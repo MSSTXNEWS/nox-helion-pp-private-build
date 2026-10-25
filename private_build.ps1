@@ -7,6 +7,7 @@ $work = Join-Path $root 'work'
 $source = Join-Path $work 'source'
 $deps = Join-Path $work 'dependencies'
 $output = Join-Path $work 'candidate'
+$qaRequirements = Join-Path $root 'requirements-qa-win64-hashed.txt'
 $sourceZip = Join-Path $work 'NOX_PP_SOURCE.zip'
 $sourceExpectedBytes = 60364346
 $sourceExpectedSha = 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'
@@ -150,7 +151,6 @@ try {
     & $venvPython -E -s -m pip --isolated check
     if ($LASTEXITCODE -ne 0) { throw "PIP_CHECK_FAILED:$LASTEXITCODE" }
 
-    $qaRequirements = Join-Path $root 'requirements-qa-win64-hashed.txt'
     if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) {
         $qaLockSha = (Get-FileHash -LiteralPath $qaRequirements -Algorithm SHA256).Hash.ToLowerInvariant()
         $qaWheels = Join-Path $evidence ('qa-wheelhouse-' + $qaLockSha.Substring(0,12))
