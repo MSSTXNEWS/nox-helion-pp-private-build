@@ -44,6 +44,8 @@ jobs:
           $client = [System.Net.Http.HttpClient]::new($handler)
           $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:GITHUB_TOKEN)
           $client.DefaultRequestHeaders.Accept.ParseAdd('application/vnd.github+json')
+          $client.DefaultRequestHeaders.UserAgent.ParseAdd('NOX-HELION-Exact-Candidate-Launch')
+          $client.DefaultRequestHeaders.Add('X-GitHub-Api-Version', '2022-11-28')
           $response = $client.GetAsync($apiUri).GetAwaiter().GetResult()
 
           if ([int]$response.StatusCode -eq 302) {
