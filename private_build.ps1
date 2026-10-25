@@ -22,6 +22,10 @@ $failure = $null
 $baseTree = $null
 $patchedTree = $null
 $exeRecords = @()
+$qaLockSha = $null
+$qaWheels = $null
+$qaDependencyFailure = $null
+$qaDependenciesReady = $false
 
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 New-Item -ItemType Directory -Path $work -Force | Out-Null
@@ -104,29 +108,79 @@ try {
 
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
     $wheels = Join-Path $deps 'wheels'
+    $pyLauncher = Get-Command py -ErrorAction Stop
+    if ($pyLauncher.CommandType -ne 'Application') { throw 'PY_LAUNCHER_NAME_COLLISION' }
     $venv = Join-Path $work 'build-venv'
     & py -3.12 -m venv $venv
     if ($LASTEXITCODE -ne 0) { throw "BUILD_VENV_CREATE_FAILED:$LASTEXITCODE" }
     $venvPython = Join-Path $venv 'Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) { throw 'BUILD_VENV_PYTHON_MISSING' }
-    & $venvPython -E -s -m pip install --disable-pip-version-check --no-index --only-binary=:all: --find-links $wheels --require-hashes -r $requirements
+    & $venvPython -E -s -m pip --isolated install --disable-pip-version-check --no-index --only-binary=:all: --find-links $wheels --require-hashes -r $requirements
     if ($LASTEXITCODE -ne 0) { throw "OFFLINE_PINNED_DEPENDENCY_INSTALL_FAILED:$LASTEXITCODE" }
-    & $venvPython -E -s -m pip check
+    & $venvPython -E -s -m pip --isolated check
     if ($LASTEXITCODE -ne 0) { throw "PIP_CHECK_FAILED:$LASTEXITCODE" }
+
+    $qaRequirements = Join-Path $root 'requirements-qa-win64-hashed.txt'
+    if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) {
+        $qaLockSha = (Get-FileHash -LiteralPath $qaRequirements -Algorithm SHA256).Hash.ToLowerInvariant()
+        $qaWheels = Join-Path $evidence ('qa-wheelhouse-' + $qaLockSha.Substring(0,12))
+        Copy-Item -LiteralPath $qaRequirements -Destination (Join-Path $evidence 'requirements-qa-win64-hashed.txt') -Force
+        New-Item -ItemType Directory -Path $qaWheels -Force | Out-Null
+        try {
+            & $venvPython -E -s -m pip --isolated download --disable-pip-version-check --no-deps --only-binary=:all: --dest $qaWheels --require-hashes -r $qaRequirements
+            if ($LASTEXITCODE -ne 0) { throw "QA_WHEEL_DOWNLOAD_FAILED:$LASTEXITCODE" }
+            $qaExpectedWheels = [ordered]@{
+                'lxml-6.1.3-cp312-cp312-win_amd64.whl'='3e9a00d1c2c30936f7add097c41afc5da6556c580909104aafd382cac92a855c'
+                'pillow-13.0.0-cp312-cp312-win_amd64.whl'='ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b'
+                'python_docx-1.2.0-py3-none-any.whl'='3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7'
+                'typing_extensions-4.16.0-py3-none-any.whl'='481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8'
+                'tzdata-2026.5-py2.py3-none-any.whl'='b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac'
+            }
+            foreach ($wheelName in $qaExpectedWheels.Keys) {
+                Assert-Sha256 (Join-Path $qaWheels $wheelName) $qaExpectedWheels[$wheelName] ('QA wheel '+$wheelName)
+            }
+            & $venvPython -E -s -m pip --isolated install --disable-pip-version-check --no-index --no-deps --only-binary=:all: --find-links $qaWheels --require-hashes -r $qaRequirements
+            if ($LASTEXITCODE -ne 0) { throw "QA_DEPENDENCY_INSTALL_FAILED:$LASTEXITCODE" }
+            & $venvPython -E -s -m pip --isolated check
+            if ($LASTEXITCODE -ne 0) { throw "QA_DEPENDENCY_PIP_CHECK_FAILED:$LASTEXITCODE" }
+            $qaDependenciesReady = $true
+        } catch {
+            $qaDependencyFailure = ($_ | Out-String).Trim()
+            Write-Warning ("QA_DEPENDENCIES_NOT_READY; continuing to compile and preserve candidate. " + $qaDependencyFailure)
+        }
+    } else {
+        $qaDependencyFailure = 'QA_DEPENDENCY_LOCK_MISSING'
+        Write-Warning 'QA_DEPENDENCY_LOCK_MISSING; continuing to compile and preserve candidate.'
+    }
+
     & $venvPython -E -s -c 'import sys,struct,tkinter,pytest,trimesh,numpy,PyInstaller; assert sys.version_info[:3]==(3,12,10); assert struct.calcsize("P")==8; assert PyInstaller.__version__=="6.16.0"'
     if ($LASTEXITCODE -ne 0) { throw "PINNED_PYTHON_TK_AND_BUILD_IMPORTS_REQUIRED:$LASTEXITCODE" }
+    if ($qaDependenciesReady) {
+        & $venvPython -E -s -c 'import PIL,docx,lxml,typing_extensions,tzdata,zoneinfo; from importlib import metadata; assert metadata.version("Pillow")=="13.0.0"; assert metadata.version("python-docx")=="1.2.0"; assert metadata.version("lxml")=="6.1.3"; assert metadata.version("typing-extensions")=="4.16.0"; assert metadata.version("tzdata")=="2026.5"; zoneinfo.ZoneInfo("Europe/Madrid")'
+        if ($LASTEXITCODE -ne 0) {
+            $qaDependenciesReady = $false
+            $qaDependencyFailure = 'QA_DEPENDENCY_IMPORT_VERSION_OR_ZONEINFO_PROBE_FAILED'
+            Write-Warning $qaDependencyFailure
+        }
+    }
 
     # Route the existing source builder's `py -3.12` calls to this isolated
     # interpreter; keep the hosted runner's preinstalled tools untouched.
     function py {
         $pythonArgs = @($args)
-        if ($pythonArgs.Count -gt 0 -and $pythonArgs[0] -eq '-3.12') {
-            $pythonArgs = @($pythonArgs | Select-Object -Skip 1)
+        if ($pythonArgs.Count -lt 1 -or $pythonArgs[0] -cne '-3.12') {
+            throw 'UNEXPECTED_PY_LAUNCHER_SELECTOR'
         }
+        $pythonArgs = @($pythonArgs | Select-Object -Skip 1)
         & $venvPython @pythonArgs
     }
 
     New-Item -ItemType Directory -Path $output | Out-Null
+    $baseNotices = Join-Path $deps 'DEPENDENCY_NOTICES.txt'
+    if (Test-Path -LiteralPath $baseNotices -PathType Leaf) { Copy-Item -LiteralPath $baseNotices -Destination (Join-Path $output 'DEPENDENCY_NOTICES.txt') -Force }
+    $qaNotices = Join-Path $root 'QA_DEPENDENCY_NOTICES.txt'
+    if (Test-Path -LiteralPath $qaNotices -PathType Leaf) { Copy-Item -LiteralPath $qaNotices -Destination (Join-Path $output 'QA_DEPENDENCY_NOTICES.txt') -Force }
+    if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) { Copy-Item -LiteralPath $qaRequirements -Destination (Join-Path $output 'requirements-qa-win64-hashed.txt') -Force }
     & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM
     if ($LASTEXITCODE -ne 0) { throw "C_RELEASE_SPRINT_BUILD_FAILED:$LASTEXITCODE" }
 } catch {
@@ -153,6 +207,10 @@ try {
         source_tree_expected=$patchedTreeExpected
         a04_patch_zip_sha256=if (Test-Path -LiteralPath $patchZip) {(Get-FileHash -LiteralPath $patchZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         wheelhouse_sha256=if (Test-Path -LiteralPath $wheelZip) {(Get-FileHash -LiteralPath $wheelZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
+        qa_requirements_sha256=$qaLockSha
+        qa_dependencies_ready=$qaDependenciesReady
+        qa_dependency_failure=$qaDependencyFailure
+        qa_wheels=if ($null -ne $qaWheels -and (Test-Path -LiteralPath $qaWheels -PathType Container)) {@(Get-ChildItem -LiteralPath $qaWheels -Filter '*.whl' -File | ForEach-Object {[ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}})} else {@()}
         exes=$exeRecords
         release_accepted=$false
         failure=$failure
@@ -169,6 +227,18 @@ try {
         "failure: $failure"
     ) -join [Environment]::NewLine
     Set-Content -LiteralPath (Join-Path $output 'BUILD_STATUS.txt') -Value $statusText -Encoding UTF8
+    $candidateReadme = @(
+        'PRE-PRE diagnostic Windows candidate; release_accepted=false.'
+        "run_id: $env:GITHUB_RUN_ID"
+        "source_base_tree: $baseTree"
+        "source_patched_tree: $patchedTree"
+        "qa_requirements_sha256: $qaLockSha"
+        "qa_dependencies_ready: $qaDependenciesReady"
+        "qa_dependency_failure: $qaDependencyFailure"
+        'Check C_RELEASE_SPRINT_BUILD_RECEIPT.json and build-attempt.json for exact gates and EXE SHA values.'
+        'Real local-model inference through the GUI, Persona/history/STOP, full rights and independent acceptance remain unverified unless separately evidenced.'
+    ) -join [Environment]::NewLine
+    Set-Content -LiteralPath (Join-Path $output 'CANDIDATE_README.txt') -Value $candidateReadme -Encoding UTF8
     try { Stop-Transcript | Out-Null } catch {}
 }
 
