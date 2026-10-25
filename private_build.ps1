@@ -32,6 +32,14 @@ $qaDependenciesReady = $false
 
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 New-Item -ItemType Directory -Path $work -Force | Out-Null
+# Keep Windows source-QA temp files under this isolated checkout. The runner's
+# profile TEMP path contains a reparse ancestor and can produce ACL/WinError 32
+# failures during security checks and TemporaryDirectory cleanup.
+$windowsTemp = Join-Path $work 'windows-temp'
+New-Item -ItemType Directory -Path $windowsTemp -Force | Out-Null
+$env:TEMP = $windowsTemp
+$env:TMP = $windowsTemp
+$env:TMPDIR = $windowsTemp
 Start-Transcript -LiteralPath (Join-Path $evidence 'windows-build-transcript.txt') -Force | Out-Null
 
 function Assert-Sha256([string]$Path, [string]$Expected, [string]$Label) {
