@@ -226,6 +226,19 @@ try {
     if (Test-Path -LiteralPath $cReceiptPath -PathType Leaf) {
         try {
             $cReceipt = Get-Content -LiteralPath $cReceiptPath -Raw | ConvertFrom-Json
+            $fastModeProp = $cReceipt.PSObject.Properties['fast_candidate_mode']
+            if ($null -eq $fastModeProp) { throw 'FAST_CANDIDATE_RECEIPT_FLAG_MISSING' }
+            $fastModeValue = $fastModeProp.Value
+            if ($fastModeValue -isnot [bool]) {
+                $isPresentProp = $null
+                if ($null -ne $fastModeValue) { $isPresentProp = $fastModeValue.PSObject.Properties['IsPresent'] }
+                if ($null -eq $isPresentProp -or $isPresentProp.Value -isnot [bool]) {
+                    throw 'FAST_CANDIDATE_RECEIPT_FLAG_INVALID'
+                }
+                $fastModeProp.Value = [bool]$isPresentProp.Value
+            }
+            $cReceipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $cReceiptPath -Encoding UTF8
+            $cReceipt = Get-Content -LiteralPath $cReceiptPath -Raw | ConvertFrom-Json
             if ($cReceipt.schema -ceq 'NOX_C_RELEASE_SPRINT_BUILD_RECEIPT_V2') {
                 $sourceQaStatus = [string]$cReceipt.source_qa_status
                 $nativeSmokeStatus = [string]$cReceipt.native_smoke_status
