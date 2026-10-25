@@ -102,6 +102,14 @@ try {
         throw "A04 patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
     }
 
+    # The disposable GitHub Windows image preinstalls pipx 1.18.4, which requires packaging>=26.3.
+    # This build pins packaging==25.0; remove only that unrelated runner tool before installing the exact wheel set.
+    $runnerPipx = & py -3.12 -E -s -m pip show pipx 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        & py -3.12 -E -s -m pip uninstall --yes pipx
+        if ($LASTEXITCODE -ne 0) { throw "REMOVE_RUNNER_PIPX_FAILED:$LASTEXITCODE" }
+    }
+
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
     $wheels = Join-Path $deps 'wheels'
     & py -3.12 -E -s -m pip install --disable-pip-version-check --no-index --only-binary=:all: --find-links $wheels --require-hashes -r $requirements
