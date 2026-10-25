@@ -176,11 +176,6 @@ try {
     }
 
     New-Item -ItemType Directory -Path $output | Out-Null
-    $baseNotices = Join-Path $deps 'DEPENDENCY_NOTICES.txt'
-    if (Test-Path -LiteralPath $baseNotices -PathType Leaf) { Copy-Item -LiteralPath $baseNotices -Destination (Join-Path $output 'DEPENDENCY_NOTICES.txt') -Force }
-    $qaNotices = Join-Path $root 'QA_DEPENDENCY_NOTICES.txt'
-    if (Test-Path -LiteralPath $qaNotices -PathType Leaf) { Copy-Item -LiteralPath $qaNotices -Destination (Join-Path $output 'QA_DEPENDENCY_NOTICES.txt') -Force }
-    if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) { Copy-Item -LiteralPath $qaRequirements -Destination (Join-Path $output 'requirements-qa-win64-hashed.txt') -Force }
     & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM
     if ($LASTEXITCODE -ne 0) { throw "C_RELEASE_SPRINT_BUILD_FAILED:$LASTEXITCODE" }
 } catch {
@@ -217,6 +212,11 @@ try {
     }
     $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'build-attempt.json') -Encoding UTF8
     New-Item -ItemType Directory -Path $output -Force | Out-Null
+    $baseNotices = Join-Path $deps 'DEPENDENCY_NOTICES.txt'
+    if (Test-Path -LiteralPath $baseNotices -PathType Leaf) { Copy-Item -LiteralPath $baseNotices -Destination (Join-Path $output 'DEPENDENCY_NOTICES.txt') -Force }
+    $qaNotices = Join-Path $root 'QA_DEPENDENCY_NOTICES.txt'
+    if (Test-Path -LiteralPath $qaNotices -PathType Leaf) { Copy-Item -LiteralPath $qaNotices -Destination (Join-Path $output 'QA_DEPENDENCY_NOTICES.txt') -Force }
+    if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) { Copy-Item -LiteralPath $qaRequirements -Destination (Join-Path $output 'requirements-qa-win64-hashed.txt') -Force }
     $statusText = @(
         'PRE-RELEASE WINDOWS CANDIDATE BUILD'
         "status: $runStatus"
