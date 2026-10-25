@@ -39,9 +39,21 @@ jobs:
         with:
           name: PP-001-C1-R3-Windows-candidate-${{ github.run_id }}
           path: |
-            work/candidate/**
+            work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe
+            work/candidate/dist/NOX_HELION_BACKGROUND_CANDIDATE.exe
+            work/candidate/C_RELEASE_SPRINT_BUILD_RECEIPT.json
+            work/candidate/CANDIDATE_README.txt
+            work/candidate/BUILD_STATUS.txt
+            work/candidate/launch_background_user.ps1
+            work/candidate/register_windows_background.ps1
+            work/candidate/unregister_windows_background.ps1
+            work/candidate/DEPENDENCY_NOTICES.txt
+            work/candidate/QA_DEPENDENCY_NOTICES.txt
             work/NOX_NATIVE_SMOKE_*/**
-            ci-evidence/**
+            ci-evidence/build-attempt.json
+            ci-evidence/windows-build-transcript.txt
+            ci-evidence/requirements-qa-win64-hashed.txt
+            ci-evidence/qa-wheelhouse-*/*.whl
           if-no-files-found: warn
           retention-days: 14
 
