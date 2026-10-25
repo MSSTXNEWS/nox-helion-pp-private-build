@@ -102,22 +102,29 @@ try {
         throw "A04 patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
     }
 
-    # The disposable GitHub Windows image preinstalls pipx 1.18.4, which requires packaging>=26.3.
-    # This build pins packaging==25.0; remove only that unrelated runner tool before installing the exact wheel set.
-    $runnerPipx = & py -3.12 -E -s -m pip show pipx 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        & py -3.12 -E -s -m pip uninstall --yes pipx
-        if ($LASTEXITCODE -ne 0) { throw "REMOVE_RUNNER_PIPX_FAILED:$LASTEXITCODE" }
-    }
-
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
     $wheels = Join-Path $deps 'wheels'
-    & py -3.12 -E -s -m pip install --disable-pip-version-check --no-index --only-binary=:all: --find-links $wheels --require-hashes -r $requirements
+    $venv = Join-Path $work 'build-venv'
+    & py -3.12 -m venv $venv
+    if ($LASTEXITCODE -ne 0) { throw "BUILD_VENV_CREATE_FAILED:$LASTEXITCODE" }
+    $venvPython = Join-Path $venv 'Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) { throw 'BUILD_VENV_PYTHON_MISSING' }
+    & $venvPython -E -s -m pip install --disable-pip-version-check --no-index --only-binary=:all: --find-links $wheels --require-hashes -r $requirements
     if ($LASTEXITCODE -ne 0) { throw "OFFLINE_PINNED_DEPENDENCY_INSTALL_FAILED:$LASTEXITCODE" }
-    & py -3.12 -E -s -m pip check
+    & $venvPython -E -s -m pip check
     if ($LASTEXITCODE -ne 0) { throw "PIP_CHECK_FAILED:$LASTEXITCODE" }
-    & py -3.12 -E -s -c 'import sys,struct,tkinter,pytest,trimesh,numpy,PyInstaller; assert sys.version_info[:3]==(3,12,10); assert struct.calcsize("P")==8; assert PyInstaller.__version__=="6.16.0"'
+    & $venvPython -E -s -c 'import sys,struct,tkinter,pytest,trimesh,numpy,PyInstaller; assert sys.version_info[:3]==(3,12,10); assert struct.calcsize("P")==8; assert PyInstaller.__version__=="6.16.0"'
     if ($LASTEXITCODE -ne 0) { throw "PINNED_PYTHON_TK_AND_BUILD_IMPORTS_REQUIRED:$LASTEXITCODE" }
+
+    # Route the existing source builder's `py -3.12` calls to this isolated
+    # interpreter; keep the hosted runner's preinstalled tools untouched.
+    function py {
+        $pythonArgs = @($args)
+        if ($pythonArgs.Count -gt 0 -and $pythonArgs[0] -eq '-3.12') {
+            $pythonArgs = @($pythonArgs | Select-Object -Skip 1)
+        }
+        & $venvPython @pythonArgs
+    }
 
     New-Item -ItemType Directory -Path $output | Out-Null
     & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM
