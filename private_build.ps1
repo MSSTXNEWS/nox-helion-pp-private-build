@@ -39,6 +39,7 @@ $s08Tree = $null
 $patchedTree = $null
 $exeRecords = @()
 $qaLockSha = $null
+$qaRequirements = $null
 $qaWheels = $null
 $qaDependencyFailure = $null
 $qaDependenciesReady = $false
