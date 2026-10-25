@@ -1,0 +1,107 @@
+name: PRE-PRE exact candidate launch
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+
+concurrency:
+  group: pp-exe-launch-run40210839317
+  cancel-in-progress: false
+
+jobs:
+  launch:
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Fetch and launch the exact existing candidate once
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = 'MSSTXNEWS/nox-helion-pp-private-build'
+          $sourceRunId = 40210839317
+          $artifactId = 12605282328
+          $expectedHead = 'ca1a876018655b7b3d12c7fb8f273def8d1e45ad'
+          $expectedZipSha256 = 'f7b57520904cb60e17ce91737bb9f2f8af583a4ab769734a851551fa9f4eb625'
+          $apiRoot = 'https://api.github.com/repos/' + $repo
+          $headers = @{
+            Authorization = 'Bearer ' + $env:GITHUB_TOKEN
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+
+          $meta = Invoke-RestMethod -Method Get -Uri "$apiRoot/actions/artifacts/$artifactId" -Headers $headers
+          if ($meta.id -ne $artifactId -or $meta.workflow_run.id -ne $sourceRunId -or $meta.workflow_run.head_sha -ne $expectedHead -or $meta.expired) {
+            throw "Artifact provenance mismatch: id=$($meta.id), run=$($meta.workflow_run.id), head=$($meta.workflow_run.head_sha), expired=$($meta.expired)"
+          }
+
+          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-artifact12605282328.zip'
+          $apiUri = [uri]"$apiRoot/actions/artifacts/$artifactId/zip"
+          $handler = [System.Net.Http.HttpClientHandler]::new()
+          $handler.AllowAutoRedirect = $false
+          $client = [System.Net.Http.HttpClient]::new($handler)
+          $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:GITHUB_TOKEN)
+          $client.DefaultRequestHeaders.Accept.ParseAdd('application/vnd.github+json')
+          $response = $client.GetAsync($apiUri).GetAwaiter().GetResult()
+
+          if ([int]$response.StatusCode -eq 302) {
+            $downloadUri = $response.Headers.Location
+            if (-not $downloadUri.IsAbsoluteUri) { $downloadUri = [uri]::new($apiUri, $downloadUri) }
+            $response.Dispose()
+            $client.Dispose()
+            $publicHandler = [System.Net.Http.HttpClientHandler]::new()
+            $publicClient = [System.Net.Http.HttpClient]::new($publicHandler)
+            $downloadResponse = $publicClient.GetAsync($downloadUri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+          } elseif ([int]$response.StatusCode -eq 200) {
+            $downloadResponse = $response
+          } else {
+            throw "Artifact download endpoint returned HTTP $([int]$response.StatusCode)"
+          }
+
+          if (-not $downloadResponse.IsSuccessStatusCode) { throw "Artifact byte download returned HTTP $([int]$downloadResponse.StatusCode)" }
+          $inputStream = $downloadResponse.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+          $outputStream = [System.IO.File]::Create($zipPath)
+          try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose(); $downloadResponse.Dispose() }
+          if ($client) { $client.Dispose() }
+          if ($publicClient) { $publicClient.Dispose() }
+
+          $actualZipSha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualZipSha256 -ne $expectedZipSha256) { throw "ZIP SHA256 mismatch: expected=$expectedZipSha256 actual=$actualZipSha256" }
+
+          $extractPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-extract'
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+          $matches = @(Get-ChildItem -LiteralPath $extractPath -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' -File -Recurse)
+          if ($matches.Count -ne 1) { throw "Expected exactly one private candidate EXE; found $($matches.Count)" }
+
+          $exe = $matches[0].FullName
+          $process = Start-Process -FilePath $exe -WorkingDirectory $matches[0].DirectoryName -PassThru
+          $launchUtc = [DateTimeOffset]::UtcNow.ToString('o')
+          $inputIdle = 'unavailable'
+          try { $inputIdle = [string]$process.WaitForInputIdle(10000) } catch { $inputIdle = 'not-exposed: ' + $_.Exception.GetType().Name }
+          Start-Sleep -Seconds 5
+          $process.Refresh()
+          $alive = -not $process.HasExited
+          $windowHandle = if ($alive) { [string]$process.MainWindowHandle } else { '0' }
+          $windowTitle = if ($alive) { $process.MainWindowTitle } else { '' }
+          $exitCode = if ($alive) { 'still-running' } else { [string]$process.ExitCode }
+
+          $result = @(
+            "source_run=$sourceRunId"
+            "source_head=$expectedHead"
+            "artifact_id=$artifactId"
+            "artifact_zip_sha256=$actualZipSha256"
+            "exe=$exe"
+            "launch_utc=$launchUtc"
+            "pid=$($process.Id)"
+            "process_alive=$alive"
+            "main_window_handle=$windowHandle"
+            "main_window_title=$windowTitle"
+            "wait_for_input_idle=$inputIdle"
+            "exit_code=$exitCode"
+          ) -join "`n"
+          Write-Host $result
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $result
+
+          if (-not $alive) { throw "Exact candidate process exited before the observation window ended; exit_code=$exitCode" }
