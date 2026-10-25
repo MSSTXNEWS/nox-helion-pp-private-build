@@ -15,7 +15,7 @@ $patchedTreeExpected = 'd16663f9fd26aa0eab90270fff1bb65bc3f805e6'
 $patchZip = Join-Path $root 'NOX_A04_BUILD_PATCH.zip'
 $patchZipExpected = '37078f0105f42ff9964a533399a9a71769d0517e8f0e3f49e3e7266ae28eb4eb'
 $patchExpected = 'cc799cde9b99c37be113950da2fcef53491873ccd417ca426cacbced47a83996'
-$wheelZip = Join-Path $root 'NOX_PP_BUILD_WHEELHOUSE_18.zip'
+$wheelZip = Join-Path $work 'NOX_PP_BUILD_WHEELHOUSE_18.zip'
 $wheelExpected = '2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598ff'
 $started = [DateTime]::UtcNow
 $failure = $null
@@ -59,11 +59,24 @@ try {
     Assert-Sha256 $sourceZip $sourceExpectedSha 'PRE-PRE source archive'
 
     Assert-Sha256 $patchZip $patchZipExpected 'A04 patch package'
+    $wheelPartNames = @('wheelhouse_00.part', 'wheelhouse_01.part', 'wheelhouse_02.part')
+    $wheelStream = [IO.File]::Open($wheelZip, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+    try {
+        foreach ($partName in $wheelPartNames) {
+            $partPath = Join-Path $root $partName
+            if (-not (Test-Path -LiteralPath $partPath -PathType Leaf)) { throw "WHEELHOUSE_CHUNK_MISSING:$partName" }
+            $partStream = [IO.File]::OpenRead($partPath)
+            try { $partStream.CopyTo($wheelStream) } finally { $partStream.Dispose() }
+        }
+    } finally { $wheelStream.Dispose() }
+    if ((Get-Item -LiteralPath $wheelZip).Length -ne 21874335) { throw 'WHEELHOUSE_ARCHIVE_SIZE_MISMATCH' }
     Assert-Sha256 $wheelZip $wheelExpected '18-wheel build dependency package'
     if (Test-Path -LiteralPath $source) { Remove-Item -LiteralPath $source -Recurse -Force }
     if (Test-Path -LiteralPath $deps) { Remove-Item -LiteralPath $deps -Recurse -Force }
     if (Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output -Recurse -Force }
     Expand-Archive -LiteralPath $sourceZip -DestinationPath $source
+    $delivery = Join-Path $source '_delivery'
+    if (Test-Path -LiteralPath $delivery -PathType Container) { Remove-Item -LiteralPath $delivery -Recurse -Force }
     Expand-Archive -LiteralPath $wheelZip -DestinationPath $deps
 
     $patchDir = Join-Path $evidence 'patch'
