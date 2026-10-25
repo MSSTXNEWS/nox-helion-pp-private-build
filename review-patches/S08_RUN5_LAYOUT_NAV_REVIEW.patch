@@ -1,0 +1,49 @@
+diff --git a/helion/s08_v28_desktop.py b/helion/s08_v28_desktop.py
+--- a/helion/s08_v28_desktop.py
++++ b/helion/s08_v28_desktop.py
+@@ -248,6 +248,10 @@
+         self.root.bind_all('<Control-Return>',self._s08_execute_active_read_key,add='+')
+         self.content.bind('<Configure>',self._s08_on_resize,add='+')
+         self._s08_cols = 4
++        # Reserve the inherited output panel before the expandable art view.
++        # S08 adds menu content above it; keeping output ahead of art preserves
++        # a usable result/STOP area on compact-height displays.
++        self.output_frame.pack_configure(before=self.art_frame)
+ 
+     def _bind_shortcuts(self) -> None:
+         """Bind inherited hotkeys once, behind the actual Tk focus owner.
+diff --git a/helion/e08_desktop_ui.py b/helion/e08_desktop_ui.py
+--- a/helion/e08_desktop_ui.py
++++ b/helion/e08_desktop_ui.py
+@@ -2083,7 +2083,9 @@
+         elif screen_id == 'screen.menu':
+             nav_snapshot = self.nav.menu()
+         elif spec.core_id:
+-            nav_snapshot = self.nav.select_core(spec.core_id)
++            nav_snapshot = self.nav.select_core(
++                spec.core_id,
++                screen_id=screen_id if screen_id in FACADES_BY_SCREEN else None)
+         # STOP may re-enter navigation and cause DesktopRouteController to
+         # reject this stale transition. Render only the screen it actually
+         # committed; never leave E08's active_screen/CoreID ahead of the
+diff --git a/helion/desktop_routes.py b/helion/desktop_routes.py
+--- a/helion/desktop_routes.py
++++ b/helion/desktop_routes.py
+@@ -683,11 +683,15 @@
+         # Do NOT re-dispatch previously viewed route handlers.
+         return self._current
+ 
+-    def select_core(self, core_id: str) -> ScreenSnapshot:
++    def select_core(self, core_id: str, *, screen_id: str | None = None) -> ScreenSnapshot:
+         if core_id not in CORE_IDS:
+             raise ValueError('unknown_core')
++        if screen_id is not None and (
++                not isinstance(screen_id, str) or
++                not screen_id.startswith('screen.facade.')):
++            raise ValueError('unknown_facade_screen')
+         requested = ScreenSnapshot(
+-            'screen.' + core_id, ViewKind.CORE, ViewState.OFFLINE,
++            screen_id or 'screen.' + core_id, ViewKind.CORE, ViewState.OFFLINE,
+             'CoreID выбран. Inference не выполнялся: модель без проверки OFFLINE.',
+             core_id=core_id)
+         result = self._navigate(requested)
