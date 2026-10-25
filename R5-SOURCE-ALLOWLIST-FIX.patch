@@ -1,0 +1,14 @@
+diff --git a/nox_supervisor/engine.py b/nox_supervisor/engine.py
+index bc923ee..c990480 100644
+--- a/nox_supervisor/engine.py
++++ b/nox_supervisor/engine.py
+@@ -138,7 +138,8 @@ def _safe_regular(path: Path, root: Path):
+     else:
+         raise PermissionDenied('source_outside_allowlist')
+     resolved = absolute.resolve(strict=True)
+-    if not resolved.is_relative_to(root):
++    resolved_root = root.resolve(strict=True)
++    if not resolved.is_relative_to(resolved_root):
+         raise PermissionDenied('source_outside_allowlist')
+     inf = resolved.stat()
+     if not stat.S_ISREG(inf.st_mode):
