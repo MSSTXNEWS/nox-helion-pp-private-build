@@ -11,10 +11,13 @@ $sourceZip = Join-Path $work 'NOX_PP_SOURCE.zip'
 $sourceExpectedBytes = 60364346
 $sourceExpectedSha = 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'
 $baseTreeExpected = '1454257c66d5107b12091b8e81706e51b0cfb672'
-$patchedTreeExpected = 'd16663f9fd26aa0eab90270fff1bb65bc3f805e6'
+$a04TreeExpected = 'd16663f9fd26aa0eab90270fff1bb65bc3f805e6'
+$patchedTreeExpected = '63f26c20d703d6aa91b941c94266ae7c3a563a5d'
 $patchZip = Join-Path $root 'NOX_A04_BUILD_PATCH.zip'
 $patchZipExpected = '37078f0105f42ff9964a533399a9a71769d0517e8f0e3f49e3e7266ae28eb4eb'
 $patchExpected = 'cc799cde9b99c37be113950da2fcef53491873ccd417ca426cacbced47a83996'
+$resourcePatch = Join-Path $root 'PP_MENU_CATALOG_BUNDLE.patch'
+$resourcePatchExpected = '9a79aefb78e87aa41ad784e0a0ca4a6f26a765f084420d86e244505d1d7c1215'
 $wheelZip = Join-Path $work 'NOX_PP_BUILD_WHEELHOUSE_18.zip'
 $wheelExpected = '2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598ff'
 $started = [DateTime]::UtcNow
@@ -87,6 +90,7 @@ try {
     Expand-Archive -LiteralPath $patchZip -DestinationPath $patchDir
     $patchPath = Join-Path $patchDir 'A04_BUILD_REPAIRS_EXACT_PARENT.patch'
     Assert-Sha256 $patchPath $patchExpected 'A04 source patch'
+    Assert-Sha256 $resourcePatch $resourcePatchExpected 'PP menu catalog bundle patch'
 
     Invoke-Git @('-C', $source, 'init', '--quiet')
     Invoke-Git @('-C', $source, 'config', 'core.autocrlf', 'false')
@@ -101,9 +105,17 @@ try {
     Invoke-Git @('-C', $source, 'apply', $patchPath)
     Invoke-Git @('-C', $source, 'add', '--all')
     Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+    $a04Tree = (& git -C $source write-tree).Trim()
+    if ($LASTEXITCODE -ne 0 -or $a04Tree -cne $a04TreeExpected) {
+        throw "A04 patched tree mismatch: expected=$a04TreeExpected actual=$a04Tree"
+    }
+    Invoke-Git @('-C', $source, 'apply', '--check', $resourcePatch)
+    Invoke-Git @('-C', $source, 'apply', $resourcePatch)
+    Invoke-Git @('-C', $source, 'add', '--all')
+    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
     $patchedTree = (& git -C $source write-tree).Trim()
     if ($LASTEXITCODE -ne 0 -or $patchedTree -cne $patchedTreeExpected) {
-        throw "A04 patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
+        throw "Final patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
     }
 
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
