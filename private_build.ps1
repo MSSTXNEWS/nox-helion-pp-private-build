@@ -135,6 +135,10 @@ try {
                 'python_docx-1.2.0-py3-none-any.whl'='3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7'
                 'typing_extensions-4.16.0-py3-none-any.whl'='481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8'
                 'tzdata-2026.5-py2.py3-none-any.whl'='b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac'
+                'python_pptx-1.0.2-py3-none-any.whl'='160838e0b8565a8b1f67947675886e9fea18aa5e795db7ae531606d68e785cba'
+                'xlsxwriter-3.3.0-py3-none-any.whl'='5f04772d43281da5109af66f39b65153359a203e896847c416476e709b024469'
+                'reportlab-5.1.0-py3-none-any.whl'='59fdbaec5efe437095ad1d7292ec9a271c8ca2d3ec75e889c6e61400929b90df'
+                'charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl'='780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc'
             }
             foreach ($wheelName in $qaExpectedWheels.Keys) {
                 Assert-Sha256 (Join-Path $qaWheels $wheelName) $qaExpectedWheels[$wheelName] ('QA wheel '+$wheelName)
@@ -156,7 +160,7 @@ try {
     & $venvPython -E -s -c 'import sys,struct,tkinter,pytest,trimesh,numpy,PyInstaller; assert sys.version_info[:3]==(3,12,10); assert struct.calcsize("P")==8; assert PyInstaller.__version__=="6.16.0"'
     if ($LASTEXITCODE -ne 0) { throw "PINNED_PYTHON_TK_AND_BUILD_IMPORTS_REQUIRED:$LASTEXITCODE" }
     if ($qaDependenciesReady) {
-        & $venvPython -E -s -c 'import PIL,docx,lxml,typing_extensions,tzdata,zoneinfo; from importlib import metadata; assert metadata.version("Pillow")=="13.0.0"; assert metadata.version("python-docx")=="1.2.0"; assert metadata.version("lxml")=="6.1.3"; assert metadata.version("typing-extensions")=="4.16.0"; assert metadata.version("tzdata")=="2026.5"; zoneinfo.ZoneInfo("Europe/Madrid")'
+        & $venvPython -E -s -c 'import PIL,docx,lxml,typing_extensions,tzdata,zoneinfo,pptx,reportlab,xlsxwriter,charset_normalizer; from importlib import metadata; assert metadata.version("Pillow")=="13.0.0"; assert metadata.version("python-docx")=="1.2.0"; assert metadata.version("lxml")=="6.1.3"; assert metadata.version("typing-extensions")=="4.16.0"; assert metadata.version("tzdata")=="2026.5"; assert metadata.version("python-pptx")=="1.0.2"; assert metadata.version("XlsxWriter")=="3.3.0"; assert metadata.version("reportlab")=="5.1.0"; assert metadata.version("charset-normalizer")=="3.5.2"; zoneinfo.ZoneInfo("Europe/Madrid")'
         if ($LASTEXITCODE -ne 0) {
             $qaDependenciesReady = $false
             $qaDependencyFailure = 'QA_DEPENDENCY_IMPORT_VERSION_OR_ZONEINFO_PROBE_FAILED'
