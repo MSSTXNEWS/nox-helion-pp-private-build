@@ -175,7 +175,7 @@ jobs:
           retention-days: 14
 
   evidence_gate:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized evidence-only gate for artifact 12606886034' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized evidence-only gate byte-preserving artifact 12606886034' }}
     runs-on: windows-2025
     timeout-minutes: 5
     steps:
@@ -230,13 +230,31 @@ jobs:
           if ($rawMatches.Count -ne 1) { throw "HOLD: expected exactly one launch-evidence.json; found $($rawMatches.Count)" }
           "Verified artifact_id=$artifactId run_id=$runId zip_sha256=$zipSha" | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
 
+      - name: Decode byte-exact verified manifest copies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $manifestRoot = Join-Path $env:RUNNER_TEMP 'byte-exact-verified-manifests'
+          New-Item -ItemType Directory -Path $manifestRoot -Force | Out-Null
+          $manifestPairs = @(
+            @{ Source = '.\evidence\PP-ONE-037-C2-SOURCE-FREEZE.json.b64'; Name = 'PP-ONE-037-C2-SOURCE-FREEZE.json' },
+            @{ Source = '.\evidence\NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md.b64'; Name = 'NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md' },
+            @{ Source = '.\evidence\PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json.b64'; Name = 'PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json' }
+          )
+          foreach ($pair in $manifestPairs) {
+            $encoded = (Get-Content -LiteralPath $pair.Source -Raw) -replace '\s', ''
+            $destination = Join-Path $manifestRoot $pair.Name
+            [System.IO.File]::WriteAllBytes($destination, [Convert]::FromBase64String($encoded))
+          }
+
       - name: Run provenance and process-start gate only
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $raw = Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'launch-evidence-artifact12606886034') -Filter 'launch-evidence.json' -File -Recurse | Select-Object -First 1
+          $manifestRoot = Join-Path $env:RUNNER_TEMP 'byte-exact-verified-manifests'
           $gateOut = Join-Path $env:RUNNER_TEMP 'normalized-same-exe-evidence.json'
-          & '.\evidence\pp_same_exe_acceptance.ps1' -LaunchEvidenceJson $raw.FullName -SourceFreezeJson '.\evidence\PP-ONE-037-C2-SOURCE-FREEZE.json' -PortableManifest '.\evidence\NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md' -QwenBindingJson '.\evidence\PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json' -EvidenceOut $gateOut
+          & '.\evidence\pp_same_exe_acceptance.ps1' -LaunchEvidenceJson $raw.FullName -SourceFreezeJson (Join-Path $manifestRoot 'PP-ONE-037-C2-SOURCE-FREEZE.json') -PortableManifest (Join-Path $manifestRoot 'NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md') -QwenBindingJson (Join-Path $manifestRoot 'PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json') -EvidenceOut $gateOut
           if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Preserve normalized provenance record
