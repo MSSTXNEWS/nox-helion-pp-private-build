@@ -9,6 +9,7 @@ on:
 
 permissions:
   actions: read
+  contents: read
 
 concurrency:
   group: pp-exe-launch-run40210839317
@@ -16,7 +17,7 @@ concurrency:
 
 jobs:
   launch:
-    if: \${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12605282328') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12605282328') }}
     runs-on: windows-2025
     timeout-minutes: 5
     steps:
@@ -170,5 +171,79 @@ jobs:
         with:
           name: PP-001-exact-launch-evidence-${{ github.run_id }}
           path: ${{ runner.temp }}/launch-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  evidence_gate:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized evidence-only gate for artifact 12606886034' }}
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Checkout verified gate inputs
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Fetch and verify existing launch evidence artifact
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $repo = 'MSSTXNEWS/nox-helion-pp-private-build'
+          $runId = 40213466755
+          $artifactId = 12606886034
+          $expectedHead = '58638ebe82fe1067c29186b72cf8909bcd1835a4'
+          $expectedZipSha256 = 'e1e81a02b38cdd67aeff3c1799c2dcd986ea8b1d34b0837f85decadbe7bd54a6'
+          $apiRoot = 'https://api.github.com/repos/' + $repo
+          $zipPath = Join-Path $env:RUNNER_TEMP 'launch-evidence-artifact12606886034.zip'
+          $extractPath = Join-Path $env:RUNNER_TEMP 'launch-evidence-artifact12606886034'
+          $headers = @{ Authorization = 'Bearer ' + $env:GITHUB_TOKEN; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $meta = Invoke-RestMethod -Method Get -Uri "$apiRoot/actions/artifacts/$artifactId" -Headers $headers
+          if ($meta.id -ne $artifactId -or $meta.workflow_run.id -ne $runId -or $meta.workflow_run.head_sha -ne $expectedHead -or $meta.name -ne 'PP-001-exact-launch-evidence-40213466755' -or $meta.expired) {
+            throw "HOLD: evidence artifact provenance mismatch: id=$($meta.id), run=$($meta.workflow_run.id), head=$($meta.workflow_run.head_sha), name=$($meta.name), expired=$($meta.expired)"
+          }
+          $apiUri = [uri]"$apiRoot/actions/artifacts/$artifactId/zip"
+          $handler = [System.Net.Http.HttpClientHandler]::new()
+          $handler.AllowAutoRedirect = $false
+          $client = [System.Net.Http.HttpClient]::new($handler)
+          $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:GITHUB_TOKEN)
+          $client.DefaultRequestHeaders.Accept.ParseAdd('application/vnd.github+json')
+          $client.DefaultRequestHeaders.UserAgent.ParseAdd('NOX-HELION-Evidence-Only-Gate')
+          $client.DefaultRequestHeaders.Add('X-GitHub-Api-Version', '2022-11-28')
+          $response = $client.GetAsync($apiUri).GetAwaiter().GetResult()
+          $publicClient = $null
+          if ([int]$response.StatusCode -eq 302) {
+            $downloadUri = $response.Headers.Location
+            if (-not $downloadUri.IsAbsoluteUri) { $downloadUri = [uri]::new($apiUri, $downloadUri) }
+            $response.Dispose(); $client.Dispose()
+            $publicClient = [System.Net.Http.HttpClient]::new([System.Net.Http.HttpClientHandler]::new())
+            $downloadResponse = $publicClient.GetAsync($downloadUri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+          } elseif ([int]$response.StatusCode -eq 200) { $downloadResponse = $response }
+          else { $detail = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult(); throw "HOLD: artifact endpoint returned HTTP $([int]$response.StatusCode): $detail" }
+          if (-not $downloadResponse.IsSuccessStatusCode) { throw "HOLD: artifact byte download returned HTTP $([int]$downloadResponse.StatusCode)" }
+          $inputStream = $downloadResponse.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+          $outputStream = [System.IO.File]::Create($zipPath)
+          try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose(); $downloadResponse.Dispose(); if ($client) { $client.Dispose() }; if ($publicClient) { $publicClient.Dispose() } }
+          $zipSha = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($zipSha -ne $expectedZipSha256) { throw "HOLD: evidence artifact ZIP SHA mismatch; expected=$expectedZipSha256 actual=$zipSha" }
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+          $rawMatches = @(Get-ChildItem -LiteralPath $extractPath -Filter 'launch-evidence.json' -File -Recurse)
+          if ($rawMatches.Count -ne 1) { throw "HOLD: expected exactly one launch-evidence.json; found $($rawMatches.Count)" }
+          "Verified artifact_id=$artifactId run_id=$runId zip_sha256=$zipSha" | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+      - name: Run provenance and process-start gate only
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $raw = Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP 'launch-evidence-artifact12606886034') -Filter 'launch-evidence.json' -File -Recurse | Select-Object -First 1
+          $gateOut = Join-Path $env:RUNNER_TEMP 'normalized-same-exe-evidence.json'
+          & '.\evidence\pp_same_exe_acceptance.ps1' -LaunchEvidenceJson $raw.FullName -SourceFreezeJson '.\evidence\PP-ONE-037-C2-SOURCE-FREEZE.json' -PortableManifest '.\evidence\NOX_HELION_PORTABLE_PREREQUISITES_RUN40210839317.md' -QwenBindingJson '.\evidence\PP-ONE-037-QWEN-LAYER-DRIVE-BINDING.json' -EvidenceOut $gateOut
+          if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Preserve normalized provenance record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: PP-037-normalized-same-exe-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/normalized-same-exe-evidence.json
           if-no-files-found: warn
           retention-days: 14
