@@ -12,7 +12,10 @@ $sourceExpectedBytes = 60364346
 $sourceExpectedSha = 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'
 $baseTreeExpected = '1454257c66d5107b12091b8e81706e51b0cfb672'
 $a04TreeExpected = 'd16663f9fd26aa0eab90270fff1bb65bc3f805e6'
-$patchedTreeExpected = '63f26c20d703d6aa91b941c94266ae7c3a563a5d'
+$a05TreeExpected = 'aef8a90bece015d64f2b813ba2545ecb9c904a22'
+$patchedTreeExpected = 'f14347efdfa9b389c1e77fb9ffd0272203592224'
+$a05Patch = Join-Path $root 'A05_FONT_BUNDLE.patch'
+$a05PatchExpected = 'f4084a0625981e9b0c73f2c8b9f5b4f3816ee5f9953038f2d135e1d5d1923135'
 $patchZip = Join-Path $root 'NOX_A04_BUILD_PATCH.zip'
 $patchZipExpected = '37078f0105f42ff9964a533399a9a71769d0517e8f0e3f49e3e7266ae28eb4eb'
 $patchExpected = 'cc799cde9b99c37be113950da2fcef53491873ccd417ca426cacbced47a83996'
@@ -23,6 +26,8 @@ $wheelExpected = '2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598
 $started = [DateTime]::UtcNow
 $failure = $null
 $baseTree = $null
+$a04Tree = $null
+$a05Tree = $null
 $patchedTree = $null
 $exeRecords = @()
 $qaLockSha = $null
@@ -91,6 +96,7 @@ try {
     $patchPath = Join-Path $patchDir 'A04_BUILD_REPAIRS_EXACT_PARENT.patch'
     Assert-Sha256 $patchPath $patchExpected 'A04 source patch'
     Assert-Sha256 $resourcePatch $resourcePatchExpected 'PP menu catalog bundle patch'
+    Assert-Sha256 $a05Patch $a05PatchExpected 'A05 font bundle patch'
 
     Invoke-Git @('-C', $source, 'init', '--quiet')
     Invoke-Git @('-C', $source, 'config', 'core.autocrlf', 'false')
@@ -109,6 +115,16 @@ try {
     if ($LASTEXITCODE -ne 0 -or $a04Tree -cne $a04TreeExpected) {
         throw "A04 patched tree mismatch: expected=$a04TreeExpected actual=$a04Tree"
     }
+
+    Invoke-Git @('-C', $source, 'apply', '--check', $a05Patch)
+    Invoke-Git @('-C', $source, 'apply', $a05Patch)
+    Invoke-Git @('-C', $source, 'add', '--all')
+    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+    $a05Tree = (& git -C $source write-tree).Trim()
+    if ($LASTEXITCODE -ne 0 -or $a05Tree -cne $a05TreeExpected) {
+        throw "A05 patched tree mismatch: expected=$a05TreeExpected actual=$a05Tree"
+    }
+
     Invoke-Git @('-C', $source, 'apply', '--check', $resourcePatch)
     Invoke-Git @('-C', $source, 'apply', $resourcePatch)
     Invoke-Git @('-C', $source, 'add', '--all')
@@ -215,9 +231,15 @@ try {
         source_archive_bytes=if (Test-Path -LiteralPath $sourceZip) {(Get-Item -LiteralPath $sourceZip).Length} else {$null}
         source_archive_sha256=if (Test-Path -LiteralPath $sourceZip) {(Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         source_base_tree=$baseTree
+        source_a04_tree=$a04Tree
+        source_a04_tree_expected=$a04TreeExpected
+        source_a05_tree=$a05Tree
+        source_a05_tree_expected=$a05TreeExpected
         source_patched_tree=$patchedTree
+        source_final_tree=$patchedTree
         source_tree_expected=$patchedTreeExpected
         a04_patch_zip_sha256=if (Test-Path -LiteralPath $patchZip) {(Get-FileHash -LiteralPath $patchZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
+        a05_patch_sha256=if (Test-Path -LiteralPath $a05Patch) {(Get-FileHash -LiteralPath $a05Patch -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         wheelhouse_sha256=if (Test-Path -LiteralPath $wheelZip) {(Get-FileHash -LiteralPath $wheelZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         qa_requirements_sha256=$qaLockSha
         qa_dependencies_ready=$qaDependenciesReady
