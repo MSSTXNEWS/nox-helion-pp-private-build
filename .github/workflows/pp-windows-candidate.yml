@@ -1,0 +1,56 @@
+name: PRE-PRE Windows candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pp-windows-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - name: Check out private build inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+
+      - name: Prepare exact source, install offline dependencies, and build
+        id: build
+        continue-on-error: true
+        shell: pwsh
+        run: '& .\private_build.ps1'
+
+      - name: Preserve candidate binaries, build receipt, and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: PP-001-C1-R3-Windows-candidate-${{ github.run_id }}
+          path: |
+            work/candidate/**
+            work/NOX_NATIVE_SMOKE_*/**
+            ci-evidence/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Report the build attempt status
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.build.outcome }}' -ne 'success') {
+            Write-Host 'Build attempt incomplete or failed; available files are retained as candidate evidence.'
+            exit 1
+          }
+          Write-Host 'Build script returned success. This remains a pre-release candidate; product gates are separate.'
