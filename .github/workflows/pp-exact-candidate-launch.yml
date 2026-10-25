@@ -1,6 +1,11 @@
 name: PRE-PRE exact candidate launch
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/pp-exact-candidate-launch.yml'
 
 permissions:
   actions: read
@@ -11,6 +16,7 @@ concurrency:
 
 jobs:
   launch:
+    if: \${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12605282328') }}
     runs-on: windows-2025
     timeout-minutes: 5
     steps:
