@@ -38,6 +38,7 @@ jobs:
             actual_zip_sha256 = $null
             source_commit = $expectedHead
             exact_exe_name = $null
+            exact_exe_path = $null
             exact_exe_bytes = $null
             exact_exe_sha256 = $null
             process_start_info = $null
@@ -112,6 +113,7 @@ jobs:
             $exeItem = Get-Item -LiteralPath $exe
             $exeSha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
             $evidence.exact_exe_name = $exeItem.Name
+            $evidence.exact_exe_path = $exeItem.FullName
             $evidence.exact_exe_bytes = $exeItem.Length
             $evidence.exact_exe_sha256 = $exeSha256
 
