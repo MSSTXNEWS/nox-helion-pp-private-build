@@ -13,9 +13,15 @@ $sourceExpectedSha = 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284
 $baseTreeExpected = '1454257c66d5107b12091b8e81706e51b0cfb672'
 $a04TreeExpected = 'd16663f9fd26aa0eab90270fff1bb65bc3f805e6'
 $a05TreeExpected = 'aef8a90bece015d64f2b813ba2545ecb9c904a22'
-$patchedTreeExpected = 'f14347efdfa9b389c1e77fb9ffd0272203592224'
+$outsideAllowlistTreeExpected = '3ea460b7641fbeb8c441a2d20d00475c3e9513e9'
+$s08TreeExpected = 'b8c418af7ca6016e86bf74c9cb4a0841f24b3f5f'
+$patchedTreeExpected = 'b1eeb17b86f5789abfbda2caea99c8839b33bb1b'
 $a05Patch = Join-Path $root 'A05_FONT_BUNDLE.patch'
 $a05PatchExpected = 'f4084a0625981e9b0c73f2c8b9f5b4f3816ee5f9953038f2d135e1d5d1923135'
+$sourceOutsideAllowlistPatch = Join-Path $root 'R5-SOURCE-ALLOWLIST-FIX.patch'
+$sourceOutsideAllowlistPatchExpected = '3f681ffdd367b6e7f6d7a38569b31b30c356da12003be2cf2f82cab07b8dd6df'
+$s08Patch = Join-Path $root 'review-patches/S08_RUN5_LAYOUT_NAV_REVIEW.patch'
+$s08PatchExpected = '52174d0ef34e41c28df87c2863444de50b183457f8709d21f2d0103acec218b0'
 $patchZip = Join-Path $root 'NOX_A04_BUILD_PATCH.zip'
 $patchZipExpected = '37078f0105f42ff9964a533399a9a71769d0517e8f0e3f49e3e7266ae28eb4eb'
 $patchExpected = 'cc799cde9b99c37be113950da2fcef53491873ccd417ca426cacbced47a83996'
@@ -28,6 +34,8 @@ $failure = $null
 $baseTree = $null
 $a04Tree = $null
 $a05Tree = $null
+$outsideAllowlistTree = $null
+$s08Tree = $null
 $patchedTree = $null
 $exeRecords = @()
 $qaLockSha = $null
@@ -37,6 +45,14 @@ $qaDependenciesReady = $false
 
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 New-Item -ItemType Directory -Path $work -Force | Out-Null
+# Keep Windows source-QA temp files under this isolated checkout. The runner's
+# profile TEMP path contains a reparse ancestor and can produce ACL/WinError 32
+# failures during security checks and TemporaryDirectory cleanup.
+$windowsTemp = Join-Path $work 'windows-temp'
+New-Item -ItemType Directory -Path $windowsTemp -Force | Out-Null
+$env:TEMP = $windowsTemp
+$env:TMP = $windowsTemp
+$env:TMPDIR = $windowsTemp
 Start-Transcript -LiteralPath (Join-Path $evidence 'windows-build-transcript.txt') -Force | Out-Null
 
 function Assert-Sha256([string]$Path, [string]$Expected, [string]$Label) {
@@ -97,6 +113,8 @@ try {
     Assert-Sha256 $patchPath $patchExpected 'A04 source patch'
     Assert-Sha256 $resourcePatch $resourcePatchExpected 'PP menu catalog bundle patch'
     Assert-Sha256 $a05Patch $a05PatchExpected 'A05 font bundle patch'
+    Assert-Sha256 $sourceOutsideAllowlistPatch $sourceOutsideAllowlistPatchExpected 'source outside allowlist patch'
+    Assert-Sha256 $s08Patch $s08PatchExpected 'S08 layout navigation patch'
 
     Invoke-Git @('-C', $source, 'init', '--quiet')
     Invoke-Git @('-C', $source, 'config', 'core.autocrlf', 'false')
@@ -123,6 +141,24 @@ try {
     $a05Tree = (& git -C $source write-tree).Trim()
     if ($LASTEXITCODE -ne 0 -or $a05Tree -cne $a05TreeExpected) {
         throw "A05 patched tree mismatch: expected=$a05TreeExpected actual=$a05Tree"
+    }
+
+    Invoke-Git @('-C', $source, 'apply', '--check', $sourceOutsideAllowlistPatch)
+    Invoke-Git @('-C', $source, 'apply', $sourceOutsideAllowlistPatch)
+    Invoke-Git @('-C', $source, 'add', '--all')
+    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+    $outsideAllowlistTree = (& git -C $source write-tree).Trim()
+    if ($LASTEXITCODE -ne 0 -or $outsideAllowlistTree -cne $outsideAllowlistTreeExpected) {
+        throw "Source outside allowlist tree mismatch: expected=$outsideAllowlistTreeExpected actual=$outsideAllowlistTree"
+    }
+
+    Invoke-Git @('-C', $source, 'apply', '--check', $s08Patch)
+    Invoke-Git @('-C', $source, 'apply', $s08Patch)
+    Invoke-Git @('-C', $source, 'add', '--all')
+    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+    $s08Tree = (& git -C $source write-tree).Trim()
+    if ($LASTEXITCODE -ne 0 -or $s08Tree -cne $s08TreeExpected) {
+        throw "S08 patched tree mismatch: expected=$s08TreeExpected actual=$s08Tree"
     }
 
     Invoke-Git @('-C', $source, 'apply', '--check', $resourcePatch)
@@ -235,11 +271,21 @@ try {
         source_a04_tree_expected=$a04TreeExpected
         source_a05_tree=$a05Tree
         source_a05_tree_expected=$a05TreeExpected
+        source_outside_allowlist_tree=$outsideAllowlistTree
+        source_outside_allowlist_tree_expected=$outsideAllowlistTreeExpected
+        source_s08_tree=$s08Tree
+        source_s08_tree_expected=$s08TreeExpected
         source_patched_tree=$patchedTree
         source_final_tree=$patchedTree
         source_tree_expected=$patchedTreeExpected
         a04_patch_zip_sha256=if (Test-Path -LiteralPath $patchZip) {(Get-FileHash -LiteralPath $patchZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         a05_patch_sha256=if (Test-Path -LiteralPath $a05Patch) {(Get-FileHash -LiteralPath $a05Patch -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
+        source_outside_allowlist_patch_sha256=if (Test-Path -LiteralPath $sourceOutsideAllowlistPatch) {(Get-FileHash -LiteralPath $sourceOutsideAllowlistPatch -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
+        s08_review_patch_sha256=if (Test-Path -LiteralPath $s08Patch) {(Get-FileHash -LiteralPath $s08Patch -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
+        a05_helper_review_commit='3d5888e8ad89f80cf826b64ff9e4673814faa008'
+        source_outside_allowlist_review_commit='44d74f8563be7dcdc8ee5df058a8829394bb8923'
+        s08_review_commit='6c56e4ee472165b4382881b3388ef3515da66223'
+        model_temp_root_review_commit='7e08a44babe1ed502548ef6a602f272d00323f48'
         wheelhouse_sha256=if (Test-Path -LiteralPath $wheelZip) {(Get-FileHash -LiteralPath $wheelZip -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null}
         qa_requirements_sha256=$qaLockSha
         qa_dependencies_ready=$qaDependenciesReady
