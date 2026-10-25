@@ -1,1 +1,4 @@
 /PP_MENU_CATALOG_BUNDLE.patch -text
+/A05_FONT_BUNDLE.patch -text
+/R5-SOURCE-ALLOWLIST-FIX.patch -text
+/review-patches/S08_RUN5_LAYOUT_NAV_REVIEW.patch -text
