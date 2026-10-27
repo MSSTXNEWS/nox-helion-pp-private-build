@@ -17,6 +17,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Ten physical integration-gate checks
         shell: pwsh
         run: python -m unittest discover -s tests/e06 -p 'test_*.py' -v
