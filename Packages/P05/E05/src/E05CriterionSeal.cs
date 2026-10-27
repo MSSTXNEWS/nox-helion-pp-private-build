@@ -23,12 +23,12 @@ public static class E05SealedProgress
         if (lane is null || verifier is null || lane.LaneId is < 1 or > 5 ||
             !IsSha256(lane.ManifestSha256) ||
             !verifier.IsFrozenManifest(lane.ManifestSha256, lane.LaneId) ||
-            lane.Criteria.Count == 0) return null;
+            lane.Criteria is null || lane.Criteria.Count == 0) return null;
         decimal total = 0, done = 0;
         var unique = new HashSet<string>(StringComparer.Ordinal);
         foreach (var c in lane.Criteria)
         {
-            if (string.IsNullOrWhiteSpace(c.TaskId) || !unique.Add(c.TaskId) ||
+            if (c is null || string.IsNullOrWhiteSpace(c.TaskId) || !unique.Add(c.TaskId) ||
                 c.Weight <= 0 || c.Weight > 1000) return null;
             checked { total += c.Weight; }
             if (c.State == "ACCEPTED")
