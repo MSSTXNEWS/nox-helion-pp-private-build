@@ -24,7 +24,13 @@ from typing import Any, Callable, Iterator
 MAX_FILE = 25 * 1024 * 1024
 MAX_CHAT = 100 * 1024 * 1024
 ALLOWED_MIME = {"application/pdf", "image/png", "image/jpeg", "text/plain"}
-_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+class _DenyRedirect(urllib.request.HTTPRedirectHandler):
+    """Never forward local prompts to a redirected remote host."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise P02Error("OLLAMA_HTTP_REDIRECT_DENIED")
+
+
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}), _DenyRedirect())
 
 
 class P02Error(Exception):
@@ -70,12 +76,20 @@ class OllamaClient:
 
     def models(self) -> list[str]:
         with self._open("/api/tags") as r:
-            doc = json.load(r)
+            raw = r.read(2 * 1024 * 1024 + 1)
+        if len(raw) > 2 * 1024 * 1024:
+            raise P02Error("Ollama model list over size limit")
+        try:
+            doc = json.loads(raw)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise P02Error("Invalid Ollama model list") from exc
+        if not isinstance(doc, dict):
+            raise P02Error("Invalid Ollama model metadata")
         models = doc.get("models")
         if not isinstance(models, list):
             raise P02Error("/api/tags returned invalid models")
         return [m["name"] for m in models if isinstance(m, dict)
-                and isinstance(m.get("name"), str) and m["name"]]
+                and isinstance(m.get("name"), str) and 0 < len(m["name"]) <= 256]
 
     def stop(self):
         """Signal the active iterator; never synchronously wait for HTTP close."""
@@ -251,6 +265,13 @@ class P02Store:
         self.staging.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.blobs.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._lock = threading.RLock()
+
+    def host_schema_inventory(self) -> tuple[str, ...]:
+        """Read-only host table list for #6; never silently migrate a user's DB."""
+        with self._lock:
+            return tuple(sorted(row[0] for row in self.db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")
+                if not str(row[0]).startswith('sqlite_')))
 
     def initialize(self):
         # Never create a duplicate chat history over an existing native chat schema.

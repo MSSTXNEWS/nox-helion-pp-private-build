@@ -87,6 +87,7 @@ class ChatBridgeTests(unittest.TestCase):
     def test_chat_rag_and_error_flow(self):
         from p02_chat_bridge import ChatBridge
         class Fake:
+            def models(self): return ['tiny']
             def stream(self, model, messages, stop):
                 self.messages = messages
                 yield {'delta':'OK', 'done':False}

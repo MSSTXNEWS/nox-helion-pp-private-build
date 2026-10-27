@@ -71,6 +71,8 @@ class ChatBridge:
         history = self.store.history(tenant, principal, chat_id)
         if stop.is_set():
             raise Cancelled("STOP requested before chat")
+        # Fail closed: writing a prompt cannot silently target a nonexistent tag.
+        self.select_model(model)
         context, evidence = "", []
         if self.rag_context:
             context, evidence = self._rag_evidence(
@@ -87,9 +89,14 @@ class ChatBridge:
         if evidence:
             yield {"type": "chat.sources", "run_id": run, "sources": evidence}
         parts: list[str] = []
+        total_chars = 0
         try:
             for item in self.ollama.stream(model, messages, stop):
                 if item["delta"]:
+                    total_chars += len(item["delta"])
+                    if total_chars > 1_000_000:
+                        self.ollama.stop()  # cancel runaway generation
+                        raise P02Error("Ollama reply exceeded persistence quota")
                     parts.append(item["delta"])
                     yield {"type": "chat.delta", "run_id": run, "text": item["delta"]}
                 if item["done"]:
