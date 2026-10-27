@@ -1,0 +1,81 @@
+{
+  "schema": "NOX-V16-SOURCE-RECEIPT-V1",
+  "runId": "NOX-V16-PACK02-50-20261028",
+  "owner": 6,
+  "base": "ea3eaf019665ea3cc886dcb998ae353eb6a053fe",
+  "sourceCandidateBranch": "nox-v16-pack02-50-working-tools-20261028",
+  "sourceCommit": "75ca537ce5b8e9a43314d76ad7272d7c771b7165",
+  "originalTreePreserved": true,
+  "notes": [
+    "All these files are new relative to PACK01 PR #27 base; preimage ABSENT (not a SHA).",
+    "SHA256 values are hashes of UTF-8 file contents from authenticated GitHub exact branch readback.",
+    "Git blob sha1 recorded separately, not equal to SHA256.",
+    "CI proves isolated execution, NOT integrated Windows app/EXE or independent E07 QA.",
+    "No original file was modified in accepted branch final tree."
+  ],
+  "paths": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "2a0b346f9bbd2823cbf97a9062d965fe82c0fd5f13c1915761d71ea73dfa48b3",
+      "git_blob_sha1": "11e7081acf30d0b91649af2f8513044900664bc8",
+      "bytes_utf8": 9592
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/catalog.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "12e61ca6fd7c2eae417a1ecaafa53a393379db63752927a3e6d269f9f69ed6cf",
+      "git_blob_sha1": "a18a1de445fbf3d734b02b52be4ea1e726ae52db",
+      "bytes_utf8": 1977
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/catalog.json",
+      "preimage": "ABSENT",
+      "post_sha256": "9c9e2197248ce6f861a67300db2b48565915303b05f999c1659cb254d9a5ab4f",
+      "git_blob_sha1": "69e6925eec57291474c14a33c344665689561dd5",
+      "bytes_utf8": 16934
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/panel.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "cde12aa9ab0147f8d1128053dd3ba2cda4443cde09994884d1490c0425baf5a2",
+      "git_blob_sha1": "3dedab59de7bf5aff74c96e346b8cf37ad06b6c9",
+      "bytes_utf8": 3488
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/panel.css",
+      "preimage": "ABSENT",
+      "post_sha256": "361c7cc19eeae3e1f62255988972f5bd8def18fdc272c6e23b117605096dbc97",
+      "git_blob_sha1": "7f14c9b6a3b7ed910586beb3e694ae7556f4f4a7",
+      "bytes_utf8": 2704
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/smoke.test.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "04472b80b3fdb7e819ec1a03fc1f0439c0f8234743a8af8b8d3cafe7462f6306",
+      "git_blob_sha1": "a7f1fc89406042c7a76ceec7186c93548a9e9486",
+      "bytes_utf8": 3578
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/README.md",
+      "preimage": "ABSENT",
+      "post_sha256": "06333bfb26380b5fd49bf5b3da0dd9bedc47fe2d60b96f968aa353441f9106d9",
+      "git_blob_sha1": "e9f3da0e27d0bc6e239b7995d10b8517568956e1",
+      "bytes_utf8": 3205
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/acceptance-ledger.csv",
+      "preimage": "ABSENT",
+      "post_sha256": "f7b2091608afbe3416b5b61d65d8ca95959aef1de24f2ffa7be6ea88b9ab7a49",
+      "git_blob_sha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "bytes_utf8": 3025
+    },
+    {
+      "path": ".github/workflows/nox-pack02-fifty-checks.yml",
+      "preimage": "ABSENT",
+      "post_sha256": "6ac4a148680345a0045f7ade949f98728e7277cf74afa585d0bae5e00b4f9a43",
+      "git_blob_sha1": "89dc2a64b00248a6c2de52aad357ad995fd0bdb5",
+      "bytes_utf8": 807
+    }
+  ]
+}
