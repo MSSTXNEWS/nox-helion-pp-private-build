@@ -127,6 +127,49 @@ class PythonHostCompatibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(rag.RagHold, "RAG_CHUNK_PROVENANCE_INVALID"):
             self.rag.search(OWNER_A, "c1", "alpha")
 
+    def test_authorized_file_ingestion_is_idempotent_and_updatable(self):
+        source_file = Path(self.tmp.name) / "note.md"
+        source_file.write_bytes(b"\xef\xbb\xbfalpha file")
+        first = self.rag.ingest_file(OWNER_A, "c1", source_file)
+        self.assertEqual(first["indexed_chunks"], 1)
+        self.assertFalse(first["unchanged"])
+        self.assertEqual(first["sha256"], rag._sha(source_file.read_bytes()))
+        prior_calls = EmbedFixture.count
+        second = self.rag.ingest_file(OWNER_A, "c1", source_file)
+        self.assertEqual(EmbedFixture.count, prior_calls)
+        self.assertTrue(second["unchanged"])
+        source_file.write_text("beta changed file", encoding="utf-8")
+        updated = self.rag.ingest_file(OWNER_A, "c1", source_file)
+        self.assertFalse(updated["unchanged"])
+        self.assertEqual(updated["source_id"], first["source_id"])
+        self.assertEqual(len(self.rag.search(OWNER_A, "c1", "beta")), 1)
+
+    def test_bad_file_and_foreign_owner_cannot_read_or_import(self):
+        source_file = Path(self.tmp.name) / "invalid.md"
+        source_file.write_bytes(b"\xff\xfe\xff")
+        with self.assertRaisesRegex(rag.RagHold, "RAG_FILE_NOT_UTF8"):
+            self.rag.ingest_file(OWNER_A, "c1", source_file)
+        with self.assertRaisesRegex(rag.RagHold, "RAG_AUTHENTICATED_OWNER_SID_REQUIRED"):
+            self.rag.ingest_file("not-owner", "c1", source_file)
+        original = Path(self.tmp.name) / "keep.md"
+        original.write_text("alpha safe", encoding="utf-8")
+        link = Path(self.tmp.name) / "link.md"
+        try:
+            link.symlink_to(original)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlinks unsupported")
+        with self.assertRaisesRegex(rag.RagHold, "RAG_FILE_SYMLINK_BLOCKED"):
+            self.rag.ingest_file(OWNER_A, "c1", link)
+        self.assertEqual(original.read_text(encoding="utf-8"), "alpha safe")
+
+    def test_legacy_source_with_oversized_title_holds_in_p02_adapter(self):
+        self.rag.ingest_text(OWNER_A, "c1", "safe-source", "example.md", "alpha content")
+        old = json.loads(self.index_path.read_text(encoding="utf-8"))
+        old["sources"][0]["fileName"] = "x" * 201 + ".md"
+        self.index_path.write_text(json.dumps(old), encoding="utf-8")
+        with self.assertRaisesRegex(rag.RagHold, "RAG_PROVENANCE_P02_INCOMPATIBLE"):
+            self.rag.context(OWNER_A, "c1", "alpha")
+
     def test_source_identity_and_symlink_fail_closed(self):
         original = Path(self.tmp.name) / "untouched.txt"
         original.write_text("safe", encoding="utf-8")
