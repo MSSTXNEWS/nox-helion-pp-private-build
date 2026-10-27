@@ -95,6 +95,10 @@ internal static class Program
             Check(hits.Count > 0 && hits[0].Text.Contains("alpha original"), "authorized search");
             Check(hits[0].ChunkSha256 == Sha(hits[0].Text), "citation hash");
             Check(RagService.BuildContext(hits).Contains("SHA256:"), "citation context");
+            await ingest.IngestTextAsync(ownerA, conversation, "citation-safety", "source]#note.md", "alpha citation");
+            var safelyEncoded = await ingest.BuildContextAsync(ownerA, conversation, "alpha");
+            Check(safelyEncoded.ContextText.Contains("source%5D%23note.md"), "citation filename percent-encoded");
+            Check(!safelyEncoded.ContextText.Contains("source]#note.md"), "unescaped filename absent");
 
             Check((await rag.SearchAsync(ownerB, conversation, "alpha")).Count == 0, "owner isolation");
             Check((await rag.SearchAsync(ownerA, "other-conversation", "alpha")).Count == 0, "conversation isolation");
