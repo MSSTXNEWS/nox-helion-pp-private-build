@@ -29,12 +29,19 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $patch = (Resolve-Path 'Packages/P03/C40/NOX_V16_E03_TURBO10_from_C40.patch').Path
           $expected = 'bb6f38d3da5389039236f8c66419e74b8e593b5db66280df7a89a8932ba12149'
-          if ((Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'P03_TURBO10_PATCH_SHA_MISMATCH' }
+          # Git on Windows may checkout .patch files with CRLF despite LF blob bytes.
+          # Normalize into a temp copy for a SHA-256 check over the exact original patch bytes.
+          $patchText = [System.IO.File]::ReadAllText($patch).Replace("`r`n", "`n")
+          $patchBytes = [System.Text.Encoding]::UTF8.GetBytes($patchText)
+          $actual = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($patchBytes)).ToLowerInvariant()
+          if ($actual -ne $expected) { throw "P03_TURBO10_PATCH_SHA_MISMATCH actual=$actual" }
+          $exactPatch = Join-Path $env:RUNNER_TEMP 'NOX_P03_TURBO10_exact.patch'
+          [System.IO.File]::WriteAllBytes($exactPatch, $patchBytes)
           git -C p03-c40-source init -q
           if ($LASTEXITCODE -ne 0) { throw 'P03_GIT_INIT_FAILED' }
-          git -C p03-c40-source apply --check $patch
+          git -C p03-c40-source apply --check $exactPatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_PREIMAGE_FAILED' }
-          git -C p03-c40-source apply $patch
+          git -C p03-c40-source apply $exactPatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_APPLY_FAILED' }
       - uses: actions/setup-dotnet@v4
         with:
