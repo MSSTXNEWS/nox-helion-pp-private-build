@@ -12,6 +12,7 @@ PATHS=(
     "coordination/e06/emit_receipts.py",
     "coordination/e06/README.md",
     "tests/e06/test_verify_integration.py",
+    "tests/e06/test_hardening.py",
     ".github/workflows/nox-e06-intake.yml",
 )
 def git(*args):
