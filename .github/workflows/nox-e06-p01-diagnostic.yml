@@ -1,0 +1,48 @@
+name: NOX E06 P01 diagnostic Windows source build
+on:
+  push:
+    paths:
+      - 'donors/P01_C07/**'
+      - 'coordination/e06/stage_p01.py'
+      - '.github/workflows/nox-e06-p01-diagnostic.yml'
+  pull_request:
+    paths:
+      - 'donors/P01_C07/**'
+      - 'coordination/e06/stage_p01.py'
+      - '.github/workflows/nox-e06-p01-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  shell-build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Reconstruct exact P01 source ZIP and lock every R11 file SHA
+        shell: pwsh
+        run: python coordination/e06/stage_p01.py
+      - name: Compile original untouched P01 Windows WPF WebView2 shell
+        shell: pwsh
+        run: |
+          dotnet restore work/e06/staged/R11/NOX.P01.Shell.csproj
+          if ($LASTEXITCODE -ne 0) { throw "P01_RESTORE_FAIL" }
+          dotnet build work/e06/staged/R11/NOX.P01.Shell.csproj --no-restore -c Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw "P01_BUILD_FAIL" }
+      - name: Preserve exact original lock and diagnostic built files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-p01-wpf-diagnostic-source-and-build
+          path: |
+            work/e06/staged/source_lock.json
+            work/e06/staged/R11/bin/Release/net8.0-windows/
+          if-no-files-found: warn
+          retention-days: 14
