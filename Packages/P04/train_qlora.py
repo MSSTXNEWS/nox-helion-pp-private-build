@@ -327,6 +327,11 @@ class RunController:
 
     def stop(self, reason: str = "stop-requested") -> Path:
         with self._lock:
+            if self.state == "STOPPED":
+                if not self.events or self.events[-1].get("state") != "STOPPED":
+                    raise TrainingGateError("STATE_INVALID", "Terminal STOP event is unavailable.")
+                # Retry receipt finalization after an earlier receipt write failure.
+                return self.write_result("STOPPED", self.events[-1]["reason"])
             if self.state not in ("RUNNING", "PAUSE_REQUESTED", "PAUSED"):
                 raise TrainingGateError("STATE_INVALID", "STOP requires an active or paused run.")
             self._persist("STOPPED", reason)
