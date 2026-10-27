@@ -34,7 +34,7 @@ def main():
     if "{{" in original:raise SystemExit("P05_TEMPLATE_ALREADY_INTERPOLATED")
     body=original[len('        return """'):-len('""";')]
     rewritten,count=re.subn(r'""" \+ (.*?) \+ """',convert,body,flags=re.S)
-    if count!=16 or '"""' in rewritten or rewritten.count("{{")!=20:
+    if count!=16 or '"""' in rewritten or rewritten.count("{{")!=21:
         raise SystemExit("P05_HTML_EXPRESSION_MAP_CHANGED")
     content='        return $$"""\n'+"\n".join("        "+x for x in rewritten.splitlines())+'\n        """;'
     repaired=source[:begin]+content+source[end:]
