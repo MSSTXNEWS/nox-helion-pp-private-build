@@ -3,7 +3,7 @@
   "run_id": "NOX-V16-E04-TURBO10-20261028",
   "owner": 4,
   "branch": "e04/v16-pr7-guard-tests-20261028",
-  "head_before_receipt_git_sha1": "4efd6837b6c731e9d08e8b147510cf165f51c3bc",
+  "head_before_receipt_git_sha1": "3702da76c2243183d4313ee8b60796723588d6fa",
   "base_git_sha1": "1213906cadf57cb8a530a236fe6572fd54a5932b",
   "source_lock": "HOLD_E06",
   "accepted": "NO",
@@ -18,9 +18,9 @@
       "path": ".github/workflows/nox-p04-candidate-ci.yml",
       "owner": 4,
       "pre_sha256": "ABSENT",
-      "post_sha256": "54f0c92f9df1804299fc04da57908fbe94f5bd41f378dc1ec26e76b197d4216b",
-      "git_blob_sha1": "39c251b317657c3f184ba9b725b7a7934aebfd82",
-      "hunk_sha256": "2cd48fd4c808fffacb1b36fa3453ea60ab81cf3f23244d29d4252433f24059b3",
+      "post_sha256": "1bc83130243b0c87824578210d0755b807213e8bc432556c1e109942c6be2169",
+      "git_blob_sha1": "3a42bd189d29ab8eecaa0fbc540a5fbfb19f2580",
+      "hunk_sha256": "PENDING_AFTER_WORKFLOW_EDIT",
       "state": "PATCH_CANDIDATE"
     },
     {
@@ -122,5 +122,8 @@
       "hunk_sha256": "5aebfda8e236a908ab5a28f4fd1f17ab779f862d5a8e095080b8ac693900d862",
       "state": "PATCH_CANDIDATE"
     }
-  ]
+  ],
+  "previous_head_before_receipt_git_sha1": "4efd6837b6c731e9d08e8b147510cf165f51c3bc",
+  "ci_actual_after_change": "NO_VERIFIED_RUN",
+  "note": "Final receipt covers exact content at pre-receipt commit, excludes this JSON file; hunk hash for workflow intentionally PENDING and must be recomputed by E06, not acceptance."
 }
