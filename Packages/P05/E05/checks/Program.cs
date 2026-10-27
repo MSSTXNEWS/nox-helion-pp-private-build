@@ -222,6 +222,40 @@ try { await new E05SensorPublisher(Array.Empty<ISensorProvider>(),
     throw new Exception("T10-01 invalid bridge was allowed"); }
 catch (NotSupportedException) { Console.WriteLine("PASS T10-10: old noncanonical telemetry publisher fails closed"); }
 
+// C09: regressions for changes physically committed to E05 source.
+var replay = new E05ActivityTimeline("RUN-E05-TEST");
+for (int i = 0; i < 10020; i++)
+    if (!replay.Accept(evt! with { EventId = "c09-" + i }, nowV3))
+        throw new Exception("C09 replay admission failed at " + i);
+Check(!replay.Accept(evt! with { EventId = "c09-10019" }, nowV3),
+    "C09-01 bounded replay window retains recent deduplication");
+Check(!replay.Accept(evt! with { EventId = "old-rejected", TimestampUtc = nowV3.AddMinutes(-4) }, nowV3),
+    "C09-01 out-of-order event rejected");
+Check(replay.Accept(evt! with { EventId = "old-rejected" }, nowV3),
+    "C09-01 rejected event ID not consumed");
+var mixedVram = E05HardwareEvidence.Snapshot("RUN-E05-TEST", new ISensorProvider[] {
+    new FakeSensorProvider(new SensorPoint("gpu.vram.used_bytes", 30, "bytes", "NVML", nowV3, "LIVE"),
+        new SensorPoint("gpu.vram.total_bytes", 50, "bytes", "OTHER", nowV3, "LIVE"),
+        new SensorPoint("gpu.percent", 88, "bytes", "NVML", nowV3, "LIVE")) }, nowV3, CancellationToken.None);
+Check(mixedVram.Sensors.Single(x => x.Key == "gpu.vram.used_bytes").Value is null &&
+    mixedVram.Sensors.Single(x => x.Key == "gpu.percent").Value is null,
+    "C09-02 mixed VRAM providers and wrong units fail closed");
+var nullOrbit = E05CorePersonaProjection.Project(null!, approvedPersonas,
+    cproof, pproof, nowV3);
+Check(nullOrbit.CenterPercent is null && nullOrbit.Status == "N_D",
+    "C09-03 null CoreID proof list cannot fake progress");
+using (var malformedHttp = new HttpClient(new MalformedRevisionFixtureHandler()))
+{
+    var malformedDocs = new GoogleDocsAppendReadback(malformedHttp,
+        _ => Task.FromResult("fixture-token"));
+    var bad = await malformedDocs.AppendAsync("1FixtureDocumentId", id, entry,
+        CancellationToken.None);
+    Check(bad.Status == "NO_REVISION",
+        "C09-05 non-string Google revision fails closed");
+}
+Check(E05WowCompatibility.Resolve(null!, true, false, false).All(x => !x.Enabled),
+    "C09-09 null WOW allowlist leaves optional motion disabled");
+
 Console.WriteLine("ALL E05 mocked/offline checks passed (no real hardware/network)");
 
 sealed class DocsFixtureHandler : HttpMessageHandler
@@ -284,4 +318,12 @@ sealed class FakeReceiptVerifier : IE05ReceiptVerifier
 sealed class FakeLegacyTransport : IEventV3Transport
 {
     public ValueTask SendAsync(TelemetryEventV3 m, CancellationToken stop) => ValueTask.CompletedTask;
+}
+
+sealed class MalformedRevisionFixtureHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage req, CancellationToken ct) =>
+        Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent("{\"revisionId\":42,\"body\":{\"content\":[]}}")
+        });
 }
