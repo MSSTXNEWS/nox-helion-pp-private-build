@@ -64,7 +64,10 @@ public static class SpaceParsers
             string published = node.SelectSingleNode("pubDate")?.InnerText?.Trim() ?? "";
             if (title.Length == 0 || title.Length > 300 ||
                 !Uri.TryCreate(link, UriKind.Absolute, out var uri) ||
-                uri.Scheme != Uri.UriSchemeHttps) continue;
+                uri.Scheme != Uri.UriSchemeHttps || uri.IsLoopback ||
+                uri.HostNameType != UriHostNameType.Dns ||
+                uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) ||
+                !string.IsNullOrEmpty(uri.UserInfo)) continue;
             DateTimeOffset? time = DateTimeOffset.TryParse(published,
                 CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var t) ? t : null;
             result.Add(new NewsHeadline(title, uri, source, time));
