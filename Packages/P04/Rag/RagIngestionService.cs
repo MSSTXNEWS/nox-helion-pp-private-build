@@ -189,7 +189,7 @@ public sealed class RagIngestionService
         var included = new List<RagSearchResult>(hits.Count);
         foreach (var hit in hits)
         {
-            var citation = $"[SOURCE: {hit.FileName}#{hit.ChunkIndex + 1}; SHA256:{hit.ChunkSha256}]\n";
+            var citation = $"[SOURCE: {Uri.EscapeDataString(hit.FileName)}#{hit.ChunkIndex + 1}; SHA256:{hit.ChunkSha256}]\n";
             var needed = citation.Length + hit.Text.Length + (context.Length == 0 ? 0 : 2);
             if (needed > MaximumContextCharacters - context.Length)
                 break;
