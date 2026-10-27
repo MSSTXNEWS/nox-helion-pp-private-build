@@ -795,7 +795,11 @@ def main() -> int:
         train_loss = finite_metric(result.training_loss)
         baseline_eval_loss = finite_metric(baseline.get("eval_loss"))
         adapter_eval_loss = finite_metric(final_eval.get("eval_loss"))
-        evaluation_status = "VALID" if baseline_eval_loss is not None and adapter_eval_loss is not None else "HOLD_MISSING_OR_NONFINITE"
+        evaluation_status = (
+            "HOLD_MISSING_OR_NONFINITE" if baseline_eval_loss is None or adapter_eval_loss is None
+            else "VALID" if adapter_eval_loss < baseline_eval_loss
+            else "HOLD_NO_IMPROVEMENT"
+        )
         if status == "COMPLETED" and (train_loss is None or evaluation_status != "VALID"):
             status = "HOLD"
         checkpoint_info = None
