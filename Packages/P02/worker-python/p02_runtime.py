@@ -111,6 +111,16 @@ class OllamaClient:
             self._busy, self._cancel = True, cancel
         received: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=32)
         finished = threading.Event()
+        consumer_done = threading.Event()
+
+        def release_if_closed():
+            # The lease belongs to BOTH the transport and the UI iterator;
+            # draining a buffered response is still an active chat operation.
+            if not finished.is_set() or not consumer_done.is_set():
+                return
+            with self._guard:
+                if self._cancel is cancel:
+                    self._cancel, self._busy = None, False
 
         def emit(kind: str, item: object):
             # Bound memory even when the iterator is stopped/closed.
@@ -173,6 +183,7 @@ class OllamaClient:
                     if self._active is response:
                         self._active = None
                 finished.set()
+                release_if_closed()
                 emit("end", None)
 
         thread = threading.Thread(target=worker, daemon=True, name="nox-p02-ollama-stream")
@@ -206,9 +217,12 @@ class OllamaClient:
                 raise P02Error("Ollama stream truncated before done=true")
         finally:
             cancel.set()
+            consumer_done.set()
             with self._guard:
                 response = self._active
-                self._cancel, self._busy = None, False
+            # Only the final party to finish (socket OR consumer) clears the
+            # single-chat lease. STOP of a blocked socket never releases it early.
+            release_if_closed()
             if response is not None and not finished.is_set():
                 threading.Thread(target=self._close_safely, args=(response,), daemon=True).start()
 
