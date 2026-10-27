@@ -12,8 +12,10 @@ test("original asset tree untouched; exact SHA-256 for every new production asse
    assert.ok(x.path.startsWith("proposals/NOX-WOW51-100/")||x.path===".github/workflows/nox-wow51-100.yml");
    const target=resolve(root,x.path);
    assert.ok(target.startsWith(root+sep));
-   const bytes=readFileSync(target);
-   assert.equal(createHash("sha256").update(bytes).digest("hex"),x.post_sha256,x.path);
-   assert.equal(bytes.length,x.bytes_utf8,x.path);
+   const raw=readFileSync(target,"utf8");
+   // GitHub stores the canonical UTF-8 blob; Windows checkout may materialize CRLF. Compare the canonical LF content.
+   const canonical=Buffer.from(raw.replace(/\r\n/g,"\n"),"utf8");
+   assert.equal(createHash("sha256").update(canonical).digest("hex"),x.post_sha256,x.path);
+   assert.equal(canonical.length,x.bytes_utf8,x.path);
  }
 });
