@@ -716,8 +716,9 @@ def main() -> int:
                     control.should_training_stop = True
                 return control
             def on_save(self, args_, state, control, **kwargs):
-                events.emit("checkpoint.saved", "READY", "checkpoint_saved",
-                            "Transformers saved a resumable checkpoint.", int(state.global_step), int(state.max_steps))
+                events.emit("checkpoint.saved", "RUNNING", "checkpoint_saved",
+                            "Trainer reported a checkpoint save; full-state integrity is verified separately.",
+                            int(state.global_step), int(state.max_steps))
                 return control
 
         # Capture a genuine base holdout baseline before attaching LoRA.
