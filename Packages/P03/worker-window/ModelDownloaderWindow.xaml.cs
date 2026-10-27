@@ -161,7 +161,7 @@ public sealed class ModelDownloaderWindow : Window
             string.IsNullOrWhiteSpace(artifact.ArtifactName))
             return Block("Нет идентификатора выбранного артефакта.", out reason);
         if (string.IsNullOrWhiteSpace(artifact.LicenseId) ||
-            string.IsNullOrWhiteSpace(artifact.LicenseEvidenceUrl))
+            !IsHttpsEvidence(artifact.LicenseEvidenceUrl))
             return Block("Лицензия или её источник не подтверждены.", out reason);
         if (!Regex.IsMatch(artifact.ResolvedRevision ?? string.Empty, "^[0-9a-fA-F]{40}$"))
             return Block("Не закреплена неизменяемая ревизия commit SHA.", out reason);
@@ -170,19 +170,26 @@ public sealed class ModelDownloaderWindow : Window
         if (!Regex.IsMatch(artifact.Sha256 ?? string.Empty, "^[0-9a-fA-F]{64}$"))
             return Block("SHA-256 артефакта неизвестен или некорректен.", out reason);
         if (artifact.RequiredVramGiB is null || artifact.RequiredVramGiB <= 0 ||
-            string.IsNullOrWhiteSpace(artifact.CompatibilityEvidenceUrl))
+            !IsHttpsEvidence(artifact.CompatibilityEvidenceUrl))
             return Block("Совместимость/требование VRAM не подтверждены источником.", out reason);
         if (!decimal.TryParse(_availableVram.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var available) ||
             available <= 0 || available < artifact.RequiredVramGiB.Value)
             return Block("Доступная VRAM не указана или меньше подтверждённого требования.", out reason);
-        if (string.IsNullOrWhiteSpace(artifact.SourceCommit) ||
-            string.IsNullOrWhiteSpace(artifact.SourceTree) ||
+        if (!IsGitObjectId(artifact.SourceCommit) ||
+            !IsGitObjectId(artifact.SourceTree) ||
             string.IsNullOrWhiteSpace(artifact.OwnerReceiptId))
             return Block("Нет привязки к source commit/tree и owner receipt.", out reason);
 
         reason = "Поля provenance и совместимости подтверждены.";
         return true;
     }
+
+    private static bool IsHttpsEvidence(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGitObjectId(string? value) =>
+        Regex.IsMatch(value ?? string.Empty, "^[0-9a-fA-F]{40}$");
 
     private static bool Block(string message, out string reason)
     {
