@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 from dataclasses import dataclass
 from typing import Callable, Mapping
 from p02_runtime import P02Error
@@ -65,7 +66,8 @@ class P02EventRelay:
         if kind == 'chat.start':
             if self._started:
                 raise P02Error('DUPLICATE_CHAT_START')
-            if not isinstance(event.get('model'), str) or not event['model']:
+            if (not isinstance(event.get('model'), str) or
+                    not 0 < len(event['model']) <= 256):
                 raise P02Error('CHAT_START_MODEL_REQUIRED')
         elif not self._started:
             raise P02Error('CHAT_START_REQUIRED')
@@ -75,7 +77,8 @@ class P02EventRelay:
             raise P02Error('CHAT_DELTA_NOT_TEXT')
         if kind == 'chat.sources' and not isinstance(event.get('sources'), list):
             raise P02Error('CHAT_SOURCES_INVALID')
-        if kind == 'chat.complete' and (not isinstance(event.get('chars'), int) or event['chars'] < 0):
+        if kind == 'chat.complete' and (type(event.get('chars')) is not int or
+                                        not 0 <= event['chars'] <= 1_000_000):
             raise P02Error('CHAT_COMPLETE_INVALID')
         payload = {k: v for k, v in event.items() if k != 'type'}
         # Native host schemas are explicit, not a generic JSON-to-privilege
@@ -110,6 +113,14 @@ class P02EventRelay:
                         ('url' in row and
                          (not isinstance(row['url'], str) or len(row['url']) > 2048))):
                     raise P02Error('CHAT_SOURCES_SCHEMA_INVALID')
+                if 'url' in row:
+                    try:
+                        u = urllib.parse.urlsplit(row['url'])
+                        if (u.scheme != 'https' or not u.hostname or u.username or
+                                u.password or any(ord(c) < 32 for c in row['url'])):
+                            raise P02Error('CHAT_SOURCE_URL_FORBIDDEN')
+                    except ValueError as exc:
+                        raise P02Error('CHAT_SOURCE_URL_FORBIDDEN') from exc
         try:
             serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False)
         except (TypeError, ValueError, OverflowError) as exc:

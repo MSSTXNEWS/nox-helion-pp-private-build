@@ -266,7 +266,11 @@ class P02Store:
                 isinstance(t, str) and t and len(t) <= 128 for t in approved_host_tables):
             raise TypeError('Native host approved table names required')
         self.approved_host_tables = approved_host_tables
-        self.root = pathlib.Path(attachment_root).resolve()
+        original_root = pathlib.Path(attachment_root).absolute()
+        # Native owner must give the actual app-owned directory, never a symlink.
+        if original_root.is_symlink():
+            raise P02Error('ATTACHMENT_ROOT_SYMLINK_DENIED')
+        self.root = original_root.resolve()
         self.staging = self.root / "staging"
         self.blobs = self.root / "stored"
         # This is host-selected application data, NEVER a path from webpage JS.
@@ -311,6 +315,9 @@ class P02Store:
             enabled = self.db.execute('PRAGMA foreign_keys').fetchone()
             if enabled != (1,):
                 raise P02Error('HOST_SQLITE_FOREIGN_KEYS_REQUIRED')
+            # Explicit BEGIN makes CREATE TABLE/INDEX and metadata insert one
+            # rollbackable unit (sqlite3's implicit transactions skip DDL).
+            self.db.execute('BEGIN IMMEDIATE')
             with self.db:
                 yield
 
@@ -359,6 +366,26 @@ class P02Store:
                     cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
                     if cols != expected_columns:
                         raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
+                    key_columns = {'p02_chats': 'id', 'p02_messages': 'id',
+                                   'p02_attachments': 'id', 'p02_gc': 'storage',
+                                   'p02_meta': 'key'}
+                    info = list(self.db.execute(f'PRAGMA table_info({table})'))
+                    if not any(row[1] == key_columns[table] and row[5] == 1 for row in info):
+                        raise P02Error('P02_SCHEMA_PRIMARY_KEY_DRIFT; restore verified backup')
+                # A forged attachment table with matching column names but no
+                # storage uniqueness could bind one physical blob to several chats.
+                indices = list(self.db.execute('PRAGMA index_list(p02_attachments)'))
+                found_storage_unique = False
+                for index_row in indices:
+                    if index_row[2] != 1:  # unique = 1
+                        continue
+                    index_name = str(index_row[1]).replace('"', '""')
+                    keys = [row[2] for row in self.db.execute(
+                        f'PRAGMA index_info("{index_name}")')]
+                    if keys == ['storage']:
+                        found_storage_unique = True
+                if not found_storage_unique:
+                    raise P02Error('P02_STORAGE_UNIQUENESS_DRIFT; restore verified backup')
                 for table in ('p02_messages', 'p02_attachments'):
                     rows = list(self.db.execute(f'PRAGMA foreign_key_list({table})'))
                     if not any(row[2] == 'p02_chats' and row[3] == 'chat_id'
@@ -435,6 +462,11 @@ class P02Store:
         if mime not in ALLOWED_MIME:
             raise P02Error("Unsupported MIME")
         _check_scope(tenant, user, chat)
+        # Deny unauthorized streams BEFORE allocating staging bytes. Ownership
+        # is checked again in the committing SQLite transaction to prevent TOCTOU.
+        with self._lock:
+            self._owned(tenant, user, chat)
+        self._assert_storage_roots()
         fd, tmp_name = tempfile.mkstemp(prefix="p02_", suffix=".stage", dir=self.staging)
         tmp = pathlib.Path(tmp_name)
         storage = uuid.uuid4().hex
@@ -443,21 +475,37 @@ class P02Store:
         size = 0
         first = bytearray()
         digest = hashlib.sha256()
+        text_decoder = None
+        if mime == 'text/plain':
+            import codecs
+            text_decoder = codecs.getincrementaldecoder('utf-8')('strict')
         try:
             with os.fdopen(fd, "wb") as out:
                 while True:
                     chunk = source.read(65536)
-                    if not chunk:
+                    if chunk == b'':
                         break
-                    if not isinstance(chunk, bytes):
-                        raise P02Error("Attachment source must supply bytes")
+                    if not isinstance(chunk, bytes) or len(chunk) > 65536:
+                        raise P02Error('ATTACHMENT_STREAM_INVALID_CHUNK')
                     size += len(chunk)
                     if size > MAX_FILE:
                         raise P02Error("Attachment exceeds 25 MiB limit")
+                    if text_decoder is not None:
+                        if b'\x00' in chunk:
+                            raise P02Error('ATTACHMENT_PLAINTEXT_NUL_DENIED')
+                        try:
+                            text_decoder.decode(chunk, final=False)
+                        except UnicodeError as exc:
+                            raise P02Error('ATTACHMENT_PLAINTEXT_UTF8_REQUIRED') from exc
                     digest.update(chunk)
                     if len(first) < 12:
                         first.extend(chunk[:12 - len(first)])
                     out.write(chunk)
+                if text_decoder is not None:
+                    try:
+                        text_decoder.decode(b'', final=True)
+                    except UnicodeError as exc:
+                        raise P02Error('ATTACHMENT_PLAINTEXT_UTF8_REQUIRED') from exc
                 out.flush()
                 os.fsync(out.fileno())
             if size == 0:
@@ -507,8 +555,11 @@ class P02Store:
             path = _safe_blob_path(self.blobs, storage)
             fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             with os.fdopen(fd, "rb") as f:
-                if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
-                    raise P02Error("Not a regular stored file")
+                file_stat = os.fstat(f.fileno())
+                if not stat.S_ISREG(file_stat.st_mode):
+                    raise P02Error('Not a regular stored file')
+                if file_stat.st_nlink != 1:
+                    raise P02Error('ATTACHMENT_HARDLINK_ALIAS_DENIED')
                 content = f.read(MAX_FILE + 1)
             if len(content) != expected or hashlib.sha256(content).hexdigest() != sha:
                 raise P02Error("Stored attachment checksum mismatch")
@@ -545,7 +596,13 @@ class P02Store:
                     continue
                 self._assert_storage_roots()
                 path = _safe_blob_path(self.blobs, storage)
-                with contextlib.suppress(FileNotFoundError):
+                try:
+                    st = path.lstat()
+                except FileNotFoundError:
+                    st = None
+                if st is not None:
+                    if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+                        raise P02Error('ATTACHMENT_GC_UNSAFE_FILE_TYPE')
                     path.unlink()
                 with self.db:
                     self.db.execute("DELETE FROM p02_gc WHERE storage=?", (storage,))
