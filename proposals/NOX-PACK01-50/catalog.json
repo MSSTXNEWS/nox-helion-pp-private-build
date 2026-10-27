@@ -83,7 +83,7 @@
       "title": "История разговоров",
       "category": "chat",
       "owner": 2,
-      "risk": "safe",
+      "risk": "sensitive",
       "intent": "nox.feature.request",
       "settings": []
     },
