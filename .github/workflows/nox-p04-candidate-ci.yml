@@ -1,0 +1,24 @@
+name: NOX P04 isolated component checks
+on:
+  push:
+    branches:
+      - e04/v16-pr7-guard-tests-20261028
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p04-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Fail-closed synthetic Python regression tests
+        run: python -m unittest discover -s tests/P04 -p 'test_*.py' -v
+      - name: Build P04 RAG and GPU component without new packages
+        run: dotnet build Packages/P04/NoxP04.csproj -c Release --nologo
