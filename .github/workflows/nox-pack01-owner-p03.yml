@@ -2,7 +2,9 @@ name: NOX PACK01 real P03 ModelCenter binding Windows
 on:
   pull_request:
     paths:
-      - 'proposals/NOX-PACK01-50/**'
+      - 'proposals/NOX-PACK01-50/P03OwnerPack.cs'
+      - 'proposals/NOX-PACK01-50/P03Smoke/**'
+      - 'proposals/NOX-PACK01-50/catalog.json'
       - '.github/workflows/nox-pack01-owner-p03.yml'
   workflow_dispatch:
 permissions:
