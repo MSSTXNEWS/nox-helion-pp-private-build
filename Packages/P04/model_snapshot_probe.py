@@ -147,9 +147,9 @@ def main() -> int:
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--expected-revision", required=True)
     args = parser.parse_args()
-    print(json.dumps(inspect(args.root, args.expected_revision),
-                     ensure_ascii=False, sort_keys=True))
-    return 0 if inspect(args.root, args.expected_revision)["status"] == "LOCAL_FILES_PRESENT_ONLY" else 2
+    result = inspect(args.root, args.expected_revision)
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+    return 0 if result["status"] == "LOCAL_FILES_PRESENT_ONLY" else 2
 
 
 if __name__ == "__main__":
