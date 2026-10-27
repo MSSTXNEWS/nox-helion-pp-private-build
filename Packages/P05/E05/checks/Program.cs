@@ -130,6 +130,86 @@ var projected = ReadinessProjection.Evaluate("run-verified-fixture",
     new LaneProof?[] {null, null, null, null, null}, "HOLD", "HOLD", DateTimeOffset.UtcNow);
 Check(projected.Bars.Count == 7 && projected.Overall is null &&
     projected.Bars.All(x => x.Percent is null), "seven undefined bars are never fabricated");
+// TURBO10: canonical events.v3 is enforced without a second event writer.
+var nowV3 = DateTimeOffset.UtcNow;
+var liveGpu = new SensorPoint("gpu.percent", 52.65, "%", "NVIDIA.NVML", nowV3, "LIVE");
+var evt = E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu, nowV3);
+Check(evt is not null && evt.EventType == "gpu.sample" && evt.Numerator == 5265 &&
+    evt.Denominator == 10000 && !evt.EvidenceVerified &&
+    E05CanonicalEventFactory.IsCanonical(evt), "T10-01: legacy events.v3 GPU payload only");
+Check(E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu with {
+    ObservedAtUtc = nowV3.AddMinutes(-2) }, nowV3) is null,
+    "T10-01: old telemetry never emitted");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with { EventType = "telemetry.snapshot" }),
+    "T10-01: unsupported event type blocked");
+var hw = E05HardwareEvidence.Snapshot("RUN-E05-TEST", new ISensorProvider[] {
+    new FakeSensorProvider(liveGpu, new SensorPoint("gpu.vram.used_bytes", 20,
+        "bytes", "NVML", nowV3, "LIVE"), new SensorPoint("gpu.vram.total_bytes", 10,
+        "bytes", "NVML", nowV3, "LIVE")) }, nowV3, CancellationToken.None);
+Check(hw.Sensors.Count == 5 && hw.Sensors.Single(x => x.Key == "gpu.vram.used_bytes").Value is null,
+    "T10-02: inconsistent VRAM quarantined without fake values");
+var approvedCores = Enumerable.Range(0, 8).Select(i => "ORIGINAL-" + i).ToArray();
+var approvedPersonas = Enumerable.Range(0, 5).Select(i => "PERSONA-" + i).ToArray();
+var cproof = approvedCores.Select((name, i) => new CoreProof(name, i * 10,
+    "VERIFIED", "receipt-" + i, nowV3)).ToArray();
+var pproof = approvedPersonas.Select(name => new PersonaProof(name, "AVAILABLE", nowV3)).ToArray();
+var orb = E05CorePersonaProjection.Project(approvedCores, approvedPersonas,
+    cproof, pproof, nowV3);
+Check(orb.CenterPercent == 35 && orb.State == "VERIFIED", "T10-03: 8 core and 5 persona proofs");
+Check(E05CorePersonaProjection.Project(approvedCores, approvedPersonas,
+    cproof, pproof, nowV3.AddHours(1)).CenterPercent is null,
+    "T10-03: stale core ring becomes N/D");
+var manifest = new string('a', 64);
+var sealedLane = new E05SealedLane(1, manifest,
+    new[] { new E05SealedCriterion("P01-T1", 1, "ACCEPTED", "receipt", new string('b', 64)) });
+Check(E05SealedProgress.Evaluate(sealedLane, null) is null,
+    "T10-04: no verifier means no readiness percentage");
+Check(E05SealedProgress.Evaluate(sealedLane, new FakeReceiptVerifier()) == 100m,
+    "T10-04: owner-bound acceptance evidence can produce measured percentage");
+Check(E05SealedProgress.Evaluate(sealedLane with { ManifestSha256 = "not-sha" },
+    new FakeReceiptVerifier()) is null, "T10-04: invalid manifest rejected");
+var activity = new E05ActivityTimeline("RUN-E05-TEST");
+Check(activity.Accept(evt!, nowV3) && activity.Read(nowV3).Count == 1,
+    "T10-05: actual live event enters timeline");
+Check(!activity.Accept(evt!, nowV3), "T10-05: event ID deduplicated");
+Check(activity.Read(nowV3.AddMinutes(4))[0].State == "OFFLINE",
+    "T10-05: stream activity expiry is explicit");
+var targets = new [] { new E05DriveTarget("report", "1FixtureDocumentId"),
+    new E05DriveTarget("lessons", "1AnotherFixtureId"),
+    new E05DriveTarget("master", "1ThirdFixtureId") };
+using var docsGateHttp = new HttpClient(new DocsFixtureHandler("RUN-E05-TEST fixture"));
+var docsGateWriter = new GoogleDocsAppendReadback(docsGateHttp,
+    _ => Task.FromResult("fixture-token"));
+var docsGate = await E05DriveRunGate.AppendRunAsync(docsGateWriter,
+    "RUN-E05-TEST", "RUN-E05-TEST fixture", targets, false, CancellationToken.None);
+Check(docsGate.State == "HOLD_MASTER_INTEGRITY" && docsGate.Receipts.Count == 2,
+    "T10-06: unverified historical master prevents app-side journal write");
+var cfg = def with { Id = "bitcoin" };
+var known = E05FeedTrust.Classify(new FeedResult("bitcoin", "fixture", "{}",
+    nowV3.AddHours(-1), nowV3, "LIVE", null, false), cfg, nowV3);
+Check(known.Status == "SOURCE_DATED" && E05FeedTrust.SupportedIds.Count == 8,
+    "T10-07: source-backed market feed, 8 known categories");
+Check(E05FeedTrust.Classify(new FeedResult("bitcoin", "fixture", "{}",
+    nowV3.AddHours(-4), nowV3, "LIVE", null, true), cfg, nowV3).Status == "STALE",
+    "T10-07: stale price cannot look live");
+var wow = E05WowCompatibility.Resolve(new[] { "live-aura", "stream-pulse" },
+    false, false, false);
+Check(wow.Count == 7 && wow.All(x => !x.Enabled),
+    "T10-08: no verified event bridge means no decorative fake pulse");
+Check(E05WowCompatibility.Resolve(new[] { "live-aura" }, true, true, false)
+    .All(x => !x.Enabled), "T10-08: ECO disables optional visual motion");
+var feedSnapshot = new FeedResult("weather", "fixture", "{}", nowV3,
+    nowV3, "LIVE", null, false);
+var mobile = E05SpaceReadOnlyProjection.Build("RUN-E05-TEST", nowV3,
+    new [] { feedSnapshot }, hw, null);
+Check(mobile.Access == "READ_ONLY" && mobile.Tiles.Count == 1 &&
+    mobile.ProductProgress is null && mobile.Tiles[0].Preview is null,
+    "T10-09: mobile/SPACE read-only, no invented progress");
+try { await new E05SensorPublisher(Array.Empty<ISensorProvider>(),
+    new FakeLegacyTransport()).PollOnceAsync("RUN-E05-TEST", CancellationToken.None);
+    throw new Exception("T10-01 invalid bridge was allowed"); }
+catch (NotSupportedException) { Console.WriteLine("PASS T10-10: old noncanonical telemetry publisher fails closed"); }
+
 Console.WriteLine("ALL E05 mocked/offline checks passed (no real hardware/network)");
 
 sealed class DocsFixtureHandler : HttpMessageHandler
@@ -174,4 +254,22 @@ sealed class FeedFixtureHandler : HttpMessageHandler
             Content = new StringContent(new string('x', payloadSize))
         });
     }
+}
+
+sealed class FakeSensorProvider : ISensorProvider
+{
+    private readonly SensorPoint[] sensors;
+    public string Name => "TEST";
+    public FakeSensorProvider(params SensorPoint[] sensors) { this.sensors = sensors; }
+    public IReadOnlyList<SensorPoint> Read(CancellationToken cancel) => sensors;
+}
+sealed class FakeReceiptVerifier : IE05ReceiptVerifier
+{
+    public bool IsFrozenManifest(string sha, int id) => id == 1 && sha == new string('a', 64);
+    public bool IsVerified(string task, string receipt, string sha) =>
+        task == "P01-T1" && receipt == "receipt" && sha == new string('b', 64);
+}
+sealed class FakeLegacyTransport : IEventV3Transport
+{
+    public ValueTask SendAsync(TelemetryEventV3 m, CancellationToken stop) => ValueTask.CompletedTask;
 }
