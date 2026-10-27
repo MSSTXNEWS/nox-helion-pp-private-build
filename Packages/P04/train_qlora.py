@@ -345,11 +345,42 @@ def gpu_temperature(exe: str, gpu_uuid: str) -> float | None:
 
 
 class EventWriter:
+    """Append-only v3 events with fail-closed run identity and resume sequence."""
+
     def __init__(self, path: Path, run_id: str, task_id: str):
         self.path, self.run_id, self.task_id = path, run_id, task_id
+        if self.path.parent.is_symlink():
+            raise ValueError("EVENT_LOG_PARENT_SYMLINK")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
         self.sequence = 0
+        if self.path.is_symlink():
+            raise ValueError("EVENT_LOG_SYMLINK")
+        if self.path.exists():
+            if not self.path.is_file():
+                raise ValueError("EVENT_LOG_NOT_REGULAR_FILE")
+            size = self.path.stat().st_size
+            if size:
+                with self.path.open("rb") as stream:
+                    stream.seek(max(size - 8192, 0))
+                    tail = stream.read(8192)
+                if not tail.endswith(b"\n"):
+                    raise ValueError("EVENT_LOG_INCOMPLETE_TAIL")
+                last = tail.rstrip(b"\n").rsplit(b"\n", 1)[-1]
+                if len(last) > 4096:
+                    raise ValueError("EVENT_LOG_LAST_LINE_TOO_LONG")
+                try:
+                    previous = json.loads(last)
+                except (ValueError, UnicodeDecodeError) as exc:
+                    raise ValueError("EVENT_LOG_LAST_EVENT_INVALID") from exc
+                if (not isinstance(previous, dict)
+                        or previous.get("schema") != EVENT_SCHEMA
+                        or previous.get("run_id") != run_id
+                        or previous.get("task_id") != task_id
+                        or type(previous.get("event_sequence")) is not int
+                        or previous["event_sequence"] < 1):
+                    raise ValueError("EVENT_LOG_RUN_IDENTITY_MISMATCH")
+                self.sequence = previous["event_sequence"]
 
     @staticmethod
     def clean(message: str) -> str:
@@ -360,20 +391,32 @@ class EventWriter:
     def emit(self, event_type: str, state: str, action: str, message: str,
              numerator: int | None = None, denominator: int | None = None,
              metric_name: str | None = None, metric_value: float | None = None) -> None:
+        if any(value is not None and (type(value) is not int or value < 0)
+               for value in (numerator, denominator)):
+            raise ValueError("EVENT_PROGRESS_INVALID")
+        if metric_value is not None and finite_metric(metric_value) is None:
+            raise ValueError("EVENT_METRIC_NOT_FINITE")
         with self.lock:
-            self.sequence += 1
+            if self.path.is_symlink() or self.path.parent.is_symlink():
+                raise ValueError("EVENT_LOG_SYMLINK")
+            next_sequence = self.sequence + 1
             event = {
                 "schema": EVENT_SCHEMA, "run_id": self.run_id, "event_id": uuid.uuid4().hex,
-                "event_sequence": self.sequence, "event_type": event_type, "task_id": self.task_id,
+                "event_sequence": next_sequence, "event_type": event_type, "task_id": self.task_id,
                 "package_id": "P04", "action_id": action, "timestamp_utc": utc_now(),
                 "state": state, "source": "P04.QLoRA", "message": self.clean(message),
                 "numerator": numerator, "denominator": denominator, "evidence_verified": False,
                 "metric_name": metric_name, "metric_value": metric_value,
             }
-            with self.path.open("a", encoding="utf-8", newline="\n") as stream:
-                stream.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
+            payload = (json.dumps(event, ensure_ascii=False, allow_nan=False,
+                                  separators=(",", ":")) + "\n").encode("utf-8")
+            flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0)
+            fd = os.open(self.path, flags, 0o600)
+            with os.fdopen(fd, "ab") as stream:
+                stream.write(payload)
                 stream.flush()
                 os.fsync(stream.fileno())
+            self.sequence = next_sequence
 
 
 def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str]:
