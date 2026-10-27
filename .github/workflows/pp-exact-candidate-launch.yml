@@ -81,7 +81,7 @@ jobs:
           $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-artifact12745455266.zip'
           $extractPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-extract'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'launch-evidence.json'
-          $evidence = [ordered]@{ status='IN_PROGRESS'; source_run_id=$sourceRunId; artifact_id=$artifactId; source_commit=$expectedHead; expected_zip_sha256=$expectedZipSha256; actual_zip_sha256=$null; expected_exe_sha256=$expectedExeSha256; exact_exe_name=$null; exact_exe_path=$null; exact_exe_bytes=$null; exact_exe_sha256=$null; child_environment_policy='Allowlist only; no fetch credentials'; child_environment_secrets_cleared=$false; process_start_info=$null; process_start_attempt_utc=$null; process_start_returned_utc=$null; process_started_utc=$null; process_id=$null; process_alive_after_observation=$null; main_window_handle=$null; main_window_title=$null; wait_for_input_idle=$null; process_exit_state='NOT_STARTED'; process_cleanup_state='NOT_STARTED'; cleanup_verified=$false; descendant_process_ids_observed=@(); descendants_cleanup_verified=$false; error=$null }
+          $evidence = [ordered]@{ status='IN_PROGRESS'; source_run_id=$sourceRunId; artifact_id=$artifactId; source_commit=$expectedHead; expected_zip_sha256=$expectedZipSha256; actual_zip_sha256=$null; expected_exe_sha256=$expectedExeSha256; exact_exe_name=$null; exact_exe_path=$null; exact_exe_bytes=$null; exact_exe_sha256=$null; child_environment_policy='Allowlist only; no fetch credentials'; child_environment_secrets_cleared=$false; process_start_info=$null; process_start_attempt_utc=$null; process_start_returned_utc=$null; process_started_utc=$null; process_id=$null; process_alive_after_observation=$null; main_window_handle=$null; main_window_title=$null; wait_for_input_idle=$null; process_exit_state='NOT_STARTED'; process_cleanup_state='NOT_STARTED'; root_process_exit_verified=$false; descendant_absence_observed=$false; process_tree_exit_guaranteed=$false; descendant_process_ids_observed=@(); error=$null }
           function Save-Evidence { $evidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $evidencePath -Encoding utf8 }
           $process = $null
           function Get-DescendantProcessIds([int]$rootProcessId) {
@@ -150,11 +150,12 @@ jobs:
             }
             $remainingDescendants = @(Get-DescendantProcessIds -rootProcessId $rootProcessId)
             $evidence.descendant_process_ids_observed=@($observed)
-            $evidence.descendants_cleanup_verified=($remainingDescendants.Count -eq 0 -and $stablePasses -ge 2)
+            $evidence.descendant_absence_observed=($remainingDescendants.Count -eq 0 -and $stablePasses -ge 2)
             $process.Refresh()
-            $evidence.cleanup_verified=($process.HasExited -and $evidence.descendants_cleanup_verified)
-            $evidence.process_cleanup_state=if($evidence.cleanup_verified){'ROOT_AND_OBSERVED_DESCENDANTS_EXITED'}else{'CLEANUP_UNVERIFIED'}
-            if(-not $evidence.cleanup_verified){throw 'Candidate root or observed descendant process remains'}
+            $evidence.root_process_exit_verified=$process.HasExited
+            $evidence.process_tree_exit_guaranteed=$false
+            $evidence.process_cleanup_state=if($evidence.root_process_exit_verified -and $evidence.descendant_absence_observed){'ROOT_EXITED_DESCENDANTS_ABSENT_IN_TWO_WMI_SNAPSHOTS'}else{'CLEANUP_NOT_VERIFIED'}
+            if(-not $evidence.root_process_exit_verified -or -not $evidence.descendant_absence_observed){throw 'Root exit or two-snapshot descendant absence could not be established'}
             $evidence.status=if($alive){'PROCESS_STARTED_AND_TERMINATED'}else{'PROCESS_EXITED_BEFORE_5S'}
             Save-Evidence
             $summary=$evidence|ConvertTo-Json -Depth 6
@@ -163,7 +164,7 @@ jobs:
             if(-not $alive){throw "Exact candidate process exited before observation; exit_code=$($process.ExitCode)"}
           } catch {
             $evidence.status='FAILED'; $evidence.error=$_.Exception.Message
-            if($null -ne $process){try{$process.Refresh();if(-not $process.HasExited){$process.Kill($true);$process.WaitForExit(10000)|Out-Null;$process.Refresh()};$remaining=@(Get-DescendantProcessIds -rootProcessId $process.Id);foreach($pidValue in $remaining){Stop-Process -Id ([int]$pidValue) -Force -ErrorAction SilentlyContinue};$evidence.cleanup_verified=$process.HasExited;$evidence.descendants_cleanup_verified=(@(Get-DescendantProcessIds -rootProcessId $process.Id).Count -eq 0);$evidence.process_cleanup_state='CATCH_CLEANUP_ATTEMPTED'}catch{$evidence.cleanup_verified=$false;$evidence.process_cleanup_state='CLEANUP_FAILED';$evidence.error+='; cleanup_error='+$_.Exception.Message}}
+            if($null -ne $process){try{$process.Refresh();if(-not $process.HasExited){$process.Kill($true);$process.WaitForExit(10000)|Out-Null;$process.Refresh()};$evidence.root_process_exit_verified=$process.HasExited;$stable=0;$seen=[System.Collections.Generic.HashSet[int]]::new();for($attempt=0;$attempt -lt 12 -and $stable -lt 2;$attempt++){$left=@(Get-DescendantProcessIds -rootProcessId $process.Id);foreach($id in $left){[void]$seen.Add([int]$id);Stop-Process -Id ([int]$id) -Force -ErrorAction SilentlyContinue};if($left.Count -eq 0){$stable++}else{$stable=0};Start-Sleep -Milliseconds 250};$left=@(Get-DescendantProcessIds -rootProcessId $process.Id);$evidence.descendant_process_ids_observed=@($seen);$evidence.descendant_absence_observed=($left.Count -eq 0 -and $stable -ge 2);$evidence.process_tree_exit_guaranteed=$false;$evidence.process_cleanup_state='CATCH_ROOT_EXIT_AND_WMI_SWEEP'}catch{$evidence.root_process_exit_verified=$false;$evidence.descendant_absence_observed=$false;$evidence.process_tree_exit_guaranteed=$false;$evidence.process_cleanup_state='CLEANUP_FAILED';$evidence.error+='; cleanup_error='+$_.Exception.Message}}
             Save-Evidence
             Write-Error $evidence.error
             exit 1
