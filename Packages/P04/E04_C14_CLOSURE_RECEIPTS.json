@@ -1,0 +1,68 @@
+{
+  "schema": "NOX-E04-P04-CLOSURE-C14-v1",
+  "run_id": "NOX-V16-E04-CLOSURE-C14-20261028",
+  "owner": 4,
+  "branch": "e04/v16-pr7-guard-tests-20261028",
+  "baseline_commit_sha1": "cf3155fe82a04ddc062f40107fbbfdffe135da75",
+  "head_before_receipt_git_sha1": "4f26015876d81c146c978e7ab53899177bef08de",
+  "selected_engine": "PR7+PR12 single PEFT/QLoRA trainer; Python RAG only when original host is Python",
+  "ci": {
+    "run_id": 40604838692,
+    "status": "COMPLETED_SUCCESS",
+    "linux": "P04 Python .NET8 and P02 cross-owner smoke PASS",
+    "windows": "P04 Python and P02 cross-owner smoke PASS",
+    "live_ollama": "NOT_RUN",
+    "actual_nvidia_cuda_training": "NOT_RUN"
+  },
+  "gates": {
+    "source_candidate": "YES",
+    "component_ci": "PASS",
+    "whole_tree_sourcelock": "HOLD_E06",
+    "licensed_dataset_and_model": "HOLD",
+    "real_nvidia_gpu_training": "HOLD",
+    "final_windows_build": "NOT_RUN",
+    "independent_e07": "NOT_RUN"
+  },
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": 4,
+      "pre_sha256": "bb16ab0223d83d5f0e82fe4598ae780e7d135913892efe97d2e133c0a87a64dd",
+      "post_sha256": "6d69e593212a573a5ce5ed438c90582fe385537ce0e0f68b41b04cebc822dd9d",
+      "pre_git_blob_sha1": "f3d6910683cf3bda0b7974a7121333a7149e3f7b",
+      "post_git_blob_sha1": "79aeb10d753250965bb4a9ad35157da3bb19adff",
+      "transition_receipt_sha256": "f69fe2b9496bad62cccbaf5d8802a3a6a9bedda00b1672dc3e4a6381ca1625df",
+      "state": "PATCH_CANDIDATE"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "owner": 4,
+      "pre_sha256": "ABSENT",
+      "post_sha256": "3e9ac38e6b3c148d11d0f10644f5de1ec746716110593d621ce11098c5aa22ef",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "46daf897e25331eaf8027dd7822b9034be0221d7",
+      "transition_receipt_sha256": "d009da043738e0d93dd734bea39cea1c5bf8aee093bcd564c1466938e41f019f",
+      "state": "PATCH_CANDIDATE"
+    },
+    {
+      "path": "tests/P04/test_gpu_vram_headroom.py",
+      "owner": 4,
+      "pre_sha256": "ABSENT",
+      "post_sha256": "9ca44c96e307f54c34c4c1a0c86f3a018b1610593a872b4614b9ae82f0179666",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "777ed07af0f0d692bf421d444dbaec82662b82ea",
+      "transition_receipt_sha256": "febc0467ab89a88d331f9a15961f6afb31c536b22b944d8191e06066aed80c49",
+      "state": "PATCH_CANDIDATE"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "owner": 4,
+      "pre_sha256": "ABSENT",
+      "post_sha256": "2d96bbfb5bdbba36f04dd9c04e5c0ba1afcfb45706e30d6b7d289f7b06ebf15e",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "99463d01f165774917cc4ce4236bf871f331fa89",
+      "transition_receipt_sha256": "672be834254d5113d78268623c5b6574534f98d5d868a5ba51abc38f0903bd0c",
+      "state": "PATCH_CANDIDATE"
+    }
+  ]
+}
