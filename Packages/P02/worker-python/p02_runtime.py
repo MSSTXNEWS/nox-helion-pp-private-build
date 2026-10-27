@@ -257,8 +257,15 @@ def _safe_blob_path(root: pathlib.Path, storage: str) -> pathlib.Path:
 
 class P02Store:
     """Accepts host's existing SQLite connection. No second DB or SQLite user_version mutation."""
-    def __init__(self, db: sqlite3.Connection, attachment_root: str | os.PathLike):
+    def __init__(self, db: sqlite3.Connection, attachment_root: str | os.PathLike,
+                 *, approved_host_tables: frozenset[str] = frozenset()):
         self.db = db
+        # Optional #6-approved table names allow a shared existing SQLite connection,
+        # never a second history. Unknown schemas are quarantined, not guessed.
+        if not isinstance(approved_host_tables, frozenset) or not all(
+                isinstance(t, str) and t and len(t) <= 128 for t in approved_host_tables):
+            raise TypeError('Native host approved table names required')
+        self.approved_host_tables = approved_host_tables
         self.root = pathlib.Path(attachment_root).resolve()
         self.staging = self.root / "staging"
         self.blobs = self.root / "stored"
@@ -273,21 +280,67 @@ class P02Store:
                 "SELECT name FROM sqlite_master WHERE type='table'")
                 if not str(row[0]).startswith('sqlite_')))
 
-    def initialize(self):
-        # Never create a duplicate chat history over an existing native chat schema.
-        # Integrator #6 must migrate/map that schema explicitly (with backup).
+    @contextlib.contextmanager
+    def _write_transaction(self):
+        """Never silently commit an unrelated host transaction on the SHARED DB.
+
+        #6 must serialize use of the supplied connection across host modules.
+        SQLite savepoints alone cannot tell a P02 write from the host's pending
+        transaction, so reject a busy connection instead of adopting its commit.
+        """
         with self._lock:
-            existing = {r[0].lower() for r in self.db.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
-            native_chat_names = {"chat", "chats", "messages", "chat_messages",
-                                 "conversations", "conversation_messages", "chat_history",
-                                 "chat_sessions", "message_history"}
+            if self.db.in_transaction:
+                raise P02Error('HOST_SQLITE_TRANSACTION_ACTIVE')
+            with self.db:
+                yield
+
+    def initialize(self):
+        """Fail-closed shared DB admission and atomic P02-only schema creation.
+
+        Existing production chats must be mapped by #6 rather than overlaid.
+        No PRAGMA user_version changes, no unrelated writes, no executescript,
+        no implicit commit of host transactions, no schema deletion/downgrade.
+        """
+        reserved = {'p02_chats','p02_messages','p02_attachments',
+                    'p02_gc','p02_meta','p02_messages_by_chat'}
+        native_chat_names = {'chat','chats','messages','chat_messages',
+                             'conversations','conversation_messages','chat_history',
+                             'chat_sessions','message_history'}
+        with self._write_transaction():
+            rows = self.db.execute("SELECT name FROM sqlite_master WHERE type IN ('table','index')").fetchall()
+            existing = {str(row[0]).lower() for row in rows
+                        if not str(row[0]).lower().startswith('sqlite_')}
             if existing & native_chat_names:
-                raise P02Error("HOST_CHAT_SCHEMA_MAPPING_REQUIRED; refusing parallel history")
-        # Avoid changing the host application's user_version, journal mode or existing tables.
-        with self._lock, self.db:
-            self.db.execute("PRAGMA foreign_keys=ON")
-            self.db.executescript("""
+                raise P02Error('HOST_CHAT_SCHEMA_MAPPING_REQUIRED; refusing parallel history')
+            unknown = existing - reserved
+            if unknown - {x.lower() for x in self.approved_host_tables}:
+                raise P02Error('HOST_SCHEMA_REVIEW_REQUIRED; refusing unapproved shared tables')
+            if existing & reserved:
+                if 'p02_meta' not in existing:
+                    raise P02Error('INCOMPLETE_P02_SCHEMA; refusing implicit repair')
+                version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
+                if version != ('1',):
+                    raise P02Error('Incompatible existing P02 schema; refusing downgrade')
+                # Existing user data is immutable until every required table and
+                # its primary-key/foreign-key fields are confirmed. A partial
+                # schema must be restored by #6 from verified backup, not
+                # silently populated with empty tables alongside old chats.
+                required = {
+                    'p02_chats': {'id', 'tenant', 'principal', 'created_at'},
+                    'p02_messages': {'id', 'chat_id', 'role', 'content', 'created_at'},
+                    'p02_attachments': {'id', 'chat_id', 'storage', 'sha256', 'mime', 'bytes', 'created_at'},
+                    'p02_gc': {'storage', 'queued_at'},
+                    'p02_meta': {'key', 'value'},
+                }
+                if not set(required).issubset(existing):
+                    raise P02Error('INCOMPLETE_P02_SCHEMA; restore verified backup')
+                for table, expected_columns in required.items():
+                    # Static table names only; never interpolate web/user input.
+                    cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
+                    if cols != expected_columns:
+                        raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
+            self.db.execute('PRAGMA foreign_keys=ON')
+            schema = """
                 CREATE TABLE IF NOT EXISTS p02_chats(
                     id TEXT PRIMARY KEY, tenant TEXT NOT NULL, principal TEXT NOT NULL,
                     created_at INTEGER NOT NULL);
@@ -303,10 +356,15 @@ class P02Store:
                 CREATE TABLE IF NOT EXISTS p02_gc(storage TEXT PRIMARY KEY, queued_at INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS p02_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 INSERT OR IGNORE INTO p02_meta(key,value) VALUES('schema','1');
-            """)
+            """
+            # Python sqlite3.executescript() may commit host work; individual
+            # static statements inside this transaction preserve atomicity.
+            for statement in schema.split(';'):
+                if statement.strip():
+                    self.db.execute(statement)
             version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
-            if version != ("1",):
-                raise P02Error("Incompatible existing P02 schema; refuse automatic downgrade")
+            if version != ('1',):
+                raise P02Error('Incompatible existing P02 schema; refuse automatic downgrade')
 
     def _owned(self, tenant: str, user: str, chat: str):
         _check_scope(tenant, user, chat)
@@ -317,13 +375,13 @@ class P02Store:
 
     def create_chat(self, tenant: str, user: str, chat: str):
         _check_scope(tenant, user, chat)
-        with self._lock, self.db:
+        with self._write_transaction():
             self.db.execute("INSERT INTO p02_chats VALUES(?,?,?,?)", (chat, tenant, user, int(time.time())))
 
     def add_message(self, tenant: str, user: str, chat: str, role: str, content: str) -> str:
         if role not in ("user", "assistant", "tool") or not isinstance(content, str) or len(content) > 1_000_000:
             raise ValueError("Invalid role/content")
-        with self._lock, self.db:
+        with self._write_transaction():
             self._owned(tenant, user, chat)
             message_id = uuid.uuid4().hex
             self.db.execute("INSERT INTO p02_messages VALUES(?,?,?,?,?)",
@@ -340,7 +398,7 @@ class P02Store:
         return [{"role": role, "content": content} for role, content in reversed(rows)]
 
     def prune(self, tenant: str, user: str, chat: str, before_epoch: int) -> int:
-        with self._lock, self.db:
+        with self._write_transaction():
             self._owned(tenant, user, chat)
             cursor = self.db.execute("DELETE FROM p02_messages WHERE chat_id=? AND created_at<?",
                                      (chat, before_epoch))
@@ -386,7 +444,7 @@ class P02Store:
             if mime == "text/plain" and (b"\x00" in first):
                 raise P02Error("Invalid plain-text header")
             sha = digest.hexdigest()
-            with self._lock, self.db:
+            with self._write_transaction():
                 self._owned(tenant, user, chat)
                 current = self.db.execute("SELECT COALESCE(SUM(bytes),0) FROM p02_attachments WHERE chat_id=?",
                                           (chat,)).fetchone()[0]
@@ -427,7 +485,7 @@ class P02Store:
 
     def delete_attachment(self, tenant: str, user: str, chat: str, stored_id: str):
         """Delete metadata under ACL and queue app-owned physical bytes for durable GC."""
-        with self._lock, self.db:
+        with self._write_transaction():
             self._owned(tenant, user, chat)
             row = self.db.execute("SELECT storage FROM p02_attachments WHERE id=? AND chat_id=?",
                                   (stored_id, chat)).fetchone()
@@ -437,7 +495,7 @@ class P02Store:
             self.db.execute("DELETE FROM p02_attachments WHERE id=? AND chat_id=?", (stored_id, chat))
 
     def delete_chat(self, tenant: str, user: str, chat: str):
-        with self._lock, self.db:
+        with self._write_transaction():
             self._owned(tenant, user, chat)
             for (storage,) in self.db.execute("SELECT storage FROM p02_attachments WHERE chat_id=?", (chat,)):
                 self.db.execute("INSERT OR IGNORE INTO p02_gc VALUES(?,?)", (storage, int(time.time())))
@@ -448,6 +506,8 @@ class P02Store:
         """Remove only DB-confirmed unreferenced blobs; safe to retry after crash."""
         removed = 0
         with self._lock:
+            if self.db.in_transaction:
+                raise P02Error('HOST_SQLITE_TRANSACTION_ACTIVE')
             records = self.db.execute("SELECT storage FROM p02_gc").fetchall()
             for (storage,) in records:
                 if self.db.execute("SELECT 1 FROM p02_attachments WHERE storage=?", (storage,)).fetchone():
