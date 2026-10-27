@@ -226,7 +226,7 @@ public sealed class GpuGuardian
 
     private static GpuTelemetrySample Unavailable(string code) =>
         new(DateTimeOffset.UtcNow, "N_D", null, null, null, null, null, null,
-            "nvidia-smi", code);
+            null, "nvidia-smi", code);
 
     private static async Task<string> ReadBoundedAsync(StreamReader reader, int maximumCharacters, CancellationToken token)
     {
@@ -463,6 +463,7 @@ public static class GpuWorkerLauncher
             throw new InvalidOperationException("Managed GPU worker did not start.");
         }
         guardian.EmitWorker(workerId, "task.started", "RUNNING", "NOX-managed GPU worker started.");
-        return new ManagedGpuWorker(workerId, process, control, guardian.EmitWorker);
+        return new ManagedGpuWorker(workerId, process, control,
+            (eventType, state, message) => guardian.EmitWorker(workerId, eventType, state, message));
     }
 }
