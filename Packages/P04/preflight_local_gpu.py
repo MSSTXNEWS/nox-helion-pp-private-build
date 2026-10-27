@@ -58,7 +58,8 @@ def inspect(profile: str, gpu_index: int) -> dict:
         temperature = train_qlora.gpu_temperature(exe, selected["uuid"])
         if temperature is None:
             raise RuntimeError("GPU_TEMPERATURE_UNAVAILABLE")
-        if temperature >= 80 if profile == "ECO" else temperature >= 83 if profile == "BALANCED" else temperature >= 85:
+        limit = {"ECO": 80, "BALANCED": 83, "INTENSIVE": 85}[profile]
+        if temperature >= limit:
             raise RuntimeError("GPU_THERMAL_HEADROOM_UNAVAILABLE")
         memory = train_qlora.gpu_vram_headroom(exe, selected["uuid"], profile)
         report["gpu"] = {
@@ -72,6 +73,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
     if not any(x.startswith("PACKAGE_NOT_INSTALLED") for x in report["errors"]):
         # This proves local package installations, not CUDA runtime functionality.
         try:
+            # Match training's single approved UUID before importing CUDA.
+            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
             import torch
             if not torch.cuda.is_available():
                 report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
