@@ -38,10 +38,15 @@ jobs:
         run: |
           python coordination/e06/canonical_source_lock.py --source-root . --route-map e06-owner-map.json --out e06-original-baseline-sourcelock.json
           python -c "import json; x=json.load(open('e06-original-baseline-sourcelock.json',encoding='utf-8')); assert x['total_members']==729 and x['source_modified'] is False and x['product_integrated'] is False and x['release']=='BLOCKED' and x['route_candidate_admission']['source_method_candidates']==21"
+      - name: Generate exact owner path SHA and patch receipts
+        shell: pwsh
+        run: python coordination/e06/r03_receipts.py
       - name: Retain evidence without publishing original assets or EXE
         uses: actions/upload-artifact@v4
         with:
           name: e06-r03-original-sourcelock
-          path: e06-original-baseline-sourcelock.json
+          path: |
+            e06-original-baseline-sourcelock.json
+            e06-r03-source-receipts.json
           retention-days: 30
           if-no-files-found: error
