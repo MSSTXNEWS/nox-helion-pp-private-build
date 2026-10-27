@@ -75,7 +75,7 @@ function Test-PatchedSourceCache([string]$Path, [string]$ExpectedTree) {
 }
 
 try {
-    $freezePath = Join-Path $evidence 'PP-ONE-037-C2-SOURCE-FREEZE.json'
+    $freezePath = Join-Path $root 'evidence\PP-ONE-037-C2-SOURCE-FREEZE.json'
     if (-not (Test-Path -LiteralPath $freezePath -PathType Leaf)) { throw 'SOURCE_FREEZE_MANIFEST_MISSING' }
     $freeze = Get-Content -LiteralPath $freezePath -Raw | ConvertFrom-Json
     if ($freeze.schema -cne 'NOX_PP_SOURCE_FREEZE_BINDING_V1' -or $freeze.packet -cne 'PP-ONE-037' -or $freeze.approach -cne 'C2') {
