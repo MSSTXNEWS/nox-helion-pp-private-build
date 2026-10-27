@@ -58,8 +58,10 @@ def finite_metric(value: Any) -> float | None:
 
 def sha256_tree(root: Path) -> str:
     """Hash a directory deterministically and reject symbolic links."""
+    if root.is_symlink():
+        raise ValueError("TREE_ROOT_NOT_REGULAR_DIRECTORY")
     root = root.resolve(strict=True)
-    if not root.is_dir() or root.is_symlink():
+    if not root.is_dir():
         raise ValueError("TREE_ROOT_NOT_REGULAR_DIRECTORY")
     digest = hashlib.sha256()
     files = sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
@@ -133,6 +135,8 @@ def write_training_receipt(output: Path, receipt: dict[str, Any]) -> tuple[str, 
 
 
 def read_object(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("INPUT_NOT_REGULAR_FILE")
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError("EXPECTED_JSON_OBJECT")
