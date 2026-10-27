@@ -36,8 +36,12 @@ public static class E05HardwareEvidence
             var sample = values.Length == 1 ? values[0] : null;
             if (sample is null) { points.Add(new(key, null, Unit(key), "NONE", null,
                 values.Length > 1 ? "PROVIDER_CONFLICT" : "UNAVAILABLE")); continue; }
-            bool fresh = sample.Status == "LIVE" && sample.ObservedAtUtc.HasValue &&
-                now >= sample.ObservedAtUtc && now - sample.ObservedAtUtc <= TimeSpan.FromSeconds(30);
+            bool unitMatches = sample.Unit == Unit(key) ||
+                (key.EndsWith("temperature.c", StringComparison.Ordinal) && sample.Unit == "C");
+            bool fresh = sample.Status == "LIVE" && unitMatches &&
+                !string.IsNullOrWhiteSpace(sample.Source) &&
+                sample.ObservedAtUtc.HasValue && now >= sample.ObservedAtUtc &&
+                now - sample.ObservedAtUtc <= TimeSpan.FromSeconds(30);
             bool magnitude = sample.Value.HasValue && double.IsFinite(sample.Value.Value) &&
                 sample.Value >= 0 && (key.EndsWith("percent") ? sample.Value <= 100 : true) &&
                 (key.EndsWith("temperature.c") ? sample.Value <= 150 : true);
@@ -48,7 +52,9 @@ public static class E05HardwareEvidence
         }
         var used = points.Single(x => x.Key == "gpu.vram.used_bytes");
         var total = points.Single(x => x.Key == "gpu.vram.total_bytes");
-        if (used.Value.HasValue && total.Value.HasValue && (total.Value <= 0 || used.Value > total.Value))
+        if (used.Value.HasValue && total.Value.HasValue &&
+            (total.Value <= 0 || used.Value > total.Value ||
+             !string.Equals(used.Source, total.Source, StringComparison.Ordinal)))
         {
             for (int i = 0; i < points.Count; i++)
                 if (points[i].Key.StartsWith("gpu.vram.", StringComparison.Ordinal))
