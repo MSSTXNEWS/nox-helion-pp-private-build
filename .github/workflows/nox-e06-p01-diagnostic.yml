@@ -32,7 +32,10 @@ jobs:
       - name: Apply lossless, SHA-guarded legacy P05 diagnostic-only C# repair
         shell: pwsh
         run: python coordination/e06/patch_legacy_p05_html.py
-      - name: Compile P01 Windows WPF WebView2 shell with isolated P05 syntax repair
+      - name: Isolated SHA-guarded compiler compatibility fixes preserving original owners
+        shell: pwsh
+        run: python coordination/e06/patch_legacy_compiler.py
+      - name: Compile P01 Windows WPF WebView2 shell with isolated owner-approved-review staging
         shell: pwsh
         run: |
           dotnet restore work/e06/staged/R11/NOX.P01.Shell.csproj
@@ -47,6 +50,7 @@ jobs:
           path: |
             work/e06/staged/source_lock.json
             work/e06/staged/P05-diagnostic-repair-receipt.json
+            work/e06/staged/legacy-compiler-repair-receipts.json
             work/e06/staged/P05_original_InstallerRunReport.cs.txt
             work/e06/staged/R11/bin/Release/net8.0-windows/
           if-no-files-found: warn
