@@ -25,7 +25,7 @@ jobs:
         id: fetch_candidate
         shell: pwsh
         env:
-          GITHUB_TOKEN: \${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           $repo = 'MSSTXNEWS/nox-helion-pp-private-build'
