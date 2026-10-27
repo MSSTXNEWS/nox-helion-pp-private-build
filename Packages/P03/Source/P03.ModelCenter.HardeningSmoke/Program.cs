@@ -152,3 +152,22 @@ try
 }
 finally { Directory.Delete(multiRoot, recursive: true); }
 Console.WriteLine("P03_FINAL_QUEUE_CONCURRENCY_PASS 7/7");
+
+
+ // One existing-host HTTP client; no system proxy, external redirects, or alternate host.
+using (var safeClient = OllamaLoopbackHttpClientFactory.Create(new Uri("http://localhost:11434/")))
+    Assert(safeClient.BaseAddress!.Host == "127.0.0.1",
+        "F08 one shared loopback transport canonicalizes localhost");
+foreach (var bad in new[] {
+    "http://example.com:11434/", "https://localhost:11434/",
+    "http://user:secret@localhost:11434/", "http://localhost:11434/api/",
+    "http://localhost:11434/?redirect=1" })
+{
+    try {
+        OllamaLoopbackHttpClientFactory.ValidateAndCanonicalize(new Uri(bad));
+        throw new Exception("FAIL F09 disallowed host/URL " + bad);
+    }
+    catch (InvalidOperationException) { /* expected */ }
+}
+Assert(true, "F09 all remote/proxy-ambiguous endpoint shapes denied");
+Console.WriteLine("P03_FINAL_TRANSPORT_POLICY_PASS 2/2");
