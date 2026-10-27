@@ -164,6 +164,15 @@ internal static class Program
                 Check((await reopened.SearchAsync(ownerA, conversation, "alpha")).Count == 0,
                     "deleted conversation stays deleted across service restart");
             }
+            var indexPath = Path.Combine(directory, "index.json");
+            using (var oversized = new FileStream(indexPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                oversized.SetLength(256L * 1024 * 1024 + 1);
+            try
+            {
+                await rag.SearchAsync(ownerA, conversation, "alpha");
+                throw new InvalidOperationException("RAG_OVERSIZE_INDEX_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
             Console.WriteLine("P04_RAG_SYNTHETIC_COMPONENT_PASS: " + _checks + " checks; NO_REAL_OLLAMA_OR_GPU");
             return 0;
         }
