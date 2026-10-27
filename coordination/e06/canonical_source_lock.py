@@ -82,7 +82,7 @@ def digest_archive(root, meta, target):
 def canonical_tree(files):
     """Unambiguous, domain-separated original-file tree SHA256, NOT a Git tree SHA1."""
     h = hashlib.sha256(b"NOX-SOURCELOCK-V2\x00")
-    for item in files:
+    for item in sorted(files, key=lambda x: x["path"]):
         line = json.dumps([item["path"], item["bytes"], item["sha256"]],
                           ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         h.update(len(line).to_bytes(8, "big") + line)
