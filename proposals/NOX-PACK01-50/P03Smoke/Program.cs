@@ -20,15 +20,14 @@ static class Program
             var queue=new ModelDownloadQueueStore(directory);
             var ollama=new OllamaModelAdapter(http,directory);
             var worker=new ModelDownloadQueueWorker(queue,ollama,new ModelLifecyclePublisher(new SilentSink()));
-            var facade=new ModelCenterFacade(queue,worker,http);
-            var adapter=new P03OwnerPack(facade,queue,new WindowsComponentAdapter());
+            var adapter=new P03OwnerPack(queue,worker,new WindowsComponentAdapter(),http);
             if(P03OwnerPack.Supported.Count!=9)throw new Exception("Nine owner routes required");
-            var choices=(IReadOnlyList<QuickModelChoice>)await adapter.ExecuteAsync(new("models.catalog"));
-            if(choices.Count!=20)throw new Exception("Expected 20 original quick model choices");
+            var choices=(IReadOnlyList<ModelCatalogEntry>)await adapter.ExecuteAsync(new("models.catalog"));
+            if(choices.Count!=30)throw new Exception("Expected 30 original model discovery families");
             var q=(IReadOnlyList<ModelJob>)await adapter.ExecuteAsync(new("models.queue"));
             if(q.Count!=0)throw new Exception("Queue must start empty");
             var denied=false;
-            try{await adapter.ExecuteAsync(new("models.pull",ChoiceId:"08",
+            try{await adapter.ExecuteAsync(new("models.pull",
                 ReviewedLicenseUrl:"https://example.test/license",NativeLicenseConsent:false));}
             catch(UnauthorizedAccessException){denied=true;}
             if(!denied)throw new Exception("Pull without native consent must be rejected");
