@@ -75,6 +75,19 @@ internal static class Program
             var context=(RagContextResult)await pack.ExecuteAsync("rag.search",
                 "S-1-5-21-1111","room-1",input:"alpha",cancel:timeout.Token);
             Require(context.Sources.Count>0 && context.ContextText.Contains("SHA256:"),"TRUE_SEARCH");
+            var chatRag=new P02RagChatOwnerPort(new RagChatContextProvider(ingest),
+                identity=>identity.WindowsSid=="S-1-5-21-1111"&&
+                          identity.ConversationId=="room-1"&&
+                          identity.SessionId=="real-native-host-session");
+            var linked=await chatRag.RetrieveAsync(new NativeP02ChatScope(
+                "S-1-5-21-1111","room-1","real-native-host-session"),"alpha",stop:timeout.Token);
+            Require(linked.Sources.Count>0&&linked.ContextText.Contains("SHA256:"),"P02_CHAT_RAG_REAL_CITATIONS");
+            denied=false;
+            try {
+                await chatRag.RetrieveAsync(new NativeP02ChatScope(
+                    "S-1-5-21-2222","room-1","page-supplied-session"),"alpha",stop:timeout.Token);
+            }catch(UnauthorizedAccessException){denied=true;}
+            Require(denied,"P02_CHAT_RAG_NATIVE_SESSION_DENY");
             var outsider=(RagContextResult)await pack.ExecuteAsync("rag.search",
                 "S-1-5-21-2222","room-1",input:"alpha",cancel:timeout.Token);
             Require(outsider.Sources.Count==0,"ACL");
@@ -97,7 +110,7 @@ internal static class Program
             try {await pack.ExecuteAsync("training.pause","S-1-5-21-1111","room-1",cancel:timeout.Token);}
             catch(InvalidOperationException){denied=true;}
             Require(denied,"UNBOUND_WORKER_HOLD");
-            Console.WriteLine("NOX_P04_PACK_PASS: six methods, real index, cited search, source deletion, ACL, real GPU sample and disabled absent trainer");
+            Console.WriteLine("NOX_P04_PACK_PASS: six P04 methods plus P02.chat.rag, source citations, native ACL and GPU truth");
             return 0;
         }
         finally

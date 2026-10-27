@@ -21,7 +21,7 @@ static class Program
             var ollama=new OllamaModelAdapter(http,directory);
             var worker=new ModelDownloadQueueWorker(queue,ollama,new ModelLifecyclePublisher(new SilentSink()));
             var adapter=new P03OwnerPack(queue,worker,new WindowsComponentAdapter(),http);
-            if(P03OwnerPack.Supported.Count!=9)throw new Exception("Nine owner routes required");
+            if(P03OwnerPack.Supported.Count!=10)throw new Exception("Ten owner routes required");
             var choices=(IReadOnlyList<ModelCatalogEntry>)await adapter.ExecuteAsync(new("models.catalog"));
             if(choices.Count!=30)throw new Exception("Expected 30 original model discovery families");
             var q=(IReadOnlyList<ModelJob>)await adapter.ExecuteAsync(new("models.queue"));
@@ -37,13 +37,14 @@ static class Program
                 NativeLicenseConsent:true,NativeFilePickerConfirmed:false));}
             catch(UnauthorizedAccessException){denied=true;}
             if(!denied)throw new Exception("GGUF import without verified picker must be rejected");
-            denied=false;
-            try{await adapter.ExecuteAsync(new("models.licenses"));}
-            catch(NotSupportedException){denied=true;}
-            if(!denied)throw new Exception("Unverified model licenses must HOLD");
+            var licenses=await adapter.ExecuteAsync(new("models.licenses"));
+            var entries=System.Text.Json.JsonSerializer.Serialize(licenses);
+            if(!entries.Contains("REVIEW_REQUIRED",StringComparison.Ordinal) ||
+               entries.Contains("\"CanDownload\":true",StringComparison.Ordinal))
+                throw new Exception("Unverified license entries must be REVIEW_REQUIRED, never downloadable");
             var preflight=(IReadOnlyList<ComponentStatus>)await adapter.ExecuteAsync(new("models.preflight"));
             if(preflight.Count!=6)throw new Exception("Expected 6 original C40+TURBO10 probes including GPU and Python training libraries");
-            Console.WriteLine("NOX_P03_OWNER_PACK_PASS: original 20 tags, queue, 9 bindings, consent/picker/permissions and actual Windows preflight");
+            Console.WriteLine("NOX_P03_OWNER_PACK_PASS: original 30 family candidates, queue, 10 bindings, consent/picker/permissions and actual Windows preflight");
         }
         finally { try{Directory.Delete(directory,recursive:true);}catch{} }
     }
