@@ -25,6 +25,7 @@
     "schema": { "const": "NOX-INSTALLER-EVENT-v3" },
     "run_id": { "type": "string", "minLength": 1, "maxLength": 128 },
     "event_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "event_sequence": { "type": "integer", "minimum": 1 },
     "event_type": {
       "type": "string",
       "enum": [
@@ -47,6 +48,8 @@
     "message": { "type": "string", "maxLength": 4096 },
     "numerator": { "type": ["integer", "null"], "minimum": 0 },
     "denominator": { "type": ["integer", "null"], "minimum": 0 },
+    "metric_name": { "type": ["string", "null"], "maxLength": 64 },
+    "metric_value": { "type": ["number", "null"] },
     "evidence_verified": { "type": "boolean", "default": false },
     "temperature_c": { "type": ["number", "null"], "minimum": 0, "maximum": 150 },
     "gpu_utilization_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
@@ -62,7 +65,7 @@
       "then": { "properties": { "package_id": { "const": "P04" } } }
     },
     {
-      "if": { "properties": { "event_type": { "enum": ["training.step", "checkpoint.saved"] } } },
+      "if": { "properties": { "event_type": { "enum": ["training.step", "checkpoint.saved", "model.stopped"] } } },
       "then": { "properties": { "package_id": { "const": "P04" } } }
     }
   ]

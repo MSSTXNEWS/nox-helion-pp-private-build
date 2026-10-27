@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import re
@@ -45,6 +46,14 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def finite_metric(value: Any) -> float | None:
+    """Keep non-finite or missing metrics out of completion receipts."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
 
 
 def sha256_tree(root: Path) -> str:
@@ -112,12 +121,33 @@ def verify_manifest(manifest_path: Path, train_path: Path, holdout_path: Path,
         attestation = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE") from exc
+    # Bind the verifier's decision to every authorization-bearing manifest
+    # field and both exact payload digests. A valid status for a dataset ID
+    # alone is insufficient: it could otherwise be replayed across revisions,
+    # licenses, approvals, or changed train/holdout files.
+    attested_fields = {
+        "schema": "nox-rights-attestation-v1",
+        "status": "VERIFIED",
+        "manifest_sha256": manifest_sha,
+        "dataset_id": manifest["dataset_id"],
+        "dataset_revision": manifest["dataset_revision"],
+        "license_id": manifest["license_id"],
+        "owner_approval_id": manifest["owner_approval_id"],
+        "train_sha256": manifest["train_sha256"].lower(),
+        "holdout_sha256": manifest["holdout_sha256"].lower(),
+        "intent": "training",
+    }
     if (not isinstance(attestation, dict)
-            or attestation.get("status") != "VERIFIED"
-            or attestation.get("manifest_sha256", "").lower() != manifest_sha
-            or attestation.get("dataset_id") != manifest["dataset_id"]
-            or attestation.get("intent") != "training"):
+            or any(not isinstance(attestation.get(key), str)
+                   or attestation[key].lower() != expected.lower()
+                   for key, expected in attested_fields.items())
+            or not isinstance(attestation.get("attestation_id"), str)
+            or not attestation["attestation_id"].strip()):
         raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+    manifest["_rights_attestation_id"] = attestation["attestation_id"].strip()
+    manifest["_rights_attestation_sha256"] = hashlib.sha256(
+        json.dumps(attestation, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return manifest
 
 
@@ -226,7 +256,8 @@ class EventWriter:
         return message[:240]
 
     def emit(self, event_type: str, state: str, action: str, message: str,
-             numerator: int | None = None, denominator: int | None = None) -> None:
+             numerator: int | None = None, denominator: int | None = None,
+             metric_name: str | None = None, metric_value: float | None = None) -> None:
         with self.lock:
             self.sequence += 1
             event = {
@@ -235,6 +266,7 @@ class EventWriter:
                 "package_id": "P04", "action_id": action, "timestamp_utc": utc_now(),
                 "state": state, "source": "P04.QLoRA", "message": self.clean(message),
                 "numerator": numerator, "denominator": denominator, "evidence_verified": False,
+                "metric_name": metric_name, "metric_value": metric_value,
             }
             with self.path.open("a", encoding="utf-8", newline="\n") as stream:
                 stream.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
@@ -366,8 +398,13 @@ def main() -> int:
             "run_id": args.run_id, "task_id": args.task_id,
             "model_id": model_lock["model_id"], "model_revision": args.model_revision,
             "model_snapshot_sha256": model_lock["snapshot_sha256"].lower(),
+            "model_lock_sha256": sha256_file(args.model_lock.resolve(strict=True)),
             "dataset_id": manifest["dataset_id"], "dataset_revision": manifest["dataset_revision"],
+            "dataset_manifest_sha256": sha256_file(manifest_path),
+            "license_id": manifest["license_id"], "owner_approval_id": manifest["owner_approval_id"],
             "train_sha256": manifest["train_sha256"].lower(), "holdout_sha256": manifest["holdout_sha256"].lower(),
+            "rights_attestation_id": manifest["_rights_attestation_id"],
+            "rights_attestation_sha256": manifest["_rights_attestation_sha256"],
             "profile": args.profile, "max_steps": max_steps, "epochs": args.epochs,
             "batch_size": batch_size, "learning_rate": args.learning_rate, "max_seq_length": max_seq,
             "save_steps": save_steps, "eval_steps": eval_steps,
@@ -383,6 +420,35 @@ def main() -> int:
                 raise ValueError("RESUME_RUN_IDENTITY_MISMATCH")
             selected = args.resume_from_checkpoint
             step, resume_sha = validated_checkpoint(checkpoint_dir, selected)
+            prior_receipt_path = output / "training-receipt.json"
+            if prior_receipt_path.is_symlink() or not prior_receipt_path.is_file():
+                raise ValueError("RESUME_RECEIPT_MISSING")
+            prior_receipt = read_object(prior_receipt_path)
+            prior_model = prior_receipt.get("model", {})
+            prior_dataset = prior_receipt.get("dataset", {})
+            prior_checkpoint = prior_receipt.get("checkpoint", {})
+            selected_relative = selected.resolve(strict=True).relative_to(output).as_posix()
+            if (prior_receipt.get("schema") != RECEIPT_SCHEMA or prior_receipt.get("run_id") != args.run_id
+                    or prior_receipt.get("status") != "PAUSED"):
+                raise ValueError("RESUME_REQUIRES_MATCHING_PAUSED_RECEIPT")
+            if (prior_model.get("id") != model_lock["model_id"]
+                    or prior_model.get("revision") != args.model_revision
+                    or prior_model.get("snapshot_sha256", "").casefold() != model_lock["snapshot_sha256"].casefold()):
+                raise ValueError("RESUME_RECEIPT_MODEL_MISMATCH")
+            expected_dataset = {
+                "id": manifest["dataset_id"], "revision": manifest["dataset_revision"],
+                "license_id": manifest["license_id"], "owner_approval_id": manifest["owner_approval_id"],
+                "rights_attestation_id": manifest["_rights_attestation_id"],
+                "rights_attestation_sha256": manifest["_rights_attestation_sha256"],
+                "train_sha256": manifest["train_sha256"].lower(),
+                "holdout_sha256": manifest["holdout_sha256"].lower(),
+            }
+            if any(prior_dataset.get(key) != expected for key, expected in expected_dataset.items()):
+                raise ValueError("RESUME_RECEIPT_DATASET_MISMATCH")
+            if (prior_checkpoint.get("status") != "HASHED"
+                    or prior_checkpoint.get("path") != selected_relative
+                    or prior_checkpoint.get("tree_sha256", "").casefold() != resume_sha.casefold()):
+                raise ValueError("RESUME_RECEIPT_CHECKPOINT_MISMATCH")
             resume = str(selected.resolve(strict=True))
         else:
             output.mkdir(parents=True, exist_ok=False)
@@ -434,16 +500,20 @@ def main() -> int:
         class Callback(TrainerCallback):
             def on_log(self, args_, state, control, logs=None, **kwargs):
                 logs = logs or {}
-                if "loss" in logs:
-                    monitor["train_loss"] = float(logs["loss"])
+                train_metric = finite_metric(logs.get("loss"))
+                if train_metric is not None:
+                    monitor["train_loss"] = train_metric
                     events.emit("training.step", "RUNNING", "train_loss",
                                 f"train_loss={monitor['train_loss']:.8g}",
-                                int(state.global_step), int(state.max_steps))
-                if "eval_loss" in logs:
-                    monitor["eval_loss"] = float(logs["eval_loss"])
+                                int(state.global_step), int(state.max_steps),
+                                "train_loss", monitor["train_loss"])
+                eval_metric = finite_metric(logs.get("eval_loss"))
+                if eval_metric is not None:
+                    monitor["eval_loss"] = eval_metric
                     events.emit("training.step", "RUNNING", "validation_loss",
                                 f"eval_loss={monitor['eval_loss']:.8g}",
-                                int(state.global_step), int(state.max_steps))
+                                int(state.global_step), int(state.max_steps),
+                                "validation_loss", monitor["eval_loss"])
                 return control
             def on_step_end(self, args_, state, control, **kwargs):
                 events.emit("training.step", "RUNNING", "optimizer_step", "Trainer optimizer step completed.",
@@ -544,6 +614,12 @@ def main() -> int:
 
         if args.pause_marker and monitor["pause"]:
             args.pause_marker.unlink(missing_ok=True)
+        train_loss = finite_metric(result.training_loss)
+        baseline_eval_loss = finite_metric(baseline.get("eval_loss"))
+        adapter_eval_loss = finite_metric(final_eval.get("eval_loss"))
+        evaluation_status = "VALID" if baseline_eval_loss is not None and adapter_eval_loss is not None else "HOLD_MISSING_OR_NONFINITE"
+        if status == "COMPLETED" and (train_loss is None or evaluation_status != "VALID"):
+            status = "HOLD"
         checkpoint_info = None
         candidates = sorted(checkpoint_dir.glob("checkpoint-*"), key=lambda p: int(p.name.split("-")[-1]))
         latest = candidates[-1] if candidates else None
@@ -560,6 +636,8 @@ def main() -> int:
                       "snapshot_sha256": model_lock["snapshot_sha256"].lower(), "quantization": "4-bit NF4 QLoRA"},
             "dataset": {"id": manifest["dataset_id"], "revision": manifest["dataset_revision"],
                         "license_id": manifest["license_id"], "owner_approval_id": manifest["owner_approval_id"],
+                        "rights_attestation_id": manifest["_rights_attestation_id"],
+                        "rights_attestation_sha256": manifest["_rights_attestation_sha256"],
                         "train_sha256": manifest["train_sha256"].lower(), "holdout_sha256": manifest["holdout_sha256"].lower(),
                         "train_records": train_records, "holdout_records": holdout_records},
             "runtime": {"python": sys.version.split()[0], "platform": platform.platform(),
@@ -569,9 +647,10 @@ def main() -> int:
                         "gpu": chosen["name"], "gpu_uuid": chosen["uuid"], "gpu_memory_total_mib": chosen["memory_total_mib"]},
             "training": {"profile": args.profile, "max_steps": total_steps,
                          "global_step": global_step, "epochs": epochs, "batch_size": batch_size,
-                         "learning_rate": args.learning_rate, "train_loss": float(result.training_loss),
-                         "baseline_eval_loss": baseline.get("eval_loss"),
-                         "adapter_eval_loss": final_eval.get("eval_loss"),
+                         "learning_rate": args.learning_rate, "train_loss": train_loss,
+                         "baseline_eval_loss": baseline_eval_loss,
+                         "adapter_eval_loss": adapter_eval_loss,
+                         "evaluation_status": evaluation_status,
                          "gpu_temperature_initial_c": temp, "gpu_temperature_last_c": monitor["temperature"],
                          "thermal_stop_reason": monitor["thermal_reason"]},
             "checkpoint": checkpoint_info, "adapter_sha256": sha256_tree(adapter_dir),

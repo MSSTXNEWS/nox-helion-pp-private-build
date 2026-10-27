@@ -33,7 +33,17 @@ public sealed record GpuGuardianEvent(
     [property: JsonPropertyName("message")] string Message,
     [property: JsonPropertyName("numerator")] long? Numerator,
     [property: JsonPropertyName("denominator")] long? Denominator,
-    [property: JsonPropertyName("evidence_verified")] bool EvidenceVerified);
+    [property: JsonPropertyName("evidence_verified")] bool EvidenceVerified,
+    [property: JsonPropertyName("event_sequence")] long? EventSequence = null,
+    [property: JsonPropertyName("metric_name")] string? MetricName = null,
+    [property: JsonPropertyName("metric_value")] double? MetricValue = null,
+    [property: JsonPropertyName("temperature_c")] double? TemperatureC = null,
+    [property: JsonPropertyName("gpu_utilization_percent")] double? GpuUtilizationPercent = null,
+    [property: JsonPropertyName("memory_used_mib")] long? MemoryUsedMiB = null,
+    [property: JsonPropertyName("memory_total_mib")] long? MemoryTotalMiB = null,
+    [property: JsonPropertyName("gpu_index")] long? GpuIndex = null,
+    [property: JsonPropertyName("gpu_name")] string? GpuName = null,
+    [property: JsonPropertyName("error_code")] string? ErrorCode = null);
 
 public enum GpuMode { ECO, BALANCED, INTENSIVE }
 
@@ -66,6 +76,7 @@ public sealed class GpuGuardian
     private const int MaximumOutputCharacters = 64 * 1024;
     private readonly string? _nvidiaSmiPath;
     private readonly string _runId;
+    private long _eventSequence;
 
     public GpuGuardian(string? runId = null, string? nvidiaSmiPath = null)
     {
@@ -200,14 +211,18 @@ public sealed class GpuGuardian
             EventSchema, _runId, Guid.NewGuid().ToString("N"), "gpu.sample", taskId,
             "P04", "gpu_sample", sample.TimestampUtc, sample.State, sample.Source,
             message, sample.UtilizationPercent.HasValue ? (long?)Math.Round(sample.UtilizationPercent.Value) : null,
-            sample.UtilizationPercent.HasValue ? 100L : null, false));
+            sample.UtilizationPercent.HasValue ? 100L : null, false,
+            Interlocked.Increment(ref _eventSequence), TemperatureC: sample.TemperatureC,
+            GpuUtilizationPercent: sample.UtilizationPercent, MemoryUsedMiB: sample.MemoryUsedMiB,
+            MemoryTotalMiB: sample.MemoryTotalMiB, GpuIndex: sample.Index, GpuName: sample.Name,
+            ErrorCode: sample.ErrorCode));
     }
 
     internal void EmitWorker(string workerId, string eventType, string state, string message) =>
         EventRaised?.Invoke(new GpuGuardianEvent(
             EventSchema, _runId, Guid.NewGuid().ToString("N"), eventType, workerId,
             "P04", "gpu_worker", DateTimeOffset.UtcNow, state, "P04.GpuGuardian",
-            message, null, null, false));
+            message, null, null, false, Interlocked.Increment(ref _eventSequence)));
 
     private static GpuTelemetrySample Unavailable(string code) =>
         new(DateTimeOffset.UtcNow, "N_D", null, null, null, null, null, null,
@@ -320,6 +335,7 @@ public sealed class GpuWorkQueue : IDisposable
         await _singleGpuSlot.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
             if (policy.QueueStartDelay > TimeSpan.Zero)
                 await Task.Delay(policy.QueueStartDelay, cancellationToken).ConfigureAwait(false);
             return await operation(cancellationToken).ConfigureAwait(false);
@@ -329,7 +345,10 @@ public sealed class GpuWorkQueue : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0) _singleGpuSlot.Dispose();
+        // Do not dispose the semaphore while a queued/running operation still
+        // owns it: RunAsync must always be able to Release from its finally.
+        // SemaphoreSlim allocates no kernel handle unless WaitHandle is used.
+        Interlocked.Exchange(ref _disposed, 1);
     }
 }
 

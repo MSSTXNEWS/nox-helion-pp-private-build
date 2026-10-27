@@ -24,11 +24,14 @@ public sealed record InstallerRunEvent(
     string PackageId,
     string ActionId,
     DateTimeOffset TimestampUtc,
+    long? EventSequence,
     string State,
     string Source,
     string Message,
     long? Numerator,
     long? Denominator,
+    string? MetricName,
+    double? MetricValue,
     string Category,
     bool ProducerClaimedEvidenceVerified,
     bool EvidenceVerified,
@@ -36,6 +39,8 @@ public sealed record InstallerRunEvent(
     double? GpuUtilizationPercent,
     long? MemoryUsedMiB,
     long? MemoryTotalMiB,
+    long? GpuIndex,
+    string? GpuName,
     string? ErrorCode);
 
 /// <summary>Streams NOX-INSTALLER-EVENT-v3 NDJSON into a safe report view.</summary>
@@ -44,6 +49,8 @@ public static partial class InstallerRunReport
     public const string EventSchema = "NOX-INSTALLER-EVENT-v3";
     public const int MaximumLineBytes = 256 * 1024;
     private const int MaximumEvents = 1_000_000;
+    private const int ReadBufferBytes = 16 * 1024;
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private static readonly HashSet<string> EventTypes = new(StringComparer.Ordinal)
     {
         "task.started", "task.progress", "training.step", "checkpoint.saved",
@@ -60,27 +67,28 @@ public static partial class InstallerRunReport
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
-        using var reader = new StreamReader(input, new UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: false,
-            bufferSize: 16 * 1024, leaveOpen: true);
         var lineNumber = 0L;
-        var emitted = 0;
-        while (true)
+        await foreach (var boundedLine in ReadBoundedUtf8LinesAsync(input, cancellationToken).ConfigureAwait(false))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-            if (line is null) yield break;
             lineNumber++;
-            if (line.Length == 0) continue;
-            if (Encoding.UTF8.GetByteCount(line) > MaximumLineBytes)
-            {
-                onInvalidLine?.Invoke(lineNumber, "EVENT_LINE_TOO_LARGE");
-                continue;
-            }
-            if (++emitted > MaximumEvents)
+            if (lineNumber > MaximumEvents)
             {
                 onInvalidLine?.Invoke(lineNumber, "EVENT_COUNT_LIMIT_REACHED");
                 yield break;
             }
+            if (boundedLine.TooLarge)
+            {
+                onInvalidLine?.Invoke(lineNumber, "EVENT_LINE_TOO_LARGE");
+                continue;
+            }
+            if (boundedLine.InvalidUtf8)
+            {
+                onInvalidLine?.Invoke(lineNumber, "EVENT_INVALID_UTF8");
+                continue;
+            }
+            var line = boundedLine.Text ?? string.Empty;
+            if (line.Length == 0) continue;
 
             InstallerRunEvent? parsed;
             try { parsed = ParseLine(line); }
@@ -91,6 +99,65 @@ public static partial class InstallerRunReport
             }
             if (parsed is not null) yield return parsed;
         }
+    }
+
+    private readonly record struct BoundedLine(string? Text, bool TooLarge, bool InvalidUtf8);
+
+    /// <summary>
+    /// Reads fixed-size byte chunks and caps each line before decoding it. This
+    /// prevents ReadLineAsync from allocating an unbounded string for a hostile
+    /// or corrupted event stream.
+    /// </summary>
+    private static async IAsyncEnumerable<BoundedLine> ReadBoundedUtf8LinesAsync(
+        Stream input,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var readBuffer = new byte[ReadBufferBytes];
+        var lineBuffer = new byte[MaximumLineBytes + 1]; // extra byte permits CRLF normalization
+        var lineLength = 0;
+        var tooLarge = false;
+        while (true)
+        {
+            var read = await input.ReadAsync(readBuffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+            if (read == 0) break;
+            var segmentStart = 0;
+            for (var index = 0; index < read; index++)
+            {
+                if (readBuffer[index] != (byte)'\n') continue;
+                AppendSegment(readBuffer, segmentStart, index - segmentStart, lineBuffer, ref lineLength, ref tooLarge);
+                yield return DecodeBoundedLine(lineBuffer, lineLength, tooLarge);
+                lineLength = 0;
+                tooLarge = false;
+                segmentStart = index + 1;
+            }
+            if (segmentStart < read)
+                AppendSegment(readBuffer, segmentStart, read - segmentStart, lineBuffer, ref lineLength, ref tooLarge);
+        }
+
+        if (lineLength > 0 || tooLarge)
+            yield return DecodeBoundedLine(lineBuffer, lineLength, tooLarge);
+    }
+
+    private static void AppendSegment(byte[] source, int offset, int count, byte[] lineBuffer,
+        ref int lineLength, ref bool tooLarge)
+    {
+        if (tooLarge) return;
+        if (lineLength + count > lineBuffer.Length)
+        {
+            tooLarge = true;
+            return;
+        }
+        Buffer.BlockCopy(source, offset, lineBuffer, lineLength, count);
+        lineLength += count;
+    }
+
+    private static BoundedLine DecodeBoundedLine(byte[] lineBuffer, int lineLength, bool tooLarge)
+    {
+        if (tooLarge) return new BoundedLine(null, true, false);
+        if (lineLength > 0 && lineBuffer[lineLength - 1] == (byte)'\r') lineLength--;
+        if (lineLength > MaximumLineBytes) return new BoundedLine(null, true, false);
+        try { return new BoundedLine(StrictUtf8.GetString(lineBuffer, 0, lineLength), false, false); }
+        catch (System.Text.DecoderFallbackException) { return new BoundedLine(null, false, true); }
     }
 
     public static InstallerRunEvent? ParseLine(string line)
@@ -114,35 +181,71 @@ public static partial class InstallerRunReport
             !TryString(root, "state", 32, out var state) ||
             !TryString(root, "source", 128, out var source))
             throw new InvalidDataException("EVENT_REQUIRED_FIELD_INVALID");
+        if ((eventType is "training.step" or "checkpoint.saved" or "model.stopped" or "gpu.sample") && packageId != "P04")
+            throw new InvalidDataException("EVENT_PACKAGE_MISMATCH");
         if (!root.TryGetProperty("timestamp_utc", out var timestampElement) || timestampElement.ValueKind != JsonValueKind.String ||
-            !DateTimeOffset.TryParse(timestampElement.GetString(), CultureInfo.InvariantCulture,
+            timestampElement.GetString() is not string timestampText || !timestampText.Contains('T') ||
+            !DateTimeOffset.TryParse(timestampText, CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var timestamp))
             throw new InvalidDataException("EVENT_TIMESTAMP_INVALID");
+
+        var sequence = ReadNullableNonNegativeInt64(root, "event_sequence");
+        if (sequence is 0) throw new InvalidDataException("EVENT_SEQUENCE_INVALID");
 
         var message = root.TryGetProperty("message", out var messageElement) && messageElement.ValueKind == JsonValueKind.String
             ? Redact(messageElement.GetString() ?? string.Empty)
             : string.Empty;
         var producerClaim = root.TryGetProperty("evidence_verified", out var evidenceElement) &&
             evidenceElement.ValueKind is JsonValueKind.True or JsonValueKind.False && evidenceElement.GetBoolean();
+        var numerator = ReadNullableNonNegativeInt64(root, "numerator");
+        var denominator = ReadNullableNonNegativeInt64(root, "denominator");
+        if (numerator.HasValue && denominator.HasValue && numerator.Value > denominator.Value)
+            throw new InvalidDataException("EVENT_PROGRESS_RANGE_INVALID");
+        string? metricName = null;
+        if (root.TryGetProperty("metric_name", out var metricNameElement) && metricNameElement.ValueKind != JsonValueKind.Null)
+        {
+            if (metricNameElement.ValueKind != JsonValueKind.String || metricNameElement.GetString() is not string metricNameText ||
+                metricNameText.Length > 64 || metricNameText.Any(char.IsControl))
+                throw new InvalidDataException("EVENT_METRIC_NAME_INVALID");
+            metricName = SafeToken(metricNameText, 64);
+        }
+        var metricValue = ReadNullableDouble(root, "metric_value", -double.MaxValue, double.MaxValue);
+        var memoryUsed = ReadNullableNonNegativeInt64(root, "memory_used_mib");
+        var memoryTotal = ReadNullableNonNegativeInt64(root, "memory_total_mib");
+        if (memoryUsed.HasValue && memoryTotal.HasValue && memoryUsed.Value > memoryTotal.Value)
+            throw new InvalidDataException("EVENT_GPU_MEMORY_RANGE_INVALID");
+        var gpuIndex = ReadNullableNonNegativeInt64(root, "gpu_index");
+        string? gpuNameValue = null;
+        if (root.TryGetProperty("gpu_name", out var gpuName) && gpuName.ValueKind != JsonValueKind.Null)
+        {
+            if (gpuName.ValueKind != JsonValueKind.String || gpuName.GetString() is not string gpuNameText ||
+                gpuNameText.Length > 256 || gpuNameText.Any(char.IsControl))
+                throw new InvalidDataException("EVENT_GPU_NAME_INVALID");
+            gpuNameValue = Redact(gpuNameText);
+        }
 
         return new InstallerRunEvent(
-            SafeToken(runId, 128), SafeToken(eventId, 128), eventType, SafeToken(taskId, 128), SafeToken(packageId, 64), SafeToken(actionId, 128), timestamp,
-            state, Redact(source), message,
-            ReadNullableNonNegativeInt64(root, "numerator"), ReadNullableNonNegativeInt64(root, "denominator"),
-            Classify(eventType, actionId),
+            SafeToken(runId, 128), SafeToken(eventId, 128), eventType, SafeToken(taskId, 128), SafeToken(packageId, 64), SafeToken(actionId, 128), timestamp, sequence,
+            SafeToken(state, 32), Redact(source), message,
+            numerator, denominator, metricName, metricValue,
+            Classify(eventType, actionId, metricName),
             producerClaim,
             EvidenceVerified: false,
             ReadNullableDouble(root, "temperature_c", 0, 150),
             ReadNullableDouble(root, "gpu_utilization_percent", 0, 100),
-            ReadNullableNonNegativeInt64(root, "memory_used_mib"),
-            ReadNullableNonNegativeInt64(root, "memory_total_mib"),
+            memoryUsed, memoryTotal, gpuIndex, gpuNameValue,
             root.TryGetProperty("error_code", out var error) && error.ValueKind == JsonValueKind.String
                 ? SafeIdentifier(error.GetString(), 128)
                 : null);
     }
 
-    private static string Classify(string eventType, string actionId)
+    private static string Classify(string eventType, string actionId, string? metricName)
     {
+        if (metricName?.Contains("eval", StringComparison.OrdinalIgnoreCase) == true ||
+            metricName?.Contains("validation", StringComparison.OrdinalIgnoreCase) == true ||
+            actionId.Contains("eval", StringComparison.OrdinalIgnoreCase) ||
+            actionId.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
+            actionId.Contains("baseline", StringComparison.OrdinalIgnoreCase)) return "evaluation";
         if (eventType == "training.step") return "training_step";
         if (eventType == "checkpoint.saved") return "checkpoint";
         if (eventType == "gpu.sample") return "gpu_telemetry";
@@ -150,8 +253,6 @@ public static partial class InstallerRunReport
         if (eventType == "task.failed") return "task_failed";
         if (eventType == "task.completed") return "task_completed";
         if (eventType == "task.started") return "task_started";
-        if (actionId.Contains("eval", StringComparison.OrdinalIgnoreCase) ||
-            actionId.Contains("baseline", StringComparison.OrdinalIgnoreCase)) return "evaluation";
         return "task_progress";
     }
 

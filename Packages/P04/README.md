@@ -15,10 +15,12 @@ This directory is a source package proposal for NOX P04. It provides local retri
 ### Training authorization and model compatibility
 
 - Training is fail-closed. Require a dataset manifest with explicit rights approval, consent, immutable dataset/revision identifiers, train and holdout SHA-256 values, owner approval, and a configured external rights/signature verifier. A manifest's self-asserted booleans alone do not prove authorization.
+- The configured verifier must return JSON attestation schema `nox-rights-attestation-v1`, status `VERIFIED`, the exact manifest SHA-256, dataset ID/revision, license ID, owner approval ID, train/holdout SHA-256, `intent=training`, and a non-empty attestation ID. The worker stores the attestation ID and canonical JSON SHA-256 in its v2 training receipt. The trusted verifier executable and approved manifest must be supplied by the host; this package does not invent either.
 - Require a compatible local model snapshot plus an immutable upstream revision recorded in the run identity. Use trust_remote_code=false; do not download models or datasets implicitly from a training run.
 - QLoRA uses Transformers/TRL Trainer with PEFT and Accelerate. Only one Trainer/Accelerate execution path owns the GPU. Quantized base weights are not merged in place; any merge must target a fresh output directory after checking exact base revision and adapter metadata.
 - Preserve a separate validation holdout. Report measured train/eval losses and checkpoint receipts only when produced by the real worker.
-- STOP and PAUSE act at optimizer-step boundaries and request a full resumable checkpoint. RESUME requires matching model, dataset hashes, and training configuration. An absent or invalid checkpoint remains HOLD.
+- Training event envelopes carry finite values as typed `metric_name` and `metric_value` fields. The human-readable message is supplemental, not the metric data source.
+- STOP and PAUSE act at optimizer-step boundaries and request a full resumable checkpoint. RESUME requires the exact prior PAUSED receipt, run configuration, model-lock SHA, manifest/rights-attestation identity, and checkpoint tree SHA to match. An absent, altered, or invalid receipt/checkpoint remains HOLD. The one-time baseline evaluation occurs before the Trainer callback loop, so STOP/PAUSE markers are observed after that evaluation returns.
 
 ### GPU ECO Guardian
 
@@ -27,6 +29,12 @@ ECO, BALANCED, and INTENSIVE are cooperative scheduling profiles. They may chang
 ### P05 event bridge
 
 Training and GPU events use Contracts/events.v3.json. P05 may classify the event for reporting, but must keep evidence_verified=false unless a separate verifier validates the referenced receipt. A progress event, dashboard bar, or task completion is not a training result or release acceptance.
+- The QLoRA writer emits receipt schema `NOX-QLORA-TRAINING-RECEIPT-v2`; the merge command requires that exact schema and re-attests the same dataset authorization and base snapshot before writing to a new output directory.
+- NVIDIA event samples preserve nullable temperature, utilization, VRAM, GPU identity, event sequence, and sensor error code. A missing reading remains null and is never synthesized.
+
+### Chat host seam
+
+`RagChatContextProvider` is the host-facing DI seam. It accepts the authenticated owner SID and conversation ID, retrieves bounded passages for the user message, and returns context with citations. It has not been called by a live chat host because the owner-bound application source tree is not present in this candidate repository.
 
 ## Current builder limitation
 

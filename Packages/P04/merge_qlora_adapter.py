@@ -7,8 +7,10 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import sys
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -21,6 +23,74 @@ def read_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("INPUT_JSON_MUST_BE_OBJECT")
     return value
+
+
+def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
+                               receipt_dataset: Any) -> dict[str, Any]:
+    """Re-check rights authorization at merge time; a receipt alone is not authority."""
+    manifest = read_object(manifest_path)
+    if verifier_path.is_symlink() or not verifier_path.is_file():
+        raise ValueError("RIGHTS_VERIFIER_NOT_REGULAR_FILE")
+    for key, expected in (("schema", "nox-dataset-consent-v1"),
+                          ("rights_status", "APPROVED"),
+                          ("consent_status", "GRANTED")):
+        if manifest.get(key) != expected:
+            raise ValueError("DATASET_" + key.upper() + "_NOT_APPROVED")
+    if not isinstance(receipt_dataset, dict):
+        raise ValueError("TRAINING_RECEIPT_DATASET_MISSING")
+    fields = {"dataset_id": "id", "dataset_revision": "revision",
+              "license_id": "license_id", "owner_approval_id": "owner_approval_id",
+              "train_sha256": "train_sha256", "holdout_sha256": "holdout_sha256"}
+    for field, receipt_field in fields.items():
+        value = manifest.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("DATASET_" + field.upper() + "_MISSING")
+        recorded = receipt_dataset.get(receipt_field)
+        if not isinstance(recorded, str) or recorded.casefold() != value.casefold():
+            raise ValueError("TRAINING_RECEIPT_DATASET_MISMATCH")
+    for field in ("train_sha256", "holdout_sha256"):
+        if re.fullmatch(r"[0-9a-fA-F]{64}", manifest[field]) is None:
+            raise ValueError("DATASET_" + field.upper() + "_INVALID")
+    if manifest["train_sha256"].casefold() == manifest["holdout_sha256"].casefold():
+        raise ValueError("TRAIN_AND_HOLDOUT_MUST_DIFFER")
+    manifest_sha = sha256_file(manifest_path)
+    result = subprocess.run(
+        [str(verifier_path.resolve(strict=True)), "--manifest", str(manifest_path.resolve(strict=True)),
+         "--intent", "training", "--manifest-sha256", manifest_sha],
+        check=False, capture_output=True, text=True, timeout=30, shell=False,
+    )
+    if result.returncode != 0:
+        raise ValueError("RIGHTS_VERIFIER_REJECTED_MANIFEST")
+    try:
+        attestation = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE") from exc
+    expected_attestation = {
+        "schema": "nox-rights-attestation-v1",
+        "status": "VERIFIED",
+        "manifest_sha256": manifest_sha,
+        "dataset_id": manifest["dataset_id"],
+        "dataset_revision": manifest["dataset_revision"],
+        "license_id": manifest["license_id"],
+        "owner_approval_id": manifest["owner_approval_id"],
+        "train_sha256": manifest["train_sha256"].lower(),
+        "holdout_sha256": manifest["holdout_sha256"].lower(),
+        "intent": "training",
+    }
+    if (not isinstance(attestation, dict)
+            or any(not isinstance(attestation.get(key), str)
+                   or attestation[key].casefold() != expected.casefold()
+                   for key, expected in expected_attestation.items())
+            or not isinstance(attestation.get("attestation_id"), str)
+            or not attestation["attestation_id"].strip()):
+        raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+    attestation_sha = hashlib.sha256(
+        json.dumps(attestation, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if (receipt_dataset.get("rights_attestation_id") != attestation["attestation_id"].strip()
+            or receipt_dataset.get("rights_attestation_sha256", "").casefold() != attestation_sha):
+        raise ValueError("TRAINING_RECEIPT_RIGHTS_ATTESTATION_MISMATCH")
+    return manifest
 
 
 def sha256_file(path: Path) -> str:
@@ -56,14 +126,26 @@ def main() -> int:
     parser.add_argument("--model-lock", required=True, type=Path)
     parser.add_argument("--adapter-dir", required=True, type=Path)
     parser.add_argument("--training-receipt", required=True, type=Path)
+    parser.add_argument("--dataset-manifest", required=True, type=Path,
+                        help="same consent manifest used by the completed training run")
+    parser.add_argument("--rights-verifier", required=True, type=Path,
+                        help="local executable that re-attests training rights; no shell")
     parser.add_argument("--output-dir", required=True, type=Path, help="must not exist")
     args = parser.parse_args()
 
     temp_output: Path | None = None
     try:
+        for label, path in (("MODEL", args.model_dir), ("MODEL_LOCK", args.model_lock),
+                            ("ADAPTER", args.adapter_dir), ("TRAINING_RECEIPT", args.training_receipt),
+                            ("DATASET_MANIFEST", args.dataset_manifest),
+                            ("RIGHTS_VERIFIER", args.rights_verifier)):
+            if path.is_symlink():
+                raise ValueError(label + "_PATH_MUST_NOT_BE_SYMLINK")
         model_dir = args.model_dir.resolve(strict=True)
         adapter_dir = args.adapter_dir.resolve(strict=True)
         receipt_path = args.training_receipt.resolve(strict=True)
+        dataset_manifest_path = args.dataset_manifest.resolve(strict=True)
+        verifier_path = args.rights_verifier.resolve(strict=True)
         lock = read_object(args.model_lock.resolve(strict=True))
         receipt = read_object(receipt_path)
         adapter_meta = read_object(adapter_dir / "adapter-base.json")
@@ -79,10 +161,13 @@ def main() -> int:
             raise ValueError("MODEL_LOCK_IDENTITY_INCOMPLETE")
         if tree_sha256(model_dir).lower() != snapshot_hash.lower():
             raise ValueError("BASE_SNAPSHOT_SHA256_MISMATCH")
-        if receipt.get("schema") != "NOX-QLORA-TRAINING-RECEIPT-v1" or receipt.get("status") != "COMPLETED":
+        if receipt.get("schema") != "NOX-QLORA-TRAINING-RECEIPT-v2" or receipt.get("status") != "COMPLETED":
             raise ValueError("TRAINING_RECEIPT_NOT_COMPLETED")
-        if receipt.get("model", {}).get("id") != model_id or receipt.get("model", {}).get("revision") != revision:
+        receipt_model = receipt.get("model", {})
+        if (receipt_model.get("id") != model_id or receipt_model.get("revision") != revision
+                or str(receipt_model.get("snapshot_sha256", "")).casefold() != snapshot_hash.casefold()):
             raise ValueError("TRAINING_RECEIPT_BASE_MISMATCH")
+        verify_dataset_attestation(dataset_manifest_path, verifier_path, receipt.get("dataset"))
         if receipt.get("adapter_sha256", "").lower() != tree_sha256(adapter_dir).lower():
             raise ValueError("ADAPTER_SHA256_MISMATCH")
         if (adapter_meta.get("model_id") != model_id
@@ -98,6 +183,8 @@ def main() -> int:
                 or not isinstance(adapter_loss, (int, float)) or not math.isfinite(float(adapter_loss))
                 or float(adapter_loss) >= float(baseline_loss)):
             raise ValueError("ADAPTER_VALIDATION_DID_NOT_IMPROVE")
+        if args.output_dir.is_symlink():
+            raise ValueError("MERGE_OUTPUT_MUST_NOT_BE_SYMLINK")
         output = args.output_dir.absolute()
         if output.exists() or output.is_symlink() or not output.parent.is_dir() or output.parent.is_symlink():
             raise ValueError("MERGE_OUTPUT_MUST_BE_NEW_DIRECTORY_IN_EXISTING_PARENT")
