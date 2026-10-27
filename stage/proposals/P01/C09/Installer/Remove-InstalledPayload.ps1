@@ -35,7 +35,8 @@ $ownership = (Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8).Trim()
 if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MARKER' }
 $m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
-if ($null -eq $m.files -or @($m.files).Count -lt 1) { throw 'P01_UNINSTALL_EMPTY_MANIFEST' }
+if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
+if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'P01_UNINSTALL_INVALID_RUN_ID' }
 $registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 $directories = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 $checked = New-Object 'System.Collections.Generic.List[object]'
@@ -63,6 +64,7 @@ function Assert-VerifiedEntry([object]$Entry) {
 foreach ($f in @($m.files)) {
   if ($null -eq $f -or $f.path -isnot [string]) { throw 'P01_UNINSTALL_BAD_ROW' }
   $relative = Normalize-Relative ([string]$f.path)
+  if ($relative -ieq 'payload.sha256.json' -or $relative -ieq 'nox-p01-owned.txt' -or $relative -ieq 'Uninstall.exe') { throw 'P01_UNINSTALL_RESERVED_INSTALLER_METADATA' }
   if (-not $registered.Add($relative)) { throw 'P01_UNINSTALL_DUPLICATE_PATH' }
   $full = [IO.Path]::GetFullPath((Join-Path $root $relative))
   if (-not $full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'P01_UNINSTALL_PATH_ESCAPE' }
@@ -90,8 +92,10 @@ foreach ($entry in $checked) {
 }
 # PHASE 3 — delete ONLY prevalidated payload paths, keep unknown/user data/metadata.
 $removed=0
-foreach ($path in $verified) {
-  Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+foreach ($entry in $checked) {
+  # C11: enforce final per-file digest check just before removal.
+  Assert-VerifiedEntry $entry
+  Remove-Item -LiteralPath $entry.Full -Force -ErrorAction Stop
   $removed++
 }
 foreach ($dir in @($directories | Sort-Object Length -Descending)) {
