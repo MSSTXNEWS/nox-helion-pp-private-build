@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '22'
       - name: All fifty effect contracts
-        run: node --test proposals/NOX-WOW51-100/wow51-100.test.mjs
+        run: node --test proposals/NOX-WOW51-100/*.test.mjs
       - name: Exact source modules
         run: |
           node --check proposals/NOX-WOW51-100/catalog.mjs
