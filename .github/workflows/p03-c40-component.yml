@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'Packages/P03/C40/**'
+      - 'Packages/P03/Source/**'
       - '.github/workflows/p03-c40-component.yml'
   workflow_dispatch:
 permissions:
@@ -105,3 +106,44 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_BUILD_FAILED' }
           dotnet run --project p03-c40-source/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj --configuration Release --no-build
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_TEST_FAILED' }
+
+      - name: Compile consolidated P03 direct source (preserve original Windows installer donor)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $live = 'Packages/P03/Source'
+          $donor = 'p03-c40-source/P03.ModelCenter/WindowsComponentAdapter.cs'
+          if (-not (Test-Path -LiteralPath $donor)) { throw 'OWNER3_ORIGINAL_WINDOWS_PROBE_MISSING' }
+          if (Test-Path -LiteralPath "$live/P03.ModelCenter/WindowsComponentAdapter.cs") { throw 'OWNER3_SOURCE_COLLISION_HOLD' }
+          Copy-Item -LiteralPath $donor -Destination "$live/P03.ModelCenter/WindowsComponentAdapter.cs"
+          $manifest = Get-Content -LiteralPath "$live/P03.ModelCenter/PIN_REVIEW_TEMPLATE_15.json" -Raw | ConvertFrom-Json
+          if ($manifest.items.Count -ne 15) { throw 'OWNER3_REVIEW_LEADS_LOSS' }
+          if (@($manifest.items | Where-Object { $_.reviewStatus -ne 'REVIEW_REQUIRED' }).Count -gt 0) { throw 'OWNER3_UNAPPROVED_MODEL_DOWNLOAD' }
+          dotnet build "$live/P03.ModelCenter.Smoke/P03.ModelCenter.Smoke.csproj" --configuration Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_SOURCE_BUILD_FAILED' }
+          dotnet run --project "$live/P03.ModelCenter.Smoke/P03.ModelCenter.Smoke.csproj" --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_SOURCE_SMOKE_FAILED' }
+          dotnet build "$live/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj" --configuration Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_HARDENING_BUILD_FAILED' }
+          dotnet run --project "$live/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj" --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_HARDENING_FAILED' }
+          node --check "$live/P03.ModelCenter.Wow/ui.js"
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_JS_INVALID' }
+      - name: Package verified consolidated component source for integrator 6
+        if: success()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem 'Packages/P03/Source' -Recurse -Directory |
+            Where-Object { $_.Name -in @('bin','obj') } |
+            Remove-Item -Recurse -Force
+          Compress-Archive -LiteralPath 'Packages/P03/Source' -DestinationPath 'P03_E03_CONSOLIDATED_SOURCE_ARTIFACT.zip'
+          $h = (Get-FileHash -LiteralPath 'P03_E03_CONSOLIDATED_SOURCE_ARTIFACT.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Output "E03_CONSOLIDATED_CI_SOURCE_SHA256=$h"
+          Write-Output 'SOURCE_ONLY_NOT_WINDOWS_EXE_NOT_INTEGRATED'
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: E03-P03-consolidated-source-only
+          path: P03_E03_CONSOLIDATED_SOURCE_ARTIFACT.zip
+          retention-days: 30
