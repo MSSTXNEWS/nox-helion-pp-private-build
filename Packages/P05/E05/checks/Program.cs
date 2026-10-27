@@ -142,6 +142,10 @@ Check(E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu with {
     "T10-01: old telemetry never emitted");
 Check(!E05CanonicalEventFactory.IsCanonical(evt! with { EventType = "telemetry.snapshot" }),
     "T10-01: unsupported event type blocked");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with { Message = null! }),
+    "T10-01: null event message fails closed");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with { Message = "unsafe\nlog" }),
+    "T10-01: multiline event message fails closed");
 var hw = E05HardwareEvidence.Snapshot("RUN-E05-TEST", new ISensorProvider[] {
     new FakeSensorProvider(liveGpu, new SensorPoint("gpu.vram.used_bytes", 20,
         "bytes", "NVML", nowV3, "LIVE"), new SensorPoint("gpu.vram.total_bytes", 10,
@@ -168,6 +172,11 @@ Check(E05SealedProgress.Evaluate(sealedLane, new FakeReceiptVerifier()) == 100m,
     "T10-04: owner-bound acceptance evidence can produce measured percentage");
 Check(E05SealedProgress.Evaluate(sealedLane with { ManifestSha256 = "not-sha" },
     new FakeReceiptVerifier()) is null, "T10-04: invalid manifest rejected");
+Check(E05SealedProgress.Evaluate(sealedLane with { Criteria = null! },
+    new FakeReceiptVerifier()) is null, "T10-04: null criterion manifest is N/D");
+Check(E05SealedProgress.Evaluate(sealedLane with {
+    Criteria = new E05SealedCriterion[] { null! } },
+    new FakeReceiptVerifier()) is null, "T10-04: corrupted criterion row is N/D");
 var activity = new E05ActivityTimeline("RUN-E05-TEST");
 Check(activity.Accept(evt!, nowV3) && activity.Read(nowV3).Count == 1,
     "T10-05: actual live event enters timeline");
@@ -184,6 +193,9 @@ var docsGate = await E05DriveRunGate.AppendRunAsync(docsGateWriter,
     "RUN-E05-TEST", "RUN-E05-TEST fixture", targets, false, CancellationToken.None);
 Check(docsGate.State == "HOLD_MASTER_INTEGRITY" && docsGate.Receipts.Count == 2,
     "T10-06: unverified historical master prevents app-side journal write");
+var malformedGate = await E05DriveRunGate.AppendRunAsync(docsGateWriter,
+    "RUN-E05-TEST", "RUN-E05-TEST fixture", null!, false, CancellationToken.None);
+Check(malformedGate.State == "HOLD_CONTRACT", "T10-06: null target list fails closed");
 var cfg = def with { Id = "bitcoin" };
 var known = E05FeedTrust.Classify(new FeedResult("bitcoin", "fixture", "{}",
     nowV3.AddHours(-1), nowV3, "LIVE", null, false), cfg, nowV3);
