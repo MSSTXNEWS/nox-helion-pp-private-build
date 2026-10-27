@@ -72,9 +72,10 @@ jobs:
           $expected = 'fbfa3c354e2bfeb52871a2cae28d61e1b1c5db198d8e2539d1593f73397292b4'
           $actual = (Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw 'P03_TURBO12_PATCH_SHA_MISMATCH' }
-          git -C p03-c40-source apply --check $patch
+          $sourcePatch = (Resolve-Path -LiteralPath $patch).Path
+          git -C p03-c40-source apply --check $sourcePatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_PREIMAGE_CONFLICT' }
-          git -C p03-c40-source apply $patch
+          git -C p03-c40-source apply $sourcePatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_APPLY_FAILED' }
       - uses: actions/setup-dotnet@v4
         with:
