@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import os
+import stat
 from pathlib import Path
 import re
 import threading
@@ -202,8 +203,44 @@ class LocalRag:
             raise RagHold("OLLAMA_EMBED_DIMENSIONS_CHANGED")
         return result
 
+    def ingest_file(self, owner_sid: str, conversation_id: str, file_path: str | Path) -> dict:
+        """Read authorized local UTF-8 text once; host must authorize this path first."""
+        _scope(owner_sid, conversation_id)
+        path = Path(file_path)
+        if not path.is_absolute() or str(path).startswith(("//", "\\\\")):
+            raise RagHold("RAG_LOCAL_FILE_PATH_REQUIRED")
+        _safe_name(path.name)
+        cursor = path
+        while True:
+            if cursor.is_symlink():
+                raise RagHold("RAG_FILE_SYMLINK_BLOCKED")
+            if cursor == cursor.parent:
+                break
+            cursor = cursor.parent
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= 8 * 1024 * 1024:
+                raise RagHold("RAG_FILE_SIZE_OR_TYPE_INVALID")
+            with os.fdopen(fd, "rb", closefd=False) as stream:
+                raw = stream.read(8 * 1024 * 1024 + 1)
+            if len(raw) > 8 * 1024 * 1024:
+                raise RagHold("RAG_FILE_TOO_LARGE")
+        finally:
+            os.close(fd)
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise RagHold("RAG_FILE_NOT_UTF8") from exc
+        canonical = str(path.resolve(strict=True))
+        if os.name == "nt":
+            canonical = canonical.upper()
+        source_id = "file:" + _sha(canonical.encode("utf-8"))
+        return self.ingest_text(owner_sid, conversation_id, source_id, path.name, text,
+                                _source_sha=_sha(raw))
+
     def ingest_text(self, owner_sid: str, conversation_id: str, source_id: str,
-                    file_name: str, text: str) -> dict:
+                    file_name: str, text: str, *, _source_sha: str | None = None) -> dict:
         _scope(owner_sid, conversation_id)
         _safe_name(file_name)
         if (not isinstance(source_id, str) or not 0 < len(source_id) <= 128
@@ -212,11 +249,35 @@ class LocalRag:
         if (not isinstance(text, str) or not text.strip() or len(text) > MAX_SOURCE_CHARS
                 or len(text.encode("utf-8")) > 8 * 1024 * 1024 or "\x00" in text):
             raise RagHold("RAG_SOURCE_TEXT_INVALID")
+        identity = _sha(text.encode("utf-8")) if _source_sha is None else _source_sha
+        if not SHA_RE.fullmatch(identity):
+            raise RagHold("RAG_SOURCE_SHA_INVALID")
+        with self._locked():
+            current = self._read()
+            for item in current["sources"]:
+                if ((item.get("ownerSid"), item.get("conversationId"), item.get("sourceId"))
+                        == (owner_sid, conversation_id, source_id)
+                        and item.get("sourceIdentitySha256") == identity
+                        and item.get("fileName") == file_name):
+                    chunks = item.get("chunks")
+                    if not isinstance(chunks, list) or not chunks:
+                        raise RagHold("RAG_INDEX_CHUNKS_INVALID")
+                    for entry in chunks:
+                        if (not isinstance(entry, dict)
+                                or not isinstance(entry.get("text"), str)
+                                or _sha(entry["text"].encode("utf-8")) != entry.get("chunkSha256")
+                                or not isinstance(entry.get("vector"), list)
+                                or len(entry["vector"]) != current["vectorDimensions"]
+                                or any(type(v) not in (float, int) or not math.isfinite(v)
+                                       for v in entry["vector"])):
+                            raise RagHold("RAG_INDEX_CHUNK_INTEGRITY_FAILED")
+                    return {"source_id": source_id, "sha256": identity,
+                            "indexed_chunks": len(chunks), "unchanged": True}
         chunks = list(_chunks(text))
         vectors = self._embeddings(chunks)
         source = {"ownerSid": owner_sid, "conversationId": conversation_id,
                   "sourceId": source_id, "fileName": file_name,
-                  "sourceIdentitySha256": _sha(text.encode("utf-8")),
+                  "sourceIdentitySha256": identity,
                   "chunks": [{"chunkIndex": i, "chunkSha256": _sha(c.encode("utf-8")),
                               "text": c, "vector": vectors[i]} for i, c in enumerate(chunks)]}
         with self._locked():
@@ -231,7 +292,7 @@ class LocalRag:
             data["sources"].append(source)
             self._write(data)
         return {"source_id": source_id, "sha256": source["sourceIdentitySha256"],
-                "indexed_chunks": len(chunks)}
+                "indexed_chunks": len(chunks), "unchanged": False}
 
     def search(self, owner_sid: str, conversation_id: str, query: str, top_k: int = 5) -> list[dict]:
         _scope(owner_sid, conversation_id)
@@ -275,6 +336,9 @@ class LocalRag:
         parts, provenance = [], []
         chars = 0
         for hit in hits:
+            if (not isinstance(hit["source_id"], str) or len(hit["source_id"]) > 128
+                    or not isinstance(hit["title"], str) or len(hit["title"]) > 200):
+                raise RagHold("RAG_PROVENANCE_P02_INCOMPATIBLE")
             name = quote(hit["title"], safe="")
             header = f"[SOURCE: {name}#{hit['chunk_index'] + 1}; SHA256:{hit['chunk_sha256']}]\n"
             length = len(header) + len(hit["text"]) + (2 if parts else 0)
