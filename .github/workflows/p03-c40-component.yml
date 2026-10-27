@@ -64,6 +64,18 @@ jobs:
           $manifest = Get-Content -Raw 'p03-c40-source/P03.ModelCenter/PIN_REVIEW_TEMPLATE_15.json' | ConvertFrom-Json
           if ($manifest.items.Count -ne 15) { throw 'P03_MODEL_REVIEW_COUNT' }
           if (@($manifest.items | Where-Object { $_.reviewStatus -ne 'REVIEW_REQUIRED' }).Count -ne 0) { throw 'P03_MODEL_REVIEW_GATE' }
+      - name: Apply E03 TURBO12 additive overlay (retain TURBO10/11, enforce exact bytes)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $patch = 'Packages/P03/C40/NOX_V16_E03_TURBO12_additive_hardening.patch'
+          $expected = 'fbfa3c354e2bfeb52871a2cae28d61e1b1c5db198d8e2539d1593f73397292b4'
+          $actual = (Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'P03_TURBO12_PATCH_SHA_MISMATCH' }
+          git -C p03-c40-source apply --check $patch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_PREIMAGE_CONFLICT' }
+          git -C p03-c40-source apply $patch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_APPLY_FAILED' }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -80,3 +92,12 @@ jobs:
         run: |
           node --check p03-c40-source/P03.ModelCenter.Wow/ui.js
           if ($LASTEXITCODE -ne 0) { throw 'P03_JS_CHECK_FAILED' }
+
+      - name: E03 TURBO12 targeted .NET safety suite (fake data, no weights/downloads)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build p03-c40-source/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj --configuration Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_BUILD_FAILED' }
+          dotnet run --project p03-c40-source/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_TEST_FAILED' }
