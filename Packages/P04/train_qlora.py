@@ -297,6 +297,8 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
                 count += 1
                 if count > MAX_DATASET_LEAKAGE_SCAN_ROWS:
                     raise ValueError(label + "_LEAKAGE_SCAN_LIMIT_EXCEEDED")
+                if len(line) > MAX_JSONL_LINE_CHARACTERS:
+                    raise ValueError(label + "_LEAKAGE_SCAN_LINE_TOO_LONG")
                 yield payload_digest(json.loads(line))
         if count == 0:
             raise ValueError(label + "_EMPTY")
@@ -309,6 +311,16 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
         if digest in train_digests:
             raise ValueError("DATASET_TRAIN_HOLDOUT_EXAMPLE_OVERLAP")
     return train_rows, holdout_rows
+
+
+def verify_dataset_unchanged(manifest: dict[str, Any], train_path: Path, holdout_path: Path) -> None:
+    """Reattest the identical approved bytes immediately before opening the dataset."""
+    for name, path in (("train", train_path), ("holdout", holdout_path)):
+        digest = manifest.get(name + "_sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+            raise ValueError("DATASET_" + name.upper() + "_SHA256_MISSING")
+        if path.is_symlink() or not path.is_file() or sha256_file(path).casefold() != digest.casefold():
+            raise ValueError("DATASET_" + name.upper() + "_MODIFIED_AFTER_PREFLIGHT")
 
 
 def nvidia_smi() -> str | None:
@@ -357,6 +369,9 @@ class EventWriter:
     """Append-only v3 events with fail-closed run identity and resume sequence."""
 
     def __init__(self, path: Path, run_id: str, task_id: str):
+        if (not isinstance(run_id, str) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", run_id)
+                or not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", task_id)):
+            raise ValueError("EVENT_RUN_TASK_ID_INVALID")
         self.path, self.run_id, self.task_id = path, run_id, task_id
         if self.path.parent.is_symlink():
             raise ValueError("EVENT_LOG_PARENT_SYMLINK")
@@ -644,6 +659,7 @@ def main() -> int:
         dtype = torch.bfloat16 if bf16 else torch.float16
         quant = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
                                    bnb_4bit_use_double_quant=True, bnb_4bit_compute_dtype=dtype)
+        verify_dataset_unchanged(manifest, train_path, holdout_path)
         train_dataset = load_dataset("json", data_files=str(train_path), split="train")
         eval_dataset = load_dataset("json", data_files=str(holdout_path), split="train")
         schedule = "epoch" if args.epochs is not None else "steps"
