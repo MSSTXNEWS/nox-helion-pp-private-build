@@ -150,7 +150,7 @@ class Turbo10(unittest.TestCase):
             file=pathlib.Path(d)/'local.mp4';file.write_bytes(b'ftyp')
             with self.assertRaises(PermissionError):
                 authorized_local_video(d,str(file),native_user_selected=False)
-            self.assertEqual(authorized_local_video(d,str(file),native_user_selected=True),str(file))
+            self.assertTrue(pathlib.Path(authorized_local_video(d,str(file),native_user_selected=True)).samefile(file))
             (pathlib.Path(d)/'evil.html').write_text('<script>')
             with self.assertRaises(P02Error):
                 authorized_local_video(d,str(pathlib.Path(d)/'evil.html'),native_user_selected=True)
