@@ -9,14 +9,14 @@ test('one binding proof for exactly fifty canonical route IDs',()=>{
   assert.deepEqual(new Set(map.routes.map(x=>x.routeId)),new Set(catalog.actions.map(x=>x.routeId)));
   assert.equal(new Set(map.routes.map(x=>x.taskId)).size,50);
 });
-test('32 original owner method bindings and 18 distinct HOLD routes',()=>{
+test('36 owner method bindings and 14 distinct HOLD routes',()=>{
   const bound=map.routes.filter(x=>x.sourceBinding);
   const hold=map.routes.filter(x=>!x.sourceBinding);
-  assert.equal(bound.length,32);
-  assert.equal(hold.length,18);
+  assert.equal(bound.length,36);
+  assert.equal(hold.length,14);
   assert.equal(map.counts.exeIntegrated,0);
   assert.equal(map.counts.releaseAccepted,0);
-  assert.equal(map.counts.p02+map.counts.p03+map.counts.p04+map.counts.e05,32);
+  assert.equal(map.counts.p02+map.counts.p03+map.counts.p04+map.counts.e05,36);
   assert.deepEqual(new Set(hold.map(x=>x.routeId)),
                    new Set(map.remainingNativeBlockers.map(x=>x.routeId)));
 });
