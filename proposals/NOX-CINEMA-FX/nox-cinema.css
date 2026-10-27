@@ -240,3 +240,16 @@
     animation:none!important;
   }
 }
+
+/* Pause CSS work as well as JavaScript rAF when E06 host hides the view.
+   Scope only our FX so original application controls never stop processing. */
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__corona,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-panel::before {
+  animation-play-state:paused!important;
+}
