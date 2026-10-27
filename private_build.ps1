@@ -104,12 +104,16 @@ try {
     }
 
     $sourceArchiveReused = $false
+    $sourceArchiveSha = $null
     if (Test-Path -LiteralPath $sourceZip -PathType Leaf) {
         if ((Get-Item -LiteralPath $sourceZip).Length -eq $sourceExpectedBytes) {
             try {
-                $cachedSourceSha = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
-                $sourceArchiveReused = $cachedSourceSha -ceq $sourceExpectedSha
-            } catch { $sourceArchiveReused = $false }
+                $sourceArchiveSha = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
+                $sourceArchiveReused = $sourceArchiveSha -ceq $sourceExpectedSha
+            } catch {
+                $sourceArchiveSha = $null
+                $sourceArchiveReused = $false
+            }
         }
     }
     if (-not $sourceArchiveReused) {
@@ -128,7 +132,8 @@ try {
             } finally { $outStream.Dispose() }
             $tempBytes = (Get-Item -LiteralPath $sourceZipTemp).Length
             if ($tempBytes -ne $sourceExpectedBytes) { throw "SOURCE_ARCHIVE_SIZE_MISMATCH:$tempBytes" }
-            Assert-Sha256 $sourceZipTemp $sourceExpectedSha 'PRE-PRE source archive'
+            $sourceArchiveSha = (Get-FileHash -LiteralPath $sourceZipTemp -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($sourceArchiveSha -cne $sourceExpectedSha) { throw "PRE-PRE_SOURCE_ARCHIVE_SHA256_MISMATCH:$sourceArchiveSha" }
             Move-Item -LiteralPath $sourceZipTemp -Destination $sourceZip -Force
         } finally {
             if (Test-Path -LiteralPath $sourceZipTemp -PathType Leaf) { Remove-Item -LiteralPath $sourceZipTemp -Force }
@@ -138,7 +143,7 @@ try {
     }
     $actualBytes = (Get-Item -LiteralPath $sourceZip).Length
     if ($actualBytes -ne $sourceExpectedBytes) { throw "SOURCE_ARCHIVE_SIZE_MISMATCH:$actualBytes" }
-    Assert-Sha256 $sourceZip $sourceExpectedSha 'PRE-PRE source archive'
+    if ($sourceArchiveSha -cne $sourceExpectedSha) { throw "PRE-PRE_SOURCE_ARCHIVE_SHA256_MISMATCH:$sourceArchiveSha" }
 
     Assert-Sha256 $patchZip $patchZipExpected 'A04 patch package'
     $wheelArchiveReused = $false
