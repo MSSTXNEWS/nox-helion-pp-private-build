@@ -51,8 +51,12 @@ class P02Tests(unittest.TestCase):
         self.assertEqual(len(ack['stored_id']),32)
         self.assertEqual(self.store.read_file('tenant','alice','chat1',ack['stored_id']),content)
         with self.assertRaises(PermissionError):self.store.read_file('tenant','eve','chat1',ack['stored_id'])
-        self.store.delete_chat('tenant','alice','chat1')
+        self.store.delete_attachment('tenant','alice','chat1',ack['stored_id'])
+        with self.assertRaises(PermissionError):
+            self.store.read_file('tenant','alice','chat1',ack['stored_id'])
         self.assertEqual(self.store.collect_garbage(),1)
+        self.store.delete_chat('tenant','alice','chat1')
+        self.assertEqual(self.store.collect_garbage(),0)
         self.assertEqual(self.store.collect_garbage(),0)
     def test_invalid_mime_and_quota(self):
         with self.assertRaises(P02Error):self.store.store_file('tenant','alice','chat1','application/pdf',io.BytesIO(b'MZbad'))
