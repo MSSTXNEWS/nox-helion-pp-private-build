@@ -25,15 +25,17 @@ public sealed class OllamaChatClient : IDisposable
     private readonly Uri _baseUri;
     private readonly SemaphoreSlim _singleChat = new(1, 1);
     private readonly TimeSpan _firstResponseLimit;
+    private readonly TimeSpan _streamIdleLimit;
     private bool _disposed;
 
-    public OllamaChatClient(Uri endpoint, HttpClient? httpClient = null, TimeSpan? firstResponseLimit = null)
+    public OllamaChatClient(Uri endpoint, HttpClient? httpClient = null, TimeSpan? firstResponseLimit = null,
+        TimeSpan? streamIdleLimit = null)
     {
         if (endpoint is null || endpoint.Scheme != Uri.UriSchemeHttp ||
             !(endpoint.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
               endpoint.Host == "127.0.0.1" || endpoint.Host == "[::1]" || endpoint.Host == "::1") ||
             !string.IsNullOrEmpty(endpoint.UserInfo) || !string.IsNullOrEmpty(endpoint.Query) ||
-            !string.IsNullOrEmpty(endpoint.Fragment))
+            !string.IsNullOrEmpty(endpoint.Fragment) || endpoint.AbsolutePath != "/")
             throw new ArgumentException("Only local Ollama HTTP endpoints are allowed.", nameof(endpoint));
 
         _baseUri = endpoint.AbsoluteUri.EndsWith("/", StringComparison.Ordinal)
@@ -44,6 +46,9 @@ public sealed class OllamaChatClient : IDisposable
         _firstResponseLimit = firstResponseLimit ?? TimeSpan.FromSeconds(45);
         if (_firstResponseLimit <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(firstResponseLimit));
+        _streamIdleLimit = streamIdleLimit ?? TimeSpan.FromSeconds(60);
+        if (_streamIdleLimit <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(streamIdleLimit));
     }
 
     public async Task<IReadOnlyList<OllamaModel>> GetModelsAsync(CancellationToken stop)
@@ -74,8 +79,8 @@ public sealed class OllamaChatClient : IDisposable
 
     /// <summary>
     /// One live request at a time. Caller's CancellationToken is STOP; cancel also disposes
-    /// the response stream. Timeout is for first HTTP response; additional inactivity needs
-    /// host policy. No simulated chunks, no synthetic successful completion.
+    /// the response stream. Independent first-response and per-line stream-idle deadlines;
+    /// no simulated chunks and no synthetic successful completion.
     /// </summary>
     public async IAsyncEnumerable<OllamaChunk> StreamChatAsync(
         string model, IReadOnlyList<OllamaMessage> messages, 
@@ -113,7 +118,19 @@ public sealed class OllamaChatClient : IDisposable
                 while (true)
                 {
                     stop.ThrowIfCancellationRequested();
-                    var line = await reader.ReadLineAsync(stop).ConfigureAwait(false);
+                    string? line;
+                    using (var idleCts = CancellationTokenSource.CreateLinkedTokenSource(stop))
+                    {
+                        idleCts.CancelAfter(_streamIdleLimit);
+                        try
+                        {
+                            line = await reader.ReadLineAsync(idleCts.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException e) when (!stop.IsCancellationRequested)
+                        {
+                            throw new TimeoutException("Ollama stream inactivity timeout.", e);
+                        }
+                    }
                     if (line is null) break;
                     if (string.IsNullOrWhiteSpace(line)) continue;
                     using var json = JsonDocument.Parse(line);
