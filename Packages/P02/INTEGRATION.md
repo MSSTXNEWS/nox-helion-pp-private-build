@@ -1,3 +1,21 @@
+# V16 FASTPATH UPDATE (RunID NOX-V16-E02-FASTPATH-20261028-01)
+
+**Preferred compatibility route: Python stdlib candidate**, now preserved at
+`Packages/P02/worker-python/p02_runtime.py`,
+`p02_chat_bridge.py`, `test_p02_runtime.py`, and README.
+Synthetic local component tests: 6/6 PASS on Python 3.13 with no third-party dependency.
+The three Python files were read back from GitHub and byte-pinned against local git blob SHA-1.
+Official references: https://github.com/ollama/ollama/blob/main/docs/api.md
+and https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/security .
+
+Original C# files in this PR remain uncompiled, unintegrated fallback candidates ONLY.
+**Do not load C# and Python as two simultaneous chat engines or create a new SQLite DB.**
+#6 must inventory source ZIP + current Python/PyInstaller runtime, choose existing paths
+and either reuse or port only nonduplicative behavior. Do not copy Python files into
+an installer without the SourceLock and owner's acceptance.
+No live Ollama provider, real RAG pipeline, WebView2, Windows EXE or E07 acceptance
+was exercised. Component fixture proof != integrated/accepted.
+---
 # NOX FIN ZAGR V16 — Executor 2 · P02 owner handoff
 
 Status: PATCH_CANDIDATE only. Integrator #6 must reconcile existing source archive and
