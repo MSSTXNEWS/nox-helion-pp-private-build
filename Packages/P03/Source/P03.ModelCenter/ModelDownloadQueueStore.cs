@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace Nox.P03;
@@ -37,6 +38,7 @@ public sealed class ModelDownloadQueueStore
     private static readonly Regex ShaPattern = new("^[a-fA-F0-9]{64}$", RegexOptions.Compiled);
     private static readonly Regex TagPattern = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$", RegexOptions.Compiled);
     private readonly string _path;
+    private readonly string _leasePath;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public ModelDownloadQueueStore(string dataDirectory)
@@ -49,12 +51,18 @@ public sealed class ModelDownloadQueueStore
         ModelLocalAttestation.RequireNoExistingReparsePoint(dataDirectory);
         _path = Path.Combine(Path.GetFullPath(dataDirectory), "p03-model-download-queue.json");
         ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
+        _leasePath = _path + ".lock";
+        ModelLocalAttestation.RequireNoExistingReparsePoint(_leasePath);
     }
 
     public async Task<IReadOnlyList<ModelJob>> ReadAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
-        try { return await ReadCoreAsync(ct); }
+        try
+        {
+            using var lease = await AcquireFileLeaseAsync(ct);
+            return await ReadCoreAsync(ct);
+        }
         finally { _gate.Release(); }
     }
 
@@ -92,6 +100,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var now = DateTimeOffset.UtcNow;
             var job = new ModelJob(Guid.NewGuid(), ModelJobKind.GgufImport, tag.Trim(), fullPath,
@@ -121,6 +130,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var prior = jobs.FirstOrDefault(j => j.Kind == ModelJobKind.OllamaPull &&
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling) &&
@@ -153,6 +163,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var index = jobs.FindIndex(x => x.Id == id);
             if (index < 0) return null;
@@ -221,6 +232,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var recovered = 0;
             for (var i = 0; i < jobs.Count; i++)
@@ -242,6 +254,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var jobs = (await ReadCoreAsync(ct)).ToList();
             var failed = jobs.FirstOrDefault(x => x.Id == id && x.State is ModelJobState.Failed or ModelJobState.Cancelled);
             if (failed is null) return null;
@@ -271,6 +284,7 @@ public sealed class ModelDownloadQueueStore
         await _gate.WaitAsync(ct);
         try
         {
+            using var lease = await AcquireFileLeaseAsync(ct);
             var backup = _path + ".bak";
             ModelLocalAttestation.RequireNoExistingReparsePoint(backup);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
@@ -292,6 +306,33 @@ public sealed class ModelDownloadQueueStore
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }
         finally { _gate.Release(); }
+    }
+
+    /// <summary>
+    /// Serializes queue writes across multiple app instances, not merely one object.
+    /// The lock file stays permanently so no second inode can bypass an active lease.
+    /// </summary>
+    private async Task<FileStream> AcquireFileLeaseAsync(CancellationToken ct)
+    {
+        var elapsed = Stopwatch.StartNew();
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            ModelLocalAttestation.RequireNoExistingReparsePoint(_leasePath);
+            try
+            {
+                return new FileStream(_leasePath, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+                    FileShare.None, 1, FileOptions.None);
+            }
+            catch (IOException) when (elapsed.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                await Task.Delay(40, ct);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException("P03_QUEUE_LEASE_UNAVAILABLE: concurrent queue writer", ex);
+            }
+        }
     }
 
     private async Task<IReadOnlyList<ModelJob>> ReadCoreAsync(CancellationToken ct)
