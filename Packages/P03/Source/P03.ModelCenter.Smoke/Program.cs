@@ -117,7 +117,7 @@ sealed class FakeOllamaHandler(bool success) : HttpMessageHandler
         {
             "/api/pull" => new HttpResponseMessage(HttpStatusCode.OK) {
                 Content = new StringContent(success
-                    ? "{\"status\":\"downloading\",\"digest\":\"sha256:a\",\"completed\":3,\"total\":3}\n{\"status\":\"success\"}\n"
+                    ? "{\"status\":\"downloading\",\"digest\":\"sha256:" + new string('a', 64) + "\",\"completed\":3,\"total\":3}\n{\"status\":\"success\"}\n"
                     : "{\"status\":\"downloading\"}\n", Encoding.UTF8) },
             "/api/create" => new HttpResponseMessage(HttpStatusCode.OK) {
                 Content = new StringContent("{\"status\":\"parsing GGUF\"}\n{\"status\":\"success\"}\n", Encoding.UTF8) },
