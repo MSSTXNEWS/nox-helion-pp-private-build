@@ -365,6 +365,40 @@ def gpu_temperature(exe: str, gpu_uuid: str) -> float | None:
         return None
 
 
+def gpu_vram_headroom(exe: str, gpu_uuid: str, profile: str) -> dict[str, int]:
+    """Read real free VRAM before CUDA; reserve memory for the Windows UI.
+
+    This is a start gate, NOT a claim that utilization or memory is capped.
+    Never infer free VRAM from total capacity or a synthetic sensor value.
+    """
+    if profile not in PROFILES or not re.fullmatch(r"GPU-[A-Za-z0-9-]{4,128}", gpu_uuid):
+        raise ValueError("GPU_HEADROOM_IDENTITY_INVALID")
+    try:
+        result = subprocess.run(
+            [exe, "--id=" + gpu_uuid, "--query-gpu=memory.free,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5, shell=False, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError("GPU_VRAM_TELEMETRY_UNAVAILABLE") from exc
+    if result.returncode:
+        raise RuntimeError("GPU_VRAM_TELEMETRY_UNAVAILABLE")
+    fields = result.stdout.strip().splitlines()
+    if len(fields) != 1:
+        raise RuntimeError("GPU_VRAM_TELEMETRY_INVALID")
+    numbers = [part.strip() for part in fields[0].split(",")]
+    if len(numbers) != 2 or any(re.fullmatch(r"[0-9]{1,9}", x) is None for x in numbers):
+        raise RuntimeError("GPU_VRAM_TELEMETRY_INVALID")
+    free_mib, total_mib = map(int, numbers)
+    if not 1 <= total_mib <= 1024 * 1024 or not 0 <= free_mib <= total_mib:
+        raise RuntimeError("GPU_VRAM_TELEMETRY_INVALID")
+    reserve_pct = {"ECO": 30, "BALANCED": 20, "INTENSIVE": 20}[profile]
+    reserve_mib = max(1024, (total_mib * reserve_pct + 99) // 100)
+    if free_mib < reserve_mib + 1024:
+        raise RuntimeError("GPU_VRAM_INSUFFICIENT_GUI_HEADROOM")
+    return {"free_mib": free_mib, "total_mib": total_mib,
+            "gui_reserve_mib": reserve_mib}
+
+
 class EventWriter:
     """Append-only v3 events with fail-closed run identity and resume sequence."""
 
@@ -566,6 +600,7 @@ def main() -> int:
             raise RuntimeError("GPU_TEMPERATURE_UNAVAILABLE")
         if temp >= args.thermal_stop_c:
             raise RuntimeError("GPU_TEMPERATURE_LIMIT_EXCEEDED")
+        vram_headroom = gpu_vram_headroom(exe, chosen["uuid"], args.profile)
         lock_fd = acquire_gpu_lock(lock_path)
         os.write(lock_fd, (args.run_id + "\n").encode())
         os.fsync(lock_fd)
@@ -826,7 +861,9 @@ def main() -> int:
                         "torch": torch.__version__, "transformers": transformers.__version__,
                         "peft": peft.__version__, "trl": trl.__version__,
                         "accelerate": accelerate.__version__, "cuda": torch.version.cuda,
-                        "gpu": chosen["name"], "gpu_uuid": chosen["uuid"], "gpu_memory_total_mib": chosen["memory_total_mib"]},
+                        "gpu": chosen["name"], "gpu_uuid": chosen["uuid"], "gpu_memory_total_mib": chosen["memory_total_mib"],
+                        "gpu_memory_free_initial_mib": vram_headroom["free_mib"],
+                        "gui_vram_reserve_initial_mib": vram_headroom["gui_reserve_mib"]},
             "training": {"profile": args.profile, "max_steps": total_steps,
                          "global_step": global_step, "epochs": epochs, "batch_size": batch_size,
                          "learning_rate": args.learning_rate, "train_loss": train_loss,
