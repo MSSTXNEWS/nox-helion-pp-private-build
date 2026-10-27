@@ -227,10 +227,15 @@ def verify_model_lock(lock_path: Path, model_path: Path, expected_revision: str)
     return lock
 
 
+MAX_JSONL_LINE_CHARACTERS = 1_048_576
+
+
 def validate_jsonl(path: Path, label: str) -> int:
     count = 0
     with path.open("r", encoding="utf-8") as stream:
         for number, line in enumerate(stream, 1):
+            if len(line) > MAX_JSONL_LINE_CHARACTERS:
+                raise ValueError(f"{label}_LINE_TOO_LONG_{number}")
             if not line.strip():
                 continue
             try:
@@ -254,6 +259,8 @@ def validate_jsonl(path: Path, label: str) -> int:
             if not valid_assistant:
                 raise ValueError(f"{label}_NO_ASSISTANT_TARGET_{number}")
             count += 1
+            if count > MAX_DATASET_LEAKAGE_SCAN_ROWS:
+                raise ValueError(f"{label}_RECORD_LIMIT_EXCEEDED")
     if count == 0:
         raise ValueError(f"{label}_EMPTY")
     return count
