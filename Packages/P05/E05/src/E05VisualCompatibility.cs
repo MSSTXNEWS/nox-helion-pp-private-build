@@ -16,12 +16,14 @@ public static class E05WowCompatibility
     {
         var ids = new[] { "orbit-evidence", "live-aura", "cinematic-reveal",
             "command-focus", "stream-pulse", "action-ack", "source-trust" };
+        var allowed = approvedEffectIds is null ? new HashSet<string>(StringComparer.Ordinal) :
+            new HashSet<string>(approvedEffectIds.Where(x => x is not null), StringComparer.Ordinal);
         return ids.Select(x => new E05WowOption(x, "E01/E06", "PR9+PR14+PR15 REVIEW",
             hostEventBridgeVerified && !eco && !reducedMotion &&
-            approvedEffectIds.Contains(x),
+            allowed.Contains(x),
             !hostEventBridgeVerified ? "EVENT_BRIDGE_UNVERIFIED" :
             eco || reducedMotion ? "MOTION_DISABLED" :
-            !approvedEffectIds.Contains(x) ? "NOT_DESIGN_APPROVED" : "OPTIONAL"))
+            !allowed.Contains(x) ? "NOT_DESIGN_APPROVED" : "OPTIONAL"))
             .ToArray();
     }
 }
