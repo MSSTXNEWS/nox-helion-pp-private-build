@@ -145,9 +145,11 @@
     {
       "path": "donors/P01_C07/P01_C07_27.part",
       "git_blob_sha1": "fd9cacdade5c3cda3594b46ee283bb3231812b1e",
-      "size_bytes": 633714
+      "size_bytes": 633713
     }
   ],
   "source_status": "UNMODIFIED_DONOR_BYTES_NOT_APP_INTEGRATION",
-  "instruction": "Concatenate numbered files in order, validate total length and SHA256 before extracting. Never overwrite original application files without per-path receipt and compatible SourceLock."
+  "instruction": "Concatenate numbered files in order, validate total length and SHA256 before extracting. Never overwrite original application files without per-path receipt and compatible SourceLock.",
+  "archive_status": "REQUIRES_WINDOWS_CI_REASSEMBLY_AND_SHA_CONFIRMATION",
+  "origin": "Library exact SHA256 locally verified; original Drive donor mirrors Library file"
 }
