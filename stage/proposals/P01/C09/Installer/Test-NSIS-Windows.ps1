@@ -29,9 +29,9 @@ foreach($pair in @(@($InitialSetup,$ExpectedInitialSetupSha256),@($UpgradeSetup,
 }
 if ($ExpectedInitialSetupSha256.ToLowerInvariant() -ceq $ExpectedUpgradeSetupSha256.ToLowerInvariant()) {throw 'UPGRADE_SETUP_BINARY_NOT_DISTINCT'}
 $results=[ordered]@{schema='NOX_P01_NSIS_NATIVE_QA_V1'; timestampUTC=[DateTime]::UtcNow.ToString('o');runId=$env:GITHUB_RUN_ID; machine=$env:COMPUTERNAME; firstSetupSha256=$ExpectedInitialSetupSha256; upgradeSetupSha256=$ExpectedUpgradeSetupSha256; install='NOT_RUN'; update='NOT_RUN';rollback='NOT_RUN';uninstall='NOT_RUN'; userDataRetained='NOT_RUN'; releaseAllowed=$false}
-function Exec-Setup([string]$exe,[string[]]$args){
-  $p=Start-Process -FilePath $exe -ArgumentList $args -Wait -PassThru
-  if($p.ExitCode -ne 0){throw "NSIS_EXIT_$($p.ExitCode):$exe $($args -join ' ')"}
+function Exec-Setup([string]$exe,[string[]]$SetupArgs){
+  $p=Start-Process -FilePath $exe -ArgumentList $SetupArgs -Wait -PassThru
+  if($p.ExitCode -ne 0){throw "NSIS_EXIT_$($p.ExitCode):$exe $($SetupArgs -join ' ')"}
 }
 try {
   Exec-Setup $InitialSetup @('/S')
