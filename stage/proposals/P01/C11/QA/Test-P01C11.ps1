@@ -14,8 +14,12 @@ $root=Join-Path $temp 'payload'
 $count=0
 function Must([bool]$Condition,[string]$Message) { if (-not $Condition) { throw "P01_C11_ASSERT:$Message" } }
 function ScriptCase([string]$Path,[string[]]$Args,[bool]$Expected,[string]$ErrorToken) {
-  $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path @Args 2>&1
-  $status=$LASTEXITCODE
+  $oldPreference=$ErrorActionPreference
+  $ErrorActionPreference='Continue'
+  try {
+    $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path @Args 2>&1
+    $status=$LASTEXITCODE
+  } finally { $ErrorActionPreference=$oldPreference }
   if ($Expected) { Must ($status -eq 0) "expected success: $Path status=$status $output" }
   else { Must ($status -ne 0) "expected rejected: $Path" ; Must ((($output | Out-String).Contains($ErrorToken))) "wrong error: expected=$ErrorToken actual=$output" }
 }
