@@ -13,11 +13,11 @@ $root=Join-Path $temp 'payload'
 [void](New-Item -ItemType Directory -Path $root -Force)
 $count=0
 function Must([bool]$Condition,[string]$Message) { if (-not $Condition) { throw "P01_C11_ASSERT:$Message" } }
-function ScriptCase([string]$Path,[string[]]$Args,[bool]$Expected,[string]$ErrorToken) {
+function ScriptCase([string]$Path,[string[]]$Arguments,[bool]$Expected,[string]$ErrorToken) {
   $oldPreference=$ErrorActionPreference
   $ErrorActionPreference='Continue'
   try {
-    $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path @Args 2>&1
+    $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Path @Arguments 2>&1
     $status=$LASTEXITCODE
   } finally { $ErrorActionPreference=$oldPreference }
   if ($Expected) { Must ($status -eq 0) "expected success: $Path status=$status $output" }
