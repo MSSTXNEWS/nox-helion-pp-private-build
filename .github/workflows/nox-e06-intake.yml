@@ -23,9 +23,9 @@ jobs:
       - name: Generate fail-closed receipt
         shell: pwsh
         run: |
-          python coordination/e06/verify_integration.py --out e06-gate.json
+          python coordination/e06/verify_integration.py --source-root . --out e06-gate.json
           if ($LASTEXITCODE -ne 2) { throw "Unaccepted application must remain blocked" }
-          python -c "import json; x=json.load(open('e06-gate.json')); assert x['release']=='BLOCKED'; assert len(x['gates'])==10"
+          python -c "import json; x=json.load(open('e06-gate.json')); assert x['release']=='BLOCKED'; assert len(x['gates'])==10; assert x['gates']['02_source_archive']=='PASS'"
       - name: Compute per-file pre/post SHA256 and actual Git patch SHA256
         shell: pwsh
         run: python coordination/e06/emit_receipts.py
