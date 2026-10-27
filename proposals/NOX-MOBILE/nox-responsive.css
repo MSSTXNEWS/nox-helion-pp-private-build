@@ -55,31 +55,29 @@
 .nox-responsive .nox-home-orbits {
   width:min(92vw,640px);aspect-ratio:1;max-height:calc(100dvh - 28px);
   margin:auto;position:relative;isolation:isolate;
-  --orbit-x:35%;--orbit-y:35%;
+  
 }
 .nox-responsive .nox-home-orbits>[data-orbit-slot] {
   position:absolute;left:50%;top:50%;width:clamp(50px,15%,94px);
-  aspect-ratio:1;transform:translate(-50%,-50%) translate(var(--orbit-left,0px),var(--orbit-top,0px));
+  aspect-ratio:1;transform:translate(-50%,-50%);
   border-radius:50%;overflow:visible;
 }
-.nox-responsive .nox-home-orbits>[data-orbit-slot="HELION"] {
-  width:clamp(132px,37%,260px);z-index:4;--orbit-left:0px;--orbit-top:0px;
-}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="1"] {--orbit-left:0px;--orbit-top:calc(-1 * var(--orbit-y));}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="2"] {--orbit-left:calc(.71 * var(--orbit-x));--orbit-top:calc(-.71 * var(--orbit-y));}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="3"] {--orbit-left:var(--orbit-x);--orbit-top:0px;}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="4"] {--orbit-left:calc(.71 * var(--orbit-x));--orbit-top:calc(.71 * var(--orbit-y));}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="5"] {--orbit-left:0px;--orbit-top:var(--orbit-y);}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="6"] {--orbit-left:calc(-.71 * var(--orbit-x));--orbit-top:calc(.71 * var(--orbit-y));}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="7"] {--orbit-left:calc(-1 * var(--orbit-x));--orbit-top:0px;}
-.nox-responsive .nox-home-orbits>[data-orbit-slot="8"] {--orbit-left:calc(-.71 * var(--orbit-x));--orbit-top:calc(-.71 * var(--orbit-y));}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="HELION"] {width:clamp(132px,37%,260px);z-index:4;left:50%;top:50%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="1"] {left:50%;top:12%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="2"] {left:77%;top:23%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="3"] {left:88%;top:50%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="4"] {left:77%;top:77%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="5"] {left:50%;top:88%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="6"] {left:23%;top:77%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="7"] {left:12%;top:50%;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="8"] {left:23%;top:23%;}
 @media(max-width:650px) {
   .nox-responsive .nox-grid {grid-template-columns:minmax(0,1fr);}
   .nox-responsive .nox-chat-shell {display:flex;flex-direction:column;height:calc(100dvh - 54px)}
   .nox-responsive .nox-chat-history {max-height:28dvh;flex:0 0 auto}
   .nox-responsive .nox-chat-thread {flex:1 1 auto}
   .nox-responsive .nox-chat-composer {bottom:env(safe-area-inset-bottom,0px)}
-  .nox-responsive .nox-home-orbits {width:min(100%,calc(100dvh - 26px));--orbit-x:34%;--orbit-y:34%}
+  .nox-responsive .nox-home-orbits {width:min(100%,calc(100dvh - 26px))}
   .nox-responsive .nox-home-orbits>[data-orbit-slot="HELION"] {width:34%}
   .nox-responsive .nox-home-orbits>[data-orbit-slot]:not([data-orbit-slot="HELION"]) {width:14%}
   .nox-responsive .nox-screen-toolbar {gap:6px}
