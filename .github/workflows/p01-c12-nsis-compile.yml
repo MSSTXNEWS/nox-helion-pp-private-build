@@ -33,6 +33,10 @@ jobs:
           $payload=Join-Path $env:RUNNER_TEMP 'p01-c12-synthetic'
           New-Item -Path $payload -ItemType Directory -Force | Out-Null
           [IO.File]::WriteAllText((Join-Path $payload 'NOX.P01.Shell.exe'),'SYNTHETIC_ONLY_NOT_APP')
+          $exe=Join-Path $payload 'NOX.P01.Shell.exe'
+          $entry=[ordered]@{path='NOX.P01.Shell.exe';bytes=(Get-Item -LiteralPath $exe).Length;sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()}
+          $manifest=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';runId='C12-FIRST';version='0.1.0';files=@($entry)}
+          $manifest|ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $payload 'payload.sha256.json') -Encoding utf8
           $out=Join-Path $env:RUNNER_TEMP 'P01-C12-SYNTHETIC-SETUP.exe'
           & $makensis '/V2' ("/DPAYLOAD_DIR="+$payload) ("/DVERIFY_SCRIPT="+(Join-Path $p 'Verify-Payload.ps1')) ("/DPREFLIGHT_SCRIPT="+(Join-Path $p 'Preflight-InstallPath.ps1')) ("/DREMOVE_SCRIPT="+(Join-Path $p 'Remove-InstalledPayload.ps1')) ("/DOUTPUT_SETUP="+$out) '/DAPP_VERSION=0.1.0' $nsi
           if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $out -PathType Leaf)) { throw 'P01_C12_NSIS_COMPILE_FAIL' }
@@ -40,6 +44,44 @@ jobs:
           New-Item -Path 'ci-evidence' -ItemType Directory -Force | Out-Null
           $receipt|ConvertTo-Json -Depth 6|Set-Content -Path 'ci-evidence/p01-c12-nsis-compile.json' -Encoding UTF8
           Write-Host 'P01_C12_ORIGINAL_NSIS_COMPILE_PASS; THIS IS NOT A WORKING APP'
+      - name: Native Windows installer transaction using synthetic payload (NOT APP QA)
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $ErrorActionPreference='Stop'
+          $p=Join-Path $env:GITHUB_WORKSPACE 'stage/proposals/P01/C09/Installer'
+          $nsi=Join-Path $p 'NOX-HELION-Setup.nsi'
+          $makensis='C:\Program Files (x86)\NSIS\makensis.exe'
+          $payload2=Join-Path $env:RUNNER_TEMP 'p01-c12-synthetic-upgrade'
+          New-Item -Path $payload2 -ItemType Directory -Force | Out-Null
+          $exe2=Join-Path $payload2 'NOX.P01.Shell.exe'
+          [IO.File]::WriteAllText($exe2,'SYNTHETIC_ONLY_NOT_APP_UPGRADE')
+          $entry2=[ordered]@{path='NOX.P01.Shell.exe';bytes=(Get-Item -LiteralPath $exe2).Length;sha256=(Get-FileHash -LiteralPath $exe2 -Algorithm SHA256).Hash.ToLowerInvariant()}
+          $manifest2=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';runId='C12-UPGRADE';version='0.1.1';files=@($entry2)}
+          $manifest2|ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $payload2 'payload.sha256.json') -Encoding utf8
+          $out1=Join-Path $env:RUNNER_TEMP 'P01-C12-SYNTHETIC-SETUP.exe'
+          $out2=Join-Path $env:RUNNER_TEMP 'P01-C12-SYNTHETIC-UPGRADE.exe'
+          & $makensis '/V2' ("/DPAYLOAD_DIR="+$payload2) ("/DVERIFY_SCRIPT="+(Join-Path $p 'Verify-Payload.ps1')) ("/DPREFLIGHT_SCRIPT="+(Join-Path $p 'Preflight-InstallPath.ps1')) ("/DREMOVE_SCRIPT="+(Join-Path $p 'Remove-InstalledPayload.ps1')) ("/DOUTPUT_SETUP="+$out2) '/DAPP_VERSION=0.1.1' $nsi
+          if ($LASTEXITCODE -ne 0) { throw 'P01_C12_UPGRADE_COMPILE_FAIL' }
+          $h1=(Get-FileHash -LiteralPath $out1 -Algorithm SHA256).Hash.ToLowerInvariant()
+          $h2=(Get-FileHash -LiteralPath $out2 -Algorithm SHA256).Hash.ToLowerInvariant()
+          $report=Join-Path $env:GITHUB_WORKSPACE 'ci-evidence/p01-c12-nsis-transaction.json'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $p 'Test-NSIS-Windows.ps1') -InitialSetup $out1 -UpgradeSetup $out2 -ExpectedInitialSetupSha256 $h1 -ExpectedUpgradeSetupSha256 $h2 -ReportPath $report -DisposableRunnerAcknowledged
+          if ($LASTEXITCODE -ne 0) { throw 'P01_C12_NATIVE_TRANSACTION_FAILED' }
+          $proof=Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
+          foreach($gate in @('install','update','rollback','uninstall','userDataRetained')) {
+            if ($proof.$gate -cne 'PASS') { throw "P01_C12_NATIVE_GATE_HOLD:$gate" }
+          }
+          Write-Host 'P01_C12_NATIVE_TRANSACTION_PASS; SYNTHETIC_PAYLOAD_NOT_REAL_NOX'
+      - name: Preserve native transaction receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p01-c12-nsis-transaction
+          path: ci-evidence/p01-c12-nsis-transaction.json
+          retention-days: 30
+          if-no-files-found: warn
       - name: Preserve compile receipt
         uses: actions/upload-artifact@v4
         with:
