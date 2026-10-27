@@ -11,6 +11,8 @@ public sealed class E05ActivityTimeline
 {
     private readonly Dictionary<string, E05ActivityItem> current = new(StringComparer.Ordinal);
     private readonly HashSet<string> processedIds = new(StringComparer.Ordinal);
+    private readonly Queue<string> recentIds = new();
+    private const int EventIdLimit = 10000;
     private readonly string expectedRunId;
     public E05ActivityTimeline(string expectedRunId)
     {
@@ -23,14 +25,17 @@ public sealed class E05ActivityTimeline
         if (!E05CanonicalEventFactory.IsCanonical(e) || e.RunId != expectedRunId ||
             e.EventType == "acceptance.updated" || e.EvidenceVerified ||
             e.TimestampUtc > now || now - e.TimestampUtc > TimeSpan.FromMinutes(5) ||
-            !processedIds.Add(e.EventId)) return false;
+            processedIds.Contains(e.EventId)) return false;
         var key = e.PackageId + "/" + e.TaskId;
         if (current.TryGetValue(key, out var old) && e.TimestampUtc < old.LastSeenUtc)
             return false;
         current[key] = new(e.TaskId, e.PackageId, e.EventType, e.State,
             e.TimestampUtc, e.Numerator, e.Denominator);
-        // The host may recycle the timeline per RunID; cap memory without dropping state.
-        if (processedIds.Count > 10000) processedIds.Clear();
+        processedIds.Add(e.EventId);
+        recentIds.Enqueue(e.EventId);
+        // Bounded replay window. Never clear the entire set (which re-admits old IDs).
+        while (recentIds.Count > EventIdLimit)
+            processedIds.Remove(recentIds.Dequeue());
         return true;
     }
     public IReadOnlyList<E05ActivityItem> Read(DateTimeOffset now) =>
