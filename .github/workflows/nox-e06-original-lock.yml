@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'coordination/e06/canonical_source_lock.py'
+      - 'coordination/e06/r03_receipts.py'
       - 'tests/e06/test_source_lock.py'
       - '.github/workflows/nox-e06-original-lock.yml'
   pull_request:
@@ -10,6 +11,9 @@ on:
       - 'coordination/e06/canonical_source_lock.py'
       - 'tests/e06/test_source_lock.py'
       - '.github/workflows/nox-e06-original-lock.yml'
+concurrency:
+  group: e06-source-lock-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

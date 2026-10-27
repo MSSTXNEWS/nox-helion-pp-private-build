@@ -2,14 +2,23 @@ name: NOX E06 no-loss deterministic gate
 on:
   push:
     paths:
-      - 'coordination/e06/**'
-      - 'tests/e06/**'
+      - 'coordination/e06/intake.json'
+      - 'coordination/e06/verify_integration.py'
+      - 'coordination/e06/emit_receipts.py'
+      - 'tests/e06/test_verify_integration.py'
+      - 'tests/e06/test_hardening.py'
       - '.github/workflows/nox-e06-intake.yml'
   pull_request:
     paths:
-      - 'coordination/e06/**'
-      - 'tests/e06/**'
+      - 'coordination/e06/intake.json'
+      - 'coordination/e06/verify_integration.py'
+      - 'coordination/e06/emit_receipts.py'
+      - 'tests/e06/test_verify_integration.py'
+      - 'tests/e06/test_hardening.py'
       - '.github/workflows/nox-e06-intake.yml'
+concurrency:
+  group: e06-intake-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -21,7 +30,10 @@ jobs:
           fetch-depth: 0
       - name: Ten physical integration-gate checks
         shell: pwsh
-        run: python -m unittest discover -s tests/e06 -p 'test_*.py' -v
+        run: |
+          python -m unittest discover -s tests/e06 -p 'test_verify_integration.py' -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s tests/e06 -p 'test_hardening.py' -v
       - name: Generate fail-closed receipt
         shell: pwsh
         run: |
