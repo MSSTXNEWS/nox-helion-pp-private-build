@@ -47,7 +47,9 @@ class HardwarePreflightContracts(unittest.TestCase):
             return_value={"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
         ), patch.dict(sys.modules, {"torch": fake_torch}):
             result = probe.inspect("BALANCED", 1)
-        self.assertEqual(result["status"], "READY_FOR_AUTHORIZED_TRAINING")
+        self.assertEqual(result["status"], "HARDWARE_READY_ONLY")
+        self.assertFalse(result["model_license_verified"])
+        self.assertFalse(result["dataset_rights_verified"])
         self.assertEqual(result["gpu"]["free_mib"], 11000)
         self.assertFalse(result["runtime_training_verified"])
 
