@@ -169,12 +169,13 @@ def write_checkpoint_receipt(
     checkpoint = safe_child(run_root, checkpoint_relative_path)
     if not checkpoint.is_file():
         raise TrainingGateError("CHECKPOINT_MISSING", "Checkpoint file does not exist.")
-    receipt_path = safe_child(run_root, "checkpoint.receipt.json")
+    checkpoint_sha = sha256_file(checkpoint)
+    receipt_path = safe_child(run_root, "checkpoint.receipt." + checkpoint_sha + ".json")
     receipt = {
         "schema": CHECKPOINT_SCHEMA,
         "identity": identity_object(identity),
         "checkpoint_path": checkpoint.relative_to(run_root.resolve()).as_posix(),
-        "checkpoint_sha256": sha256_file(checkpoint),
+        "checkpoint_sha256": checkpoint_sha,
         "created_utc": utc_now(),
     }
     atomic_write_json(receipt_path, receipt)
@@ -217,7 +218,23 @@ class RunController:
         self._lock = threading.RLock()
         self.state = "READY"
         self.events: list[dict[str, str]] = []
-        self._persist("READY", "controller-created")
+        if self.state_path.exists():
+            try:
+                prior = json.loads(self.state_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted run state is unreadable.") from exc
+            if prior.get("schema") != "NOX_P05_RUN_STATE_V1":
+                raise TrainingGateError("RUN_STATE_UNSUPPORTED", "Persisted run state schema is unsupported.")
+            if prior.get("identity") != identity_object(self.identity):
+                raise TrainingGateError("RUN_IDENTITY_MISMATCH", "Persisted run identity differs.")
+            if prior.get("state") not in ("READY", "RUNNING", "PAUSE_REQUESTED", "PAUSED", "STOPPED", "COMPLETED", "FAILED"):
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted run state value is invalid.")
+            if not isinstance(prior.get("events"), list):
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted event history is invalid.")
+            self.state = prior["state"]
+            self.events = prior["events"]
+        else:
+            self._persist("READY", "controller-created")
 
     def _persist(self, state: str, reason: str) -> None:
         event = {
@@ -292,14 +309,24 @@ class RunController:
             raise TrainingGateError("SUCCESS_WITHOUT_BACKEND", "Success requires a completed backend receipt.")
         if status == "SUCCEEDED" and self.state != "RUNNING":
             raise TrainingGateError("STATE_INVALID", "Only a running backend may complete successfully.")
+        if status == "STOPPED" and self.state != "STOPPED":
+            raise TrainingGateError("STATE_INVALID", "STOPPED result requires terminal STOP state.")
+        if status == "PAUSED" and self.state != "PAUSED":
+            raise TrainingGateError("STATE_INVALID", "PAUSED result requires checkpointed pause state.")
+        if status == "FAILED" and self.state not in ("READY", "RUNNING", "PAUSE_REQUESTED"):
+            raise TrainingGateError("STATE_INVALID", "FAILED result requires an unfinished run.")
         result = {
             "schema": RESULT_SCHEMA,
             "identity": identity_object(self.identity),
             "status": status,
             "reason": reason[:240],
             "created_utc": utc_now(),
-            "training_performed": status == "SUCCEEDED" and backend_completed,
+            "backend_completed": backend_completed,
         }
         atomic_write_json(self.result_path, result)
+        if status == "SUCCEEDED":
+            self._persist("COMPLETED", "backend-completed")
+        elif status == "FAILED":
+            self._persist("FAILED", reason)
         return self.result_path
 
