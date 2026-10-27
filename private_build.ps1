@@ -118,18 +118,34 @@ try {
     Assert-Sha256 $sourceZip $sourceExpectedSha 'PRE-PRE source archive'
 
     Assert-Sha256 $patchZip $patchZipExpected 'A04 patch package'
-    $wheelPartNames = @('wheelhouse_00.part', 'wheelhouse_01.part', 'wheelhouse_02.part')
-    $wheelStream = [IO.File]::Open($wheelZip, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
-    try {
-        foreach ($partName in $wheelPartNames) {
-            $partPath = Join-Path $root $partName
-            if (-not (Test-Path -LiteralPath $partPath -PathType Leaf)) { throw "WHEELHOUSE_CHUNK_MISSING:$partName" }
-            $partStream = [IO.File]::OpenRead($partPath)
-            try { $partStream.CopyTo($wheelStream) } finally { $partStream.Dispose() }
+    $wheelArchiveReused = $false
+    if (Test-Path -LiteralPath $wheelZip -PathType Leaf) {
+        if ((Get-Item -LiteralPath $wheelZip).Length -eq 21874335) {
+            try {
+                $cachedWheelSha = (Get-FileHash -LiteralPath $wheelZip -Algorithm SHA256).Hash.ToLowerInvariant()
+                $wheelArchiveReused = $cachedWheelSha -ceq $wheelExpected
+            } catch {
+                $wheelArchiveReused = $false
+            }
         }
-    } finally { $wheelStream.Dispose() }
-    if ((Get-Item -LiteralPath $wheelZip).Length -ne 21874335) { throw 'WHEELHOUSE_ARCHIVE_SIZE_MISMATCH' }
-    Assert-Sha256 $wheelZip $wheelExpected '18-wheel build dependency package'
+    }
+    if (-not $wheelArchiveReused) {
+        if (Test-Path -LiteralPath $wheelZip -PathType Leaf) { Remove-Item -LiteralPath $wheelZip -Force }
+        $wheelPartNames = @('wheelhouse_00.part', 'wheelhouse_01.part', 'wheelhouse_02.part')
+        $wheelStream = [IO.File]::Open($wheelZip, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try {
+            foreach ($partName in $wheelPartNames) {
+                $partPath = Join-Path $root $partName
+                if (-not (Test-Path -LiteralPath $partPath -PathType Leaf)) { throw "WHEELHOUSE_CHUNK_MISSING:$partName" }
+                $partStream = [IO.File]::OpenRead($partPath)
+                try { $partStream.CopyTo($wheelStream) } finally { $partStream.Dispose() }
+            }
+        } finally { $wheelStream.Dispose() }
+        if ((Get-Item -LiteralPath $wheelZip).Length -ne 21874335) { throw 'WHEELHOUSE_ARCHIVE_SIZE_MISMATCH' }
+        Assert-Sha256 $wheelZip $wheelExpected '18-wheel build dependency package'
+    } else {
+        Write-Output "WHEELHOUSE_ARCHIVE_REUSED:$wheelExpected"
+    }
     $sourceReady = Test-PatchedSourceCache -Path $source -ExpectedTree $patchedTreeExpected
     if (Test-Path -LiteralPath $deps) { Remove-Item -LiteralPath $deps -Recurse -Force }
     if (Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output -Recurse -Force }
