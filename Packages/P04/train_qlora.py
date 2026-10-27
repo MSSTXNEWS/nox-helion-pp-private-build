@@ -697,6 +697,8 @@ def main() -> int:
         verify_dataset_unchanged(manifest, train_path, holdout_path)
         train_dataset = load_dataset("json", data_files=str(train_path), split="train")
         eval_dataset = load_dataset("json", data_files=str(holdout_path), split="train")
+        # Preserve approved source identity across dataset loading as well as before it.
+        verify_dataset_unchanged(manifest, train_path, holdout_path)
         schedule = "epoch" if args.epochs is not None else "steps"
         training_args = SFTConfig(
             output_dir=str(checkpoint_dir), max_steps=max_steps, num_train_epochs=epochs,
