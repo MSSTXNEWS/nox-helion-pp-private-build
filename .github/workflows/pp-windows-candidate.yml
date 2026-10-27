@@ -50,6 +50,8 @@ jobs:
             work/candidate/DEPENDENCY_NOTICES.txt
             work/candidate/QA_DEPENDENCY_NOTICES.txt
             work/NOX_NATIVE_SMOKE_*/**
+            ci-evidence/p01-sourcelock.json
+            ci-evidence/p01-prerequisites.json
             ci-evidence/build-attempt.json
             ci-evidence/windows-build-transcript.txt
             ci-evidence/requirements-qa-win64-hashed.txt
