@@ -1,5 +1,6 @@
 """Focused Windows integration test: real owner #2 Ollama client + SQLite store, no second backend."""
 import importlib.util
+import io
 import json
 import os
 import pathlib
@@ -70,18 +71,19 @@ class BridgeTest(unittest.TestCase):
         self.store.create_chat("t2","p2","room2")
         self.client=OllamaClient(self.endpoint,timeout=8)
         self.dispatch=bridge.NoxPackHost(self.catalog)
-        self.owner=bridge.ExistingP02Adapter(self.client,self.store)
+        self.owner=bridge.ExistingP02Adapter(self.client,self.store,
+            native_selected_file=lambda session:("text/plain",io.BytesIO(b"NOX approved sample")))
         self.bound=self.owner.register(self.dispatch,receipt="NOX-P02-SOURCE-PINNED-TEST")
         self.session=bridge.NativeSession("t1","p1","room1",
-            allowed=frozenset(self.bound),private_approved=frozenset({"chat.history"}))
+            allowed=frozenset(self.bound),private_approved=frozenset({"chat.history","chat.attach"}))
     def tearDown(self):
         self.client.stop();self.db.close();self.temp.cleanup()
-    def test_catalog_fifty_and_only_six_real_bindings(self):
+    def test_catalog_fifty_and_only_eight_real_bindings(self):
         self.assertEqual(len(self.dispatch.routes),50)
-        self.assertEqual(len(self.bound),6)
-        self.assertEqual(len(self.dispatch.ports),6)
+        self.assertEqual(len(self.bound),8)
+        self.assertEqual(len(self.dispatch.ports),8)
         self.assertEqual(len(self.dispatch.advertise(self.session)),50)
-        self.assertEqual(sum(x["enabled"] for x in self.dispatch.advertise(self.session).values()),6)
+        self.assertEqual(sum(x["enabled"] for x in self.dispatch.advertise(self.session).values()),8)
     def test_installed_models_via_real_owner_ollama(self):
         answer=self.dispatch.execute("chat.model",{},self.session)
         self.assertEqual(answer["models"],["qwen3:4b","llama3.2:1b"])
@@ -113,11 +115,24 @@ class BridgeTest(unittest.TestCase):
         roles=[x["role"] for x in self.store.history("t1","p1","room1")]
         self.assertEqual(roles,["user","assistant"])
 
+    def test_native_attachment_uses_existing_scoped_sqlite_and_blob_storage(self):
+        attached=self.dispatch.execute("chat.attach",{},self.session)
+        self.assertIsInstance(attached["storedAttachment"],dict)
+        self.assertEqual(attached["storedAttachment"]["mime"],"text/plain")
+        self.assertEqual(attached["storedAttachment"]["bytes"],len(b"NOX approved sample"))
+
+    def test_quick_commands_only_return_host_enabled_native_routes(self):
+        result=self.dispatch.execute("chat.commands",{},self.session)
+        self.assertIn("helion.chat",result["commands"])
+        self.assertIn("chat.attach",result["commands"])
+        self.assertNotIn("models.pull",result["commands"])
+        self.assertNotIn("system.pc_control",result["commands"])
+
     def test_uninstalled_model_denied(self):
         with self.assertRaises(bridge.HostHold):
             self.dispatch.execute("helion.chat",{"model":"not-installed","text":"Hi"},self.session)
-    def test_unbound_forty_four_actions_hold(self):
-        self.assertEqual(len(bridge.ALLOWED_ROUTES-self.bound),44)
+    def test_unbound_forty_two_actions_hold(self):
+        self.assertEqual(len(bridge.ALLOWED_ROUTES-self.bound),42)
         with self.assertRaises(bridge.HostHold):
             self.dispatch.execute("models.pull",{},bridge.NativeSession("t1","p1","room1",
                 allowed=frozenset({"models.pull"}),private_approved=frozenset({"models.pull"})))
