@@ -77,6 +77,61 @@ def sha256_tree(root: Path) -> str:
     return digest.hexdigest()
 
 
+def write_training_receipt(output: Path, receipt: dict[str, Any]) -> tuple[str, Path]:
+    """Preserve immutable per-run receipt before replacing the latest view.
+
+    Based on the useful atomic receipt concept from candidate PR #6, while
+    retaining the single real PEFT backend and v2 receipt schema from PR #7.
+    No GPU or model weights are needed to verify this function.
+    """
+    payload = (json.dumps(receipt, sort_keys=True, ensure_ascii=False,
+                          separators=(",", ":")) + "\n").encode("utf-8")
+    digest = hashlib.sha256(payload).hexdigest()
+    archive_dir = output / "receipts"
+    if archive_dir.is_symlink():
+        raise ValueError("TRAIN_RECEIPT_ARCHIVE_SYMLINK")
+    archive_dir.mkdir(exist_ok=True)
+    archive = archive_dir / (digest + ".json")
+    if archive.is_symlink():
+        raise ValueError("TRAIN_RECEIPT_ARCHIVE_SYMLINK")
+    if archive.exists():
+        if not archive.is_file() or sha256_file(archive) != digest:
+            raise ValueError("TRAIN_RECEIPT_ARCHIVE_COLLISION")
+    else:
+        try:
+            with archive.open("xb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError:
+            if not archive.is_file() or archive.is_symlink() or sha256_file(archive) != digest:
+                raise ValueError("TRAIN_RECEIPT_ARCHIVE_COLLISION")
+    latest = output / "training-receipt.json"
+    if latest.is_symlink():
+        raise ValueError("TRAIN_RECEIPT_LATEST_SYMLINK")
+    fd, temporary = tempfile.mkstemp(prefix=".training-receipt-", suffix=".tmp", dir=output)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, latest)
+        try:
+            directory_fd = os.open(output, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        except OSError:
+            pass
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    if sha256_file(latest) != digest:
+        raise ValueError("TRAIN_RECEIPT_WRITE_VERIFICATION_FAILED")
+    return digest, latest
+
+
 def read_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -700,9 +755,7 @@ def main() -> int:
             "checkpoint": checkpoint_info, "adapter_sha256": sha256_tree(adapter_dir),
             "evidence_verified": False,
         }
-        receipt_path = output / "training-receipt.json"
-        receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        receipt_sha = sha256_file(receipt_path)
+        receipt_sha, receipt_path = write_training_receipt(output, receipt)
         terminal_message = f"{status}; receipt_sha256={receipt_sha}; checkpoint={checkpoint_info['status'] if checkpoint_info else 'UNAVAILABLE'}"
         if status == "PAUSED":
             events.emit("task.progress", "PAUSED", "training_paused", terminal_message, global_step, total_steps)
