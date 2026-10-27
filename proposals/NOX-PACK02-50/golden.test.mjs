@@ -98,8 +98,8 @@ test("secondary UI: 50 buttons are real, selecting and executing writes result",
   assert.equal(panel.getCount(),50);
   const frame=root.children[0],grid=frame.children[2],tools=grid.children;
   assert.equal(tools.length,50);
-  const entry=tools.find(x=>x.dataset.tool==="dev.json.pretty");
-  entry.click();assert.equal(panel.getSelected(),"dev.json.pretty");
+  const entry=tools.find(x=>x.dataset.tool==="data.json.pretty");
+  entry.click();assert.equal(panel.getSelected(),"data.json.pretty");
   const space=frame.children[3],editor=space.children[1],opts=space.children[2],run=space.children[3],status=space.children[4],result=space.children[5];
   editor.value='{"a":1}';opts.value="{}";run.click();
   assert.deepEqual(JSON.parse(result.textContent),{a:1});
@@ -112,4 +112,25 @@ test("secondary UI: 50 buttons are real, selecting and executing writes result",
 test("HOME cannot mount panel",()=>{
  const root=new FakeNode("main");root.closest=()=>({nodeType:1});
  assert.throws(()=>mountPack02(root),/D02_HOME_LOCK/);
+});
+
+test("untrusted owner names cannot break task groups",()=>{
+ const out=execute("workflow.tasks.group","- [x] X | owner=constructor\n- [ ] Y | owner=__proto__");
+ assert.equal(out.result.constructor.length,1);
+ assert.equal(out.result.__proto__.length,1);
+});
+test("reserved speaker identifiers are counted as ordinary labels",()=>{
+ const out=execute("media.transcript.speakers","constructor: Hello\n__proto__: Good morning");
+ assert.equal(out.result.constructor,1);
+ assert.equal(out.result.__proto__,1);
+});
+test("subtitles never silently truncate cues by shifting before zero",()=>{
+ assert.throws(()=>execute("media.subtitles.shift",S,{seconds:-10}),/SHIFT_BEFORE_ZERO/);
+ assert.throws(()=>execute("media.subtitles.shift",S,{seconds:"not a number"}),/SHIFT_NUMBER_REQUIRED/);
+});
+test("document chunks do not split unicode surrogate pairs",()=>{
+ const input="x".repeat(99)+"😊"+"y".repeat(99);
+ const chunks=execute("docs.text.chunks",input,{size:100}).result;
+ assert.equal(chunks.join(""),input);
+ assert.equal(chunks[0],"x".repeat(99)+"😊");
 });
