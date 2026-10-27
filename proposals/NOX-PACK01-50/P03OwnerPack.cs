@@ -42,7 +42,7 @@ public sealed class P03OwnerPack
     public static readonly IReadOnlySet<string> Supported = new HashSet<string>(StringComparer.Ordinal)
     {
         "models.catalog", "models.installed", "models.pull", "models.gguf.import",
-        "models.queue", "models.cancel", "models.retry", "models.digest", "models.preflight"
+        "models.queue", "models.cancel", "models.retry", "models.digest", "models.preflight", "models.licenses"
     };
 
     public async Task<object> ExecuteAsync(VerifiedP03Input intent,CancellationToken stop = default)
@@ -56,6 +56,15 @@ public sealed class P03OwnerPack
             case "models.catalog":
                 return ModelCatalog.OfficialFamilies.Where(x=>string.IsNullOrWhiteSpace(intent.Query) ||
                     (x.Name+" "+x.Id).Contains(intent.Query,StringComparison.OrdinalIgnoreCase)).ToArray();
+            case "models.licenses":
+                // Reflect only original owner model-card evidence, never invent a grant.
+                return ModelCatalog.OfficialFamilies.Select(x=>new {
+                    FamilyId=x.Id, x.Name, x.ExactTag, x.License,
+                    LicenseEvidence=x.LicenseEvidenceUri?.AbsoluteUri,
+                    x.ImmutableRevision,
+                    Status=x.CanOfferOneClickPull ? "ARTIFACT_VERIFIED" : "REVIEW_REQUIRED",
+                    CanDownload=x.CanOfferOneClickPull
+                }).ToArray();
             case "models.installed":
                 return await InstalledAsync(stop).ConfigureAwait(false);
             case "models.queue":
