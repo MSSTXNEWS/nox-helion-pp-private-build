@@ -54,5 +54,26 @@ class CheckpointGates(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.w.validated_checkpoint(root, chk)
 
+    def test_empty_model_weights_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, chk = self.make_checkpoint(Path(tmp))
+            (chk / "adapter_model.safetensors").write_bytes(b"")
+            with self.assertRaisesRegex(ValueError, "MODEL_MISSING"):
+                self.w.validated_checkpoint(root, chk)
+
+    def test_trainer_state_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, chk = self.make_checkpoint(Path(tmp))
+            state = chk / "trainer_state.json"
+            external = Path(tmp) / "external_state.json"
+            external.write_text('{"global_step":4}', encoding="utf-8")
+            state.unlink()
+            try:
+                state.symlink_to(external)
+            except (OSError, NotImplementedError):
+                self.skipTest("platform denies symlink creation")
+            with self.assertRaises(ValueError):
+                self.w.validated_checkpoint(root, chk)
+
 if __name__ == "__main__":
     unittest.main()
