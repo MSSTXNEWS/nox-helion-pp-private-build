@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using NoxP04.Rag;
+using NoxP04.GpuGuardian;
 
 // In-process contract fixture only: no Ollama model or real embeddings.
 // Run as a separate component test; it must never be counted as GPU runtime proof.
@@ -82,6 +83,25 @@ internal static class Program
             using var rag = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
                 "no-model-test-double", Path.Combine(directory, "index.json"));
             var ingest = new RagIngestionService(rag);
+            var eco = GpuModePolicy.For(GpuMode.ECO);
+            var balanced = GpuModePolicy.For(GpuMode.BALANCED);
+            var intensive = GpuModePolicy.For(GpuMode.INTENSIVE);
+            Check(eco.QueueStartDelay > balanced.QueueStartDelay &&
+                  balanced.QueueStartDelay > intensive.QueueStartDelay, "gpu scheduling profiles");
+            Check(eco.MaximumConcurrentJobs == 1 && balanced.MaximumConcurrentJobs == 1 &&
+                  intensive.MaximumConcurrentJobs == 1, "single training queue");
+            var missingSensor = new GpuTelemetrySample(DateTimeOffset.UtcNow, "N_D",
+                null, null, null, null, null, null, null, "nvidia-smi", "SENSOR_UNAVAILABLE");
+            Check(GpuGuardian.ThermalHoldReason(missingSensor, 83) ==
+                "GPU_TEMPERATURE_UNAVAILABLE", "gpu sensor missing fail-closed");
+            var highTemp = missingSensor with { State = "READY", TemperatureC = 90 };
+            Check(GpuGuardian.ThermalHoldReason(highTemp, 83) ==
+                "GPU_TEMPERATURE_LIMIT_EXCEEDED", "gpu overheat stop");
+            try {
+                GpuGuardian.ThermalHoldReason(missingSensor, double.NaN);
+                throw new InvalidOperationException("P04_RAG_TEST_FAILED: nonfinite threshold accepted");
+            } catch (ArgumentOutOfRangeException) { _checks++; }
+
             const string ownerA = "S-1-5-21-1100";
             const string ownerB = "S-1-5-21-2200";
             const string conversation = "conversation-a";
