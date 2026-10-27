@@ -134,16 +134,14 @@ public sealed class E05SensorPublisher
     private readonly IEventV3Transport hostTransport;
     public E05SensorPublisher(IReadOnlyList<ISensorProvider> providers, IEventV3Transport hostTransport)
     { this.providers = providers; this.hostTransport = hostTransport; }
-    public async Task PollOnceAsync(string runId, CancellationToken stop)
+    // R11 events.v3 does not define telemetry.snapshot. Host #6 must bind
+    // E05CanonicalEventFactory.GpuUtilization to its existing EventV3Bridge.
+    // Until that binding exists this legacy method fails closed, rather than
+    // emitting a noncanonical event into the shared journal.
+    public Task PollOnceAsync(string runId, CancellationToken stop)
     {
+        stop.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(runId)) throw new ArgumentException("Missing RunID", nameof(runId));
-        var samples = new List<SensorPoint>();
-        foreach (var provider in providers)
-        {
-            stop.ThrowIfCancellationRequested();
-            samples.AddRange(provider.Read(stop));
-        }
-        await hostTransport.SendAsync(new TelemetryEventV3("3", "telemetry.snapshot", runId,
-            DateTimeOffset.UtcNow, samples), stop);
+        throw new NotSupportedException("HOLD: telemetry.snapshot is not an approved events.v3 event type. Use E05CanonicalEventFactory and E06-owned host bridge.");
     }
 }
