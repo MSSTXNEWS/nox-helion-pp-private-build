@@ -129,7 +129,7 @@ class NoxPackHost:
 
 class ExistingP02Adapter:
     """Actual owner #2 Python OllamaClient and P02Store, injected by trusted host."""
-    def __init__(self, client, store, *, event_sink=None):
+    def __init__(self, client, store, *, event_sink=None, native_selected_file=None):
         if not all(callable(getattr(client,n,None)) for n in ("models","stream","stop")):
             raise ValueError("Existing P02 OllamaClient required")
         if not all(callable(getattr(store,n,None)) for n in ("history","add_message","store_file")):
@@ -137,6 +137,8 @@ class ExistingP02Adapter:
         self.client = client
         self.store = store
         self.event_sink = event_sink
+        # Native file picker callback returns (MIME, binary stream); never page JSON.
+        self.native_selected_file = native_selected_file
 
     def available(self) -> bool:
         try:return isinstance(self.client.models(),list)
@@ -186,13 +188,42 @@ class ExistingP02Adapter:
         self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
         return {"answer":text,"done":True}
 
+    def attach_native_selected(self,session,args):
+        if not callable(self.native_selected_file):
+            raise HostHold("Trusted native file picker not bound")
+        selected = self.native_selected_file(session)
+        if not isinstance(selected,tuple) or len(selected)!=2:
+            raise HostHold("Native file picker returned no approved file")
+        mime,stream = selected
+        if not isinstance(mime,str) or not callable(getattr(stream,"read",None)):
+            raise HostDenied("Native file selection invalid")
+        try:
+            # Existing P02 handles MIME/signature/size/SHA, SQLite ACL and stored ID.
+            result=self.store.store_file(session.tenant,session.principal,
+                session.chat_id,mime,stream)
+            return {"storedAttachment":result}
+        finally:
+            if callable(getattr(stream,"close",None)):stream.close()
+
+    @staticmethod
+    def scoped_commands(dispatcher,session,args):
+        # No fake buttons: list ONLY native-advertised, enabled route capabilities.
+        eligible=dispatcher.advertise(session)
+        return {"commands":[route for route,cap in eligible.items()
+            if cap["enabled"] and route!="chat.commands"]}
+
     def register(self, dispatcher:NoxPackHost, *, receipt:str):
         entries = {
           "helion.chat":self.chat,"core.chat":self.chat,"persona.chat":self.chat,
           "chat.model":self.list_models,"chat.history":self.history,"chat.stop":self.stop
         }
+        entries["chat.commands"]=lambda scope,args:self.scoped_commands(dispatcher,scope,args)
+        if callable(self.native_selected_file):
+            entries["chat.attach"]=self.attach_native_selected
         for route,func in entries.items():
-            dispatcher.bind(route,BoundPort(func,self.available,receipt,2))
+            # Chat quick commands reflect current host route registry, not Ollama status.
+            ready=(lambda:True) if route=="chat.commands" else self.available
+            dispatcher.bind(route,BoundPort(func,ready,receipt,2))
         return frozenset(entries)
 
 def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
@@ -213,3 +244,71 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
         dispatcher.bind(route,BoundPort(fn,probe,receipt,owner))
         wired.append(route)
     return frozenset(wired)
+
+
+class ExistingP02VoiceAdapter:
+    """Owner #2's ORIGINAL LocalVoicePipeline/ConsentGatedSip source methods.
+
+    All audio, identity and SIP quote capabilities must come from trusted native
+    Windows callbacks. This adapter does not install voices, initiate new provider
+    sessions, create another LLM or record audio.
+    """
+    def __init__(self, voice_pipeline, sip_client, *,
+                 native_identity, native_microphone_sample, native_provider_quote):
+        if not callable(native_identity) or not callable(native_microphone_sample) or not callable(native_provider_quote):
+            raise ValueError("Native identity/audio/quote selectors required")
+        if not callable(getattr(voice_pipeline,"run",None)):
+            raise ValueError("Existing owner LocalVoicePipeline required")
+        if not callable(getattr(sip_client,"place",None)):
+            raise ValueError("Existing owner ConsentGatedSip required")
+        self.voice=voice_pipeline
+        self.sip=sip_client
+        self.native_identity=native_identity
+        self.native_audio=native_microphone_sample
+        self.native_quote=native_provider_quote
+
+    def voice_ready(self):
+        # True only if local weights were independently approved and an installed
+        # voice exists. This is not a synthetic "connected" signal.
+        return self.voice.approved_models is True and bool(self.voice.permitted_voices)
+
+    def sip_ready(self):
+        return (callable(self.sip.provider) and callable(self.sip.user_approval) and
+                callable(self.sip.provider_quote_verify))
+
+    def speak(self,session,args, *,mode):
+        if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
+        identity=self.native_identity(session)
+        captured=self.native_audio(session)
+        if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
+            raise HostDenied("No trusted bounded microphone capture")
+        direction=args.get("direction","ru-es")
+        if direction not in ("ru-es","es-ru"):raise HostDenied("Only RU/ES directions")
+        source,target=("ru","es") if direction=="ru-es" else ("es","ru")
+        voice=args.get("voiceId")
+        if voice not in self.voice.permitted_voices:
+            raise HostDenied("Voice must be one actually installed and approved")
+        level=args.get("level","A2")
+        # Native Windows permission for the microphone happens before returning bytes.
+        response=self.voice.run(identity,captured,source=source,target=target,
+            voice=voice,mode=mode,level=level,microphone_consent=True)
+        return {"transcript":response.transcript,"answer":response.response,
+                "audio":response.audio,"source":response.source_lang,
+                "target":response.target_lang,"mode":response.mode}
+
+    def dial(self,session,args):
+        if not self.sip_ready():raise HostHold("SIP provider, quote verification or consent not configured")
+        identity=self.native_identity(session)
+        quote=self.native_quote(session)  # NEVER generated from client price or number.
+        if quote is None:raise HostHold("No live quote approved by SIP provider")
+        return self.sip.place(identity,quote)
+
+    def register(self,dispatcher:NoxPackHost,*,receipt:str):
+        entries={
+            "translate.ru_es":(lambda session,args:self.speak(session,args,mode="translate"),self.voice_ready),
+            "maestro.spanish":(lambda session,args:self.speak(session,args,mode="maestro"),self.voice_ready),
+            "calls.dial":(self.dial,self.sip_ready)
+        }
+        for route,(fn,ready) in entries.items():
+            dispatcher.bind(route,BoundPort(fn,ready,receipt,2))
+        return frozenset(entries)

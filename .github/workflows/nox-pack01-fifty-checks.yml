@@ -21,6 +21,7 @@ jobs:
           node --check proposals/NOX-PACK01-50/registry.mjs
           node --check proposals/NOX-PACK01-50/panel.mjs
           node --check proposals/NOX-PACK01-50/smoke.test.mjs
+          node --check proposals/NOX-PACK01-50/binding_map.test.mjs
       - name: Run 50 per-route contract checks and fail-closed gates
         shell: pwsh
-        run: node --test proposals/NOX-PACK01-50/smoke.test.mjs
+        run: node --test proposals/NOX-PACK01-50/smoke.test.mjs proposals/NOX-PACK01-50/binding_map.test.mjs
