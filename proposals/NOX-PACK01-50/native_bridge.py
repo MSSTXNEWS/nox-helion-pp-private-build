@@ -296,6 +296,14 @@ class ExistingP02VoiceAdapter:
                 "audio":response.audio,"source":response.source_lang,
                 "target":response.target_lang,"mode":response.mode}
 
+    def voice_settings(self,session,args):
+        # Read the owner-approved local voice identities. No synthetic voices or downloads.
+        if not self.voice_ready():
+            raise HostHold("Installed local voice catalogue not approved")
+        return {"voices":sorted(self.voice.permitted_voices),
+                "modelsApproved":self.voice.approved_models is True,
+                "voiceCount":len(self.voice.permitted_voices)}
+
     def dial(self,session,args):
         if not self.sip_ready():raise HostHold("SIP provider, quote verification or consent not configured")
         identity=self.native_identity(session)
@@ -307,7 +315,8 @@ class ExistingP02VoiceAdapter:
         entries={
             "translate.ru_es":(lambda session,args:self.speak(session,args,mode="translate"),self.voice_ready),
             "maestro.spanish":(lambda session,args:self.speak(session,args,mode="maestro"),self.voice_ready),
-            "calls.dial":(self.dial,self.sip_ready)
+            "calls.dial":(self.dial,self.sip_ready),
+            "voice.settings":(self.voice_settings,self.voice_ready)
         }
         for route,(fn,ready) in entries.items():
             dispatcher.bind(route,BoundPort(fn,ready,receipt,2))
