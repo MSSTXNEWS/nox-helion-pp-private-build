@@ -1,0 +1,44 @@
+name: NOX P01 C09 Windows PowerShell no-loss component (candidate)
+on:
+  push:
+    branches: [e01/v16-c09-noloss-20261028]
+    paths: ['.github/workflows/p01-c09-noloss-native.yml','proposals/P01/C09/**']
+  pull_request:
+    paths: ['.github/workflows/p01-c09-noloss-native.yml','proposals/P01/C09/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-p01-c09-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native-component:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: PowerShell parse all P01 source and native fixture
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:GITHUB_WORKSPACE 'proposals/P01/C09'
+          $files=@(Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.ps1')
+          if ($files.Count -lt 6) { throw 'P01_C09_EXPECTED_SCRIPTS_NOT_PRESENT' }
+          foreach ($f in $files) {
+            $tokens=$null;$errors=$null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors -and $errors.Count) { throw "P01_C09_PARSE_FAILED: $($f.FullName) : $($errors | Out-String)" }
+          }
+          Write-Host "P01_C09_POWERSHELL_PARSE_PASS=$($files.Count)"
+      - name: Test 10 no-loss, validation, and read-only prerequisite scenarios
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:GITHUB_WORKSPACE 'proposals/P01/C09'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $root 'QA/P01_E01_C09/Test-P01Native-C09.ps1') -SourceRoot $root
+          if ($LASTEXITCODE -ne 0) { throw "P01_C09_NATIVE_FAILED:$LASTEXITCODE" }
+          Write-Host 'P01_C09_NATIVE_COMPONENT_PASS; NSIS/WPF E2E and E07 remain HOLD.'
