@@ -12,7 +12,7 @@ Canonical source:
 Build repair:
 - NOX_A04_BUILD_PATCH.zip SHA-256: 37078f0105f42ff9964a533399a9a71769d0517e8f0e3f49e3e7266ae28eb4eb.
 - Apply only after the base-tree check above.
-- Expected patched Git tree: d16663f9fd26aa0eab90270fff1bb65bc3f805e6.
+- Expected A04-intermediate Git tree (after applying only the A04 patch): d16663f9fd26aa0eab90270fff1bb65bc3f805e6. The subsequent menu-catalog and fast-candidate patches advance the source to the final patched tree pinned in private_build.ps1: d61632a7dd4ca889f16eba2d330e2ed5fd6b3842.
 
 Dependencies:
 - NOX_PP_BUILD_WHEELHOUSE_18.zip SHA-256: 2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598ff.
