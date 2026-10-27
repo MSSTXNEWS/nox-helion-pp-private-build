@@ -1,0 +1,41 @@
+name: NOX P03 C40 component gate (not release QA)
+on:
+  pull_request:
+    paths:
+      - 'Packages/P03/C40/**'
+      - '.github/workflows/p03-c40-component.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p03-source-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify pinned source archive and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = 'Packages/P03/C40/NOX_V16_E03_C40_P03_CLOSURE_CANDIDATE.zip'
+          $expected = '7eda02703538517e3efabf0e1814bcbee3ced167f897185e48eff7ed06c7c46b'
+          $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "P03_ARCHIVE_SHA_MISMATCH" }
+          Expand-Archive -LiteralPath $zip -DestinationPath p03-c40-source -Force
+          if (-not (Test-Path 'p03-c40-source/P03.ModelCenter/P03.ModelCenter.csproj')) { throw 'P03_CSPROJ_MISSING' }
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build source and run deterministic component smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build p03-c40-source/P03.ModelCenter.Smoke/P03.ModelCenter.Smoke.csproj --configuration Release --nologo
+          if ($LASTEXITCODE -ne 0) { throw 'P03_BUILD_FAILED' }
+          dotnet run --project p03-c40-source/P03.ModelCenter.Smoke/P03.ModelCenter.Smoke.csproj --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'P03_SMOKE_FAILED' }
+      - name: JavaScript syntax (no npm download)
+        shell: pwsh
+        run: |
+          node --check p03-c40-source/P03.ModelCenter.Wow/ui.js
+          if ($LASTEXITCODE -ne 0) { throw 'P03_JS_CHECK_FAILED' }
