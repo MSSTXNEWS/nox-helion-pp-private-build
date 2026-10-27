@@ -93,6 +93,18 @@ def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
     return manifest
 
 
+
+def verified_loss_improvement(baseline_loss: Any, adapter_loss: Any) -> tuple[float, float]:
+    """Require real finite measured losses; bool is not a valid metric."""
+    if (type(baseline_loss) not in (int, float)
+            or type(adapter_loss) not in (int, float)
+            or not math.isfinite(float(baseline_loss))
+            or not math.isfinite(float(adapter_loss))
+            or float(adapter_loss) >= float(baseline_loss)):
+        raise ValueError("ADAPTER_VALIDATION_DID_NOT_IMPROVE")
+    return float(baseline_loss), float(adapter_loss)
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -179,10 +191,7 @@ def main() -> int:
         training = receipt.get("training", {})
         baseline_loss = training.get("baseline_eval_loss")
         adapter_loss = training.get("adapter_eval_loss")
-        if (type(baseline_loss) not in (int, float) or not math.isfinite(float(baseline_loss))
-                or type(adapter_loss) not in (int, float) or not math.isfinite(float(adapter_loss))
-                or float(adapter_loss) >= float(baseline_loss)):
-            raise ValueError("ADAPTER_VALIDATION_DID_NOT_IMPROVE")
+        baseline_loss, adapter_loss = verified_loss_improvement(baseline_loss, adapter_loss)
         if args.output_dir.is_symlink():
             raise ValueError("MERGE_OUTPUT_MUST_NOT_BE_SYMLINK")
         output = args.output_dir.absolute()
