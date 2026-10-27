@@ -43,11 +43,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_PREIMAGE_FAILED' }
           git -C p03-c40-source apply $exactPatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_APPLY_FAILED' }
-      - name: Apply owner-scoped TURBO11 patch over exact C40 snapshot
+      - name: Apply owner-scoped TURBO11 patch over exact TURBO10 snapshot
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $patch = (Resolve-Path 'Packages/P03/C40/NOX_V16_E03_TURBO11_from_C40.patch').Path
+          $patch = (Resolve-Path 'Packages/P03/C40/NOX_V16_E03_TURBO11_from_TURBO10.patch').Path
           $expected = 'f9fc4845d456d478fae9312d761c130999416ee3ebdf3be1ad9d76554a518506'
           # Git on Windows may checkout .patch files with CRLF despite LF blob bytes.
           # Normalize into a temp copy for a SHA-256 check over the exact original patch bytes.
