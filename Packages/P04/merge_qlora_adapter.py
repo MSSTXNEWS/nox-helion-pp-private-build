@@ -114,6 +114,8 @@ def sha256_file(path: Path) -> str:
 
 
 def tree_sha256(root: Path, *, skip_merge_receipt: bool = False) -> str:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("MODEL_TREE_NOT_REGULAR_DIRECTORY")
     digest = hashlib.sha256()
     files = sorted(root.rglob("*"))
     regular_files = [path for path in files if path.is_file()]
