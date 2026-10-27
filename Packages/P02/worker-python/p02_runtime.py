@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import pathlib
+import queue
 import re
 import sqlite3
 import stat
@@ -35,7 +36,12 @@ class Cancelled(P02Error):
 
 
 class OllamaClient:
-    """Loopback-only Ollama client. Close response when cancelling an active stream."""
+    """Loopback-only Ollama. One producer per request; STOP never waits on socket reads.
+
+    A daemon transport worker is bounded by the configured socket timeout, while the
+    UI-facing iterator polls a bounded queue and responds to STOP independently.
+    Closing the generator signals cancellation and closes the underlying connection.
+    """
     def __init__(self, base: str = "http://127.0.0.1:11434", timeout: float = 30):
         u = urllib.parse.urlsplit(base)
         if (u.scheme != "http" or u.hostname not in ("127.0.0.1", "localhost", "::1")
@@ -46,6 +52,8 @@ class OllamaClient:
         self.base = base.rstrip("/")
         self.timeout = timeout
         self._active = None
+        self._cancel = None
+        self._busy = False
         self._guard = threading.RLock()
 
     def _open(self, path: str, data: bytes | None = None):
@@ -70,66 +78,139 @@ class OllamaClient:
                 and isinstance(m.get("name"), str) and m["name"]]
 
     def stop(self):
+        """Signal the active iterator; never synchronously wait for HTTP close."""
         with self._guard:
-            response = self._active
-        if response:
+            cancel, response = self._cancel, self._active
+        if cancel is not None:
+            cancel.set()
+        if response is not None:
+            threading.Thread(target=self._close_safely, args=(response,), daemon=True).start()
+
+    @staticmethod
+    def _close_safely(response):
+        with contextlib.suppress(Exception):
             response.close()
 
     def stream(self, model: str, messages: list[dict], stop: threading.Event | None = None
                ) -> Iterator[dict[str, Any]]:
-        if not model or not isinstance(model, str) or not isinstance(messages, list) or not messages:
-            raise ValueError("Valid model and nonempty messages required")
-        stop = stop or threading.Event()
+        if (not isinstance(model, str) or not 0 < len(model) <= 256 or
+                not isinstance(messages, list) or not messages or
+                any(not isinstance(m, dict) or m.get("role") not in
+                    ("system", "user", "assistant", "tool") or
+                    not isinstance(m.get("content"), str) for m in messages)):
+            raise ValueError("Invalid Ollama model/messages")
+        stop = stop if stop is not None else threading.Event()
         if stop.is_set():
             raise Cancelled("STOP before request")
         body = json.dumps({"model": model, "messages": messages, "stream": True},
             ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        response = self._open("/api/chat", body)
+        cancel = threading.Event()
         with self._guard:
-            if self._active is not None:
-                response.close()
+            if self._busy:
                 raise P02Error("Another chat stream is active")
-            self._active = response
-        finished = False
-        try:
-            for raw in response:
-                if stop.is_set():
-                    raise Cancelled("STOP requested")
-                if len(raw) > 1024 * 1024:
-                    raise P02Error("Overlarge Ollama event")
-                if not raw.strip():
-                    continue
+            self._busy, self._cancel = True, cancel
+        received: queue.Queue[tuple[str, object]] = queue.Queue(maxsize=32)
+        finished = threading.Event()
+
+        def emit(kind: str, item: object):
+            # Bound memory even when the iterator is stopped/closed.
+            while not cancel.is_set() and not stop.is_set():
                 try:
-                    data = json.loads(raw)
-                except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                    raise P02Error("Malformed Ollama NDJSON") from e
-                if not isinstance(data, dict):
-                    raise P02Error("Ollama stream event must be an object")
-                if "error" in data:
-                    raise P02Error(f"Ollama stream error: {str(data['error'])[:512]}")
-                if not isinstance(data.get("done"), bool):
-                    raise P02Error("Ollama stream missing done boolean")
-                message = data.get("message", {})
-                delta = message.get("content", "") if isinstance(message, dict) else ""
-                if not isinstance(delta, str):
-                    raise P02Error("Ollama stream returned non-text content")
-                yield {"delta": delta, "done": data["done"], "reason": data.get("done_reason")}
-                if data["done"]:
-                    finished = True
+                    received.put((kind, item), timeout=.05)
+                    return
+                except queue.Full:
+                    continue
+
+        def worker():
+            response = None
+            try:
+                if cancel.is_set() or stop.is_set():
+                    return
+                response = self._open("/api/chat", body)
+                with self._guard:
+                    if cancel.is_set() or stop.is_set():
+                        return
+                    self._active = response
+                done_seen = False
+                for raw in response:
+                    if cancel.is_set() or stop.is_set():
+                        return
+                    if len(raw) > 1024 * 1024:
+                        raise P02Error("Overlarge Ollama event")
+                    if not raw.strip():
+                        continue
+                    try:
+                        data = json.loads(raw)
+                    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                        raise P02Error("Malformed Ollama NDJSON") from exc
+                    if not isinstance(data, dict):
+                        raise P02Error("Ollama stream event must be an object")
+                    if "error" in data:
+                        raise P02Error(f"Ollama stream error: {str(data['error'])[:512]}")
+                    if not isinstance(data.get("done"), bool):
+                        raise P02Error("Ollama stream missing done boolean")
+                    message = data.get("message", {})
+                    delta = message.get("content", "") if isinstance(message, dict) else ""
+                    if not isinstance(delta, str):
+                        raise P02Error("Ollama stream returned non-text content")
+                    emit("chunk", {"delta": delta, "done": data["done"],
+                                   "reason": data.get("done_reason")})
+                    if data["done"]:
+                        done_seen = True
+                        break
+                if not done_seen and not cancel.is_set() and not stop.is_set():
+                    raise P02Error("Ollama stream truncated before done=true")
+            except (TimeoutError, OSError, urllib.error.URLError) as exc:
+                emit("error", P02Error("Ollama streaming timeout/connection error: " +
+                                        type(exc).__name__))
+            except Exception as exc:
+                emit("error", exc if isinstance(exc, P02Error) else
+                     P02Error("Ollama transport exception: " + type(exc).__name__))
+            finally:
+                if response is not None:
+                    self._close_safely(response)
+                with self._guard:
+                    if self._active is response:
+                        self._active = None
+                finished.set()
+                emit("end", None)
+
+        thread = threading.Thread(target=worker, daemon=True, name="nox-p02-ollama-stream")
+        thread.start()
+        saw_done = False
+        try:
+            while True:
+                if stop.is_set() or cancel.is_set():
+                    raise Cancelled("STOP requested")
+                try:
+                    kind, payload = received.get(timeout=.05)
+                except queue.Empty:
+                    if finished.is_set() and received.empty():
+                        break
+                    continue
+                if kind == "chunk":
+                    if stop.is_set() or cancel.is_set():
+                        raise Cancelled("STOP requested")
+                    assert isinstance(payload, dict)
+                    yield payload
+                    if payload["done"]:
+                        saw_done = True
+                        break
+                elif kind == "error":
+                    raise payload  # type: ignore[misc]
+                elif kind == "end":
                     break
-            if stop.is_set():
+            if stop.is_set() or cancel.is_set():
                 raise Cancelled("STOP requested")
-            if not finished:
+            if not saw_done:
                 raise P02Error("Ollama stream truncated before done=true")
-        except (TimeoutError, OSError, ValueError) as e:
-            if stop.is_set():
-                raise Cancelled("STOP requested") from e
-            raise P02Error("Ollama streaming timeout/connection error") from e
         finally:
+            cancel.set()
             with self._guard:
-                if self._active is response:
-                    self._active = None
-            response.close()
+                response = self._active
+                self._cancel, self._busy = None, False
+            if response is not None and not finished.is_set():
+                threading.Thread(target=self._close_safely, args=(response,), daemon=True).start()
 
 
 def _check_scope(tenant: str, user: str, chat: str):
@@ -158,6 +239,16 @@ class P02Store:
         self._lock = threading.RLock()
 
     def initialize(self):
+        # Never create a duplicate chat history over an existing native chat schema.
+        # Integrator #6 must migrate/map that schema explicitly (with backup).
+        with self._lock:
+            existing = {r[0].lower() for r in self.db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+            native_chat_names = {"chat", "chats", "messages", "chat_messages",
+                                 "conversations", "conversation_messages", "chat_history",
+                                 "chat_sessions", "message_history"}
+            if existing & native_chat_names:
+                raise P02Error("HOST_CHAT_SCHEMA_MAPPING_REQUIRED; refusing parallel history")
         # Avoid changing the host application's user_version, journal mode or existing tables.
         with self._lock, self.db:
             self.db.execute("PRAGMA foreign_keys=ON")
