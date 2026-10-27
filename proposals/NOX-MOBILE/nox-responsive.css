@@ -1,0 +1,105 @@
+/* NOX V16 MOBILE — add-on skin for the existing trusted WebView2 frontend.
+   No second backend; no outside website CSS injection; approved art remains underneath.
+   Owner #1 adopts selectors during E06 host integration. */
+.nox-responsive {
+  --nox-glass: rgba(11,21,31,.68);
+  --nox-stroke: rgba(165,233,237,.3);
+  --nox-type: #eaf5f5;
+  --nox-soft: #a2bec7;
+  --nox-safe-pad: max(12px,env(safe-area-inset-left,0px));
+  color:var(--nox-type);
+  color-scheme:dark;
+  min-height:100dvh;
+  overflow-x:clip;
+}
+.nox-responsive *, .nox-responsive *::before, .nox-responsive *::after {box-sizing:border-box}
+.nox-responsive .nox-surface {
+  border-radius:16px;border:1px solid var(--nox-stroke);
+  background:linear-gradient(155deg,rgba(62,83,96,.19),var(--nox-glass) 50%,rgba(4,9,15,.77));
+  box-shadow:inset 0 1px rgba(235,252,254,.14),0 12px 28px #0006;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+}
+.nox-responsive .nox-view {
+  min-height:100dvh;
+  padding: max(12px,env(safe-area-inset-top,0px)) var(--nox-safe-pad)
+           max(18px,env(safe-area-inset-bottom,0px));
+}
+.nox-responsive .nox-screen-toolbar {
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  position:sticky;top:0;z-index:30;padding:8px;background:#0b141dde;
+}
+.nox-responsive[data-nox-page="home"] .nox-screen-toolbar,
+.nox-responsive[data-nox-page="home"] .nox-function-search,
+.nox-responsive[data-nox-page="home"] .nox-data-panel {
+  display:none!important;
+}
+.nox-responsive .nox-function-search {min-width:0;flex:1 1 180px}
+.nox-responsive .nox-function-search input {
+  width:100%;padding:12px 14px;border:1px solid var(--nox-stroke);
+  border-radius:999px;background:#10202cd9;color:var(--nox-type);font:inherit;
+}
+.nox-responsive button,.nox-responsive [role="button"] {
+  min-height:44px;min-width:44px;touch-action:manipulation;
+}
+.nox-responsive :focus-visible {outline:2px solid #c7f9ff;outline-offset:3px}
+.nox-responsive .nox-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.nox-responsive .nox-chat-shell {display:grid;grid-template-columns:minmax(190px,290px) minmax(0,1fr);gap:14px;height:calc(100dvh - 72px)}
+.nox-responsive .nox-chat-history,.nox-responsive .nox-chat-thread {min-width:0;min-height:0;overflow:auto}
+.nox-responsive .nox-chat-thread {display:flex;flex-direction:column;gap:12px}
+.nox-responsive .nox-chat-composer {
+  position:sticky;bottom:0;z-index:5;padding:12px;
+  margin-top:auto;background:var(--nox-glass);
+}
+.nox-responsive .nox-touch-toolbar {display:flex;gap:8px;flex-wrap:wrap}
+.nox-responsive .nox-metric {font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.nox-responsive .nox-home-orbits {
+  width:min(92vw,640px);aspect-ratio:1;max-height:calc(100dvh - 28px);
+  margin:auto;position:relative;isolation:isolate;
+  --orbit-x:35%;--orbit-y:35%;
+}
+.nox-responsive .nox-home-orbits>[data-orbit-slot] {
+  position:absolute;left:50%;top:50%;width:clamp(50px,15%,94px);
+  aspect-ratio:1;transform:translate(-50%,-50%) translate(var(--orbit-left,0px),var(--orbit-top,0px));
+  border-radius:50%;overflow:visible;
+}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="HELION"] {
+  width:clamp(132px,37%,260px);z-index:4;--orbit-left:0px;--orbit-top:0px;
+}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="1"] {--orbit-left:0px;--orbit-top:calc(-1 * var(--orbit-y));}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="2"] {--orbit-left:calc(.71 * var(--orbit-x));--orbit-top:calc(-.71 * var(--orbit-y));}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="3"] {--orbit-left:var(--orbit-x);--orbit-top:0px;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="4"] {--orbit-left:calc(.71 * var(--orbit-x));--orbit-top:calc(.71 * var(--orbit-y));}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="5"] {--orbit-left:0px;--orbit-top:var(--orbit-y);}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="6"] {--orbit-left:calc(-.71 * var(--orbit-x));--orbit-top:calc(.71 * var(--orbit-y));}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="7"] {--orbit-left:calc(-1 * var(--orbit-x));--orbit-top:0px;}
+.nox-responsive .nox-home-orbits>[data-orbit-slot="8"] {--orbit-left:calc(-.71 * var(--orbit-x));--orbit-top:calc(-.71 * var(--orbit-y));}
+@media(max-width:650px) {
+  .nox-responsive .nox-grid {grid-template-columns:minmax(0,1fr);}
+  .nox-responsive .nox-chat-shell {display:flex;flex-direction:column;height:calc(100dvh - 54px)}
+  .nox-responsive .nox-chat-history {max-height:28dvh;flex:0 0 auto}
+  .nox-responsive .nox-chat-thread {flex:1 1 auto}
+  .nox-responsive .nox-chat-composer {bottom:env(safe-area-inset-bottom,0px)}
+  .nox-responsive .nox-home-orbits {width:min(100%,calc(100dvh - 26px));--orbit-x:34%;--orbit-y:34%}
+  .nox-responsive .nox-home-orbits>[data-orbit-slot="HELION"] {width:34%}
+  .nox-responsive .nox-home-orbits>[data-orbit-slot]:not([data-orbit-slot="HELION"]) {width:14%}
+  .nox-responsive .nox-screen-toolbar {gap:6px}
+  .nox-responsive .nox-touch-toolbar {justify-content:space-around}
+}
+@media(max-width:360px) {
+  .nox-responsive .nox-home-orbits {--orbit-x:33%;--orbit-y:33%}
+  .nox-responsive .nox-screen-toolbar {padding:5px}
+  .nox-responsive .nox-function-search {flex-basis:100%}
+  .nox-responsive .nox-surface {-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)}
+}
+@media(max-height:500px) and (min-width:650px) {
+  .nox-responsive .nox-chat-shell {height:calc(100dvh - 20px)}
+  .nox-responsive .nox-home-orbits {width:min(70vh,430px);max-height:95vh}
+}
+@media(prefers-reduced-motion:reduce) {
+  .nox-responsive *, .nox-responsive *::before, .nox-responsive *::after {
+    transition:none!important;animation:none!important;scroll-behavior:auto!important
+  }
+}
+.nox-responsive[data-nox-mode="eco"] .nox-surface {
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
