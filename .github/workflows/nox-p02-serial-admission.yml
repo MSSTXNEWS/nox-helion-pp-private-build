@@ -40,6 +40,10 @@ jobs:
           NOX_P02_OWNER_PATH: ${{ github.workspace }}/Packages/P02/worker-python
         run: |
           python Packages/P02/worker-python/run_pack01_owner_gate.py
+      - name: P02 native route-port permissions and provider admission
+        shell: pwsh
+        run: |
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_owner_route_ports.py' -v
       - name: Release gate (intentional)
         shell: pwsh
         run: |
