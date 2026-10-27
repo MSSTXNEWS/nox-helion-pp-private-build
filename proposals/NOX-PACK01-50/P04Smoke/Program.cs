@@ -80,12 +80,12 @@ internal static class Program
                           identity.ConversationId=="room-1"&&
                           identity.SessionId=="real-native-host-session");
             var linked=await chatRag.RetrieveAsync(new NativeP02ChatScope(
-                "S-1-5-21-1111","room-1","real-native-host-session"),"alpha",cancel:timeout.Token);
+                "S-1-5-21-1111","room-1","real-native-host-session"),"alpha",stop:timeout.Token);
             Require(linked.Sources.Count>0&&linked.ContextText.Contains("SHA256:"),"P02_CHAT_RAG_REAL_CITATIONS");
             denied=false;
             try {
                 await chatRag.RetrieveAsync(new NativeP02ChatScope(
-                    "S-1-5-21-2222","room-1","page-supplied-session"),"alpha",cancel:timeout.Token);
+                    "S-1-5-21-2222","room-1","page-supplied-session"),"alpha",stop:timeout.Token);
             }catch(UnauthorizedAccessException){denied=true;}
             Require(denied,"P02_CHAT_RAG_NATIVE_SESSION_DENY");
             var outsider=(RagContextResult)await pack.ExecuteAsync("rag.search",
