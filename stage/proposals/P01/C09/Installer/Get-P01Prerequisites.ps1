@@ -5,9 +5,14 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if ($env:OS -ne 'Windows_NT') { throw 'P01_PREREQUISITES_WINDOWS_REQUIRED' }
 function Probe([string]$Name, [string]$Exe) {
-  $cmd=Get-Command $Exe -ErrorAction SilentlyContinue
+  # C11: count only regular executable application files, not aliases/functions/junctions.
+  $cmd=Get-Command $Exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($null -eq $cmd) { return [ordered]@{name=$Name;available=$false;source='PATH';executable=$null} }
-  return [ordered]@{name=$Name;available=$true;source='PATH';executable=[string]$cmd.Source}
+  $exePath=[string]$cmd.Source
+  if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) { return [ordered]@{name=$Name;available=$false;source='PATH';executable=$null} }
+  $item=Get-Item -LiteralPath $exePath -Force -ErrorAction Stop
+  if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return [ordered]@{name=$Name;available=$false;source='PATH';executable=$null} }
+  return [ordered]@{name=$Name;available=$true;source='PATH';executable=$exePath}
 }
 $items=@(
  (Probe 'Python' 'python.exe'),
