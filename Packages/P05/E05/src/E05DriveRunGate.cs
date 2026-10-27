@@ -20,9 +20,10 @@ public static class E05DriveRunGate
         IReadOnlyList<E05DriveTarget> approved, bool masterIntegrityVerified,
         CancellationToken stop)
     {
-        if (string.IsNullOrWhiteSpace(runId) ||
+        if (writer is null || string.IsNullOrWhiteSpace(runId) ||
+            string.IsNullOrWhiteSpace(text) ||
             !text.Contains(runId, StringComparison.Ordinal) ||
-            approved.Count != 3 ||
+            approved is null || approved.Count != 3 ||
             approved.Select(x => x.DocumentId).Distinct(StringComparer.Ordinal).Count() != 3 ||
             !new[] { "report", "lessons", "master" }.All(p =>
                 approved.Count(t => t.Purpose == p) == 1))
