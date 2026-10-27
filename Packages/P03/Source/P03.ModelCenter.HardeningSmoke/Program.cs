@@ -1,0 +1,107 @@
+using System.Text;
+using System.Text.Json;
+using Nox.P03;
+
+int pass = 0;
+void Assert(bool value, string name) { if (!value) throw new Exception("FAIL " + name); Console.WriteLine("PASS " + name); pass++; }
+void MustReject(Action fn, string name) {
+    try { fn(); }
+    catch (InvalidDataException) { Console.WriteLine("PASS " + name); pass++; return; }
+    throw new Exception("FAIL " + name);
+}
+using var correct = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
+Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "m:1") == "sha256:" + new string('a',64), "T01 pinned local digest");
+Assert(ModelLocalAttestation.ParseUnambiguousModelDigest(correct.RootElement, "missing:1") is null, "T02 absent tag stays unknown");
+using var duplicated = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"},{\"name\":\"m:1\",\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(duplicated.RootElement,"m:1"), "T03 duplicate tag denied");
+using var invalidSchema = JsonDocument.Parse("{\"models\":{}}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(invalidSchema.RootElement,"m:1"), "T04 nonarray tags denied");
+using var invalidDigest = JsonDocument.Parse("{\"models\":[{\"name\":\"m:1\",\"digest\":\"sha256:broken\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(invalidDigest.RootElement,"m:1"), "T05 malformed digest denied");
+using var missingName = JsonDocument.Parse("{\"models\":[{\"digest\":\"sha256:" + new string('a',64) + "\"}]}");
+MustReject(() => ModelLocalAttestation.ParseUnambiguousModelDigest(missingName.RootElement,"m:1"), "T06 malformed record denied");
+var root = Path.Combine(Path.GetTempPath(),"NOX_P03_HARDEN_"+Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(root);
+try {
+  var file = Path.Combine(root,"valid.gguf"); await File.WriteAllTextAsync(file,"GGUFtest");
+  ModelLocalAttestation.RequireRegularUnlinkedFile(file); Assert(true,"T07 regular GGUF allowed");
+  var link = Path.Combine(root,"link.gguf");
+  try {
+    File.CreateSymbolicLink(link, file);
+    MustReject(() => ModelLocalAttestation.RequireRegularUnlinkedFile(link),"T08 symlink GGUF denied");
+  } catch (UnauthorizedAccessException) { Console.WriteLine("SKIP T08 Windows symlink privilege unavailable"); }
+  var receipt = new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1",Guid.NewGuid(),"m:1","ollama-pull",
+      DateTimeOffset.UtcNow,null,null,"sha256:"+new string('a',64),"https://ollama.com/library/m","http://localhost:11434/");
+  var receiptFile = Path.Combine(root,"receipt.json");
+  await File.WriteAllTextAsync(receiptFile,JsonSerializer.Serialize(receipt,new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+  await ModelLocalAttestation.VerifyReceiptAsync(receiptFile, receipt, default);
+  Assert(true,"T09 install receipt readback");
+  try { await ModelLocalAttestation.VerifyReceiptAsync(receiptFile,receipt with { ModelTag="attacker:tag" },default); throw new Exception("FAIL T10"); }
+  catch (InvalidDataException) { Assert(true,"T10 receipt mismatch denied"); }
+} finally { Directory.Delete(root,recursive:true); }
+Console.WriteLine($"P03_HARDENING_SMOKE_PASS {pass} verified assertions");
+
+// TURBO13 protocol and immutable receipt tests; each uses actual source methods.
+int turbo13Pass = 0;
+void T13(bool ok, string label) { if (!ok) throw new Exception("FAIL " + label); turbo13Pass++; Console.WriteLine("PASS " + label); }
+async Task RejectAsync(Func<Task> test, string label)
+{
+    try { await test(); }
+    catch (InvalidDataException) { T13(true, label); return; }
+    throw new Exception("FAIL " + label);
+}
+async Task Drain(string input)
+{
+    using var reader = new StringReader(input);
+    await foreach (var _ in ModelLocalAttestation.ReadValidatedStreamAsync(reader)) { }
+}
+// 01. Two valid records across buffer boundaries and CRLF preserve exact fields.
+var goodLine = "{\"status\":\"downloading\",\"digest\":\"sha256:" + new string('a',64) + "\",\"completed\":1,\"total\":2}";
+using (var reader = new StringReader(goodLine + "\r\n{\"status\":\"success\"}"))
+{
+    var updates = new List<OllamaStreamUpdate>();
+    await foreach (var evt in ModelLocalAttestation.ReadValidatedStreamAsync(reader)) updates.Add(evt);
+    T13(updates.Count == 2 && updates[0].Completed == 1 && updates[1].Status == "success", "T13-01 bounded valid CRLF stream");
+}
+// 02. Oversized first line without a terminator fails before unbounded allocation.
+await RejectAsync(() => Drain(new string('x', ModelLocalAttestation.MaxEventCharacters + 1)),
+    "T13-02 oversized no-newline line denied");
+// 03. Numeric status must be rejected, not reported as a completed download.
+await RejectAsync(() => Drain("{\"status\":17}\n"), "T13-03 typed status enforced");
+// 04. Negative byte progress is invalid.
+await RejectAsync(() => Drain("{\"status\":\"pulling\",\"completed\":-1,\"total\":1}\n"),
+    "T13-04 negative progress denied");
+// 05. Completed bytes must not exceed the total.
+await RejectAsync(() => Drain("{\"status\":\"pulling\",\"completed\":5,\"total\":2}\n"),
+    "T13-05 impossible progress denied");
+// 06. A progress layer's digest must be a complete SHA-256.
+await RejectAsync(() => Drain("{\"status\":\"pulling\",\"digest\":\"sha256:xyz\"}\n"),
+    "T13-06 fake layer digest denied");
+// 07. Error must be text, not a nested object that bypasses the error branch.
+await RejectAsync(() => Drain("{\"status\":\"pulling\",\"error\":{}}\n"),
+    "T13-07 nonstring error denied");
+// 08. A forged second success or arbitrary event after success is rejected.
+await RejectAsync(() => Drain("{\"status\":\"success\"}\n{\"status\":\"success\"}\n"),
+    "T13-08 duplicate terminal success denied");
+// 09. Full timestamp on persisted installation evidence is immutable.
+var attestationRoot = Path.Combine(Path.GetTempPath(), "NOX_P03_T13_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(attestationRoot);
+try
+{
+    var r = new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1", Guid.NewGuid(), "m:1", "gguf-import",
+        DateTimeOffset.UtcNow, 8, new string('a',64), "sha256:"+new string('b',64),
+        "https://ollama.com/library/m", "http://localhost:11434/");
+    await ModelLocalAttestation.WriteNewReceiptAsync(attestationRoot, r, default);
+    await RejectAsync(() => ModelLocalAttestation.VerifyReceiptAsync(
+        Path.Combine(attestationRoot, r.JobId.ToString("N")+".json"),
+        r with { CompletedAtUtc = r.CompletedAtUtc.AddMinutes(1) }, default),
+        "T13-09 receipt timestamp mutation denied");
+    // 10. A later concurrent operation cannot silently replace an earlier receipt.
+    bool duplicateBlocked = false;
+    try { await ModelLocalAttestation.WriteNewReceiptAsync(attestationRoot, r, default); }
+    catch (IOException) { duplicateBlocked = true; }
+    await ModelLocalAttestation.VerifyReceiptAsync(Path.Combine(attestationRoot, r.JobId.ToString("N")+".json"), r, default);
+    T13(duplicateBlocked, "T13-10 immutable receipt no overwrite");
+}
+finally { Directory.Delete(attestationRoot, recursive:true); }
+Console.WriteLine($"P03_TURBO13_SMOKE_PASS {turbo13Pass}/10 targeted assertions");
