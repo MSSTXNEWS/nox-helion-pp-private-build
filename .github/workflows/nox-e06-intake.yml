@@ -26,8 +26,13 @@ jobs:
           python coordination/e06/verify_integration.py --out e06-gate.json
           if ($LASTEXITCODE -ne 2) { throw "Unaccepted application must remain blocked" }
           python -c "import json; x=json.load(open('e06-gate.json')); assert x['release']=='BLOCKED'; assert len(x['gates'])==10"
+      - name: Compute per-file pre/post SHA256 and actual Git patch SHA256
+        shell: pwsh
+        run: python coordination/e06/emit_receipts.py
       - name: Save machine-readable receipt
         uses: actions/upload-artifact@v4
         with:
           name: e06-no-loss-gate
-          path: e06-gate.json
+          path: |
+            e06-gate.json
+            e06-file-receipts.json
