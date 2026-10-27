@@ -130,7 +130,7 @@ test("decorations preserve approved original elements/handlers/data; revert full
 test("fail closed on duplicate mount, untrusted data, unknown CoreID",()=>{
   const o=fakeScene();
   const x=installNoxCinemaFX({root:o.root,orbs:o.orbs});
-  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs}),/DUPLICATE/);
+  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs}),/ALREADY_MOUNTED/);
   assert.equal(x.setState("training","RUN-123","CORE_2"),true);
   assert.equal(o.orbs[2].element.dataset.noxState,"training");
   assert.equal(x.setState("training","bad/../run"),false);
