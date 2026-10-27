@@ -42,7 +42,7 @@ static class Program
             catch(NotSupportedException){denied=true;}
             if(!denied)throw new Exception("Unverified model licenses must HOLD");
             var preflight=(IReadOnlyList<ComponentStatus>)await adapter.ExecuteAsync(new("models.preflight"));
-            if(preflight.Count!=5)throw new Exception("Expected five real OS probes including NVIDIA GPU");
+            if(preflight.Count!=6)throw new Exception("Expected 6 original C40+TURBO10 probes including GPU and Python training libraries");
             Console.WriteLine("NOX_P03_OWNER_PACK_PASS: original 20 tags, queue, 9 bindings, consent/picker/permissions and actual Windows preflight");
         }
         finally { try{Directory.Delete(directory,recursive:true);}catch{} }
