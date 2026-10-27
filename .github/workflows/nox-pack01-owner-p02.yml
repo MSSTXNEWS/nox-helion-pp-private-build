@@ -1,0 +1,34 @@
+name: NOX PACK01 actual P02 owner binding Windows
+on:
+  pull_request:
+    paths:
+      - 'proposals/NOX-PACK01-50/**'
+      - '.github/workflows/nox-pack01-owner-p02.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p02-existing-owner:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout exact P02 owner source without copying files
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: b90c90fbea680dce9bee584213f7412b594eda90
+          path: owner-p02
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify Python bridge syntax
+        shell: pwsh
+        run: |
+          python -m py_compile proposals/NOX-PACK01-50/native_bridge.py
+          python -m py_compile proposals/NOX-PACK01-50/test_native_bridge.py
+      - name: Test exact P02 Ollama streaming and real SQLite owner paths
+        shell: pwsh
+        env:
+          NOX_P02_OWNER_PATH: ${{ github.workspace }}/owner-p02/Packages/P02/worker-python
+        run: |
+          python -m unittest discover -s proposals/NOX-PACK01-50 -p 'test_native_bridge.py' -v
