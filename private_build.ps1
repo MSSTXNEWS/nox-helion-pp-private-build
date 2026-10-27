@@ -98,6 +98,49 @@ try {
         throw 'SOURCE_FREEZE_WHEELHOUSE_BINDING_MISMATCH'
     }
 
+    # P01 SourceLock: pin the checkout identity before touching the archived source.
+    # The archive and its independent source-freeze binding remain authoritative.
+    $checkoutCommit = (& git -C $root rev-parse HEAD 2>$null)
+    $checkoutTree = (& git -C $root rev-parse HEAD^{tree} 2>$null)
+    if ($LASTEXITCODE -ne 0 -or -not $checkoutCommit -or -not $checkoutTree) {
+        throw 'P01_SOURCELOCK_CHECKOUT_UNAVAILABLE'
+    }
+    $checkoutCommit = ([string]$checkoutCommit).Trim()
+    $checkoutTree = ([string]$checkoutTree).Trim()
+    $sourceLock = [ordered]@{
+        schema = 'NOX_P01_SOURCELOCK_V1'
+        task_id = 'NOX-FIN-ZAGR-V15-EXECUTOR-1-P01'
+        repository = 'MSSTXNEWS/nox-helion-pp-private-build'
+        checkout_commit = $checkoutCommit
+        checkout_tree = $checkoutTree
+        frozen_source_sha256 = $sourceExpectedSha
+        frozen_base_tree = $baseTreeExpected
+        frozen_patched_tree = $patchedTreeExpected
+        freeze_manifest = 'evidence/PP-ONE-037-C2-SOURCE-FREEZE.json'
+        captured_utc = [DateTime]::UtcNow.ToString('o')
+    }
+    $sourceLock | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $evidence 'p01-sourcelock.json') -Encoding UTF8
+
+    # Diagnostic only: installed prerequisites must never be mistaken for
+    # bundled dependencies. No host software is modified or silently installed.
+    $toolState = [ordered]@{}
+    foreach ($toolName in @('py','python','ollama','git','makensis')) {
+        $command = Get-Command $toolName -CommandType Application -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        $toolState[$toolName] = [ordered]@{
+            detected = ($null -ne $command)
+            path = if ($null -ne $command) { $command.Source } else { $null }
+        }
+    }
+    [ordered]@{
+        schema = 'NOX_P01_PREREQUISITES_V1'
+        task_id = 'NOX-FIN-ZAGR-V15-EXECUTOR-1-P01'
+        checkout_commit = $checkoutCommit
+        captured_utc = [DateTime]::UtcNow.ToString('o')
+        tools = $toolState
+        note = 'Detection only; no download, install, update, rollback or runtime acceptance inferred.'
+    } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $evidence 'p01-prerequisites.json') -Encoding UTF8
+
     if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem -or
         [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne [Runtime.InteropServices.Architecture]::X64) {
         throw 'AUTHORIZED_WINDOWS_X64_RUNNER_REQUIRED'
