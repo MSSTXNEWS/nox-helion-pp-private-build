@@ -3,6 +3,13 @@ on:
   push:
     branches:
       - e04/v16-pr7-guard-tests-20261028
+  pull_request:
+    branches:
+      - codex/p04-create-rag-training-gpu-20261027
+    paths:
+      - 'Packages/P04/**'
+      - 'tests/P04/**'
+      - '.github/workflows/nox-p04-candidate-ci.yml'
   workflow_dispatch:
 permissions:
   contents: read
