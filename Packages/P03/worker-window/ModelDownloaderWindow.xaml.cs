@@ -25,7 +25,14 @@ public sealed record ModelArtifactEvidence(
     string CompatibilityEvidenceUrl,
     string SourceCommit,
     string SourceTree,
-    string OwnerReceiptId);
+    string SourceLockTree,
+    string OwnerReceiptId,
+    string OwnerReceiptSourceCommit,
+    string OwnerReceiptSourceTree,
+    string OwnerReceiptPath,
+    string OwnerReceiptPreimageSha256,
+    string OwnerReceiptPostimageSha256,
+    string OwnerReceiptPatchSha256);
 
 /// <summary>
 /// Code-only WPF window. Download/import execution stays with the existing host
@@ -104,7 +111,7 @@ public sealed class ModelDownloaderWindow : Window
         var vramRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
         vramRow.Children.Add(new TextBlock
         {
-            Text = "Доступно VRAM, GiB:",
+            Text = "Доступно VRAM, GiB (введите вручную):",
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 10, 0)
         });
@@ -177,8 +184,19 @@ public sealed class ModelDownloaderWindow : Window
             return Block("Доступная VRAM не указана или меньше подтверждённого требования.", out reason);
         if (!IsGitObjectId(artifact.SourceCommit) ||
             !IsGitObjectId(artifact.SourceTree) ||
-            string.IsNullOrWhiteSpace(artifact.OwnerReceiptId))
-            return Block("Нет привязки к source commit/tree и owner receipt.", out reason);
+            !IsGitObjectId(artifact.SourceLockTree) ||
+            !string.Equals(artifact.SourceTree, artifact.SourceLockTree, StringComparison.OrdinalIgnoreCase))
+            return Block("Исходное дерево не совпадает с активным SourceLock.", out reason);
+        if (string.IsNullOrWhiteSpace(artifact.OwnerReceiptId) ||
+            !IsGitObjectId(artifact.OwnerReceiptSourceCommit) ||
+            !IsGitObjectId(artifact.OwnerReceiptSourceTree) ||
+            !string.Equals(artifact.OwnerReceiptSourceCommit, artifact.SourceCommit, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(artifact.OwnerReceiptSourceTree, artifact.SourceTree, StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(artifact.OwnerReceiptPath) ||
+            !IsSha256(artifact.OwnerReceiptPreimageSha256) ||
+            !IsSha256(artifact.OwnerReceiptPostimageSha256) ||
+            !IsSha256(artifact.OwnerReceiptPatchSha256))
+            return Block("Owner receipt не привязан к точному пути, commit/tree и pre/postimage/patch SHA.", out reason);
 
         reason = "Поля provenance и совместимости подтверждены.";
         return true;
@@ -190,6 +208,9 @@ public sealed class ModelDownloaderWindow : Window
 
     private static bool IsGitObjectId(string? value) =>
         Regex.IsMatch(value ?? string.Empty, "^[0-9a-fA-F]{40}$");
+
+    private static bool IsSha256(string? value) =>
+        Regex.IsMatch(value ?? string.Empty, "^[0-9a-fA-F]{64}$");
 
     private static bool Block(string message, out string reason)
     {
@@ -215,7 +236,11 @@ public sealed class ModelDownloaderWindow : Window
             $"SHA-256: {ValueOrUnknown(artifact.Sha256)}\n" +
             $"Минимальная VRAM: {(artifact.RequiredVramGiB.HasValue ? artifact.RequiredVramGiB.Value.ToString(CultureInfo.InvariantCulture) + " GiB" : "неизвестна")}\n" +
             $"Source: {ValueOrUnknown(artifact.SourceCommit)} / {ValueOrUnknown(artifact.SourceTree)}\n" +
-            $"Owner receipt: {ValueOrUnknown(artifact.OwnerReceiptId)}";
+            $"SourceLock tree: {ValueOrUnknown(artifact.SourceLockTree)}\n" +
+            $"Owner receipt: {ValueOrUnknown(artifact.OwnerReceiptId)}\n" +
+            $"Receipt source: {ValueOrUnknown(artifact.OwnerReceiptSourceCommit)} / {ValueOrUnknown(artifact.OwnerReceiptSourceTree)}\n" +
+            $"Receipt path: {ValueOrUnknown(artifact.OwnerReceiptPath)}\n" +
+            $"Receipt SHA-256 pre/post/patch: {ValueOrUnknown(artifact.OwnerReceiptPreimageSha256)} / {ValueOrUnknown(artifact.OwnerReceiptPostimageSha256)} / {ValueOrUnknown(artifact.OwnerReceiptPatchSha256)}";
 
         _status.Text = eligible ? reason : "BLOCKED · " + reason;
         _status.Foreground = eligible ? Brushes.LightGreen : Brushes.Orange;
