@@ -26,11 +26,13 @@ jobs:
         run: |
           node --check proposals/NOX-CINEMA-FX/nox-cinema.mjs
           node --check proposals/NOX-CINEMA-FX/nox-cinema.test.mjs
+          node --check proposals/NOX-CINEMA-FX/nox-cinema-events.mjs
+          node --check proposals/NOX-CINEMA-FX/nox-cinema-events.test.mjs
           if ($LASTEXITCODE -ne 0) {throw 'CINEMA_SYNTAX_FAIL'}
       - name: Run original D02 no-loss and particle gravity regression
         shell: pwsh
         run: |
-          node --test proposals/NOX-CINEMA-FX/nox-cinema.test.mjs
+          node --test proposals/NOX-CINEMA-FX/nox-cinema.test.mjs proposals/NOX-CINEMA-FX/nox-cinema-events.test.mjs
           if ($LASTEXITCODE -ne 0) {throw 'CINEMA_COMPONENT_FAIL'}
       - name: Verify no changes to original approved assets
         shell: pwsh
