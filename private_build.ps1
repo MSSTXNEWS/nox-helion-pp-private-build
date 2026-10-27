@@ -103,16 +103,39 @@ try {
         throw 'AUTHORIZED_WINDOWS_X64_RUNNER_REQUIRED'
     }
 
-    $chunkNames = @('source_00.part', 'source_01.part', 'source_02.part')
-    $outStream = [IO.File]::Open($sourceZip, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
-    try {
-        foreach ($chunkName in $chunkNames) {
-            $chunkPath = Join-Path $root $chunkName
-            if (-not (Test-Path -LiteralPath $chunkPath -PathType Leaf)) { throw "SOURCE_CHUNK_MISSING:$chunkName" }
-            $inputStream = [IO.File]::OpenRead($chunkPath)
-            try { $inputStream.CopyTo($outStream) } finally { $inputStream.Dispose() }
+    $sourceArchiveReused = $false
+    if (Test-Path -LiteralPath $sourceZip -PathType Leaf) {
+        if ((Get-Item -LiteralPath $sourceZip).Length -eq $sourceExpectedBytes) {
+            try {
+                $cachedSourceSha = (Get-FileHash -LiteralPath $sourceZip -Algorithm SHA256).Hash.ToLowerInvariant()
+                $sourceArchiveReused = $cachedSourceSha -ceq $sourceExpectedSha
+            } catch { $sourceArchiveReused = $false }
         }
-    } finally { $outStream.Dispose() }
+    }
+    if (-not $sourceArchiveReused) {
+        $sourceZipTemp = "$sourceZip.tmp"
+        if (Test-Path -LiteralPath $sourceZipTemp -PathType Leaf) { Remove-Item -LiteralPath $sourceZipTemp -Force }
+        try {
+            $chunkNames = @('source_00.part', 'source_01.part', 'source_02.part')
+            $outStream = [IO.File]::Open($sourceZipTemp, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+            try {
+                foreach ($chunkName in $chunkNames) {
+                    $chunkPath = Join-Path $root $chunkName
+                    if (-not (Test-Path -LiteralPath $chunkPath -PathType Leaf)) { throw "SOURCE_CHUNK_MISSING:$chunkName" }
+                    $inputStream = [IO.File]::OpenRead($chunkPath)
+                    try { $inputStream.CopyTo($outStream) } finally { $inputStream.Dispose() }
+                }
+            } finally { $outStream.Dispose() }
+            $tempBytes = (Get-Item -LiteralPath $sourceZipTemp).Length
+            if ($tempBytes -ne $sourceExpectedBytes) { throw "SOURCE_ARCHIVE_SIZE_MISMATCH:$tempBytes" }
+            Assert-Sha256 $sourceZipTemp $sourceExpectedSha 'PRE-PRE source archive'
+            Move-Item -LiteralPath $sourceZipTemp -Destination $sourceZip -Force
+        } finally {
+            if (Test-Path -LiteralPath $sourceZipTemp -PathType Leaf) { Remove-Item -LiteralPath $sourceZipTemp -Force }
+        }
+    } else {
+        Write-Output "SOURCE_ARCHIVE_REUSED:$sourceExpectedSha"
+    }
     $actualBytes = (Get-Item -LiteralPath $sourceZip).Length
     if ($actualBytes -ne $sourceExpectedBytes) { throw "SOURCE_ARCHIVE_SIZE_MISMATCH:$actualBytes" }
     Assert-Sha256 $sourceZip $sourceExpectedSha 'PRE-PRE source archive'
