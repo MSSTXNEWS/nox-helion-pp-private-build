@@ -195,10 +195,10 @@ public sealed class GpuGuardian
     public static string? ThermalHoldReason(GpuTelemetrySample sample, double thresholdC)
     {
         ArgumentNullException.ThrowIfNull(sample);
-        if (sample.State != "READY" || sample.TemperatureC is null)
-            return "GPU_TEMPERATURE_UNAVAILABLE";
         if (!double.IsFinite(thresholdC) || thresholdC is < 50 or > 95)
             throw new ArgumentOutOfRangeException(nameof(thresholdC));
+        if (sample.State != "READY" || sample.TemperatureC is null)
+            return "GPU_TEMPERATURE_UNAVAILABLE";
         return sample.TemperatureC >= thresholdC ? "GPU_TEMPERATURE_LIMIT_EXCEEDED" : null;
     }
 
