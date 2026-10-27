@@ -1,0 +1,32 @@
+name: NOX PACK01 real E05 feed and sensor bindings Windows
+on:
+  pull_request:
+    paths:
+      - 'proposals/NOX-PACK01-50/**'
+      - '.github/workflows/nox-pack01-owner-e05.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  e05-source:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout current original E05 owner without replacing files
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 109da8f4e4cd12a9535e7ce5a7a0dbf2f7032c90
+          path: owner-p05
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile additive E05 source adapter against original E05 owner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Copy-Item proposals/NOX-PACK01-50/E05OwnerPack.cs owner-p05/Packages/P05/E05/src/E05OwnerPack.cs
+          dotnet build proposals/NOX-PACK01-50/E05Smoke/E05Smoke.csproj --configuration Release --nologo
+          if ($LASTEXITCODE -ne 0) {throw 'E05_OWNER_PACK_COMPILE_FAIL'}
+          dotnet run --project proposals/NOX-PACK01-50/E05Smoke/E05Smoke.csproj --configuration Release --no-build
+          if ($LASTEXITCODE -ne 0) {throw 'E05_OWNER_PACK_RUNTIME_FAIL'}
