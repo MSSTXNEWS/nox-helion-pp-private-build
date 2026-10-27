@@ -99,6 +99,7 @@ internal static class Program
             var safelyEncoded = await ingest.BuildContextAsync(ownerA, conversation, "alpha");
             Check(safelyEncoded.ContextText.Contains("source%5D%23note.md"), "citation filename percent-encoded");
             Check(!safelyEncoded.ContextText.Contains("source]#note.md"), "unescaped filename absent");
+            Check(await rag.DeleteSourceAsync(ownerA, conversation, "citation-safety"), "citation fixture cleanup");
 
             Check((await rag.SearchAsync(ownerB, conversation, "alpha")).Count == 0, "owner isolation");
             Check((await rag.SearchAsync(ownerA, "other-conversation", "alpha")).Count == 0, "conversation isolation");
