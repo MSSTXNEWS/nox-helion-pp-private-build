@@ -5,17 +5,18 @@
   "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
   "counts": {
     "catalogue": 50,
-    "sourceOwnerMethodBound": 36,
-    "p02": 12,
+    "sourceOwnerMethodBound": 37,
+    "p02": 13,
     "p03": 10,
     "p04": 8,
     "e05": 6,
-    "unbound": 14,
+    "unbound": 13,
     "exeIntegrated": 0,
     "releaseAccepted": 0
   },
   "notes": [
-    "36 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
+    "37/50 source method proposals, not native installed integrations.",
+    "chat.rag uses existing original P04 citation-bearing method and native P02 session authorization; E06 host must supply identity and integrate with one chat.",
     "User's original 729-file source is integrity verified but still not unified with this proposal.",
     "Remaining 14 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
     "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
@@ -96,12 +97,12 @@
       "taskId": "NIP01-07",
       "routeId": "chat.rag",
       "owner": 2,
-      "sourceBinding": null,
-      "componentCI": "NOT_RUN",
+      "sourceBinding": "proposals/NOX-PACK01-50/P02RagChatOwnerPort.cs:P02RagChatOwnerPort.RetrieveAsync",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_OWNER_P04_WITH_P02_NATIVE_AUTH",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "E06_SINGLE_HOST_SID_SESSION_AND_P02_PROMPT_CONTEXT_RENDERER"
     },
     {
       "taskId": "NIP01-08",
@@ -646,14 +647,15 @@
       "status": "SOURCE_CANDIDATE_CI_PENDING",
       "ownerP03": "P03 C40 original ModelCatalog.OfficialFamilies",
       "ownerP04": "P04 verified original train_qlora.py methods"
+    },
+    "p02RagSource": {
+      "status": "OWNER_SOURCE_PATCH_CI_PENDING",
+      "file": "proposals/NOX-PACK01-50/P02RagChatOwnerPort.cs",
+      "originalOwner": "P04 RagChatContextProvider",
+      "remark": "No added LLM or RAG index, real user-PC runtime not run"
     }
   },
   "remainingNativeBlockers": [
-    {
-      "taskId": "NIP01-07",
-      "routeId": "chat.rag",
-      "owner": 2
-    },
     {
       "taskId": "NIP01-08",
       "routeId": "chat.voice",
