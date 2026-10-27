@@ -33,15 +33,21 @@ if (Test-Path -LiteralPath $root -PathType Container) {
 }
 # Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence.
 $regPaths = @(
- 'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
- 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
- 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}'
+ 'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+ 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+ 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
 )
 $installed = $false
 foreach ($p in $regPaths) {
   try {
     $v = (Get-ItemProperty -LiteralPath $p -ErrorAction Stop).pv
-    if ($v -and $v -ne '0.0.0.0') { $installed = $true; break }
+    # C11: WebView2 Runtime is present only with a parsable, nonzero version.
+    if ($v) {
+      try {
+        $runtimeVersion=[version][string]$v
+        if ($runtimeVersion.Major -gt 0) { $installed = $true; break }
+      } catch { }
+    }
   } catch { }
 }
 if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }

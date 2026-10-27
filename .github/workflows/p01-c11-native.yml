@@ -1,0 +1,68 @@
+name: NOX P01 C11 Windows component
+on:
+  push:
+    branches:
+      - e01/v16-c11-real-completion-20261028
+    paths:
+      - '.github/workflows/p01-c11-native.yml'
+      - 'stage/proposals/P01/C09/**'
+      - 'stage/proposals/P01/C11/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p01-c11-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  native:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: PowerShell parse all owned scripts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $base=Join-Path $env:GITHUB_WORKSPACE 'stage/proposals/P01/C09'
+          $files=@(Get-ChildItem -LiteralPath $base -Recurse -File -Filter '*.ps1')
+          if ($files.Count -lt 6) { throw 'P01_C11_SOURCE_MISSING' }
+          foreach ($f in $files) {
+            $tokens=$null
+            $parseErrors=$null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName,[ref]$tokens,[ref]$parseErrors)
+            if ($parseErrors.Count -gt 0) { throw "P01_C11_PS_PARSE:$($f.FullName):$($parseErrors | Out-String)" }
+          }
+          Write-Host "P01_C11_PARSE_PASS=$($files.Count)"
+      - name: Native Windows PowerShell 5.1 ten scenarios
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $ErrorActionPreference='Stop'
+          $base=Join-Path $env:GITHUB_WORKSPACE 'stage/proposals/P01/C09'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $base 'QA/P01_E01_C09/Test-P01Native-C09.ps1') -SourceRoot $base
+          if ($LASTEXITCODE -ne 0) { throw "P01_C11_NATIVE_TESTS_FAILED:$LASTEXITCODE" }
+      - name: C11 identity and no-loss negative scenarios
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $ErrorActionPreference='Stop'
+          $qa=Join-Path $env:GITHUB_WORKSPACE 'stage/proposals/P01/C11/QA/Test-P01C11.ps1'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $qa
+          if ($LASTEXITCODE -ne 0) { throw "P01_C11_GUARDS_FAILED:$LASTEXITCODE" }
+      - name: Compute cryptographic owner receipts and assert no loss
+        shell: pwsh
+        run: |
+          node 'stage/proposals/P01/C11/QA/emit-receipts.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P01_C11_RECEIPT_FAILED' }
+      - name: Preserve exact source receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: p01-c12-owner-receipts
+          path: ci-evidence/p01-c12-owner-receipts.json
+          retention-days: 30
+          if-no-files-found: error

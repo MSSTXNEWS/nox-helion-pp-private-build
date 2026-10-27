@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
 $rootInfo = Get-Item -LiteralPath $Root -ErrorAction Stop
-if (-not $rootInfo.PSIsContainer) { Fail 'root is not directory' }
+if (-not $rootInfo.PSIsContainer -or (($rootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe or reparse root' }
 $rootFull = [IO.Path]::GetFullPath($rootInfo.FullName).TrimEnd('\')
 function Assert-NoReparseAncestors([string]$Target) {
   $cursor = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Target))
@@ -21,16 +21,16 @@ function Assert-NoReparseAncestors([string]$Target) {
   }
 }
 $manifestFull = [IO.Path]::GetFullPath($Manifest)
-if (-not $manifestFull.StartsWith($rootFull+'\', [StringComparison]::OrdinalIgnoreCase)) { Fail 'manifest outside root' }
+if ($manifestFull -ine (Join-Path $rootFull 'payload.sha256.json')) { Fail 'noncanonical manifest path' }
 Assert-NoReparseAncestors $manifestFull
 $manifestItem=Get-Item -LiteralPath $manifestFull -Force -ErrorAction Stop
 if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe manifest' }
 $m = Get-Content -LiteralPath $manifestFull -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1') { Fail 'schema' }
 if ($m.entrypoint -cne 'NOX.P01.Shell.exe') { Fail 'entrypoint' }
-if ($null -eq $m.files -or @($m.files).Count -lt 1) { Fail 'empty manifest' }
-if ($m.runId -isnot [string] -or [string]::IsNullOrWhiteSpace($m.runId)) { Fail 'missing run ID' }
-if ($m.version -isnot [string] -or [string]::IsNullOrWhiteSpace($m.version)) { Fail 'missing version' }
+if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { Fail 'invalid manifest length' }
+if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { Fail 'invalid run ID' }
+if ($m.version -isnot [string] -or $m.version -cnotmatch '^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}(\.[0-9]{1,5})?$') { Fail 'invalid version' }
 $registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 foreach($f in $m.files) {
   if ($null -eq $f -or $f.path -isnot [string] -or ([string]$f.sha256) -cnotmatch '^[a-fA-F0-9]{64}$') { Fail 'bad manifest row or SHA' }
@@ -43,6 +43,7 @@ foreach($f in $m.files) {
     if ($part -eq '' -or $part -eq '.' -or $part -eq '..' -or $part -match '[. ]$' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$') { Fail 'unsafe Windows component' }
   }
   $rel = $rel.Replace('/','\')
+  if ($rel -ieq 'payload.sha256.json' -or $rel -ieq 'nox-p01-owned.txt' -or $rel -ieq 'Uninstall.exe') { Fail 'installer metadata is not application payload' }
   if (-not $registered.Add($rel)) { Fail "duplicate path $rel" }
   $full = [IO.Path]::GetFullPath((Join-Path $rootFull $rel))
   if (-not $full.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase)) { Fail "escape $rel" }
