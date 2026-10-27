@@ -155,7 +155,7 @@ var cproof = approvedCores.Select((name, i) => new CoreProof(name, i * 10,
 var pproof = approvedPersonas.Select(name => new PersonaProof(name, "AVAILABLE", nowV3)).ToArray();
 var orb = E05CorePersonaProjection.Project(approvedCores, approvedPersonas,
     cproof, pproof, nowV3);
-Check(orb.CenterPercent == 35 && orb.State == "VERIFIED", "T10-03: 8 core and 5 persona proofs");
+Check(orb.CenterPercent == 35 && orb.Status == "VERIFIED", "T10-03: 8 core and 5 persona proofs");
 Check(E05CorePersonaProjection.Project(approvedCores, approvedPersonas,
     cproof, pproof, nowV3.AddHours(1)).CenterPercent is null,
     "T10-03: stale core ring becomes N/D");
