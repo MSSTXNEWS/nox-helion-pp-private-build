@@ -158,6 +158,35 @@ public sealed class ModelDownloadQueueStore
             throw new ArgumentException("A reviewed non-latest model tag is required.", nameof(tag));
     }
 
+    /// <summary>
+    /// Atomic claim: only one NOX process may transition a queued job into Running.
+    /// A previous Running state must never count as a successful second claim.
+    /// </summary>
+    public async Task<ModelJob?> TryStartQueuedAsync(Guid id, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            using var lease = await AcquireFileLeaseAsync(ct);
+            var jobs = (await ReadCoreAsync(ct)).ToList();
+            var index = jobs.FindIndex(j => j.Id == id);
+            if (index < 0 || jobs[index].State != ModelJobState.Queued) return null;
+            var old = jobs[index];
+            if (old.Kind == ModelJobKind.OllamaPull &&
+                (old.ExpectedOllamaDigest is not { Length: 64 } ||
+                 !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
+                 string.IsNullOrWhiteSpace(old.ImmutableRevision)))
+                throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
+            var claimed = old with { State = ModelJobState.Running,
+                Attempts = checked(old.Attempts + 1), Status = "Starting",
+                UpdatedAtUtc = DateTimeOffset.UtcNow };
+            jobs[index] = claimed;
+            await SaveCoreAsync(jobs, ct);
+            return claimed;
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task<ModelJob?> UpdateAsync(Guid id, Func<ModelJob, ModelJob> update, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
