@@ -115,6 +115,15 @@ internal static class Program
             Check(hits.Count > 0 && hits[0].Text.Contains("alpha original"), "authorized search");
             Check(hits[0].ChunkSha256 == Sha(hits[0].Text), "citation hash");
             Check(RagService.BuildContext(hits).Contains("SHA256:"), "citation context");
+            using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
+                "no-model-test-double", Path.Combine(directory, "index.json")))
+            {
+                var persisted = await reopened.SearchAsync(ownerA, conversation, "alpha");
+                Check(persisted.Count > 0 && persisted[0].ChunkSha256 == hits[0].ChunkSha256,
+                    "index persists across RAG service restart");
+                Check((await reopened.SearchAsync(ownerB, conversation, "alpha")).Count == 0,
+                    "persisted index still enforces owner ACL");
+            }
             await ingest.IngestTextAsync(ownerA, conversation, "citation-safety", "source]#note.md", "alpha citation");
             var safelyEncoded = await ingest.BuildContextAsync(ownerA, conversation, "alpha");
             Check(safelyEncoded.ContextText.Contains("source%5D%23note.md"), "citation filename percent-encoded");
@@ -137,6 +146,12 @@ internal static class Program
             await ingest.IngestTextAsync(ownerA, conversation, "s2", "b.txt", "beta content");
             Check(await rag.DeleteConversationAsync(ownerA, conversation) == 2, "conversation delete");
             Check((await rag.SearchAsync(ownerA, conversation, "alpha")).Count == 0, "deleted conversation empty");
+            using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
+                "no-model-test-double", Path.Combine(directory, "index.json")))
+            {
+                Check((await reopened.SearchAsync(ownerA, conversation, "alpha")).Count == 0,
+                    "deleted conversation stays deleted across service restart");
+            }
             Console.WriteLine("P04_RAG_SYNTHETIC_COMPONENT_PASS: " + _checks + " checks; NO_REAL_OLLAMA_OR_GPU");
             return 0;
         }
