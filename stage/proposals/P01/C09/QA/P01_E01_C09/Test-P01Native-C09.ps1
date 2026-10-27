@@ -33,8 +33,13 @@ function New-Fixture([string]$Label) {
 }
 function Invoke-Uninstaller([pscustomobject]$Fixture,[bool]$ShouldPass,[string]$Case) {
   $env:LOCALAPPDATA=$Fixture.Local
-  $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $uninstaller -InstallRoot $Fixture.Root 2>&1
-  $code=$LASTEXITCODE
+  # Expected child stderr must not become a terminating parent error under pwsh 7.
+  $formerPreference=$ErrorActionPreference
+  $ErrorActionPreference='Continue'
+  try {
+    $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $uninstaller -InstallRoot $Fixture.Root 2>&1
+    $code=$LASTEXITCODE
+  } finally { $ErrorActionPreference=$formerPreference }
   if($ShouldPass){Assert ($code -eq 0) "$Case expected success, got $code ($output)"}
   else {Assert ($code -ne 0) "$Case expected failure, got success"}
 }
