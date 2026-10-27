@@ -1,0 +1,24 @@
+name: NOX V16 WOW51-100 isolated source + render contract
+on:
+  push:
+    paths:
+      - 'proposals/NOX-WOW51-100/**'
+      - '.github/workflows/nox-wow51-100.yml'
+  pull_request:
+    paths:
+      - 'proposals/NOX-WOW51-100/**'
+      - '.github/workflows/nox-wow51-100.yml'
+jobs:
+  source:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All fifty effect contracts
+        run: node --test proposals/NOX-WOW51-100/wow51-100.test.mjs
+      - name: Exact source modules
+        run: |
+          node --check proposals/NOX-WOW51-100/catalog.mjs
+          node --check proposals/NOX-WOW51-100/wow51-100.mjs
