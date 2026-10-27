@@ -5,23 +5,25 @@
   "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
   "counts": {
     "catalogue": 50,
-    "sourceOwnerMethodBound": 32,
-    "p02": 11,
-    "p03": 9,
-    "p04": 6,
+    "sourceOwnerMethodBound": 36,
+    "p02": 12,
+    "p03": 10,
+    "p04": 8,
     "e05": 6,
-    "unbound": 18,
+    "unbound": 14,
     "exeIntegrated": 0,
     "releaseAccepted": 0
   },
   "notes": [
-    "32 source-method mappings do NOT mean 32 user-PC working functions or connected native host.",
-    "Six P04 methods use existing RAG index/GPU Guardian; pause/resume require original actually active worker.",
-    "Voice source methods are from owner P02, but no ASR/TTS weights or actual SIP provider are claimed installed.",
-    "Existing P02 same-second history-order regression still tracked; no release acceptance until fixed and verified.",
-    "Exact 18 missing routes are listed in remainingNativeBlockers.",
-    "User's original D02, WOW and SourceLock remain untouched by this proposal.",
-    "Full original app host integration and independent Windows E07 same-exe-SHA QA are pending."
+    "36 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
+    "User's original 729-file source is integrity verified but still not unified with this proposal.",
+    "Remaining 14 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
+    "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
+    "Voice settings require installed approved voices, do not claim free weights installed.",
+    "Model license view lists REVIEW_REQUIRED for unverified catalog families, never marks them legally approved.",
+    "Dataset rights and checkpoint functions call exact owner methods; real GPU training/merged LoRA/phone call NOT RUN.",
+    "P02 history same-second ordering regression still tracked, not resolved by candidate routes.",
+    "Original WOW 10+10+10, 8 CoreID, Persona/D02 and source archived files untouched."
   ],
   "routes": [
     {
@@ -237,12 +239,12 @@
       "taskId": "NIP01-20",
       "routeId": "models.licenses",
       "owner": 3,
-      "sourceBinding": null,
-      "componentCI": "NOT_RUN",
+      "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "EXACT_TAG_LICENSE_REVIEW_REQUIRED_EVEN_WITH_LIVE_CATALOGUE"
     },
     {
       "taskId": "NIP01-21",
@@ -281,12 +283,12 @@
       "taskId": "NIP01-24",
       "routeId": "datasets.review",
       "owner": 4,
-      "sourceBinding": null,
-      "componentCI": "NOT_RUN",
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_training_readonly.py:P04TrainingReadOnlyPack.review_dataset",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "APPROVED_NATIVE_DATASET_RIGHTS_VERIFIER_AND_HOST"
     },
     {
       "taskId": "NIP01-25",
@@ -336,12 +338,12 @@
       "taskId": "NIP01-29",
       "routeId": "training.checkpoints",
       "owner": 4,
-      "sourceBinding": null,
-      "componentCI": "NOT_RUN",
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_training_readonly.py:P04TrainingReadOnlyPack.inspect_checkpoint",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "EXISTING_FULL_STATE_CKPT_AND_NATIVE_OWNER_HOST"
     },
     {
       "taskId": "NIP01-30",
@@ -380,12 +382,12 @@
       "taskId": "NIP01-33",
       "routeId": "voice.settings",
       "owner": 2,
-      "sourceBinding": null,
-      "componentCI": "NOT_RUN",
+      "sourceBinding": "proposals/NOX-PACK01-50/native_bridge.py:ExistingP02VoiceAdapter.voice_settings",
+      "componentCI": "WINDOWS_COMPONENT_PENDING_CURRENT_OWNER_CI",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "APPROVED_INSTALLED_TTS_VOICES_AND_NATIVE_HOST"
     },
     {
       "taskId": "NIP01-34",
@@ -626,6 +628,24 @@
       "runId": 40601244469,
       "head": "0917b457e4a05b1dc47ffbd5b67133111fcda9c7",
       "sourceAttachmentsAndCommands": "PASS"
+    },
+    "originalArchive": {
+      "runId": 40601804526,
+      "files": 729,
+      "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "result": "EXACT_SOURCE_SHA_AND_STATIC_FUNCTION_AUDIT_PASS",
+      "acceptance": "NOT_INTEGRATED"
+    },
+    "newOwnerBindings": {
+      "routeIds": [
+        "voice.settings",
+        "models.licenses",
+        "datasets.review",
+        "training.checkpoints"
+      ],
+      "status": "SOURCE_CANDIDATE_CI_PENDING",
+      "ownerP03": "P03 C40 original ModelCatalog.OfficialFamilies",
+      "ownerP04": "P04 verified original train_qlora.py methods"
     }
   },
   "remainingNativeBlockers": [
@@ -640,34 +660,14 @@
       "owner": 2
     },
     {
-      "taskId": "NIP01-20",
-      "routeId": "models.licenses",
-      "owner": 3
-    },
-    {
-      "taskId": "NIP01-24",
-      "routeId": "datasets.review",
-      "owner": 4
-    },
-    {
       "taskId": "NIP01-26",
       "routeId": "training.start",
-      "owner": 4
-    },
-    {
-      "taskId": "NIP01-29",
-      "routeId": "training.checkpoints",
       "owner": 4
     },
     {
       "taskId": "NIP01-30",
       "routeId": "training.evaluate",
       "owner": 4
-    },
-    {
-      "taskId": "NIP01-33",
-      "routeId": "voice.settings",
-      "owner": 2
     },
     {
       "taskId": "NIP01-35",
