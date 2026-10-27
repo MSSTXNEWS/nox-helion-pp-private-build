@@ -1,4 +1,4 @@
-name: PRE-PRE exact candidate launch
+name: E07 current-main exact candidate process-start proof
 on:
   workflow_dispatch:
   push:
@@ -12,156 +12,161 @@ permissions:
   contents: read
 
 concurrency:
-  group: pp-exe-launch-run40210839317
+  group: pp-exe-launch-run40527490043
   cancel-in-progress: false
 
 jobs:
   launch:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12605282328') }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12745455266')) }}
     runs-on: windows-2025
     timeout-minutes: 5
     steps:
-      - name: Fetch, verify, and launch the exact existing candidate once
-        id: launch
+      - name: Fetch and byte-verify the exact current-main candidate artifact
+        id: fetch_candidate
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           $repo = 'MSSTXNEWS/nox-helion-pp-private-build'
-          $sourceRunId = 40210839317
-          $artifactId = 12605282328
-          $expectedHead = 'ca1a876018655b7b3d12c7fb8f273def8d1e45ad'
-          $expectedZipSha256 = 'f7b57520904cb60e17ce91737bb9f2f8af583a4ab769734a851551fa9f4eb625'
+          $sourceRunId = 40527490043
+          $artifactId = 12745455266
+          $expectedHead = '89dda555b37c260af16ad91807f13360669d8596'
+          $expectedZipSha256 = '91d9b815400ced62610b0b9c86551207a46bc7a880a71528fc481ba5cb0e3d78'
           $apiRoot = 'https://api.github.com/repos/' + $repo
-          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-artifact12605282328.zip'
-          $extractPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-extract'
+          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-artifact12745455266.zip'
+          $headers = @{ Authorization = 'Bearer ' + $env:GITHUB_TOKEN; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $meta = Invoke-RestMethod -Method Get -Uri "$apiRoot/actions/artifacts/$artifactId" -Headers $headers
+          if ($meta.id -ne $artifactId -or $meta.workflow_run.id -ne $sourceRunId -or $meta.workflow_run.head_sha -ne $expectedHead -or $meta.expired) { throw "Artifact provenance mismatch: id=$($meta.id), run=$($meta.workflow_run.id), head=$($meta.workflow_run.head_sha), expired=$($meta.expired)" }
+          $apiUri = [uri]"$apiRoot/actions/artifacts/$artifactId/zip"
+          $handler = [System.Net.Http.HttpClientHandler]::new()
+          $handler.AllowAutoRedirect = $false
+          $client = [System.Net.Http.HttpClient]::new($handler)
+          $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:GITHUB_TOKEN)
+          $client.DefaultRequestHeaders.Accept.ParseAdd('application/vnd.github+json')
+          $client.DefaultRequestHeaders.UserAgent.ParseAdd('NOX-HELION-Exact-Candidate-Fetch')
+          $client.DefaultRequestHeaders.Add('X-GitHub-Api-Version', '2022-11-28')
+          $response = $client.GetAsync($apiUri).GetAwaiter().GetResult()
+          $publicClient = $null
+          if ([int]$response.StatusCode -eq 302) {
+            $downloadUri = $response.Headers.Location
+            if (-not $downloadUri.IsAbsoluteUri) { $downloadUri = [uri]::new($apiUri, $downloadUri) }
+            $response.Dispose(); $client.Dispose()
+            $publicClient = [System.Net.Http.HttpClient]::new([System.Net.Http.HttpClientHandler]::new())
+            $downloadResponse = $publicClient.GetAsync($downloadUri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
+          } elseif ([int]$response.StatusCode -eq 200) { $downloadResponse = $response }
+          else { $detail = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult(); throw "Artifact endpoint returned HTTP $([int]$response.StatusCode): $detail" }
+          if (-not $downloadResponse.IsSuccessStatusCode) { throw "Artifact bytes returned HTTP $([int]$downloadResponse.StatusCode)" }
+          $inputStream = $downloadResponse.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+          $outputStream = [System.IO.File]::Create($zipPath)
+          try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose(); $downloadResponse.Dispose() }
+          if ($client) { $client.Dispose() }
+          if ($publicClient) { $publicClient.Dispose() }
+          $actualZipSha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualZipSha256 -ne $expectedZipSha256) { throw "ZIP SHA256 mismatch: expected=$expectedZipSha256 actual=$actualZipSha256" }
+          $headers.Clear()
+          [Environment]::SetEnvironmentVariable('GITHUB_TOKEN', $null, 'Process')
+          Write-Host "Verified run=$sourceRunId artifact=$artifactId head=$expectedHead zip_sha256=$actualZipSha256"
+
+      - name: Start exact candidate without fetch credentials and terminate it after observation
+        id: launch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceRunId = 40527490043
+          $artifactId = 12745455266
+          $expectedHead = '89dda555b37c260af16ad91807f13360669d8596'
+          $expectedZipSha256 = '91d9b815400ced62610b0b9c86551207a46bc7a880a71528fc481ba5cb0e3d78'
+          $expectedExeSha256 = '00d3d9b2e631cd73da7359c43f5e238093d34377b58b1e37f46d715b6ed7342b'
+          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-artifact12745455266.zip'
+          $extractPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-extract'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'launch-evidence.json'
-          $evidence = [ordered]@{
-            status = 'IN_PROGRESS'
-            source_run_id = $sourceRunId
-            artifact_id = $artifactId
-            expected_zip_sha256 = $expectedZipSha256
-            actual_zip_sha256 = $null
-            source_commit = $expectedHead
-            exact_exe_name = $null
-            exact_exe_path = $null
-            exact_exe_bytes = $null
-            exact_exe_sha256 = $null
-            process_start_info = $null
-            process_start_attempt_utc = $null
-            process_start_returned_utc = $null
-            process_started_utc = $null
-            process_id = $null
-            process_alive_after_observation = $null
-            main_window_handle = $null
-            main_window_title = $null
-            wait_for_input_idle = $null
-            process_exit_state = 'NOT_STARTED'
-            error = $null
+          $evidence = [ordered]@{ status='IN_PROGRESS'; source_run_id=$sourceRunId; artifact_id=$artifactId; source_commit=$expectedHead; expected_zip_sha256=$expectedZipSha256; actual_zip_sha256=$null; expected_exe_sha256=$expectedExeSha256; exact_exe_name=$null; exact_exe_path=$null; exact_exe_bytes=$null; exact_exe_sha256=$null; child_environment_policy='Allowlist only; no fetch credentials'; child_environment_secrets_cleared=$false; process_start_info=$null; process_start_attempt_utc=$null; process_start_returned_utc=$null; process_started_utc=$null; process_id=$null; process_alive_after_observation=$null; main_window_handle=$null; main_window_title=$null; wait_for_input_idle=$null; process_exit_state='NOT_STARTED'; process_cleanup_state='NOT_STARTED'; root_process_exit_verified=$false; descendant_absence_observed=$false; process_tree_exit_guaranteed=$false; descendant_process_ids_observed=@(); error=$null }
+          function Save-Evidence { $evidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $evidencePath -Encoding utf8 }
+          $process = $null
+          function Get-DescendantProcessIds([int]$rootProcessId) {
+            $all = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId,ParentProcessId -ErrorAction Stop)
+            $ids = [System.Collections.Generic.HashSet[int]]::new()
+            [void]$ids.Add($rootProcessId)
+            $changed = $true
+            while ($changed) {
+              $changed = $false
+              foreach ($entry in $all) {
+                $parentId = [int]$entry.ParentProcessId
+                $childId = [int]$entry.ProcessId
+                if ($ids.Contains($parentId) -and -not $ids.Contains($childId)) {
+                  [void]$ids.Add($childId)
+                  $changed = $true
+                }
+              }
+            }
+            return @($ids | Where-Object { $_ -ne $rootProcessId })
           }
-          function Save-Evidence {
-            $evidence | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $evidencePath -Encoding utf8
-          }
-          Save-Evidence
-
           try {
-            $headers = @{
-              Authorization = 'Bearer ' + $env:GITHUB_TOKEN
-              Accept = 'application/vnd.github+json'
-              'X-GitHub-Api-Version' = '2022-11-28'
-            }
-            $meta = Invoke-RestMethod -Method Get -Uri "$apiRoot/actions/artifacts/$artifactId" -Headers $headers
-            if ($meta.id -ne $artifactId -or $meta.workflow_run.id -ne $sourceRunId -or $meta.workflow_run.head_sha -ne $expectedHead -or $meta.expired) {
-              throw "Artifact provenance mismatch: id=$($meta.id), run=$($meta.workflow_run.id), head=$($meta.workflow_run.head_sha), expired=$($meta.expired)"
-            }
-
-            $apiUri = [uri]"$apiRoot/actions/artifacts/$artifactId/zip"
-            $handler = [System.Net.Http.HttpClientHandler]::new()
-            $handler.AllowAutoRedirect = $false
-            $client = [System.Net.Http.HttpClient]::new($handler)
-            $client.DefaultRequestHeaders.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $env:GITHUB_TOKEN)
-            $client.DefaultRequestHeaders.Accept.ParseAdd('application/vnd.github+json')
-            $client.DefaultRequestHeaders.UserAgent.ParseAdd('NOX-HELION-Exact-Candidate-Launch')
-            $client.DefaultRequestHeaders.Add('X-GitHub-Api-Version', '2022-11-28')
-            $response = $client.GetAsync($apiUri).GetAwaiter().GetResult()
-
-            if ([int]$response.StatusCode -eq 302) {
-              $downloadUri = $response.Headers.Location
-              if (-not $downloadUri.IsAbsoluteUri) { $downloadUri = [uri]::new($apiUri, $downloadUri) }
-              $response.Dispose()
-              $client.Dispose()
-              $publicHandler = [System.Net.Http.HttpClientHandler]::new()
-              $publicClient = [System.Net.Http.HttpClient]::new($publicHandler)
-              $downloadResponse = $publicClient.GetAsync($downloadUri, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
-            } elseif ([int]$response.StatusCode -eq 200) {
-              $downloadResponse = $response
-            } else {
-              $detail = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-              throw "Artifact download endpoint returned HTTP $([int]$response.StatusCode): $detail"
-            }
-
-            if (-not $downloadResponse.IsSuccessStatusCode) { throw "Artifact byte download returned HTTP $([int]$downloadResponse.StatusCode)" }
-            $inputStream = $downloadResponse.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-            $outputStream = [System.IO.File]::Create($zipPath)
-            try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose(); $inputStream.Dispose(); $downloadResponse.Dispose() }
-            if ($client) { $client.Dispose() }
-            if ($publicClient) { $publicClient.Dispose() }
-
             $actualZipSha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
             $evidence.actual_zip_sha256 = $actualZipSha256
-            if ($actualZipSha256 -ne $expectedZipSha256) { throw "ZIP SHA256 mismatch: expected=$expectedZipSha256 actual=$actualZipSha256" }
-
+            if ($actualZipSha256 -ne $expectedZipSha256) { throw "ZIP SHA changed after fetch: expected=$expectedZipSha256 actual=$actualZipSha256" }
             Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
             $matches = @(Get-ChildItem -LiteralPath $extractPath -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' -File -Recurse)
             if ($matches.Count -ne 1) { throw "Expected exactly one private candidate EXE; found $($matches.Count)" }
-
             $exe = $matches[0].FullName
             $exeItem = Get-Item -LiteralPath $exe
             $exeSha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
-            $evidence.exact_exe_name = $exeItem.Name
-            $evidence.exact_exe_path = $exeItem.FullName
-            $evidence.exact_exe_bytes = $exeItem.Length
-            $evidence.exact_exe_sha256 = $exeSha256
-
+            if ($exeSha256 -ne $expectedExeSha256) { throw "EXE SHA mismatch: expected=$expectedExeSha256 actual=$exeSha256" }
+            $evidence.exact_exe_name=$exeItem.Name; $evidence.exact_exe_path=$exeItem.FullName; $evidence.exact_exe_bytes=$exeItem.Length; $evidence.exact_exe_sha256=$exeSha256
             $psi = [System.Diagnostics.ProcessStartInfo]::new()
-            $psi.FileName = $exe
-            $psi.WorkingDirectory = $exeItem.DirectoryName
-            $psi.UseShellExecute = $true
-            $evidence.process_start_info = [ordered]@{
-              filename = $psi.FileName
-              working_directory = $psi.WorkingDirectory
-              use_shell_execute = $psi.UseShellExecute
-            }
-            $evidence.process_start_attempt_utc = [DateTimeOffset]::UtcNow.ToString('o')
-            $process = [System.Diagnostics.Process]::Start($psi)
-            $evidence.process_start_returned_utc = [DateTimeOffset]::UtcNow.ToString('o')
-            if ($null -eq $process) { throw 'Process.Start returned null for the exact candidate EXE' }
-
-            $evidence.process_id = $process.Id
-            try { $evidence.process_started_utc = $process.StartTime.ToUniversalTime().ToString('o') } catch { $evidence.process_started_utc = 'unavailable: ' + $_.Exception.GetType().Name }
-            $inputIdle = 'unavailable'
-            try { $inputIdle = [string]$process.WaitForInputIdle(10000) } catch { $inputIdle = 'not-exposed: ' + $_.Exception.GetType().Name }
+            $psi.FileName=$exe; $psi.WorkingDirectory=$exeItem.DirectoryName; $psi.UseShellExecute=$false; $psi.CreateNoWindow=$false
+            $psi.Environment.Clear()
+            foreach ($name in @('SystemRoot','WINDIR','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA','PROGRAMDATA','HOMEDRIVE','HOMEPATH','COMSPEC')) { $value=[Environment]::GetEnvironmentVariable($name,'Process'); if(-not [string]::IsNullOrWhiteSpace($value)){$psi.Environment[$name]=$value} }
+            if(-not $psi.Environment.ContainsKey('SystemRoot')){$psi.Environment['SystemRoot']=[Environment]::GetFolderPath('Windows')}
+            $evidence.child_environment_secrets_cleared = -not $psi.Environment.ContainsKey('GITHUB_TOKEN') -and -not ($psi.Environment.Keys | Where-Object {$_ -like 'ACTIONS_*' -or $_ -like 'GITHUB_*'})
+            $evidence.process_start_info=[ordered]@{filename=$psi.FileName; working_directory=$psi.WorkingDirectory; use_shell_execute=$psi.UseShellExecute; allowlist_only=$true; github_and_actions_variables_passed=$false}
+            $evidence.process_start_attempt_utc=[DateTimeOffset]::UtcNow.ToString('o')
+            $process=[System.Diagnostics.Process]::Start($psi)
+            $evidence.process_start_returned_utc=[DateTimeOffset]::UtcNow.ToString('o')
+            if($null -eq $process){throw 'Process.Start returned null'}
+            $evidence.process_id=$process.Id
+            try{$evidence.process_started_utc=$process.StartTime.ToUniversalTime().ToString('o')}catch{$evidence.process_started_utc='unavailable: '+$_.Exception.GetType().Name}
+            $inputIdle='unavailable'; try{$inputIdle=[string]$process.WaitForInputIdle(10000)}catch{$inputIdle='not-exposed: '+$_.Exception.GetType().Name}
             Start-Sleep -Seconds 5
+            $process.Refresh(); $alive=-not $process.HasExited
+            $evidence.process_alive_after_observation=$alive
+            $evidence.main_window_handle=if($alive){[string]$process.MainWindowHandle}else{'0'}
+            $evidence.main_window_title=if($alive){$process.MainWindowTitle}else{''}
+            $evidence.wait_for_input_idle=$inputIdle
+            $evidence.process_exit_state=if($alive){'RUNNING_AFTER_5S'}else{'EXITED_'+[string]$process.ExitCode}
+            $rootProcessId = $process.Id
+            if($alive){$process.Kill($true);if(-not $process.WaitForExit(10000)){throw 'Candidate root process did not terminate'};$process.Refresh()}
+            $observed = [System.Collections.Generic.HashSet[int]]::new()
+            $stablePasses = 0
+            for($attempt=0; $attempt -lt 12 -and $stablePasses -lt 2; $attempt++){
+              $descendants = @(Get-DescendantProcessIds -rootProcessId $rootProcessId)
+              foreach($descendantId in $descendants){
+                [void]$observed.Add([int]$descendantId)
+                Stop-Process -Id ([int]$descendantId) -Force -ErrorAction SilentlyContinue
+              }
+              if($descendants.Count -eq 0){$stablePasses++}else{$stablePasses=0}
+              Start-Sleep -Milliseconds 250
+            }
+            $remainingDescendants = @(Get-DescendantProcessIds -rootProcessId $rootProcessId)
+            $evidence.descendant_process_ids_observed=@($observed)
+            $evidence.descendant_absence_observed=($remainingDescendants.Count -eq 0 -and $stablePasses -ge 2)
             $process.Refresh()
-            $alive = -not $process.HasExited
-            $evidence.process_alive_after_observation = $alive
-            $evidence.main_window_handle = if ($alive) { [string]$process.MainWindowHandle } else { '0' }
-            $evidence.main_window_title = if ($alive) { $process.MainWindowTitle } else { '' }
-            $evidence.wait_for_input_idle = $inputIdle
-            $evidence.process_exit_state = if ($alive) { 'RUNNING_AFTER_5S' } else { 'EXITED_' + [string]$process.ExitCode }
-            $evidence.status = if ($alive) { 'PROCESS_STARTED' } else { 'PROCESS_EXITED' }
+            $evidence.root_process_exit_verified=$process.HasExited
+            $evidence.process_tree_exit_guaranteed=$false
+            $evidence.process_cleanup_state=if($evidence.root_process_exit_verified -and $evidence.descendant_absence_observed){'ROOT_EXITED_DESCENDANTS_ABSENT_IN_TWO_WMI_SNAPSHOTS'}else{'CLEANUP_NOT_VERIFIED'}
+            if(-not $evidence.root_process_exit_verified -or -not $evidence.descendant_absence_observed){throw 'Root exit or two-snapshot descendant absence could not be established'}
+            $evidence.status=if($alive){'PROCESS_STARTED_AND_TERMINATED'}else{'PROCESS_EXITED_BEFORE_5S'}
             Save-Evidence
-
-            $summary = $evidence | ConvertTo-Json -Depth 6
+            $summary=$evidence|ConvertTo-Json -Depth 6
             Write-Host $summary
-            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value ('```json' + "`n" + $summary + "`n" + '```')
-            if (-not $alive) { throw "Exact candidate process exited before observation; exit_code=$($process.ExitCode)" }
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $summary
+            if(-not $alive){throw "Exact candidate process exited before observation; exit_code=$($process.ExitCode)"}
           } catch {
-            $evidence.status = 'FAILED'
-            $evidence.error = $_.Exception.Message
+            $evidence.status='FAILED'; $evidence.error=$_.Exception.Message
+            if($null -ne $process){try{$process.Refresh();if(-not $process.HasExited){$process.Kill($true);$process.WaitForExit(10000)|Out-Null;$process.Refresh()};$evidence.root_process_exit_verified=$process.HasExited;$stable=0;$seen=[System.Collections.Generic.HashSet[int]]::new();for($attempt=0;$attempt -lt 12 -and $stable -lt 2;$attempt++){$left=@(Get-DescendantProcessIds -rootProcessId $process.Id);foreach($id in $left){[void]$seen.Add([int]$id);Stop-Process -Id ([int]$id) -Force -ErrorAction SilentlyContinue};if($left.Count -eq 0){$stable++}else{$stable=0};Start-Sleep -Milliseconds 250};$left=@(Get-DescendantProcessIds -rootProcessId $process.Id);$evidence.descendant_process_ids_observed=@($seen);$evidence.descendant_absence_observed=($left.Count -eq 0 -and $stable -ge 2);$evidence.process_tree_exit_guaranteed=$false;$evidence.process_cleanup_state='CATCH_ROOT_EXIT_AND_WMI_SWEEP'}catch{$evidence.root_process_exit_verified=$false;$evidence.descendant_absence_observed=$false;$evidence.process_tree_exit_guaranteed=$false;$evidence.process_cleanup_state='CLEANUP_FAILED';$evidence.error+='; cleanup_error='+$_.Exception.Message}}
             Save-Evidence
-            Write-Error $_
+            Write-Error $evidence.error
             exit 1
           }
 
