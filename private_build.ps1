@@ -56,6 +56,29 @@ function Invoke-Git([string[]]$GitArgs) {
 }
 
 try {
+    $freezePath = Join-Path $evidence 'PP-ONE-037-C2-SOURCE-FREEZE.json'
+    if (-not (Test-Path -LiteralPath $freezePath -PathType Leaf)) { throw 'SOURCE_FREEZE_MANIFEST_MISSING' }
+    $freeze = Get-Content -LiteralPath $freezePath -Raw | ConvertFrom-Json
+    if ($freeze.schema -cne 'NOX_PP_SOURCE_FREEZE_BINDING_V1' -or $freeze.packet -cne 'PP-ONE-037' -or $freeze.approach -cne 'C2') {
+        throw 'SOURCE_FREEZE_MANIFEST_IDENTITY_MISMATCH'
+    }
+    $locked = $freeze.pinned_build_inputs
+    if ($locked.source_archive_sha256 -cne $sourceExpectedSha -or $locked.source_archive_bytes -ne $sourceExpectedBytes) {
+        throw 'SOURCE_FREEZE_ARCHIVE_BINDING_MISMATCH'
+    }
+    if ($locked.base_tree -cne $baseTreeExpected -or $locked.patched_tree_expected -cne $patchedTreeExpected) {
+        throw 'SOURCE_FREEZE_TREE_BINDING_MISMATCH'
+    }
+    if ($locked.a04_patch_zip_sha256 -cne $patchZipExpected -or $locked.a04_patch_sha256 -cne $patchExpected) {
+        throw 'SOURCE_FREEZE_A04_PATCH_BINDING_MISMATCH'
+    }
+    if ($locked.menu_patch_sha256 -cne $resourcePatchExpected -or $locked.fast_candidate_patch_sha256 -cne $fastCandidatePatchExpected) {
+        throw 'SOURCE_FREEZE_PATCH_CHAIN_BINDING_MISMATCH'
+    }
+    if ($locked.build_wheelhouse_sha256 -cne $wheelExpected) {
+        throw 'SOURCE_FREEZE_WHEELHOUSE_BINDING_MISMATCH'
+    }
+
     if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem -or
         [Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne [Runtime.InteropServices.Architecture]::X64) {
         throw 'AUTHORIZED_WINDOWS_X64_RUNNER_REQUIRED'
