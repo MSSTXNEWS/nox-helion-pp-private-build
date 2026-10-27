@@ -4,22 +4,25 @@
   "owner": 6,
   "base": "ea3eaf019665ea3cc886dcb998ae353eb6a053fe",
   "sourceCandidateBranch": "nox-v16-pack02-50-working-tools-20261028",
-  "sourceCommit": "75ca537ce5b8e9a43314d76ad7272d7c771b7165",
+  "sourceCommit": "f433e71760a9ba5b907ce84208ee0a454ec450ba",
   "originalTreePreserved": true,
   "notes": [
     "All these files are new relative to PACK01 PR #27 base; preimage ABSENT (not a SHA).",
     "SHA256 values are hashes of UTF-8 file contents from authenticated GitHub exact branch readback.",
     "Git blob sha1 recorded separately, not equal to SHA256.",
     "CI proves isolated execution, NOT integrated Windows app/EXE or independent E07 QA.",
-    "No original file was modified in accepted branch final tree."
+    "No original file was modified in accepted branch final tree.",
+    "Receipt refreshed after golden tests and 4 scoped source hardenings; 11 exact source paths now tracked, self-referential receipt excluded.",
+    "Source files hashes were computed from exact GitHub connector UTF-8 readback; Windows byte-level confirmation must pass at HEAD.",
+    "Old SourceLock/previous packaging untouched. Current source branch is not main."
   ],
   "paths": [
     {
       "path": "proposals/NOX-PACK02-50/ops.mjs",
       "preimage": "ABSENT",
-      "post_sha256": "2a0b346f9bbd2823cbf97a9062d965fe82c0fd5f13c1915761d71ea73dfa48b3",
-      "git_blob_sha1": "11e7081acf30d0b91649af2f8513044900664bc8",
-      "bytes_utf8": 9592
+      "post_sha256": "2106c7964aafc34d79d7709b2d43b81287b15bf2eba0fb814a9515cd773eb28e",
+      "git_blob_sha1": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+      "bytes_utf8": 9833
     },
     {
       "path": "proposals/NOX-PACK02-50/catalog.mjs",
@@ -57,6 +60,20 @@
       "bytes_utf8": 3578
     },
     {
+      "path": "proposals/NOX-PACK02-50/golden.test.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "d0d403a4e34efa71ef7980e290fe0f3f4288a3460626b9dff2db297b3dc6359d",
+      "git_blob_sha1": "250f4f01ffdaed2e6690a10df2d670b15abc4dab",
+      "bytes_utf8": 9171
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/receipt.test.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "dcef3ba80eb26c71fb75f7ced0db80dbe17502bf2021d05a538db53f63bbd035",
+      "git_blob_sha1": "baff2b1ab349909f9d2e01a70d31849027e34a16",
+      "bytes_utf8": 1580
+    },
+    {
       "path": "proposals/NOX-PACK02-50/README.md",
       "preimage": "ABSENT",
       "post_sha256": "06333bfb26380b5fd49bf5b3da0dd9bedc47fe2d60b96f968aa353441f9106d9",
@@ -73,9 +90,16 @@
     {
       "path": ".github/workflows/nox-pack02-fifty-checks.yml",
       "preimage": "ABSENT",
-      "post_sha256": "6ac4a148680345a0045f7ade949f98728e7277cf74afa585d0bae5e00b4f9a43",
-      "git_blob_sha1": "89dc2a64b00248a6c2de52aad357ad995fd0bdb5",
-      "bytes_utf8": 807
+      "post_sha256": "e2b0a412e9112f7e0746d07c4f1e1609a627495291787421b4602657fe9e72cc",
+      "git_blob_sha1": "aa72f3d627261af4bc3b161f0e1dec8d2aa66f98",
+      "bytes_utf8": 803
     }
-  ]
+  ],
+  "checks": {
+    "byteLevelWindowsCI": "RUNNING_AT_SOURCE_REVISION",
+    "Golden50": true,
+    "uiClickMock": true,
+    "securityEdgeCases": true,
+    "mainExeInstalled": false
+  }
 }
