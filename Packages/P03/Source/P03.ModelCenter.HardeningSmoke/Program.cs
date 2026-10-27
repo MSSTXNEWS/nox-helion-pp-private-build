@@ -105,3 +105,50 @@ try
 }
 finally { Directory.Delete(attestationRoot, recursive:true); }
 Console.WriteLine($"P03_TURBO13_SMOKE_PASS {turbo13Pass}/10 targeted assertions");
+
+ // E03 final: multiple NOX windows share one persisted queue; no lost updates.
+var multiRoot = Path.Combine(Path.GetTempPath(), "NOX_P03_MULTI_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(multiRoot);
+try
+{
+    var a = new ModelDownloadQueueStore(multiRoot);
+    var b = new ModelDownloadQueueStore(multiRoot);
+    var evidence = "https://ollama.com/library/tinyllama";
+    var digestA = new string('a', 64);
+    var digestB = new string('b', 64);
+    var model = ModelCatalog.Get("tinyllama") with {
+        EvidenceStatus = CatalogEvidenceStatus.ArtifactVerified,
+        ExactTag = "tinyllama:1.1b", Version = "synthetic-fixture", License = "fixture-license",
+        ArtifactBytes = 100, RequiredDiskBytes = 200, RecommendedRamBytes = 300,
+        ExpectedSha256 = digestB, ExpectedManifestDigestSha256 = digestA,
+        ImmutableRevision = "sha256:" + digestA, CompatibilityReviewed = true,
+        LicenseEvidenceUri = new Uri(evidence), CompatibilityEvidenceUri = new Uri(evidence)
+    };
+    var sameJobs = await Task.WhenAll(Enumerable.Range(0, 20).Select(i =>
+        (i % 2 == 0 ? a : b).EnqueueVerifiedPullAsync(model, true)));
+    Assert(sameJobs.Select(j => j.Id).Distinct().Count() == 1,
+        "F01 multiple instances deduplicate immutable Pull");
+    Assert((await new ModelDownloadQueueStore(multiRoot).ReadAsync()).Count == 1,
+        "F02 queue stays durable across independent instances");
+    var file = Path.Combine(multiRoot, "sample.gguf");
+    await File.WriteAllBytesAsync(file, Encoding.ASCII.GetBytes("GGUFsynthetic-byteproof"));
+    var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(file))).ToLowerInvariant();
+    var size = new FileInfo(file).Length;
+    await Task.WhenAll(Enumerable.Range(0, 10).Select(i =>
+        (i % 2 == 0 ? a : b).EnqueueVerifiedGgufAsync("local:example" + i,
+            file, size, sha, "synthetic-rights", evidence)));
+    Assert((await new ModelDownloadQueueStore(multiRoot).ReadAsync()).Count == 11,
+        "F03 concurrent separate GGUF requests cannot overwrite each other");
+    var started = await a.UpdateAsync(sameJobs[0].Id, j => j with { State = ModelJobState.Running });
+    Assert(started?.State == ModelJobState.Running, "F04 state persisted under queue lease");
+    var restarted = new ModelDownloadQueueStore(multiRoot);
+    Assert(await restarted.RecoverInterruptedAsync() == 1, "F05 interrupted job recovered");
+    var retried = await Task.WhenAll(a.RetryAsync(sameJobs[0].Id), b.RetryAsync(sameJobs[0].Id));
+    Assert(retried.All(x => x is not null) &&
+           retried.Select(x => x!.Id).Distinct().Count() == 1,
+        "F06 two concurrent retries share one child job");
+    Assert((await restarted.ReadAsync()).Count == 12,
+        "F07 all prior jobs retained after retry");
+}
+finally { Directory.Delete(multiRoot, recursive: true); }
+Console.WriteLine("P03_FINAL_QUEUE_CONCURRENCY_PASS 7/7");
