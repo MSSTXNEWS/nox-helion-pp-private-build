@@ -325,10 +325,17 @@ class RunController:
             "created_utc": utc_now(),
             "backend_completed": backend_completed,
         }
+        receipt_bytes = canonical_json_bytes(result) + b"\n"
+        receipt_digest = sha256_bytes(receipt_bytes)
+        archive_path = safe_child(
+            self.run_root, f"result-receipts/{receipt_digest}.json"
+        )
+        # Preserve each status receipt; result.receipt.json remains the latest-value view.
+        atomic_write_json(archive_path, result)
         atomic_write_json(self.result_path, result)
         if status == "SUCCEEDED":
             self._persist("COMPLETED", "backend-completed")
         elif status == "FAILED":
             self._persist("FAILED", reason)
-        return self.result_path
+        return archive_path
 
