@@ -242,8 +242,10 @@ class OllamaClient:
 
 
 def _check_scope(tenant: str, user: str, chat: str):
-    if any(not isinstance(x, str) or not x or len(x) > 200 for x in (tenant, user, chat)):
-        raise ValueError("Missing tenant, user or chat scope")
+    if any(not isinstance(x, str) or not x.strip() or len(x) > 200 or
+           any(ord(char) < 32 or ord(char) == 127 for char in x)
+           for x in (tenant, user, chat)):
+        raise ValueError("Missing or invalid tenant, user or chat scope")
 
 
 def _safe_blob_path(root: pathlib.Path, storage: str) -> pathlib.Path:
@@ -386,6 +388,13 @@ class P02Store:
                         found_storage_unique = True
                 if not found_storage_unique:
                     raise P02Error('P02_STORAGE_UNIQUENESS_DRIFT; restore verified backup')
+                # Stable same-second history order uses the internal rowid.
+                # Existing WITHOUT ROWID variants must be mapped/migrated by #6;
+                # accepting them here could break ordering or lose history.
+                try:
+                    self.db.execute('SELECT rowid FROM p02_messages LIMIT 0')
+                except sqlite3.OperationalError as exc:
+                    raise P02Error('P02_MESSAGE_ROWID_REQUIRED; restore verified backup') from exc
                 for table in ('p02_messages', 'p02_attachments'):
                     rows = list(self.db.execute(f'PRAGMA foreign_key_list({table})'))
                     if not any(row[2] == 'p02_chats' and row[3] == 'chat_id'
@@ -443,15 +452,24 @@ class P02Store:
             return message_id
 
     def history(self, tenant: str, user: str, chat: str, limit: int = 250) -> list[dict]:
-        if not (1 <= limit <= 1000):
+        # bool is an int subclass; accepting it as a page size hides UI/host mistakes.
+        if type(limit) is not int or not (1 <= limit <= 1000):
             raise ValueError("Invalid limit")
         with self._lock:
             self._owned(tenant, user, chat)
+            # UUID message IDs are random: sorting by ID after same-second
+            # timestamps reorders user/assistant messages.  Existing P02
+            # message tables use SQLite rowid, the insertion-order tie breaker.
+            # Do not alter schema, timestamps, IDs or any persisted message.
             rows = self.db.execute("""SELECT role,content FROM p02_messages WHERE chat_id=?
-                       ORDER BY created_at DESC,id DESC LIMIT ?""", (chat, limit)).fetchall()
+                       ORDER BY created_at DESC,rowid DESC LIMIT ?""", (chat, limit)).fetchall()
         return [{"role": role, "content": content} for role, content in reversed(rows)]
 
     def prune(self, tenant: str, user: str, chat: str, before_epoch: int) -> int:
+        # Invalid retention inputs must not delete any user history. Values are
+        # UTC seconds, not milliseconds; explicit delete_chat handles full removal.
+        if type(before_epoch) is not int or not 0 <= before_epoch <= 253402300799:
+            raise ValueError("Invalid UTC retention cutoff")
         with self._write_transaction():
             self._owned(tenant, user, chat)
             cursor = self.db.execute("DELETE FROM p02_messages WHERE chat_id=? AND created_at<?",
