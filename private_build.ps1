@@ -55,6 +55,25 @@ function Invoke-Git([string[]]$GitArgs) {
     if ($LASTEXITCODE -ne 0) { throw "git command failed ($LASTEXITCODE): $($GitArgs -join ' ')" }
 }
 
+function Test-PatchedSourceCache([string]$Path, [string]$ExpectedTree) {
+    $gitDirectory = Join-Path $Path '.git'
+    if (-not (Test-Path -LiteralPath $gitDirectory -PathType Container)) { return $false }
+    try {
+        $deliveryPath = Join-Path $Path '_delivery'
+        if (Test-Path -LiteralPath $deliveryPath -PathType Container) {
+            Remove-Item -LiteralPath $deliveryPath -Recurse -Force
+        }
+        Invoke-Git @('-C', $Path, 'config', 'core.autocrlf', 'false')
+        Invoke-Git @('-C', $Path, 'add', '--all')
+        Invoke-Git @('-C', $Path, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+        $cachedTree = (& git -C $Path write-tree).Trim()
+        if ($LASTEXITCODE -ne 0) { return $false }
+        return $cachedTree -ceq $ExpectedTree
+    } catch {
+        return $false
+    }
+}
+
 try {
     $freezePath = Join-Path $evidence 'PP-ONE-037-C2-SOURCE-FREEZE.json'
     if (-not (Test-Path -LiteralPath $freezePath -PathType Leaf)) { throw 'SOURCE_FREEZE_MANIFEST_MISSING' }
@@ -111,12 +130,17 @@ try {
     } finally { $wheelStream.Dispose() }
     if ((Get-Item -LiteralPath $wheelZip).Length -ne 21874335) { throw 'WHEELHOUSE_ARCHIVE_SIZE_MISMATCH' }
     Assert-Sha256 $wheelZip $wheelExpected '18-wheel build dependency package'
-    if (Test-Path -LiteralPath $source) { Remove-Item -LiteralPath $source -Recurse -Force }
+    $sourceReady = Test-PatchedSourceCache -Path $source -ExpectedTree $patchedTreeExpected
     if (Test-Path -LiteralPath $deps) { Remove-Item -LiteralPath $deps -Recurse -Force }
     if (Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output -Recurse -Force }
-    Expand-Archive -LiteralPath $sourceZip -DestinationPath $source
-    $delivery = Join-Path $source '_delivery'
-    if (Test-Path -LiteralPath $delivery -PathType Container) { Remove-Item -LiteralPath $delivery -Recurse -Force }
+    if (-not $sourceReady) {
+        if (Test-Path -LiteralPath $source) { Remove-Item -LiteralPath $source -Recurse -Force }
+        Expand-Archive -LiteralPath $sourceZip -DestinationPath $source
+        $delivery = Join-Path $source '_delivery'
+        if (Test-Path -LiteralPath $delivery -PathType Container) { Remove-Item -LiteralPath $delivery -Recurse -Force }
+    } else {
+        Write-Output "SOURCE_CACHE_REUSED:$patchedTreeExpected"
+    }
     Expand-Archive -LiteralPath $wheelZip -DestinationPath $deps
 
     $patchDir = Join-Path $evidence 'patch'
@@ -126,38 +150,41 @@ try {
     Assert-Sha256 $resourcePatch $resourcePatchExpected 'PP menu catalog bundle patch'
     Assert-Sha256 $fastCandidatePatch $fastCandidatePatchExpected 'PP fast candidate mode patch'
 
-    Invoke-Git @('-C', $source, 'init', '--quiet')
-    Invoke-Git @('-C', $source, 'config', 'core.autocrlf', 'false')
-    Invoke-Git @('-C', $source, 'add', '--all')
-    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
-    $baseTree = (& git -C $source write-tree).Trim()
-    if ($LASTEXITCODE -ne 0 -or $baseTree -cne $baseTreeExpected) {
-        throw "PRE-PRE base tree mismatch: expected=$baseTreeExpected actual=$baseTree"
-    }
-
-    Invoke-Git @('-C', $source, 'apply', '--check', $patchPath)
-    Invoke-Git @('-C', $source, 'apply', $patchPath)
-    Invoke-Git @('-C', $source, 'add', '--all')
-    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
-    $a04Tree = (& git -C $source write-tree).Trim()
-    if ($LASTEXITCODE -ne 0 -or $a04Tree -cne $a04TreeExpected) {
-        throw "A04 patched tree mismatch: expected=$a04TreeExpected actual=$a04Tree"
-    }
-    Invoke-Git @('-C', $source, 'apply', '--check', $resourcePatch)
-    Invoke-Git @('-C', $source, 'apply', $resourcePatch)
-    Invoke-Git @('-C', $source, 'add', '--all')
-    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
-    $menuTree = (& git -C $source write-tree).Trim()
-    if ($LASTEXITCODE -ne 0 -or $menuTree -cne $menuTreeExpected) {
-        throw "Menu catalog bundle tree mismatch: expected=$menuTreeExpected actual=$menuTree"
-    }
-    Invoke-Git @('-C', $source, 'apply', '--check', $fastCandidatePatch)
-    Invoke-Git @('-C', $source, 'apply', $fastCandidatePatch)
-    Invoke-Git @('-C', $source, 'add', '--all')
-    Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
-    $patchedTree = (& git -C $source write-tree).Trim()
-    if ($LASTEXITCODE -ne 0 -or $patchedTree -cne $patchedTreeExpected) {
-        throw "Final patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
+    if (-not $sourceReady) {
+        Invoke-Git @('-C', $source, 'init', '--quiet')
+        Invoke-Git @('-C', $source, 'config', 'core.autocrlf', 'false')
+        Invoke-Git @('-C', $source, 'add', '--all')
+        Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+        $baseTree = (& git -C $source write-tree).Trim()
+        if ($LASTEXITCODE -ne 0 -or $baseTree -cne $baseTreeExpected) {
+            throw "PRE-PRE base tree mismatch: expected=$baseTreeExpected actual=$baseTree"
+        }
+        Invoke-Git @('-C', $source, 'apply', '--check', $patchPath)
+        Invoke-Git @('-C', $source, 'apply', $patchPath)
+        Invoke-Git @('-C', $source, 'add', '--all')
+        Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+        $a04Tree = (& git -C $source write-tree).Trim()
+        if ($LASTEXITCODE -ne 0 -or $a04Tree -cne $a04TreeExpected) {
+            throw "A04 patched tree mismatch: expected=$a04TreeExpected actual=$a04Tree"
+        }
+        Invoke-Git @('-C', $source, 'apply', '--check', $resourcePatch)
+        Invoke-Git @('-C', $source, 'apply', $resourcePatch)
+        Invoke-Git @('-C', $source, 'add', '--all')
+        Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+        $menuTree = (& git -C $source write-tree).Trim()
+        if ($LASTEXITCODE -ne 0 -or $menuTree -cne $menuTreeExpected) {
+            throw "Menu catalog bundle tree mismatch: expected=$menuTreeExpected actual=$menuTree"
+        }
+        Invoke-Git @('-C', $source, 'apply', '--check', $fastCandidatePatch)
+        Invoke-Git @('-C', $source, 'apply', $fastCandidatePatch)
+        Invoke-Git @('-C', $source, 'add', '--all')
+        Invoke-Git @('-C', $source, 'update-index', '--chmod=+x', '--', 'tools/MB1_RUNTIME_PREFLIGHT.py', 'tools/visual_pack_gate.py')
+        $patchedTree = (& git -C $source write-tree).Trim()
+        if ($LASTEXITCODE -ne 0 -or $patchedTree -cne $patchedTreeExpected) {
+            throw "Final patched tree mismatch: expected=$patchedTreeExpected actual=$patchedTree"
+        }
+    } else {
+        $patchedTree = $patchedTreeExpected
     }
 
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
