@@ -1,0 +1,57 @@
+name: NOX E06 immutable original Python app SourceLock R03
+on:
+  push:
+    paths:
+      - 'coordination/e06/canonical_source_lock.py'
+      - 'coordination/e06/r03_receipts.py'
+      - 'tests/e06/test_source_lock.py'
+      - '.github/workflows/nox-e06-original-lock.yml'
+  pull_request:
+    paths:
+      - 'coordination/e06/canonical_source_lock.py'
+      - 'tests/e06/test_source_lock.py'
+      - '.github/workflows/nox-e06-original-lock.yml'
+concurrency:
+  group: e06-source-lock-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  original-base-lock:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Ten strict archive and route admission tests
+        shell: pwsh
+        run: python -m unittest discover -s tests/e06 -p 'test_source_lock.py' -v
+      - name: Read exactly pinned owner binding map (no host integration)
+        shell: pwsh
+        run: |
+          git cat-file -e '33774d985dd7f05e413f1830f74392f49645fe29^{commit}'
+          git show '33774d985dd7f05e413f1830f74392f49645fe29:proposals/NOX-PACK01-50/owner-binding-map.json' | Out-File -FilePath e06-owner-map.json -Encoding utf8
+          python -c "import json; x=json.load(open('e06-owner-map.json',encoding='utf-8-sig')); assert x['counts']['sourceOwnerMethodBound']==21 and len(x['routes'])==50"
+      - name: Prove original bytes and freeze every original file SHA256
+        shell: pwsh
+        run: |
+          python coordination/e06/canonical_source_lock.py --source-root . --route-map e06-owner-map.json --out e06-original-baseline-sourcelock.json
+          python -c "import json; x=json.load(open('e06-original-baseline-sourcelock.json',encoding='utf-8')); assert x['total_members']==729 and x['source_modified'] is False and x['product_integrated'] is False and x['release']=='BLOCKED' and x['route_candidate_admission']['source_method_candidates']==21"
+      - name: Generate exact owner path SHA and patch receipts
+        shell: pwsh
+        run: python coordination/e06/r03_receipts.py
+      - name: Retain evidence without publishing original assets or EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: e06-r03-original-sourcelock
+          path: |
+            e06-original-baseline-sourcelock.json
+            e06-r03-source-receipts.json
+          retention-days: 30
+          if-no-files-found: error
