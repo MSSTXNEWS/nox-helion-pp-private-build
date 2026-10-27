@@ -33,3 +33,14 @@ jobs:
         run: dotnet build tests/P04/RagLiveSmoke.csproj -c Release --nologo
       - name: Run fake-loopback RAG ACL, provenance, and lifecycle fixture
         run: dotnet run --project tests/P04/RagComponentHarness.csproj -c Release
+
+      - name: Stage exact P02 Python ChatBridge source without merging it
+        env:
+          P02_SHA: 960cac1c53164687241d2443c97bd7f777ab5fb7
+        run: |
+          git fetch --no-tags --depth=1 origin "$P02_SHA"
+          mkdir -p "$RUNNER_TEMP/p02-pinned"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_runtime.py" > "$RUNNER_TEMP/p02-pinned/p02_runtime.py"
+          git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
+      - name: Verify actual pinned P02 ChatBridge against P04 Python RAG
+        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02_bridge_integration.py' -v
