@@ -120,7 +120,8 @@ class BridgeTest(unittest.TestCase):
         with self.assertRaises(bridge.HostHold):
             self.dispatch.bind("models.pull",bridge.BoundPort(lambda s,a:True,lambda:True,"r",2))
     def test_dangerous_requires_fresh_native_approval_even_if_bound(self):
-        host=bridge.NoxPackHost(self.catalog,native_approve=lambda session,route,args:args.get("approved") is True)
+        native_permission={"enabled":False}
+        host=bridge.NoxPackHost(self.catalog,native_approve=lambda session,route,args:native_permission["enabled"])
         hit=[]
         port=bridge.BoundPort(lambda s,a:hit.append("called"),lambda:True,"NATIVE-INSTALL-RECEIPT",1)
         host.bind("system.update",port)
@@ -130,7 +131,8 @@ class BridgeTest(unittest.TestCase):
         with self.assertRaises(bridge.HostDenied):
             host.execute("system.update",{},s)
         self.assertEqual(hit,[])
-        host.execute("system.update",{"approved":True},s)
+        native_permission["enabled"]=True
+        host.execute("system.update",{"untrustedPayloadIgnored":True},s)
         self.assertEqual(hit,["called"])
     def test_oversize_untrusted_payload_rejected(self):
         with self.assertRaises(bridge.HostDenied):
