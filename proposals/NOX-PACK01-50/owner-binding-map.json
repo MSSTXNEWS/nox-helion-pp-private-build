@@ -137,99 +137,99 @@
       "routeId": "models.catalog",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-12",
       "routeId": "models.installed",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-13",
       "routeId": "models.pull",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-14",
       "routeId": "models.gguf.import",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-15",
       "routeId": "models.queue",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-16",
       "routeId": "models.cancel",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-17",
       "routeId": "models.retry",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-18",
       "routeId": "models.digest",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-19",
       "routeId": "models.preflight",
       "owner": 3,
       "sourceBinding": "proposals/NOX-PACK01-50/P03OwnerPack.cs:P03OwnerPack.ExecuteAsync",
-      "componentCI": "WINDOWS_COMPONENT_PENDING",
+      "componentCI": "WINDOWS_COMPONENT_PASS_OWNER_P03",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "C40_OWNER_CI_AND_E06_HOST_SOURCELOCK"
+      "blocker": "HOST_SOURCELOCK_PINNED_MODEL_LICENSE_LIVE_OLLAMA_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-20",
@@ -572,5 +572,38 @@
       "releaseAccepted": false,
       "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
     }
-  ]
+  ],
+  "proof": {
+    "routeContract": {
+      "runId": 40599944071,
+      "tests": 57,
+      "passed": 57,
+      "failed": 0,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "p02Owner": {
+      "runId": 40599944080,
+      "pythonTests": 15,
+      "knownExpectedFailures": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "p03Owner": {
+      "runId": 40599944082,
+      "build": "PASS",
+      "syntheticOwnerSmoke": "PASS",
+      "warningCount": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "e05Owner": {
+      "runId": 40599944081,
+      "build": "PASS",
+      "sourceSensorSmoke": "PASS",
+      "warningCount": 1,
+      "commit": "43b3e3b99f44bec2046d9aa81241ffbde73828c2"
+    },
+    "finalExe": {
+      "status": "NOT_INTEGRATED",
+      "sameShaAcceptance": "NOT_RUN"
+    }
+  }
 }
