@@ -70,9 +70,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $patch = 'Packages/P03/C40/NOX_V16_E03_TURBO12_additive_hardening.patch'
           $expected = 'fbfa3c354e2bfeb52871a2cae28d61e1b1c5db198d8e2539d1593f73397292b4'
-          $actual = (Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actual -ne $expected) { throw 'P03_TURBO12_PATCH_SHA_MISMATCH' }
-          $sourcePatch = (Resolve-Path -LiteralPath $patch).Path
+          $patchText = [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $patch).Path).Replace("`r`n", "`n")
+          $patchBytes = [System.Text.Encoding]::UTF8.GetBytes($patchText)
+          $actual = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($patchBytes)).ToLowerInvariant()
+          if ($actual -ne $expected) { throw "P03_TURBO12_PATCH_SHA_MISMATCH actual=$actual" }
+          $sourcePatch = Join-Path $env:RUNNER_TEMP 'NOX_P03_TURBO12_exact.patch'
+          [System.IO.File]::WriteAllBytes($sourcePatch, $patchBytes)
           git -C p03-c40-source apply --check $sourcePatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO12_PREIMAGE_CONFLICT' }
           git -C p03-c40-source apply $sourcePatch
