@@ -26,7 +26,7 @@ def safe_member(member):
     p=PurePosixPath(name)
     if (not name or name.startswith("/") or "\x00" in name or
         ".." in p.parts or p.is_absolute() or ":" in p.parts[0] or
-        ((member.external_attr>>16)&stat.S_IFMT(stat.S_IFLNK))):
+        (stat.S_IFMT(member.external_attr>>16)==stat.S_IFLNK)):
         raise RuntimeError("UNSAFE_ZIP_MEMBER:"+name)
     return name.rstrip("/")
 def main():
