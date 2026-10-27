@@ -103,16 +103,6 @@ class ChatBridgeTests(unittest.TestCase):
         db.close()
 
 class P02ExtendedTests(unittest.TestCase):
-    def test_failclosed_existing_host_history_no_duplicate_tables(self):
-        db = sqlite3.connect(':memory:')
-        db.execute('CREATE TABLE chats (id TEXT PRIMARY KEY)')
-        with tempfile.TemporaryDirectory() as root:
-            storage = P02Store(db, Path(root) / 'storage')
-            with self.assertRaisesRegex(P02Error, 'HOST_CHAT_SCHEMA_MAPPING_REQUIRED'):
-                storage.initialize()
-            tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            self.assertNotIn('p02_chats', tables)
-        db.close()
 
     def test_buffered_response_keeps_chat_lease_until_consumer_drains(self):
         """A finished producer must not allow a second chat while reply is unread."""
@@ -184,6 +174,17 @@ class P02ExtendedTests(unittest.TestCase):
         while client._busy and time.monotonic() < limit:
             time.sleep(.01)
         self.assertFalse(client._busy)
+
+    def test_failclosed_existing_host_history_no_duplicate_tables(self):
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE chats (id TEXT PRIMARY KEY)')
+        with tempfile.TemporaryDirectory() as root:
+            storage = P02Store(db, Path(root) / 'storage')
+            with self.assertRaisesRegex(P02Error, 'HOST_CHAT_SCHEMA_MAPPING_REQUIRED'):
+                storage.initialize()
+            tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertNotIn('p02_chats', tables)
+        db.close()
 
     def test_active_stream_stop_during_blocked_read(self):
         import time
