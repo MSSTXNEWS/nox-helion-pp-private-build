@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -51,7 +52,9 @@ public static class E05CanonicalEventFactory
             string.IsNullOrWhiteSpace(e.TaskId) ||
             e.PackageId is not ("P01" or "P02" or "P03" or "P04" or "P05" or "E06" or "E07") ||
             string.IsNullOrWhiteSpace(e.ActionId) || string.IsNullOrWhiteSpace(e.Source) ||
-            e.Message.Length > 240) return false;
+            e.Source.Length > 120 || e.Message is null || e.Message.Length > 240 ||
+            e.Message.Any(c => char.IsControl(c)) ||
+            e.Source.Any(c => char.IsControl(c))) return false;
         if (e.Numerator.HasValue != e.Denominator.HasValue) return false;
         if (e.Denominator.HasValue && (e.Denominator <= 0 || e.Numerator < 0 || e.Numerator > e.Denominator)) return false;
         return true;
