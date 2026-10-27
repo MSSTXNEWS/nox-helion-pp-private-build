@@ -61,10 +61,10 @@ index 0000000..e433410
 +Console.WriteLine($"P03_HARDENING_SMOKE_PASS {pass} verified assertions");
 diff --git a/P03.ModelCenter/ModelLocalAttestation.cs b/P03.ModelCenter/ModelLocalAttestation.cs
 new file mode 100644
-index 0000000..f4b7fb3
+index 0000000..0a68684
 --- /dev/null
 +++ b/P03.ModelCenter/ModelLocalAttestation.cs
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,115 @@
 +using System.Net.Http;
 +using System.Text.Json;
 +using System.Text.RegularExpressions;
@@ -153,7 +153,8 @@ index 0000000..f4b7fb3
 +             !((resolved.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) ||
 +               (System.Net.IPAddress.TryParse(resolved.Host, out var ip) && System.Net.IPAddress.IsLoopback(ip)))))
 +            throw new InvalidDataException("OLLAMA_REDIRECT_NOT_LOCAL");
-+        await response.Content.LoadIntoBufferAsync(MaxTagsResponseBytes, ct);
++        await response.Content.LoadIntoBufferAsync(MaxTagsResponseBytes);
++        ct.ThrowIfCancellationRequested();
 +        await using var body = await response.Content.ReadAsStreamAsync(ct);
 +        using var doc = await JsonDocument.ParseAsync(body, cancellationToken: ct);
 +        return ParseUnambiguousModelDigest(doc.RootElement, model);
