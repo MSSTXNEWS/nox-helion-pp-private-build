@@ -179,8 +179,8 @@ def main() -> int:
         training = receipt.get("training", {})
         baseline_loss = training.get("baseline_eval_loss")
         adapter_loss = training.get("adapter_eval_loss")
-        if (not isinstance(baseline_loss, (int, float)) or not math.isfinite(float(baseline_loss))
-                or not isinstance(adapter_loss, (int, float)) or not math.isfinite(float(adapter_loss))
+        if (type(baseline_loss) not in (int, float) or not math.isfinite(float(baseline_loss))
+                or type(adapter_loss) not in (int, float) or not math.isfinite(float(adapter_loss))
                 or float(adapter_loss) >= float(baseline_loss)):
             raise ValueError("ADAPTER_VALIDATION_DID_NOT_IMPROVE")
         if args.output_dir.is_symlink():
