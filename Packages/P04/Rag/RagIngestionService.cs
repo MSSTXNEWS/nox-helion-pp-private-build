@@ -274,12 +274,8 @@ public sealed class RagIngestionService
 
     private static void ValidateScope(string ownerSid, string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerSid);
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        if (!ownerSid.StartsWith("S-1-", StringComparison.Ordinal) || ownerSid.Length > 184 || ownerSid.Any(char.IsControl))
-            throw new ArgumentException("A valid Windows owner SID is required.", nameof(ownerSid));
-        if (conversationId.Length > 256 || conversationId.Any(char.IsControl))
-            throw new ArgumentException("Conversation ID is invalid or too long.", nameof(conversationId));
+        RagService.ValidateOwnerSid(ownerSid);
+        RagService.ValidateConversationId(conversationId);
     }
 
     private static void ValidateSourceMetadata(string sourceId, string fileName)
