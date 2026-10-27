@@ -16,14 +16,18 @@ public static class E05CorePersonaProjection
         IReadOnlyList<string> approvedPersonaIds, IReadOnlyList<CoreProof> sourceCores,
         IReadOnlyList<PersonaProof> sourcePersonas, DateTimeOffset now)
     {
-        bool approved = Unique(approvedCoreIds, 8) && Unique(approvedPersonaIds, 5);
-        bool exactCores = approved && sourceCores.Count == 8 &&
+        bool approved = approvedCoreIds is not null && approvedPersonaIds is not null &&
+            sourceCores is not null && sourcePersonas is not null &&
+            Unique(approvedCoreIds, 8) && Unique(approvedPersonaIds, 5);
+        bool exactCores = approved && sourceCores!.Count == 8 &&
+            sourceCores.All(c => c is not null) &&
             approvedCoreIds.ToHashSet(StringComparer.Ordinal).SetEquals(
                 sourceCores.Select(c => c.CoreId));
-        bool exactPersonas = approved && sourcePersonas.Count == 5 &&
+        bool exactPersonas = approved && sourcePersonas!.Count == 5 &&
+            sourcePersonas.All(p => p is not null) &&
             approvedPersonaIds.ToHashSet(StringComparer.Ordinal).SetEquals(
                 sourcePersonas.Select(p => p.PersonaId));
-        var safeCores = exactCores ? sourceCores.Select(c => c.MeasuredAt is not null &&
+        var safeCores = exactCores ? sourceCores!.Select(c => c is not null && c.MeasuredAt is not null &&
             c.MeasuredAt <= now && now - c.MeasuredAt <= TimeSpan.FromMinutes(5)
                 ? c : c with { Percent = null, Status = "N_D", ReceiptId = null }).ToArray()
             : Array.Empty<CoreProof>();
