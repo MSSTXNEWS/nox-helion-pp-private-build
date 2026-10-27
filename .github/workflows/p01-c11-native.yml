@@ -7,11 +7,6 @@ on:
       - '.github/workflows/p01-c11-native.yml'
       - 'stage/proposals/P01/C09/**'
       - 'stage/proposals/P01/C11/**'
-  pull_request:
-    paths:
-      - '.github/workflows/p01-c11-native.yml'
-      - 'stage/proposals/P01/C09/**'
-      - 'stage/proposals/P01/C11/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +21,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: PowerShell parse all owned scripts
         shell: pwsh
         run: |
@@ -58,3 +54,15 @@ jobs:
           $qa=Join-Path $env:GITHUB_WORKSPACE 'stage/proposals/P01/C11/QA/Test-P01C11.ps1'
           & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $qa
           if ($LASTEXITCODE -ne 0) { throw "P01_C11_GUARDS_FAILED:$LASTEXITCODE" }
+      - name: Compute cryptographic owner receipts and assert no loss
+        shell: pwsh
+        run: |
+          node 'stage/proposals/P01/C11/QA/emit-receipts.cjs'
+          if ($LASTEXITCODE -ne 0) { throw 'P01_C11_RECEIPT_FAILED' }
+      - name: Preserve exact source receipts
+        uses: actions/upload-artifact@v4
+        with:
+          name: p01-c11-owner-receipts
+          path: ci-evidence/p01-c11-owner-receipts.json
+          retention-days: 30
+          if-no-files-found: error
