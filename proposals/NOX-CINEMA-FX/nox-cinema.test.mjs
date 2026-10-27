@@ -121,6 +121,7 @@ test("decorations preserve approved original elements/handlers/data; revert full
   assert.equal(scene.snapshot().particles,0);
   assert.equal(o.pending,0);
   assert.equal(o.root.classList.contains("nox-cinema-scope"),false);
+  assert.equal(o.root.dataset.noxFxVisible,undefined);
   assert.equal(o.ctrl.classList.contains("nox-cinema-control"),false);
   assert.ok(o.orbs.every((orb,i)=>orb.element===originalElements[i]&&
     !orb.element.querySelector(".nox-cinema-orb__layers")&&
@@ -144,9 +145,11 @@ test("hidden tab, ECO, reduced motion stop animation and release particles",()=>
   o.tick(12000);
   assert.ok(scene.snapshot().particles>0);
   o.visibility(false);
+  assert.equal(o.root.dataset.noxFxVisible,"false");
   assert.equal(scene.snapshot().particles,0);
   assert.equal(o.pending,0);
   o.visibility(true);
+  assert.equal(o.root.dataset.noxFxVisible,"true");
   assert.ok(o.pending>0);
   assert.equal(scene.setProfile("ECO"),true);
   assert.equal(o.root.dataset.noxMode,"eco");
