@@ -62,7 +62,7 @@ jobs:
       - name: Preserve exact source receipts
         uses: actions/upload-artifact@v4
         with:
-          name: p01-c11-owner-receipts
-          path: ci-evidence/p01-c11-owner-receipts.json
+          name: p01-c12-owner-receipts
+          path: ci-evidence/p01-c12-owner-receipts.json
           retention-days: 30
           if-no-files-found: error
