@@ -244,14 +244,16 @@ class RunController:
             "run_id": self.identity.run_id,
             "task_id": self.identity.task_id,
         }
-        self.state = state
-        self.events.append(event)
+        next_events = [*self.events, event]
         atomic_write_json(self.state_path, {
             "schema": "NOX_P05_RUN_STATE_V1",
             "identity": identity_object(self.identity),
             "state": state,
-            "events": self.events,
+            "events": next_events,
         })
+        # Commit in-memory state only after the durable state write succeeds.
+        self.events = next_events
+        self.state = state
 
     def start(self, *, gates_verified: bool) -> None:
         with self._lock:
