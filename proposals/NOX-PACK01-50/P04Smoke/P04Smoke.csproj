@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="../../../owner-p04/Packages/P04/NoxP04.csproj" />
     <Compile Include="../P04OwnerPack.cs" Link="P04OwnerPack.cs" />
+    <Compile Include="../P02RagChatOwnerPort.cs" Link="P02RagChatOwnerPort.cs" />
   </ItemGroup>
 </Project>
