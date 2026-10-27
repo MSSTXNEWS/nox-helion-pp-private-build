@@ -103,6 +103,8 @@ class OllamaClient:
                     data = json.loads(raw)
                 except (json.JSONDecodeError, UnicodeDecodeError) as e:
                     raise P02Error("Malformed Ollama NDJSON") from e
+                if not isinstance(data, dict):
+                    raise P02Error("Ollama stream event must be an object")
                 if "error" in data:
                     raise P02Error(f"Ollama stream error: {str(data['error'])[:512]}")
                 if not isinstance(data.get("done"), bool):
@@ -119,7 +121,7 @@ class OllamaClient:
                 raise Cancelled("STOP requested")
             if not finished:
                 raise P02Error("Ollama stream truncated before done=true")
-        except (TimeoutError, OSError) as e:
+        except (TimeoutError, OSError, ValueError) as e:
             if stop.is_set():
                 raise Cancelled("STOP requested") from e
             raise P02Error("Ollama streaming timeout/connection error") from e
@@ -296,6 +298,17 @@ class P02Store:
             if len(content) != expected or hashlib.sha256(content).hexdigest() != sha:
                 raise P02Error("Stored attachment checksum mismatch")
             return content
+
+    def delete_attachment(self, tenant: str, user: str, chat: str, stored_id: str):
+        """Delete metadata under ACL and queue app-owned physical bytes for durable GC."""
+        with self._lock, self.db:
+            self._owned(tenant, user, chat)
+            row = self.db.execute("SELECT storage FROM p02_attachments WHERE id=? AND chat_id=?",
+                                  (stored_id, chat)).fetchone()
+            if row is None:
+                raise PermissionError("Attachment unavailable")
+            self.db.execute("INSERT OR IGNORE INTO p02_gc VALUES(?,?)", (row[0], int(time.time())))
+            self.db.execute("DELETE FROM p02_attachments WHERE id=? AND chat_id=?", (stored_id, chat))
 
     def delete_chat(self, tenant: str, user: str, chat: str):
         with self._lock, self.db:
