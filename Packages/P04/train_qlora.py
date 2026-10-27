@@ -710,6 +710,7 @@ def main() -> int:
             dataset_num_proc=1, disable_tqdm=True, save_only_model=False,
         )
         monitor = {"last_check": 0.0, "temperature": temp, "thermal_reason": None,
+                   "resource_reason": None, "vram_free_mib": vram_headroom["free_mib"],
                    "stop": False, "pause": False, "train_loss": None, "eval_loss": None}
         class Callback(TrainerCallback):
             def on_log(self, args_, state, control, logs=None, **kwargs):
@@ -742,6 +743,15 @@ def main() -> int:
                         control.should_save = True
                         control.should_training_stop = True
                         events.emit("task.progress", "HOLD", "gpu_thermal_stop", monitor["thermal_reason"])
+                        return control
+                    try:
+                        current_vram = gpu_vram_headroom(exe, chosen["uuid"], args.profile)
+                        monitor["vram_free_mib"] = current_vram["free_mib"]
+                    except RuntimeError as exc:
+                        monitor["resource_reason"] = str(exc)
+                        control.should_save = True
+                        control.should_training_stop = True
+                        events.emit("task.progress", "HOLD", "gpu_vram_stop", monitor["resource_reason"])
                         return control
                 if args.stop_marker.exists():
                     monitor["stop"] = True
@@ -790,7 +800,7 @@ def main() -> int:
         result = trainer.train(resume_from_checkpoint=resume)
         global_step = int(trainer.state.global_step)
         total_steps = int(trainer.state.max_steps)
-        if monitor["thermal_reason"]:
+        if monitor["thermal_reason"] or monitor["resource_reason"]:
             status = "HOLD"
         elif monitor["stop"] or args.stop_marker.exists():
             status = "STOPPED"
@@ -873,7 +883,9 @@ def main() -> int:
                          "adapter_eval_loss": adapter_eval_loss,
                          "evaluation_status": evaluation_status,
                          "gpu_temperature_initial_c": temp, "gpu_temperature_last_c": monitor["temperature"],
-                         "thermal_stop_reason": monitor["thermal_reason"]},
+                         "thermal_stop_reason": monitor["thermal_reason"],
+                         "gpu_resource_stop_reason": monitor["resource_reason"],
+                         "gpu_memory_free_last_mib": monitor["vram_free_mib"]},
             "checkpoint": checkpoint_info, "adapter_sha256": sha256_tree(adapter_dir),
             "evidence_verified": False,
         }
