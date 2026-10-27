@@ -28,6 +28,6 @@ const summary={run:"NOX-PACK01-FINAL18-20261028",scope:"FIFTY_ROUTE_SOURCE_COVER
     "Actual V16 release readiness remains N/D until canonical all-feature denominator and E07 same-SHA QA."
   ]
 };
-if(summary.all!==50||summary.sourceBound!==36||summary.remaining.length!==14||summary.finalExeAccepted!==0)
+if(summary.all!==50||summary.sourceBound!==37||summary.remaining.length!==13||summary.finalExeAccepted!==0)
  throw Error("PROGRESS_LEDGER_DRIFT");
 console.log(JSON.stringify(summary,null,2));
