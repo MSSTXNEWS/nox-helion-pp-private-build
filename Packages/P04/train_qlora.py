@@ -246,6 +246,8 @@ def validate_jsonl(path: Path, label: str) -> int:
                 raise ValueError(f"{label}_ROW_NOT_OBJECT_{number}")
             if isinstance(row.get("text"), str) and row["text"].strip():
                 count += 1
+                if count > MAX_DATASET_LEAKAGE_SCAN_ROWS:
+                    raise ValueError(f"{label}_RECORD_LIMIT_EXCEEDED")
                 continue
             messages = row.get("messages")
             if not isinstance(messages, list) or not messages:
