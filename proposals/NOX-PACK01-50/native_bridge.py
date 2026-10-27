@@ -129,7 +129,7 @@ class NoxPackHost:
 
 class ExistingP02Adapter:
     """Actual owner #2 Python OllamaClient and P02Store, injected by trusted host."""
-    def __init__(self, client, store, *, event_sink=None):
+    def __init__(self, client, store, *, event_sink=None, native_selected_file=None):
         if not all(callable(getattr(client,n,None)) for n in ("models","stream","stop")):
             raise ValueError("Existing P02 OllamaClient required")
         if not all(callable(getattr(store,n,None)) for n in ("history","add_message","store_file")):
@@ -137,6 +137,8 @@ class ExistingP02Adapter:
         self.client = client
         self.store = store
         self.event_sink = event_sink
+        # Native file picker callback returns (MIME, binary stream); never page JSON.
+        self.native_selected_file = native_selected_file
 
     def available(self) -> bool:
         try:return isinstance(self.client.models(),list)
@@ -186,13 +188,42 @@ class ExistingP02Adapter:
         self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
         return {"answer":text,"done":True}
 
+    def attach_native_selected(self,session,args):
+        if not callable(self.native_selected_file):
+            raise HostHold("Trusted native file picker not bound")
+        selected = self.native_selected_file(session)
+        if not isinstance(selected,tuple) or len(selected)!=2:
+            raise HostHold("Native file picker returned no approved file")
+        mime,stream = selected
+        if not isinstance(mime,str) or not callable(getattr(stream,"read",None)):
+            raise HostDenied("Native file selection invalid")
+        try:
+            # Existing P02 handles MIME/signature/size/SHA, SQLite ACL and stored ID.
+            result=self.store.store_file(session.tenant,session.principal,
+                session.chat_id,mime,stream)
+            return {"storedAttachment":result}
+        finally:
+            if callable(getattr(stream,"close",None)):stream.close()
+
+    @staticmethod
+    def scoped_commands(dispatcher,session,args):
+        # No fake buttons: list ONLY native-advertised, enabled route capabilities.
+        eligible=dispatcher.advertise(session)
+        return {"commands":[route for route,cap in eligible.items()
+            if cap["enabled"] and route!="chat.commands"]}
+
     def register(self, dispatcher:NoxPackHost, *, receipt:str):
         entries = {
           "helion.chat":self.chat,"core.chat":self.chat,"persona.chat":self.chat,
           "chat.model":self.list_models,"chat.history":self.history,"chat.stop":self.stop
         }
+        entries["chat.commands"]=lambda scope,args:self.scoped_commands(dispatcher,scope,args)
+        if callable(self.native_selected_file):
+            entries["chat.attach"]=self.attach_native_selected
         for route,func in entries.items():
-            dispatcher.bind(route,BoundPort(func,self.available,receipt,2))
+            # Chat quick commands reflect current host route registry, not Ollama status.
+            ready=(lambda:True) if route=="chat.commands" else self.available
+            dispatcher.bind(route,BoundPort(func,ready,receipt,2))
         return frozenset(entries)
 
 def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
