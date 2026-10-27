@@ -20,5 +20,7 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Fail-closed synthetic Python regression tests
         run: python -m unittest discover -s tests/P04 -p 'test_*.py' -v
-      - name: Build P04 RAG and GPU component without new packages
+      - name: Compile RAG and GPU components
         run: dotnet build Packages/P04/NoxP04.csproj -c Release --nologo
+      - name: Run fake-loopback RAG ACL, provenance, and lifecycle fixture
+        run: dotnet run --project tests/P04/RagComponentHarness.csproj -c Release
