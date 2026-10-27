@@ -221,7 +221,7 @@ WHERE a.id=$id AND c.id=$chat AND c.tenant=$tenant AND c.owner=$owner;";
         cmd.Transaction=tx;
         cmd.CommandText="DELETE FROM messages WHERE chat_id=$chat AND created_utc<$before;";
         cmd.Parameters.AddWithValue("$chat",chatId);
-        cmd.Parameters.AddWithValue("$before",before.UtcDateTime.ToString("O"));
+        cmd.Parameters.AddWithValue("$before",before.ToUniversalTime().ToString("O"));
         var count=await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         await tx.CommitAsync(ct).ConfigureAwait(false);
         return count;
