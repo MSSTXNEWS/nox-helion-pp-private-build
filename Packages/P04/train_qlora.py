@@ -200,6 +200,49 @@ def validate_jsonl(path: Path, label: str) -> int:
     return count
 
 
+
+MAX_DATASET_LEAKAGE_SCAN_ROWS = 500_000
+
+
+def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[int, int]:
+    """Reject exact training/holdout examples before accessing CUDA.
+
+    The train and holdout SHA-256 manifest checks protect file identity, not
+    against duplicate samples hidden in differently ordered files. Scan only
+    validated local JSONL files, bounded to avoid untrusted input memory growth.
+    """
+    def payload_digest(row: dict[str, Any]) -> bytes:
+        value = row.get("text")
+        if isinstance(value, str) and value.strip():
+            payload = value.strip()
+        else:
+            payload = json.dumps(row["messages"], ensure_ascii=False, sort_keys=True,
+                                 separators=(",", ":"))
+        return hashlib.sha256(payload.encode("utf-8")).digest()
+
+    def records(path: Path, label: str):
+        count = 0
+        with path.open("r", encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                count += 1
+                if count > MAX_DATASET_LEAKAGE_SCAN_ROWS:
+                    raise ValueError(label + "_LEAKAGE_SCAN_LIMIT_EXCEEDED")
+                yield payload_digest(json.loads(line))
+        if count == 0:
+            raise ValueError(label + "_EMPTY")
+
+    train_digests = set(records(train_path, "TRAIN"))
+    train_rows = len(train_digests)
+    holdout_rows = 0
+    for digest in records(holdout_path, "HOLDOUT"):
+        holdout_rows += 1
+        if digest in train_digests:
+            raise ValueError("DATASET_TRAIN_HOLDOUT_EXAMPLE_OVERLAP")
+    return train_rows, holdout_rows
+
+
 def nvidia_smi() -> str | None:
     exe = shutil.which("nvidia-smi") or shutil.which("nvidia-smi.exe")
     if exe:
@@ -377,6 +420,7 @@ def main() -> int:
         model_lock = verify_model_lock(args.model_lock.resolve(strict=True), model_path, args.model_revision)
         train_records = validate_jsonl(train_path, "TRAIN")
         holdout_records = validate_jsonl(holdout_path, "HOLDOUT")
+        validate_holdout_separation(train_path, holdout_path)
 
         exe = nvidia_smi()
         if not exe:
