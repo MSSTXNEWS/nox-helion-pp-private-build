@@ -1,4 +1,4 @@
-name: NOX P03 C40 component gate (not release QA)
+name: NOX P03 C40 + TURBO10 owner component gate (not release QA)
 on:
   pull_request:
     paths:
@@ -23,6 +23,19 @@ jobs:
           if ($actual -ne $expected) { throw "P03_ARCHIVE_SHA_MISMATCH" }
           Expand-Archive -LiteralPath $zip -DestinationPath p03-c40-source -Force
           if (-not (Test-Path 'p03-c40-source/P03.ModelCenter/P03.ModelCenter.csproj')) { throw 'P03_CSPROJ_MISSING' }
+      - name: Apply owner-scoped TURBO10 patch over exact C40 snapshot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $patch = (Resolve-Path 'Packages/P03/C40/NOX_V16_E03_TURBO10_from_C40.patch').Path
+          $expected = 'bb6f38d3da5389039236f8c66419e74b8e593b5db66280df7a89a8932ba12149'
+          if ((Get-FileHash -LiteralPath $patch -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'P03_TURBO10_PATCH_SHA_MISMATCH' }
+          git -C p03-c40-source init -q
+          if ($LASTEXITCODE -ne 0) { throw 'P03_GIT_INIT_FAILED' }
+          git -C p03-c40-source apply --check $patch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_PREIMAGE_FAILED' }
+          git -C p03-c40-source apply $patch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_APPLY_FAILED' }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
