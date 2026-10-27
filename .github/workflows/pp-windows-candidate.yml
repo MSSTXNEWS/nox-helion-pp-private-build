@@ -20,6 +20,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Restore exact pinned source and wheelhouse archives
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
+        with:
+          path: |
+            work/NOX_PP_SOURCE.zip
+            work/NOX_PP_BUILD_WHEELHOUSE_18.zip
+          key: nox-pp-inputs-windows-2025-ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a-2b6291a45f7c03c583e2073d069f6a1de5832d3bc54b33150f940b4aa53598ff
+
       - name: Set up pinned Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
