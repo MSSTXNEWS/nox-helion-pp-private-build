@@ -73,7 +73,9 @@ public sealed class E05SafeFeedClient : IDisposable
         var key = string.Join("\u001f", source.Id, source.Provider,
             source.Endpoint.AbsoluteUri, source.AllowedHost, source.LicenseReceipt,
             source.Ttl.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            source.MaxSourceAge.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            source.MaxSourceAge.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            source.Timeout.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            source.MaxBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var gate = gates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancel).ConfigureAwait(false);
         try
