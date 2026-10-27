@@ -65,9 +65,9 @@
     {
       "path": "proposals/NOX-WOW51-100/sha256.test.mjs",
       "preimage": "ABSENT",
-      "post_sha256": "9be20309cf7ea543285d55573678c9166a2233067352dff47a7b87d03d6cb03d",
-      "bytes_utf8": 1144,
-      "git_blob_sha1": "ee95c63a627f5b0e3222ff87d52d043e161636f9"
+      "post_sha256": "274353f0b58a6e33308bc42737aa9534beabffb85a4f827c6186325934035d3f",
+      "bytes_utf8": 1342,
+      "git_blob_sha1": "8fb6d1f0a36a977da33ed2658376832c8450f94e"
     },
     {
       "path": ".github/workflows/nox-wow51-100.yml",
@@ -81,6 +81,7 @@
     "Original PR30 D02 source unchanged; all candidate paths new.",
     "Git 40-character blob hashes are SHA-1, not these SHA-256 digests.",
     "CI tests source effects and hash receipts; not WebView2 visual QA or installed EXE acceptance.",
-    "HOST_EVENT cues cannot claim actual model activity without signed native admission."
+    "HOST_EVENT cues cannot claim actual model activity without signed native admission.",
+    "Windows canonical LF normalization in SHA test; exact Git blob contents remain immutable despite checkout EOL policy."
   ]
 }
