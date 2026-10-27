@@ -256,6 +256,12 @@ using (var malformedHttp = new HttpClient(new MalformedRevisionFixtureHandler())
 Check(E05WowCompatibility.Resolve(null!, true, false, false).All(x => !x.Enabled),
     "C09-09 null WOW allowlist leaves optional motion disabled");
 
+var unsafeNews = "<rss><channel><item><title>Private</title><link>https://127.0.0.1/local</link><pubDate>Tue, 27 Oct 2026 18:00:00 GMT</pubDate></item></channel></rss>";
+Check(SpaceParsers.ParseRss(unsafeNews, "fixture").Count == 0,
+    "C09-10 RSS link into loopback is rejected");
+var safeNews = unsafeNews.Replace("https://127.0.0.1/local", "https://example.org/article");
+Check(SpaceParsers.ParseRss(safeNews, "fixture").Count == 1,
+    "C09-10 valid HTTPS news link remains available");
 Console.WriteLine("ALL E05 mocked/offline checks passed (no real hardware/network)");
 
 sealed class DocsFixtureHandler : HttpMessageHandler
