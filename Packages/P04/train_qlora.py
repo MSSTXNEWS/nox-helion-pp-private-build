@@ -274,6 +274,11 @@ class RunController:
             "run_id": self.identity.run_id,
             "task_id": self.identity.task_id,
         }
+        if len(self.events) >= MAX_RUN_EVENTS:
+            raise TrainingGateError(
+                "RUN_EVENT_LIMIT",
+                "Run event history is full; refusing to write an unreadable state file.",
+            )
         next_events = [*self.events, event]
         atomic_write_json(self.state_path, {
             "schema": "NOX_P05_RUN_STATE_V1",
