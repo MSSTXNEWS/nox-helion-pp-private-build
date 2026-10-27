@@ -43,6 +43,27 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_PREIMAGE_FAILED' }
           git -C p03-c40-source apply $exactPatch
           if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO10_APPLY_FAILED' }
+      - name: Apply owner-scoped TURBO11 patch over exact C40 snapshot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $patch = (Resolve-Path 'Packages/P03/C40/NOX_V16_E03_TURBO11_from_C40.patch').Path
+          $expected = 'f9fc4845d456d478fae9312d761c130999416ee3ebdf3be1ad9d76554a518506'
+          # Git on Windows may checkout .patch files with CRLF despite LF blob bytes.
+          # Normalize into a temp copy for a SHA-256 check over the exact original patch bytes.
+          $patchText = [System.IO.File]::ReadAllText($patch).Replace("`r`n", "`n")
+          $patchBytes = [System.Text.Encoding]::UTF8.GetBytes($patchText)
+          $actual = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($patchBytes)).ToLowerInvariant()
+          if ($actual -ne $expected) { throw "P03_TURBO11_PATCH_SHA_MISMATCH actual=$actual" }
+          $exactPatch = Join-Path $env:RUNNER_TEMP 'NOX_P03_TURBO11_exact.patch'
+          [System.IO.File]::WriteAllBytes($exactPatch, $patchBytes)
+          git -C p03-c40-source apply --check $exactPatch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO11_PREIMAGE_FAILED' }
+          git -C p03-c40-source apply $exactPatch
+          if ($LASTEXITCODE -ne 0) { throw 'P03_TURBO11_APPLY_FAILED' }
+          $manifest = Get-Content -Raw 'p03-c40-source/P03.ModelCenter/PIN_REVIEW_TEMPLATE_15.json' | ConvertFrom-Json
+          if ($manifest.items.Count -ne 15) { throw 'P03_MODEL_REVIEW_COUNT' }
+          if (@($manifest.items | Where-Object { $_.reviewStatus -ne 'REVIEW_REQUIRED' }).Count -ne 0) { throw 'P03_MODEL_REVIEW_GATE' }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
