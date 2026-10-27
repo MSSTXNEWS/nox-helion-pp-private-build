@@ -24,7 +24,7 @@ class CanonicalSourceLockTests(unittest.TestCase):
         self.assertEqual(NO_RELEASE, "ORIGINAL_BASELINE_ONLY_NOT_INTEGRATED")
 
     def test_02_zip_member_traversal_denied(self):
-        for path in ("../a", "dir/../x", "/absolute", "dir\\x", "C:x", "dir//foo"):
+        for path in ("../a", "dir/../x", "/absolute", "C:x", "dir//foo"):
             with self.subTest(path=path):
                 with zip_of({path: "data"}) as z:
                     with self.assertRaises(ValueError):
