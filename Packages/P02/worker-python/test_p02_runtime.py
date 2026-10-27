@@ -114,6 +114,77 @@ class P02ExtendedTests(unittest.TestCase):
             self.assertNotIn('p02_chats', tables)
         db.close()
 
+    def test_buffered_response_keeps_chat_lease_until_consumer_drains(self):
+        """A finished producer must not allow a second chat while reply is unread."""
+        import time
+        class Response:
+            def __iter__(self):
+                yield b'{"message":{"content":"one"},"done":false}\n'
+                yield b'{"message":{"content":"two"},"done":true}\n'
+            def close(self):
+                pass
+        class Fake(OllamaClient):
+            def _open(self, path, data=None):
+                return Response()
+        client = Fake()
+        chunks = client.stream('demo', [{'role':'user','content':'go'}])
+        self.assertEqual(next(chunks)['delta'], 'one')
+        limit = time.monotonic() + 1
+        while client._active is not None and time.monotonic() < limit:
+            time.sleep(.01)
+        # Network worker has exited, but the UI still holds unfinished reply.
+        with self.assertRaisesRegex(P02Error, 'Another chat stream is active'):
+            next(client.stream('second', [{'role':'user','content':'go'}]))
+        self.assertTrue(next(chunks)['done'])
+        chunks.close()
+        self.assertFalse(client._busy)
+
+    def test_stop_cannot_overlap_previous_live_socket_worker(self):
+        """STOP returns promptly but next chat must wait for old worker cleanup."""
+        import time
+        from p02_runtime import OllamaClient, P02Error, Cancelled
+        class DelayedResponse:
+            def __init__(self):
+                self.pending = threading.Event()
+                self.release = threading.Event()
+                self.exited = threading.Event()
+            def __iter__(self):
+                try:
+                    yield b'{"message":{"content":"first"},"done":false}\n'
+                    self.pending.set()
+                    self.release.wait(timeout=2)
+                    yield b'{"message":{"content":"last"},"done":true}\n'
+                finally:
+                    self.exited.set()
+            def close(self):
+                # Simulate a socket whose close does not wake blocking read.
+                pass
+        class Fake(OllamaClient):
+            def __init__(self):
+                super().__init__('http://127.0.0.1:11434', timeout=1)
+                self.response = DelayedResponse()
+            def _open(self, path, data=None):
+                return self.response
+        client = Fake()
+        stream = client.stream('a', [{'role':'user','content':'start'}])
+        try:
+            self.assertEqual(next(stream)['delta'], 'first')
+            self.assertTrue(client.response.pending.wait(.5))
+            client.stop()
+            with self.assertRaises(Cancelled): next(stream)
+            # Consumer is finished but worker still owns the response.
+            with self.assertRaisesRegex(P02Error, 'Another chat stream is active'):
+                next(client.stream('b', [{'role':'user','content':'new'}]))
+        finally:
+            stream.close()
+            client.response.release.set()
+            self.assertTrue(client.response.exited.wait(1), 'Old socket did not exit')
+        # It is safe to release the reservation only after socket cleanup.
+        limit = time.monotonic() + 1
+        while client._busy and time.monotonic() < limit:
+            time.sleep(.01)
+        self.assertFalse(client._busy)
+
     def test_active_stream_stop_during_blocked_read(self):
         import time
         from http.server import ThreadingHTTPServer
