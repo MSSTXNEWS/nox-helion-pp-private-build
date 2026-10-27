@@ -379,16 +379,22 @@ def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str
     real = selected.resolve(strict=True)
     if real.parent != root or not re.fullmatch(r"checkpoint-(\d+)", real.name):
         raise ValueError("RESUME_CHECKPOINT_OUTSIDE_RUN")
-    state = read_object(real / "trainer_state.json")
+    state_path = real / "trainer_state.json"
+    if state_path.is_symlink() or not state_path.is_file() or state_path.stat().st_size == 0:
+        raise ValueError("RESUME_CHECKPOINT_TRAINER_STATE_INVALID")
+    state = read_object(state_path)
     step = int(real.name.split("-")[-1])
     if type(state.get("global_step")) is not int or state["global_step"] != step:
         raise ValueError("RESUME_CHECKPOINT_STEP_MISMATCH")
     model_files = ("adapter_model.safetensors", "adapter_model.bin", "model.safetensors", "pytorch_model.bin")
-    if not any((real / name).is_file() and not (real / name).is_symlink() for name in model_files):
+    if not any((real / name).is_file() and not (real / name).is_symlink()
+               and (real / name).stat().st_size > 0 for name in model_files):
         raise ValueError("RESUME_CHECKPOINT_MODEL_MISSING")
     for name in ("optimizer.pt", "scheduler.pt"):
         if not (real / name).is_file() or (real / name).stat().st_size == 0:
             raise ValueError("RESUME_CHECKPOINT_STATE_MISSING")
+    if any(item.is_symlink() for item in real.rglob("*")):
+        raise ValueError("RESUME_CHECKPOINT_SYMLINK_IN_TREE")
     rng = list(real.glob("rng_state*.pth"))
     if not rng or any(not path.is_file() or path.is_symlink() or path.stat().st_size == 0 for path in rng):
         raise ValueError("RESUME_CHECKPOINT_RNG_MISSING")
