@@ -69,7 +69,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $patch = 'Packages/P03/C40/NOX_V16_E03_TURBO12_additive_hardening.patch'
-          $expected = 'fbfa3c354e2bfeb52871a2cae28d61e1b1c5db198d8e2539d1593f73397292b4'
+          $expected = '5f6d50ef1eb0d46ab8e825285def81511bb5b514aee3d16f3fdd370e69e1d537'
           $patchText = [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $patch).Path).Replace("`r`n", "`n")
           $patchBytes = [System.Text.Encoding]::UTF8.GetBytes($patchText)
           $actual = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($patchBytes)).ToLowerInvariant()
