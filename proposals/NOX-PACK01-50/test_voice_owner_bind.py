@@ -47,11 +47,17 @@ class VoiceOwnerTests(unittest.TestCase):
         self.session=bridge.NativeSession("tenant1","user1","room1",allowed=self.bound,
             private_approved=self.bound)
 
-    def test_original_voice_owner_three_routes_wired(self):
+    def test_original_voice_owner_four_routes_wired(self):
         self.assertEqual(self.bound,
-            frozenset({"translate.ru_es","maestro.spanish","calls.dial"}))
+            frozenset({"translate.ru_es","maestro.spanish","calls.dial","voice.settings"}))
         self.assertTrue(self.host.advertise(self.session)["translate.ru_es"]["enabled"])
         self.assertFalse(self.host.advertise(self.session)["calls.dial"]["enabled"])
+
+    def test_voice_settings_are_installed_owner_identities_only(self):
+        item=self.host.execute("voice.settings",{},self.session)
+        self.assertEqual(item["voices"],["es-voice"])
+        self.assertEqual(item["voiceCount"],1)
+        self.assertTrue(item["modelsApproved"])
 
     def test_translation_real_owner_pipeline_on_local_fixture(self):
         out=self.host.execute("translate.ru_es",
