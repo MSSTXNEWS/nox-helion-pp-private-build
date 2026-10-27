@@ -24,6 +24,11 @@ CHECKPOINT_SCHEMA = "NOX_P05_CHECKPOINT_RECEIPT_V1"
 RESULT_SCHEMA = "NOX_P05_RESULT_RECEIPT_V1"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$")
+MAX_RUN_EVENTS = 4096
+RUN_STATE_VALUES = frozenset(
+    ("READY", "RUNNING", "PAUSE_REQUESTED", "PAUSED", "STOPPED", "COMPLETED", "FAILED")
+)
+RUN_EVENT_FIELDS = frozenset(("state", "reason", "at_utc", "run_id", "task_id"))
 
 
 class TrainingGateError(ValueError):
@@ -223,16 +228,41 @@ class RunController:
                 prior = json.loads(self.state_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
                 raise TrainingGateError("RUN_STATE_INVALID", "Persisted run state is unreadable.") from exc
+            if not isinstance(prior, Mapping):
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted run state must be a JSON object.")
             if prior.get("schema") != "NOX_P05_RUN_STATE_V1":
                 raise TrainingGateError("RUN_STATE_UNSUPPORTED", "Persisted run state schema is unsupported.")
             if prior.get("identity") != identity_object(self.identity):
                 raise TrainingGateError("RUN_IDENTITY_MISMATCH", "Persisted run identity differs.")
-            if prior.get("state") not in ("READY", "RUNNING", "PAUSE_REQUESTED", "PAUSED", "STOPPED", "COMPLETED", "FAILED"):
+            state = prior.get("state")
+            if state not in RUN_STATE_VALUES:
                 raise TrainingGateError("RUN_STATE_INVALID", "Persisted run state value is invalid.")
-            if not isinstance(prior.get("events"), list):
-                raise TrainingGateError("RUN_STATE_INVALID", "Persisted event history is invalid.")
-            self.state = prior["state"]
-            self.events = prior["events"]
+            events = prior.get("events")
+            if not isinstance(events, list) or not events or len(events) > MAX_RUN_EVENTS:
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted event history is missing or exceeds limits.")
+            for event in events:
+                if not isinstance(event, Mapping) or set(event.keys()) != RUN_EVENT_FIELDS:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event fields are invalid.")
+                if event.get("state") not in RUN_STATE_VALUES:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event state is invalid.")
+                if event.get("run_id") != self.identity.run_id or event.get("task_id") != self.identity.task_id:
+                    raise TrainingGateError("RUN_IDENTITY_MISMATCH", "Persisted event belongs to another run.")
+                reason = event.get("reason")
+                at_utc = event.get("at_utc")
+                if not isinstance(reason, str) or not reason or len(reason) > 240:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event reason is invalid.")
+                if not isinstance(at_utc, str) or not at_utc or len(at_utc) > 32:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event timestamp is invalid.")
+                try:
+                    event_time = datetime.fromisoformat(at_utc.replace("Z", "+00:00"))
+                except ValueError as exc:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event timestamp is invalid.") from exc
+                if event_time.tzinfo is None:
+                    raise TrainingGateError("RUN_STATE_INVALID", "Persisted event timestamp must include a timezone.")
+            if events[-1].get("state") != state:
+                raise TrainingGateError("RUN_STATE_INVALID", "Persisted final event does not match run state.")
+            self.state = state
+            self.events = [dict(event) for event in events]
         else:
             self._persist("READY", "controller-created")
 
