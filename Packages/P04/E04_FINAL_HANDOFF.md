@@ -18,3 +18,12 @@ E06 ordered handoff:
 E04 fixed areas: E04.01 ingestion/index; .02 search/citations/chat context; .03 ACL/update/delete; .04 dataset rights and holdout; .05 actual PEFT worker and STOP/PAUSE/RESUME/checkpoint; .06 GPU telemetry, modes, evaluation and merge; .07 events contract, component tests and handoff.
 
 Conditions that keep status HOLD: missing SourceLock, unauthorized dataset, missing model license/revision, unavailable GPU, unverified Windows host. All accepted product progress=N/D until exact complete criteria are evidenced. This handoff is source documentation, not a proof of tests or training.
+
+## E04 acceleration delta: official reusable integrations, no duplicate engines
+- Existing local RAG continues using the official Ollama POST /api/embed format with array input, embeddings array, truncate=false and no fallback vectors: https://docs.ollama.com/api/embed
+- Existing PEFT worker keeps the official Transformers Trainer checkpoint resume path; optimizer/scheduler/RNG and adapter identity are checked rather than inventing a new trainer: https://huggingface.co/docs/transformers/trainer_recipes
+- Existing LoRA merge uses PEFT merge_and_unload(safe_merge=True) in a new output location; base weights and immutable adapter remain intact: https://huggingface.co/docs/peft/main/package_reference/peft_model
+- Added a strict non-boolean and finite evaluation-loss gate, plus fail-closed original symlink-root/JSON input checks. Tests import the actual P04 Python modules.
+- Optional real local Ollama smoke exists as tests/P04/RagLiveSmoke.csproj. It compiles in candidate CI but is NOT run against a real model there. On an authorized machine set NOX_P04_EMBED_MODEL to an already-installed licensed embedding model tag and run: dotnet run --project tests/P04/RagLiveSmoke.csproj -c Release . No Ollama pulls, internet access or installs are performed by this smoke. Output code 3 means HOLD on unavailable prerequisites.
+- No NVIDIA CUDA hardware, rights-attested training set, licensed local base snapshot or full Windows host is available in this connected execution environment; actual QLoRA training, checkpoint resume, eval and merge remain HOLD.
+- Integrator #6 must bind these changes to its current SourceLock and single host and execute one authorized GPU session. E07 independently accepts the same EXE SHA. Preserve original D02, approved 10+10+10, WOW and every unique source candidate.
