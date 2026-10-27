@@ -41,7 +41,13 @@ $installed = $false
 foreach ($p in $regPaths) {
   try {
     $v = (Get-ItemProperty -LiteralPath $p -ErrorAction Stop).pv
-    if ($v -and $v -ne '0.0.0.0') { $installed = $true; break }
+    # C11: WebView2 Runtime is present only with a parsable, nonzero version.
+    if ($v) {
+      try {
+        $runtimeVersion=[version][string]$v
+        if ($runtimeVersion.Major -gt 0) { $installed = $true; break }
+      } catch { }
+    }
   } catch { }
 }
 if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }
