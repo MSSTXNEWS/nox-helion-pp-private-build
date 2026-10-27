@@ -269,9 +269,23 @@ class P02Store:
         self.root = pathlib.Path(attachment_root).resolve()
         self.staging = self.root / "staging"
         self.blobs = self.root / "stored"
+        # This is host-selected application data, NEVER a path from webpage JS.
+        # Do not follow existing symlinks for the storage subdirectories: a
+        # crafted profile could otherwise redirect private attachments outside
+        # the approved app-owned tree even if individual *.blob is checked.
+        if self.staging.is_symlink() or self.blobs.is_symlink():
+            raise P02Error('ATTACHMENT_STORAGE_SYMLINK_DENIED')
         self.staging.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.blobs.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self._assert_storage_roots()
         self._lock = threading.RLock()
+
+    def _assert_storage_roots(self):
+        if (self.staging.is_symlink() or self.blobs.is_symlink()
+                or self.staging.resolve() != self.root / 'staging'
+                or self.blobs.resolve() != self.root / 'stored'
+                or not self.staging.is_dir() or not self.blobs.is_dir()):
+            raise P02Error('ATTACHMENT_STORAGE_OUTSIDE_APPROVED_ROOT')
 
     def host_schema_inventory(self) -> tuple[str, ...]:
         """Read-only host table list for #6; never silently migrate a user's DB."""
@@ -291,6 +305,12 @@ class P02Store:
         with self._lock:
             if self.db.in_transaction:
                 raise P02Error('HOST_SQLITE_TRANSACTION_ACTIVE')
+            # Host may reopen the shared SQLite connection with FK enforcement
+            # disabled. Never perform deletes that would orphan chat history.
+            self.db.execute('PRAGMA foreign_keys=ON')
+            enabled = self.db.execute('PRAGMA foreign_keys').fetchone()
+            if enabled != (1,):
+                raise P02Error('HOST_SQLITE_FOREIGN_KEYS_REQUIRED')
             with self.db:
                 yield
 
@@ -339,6 +359,13 @@ class P02Store:
                     cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
                     if cols != expected_columns:
                         raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
+                for table in ('p02_messages', 'p02_attachments'):
+                    rows = list(self.db.execute(f'PRAGMA foreign_key_list({table})'))
+                    if not any(row[2] == 'p02_chats' and row[3] == 'chat_id'
+                               and row[4] == 'id' and row[6] == 'CASCADE' for row in rows):
+                        raise P02Error('P02_SCHEMA_FOREIGN_KEY_DRIFT; restore verified backup')
+                if self.db.execute('PRAGMA foreign_key_check').fetchone() is not None:
+                    raise P02Error('P02_SCHEMA_FOREIGN_KEY_VIOLATION; restore verified backup')
             self.db.execute('PRAGMA foreign_keys=ON')
             schema = """
                 CREATE TABLE IF NOT EXISTS p02_chats(
@@ -444,13 +471,16 @@ class P02Store:
             if mime == "text/plain" and (b"\x00" in first):
                 raise P02Error("Invalid plain-text header")
             sha = digest.hexdigest()
+            self._assert_storage_roots()
             with self._write_transaction():
                 self._owned(tenant, user, chat)
                 current = self.db.execute("SELECT COALESCE(SUM(bytes),0) FROM p02_attachments WHERE chat_id=?",
                                           (chat,)).fetchone()[0]
                 if current + size > MAX_CHAT:
                     raise P02Error("Chat attachment quota exceeded")
-                os.replace(tmp, dest)
+                # Atomic, no-clobber publication on the same application data
+                # volume; preserve any prior blob on collision (NO-LOSS).
+                os.link(tmp, dest, follow_symlinks=False)
                 moved = True
                 record_id = uuid.uuid4().hex
                 self.db.execute("INSERT INTO p02_attachments VALUES(?,?,?,?,?,?,?)",
@@ -473,6 +503,7 @@ class P02Store:
             if found is None:
                 raise PermissionError("Attachment unavailable")
             storage, sha, expected = found
+            self._assert_storage_roots()
             path = _safe_blob_path(self.blobs, storage)
             fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             with os.fdopen(fd, "rb") as f:
@@ -512,6 +543,7 @@ class P02Store:
             for (storage,) in records:
                 if self.db.execute("SELECT 1 FROM p02_attachments WHERE storage=?", (storage,)).fetchone():
                     continue
+                self._assert_storage_roots()
                 path = _safe_blob_path(self.blobs, storage)
                 with contextlib.suppress(FileNotFoundError):
                     path.unlink()

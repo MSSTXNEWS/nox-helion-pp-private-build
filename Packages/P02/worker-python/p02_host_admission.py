@@ -78,10 +78,43 @@ class P02EventRelay:
         if kind == 'chat.complete' and (not isinstance(event.get('chars'), int) or event['chars'] < 0):
             raise P02Error('CHAT_COMPLETE_INVALID')
         payload = {k: v for k, v in event.items() if k != 'type'}
-        # Never allow page-supplied tenant/principal/permissions/host events.
-        if any(k in payload for k in ('tenant','principal','host_type','permission','api_key')):
+        # Native host schemas are explicit, not a generic JSON-to-privilege
+        # forwarder. Rejected extra fields cannot become capabilities on V3.
+        permitted = {
+            'chat.start': {'run_id', 'model'},
+            'chat.delta': {'run_id', 'text'},
+            'chat.sources': {'run_id', 'sources'},
+            'chat.complete': {'run_id', 'chars'},
+            'chat.error': {'run_id', 'code', 'detail'},
+        }
+        if set(payload) - permitted[kind]:
             raise PermissionError('EVENT_PRIVILEGE_FIELDS_FORBIDDEN')
-        if len(json.dumps(payload, ensure_ascii=False).encode('utf-8')) > 65536:
+        if kind == 'chat.error':
+            if (not isinstance(payload.get('code'), str) or
+                    not 0 < len(payload['code']) <= 32 or
+                    not isinstance(payload.get('detail'), str) or
+                    len(payload['detail']) > 256):
+                raise P02Error('CHAT_ERROR_SCHEMA_INVALID')
+        if kind == 'chat.sources':
+            rows = payload['sources']
+            if len(rows) > 20:
+                raise P02Error('CHAT_SOURCES_OVER_QUOTA')
+            for row in rows:
+                if (not isinstance(row, dict) or
+                        not {'source_id', 'title'} <= set(row) or
+                        set(row) - {'source_id', 'title', 'url'} or
+                        not isinstance(row['source_id'], str) or
+                        not 0 < len(row['source_id']) <= 128 or
+                        not isinstance(row['title'], str) or
+                        not 0 < len(row['title']) <= 200 or
+                        ('url' in row and
+                         (not isinstance(row['url'], str) or len(row['url']) > 2048))):
+                    raise P02Error('CHAT_SOURCES_SCHEMA_INVALID')
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise P02Error('P02_EVENT_NOT_SERIALIZABLE') from exc
+        if len(serialized.encode('utf-8')) > 65536:
             raise P02Error('P02_EVENT_PAYLOAD_OVER_QUOTA')
         mapped = self._binding.route_map[kind]
         self._binding.publish(mapped, payload)
