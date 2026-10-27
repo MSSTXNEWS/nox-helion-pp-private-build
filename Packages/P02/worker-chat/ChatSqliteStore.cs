@@ -28,7 +28,7 @@ public sealed class ChatSqliteStore
         var builder = new SqliteConnectionStringBuilder
         {
             DataSource = fullPath, Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared, Pooling = true, ForeignKeys = true
+            Cache = SqliteCacheMode.Default, Pooling = true, ForeignKeys = true
         };
         _connectionString = builder.ToString();
     }
@@ -48,6 +48,12 @@ public sealed class ChatSqliteStore
     public async Task InitializeAsync(CancellationToken ct = default)
     {
         await using var db = await OpenAsync(ct).ConfigureAwait(false);
+        // WAL reduces cross-reader blocking. SQLite provider async calls are synchronous.
+        await using (var wal = db.CreateCommand())
+        {
+            wal.CommandText = "PRAGMA journal_mode=WAL;";
+            await wal.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
         using (var version = db.CreateCommand())
         {
             version.CommandText = "PRAGMA user_version;";
@@ -209,6 +215,39 @@ WHERE a.id=$id AND c.id=$chat AND c.tenant=$tenant AND c.owner=$owner;";
             throw new UnauthorizedAccessException("Attachment not available.");
         return new StoredAttachment(reader.GetString(0),reader.GetString(1),
             reader.GetString(2),reader.GetString(3),reader.GetInt64(4));
+    }
+
+
+    /// <summary>Delete one attachment record only under native-authenticated ownership.
+    /// Pass the returned opaque storage ID to AttachmentPipeline.PurgeDeletedChatFiles.
+    /// The DB commit and disk purge are not atomic; reconcile orphan blobs on restart.</summary>
+    public async Task<string> DeleteAttachmentAsync(string tenant,string principal,
+        string chatId,string attachmentId,CancellationToken ct=default)
+    {
+        await using var db=await OpenAsync(ct).ConfigureAwait(false);
+        await using var tx=(SqliteTransaction)await db.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await EnsureOwnedAsync(db,tx,tenant,principal,chatId,ct).ConfigureAwait(false);
+        string storageId;
+        await using(var read=db.CreateCommand())
+        {
+            read.Transaction=tx;
+            read.CommandText="SELECT storage_id FROM attachments WHERE id=$id AND chat_id=$chat;";
+            read.Parameters.AddWithValue("$id",Required(attachmentId,nameof(attachmentId)));
+            read.Parameters.AddWithValue("$chat",chatId);
+            storageId=await read.ExecuteScalarAsync(ct).ConfigureAwait(false) as string
+                ?? throw new UnauthorizedAccessException("Attachment is not owned.");
+        }
+        await using(var del=db.CreateCommand())
+        {
+            del.Transaction=tx;
+            del.CommandText="DELETE FROM attachments WHERE id=$id AND chat_id=$chat;";
+            del.Parameters.AddWithValue("$id",attachmentId);
+            del.Parameters.AddWithValue("$chat",chatId);
+            if(await del.ExecuteNonQueryAsync(ct).ConfigureAwait(false)!=1)
+                throw new InvalidOperationException("Attachment removal conflict.");
+        }
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+        return storageId;
     }
 
     public async Task<int> PruneMessagesAsync(string tenant,string principal,string chatId,
