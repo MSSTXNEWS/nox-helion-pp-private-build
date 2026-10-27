@@ -107,6 +107,18 @@ internal static class Program
             const string conversation = "conversation-a";
             const string source = "source-fixture-a";
 
+            try
+            {
+                await ingest.IngestTextAsync("S-1-not-a-sid", conversation, "invalid-owner", "fixture.md", "alpha");
+                throw new InvalidOperationException("RAG_INVALID_OWNER_ACCEPTED");
+            }
+            catch (ArgumentException) { _checks++; }
+            try
+            {
+                await ingest.IngestTextAsync(ownerA, new string('c', 257), "invalid-conversation", "fixture.md", "alpha");
+                throw new InvalidOperationException("RAG_INVALID_CONVERSATION_ACCEPTED");
+            }
+            catch (ArgumentException) { _checks++; }
             var stored = await ingest.IngestTextAsync(ownerA, conversation, source, "fixture.md", "alpha original");
             Check(stored.IndexedChunks > 0, "ingest");
             Check(stored.SourceIdentitySha256 == Sha("alpha original"), "source identity");
