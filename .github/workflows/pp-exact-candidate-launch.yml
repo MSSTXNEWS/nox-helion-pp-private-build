@@ -1,9 +1,10 @@
-name: PRE-PRE exact candidate launch
+name: E07 current-main exact candidate process-start proof
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - codex/e07-run15-secretless-launch
     paths:
       - '.github/workflows/pp-exact-candidate-launch.yml'
 
@@ -12,12 +13,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: pp-exe-launch-run40210839317
+  group: pp-exe-launch-run40527490043
   cancel-in-progress: false
 
 jobs:
   launch:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12605282328') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(fromJSON('["refs/heads/main","refs/heads/codex/e07-run15-secretless-launch"]'), github.ref) && github.event.head_commit.message == 'PP-ONE-037 authorized exact artifact launch 12745455266') }}
     runs-on: windows-2025
     timeout-minutes: 5
     steps:
@@ -29,17 +30,19 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $repo = 'MSSTXNEWS/nox-helion-pp-private-build'
-          $sourceRunId = 40210839317
-          $artifactId = 12605282328
-          $expectedHead = 'ca1a876018655b7b3d12c7fb8f273def8d1e45ad'
-          $expectedZipSha256 = 'f7b57520904cb60e17ce91737bb9f2f8af583a4ab769734a851551fa9f4eb625'
+          $sourceRunId = 40527490043
+          $artifactId = 12745455266
+          $expectedHead = '89dda555b37c260af16ad91807f13360669d8596'
+          $expectedZipSha256 = '91d9b815400ced62610b0b9c86551207a46bc7a880a71528fc481ba5cb0e3d78'
           $apiRoot = 'https://api.github.com/repos/' + $repo
-          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-artifact12605282328.zip'
+          $zipPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40527490043-artifact12745455266.zip'
           $extractPath = Join-Path $env:RUNNER_TEMP 'PP-001-run40210839317-extract'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'launch-evidence.json'
           $evidence = [ordered]@{
             status = 'IN_PROGRESS'
             source_run_id = $sourceRunId
+            child_environment_policy = 'Allowlist-only; GitHub and Actions credentials removed'
+            child_environment_secrets_cleared = $false
             artifact_id = $artifactId
             expected_zip_sha256 = $expectedZipSha256
             actual_zip_sha256 = $null
@@ -111,6 +114,8 @@ jobs:
             $actualZipSha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
             $evidence.actual_zip_sha256 = $actualZipSha256
             if ($actualZipSha256 -ne $expectedZipSha256) { throw "ZIP SHA256 mismatch: expected=$expectedZipSha256 actual=$actualZipSha256" }
+            $headers.Clear()
+            [Environment]::SetEnvironmentVariable('GITHUB_TOKEN', $null, 'Process')
 
             Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
             $matches = @(Get-ChildItem -LiteralPath $extractPath -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' -File -Recurse)
@@ -127,11 +132,21 @@ jobs:
             $psi = [System.Diagnostics.ProcessStartInfo]::new()
             $psi.FileName = $exe
             $psi.WorkingDirectory = $exeItem.DirectoryName
-            $psi.UseShellExecute = $true
+            $psi.UseShellExecute = $false
+            $psi.CreateNoWindow = $false
+            $psi.Environment.Clear()
+            foreach ($name in @('SystemRoot','WINDIR','TEMP','TMP','USERPROFILE','LOCALAPPDATA','APPDATA','PROGRAMDATA','HOMEDRIVE','HOMEPATH','COMSPEC')) {
+              $value = [Environment]::GetEnvironmentVariable($name, 'Process')
+              if (-not [string]::IsNullOrWhiteSpace($value)) { $psi.Environment[$name] = $value }
+            }
+            if (-not $psi.Environment.ContainsKey('SystemRoot')) { $psi.Environment['SystemRoot'] = [Environment]::GetFolderPath('Windows') }
+            $evidence.child_environment_secrets_cleared = -not $psi.Environment.ContainsKey('GITHUB_TOKEN') -and -not ($psi.Environment.Keys | Where-Object { $_ -like 'ACTIONS_*' -or $_ -like 'GITHUB_*' })
             $evidence.process_start_info = [ordered]@{
               filename = $psi.FileName
               working_directory = $psi.WorkingDirectory
               use_shell_execute = $psi.UseShellExecute
+              allowlist_only = $true
+              github_and_actions_variables_passed = $false
             }
             $evidence.process_start_attempt_utc = [DateTimeOffset]::UtcNow.ToString('o')
             $process = [System.Diagnostics.Process]::Start($psi)
