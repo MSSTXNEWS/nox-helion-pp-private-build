@@ -34,6 +34,8 @@ def inspect(profile: str, gpu_index: int) -> dict:
         "gpu": None,
         "errors": [],
         "runtime_training_verified": False,
+        "model_license_verified": False,
+        "dataset_rights_verified": False,
     }
     for package in PACKAGES:
         try:
@@ -86,7 +88,7 @@ def inspect(profile: str, gpu_index: int) -> dict:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
-    report["status"] = "READY_FOR_AUTHORIZED_TRAINING" if not report["errors"] else "HOLD"
+    report["status"] = "HARDWARE_READY_ONLY" if not report["errors"] else "HOLD"
     return report
 
 
@@ -99,7 +101,7 @@ def main() -> int:
         parser.error("GPU_INDEX_INVALID")
     report = inspect(args.profile, args.gpu_index)
     print(json.dumps(report, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-    return 0 if report["status"] == "READY_FOR_AUTHORIZED_TRAINING" else 2
+    return 0 if report["status"] == "HARDWARE_READY_ONLY" else 2
 
 
 if __name__ == "__main__":
