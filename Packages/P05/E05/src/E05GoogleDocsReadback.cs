@@ -101,7 +101,9 @@ public sealed class GoogleDocsAppendReadback
         return true;
     }
     private static string? ReadRevision(JsonElement root) =>
-        root.TryGetProperty("revisionId", out var r) ? r.GetString() : null;
+        root.ValueKind == JsonValueKind.Object &&
+        root.TryGetProperty("revisionId", out var r) &&
+        r.ValueKind == JsonValueKind.String ? r.GetString() : null;
 
     private static async Task<JsonDocument> ParseBoundedAsync(HttpResponseMessage response,
         CancellationToken stop)
