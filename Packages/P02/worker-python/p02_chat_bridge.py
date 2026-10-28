@@ -101,6 +101,28 @@ class ChatBridge:
             evidence.append(item)
         return context, evidence
 
+    @staticmethod
+    def _history_snapshot(history: object) -> list[dict]:
+        """Freeze only authorized P02 dialogue rows; never forward host metadata.
+
+        The original P02Store returns a bounded list from the existing SQLite.
+        A host adapter must not elevate an untrusted history row to system
+        role, hand Ollama malformed Unicode, or mutate a frame after approval.
+        This is NOT a replacement for native SID/session/SQLite ACL checks.
+        """
+        if not isinstance(history, list) or len(history) > 1000:
+            raise P02Error("Invalid host chat history envelope")
+        snapshot = []
+        for row in history[-50:]:
+            if (not isinstance(row, dict) or
+                    row.get("role") not in ("user", "assistant", "tool") or
+                    not isinstance(row.get("content"), str) or
+                    len(row["content"]) > 1_000_000 or
+                    not ChatBridge._utf8_ok(row["content"])):
+                raise P02Error("Invalid host chat history row")
+            snapshot.append({"role": row["role"], "content": row["content"]})
+        return snapshot
+
     def send(self, tenant: str, principal: str, chat_id: str,
              model: str, prompt: str, stop: threading.Event | None = None
              ) -> Iterator[dict]:
@@ -113,13 +135,13 @@ class ChatBridge:
         history = self.store.history(tenant, principal, chat_id)
         if stop.is_set():
             raise Cancelled("STOP requested before chat")
+        messages = self._history_snapshot(history)
         # Fail closed: writing a prompt cannot silently target a nonexistent tag.
         self.select_model(model)
         context, evidence = "", []
         if self.rag_context:
             context, evidence = self._rag_evidence(
                 self.rag_context(tenant, principal, chat_id, prompt))
-        messages = history[-50:]
         if context:
             # Source text is untrusted; never elevate it to a system instruction.
             messages = [{"role": "user", "content":
