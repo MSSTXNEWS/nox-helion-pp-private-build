@@ -148,8 +148,9 @@ public sealed class MediaWeightTransfer
             if (File.Exists(dest))
             {
                 var info = new FileInfo(dest);
+                await using var existingStream = File.OpenRead(dest);
                 if (info.Length != f.Bytes || !string.Equals(
-                    Convert.ToHexString(await SHA256.HashDataAsync(File.OpenRead(dest), ct)),
+                    Convert.ToHexString(await SHA256.HashDataAsync(existingStream, ct)),
                     f.Sha256, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("EXISTING_WEIGHT_FILE_HASH_CONFLICT");
                 complete += f.Bytes;
