@@ -52,3 +52,20 @@ test("self-improvement: destroy/close stops new native actions",async()=>{
  assert.equal((await d.invoke("x")).reason,"PORT_CLOSED");
  assert.equal(calls,0);
 });
+
+test("T01/T02: type-coerced route IDs cannot cross the native port",async()=>{
+ let calls=0;
+ const d=createP01RouteDispatcher({isAvailable:()=>true,
+   invokeRoute:async()=>{calls++;return {ok:true,routeId:"123",receiptId:"r"};}});
+ assert.equal((await d.invoke(undefined)).reason,"INVALID_ROUTE");
+ assert.equal((await d.invoke(123)).reason,"INVALID_ROUTE");
+ assert.equal((await d.invoke({toString:()=>"ok"})).reason,"INVALID_ROUTE");
+ assert.equal(calls,0);
+});
+test("T10: forged number/object ACK receipts are never accepted",async()=>{
+ for(const receiptId of [123,{toString:()=>"native-1"}]){
+   const d=createP01RouteDispatcher({isAvailable:()=>true,
+     invokeRoute:async req=>({ok:true,routeId:req.routeId,receiptId})});
+   assert.equal((await d.invoke("ui.search")).reason,"ACK_MISSING");
+ }
+});
