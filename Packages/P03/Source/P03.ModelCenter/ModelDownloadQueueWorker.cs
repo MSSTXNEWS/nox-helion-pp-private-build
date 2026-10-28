@@ -101,7 +101,7 @@ public sealed class ModelDownloadQueueWorker(
             // STOP can arrive after token registration but before the atomic
             // Queued->Running claim. Persist the cancellation at that boundary.
             if (record?.State == ModelJobState.Queued)
-                return await store.CancelQueuedAsync(id, ct);
+                return await store.RequestCancelAsync(id, ct);
             return false;
         }
         return await store.CancelQueuedAsync(id, ct);
