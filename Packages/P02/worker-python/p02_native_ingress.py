@@ -19,6 +19,24 @@ P02_ROUTES = frozenset({
     "helion.chat", "core.chat", "persona.chat", "chat.model", "chat.history",
     "chat.rag", "chat.voice", "chat.stop", "calls.history",
 })
+# Optional P03 read-only admission. Sensitive model actions stay outside this
+# ingress until the native owner explicitly binds and authorizes them.
+P03_NATIVE_READ_ROUTES = frozenset({
+    "models.catalog", "models.installed", "models.digest",
+})
+
+
+def _reject_nonfinite(_value: str):
+    raise ValueError("Non-finite JSON constant forbidden")
+
+
+def _reject_duplicate_fields(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("Duplicated JSON key forbidden")
+        obj[key] = value
+    return obj
 
 
 class ProtocolHold(Exception):
@@ -35,7 +53,9 @@ class NativeIngress:
     """
 
     def __init__(self, existing_dispatcher: Any, native_session: Callable[[], Any],
-                 *, expected_run_id: str):
+                 *, expected_run_id: str, allow_modelcenter_reads: bool = False):
+        if type(allow_modelcenter_reads) is not bool:
+            raise ValueError("Explicit native ModelCenter read gate required")
         if not callable(native_session) or not (isinstance(expected_run_id, str)
                 and 0 < len(expected_run_id) <= 128
                 and all(32 <= ord(c) < 127 for c in expected_run_id)):
@@ -45,6 +65,7 @@ class NativeIngress:
         self._dispatch = existing_dispatcher
         self._session = native_session
         self.run_id = expected_run_id
+        self._modelcenter_reads = allow_modelcenter_reads
         self._seen = set()
         self._replay_lock = threading.Lock()
         self._serial = threading.Lock()
@@ -54,8 +75,11 @@ class NativeIngress:
         if not isinstance(encoded, bytes) or not 0 < len(encoded) <= MAX_INPUT:
             raise ProtocolHold("NATIVE_FRAME_TOO_LARGE_OR_EMPTY")
         try:
-            request = json.loads(encoded.decode("utf-8"))
-        except (ValueError, UnicodeError) as exc:
+            request = json.loads(
+                encoded.decode("utf-8"),
+                parse_constant=_reject_nonfinite,
+                object_pairs_hook=_reject_duplicate_fields)
+        except (ValueError, UnicodeError, RecursionError) as exc:
             raise ProtocolHold("NATIVE_FRAME_INVALID_JSON") from exc
         if not isinstance(request, dict) or set(request) != {
                 "protocol", "requestId", "route", "payload", "runId"}:
@@ -65,8 +89,27 @@ class NativeIngress:
         nonce, route, payload = request["requestId"], request["route"], request["payload"]
         if not isinstance(nonce, str) or not NONCE.fullmatch(nonce):
             raise ProtocolHold("NATIVE_NONCE_INVALID")
-        if not isinstance(route, str) or route not in P02_ROUTES or not isinstance(payload, dict):
+        if not isinstance(route, str) or not isinstance(payload, dict):
             raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
+        if route not in P02_ROUTES:
+            # ModelCenter read routes need BOTH a host-side opt-in and the
+            # existing PACK01 owner's concrete, receipt-bound P03 port.
+            # No page data can opt in; no downloads, imports or retries here.
+            if not self._modelcenter_reads or route not in P03_NATIVE_READ_ROUTES:
+                raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
+            routes = getattr(self._dispatch, "routes", None)
+            ports = getattr(self._dispatch, "ports", None)
+            route_info = routes.get(route) if isinstance(routes, dict) else None
+            port = ports.get(route) if isinstance(ports, dict) else None
+            if (not isinstance(route_info, dict)
+                    or type(route_info.get("owner")) is not int
+                    or route_info["owner"] != 3
+                    or getattr(port, "owner", None) != 3
+                    or not isinstance(getattr(port, "evidence_id", None), str)
+                    or not port.evidence_id.strip()
+                    or not callable(getattr(port, "call", None))
+                    or not callable(getattr(port, "available", None))):
+                raise ProtocolHold("NATIVE_MODEL_CENTER_OWNER_NOT_BOUND")
         # This intentionally bans any identity or permission claim in page data.
         if any(key in payload for key in (
                 "tenant", "principal", "windows_sid", "session_id", "scopes",

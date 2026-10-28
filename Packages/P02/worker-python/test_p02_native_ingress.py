@@ -80,6 +80,74 @@ class IngressTests(unittest.TestCase):
         self.assertEqual(len(outcome), 1)
         self.assertIsInstance(outcome[0], bytes)
 
+    def test_json_duplicate_keys_and_nonfinite_rejected_before_dispatch(self):
+        bad = (
+            b'{"protocol":"NOX-P02-NATIVE-v1","protocol":"NOX-P02-NATIVE-v1",'
+            b'"runId":"' + R.encode() + b'","requestId":"' + b"1" * 32 +
+            b'","route":"chat.model","payload":{}}',
+            b'{"protocol":"NOX-P02-NATIVE-v1","runId":"' + R.encode() +
+            b'","requestId":"' + b"2" * 32 +
+            b'","route":"chat.model","payload":{"x":{"ok":1,"ok":2}}}',
+            b'{"protocol":"NOX-P02-NATIVE-v1","runId":"' + R.encode() +
+            b'","requestId":"' + b"3" * 32 +
+            b'","route":"chat.model","payload":{"score":NaN}}',
+            b'{"protocol":"NOX-P02-NATIVE-v1","runId":"' + R.encode() +
+            b'","requestId":"' + b"4" * 32 +
+            b'","route":"chat.model","payload":{"score":Infinity}}',
+        )
+        for raw in bad:
+            with self.subTest(raw=raw[-40:]):
+                with self.assertRaisesRegex(ProtocolHold, "INVALID_JSON"):
+                    self.router.handle(raw)
+        self.assertFalse(self.provider.seen)
+
+    def test_p03_read_routes_require_explicit_native_opt_in_and_bound_owner(self):
+        # ModelCenter does not get a second downloader or unauthenticated route.
+        with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
+            self.router.handle(packet(12, "models.catalog"))
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+            ingress.handle(packet(13, "models.catalog"))
+        self.provider.routes = {"models.catalog": {"owner": 3}}
+        self.provider.ports = {"models.catalog": type("Port", (), {
+            "owner": 3, "evidence_id": "PINNED_OWNER3_SOURCE",
+            "call": staticmethod(lambda scope, args: {"native": True}),
+            "available": staticmethod(lambda: True)})()}
+        response = json.loads(ingress.handle(packet(14, "models.catalog")))
+        self.assertEqual(response["result"]["route"], "models.catalog")
+        with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
+            ingress.handle(packet(15, "models.pull"))
+        with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
+            ingress.handle(packet(16, "models.gguf.import"))
+        self.assertEqual([item[0] for item in self.provider.seen], ["models.catalog"])
+
+    def test_modelcenter_wrong_owner_or_empty_receipt_denied(self):
+        self.provider.routes = {"models.installed": {"owner": 2}}
+        self.provider.ports = {"models.installed": type("Port", (), {
+            "owner": 3, "evidence_id": ""})()}
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+            ingress.handle(packet(17, "models.installed"))
+        self.assertFalse(self.provider.seen)
+
+    def test_overdeep_nested_json_is_protocol_hold(self):
+        payload = b"[" * 1300 + b"0" + b"]" * 1300
+        with self.assertRaisesRegex(ProtocolHold, "INVALID_JSON"):
+            self.router.handle(payload)
+        self.assertFalse(self.provider.seen)
+
+    def test_modelcenter_noncallable_port_cannot_pass_native_admission(self):
+        self.provider.routes = {"models.catalog": {"owner": 3}}
+        self.provider.ports = {"models.catalog": type("Port", (), {
+            "owner": 3, "evidence_id": "FORGED_PORT_METADATA"})()}
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+            ingress.handle(packet(30, "models.catalog"))
+        self.assertFalse(self.provider.seen)
+
     def test_missing_session_fails_closed(self):
         ingress = NativeIngress(self.provider, lambda: None, expected_run_id=R)
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
