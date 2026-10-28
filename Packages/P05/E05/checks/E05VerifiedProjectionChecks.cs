@@ -47,6 +47,33 @@ public static class E05VerifiedProjectionChecks
         Check(good.Tiles.Count == 1 && good.Tiles[0].Status == "SOURCE_DATED" &&
             good.ProductProgress is null && good.Access == "READ_ONLY",
             "C14 licensed source receives dated read-only status");
+        var fabricatedScalar = E05ApprovedSpace.Project("E05-TEST", now,
+            new[] { fresh }, known, null, 100m);
+        Check(fabricatedScalar.ProductProgress is null,
+            "R17 raw caller percentage cannot impersonate a sealed product ledger");
+        var sealedSpace = E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            new[] { fresh }, known, null, verified, lanes, new PositiveFixtureVerifier());
+        Check(sealedSpace.ProductProgress == 100m,
+            "R17 five independent owner seals authorize the SPACE product bar");
+        var wrongRun = E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            new[] { fresh }, known, null, verified with { RunId = "OTHER-RUN" },
+            lanes, new PositiveFixtureVerifier());
+        Check(wrongRun.ProductProgress is null,
+            "R17 cross-RunID readiness rejected");
+        var staleRun = E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            new[] { fresh }, known, null, verified with { At = now.AddMinutes(-2) },
+            lanes, new PositiveFixtureVerifier());
+        Check(staleRun.ProductProgress is null,
+            "R17 stale readiness rejected");
+        var mismatchedOverall = E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            new[] { fresh }, known, null, verified with { Overall = 50m },
+            lanes, new PositiveFixtureVerifier());
+        Check(mismatchedOverall.ProductProgress is null,
+            "R17 changed weighted total rejected");
+        var missingOwner = E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            new[] { fresh }, known, null, verified, lanes, null);
+        Check(missingOwner.ProductProgress is null,
+            "R17 absent owner receipt verifier rejects product percentage");
         var unlicensed = E05ApprovedSpace.Project("E05-TEST", now,
             new[] { fresh }, null, null, null);
         Check(unlicensed.Tiles[0].Status == "DISABLED",
