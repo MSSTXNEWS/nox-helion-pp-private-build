@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_E06_ONE_COMMIT_CAS_RECEIPT_V1",
+  "run_id": "NOX-V16-W2-02-20261028T1747MSK-R12-AZURE-PAYLOAD",
+  "owner": "E06 W2-02",
+  "base": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "immutable_head_before": "d8e57d1f7496faa5ffb457696c8a1e127885422b",
+    "tree": "226b3a1b4621be9f3dae4b8f7adee209cfd2c7c1",
+    "legacy_main": "0b3a7d435be735148d64171deb9027093a89646e",
+    "raw_source_729_sha256_status": "NOT_VERIFIED"
+  },
+  "changes": [
+    {
+      "path": "azure-pipelines-nox-v16.yml",
+      "owner": "E06 W2-02",
+      "pre_sha256": "3dce4daed632bc3523f9754138b018fb5d532491cb20917ed348716f5674cbc9",
+      "post_sha256": "ebc5584c0aab4d35cb48bb5fcc94968a68672fd4013550f425a72201ef868c5d",
+      "pre_git_blob_sha1": "c571ce2dce7c97dfcc4c0e1bd2e49a5956dee53c",
+      "post_git_blob_sha1": "a4dbdf8f91d69ea26901dd991dc8f25937e6cff1",
+      "diff": "Extend canonical Azure diagnostic artifact step to copy full multi-file WPF payload and verify every published SHA, verify BUILT handoff SHA for WPF EXE and Setup, preserve previous ZIP/NSIS/runner behavior."
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W2_02_R12_AZURE_PRIVATE_PAYLOAD_RECEIPT_20261028.json",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "RECORDED_IN_E06_DRIVE_READBACK_DUE_TO_SELF_REFERENCE",
+      "pre_git_blob_sha1": "ABSENT"
+    }
+  ],
+  "task_ledger": [
+    "W2-R12-01 source preimage",
+    "W2-R12-02 frozen HEAD",
+    "W2-R12-03 complete binary dependencies",
+    "W2-R12-04 payload hidden files",
+    "W2-R12-05 path/reparse guard",
+    "W2-R12-06 postcopy per-file SHA",
+    "W2-R12-07 complete file count",
+    "W2-R12-08 E07 BUILT published SHA",
+    "W2-R12-09 one canonical YAML/no new PR",
+    "W2-R12-10 source receipt + readback"
+  ],
+  "tests": {
+    "verified_static_contracts": 10,
+    "verified_static_passed": 10,
+    "powershell_native": "NOT_RUN",
+    "azure_pipeline": "NOT_RUN_UNAUTHORIZED",
+    "windows_installer": "NOT_RUN",
+    "installed_e07": "0/10"
+  },
+  "status": {
+    "source": "SOURCE_CANDIDATE",
+    "integrated": "HOLD",
+    "windows_accepted": "NOT_RUN",
+    "release_accepted": false
+  },
+  "exactly_one_lesson": "PRIVATE_MULTIFILE_PAYLOAD_ATTESTATION_GATE: when PublishSingleFile=false, preserve the complete private WPF payload and require postcopy per-file SHA + matching E07 BUILT executable and Setup SHAs; a diagnostic artifact is never E07 acceptance.",
+  "timestamp_utc": "2026-10-28T14:54:52.177Z"
+}

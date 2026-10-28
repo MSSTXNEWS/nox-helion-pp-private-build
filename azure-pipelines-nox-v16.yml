@@ -101,8 +101,52 @@ jobs:
         @('work/e06/azure-onehost-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json','D02_VISUAL_PUBLISH_RECEIPT.json'),
         @('work/e06/azure-onehost-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe','NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
       )
-      foreach ($entry in $files) { if (Test-Path -LiteralPath $entry[0] -PathType Leaf) { Copy-Item -LiteralPath $entry[0] -Destination (Join-Path $dst $entry[1]) -ErrorAction Stop } }
-      Write-Host 'Diagnostic evidence only; original source ZIP parts and secrets are not uploaded.'
+      foreach ($entry in $files) {
+        if (!(Test-Path -LiteralPath $entry[0] -PathType Leaf)) { continue }
+        $source=Get-Item -LiteralPath $entry[0] -Force
+        if (($source.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'AZURE_DIAGNOSTIC_EVIDENCE_REPARSE_HOLD' }
+        $target=Join-Path $dst $entry[1]
+        $digest=(Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        Copy-Item -LiteralPath $source.FullName -Destination $target -ErrorAction Stop
+        if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digest) { throw 'AZURE_DIAGNOSTIC_EVIDENCE_COPY_SHA_HOLD' }
+      }
+      # PublishSingleFile=false: the WPF EXE requires its DLLs and runtime payload.
+      # Keep the diagnostic bundle in the PRIVATE pipeline artifact, never public release.
+      $payloadSource='work/e06/azure-onehost-diagnostic/payload'
+      if (Test-Path -LiteralPath $payloadSource -PathType Container) {
+        $nodes=@(Get-Item -LiteralPath $payloadSource -Force)+@(Get-ChildItem -LiteralPath $payloadSource -Recurse -Force)
+        foreach ($node in $nodes) {
+          if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'AZURE_PUBLISHED_REPARSE_HOLD' }
+        }
+        $payloadTarget=Join-Path $dst 'payload'
+        if (Test-Path -LiteralPath $payloadTarget) { throw 'AZURE_PUBLISHED_TARGET_EXISTS_HOLD' }
+        Copy-Item -LiteralPath $payloadSource -Destination $payloadTarget -Recurse -ErrorAction Stop
+        $originalFiles=@(Get-ChildItem -LiteralPath $payloadSource -File -Recurse -Force)
+        $publishedFiles=@(Get-ChildItem -LiteralPath $payloadTarget -File -Recurse -Force)
+        if ($originalFiles.Count -ne $publishedFiles.Count) { throw 'AZURE_PUBLISHED_FILE_COUNT_HOLD' }
+        $digestRows=@()
+        foreach ($file in $originalFiles) {
+          $relative=$file.FullName.Substring($payloadSource.Length+1)
+          $published=Join-Path $payloadTarget $relative
+          if (!(Test-Path -LiteralPath $published -PathType Leaf)) { throw 'AZURE_PUBLISHED_MISSING_FILE_HOLD' }
+          $digest=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ((Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digest) { throw 'AZURE_PUBLISHED_PAYLOAD_SHA_HOLD' }
+          $digestRows+=([ordered]@{path=$relative.Replace('\','/');sha256=$digest;bytes=$file.Length})
+        }
+        $seal='work/e06/azure-onehost-diagnostic/E07_BUILT_HANDOFF.json'
+        if (Test-Path -LiteralPath $seal -PathType Leaf) {
+          $handoff=Get-Content -LiteralPath $seal -Raw -Encoding UTF8 | ConvertFrom-Json
+          $binary=Join-Path $payloadTarget 'NOX.P01.Shell.exe'
+          $setup=Join-Path $dst 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+          if (!(Test-Path -LiteralPath $binary -PathType Leaf) -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'AZURE_E07_BUILT_BINARY_MISSING_HOLD' }
+          if ($handoff.phase -cne 'BUILT' -or $handoff.release_accepted -ne $false -or
+              ([string]$handoff.published_exe_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -or
+              ([string]$handoff.setup_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'AZURE_E07_BUILT_SHA_HOLD' }
+        }
+        $manifest=[ordered]@{schema='NOX_AZURE_PRIVATE_DIAGNOSTIC_SHA_V1';source_commit='$(Build.SourceVersion)';azure_build_id='$(Build.BuildId)';release_accepted=$false;files=$digestRows}
+        [IO.File]::WriteAllText((Join-Path $dst 'PUBLISHED_PRIVATE_PAYLOAD_SHA256.json'),($manifest | ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
+      }
+      Write-Host 'Private diagnostic bundle with complete WPF runtime SHA-checked, NOT E07 accepted.'
     displayName: 'Retain evidence and diagnostic installer without secrets'
     condition: succeededOrFailed()
   - task: PublishPipelineArtifact@1
