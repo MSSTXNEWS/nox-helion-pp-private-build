@@ -6,6 +6,7 @@ Unknown/unavailable actions always HOLD; never simulate completion.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from typing import Callable, Any
 import json
 import re
@@ -277,7 +278,7 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
         if type(route) is not str or type(method) is not str or not method.isidentifier():
             raise HostDenied("Trusted literal route-to-method mapping required")
         item = dispatcher.routes.get(route)
-        if (type(item) is not dict or type(item.get("owner")) is not int
+        if (not isinstance(item, Mapping) or type(item.get("owner")) is not int
                 or item["owner"] != owner):
             raise HostDenied("Native route owner mismatch")
         if route in before:
