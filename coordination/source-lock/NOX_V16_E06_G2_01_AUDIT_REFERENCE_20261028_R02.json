@@ -1,0 +1,263 @@
+{
+  "schema": "NOX_V16_E06_G2_01_READ_ONLY_ORIGINAL_LOCK_REFERENCE_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028T0705MSK-R02",
+  "created_utc": "2026-10-28T04:07:50Z",
+  "owner": "E06",
+  "approval": "DRAFT_HOLD_NOT_A_SECOND_SOURCELOCK_NOT_A_RELEASE",
+  "original_immutable_reference": {
+    "provenance": "R03 CI original baseline lock, not a merged tree",
+    "lock_sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "lock_bytes": 132648,
+    "source_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "source_archive_bytes": 60364346,
+    "original_tree_sha256": "1986e1e26ef5d73ed430797e5fbf263c06fc63742c1f3ac28a0f048b50376ae8",
+    "members": 729,
+    "uncompressed_bytes": 67102932,
+    "source_origin_git_commit_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "source_origin_git_tree_sha1": "bedea674b77d14d94028ba86251d8f4d690353c1",
+    "donor_r03_commit_git_sha1": "0288b55e08c25cb43f25c833a79fb06f81043a94",
+    "artifact_id": 12778072885,
+    "source_ci_run_id": 40601140220,
+    "status": "ORIGINAL_SOURCE_MANIFEST_VERIFIED_NO_INTEGRATED_TREE"
+  },
+  "frozen_shared_git_baseline": {
+    "commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "checked_current_main": "MATCH"
+  },
+  "pr66_common_inventory": {
+    "number": 66,
+    "head_git_sha1": "bfc318d6e002563995fd05a420c2022b39ef90d9",
+    "file": "coordination/source-lock/NOX_V16_CROSS_SOURCE_INVENTORY_20261028.json",
+    "git_blob_sha1": "cbdc9d33e5bfdf8273f018f0b07f4b2f6c947a25",
+    "status": "INVENTORY_ONLY_HELD"
+  },
+  "parts": [
+    {
+      "path": "source_00.part",
+      "size_bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "raw_part_sha256": null,
+      "raw_sha256_status": "N/D_EMPTY_BINARY_CONTENT_CONNECTOR"
+    },
+    {
+      "path": "source_01.part",
+      "size_bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "raw_part_sha256": null,
+      "raw_sha256_status": "N/D_EMPTY_BINARY_CONTENT_CONNECTOR"
+    },
+    {
+      "path": "source_02.part",
+      "size_bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "raw_part_sha256": null,
+      "raw_sha256_status": "N/D_EMPTY_BINARY_CONTENT_CONNECTOR"
+    }
+  ],
+  "preserved_original_assets": {
+    "D02": "3 hashed manifest paths",
+    "Persona": "2 hashed manifest paths",
+    "CORE_CHAT": "2 paths",
+    "VOICE": "2 paths",
+    "ROUTES": "2 paths",
+    "SECURITY": "2 paths",
+    "WINDOWS_BUILD": "3 paths",
+    "MODEL_FEATURE_CONTRACT": "one SHA256 path; 7 small .safetensors manifest entries 18420-18428 bytes each",
+    "installed_full_model_weights": "N/D",
+    "new_candidate_approved_asset_versions": "HOLD_RECEIPTS"
+  },
+  "owner_collision_map": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "owners": [
+        "E02"
+      ],
+      "candidate_prs": [
+        58,
+        64,
+        76
+      ],
+      "resolution": "HOLD exact original preimage 3-way reconciliation"
+    },
+    {
+      "path": "P01 native D02 mount",
+      "owners": [
+        "E01",
+        "E06"
+      ],
+      "candidate_prs": [
+        63,
+        67
+      ],
+      "resolution": "HOLD one scene/renderer ownership"
+    },
+    {
+      "path": "Packages/P04/GPU",
+      "owners": [
+        "E04"
+      ],
+      "candidate_prs": [
+        65,
+        74
+      ],
+      "resolution": "HOLD stacked original bytes and full GPU"
+    },
+    {
+      "path": "canonical native host",
+      "owners": [
+        "E06"
+      ],
+      "candidate_prs": [
+        69,
+        70,
+        71
+      ],
+      "resolution": "HOLD select one host contract, no parallel rewrites"
+    }
+  ],
+  "task_ledger": [
+    {
+      "id": "E06.G2.01",
+      "outcome": "PASS",
+      "evidence": "Read V16, master, E06 report, cross-owner lessons before audit"
+    },
+    {
+      "id": "E06.G2.02",
+      "outcome": "PASS",
+      "evidence": "Current main and Git tree typed SHA1 matched frozen baseline"
+    },
+    {
+      "id": "E06.G2.03",
+      "outcome": "PASS",
+      "evidence": "PR66 head bfc... and inventory blob SHA1 checked"
+    },
+    {
+      "id": "E06.G2.04",
+      "outcome": "PARTIAL",
+      "evidence": "3 part Git blob SHA1 and exact sizes; RAW SHA256 N/D"
+    },
+    {
+      "id": "E06.G2.05",
+      "outcome": "PASS_MANIFEST",
+      "evidence": "Reused single byte-immutable R03; 729 rows domain-separated SHA256 verified"
+    },
+    {
+      "id": "E06.G2.06",
+      "outcome": "PARTIAL",
+      "evidence": "Original D02/Persona/7 tiny safetensors in R03 manifest; installed LLM/GPU weights N/D"
+    },
+    {
+      "id": "E06.G2.07",
+      "outcome": "HOLD_CONFLICTS",
+      "evidence": "P02 duplicate runtime PR58/64/76 and P01/P04 ownership held"
+    },
+    {
+      "id": "E06.G2.08",
+      "outcome": "PASS_LOCAL_ONLY",
+      "evidence": "Fail-closed guard 12/12 Python unittest PASS; Windows NOT_RUN"
+    },
+    {
+      "id": "E06.G2.09",
+      "outcome": "PASS_COORDINATION_CANDIDATE",
+      "evidence": "Only additive coordination audit; frozen main/UI/host untouched"
+    },
+    {
+      "id": "E06.G2.10",
+      "outcome": "PENDING_DRIVE_READBACK",
+      "evidence": "One E06 report, one lesson, append-only master and readback"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "E01",
+      "task_ids": "V16.26.3;E01-G1-01..10",
+      "source": "PR30,63,67,73,77 SOURCE candidates",
+      "component_verified": "SOURCE-only checks; current native N/D",
+      "integrated": "HOLD P01 dual scene mounts",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E02",
+      "task_ids": "V16.26.4;E02-G1-C14",
+      "source": "PR58/64/76 overlap same original p02_runtime.py",
+      "component_verified": "31/31 local helper PASS; original store 8 NOT_RUN",
+      "integrated": "HOLD shared SQLite/host",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E03",
+      "task_ids": "V16.26.5;E03-G1-03.01..10",
+      "source": "PR17/78 admission 25 mutable tags 17 leads",
+      "component_verified": "32 local policy tests PASS; installed downloads N/D",
+      "integrated": "HOLD original downloader + rights",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E04",
+      "task_ids": "V16.26.6;E04-G1-04",
+      "source": "PR62/65/74 stacked components",
+      "component_verified": "isolated dataset QA PASS; native GPU training N/D",
+      "integrated": "HOLD old preimages and original GPU",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E05",
+      "task_ids": "V16.26.7;E05-G1-05",
+      "source": "PR59/61/75 events.v3 candidate",
+      "component_verified": "18/18 Node oracle PASS only",
+      "integrated": "HOLD native one host/sensors",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E06",
+      "task_ids": "V16.26.8;E06-G2-01..10",
+      "source": "R03 original immutable lock plus PR66 inventory; G2-01 reference-gate candidate",
+      "component_verified": "729 metadata entries rechecked, 12 local negative/positive gate tests PASS",
+      "integrated": "HOLD current owner receipts + raw parts",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    },
+    {
+      "id": "E07",
+      "task_ids": "V16.26.8;QA01..QA10",
+      "source": "historical diagnostics only",
+      "component_verified": "no one current EXE / same BuildID",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "completion": "N/D"
+    }
+  ],
+  "weights": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10,
+    "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+    "verified_total": "N/D"
+  },
+  "candidate_guard": {
+    "local_path": "coordination/source-lock/verify_immutable_original.py",
+    "source_sha256": "5eb39bb71b817bce398a586bfbe97ba5d91ae2543e982d520d7abfc013fafeb8",
+    "tests_sha256": "873ff2eb514f305356e4adeb25ff81b3523c1705160d20eec2ed8ce9feb050d2",
+    "local_test_count": 12,
+    "local_tests_passed": 12,
+    "windows_tests": "NOT_RUN",
+    "raw_part_sha256": "N/D"
+  },
+  "mutations": {
+    "git_main": "0 files changed",
+    "git_ui_host": "0 files changed",
+    "git_archives": "0 files changed",
+    "branch_owner_only": "coordination/e06-g2-01-reference-gate-20261028-r02",
+    "original_lock": "UNCHANGED",
+    "cross_owner_merges": 0
+  },
+  "release": "HOLD_NO_FINAL_EXE"
+}
