@@ -16,14 +16,14 @@ jobs:
       - name: Pinned original owner2 Python runtime
         uses: actions/checkout@v4
         with:
-          ref: e5f5a5af7e58bd7c7d9f37c59034e7244ca1332b
+          ref: 71a32bf4e2d5ab7f1e17fc91de3502170a8885f7
           path: _pinned_p02
           sparse-checkout: |
             Packages/P02/worker-python/
       - name: Pinned existing PACK01 native host (never a second server)
         uses: actions/checkout@v4
         with:
-          ref: 33774d985dd7f05e413f1830f74392f49645fe29
+          ref: be1fe05d88443e41b0d196617840508d9dd39b7d
           path: _pinned_pack01
           sparse-checkout: |
             proposals/NOX-PACK01-50/
@@ -73,8 +73,8 @@ jobs:
             runId = 'NOX-V16-E03-ONEHOST-PY-20261028'
             owner = 3
             gitCheckout = (git rev-parse HEAD).Trim()
-            p02SourceCommit = 'e5f5a5af7e58bd7c7d9f37c59034e7244ca1332b'
-            pack01HostCommit = '33774d985dd7f05e413f1830f74392f49645fe29'
+            p02SourceCommit = '71a32bf4e2d5ab7f1e17fc91de3502170a8885f7'
+            pack01HostCommit = 'be1fe05d88443e41b0d196617840508d9dd39b7d'
             modelCatalogGitBlob = $observed
             componentSourceOnly = $true
             originalHostMerged = $false
