@@ -270,7 +270,12 @@ export function projectSpaceView(host, nowMs=Date.now()) {
     core:projectCorePersona(sameRunCore,nowMs),
     feeds:projectFeeds(sameRunFeeds,nowMs),
     events:projectCanonicalEvents(host.events,host.run_id,nowMs),
+    // An administrative Drive connector receipt is not app-side OAuth.
+    // This remains APP_REPORTED, NEVER externally VERIFIED. E06 must bind
+    // signed native app evidence and the actual Drive response for acceptance.
     driveReadback:host.drive?.run_id===host.run_id &&
-      host.drive?.status==='READBACK_PASS' && sha(host.drive?.receipt_sha256)
-        ?'APP_REPORTED_READBACK':'HOLD'}); // E06 must independently attest actual Drive response.
+      validRunId(host.build_id) && host.drive?.build_id===host.build_id &&
+      host.drive?.origin==='WEBVIEW2_APP' && host.drive?.status==='READBACK_PASS' &&
+      ago(host.drive?.readback_at_utc,nowMs,300000) && sha(host.drive?.receipt_sha256)
+        ?'APP_REPORTED_READBACK':'HOLD'}); // No OAuth/network performed here.
 }
