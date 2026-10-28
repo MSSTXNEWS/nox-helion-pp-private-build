@@ -6,6 +6,7 @@ proposal: it cannot activate until the original whole-app SourceLock is sealed.
 """
 from __future__ import annotations
 
+import copy
 import json
 import math
 import re
@@ -406,7 +407,11 @@ class G2OneHostBinder:
             raise G2Hold("Original P02/P03 owner adapters are missing")
         with self.lock:  # Canonical host registry lock, never an E06 copy.
             before = dict(self.host.ports)
-            frozen_routes = dict(self.host.routes)
+            try:
+                # dict() aliases nested owner permissions: freeze the actual ACL.
+                frozen_routes = copy.deepcopy(self.host.routes)
+            except Exception as exc:
+                raise G2Hold("Native route descriptors cannot be frozen") from exc
             e05_routes = {route for route in P05_ROUTES
                           if self.e05.available(route)}
             voice_routes = {}
@@ -428,7 +433,10 @@ class G2OneHostBinder:
             intended = set(e05_routes) | set(voice_routes) | mobile_routes
             for route in intended:
                 owner = 5 if route in e05_routes else 6 if route in mobile_routes else 2
-                if (route in before or self.host.routes.get(route, {}).get("owner") != owner):
+                descriptor = frozen_routes.get(route)
+                if (route in before or type(descriptor) is not dict
+                        or type(descriptor.get("owner")) is not int
+                        or descriptor["owner"] != owner):
                     raise G2Hold("Existing host route collision or wrong owner: " + route)
             try:
                 # Verify inside the existing host lock, not only before it.
@@ -489,5 +497,10 @@ class G2OneHostBinder:
                 # original source/assets and existing host object stay intact.
                 self.host.ports.clear()
                 self.host.ports.update(before)
+                # Restore owner-mutated nested route ACLs, but never rewrite
+                # native routes when their pre-bind value is unchanged.
+                if self.host.routes != frozen_routes:
+                    self.host.routes.clear()
+                    self.host.routes.update(copy.deepcopy(frozen_routes))
                 raise G2Hold("All-or-HOLD existing-host bindings rolled back") from exc
             return frozenset(set(p2) | set(p3) | intended)
