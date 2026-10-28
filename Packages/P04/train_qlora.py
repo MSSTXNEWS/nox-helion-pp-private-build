@@ -351,8 +351,13 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
         if isinstance(value, str) and value.strip():
             payload = value.strip()
         else:
-            payload = json.dumps(row["messages"], ensure_ascii=False, sort_keys=True,
-                                 separators=(",", ":"))
+            # The model-visible dialogue is role/content; donor provenance
+            # and annotation keys must not conceal the same supervised sample
+            # across train/holdout or inflate training with duplicate examples.
+            payload = json.dumps(
+                [{"role": message["role"], "content": message["content"]}
+                 for message in row["messages"]],
+                ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(payload.encode("utf-8")).digest()
 
     def records(path: Path, label: str):
