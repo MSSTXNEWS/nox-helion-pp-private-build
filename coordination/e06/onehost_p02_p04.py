@@ -209,15 +209,23 @@ class P02P04OneHost:
         P02 chat.start/delta/sources are NOT events.v3 event_type values:
         never pretend these frames were published on the P05 bus.
         """
-        self._admit(scope, "chat.send")
+        # Validate cancellation BEFORE any native authorization/SQLite ACL
+        # read. A pre-signalled STOP must not touch owner state at all.
         if stop is not None and not isinstance(stop, threading.Event):
             raise TypeError("NATIVE_STOP_EVENT_REQUIRED")
+        native_stop = stop if stop is not None else threading.Event()
+        if native_stop.is_set():
+            return (frame for frame in ())  # closeable no-op, no second owner stream
+        self._admit(scope, "chat.send")
+        # history() and native callbacks can block; they may observe STOP
+        # during admission. Do not invoke even an eager owner ChatBridge then.
+        if native_stop.is_set():
+            return (frame for frame in ())
         # The owner ChatBridge is a lazy generator: its SQLite write and
         # streaming work happen at next(), NOT when send() is called. Recheck
         # the native session immediately before every owner advancement so a
         # revoked SID/route/context cannot keep receiving deltas or completion.
         # This adds no LLM, host, database, RAG index or GPU worker.
-        native_stop = stop if stop is not None else threading.Event()
         owner_frames = self.chat.send(scope.tenant, scope.principal,
                                       scope.conversation_id, model, prompt,
                                       native_stop)

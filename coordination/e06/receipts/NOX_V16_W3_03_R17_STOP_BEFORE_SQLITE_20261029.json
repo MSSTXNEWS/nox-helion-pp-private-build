@@ -1,0 +1,73 @@
+{
+  "schema": "NOX-V16-E06-SOURCE-ONLY-R20-v1",
+  "run_id": "NOX-V16-W3-03-20261029T0050MSK-R17",
+  "task_id": "E06-W3-03-STOP-ADMISSION-01",
+  "owner": "E06/W3.03 P02-P04 onehost bridge",
+  "mode": "SOURCE_ONLY_NO_EXE_NO_CI_NO_MERGE",
+  "pr162_input_head": "5f7e6e82f74bdcab6d8d711c4b4197eab10c935f",
+  "pr162_input_tree": "6fbe241a9a3c0dc8b27ddc04891d55c1c0e2a02e",
+  "source_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_lock_729": "HOLD_NOT_PHYSICALLY_VERIFIED",
+  "owner_branch": "owner/e06/w3-03-r17-stop-before-sqlite-20261029",
+  "previous_lesson_id": "E06_NFC_CASEFOLD_OWNER_WIRE_PROPERTIES",
+  "previous_lesson_applied": "YES_R16_OWNER_WIRE_COLLISION_TESTS_PRESERVED_AND_GREEN",
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "owner": "E06/W3.03",
+      "pre_sha256": "b56fdf5fac1cc949fe6aee02b40a6028ad520b5a1d063decc00a1c17eaeef0ee",
+      "post_sha256": "a1597da8be6e5bab47e63f5653ba28051865d1b55ae18c5fa200f84abcdd1ee1",
+      "pre_git_blob_sha1": "acf09d1daaae4ee98a95f55a092b9c92abbc8673",
+      "post_git_blob_sha1": "0f3919157944ffc8bdf3e403011c6454da0f197c",
+      "diff": "validate STOP token and pre-signalled cancellation before native SQLite admission; short circuit STOP observed during admission before calling P02 ChatBridge.send"
+    },
+    {
+      "path": "tests/e06/test_onehost_pre_admission_stop_r17.py",
+      "owner": "E06/W3.03",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "8e25839e942a7ac68e3358edf4f2d2d874957662d92d2477cab3d61db0f4b65d",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "3589af6e39e64a7d27ecc2ca7168a8b8291f7a4d",
+      "diff": "three deterministic negative regressions on the exact previous E06 owner blob"
+    }
+  ],
+  "focused_test": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/e06 -p test_onehost_pre_admission_stop_r17.py -v",
+    "old_exact_preimage": "3 FAIL / 9 runs",
+    "new_exact_postimage": "9/9 PASS",
+    "selected_owner_suite": "116/116 PASS",
+    "real_hardware": "NOT_RUN",
+    "gpu_eval": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "permission_map": {
+    "trusted_scope": "NativeScope (existing P02)",
+    "windows_sid": "existing native_sid",
+    "acl": "existing native_authorize",
+    "conversation": "existing native_context_chat",
+    "storage": "original P02Store SQLite",
+    "generation": "original ChatBridge/Ollama",
+    "rag": "original P04 LocalRag",
+    "events": "existing P05 owner, unchanged",
+    "stop": "native threading.Event checked pre-admission, during admission and per-frame"
+  },
+  "product_status": "SOURCE_COMPONENT_DONE_ONLY",
+  "remaining_p0_p1": [
+    "native atomic permission/SQLite lease rollback is not proven",
+    "real Ollama RAG citations / GPU checkpoint eval not executed",
+    "729 physical ZIP source hashes not proven",
+    "same-SHA independent source acceptance absent"
+  ],
+  "one_lesson": {
+    "id": "STOP_TOKEN_PRECHECK_BEFORE_SQLITE_ADMISSION",
+    "error": "STOP or malformed stop token reached authorization+SQLite history before validation",
+    "cause": "stream_chat invoked _admit before checking native STOP",
+    "change": "validate native stop object and cancel before _admit; recheck after blocking _admit before any owner send",
+    "regression": "3 exact-preimage RED to 9 focused GREEN; 116 existing selected owner tests GREEN",
+    "prevent_repeat": "Every new owner operation must check cancellation token before first read and after blocking authorization."
+  },
+  "weighted_progress": "N/D",
+  "e07_windows": "0/10 NOT_RUN",
+  "release": "HOLD",
+  "no_loss": true
+}
