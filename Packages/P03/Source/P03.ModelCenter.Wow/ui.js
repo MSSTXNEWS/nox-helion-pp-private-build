@@ -167,13 +167,24 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const evt=data.event;
   if(!evt||typeof evt!=='object'||typeof evt.jobId!=='string'||typeof evt.phase!=='string')return;
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(evt.jobId)||
-    !['started','progress','completed','failed','cancelled'].includes(evt.phase))return;
-  state.events.unshift({...evt,status:typeof evt.status==='string'?evt.status.slice(0,512):''});
-  state.events.length=Math.min(state.events.length,40);
-  const job=currentJob();if(job&&String(evt.jobId||evt.JobId)===String(job.jobId)){if(typeof evt.status==='string')job.status=evt.status;
-    if(numeric(evt.completedBytes)!==null)job.completedBytes=evt.completedBytes;
-    if(numeric(evt.totalBytes)!==null)job.totalBytes=evt.totalBytes;
-    if(['completed','failed','cancelled'].includes(evt.phase))job.state=evt.phase==='completed'?'Completed':evt.phase==='failed'?'Failed':'Cancelled';}
+    !['started','progress','completed','failed','cancelled'].includes(evt.phase)||
+    (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
+    (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
+  const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
+  state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
+  const job=currentJob();
+  if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
+     !['Completed','Failed','Cancelled'].includes(job.state)){
+    if(typeof evt.status==='string')job.status=evt.status;
+    const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
+    if(done!==null&&total!==null&&total>0&&done<=total&&
+       (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
+       (numeric(job.totalBytes)===null||total>=job.totalBytes)){
+      job.completedBytes=done;job.totalBytes=total;
+    }
+    const terminal={completed:'Completed',failed:'Failed',cancelled:'Cancelled'}[evt.phase];
+    if(terminal)job.state=terminal;
+  }
   render();
  }else if(data.type==='p03.command.ack.v1'){
   if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action)||typeof data.commandId!=='string'||typeof data.accepted!=='boolean')return;

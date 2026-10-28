@@ -18,6 +18,8 @@ jobs:
         run: python3 coordination/source-lock/verify_original_archive.py --parts-dir . --expected-files 729 --output "${RUNNER_TEMP}/nox-original-729.json"
       - name: Run existing exact C40 admission mock tests
         run: python3 -m unittest discover -s Packages/P03/Admission -p 'test_p03*.py' -v
+      - name: E03 real UI ACK, progress and terminal lifecycle regression
+        run: node coordination/express/tests/p03_ui_runtime.cjs
       - name: Check original Quick20 UI contract
         run: |
           node --check Packages/P03/Source/P03.ModelCenter.Wow/ui.js
