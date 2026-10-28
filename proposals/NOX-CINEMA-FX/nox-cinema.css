@@ -108,7 +108,7 @@
     inset 0 0 18px rgba(221,124,55,.14);
   opacity:.66;animation:nox-cinema-corona 6.5s ease-in-out infinite alternate;
 }
-.nox-cinema-orb[data-nox-fx-state="running"] {--nox-orb-heat:.8;}
+.nox-cinema-orb[data-nox-fx-state="training"] {--nox-orb-heat:.8;}
 .nox-cinema-orb[data-nox-fx-state="offline"] .nox-cinema-orb__lava { opacity:.12; }
 .nox-cinema-orb[data-nox-fx-state="error"] .nox-cinema-orb__corona {border-color:#e99b91;box-shadow:0 0 20px #c55c4999;}
 .nox-cinema-orb__ejecta {
