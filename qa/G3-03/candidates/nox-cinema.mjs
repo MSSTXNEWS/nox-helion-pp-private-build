@@ -73,7 +73,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   validateScene(orbs);
   if(!root||root.nodeType!==1)throw new Error("NOX_FX_TRUSTED_ROOT_REQUIRED");
   if(mounted.has(root))throw new Error("NOX_FX_ALREADY_MOUNTED");
-  if(!profileSet.has(profile)||typeof random!=="function")
+  if(!profileSet.has(profile)||typeof random!=="function"||
+     (clock!==null&&typeof clock!=="function"))
     throw new Error("NOX_FX_INVALID_OPTIONS");
   if(!Array.isArray(controls)||!Array.isArray(panels))
     throw new Error("NOX_FX_DECORATION_LIST");
@@ -95,6 +96,12 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     throw new Error("NOX_FX_INVALID_EVENT_SOURCE");
   if(orbs.some(x=>!root.contains(x.element)||x.element.querySelector(".nox-cinema-orb__layers")))
     throw new Error("NOX_FX_ORB_OUTSIDE_HOST_OR_ALREADY_DECORATED");
+  // FX RNG is decorative, never a source of native telemetry.
+  // Invalid or throwing custom samplers must not poison SVG geometry.
+  const safeRandom=()=>{
+    try{const v=random();return typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<1?v:.5;}
+    catch{return .5;}
+  };
   const time=clock||(()=>win.performance.now());
   const motion=typeof win.matchMedia==="function"?
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
@@ -144,7 +151,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     element.appendChild(layers);
     decorated.push({element,cls:"nox-cinema-orb",addedClass});
     const shape={id:entry.id,element,layers,svg,index,
-      nextBurst:time()+4500+random()*18000};
+      nextBurst:time()+4500+safeRandom()*18000};
     return shape;
   });
   function decorate(items,cls){
@@ -174,19 +181,19 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(isActive())wake();else sleep();
   }
   function nextDelay(policy){return policy.minimumBurstMs+
-    random()*(policy.maximumBurstMs-policy.minimumBurstMs);}
+    safeRandom()*(policy.maximumBurstMs-policy.minimumBurstMs);}
   function makeParticle(orb,now){
-    const angle=2*Math.PI*random();
-    const size=clamp(.65+random()*1.85,.6,2.5);
+    const angle=2*Math.PI*safeRandom();
+    const size=clamp(.65+safeRandom()*1.85,.6,2.5);
     const node=svgElement(doc,"path",{d:"M "+(-size)+" 0 L 0 "+(-size*.42)+
       " L "+size+" 0 L 0 "+(size*.42)+" Z",
-      fill:random()<.23?"#323032":"#c57244",
+      fill:safeRandom()<.23?"#323032":"#c57244",
       opacity:"0"});
     orb.svg.appendChild(node);
-    const p={node,started:now,duration:2200+random()*1900,
-      surfaceRadius:86+random()*6,reach:(orb.index===0?16:8)+random()*(orb.index===0?29:20),
-      angle,swirl:(random()-.5)*17,brightness:.48+random()*.42,
-      rotation:random()*360};
+    const p={node,started:now,duration:2200+safeRandom()*1900,
+      surfaceRadius:86+safeRandom()*6,reach:(orb.index===0?16:8)+safeRandom()*(orb.index===0?29:20),
+      angle,swirl:(safeRandom()-.5)*17,brightness:.48+safeRandom()*.42,
+      rotation:safeRandom()*360};
     particles.push(p);particleCount++;emissions++;
   }
   function loop(now){
@@ -208,7 +215,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       if(now<orb.nextBurst)continue;
       orb.nextBurst=now+nextDelay(policy)*(orb.index===0?1:2.1);
       if(particleCount>=policy.maxParticles)continue;
-      if(orb.index!==0 && random()>.38)continue;
+      if(orb.index!==0 && safeRandom()>.38)continue;
       const count=orb.index===0?2:1;
       for(let i=0;i<count&&particleCount<policy.maxParticles;i++)makeParticle(orb,now);
     }

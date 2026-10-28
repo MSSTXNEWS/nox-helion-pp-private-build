@@ -52,7 +52,7 @@
   background-size:260% 100%;
   animation:nox-cinema-sweep 13s linear infinite;
 }
-.nox-cinema-control[data-nox-float="true"] { animation:none; }
+/* Float only the FX pseudo-layer; never override native control animation. */
 .nox-cinema-control[data-nox-float="true"]::after {
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
   background:radial-gradient(ellipse at 50% 80%,rgba(160,234,239,.18),transparent 72%);
@@ -66,7 +66,7 @@
 }
 .nox-cinema-control:active:not(:disabled) { filter:brightness(1.3); }
 .nox-cinema-control:focus-visible { outline:2px solid #c4ffff;outline-offset:3px; }
-.nox-cinema-control:disabled { opacity:.45;cursor:not-allowed;animation:none; }
+.nox-cinema-control:disabled { opacity:.45;cursor:not-allowed; }
 .nox-cinema-control:disabled::after,
 .nox-cinema-control[aria-disabled="true"]::after { animation:none!important; }
 .nox-cinema-scope:is([data-nox-fx-state="thinking"],[data-nox-fx-state="streaming"],[data-nox-fx-state="loading"],[data-nox-fx-state="training"]) .nox-cinema-panel {
@@ -260,7 +260,6 @@
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__crust,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__corona,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__rim,
-.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control[data-nox-float="true"]::after,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-panel::before {
