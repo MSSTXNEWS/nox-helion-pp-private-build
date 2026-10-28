@@ -141,3 +141,106 @@ class ExistingDispatcherBindingTests(RouteTests):
         with self.assertRaises(RouteHold):
             register_with_existing_pack01(Dispatcher(),lambda *args:None,
                                           lambda _:self.scope,self.ports,receipt='E02-PIN')
+    def test_r22_all_three_ports_bind_to_immutable_host50_without_mutating_registry(self):
+        from dataclasses import dataclass
+        from types import MappingProxyType
+        from p02_owner_route_ports import register_with_existing_pack01
+        @dataclass(frozen=True)
+        class BoundPort:
+            call: object
+            available: object
+            evidence_id: str
+            owner: int
+        class Dispatcher:
+            def __init__(self):
+                self.ports={}
+                self.routes=MappingProxyType({
+                    route: MappingProxyType({'owner':2})
+                    for route in ('chat.rag','chat.voice','calls.history')})
+            def bind(self,route,port): self.ports[route]=port
+        host=Dispatcher()
+        registered=register_with_existing_pack01(
+            host,BoundPort,lambda _:self.scope,self.ports,receipt='f'*64)
+        self.assertEqual(len(registered),3)
+        self.assertEqual(set(host.ports),set(host.routes))
+        self.assertEqual(host.ports['chat.rag'].call(None,{'query':'facts'})['context'],'data')
+        self.assertEqual(host.ports['calls.history'].call(None,{})['calls'][0]['call_id'],'id1')
+        self.assertEqual(host.ports['chat.voice'].owner,2)
+        with self.assertRaises(TypeError):
+            host.routes['chat.voice']['owner']=1
+
+    def test_r22_wrong_immutable_owner_fails_without_partial_bind(self):
+        from types import MappingProxyType
+        from p02_owner_route_ports import register_with_existing_pack01,RouteHold
+        class Dispatcher:
+            def __init__(self):
+                self.ports={}
+                self.routes=MappingProxyType({
+                    r:MappingProxyType({'owner':True if r=='chat.voice' else 2})
+                    for r in ('chat.rag','chat.voice','calls.history')})
+            def bind(self,r,p): self.ports[r]=p
+        host=Dispatcher()
+        with self.assertRaisesRegex(RouteHold,'CANONICAL_PACK01_OWNER_ROUTE_REQUIRED'):
+            register_with_existing_pack01(
+                host,lambda *v:object(),lambda _:self.scope,self.ports,receipt='f'*64)
+        self.assertEqual(host.ports,{})
+
+    def test_r22_partial_registration_rollback_preserves_unrelated_port(self):
+        from types import MappingProxyType
+        from dataclasses import dataclass
+        from p02_owner_route_ports import register_with_existing_pack01
+        @dataclass(frozen=True)
+        class BoundPort:
+            call: object
+            available: object
+            evidence_id: str
+            owner: int
+        class Dispatcher:
+            def __init__(self):
+                self.routes=MappingProxyType({
+                    r:MappingProxyType({'owner':2})
+                    for r in ('chat.rag','chat.voice','calls.history')})
+                self.unrelated=object()
+                self.ports={'models.catalog':self.unrelated}
+            def bind(self,r,p):
+                if r=='calls.history': raise RuntimeError('injected late failure')
+                self.ports[r]=p
+        host=Dispatcher()
+        with self.assertRaisesRegex(RuntimeError,'injected late failure'):
+            register_with_existing_pack01(
+                host,BoundPort,lambda _:self.scope,self.ports,receipt='f'*64)
+        self.assertEqual(host.ports,{'models.catalog':host.unrelated})
+
+    def test_r22_missing_route_on_immutable_host_fails_closed(self):
+        from types import MappingProxyType
+        from p02_owner_route_ports import register_with_existing_pack01, RouteHold
+        class Dispatcher:
+            def __init__(self):
+                self.routes=MappingProxyType({
+                    'chat.rag':MappingProxyType({'owner':2}),
+                    'chat.voice':MappingProxyType({'owner':2})})
+                self.ports={}
+            def bind(self,r,p):self.ports[r]=p
+        host=Dispatcher()
+        with self.assertRaisesRegex(RouteHold,'CANONICAL_PACK01_OWNER_ROUTE_REQUIRED'):
+            register_with_existing_pack01(
+                host,lambda *v:object(),lambda _:self.scope,self.ports,receipt='f'*64)
+        self.assertFalse(host.ports)
+
+    def test_r22_duplicate_existing_native_binding_is_never_replaced(self):
+        from types import MappingProxyType
+        from p02_owner_route_ports import register_with_existing_pack01,RouteHold
+        existing=object()
+        class Dispatcher:
+            def __init__(self):
+                self.routes=MappingProxyType({
+                    r:MappingProxyType({'owner':2})
+                    for r in ('chat.rag','chat.voice','calls.history')})
+                self.ports={'chat.voice':existing}
+            def bind(self,r,p):self.ports[r]=p
+        host=Dispatcher()
+        with self.assertRaisesRegex(RouteHold,'EXISTING_ROUTE_ALREADY_BOUND_NO_OVERRIDE'):
+            register_with_existing_pack01(
+                host,lambda *v:object(),lambda _:self.scope,self.ports,receipt='f'*64)
+        self.assertIs(host.ports['chat.voice'],existing)
+        self.assertEqual(len(host.ports),1)
