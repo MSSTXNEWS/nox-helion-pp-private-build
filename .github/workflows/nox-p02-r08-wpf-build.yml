@@ -68,6 +68,50 @@ jobs:
           New-Item -ItemType Directory -Path 'coordination/e06' -Force | Out-Null
           Copy-Item '.e06-existing-fixes/coordination/e06/patch_legacy_p05_html.py' 'coordination/e06/patch_legacy_p05_html.py'
           Copy-Item '.e06-existing-fixes/coordination/e06/patch_legacy_compiler.py' 'coordination/e06/patch_legacy_compiler.py'
+      - name: Recover the four approved D02 images from verified frozen original archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $targetRoot='work/e06/staged/R11/Assets'
+          if (!(Test-Path -LiteralPath $targetRoot -PathType Container)) { throw 'NOX_R08_ASSETS_FOLDER_MISSING' }
+          $tmp=Join-Path $env:RUNNER_TEMP 'NOX_E06_APPROVED_D02_ORIGINAL.zip'
+          if (Test-Path $tmp) { throw 'NOX_D02_TEMP_ARCHIVE_ALREADY_EXISTS' }
+          $writer=[IO.File]::CreateNew($tmp)
+          try {
+            foreach ($name in @('source_00.part','source_01.part','source_02.part')) {
+              if (!(Test-Path -LiteralPath $name -PathType Leaf)) { throw "NOX_ORIGINAL_SOURCE_PART_MISSING:$name" }
+              $reader=[IO.File]::OpenRead((Resolve-Path -LiteralPath $name).Path)
+              try { $reader.CopyTo($writer) } finally { $reader.Dispose() }
+            }
+          } finally { $writer.Dispose() }
+          if ((Get-Item -LiteralPath $tmp).Length -ne 60364346) { throw 'NOX_ORIGINAL_SOURCE_SIZE_HOLD' }
+          if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a') { throw 'NOX_ORIGINAL_SOURCE_SHA_HOLD' }
+          Add-Type -AssemblyName System.IO.Compression
+          $assets=@(
+            @{from='assets/HOME_OWNER_APPROVED.png';to='home.png';sha='382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'},
+            @{from='assets/approved_ui/NOX_HELION_MENU_OWNER_APPROVED_20261019.png';to='menu.png';sha='4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9'},
+            @{from='assets/approved_ui/NOX_HELION_APPROVED_CORE_01_CONSCIOUSNESS_20261020.png';to='core01.png';sha='343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97'},
+            @{from='assets/approved_ui/NOX_HELION_MENU_8_SECTIONS_COLLAGE_APPROVED_20261020.png';to='menu_sections.png';sha='7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'}
+          )
+          $receipt=[ordered]@{schema='NOX_E06_D02_BYTE_EXACT_ASSETS_V1'; originalArchiveSha256='ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'; files=@()}
+          $zip=[IO.Compression.ZipFile]::OpenRead($tmp)
+          try {
+            foreach($asset in $assets) {
+              $entry=$zip.GetEntry($asset.from)
+              if ($null -eq $entry) { throw "NOX_D02_APPROVED_ASSET_MISSING:$($asset.from)" }
+              $dest=Join-Path $targetRoot $asset.to
+              if (!(Test-Path -LiteralPath $dest -PathType Leaf)) {
+                $input=$entry.Open()
+                $output=[IO.File]::CreateNew([IO.Path]::GetFullPath($dest))
+                try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
+              }
+              $observed=(Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($observed -cne $asset.sha) { throw "NOX_D02_ASSET_PREIMAGE_CONFLICT:$($asset.to)" }
+              $receipt.files+=@([ordered]@{source=$asset.from;target=$asset.to;sha256=$observed;bytes=(Get-Item -LiteralPath $dest).Length})
+            }
+          } finally { $zip.Dispose(); Remove-Item -LiteralPath $tmp -Force }
+          $receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath 'work/e06/staged/d02-byte-exact-receipt.json' -Encoding utf8
+          Write-Host 'NOX_D02_FOUR_ORIGINAL_IMAGES_BYTE_EXACT_PASS'
       - name: Apply E06's original exact-SHA P05 HTML compatibility fix to staged bytes only
         shell: pwsh
         run: python coordination/e06/patch_legacy_p05_html.py
@@ -105,6 +149,7 @@ jobs:
             diagnosticExeSha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
             diagnosticExeBytes=(Get-Item -LiteralPath $exe).Length
             sourceSubsetOnly=$true
+            originalApprovedD02AssetsIncluded=$true
             stagedRepairsRequireOwnerApproval=$true
             originalSourceUntouched=$true
             fullProductIntegrated=$false
@@ -122,6 +167,7 @@ jobs:
             work/e06/staged/legacy-compiler-repair-receipts.json
             work/e06/staged/E02-compiler-compat-receipt.json
             work/e06/staged/diagnostic-receipt.json
+            work/e06/staged/d02-byte-exact-receipt.json
           if-no-files-found: warn
           retention-days: 14
 
