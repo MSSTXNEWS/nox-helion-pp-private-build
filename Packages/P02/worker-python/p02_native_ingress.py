@@ -79,7 +79,7 @@ class NativeIngress:
                 encoded.decode("utf-8"),
                 parse_constant=_reject_nonfinite,
                 object_pairs_hook=_reject_duplicate_fields)
-        except (ValueError, UnicodeError) as exc:
+        except (ValueError, UnicodeError, RecursionError) as exc:
             raise ProtocolHold("NATIVE_FRAME_INVALID_JSON") from exc
         if not isinstance(request, dict) or set(request) != {
                 "protocol", "requestId", "route", "payload", "runId"}:
@@ -106,7 +106,9 @@ class NativeIngress:
                     or route_info["owner"] != 3
                     or getattr(port, "owner", None) != 3
                     or not isinstance(getattr(port, "evidence_id", None), str)
-                    or not port.evidence_id.strip()):
+                    or not port.evidence_id.strip()
+                    or not callable(getattr(port, "call", None))
+                    or not callable(getattr(port, "available", None))):
                 raise ProtocolHold("NATIVE_MODEL_CENTER_OWNER_NOT_BOUND")
         # This intentionally bans any identity or permission claim in page data.
         if any(key in payload for key in (
