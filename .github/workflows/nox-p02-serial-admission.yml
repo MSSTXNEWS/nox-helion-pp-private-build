@@ -47,6 +47,7 @@ jobs:
           NOX_P02_OWNER_PATH: ${{ github.workspace }}/Packages/P02/worker-python
         run: |
           python Packages/P02/worker-python/run_pack01_owner_gate.py
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_ingress_pack01.py' -v
       - name: P02 native route-port permissions and provider admission
         shell: pwsh
         run: |
