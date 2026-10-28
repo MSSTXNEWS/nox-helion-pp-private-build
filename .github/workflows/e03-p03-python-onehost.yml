@@ -43,3 +43,50 @@ jobs:
         run: |
           python -m py_compile Packages/P03/Source/python-host/p03_onehost_port.py
           if ($LASTEXITCODE -ne 0) { throw 'E03_ONEHOST_SYNTAX_FAILED' }
+
+      - name: Pin exact ModelCatalog source and emit owner3 SHA receipts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $catalog = Get-Content -Raw 'Packages/P03/Source/python-host/catalog30.discovery.json' | ConvertFrom-Json
+          $observed = (git rev-parse HEAD:Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs).Trim()
+          if ($observed -ne $catalog.sourceGitBlobSha1) { throw 'E03_DISCOVERY_SOURCE_DRIFT_HOLD' }
+          $paths = @(
+            'Packages/P03/Source/python-host/catalog30.discovery.json',
+            'Packages/P03/Source/python-host/p03_onehost_port.py',
+            'Packages/P03/Source/python-host/test_p03_onehost_port.py',
+            'Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md',
+            '.github/workflows/e03-p03-python-onehost.yml'
+          )
+          $items = @()
+          foreach ($p in $paths) {
+            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { throw "E03_SOURCE_MISSING: $p" }
+            $items += @{
+              path = $p
+              owner = 3
+              sha256 = (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()
+              sizeBytes = (Get-Item -LiteralPath $p).Length
+            }
+          }
+          $receipt = @{
+            schema = 'NOX_V16_E03_ONEHOST_RECEIPT_V1'
+            runId = 'NOX-V16-E03-ONEHOST-PY-20261028'
+            owner = 3
+            gitCheckout = (git rev-parse HEAD).Trim()
+            p02SourceCommit = 'e5f5a5af7e58bd7c7d9f37c59034e7244ca1332b'
+            pack01HostCommit = '33774d985dd7f05e413f1830f74392f49645fe29'
+            modelCatalogGitBlob = $observed
+            componentSourceOnly = $true
+            originalHostMerged = $false
+            finalExeAccepted = $false
+            paths = $items
+          }
+          $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath 'E03_ONEHOST_SOURCE_RECEIPT.json' -Encoding utf8
+          Write-Output 'E03_ONEHOST_SOURCE_RECEIPT_SHA256'
+          (Get-FileHash -LiteralPath 'E03_ONEHOST_SOURCE_RECEIPT.json' -Algorithm SHA256).Hash.ToLowerInvariant()
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: E03-P03-onehost-source-receipt
+          path: E03_ONEHOST_SOURCE_RECEIPT.json
+          retention-days: 30
