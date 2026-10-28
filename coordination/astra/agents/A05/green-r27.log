@@ -1,0 +1,45 @@
+test_call_history_malformed_rejected (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_call_history_malformed_rejected) ... ok
+test_call_history_sanitizes_provider_data (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_call_history_sanitizes_provider_data) ... ok
+test_cross_tenant_call_history_blocked (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_cross_tenant_call_history_blocked) ... ok
+test_limits_bool_rejected (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_limits_bool_rejected) ... ok
+test_native_route_denial (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_native_route_denial) ... ok
+test_native_stop_after_voice_run_does_not_publish_output (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_native_stop_after_voice_run_does_not_publish_output) ... ok
+test_native_stop_before_capture_does_not_consume_one_use_audio (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_native_stop_before_capture_does_not_consume_one_use_audio) ... ok
+test_rag_existing_index_and_sources (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_rag_existing_index_and_sources) ... ok
+test_rag_rejects_unverified_source (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_rag_rejects_unverified_source) ... ok
+test_refuses_foreign_dispatcher_route_owner (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_refuses_foreign_dispatcher_route_owner) ... ok
+test_registers_only_three_ports_and_uses_native_mapper (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_registers_only_three_ports_and_uses_native_mapper) ... ok
+test_requires_existing_host_chat_acl (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_requires_existing_host_chat_acl) ... ok
+test_sid_mismatch_blocked (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_sid_mismatch_blocked) ... ok
+test_unavailable_routes_hold (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_unavailable_routes_hold) ... ok
+test_voice_capture_and_one_time_use (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_voice_capture_and_one_time_use) ... ok
+test_voice_rejects_page_audio (test_p02_owner_route_ports.ExistingDispatcherBindingTests.test_voice_rejects_page_audio) ... ok
+test_call_history_malformed_rejected (test_p02_owner_route_ports.RouteTests.test_call_history_malformed_rejected) ... ok
+test_call_history_sanitizes_provider_data (test_p02_owner_route_ports.RouteTests.test_call_history_sanitizes_provider_data) ... ok
+test_cross_tenant_call_history_blocked (test_p02_owner_route_ports.RouteTests.test_cross_tenant_call_history_blocked) ... ok
+test_limits_bool_rejected (test_p02_owner_route_ports.RouteTests.test_limits_bool_rejected) ... ok
+test_native_route_denial (test_p02_owner_route_ports.RouteTests.test_native_route_denial) ... ok
+test_native_stop_after_voice_run_does_not_publish_output (test_p02_owner_route_ports.RouteTests.test_native_stop_after_voice_run_does_not_publish_output) ... ok
+test_native_stop_before_capture_does_not_consume_one_use_audio (test_p02_owner_route_ports.RouteTests.test_native_stop_before_capture_does_not_consume_one_use_audio) ... ok
+test_rag_existing_index_and_sources (test_p02_owner_route_ports.RouteTests.test_rag_existing_index_and_sources) ... ok
+test_rag_rejects_unverified_source (test_p02_owner_route_ports.RouteTests.test_rag_rejects_unverified_source) ... ok
+test_requires_existing_host_chat_acl (test_p02_owner_route_ports.RouteTests.test_requires_existing_host_chat_acl) ... ok
+test_sid_mismatch_blocked (test_p02_owner_route_ports.RouteTests.test_sid_mismatch_blocked) ... ok
+test_unavailable_routes_hold (test_p02_owner_route_ports.RouteTests.test_unavailable_routes_hold) ... ok
+test_voice_capture_and_one_time_use (test_p02_owner_route_ports.RouteTests.test_voice_capture_and_one_time_use) ... ok
+test_voice_rejects_page_audio (test_p02_owner_route_ports.RouteTests.test_voice_rejects_page_audio) ... ok
+test_fresh_quote_still_dials_only_once (test_p02_voice_sip_r27.SipExpiryTests.test_fresh_quote_still_dials_only_once) ... ok
+test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) ... ok
+test_quote_expiring_during_approval_never_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_approval_never_dials) ... ok
+test_quote_expiring_during_verification_never_prompts_or_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_verification_never_prompts_or_dials) ... ok
+test_cleanup_exception_is_wrapped_as_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_exception_is_wrapped_as_hold) ... ok
+test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) ... ok
+test_immutable_three_port_registry_accepts_r22_donor_contract (test_p02_voice_sip_r27.VoiceOutputTests.test_immutable_three_port_registry_accepts_r22_donor_contract) ... ok
+test_stop_during_output_revokes_native_receipt_without_success (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_during_output_revokes_native_receipt_without_success) ... ok
+test_stop_without_cleanup_callback_is_explicit_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_without_cleanup_callback_is_explicit_hold) ... ok
+test_successful_output_is_not_discarded (test_p02_voice_sip_r27.VoiceOutputTests.test_successful_output_is_not_discarded) ... ok
+
+----------------------------------------------------------------------
+Ran 40 tests in 0.031s
+
+OK

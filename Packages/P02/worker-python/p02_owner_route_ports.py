@@ -6,6 +6,7 @@ exact route and bind its existing provider. All unbound ports remain HOLD.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from collections.abc import Mapping
 import re
 import threading
 from typing import Callable, Any
@@ -47,6 +48,7 @@ class OwnerTwoPorts:
                  voice_pipeline: LocalVoicePipeline | None = None,
                  native_take_audio: Callable[[NativeScope, str], bytes] | None = None,
                  native_store_output_audio: Callable[[NativeScope, bytes], str] | None = None,
+                 native_discard_output_audio: Callable[[NativeScope, str], bool] | None = None,
                  native_call_history: Callable[[NativeScope, int], list[dict]] | None = None,
                  owner_ready: Callable[[str], bool] | None = None):
         if not isinstance(store, P02Store) or not callable(native_authorize):
@@ -55,6 +57,7 @@ class OwnerTwoPorts:
         self.rag, self.voice, self.take_audio, self.call_history = (
             rag_index, voice_pipeline, native_take_audio, native_call_history)
         self.store_output_audio = native_store_output_audio
+        self.discard_output_audio = native_discard_output_audio
         self.owner_ready = owner_ready
 
     def _session(self, scope: NativeScope, route: str) -> None:
@@ -134,6 +137,19 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
+        # Reuse R18's post-persistence STOP boundary, then revoke the exact
+        # native receipt. Only the authenticated host may delete its audio.
+        if stop is not None and stop.is_set():
+            if (not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id)
+                    or not callable(self.discard_output_audio)):
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            try:
+                discarded = self.discard_output_audio(scope, output_id)
+            except Exception as exc:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD") from exc
+            if discarded is not True:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
         return {"transcript": result.transcript, "response": result.response,
@@ -190,13 +206,13 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
     # A late foreign owner/missing route must not leave two live P02 ports.
     routes = getattr(dispatcher, "routes", None)
     ports = getattr(dispatcher, "ports", None)
-    if not isinstance(routes, dict) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
+    if not isinstance(routes, Mapping) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
         raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
     for route in mapping:
         if route in ports:
             raise RouteHold("EXISTING_ROUTE_ALREADY_BOUND_NO_OVERRIDE")
         info = routes.get(route)
-        if not isinstance(info, dict) or type(info.get("owner")) is not int or info["owner"] != 2:
+        if not isinstance(info, Mapping) or type(info.get("owner")) is not int or info["owner"] != 2:
             raise RouteHold("CANONICAL_PACK01_OWNER_ROUTE_REQUIRED")
     staged = {}
     for route, handler in mapping.items():
