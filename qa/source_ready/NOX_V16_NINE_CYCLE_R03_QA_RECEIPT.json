@@ -1,0 +1,135 @@
+{
+  "schema": "NOX_V16_INDEPENDENT_SOURCE_QA_NINE_CYCLES_R03",
+  "run_id": "NOX-V16-QA2-20261028-R03-NINE",
+  "owner": "Manual #2 INDEPENDENT QA ONLY",
+  "checked_head": "802401f8afc2fdd8b6df1f9cfa8a05a30de8e75c",
+  "start_head": "8e1a5336c9c82bbb59ead49aca065eb7382344d0",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "qa_branch": "qa/v16-nine-cycle-source-independent-20261028-r03",
+  "source_changed_by_QA": false,
+  "checks": [
+    {
+      "id": "C1",
+      "scope": "One source candidate",
+      "state": "SOURCE_PRESENT",
+      "evidence": "PR162 draft; exact SHA pin and no merge"
+    },
+    {
+      "id": "C2",
+      "scope": "Host50 owner ledger vs catalog",
+      "state": "RED_SOURCE_RECEIPT_MISMATCH",
+      "exact": "NIP01-07 chat.rag: ledger SOURCE=CANDIDATE; canonical owner-binding-map sourceBinding=null. Owner map counts 36/14, historical compact ledger 37/13.",
+      "owner": "#1 W1-02 W3"
+    },
+    {
+      "id": "C3",
+      "scope": "P01 D02/WOW",
+      "state": "SOURCE_GUARDS_PRESENT",
+      "evidence": "8 CoreID+HELION, Reduced Motion, profile input validation. 200 runtime effects not independently accepted"
+    },
+    {
+      "id": "C4",
+      "scope": "P02 native ingress/STOP",
+      "state": "SOURCE_GUARDS_PRESENT",
+      "evidence": "JSON nesting 512, single owner dispatcher, atomic 3-port rollback. No Windows streaming/voice proof"
+    },
+    {
+      "id": "C5",
+      "scope": "P03 ModelCenter",
+      "state": "SOURCE_GUARDS_PRESENT_WITH_DEFENSE_TEST",
+      "evidence": "Read-only routes/native approval, canonical NoxPackHost.bind inserts or throws. Defensive no-op dispatcher test is not a proven production bug."
+    },
+    {
+      "id": "C6",
+      "scope": "P04 RAG/GPU",
+      "state": "SOURCE_GUARDS_PRESENT",
+      "evidence": "strict source JSON provenance + nonregular pinned SHA tree; no actual GPU train/eval/holdout test"
+    },
+    {
+      "id": "C7",
+      "scope": "P05 events/SPACE",
+      "state": "SOURCE_GUARDS_PRESENT",
+      "evidence": "CacheIdentity FeedId/Provider/Endpoint and events.v3 receipt validation; real telemetry/native integration unproven"
+    },
+    {
+      "id": "C8",
+      "scope": "E06 onehost",
+      "state": "SOURCE_READY_HOLD",
+      "evidence": "Existing diagnostic builder retains ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE, need one real P01–P05 host and verified binding"
+    },
+    {
+      "id": "C9",
+      "scope": "SourceLock 729",
+      "state": "PHYSICAL_EVIDENCE_HOLD",
+      "evidence": "Nontruncated Git tree with original 3 Git blobs SHA1/byte sizes intact; 60,364,346-byte ZIP SHA256 + all 729 member raw SHA256 not independently rehashed on this HEAD"
+    }
+  ],
+  "file_sha": [
+    {
+      "path": "qa/source_ready/test_host50_map_reconciliation_r03.py",
+      "sha256": "023eff5a87b4b338fdc96d61af1303725c011544f81137dd87425c916e16d5b7",
+      "git_blob": "00de405cb0dc8f39d7456cec69b1638e5559895b",
+      "tests": 6
+    },
+    {
+      "path": "qa/source_ready/test_p03_native_port_atomicity_r03.py",
+      "sha256": "18b47d5d297c6223e53c2e4158d55b4646de38209f1661076cbbe3f144817688",
+      "git_blob": "92bc9fdced2563621e92bba345c1e8bde9151ebf",
+      "tests": 4
+    }
+  ],
+  "relevant_owner_sha": {
+    "host50_map": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+    "host50_ledger": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "pack01_catalog": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "P03_onehost": "5f4d3bcb10b49d23d6522433de81d4aad7a1a66d",
+    "original_NoxPackHost": "46bc53bd4f8a55a9bfe067d5e34521bc07903bf6",
+    "P04_nonregular": "413e5395c736934b2c0bf523382a569b0baa2b33",
+    "P04_RAG_json": "58af025bd05f0e99a445b56c307e12d600b8f19f",
+    "P05_cache": "6349d0f4f8a33f0fda7c12243ea07c5734810289"
+  },
+  "original_parts": [
+    {
+      "path": "source_00.part",
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "size": 20971520
+    },
+    {
+      "path": "source_01.part",
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "size": 20971520
+    },
+    {
+      "path": "source_02.part",
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "size": 18421306
+    }
+  ],
+  "evidence": {
+    "git_source_checks": "6/9 source/source-present checks, 3 HOLD (Host50 parity, E06 full host, original physical 729)",
+    "qa_files": "2 new files, 10 methods saved with pre ABSENT, no product files changed",
+    "actual_private_repo_unittest": "NOT_RUN; working copy inaccessible on this host",
+    "Python_native": "NOT_RUN",
+    "dotnet_native": "NOT_RUN",
+    "Windows": "NOT_RUN",
+    "E07": "0/10 NOT_RUN"
+  },
+  "gate_status": {
+    "taskid_progress_weighting": "P01 20 / P02 25 / P03 20 / P04 25 / P05 10",
+    "historical_DONE": "PRESERVED",
+    "weighted_actual_source_percent": "N/D",
+    "CODE_COMPLETE": "HOLD",
+    "INTEGRATED": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "WINDOWS_BUILD": "NOT_RUN",
+    "E07_ACCEPTED": "0/10 NOT_RUN"
+  },
+  "owners": {
+    "P0_HOST50": "#1 W1-02 W3; issue exact NIP01-07 and full 50 signed capability proof",
+    "P0_ONEHOST": "#1 E06; prove actual single integrated native dispatch and STOP",
+    "P0_SOURCELOCK": "#1 W1-01 independent #2; actual ZIP and 729 per-member SHA256",
+    "P1_P03_DEFENSIVE": "#1 P03; test no-op fake dispatcher as hardening only, original NoxPackHost bind is not no-op"
+  },
+  "one_improvement": "SOURCE_REALITY_FILTER: test owner map against ledger by TaskID and inspect actual NoxPackHost.bind before labelling a theoretical mock behavior as product P0/P1; avoid ghost defects and work duplication.",
+  "no_loss": "QA-only isolated branch, 2 new test sources, no product code/PR162/main/archives/user data changed."
+}
