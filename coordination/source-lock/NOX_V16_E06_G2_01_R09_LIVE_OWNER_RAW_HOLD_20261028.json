@@ -1,0 +1,127 @@
+{
+  "schema": "NOX_V16_E06_R09_COORDINATION_ONLY_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028T1411MSK-R09",
+  "owner": "E06",
+  "status": "HOLD_NOT_PROMOTED",
+  "baseline": {
+    "commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "inventory_pr": 66
+  },
+  "historical_original": {
+    "immutable_r03_sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "historical_commit_git_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "manifest_entries": 729,
+    "manifest_unique": 729,
+    "physical_files_sha256_verified": 0,
+    "original_zip_bytes": 60364346,
+    "original_zip_sha256_historical_ci": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "parts": [
+    {
+      "name": "source_00.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "raw_sha256": null
+    },
+    {
+      "name": "source_01.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "raw_sha256": null
+    },
+    {
+      "name": "source_02.part",
+      "bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d60",
+      "raw_sha256": null
+    }
+  ],
+  "assets": "D02/Persona/approved assets: historical manifest entries only; raw-byte independent acceptance HOLD",
+  "model_weights": "7 tiny safetensors named in historical manifest; installed inference/ASR/TTS/GPU weights N/D",
+  "owners": [
+    [
+      "E01",
+      "V16.26.3",
+      "P01",
+      144,
+      "f8bb7db02a5b01385d5d08329358be8c0936dfc2"
+    ],
+    [
+      "E02",
+      "V16.26.4",
+      "P02",
+      146,
+      "9ade984a8be08b39e4339da762aeb100b512b789"
+    ],
+    [
+      "E03",
+      "V16.26.5",
+      "P03",
+      142,
+      "79f121f7dd96b8832107028bc8a0d6fdea9d7de6"
+    ],
+    [
+      "E04",
+      "V16.26.6",
+      "P04",
+      143,
+      "353705bf5b097677cdec9a27091325bcb14828b6"
+    ],
+    [
+      "E05",
+      "V16.26.7",
+      "P05",
+      145,
+      "1a841e543c3a9c384ff456f911ca99240695e803"
+    ],
+    [
+      "E06",
+      "V16.26.8",
+      "coordination/source-lock",
+      124,
+      "ee2ce26a769105faae3e05c6af00bcbe5115dceb"
+    ],
+    [
+      "E07",
+      "QA01-QA10",
+      "independent_Windows",
+      46,
+      null
+    ]
+  ],
+  "integration": "HOLD",
+  "windows_acceptance": "NOT_RUN",
+  "weighted_progress": "N/D",
+  "weights": [
+    20,
+    25,
+    20,
+    25,
+    10
+  ],
+  "holds": [
+    "RAW_PARTS_SHA256_UNAVAILABLE",
+    "729_RAW_FILES_NOT_INDEPENDENTLY_CHECKED",
+    "HISTORICAL_TREE_DIFFERS_FROM_CURRENT",
+    "OWNER_STACKED_PR_PREIMAGE_NOT_ADMITTED",
+    "E07_SAME_BUILDID_EXE_SHA_NOT_ACCEPTED"
+  ],
+  "overlaps": [
+    "E01 PR144 versus earlier PR133 and cinema QA PR141",
+    "E02 PR146 stacked over PR135",
+    "E03 PR142 stacked over PR132",
+    "E04 PR143 stacked over PR134",
+    "E05 PR145 stacked over PR131"
+  ],
+  "guard": "CHECK_LIVE_HEAD_AND_OWNER_PREIMAGE_BEFORE_EACH_ADMISSION; never promote filename or manifest presence into native acceptance",
+  "no_loss": {
+    "delete_files": 0,
+    "change_main": false,
+    "change_ui": false,
+    "change_host": false,
+    "replace_sourcelock": false,
+    "merge_pr": false,
+    "claim_final_exe": false
+  }
+}
