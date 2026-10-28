@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_E06_SOURCE_ONLY_RECEIPT_V1",
+  "runId": "NOX-V16-W1-03-20261029T013006MSK-R20",
+  "actualStartMSK": "2026-10-29T01:30:06+03:00",
+  "checkpointMSK": "2026-10-29T01:35:49+03:00",
+  "taskId": "W1.03.E06.R20.CREATIVE_WORKER_EOF_ORPHAN_PENDING",
+  "owner": "E01 Creative product; E06 independent isolated patch",
+  "currentPR162": {
+    "number": 162,
+    "head": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+    "status": "DRAFT_UNCHANGED"
+  },
+  "branch": "security/w1-03-r20-creative-stdout-eof-20261029",
+  "historicalMain": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source": {
+    "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+    "pre_sha256": "112cdff395c3392b66b1d0d85f402eff646b7b6cf5f478513e86aa77009ac4d2",
+    "post_sha256": "e14f3777e210629fb00377cf5c507c8a6dae7407d5447127a0f20b617e0936a5",
+    "pre_git_blob_sha1": "2e70b68b85f2c968a3a46b7d6befd4611a789d89",
+    "post_git_blob_sha1": "656ffc8528a97616d1520d9739d5e0d576d4b3ad",
+    "commit": "673f39119183091c3a3488158b93a65784afa5ad",
+    "diff": "8 isolated hunks: guard closed reader; move pending admission after Ensure; fail orphaned pending on EOF and old process exit before restart; retain atomic TryRemove; preserve STOP exit observation & SHA trust",
+    "github_readback": "EXACT_MATCH"
+  },
+  "test": {
+    "path": "tests/e06/test_creative_stdout_orphan_cleanup_r20.py",
+    "pre_sha256": "ABSENT",
+    "post_sha256": "b02ba83708d0a5deec5e21cba61ede3aa02ac8208a01a46bb435d5a0ff442272",
+    "post_git_blob_sha1": "ec281ef8fcd7fdc7d3976e59147137fc0d4c7d1c",
+    "commit": "9ef475cfd16c874d2f0c8b0a22f95a5e7dbc87f9",
+    "exact_full_source_structural_checks": {
+      "original": "3_PASS_5_RED",
+      "isolated_patch": "8_PASS_0_RED"
+    },
+    "actual_python_unittest": "NOT_RUN",
+    "actual_csharp_component": "NOT_RUN",
+    "windows_exe_nsis_ci_e07": "NOT_RUN_PER_R20"
+  },
+  "previousLesson": "STOP_ACK_ONLY_AFTER_OBSERVED_EXIT APPLIED: verified true exit wait and failure ack retained",
+  "singleNewLesson": "CREATIVE_EOF_FAIL_INFLIGHT_BEFORE_NEXT_WORKER: unexpected stdout EOF left pending IDs without a failure receipt; root cause: no reader-finally cleanup and admission preceding process selection; patch: fail each atomic pending receipt on EOF, block closed channel, clear prior generation before restart; regression: pinned exact-source 3/8 -> 8/8 static; next: owner-run same-source C# component test with simulated EOF and two concurrent requests.",
+  "release": {
+    "new_product_taskid_DONE": 0,
+    "isolated_source_candidate_fixes": 1,
+    "accepted_global_progress": "N/D",
+    "feature_code_complete": "HOLD",
+    "source_ready": "HOLD",
+    "release": "HOLD",
+    "build": "PROHIBITED"
+  },
+  "noLoss": "PR162/main untouched, original ZIP parts/D02/8 CoreID/5 Persona/WOW200 & user data unchanged."
+}
