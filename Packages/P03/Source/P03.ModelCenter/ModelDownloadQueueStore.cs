@@ -246,6 +246,17 @@ public sealed class ModelDownloadQueueStore
         finally { _gate.Release(); }
     }
 
+    public async Task<bool> RequestCancelAsync(Guid id, CancellationToken ct = default)
+    {
+        var result = await UpdateAsync(id, job => job.State switch
+        {
+            ModelJobState.Queued => job with { State = ModelJobState.Cancelled },
+            ModelJobState.Running => job with { State = ModelJobState.Cancelling },
+            _ => job
+        }, ct);
+        return result?.State is ModelJobState.Cancelled or ModelJobState.Cancelling;
+    }
+
     public async Task<bool> CancelQueuedAsync(Guid id, CancellationToken ct = default)
     {
         var changed = await UpdateAsync(id, j => j.State == ModelJobState.Queued
