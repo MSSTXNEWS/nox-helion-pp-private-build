@@ -141,7 +141,7 @@ function sendAction(action){const c=state.capabilities||{};const job=currentJob(
  const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
- const m=current(),pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,timer:null};
+ const m=current(),pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,timer:null};
  state.pending.set(action,pending);renderHero();renderQuick20();
  try{window.chrome.webview.postMessage(data);
   pending.timer=setTimeout(()=>{if(state.pending.get(action)!==pending)return;state.pending.delete(action);renderHero();renderQuick20();showToast('Нет ACK host: исход неизвестен; проверьте очередь.');},45000);
