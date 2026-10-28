@@ -247,6 +247,23 @@ class LocalRag:
                 raw = stream.read(8 * 1024 * 1024 + 1)
             if len(raw) > 8 * 1024 * 1024:
                 raise RagHold("RAG_FILE_TOO_LARGE")
+            # Bind the bytes read to the same regular file and pathname.
+            # This closes common edit/rename/symlink-swap windows before indexing;
+            # the native host still owns race-free trusted-root handle policy.
+            try:
+                after_fd = os.fstat(fd)
+                after_path = os.stat(path, follow_symlinks=False)
+            except OSError as exc:
+                raise RagHold("RAG_FILE_CHANGED_DURING_READ") from exc
+            if (len(raw) != info.st_size
+                    or any(not stat.S_ISREG(now.st_mode)
+                           or now.st_size != info.st_size
+                           or now.st_mtime_ns != info.st_mtime_ns
+                           or (info.st_ino and now.st_ino
+                               and (now.st_dev, now.st_ino) != (info.st_dev, info.st_ino))
+                           for now in (after_fd, after_path))):
+                raise RagHold("RAG_FILE_CHANGED_DURING_READ")
+            _reject_reparse_ancestors(path)
         finally:
             os.close(fd)
         try:
