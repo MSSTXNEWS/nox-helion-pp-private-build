@@ -51,7 +51,13 @@ class NativeSession:
         if not all(isinstance(s, str) and 0 < len(s) <= 128
                    for s in (self.tenant, self.principal, self.chat_id)):
             raise HostDenied("Invalid authenticated native session")
-        if not self.allowed.issubset(ALLOWED_ROUTES):
+        # Native host only: permissions are immutable exact sets, never a
+        # page-provided string or mutable set that callbacks could change.
+        if type(self.allowed) is not frozenset or type(self.private_approved) is not frozenset:
+            raise HostDenied("Immutable native route scopes required")
+        if (any(type(route) is not str for route in self.allowed | self.private_approved) or
+                not self.allowed.issubset(ALLOWED_ROUTES) or
+                not self.private_approved.issubset(self.allowed)):
             raise HostDenied("Invalid route scopes")
 
 @dataclass(frozen=True)
@@ -73,8 +79,12 @@ class NoxPackHost:
         if set(ids) != ALLOWED_ROUTES or len(set(ids)) != 50:
             raise ValueError("Route set mismatch or duplicate")
         task_ids = [item.get("taskId") for item in actions]
-        if len(set(task_ids)) != 50 or any(not isinstance(t,str) or not TASK.fullmatch(t) for t in task_ids):
-            raise ValueError("Invalid TaskID")
+        if (len(set(task_ids)) != 50 or
+                task_ids != [f"NIP01-{i:02d}" for i in range(1, 51)]):
+            raise ValueError("Invalid or reordered canonical TaskID")
+        if any(type(row.get("owner")) is not int or not 1 <= row["owner"] <= 6 or
+               row.get("risk") not in ("safe", "sensitive", "dangerous") for row in actions):
+            raise ValueError("Invalid approved native owner/risk policy")
         self.routes = {item["routeId"]:item for item in actions}
         self.ports:dict[str,BoundPort] = {}
         self.native_approve = native_approve
@@ -82,7 +92,7 @@ class NoxPackHost:
     def bind(self, route:str, port:BoundPort):
         if route not in self.routes or not isinstance(port,BoundPort):
             raise ValueError("Unapproved native port")
-        if port.owner != self.routes[route]["owner"] or not isinstance(port.evidence_id,str) or not port.evidence_id.strip():
+        if type(port.owner) is not int or port.owner != self.routes[route]["owner"] or not isinstance(port.evidence_id,str) or not port.evidence_id.strip():
             raise HostHold("Matching owner receipt required")
         if not callable(port.call) or not callable(port.available):
             raise HostHold("Callable owner backend/probe required")
@@ -91,6 +101,8 @@ class NoxPackHost:
         self.ports[route] = port
 
     def advertise(self, session:NativeSession) -> dict:
+        if type(session) is not NativeSession:
+            raise HostDenied("Existing native session type required")
         session.validate()
         out = {}
         for route, item in self.routes.items():
@@ -108,8 +120,10 @@ class NoxPackHost:
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
+        if type(session) is not NativeSession:
+            raise HostDenied("Existing native session type required")
         session.validate()
-        if route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
+        if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
         if not isinstance(payload, dict):
             raise HostDenied("Missing/oversize request")

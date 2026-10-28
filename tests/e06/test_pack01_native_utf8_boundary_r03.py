@@ -74,5 +74,159 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(self.seen, [])
 
 
+    def test_native_approval_must_not_mutate_executed_payload(self):
+        payload = {"target": {"name": "original"}}
+        approved = []
+        def approve(session, route, approved_copy):
+            approved.append(approved_copy)
+            approved_copy["target"]["name"] = "changed-during-consent"
+            payload["target"]["name"] = "changed-by-caller"
+            return True
+        self.dispatch.native_approve = approve
+        self.dispatch.bind("system.pc_control", bridge.BoundPort(
+            lambda session, data: self.seen.append(data) or {"done": True},
+            lambda: True, "NATIVE_EXACT_ACTION_RECEIPT", 1))
+        privileged = bridge.NativeSession("test_tenant", "test_owner", "test_chat",
+            allowed=frozenset({"system.pc_control"}),
+            private_approved=frozenset({"system.pc_control"}))
+        result = self.dispatch.execute("system.pc_control", payload, privileged)
+        self.assertEqual(result, {"done": True})
+        self.assertEqual(approved[0]["target"]["name"], "changed-during-consent")
+        self.assertEqual(self.seen, [{"target": {"name": "original"}}])
+
+    def test_backend_availability_callback_cannot_swap_request_data(self):
+        original = {"text": "original"}
+        other = bridge.NoxPackHost(json.loads(CATALOG.read_text("utf-8")))
+        def readiness():
+            original["text"] = "swapped-on-ready-check"
+            return True
+        observed = []
+        other.bind("media.subtitles", bridge.BoundPort(
+            lambda session, data: observed.append(data) or "OK",
+            readiness, "NATIVE_PROBE_RECEIPT", 1))
+        self.assertEqual(other.execute("media.subtitles", original, self.session), "OK")
+        self.assertEqual(observed, [{"text": "original"}])
+
+    def test_nested_payload_snapshot_is_separate_from_original(self):
+        payload = {"nested": [{"value": "before"}]}
+        result = self.request(payload)
+        payload["nested"][0]["value"] = "after"
+        self.assertEqual(result, {"status": "owner-executed"})
+        self.assertEqual(self.seen, [{"nested": [{"value": "before"}]}])
+
+
+    def test_native_owner_identity_rejects_bool_and_float(self):
+        for fake_owner in (True, 1.0, "1"):
+            with self.subTest(owner=fake_owner):
+                other = bridge.NoxPackHost(json.loads(CATALOG.read_text("utf-8")))
+                port = bridge.BoundPort(
+                    lambda session, data: "OK", lambda: True,
+                    "NATIVE_OWNER_SOURCE_RECEIPT", fake_owner)
+                with self.assertRaises(bridge.HostHold):
+                    other.bind("media.subtitles", port)
+                self.assertFalse(other.ports)
+
+    def test_registered_integer_owner_still_admitted(self):
+        self.assertEqual(self.dispatch.ports["media.subtitles"].owner, 1)
+        self.assertEqual(self.request({"text": "safe"}), {"status": "owner-executed"})
+
+
+    def test_reject_mutable_native_route_scopes(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed={"media.subtitles"}, private_approved=frozenset())
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_reject_string_scopes_not_typed_as_frozenset(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed=frozenset({"media.subtitles"}),
+            private_approved="media.subtitles")
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_reject_approval_outside_active_native_allowed_routes(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed=frozenset({"media.subtitles"}),
+            private_approved=frozenset({"system.pc_control"}))
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_immutable_native_scope_within_allowed_routes_remains_accepted(self):
+        allowed = frozenset({"media.subtitles"})
+        good = bridge.NativeSession("tenant", "person", "chat",
+            allowed=allowed, private_approved=allowed)
+        self.assertEqual(
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, good),
+            {"status": "owner-executed"})
+        self.assertEqual(self.seen, [{"text": "safe"}])
+
+
+    def test_catalog_rejects_boolean_or_float_native_owner(self):
+        for bad_owner in (True, 1.0, "1"):
+            with self.subTest(bad_owner=bad_owner):
+                catalog = json.loads(CATALOG.read_text("utf-8"))
+                for row in catalog["actions"]:
+                    if row["routeId"] == "media.subtitles":
+                        row["owner"] = bad_owner
+                with self.assertRaises(ValueError):
+                    bridge.NoxPackHost(catalog)
+
+    def test_catalog_rejects_unknown_risk_policy(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        for row in catalog["actions"]:
+            if row["routeId"] == "media.subtitles":
+                row["risk"] = "unverified"
+        with self.assertRaises(ValueError):
+            bridge.NoxPackHost(catalog)
+
+    def test_original_catalog_owner_risks_remain_valid(self):
+        original = json.loads(CATALOG.read_text("utf-8"))
+        self.assertEqual(len(bridge.NoxPackHost(original).routes), 50)
+
+
+    def test_forged_foreign_session_cannot_override_validation(self):
+        class FakeSession:
+            allowed = frozenset({"media.subtitles"})
+            private_approved = frozenset()
+            tenant = "tenant"
+            principal = "principal"
+            chat_id = "chat"
+            def validate(self):
+                return None
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.execute("media.subtitles", {"text": "no"}, FakeSession())
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.advertise(FakeSession())
+        self.assertEqual(self.seen, [])
+
+    def test_subclass_native_session_is_not_a_signed_host_identity(self):
+        class ForgedSession(bridge.NativeSession):
+            def validate(self):
+                return None
+        forged = ForgedSession("tenant", "principal", "chat",
+            allowed=frozenset({"media.subtitles"}))
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.execute("media.subtitles", {}, forged)
+        self.assertEqual(self.seen, [])
+
+    def test_catalog_reordered_task_ids_must_not_bind_route_owners(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        catalog["actions"][0]["taskId"], catalog["actions"][1]["taskId"] = (
+            catalog["actions"][1]["taskId"], catalog["actions"][0]["taskId"])
+        with self.assertRaisesRegex(ValueError, "TaskID"):
+            bridge.NoxPackHost(catalog)
+        self.assertEqual(self.seen, [])
+
+    def test_unhashable_native_route_is_denied_before_backend(self):
+        for route in ([], {}, None, 1):
+            with self.subTest(route=repr(route)):
+                with self.assertRaises(bridge.HostDenied):
+                    self.dispatch.execute(route, {}, self.session)
+        self.assertEqual(self.seen, [])
+
+
 if __name__ == "__main__":
     unittest.main()
