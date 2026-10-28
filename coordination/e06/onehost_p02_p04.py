@@ -252,6 +252,11 @@ class P02P04OneHost:
             # leases. Any failed native cleanup must HOLD, not leak an owner
             # exception or report a successful chat completion.
             owner_close_attempted = False
+            # Pin the genuine P02 run epoch when the existing owner provides
+            # its run_id. Older offline owner stubs can omit the identifier;
+            # the installed P02 ChatBridge always emits it on chat.start.
+            owner_run_id = None
+            owner_run_started = False
 
             def close_owner_once():
                 nonlocal owner_close_attempted
@@ -294,6 +299,28 @@ class P02P04OneHost:
                     if (type(wire.get("type")) is not str
                             or wire["type"] not in _P02_CHAT_FRAMES):
                         raise OneHostHold("EXISTING_P02_CHAT_FRAME_TYPE_REQUIRED")
+                    # The owner P02 ChatBridge carries one run_id across its
+                    # chat.start and chat.sources frames. Pin the first actual
+                    # owner token: a citation from a different run, a missing
+                    # citation epoch, or sources before its start must never
+                    # reach the existing native WebView2 channel. This does
+                    # not fabricate provenance or replace P02 citation checks.
+                    run_token = wire.get("run_id")
+                    if run_token is not None:
+                        if (type(run_token) is not str or not 0 < len(run_token) <= 128
+                                or any(ord(ch) < 32 or ord(ch) == 127 for ch in run_token)):
+                            raise OneHostHold("P02_CHAT_OWNER_RUN_ID_INVALID")
+                        if owner_run_id is None:
+                            owner_run_id = run_token
+                        elif run_token != owner_run_id:
+                            raise OneHostHold("P02_CHAT_OWNER_RUN_ID_CHANGED")
+                    if wire["type"] == "chat.start" and run_token is not None:
+                        owner_run_started = True
+                    if wire["type"] == "chat.sources" and owner_run_id is not None:
+                        if run_token is None:
+                            raise OneHostHold("P02_CHAT_CITATION_RUN_ID_REQUIRED")
+                        if not owner_run_started:
+                            raise OneHostHold("P02_CHAT_CITATION_START_REQUIRED")
                     # A blocking owner generator may complete a RAG/LLM await
                     # after native permission was revoked. Pre-next admission
                     # alone cannot protect the newly produced frame.

@@ -1,0 +1,71 @@
+{
+  "schema": "NOX-V16-E06-SOURCE-ONLY-R20-v1",
+  "run_id": "NOX-V16-W3-03-20261029T0156MSK-R18",
+  "task_id": "E06-W3-03-CITATION-RUN-EPOCH-02",
+  "owner": "E06/W3.03 P02-P04 original owner onehost adapter",
+  "mode": "SOURCE_ONLY_NO_EXE_NO_CI_NO_E07_NO_MERGE",
+  "staging_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "staging_pr162_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+  "owner_branch": "owner/e06/w3-03-r17-stop-before-sqlite-20261029",
+  "owner_precommit": "0a5d6687bc0d5024316df3579bac12f97553293e",
+  "owner_pretree": "0d65f50cc843c4d04c7aa9032e05c1f1abf61eb2",
+  "historical_source_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_lock_729": "NOT_PHYSICALLY_VERIFIED",
+  "files": [
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "pre_sha256": "a1597da8be6e5bab47e63f5653ba28051865d1b55ae18c5fa200f84abcdd1ee1",
+      "post_sha256": "12e294e5753b9c058c51ec1ad059f44c086ef51209a0723b3c92ab4b871a29fe",
+      "pre_git_blob_sha1": "0f3919157944ffc8bdf3e403011c6454da0f197c",
+      "post_git_blob_sha1": "dc0a56cec2bcd010f456ab61f92e82ec32862839",
+      "owner": "E06/W3.03",
+      "diff": "Bind existing P02 run_id on chat.start; reject chat.sources with mismatched/missing owner run_id or before owner start; reject control characters in run_id."
+    },
+    {
+      "path": "tests/e06/test_onehost_citation_run_binding_r18.py",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "39ee4ba66edc90902cfc7a625ac93c1d562d55a6e1d97707a99f06a0fa86fad1",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "2992046511d7d779f2c87f6ee1f71a7c251c722a",
+      "owner": "E06/W3.03",
+      "diff": "One normal+four negative original-owner stream cases, no hardware."
+    }
+  ],
+  "tests": {
+    "negative_same_preimage": "4 FAIL out of 11 discovered test cases",
+    "focused_postimage": "11/11 PASS",
+    "previous_lesson_R17": "STOP_TOKEN_PRECHECK_BEFORE_SQLITE_ADMISSION APPLIED YES, focused 9/9 PASS",
+    "terminal_cleanup_regression": "11/11 PASS",
+    "nested_provenance_regression": "21/21 PASS",
+    "python_ast": "PASS",
+    "hardware_and_windows": "NOT_RUN"
+  },
+  "permission_map": {
+    "owner_p02": "EXISTING ChatBridge/P02Store/OllamaClient",
+    "owner_p04": "EXISTING LocalRag/p02_callback",
+    "acl": "EXISTING native SID/session/authorize + SQLite history",
+    "stop": "EXISTING threading.Event per run",
+    "webview2": "EXISTING P02 frames only",
+    "events": "EXISTING P05 owner unchanged",
+    "gpu": "EXISTING owner ports unchanged"
+  },
+  "product_done_new": 0,
+  "source_candidate_new": 1,
+  "remaining_p0_p1": [
+    "native atomic authorization/SQLite rollback not proven",
+    "P04 real RAG citation provenance and GPU checkpoints without hardware/eval HOLD",
+    "physical 3 ZIP parts 729 SHA unreconciled",
+    "independent frozen source acceptance HOLD"
+  ],
+  "previous_lesson": "STOP_TOKEN_PRECHECK_BEFORE_SQLITE_ADMISSION",
+  "previous_lesson_applied": "YES",
+  "one_lesson": {
+    "id": "BIND_P02_CITATIONS_TO_OWNER_RUN_EPOCH",
+    "error": "cross-run or unattributed chat.sources could pass type-only E06 acceptance",
+    "cause": "P02 native frame boundary checked type and post-auth but not conversation-run epoch",
+    "change": "pin owner-provided run_id and require identical token and prior chat.start for citation frames",
+    "regression": "exact-preimage 4 negative failures -> focused GREEN 11/11, previous STOP lesson 9/9",
+    "prevent_repeat": "new citation-bearing native frames require an owner run-epoch correlation regression and preserve earlier cancellation gate"
+  },
+  "release": "HOLD"
+}
