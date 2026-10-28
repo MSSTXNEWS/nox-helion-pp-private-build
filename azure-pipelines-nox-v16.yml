@@ -59,6 +59,8 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_INGRESS_UNIT_HOLD' }
       python tests/P04/test_training_failure_status.py
       if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
+      python tests/P04/test_gpu_inventory_identity_gate_r13.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_INVENTORY_OWNER_UNIT_HOLD' }
       python tests/P04/test_e04_role_type_before_membership.py
       if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_creative_worker_payload_integrity_r18.py' -v
