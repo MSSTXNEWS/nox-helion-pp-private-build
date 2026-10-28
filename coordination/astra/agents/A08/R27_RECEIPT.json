@@ -1,0 +1,46 @@
+{
+  "run_id": "ASTRA-R27-A08-01-CHECKPOINT-RESUME",
+  "agent_id": "/root/a08",
+  "branch": "astra/r27-a08-20261029",
+  "parent": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "completed_megablocks": 1,
+  "planned_megablocks": 10,
+  "matrix_approach": 5,
+  "task_ids": [
+    "A08-R27-CHECKPOINT-ANCESTRY",
+    "E04-P04-CHECKPOINT-RNG-IDENTITY-R18"
+  ],
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "pre_git_blob": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "post_git_blob": "255142a3e997a86f7bfd4e8e9ee48f66788594cc",
+      "pre_sha256": "836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712",
+      "post_sha256": "980c144284330a8b23679e412f07d8f96dc86da80925514be8313638dd20b9f6"
+    },
+    {
+      "path": "coordination/astra/agents/A08/test_checkpoint_resume_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "aba643e6b6a5f3255f1c731ce8e096e5b952ca0b",
+      "pre_sha256": null,
+      "post_sha256": "474b84e9f77072cf8ee715af03517cb9f2ce482dc9a82decdc78898cf992b83e"
+    }
+  ],
+  "donor_reused": {
+    "commit": "e59e97d9b036779e8cc211033aa267a7a0c97cc4",
+    "path": "coordination/e04/patches/NOX_V16_W4_R18_RNG_CHECKPOINT_SOURCE.patch",
+    "scope": "exact RNG guard hunk; original patch-only donor did not alter production source"
+  },
+  "tests": {
+    "new_regression": "RED 4 fail / 2 pass -> GREEN 6/6",
+    "combined_targeted_python_suite": "23/23 PASS",
+    "command": "python unittest suite: coordination/astra/agents/A08/test_checkpoint_resume_r27.py + tests/P04/test_checkpoint_state_integrity.py + test_training_event_gpu_path_security.py + test_training_failure_status.py",
+    "scope": "actual imported production Python module with temporary filesystem/checkpoint fixture bytes; no model training"
+  },
+  "lesson": "Check checkpoint lexical ancestry before path resolution; apply reviewed RNG namespace donor to actual production source and retain canonical/rank-format positives. Git blob bytes verified before edits.",
+  "gpu_training": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "source_complete": "HOLD",
+  "integration": "NOT_RUN",
+  "ci": "NOT_RUN"
+}

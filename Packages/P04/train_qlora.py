@@ -719,6 +719,10 @@ class EventWriter:
 
 
 def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str]:
+    # Inspect lexical ancestry before resolve() erases symlink/junction hops.
+    # Resume must not admit an aliased path just because its target is in-run.
+    reject_reparse_ancestors(checkpoint_dir.absolute())
+    reject_reparse_ancestors(selected.absolute())
     if selected.is_symlink() or not selected.is_dir():
         raise ValueError("RESUME_CHECKPOINT_NOT_REGULAR_DIRECTORY")
     root = checkpoint_dir.resolve(strict=True)
@@ -742,7 +746,8 @@ def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str
     if any(item.is_symlink() for item in real.rglob("*")):
         raise ValueError("RESUME_CHECKPOINT_SYMLINK_IN_TREE")
     rng = list(real.glob("rng_state*.pth"))
-    if not rng or any(not path.is_file() or path.is_symlink() or path.stat().st_size == 0 for path in rng):
+    if (len(rng) != 1 or re.fullmatch(r"rng_state(?:_[0-9]+)?\.pth", rng[0].name) is None
+            or not rng[0].is_file() or rng[0].is_symlink() or rng[0].stat().st_size == 0):
         raise ValueError("RESUME_CHECKPOINT_RNG_MISSING")
     return step, sha256_tree(real)
 
