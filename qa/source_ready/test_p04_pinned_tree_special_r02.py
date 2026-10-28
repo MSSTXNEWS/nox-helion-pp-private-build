@@ -69,6 +69,17 @@ class P04PinnedTreeSpecialFiles(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SYMLINK"):
                 self.owner.sha256_tree(p)
 
+    def test_source_has_cross_platform_regular_file_type_gate(self):
+        # Even on Windows where mkfifo is unavailable, source admission
+        # must explicitly reject socket/pipe/device and unknown file types.
+        owner_text = OWNER.read_text(encoding="utf-8")
+        start = owner_text.index("def sha256_tree")
+        end = owner_text.index("\ndef write_training_receipt", start)
+        function = owner_text[start:end]
+        self.assertIn("stat.S_ISREG", function,
+                      "The pinned-tree function must reject nonregular nodes")
+        self.assertRegex(function, r"SPECIAL_FILE|NONREGULAR")
+
     @unittest.skipUnless(hasattr(os, "mkfifo"), "POSIX named pipe required")
     def test_fifo_cannot_be_silently_excluded_from_hash(self):
         with tempfile.TemporaryDirectory() as tmp:
