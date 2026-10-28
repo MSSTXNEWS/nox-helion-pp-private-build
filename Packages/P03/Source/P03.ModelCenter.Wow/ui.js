@@ -90,9 +90,9 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?.status||'Нет активной операции';
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
   $('transferNote').textContent=realPct===null?'Без достоверного процента':`Прогресс ${realPct}%`;
-  $('modelSize').textContent=bytes(m?.artifactBytes);
-  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Running','Downloading'].includes(j.state);
-  const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled','Paused'].includes(j.state);
+  $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
+  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running','Downloading'].includes(j.state);
+  const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled'].includes(j.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
   $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
@@ -125,7 +125,7 @@ function renderComparison(){const root=$('comparison');root.replaceChildren();if
   for(const [label,value] of [['Статус',hasEvidence(m)?'VERIFIED':'REVIEW_REQUIRED'],['Размер',bytes(m.artifactBytes)],['VRAM',fmtRam(m.requiredVramGiB)],['Лицензия',safeText(m.license)],['Тег',safeText(m.exactTag)]])dl.append(...lineItem(label,value));col.append(dl);grid.append(col);}root.append(grid);
 }
 function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(state.events.length===0){feed.append(el('li','empty','Нет событий от host.'));return;}
- for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||Date.now());const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+ for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||'');const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
 }
 function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
@@ -134,11 +134,11 @@ function sendAction(action){const c=state.capabilities||{};const job=currentJob(
  if(action==='importGguf'&&!$('licenseAck').checked)return;
  if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
- if(state.pending.has(action))return;state.pending.add(action);renderHero();const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
+ if(state.pending.has(action))return;state.pending.add(action);renderHero();renderQuick20();const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
  const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
- try{window.chrome.webview.postMessage(data);showToast('Команда отправлена host. Ожидание ответа.');}catch{state.pending.delete(action);renderHero();showToast('Связь с host отсутствует.');}
+ try{window.chrome.webview.postMessage(data);showToast('Команда отправлена host. Ожидание ответа.');}catch{state.pending.delete(action);renderHero();renderQuick20();showToast('Связь с host отсутствует.');}
  // Pending is not interpreted as success; delayed ACK clears this lock.
 }
 let toastTimer;function showToast(msg){const n=$('toast');n.textContent=ellipsis(msg,240);n.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.hidden=true,4500);}
@@ -160,13 +160,13 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     if(['completed','failed','cancelled'].includes(evt.phase))job.state=evt.phase==='completed'?'Completed':evt.phase==='failed'?'Failed':'Cancelled';}
   render();
  }else if(data.type==='p03.command.ack.v1'){
-  if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action))return;state.pending.delete(data.action);renderHero();showToast(data.accepted===true?'Host принял команду; результат будет в событиях.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
+  if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action))return;state.pending.delete(data.action);renderHero();renderQuick20();showToast(data.accepted===true?'Host принял команду; результат будет в событиях.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);
 for(const b of document.querySelectorAll('[data-filter]'))b.addEventListener('click',()=>{state.filter=b.dataset.filter;for(const btn of document.querySelectorAll('[data-filter]')){btn.classList.toggle('active',btn===b);btn.setAttribute('aria-pressed',String(btn===b));}renderCatalog();});
 $('pullBtn').addEventListener('click',()=>sendAction('pull'));
 $('importBtn').addEventListener('click',()=>sendAction('importGguf'));
-$('licenseAck').addEventListener('change',renderHero);
+$('licenseAck').addEventListener('change',()=>{renderHero();renderQuick20();});
 $('stopBtn').addEventListener('click',()=>sendAction('stop'));
 $('retryBtn').addEventListener('click',()=>sendAction('retry'));
 $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));

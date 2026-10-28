@@ -88,7 +88,7 @@ public static class ModelWowBridgeContract
         Capabilities allowed, out Command? command)
     {
         command = null;
-        if (string.IsNullOrWhiteSpace(payload) || payload.Length > 2048 || jobs is null || allowed is null)
+        if (string.IsNullOrWhiteSpace(payload) || payload.Length > 2048 || jobs is null || approvedCatalog is null || allowed is null)
             return false;
         try
         {
@@ -108,9 +108,9 @@ public static class ModelWowBridgeContract
                 if (!root.TryGetProperty("modelId", out var selected) || selected.ValueKind != JsonValueKind.String ||
                     !root.TryGetProperty("licenseAcknowledged", out var ack) || ack.ValueKind != JsonValueKind.True)
                     return false;
-                var m = approvedCatalog.FirstOrDefault(x => x.Id == selected.GetString());
-                if (m is null || !m.CanOfferOneClickPull) return false;
-                command = new Command(id, action, null, m.Id);
+                var matches = approvedCatalog.Where(x => x.Id == selected.GetString()).Take(2).ToArray();
+                if (matches.Length != 1 || !matches[0].CanOfferOneClickPull) return false;
+                command = new Command(id, action, null, matches[0].Id);
                 return true;
             }
             if (action == "importGguf" && allowed.ImportGguf)
@@ -131,7 +131,7 @@ public static class ModelWowBridgeContract
                 !Guid.TryParse(jobProp.GetString(), out var jobId)) return false;
             var job = jobs.FirstOrDefault(x => x.Id == jobId);
             if (job is null) return false;
-            if (action == "stop" && job.State != ModelJobState.Running) return false;
+            if (action == "stop" && job.State is not (ModelJobState.Queued or ModelJobState.Running)) return false;
             if (action == "retry" && job.State is not (ModelJobState.Failed or ModelJobState.Cancelled))
                 return false;
             command = new Command(id, action!, jobId, null);
