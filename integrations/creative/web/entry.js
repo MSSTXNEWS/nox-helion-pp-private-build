@@ -27,7 +27,9 @@
      return;
    }
    if(event.data.type==='nox.creative.projector.v1'){
-     window.chrome?.webview?.postMessage?.({action:'creativeProjector'});return;
+     const project=event.data.project_id;
+     if(typeof project!=='string'||(project!==''&&!/^[a-z0-9_-]{1,48}$/i.test(project)))return;
+     window.chrome?.webview?.postMessage?.({action:'creativeProjector',projectId:project});return;
    }
    if(event.data.type==='nox.creative.request.v1'){
      if(!/^[0-9a-f-]{36}$/i.test(event.data.request_id||''))return;
