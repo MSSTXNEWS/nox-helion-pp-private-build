@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Callable, Mapping
 from p02_runtime import P02Error
@@ -109,8 +110,12 @@ class P02EventRelay:
                         set(row) - {'source_id', 'title', 'url'} or
                         not isinstance(row['source_id'], str) or
                         not 0 < len(row['source_id']) <= 128 or
+                        any(unicodedata.category(ch) in ('Cc', 'Cf', 'Cs')
+                            for ch in row['source_id']) or
                         not isinstance(row['title'], str) or
                         not 0 < len(row['title']) <= 200 or
+                        any(unicodedata.category(ch) in ('Cc', 'Cf', 'Cs')
+                            for ch in row['title']) or
                         ('url' in row and
                          (not isinstance(row['url'], str) or len(row['url']) > 2048))):
                     raise P02Error('CHAT_SOURCES_SCHEMA_INVALID')
