@@ -74,8 +74,10 @@ def validate_training_limits(profile: dict[str, Any], max_steps: int,
     if ((max_steps != -1 and not 1 <= max_steps <= profile["max_steps"])
             or not math.isfinite(epochs) or not 0 < epochs <= profile["max_epochs"]):
         raise ValueError("P04_TRAINING_PROFILE_BUDGET_EXCEEDED")
-    if (save_steps < 1 or eval_steps < 1
-            or (max_steps != -1 and (save_steps > max_steps or eval_steps > max_steps))):
+    # Very short operator-approved smoke runs may end before the periodic
+    # save/eval interval; the trainer still performs its terminal evaluation
+    # and explicit PAUSE/STOP forces a full-state save.
+    if save_steps < 1 or eval_steps < 1:
         raise ValueError("P04_TRAINING_CHECKPOINT_EVAL_INTERVAL_INVALID")
 
 
