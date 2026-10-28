@@ -55,15 +55,19 @@ function create(){
   }catch(e){note('HOLD визуального движка: '+e.message)}
   // First 50 actual route presets are read from the original single P01 catalog.
   // We do not dispatch privileged routes on a visual preview click.
-  fetch('../pack01-catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('P01 catalog unavailable');return r.json()}).then(catalog=>{
+  fetch('wow200/pack01-catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('P01 catalog unavailable');return r.json()}).then(catalog=>{
     if(!Array.isArray(catalog.actions)||catalog.actions.length!==50)throw Error('P01 original routes incomplete');
     for(const action of catalog.actions){const button=document.createElement('button');button.className='nox-pack01__tile';button.type='button';button.dataset.routeId=action.routeId;button.dataset.state='HOLD';button.textContent=action.title||action.routeId;
       const description=document.createElement('span');description.textContent='FX preview / без вызова действия';button.append(description);
       button.onclick=()=>{
         // UI gesture opens the real existing P01 function panel. Never auto-execute
         // privileged actions or simulate a successful backend operation.
-        window.parent?.postMessage({type:'nox.creative.navigate.v1',routeId:action.routeId},window.location.origin);
-        note('NOX · переход к штатной функции '+action.routeId+' · запуск и права проверяются в основном NOX');
+        if(window.parent===window){note('HOLD · основной NOX не подключён к маршруту '+action.routeId);return;}
+        try{
+          window.parent.postMessage({type:'nox.creative.navigate.v1',routeId:action.routeId},window.location.origin);
+          note('REQUESTED · '+action.routeId+' · ожидается подтверждение основного NOX, действие ещё не выполнено');
+        }catch{note('HOLD · нет доступного канала к основной функции '+action.routeId);}
+
       };
       routes.append(button)}
     pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(mod.value.toLowerCase());

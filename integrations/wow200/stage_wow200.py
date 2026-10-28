@@ -18,6 +18,7 @@ D02 = {
 # This prevents a fabricated 50-entry placeholder list passing as "WOW 1-200".
 DONOR_MANIFEST_BLOB = "de7c6305c02023bd61c5acba3ffea5f62953a0d1"
 DONOR_FILE_COUNT = 56
+PACK01_CATALOG_BLOB = "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d"
 # E01 PR144 HEAD f8bb7db02a5b01385d5d08329358be8c0936dfc2
 # Source blobs verified identical in the frozen E06 PR162 candidate.
 # Keep the old WOW200 donor *unchanged* as a separate legacy payload.
@@ -72,6 +73,21 @@ def stage(root:Path, source:Path)->dict:
     # Verify both byte-identical immutable versions BEFORE touching the staged tree.
     # source is <repo>/integrations/wow200; owner1 source is <repo>/proposals/.
     owner1_root=source.parents[1]
+    pack01_catalog=owner1_root/"proposals/NOX-PACK01-50/catalog.json"
+    if (not pack01_catalog.is_file() or pack01_catalog.is_symlink() or
+        gitsha(pack01_catalog.read_bytes())!=PACK01_CATALOG_BLOB):
+        raise ValueError("PACK01_CATALOG_PIN_HOLD")
+    catalog=json.loads(pack01_catalog.read_text(encoding="utf-8"))
+    actions=catalog.get("actions")
+    if (catalog.get("status")!="SOURCE_CANDIDATE_NOT_INTEGRATED" or
+        not isinstance(actions,list) or len(actions)!=50 or
+        not all(isinstance(a,dict) and isinstance(a.get("routeId"),str) and
+                isinstance(a.get("taskId"),str) and
+                a.get("category") in {"chat","models","learning","voice","space"}
+                for a in actions) or
+        len({a["routeId"] for a in actions})!=50 or
+        len({a["taskId"] for a in actions})!=50):
+        raise ValueError("PACK01_CATALOG_50_ROUTES_HOLD")
     for rel,pins in OWNER1_D02_ENGINE.items():
         archived=source/rel
         active=owner1_root/rel
@@ -83,7 +99,7 @@ def stage(root:Path, source:Path)->dict:
             raise ValueError("OWNER1_D02_ENGINE_SHA_HOLD:"+rel)
     dest=root/"Assets/creative/wow200"
     if dest.exists():raise ValueError("WOW200_ALREADY_INSTALLED_HOLD")
-    plans=[]
+    plans=[(pack01_catalog,dest/"pack01-catalog.json")]
     for rel, expected in files.items():
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
             raise ValueError("UNSAFE_WOW_SOURCE_PATH")
@@ -147,6 +163,7 @@ def stage(root:Path, source:Path)->dict:
         receipt={"schema":"NOX_V16_WOW200_ADDITIVE_R13_STAGE", "source":"PR44/PR38/PR14/PR15 immutable Git blobs", "files":copied,
           "count":len(copied),"D02_original_SHA256":D02,"same_EXE_QA":"NOT_RUN","GPU":"NOT_RUN",
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
+          "pack01_catalog_blob":PACK01_CATALOG_BLOB,"pack01_catalog_routes":50,
           "home_pr30_renderer_staged":True,
           "active_d02_engine":"OWNER1_PR144_PINNED",
           "active_d02_git_blobs":{rel:p["active_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
