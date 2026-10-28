@@ -74,4 +74,19 @@ $('theater-open').onclick=openTheater;$('theater-title').oninput=()=>popup('titl
 const spaces=$('spaces');for(const s of SPACES){const b=document.createElement('button');b.className='tile';b.textContent=s;b.onclick=()=>{popup('space',s);showToast('Выбрана сцена: '+s)};spaces.append(b)}$('open-space').onclick=openTheater;$('apply-fx').onclick=applyWow;applyWow();
 try{let response=await fetch('/api/bootstrap');if(response.ok){const b=await response.json();csrf=b.csrf}}catch{};
 await refresh();await renderModels();}
+
+// The original NOX chat sends prefill events from a same-origin WebView2 frame.
+// Receiving it in the studio is required; otherwise chat commands silently vanish.
+window.addEventListener('message',async event=>{
+ if(event.origin!==location.origin || event.source!==window.parent || event.data?.type!=='nox.creative.prefill.v1')return;
+ const text=String(event.data.text||'').slice(0,6000);
+ if(!text)return;
+ $('prompt').value=text;
+ navigate('create');
+ if(event.data.execute){
+  const result=await task('chat_execute',{text,project_id:$('project').value.trim(),scenes:Number($('scenes').value)},'chat-output');
+  if(result?.project_id)$('project').value=result.project_id;
+ }
+});
+
 init().catch(e=>showToast('Initialization failed: '+e.message,true));

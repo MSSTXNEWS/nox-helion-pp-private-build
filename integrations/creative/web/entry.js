@@ -11,9 +11,9 @@
  button('🎬 ТВОРЧЕСКАЯ СТУДИЯ',document.querySelector('#functions .nox-pack-head'));
  function launch(text='',execute=false){
    if(typeof showScreen==='function')showScreen('creative');else screen.classList.add('active');
-   if(text)frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',text,execute},location.origin);
+   if(text){window.__noxCreativePrefill={text,execute};if(frame.dataset.loaded==='yes'){frame.contentWindow.postMessage({type:'nox.creative.prefill.v1',text,execute},location.origin);window.__noxCreativePrefill=null}}
  }
- frame.addEventListener('load',()=>{const t=window.__noxCreativePrefill;if(t){frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',...t},location.origin);window.__noxCreativePrefill=null}});
+ frame.addEventListener('load',()=>{frame.dataset.loaded='yes';const t=window.__noxCreativePrefill;if(t){frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',...t},location.origin);window.__noxCreativePrefill=null}});
  window.addEventListener('message',event=>{
    if(event.origin!==location.origin || event.source!==frame.contentWindow || !event.data)return;
    if(event.data.type==='nox.creative.projector.v1'){
@@ -37,8 +37,8 @@
  function sendToStudio(event){
    const value=chatInput?.value||'';if(!studioIntent(value))return;
    event.preventDefault();event.stopImmediatePropagation();
-   window.__noxCreativePrefill={text:value,execute:true};launch(value,true);
+   chatInput.value='';window.__noxCreativePrefill={text:value,execute:true};launch(value,true);
  }
  send?.addEventListener('click',sendToStudio,true);
- chatInput?.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'&&studioIntent(chatInput.value))sendToStudio(event)},true);
+ chatInput?.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&!event.repeat&&studioIntent(chatInput.value))sendToStudio(event)},true);
 })();

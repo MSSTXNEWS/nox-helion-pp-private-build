@@ -75,7 +75,7 @@ public partial class MainWindow
                 {
                     while (await process.StandardOutput.ReadLineAsync() is { } line)
                     {
-                        if (line.Length>8_000_000)continue;
+                        if (line.Length>8_000_000) { WriteLog("CREATIVE_RESPONSE_TOO_LARGE"); continue; }
                         using var doc=JsonDocument.Parse(line);
                         if (!doc.RootElement.TryGetProperty("request_id",out var id) || id.ValueKind!=JsonValueKind.String ||
                             !Guid.TryParseExact(id.GetString(),"D",out _))continue;

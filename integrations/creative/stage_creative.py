@@ -37,8 +37,19 @@ def main():
     for file in sorted((source/'web').glob('*')):
         if not file.is_file():continue
         dest=target/file.name;shutil.copyfile(file,dest);record(dest)
-    for canonical in ('home.png','menu.png','core01.png','menu_sections.png'):
-        if not (stage/'Assets'/canonical).is_file():raise SystemExit('HOLD: original D02 resource missing: '+canonical)
+    # NO-LOSS hard gate: canonical D02 artwork must remain byte-identical before and after.
+    approved={
+        'home.png':'382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a',
+        'menu.png':'4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9',
+        'core01.png':'343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97',
+        'menu_sections.png':'7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'
+    }
+    for canonical, expected in approved.items():
+        file=stage/'Assets'/canonical
+        if not file.is_file() or sha(file)!=expected:
+            raise SystemExit('HOLD: original D02 resource missing or altered: '+canonical)
+    receipt['canonical_d02_sha256']=approved
+
     (stage.parent/'CREATIVE_STAGE_RECEIPT.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     print('CREATIVE_R13_STAGED_NOLOSS',len(receipt['files']))
 
