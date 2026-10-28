@@ -63,9 +63,10 @@ class NativeDepthBoundaryRegression(unittest.TestCase):
         # The worker's preliminary json.loads() currently executes BEFORE
         # NativeIngress's MAX_JSON_NESTING=512 policy, and only catches
         # (ValueError, UnicodeError), not RecursionError.
-        depth = max(3000, sys.getrecursionlimit() + 500)
-        if depth * 2 + 1 > MAX_INPUT:
-            self.skipTest("Interpreter recursion limit exceeds bounded native frame")
+        # Pin a bounded parser recursion budget inside this one test so the
+        # reproducer is deterministic across Windows and Linux Python builds.
+        depth = 12000
+        self.assertLessEqual(depth * 2 + 1, MAX_INPUT)
         invalid_json = b"[" * depth + b"0" + b"]" * depth
         good_json = json.dumps({
             "protocol": "NOX-P02-NATIVE-v1",
@@ -78,7 +79,16 @@ class NativeDepthBoundaryRegression(unittest.TestCase):
         ingress = NativeIngress(dispatcher, lambda: object(), expected_run_id=RUN_ID)
         output = io.BytesIO()
         request_stream = io.BytesIO(framed(invalid_json) + framed(good_json))
-        count = serve_native_frames(ingress, request_stream, output, drain_timeout=3.0)
+        previous_limit = sys.getrecursionlimit()
+        try:
+            sys.setrecursionlimit(1000)
+            # Prove that the untrusted prefix causes the specific uncaught
+            # exception in this Python runtime, before testing the owner pipe.
+            with self.assertRaises(RecursionError):
+                json.loads(invalid_json.decode("utf-8"))
+            count = serve_native_frames(ingress, request_stream, output, drain_timeout=3.0)
+        finally:
+            sys.setrecursionlimit(previous_limit)
         answers = read_all_frames(output.getvalue())
         self.assertEqual(count, 2)
         self.assertEqual(len(answers), 2)
