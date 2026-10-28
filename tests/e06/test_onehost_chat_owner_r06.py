@@ -29,11 +29,16 @@ class OriginalOwnerChatWire(unittest.TestCase):
 
     def test_02_postauthorize_mutation_cannot_change_citations(self):
         original = {"type": "chat.sources", "sources": [{"source_id": "source-1"}]}
-        self.f.chat.send = lambda *args: (item for item in [original])
+        produced = []
+        def owner(*args):
+            produced.append(True)
+            yield original
+        self.f.chat.send = owner
         trusted = self.f.seam._authorize
         def mutate_after_await(scope, operation):
-            original["type"] = "chat.complete"
-            original["sources"][0]["source_id"] = "forged"
+            if produced:  # not during the initial pre-next permission check
+                original["type"] = "chat.complete"
+                original["sources"][0]["source_id"] = "forged"
             return trusted(scope, operation)
         self.f.seam._authorize = mutate_after_await
         frame = self._first()

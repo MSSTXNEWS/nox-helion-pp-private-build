@@ -29,9 +29,9 @@
       "path": "tests/e06/test_onehost_chat_owner_r06.py",
       "owner": "E06",
       "pre_sha256": "ABSENT",
-      "post_sha256": "332d0ce8073c1091a1ee48715f411830aab78cee067f9e54194d624c6cbdd479",
+      "post_sha256": "1f849f5db201d49752ba302f312259dfdd8c1f9651a4f2a7baf197d1d3c30c97",
       "pre_git_blob_sha1": "ABSENT",
-      "post_git_blob_sha1": "5c45c3f08c1138676423d5cc2928f9bc6a4ce949",
+      "post_git_blob_sha1": "c771404d65b732df8c683730d37b9b829c6806bb",
       "diff": "ADD_7_ORIGINAL_OWNER_MODULE_NEGATIVE_REGRESSIONS_AUTHORED_NOT_RUN"
     },
     {
@@ -188,5 +188,15 @@
     "single installed Windows EXE E07 acceptance"
   ],
   "no_loss": "main and all P01-P05 owners, D02, 8 CoreIDs, five Personas, WOW, weights, SQLite schema, RAG, GPU worker, events.v3, original archives and EXE unchanged",
-  "release": "HOLD"
+  "release": "HOLD",
+  "test_case_correction": {
+    "reason": "Owner contract test_02 had mutation at pre-next authorization; revised to mutate only after owner generator yielded; prevents false regression FAIL.",
+    "first_source_commit": "0d7a548222f66b4bb5405e8106e3df1e3ed47a2b",
+    "test_pre_sha256": "332d0ce8073c1091a1ee48715f411830aab78cee067f9e54194d624c6cbdd479",
+    "test_post_sha256": "1f849f5db201d49752ba302f312259dfdd8c1f9651a4f2a7baf197d1d3c30c97",
+    "test_pre_git_blob_sha1": "5c45c3f08c1138676423d5cc2928f9bc6a4ce949",
+    "test_post_git_blob_sha1": "c771404d65b732df8c683730d37b9b829c6806bb",
+    "original_owner_tests": "AUTHORED_NOT_RUN",
+    "native_ci": "NOT_RUN_HOLD"
+  }
 }
