@@ -5,6 +5,7 @@ on:
       - e06/v16-diagnostic-build-20261028
     paths:
       - .github/workflows/nox-e06-python-diagnostic.yml
+      - private_build.ps1
   workflow_dispatch:
 permissions:
   contents: read
