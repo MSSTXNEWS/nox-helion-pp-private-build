@@ -69,6 +69,18 @@
     {
       "id": "tools",
       "title": "Документы / Инструменты"
+    },
+    {
+      "id": "behavior",
+      "title": "Поведение / Общение"
+    },
+    {
+      "id": "politics",
+      "title": "Политика / Аргументы"
+    },
+    {
+      "id": "orientation",
+      "title": "Предпочтения / Ориентиры"
     }
   ],
   "principle": "Any public source link identifies candidate model weights, not an approved immutable per-file artifact. Only native host-reviewed exact revision, byte sizes and SHA256 enable the real Download button. Personality and episodic memory are runtime systems, NOT weights alone.",
@@ -1821,6 +1833,360 @@
         "totalBytes": null
       },
       "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "behavior",
+      "modelId": "behavior-minilm",
+      "variantId": "multilingual-nli-fast",
+      "name": "MiniLM · контекст речи и намерения",
+      "variant": "Многоязычная NLI · лёгкая",
+      "source": "https://huggingface.co/MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+      "huggingFaceRepo": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+      "format": "HF_REPOSITORY",
+      "notes": "Не диагностирует характер человека",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "behavior",
+      "modelId": "behavior-deberta",
+      "variantId": "multilingual-nli-deberta",
+      "name": "mDeBERTa · смысл фраз",
+      "variant": "Многоязычная NLI · качество",
+      "source": "https://huggingface.co/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+      "huggingFaceRepo": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+      "format": "HF_REPOSITORY",
+      "notes": "Разрешён только анализ явно предоставленного текста",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "behavior",
+      "modelId": "behavior-irony",
+      "variantId": "irony-roberta",
+      "name": "RoBERTa · ирония",
+      "variant": "Анализ иронии текста EN",
+      "source": "https://huggingface.co/cardiffnlp/twitter-roberta-base-irony",
+      "huggingFaceRepo": "cardiffnlp/twitter-roberta-base-irony",
+      "format": "HF_REPOSITORY",
+      "notes": "Не доказательство человеческих мотивов",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "behavior",
+      "modelId": "behavior-toxicity",
+      "variantId": "detoxify-toxic-bert",
+      "name": "Detoxify · токсичность",
+      "variant": "Токсичная лексика",
+      "source": "https://huggingface.co/unitary/toxic-bert",
+      "huggingFaceRepo": "unitary/toxic-bert",
+      "format": "HF_REPOSITORY",
+      "notes": "Оценка текста, не человека",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion-hartmann",
+      "variantId": "distilroberta-7",
+      "name": "Emotion RoBERTa · 7 эмоций",
+      "variant": "Английский текст",
+      "source": "https://huggingface.co/j-hartmann/emotion-english-distilroberta-base",
+      "huggingFaceRepo": "j-hartmann/emotion-english-distilroberta-base",
+      "format": "HF_REPOSITORY",
+      "notes": "Мягкий эмоциональный сигнал, не диагноз",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion-wav2vec",
+      "variantId": "superb-er",
+      "name": "SUPERB Wav2Vec2 · речь",
+      "variant": "4 эмоции по голосовому фрагменту",
+      "source": "https://huggingface.co/superb/wav2vec2-base-superb-er",
+      "huggingFaceRepo": "superb/wav2vec2-base-superb-er",
+      "format": "HF_REPOSITORY",
+      "notes": "Только с согласия, англоязычные данные",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion-speechbrain",
+      "variantId": "iemocap-wav2vec",
+      "name": "SpeechBrain · эмоции речи",
+      "variant": "IEMOCAP, английский",
+      "source": "https://huggingface.co/speechbrain/emotion-recognition-wav2vec2-IEMOCAP",
+      "huggingFaceRepo": "speechbrain/emotion-recognition-wav2vec2-IEMOCAP",
+      "format": "HF_REPOSITORY",
+      "notes": "Не выводить ориентацию или политические взгляды",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "politics",
+      "modelId": "political-stance",
+      "variantId": "xstance-mdeberta",
+      "name": "Stance XStance · отношение к тезису",
+      "variant": "Многоязычные favor/against",
+      "source": "https://huggingface.co/MatteoFasulo/mdeberta-v3-xstance",
+      "huggingFaceRepo": "MatteoFasulo/mdeberta-v3-xstance",
+      "format": "HF_REPOSITORY",
+      "notes": "Только анализ публичного текста и позиции к конкретному вопросу",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "politics",
+      "modelId": "political-stance",
+      "variantId": "xstance-xlmr",
+      "name": "Stance XStance · XLM-R",
+      "variant": "Сравнение аргументов",
+      "source": "https://huggingface.co/MatteoFasulo/xlm-roberta-xstance",
+      "huggingFaceRepo": "MatteoFasulo/xlm-roberta-xstance",
+      "format": "HF_REPOSITORY",
+      "notes": "Не классифицировать политическую принадлежность пользователя",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "politics",
+      "modelId": "political-stance",
+      "variantId": "newsbias-roberta",
+      "name": "EchoCheck · новостные материалы",
+      "variant": "Заявленная политическая окраска статей",
+      "source": "https://huggingface.co/alxdev/echocheck-political-stance",
+      "huggingFaceRepo": "alxdev/echocheck-political-stance",
+      "format": "HF_REPOSITORY",
+      "notes": "Ограниченная применимость; ошибка и смещения возможны",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "politics",
+      "modelId": "political-analysis",
+      "variantId": "politics-pretrain",
+      "name": "POLITICS · тематические статьи",
+      "variant": "Предобучение, требует fine-tuning",
+      "source": "https://huggingface.co/launch/POLITICS",
+      "huggingFaceRepo": "launch/POLITICS",
+      "format": "HF_REPOSITORY",
+      "notes": "Не готовый классификатор без дообучения",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "politics",
+      "modelId": "political-analysis",
+      "variantId": "news-bias-distilbert",
+      "name": "News Bias DistilBERT",
+      "variant": "Классификация текстов СМИ",
+      "source": "https://huggingface.co/rijulpaul/news-political-bias",
+      "huggingFaceRepo": "rijulpaul/news-political-bias",
+      "format": "HF_REPOSITORY",
+      "notes": "Нельзя использовать для выводов о личности",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "orientation",
+      "modelId": "preference-nli",
+      "variantId": "preferences-mini",
+      "name": "Личные настройки · быстрая NLI",
+      "variant": "Намерения/предпочтения из предоставленного текста",
+      "source": "https://huggingface.co/MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+      "huggingFaceRepo": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+      "format": "HF_REPOSITORY",
+      "notes": "Только добровольные настройки; без вывода сексуальной ориентации",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "orientation",
+      "modelId": "preference-nli",
+      "variantId": "preferences-large",
+      "name": "Личные настройки · mDeBERTa",
+      "variant": "Самоописание и контекст",
+      "source": "https://huggingface.co/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+      "huggingFaceRepo": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
+      "format": "HF_REPOSITORY",
+      "notes": "Зашифрованный профиль/право удаления",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
+    },
+    {
+      "category": "orientation",
+      "modelId": "preference-llm",
+      "variantId": "preferences-qwen3",
+      "name": "Личные настройки · Qwen3",
+      "variant": "Диалог с управляемыми предпочтениями",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "Не приписывать защищённые характеристики по косвенным признакам",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED",
+      "usageRestrictions": [
+        "NO_PERSONAL_POLITICAL_OR_SEXUAL_ORIENTATION_INFERENCE",
+        "NO_AUTOMATED_PERSONAL_PROFILING"
+      ]
     }
-  ]
+  ],
+  "sensitiveDataPolicy": {
+    "politics": "Only public/opt-in textual stance toward a stated topic, not political affiliation of a person",
+    "orientation": "No guessing sensitive sexual orientation; only explicit user-provided settings and no medical/personality diagnosis",
+    "emotions": "Probabilistic context cues; not identity classification",
+    "behavior": "Conversation-assistance suggestions without claims about protected traits",
+    "userCanDisable": true,
+    "userCanDelete": true
+  },
+  "note": "Expanded catalogue; sources verified via public model cards. Source presence does not attest individual checkpoint file hashes, licensing, or native execution."
 }
