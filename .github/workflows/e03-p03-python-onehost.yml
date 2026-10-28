@@ -1,0 +1,45 @@
+name: NOX E03 Python one-host P02/PACK01 contract (not release QA)
+on:
+  pull_request:
+    paths:
+      - 'Packages/P03/Source/python-host/**'
+      - '.github/workflows/e03-p03-python-onehost.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-owner-host:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned original owner2 Python runtime
+        uses: actions/checkout@v4
+        with:
+          ref: e5f5a5af7e58bd7c7d9f37c59034e7244ca1332b
+          path: _pinned_p02
+          sparse-checkout: |
+            Packages/P02/worker-python/
+      - name: Pinned existing PACK01 native host (never a second server)
+        uses: actions/checkout@v4
+        with:
+          ref: 33774d985dd7f05e413f1830f74392f49645fe29
+          path: _pinned_pack01
+          sparse-checkout: |
+            proposals/NOX-PACK01-50/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Real original P02/PACK01 contract + P03 discovery and HOLD gates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:NOX_PINNED_P02_PATH = (Resolve-Path '_pinned_p02/Packages/P02/worker-python').Path
+          $env:NOX_PINNED_PACK01_PATH = (Resolve-Path '_pinned_pack01/proposals/NOX-PACK01-50').Path
+          python -m unittest discover -s Packages/P03/Source/python-host -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E03_PYTHON_NATIVE_HOST_CONTRACT_FAILED' }
+      - name: Pycompile owned port (no third-party install)
+        shell: pwsh
+        run: |
+          python -m py_compile Packages/P03/Source/python-host/p03_onehost_port.py
+          if ($LASTEXITCODE -ne 0) { throw 'E03_ONEHOST_SYNTAX_FAILED' }
