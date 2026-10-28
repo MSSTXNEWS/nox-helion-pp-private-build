@@ -210,3 +210,97 @@ try
 }
 finally { Directory.Delete(atomicRoot, recursive: true); }
 Console.WriteLine("P03_ATOMIC_CLAIM_TEST_PASS 4/4");
+
+ // F18-F21: the ACTUAL worker must observe a STOP from another NOX window.
+ // No real model or network request is made; the fake Pull stream waits for
+ // cancellation, so only an actual worker STOP can complete this scenario.
+var stopRoot = Path.Combine(Path.GetTempPath(), "NOX_P03_STOP_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(stopRoot);
+try
+{
+    var sourceQueue = new ModelDownloadQueueStore(stopRoot);
+    var remoteQueue = new ModelDownloadQueueStore(stopRoot);
+    var reviewed = ModelCatalog.Get("tinyllama") with {
+        EvidenceStatus = CatalogEvidenceStatus.ArtifactVerified,
+        ExactTag = "tinyllama:worker-stop", Version = "synthetic-fixture",
+        License = "synthetic-license", ArtifactBytes = 100,
+        RequiredDiskBytes = 200, RecommendedRamBytes = 300,
+        ExpectedSha256 = new string('b', 64),
+        ExpectedManifestDigestSha256 = new string('a', 64),
+        ImmutableRevision = "sha256:" + new string('a', 64),
+        CompatibilityReviewed = true,
+        LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
+        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama")
+    };
+    var waitingJob = await sourceQueue.EnqueueVerifiedPullAsync(reviewed, true);
+    using var loopback = new HttpClient(new StalledOllamaHandler()) {
+        BaseAddress = new Uri("http://127.0.0.1:11434/")
+    };
+    var adapter = new OllamaModelAdapter(loopback, stopRoot);
+    var publisher = new ModelLifecyclePublisher(new SilentP03Sink());
+    var owningWorker = new ModelDownloadQueueWorker(sourceQueue, adapter, publisher);
+    var secondWindow = new ModelDownloadQueueWorker(remoteQueue, adapter, publisher);
+    var operation = owningWorker.RunNextAsync();
+    var observedStart = false;
+    for (var i = 0; i < 150; i++)
+    {
+        var saved = (await remoteQueue.ReadAsync()).Single();
+        if (saved.State == ModelJobState.Running)
+        {
+            observedStart = true;
+            break;
+        }
+        await Task.Delay(20);
+    }
+    Assert(observedStart, "F18 actual worker claimed job before cross-window STOP");
+    Assert(await secondWindow.CancelAsync(waitingJob.Id),
+        "F19 second window persisted running-job cancellation");
+    await operation.WaitAsync(TimeSpan.FromSeconds(8));
+    var finished = (await remoteQueue.ReadAsync()).Single();
+    Assert(finished.State == ModelJobState.Cancelled,
+        "F20 worker cancelled stalled stream through shared STOP");
+    Assert(!File.Exists(adapter.ReceiptPathFor(waitingJob.Id)),
+        "F21 canceled job cannot forge an installed-model receipt");
+}
+finally { Directory.Delete(stopRoot, recursive: true); }
+Console.WriteLine("P03_SHARED_WORKER_STOP_PASS 4/4");
+
+sealed class SilentP03Sink : IModelLifecycleEventSink
+{
+    public ValueTask PublishToP01Async(ModelLifecycleEvent evt, CancellationToken ct) => ValueTask.CompletedTask;
+    public ValueTask PublishToP05Async(ModelLifecycleEvent evt, CancellationToken ct) => ValueTask.CompletedTask;
+}
+
+sealed class StalledOllamaHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        if (request.RequestUri?.AbsolutePath != "/api/pull")
+            throw new InvalidOperationException("Only synthetic Ollama Pull is available");
+        return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK) {
+            Content = new StreamContent(new StalledP03Stream())
+        });
+    }
+}
+
+sealed class StalledP03Stream : Stream
+{
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count,
+        CancellationToken ct) => ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+    {
+        await Task.Delay(Timeout.Infinite, ct);
+        return 0;
+    }
+    public override void Flush() => throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long length) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
