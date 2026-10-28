@@ -171,3 +171,36 @@ foreach (var bad in new[] {
 }
 Assert(true, "F09 all remote/proxy-ambiguous endpoint shapes denied");
 Console.WriteLine("P03_FINAL_TRANSPORT_POLICY_PASS 2/2");
+
+ // Owner3 atomic-claim regression: only one process starts a given model job.
+var atomicRoot = Path.Combine(Path.GetTempPath(), "NOX_P03_CLAIM_" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(atomicRoot);
+try
+{
+    var left = new ModelDownloadQueueStore(atomicRoot);
+    var right = new ModelDownloadQueueStore(atomicRoot);
+    var approved = ModelCatalog.Get("tinyllama") with {
+        EvidenceStatus = CatalogEvidenceStatus.ArtifactVerified,
+        ExactTag = "tinyllama:1.1b", Version = "synthetic-only", License = "synthetic-license",
+        ArtifactBytes = 100, RequiredDiskBytes = 200, RecommendedRamBytes = 300,
+        ExpectedSha256 = new string('b', 64), ExpectedManifestDigestSha256 = new string('a', 64),
+        ImmutableRevision = "sha256:" + new string('a', 64), CompatibilityReviewed = true,
+        LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
+        CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama")
+    };
+    var ticket = await left.EnqueueVerifiedPullAsync(approved, true);
+    var claims = await Task.WhenAll(Enumerable.Range(0, 24).Select(i =>
+        (i % 2 == 0 ? left : right).TryStartQueuedAsync(ticket.Id)));
+    Assert(claims.Count(x => x is not null) == 1, "F10 only one process acquires model job");
+    var persistedClaim = (await right.ReadAsync()).Single();
+    Assert(persistedClaim.State == ModelJobState.Running && persistedClaim.Attempts == 1,
+        "F11 exactly one attempt persisted");
+    var toCancel = await right.EnqueueVerifiedPullAsync(approved with {
+        ExactTag = "tinyllama:test-cancel", ImmutableRevision = "sha256:" + new string('b', 64),
+        ExpectedManifestDigestSha256 = new string('b', 64) }, true);
+    Assert(await right.CancelQueuedAsync(toCancel.Id), "F12 queue STOP persisted");
+    Assert(await left.TryStartQueuedAsync(toCancel.Id) is null,
+        "F13 cancelled queued job can never be claimed");
+}
+finally { Directory.Delete(atomicRoot, recursive: true); }
+Console.WriteLine("P03_ATOMIC_CLAIM_TEST_PASS 4/4");
