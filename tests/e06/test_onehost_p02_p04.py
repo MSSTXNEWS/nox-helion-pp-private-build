@@ -255,5 +255,59 @@ class OneHostOwnerContract(unittest.TestCase):
 
 
 
+    def test_24_event_verifier_mutation_does_not_forge_completion(self):
+        event = dict(schema="NOX-INSTALLER-EVENT-v3", package_id="P04",
+                     event_type="gpu.sample", evidence_verified=True,
+                     extra={"step": 1})
+        def verify(accepted):
+            accepted["event_type"] = "task.completed"
+            accepted["extra"]["step"] = 999
+            return True
+        self.seam._verify_v3 = verify
+        self.seam._publish_v3 = self.published.append
+        self.seam.publish_owner_gpu_event(self.scope, event)
+        self.assertEqual(self.published[0]["event_type"], "gpu.sample")
+        self.assertEqual(self.published[0]["extra"], {"step": 1})
+
+    def test_25_caller_mutation_does_not_change_verified_snapshot(self):
+        event = dict(schema="NOX-INSTALLER-EVENT-v3", package_id="P04",
+                     event_type="gpu.sample", evidence_verified=True)
+        def verify(accepted):
+            event["event_type"] = "task.completed"
+            return True
+        self.seam._verify_v3 = verify
+        self.seam._publish_v3 = self.published.append
+        self.seam.publish_owner_gpu_event(self.scope, event)
+        self.assertEqual(self.published[0]["event_type"], "gpu.sample")
+
+    def test_26_gpu_ack_verifier_cannot_forge_training_complete(self):
+        def verify(ack):
+            ack["status"] = "TRAINING_COMPLETED"
+            return True
+        self.seam._gpu = lambda scope, command, worker: {
+            "worker_id": worker, "command": command, "status": "ACK_ONLY"}
+        self.seam._verify_ack = verify
+        self.assertEqual(self.seam.gpu_command(
+            self.scope, "gpu.pause", "worker-1")["status"], "ACK_ONLY")
+
+    def test_27_nonfinite_gpu_telemetry_denied(self):
+        self.seam._verify_v3 = lambda event: True
+        self.seam._publish_v3 = self.published.append
+        event = dict(schema="NOX-INSTALLER-EVENT-v3", package_id="P04",
+                     event_type="gpu.sample", evidence_verified=True, value=float("nan"))
+        with self.assertRaisesRegex(OneHostHold, "OWNER_JSON_VALUE_INVALID"):
+            self.seam.publish_owner_gpu_event(self.scope, event)
+        self.assertEqual(self.published, [])
+
+    def test_28_oversized_gpu_telemetry_denied(self):
+        self.seam._verify_v3 = lambda event: True
+        self.seam._publish_v3 = self.published.append
+        event = dict(schema="NOX-INSTALLER-EVENT-v3", package_id="P04",
+                     event_type="gpu.sample", evidence_verified=True, pad="x" * 300000)
+        with self.assertRaisesRegex(OneHostHold, "OWNER_JSON_OVER_LIMIT"):
+            self.seam.publish_owner_gpu_event(self.scope, event)
+        self.assertEqual(self.published, [])
+
+
 if __name__ == "__main__":
     unittest.main()
