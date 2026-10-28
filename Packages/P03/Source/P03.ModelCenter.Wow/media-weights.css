@@ -1,0 +1,29 @@
+/* NOX V16 Model Center media weights: additive secondary-only, original D02 untouched. */
+.p03-media-section{margin:14px 24px 19px;padding:20px 22px;border:1px solid rgba(215,167,96,.23);border-radius:17px;background:linear-gradient(145deg,rgba(27,34,43,.83),rgba(11,15,21,.96));box-shadow:0 14px 35px #0003,inset 0 1px #fff1}
+.p03-media-section .eyebrow{color:#d5a86e;letter-spacing:.17em}
+.p03-media-heading{display:flex;align-items:flex-start;gap:16px;justify-content:space-between;flex-wrap:wrap}
+.p03-media-heading h3{font-size:19px;margin:5px 0}
+.p03-media-hint{font-size:12px;color:#b9bfc6;max-width:690px;line-height:1.55}
+.p03-media-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:15px 0}
+.p03-media-tabs button{background:#1b2630;border:1px solid #9b806044;color:#d6dce1;border-radius:11px;min-height:44px;min-width:110px;padding:9px 15px}
+.p03-media-tabs button[aria-pressed=true]{background:#463728;border-color:#d4ad79;color:#f5dfc0;box-shadow:0 0 16px #d1a46b22}
+.p03-media-section button:focus-visible,.p03-media-section a:focus-visible,.p03-media-section input:focus-visible{outline:2px solid #deb477;outline-offset:2px}
+.p03-media-rights{display:flex;gap:10px;align-items:center;color:#bdc5cc;font-size:12px;margin:4px 0 13px}
+.p03-media-rights input{accent-color:#d4a168;width:18px;height:18px}
+.p03-media-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,248px),1fr));gap:12px}
+.p03-media-card{background:linear-gradient(140deg,#23303b88,#101820ec);border:1px solid rgba(180,185,191,.16);border-radius:14px;padding:14px;min-width:0;box-shadow:inset 0 1px #fff1}
+.p03-media-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.p03-media-card strong{font-size:13px;overflow-wrap:anywhere}
+.p03-media-card small{color:#a4b1ba;font-size:10px}
+.p03-media-state{min-height:25px;font-size:12px;color:#ebbb82;padding:11px 0 2px;overflow-wrap:anywhere}
+.p03-media-size{display:block;padding-bottom:12px}
+.p03-media-ops{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.p03-media-ops button{background:linear-gradient(140deg,#604830,#2c241f);border:1px solid #d3a76b77;border-radius:9px;color:#f2e3ce;min-height:44px;padding:9px 13px;font-size:12px}
+.p03-media-ops button:disabled{opacity:.55;cursor:not-allowed}
+.p03-media-ops .p03-media-stop{background:#462823;border-color:#c87869}
+.p03-media-progress{width:100%;accent-color:#daa871}
+.p03-media-source{display:inline-block;margin-top:12px;font-size:11px;color:#a7cfd5}
+#mediaWeightSummary{font-size:12px;color:#afbfcc;padding-top:15px;min-height:26px}
+@media(max-width:700px){.p03-media-section{margin:9px;padding:12px}.p03-media-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.p03-media-card{padding:9px}.p03-media-tabs button{min-width:0}}
+@media(max-width:390px){.p03-media-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.p03-media-section *{animation:none!important;transition:none!important}}
