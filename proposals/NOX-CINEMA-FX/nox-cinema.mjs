@@ -125,7 +125,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   decorate(controls,"nox-cinema-control");
   decorate(panels,"nox-cinema-panel");
   root.classList.add("nox-cinema-scope");ownerRoot=true;
-  root.dataset.noxMode=profile.toLowerCase();
+  root.dataset.noxFxMode=profile.toLowerCase();
   root.dataset.noxFxVisible="true";
   root.dataset.noxFxState=state;
   function clearParticles(){
@@ -181,7 +181,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(raf){win.cancelAnimationFrame(raf);raf=0;}
     clearParticles();
   }
-  function onVisibility(){root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
+  function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
   doc.addEventListener("visibilitychange",onVisibility);
   const onMotion=e=>{preference=!!e.matches;if(preference)sleep();else wake();};
   if(motion){
@@ -191,12 +191,14 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   const observer=typeof win.IntersectionObserver==="function"?
     new win.IntersectionObserver(items=>{
+      if(disposed)return;
       intersectVisible=items.some(x=>x.isIntersecting);
       root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";
       if(intersectVisible)wake();else sleep();
     },{threshold:.001}):null;
   if(observer)observer.observe(root);
   function applyState(next,runId=null,coreId=null){
+    if(disposed)return false;
     if(!stateSet.has(next)||(runId!==null && (!pattern.test(runId))))
       return false;
     if(coreId!==null){
@@ -215,7 +217,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     for(const orb of each){orb.layers.remove();delete orb.element.dataset.noxFxState;}
     for(const item of decorated)item.element.classList.remove(item.cls);
     root.classList.remove("nox-cinema-scope");
-    delete root.dataset.noxMode;delete root.dataset.noxFxState;
+    delete root.dataset.noxFxMode;delete root.dataset.noxFxState;
     delete root.dataset.noxFxVisible;
     doc.removeEventListener("visibilitychange",onVisibility);
     if(motion){if(typeof motion.removeEventListener==="function")motion.removeEventListener("change",onMotion);
@@ -227,6 +229,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   if(hostEvents){
     let un;
     try{un=hostEvents.subscribe(event=>{
+      if(disposed)return;
       if(!event||typeof event!=="object"||event.trusted!==true ||
          typeof event.state!=="string")return;
       // No fabricated training progress: CSS data-state is just a host-attested state.
@@ -239,12 +242,13 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   mounted.set(root,true);wake();
   return Object.freeze({
     setProfile(next){
+      if(disposed)return false;
       if(!profileSet.has(next))return false;
-      mode=next;root.dataset.noxMode=next.toLowerCase();
+      mode=next;root.dataset.noxFxMode=next.toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },
     setState:applyState,
-    setVisible(value){hostVisible=value===true;
+    setVisible(value){if(disposed)return false;hostVisible=value===true;
       root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";
       if(hostVisible)wake();else sleep();},
     snapshot(){return Object.freeze({profile:preference?"REDUCED":mode,
@@ -264,7 +268,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       for(const orb of each){orb.layers.remove();delete orb.element.dataset.noxFxState;}
       for(const item of decorated)item.element.classList.remove(item.cls);
       if(ownerRoot){root.classList.remove("nox-cinema-scope");
-        delete root.dataset.noxMode;delete root.dataset.noxFxState;
+        delete root.dataset.noxFxMode;delete root.dataset.noxFxState;
         delete root.dataset.noxFxVisible;}
       mounted.delete(root);
     }
