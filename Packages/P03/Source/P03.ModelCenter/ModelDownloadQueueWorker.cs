@@ -31,7 +31,15 @@ public sealed class ModelDownloadQueueWorker(
             lock (_running) _running[job.Id] = linked;
             // CancelQueuedAsync may win between snapshot and this transition.
             // A cancelled job must never be resurrected as Running.
-            var started = await store.TryStartQueuedAsync(job.Id, ct);
+            // A failed queue claim must not leave a disposed CTS registered:
+            // otherwise a later CancelAsync can target a dead worker token.
+            ModelJob? started;
+            try { started = await store.TryStartQueuedAsync(job.Id, ct); }
+            catch
+            {
+                lock (_running) _running.Remove(job.Id);
+                throw;
+            }
             if (started is null)
             {
                 lock (_running) _running.Remove(job.Id);
