@@ -1,0 +1,66 @@
+{
+  "run_id": "NOX-V16-W3-01-20261029T005747MSK-R17",
+  "owner": "E02/W3-01 P02 Chat SQLite Voice",
+  "actual_start_msk": "2026-10-29T00:57:47+03:00",
+  "source_checkpoint_msk": "2026-10-29T01:03:56+03:00",
+  "source_only_policy": "R20_NO_EXE_CI_CROSS_OWNER_MERGE",
+  "task_id": "P02-VOICE-NATIVE-CAPTURE-CONSENT-GATE",
+  "new_product_task_ids_source_fixed": 1,
+  "new_product_accepted_done": 0,
+  "previous_lesson": "R16 SERIAL_PUBLISH_ADMISSION_BEFORE_NATIVE_DELIVERY: N/A because P02EventRelay was not modified",
+  "exact_pr162_head_at_owner_checkout": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "source_branch": "owner/p02/w3-01-r17-native-mic-proof-20261029",
+  "source_commit": "3a6298df53fae628298e9f027a7e0800c9c3c77c",
+  "test_commit": "ef2ce4e62d0fa01572d973145bcd7a6ab7047f57",
+  "candidate_tree": "2b291f646a59f3b56ec5b1d54e25b7175389e24f",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "owner": "P02",
+      "pre_sha256": "094ec8369033ffaf95b08d5955b19c79ef2e11483d19822132d56034792fb1ed",
+      "post_sha256": "f2c0e84f798c0b82801d2b19ac6a271b50521d95dfda82310ab07828ffc3be80",
+      "pre_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "post_git_blob_sha1": "30f515b27f94c95039bbc85b418d60bce8a1f68d",
+      "test": "test_p02_native_voice_consent_r17.py: RED 1/9, GREEN 9/9"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_voice_permission_ci_r17.py",
+      "owner": "P02",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "dfd5d0106a8c6b24b5cc047501f437de6cb6aefd22aeb8301ff89f827ba63430",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "bb498132dc81523cbff8e07238570f0415eb4cfc",
+      "test": "python -m unittest -v test_p02_native_voice_permission_ci_r17.py: 6/6 PASS"
+    }
+  ],
+  "root_cause": "Native capture was incorrectly treated as equivalent to fresh native microphone permission and user consent; microphone_consent=True was hardcoded.",
+  "fix": "Host-injected native_mic_consent(scope,capture_id) proof is required before consuming single-use bytes; missing/false/error denied, browser-supplied consent rejected, post-proof STOP checked, no second host/database/LLM.",
+  "tests": {
+    "original_source_negative": "9 cases: 1 PASS 8 FAIL (10 failure assertions incl subtests)",
+    "patched_source_positive": "9/9 PASS",
+    "committed_focused_test": "6/6 PASS using owner module with injected dependencies",
+    "python_compile": "PASS",
+    "real_microphone": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "asr_tts_weights": "NOT_RUN"
+  },
+  "readback": {
+    "github_source_blob": "PASS",
+    "github_test_blob": "PASS",
+    "drive_master": "PASS",
+    "drive_e06": "PASS",
+    "drive_lessons": "PASS"
+  },
+  "one_new_lesson_id": "R17_NATIVE_CAPTURE_CONSENT_BEFORE_ONE_USE_AUDIO",
+  "hold": {
+    "source_freeze": "HOLD",
+    "source_ready": "HOLD",
+    "integration": "HOLD",
+    "windows_accepted": "NOT_RUN",
+    "E07": "0/10",
+    "original_729_sha": "NOT_VERIFIED",
+    "native_host_consent_callback": "NOT_BOUND_OR_RUNTIME_VERIFIED"
+  },
+  "next_owner_action": "Manual #1 / E06 later bind a trusted native callback that proves real OS microphone permission and fresh consent for exact authenticated capture; run source contract check before freeze, defer hardware acceptance.",
+  "no_loss": "No changes to D02/WOW/CoreID/Persona/original ZIP/user data; PR162, main, and other owners not written."
+}
