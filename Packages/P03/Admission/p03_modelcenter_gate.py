@@ -60,22 +60,37 @@ def _sha(s: Any) -> bool:
 
 
 def _https_url(s: Any) -> bool:
-    if not isinstance(s, str):
+    """Lexical E06 evidence URL gate; NEVER fetch/DNS-resolve in this policy.
+
+    urlsplit discards certain ASCII controls and allows empty userinfo or invalid
+    DNS label shapes. Reject BEFORE parsing so a misleading UI/license receipt
+    cannot be normalized into a different URL for the existing native queue.
+    The E06 host must still pin/verify any DNS, redirect and license evidence.
+    """
+    if not isinstance(s, str) or not (0 < len(s) <= 2048):
+        return False
+    if (s != s.strip() or any(ch.isspace() or unicodedata.category(ch) in
+                                  {"Cc", "Cf", "Cs"} for ch in s)
+            or re.search(r"%(?:0[0-9a-f]|1[0-9a-f]|7f)", s, re.I)):
         return False
     try:
         u = urlsplit(s)
         hostname = u.hostname
-        if not (u.scheme == "https" and hostname and not u.username
-                and not u.password and u.port in (None, 443) and not u.fragment):
+        if not (u.scheme == "https" and hostname and u.username is None
+                and u.password is None and u.port in (None, 443) and not u.fragment):
             return False
-        # Do not forward local/network-internal evidence URLs into the native
-        # license review system. This is defense in depth; it does no fetching.
+        # Do not forward local/network-internal or malformed hostnames into the
+        # native license review. This is only structural, NOT DNS/rights proof.
         if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal", ".")):
             return False
         try:
             return ipaddress.ip_address(hostname).is_global
         except ValueError:
-            return bool(re.fullmatch(r"[A-Za-z0-9.-]+", hostname))
+            labels = hostname.split(".")
+            return len(labels) >= 2 and all(
+                re.fullmatch(r"(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])", label)
+                for label in labels
+            )
     except ValueError:
         return False
 
@@ -85,7 +100,11 @@ def _positive(value: Any) -> bool:
 
 
 def _nonblank_license_id(value: Any) -> bool:
-    return isinstance(value, str) and 0 < len(value.strip()) <= 160
+    return (isinstance(value, str) and 0 < len(value) <= 160
+            and value == value.strip()
+            and all((ch == " " or not ch.isspace())
+                    and unicodedata.category(ch) not in {"Cc", "Cf", "Cs"}
+                    for ch in value))
 
 
 # This is lexical screening only; the ORIGINAL P03 native GGUF queue must still
