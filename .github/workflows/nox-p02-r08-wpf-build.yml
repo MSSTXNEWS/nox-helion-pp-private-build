@@ -73,6 +73,9 @@ jobs:
       - name: Reuse original E06 compiler fix with exact R08 source hash
         shell: pwsh
         run: python Packages/P02/diagnostics/r08_exact_reuse_e06_repairs.py
+      - name: Apply bounded E02 compiler compatibility overlay only inside isolated stage
+        shell: pwsh
+        run: python Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
         run: |
@@ -116,6 +119,7 @@ jobs:
             work/e06/staged/R08-source-seal.txt
             work/e06/staged/P05-diagnostic-repair-receipt.json
             work/e06/staged/legacy-compiler-repair-receipts.json
+            work/e06/staged/E02-compiler-compat-receipt.json
             work/e06/staged/diagnostic-receipt.json
           if-no-files-found: warn
           retention-days: 14
