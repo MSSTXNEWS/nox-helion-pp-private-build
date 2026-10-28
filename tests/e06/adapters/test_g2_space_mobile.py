@@ -398,5 +398,66 @@ class G2ComponentTests(unittest.TestCase):
                 existing_host_mutation_lock=self.registry_lock)
 
 
+    def test_33_gateway_revoked_while_host_advertises(self):
+        self.bind()
+        original = self.host.advertise
+        def revoke(session):
+            answer = original(session)
+            self.remote_gateway = False
+            return answer
+        self.host.advertise = revoke
+        with self.assertRaises(G2Hold):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
+
+    def test_34_native_private_peer_revoked_while_advertising(self):
+        self.bind()
+        original = self.host.advertise
+        def revoke(session):
+            answer = original(session)
+            self.peer_ok = False
+            return answer
+        self.host.advertise = revoke
+        with self.assertRaises(G2Denied):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
+
+    def test_35_malformed_host_advertisement_fails_closed(self):
+        self.bind()
+        self.host.advertise = lambda _session: None
+        with self.assertRaises(G2Hold):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
+
+    def test_36_source_lock_drifts_during_owner_registration(self):
+        checks = []
+        def changing_preimage(source_sha, receipts):
+            checks.append((source_sha, dict(receipts)))
+            return len(checks) == 1
+        binder = G2OneHostBinder(
+            self.host, BoundPort,
+            existing_p02=self.p02, existing_p03=self.p03,
+            e05=self.e05, mobile=self.mobile, existing_p02_voice=None,
+            source_lock_sha256=SOURCE, owner_receipts_sha256=OWNER_SHA,
+            verify_original_preimages=changing_preimage,
+            existing_host_mutation_lock=self.registry_lock)
+        with self.assertRaises(G2Hold):
+            binder.bind()
+        self.assertEqual(len(checks), 2)
+        self.assertEqual(self.host.ports, {})
+
+    def test_37_owner_overwrites_prior_port_rollback_exact(self):
+        previous = BoundPort(lambda s, p: "untouched", lambda: True,
+                             "older-owner-receipt", 2)
+        self.host.ports["custom.owner.route"] = previous
+        class MalformedP02:
+            def register(self, host, receipt):
+                host.ports["custom.owner.route"] = BoundPort(
+                    lambda s, p: "overwritten", lambda: True, receipt, 2)
+                return frozenset()
+        with self.assertRaises(G2Hold):
+            self.bind(p02=MalformedP02())
+        self.assertIs(self.host.ports["custom.owner.route"], previous)
+        self.assertEqual(len(self.host.ports), 1)
+
+
+
 if __name__ == "__main__":
     unittest.main()
