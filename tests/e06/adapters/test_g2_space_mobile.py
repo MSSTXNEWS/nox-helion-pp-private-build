@@ -1014,5 +1014,106 @@ class G2ComponentTests(unittest.TestCase):
 
 
 
+    def test_91_gpu_one_sample_positive(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "SampleId": "poll-17", "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "SampleId": "poll-17", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["gpu.percent"]["value"], 50)
+        self.assertEqual(got["gpu.temperature.c"]["value"], 63)
+
+    def test_92_gpu_cross_provider_quarantined(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "WMI",
+             "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+        self.assertIsNone(got["gpu.temperature.c"]["value"])
+
+    def test_93_gpu_conflicting_sample_ids_quarantined(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "sample_id": "poll-17", "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "sample_id": "poll-18", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+        self.assertIsNone(got["gpu.temperature.c"]["value"])
+
+    def test_94_gpu_observation_span_over_five_seconds(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "ObservedAtUtc": utc(NOW - timedelta(seconds=6))}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+        self.assertIsNone(got["gpu.temperature.c"]["value"])
+
+    def test_95_gpu_partial_sample_id_quarantined(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "SampleId": "poll-17", "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+        self.assertIsNone(got["gpu.temperature.c"]["value"])
+
+    def test_96_gpu_conflicting_sample_aliases_quarantined(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+            "DeviceId": "GPU-0", "Source": "NVML",
+            "SampleId": "poll-17", "sample_id": "poll-18",
+            "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+    def test_97_gpu_spoofed_sample_id_quarantined(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+            "DeviceId": "GPU-0", "Source": "NVML",
+            "SampleId": "poll-\u202e17", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+    def test_98_cpu_survives_cross_provider_gpu_hold(self):
+        self.e05_fake.sensors = [
+            {"Key": "cpu.system.percent", "Value": 19, "Status": "LIVE",
+             "Source": "WMI", "ObservedAtUtc": utc()},
+            {"Key": "gpu.percent", "Value": 50, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "NVML",
+             "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 63, "Status": "LIVE",
+             "DeviceId": "GPU-0", "Source": "WMI",
+             "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["cpu.system.percent"]["value"], 19)
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+
+
 if __name__ == "__main__":
     unittest.main()

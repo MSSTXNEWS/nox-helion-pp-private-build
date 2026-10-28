@@ -10,6 +10,7 @@ import json
 import math
 import re
 from g2_gpu_provenance import valid_source, valid_device, reconcile_gpu_tile
+from g2_gpu_sample_gate import valid_sample_id, enforce_gpu_tile_sample
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -136,7 +137,7 @@ class ExistingE05Projection:
         sensors = raw.get("Hardware")
         if not isinstance(sensors, list) or len(sensors) > 32:
             raise G2Hold("E05 hardware payload malformed")
-        seen, safe, observed_by_key, device_by_key = set(), {}, {}, {}
+        seen, safe, observed_by_key, device_by_key, sample_by_key = set(), {}, {}, {}, {}
         for sample in sensors:
             if (not isinstance(sample, dict) or type(sample.get("Key")) is not str
                     or sample.get("Key") not in SENSORS):
@@ -153,6 +154,13 @@ class ExistingE05Projection:
             if ("DeviceId" in sample and "device_id" in sample
                     and sample["DeviceId"] != sample["device_id"]):
                 native_device = None
+            # A native sample identity is optional for legacy P05 producers,
+            # but a supplied ID must be lexical, stable and unambiguous.
+            sample_present = "SampleId" in sample or "sample_id" in sample
+            native_sample = sample.get("SampleId", sample.get("sample_id"))
+            if ("SampleId" in sample and "sample_id" in sample
+                    and sample["SampleId"] != sample["sample_id"]):
+                native_sample = None
             good = (sample.get("Status") == "LIVE"
                     and type(value) in (int, float) and math.isfinite(value)
                     and value >= 0
@@ -161,6 +169,8 @@ class ExistingE05Projection:
                     and (key != "gpu.temperature.c" or value <= 150)
                     and valid_source(sample.get("Source"))
                     and (not key.startswith("gpu.") or valid_device(native_device))
+                    and (not key.startswith("gpu.") or not sample_present
+                         or valid_sample_id(native_sample))
                     and _fresh(sample.get("ObservedAtUtc"), now, 30)
                     and _stamp(sample.get("ObservedAtUtc")) <= _stamp(raw.get("SnapshotUtc")))
             safe[key] = {"value": value if good else None,
@@ -168,9 +178,13 @@ class ExistingE05Projection:
                          "source": sample["Source"] if good else None}
             observed_by_key[key] = sample.get("ObservedAtUtc") if good else None
             device_by_key[key] = native_device if good and key.startswith("gpu.") else None
+            sample_by_key[key] = native_sample if good and key.startswith("gpu.") else None
         # One physical GPU and one VRAM sample, consistent with owner E05 R08.
         # No second sensor, poller or events bus.
         reconcile_gpu_tile(safe, observed_by_key, device_by_key)
+        # Reuse the approved E05 snapshot; never merge providers, sample IDs
+        # or observation windows into a fictional single LIVE GPU tile.
+        enforce_gpu_tile_sample(safe, observed_by_key, sample_by_key)
         seal = getattr(self.owner, "product_receipts_sealed", None)
         percent = raw.get("ProductProgress")
         verified = callable(seal) and seal() is True
