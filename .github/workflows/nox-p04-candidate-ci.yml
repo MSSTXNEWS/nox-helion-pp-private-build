@@ -43,7 +43,7 @@ jobs:
           git show "$P02_SHA:Packages/P02/worker-python/p02_runtime.py" > "$RUNNER_TEMP/p02-pinned/p02_runtime.py"
           git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
       - name: Verify actual pinned P02 ChatBridge against P04 Python RAG
-        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02_bridge_integration.py' -v
+        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02*.py' -v
 
   p04-windows-python:
     runs-on: windows-2022
@@ -66,4 +66,4 @@ jobs:
           git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
       - name: Windows P02-P04 actual cross-branch chat bridge
         shell: bash
-        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02_bridge_integration.py' -v
+        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02*.py' -v
