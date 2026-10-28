@@ -1,0 +1,55 @@
+{
+  "schema": "NOX-V16-FINAL-L2-PENDING-ONLY-R17-ADDENDUM-v1",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R17-ACCEPTANCE-DELTA",
+  "checked_shared_head": "cb6f1c0686ff50682faa2d96d491e0773fa051b6",
+  "branch": "fix/lane2-v16-final-p02-p04-p05-20261028-r16",
+  "owner": "Manual #2; single writer PR162 is Manual #1",
+  "review_result": "P05 source and C# tests already accepted in PR162; canonical JSON contract semantically identical despite different whitespace and Git SHA. Do not reapply P05.",
+  "pending_only": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "expected_shared_blob": "cc05e7d2897e7c1183255836c413846ceb5ff520",
+      "donor_blob": "16c008366a00507a8f76286cc28cfa43a03d5257",
+      "pre_sha256": "de481593172733c230ca58d32cb1248c359b8c180b434e6de50cec1df6c17b32",
+      "post_sha256": "cf06894d5e112fb921494704ecf98bc811ddce8c0bc6e3d8b6fc923d04f9a037"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "expected_shared_blob": "d6500c1399acb5e59c89e208eacad54a4df9fd7e",
+      "donor_blob": "8b1a252b14cf45e92cde7a68d464e2a2f406f2db",
+      "pre_sha256": "843a2842dad5441507b8466abd4d245c69d05ed3bd4ad44f5cfce5d9f379e09a",
+      "post_sha256": "ff4f92bcac4a7a43a1bd1a35dace9813e7d31e1028e49a21a0698e05c0af60d7"
+    },
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "expected_shared_blob": "aff12ba3cd51ed0e5a2cdddc557998716f83a7b6",
+      "donor_blob": "94e4eb1ef83daa5dc63526070ecb9d2d1d72de2f",
+      "pre_sha256": "902ee5a33c5b78b0c9b3c33f2d83c08a7af853adac8a102dba4927d1df1281c3",
+      "post_sha256": "6f2011c528778fdd17f3bda918a65a4ae7e5ddbcb513add8a789e4a4b2689bf2"
+    },
+    {
+      "path": "tests/P04/test_training_failure_status.py",
+      "expected_shared_blob": "1bf24598047c01fd6d2ffa807ff9cf8d8ca58b2c",
+      "donor_blob": "e218bba66d528af13f1e676d98252465fd76ee2f",
+      "pre_sha256": "0328c1406d4858b024db290e15f929545b1af3f66b95371eaec3df0f220cb5bd",
+      "post_sha256": "2a497a7823d9e226103c6d291d55ce081cb7f9d221d33943469718e25793f39e"
+    }
+  ],
+  "p05_accepted": {
+    "source_cs_blob": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+    "test_cs_blob": "6f646e67aa4b71c71597a95a038c3339e83b25d9",
+    "shared_json_blob": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "donor_json_blob": "7b482f515a11832fe98f6cdd50a9240881352f65",
+    "json_semantic_equivalence": true
+  },
+  "handoff_conditions": "Re-fetch PR162 head and current owner blobs, accept only 4 pending paths by serial compare-and-swap. Do not merge whole donor branch, do not overwrite existing P05 or C#.",
+  "evidence": {
+    "git_readback": "PASS",
+    "source_contract_matrix": "12/12 static PASS",
+    "python_unittest": "NOT_RUN",
+    "dotnet_tests": "NOT_RUN",
+    "windows_e07": "0/10 NOT_RUN",
+    "gpu_training": "NOT_RUN"
+  },
+  "release": "HOLD"
+}
