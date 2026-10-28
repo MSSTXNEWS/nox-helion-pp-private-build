@@ -160,7 +160,34 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   if(!before||!after||['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
   state.models=models.map(m=>({...m}));
   if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
-  state.hostReady=true;state.activeJob=data.activeJob&&typeof data.activeJob==='object'?data.activeJob:null;
+  // Preserve terminal and monotone state when an older host snapshot arrives.
+  const incoming=data.activeJob,old=state.activeJob;
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if(incoming!=null&&(
+      typeof incoming!=='object'||!uuid.test(incoming.jobId||'')||
+      typeof incoming.modelTag!=='string'||incoming.modelTag.length>160||
+      !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
+  let next=incoming?{...incoming}:null;
+  if(next){
+    const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
+    if(done!==null&&total!==null&&done>total)return;
+    next.completedBytes=done;next.totalBytes=total;
+    if(old&&old.jobId===next.jobId&&old.modelTag===next.modelTag){
+      if(['Completed','Cancelled','Failed'].includes(old.state)&&next.state!==old.state)next={...old};
+      else{
+        if(old.state==='Cancelling'&&['Queued','Running'].includes(next.state))next.state='Cancelling';
+        if(['Running','Cancelling'].includes(old.state)&&next.state==='Queued')next.state=old.state;
+        if(numeric(old.completedBytes)!==null&&
+           (next.completedBytes===null||next.completedBytes<old.completedBytes)){
+          next.completedBytes=old.completedBytes;next.totalBytes=old.totalBytes;
+        }
+        if(numeric(old.totalBytes)!==null&&
+           (next.totalBytes===null||next.totalBytes<old.totalBytes))next.totalBytes=old.totalBytes;
+        if(next.completedBytes!==null&&next.totalBytes!==null&&next.completedBytes>next.totalBytes)return;
+      }
+    }
+  }
+  state.hostReady=true;state.activeJob=next;
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
   state.diagnostics=Array.isArray(data.diagnostics)?data.diagnostics.slice(0,30):[];
