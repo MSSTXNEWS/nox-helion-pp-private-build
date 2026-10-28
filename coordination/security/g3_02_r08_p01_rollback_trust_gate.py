@@ -42,13 +42,13 @@ def assess(source: str) -> dict:
     holds = []
     if not install or not restore:
         holds.append("MISSING_INSTALL_OR_RESTORE_SOURCE")
-    if facts["backup_activated"] and facts["rollback_skips_install_preflight"]:
+    if facts["backup_activated"] and facts["rollback_skips_install_preflight"] and not (facts["ancestor_gate_before_move"] and facts["digest_gate_before_move"]):
         holds.append("ROLLBACK_BYPASSES_NORMAL_PREFLIGHT")
     if facts["backup_activated"] and not facts["ancestor_gate_before_move"]:
         holds.append("ROLLBACK_PATH_REPARSE_NOT_ATTESTED_AT_COMMIT")
     if facts["backup_activated"] and not facts["digest_gate_before_move"]:
         holds.append("BACKUP_CONTENT_NOT_ATTESTED_BEFORE_ACTIVATION")
-    if facts["backup_activated"] and facts["marker_only_backup_admission"] and not facts["backup_manifest_read_before_move"]:
+    if facts["backup_activated"] and facts["marker_only_backup_admission"] and not (facts["backup_manifest_read_before_move"] or facts["digest_gate_before_move"]):
         holds.append("BACKUP_MARKER_PRESENT_NOT_PROVEN_TRUSTED")
     return {"status": "HOLD_OWNER_FIX_REQUIRED" if holds else "STATIC_CALLS_PRESENT_NOT_WINDOWS_ACCEPTED",
             "facts": facts, "holds": holds,
