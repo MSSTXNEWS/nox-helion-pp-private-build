@@ -95,6 +95,13 @@ stages:
               $ErrorActionPreference = 'Stop'
               $actual = (& git rev-parse HEAD).Trim()
               if ($LASTEXITCODE -ne 0 -or $actual -cne '$(Build.SourceVersion)') { throw 'BUILD_CHECKOUT_DRIFT_HOLD' }
+              # Existing owner builder requires the Windows py launcher and exact 3.12.10;
+              # reject other hosted image versions before the expensive frozen rebuild.
+              if (!(Get-Command py -CommandType Application -ErrorAction SilentlyContinue)) {
+                throw 'PY_LAUNCHER_REQUIRED_BY_ORIGINAL_BUILDER'
+              }
+              & py -3.12 -c 'import sys; assert sys.version_info[:3] == (3,12,10), sys.version'
+              if ($LASTEXITCODE -ne 0) { throw 'PINNED_PYTHON_3_12_10_NOT_AVAILABLE' }
               & ./private_build.ps1
               if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PRIVATE_BUILD_HOLD' }
               & python coordination/e06/stage_p01.py
