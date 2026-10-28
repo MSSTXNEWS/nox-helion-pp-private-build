@@ -40,13 +40,17 @@ const derivedLaneProgress = b => {
     if (!task || !validRunId(task.task_id) || seen.has(task.task_id) ||
         typeof task.weight !== 'number' || !Number.isFinite(task.weight) ||
         task.weight <= 0 || task.weight > 100 ||
-        !['SOURCE','HOLD','NOT_RUN','COMPONENT_VERIFIED'].includes(task.status)) return null;
+        !['SOURCE','HOLD','NOT_RUN','COMPONENT_VERIFIED','ACCEPTED'].includes(task.status)) return null;
     seen.add(task.task_id);
     denominator += task.weight;
-    if (task.status === 'COMPONENT_VERIFIED') {
+    // Only E06-owner ACCEPTED criteria enter the product numerator. Component
+    // verification is valuable source evidence, but not release acceptance.
+    if (task.status === 'ACCEPTED') {
       if (!sha(task.receipt_sha256)) return null;
       accepted += task.weight;
-    } else if (task.receipt_sha256 != null) return null; // reject claiming a receipt for pending work
+    } else if (task.status === 'COMPONENT_VERIFIED') {
+      if (!sha(task.receipt_sha256)) return null;
+    } else if (task.receipt_sha256 != null) return null; // pending receipt is invalid
   }
   if (Math.abs(denominator - 100) > 0.000001) return null;
   return round2(accepted);
@@ -69,7 +73,7 @@ export function projectReadiness(readiness, runId, nowMs) {
   const globalTaskIds = new Set();
   for (let i=0; i<5; i++) {
     const b = readiness.bars[i];
-    if (!b || b.executor !== i+1 || b.stage !== 'CRITERIA_VERIFIED' ||
+    if (!b || b.executor !== i+1 || b.stage !== 'CRITERIA_ACCEPTED' ||
         !sha(b.manifest_sha256) || !sha(b.receipt_sha256) ||
         !pct(b.percent) || derivedLaneProgress(b) === null ||
         Math.abs(b.percent - derivedLaneProgress(b)) > 0.005) {
@@ -80,7 +84,7 @@ export function projectReadiness(readiness, runId, nowMs) {
     for (const task of b.task_ledger) globalTaskIds.add(task.task_id);
     five.push(b.percent);
   }
-  for (let i=0; i<5; i++) bars[i] = {executor:i+1,percent:five[i],stage:'COMPONENT_VERIFIED'};
+  for (let i=0; i<5; i++) bars[i] = {executor:i+1,percent:five[i],stage:'ACCEPTED'};
   const stage6 = readiness.bars[5], stage7 = readiness.bars[6];
   const integrated=stage6?.executor===6 && stage6?.percent==null &&
     stage6?.stage==='INTEGRATED' && sha(stage6.receipt_sha256) &&
