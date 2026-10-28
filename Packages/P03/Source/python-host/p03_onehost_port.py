@@ -48,7 +48,27 @@ class P03OneHostPort:
         # Model discovery is immutable until owner review. No source URL means weights.
         if path.is_symlink() or not path.is_file() or path.stat().st_size > 100_000:
             raise P03PortHold("No safe pinned owner3 discovery catalog")
-        doc = json.loads(path.read_text(encoding="utf-8"))
+        # Ambiguous JSON or malformed roots must HOLD, never crash/approve a model.
+        # Python's default decoder silently accepts duplicate keys and NaN.
+        def unique_object(pairs):
+            obj = {}
+            for key, value in pairs:
+                if key in obj:
+                    raise P03PortHold("P03 catalog duplicate JSON key")
+                obj[key] = value
+            return obj
+
+        def reject_constant(value):
+            raise P03PortHold("P03 catalog invalid JSON numeric constant")
+
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"),
+                             object_pairs_hook=unique_object,
+                             parse_constant=reject_constant)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise P03PortHold("Malformed/unsafe P03 catalog JSON") from exc
+        if not isinstance(doc, dict):
+            raise P03PortHold("P03 catalog root must be a JSON object")
         if doc.get("schema") != "NOX-P03-PYTHON-ONEHOST-CATALOG-V1" or doc.get("sourceType") != "discovery_only":
             raise P03PortHold("P03 catalog schema drift")
         data = doc.get("models")
