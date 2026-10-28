@@ -1,0 +1,20 @@
+name: NOX V16 P01 signed EXE auto-update check (no installation)
+on:
+  push:
+    paths:
+      - 'stage/proposals/P01/C12/AutoUpdate/**'
+      - '.github/workflows/nox-p01-autoupdate.yml'
+  pull_request:
+    paths:
+      - 'stage/proposals/P01/C12/AutoUpdate/**'
+      - '.github/workflows/nox-p01-autoupdate.yml'
+jobs:
+  native-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Real ECDSA signed manifest check and no-autoinstall smoke
+        run: dotnet run --project stage/proposals/P01/C12/AutoUpdate/NoxUpdateChecks.csproj -c Release
