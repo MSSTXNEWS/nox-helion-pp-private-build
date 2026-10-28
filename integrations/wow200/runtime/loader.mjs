@@ -63,7 +63,13 @@ function create(){
   // First 50 actual route presets are read from the original single P01 catalog.
   // We do not dispatch privileged routes on a visual preview click.
   fetch('wow200/pack01-catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('P01 catalog unavailable');return r.json()}).then(catalog=>{
-    if(!Array.isArray(catalog.actions)||catalog.actions.length!==50)throw Error('P01 original routes incomplete');
+    if(catalog?.version!=='NOX-INTEGRATION-PACK-01'||!Array.isArray(catalog.actions)||catalog.actions.length!==50||
+       new Set(catalog.actions.map(x=>x?.routeId)).size!==50||
+       catalog.actions.some((x,i)=>!x||x.taskId!=='NIP01-'+String(i+1).padStart(2,'0')||
+         !/^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$/.test(x.routeId)||
+         !['chat','models','learning','voice','space'].includes(x.category)||
+         !Number.isInteger(x.owner)||x.owner<1||x.owner>6))
+      throw Error('P01 original catalog identity or routes incomplete');
     for(const action of catalog.actions){const button=document.createElement('button');button.className='nox-pack01__tile';button.type='button';button.dataset.routeId=action.routeId;button.dataset.state='HOLD';button.textContent=action.title||action.routeId;
       const description=document.createElement('span');description.textContent='FX preview / без вызова действия';button.append(description);
       button.onclick=()=>{
