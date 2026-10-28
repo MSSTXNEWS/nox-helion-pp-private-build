@@ -80,7 +80,13 @@ public sealed class ModelDownloadQueueWorker(
                 if (failed?.State == ModelJobState.Failed)
                     await SafePublishAsync(job, "failed", "Failed", null, null, null, ex.Message, CancellationToken.None);
             }
-            finally { lock (_running) _running.Remove(job.Id); }
+            finally
+            {
+                monitorStop.Cancel();
+                try { await monitorTask; }
+                catch (OperationCanceledException) when (monitorStop.IsCancellationRequested) { }
+                lock (_running) _running.Remove(job.Id);
+            }
         }
         finally { _singleWorker.Release(); }
     }
