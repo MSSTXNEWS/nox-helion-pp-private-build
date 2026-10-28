@@ -1,0 +1,168 @@
+{
+  "schema": "NOX_V16_E06_G2_01_R07_OWNER_HEAD_ADMISSION_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028T1209MSK-R07",
+  "owner": 6,
+  "stage": "SOURCE_COORDINATION_HOLD_NOT_SOURCELOCK",
+  "frozen_git_baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "verified_live": true
+  },
+  "parent_immutable": {
+    "pr": 115,
+    "head_git_sha1": "a36f8bf6f4664c24be371e468d3793c60df5d14a",
+    "previous_immutable_source_lock_sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "legacy_source_lock_main_git_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "legacy_729_manifest_members": 729,
+    "raw_extracted_member_sha256_verified": 0
+  },
+  "inventory": {
+    "pr": 66,
+    "head_git_sha1": "bfc318d6e002563995fd05a420c2022b39ef90d9",
+    "kind": "INVENTORY_ONLY"
+  },
+  "archive": {
+    "historical_zip_bytes": 60364346,
+    "historical_zip_sha256_NOT_RECOMPUTED": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "parts": [
+      {
+        "path": "source_00.part",
+        "bytes_from_git_tree": 20971520,
+        "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "raw_sha256": "N/D",
+        "raw_bytes_verified": false
+      },
+      {
+        "path": "source_01.part",
+        "bytes_from_git_tree": 20971520,
+        "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "raw_sha256": "N/D",
+        "raw_bytes_verified": false
+      },
+      {
+        "path": "source_02.part",
+        "bytes_from_git_tree": 18421306,
+        "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "raw_sha256": "N/D",
+        "raw_bytes_verified": false
+      }
+    ],
+    "assembled_raw_sha256": "N/D"
+  },
+  "preservation": {
+    "D02": "LEGACY_MANIFEST_ONLY",
+    "Persona": "LEGACY_MANIFEST_ONLY",
+    "assets": "LEGACY_MANIFEST_ONLY",
+    "model_weights": "SEVEN_SMALL_SAFETENSORS_IN_MANIFEST_INSTALLED_WEIGHTS_N/D"
+  },
+  "owner_lanes": [
+    {
+      "executor": 1,
+      "task_id": "V16.26.3",
+      "pr": 121,
+      "head_git_sha1": "f4f229adbe9da19fc2a9fc92e6ae3d3e314a790a",
+      "base_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "source": "SOURCE",
+      "component": "OFFLINE_PARTIAL_OR_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 2,
+      "task_id": "V16.26.4",
+      "pr": 123,
+      "head_git_sha1": "572bf89ee9c277d16cd528406d04bdf6c308d73c",
+      "base_git_sha1": "95f203728b7275ec3da6cfd4dd4a776c467d4e86",
+      "source": "SOURCE",
+      "component": "OFFLINE_PARTIAL_OR_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 3,
+      "task_id": "V16.26.5",
+      "pr": 122,
+      "head_git_sha1": "d0589b9099125de4e5b67ccfa737b5824bf0df29",
+      "base_git_sha1": "0d1065cf45b07b6ca7e464d7140fd42a4f8e91d6",
+      "source": "SOURCE",
+      "component": "OFFLINE_PARTIAL_OR_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 4,
+      "task_id": "V16.26.6",
+      "pr": 119,
+      "head_git_sha1": "c521ab52f20be66014028ef4aa4ce3e0f06b3dd1",
+      "base_git_sha1": "c97e0380b20a04e98d5e9852d4d868d98c1fa623",
+      "source": "SOURCE",
+      "component": "OFFLINE_PARTIAL_OR_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 5,
+      "task_id": "V16.26.7",
+      "pr": 120,
+      "head_git_sha1": "4f1fc560501c4b7befde76a70aecee7ad978f42e",
+      "base_git_sha1": "822971063440bbab66e177e1c413ee0d97a1f04f",
+      "source": "SOURCE",
+      "component": "OFFLINE_PARTIAL_OR_NOT_RUN",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 6,
+      "task_id": "V16.26.8",
+      "pr": 115,
+      "head_git_sha1": "a36f8bf6f4664c24be371e468d3793c60df5d14a",
+      "source": "SOURCE_COORDINATION",
+      "component": "METADATA_ONLY",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    },
+    {
+      "executor": 7,
+      "task_id": "QA01-QA10",
+      "pr": 46,
+      "head_git_sha1": "N/D",
+      "source": "HISTORIC_DIAGNOSTIC_ONLY",
+      "component": "FINAL_0_OF_10",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "accepted_percent": "N/D"
+    }
+  ],
+  "known_stack_conflicts": [
+    "E01 PR121 includes prior E01 source ancestry; do not cherry-pick branch wholesale",
+    "E02 PR123 -> PR110 same P02 chat bridge",
+    "E03 PR122 -> PR112 same P03 modelcenter gate",
+    "E04 PR119 -> PR108 same P04 QLoRA gate",
+    "E05 PR120 -> PR111 same P05 space projection"
+  ],
+  "no_loss": {
+    "deleted_files": 0,
+    "ui_modified": false,
+    "host_modified": false,
+    "previous_archive_modified": false,
+    "previous_source_lock_modified": false,
+    "main_modified": false
+  },
+  "gates": {
+    "new_approved_source_lock": "HOLD_RAW_PARTS_729_AND_OWNER_ACK",
+    "owner_receipts": "HOLD",
+    "integrated": "HOLD",
+    "windows_accepted": "NOT_RUN",
+    "release": "HOLD"
+  },
+  "progress_formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+  "weighted_accepted_progress": "N/D",
+  "one_applied_self_improvement": "PREWRITE_HEAD_DRIFT_GATE: pin and reread live main tree, parent PR head, and owner heads before new coordination-only publication; fail closed on drift; never rebase or merge on mismatch."
+}
