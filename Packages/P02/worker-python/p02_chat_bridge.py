@@ -20,7 +20,8 @@ class ChatBridge:
 
         Host #6 persists its existing model selector; this method is stateless.
         """
-        if not isinstance(requested, str) or not requested or len(requested) > 256:
+        if (not isinstance(requested, str) or not requested or len(requested) > 256
+                or not self._utf8_ok(requested)):
             raise ValueError("Invalid model selection")
         if requested not in self.ollama.models():
             raise P02Error("Model is not installed in Ollama")
@@ -30,6 +31,17 @@ class ChatBridge:
     def _unsafe_citation_text(value: str) -> bool:
         # Control/format/surrogate characters can spoof source labels or UI frames.
         return any(unicodedata.category(ch) in ("Cc", "Cf", "Cs") for ch in value)
+
+    @staticmethod
+    def _utf8_ok(value: str) -> bool:
+        # Python strings can contain unpaired UTF-16 surrogates (for example
+        # from malformed JSON escape sequences). Neither SQLite nor the
+        # existing Ollama JSON transport can safely persist/emit them.
+        try:
+            value.encode("utf-8", errors="strict")
+            return True
+        except UnicodeEncodeError:
+            return False
 
     @staticmethod
     def _safe_citation_url(url: str) -> bool:
@@ -58,14 +70,15 @@ class ChatBridge:
     @staticmethod
     def _rag_evidence(result: object) -> tuple[str, list[dict]]:
         if isinstance(result, str):
-            if len(result) > 32000:
-                raise P02Error("RAG context too large")
+            if len(result) > 32000 or not ChatBridge._utf8_ok(result):
+                raise P02Error("Invalid RAG context Unicode or size")
             return result, []
         if not isinstance(result, dict):
             raise P02Error("RAG provider must return text or a provenance record")
         context = result.get("context")
         rows = result.get("sources", [])
-        if not isinstance(context, str) or len(context) > 32000 or not isinstance(rows, list) or len(rows) > 20:
+        if (not isinstance(context, str) or len(context) > 32000 or
+                not ChatBridge._utf8_ok(context) or not isinstance(rows, list) or len(rows) > 20):
             raise P02Error("Invalid RAG context/provenance")
         evidence = []
         for row in rows:
@@ -91,8 +104,9 @@ class ChatBridge:
     def send(self, tenant: str, principal: str, chat_id: str,
              model: str, prompt: str, stop: threading.Event | None = None
              ) -> Iterator[dict]:
-        if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 50000:
-            raise ValueError("Prompt outside allowed length")
+        if (not isinstance(prompt, str) or not prompt.strip() or
+                len(prompt) > 50000 or not self._utf8_ok(prompt)):
+            raise ValueError("Prompt outside allowed UTF-8 range")
         stop = stop or threading.Event()
         run = uuid.uuid4().hex
         # Validate ownership BEFORE writing anything or querying RAG.
@@ -140,15 +154,25 @@ class ChatBridge:
                 for item in chunks:
                     if stop.is_set():
                         raise Cancelled("STOP before streaming event")
-                    if item["delta"]:
-                        total_chars += len(item["delta"])
+                    # One existing OllamaClient already validates NDJSON, but
+                    # protect the event/SQLite seam against malformed adapter
+                    # frames as well. Never emit bad Unicode to WebView2 or DB.
+                    if (not isinstance(item, dict) or
+                            not isinstance(item.get("delta"), str) or
+                            not isinstance(item.get("done"), bool)):
+                        raise P02Error("Malformed Ollama stream frame")
+                    delta = item["delta"]
+                    if not self._utf8_ok(delta):
+                        raise P02Error("Ollama stream returned invalid Unicode")
+                    if delta:
+                        total_chars += len(delta)
                         if total_chars > 1_000_000:
                             # The enclosing per-run closing() releases this
                             # transport. OllamaClient.stop() targets whichever
                             # request is current and must not be used here.
                             raise P02Error("Ollama reply exceeded persistence quota")
-                        parts.append(item["delta"])
-                        yield {"type": "chat.delta", "run_id": run, "text": item["delta"]}
+                        parts.append(delta)
+                        yield {"type": "chat.delta", "run_id": run, "text": delta}
                     if item["done"]:
                         # A yielded delta can be suspended by the UI just before the
                         # done frame. Never mark a cancelled turn as completed.
