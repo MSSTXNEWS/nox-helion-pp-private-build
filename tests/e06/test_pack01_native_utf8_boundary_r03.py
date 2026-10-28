@@ -227,6 +227,59 @@ class NativeWireGuard(unittest.TestCase):
                     self.dispatch.execute(route, {}, self.session)
         self.assertEqual(self.seen, [])
 
+    def test_catalog_rejects_dangerous_route_downgrade(self):
+        for target in ("system.pc_control", "calls.dial", "training.start"):
+            with self.subTest(route=target):
+                catalog = json.loads(CATALOG.read_text("utf-8"))
+                next(row for row in catalog["actions"] if row["routeId"] == target)["risk"] = "safe"
+                with self.assertRaisesRegex(ValueError, "Immutable native"):
+                    bridge.NoxPackHost(catalog)
+
+    def test_catalog_rejects_owner_escalation_and_route_reorder(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        next(row for row in catalog["actions"] if row["routeId"] == "system.pc_control")["owner"] = 2
+        with self.assertRaisesRegex(ValueError, "Immutable native"):
+            bridge.NoxPackHost(catalog)
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        catalog["actions"][0]["routeId"], catalog["actions"][1]["routeId"] = (
+            catalog["actions"][1]["routeId"], catalog["actions"][0]["routeId"])
+        with self.assertRaisesRegex(ValueError, "Immutable native"):
+            bridge.NoxPackHost(catalog)
+
+    def test_catalog_post_init_mutation_cannot_silence_native_consent(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        observed = []
+        dispatcher = bridge.NoxPackHost(catalog)
+        dispatcher.bind("system.pc_control", bridge.BoundPort(
+            lambda session, args: observed.append(args), lambda: True,
+            "SOURCE_TEST_REAL_OWNER_RECEIPT_NOT_WINDOWS", 1))
+        selected = next(row for row in catalog["actions"] if row["routeId"] == "system.pc_control")
+        selected["risk"] = "safe"
+        selected["owner"] = 2
+        session = bridge.NativeSession("tenant", "principal", "chat",
+            allowed=frozenset({"system.pc_control"}),
+            private_approved=frozenset({"system.pc_control"}))
+        with self.assertRaisesRegex(bridge.HostDenied, "Fresh native action approval"):
+            dispatcher.execute("system.pc_control", {"preview": True}, session)
+        self.assertEqual(observed, [])
+        self.assertEqual(dispatcher.routes["system.pc_control"]["risk"], "dangerous")
+        self.assertEqual(dispatcher.routes["system.pc_control"]["owner"], 1)
+
+    def test_native_policy_is_read_only_after_registration(self):
+        with self.assertRaises(TypeError):
+            self.dispatch.routes["media.subtitles"]["risk"] = "safe"
+        with self.assertRaises(TypeError):
+            self.dispatch.routes["media.subtitles"] = {}
+        self.assertEqual(self.request({"preview": "normal"}), {"status": "owner-executed"})
+
+    def test_malformed_unhashable_catalog_fails_closed(self):
+        for bad in ([], {}, None, True):
+            with self.subTest(bad=repr(bad)):
+                catalog = json.loads(CATALOG.read_text("utf-8"))
+                catalog["actions"][0]["routeId"] = bad
+                with self.assertRaises(ValueError):
+                    bridge.NoxPackHost(catalog)
+
 
 if __name__ == "__main__":
     unittest.main()
