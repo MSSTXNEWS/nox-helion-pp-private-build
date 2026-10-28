@@ -37,6 +37,13 @@ jobs:
           ref: 0a832004d4b57127f08d3b045dc864ddf149d8a4
           path: .e06-existing-fixes
           persist-credentials: false
+      - name: Checkout exact owner1 corrected P01 source
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 8e42bb15aecbee8412c342b0e9049b6cce044297
+          path: .p01-approved-source
+          persist-credentials: false
       - name: Official .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -117,6 +124,23 @@ jobs:
           } finally { $zip.Dispose(); Remove-Item -LiteralPath $tmp -Force }
           $receipt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath 'work/e06/staged/d02-byte-exact-receipt.json' -Encoding utf8
           Write-Host 'NOX_D02_FOUR_ORIGINAL_IMAGES_BYTE_EXACT_PASS'
+      - name: Stage owner1 exact verified WebView2 GUID preflight (R08 original unchanged)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $dst='work/e06/staged/R11/Installer/Preflight-InstallPath.ps1'
+          $src='.p01-approved-source/stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1'
+          $pre=(Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($pre -cne '8413580656bace887478c9f82e72433987ad8e4a552af6e67c3531b09d545239') {throw 'E06_R13_STAGED_R08_PREIMAGE_CONFLICT'}
+          $blob=(git -C '.p01-approved-source' hash-object 'stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1').Trim()
+          if ($LASTEXITCODE -ne 0 -or $blob -cne 'eb45add5a929eee99bc09ef87f2db3735556b78b') {throw 'E06_R13_OWNER1_BLOB_MISMATCH'}
+          $body=Get-Content -LiteralPath $src -Raw
+          if (!$body.Contains('00C3A9A7E4C5') -or $body.Contains('00C3A7E4C5')) {throw 'E06_R13_MICROSOFT_GUID_MISMATCH'}
+          Copy-Item -LiteralPath $src -Destination $dst -Force
+          $post=(Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($post -cne (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash.ToLowerInvariant()) {throw 'E06_R13_COPY_VERIFICATION_HOLD'}
+          [ordered]@{schema='E06_R13_P01_OWNER1_STAGED_ONLY';owner=1;integrator=6;original_pre_sha256=$pre;approved_owner_git_blob_sha1=$blob;staged_post_sha256=$post;original_unchanged=$true;release_accepted=$false} | ConvertTo-Json | Set-Content 'work/e06/staged/R13-P01-receipt.json'
+          Write-Host 'E06_R13_OFFICIAL_WEBVIEW2_GUID_FIXED_IN_STAGED_COPY'
       - name: Apply E06's original exact-SHA P05 HTML compatibility fix to staged bytes only
         shell: pwsh
         run: python coordination/e06/patch_legacy_p05_html.py
@@ -221,6 +245,7 @@ jobs:
         with:
           name: nox-e02-r08-pinned-diagnostic-evidence
           path: |
+            work/e06/staged/R13-P01-receipt.json
             work/e06/staged/R08-source-seal.txt
             work/e06/staged/P05-diagnostic-repair-receipt.json
             work/e06/staged/legacy-compiler-repair-receipts.json
