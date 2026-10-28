@@ -374,6 +374,8 @@ public sealed class ManagedGpuWorker : IAsyncDisposable
     public int ProcessId => _process.Id;
     public bool HasExited => _process.HasExited;
 
+    // A request ACK is not proof of a saved optimizer/scheduler/RNG checkpoint.
+    // Only the training worker's validated receipt may establish PAUSED/RUNNING.
     public async Task<bool> PauseAsync(CancellationToken cancellationToken = default) =>
         await InvokeControlAsync("PAUSED", "PauseAsync", cancellationToken).ConfigureAwait(false);
 
@@ -386,7 +388,12 @@ public sealed class ManagedGpuWorker : IAsyncDisposable
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (_process.HasExited) return true;
+            ThrowIfDisposed();
+            if (_process.HasExited)
+            {
+                _emit("task.progress", "HOLD", "Worker already exited; a verified training receipt is required to determine its final state.");
+                return false;
+            }
             var acknowledged = await _control.RequestStopAsync(cancellationToken).ConfigureAwait(false);
             if (!acknowledged)
             {
@@ -397,7 +404,9 @@ public sealed class ManagedGpuWorker : IAsyncDisposable
             {
                 await _process.WaitForExitAsync(cancellationToken)
                     .WaitAsync(timeout ?? TimeSpan.FromSeconds(30), cancellationToken).ConfigureAwait(false);
-                _emit("model.stopped", "STOPPED", "Managed worker exited after STOP acknowledgement.");
+                // Process exit only confirms termination, not successful STOP/checkpoint.
+                // Host #6 must verify the immutable training receipt before STOPPED.
+                _emit("task.progress", "HOLD", "Managed worker exited after STOP request; awaiting verified STOPPED receipt.");
                 return true;
             }
             catch (TimeoutException)
@@ -415,12 +424,21 @@ public sealed class ManagedGpuWorker : IAsyncDisposable
         await _gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (_process.HasExited) return false;
+            ThrowIfDisposed();
+            if (_process.HasExited)
+            {
+                _emit("task.progress", "HOLD", $"Cannot request {state}: worker process has exited; new validated checkpoint-bound process required.");
+                return false;
+            }
             var acknowledged = method == "PauseAsync"
                 ? await _control.PauseAsync(token).ConfigureAwait(false)
                 : await _control.ResumeAsync(token).ConfigureAwait(false);
-            _emit("task.progress", acknowledged ? state : "HOLD",
-                acknowledged ? $"Worker acknowledged {state}." : $"Worker did not acknowledge {state}.");
+            // Do not emit PAUSED or RUNNING solely on an acknowledgement.
+            // Resume of a PAUSED trainer requires a NEW process, a matching
+            // checkpoint tree SHA and rights/model/dataset re-attestation.
+            _emit("task.progress", "HOLD",
+                acknowledged ? $"Worker acknowledged {state} request; awaiting verified checkpoint/worker receipt."
+                             : $"Worker did not acknowledge {state} request.");
             return acknowledged;
         }
         finally { _gate.Release(); }
@@ -431,14 +449,14 @@ public sealed class ManagedGpuWorker : IAsyncDisposable
         if (Volatile.Read(ref _disposed) != 0) throw new ObjectDisposedException(nameof(ManagedGpuWorker));
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0)
-        {
-            _process.Dispose();
-            _gate.Dispose();
-        }
-        return ValueTask.CompletedTask;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        // Serialize disposal after any in-flight STOP/PAUSE/RESUME. Do not
+        // dispose the semaphore while another waiter may still need Release.
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try { _process.Dispose(); }
+        finally { _gate.Release(); }
     }
 }
 
@@ -462,7 +480,8 @@ public static class GpuWorkerLauncher
             process.Dispose();
             throw new InvalidOperationException("Managed GPU worker did not start.");
         }
-        guardian.EmitWorker(workerId, "task.started", "RUNNING", "NOX-managed GPU worker started.");
+        // An OS process starting is not proof of a CUDA training optimizer step.
+        guardian.EmitWorker(workerId, "task.progress", "HOLD", "NOX GPU worker process launched; awaiting verified training-start receipt.");
         return new ManagedGpuWorker(workerId, process, control,
             (eventType, state, message) => guardian.EmitWorker(workerId, eventType, state, message));
     }
