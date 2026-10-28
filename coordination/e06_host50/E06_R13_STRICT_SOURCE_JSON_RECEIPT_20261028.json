@@ -1,0 +1,90 @@
+{
+  "schema": "E06_HOST50_R13_SOURCE_ONLY_RECEIPT_V1",
+  "runId": "NOX-V16-W1-02-HOST50-20261028T2135MSK-R13",
+  "taskId": "E06-W1-02-STRICT_JSON_SOURCE_AUDIT",
+  "baseline": {
+    "canonicalPR": 162,
+    "pinnedPRHeadAtStart": "f243d911ea88e70a7b9ff093a0de47a54390862e",
+    "historicalCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "historicalTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "owner": "E06",
+    "branch": "e06/v16-host50-r13-strict-source-json-20261028-2135",
+    "gitStagingModified": false
+  },
+  "files": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "preSha256": "f87b8394c52f6bcd123413879ffcde1a4ddc146a905925db3c6d3d402da50ccb",
+      "postSha256": "eccb4b618e6da7b71df406bef229adb8797d2da3958a5b265380f27e9588bb86",
+      "preGitBlobSha1": "01a2e56d3d0e0347da79306635ea4c3892425631",
+      "postGitBlobSha1": "bc873f19631afd7746f4868a59961b8b02807c17",
+      "diff": "Add _reject_nonfinite_source_number; pass parse_constant hook to both source JSON snapshots",
+      "tests": "RED 3 nonfinite tests; GREEN 62 split-suite tests"
+    },
+    {
+      "path": "coordination/e06_host50/test_nonfinite_source_json_r13.py",
+      "owner": "E06",
+      "preSha256": "ABSENT",
+      "postSha256": "4ce47faa9bc1a60e5665a838ded3a44df2acc9c94fe4d57d3abb7ea93dca37ab",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "4407ae487fc63ae4a878d4373f414d8146f9351c",
+      "diff": "Four source-only tests, three RED->GREEN, one valid-50 PASS",
+      "tests": "4/4 PASS"
+    }
+  ],
+  "tests": {
+    "red": "3/4 FAIL as expected on pinned preimage (NaN/Infinity/-Infinity accepted); 1 valid control PASS",
+    "green": "62/62 PASS across five separate unittest module invocations (41+6+4+7+4)",
+    "compile": "PASS",
+    "warning": "Combined unittest discovery is unreliable because historic test_registry_shapes_r11 forcibly replaces sys.modules['admission']; modules verified in separate processes.",
+    "windows": "NOT_RUN"
+  },
+  "registry": {
+    "catalogPath": "proposals/NOX-PACK01-50/catalog.json",
+    "catalogGitBlob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "mapPath": "proposals/NOX-PACK01-50/owner-binding-map.json",
+    "mapGitBlob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+    "taskIdRouteOwnerMatched": "50/50",
+    "sourceCandidates": 36,
+    "unbound": 14,
+    "unboundTaskIds": [
+      "NIP01-07",
+      "NIP01-08",
+      "NIP01-26",
+      "NIP01-30",
+      "NIP01-35",
+      "NIP01-36",
+      "NIP01-37",
+      "NIP01-38",
+      "NIP01-39",
+      "NIP01-40",
+      "NIP01-47",
+      "NIP01-48",
+      "NIP01-49",
+      "NIP01-50"
+    ],
+    "staleLedgerPath": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+    "staleLedgerGitBlob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "staleLedgerClaims": "37/13",
+    "currentOwnerMapSourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "nativeCapabilityVerified": 0,
+    "integrated": 0,
+    "windowsAccepted": 0
+  },
+  "product": {
+    "sourceLock729": "NOT_VERIFIED",
+    "setupSha256": "N/D",
+    "exeSha256": "N/D",
+    "buildId": "N/D",
+    "e07": "0/10 NOT_RUN",
+    "release": "HOLD"
+  },
+  "delta": {
+    "productTaskIdDone": 0,
+    "sourceSecurityPatch": 1,
+    "policyRoutesChanged": 0,
+    "nativeBindingsAdded": 0
+  },
+  "oneAppliedLesson": "STRICT_JSON_PARSE_CONSTANT_FAIL_CLOSED: validate both exact file snapshots with parse_constant, fail closed on NaN/Infinity before audit/receipt; do not confuse source-only parsing with native acceptance."
+}
