@@ -1,0 +1,158 @@
+name: NOX V16 E06 exact D02 visual stage into ONEHOST diagnostic installer
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'coordination/e06/build_onehost_installer.ps1'
+      - '.github/workflows/nox-v16-e06-d02-onehost.yml'
+permissions:
+  contents: read
+jobs:
+  visual-source-stage:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Verify original 28-part immutable R11 donor (no guessed source)
+        shell: pwsh
+        run: |
+          python coordination/e06/stage_p01.py
+          if ($LASTEXITCODE -ne 0) { throw 'PINNED_R11_SOURCELOCK_HOLD' }
+      - name: Real D02 staging unit tests and negative tampering cases
+        shell: pwsh
+        run: |
+          python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'D02_STAGING_REGRESSION_HOLD' }
+      - name: Stage existing approved Creative and owner1 D02 in SAME disposable R11
+        shell: pwsh
+        run: |
+          python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
+          if ($LASTEXITCODE -ne 0) { throw 'SAME_R11_CREATIVE_STAGE_HOLD' }
+          python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+          if ($LASTEXITCODE -ne 0) { throw 'SAME_R11_D02_STAGE_HOLD' }
+          $receipt=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw | ConvertFrom-Json
+          # Same-source E01 stage unit test proves 65 copied receipt entries, not 64.
+          if ($receipt.count -ne 65 -or $receipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+              $receipt.legacy_d02_runtime_imported -ne $false -or $receipt.release_accepted -ne $false) {
+            throw 'D02_STAGE_ACTIVE_IMPORT_RECEIPT_HOLD'
+          }
+          $active='work/e06/staged/R11/Assets/creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs'
+          $canonical='proposals/NOX-CINEMA-FX/nox-cinema.mjs'
+          if ((Get-FileHash $active -Algorithm SHA256).Hash -cne
+              (Get-FileHash $canonical -Algorithm SHA256).Hash) { throw 'D02_ACTIVE_BYTES_HOLD' }
+          Write-Host 'D02_STAGED_SOURCE_PIN_PASS (NOT WINDOWS E07 ACCEPTED)'
+      - name: Preserve original and staged receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nox-v16-e06-d02-source-receipts-${{ github.run_id }}
+          path: |
+            work/e06/staged/source_lock.json
+            work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+            work/e06/staged/WOW200_STAGE_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 14
+  diagnostic-onehost:
+    if: github.event_name == 'workflow_dispatch'
+    needs: visual-source-stage
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build original trusted Python candidate and stage original owner1 R11
+        shell: pwsh
+        run: |
+          & ./private_build.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_CANDIDATE_BUILD_HOLD' }
+          python coordination/e06/stage_p01.py
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_R11_SOURCELOCK_HOLD' }
+          python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_729_SOURCELOCK_HOLD' }
+      - name: Build one diagnostic WPF + Python + pinned owner1 D02 / Creative NSIS
+        shell: pwsh
+        run: |
+          $expected='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+          $candidates=@(Get-ChildItem -LiteralPath 'work/candidate' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe')
+          $matches=@($candidates | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $expected })
+          if ($matches.Count -ne 1) { throw 'EXACT_ORIGINAL_PYTHON_EXE_SHA_NOT_FOUND' }
+          & ./coordination/e06/build_onehost_installer.ps1 `
+            -SourceRoot work/e06/staged/R11 `
+            -PythonExe $matches[0].FullName `
+            -OutputRoot work/e06/onehost-wow-diagnostic `
+            -RunId "NOX-E06-D02-${{ github.run_id }}" `
+            -CreativeSourceRoot integrations/creative `
+            -WowSourceRoot integrations/wow200
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path 'work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json')) {
+            throw 'COMBINED_INSTALLER_BUILD_HOLD'
+          }
+          $out='work/e06/onehost-wow-diagnostic'
+          $proof=Join-Path $out 'D02_VISUAL_PUBLISH_RECEIPT.json'
+          if (!(Test-Path -LiteralPath $proof -PathType Leaf)) { throw 'PUBLISHED_D02_RECEIPT_MISSING_HOLD' }
+          $report=Get-Content -LiteralPath $proof -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($report.schema -cne 'NOX-E06-D02-VISUAL-PAYLOAD-V1' -or
+              $report.owner1_active_only -ne $true -or
+              $report.previous_pr30_archived -ne $true -or
+              $report.release_accepted -ne $false -or
+              $report.file_count -lt 60) { throw 'PUBLISHED_D02_RECEIPT_REJECTED_HOLD' }
+          $manifest=Get-Content -LiteralPath (Join-Path $out 'payload/payload.sha256.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+          foreach ($name in @('index.html','creative/wow200/runtime/home-scene.mjs',
+              'creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs',
+              'creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css',
+              'creative/wow200/legacy/d02-pr30/nox-cinema.mjs',
+              'creative/wow200/legacy/d02-pr30/nox-cinema.css')) {
+            $rel='Assets/'+$name
+            $entry=@($manifest.files | Where-Object { $_.path -ceq $rel })
+            if ($entry.Count -ne 1) { throw "D02_NSIS_MANIFEST_ENTRY_MISSING:$rel" }
+            $published=Join-Path $out ('payload/Assets/'+$name)
+            if (!(Test-Path -LiteralPath $published -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+                ([string]$entry[0].sha256).ToLowerInvariant()) {
+              throw "D02_NSIS_MANIFEST_SHA_MISMATCH:$rel"
+            }
+          }
+          Write-Host 'D02_PUBLISHED_ASSETS_PIN_PASS / E07_NOT_RUN'
+          $handoffArgs=@{
+            Original729Receipt='work/e06/original-729-manifest.json'
+            OneHostReceipt=(Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
+            SetupExe=(Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
+            PublishedExe=(Join-Path $out 'payload/NOX.P01.Shell.exe')
+            SourceCommitSha='${{ github.sha }}'
+            Output=(Join-Path $out 'E07_BUILT_HANDOFF.json')
+            Phase='BUILT'
+          }
+          & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 @handoffArgs
+          if (!(Test-Path -LiteralPath (Join-Path $out 'E07_BUILT_HANDOFF.json') -PathType Leaf)) {
+            throw 'E07_BUILDID_HANDOFF_NOT_EMITTED'
+          }
+      - name: Preserve full build receipt; do not claim E07 release
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nox-v16-e06-onehost-diagnostic-${{ github.run_id }}
+          path: |
+            work/e06/staged/source_lock.json
+            work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+            work/e06/staged/WOW200_STAGE_RECEIPT.json
+            work/e06/original-729-manifest.json
+            work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
+            work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
+            work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
+            work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
+            work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
+          if-no-files-found: warn
+          retention-days: 14

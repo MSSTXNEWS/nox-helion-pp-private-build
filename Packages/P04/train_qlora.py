@@ -407,7 +407,9 @@ def validate_jsonl(path: Path, label: str) -> int:
                 raise ValueError(f"{label}_ROW_NEEDS_TEXT_OR_MESSAGES_{number}")
             valid_assistant = False
             for item in messages:
-                if (not isinstance(item, dict) or item.get("role") not in {"system", "user", "assistant"}
+                if (not isinstance(item, dict)
+                        or not isinstance(item.get("role"), str)
+                        or item["role"] not in {"system", "user", "assistant"}
                         or not isinstance(item.get("content"), str)):
                     raise ValueError(f"{label}_INVALID_MESSAGE_{number}")
                 valid_assistant |= item["role"] == "assistant" and bool(item["content"].strip())
@@ -686,6 +688,25 @@ def acquire_gpu_lock(lock_path: Path) -> int:
         return os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError as exc:
         raise RuntimeError("GPU_TRAINING_QUEUE_BUSY") from exc
+
+
+def classify_training_failure(error: BaseException) -> str:
+    """Do not misreport unavailable NVIDIA hardware as a code crash.
+
+    Only exact known driver/device prerequisites are added to the existing
+    fail-closed HOLD policy; unknown failures remain ERROR, not fake progress.
+    This does not authorize weights, create a CUDA device, or run training.
+    """
+    missing_gpu_prerequisites = frozenset({
+        "NVIDIA_GPU_TELEMETRY_UNAVAILABLE",
+        "SELECTED_GPU_INDEX_NOT_FOUND",
+        "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA",
+        "NO_NVIDIA_GPU_FOUND",
+    })
+    reason = str(error)
+    return ("HOLD" if reason in missing_gpu_prerequisites
+            or reason.startswith(("GPU_", "RIGHTS_", "DATASET_", "MODEL_"))
+            else "ERROR")
 
 
 def main() -> int:
@@ -1087,7 +1108,7 @@ def main() -> int:
         print(json.dumps({"run_id": args.run_id, "status": status, "receipt_sha256": receipt_sha}, separators=(",", ":")))
         return 0 if status in {"COMPLETED", "STOPPED", "PAUSED"} else 2
     except Exception as exc:
-        status = "HOLD" if str(exc).startswith(("GPU_", "RIGHTS_", "DATASET_", "MODEL_")) else "ERROR"
+        status = classify_training_failure(exc)
         try:
             events.emit("task.failed", status, "training_failed", type(exc).__name__)
         except Exception:

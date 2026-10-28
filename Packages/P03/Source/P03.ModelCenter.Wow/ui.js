@@ -8,7 +8,7 @@ const familySeed = [["deepseek-r1","DeepSeek R1"],["llama3.1","Llama 3.1"],["lla
 const state = {
   models: familySeed.map(([id,name])=>({id,name,officialUrl:`https://ollama.com/library/${id}`,artifactVerified:false})),
   activeId: familySeed[0][0], filter:'all', compare:[], hostReady:false,
-  activeJob:null, hardware:null, capabilities:{}, diagnostics:[], events:[], pending:new Set()
+  activeJob:null, hardware:null, capabilities:{}, diagnostics:[], events:[], pending:new Map()
 };
 const unknown = 'Н/Д';
 const numeric = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : null;
@@ -86,12 +86,12 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   if(j?.state) chips.append(el('span','chip',j.state));
   const complete=numeric(j?.completedBytes),total=numeric(j?.totalBytes);const realPct=complete!==null&&total!==null&&total>0&&complete<=total?Math.min(100,Math.round(complete/total*100)):null;
   $('orbit').style.setProperty('--pct',realPct===null?'0%':realPct+'%');$('orbit').classList.toggle('working',j?.state==='Running'||j?.state==='Downloading');
-  $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПОДТВЕРЖДЕНО';
+  $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПЕРЕДАНО';
   const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?.status||'Нет активной операции';
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
-  $('transferNote').textContent=realPct===null?'Без достоверного процента':`Прогресс ${realPct}%`;
+  $('transferNote').textContent=realPct===null?'Без достоверного процента':`Передано ${realPct}% · установка требует receipt`;
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
-  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running','Downloading'].includes(j.state);
+  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running'].includes(j.state);
   const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled'].includes(j.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
   $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
@@ -101,19 +101,20 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   $('actionHint').textContent=state.hostReady?'Действия выполняются только после подтверждения Windows host.':'Без host доступен просмотр каталога; операции отключены.';
 }
 function renderDna(){const m=current();const dl=$('dnaList');dl.replaceChildren();if(!m)return;
-  const fields=[['Источник',isOfficial(m.officialUrl)?'Ollama (официальный)':'Неизвестно'],['Тег',safeText(m.exactTag)],
-    ['Revision',safeText(m.immutableRevision)],['Лицензия',safeText(m.license)],['Размер',bytes(m.artifactBytes)],
-    ['SHA-256 файла',isDigest(m.sha256)?m.sha256:'REVIEW_REQUIRED'],['SHA-256 манифеста',isDigest(m.manifestSha256)?m.manifestSha256:'REVIEW_REQUIRED'],['VRAM',fmtRam(m.requiredVramGiB)]];
+  const verified=hasEvidence(m);
+  const fields=[['Источник',isOfficial(m.officialUrl)?'Ollama (официальный)':'Неизвестно'],['Тег',verified?safeText(m.exactTag):'REVIEW_REQUIRED'],
+    ['Revision',verified?safeText(m.immutableRevision):'REVIEW_REQUIRED'],['Лицензия',verified?safeText(m.license):'REVIEW_REQUIRED'],['Размер',verified?bytes(m.artifactBytes):unknown],
+    ['SHA-256 файла',verified&&isDigest(m.sha256)?m.sha256:'REVIEW_REQUIRED'],['SHA-256 манифеста',verified&&isDigest(m.manifestSha256)?m.manifestSha256:'REVIEW_REQUIRED'],['VRAM',verified?fmtRam(m.requiredVramGiB):unknown]];
   for(const [a,b] of fields)dl.append(...lineItem(a,b));const link=$('sourceLink');if(isOfficial(m.officialUrl)){link.href=m.officialUrl;link.removeAttribute('aria-disabled');}else{link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
 }
 function checkState(label,passed){const item=el('div','check '+(passed===true?'pass':passed===false?'fail':''));item.append(el('strong','',passed===true?'✓':passed===false?'×':'?'),el('span','',label));return item;}
-function hardwareCompatibility(m){if(!m||!state.hardware)return null;const h=state.hardware;
+function hardwareCompatibility(m){if(!hasEvidence(m)||!state.hardware)return null;const h=state.hardware;
   const requested=numeric(m.requiredVramGiB),available=numeric(h.vramFreeGiB);if(requested===null||available===null)return null;return available>=requested;
 }
 function renderPreflight(){const m=current(),h=state.hardware,verified=hasEvidence(m);
- const points=[['Официальный источник',isOfficial(m?.officialUrl)],['Лицензия и права',!!(m?.license&&m.licenseEvidenceUrl)||null],
-  ['Неизменяемая ревизия',!!m?.immutableRevision||null],['SHA-256 артефакта',isDigest(m?.sha256)||null],
-  ['Размер и место на диске',numeric(m?.requiredDiskGiB)!==null&&numeric(h?.diskFreeGiB)!==null?h.diskFreeGiB>=m.requiredDiskGiB:null],
+ const points=[['Официальный источник',isOfficial(m?.officialUrl)],['Лицензия и права',verified&&!!(m?.license&&m.licenseEvidenceUrl)||null],
+  ['Неизменяемая ревизия',verified&&!!m?.immutableRevision||null],['SHA-256 артефакта',verified&&isDigest(m?.sha256)||null],
+  ['Размер и место на диске',verified&&numeric(m?.requiredDiskGiB)!==null&&numeric(h?.diskFreeGiB)!==null?h.diskFreeGiB>=m.requiredDiskGiB:null],
   ['Видеопамять ПК',hardwareCompatibility(m)]];
   const container=$('preflightList');container.replaceChildren(...points.map(([label,result])=>checkState(label,result)));
   $('hardwareState').textContent=hardwareCompatibility(m)===true?'Подходит':hardwareCompatibility(m)===false?'Недостаточно':'Неизвестна';
@@ -122,7 +123,7 @@ function renderPreflight(){const m=current(),h=state.hardware,verified=hasEviden
 }
 function renderComparison(){const root=$('comparison');root.replaceChildren();if(state.compare.length!==2){root.textContent='Выберите ровно две модели галочками в каталоге.';return;}
  const grid=el('div','compare-grid');for(const id of state.compare){const m=state.models.find(x=>x.id===id);if(!m)continue;const col=el('div','compare-col');col.append(el('h4','',m.name));const dl=el('dl');
-  for(const [label,value] of [['Статус',hasEvidence(m)?'VERIFIED':'REVIEW_REQUIRED'],['Размер',bytes(m.artifactBytes)],['VRAM',fmtRam(m.requiredVramGiB)],['Лицензия',safeText(m.license)],['Тег',safeText(m.exactTag)]])dl.append(...lineItem(label,value));col.append(dl);grid.append(col);}root.append(grid);
+  for(const [label,value] of [['Статус',hasEvidence(m)?'VERIFIED':'REVIEW_REQUIRED'],['Размер',hasEvidence(m)?bytes(m.artifactBytes):unknown],['VRAM',hasEvidence(m)?fmtRam(m.requiredVramGiB):unknown],['Лицензия',hasEvidence(m)?safeText(m.license):'REVIEW_REQUIRED'],['Тег',hasEvidence(m)?safeText(m.exactTag):'REVIEW_REQUIRED']])dl.append(...lineItem(label,value));col.append(dl);grid.append(col);}root.append(grid);
 }
 function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(state.events.length===0){feed.append(el('li','empty','Нет событий от host.'));return;}
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||'');const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -133,34 +134,95 @@ function sendAction(action){const c=state.capabilities||{};const job=currentJob(
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
  if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
+ if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
+ if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
- if(state.pending.has(action))return;state.pending.add(action);renderHero();renderQuick20();const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
+ if(state.pending.has(action))return;const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
  const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
- try{window.chrome.webview.postMessage(data);showToast('Команда отправлена host. Ожидание ответа.');}catch{state.pending.delete(action);renderHero();renderQuick20();showToast('Связь с host отсутствует.');}
+ const m=current(),pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,timer:null};
+ state.pending.set(action,pending);renderHero();renderQuick20();
+ try{window.chrome.webview.postMessage(data);
+  pending.timer=setTimeout(()=>{if(state.pending.get(action)!==pending)return;state.pending.delete(action);renderHero();renderQuick20();showToast('Нет ACK host: исход неизвестен; проверьте очередь.');},45000);
+  showToast('Команда отправлена host. Ожидание ответа.');
+ }catch{if(pending.timer!==null)clearTimeout(pending.timer);state.pending.delete(action);renderHero();renderQuick20();showToast('Связь с host отсутствует.');}
  // Pending is not interpreted as success; delayed ACK clears this lock.
 }
 let toastTimer;function showToast(msg){const n=$('toast');n.textContent=ellipsis(msg,240);n.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.hidden=true,4500);}
 function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.v1','p03.event.v1','p03.command.ack.v1'].includes(data.type))return;
  if(data.type==='p03.snapshot.v1'){
-  if(Array.isArray(data.models)&&data.models.length<=250){const models=data.models.filter(m=>m&&modelId(m.id)&&typeof m.name==='string'&&m.name.length<=100).map(m=>({...m}));
-     if(models.length){state.models=models;if(!state.models.some(m=>m.id===state.activeId))state.activeId=models[0].id;}}
-  state.hostReady=true;state.activeJob=data.activeJob&&typeof data.activeJob==='object'?data.activeJob:null;
+  if(!Array.isArray(data.models)||!data.models.length||data.models.length>250)return;
+  const models=data.models;
+  if(models.some(m=>!m||!modelId(m.id)||typeof m.name!=='string'||m.name.length>100)||
+    new Set(models.map(m=>m.id)).size!==models.length)return;
+  const before=current(),after=models.find(m=>m.id===state.activeId);
+  if(!before||!after||['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
+  state.models=models.map(m=>({...m}));
+  if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
+  // Preserve terminal and monotone state when an older host snapshot arrives.
+  const incoming=data.activeJob,old=state.activeJob;
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if(incoming!=null&&(
+      typeof incoming!=='object'||!uuid.test(incoming.jobId||'')||
+      typeof incoming.modelTag!=='string'||incoming.modelTag.length>160||
+      !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
+  let next=incoming?{...incoming}:null;
+  if(next){
+    const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
+    if(done!==null&&total!==null&&done>total)return;
+    next.completedBytes=done;next.totalBytes=total;
+    if(old&&old.jobId===next.jobId&&old.modelTag===next.modelTag){
+      if(['Completed','Cancelled','Failed'].includes(old.state)&&next.state!==old.state)next={...old};
+      else{
+        if(old.state==='Cancelling'&&['Queued','Running'].includes(next.state))next.state='Cancelling';
+        if(['Running','Cancelling'].includes(old.state)&&next.state==='Queued')next.state=old.state;
+        if(numeric(old.completedBytes)!==null&&
+           (next.completedBytes===null||next.completedBytes<old.completedBytes)){
+          next.completedBytes=old.completedBytes;next.totalBytes=old.totalBytes;
+        }
+        if(numeric(old.totalBytes)!==null&&
+           (next.totalBytes===null||next.totalBytes<old.totalBytes))next.totalBytes=old.totalBytes;
+        if(next.completedBytes!==null&&next.totalBytes!==null&&next.completedBytes>next.totalBytes)return;
+      }
+    }
+  }
+  state.hostReady=true;state.activeJob=next;
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
   state.diagnostics=Array.isArray(data.diagnostics)?data.diagnostics.slice(0,30):[];
   state.externalLeads=Array.isArray(data.externalLeads)?data.externalLeads.filter(x=>x.downloadAllowed===false&&x.status==='REVIEW_REQUIRED').slice(0,40):[];
   $('hostStatus').textContent='Синхронизировано с Windows host';$('hostLight').classList.add('online');$('eventSignal').textContent='● LIVE';$('eventSignal').classList.add('live');render();
  }else if(data.type==='p03.event.v1'){
-  const evt=data.event;if(!evt||typeof evt!=='object')return;state.events.unshift(evt);state.events.length=Math.min(state.events.length,40);
-  const job=currentJob();if(job&&String(evt.jobId||evt.JobId)===String(job.jobId)){if(typeof evt.status==='string')job.status=evt.status;
-    if(numeric(evt.completedBytes)!==null)job.completedBytes=evt.completedBytes;
-    if(numeric(evt.totalBytes)!==null)job.totalBytes=evt.totalBytes;
-    if(['completed','failed','cancelled'].includes(evt.phase))job.state=evt.phase==='completed'?'Completed':evt.phase==='failed'?'Failed':'Cancelled';}
+  const evt=data.event;
+  if(!evt||typeof evt!=='object'||typeof evt.jobId!=='string'||typeof evt.phase!=='string')return;
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(evt.jobId)||
+    !['started','progress','completed','failed','cancelled'].includes(evt.phase)||
+    (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
+    (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
+  const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
+  state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
+  const job=currentJob();
+  if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
+     !['Completed','Failed','Cancelled'].includes(job.state)){
+    if(typeof evt.status==='string')job.status=evt.status;
+    const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
+    if(done!==null&&total!==null&&total>0&&done<=total&&
+       (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
+       (numeric(job.totalBytes)===null||total>=job.totalBytes)){
+      job.completedBytes=done;job.totalBytes=total;
+    }
+    const terminal={completed:'Completed',failed:'Failed',cancelled:'Cancelled'}[evt.phase];
+    if(terminal)job.state=terminal;
+  }
   render();
  }else if(data.type==='p03.command.ack.v1'){
-  if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action))return;state.pending.delete(data.action);renderHero();renderQuick20();showToast(data.accepted===true?'Host принял команду; результат будет в событиях.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
+  if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action)||typeof data.commandId!=='string'||typeof data.accepted!=='boolean')return;
+  const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
+  if(pending.timer!==null)clearTimeout(pending.timer);
+  state.pending.delete(data.action);renderHero();renderQuick20();
+  const m=current(),samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null);
+  showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);
 for(const b of document.querySelectorAll('[data-filter]'))b.addEventListener('click',()=>{state.filter=b.dataset.filter;for(const btn of document.querySelectorAll('[data-filter]')){btn.classList.toggle('active',btn===b);btn.setAttribute('aria-pressed',String(btn===b));}renderCatalog();});

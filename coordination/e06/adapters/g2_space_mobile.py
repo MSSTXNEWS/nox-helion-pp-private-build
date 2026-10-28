@@ -11,6 +11,7 @@ import math
 import re
 from g2_gpu_provenance import valid_source, valid_device, reconcile_gpu_tile
 from g2_gpu_sample_gate import valid_sample_id, enforce_gpu_tile_sample
+from g2_event_state_gate import EventStateHold, require_event_state_coherence
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -322,6 +323,10 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
                    for k in ("event_id", "task_id", "package_id",
                              "action_id", "source"))):
         raise G2Denied("Invalid canonical events.v3 envelope")
+    try:
+        require_event_state_coherence(frozen["event_type"], frozen["state"])
+    except EventStateHold as exc:
+        raise G2Denied("Inconsistent native events.v3 event type/state") from exc
     if frozen["event_type"] in ("cpu.sample", "telemetry.snapshot"):
         raise G2Denied("No unapproved events.v3 sensor type")
     if frozen.get("numerator") is not None or frozen.get("denominator") is not None:

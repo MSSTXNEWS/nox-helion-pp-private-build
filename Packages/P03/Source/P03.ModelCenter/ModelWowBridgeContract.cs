@@ -25,7 +25,12 @@ public static class ModelWowBridgeContract
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentNullException.ThrowIfNull(jobs);
         var catalog = entries.ToArray();
-        var job = activeJobId.HasValue ? jobs.FirstOrDefault(x => x.Id == activeJobId.Value) : null;
+        if (catalog.Length is < 1 or > 250 || catalog.Any(m => m is null || string.IsNullOrWhiteSpace(m.Id)) ||
+            catalog.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count()!=catalog.Length)
+            throw new InvalidDataException("P03_SNAPSHOT_DUPLICATE_OR_INVALID_MODEL");
+        var activeMatches=activeJobId.HasValue?jobs.Where(x=>x.Id==activeJobId.Value).Take(2).ToArray():Array.Empty<ModelJob>();
+        if(activeMatches.Length>1)throw new InvalidDataException("P03_SNAPSHOT_AMBIGUOUS_JOB");
+        var job=activeMatches.FirstOrDefault();
         var matched = job is null ? null : catalog.FirstOrDefault(x =>
             string.Equals(x.ExactTag, job.ModelTag, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(x.Id, job.ModelTag, StringComparison.OrdinalIgnoreCase));
@@ -75,6 +80,19 @@ public static class ModelWowBridgeContract
         }, JsonOptions);
     }
 
+    /// <summary>ACK echoes exact command identity, never an installation receipt.</summary>
+    public static string AckJson(Command cmd,bool accepted,string? reason=null)
+    {
+        ArgumentNullException.ThrowIfNull(cmd);
+        if(string.IsNullOrWhiteSpace(cmd.CommandId)||cmd.CommandId.Length>64||
+           cmd.CommandId.Any(ch=>!char.IsAsciiLetterOrDigit(ch)&&ch!='-'&&ch!='_')||
+           cmd.Action is not ("pull" or "importGguf" or "stop" or "retry" or "diagnose"))
+            throw new ArgumentException("Invalid command identity",nameof(cmd));
+        var safe=reason is null?"HOST_DENIED":new string(reason.Where(ch=>!char.IsControl(ch)).Take(160).ToArray());
+        return JsonSerializer.Serialize(new{type="p03.command.ack.v1",commandId=cmd.CommandId,action=cmd.Action,
+            accepted,reason=accepted?null:safe},JsonOptions);
+    }
+
     /// <summary>Validate bounded command shape and current queue state.
     /// The host must also validate trusted document origin, user authorization,
     /// per-job ACL, and capability before calling the worker; success ACK is not completion.
@@ -99,6 +117,10 @@ public static class ModelWowBridgeContract
                 !root.TryGetProperty("action", out var actionProp) || actionProp.ValueKind != JsonValueKind.String ||
                 !root.TryGetProperty("commandId", out var idProp) || idProp.ValueKind != JsonValueKind.String)
                 return false;
+            var seen=new HashSet<string>(StringComparer.Ordinal);
+            foreach(var field in root.EnumerateObject())
+                if(!seen.Add(field.Name)||field.Name is not ("type" or "action" or "commandId" or "modelId" or "jobId" or "licenseAcknowledged"))
+                    return false;
             string? action = actionProp.GetString();
             string? id = idProp.GetString();
             if (string.IsNullOrWhiteSpace(id) || id.Length > 64 ||
@@ -129,8 +151,9 @@ public static class ModelWowBridgeContract
             if ((action != "stop" || !allowed.Stop) && (action != "retry" || !allowed.Retry)) return false;
             if (!root.TryGetProperty("jobId", out var jobProp) || jobProp.ValueKind != JsonValueKind.String ||
                 !Guid.TryParse(jobProp.GetString(), out var jobId)) return false;
-            var job = jobs.FirstOrDefault(x => x.Id == jobId);
-            if (job is null) return false;
+            var jobMatches=jobs.Where(x=>x.Id==jobId).Take(2).ToArray();
+            if(jobMatches.Length!=1)return false;
+            var job=jobMatches[0];
             if (action == "stop" && job.State is not (ModelJobState.Queued or ModelJobState.Running)) return false;
             if (action == "retry" && job.State is not (ModelJobState.Failed or ModelJobState.Cancelled))
                 return false;

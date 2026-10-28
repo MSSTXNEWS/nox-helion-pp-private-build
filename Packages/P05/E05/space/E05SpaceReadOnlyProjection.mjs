@@ -219,7 +219,10 @@ export function projectFeeds(feeds, nowMs) {
   for (const f of feeds) if (f && singletonMarketIds.has(f.id))
     marketCounts.set(f.id,(marketCounts.get(f.id)||0)+1);
   const emittedMarkets=new Set();
-  return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).flatMap(f=>{
+  // Apply the 16-tile cap AFTER excluding unknown/empty source IDs;
+  // otherwise rejected padding can hide all licensed live SPACE sources.
+  // Duplicate-market accounting above still scans the entire bounded batch.
+  return feeds.filter(f=>f && sourceIds.has(f.id)).slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
       if (emittedMarkets.has(f.id)) return [];
       emittedMarkets.add(f.id);

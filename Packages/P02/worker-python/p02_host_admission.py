@@ -55,7 +55,8 @@ class P02EventRelay:
         This is synchronous and intentional: native host controls backpressure.
         A failed publish raises; we never imply delivery or emit synthetic ACKs.
         """
-        if not isinstance(event, dict) or event.get('type') not in P02_TYPES:
+        if (not isinstance(event, dict) or not isinstance(event.get('type'), str)
+                or event['type'] not in P02_TYPES):
             raise P02Error('P02_EVENT_UNSUPPORTED')
         run = event.get('run_id')
         if not isinstance(run, str) or RUN_ID.fullmatch(run) is None:

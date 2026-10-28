@@ -25,6 +25,25 @@ class WorkerSafetyTests(unittest.TestCase):
     def setUpClass(cls):
         cls.mod = worker()
 
+    def test_known_gpu_missing_prerequisites_report_hold(self):
+        for reason in (
+            "NVIDIA_GPU_TELEMETRY_UNAVAILABLE",
+            "SELECTED_GPU_INDEX_NOT_FOUND",
+            "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA",
+            "GPU_TEMPERATURE_UNAVAILABLE",
+        ):
+            with self.subTest(reason=reason):
+                self.assertEqual(self.mod.classify_training_failure(RuntimeError(reason)), "HOLD")
+
+    def test_other_training_faults_are_not_hidden(self):
+        for reason in (
+            "UNEXPECTED_TRAINER_FAILURE",
+            "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA_MORE",
+            "NVIDIA_UNKNOWN_FAILURE",
+        ):
+            with self.subTest(reason=reason):
+                self.assertEqual(self.mod.classify_training_failure(RuntimeError(reason)), "ERROR")
+
     def test_reject_nonfinite_or_fake_metrics(self):
         for value in (None, True, False, "1.0", float("inf"),
                       float("-inf"), float("nan")):

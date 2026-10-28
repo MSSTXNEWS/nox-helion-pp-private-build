@@ -164,6 +164,24 @@ class P02P04OneHost:
         # This checks the same existing SQLite history and tenant ACL. No
         # initialize(), CREATE TABLE, connection.open() or migration happens here.
         self.store.history(scope.tenant, scope.principal, scope.conversation_id, 1)
+        # R10: history() can block.  A session, SID, permission, RAG binding
+        # or Ollama connection may change while it runs.  GPU commands are
+        # side-effecting: checking only AFTER the owner worker returns would
+        # prevent displaying an ACK but would not prevent executing the job.
+        # Re-admit using the SAME native callbacks before every owner action.
+        self._verify_owner_bindings()
+        sid_after = self._native_sid(scope.tenant, scope.principal)
+        if (not isinstance(sid_after, str) or _SID.fullmatch(sid_after) is None
+                or sid_after != scope.windows_sid):
+            raise PermissionError("NATIVE_WINDOWS_SID_MISMATCH")
+        if self._native_context_chat(token, scope) != scope.conversation_id:
+            raise PermissionError("NATIVE_CONTEXT_NOT_BOUND_TO_EXISTING_CHAT")
+        if self._authorize(scope, operation) is not True:
+            raise PermissionError("NATIVE_OWNER_ROUTE_DENIED")
+        self._verify_owner_bindings()
+        # A host-level lock/lease is still required to make the history and
+        # native authorization boundary atomic across threads.  This is a
+        # fail-closed safety fence, NOT a Windows/E07 acceptance claim.
 
     def stream_chat(self, scope: NativeScope, model: str, prompt: str,
                     stop: threading.Event | None = None):

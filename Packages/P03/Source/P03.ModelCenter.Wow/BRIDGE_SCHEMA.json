@@ -33,5 +33,9 @@
   "source_of_truth": "existing P03 queue/catalog and lifecycle events",
   "transport": "CoreWebView2.PostWebMessageAsJson",
   "unknown_metadata": "REVIEW_REQUIRED",
-  "external_dependencies": []
+  "external_dependencies": [],
+  "ack_echo_command_id": true,
+  "late_ack_pin_guard": true,
+  "pending_timeout_ms": 45000,
+  "transfer_percent_is_install_receipt": false
 }

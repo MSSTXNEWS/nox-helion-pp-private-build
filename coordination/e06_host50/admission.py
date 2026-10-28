@@ -145,6 +145,8 @@ def validate_origin(origin: str) -> str:
 
 def audit_registry(catalog: dict, bindings: dict) -> dict:
     """Read-only audit of exactly 50 TaskIDs, NOT installation/activation."""
+    if not isinstance(catalog, dict) or not isinstance(bindings, dict):
+        raise Hold("REGISTRY_JSON_OBJECT_REQUIRED")
     if catalog.get("version") != "NOX-INTEGRATION-PACK-01":
         raise Hold("CATALOG_VERSION")
     actions, rows = catalog.get("actions"), bindings.get("routes")
@@ -153,9 +155,11 @@ def audit_registry(catalog: dict, bindings: dict) -> dict:
     actions_by_task, rows_by_task = {}, {}
     for src, index in ((actions, actions_by_task), (rows, rows_by_task)):
         for x in src:
-            if not isinstance(x, dict) or x.get("taskId") not in TASKS or x["taskId"] in index:
+            # Type-before-membership: untrusted JSON arrays/objects cannot be TaskIDs.
+            task_id = x.get("taskId") if isinstance(x, dict) else None
+            if type(task_id) is not str or task_id not in TASKS or task_id in index:
                 raise Hold("BAD_OR_DUPLICATE_TASKID")
-            index[x["taskId"]] = x
+            index[task_id] = x
         if set(index) != set(TASKS):
             raise Hold("TASK_LEDGER_GAP")
     out = []
@@ -194,7 +198,7 @@ def audit_registry(catalog: dict, bindings: dict) -> dict:
             if x.get("kind") != "select" or (("source" in x) == ("options" in x)):
                 raise Hold("INVALID_SELECT_POLICY")
             if "source" in x:
-                if x["source"] not in NATIVE_OPTION_SOURCES:
+                if type(x["source"]) is not str or x["source"] not in NATIVE_OPTION_SOURCES:
                     raise Hold("UNTRUSTED_NATIVE_OPTION_SOURCE")
                 policy[x["key"]] = {"source": x["source"]}
             else:
@@ -313,7 +317,10 @@ class Host50Admission:
                       origin: str, scopes: tuple[str,...], sensitive: tuple[str,...],
                       duration_seconds: int = 120) -> Session:
         """NATIVE-ONLY: never expose this constructor to an untrusted page."""
-        if (origin not in self.origins or not all(isinstance(x,str) and 0<len(x)<=128
+        # Native-only callers still must reject malformed scope frames cleanly.
+        if (type(scopes) is not tuple or type(sensitive) is not tuple or
+             any(type(x) is not str for x in (*scopes, *sensitive)) or
+             origin not in self.origins or not all(isinstance(x,str) and 0<len(x)<=128
              for x in (tenant, principal, chat)) or type(duration_seconds) is not int or
              not 1 <= duration_seconds <= 300 or not set(scopes).issubset(self.by_route) or
              not set(sensitive).issubset(scopes) or not scopes):
@@ -339,6 +346,7 @@ class Host50Admission:
             c.route != row["routeId"] or type(c.owner) is not int or
             c.owner != row["owner"] or
             c.handler != row["sourceBinding"] or c.frozen_tree != BASE_TREE or
+            type(c.owner_receipt_sha256) is not str or
             not SHA256.fullmatch(c.owner_receipt_sha256) or
             c.integrated is not True or c.ready is not True):
             raise Hold("NATIVE_OWNER_CAPABILITY_UNVERIFIED")

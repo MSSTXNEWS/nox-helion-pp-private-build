@@ -8,6 +8,7 @@ import json
 import re
 import stat
 import zipfile
+import importlib.util
 from pathlib import Path, PurePosixPath
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -15,6 +16,7 @@ RECEIPT=ROOT/"donors/P01_C07/P01_C07_RECEIPT.json"
 WORK=ROOT/"work/e06/staged"
 R11=WORK/"R11"
 RUN="NOX-V16-E06-P01-STAGE-20261028-R03"
+CANONICAL_ZIP_VALIDATOR=ROOT/"coordination/source-lock/verify_original_archive.py"
 def sha256(data):return hashlib.sha256(data).hexdigest()
 def safe(name,metadata):
     if not name or "\\" in name or name.startswith("/") or "\0" in name:
@@ -28,11 +30,28 @@ def main():
     sources=lock["parts"]
     if len(sources)!=28 or sum(p["size_bytes"] for p in sources)!=lock["original_zip_bytes"]:
         raise SystemExit("DONOR_PART_MAP_INCOMPLETE")
+    # This existing stage is the only R11 extractor. Reuse the canonical ZIP
+    # namespace validator; never fork a weaker second implementation.
+    if not CANONICAL_ZIP_VALIDATOR.is_file() or CANONICAL_ZIP_VALIDATOR.is_symlink():
+        raise SystemExit("CANONICAL_SOURCE_VALIDATOR_MISSING")
+    spec=importlib.util.spec_from_file_location("nox_canonical_zip_names",CANONICAL_ZIP_VALIDATOR)
+    if spec is None or spec.loader is None:
+        raise SystemExit("CANONICAL_SOURCE_VALIDATOR_UNAVAILABLE")
+    canonical=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(canonical)
+    if not callable(getattr(canonical,"validate_members",None)):
+        raise SystemExit("CANONICAL_ZIP_NAMESPACES_GATE_MISSING")
     WORK.mkdir(parents=True,exist_ok=True)
+    if WORK.is_symlink() or R11.is_symlink():
+        raise SystemExit("E06_STAGE_REPARSE_ROOT_HOLD")
+    if (WORK/"source_lock.json").exists() or (WORK/"source_lock.json").is_symlink():
+        raise SystemExit("E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE")
     temp=WORK/"source-donor-immutable.zip"
+    if temp.exists() or temp.is_symlink():
+        raise SystemExit("E06_ORIGINAL_DONOR_TEMP_ALREADY_EXISTS")
     total=hashlib.sha256()
     try:
-        with temp.open("wb") as stream:
+        with temp.open("xb") as stream:
             for item in sources:
                 src=ROOT/item["path"]
                 if not src.is_file() or src.is_symlink():raise SystemExit("MISSING_PINNED_SOURCE:"+str(src))
@@ -44,6 +63,12 @@ def main():
         if temp.stat().st_size!=lock["original_zip_bytes"] or total.hexdigest()!=lock["original_zip_sha256"]:
             raise SystemExit("DONOR_ZIP_SHA256_FAIL")
         with zipfile.ZipFile(temp) as archive:
+            # Source ZIP fixed SHA is not enough: file/parent conflicts,
+            # casefold paths, special UNIX entries must be rejected BEFORE extraction.
+            try:
+                canonical.validate_members(archive.infolist())
+            except ValueError as exc:
+                raise SystemExit("E06_CANONICAL_ZIP_NAMESPACE_HOLD:"+str(exc)) from exc
             seen=set();files=[];uncompressed=0
             for inf in archive.infolist():
                 name=safe(inf.filename,inf).as_posix()
@@ -55,9 +80,17 @@ def main():
                     raise SystemExit("ARCHIVE_SIZE_CAP")
                 if name.startswith("R11/"):
                     target=WORK/name
+                    # Reject a symlink at any pre-existing parent or leaf.
+                    node=target.parent
+                    while True:
+                        if node.is_symlink():raise SystemExit("E06_STAGE_REPARSE_PARENT:"+name)
+                        if node==WORK:break
+                        if WORK not in node.parents:raise SystemExit("E06_TARGET_OUTSIDE_STAGE")
+                        node=node.parent
                     target.parent.mkdir(parents=True,exist_ok=True)
-                    if target.exists():raise SystemExit("TARGET_EXISTS_NO_OVERWRITE:"+name)
-                    with archive.open(inf) as reader,target.open("wb") as writer:
+                    if target.exists() or target.is_symlink():
+                        raise SystemExit("TARGET_EXISTS_NO_OVERWRITE:"+name)
+                    with archive.open(inf) as reader,target.open("xb") as writer:
                         b=hashlib.sha256()
                         while chunk:=reader.read(1024*1024):
                             b.update(chunk);writer.write(chunk)
@@ -73,7 +106,10 @@ def main():
                     "original_members":len(files),"uncompressed_bytes":uncompressed,
                     "source_unchanged":True,"diagnostic":True,"release_accepted":False,
                     "artifacts":files}
-        (WORK/"source_lock.json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
+        lock_out=WORK/"source_lock.json"
+        # Do not overwrite a concurrent or historical SourceLock.
+        with lock_out.open("x",encoding="utf-8") as receipt:
+            receipt.write(json.dumps(report,indent=2)+"\n")
         print("E06_P01_DONOR_HASH_PASS",total.hexdigest())
         print("E06_P01_CANDIDATE_SOURCE_FILES",len(files))
     finally:
