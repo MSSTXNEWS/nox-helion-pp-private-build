@@ -1,5 +1,9 @@
 name: NOX E01 P01 WOW MAX10 source and exact owner NSIS regression
 on:
+  pull_request:
+    paths:
+      - 'proposals/P01/WOW-MAX10/**'
+      - '.github/workflows/p01-wow-max10.yml'
   push:
     branches:
       - e01/v16-wow-max10-one-scene-20261028
@@ -29,8 +33,15 @@ jobs:
       - name: All owner component assertions
         shell: pwsh
         run: |
-          node --test proposals/P01/WOW-MAX10/*.test.mjs
+          $tests = @(Get-ChildItem proposals/P01/WOW-MAX10 -Filter '*.test.mjs' | ForEach-Object { $_.FullName })
+          if ($tests.Count -lt 7) { throw 'P01_WOW_TEST_INVENTORY_MISSING' }
+          node --test @tests
           if ($LASTEXITCODE -ne 0) { throw 'P01_WOW_TEST_FAIL' }
+      - name: Upstream original D02 and one-scene 200 regression
+        shell: pwsh
+        run: |
+          node --test proposals/NOX-CINEMA-FX/nox-cinema.test.mjs proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'D02_OR_UNIFIED_200_REGRESSION' }
       - name: No deletion of original D02, 200 effects or other owners
         shell: pwsh
         run: |
