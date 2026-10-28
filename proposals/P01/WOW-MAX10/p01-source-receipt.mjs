@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
 import {execFileSync} from "node:child_process";
 const BASE="ef10bbba7370f67c734d69dbab8b509d3c2c457e";
 const ROOT="proposals/P01/WOW-MAX10/";
@@ -38,7 +39,7 @@ export function collectReceipt(){
     installed_windows_exe_accepted:false,e07_same_sha_accepted:false,
     release_allowed:false,accepted_product_percent:null});
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===path.resolve(import.meta.url.replace(/^file:\/\//,""))){
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const data=collectReceipt();
  fs.mkdirSync("ci-evidence",{recursive:true});
  const dest="ci-evidence/P01_WOW_MAX10_OWNER_RECEIPT.json";
