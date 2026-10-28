@@ -465,9 +465,8 @@ class G2OneHostBinder:
             before = dict(self.host.ports)
             try:
                 # dict() aliases nested owner permissions: freeze the actual ACL.
-                # The canonical PACK01 source now exposes read-only MappingProxyType.
-                # Deepcopy(mappingproxy) raises TypeError. Freeze the underlying
-                # exact descriptors into private dicts without mutating the host.
+                # Read-only MappingProxyType cannot be deep-copied as an object.
+                # Clone each approved descriptor without changing the live ACL.
                 frozen_routes = {
                     route: copy.deepcopy(dict(descriptor))
                     for route, descriptor in self.host.routes.items()
@@ -567,12 +566,11 @@ class G2OneHostBinder:
                 # Restore owner-mutated nested route ACLs, but never rewrite
                 # native routes when their pre-bind value is unchanged.
                 if self.host.routes is not original_routes:
-                    # An untrusted owner may have swapped the entire route map.
-                    # Restore the exact original read-only object, never a mutable
-                    # dict copy that silently reopens owner/risk-policy edits.
+                    # Restore original read-only registry object, never a
+                    # mutable replacement that weakens route permissions.
                     self.host.routes = original_routes
                 elif self.host.routes != frozen_routes and isinstance(self.host.routes, dict):
-                    # Legacy mutable host only; preserve original container.
+                    # Original mutable-host legacy fallback only.
                     self.host.routes.clear()
                     self.host.routes.update(copy.deepcopy(frozen_routes))
                 raise G2Hold("All-or-HOLD existing-host bindings rolled back") from exc
