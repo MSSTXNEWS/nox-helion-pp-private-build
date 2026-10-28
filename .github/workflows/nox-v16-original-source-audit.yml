@@ -5,11 +5,15 @@ on:
       - integration/nox-v16-unified-candidate-20261028-r01
     paths:
       - 'coordination/source-lock/**'
+      - 'coordination/e06/stage_p01.py'
+      - 'tests/e06/test_stage_p01_shared_zip_guard.py'
       - 'source_0*.part'
       - '.github/workflows/nox-v16-original-source-audit.yml'
   pull_request:
     paths:
       - 'coordination/source-lock/**'
+      - 'coordination/e06/stage_p01.py'
+      - 'tests/e06/test_stage_p01_shared_zip_guard.py'
       - 'source_0*.part'
       - '.github/workflows/nox-v16-original-source-audit.yml'
 permissions:
@@ -23,6 +27,9 @@ jobs:
       - name: E07-SOURCE-03 malicious ZIP namespace and special-file regressions
         shell: bash
         run: python3 -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
+      - name: E06 R11 original 28-part stage source ZIP namespace regressions
+        shell: bash
+        run: python3 -m unittest discover -s tests/e06 -p 'test_stage_p01_shared_zip_guard.py' -v
       - name: Run exact source ZIP, entry and SHA256 validation (no extraction)
         shell: bash
         run: |
