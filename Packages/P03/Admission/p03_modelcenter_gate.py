@@ -275,7 +275,7 @@ def admit_for_existing_downloader(
 _QUEUE_STATES = frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING",
                            "CANCELLED", "FAILED", "COMPLETED"})
 _QUEUE_TRANSITIONS = {
-    "QUEUED": frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING", "FAILED"}),
+    "QUEUED": frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED"}),
     "RUNNING": frozenset({"RUNNING", "CANCEL_REQUESTED", "CANCELLING", "FAILED", "COMPLETED"}),
     "CANCEL_REQUESTED": frozenset({"CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED"}),
     "CANCELLING": frozenset({"CANCELLING", "CANCELLED", "FAILED"}),
@@ -360,10 +360,32 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
 
     old_total, new_total = previous.get("totalBytes"), update.get("totalBytes")
     old_done, new_done = previous.get("completedBytes"), update.get("completedBytes")
-    if not (_positive(old_total) and old_total == new_total):
-        reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
-    if not (type(old_done) is int and type(new_done) is int and _positive(old_total)
-            and 0 <= old_done <= new_done <= old_total):
+    # Original P03 ModelJob.Queued starts with null counters. Its native worker
+    # can publish RUNNING with unknown bytes, then the FIRST measured byte pair.
+    # Requiring a known old total would reject every genuine first transfer event.
+    # Unknown -> known is allowed ONCE on the same trusted job; known -> unknown,
+    # mismatched totals and fabricated 0/0 counters are never progress evidence.
+    old_unknown = old_total is None and old_done is None
+    new_unknown = new_total is None and new_done is None
+    old_known = (_positive(old_total) and type(old_done) is int
+                 and 0 <= old_done <= old_total)
+    new_known = (_positive(new_total) and type(new_done) is int
+                 and 0 <= new_done <= new_total)
+    if old_known and new_known:
+        if old_total != new_total:
+            reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
+        if new_done < old_done:
+            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+    elif old_unknown and new_known:
+        # Native queue can emit its first measured bytes after QUEUED/RUNNING.
+        # The state transition and E06's trusted receipt still gate admission.
+        if before not in {"QUEUED", "RUNNING"}:
+            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+    elif old_unknown and new_unknown:
+        pass  # indeterminate queued/running or terminal cancellation, NOT 0%/100%
+    else:
+        if not _positive(old_total) or not _positive(new_total):
+            reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
         reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
     if isinstance(after, str) and after in {"CANCEL_REQUESTED", "CANCELLING"}:
         reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
@@ -374,8 +396,8 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
                                          and update.get("nativeFailureAttested") is True):
         reasons.append("FAILURE_RECEIPT_NOT_ATTESTED")
     elif after == "COMPLETED":
-        if not (_sha(update.get("completedReceiptSha256")) and new_done == new_total
-                and update.get("nativeCompletionAttested") is True):
+        if not (new_known and _sha(update.get("completedReceiptSha256"))
+                and new_done == new_total and update.get("nativeCompletionAttested") is True):
             reasons.append("COMPLETION_RECEIPT_OR_BYTES_MISSING")
         if not (_sha(update.get("observedArtifactSha256"))
                 and update.get("observedArtifactSha256") == update.get("expectedArtifactSha256")):
@@ -426,10 +448,17 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
             break
     if new_job.get("eventSequence") != 1 or not _positive(previous.get("eventSequence")):
         reasons.append("RETRY_SEQUENCE_NOT_RESET")
-    if not (_positive(previous.get("totalBytes"))
-            and previous.get("totalBytes") == new_job.get("totalBytes")
-            and type(new_job.get("completedBytes")) is int
-            and new_job.get("completedBytes") == 0):
+    # Original P03 RetryAsync intentionally clears TotalBytes and
+    # CompletedBytes to null. A queued retry has no verified bytes yet.
+    # Support both this native null reset and an independently attested
+    # old-total/zero reset, never carry old progress into the new attempt.
+    native_unknown_reset = (new_job.get("totalBytes") is None and
+                            new_job.get("completedBytes") is None)
+    verified_zero_reset = (_positive(previous.get("totalBytes")) and
+                           previous.get("totalBytes") == new_job.get("totalBytes") and
+                           type(new_job.get("completedBytes")) is int and
+                           new_job.get("completedBytes") == 0)
+    if not (native_unknown_reset or verified_zero_reset):
         reasons.append("RETRY_BYTES_INVALID")
     if user_retry_consent is not True:
         reasons.append("RETRY_USER_CONSENT_REQUIRED")
