@@ -2,6 +2,7 @@
 // NOX's original D02, 8 CoreID, chat, STOP and windows owner controls are unchanged.
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
@@ -80,6 +81,65 @@ public partial class MainWindow
         }
     }
 
+    // E06 source-trust fix: the installed worker must match the existing P01
+    // signed-payload SHA manifest. Manifest + ACL/installer provenance are separate
+    // release gates; this is not an Authenticode signature or native E07 proof.
+    private static void AssertPinnedCreativeWorker(string worker)
+    {
+        var root=Path.GetFullPath(AppContext.BaseDirectory);
+        var backend=Path.Combine(root,"Backend");
+        var creative=Path.Combine(backend,"Creative");
+        var expected=Path.Combine(creative,"NOX_CreativeWorker.exe");
+        var full=Path.GetFullPath(worker);
+        if (!string.Equals(full,expected,StringComparison.OrdinalIgnoreCase))
+            throw new IOException("CREATIVE_WORKER_FIXED_PATH_REQUIRED");
+        var manifest=Path.Combine(root,"payload.sha256.json");
+        foreach (var item in new[]{root,backend,creative,full,manifest})
+        {
+            if (!File.Exists(item) && !Directory.Exists(item))
+                throw new IOException("CREATIVE_PAYLOAD_INPUT_MISSING");
+            if ((File.GetAttributes(item) & FileAttributes.ReparsePoint)!=0)
+                throw new IOException("CREATIVE_PAYLOAD_REPARSE_HOLD");
+        }
+        var manifestInfo=new FileInfo(manifest);
+        if (manifestInfo.Length<64 || manifestInfo.Length>4_194_304)
+            throw new IOException("CREATIVE_MANIFEST_SIZE_HOLD");
+        using var json=JsonDocument.Parse(File.ReadAllBytes(manifest));
+        var doc=json.RootElement;
+        if (doc.ValueKind!=JsonValueKind.Object ||
+            !doc.TryGetProperty("schema",out var schema) ||
+            schema.GetString()!="NOX_P01_PAYLOAD_SHA256_V1" ||
+            !doc.TryGetProperty("files",out var entries) ||
+            entries.ValueKind!=JsonValueKind.Array)
+            throw new IOException("CREATIVE_PAYLOAD_MANIFEST_SCHEMA_HOLD");
+        string? pinned=null; long size=-1; int matches=0;
+        foreach (var entry in entries.EnumerateArray())
+        {
+            if (entry.ValueKind!=JsonValueKind.Object ||
+                !entry.TryGetProperty("path",out var path) ||
+                path.ValueKind!=JsonValueKind.String) continue;
+            if (!string.Equals(path.GetString(),"Backend/Creative/NOX_CreativeWorker.exe",
+                               StringComparison.OrdinalIgnoreCase)) continue;
+            matches++;
+            if (!entry.TryGetProperty("sha256",out var digest) ||
+                digest.ValueKind!=JsonValueKind.String ||
+                !entry.TryGetProperty("bytes",out var length) ||
+                !length.TryGetInt64(out size) || size<=0)
+                throw new IOException("CREATIVE_MANIFEST_WORKER_ENTRY_HOLD");
+            pinned=digest.GetString();
+        }
+        if (matches!=1 || pinned is null || pinned.Length!=64 ||
+            !Regex.IsMatch(pinned,@"\A[0-9a-fA-F]{64}\z") ||
+            new FileInfo(full).Length!=size)
+            throw new IOException("CREATIVE_WORKER_NOT_EXACTLY_PINNED");
+        // Fail closed on altered bytes. The canonical installer must separately
+        // protect its own manifest/install root from user modification.
+        using var stream=new FileStream(full,FileMode.Open,FileAccess.Read,FileShare.Read);
+        var observed=SHA256.HashData(stream);
+        if (!CryptographicOperations.FixedTimeEquals(observed,Convert.FromHexString(pinned)))
+            throw new IOException("CREATIVE_WORKER_SHA256_MISMATCH_HOLD");
+    }
+
     private async Task<Process> EnsureCreativeWorkerAsync()
     {
         await _creativeStartGate.WaitAsync();
@@ -87,7 +147,7 @@ public partial class MainWindow
         {
             if (_creativeWorker is {HasExited:false} existing)return existing;
             var path=Path.Combine(AppContext.BaseDirectory,"Backend","Creative","NOX_CreativeWorker.exe");
-            if (!File.Exists(path)) throw new FileNotFoundException("The signed-payload creative worker is unavailable");
+            AssertPinnedCreativeWorker(path);
             var start=new ProcessStartInfo(path)
             {
                 UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,
