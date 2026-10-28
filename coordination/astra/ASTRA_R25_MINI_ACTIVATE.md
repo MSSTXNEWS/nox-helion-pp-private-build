@@ -4,6 +4,8 @@
 
 **ПРИОРИТЕТ R26 · ОСНОВНАЯ СБОРКА В GITLAB FREE — ЭТО УЖЕ ВЫБРАНО ВЛАДЕЛЬЦЕМ 28.10.2026.** GitHub здесь — репозиторий исходников и ветка Astra, GitLab Free — ОТДЕЛЬНЫЙ Windows CI: приватный `https://gitlab.com/s-grouptwet/nox-helion-pp-private-build`, историческая ветка `migration/nox-v16-gitlab-free-20261028-r01`, успешно стартовавший (но УПАВШИЙ на P02) Pipeline `#3000422727` / Windows Job `#17549234693`, runner `saas-windows-medium-amd64`. Полный проверенный маршрут и реальные файлы: `coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md`. Ветка GitLab-миграции НЕ является автоматически синхронизированной с Astra, история исходников разошлась; живой HEAD GitLab без аутентифицированного доступа не подтверждён. **Astra не запускает GitLab CI и не переносит сборку обратно в GitHub/Azure/Release1**: только SOURCE_CODE_COMPLETE и SHA/TaskID/SourceLock handoff; позднее независимый интегратор сверит текущие GitLab и GitHub SHA, без force/reimport, подготовит CI, затем одна Windows-сборка по разрешению владельца.
 
+**Проверка исторических исходников GitLab vs Astra:** прочитай `coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json` — инвентаризованы 27 уникальных файлов миграции, 41 изменённый общий файл, защищённые оригинальные 3 source_0*.part. Ветка GitLab не равна Astra. Не синхронизировать или переписывать GitLab до полного SOURCE_CODE_COMPLETE и отдельной независимой интеграции.
+
 ОБЯЗАТЕЛЬНО ПРОЧТИ ПОЛНОСТЬЮ:
 - `coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md`
 - `coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json`
