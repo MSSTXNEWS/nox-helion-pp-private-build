@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_V16_GITLAB_PR180_IMMUTABLE_DONOR_V1",
+  "status": "SOURCE_PRESERVED_NOT_ACTIVE_NOT_E07_ACCEPTED",
+  "sourcePR": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/180",
+  "sourceCommit": "b5c070c9d0b55db3639cf17735b46d089cd0ea31",
+  "baselineMigration": "61dfb4d685469ee42c1fb67ba76f4db63406ae13",
+  "files": [
+    {
+      "source": ".github/workflows/nox-express-wow-r12.yml",
+      "gitBlobSha1": "47c0314651f014bd4b86fe73c00b2005b0948392",
+      "bytes": 2745
+    },
+    {
+      "source": "coordination/e06/build_onehost_installer.ps1",
+      "gitBlobSha1": "f5c019a66712272ed14f3f5b50610f2dea52e787",
+      "bytes": 17311
+    },
+    {
+      "source": "integrations/creative/FINAL_APPLY_AND_BUILD.ps1",
+      "gitBlobSha1": "adc48b5a5816528f649356433672498d8247fc4c",
+      "bytes": 6822
+    },
+    {
+      "source": "integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+      "gitBlobSha1": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+      "bytes": 425
+    },
+    {
+      "source": "integrations/creative/bridge/CreativeHostBridge.cs",
+      "gitBlobSha1": "e6262e8a0bfd9f52c82894a43ece89b83ff63fdc",
+      "bytes": 16654
+    },
+    {
+      "source": "integrations/creative/stage_creative.py",
+      "gitBlobSha1": "9d6b22198bd57362477afa1a7132c982793c1a64",
+      "bytes": 5367
+    },
+    {
+      "source": "integrations/creative/stage_persona_media.py",
+      "gitBlobSha1": "5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",
+      "bytes": 4406
+    },
+    {
+      "source": "integrations/creative/tests/test_persona_media.py",
+      "gitBlobSha1": "98bb074f98622aec9f431fde69214e624ae0b2b6",
+      "bytes": 4314
+    },
+    {
+      "source": "integrations/creative/tests/test_projector_contract.py",
+      "gitBlobSha1": "59a3b35549b1bb0ec5551f96a684d90ae98de52a",
+      "bytes": 2010
+    },
+    {
+      "source": "integrations/creative/web/entry.js",
+      "gitBlobSha1": "34032ba9cb41bc3d71afcdbe57f690e15fd76755",
+      "bytes": 4540
+    },
+    {
+      "source": "integrations/creative/web/persona-media.css",
+      "gitBlobSha1": "e3b89165ebd3bb3436e2b1a51ff39a2c67b9aa91",
+      "bytes": 990
+    },
+    {
+      "source": "integrations/creative/web/persona-media.js",
+      "gitBlobSha1": "2b2d0f55b75eb7c94d0c27441726ec0e595558d0",
+      "bytes": 4622
+    },
+    {
+      "source": "integrations/creative/web/studio.html",
+      "gitBlobSha1": "b90322fc4a69205f0eaf68b66ee8f30ad272eb7f",
+      "bytes": 13260
+    },
+    {
+      "source": "integrations/creative/web/studio.js",
+      "gitBlobSha1": "cbbec5b6bc69051c7725abcdab8e8c1aa0f43f78",
+      "bytes": 16091
+    },
+    {
+      "source": "integrations/creative/web/theater.html",
+      "gitBlobSha1": "8218097b981d9fb0cb9965da92acac59ed4ae765",
+      "bytes": 1789
+    },
+    {
+      "source": "integrations/creative/web/theater.js",
+      "gitBlobSha1": "04b05a20644aad580bfcb30322acba5fe7bbf77c",
+      "bytes": 2749
+    },
+    {
+      "source": "integrations/express-wow/README_RU.md",
+      "gitBlobSha1": "ded74d9891d098e1c111cb5b212b6ef3c03399c0",
+      "bytes": 917
+    },
+    {
+      "source": "integrations/express-wow/apply_express.py",
+      "gitBlobSha1": "72d799090f9f258beaf00c0a91773f27f57ef8f0",
+      "bytes": 5918
+    },
+    {
+      "source": "integrations/express-wow/tests/test_one_shot_order.py",
+      "gitBlobSha1": "f219d706e62f67e59ee44848374f71fd89d6db8e",
+      "bytes": 5932
+    },
+    {
+      "source": "integrations/express-wow/tests/test_utf8_bridge_limit.py",
+      "gitBlobSha1": "12fd9c7235b2b190f1195584d808282c4e1ad90a",
+      "bytes": 984
+    },
+    {
+      "source": "integrations/wow200/tests/test_home_scene.mjs",
+      "gitBlobSha1": "694bbb26dc0abb91693e726e24b941435a02754b",
+      "bytes": 3025
+    }
+  ],
+  "instructions": "Donors are read-only; do not import these paths into live D02/Creative without exact owner preimage, source QA and E07 acceptance."
+}
