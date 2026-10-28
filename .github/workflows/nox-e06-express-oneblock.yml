@@ -8,6 +8,7 @@ on:
       - e06/v16-r13-correct-p01-webview2-combined-20261028
       - e06/v16-r16-owner1-entire-nsis-admission-20261028
       - e06/express-finish-20261028-p0-onehost
+      - e06/v16-urgent-finish-latest-preserved-20261028
     paths:
       - '.github/workflows/nox-p02-r08-wpf-build.yml'
       - 'coordination/e06/OriginalPythonDiagnosticBridge.cs'
