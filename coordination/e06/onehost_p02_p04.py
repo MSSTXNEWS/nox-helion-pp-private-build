@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+import unicodedata
 from collections.abc import Callable, Mapping
 from urllib.parse import urlsplit
 
@@ -47,7 +48,25 @@ def _owner_wire_snapshot(payload: Mapping, *, kind: str, max_bytes: int = 262144
         raise OneHostHold(f"{kind}_OWNER_JSON_VALUE_INVALID") from exc
     if len(wire_bytes) > max_bytes:
         raise OneHostHold(f"{kind}_OWNER_JSON_OVER_LIMIT")
-    return json.loads(raw)
+    # Python dictionaries can contain differently cased or Unicode-equivalent
+    # property names that a .NET/WebView2 receiver resolves as one field.
+    # Refuse ambiguity at EVERY nested provenance/citation/ACK boundary; do
+    # not rewrite, merge or silently choose one owner-provided value.
+    wire = json.loads(raw)
+    pending = [wire]
+    while pending:
+        node = pending.pop()
+        if isinstance(node, dict):
+            seen = set()
+            for key, value in node.items():
+                normalized = unicodedata.normalize("NFC", key).casefold()
+                if normalized in seen:
+                    raise OneHostHold(f"{kind}_OWNER_JSON_PROPERTY_COLLISION")
+                seen.add(normalized)
+                pending.append(value)
+        elif isinstance(node, list):
+            pending.extend(node)
+    return wire
 
 
 class P02P04OneHost:
