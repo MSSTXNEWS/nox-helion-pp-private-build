@@ -43,6 +43,7 @@ jobs:
           node --test integrations/wow200/tests/test_home_scene.mjs
           python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
           python -m py_compile integrations/express-wow/apply_express.py integrations/wow200/stage_wow200.py
+          python -m unittest discover -s integrations/express-wow/tests -p 'test_one_shot_order.py' -v
       - name: Evidence limited to source checks
         shell: bash
         run: |
