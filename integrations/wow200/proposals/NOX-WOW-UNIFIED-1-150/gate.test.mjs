@@ -212,3 +212,24 @@ test("verified training visual expires and frees the scene, never loops as fake 
  assert.equal(scene.current().visualEvidence,"demo");
  scene.destroy();
 });
+
+const renderedTracks=root=>root.children.find(x=>x.className==="nox-d101-stage").children.flatMap(x=>x.animations).filter(x=>!x.cancelled);
+test("R27 OS reduction can release the explicit startup override in real engines",()=>{
+ const {root}=fixture();const ui=mountUnifiedCinema(root,{reducedMotion:true,mode:"REDUCED"});
+ ui.setReducedMotion(false);ui.setMode("MAX");ui.preview(101);
+ assert.equal(renderedTracks(root).length,3);
+ assert.equal(root.children.find(x=>x.className==="nox-w51-stage").dataset.mode,"MAX");
+ ui.setReducedMotion(true);assert.equal(renderedTracks(root).length,0);
+ ui.preview(51);ui.setReducedMotion(false);
+ assert.equal(root.children.find(x=>x.className==="nox-d101-stage").dataset.mode,"REDUCED");
+ assert.throws(()=>ui.setReducedMotion("false"),/INVALID_REDUCED_MOTION/);
+ ui.destroy();assert.throws(()=>ui.setReducedMotion(false),/DISPOSED/);
+});
+test("R27 every composition starts three actual tracks after a cue preview",()=>{
+ const {root}=fixture();const ui=mountUnifiedCinema(root,{nativeAuthorizeComposition:()=>true});
+ for(let id=151;id<=200;id++){
+  ui.preview(51);ui.preview(id);assert.equal(renderedTracks(root).length,3,`preview ${id}`);
+  ui.preview(51);ui.activateApprovedComposition(id);assert.equal(renderedTracks(root).length,3,`approved ${id}`);
+ }
+ ui.destroy();
+});

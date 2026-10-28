@@ -1,0 +1,52 @@
+{
+  "run_id": "ASTRA-R27-A02-20261029-PASS02",
+  "agent_id": "/root/a02",
+  "parent_commit": "8b25a833fc095f75af82b1b860e78f79d352258d",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 2,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P01-WOW-REDUCED-RESUME",
+    "P01-WOW-COMPOSITION-ACTUAL-TRACKS"
+  ],
+  "files": [
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.mjs",
+      "pre_git_blob": "31240f33991e38ac4e0b2735a8714771d3823008",
+      "post_git_blob": "0a510d5095582624306a951ecee583986ccfcb77",
+      "pre_sha256": "91072a4901ea258238df7116aeccb5dc940d58d39e65f22fabb678f759bf760b",
+      "post_sha256": "e0a31c2ab5abcea42d8d7199a2ca7e01a16a86b6fa13b925d688516cca551d06"
+    },
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs",
+      "pre_git_blob": "7ce1cc1357ef0a35bcc256dcdcc49ffc03761d20",
+      "post_git_blob": "40d497485a5953a38cb8c2eafa1fd36812ff3727",
+      "pre_sha256": "13076c0e5ece884f009f144763e7c39980c95975c6f25d5d3fa2b02d5df1547f",
+      "post_sha256": "f0ee137545765c1bccf4097cee5cb2300c89b2744a600417a9b73286cbb2fbc6"
+    },
+    {
+      "path": "integrations/wow200/runtime/loader.mjs",
+      "pre_git_blob": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+      "post_git_blob": "41fe7b09199dab84db47996190471c5b6dfa5ed3",
+      "pre_sha256": "31fe7d6b5829c8867056ed6bd209b9854a6a796d0b1b8e134d07a33ca03c48da",
+      "post_sha256": "97130f053519d92928bd645a094c71b6977c3d15fd3b36af0c5aad3641face89"
+    },
+    {
+      "path": "integrations/wow200/runtime/loader.reduced-motion.test.mjs",
+      "pre_git_blob": "4a377699cfa55344b7c778af0112aead96b0ce19",
+      "post_git_blob": "a6387df31fb94eaacbbba3ff5418225abc2a63d8",
+      "pre_sha256": "228fcb44d536b56d43e143b98741d6f79cf96440b6729ba4ad964bf55f1c6889",
+      "post_sha256": "c40488d2cd6862dfbd35d6fdac0768a01061759a7283542a63c3f1c52af8a9c2"
+    }
+  ],
+  "lesson": "Test real director tracks after each cue-to-composition transition: catalog selection alone concealed zero animation tracks. Release explicit startup motion overrides when OS preference changes.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Deterministic Node source fixtures; no real browser/GPU/Windows visual acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

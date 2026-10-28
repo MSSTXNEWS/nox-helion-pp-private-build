@@ -179,8 +179,8 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
           const item=COMPOSITION_BY_ID.get(id);
           if(!item)throw Error("UNKNOWN_COMPOSITION");
           // The SAME two components already mounted above. No third engine or scheduler.
-          cues.preview(item.opticalId);director.preview(item.directorId);
-          choose("composition");selected=id;
+          choose("composition");
+          cues.preview(item.opticalId);director.preview(item.directorId);selected=id;
           root.dataset.noxWowComposition=String(id);
           root.dataset.noxWowEvidence="demo";
           return item;
@@ -210,9 +210,9 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         // This callback MUST be supplied by native trusted host, not a page action.
         if(!nativeAuthorizeComposition||nativeAuthorizeComposition(item)!==true)
           throw Error("HOST_COMPOSITION_APPROVAL_REQUIRED");
+        choose("composition");
         cues.preview(item.opticalId);director.preview(item.directorId);
-        clearNativeExpiry();
-        choose("composition");selected=id;
+        clearNativeExpiry();selected=id;
         root.dataset.noxWowComposition=String(id);
         root.dataset.noxWowEvidence="native-composition";
         return item;
@@ -224,6 +224,12 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         if(disposed)throw Error("NOX_UNIFIED_DISPOSED");
         if(!MODES.has(next))throw Error("INVALID_WOW_PROFILE");
         cues.setMode(next);director.setMode(next);root.dataset.noxMode=next;
+      },
+      setReducedMotion(next){
+        if(disposed)throw Error("NOX_UNIFIED_DISPOSED");
+        if(typeof next!=="boolean")throw Error("INVALID_REDUCED_MOTION");
+        reducedMotion=next;cues.setReducedMotion(next);
+        director.setReducedMotion(next||root.dataset.unifiedWow==="cue");
       },
       current:()=>{
         expireNativeVisual();

@@ -13,10 +13,10 @@ function fixture({reduced=false,noMedia=false,legacy=false,bodyClass=''}={}){
  const callbacks=[],motion=noMedia?null:{matches:reduced};
  if(motion){if(legacy)motion.addListener=fn=>callbacks.push(fn);else motion.addEventListener=(_,fn)=>callbacks.push(fn);}
  const window={location:{origin:'https://nox.local'},matchMedia:noMedia?undefined:()=>motion};window.parent=window;
- const out={mount:null,scene:[],pack:[],preview:[]};
- const mountUnifiedCinema=(_,options)=>{out.mount=options;return {setMode:v=>{out.scene.push(v);return true;},preview:id=>{out.preview.push(id);return {name:'FX'};},current:()=>({active:out.scene.at(-1)||options.mode})}};
+ const out={mount:null,scene:[],motion:[],pack:[],preview:[]};
+ const mountUnifiedCinema=(_,options)=>{out.mount=options;return {setReducedMotion:v=>out.motion.push(v),setMode:v=>{out.scene.push(v);return true;},preview:id=>{out.preview.push(id);return {name:'FX'};},current:()=>({active:out.scene.at(-1)||options.mode})}};
  const mountCinematic=()=>({decorate(){},setMode:v=>out.pack.push(v)});
- const fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({actions:Array.from({length:50},(_,i)=>({routeId:'R'+i,title:'Route '+i}))})});
+ const fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({version:'NOX-INTEGRATION-PACK-01',actions:Array.from({length:50},(_,i)=>({taskId:'NIP01-'+String(i+1).padStart(2,'0'),routeId:'route'+i,title:'Route '+i,category:'chat',owner:1}))})});
  runInNewContext(source,{document,window,fetch,mountUnifiedCinema,mountCinematic,reviewWowScopes:()=>{},CUES:[],SHOTS:[],COMPOSITIONS:[]},{timeout:1000});
  return {out,find:id=>document.getElementById(id),async ready(){for(let i=0;i<7;i++)await Promise.resolve();},
  reduced(v){motion.matches=v;callbacks.forEach(cb=>cb({matches:v}));}};
@@ -31,3 +31,5 @@ test('E01-W2-R14-07 OS reduces ON disables both engines',async()=>{const x=fixtu
 test('E01-W2-R14-08 ordinary ECO selector synchronizes scene and PACK01',async()=>{const x=fixture();await x.ready();x.find('nox-wow200-mode').value='ECO';x.find('nox-wow200-mode').onchange();assert.equal(x.out.scene.at(-1),'ECO');assert.equal(x.out.pack.at(-1),'eco');});
 test('E01-W2-R14-09 untrusted selector falls back BALANCED',async()=>{const x=fixture();await x.ready();x.find('nox-wow200-mode').value='UNKNOWN';x.find('nox-wow200-mode').onchange();assert.equal(x.out.scene.at(-1),'BALANCED');assert.equal(x.out.pack.at(-1),'balanced');});
 test('E01-W2-R14-10 missing and legacy matchMedia remain safe',async()=>{const n=fixture({noMedia:true});await n.ready();assert.equal(n.out.mount.mode,'BALANCED');const l=fixture({legacy:true});await l.ready();l.reduced(true);assert.equal(l.out.scene.at(-1),'REDUCED');assert.equal(l.out.pack.at(-1),'reduced');});
+
+test("R27 loader releases the explicit startup reduced override",async()=>{const x=fixture({reduced:true});await x.ready();x.reduced(false);assert.equal(x.out.motion.at(-1),false);x.reduced(true);assert.equal(x.out.motion.at(-1),true);});

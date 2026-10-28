@@ -47,7 +47,7 @@ function create(){
   card.append(head,expl,controls,preview,report,title,routes);parent.append(card);
   const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)')??null;
   const effective=()=>safeMode(mod.value,motion);
-  const applyMode=()=>{const current=effective();scene?.setMode(current);pack?.setMode(current.toLowerCase());return current;};
+  const applyMode=()=>{const current=effective();scene?.setReducedMotion(motion?.matches===true);scene?.setMode(current);pack?.setMode(current.toLowerCase());return current;};
   try{
     reviewWowScopes();
     scene=mountUnifiedCinema(root,{mode:effective(),reducedMotion:motion?.matches===true});
