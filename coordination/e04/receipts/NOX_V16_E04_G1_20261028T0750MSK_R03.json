@@ -48,7 +48,7 @@
   "target_tests": {
     "new_methods": 5,
     "old_methods_retained": 6,
-    "actual_module_windows_linux": "NOT_VERIFIED",
+    "actual_module_windows_linux": "NOT_VERIFIED; GitHub workflow-runs lookup returned zero",
     "github_git_blob_readback": "2/2 PASS",
     "local_nvidia": {
       "nvidia_smi": "NOT_INSTALLED",
@@ -57,7 +57,8 @@
       "gpu_count": 0
     },
     "rights_weights": "NOT_VERIFIED",
-    "synthetic_test_data": "FIXTURE_ONLY"
+    "synthetic_test_data": "FIXTURE_ONLY",
+    "cpu_isolated_validation": "9/9 PASS in local Python copy of parser helper ONLY; original GitHub module NOT_RUN"
   },
   "task_ledger": [
     {
