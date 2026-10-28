@@ -212,6 +212,8 @@ class ModelSelectionSourceContracts(unittest.TestCase):
     def test_model_switch_revokes_prior_license_consent(self):
         self.assertIn("selectedModel=id;revision='';files=[];",self.js)
         self.assertIn("$('license').checked=false;",self.js)
+        self.assertIn("$('license').disabled=true;",self.js)
+        self.assertIn("$('license').disabled=false;",self.js)
 
     def test_delayed_model_metadata_cannot_replace_new_selection(self):
         self.assertIn("let modelSelectionEpoch=0;",self.js)
