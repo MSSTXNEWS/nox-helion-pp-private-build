@@ -1,10 +1,12 @@
 # NOX V16 / GitLab Free: private Windows 2022 beta runner or own Windows runner.
 # NEVER automatically run on push/import. Start explicitly with:
-# CI_PIPELINE_SOURCE=web, NOX_APPROVE_WINDOWS_BUILD=YES.
+# CI_PIPELINE_SOURCE=web (UI) or api (authenticated project Pipeline API); NOX_APPROVE_WINDOWS_BUILD=YES.
 # Free GitLab.com compute quota is limited; no auto retries.
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES"'
       when: always
     - when: never
 
