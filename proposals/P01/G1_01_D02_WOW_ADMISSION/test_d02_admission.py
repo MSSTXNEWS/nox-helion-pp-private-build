@@ -32,6 +32,10 @@ class Admission(unittest.TestCase):
             with self.subTest(task=i):
                 s=fixture();s[k]=v
                 self.assertEqual(check(s)[f'E01-G1-{i:02d}'],'HOLD')
+    def test_safe_animation_none_override(self):
+        x=fixture()
+        x['cinema_css'] = x['cinema_css'].replace('{filter:brightness(1)}', '{animation:none;filter:brightness(1)}')
+        self.assertEqual(check(x)['E01-G1-06'], 'SOURCE_GATE_PASS')
     def test_fixture_does_not_claim_windows(self):
         o=overall(fixture())
         self.assertEqual(o['source_admission'],'CANDIDATE_ONLY')
