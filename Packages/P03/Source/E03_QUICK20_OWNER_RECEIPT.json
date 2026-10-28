@@ -9,17 +9,18 @@
   "base_source_commit_sha1": "68aad16b95230b1aa6dd6ae24cb1523825705284",
   "source_commits_sha1": [
     "08bdb98c1093e1d74d750f0fbd845fc7fbf6385c",
-    "8268bfa5236e85787a3298108a232814e3a3940f"
+    "8268bfa5236e85787a3298108a232814e3a3940f",
+    "dc94e898bebf58557cdbbb1bc8ae27bccdeb5136"
   ],
-  "source_final_commit_sha1": "8268bfa5236e85787a3298108a232814e3a3940f",
-  "source_tree_sha1": null,
+  "source_final_commit_sha1": "dc94e898bebf58557cdbbb1bc8ae27bccdeb5136",
+  "source_tree_sha1": "9e1ed19148db8ea0f228cd73ea6ec3651df5b5ac",
   "file_hash_algorithm": "SHA-256 UTF-8 LF normalized GitHub fetch (NOT ZIP/whole-tree lock)",
   "paths": [
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
       "preimage_sha256_utf8_lf": null,
-      "postimage_sha256_utf8_lf": "f9f6efe1f1d365bd520af5650326461db041b89412644335f15a63fd2adcba99",
-      "postimage_git_blob_sha1": "69509258d0946d94de2b71b2a6a1a48e18194c81"
+      "postimage_sha256_utf8_lf": "42ffbb1def763ecd52573a0d5d820951753909e6c3976ca2bd975ba21e4f1eea",
+      "postimage_git_blob_sha1": "1eb49dc81dbba3adc515473f377c0651b88e8c51"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/P03.ModelCenter.QuickSmoke.csproj",
@@ -42,8 +43,8 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
       "preimage_sha256_utf8_lf": "cdd3942706c7837cd29f9d070424e6d307cb553d22147891db428e6a60e0f19a",
-      "postimage_sha256_utf8_lf": "4dd711c99416a712c921f2b5face4d1152c529a069f37dfda6928c7326b3bd9a",
-      "postimage_git_blob_sha1": "7c756579afdbdbbdc775ef2afd3cc1b925b5ecdb"
+      "postimage_sha256_utf8_lf": "c8afc0f823213614623b85deb9c03b0f9c1ba6003b54e133c7db11da6f5e597f",
+      "postimage_git_blob_sha1": "0a4d826b8b1b5e33000199f35b40450766c88d53"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/index.html",
@@ -85,14 +86,16 @@
       "JS parsed by V8 new Function",
       "20 C# model slots and 17 non-downloadable leads count via source inspection",
       "model quick-button HTML grid and bridge readback",
-      "receipt path SHA of code"
+      "receipt path SHA of code",
+      "20/20 quick-model IDs exactly match canonical 30-family C# catalog and JS list; after revision"
     ],
     "tests_hold": [
       "new .NET QuickSmoke Windows runner: GitHub Actions pre-step failure with no job logs",
       "real native Ollama downloads",
       "real GGUF imports",
       "original host SourceLock",
-      "E07 Windows QA"
+      "E07 Windows QA",
+      "Report/SI and initial owner6 handoff require source-head correction note"
     ],
     "ci_runs_failed_presteps": [
       40622837536,
@@ -155,5 +158,6 @@
   ],
   "product_acceptance_percent": null,
   "overall_weighted_percent": null,
-  "handoff_owner6": "Do not merge PR17 before whole-tree SourceLock, approved model artifact evidence, native one-host capability/ACL and E07 same-SHA QA"
+  "handoff_owner6": "Do not merge PR17 before whole-tree SourceLock, approved model artifact evidence, native one-host capability/ACL and E07 same-SHA QA",
+  "error_correction": "Late deterministic source check found nomic-embed-text was not in canonical 30 families; replaced with gemma2 (which is), same role/card count, no missing approval gate; independent 20/20 catalog-and-JS parity checks PASS."
 }
