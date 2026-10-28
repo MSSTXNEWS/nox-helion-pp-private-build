@@ -7,6 +7,7 @@ import {mountUnifiedCinema,reviewWowScopes} from "../../NOX-WOW-UNIFIED-1-150/ga
 import {createP01RouteDispatcher} from "./route-dispatch.mjs";
 import {installP01Adaptive} from "./p01-responsive.mjs";
 import {nativeVisualApproval} from "./p01-visual-approval.mjs";
+import {createP01ModeController} from "./p01-mode-controller.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
 const mounted=new WeakSet();
 export function mountP01Owner(spec){
@@ -19,7 +20,7 @@ export function mountP01Owner(spec){
      [...controls,...panels].some(el=>!root.contains(el)))
     throw Error("P01_DUPLICATE_MOUNT_OR_UNTRUSTED_DECORATION");
   const dispatcher=createP01RouteDispatcher(hostPort);
-  const cleanups=[];let fx=null,wow=null,adaptive=null,disposed=false;
+  const cleanups=[];let fx=null,wow=null,adaptive=null,modeControl=null,disposed=false;
   const saved=new Map([...menu,...buttons].map(x=>[x.element,{
     ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
     hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
@@ -48,6 +49,7 @@ export function mountP01Owner(spec){
         nativeAuthorizeComposition:item=>nativeVisualApproval(hostPort,"composition",item)
       });
     }
+    modeControl=createP01ModeController(fx,wow,mode);
     for(const [items,kind] of [[menu,"MENU"],[buttons,"BUTTON"]]){
       for(const item of items){
         const handler=async()=>{
@@ -81,9 +83,7 @@ export function mountP01Owner(spec){
       summary,
       setMode(next){
         if(disposed||!validateMode(next))return false;
-        if(!fx.setProfile(next))return false;
-        wow?.setMode(next);
-        return true;
+        return modeControl.set(next);
       },
       status(){
         return Object.freeze({...summary,profile:fx.snapshot().profile,
@@ -98,7 +98,7 @@ export function mountP01Owner(spec){
       }
     });
   }catch(err){
-    dispatcher.close();
+    modeControl?.close();dispatcher.close();
     while(cleanups.length)cleanups.pop()();
     restore();
     try{wow?.destroy();}finally{try{fx?.destroy();}finally{adaptive?.destroy();}}
