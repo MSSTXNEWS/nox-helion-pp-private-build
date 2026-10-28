@@ -219,6 +219,38 @@ jobs:
             finalRelease=$false
           } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $output 'E06-real-nsis-diagnostic.json') -Encoding UTF8
           Write-Host 'NOX_REAL_WPF_NSIS_COMPILED_NONFINAL'
+      - name: Build distinct 0.1.1 upgrade from the same pinned original WPF source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $owner='.e01-p01-installer/stage/proposals/P01/C09/Installer'
+          $root=(Resolve-Path 'work/e06/staged/R11').Path
+          $output=Join-Path (Get-Location).Path 'work/e06/nsis-upgrade'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $owner 'Build-NSIS.ps1') -SourceRoot $root -OutputDir $output -RunId "E06-REAL-NSIS-UPGRADE-$env:GITHUB_RUN_ID" -Version '0.1.1' -Makensis $env:NOX_E06_MAKENSIS
+          if ($LASTEXITCODE -ne 0) { throw 'P01_REAL_UPGRADE_BUILD_HOLD' }
+          $setup=Join-Path $output 'NOX-HELION-Setup-CANDIDATE.exe'
+          if (!(Test-Path $setup -PathType Leaf)) {throw 'P01_REAL_UPGRADE_SETUP_MISSING'}
+          Write-Host ('P01_REAL_UPGRADE_SHA256='+((Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()))
+      - name: Native transaction test on disposable runner (install update rollback uninstall data-retention)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $owner='.e01-p01-installer/stage/proposals/P01/C09/Installer'
+          $test=Join-Path $owner 'Test-NSIS-Windows.ps1'
+          if (!(Test-Path $test -PathType Leaf)) {throw 'P01_ORIGINAL_OWNER_NATIVE_QA_MISSING'}
+          $first=(Resolve-Path 'work/e06/nsis-candidate/NOX-HELION-Setup-CANDIDATE.exe').Path
+          $second=(Resolve-Path 'work/e06/nsis-upgrade/NOX-HELION-Setup-CANDIDATE.exe').Path
+          $firstSha=(Get-FileHash $first -Algorithm SHA256).Hash.ToLowerInvariant()
+          $secondSha=(Get-FileHash $second -Algorithm SHA256).Hash.ToLowerInvariant()
+          $report=Join-Path (Get-Location).Path 'work/e06/nsis-native-transaction-qa.json'
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $test -InitialSetup $first -UpgradeSetup $second -ExpectedInitialSetupSha256 $firstSha -ExpectedUpgradeSetupSha256 $secondSha -ReportPath $report -DisposableRunnerAcknowledged
+          if ($LASTEXITCODE -ne 0) {throw 'P01_REAL_NATIVE_TRANSACTION_QA_HOLD'}
+          $receipt=Get-Content $report -Raw | ConvertFrom-Json
+          foreach ($gate in @('install','update','rollback','uninstall','userDataRetained')) {
+            if ($receipt.$gate -cne 'PASS') { throw ("P01_NATIVE_"+$gate+"_NOT_PASS") }
+          }
+          if ($receipt.releaseAllowed -ne $false) {throw 'P01_FALSE_E07_ACCEPTANCE'}
+          Write-Host 'P01_NATIVE_INSTALL_UPDATE_ROLLBACK_UNINSTALL_AND_USERDATA_PASS_NOT_E07'
       - name: Preserve REAL WPF installer candidate and immutable SHA evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -229,6 +261,7 @@ jobs:
             work/e06/nsis-candidate/p01-nsis-build-receipt.json
             work/e06/nsis-candidate/E06-real-nsis-diagnostic.json
             work/e06/nsis-candidate/payload/payload.sha256.json
+            work/e06/nsis-native-transaction-qa.json
           if-no-files-found: warn
           retention-days: 14
       - name: Preserve diagnostic evidence even if compile fails
