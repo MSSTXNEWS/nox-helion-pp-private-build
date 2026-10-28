@@ -203,7 +203,7 @@ public partial class MainWindow
                         {
                             using var doc=JsonDocument.Parse(line);
                             var record=doc.RootElement;
-                            if (record.ValueKind!=JsonValueKind.Object)
+                            if (doc.RootElement.ValueKind!=JsonValueKind.Object)
                             {
                                 WriteLog("CREATIVE_STDOUT_NOT_OBJECT");
                                 continue;
