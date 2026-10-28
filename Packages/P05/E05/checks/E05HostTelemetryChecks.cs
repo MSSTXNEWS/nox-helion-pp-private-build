@@ -43,6 +43,71 @@ public static class E05HostTelemetryChecks
             CancellationToken.None);
         Verify(missing.State == "UNAVAILABLE" && missing.Sensors.Count == 0,
             "FACADE C13 unbound run remains unavailable");
+        // TURBO10: real host-owned polling, no telemetry.snapshot or second bus.
+        var received = new List<E05HardwareFrame>();
+        var liveHost = new FixtureHost();
+        var session = new E05SamplingLoop(liveHost, providers, TimeSpan.FromSeconds(2),
+            frame => received.Add(frame));
+        var sessionAck = await session.PollVerifiedOnceAsync("NOX-E05-FIXTURE",
+            CancellationToken.None);
+        Verify(sessionAck.Status == "HOST_ACCEPTED" && liveHost.Count == 1 &&
+            liveHost.EventType == "gpu.sample" && received.Count == 1 &&
+            received[0].RunId == "NOX-E05-FIXTURE",
+            "TURBO10 host poll emits only canonical gpu.sample, frame is read only");
+        var noSensorHost = new FixtureHost();
+        var unavailableFrames = new List<E05HardwareFrame>();
+        var unavailableSession = new E05SamplingLoop(noSensorHost,
+            Array.Empty<ISensorProvider>(), TimeSpan.FromSeconds(2),
+            f => unavailableFrames.Add(f));
+        var unavailableAck = await unavailableSession.PollVerifiedOnceAsync(
+            "NOX-E05-FIXTURE", CancellationToken.None);
+        Verify(unavailableAck.Status == "HOLD_SENSOR_UNVERIFIED" &&
+            unavailableFrames.Count == 1 && noSensorHost.Count == 0,
+            "TURBO10 missing sensor never makes invented GPU events");
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        try {
+            await session.PollVerifiedOnceAsync("NOX-E05-FIXTURE", cancelled.Token);
+            throw new Exception("TURBO10 cancelled sampling was not stopped");
+        }
+        catch (OperationCanceledException) {
+            Verify(liveHost.Count == 1 && received.Count == 1,
+                "TURBO10 STOP cancels before sampling or event publication");
+        }
+        // TURBO10 R02: cancellation from the ONE host-owned callback exits
+        // the periodic loop before any second sample or fabricated event.
+        using var stopAtFirst = new CancellationTokenSource();
+        var stopFrameCount = 0;
+        var stopHost = new FixtureHost();
+        var stopLoop = new E05SamplingLoop(stopHost,
+            Array.Empty<ISensorProvider>(), TimeSpan.FromSeconds(2),
+            _ => { stopFrameCount++; stopAtFirst.Cancel(); });
+        try {
+            await stopLoop.RunAsync("NOX-E05-FIXTURE", stopAtFirst.Token);
+            throw new Exception("TURBO10 R02 cancellation did not stop loop");
+        }
+        catch (OperationCanceledException) {
+            Verify(stopFrameCount == 1 && stopHost.Count == 0,
+                "TURBO10 R02 STOP ends one canonical loop without fake GPU");
+        }
+        try {
+            await stopLoop.RunAsync(new string('x', 161), CancellationToken.None);
+            throw new Exception("TURBO10 R02 bad RunID was admitted");
+        }
+        catch (ArgumentException) {
+            Verify(stopFrameCount == 1,
+                "TURBO10 R02 oversized RunID rejected before sampling");
+        }
+        var legacy = new E05SamplingLoop(
+            new E05SensorPublisher(Array.Empty<ISensorProvider>(),
+                new FixtureLegacyTransport()), TimeSpan.FromSeconds(2));
+        try {
+            await legacy.RunAsync("NOX-E05-FIXTURE", CancellationToken.None);
+            throw new Exception("TURBO10 R02 legacy noncanonical event was published");
+        }
+        catch (NotSupportedException) {
+            Verify(true, "TURBO10 R02 legacy noncanonical event stays fail-closed");
+        }
     }
     private sealed class FixtureSensor : ISensorProvider
     {
@@ -50,6 +115,11 @@ public static class E05HostTelemetryChecks
         public string Name => "fixture";
         public FixtureSensor(params SensorPoint[] values) { this.values = values; }
         public IReadOnlyList<SensorPoint> Read(CancellationToken stop) => values;
+    }
+    private sealed class FixtureLegacyTransport : IEventV3Transport
+    {
+        public ValueTask SendAsync(TelemetryEventV3 e, CancellationToken stop) =>
+            ValueTask.CompletedTask;
     }
     private sealed class FixtureHost : IE05HostEventV3Port
     {
