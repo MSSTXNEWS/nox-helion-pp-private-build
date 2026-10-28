@@ -208,8 +208,20 @@ class P03OneHostPort:
                 host_routes.get(route, {}).get("owner") != 3 or route in ports
                 for route in ids):
             raise P03PortHold("P03 route ownership collision: register none")
-        for route, callback, ready in pending:
-            self._bind(dispatcher, bound_port_type, route, callback, ready, receipt)
+        # Prebuild all native ports before mutating the shared dispatcher.
+        staged = [(route, bound_port_type(callback, ready, receipt, 3))
+                  for route, callback, ready in pending]
+        try:
+            for route, port in staged:
+                # NoxPackHost.bind enforces single owner and duplicate denial.
+                dispatcher.bind(route, port)
+        except Exception as exc:
+            # A bind implementation may write a port and then raise. Remove
+            # ONLY our exact objects; never delete someone else's newer port.
+            for route, port in reversed(staged):
+                if ports.get(route) is port:
+                    del ports[route]
+            raise P03PortHold("Owner3 registration rolled back after host rejection") from exc
         return frozenset(ids)
 
     def _local_ready(self) -> bool:
