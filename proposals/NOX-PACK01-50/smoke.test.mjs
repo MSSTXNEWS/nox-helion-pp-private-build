@@ -150,3 +150,27 @@ test("fifty visual cards preserve disabled state, real event and cleanup",()=>{
    assert.equal(handlers.size,0);
  }finally{globalThis.document=oldDoc;globalThis.window=oldWindow}
 });
+
+
+test("cinema failed native subscription rolls back visual claims and listeners",()=>{
+ const oldDoc=globalThis.document,oldWindow=globalThis.window;
+ let listeners=0,removed=0;
+ const root={nodeType:1,dataset:{},
+   classList:{contains:n=>n==="nox-pack01"},
+   closest:()=>null,
+   querySelectorAll:()=>[],
+   removeAttribute(name){delete this.dataset[name.replace(/^data-/,"").replace(/-([a-z])/g,(_,x)=>x.toUpperCase())];}};
+ globalThis.document={hidden:false,
+   addEventListener(){listeners++;},
+   removeEventListener(){removed++;}};
+ globalThis.window={matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}})};
+ try{
+   assert.throws(()=>mountCinematic(root,catalog,{
+     subscribeVerifiedNative:()=>{throw Error("Windows native events unavailable");}
+   }),/Windows native events unavailable/);
+   assert.equal(root.dataset.cinemaReady,undefined);
+   assert.equal(root.dataset.cinemaMode,undefined);
+   assert.equal(root.dataset.cinemaPaused,undefined);
+   assert.equal(listeners,removed);
+ }finally{globalThis.document=oldDoc;globalThis.window=oldWindow;}
+});
