@@ -178,14 +178,35 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
             or not _bounded(receipt, 256)):
         raise RouteHold("CURRENT_OWNER_RECEIPT_AND_NATIVE_SCOPE_REQUIRED")
     mapping = owner_ports.route_methods()
-    for route, handler in mapping.items():
-        if route in dispatcher.ports:
+    # Preflight all three canonical owner routes BEFORE publishing any handler.
+    # A late foreign owner/missing route must not leave two live P02 ports.
+    routes = getattr(dispatcher, "routes", None)
+    ports = getattr(dispatcher, "ports", None)
+    if not isinstance(routes, dict) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
+        raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
+    for route in mapping:
+        if route in ports:
             raise RouteHold("EXISTING_ROUTE_ALREADY_BOUND_NO_OVERRIDE")
-        if route not in dispatcher.routes or dispatcher.routes[route].get("owner") != 2:
+        info = routes.get(route)
+        if not isinstance(info, dict) or type(info.get("owner")) is not int or info["owner"] != 2:
             raise RouteHold("CANONICAL_PACK01_OWNER_ROUTE_REQUIRED")
+    staged = {}
+    for route, handler in mapping.items():
         def call(session, args, fn=handler):
             native_scope = host_scope_from_session(session)
             return fn(native_scope, args)
-        dispatcher.bind(route, bound_port_type(
-            call, lambda name=route: owner_ports.available(name), receipt, 2))
+        staged[route] = bound_port_type(
+            call, lambda name=route: owner_ports.available(name), receipt, 2)
+    try:
+        for route, port in staged.items():
+            dispatcher.bind(route, port)
+            if ports.get(route) is not port:
+                raise RouteHold("EXISTING_PACK01_BIND_RESULT_MISMATCH")
+    except Exception:
+        # Only remove OUR exact new port objects, never another owner's
+        # concurrent registration. This is rollback, not a second router.
+        for route, port in staged.items():
+            if ports.get(route) is port:
+                ports.pop(route, None)
+        raise
     return frozenset(mapping)
