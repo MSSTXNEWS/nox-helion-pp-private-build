@@ -1,0 +1,36 @@
+name: NOX E06 R13 native frozen combined NSIS installation on Windows (not final)
+on:
+  push:
+    branches: [e06/v16-r13-offline-webview2-gate-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  combined-installer:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Official signed Microsoft standalone prereq with exact owner P01 registry gate
+        shell: pwsh
+        run: |
+          ./coordination/e06/Test-OfficialWebView2Prereq.ps1
+      - name: Real pinned WPF+original Python NSIS install with fresh process execution
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./coordination/e06/Test-CombinedOneHostInstall.ps1
+      - name: Preserve both source and installation evidence on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r13-combined-${{ github.run_id }}
+          path: |
+            e06-r13-webview2-evidence.json
+            e06-r13-combined-install-evidence.json
+          retention-days: 30
+          if-no-files-found: warn
