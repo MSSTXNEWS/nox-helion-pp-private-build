@@ -197,6 +197,48 @@ class P03HostPortTests(unittest.TestCase):
             self.port.register(other, pack01.BoundPort, receipt="P03_TEST_LOCK")
         self.assertEqual(other.ports, {})
 
+    def test_17_host_bind_failure_after_write_rolls_back(self):
+        host = pack01.NoxPackHost(self.catalog)
+        host.bind("chat.model", pack01.BoundPort(
+            lambda s, p: {"models": []}, lambda: True, "owner2-existing", 2))
+        preserved = host.ports["chat.model"]
+        native_bind = host.bind
+        def reject_after_second(route, port):
+            native_bind(route, port)
+            if route == "models.installed":
+                raise RuntimeError("native host rejected after partial write")
+        host.bind = reject_after_second
+        with self.assertRaises(P03PortHold):
+            self.port.register(host, pack01.BoundPort, receipt="P03_LOCK_TEST")
+        self.assertEqual(host.ports, {"chat.model": preserved})
+
+    def test_18_rollback_cannot_delete_foreign_replacement(self):
+        host = pack01.NoxPackHost(self.catalog)
+        foreign = pack01.BoundPort(
+            lambda s, p: {"foreign": True}, lambda: True, "another-owner", 3)
+        native_bind = host.bind
+        def replace_then_reject(route, port):
+            if route == "models.installed":
+                host.ports[route] = foreign
+                raise RuntimeError("concurrent host inserted port")
+            native_bind(route, port)
+        host.bind = replace_then_reject
+        with self.assertRaises(P03PortHold):
+            self.port.register(host, pack01.BoundPort, receipt="P03_LOCK_TEST")
+        self.assertEqual(host.ports, {"models.installed": foreign})
+
+    def test_19_port_constructor_failure_cannot_partially_register(self):
+        host = pack01.NoxPackHost(self.catalog)
+        calls = [0]
+        def partial_constructor(*args):
+            calls[0] += 1
+            if calls[0] == 2:
+                raise RuntimeError("cannot construct owner port")
+            return pack01.BoundPort(*args)
+        with self.assertRaises(RuntimeError):
+            self.port.register(host, partial_constructor, receipt="P03_LOCK_TEST")
+        self.assertEqual(host.ports, {})
+
     def test_16_existing_dispatcher_preserved_on_bad_receipt(self):
         other = pack01.NoxPackHost(self.catalog)
         with self.assertRaises(P03PortHold):
