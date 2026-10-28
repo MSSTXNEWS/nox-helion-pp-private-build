@@ -112,6 +112,7 @@ class G2ComponentTests(unittest.TestCase):
                                  "auth-session")
         self.peer_ok = True
         self.csrf_ok = True
+        self.remote_gateway = True # synthetic owner-host health attestation, not public HTTP
         self.proof_expiry = time.monotonic() + 45
         def peer(_session):
             return {
@@ -123,7 +124,8 @@ class G2ComponentTests(unittest.TestCase):
                 "native_session_approved": True, "expires_at": self.proof_expiry,
             }
         self.mobile = PrivateMobileContract(
-            authorize_private_mobile, peer, self.host, time.monotonic)
+            authorize_private_mobile, peer, self.host, time.monotonic,
+            gateway_ready=lambda: self.remote_gateway)
 
     def bind(self, *, source=SOURCE, owner_sha=None, mobile=True,
              preimage=True, p03=None, p02=None):
@@ -268,8 +270,8 @@ class G2ComponentTests(unittest.TestCase):
         self.bind()
         result = self.host.execute(
             "mobile.connect", {"want": ["space.news", "helion.chat"]}, self.session)
-        self.assertEqual(result["mode"], "PRIVATE_CONTRACT_ONLY")
-        self.assertFalse(result["gatewayListening"])
+        self.assertEqual(result["mode"], "PRIVATE_NATIVE_ATTESTED")
+        self.assertTrue(result["gatewayListening"])
         self.assertEqual(result["allowed"], ["space.news", "helion.chat"])
 
     def test_19_public_peer_denied(self):
@@ -346,6 +348,14 @@ class G2ComponentTests(unittest.TestCase):
         with self.assertRaises(G2Hold):
             self.bind()
         self.assertEqual(self.host.ports, before)
+
+    def test_29_offline_mobile_gateway_not_advertised_as_live(self):
+        self.remote_gateway = False
+        self.bind()
+        self.assertNotIn("mobile.connect", self.host.ports)
+        self.assertFalse(self.host.advertise(self.session)["mobile.connect"]["enabled"])
+        with self.assertRaises(G2Hold):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
 
     def test_28_invalid_telemetry_snapshot_timestamp_rejected(self):
         self.e05_fake.at = NOW - timedelta(minutes=3)
