@@ -12,14 +12,13 @@ from typing import Any, Callable
 
 ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,99}$")
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}(?::[A-Za-z0-9][A-Za-z0-9._-]{0,127})?$")
-READ_ROUTES = ("models.catalog", "models.installed")
+READ_ROUTES = ("models.catalog", "models.installed", "models.digest")
 OWNER_ROUTES = {
     "models.pull": "pull",
     "models.gguf.import": "import_gguf",
     "models.queue": "queue",
     "models.cancel": "cancel",
     "models.retry": "retry",
-    "models.digest": "digest",
     "models.preflight": "preflight",
 }
 SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.cancel", "models.retry"))
@@ -107,6 +106,57 @@ class P03OneHostPort:
         return {"models": [{"tag": t, "installed": True, "digest": None} for t in tags],
                 "digestVerified": False, "source": "existing P02 OllamaClient.models"}
 
+    def digest(self, session: object, args: dict) -> dict:
+        """Read Ollama-reported local manifest digest using the EXISTING P02 transport.
+
+        A reported digest is neither independently hashed weights nor licensing
+        evidence; this method never calls Pull, downloads files or claims rights.
+        """
+        self._ensure_native_scope(session, "models.digest", args)
+        tag = args.get("modelTag")
+        if not isinstance(tag, str) or not TAG.fullmatch(tag):
+            raise P03PortDenied("Exact installed model tag required")
+        raw_open = getattr(self.ollama, "_open", None)
+        if not callable(raw_open):
+            raise P03PortHold("No owner2 existing metadata reader")
+        try:
+            with raw_open("/api/tags") as response:
+                raw = response.read(2 * 1024 * 1024 + 1)
+            if len(raw) > 2 * 1024 * 1024:
+                raise P03PortHold("Ollama metadata exceeds owner2 size cap")
+            data = json.loads(raw)
+        except P03PortHold:
+            raise
+        except Exception as exc:
+            raise P03PortHold("Existing P02 Ollama metadata unavailable") from exc
+        models = data.get("models") if isinstance(data, dict) else None
+        if not isinstance(models, list) or len(models) > 4096:
+            raise P03PortHold("Invalid Ollama metadata models")
+        matching = []
+        for item in models:
+            if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+                raise P03PortHold("Malformed Ollama metadata row")
+            name = item["name"]
+            if not TAG.fullmatch(name):
+                raise P03PortHold("Malformed local model tag")
+            if name == tag:
+                matching.append(item)
+        if len(matching) != 1:
+            raise P03PortHold("Model absent or ambiguous in /api/tags")
+        reported = matching[0].get("digest")
+        if reported is not None:
+            if (not isinstance(reported, str) or not re.fullmatch(
+                    r"sha256:[a-fA-F0-9]{64}", reported)):
+                raise P03PortHold("Invalid Ollama manifest digest")
+            reported = reported.lower()
+        return {
+            "modelTag": tag,
+            "ollamaReportedManifestDigest": reported,
+            "independentlyVerified": False,
+            "licenseVerified": False,
+            "source": "existing P02 transport /api/tags",
+        }
+
     def execute_backend(self, session: object, route: str, args: dict) -> Any:
         self._ensure_native_scope(session, route, args)
         method_name = OWNER_ROUTES.get(route)
@@ -134,6 +184,7 @@ class P03OneHostPort:
         for route, callback, ready in (
             ("models.catalog", self.catalog, lambda: True),
             ("models.installed", self.installed, self._local_ready),
+            ("models.digest", self.digest, self._metadata_ready),
         ):
             self._bind(dispatcher, bound_port_type, route, callback, ready, receipt)
             bound.add(route)
@@ -155,6 +206,9 @@ class P03OneHostPort:
             return isinstance(self.ollama.models(), list)
         except Exception:
             return False
+
+    def _metadata_ready(self) -> bool:
+        return callable(getattr(self.ollama, "_open", None)) and self._local_ready()
 
     def _backend_ready(self) -> bool:
         try:
