@@ -415,3 +415,51 @@ test('R07 same-device percent temperature VRAM remain LIVE and correctly sourced
   assert.equal(h['gpu.vram.used_bytes'].value,1024);assert.equal(h['gpu.vram.total_bytes'].value,2048);
 });
 console.log('R07 SOURCE-ONLY truth envelope tests; physical Windows GPU/WebView2/Drive still NOT_RUN.');
+// R08: host-level evidence-status consistency. A native polling frame that
+// explicitly reports UNAVAILABLE is not allowed to display embedded LIVE data.
+const r08Sensor=(key,value,unit,device_id)=>({key,value,unit,
+  ...(device_id?{device_id}:{}),status:'LIVE',source:'WindowsNative',
+  observed_at_utc:'2026-10-28T03:44:58Z'});
+const r08Frame=(state,sensors)=>({run_id:RUN,polled_utc:'2026-10-28T03:44:59Z',state,sensors});
+const r08Hardware=(state,sensors)=>projectSpaceView({run_id:RUN,hardware:r08Frame(state,sensors)},NOW).hardware;
+test('R08 unavailable polling frame must not display an embedded LIVE CPU percentage',()=>{
+  assert.equal(r08Hardware('UNAVAILABLE',[r08Sensor('cpu.system.percent',73,'%')])['cpu.system.percent'].value,null);
+});
+test('R08 unavailable polling frame must not display an embedded LIVE CPU temperature',()=>{
+  assert.equal(r08Hardware('UNAVAILABLE',[r08Sensor('cpu.temperature.c',75,'°C')])['cpu.temperature.c'].value,null);
+});
+test('R08 unavailable polling frame must not display an embedded LIVE GPU percentage',()=>{
+  assert.equal(r08Hardware('UNAVAILABLE',[r08Sensor('gpu.percent',54,'%','GPU-0')])['gpu.percent'].value,null);
+});
+test('R08 unavailable polling frame must not display embedded LIVE VRAM',()=>{
+  const h=r08Hardware('UNAVAILABLE',[r08Sensor('gpu.vram.used_bytes',1024,'bytes','GPU-0'),r08Sensor('gpu.vram.total_bytes',2048,'bytes','GPU-0')]);
+  assert.equal(h['gpu.vram.used_bytes'].value,null);assert.equal(h['gpu.vram.total_bytes'].value,null);
+});
+test('R08 unavailable frame with a mixture of CPU and GPU readings remains all N/D',()=>{
+  const h=r08Hardware('UNAVAILABLE',[r08Sensor('cpu.system.percent',12,'%'),r08Sensor('gpu.percent',78,'%','GPU-0')]);
+  assert.equal(h['cpu.system.percent'].stage,'N_D');assert.equal(h['gpu.percent'].stage,'N_D');
+});
+test('R08 LIVE polling frame still accepts a consistent native CPU reading',()=>{
+  assert.equal(r08Hardware('LIVE',[r08Sensor('cpu.system.percent',73,'%')])['cpu.system.percent'].value,73);
+});
+test('R08 PARTIAL_OR_LIVE polling frame still accepts present native CPU reading',()=>{
+  assert.equal(r08Hardware('PARTIAL_OR_LIVE',[r08Sensor('cpu.system.percent',73,'%')])['cpu.system.percent'].value,73);
+});
+test('R08 error frame must not expose a LIVE GPU reading',()=>{
+  assert.equal(r08Hardware('ERROR',[r08Sensor('gpu.percent',54,'%','GPU-0')])['gpu.percent'].value,null);
+});
+test('R08 missing frame state must not expose a LIVE CPU reading',()=>{
+  assert.equal(r08Hardware(undefined,[r08Sensor('cpu.system.percent',73,'%')])['cpu.system.percent'].value,null);
+});
+test('R08 missing hardware data still produces six explicit N/D tiles',()=>{
+  const h=projectSpaceView({run_id:RUN},NOW).hardware;
+  assert.equal(Object.keys(h).length,6);assert.ok(Object.values(h).every(x=>x.value===null&&x.stage==='N_D'));
+});
+test('R08 UNAVAILABLE hardware frame never promotes app-side Drive readback',()=>{
+  const v=projectSpaceView({run_id:RUN,hardware:r08Frame('UNAVAILABLE',[r08Sensor('cpu.system.percent',73,'%')])},NOW);
+  assert.equal(v.driveReadback,'HOLD');assert.equal(v.hardware['cpu.system.percent'].value,null);
+});
+test('R08 direct hardware projection stays independent of native frame-status admission',()=>{
+  assert.equal(projectHardware([r08Sensor('cpu.system.percent',73,'%')],NOW)['cpu.system.percent'].value,73);
+});
+console.log('R08: native UNAVAILABLE frame cannot report hardware LIVE; E07/Windows NOT_RUN.');
