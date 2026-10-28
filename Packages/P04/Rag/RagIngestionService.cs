@@ -189,7 +189,7 @@ public sealed class RagIngestionService
         var included = new List<RagSearchResult>(hits.Count);
         foreach (var hit in hits)
         {
-            var citation = $"[SOURCE: {hit.FileName}#{hit.ChunkIndex + 1}; SHA256:{hit.ChunkSha256}]\n";
+            var citation = $"[SOURCE: {Uri.EscapeDataString(hit.FileName)}#{hit.ChunkIndex + 1}; SHA256:{hit.ChunkSha256}]\n";
             var needed = citation.Length + hit.Text.Length + (context.Length == 0 ? 0 : 2);
             if (needed > MaximumContextCharacters - context.Length)
                 break;
@@ -274,12 +274,8 @@ public sealed class RagIngestionService
 
     private static void ValidateScope(string ownerSid, string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(ownerSid);
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        if (!ownerSid.StartsWith("S-1-", StringComparison.Ordinal) || ownerSid.Length > 184 || ownerSid.Any(char.IsControl))
-            throw new ArgumentException("A valid Windows owner SID is required.", nameof(ownerSid));
-        if (conversationId.Length > 256 || conversationId.Any(char.IsControl))
-            throw new ArgumentException("Conversation ID is invalid or too long.", nameof(conversationId));
+        RagService.ValidateOwnerSid(ownerSid);
+        RagService.ValidateConversationId(conversationId);
     }
 
     private static void ValidateSourceMetadata(string sourceId, string fileName)

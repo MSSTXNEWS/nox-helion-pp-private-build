@@ -45,6 +45,7 @@ public sealed class RagService : IDisposable
     private const int EmbeddingBatchSize = 32;
     private const int MaximumEmbeddingDimensions = 16_384;
     private const int MaximumInputCharacters = 2_000_000;
+    private const long MaximumIndexFileBytes = 256L * 1024 * 1024;
     private static readonly TimeSpan EmbeddingRequestTimeout = TimeSpan.FromMinutes(2);
     private const int MaximumResults = 20;
     private const int MaximumSourceIdCharacters = 256;
@@ -414,6 +415,8 @@ public sealed class RagService : IDisposable
         if ((File.GetAttributes(_indexPath) & FileAttributes.ReparsePoint) != 0)
             throw new IOException("RAG index cannot be a reparse point.");
         using var stream = new FileStream(_indexPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (stream.Length > MaximumIndexFileBytes)
+            throw new InvalidDataException("RAG index exceeds the configured size limit.");
         var loaded = JsonSerializer.Deserialize<IndexDocument>(stream, JsonOptions)
             ?? throw new InvalidDataException("RAG index is empty or invalid.");
         if (!string.Equals(loaded.Schema, IndexSchema, StringComparison.Ordinal) || loaded.Sources is null ||
@@ -437,6 +440,8 @@ public sealed class RagService : IDisposable
                        64 * 1024, FileOptions.WriteThrough))
             {
                 JsonSerializer.Serialize(stream, index, JsonOptions);
+                if (stream.Length > MaximumIndexFileBytes)
+                    throw new InvalidDataException("RAG index would exceed the configured size limit.");
                 stream.Flush(flushToDisk: true);
             }
             if (File.Exists(_indexPath) && (File.GetAttributes(_indexPath) & FileAttributes.ReparsePoint) != 0)
@@ -553,14 +558,14 @@ public sealed class RagService : IDisposable
             throw new ArgumentException($"Source ID must be at most {MaximumSourceIdCharacters} printable characters.", nameof(sourceId));
     }
 
-    private static void ValidateConversationId(string conversationId)
+    internal static void ValidateConversationId(string conversationId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
         if (conversationId.Length > 256 || conversationId.Any(char.IsControl))
             throw new ArgumentException("Conversation ID must be at most 256 printable characters.", nameof(conversationId));
     }
 
-    private static void ValidateOwnerSid(string ownerSid)
+    internal static void ValidateOwnerSid(string ownerSid)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerSid);
         var parts = ownerSid.Split('-');
