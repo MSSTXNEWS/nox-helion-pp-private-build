@@ -201,6 +201,12 @@ try
     Assert(await right.CancelQueuedAsync(toCancel.Id), "F12 queue STOP persisted");
     Assert(await left.TryStartQueuedAsync(toCancel.Id) is null,
         "F13 cancelled queued job can never be claimed");
+    Assert(await right.RequestCancelAsync(ticket.Id), "F14 remote STOP accepted");
+    Assert((await left.ReadAsync()).Single(j => j.Id == ticket.Id).State ==
+        ModelJobState.Cancelling, "F15 stop state visible to another NOX window");
+    Assert(await left.RequestCancelAsync(ticket.Id), "F16 second STOP is idempotent");
+    Assert(await right.TryStartQueuedAsync(ticket.Id) is null,
+        "F17 remote STOP cannot restart an active job");
 }
 finally { Directory.Delete(atomicRoot, recursive: true); }
 Console.WriteLine("P03_ATOMIC_CLAIM_TEST_PASS 4/4");
