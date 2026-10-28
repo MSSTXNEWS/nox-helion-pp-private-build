@@ -91,6 +91,39 @@ public sealed class ModelDownloadQueueWorker(
         finally { _singleWorker.Release(); }
     }
 
+    /// <summary>
+    /// Observe STOP persisted by a second NOX window in the existing queue.
+    /// This cooperatively cancels our local HTTP token, not the entire Ollama server.
+    /// </summary>
+    private async Task WatchSharedCancelAsync(Guid jobId, CancellationTokenSource local,
+        CancellationToken stop)
+    {
+        try
+        {
+            while (!stop.IsCancellationRequested && !local.IsCancellationRequested)
+            {
+                var jobs = await store.ReadAsync(stop);
+                var state = jobs.FirstOrDefault(x => x.Id == jobId)?.State;
+                if (state != ModelJobState.Running)
+                {
+                    local.Cancel();
+                    return;
+                }
+                await Task.Delay(250, stop);
+            }
+        }
+        catch (OperationCanceledException) when (stop.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            // If persisted STOP cannot be observed, do not silently continue an
+            // unowned model transfer. Leave the existing receipt and queue intact.
+            try { local.Cancel(); }
+            catch (ObjectDisposedException) { }
+            System.Diagnostics.Trace.TraceError(
+                "P03_CANCEL_WATCH_ERROR job={0} type={1}", jobId, ex.GetType().Name);
+        }
+    }
+
     public async Task<bool> CancelAsync(Guid id, CancellationToken ct = default)
     {
         CancellationTokenSource? running;
