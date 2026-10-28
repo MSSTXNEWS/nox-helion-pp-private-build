@@ -47,6 +47,25 @@ def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _reject_reparse_ancestors(candidate: Path) -> None:
+    """Deny symlinks and Windows reparse/junction ancestors before filesystem I/O.
+
+    Native host #6 must still supply a trusted data root / picker and guard
+    against path substitution races. This is a fail-closed preflight check.
+    """
+    for ancestor in (candidate, *candidate.parents):
+        try:
+            info = ancestor.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise RagHold("RAG_ANCESTOR_UNREADABLE") from exc
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
+            raise RagHold("RAG_ANCESTOR_REPARSE_BLOCKED")
+
+
 def _scope(owner_sid: str, conversation_id: str) -> None:
     if not isinstance(owner_sid, str) or len(owner_sid) > 184 or not SID_RE.fullmatch(owner_sid):
         raise RagHold("RAG_AUTHENTICATED_OWNER_SID_REQUIRED")
@@ -105,7 +124,9 @@ class LocalRag:
     @contextmanager
     def _locked(self):
         with self._mutex:
+            _reject_reparse_ancestors(self.path)
             self.path.parent.mkdir(parents=True, exist_ok=True)
+            _reject_reparse_ancestors(self.path)
             if self.path.parent.is_symlink() or self.path.is_symlink():
                 raise RagHold("RAG_INDEX_SYMLINK")
             lock = self.path.with_name(self.path.name + ".p04lock")
@@ -210,13 +231,7 @@ class LocalRag:
         if not path.is_absolute() or str(path).startswith(("//", "\\\\")):
             raise RagHold("RAG_LOCAL_FILE_PATH_REQUIRED")
         _safe_name(path.name)
-        cursor = path
-        while True:
-            if cursor.is_symlink():
-                raise RagHold("RAG_FILE_SYMLINK_BLOCKED")
-            if cursor == cursor.parent:
-                break
-            cursor = cursor.parent
+        _reject_reparse_ancestors(path)
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
             info = os.fstat(fd)
