@@ -1,0 +1,52 @@
+{
+  "run_id": "ASTRA-R27-A10-02-20261029",
+  "agent": "/root/a10",
+  "approaches_completed": 2,
+  "approaches_planned": 10,
+  "source_parent": "a70f9420ae6185082d3f2153aa7140395bb955e1",
+  "scope": "theater stale asynchronous playback settlements",
+  "task_ids": [
+    "A10-MEDIA-PLAYBACK-GENERATION"
+  ],
+  "donor": "292f43c92a8b42df353fa3e6b7304d1157d6c1ea",
+  "donor_policy": "Exact source reuse; original donor test relocated to owned path with source-relative require path corrected.",
+  "files": [
+    {
+      "path": "integrations/creative/web/theater.js",
+      "pre_blob": "bf8b4919b1b02462d733e6a5636f418f809b953c",
+      "post_blob": "14b7dae704bf3478d6d93c296804f45d88094578",
+      "pre_sha256": "b3f5ae38ff109ff986550dee702fcf6f9cad39fe0c78c9104373ce39e3b6d0e2",
+      "post_sha256": "13a3f7b6ab8fc7307c1ab585675593384a10137f26fc8fdfb5e1f4c9faae120a"
+    }
+  ],
+  "tests": {
+    "command": "node --test tests/e06/test_theater_media_error_r15.cjs tests/e06/test_theater_subtitle_lifecycle_r14.cjs tests/e06/test_theater_subtitle_selection_r16.cjs coordination/astra/agents/A10/test_theater_playback_r27.cjs",
+    "baseline_playback": {
+      "total": 5,
+      "pass": 2,
+      "fail": 3
+    },
+    "final": {
+      "total": 21,
+      "pass": 21,
+      "fail": 0
+    },
+    "additional_legacy_suite": {
+      "path": "integrations/creative/tests/theater.test.mjs",
+      "total": 9,
+      "pass": 0,
+      "fail": 9,
+      "reason": "Harness omits window.location; all fail while evaluating unchanged source line 8, before playback behavior. Preserved unchanged outside owned paths."
+    },
+    "boundary": "Actual Node 24 VM DOM mocks; browser/WebView2 NOT_RUN"
+  },
+  "lesson": "Every user intent and teardown that invalidates playback must invalidate pending play Promise success and rejection, not only source changes.",
+  "invariants": [
+    "Approved DOM and visuals unchanged",
+    "No second player or host",
+    "No external dependencies"
+  ],
+  "build": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_ready_percent": null
+}
