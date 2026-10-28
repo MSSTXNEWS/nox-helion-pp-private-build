@@ -157,7 +157,7 @@ change("R11/Contracts/EventV3Bridge.cs",
 extra = ROOT / "R11/E06_DiagnosticGlobalUsings.cs"
 if extra.exists() or extra.is_symlink():
     raise RuntimeError("E06_DIAGNOSTIC_GLOBAL_FILE_ALREADY_EXISTS")
-extra.write_text("global using System.IO;\n", encoding="utf-8")
+extra.write_bytes(b"global using System.IO;\n")
 if sha(extra.read_bytes()) != "9eb56b713f4bd450c169f140e74ff7b6d5e456f3742a30188b947223d01628e4":
     raise RuntimeError("E06_DIAGNOSTIC_GLOBAL_SHA_HOLD")
 receipts.append({
