@@ -115,10 +115,10 @@ try {
   }
   $report.originalD02Verified=$true
   # These are merely preserved binaries, not an authorized connected Python host.
-  $legacy=Join-Path $root 'Legacy'
+  $legacy=Join-Path $root 'LegacyCore'
   Require (Test-Path -LiteralPath (Join-Path $legacy 'NOX_HELION_PRIVATE_CANDIDATE.exe') -PathType Leaf) 'NOX_SMOKE_LEGACY_PYTHON_MISSING'
   Require (Test-Path -LiteralPath (Join-Path $legacy 'NOX_HELION_BACKGROUND_CANDIDATE.exe') -PathType Leaf) 'NOX_SMOKE_LEGACY_BACKGROUND_MISSING'
-  Require (Test-Path -LiteralPath (Join-Path $legacy 'NOT_CONNECTED_TO_WPF.txt') -PathType Leaf) 'NOX_SMOKE_MISSING_PYTHON_INERT_WARNING'
+  Require (Test-Path -LiteralPath (Join-Path $legacy 'NOT_CONNECTED_NOTICE.txt') -PathType Leaf) 'NOX_SMOKE_MISSING_PYTHON_INERT_WARNING'
   $report.originalPythonInert=$true
   $state='UNINSTALLING'
   $uninstaller=Join-Path $root 'Uninstall.exe'
