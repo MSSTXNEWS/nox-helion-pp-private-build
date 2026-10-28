@@ -19,6 +19,8 @@ export const ownerAudit=()=>Object.freeze({
   releaseAccepted:false,sourceOnly:true
 });
 const mode=()=>document.body.classList.contains('mode-eco')?'ECO':document.body.classList.contains('mode-max')?'MAX':document.body.classList.contains('mode-reduce')?'REDUCED':'BALANCED';
+// The OS Reduced Motion preference outranks user and preview animation modes.
+const safeMode=(requested,motion)=>motion?.matches===true?'REDUCED':validModes.has(requested)?requested:'BALANCED';
 const note=(x)=>{const e=$('nox-wow200-state');if(e)e.textContent=x};
 function create(){
   const parent=$('screen-immersive');
@@ -43,15 +45,18 @@ function create(){
   const title=document.createElement('h3');title.textContent='WOW 001–050 · реальные маршруты / материалы';
   const routes=document.createElement('div');routes.id='nox-wow200-routes';routes.className='nox-w200-pack01 nox-pack01';routes.dataset.noxWowSlot='secondary';
   card.append(head,expl,controls,preview,report,title,routes);parent.append(card);
+  const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)')??null;
+  const effective=()=>safeMode(mod.value,motion);
+  const applyMode=()=>{const current=effective();scene?.setMode(current);pack?.setMode(current.toLowerCase());return current;};
   try{
     reviewWowScopes();
-    scene=mountUnifiedCinema(root,{mode:mod.value,reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false});
+    scene=mountUnifiedCinema(root,{mode:effective(),reducedMotion:motion?.matches===true});
     btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
-      scene.setMode(mod.value);const cue=scene.preview(id);
-      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+mod.value+' · не подтверждение работы GPU');};
-    mod.onchange=()=>scene?.setMode(mod.value);
-    const mr=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    mr?.addEventListener?.('change',e=>{if(e.matches)scene?.setMode('REDUCED');else scene?.setMode(mod.value)});
+      const current=applyMode();const cue=scene.preview(id);
+      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+current+' · не подтверждение работы GPU');};
+    mod.onchange=applyMode;
+    if(typeof motion?.addEventListener==='function')motion.addEventListener('change',applyMode);
+    else if(typeof motion?.addListener==='function')motion.addListener(applyMode);
   }catch(e){note('HOLD визуального движка: '+e.message)}
   // First 50 actual route presets are read from the original single P01 catalog.
   // We do not dispatch privileged routes on a visual preview click.
@@ -70,7 +75,7 @@ function create(){
 
       };
       routes.append(button)}
-    pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(mod.value.toLowerCase());
+    pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(effective().toLowerCase());
   }).catch(e=>{routes.textContent='WOW 001–050: исходный маршрутный каталог недоступен · HOLD · '+e.message});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',create,{once:true});else create();
