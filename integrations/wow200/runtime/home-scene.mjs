@@ -1,9 +1,9 @@
 /* NOX V16: ACTUAL owner-approved nine-sphere D02 runtime mount.
- * Uses the existing PR30 renderer. Never creates a ninth CoreID, routes,
+ * Uses the exact E01 owner renderer (pinned Git blob). Never creates a ninth CoreID, routes,
  * numerical training progress, new event bus, model process or storage.
  * Fail-closed if the original R13 core identity/geometry differs.
  */
-import {installNoxCinemaFX} from '../proposals/NOX-CINEMA-FX/nox-cinema.mjs';
+import {installNoxCinemaFX} from '../canonical/nox-cinema.mjs';
 
 export const CANONICAL_CORES=Object.freeze([
   'CONSCIOUSNESS','PERSONA','ATLAS','VOICE','REFLECTION','CORE','NEXUS','FORGE'
@@ -46,7 +46,7 @@ export function mountApprovedHome(doc=document){
     for(const element of [central,...items])element.dataset.noxVerifiedFx='active';
     sync();
     mounted=Object.freeze({
-      snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'PR30'}),
+      snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'E01_OWNER_PINNED'}),
       setProfile:mode=>scene.setProfile(mode),
       destroy(){observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;
         for(const element of [central,...items])delete element.dataset.noxVerifiedFx;
