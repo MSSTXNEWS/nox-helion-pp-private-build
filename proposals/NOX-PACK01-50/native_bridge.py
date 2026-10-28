@@ -55,9 +55,9 @@ class NativeSession:
         # page-provided string or mutable set that callbacks could change.
         if type(self.allowed) is not frozenset or type(self.private_approved) is not frozenset:
             raise HostDenied("Immutable native route scopes required")
-        if (not self.allowed.issubset(ALLOWED_ROUTES) or
-                not self.private_approved.issubset(self.allowed) or
-                any(type(route) is not str for route in self.allowed | self.private_approved)):
+        if (any(type(route) is not str for route in self.allowed | self.private_approved) or
+                not self.allowed.issubset(ALLOWED_ROUTES) or
+                not self.private_approved.issubset(self.allowed)):
             raise HostDenied("Invalid route scopes")
 
 @dataclass(frozen=True)
@@ -81,6 +81,9 @@ class NoxPackHost:
         task_ids = [item.get("taskId") for item in actions]
         if len(set(task_ids)) != 50 or any(not isinstance(t,str) or not TASK.fullmatch(t) for t in task_ids):
             raise ValueError("Invalid TaskID")
+        if any(type(row.get("owner")) is not int or not 1 <= row["owner"] <= 6 or
+               row.get("risk") not in ("safe", "sensitive", "dangerous") for row in actions):
+            raise ValueError("Invalid approved native owner/risk policy")
         self.routes = {item["routeId"]:item for item in actions}
         self.ports:dict[str,BoundPort] = {}
         self.native_approve = native_approve
