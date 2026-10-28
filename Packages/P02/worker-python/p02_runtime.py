@@ -37,6 +37,17 @@ class P02Error(Exception):
     pass
 
 
+class ProviderTimeout(P02Error):
+    """The existing provider exceeded its I/O budget; this is never user STOP."""
+
+
+def _transport_failure(error):
+    reason = error.reason if isinstance(error, urllib.error.URLError) else error
+    if isinstance(reason, TimeoutError):
+        return ProviderTimeout("OLLAMA_TIMEOUT")
+    return P02Error("Ollama transport unavailable: " + type(error).__name__)
+
+
 class Cancelled(P02Error):
     pass
 
@@ -53,7 +64,7 @@ class OllamaClient:
         if (u.scheme != "http" or u.hostname not in ("127.0.0.1", "localhost", "::1")
                 or u.username or u.password or u.path not in ("", "/") or u.query or u.fragment):
             raise ValueError("Ollama endpoint must be loopback HTTP without path, credentials or query")
-        if timeout <= 0 or timeout > 600:
+        if type(timeout) not in (int, float) or not 0 < timeout <= 600:
             raise ValueError("Timeout out of range")
         self.base = base.rstrip("/")
         self.timeout = timeout
@@ -72,11 +83,14 @@ class OllamaClient:
             detail = e.read(1024).decode("utf-8", "replace")
             raise P02Error(f"Ollama HTTP {e.code}: {detail}") from e
         except (urllib.error.URLError, TimeoutError, OSError) as e:
-            raise P02Error(f"Ollama unavailable: {type(e).__name__}: {e}") from e
+            raise _transport_failure(e) from e
 
     def models(self) -> list[str]:
-        with self._open("/api/tags") as r:
-            raw = r.read(2 * 1024 * 1024 + 1)
+        try:
+            with self._open("/api/tags") as r:
+                raw = r.read(2 * 1024 * 1024 + 1)
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise _transport_failure(exc) from exc
         if len(raw) > 2 * 1024 * 1024:
             raise P02Error("Ollama model list over size limit")
         try:
@@ -185,8 +199,7 @@ class OllamaClient:
                 if not done_seen and not cancel.is_set() and not stop.is_set():
                     raise P02Error("Ollama stream truncated before done=true")
             except (TimeoutError, OSError, urllib.error.URLError) as exc:
-                emit("error", P02Error("Ollama streaming timeout/connection error: " +
-                                        type(exc).__name__))
+                emit("error", _transport_failure(exc))
             except Exception as exc:
                 emit("error", exc if isinstance(exc, P02Error) else
                      P02Error("Ollama transport exception: " + type(exc).__name__))

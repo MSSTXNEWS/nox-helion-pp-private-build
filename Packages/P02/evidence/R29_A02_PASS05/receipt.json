@@ -1,0 +1,51 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS05",
+  "agent_id": "/root/a02",
+  "parent_commit": "23686b38471fee3811a7f1da3abc682ffc9706a6",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 5,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-LOADER-TIMEOUT-VERSUS-STOP"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "pre_git_blob": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "post_git_blob": "bc18f08181930562c12d58dc5f1871120b9d4594",
+      "pre_sha256": "81c1ebdc2553fea86712b4709ef9206bb48c32df16532ddbf1140abba2978fb9",
+      "post_sha256": "9488f9db787debfe531d503d56a96a16bc429cdf2e22575a1a134dca816ea531"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_git_blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "post_git_blob": "b79e3a304a99f97641bc9c72ea7260af8e033b0f",
+      "pre_sha256": "443fb1d793d3767adda07463c0e9d814086a9d166a7345ed3dd9605a1004aba2",
+      "post_sha256": "3be5558f8d5a3f776aa48c51aac88d48100cc6fc051aca920baae2dae06f33cc"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "282062488b89ab49fed66a322fe7363c4642e497",
+      "pre_sha256": null,
+      "post_sha256": "3f116bd109454c295514e24fe63a36703c3d7eec1ea45a386b0cb9d41f55d1d2"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_loader_timeout_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "f23f770ebbf75ba2ca5e65e4498edb6f3feceac3",
+      "pre_sha256": null,
+      "post_sha256": "7c456cd7849cdad2512d2906c8dfc46f719a7a90872bab34658b58ea6f9cc4ff"
+    }
+  ],
+  "lesson": "Preserve typed provider timeouts across both connection/read boundaries and worker queues, then map TIMEOUT separately from STOP and connection failure; no incomplete assistant success is persisted.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}
