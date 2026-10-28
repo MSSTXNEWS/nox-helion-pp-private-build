@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import threading
 from collections.abc import Callable, Mapping
+from urllib.parse import urlsplit
 
 from p02_capabilities import context_key
 from p02_chat_bridge import ChatBridge
@@ -41,6 +42,7 @@ class P02P04OneHost:
         native_context_chat: Callable[[str, NativeScope], str],
         native_authorize: Callable[[NativeScope, str], bool],
         approved_core_ids: frozenset[str], approved_personas: frozenset[str],
+        native_verify_registry: Callable[[frozenset[str], frozenset[str]], bool],
         owner_gpu_control: Callable[[NativeScope, str, str], dict] | None = None,
         native_verify_gpu_ack: Callable[[dict], bool] | None = None,
         native_verify_v3: Callable[[dict], bool] | None = None,
@@ -62,6 +64,15 @@ class P02P04OneHost:
                 or any(not isinstance(x, str) or not x or len(x) > 128
                        for x in approved_personas)):
             raise OneHostHold("ORIGINAL_EIGHT_CORE_AND_FIVE_PERSONA_REGISTRY_REQUIRED")
+        if not callable(native_verify_registry) or native_verify_registry(
+                approved_core_ids, approved_personas) is not True:
+            raise OneHostHold("ORIGINAL_P01_CORE_PERSONA_RECEIPT_REQUIRED")
+        # One physical loopback Ollama server for chat and P04 embeddings.
+        # Localhost and 127.0.0.1 may address the same listener, but ports
+        # must agree. Both owner constructors independently enforce loopback.
+        ollama_uri, embed_uri = urlsplit(chat.ollama.base), urlsplit(rag.endpoint)
+        if (not ollama_uri.port or ollama_uri.port != embed_uri.port):
+            raise OneHostHold("ONE_OLLAMA_ENDPOINT_PORT_REQUIRED")
         if chat.rag_context is not None:
             raise OneHostHold("RAG_ALREADY_BOUND_DO_NOT_OVERRIDE")
         self.chat, self.store, self.rag = chat, store, rag
