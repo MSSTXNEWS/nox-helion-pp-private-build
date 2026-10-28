@@ -43,7 +43,8 @@ if ($source.schema -cne 'NOX_ORIGINAL_SOURCE_729_SHA256_V1' -or
  @($source.parts).Count -ne 3) { throw 'E07_ORIGINAL_729_SOURCELOCK_NOT_VERIFIED' }
 $paths=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($f in $source.files) {
- if (!$paths.Add([string]$f.path) -or
+ if ([string]::IsNullOrWhiteSpace([string]$f.path) -or
+ !$paths.Add([string]$f.path) -or
  [string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') {
    throw 'E07_INVALID_ORIGINAL_SOURCE_RECEIPT'
  }
@@ -93,6 +94,11 @@ if (Test-Path -LiteralPath $Output) { throw 'E07_HANDOFF_ALREADY_EXISTS' }
 $parent=Split-Path -Parent $Output
 if ([string]::IsNullOrWhiteSpace($parent)) { throw 'E07_OUTPUT_PARENT_REQUIRED' }
 New-Item -ItemType Directory -Path $parent -Force | Out-Null
+foreach ($ancestor in @(Get-Item -LiteralPath $parent) + @(Get-Item -LiteralPath $parent).Parent) {
+ if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+   throw 'E07_OUTPUT_REPARSE_PARENT'
+ }
+}
 [IO.File]::WriteAllText($Output,($receipt | ConvertTo-Json -Depth 8)+[Environment]::NewLine,
  [Text.UTF8Encoding]::new($false))
 $actual=Get-Content -LiteralPath $Output -Raw -Encoding UTF8 | ConvertFrom-Json
