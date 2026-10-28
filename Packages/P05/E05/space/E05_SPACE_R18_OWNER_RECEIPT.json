@@ -1,0 +1,46 @@
+{
+  "run_id": "NOX-V16-W4-02-20261029T0103MSK-R18",
+  "owner": "W4·02 / E05 P05",
+  "task_id": "V16.E05.P05.R18.TRUSTED_MARKET_QUORUM",
+  "state": "SOURCE_CANDIDATE; NOT_INTEGRATED; NOT_WINDOWS_ACCEPTED",
+  "source_policy": "R20 SOURCE_ONLY",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "owner_branch": "owner/e05/w4-02-r18-market-trust-20261029",
+  "base_pr": 162,
+  "immutable_head": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "immutable_tree": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "sourcelock_729": "NOT_VERIFIED",
+  "previous_receipt": "E05_SPACE_R17_OWNER_RECEIPT.json",
+  "previous_lesson": {
+    "id": "IDENTICAL_FEED_REPLAY_IS_NOT_INDEPENDENT_PRICE_SOURCE",
+    "applied": "YES; R18 replay test and R17 seven tests PASS"
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "4b710e2d53ac83d92116c11a7afffb2d526d778a7faec9582ff7d495ceb029c0",
+      "post_sha256": "e23f7653b5f9e857f1ec46e34f048c460f01e51707be0b50dfbc0d744312f8f1",
+      "pre_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "post_git_blob_sha1": "a83cfe6ef9ce2d351f808a3b89406bfe19b93121"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceTrustedQuorumR18.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "60c926ce2ef7fbcb60bfc1e94cce19615db6c3e837b0c00c0d8071841641b10e",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "77707184cbc28603ec41f0301aad807e4d378dcc"
+    }
+  ],
+  "checks": {
+    "negative": "8 tests on exact R17 source: 3 PASS, 5 FAIL",
+    "positive": "8/8 R18 PASS, 7/7 R17 PASS, 35/35 relevant node:test PASS; node --check PASS",
+    "runtime": "Node 22 Linux; NO_EXE / NO_WINDOWS / NO_CI",
+    "native_feeds": "NOT_RUN"
+  },
+  "new_product_done": 0,
+  "source_defects_fixed": 1,
+  "remaining": "Unverified native feed licensing, real hardware telemetry, app-side Drive, 729 physical source SHA, independent gates",
+  "lesson_id": "QUOTE_CONFLICT_REQUIRES_CURRENT_TRUSTED_OBSERVATION",
+  "no_loss": "D02/WOW200/8 CoreID/5 Persona/events.v3/other owners/ZIP/user files untouched; PR162 not modified"
+}
