@@ -702,6 +702,7 @@ def classify_training_failure(error: BaseException) -> str:
         "SELECTED_GPU_INDEX_NOT_FOUND",
         "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA",
         "NO_NVIDIA_GPU_FOUND",
+        "NVIDIA_GPU_INVENTORY_FAILED",
     })
     reason = str(error)
     return ("HOLD" if reason in missing_gpu_prerequisites

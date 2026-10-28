@@ -16,6 +16,7 @@ class TrainingFailureStatusTests(unittest.TestCase):
     def test_other_verified_missing_gpu_prerequisites_remain_hold(self):
         for code in (
             "NVIDIA_GPU_TELEMETRY_UNAVAILABLE",
+            "NVIDIA_GPU_INVENTORY_FAILED",
             "SELECTED_GPU_INDEX_NOT_FOUND",
             "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA",
             "GPU_TEMPERATURE_UNAVAILABLE",
