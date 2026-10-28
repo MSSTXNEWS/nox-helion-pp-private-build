@@ -913,5 +913,106 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(sent, [])
 
 
+    def test_81_gpu_unidentified_not_live(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 57, "Status": "LIVE",
+            "Source": "NVML", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["gpu.percent"]["status"], "N_D")
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+    def test_82_gpu_identified_positive(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 57, "Status": "LIVE",
+            "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["gpu.percent"]["value"], 57)
+
+    def test_83_gpu_lowercase_device_id_supported(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 57, "Status": "LIVE",
+            "Source": "NVML", "device_id": "GPU-0", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["gpu.percent"]["value"], 57)
+
+    def test_84_conflicting_device_aliases_quarantine(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.percent", "Value": 57, "Status": "LIVE",
+            "Source": "NVML", "DeviceId": "GPU-0",
+            "device_id": "GPU-1", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+    def test_85_bidi_spoofed_source_not_live(self):
+        self.e05_fake.sensors = [{
+            "Key": "cpu.system.percent", "Value": 22, "Status": "LIVE",
+            "Source": "NVML\u202E", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["cpu.system.percent"]["value"])
+
+    def test_86_cross_gpu_util_and_temp_quarantine(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.percent", "Value": 55, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()},
+            {"Key": "gpu.temperature.c", "Value": 65, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-1", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.percent"]["value"])
+        self.assertIsNone(got["gpu.temperature.c"]["value"])
+
+    def test_87_cross_gpu_vram_pair_quarantine(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.vram.used_bytes", "Value": 300, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()},
+            {"Key": "gpu.vram.total_bytes", "Value": 900, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-1", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.vram.used_bytes"]["value"])
+        self.assertIsNone(got["gpu.vram.total_bytes"]["value"])
+
+    def test_88_same_gpu_vram_pair_positive(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.vram.used_bytes", "Value": 300, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()},
+            {"Key": "gpu.vram.total_bytes", "Value": 900, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["gpu.vram.used_bytes"]["value"], 300)
+        self.assertEqual(got["gpu.vram.total_bytes"]["value"], 900)
+
+    def test_89_vram_plus_util_other_gpu_all_quarantined(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.vram.used_bytes", "Value": 300, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()},
+            {"Key": "gpu.vram.total_bytes", "Value": 900, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-0", "ObservedAtUtc": utc()},
+            {"Key": "gpu.percent", "Value": 75, "Status": "LIVE",
+             "Source": "NVML", "DeviceId": "GPU-1", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertTrue(all(got[k]["value"] is None for k in
+            ("gpu.vram.used_bytes", "gpu.vram.total_bytes", "gpu.percent")))
+
+    def test_90_cpu_unmodified_with_gpu_quarantined(self):
+        self.e05_fake.sensors = [
+            {"Key": "cpu.system.percent", "Value": 19, "Status": "LIVE",
+             "Source": "WMI", "ObservedAtUtc": utc()},
+            {"Key": "gpu.percent", "Value": 75, "Status": "LIVE",
+             "Source": "NVML", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(got["cpu.system.percent"]["value"], 19)
+        self.assertIsNone(got["gpu.percent"]["value"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
