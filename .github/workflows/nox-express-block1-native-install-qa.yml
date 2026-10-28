@@ -110,6 +110,22 @@ jobs:
             $report.install_root_present=(Test-Path -LiteralPath $root -PathType Container)
             if($report.stage_present){
               $report.stage_file_count=@(Get-ChildItem -LiteralPath $stage -Recurse -File -ErrorAction SilentlyContinue).Count
+              $ownerMarker=Join-Path $stage 'nox-p01-owned.txt'
+              $report.stage_marker_present=(Test-Path -LiteralPath $ownerMarker -PathType Leaf)
+              if (-not $report.stage_marker_present) {
+                try {
+                  [IO.File]::WriteAllText($ownerMarker,"NOXHELION.P01 V16"+[Environment]::NewLine)
+                  $report.native_marker_write='PASS'
+                } catch { $report.native_marker_write='FAIL:'+$_.Exception.GetType().Name }
+              }
+              if (-not (Test-Path -LiteralPath $root)) {
+                try {
+                  Move-Item -LiteralPath $stage -Destination $root -ErrorAction Stop
+                  $report.native_directory_rename='PASS'
+                  Move-Item -LiteralPath $root -Destination $stage -ErrorAction Stop
+                  $report.native_directory_restore='PASS'
+                } catch { $report.native_directory_rename='FAIL:'+$_.Exception.GetType().Name }
+              }
               $mf=Join-Path $stage 'payload.sha256.json'
               $report.stage_manifest_present=(Test-Path -LiteralPath $mf -PathType Leaf)
               if($report.stage_manifest_present){
