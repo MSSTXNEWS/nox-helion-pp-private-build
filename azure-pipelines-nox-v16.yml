@@ -91,7 +91,7 @@ jobs:
       $exe=Join-Path $out 'payload/NOX.P01.Shell.exe'
       $receipt=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
       foreach ($p in @($setup,$exe,$receipt)) { if (!(Test-Path -LiteralPath $p -PathType Leaf)) { throw "MISSING_WINDOWS_BUILD_FILE:$p" } }
-      $args=@{Original729Receipt=(Join-Path '$(Agent.TempDirectory)' 'nox-original-729-sha256.json');OneHostReceipt=$receipt;SetupExe=$setup;PublishedExe=$exe;SourceCommitSha='$(Build.SourceVersion)';Output=(Join-Path $out 'E07_BUILT_HANDOFF.json');Phase='BUILT'}
+      $args=@{Original729Receipt=(Join-Path '$(Agent.TempDirectory)' 'nox-original-729-sha256.json');Owner729Receipt=$pinnedManifest;OneHostReceipt=$receipt;SetupExe=$setup;PublishedExe=$exe;SourceCommitSha='$(Build.SourceVersion)';Output=(Join-Path $out 'E07_BUILT_HANDOFF.json');Phase='BUILT'}
       & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 @args
       if ($LASTEXITCODE -ne 0) { throw 'E07_BUILT_HANDOFF_HOLD' }
       Write-Host "SETUP_SHA256=$((Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
