@@ -132,6 +132,19 @@ class IngressTests(unittest.TestCase):
             ingress.handle(packet(17, "models.installed"))
         self.assertFalse(self.provider.seen)
 
+    def test_finite_exponent_gate_rejects_overflow_before_native_dispatch(self):
+        for i, literal in enumerate((b"1e9999", b"-1e9999", b"1e309", b"-1e309"), 100):
+            with self.subTest(exponent=literal):
+                raw = packet(i, payload={"score": 1.0}).replace(b"1.0", literal)
+                with self.assertRaisesRegex(ProtocolHold, "INVALID_JSON"):
+                    self.router.handle(raw)
+        self.assertFalse(self.provider.seen)
+
+    def test_finite_exponent_gate_allows_normal_json_float(self):
+        answer = json.loads(self.router.handle(packet(105, payload={"score": 1.5})))
+        self.assertEqual(answer["status"], "OK")
+        self.assertEqual(len(self.provider.seen), 1)
+
     def test_overdeep_nested_json_is_protocol_hold(self):
         payload = b"[" * 1300 + b"0" + b"]" * 1300
         with self.assertRaisesRegex(ProtocolHold, "INVALID_JSON"):
