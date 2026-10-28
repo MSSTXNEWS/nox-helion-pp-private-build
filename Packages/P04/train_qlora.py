@@ -90,8 +90,15 @@ def finite_metric(value: Any) -> float | None:
 
 
 def sha256_tree(root: Path) -> str:
-    """Hash a directory deterministically and reject symbolic links."""
-    if root.is_symlink():
+    """Hash pinned model/checkpoint trees; reject symlinks and Windows junctions.
+
+    The metadata gate is a fail-closed preflight, not a replacement for
+    native handle-based protection against path substitution races.
+    """
+    root_info = root.lstat()
+    if (stat.S_ISLNK(root_info.st_mode) or
+            (getattr(root_info, "st_file_attributes", 0) &
+             getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
         raise ValueError("TREE_ROOT_NOT_REGULAR_DIRECTORY")
     root = root.resolve(strict=True)
     if not root.is_dir():
@@ -99,8 +106,12 @@ def sha256_tree(root: Path) -> str:
     digest = hashlib.sha256()
     files = sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
     for path in files:
-        if path.is_symlink():
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
             raise ValueError("SYMLINK_IN_PINNED_TREE")
+        if (getattr(info, "st_file_attributes", 0) &
+                getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)):
+            raise ValueError("REPARSE_POINT_IN_PINNED_TREE")
         if not path.is_file():
             continue
         rel = path.relative_to(root).as_posix().encode("utf-8")
