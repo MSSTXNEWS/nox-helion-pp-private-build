@@ -43,6 +43,15 @@ def utc(t=NOW):
     return t.isoformat().replace("+00:00", "Z")
 
 
+def verified_event():
+    return {"schema": "NOX-INSTALLER-EVENT-v3", "run_id": G2_RUN,
+            "event_id": "evt-r04", "event_type": "task.completed",
+            "task_id": "G2-05-R04", "package_id": "P05",
+            "action_id": "space.news", "timestamp_utc": utc(),
+            "state": "COMPLETED", "source": "E05",
+            "message": "fixture", "evidence_verified": True}
+
+
 class FakeOllama:
     def __init__(self):
         self.stops = 0
@@ -457,6 +466,106 @@ class G2ComponentTests(unittest.TestCase):
         self.assertIs(self.host.ports["custom.owner.route"], previous)
         self.assertEqual(len(self.host.ports), 1)
 
+
+    def test_38_feed_source_after_fetch_is_quarantined(self):
+        self.bind()
+        original = self.e05_fake.snapshot
+        def invalid(session):
+            raw = original(session)
+            raw["Tiles"][0]["SourceUtc"] = utc(NOW)
+            raw["Tiles"][0]["FetchedUtc"] = utc(NOW - timedelta(seconds=5))
+            return raw
+        self.e05_fake.snapshot = invalid
+        r = self.host.execute("space.news", {}, self.session)
+        self.assertEqual(r["status"], "N_D")
+        self.assertIsNone(r["source"])
+
+    def test_39_feed_fetch_after_snapshot_is_quarantined(self):
+        self.e05_fake.at = NOW - timedelta(seconds=6)
+        self.bind()
+        r = self.host.execute("space.news", {}, self.session)
+        self.assertEqual(r["status"], "N_D")
+
+    def test_40_sensor_observation_after_snapshot_is_n_d(self):
+        self.e05_fake.at = NOW - timedelta(seconds=3)
+        self.e05_fake.sensors = [{
+            "Key": "cpu.system.percent", "Value": 32, "Status": "LIVE",
+            "Source": "OWNER5_HARDWARE", "ObservedAtUtc": utc(NOW)}]
+        self.bind()
+        r = self.host.execute("system.telemetry", {}, self.session)
+        self.assertIsNone(r["sensors"]["cpu.system.percent"]["value"])
+
+    def test_41_vram_requires_same_sample_instant(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.vram.used_bytes", "Value": 3, "Status": "LIVE",
+             "Source": "OWNER5_HARDWARE", "ObservedAtUtc": utc(NOW)},
+            {"Key": "gpu.vram.total_bytes", "Value": 8, "Status": "LIVE",
+             "Source": "OWNER5_HARDWARE",
+             "ObservedAtUtc": utc(NOW - timedelta(seconds=2))}]
+        self.bind()
+        r = self.host.execute("system.telemetry", {}, self.session)
+        self.assertIsNone(r["sensors"]["gpu.vram.used_bytes"]["value"])
+        self.assertIsNone(r["sensors"]["gpu.vram.total_bytes"]["value"])
+
+    def test_42_verified_event_without_native_receipt_is_hold(self):
+        published = []
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(
+                verified_event(), run_id=G2_RUN, trusted_owner=lambda: True,
+                existing_publish=lambda event: (published.append(event) or True))
+        self.assertEqual(published, [])
+
+    def test_43_verified_event_with_test_only_receipt_can_relay(self):
+        published = []
+        event = verified_event()
+        self.assertTrue(relay_existing_events_v3(
+            event, run_id=G2_RUN, trusted_owner=lambda: True,
+            trusted_evidence=lambda e: e["event_id"] == "evt-r04",
+            existing_publish=lambda e: (published.append(e) or True)))
+        self.assertEqual(published, [event])
+        self.assertIsNot(published[0], event)
+
+    def test_44_native_event_attestor_exception_fails_closed(self):
+        published = []
+        def broken(_event):
+            raise RuntimeError("native receipt offline")
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(
+                verified_event(), run_id=G2_RUN, trusted_owner=lambda: True,
+                trusted_evidence=broken,
+                existing_publish=lambda e: (published.append(e) or True))
+        self.assertFalse(published)
+
+    def test_45_csrf_rotation_during_host_advertise_denied(self):
+        self.bind()
+        original = self.host.advertise
+        old_peer = self.mobile.peer
+        csrf = [b"x" * 32]
+        def rotated_peer(session):
+            proof = old_peer(session)
+            proof["expected_csrf"] = csrf[0]
+            proof["received_csrf"] = csrf[0]
+            return proof
+        self.mobile.peer = rotated_peer
+        def rotate(session):
+            answer = original(session)
+            csrf[0] = b"z" * 32
+            return answer
+        self.host.advertise = rotate
+        with self.assertRaises(G2Denied):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
+
+    def test_46_source_lock_revoked_during_evidence_attestation(self):
+        state = [True, False]
+        published = []
+        def seal():
+            return state.pop(0)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(
+                verified_event(), run_id=G2_RUN, trusted_owner=seal,
+                trusted_evidence=lambda _: True,
+                existing_publish=lambda e: (published.append(e) or True))
+        self.assertEqual(published, [])
 
 
 if __name__ == "__main__":

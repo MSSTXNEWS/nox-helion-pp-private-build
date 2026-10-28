@@ -118,7 +118,9 @@ class ExistingE05Projection:
                   and isinstance(tile.get("Source"), str)
                   and 0 < len(tile["Source"]) <= 100
                   and _fresh(tile.get("SourceUtc"), now, 24 * 3600)
-                  and _fresh(tile.get("FetchedUtc"), now, 24 * 3600))
+                  and _fresh(tile.get("FetchedUtc"), now, 24 * 3600)
+                  and _stamp(tile.get("SourceUtc")) <= _stamp(tile.get("FetchedUtc"))
+                  and _stamp(tile.get("FetchedUtc")) <= _stamp(raw.get("SnapshotUtc")))
             return {"status": "SOURCE_DATED" if ok else
                     "STALE" if tile.get("Status") == "STALE" else "N_D",
                     "source": tile["Source"] if ok else None,
@@ -129,7 +131,7 @@ class ExistingE05Projection:
         sensors = raw.get("Hardware")
         if not isinstance(sensors, list) or len(sensors) > 32:
             raise G2Hold("E05 hardware payload malformed")
-        seen, safe = set(), {}
+        seen, safe, observed_by_key = set(), {}, {}
         for sample in sensors:
             if not isinstance(sample, dict) or sample.get("Key") not in SENSORS:
                 continue
@@ -145,14 +147,18 @@ class ExistingE05Projection:
                     and (key != "gpu.temperature.c" or value <= 150)
                     and isinstance(sample.get("Source"), str)
                     and bool(sample["Source"])
-                    and _fresh(sample.get("ObservedAtUtc"), now, 30))
+                    and _fresh(sample.get("ObservedAtUtc"), now, 30)
+                    and _stamp(sample.get("ObservedAtUtc")) <= _stamp(raw.get("SnapshotUtc")))
             safe[key] = {"value": value if good else None,
                          "status": "LIVE" if good else "N_D",
                          "source": sample["Source"] if good else None}
+            observed_by_key[key] = sample.get("ObservedAtUtc") if good else None
         used, total = safe.get("gpu.vram.used_bytes"), safe.get("gpu.vram.total_bytes")
         if (used and total and used["value"] is not None and total["value"] is not None
                 and (total["value"] <= 0 or used["value"] > total["value"]
-                     or used["source"] != total["source"])):
+                     or used["source"] != total["source"]
+                     or observed_by_key.get("gpu.vram.used_bytes") !=
+                        observed_by_key.get("gpu.vram.total_bytes"))):
             for key in ("gpu.vram.used_bytes", "gpu.vram.total_bytes"):
                 safe[key] = {"value": None, "status": "N_D", "source": None}
         seal = getattr(self.owner, "product_receipts_sealed", None)
@@ -224,14 +230,15 @@ class PrivateMobileContract:
                 raise G2Denied("Private origin/CSRF verification failed") from exc
             if ok is not True:
                 raise G2Denied("Private peer/CSRF/user consent denied")
-            return proof["identity"]
+            return (proof["identity"], proof["expected_csrf"],
+                    proof["observed_origin"])
 
         identity = attest()
         advertised = self.host.advertise(session)
         if not self.available():
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED")
         if attest() != identity:
-            raise G2Denied("Private device identity changed during advertisement")
+            raise G2Denied("Private identity, origin or CSRF epoch changed during advertisement")
         if not isinstance(advertised, dict):
             raise G2Hold("Existing native host advertisement unavailable")
         # Session-scoped capabilities, never a public URL or bearer token.
@@ -243,7 +250,8 @@ class PrivateMobileContract:
 
 def relay_existing_events_v3(event: dict, *, run_id: str,
                              trusted_owner: Callable[[], bool],
-                             existing_publish: Callable[[dict], bool]) -> bool:
+                             existing_publish: Callable[[dict], bool],
+                              trusted_evidence: Callable[[dict], bool] | None = None) -> bool:
     """One existing host events.v3 publisher. No bus, queue or invented event."""
     if not callable(trusted_owner) or trusted_owner() is not True:
         raise G2Hold("Existing events.v3 SourceLock not admitted")
@@ -269,7 +277,16 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
         n, d = event.get("numerator"), event.get("denominator")
         if type(n) is not int or type(d) is not int or not 0 <= n <= d or d <= 0:
             raise G2Denied("Evidence numerator/denominator must be bounded integers")
-    return existing_publish(event) is True
+    # Untrusted event.evidence_verified flag is never a native receipt.
+    if event["evidence_verified"] is True:
+        try:
+            attested = callable(trusted_evidence) and trusted_evidence(dict(event)) is True
+            still_sealed = trusted_owner() is True
+        except Exception as exc:
+            raise G2Hold("Native event evidence verification failed") from exc
+        if not attested or not still_sealed:
+            raise G2Hold("Verified event lacks native receipt or stable SourceLock")
+    return existing_publish(dict(event)) is True
 
 
 class G2OneHostBinder:
