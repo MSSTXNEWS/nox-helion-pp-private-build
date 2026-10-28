@@ -156,4 +156,20 @@ class ExistingEventBusOnly(unittest.TestCase):
         self.assertEqual(len(seen), 2)
         self.assertEqual(seen[-1][1]['sources'][0]['source_id'], 'ref-1')
 
+class ImmutableNativeBinding(unittest.TestCase):
+    binding=ExistingEventBusOnly.binding
+    def test_mutating_host_route_map_does_not_change_admitted_event_destination(self):
+        seen=[]
+        binding=self.binding(publish=lambda name,payload:seen.append(name))
+        relay=P02EventRelay(binding)
+        binding.route_map['chat.start']='host.privileged.install'
+        binding.route_map.clear()
+        relay.relay({'type':'chat.start','run_id':uuid.uuid4().hex,'model':'installed:verified'})
+        self.assertEqual(seen,['host.p02.chat.start'])
+
+    def test_native_session_proof_requires_true_boolean(self):
+        for value in (1,'true','false',[],object()):
+            with self.subTest(value=repr(value)),self.assertRaises(PermissionError):
+                P02EventRelay(self.binding(verified=value))
+
 if __name__=='__main__': unittest.main()

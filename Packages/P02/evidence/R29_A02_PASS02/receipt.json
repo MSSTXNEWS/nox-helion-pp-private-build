@@ -1,0 +1,38 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS02",
+  "agent_id": "/root/a02",
+  "parent_commit": "89214cee5d6f5579b722d9b0efbda83a6699e753",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 2,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-LOADER-EVENT-REGISTRY-SNAPSHOT",
+    "P02-LOADER-EXACT-SESSION-PROOF"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "pre_git_blob": "055a315575f2d0d740bb066771b8c59f426d2c92",
+      "post_git_blob": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+      "pre_sha256": "f1f9cff81ab029b3b3a06e34b5cd55232ef6b1d18c73bd075756c09c3702ad64",
+      "post_sha256": "08e18d0f9d0ff2fb057a3b6d5296ccc85a387e1780e7a3b1b705a2280ddef255"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_admission.py",
+      "pre_git_blob": "f3256dcd16eb5118f138bd3eade2a131ee97c14d",
+      "post_git_blob": "7f7459d4f42cf273a0a2961c2f3de8ce10c96baa",
+      "pre_sha256": "047ad524eabd1d0cc25cb16a129757b90293e9b4e7be75d2514dbad70159191c",
+      "post_sha256": "45d20eb0222af97d5dbe14b708d9d87f6e637bd10d8f969c47839f927e5dff81"
+    }
+  ],
+  "lesson": "A frozen binding can still contain a mutable route dictionary. Validate a detached routing snapshot and require a real True native session proof before mapping installer chat events.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

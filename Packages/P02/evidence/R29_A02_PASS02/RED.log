@@ -1,0 +1,72 @@
+test_bounded_host_delivery_with_single_run (test_p02_admission.ExistingEventBusOnly.test_bounded_host_delivery_with_single_run) ... ok
+test_cross_run_or_privileged_fields_rejected (test_p02_admission.ExistingEventBusOnly.test_cross_run_or_privileged_fields_rejected) ... ok
+test_missing_existing_host_registry_fails_closed (test_p02_admission.ExistingEventBusOnly.test_missing_existing_host_registry_fails_closed) ... ok
+test_sources_accept_valid_https_after_rejections (test_p02_admission.ExistingEventBusOnly.test_sources_accept_valid_https_after_rejections) ... ok
+test_sources_reject_ambiguous_https_links_without_publishing (test_p02_admission.ExistingEventBusOnly.test_sources_reject_ambiguous_https_links_without_publishing) ... ok
+test_mutating_host_route_map_does_not_change_admitted_event_destination (test_p02_admission.ImmutableNativeBinding.test_mutating_host_route_map_does_not_change_admitted_event_destination) ... ERROR
+test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) ... 
+  test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value='1') ... FAIL
+  test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value="'true'") ... FAIL
+  test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value="'false'") ... FAIL
+  test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value='<object object at 0x7f6ece29ccb0>') ... FAIL
+test_approved_unrelated_host_table_can_share_same_connection (test_p02_admission.SharedDatabaseAdmission.test_approved_unrelated_host_table_can_share_same_connection) ... ok
+test_existing_schema_columns_mismatch_fails_without_rewriting (test_p02_admission.SharedDatabaseAdmission.test_existing_schema_columns_mismatch_fails_without_rewriting) ... ok
+test_host_transaction_never_silently_committed (test_p02_admission.SharedDatabaseAdmission.test_host_transaction_never_silently_committed) ... ok
+test_partial_p02_schema_refuses_repair_without_data_loss (test_p02_admission.SharedDatabaseAdmission.test_partial_p02_schema_refuses_repair_without_data_loss) ... ok
+test_unknown_host_schema_holds_without_creating_parallel_history (test_p02_admission.SharedDatabaseAdmission.test_unknown_host_schema_holds_without_creating_parallel_history) ... ok
+test_unrecognized_schema_version_preserved_without_new_tables (test_p02_admission.SharedDatabaseAdmission.test_unrecognized_schema_version_preserved_without_new_tables) ... ok
+
+======================================================================
+ERROR: test_mutating_host_route_map_does_not_change_admitted_event_destination (test_p02_admission.ImmutableNativeBinding.test_mutating_host_route_map_does_not_change_admitted_event_destination)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_admission.py", line 167, in test_mutating_host_route_map_does_not_change_admitted_event_destination
+    relay.relay({'type':'chat.start','run_id':uuid.uuid4().hex,'model':'installed:verified'})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_host_admission.py", line 65, in relay
+    return self._relay_exclusive(event)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_host_admission.py", line 149, in _relay_exclusive
+    mapped = self._binding.route_map[kind]
+             ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'chat.start'
+
+======================================================================
+FAIL: test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value='1')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_admission.py", line 172, in test_native_session_proof_requires_true_boolean
+    with self.subTest(value=repr(value)),self.assertRaises(PermissionError):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value="'true'")
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_admission.py", line 172, in test_native_session_proof_requires_true_boolean
+    with self.subTest(value=repr(value)),self.assertRaises(PermissionError):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value="'false'")
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_admission.py", line 172, in test_native_session_proof_requires_true_boolean
+    with self.subTest(value=repr(value)),self.assertRaises(PermissionError):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) (value='<object object at 0x7f6ece29ccb0>')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_admission.py", line 172, in test_native_session_proof_requires_true_boolean
+    with self.subTest(value=repr(value)),self.assertRaises(PermissionError):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.006s
+
+FAILED (failures=4, errors=1)
