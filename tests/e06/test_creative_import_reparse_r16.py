@@ -31,7 +31,7 @@ class CreativeImportTrustR16(unittest.TestCase):
         cls.method = import_method(SOURCE.read_text(encoding="utf-8-sig"))
 
     def test_01_project_id_is_canonical(self):
-        self.assertIn('Regex.IsMatch(project,@"\A[a-zA-Z0-9_-]{1,48}\z")', self.method)
+        self.assertIn('Regex.IsMatch(project,@"\\A[a-zA-Z0-9_-]{1,48}\\z")', self.method)
 
     def test_02_file_size_budget_retained(self):
         self.assertIn("268435456L", self.method)
