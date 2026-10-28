@@ -2,6 +2,7 @@
 Only a local /api/tags loopback fixture. No model download, installer or GPU.
 """
 import importlib
+import io
 import json
 import os
 import pathlib
@@ -12,7 +13,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -33,7 +34,8 @@ class TagsHandler(BaseHTTPRequestHandler):
         if self.path != "/api/tags":
             self.send_error(404); return
         payload = json.dumps({"models": [
-            {"name": "qwen3:4b"}, {"name": "tinyllama:1.1b"}
+            {"name": "qwen3:4b", "digest": "sha256:" + "a" * 64},
+            {"name": "tinyllama:1.1b"}
         ]}).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -74,7 +76,7 @@ class P03HostPortTests(unittest.TestCase):
             allowed=frozenset(ROUTES), private_approved=frozenset())
 
     def test_01_original_catalog_not_installable(self):
-        self.assertEqual(self.registered, frozenset({"models.catalog","models.installed"}))
+        self.assertEqual(self.registered, frozenset({"models.catalog","models.installed","models.digest"}))
         r = self.dispatch.execute("models.catalog", {"query":"qwen"}, self.session)
         self.assertGreater(len(r["models"]), 0)
         self.assertTrue(all(not x["downloadEligible"] and
@@ -87,9 +89,42 @@ class P03HostPortTests(unittest.TestCase):
         self.assertTrue(all(x["installed"] and x["digest"] is None for x in r["models"]))
         self.assertFalse(r["digestVerified"])
 
+    def test_09_digest_is_only_local_ollama_claim(self):
+        result = self.dispatch.execute("models.digest", {"modelTag": "qwen3:4b"}, self.session)
+        self.assertEqual(result["ollamaReportedManifestDigest"], "sha256:" + "a" * 64)
+        self.assertFalse(result["independentlyVerified"])
+        self.assertFalse(result["licenseVerified"])
+        self.assertEqual(result["source"], "existing P02 transport /api/tags")
+
+    def test_10_missing_digest_is_unknown_not_installed_rights(self):
+        result = self.dispatch.execute("models.digest", {"modelTag": "tinyllama:1.1b"}, self.session)
+        self.assertIsNone(result["ollamaReportedManifestDigest"])
+        self.assertFalse(result["independentlyVerified"])
+        self.assertFalse(result["licenseVerified"])
+
+    def test_11_digest_malformed_local_response_holds(self):
+        raw = b'{"models":[{"name":"qwen3:4b","digest":"sha256:broken"}]}'
+        with patch.object(self.client, "_open", side_effect=lambda path: io.BytesIO(raw)):
+            with self.assertRaises(P03PortHold):
+                self.port.digest(self.session, {"modelTag": "qwen3:4b"})
+
+    def test_12_digest_duplicate_or_missing_local_model_holds(self):
+        raw = (b'{"models":[{"name":"qwen3:4b","digest":"sha256:' +
+               b'a' * 64 + b'"},{"name":"qwen3:4b","digest":"sha256:' + b'b' * 64 + b'"}]}')
+        with patch.object(self.client, "_open", side_effect=lambda path: io.BytesIO(raw)):
+            with self.assertRaises(P03PortHold):
+                self.port.digest(self.session, {"modelTag": "qwen3:4b"})
+        with self.assertRaises(P03PortHold):
+            self.port.digest(self.session, {"modelTag": "not-installed:1b"})
+
+    def test_13_digest_route_denies_browser_unscoped_user(self):
+        other = pack01.NativeSession("tenant", "principal", "chat", allowed=frozenset())
+        with self.assertRaises(pack01.HostDenied):
+            self.dispatch.execute("models.digest", {"modelTag": "qwen3:4b"}, other)
+
     def test_03_unbound_actions_hold_no_second_downloader(self):
-        self.assertEqual(len(self.registered),2)
-        self.assertEqual(len(self.dispatch.ports),2)
+        self.assertEqual(len(self.registered),3)
+        self.assertEqual(len(self.dispatch.ports),3)
         with self.assertRaises(pack01.HostHold):
             self.dispatch.execute("models.pull",{},pack01.NativeSession(
                 "tenant","principal","chat",allowed=frozenset({"models.pull"}),
@@ -114,7 +149,7 @@ class P03HostPortTests(unittest.TestCase):
              native_approve=lambda session,route,payload: state["approved"])
         host = pack01.NoxPackHost(self.catalog,native_approve=lambda s,r,p:state["approved"])
         bound = port.register(host,pack01.BoundPort,receipt="P03_BACKEND_MOCK_SOURCE_ONLY")
-        self.assertEqual(bound, frozenset(("models.catalog","models.installed","models.pull","models.queue")))
+        self.assertEqual(bound, frozenset(("models.catalog","models.installed","models.digest","models.pull","models.queue")))
         session = pack01.NativeSession("tenant","principal","chat",
             allowed=frozenset(ROUTES),private_approved=frozenset({"models.pull"}))
         with self.assertRaises(P03PortDenied):
@@ -146,8 +181,8 @@ class P03HostPortTests(unittest.TestCase):
 
     def test_08_existing_50_route_host_not_replaced(self):
         self.assertEqual(len(self.dispatch.routes),50)
-        self.assertEqual(len(self.dispatch.ports),2)
-        self.assertEqual(sum(v["enabled"] for v in self.dispatch.advertise(self.session).values()),2)
+        self.assertEqual(len(self.dispatch.ports),3)
+        self.assertEqual(sum(v["enabled"] for v in self.dispatch.advertise(self.session).values()),3)
 
 if __name__ == "__main__":
     unittest.main()
