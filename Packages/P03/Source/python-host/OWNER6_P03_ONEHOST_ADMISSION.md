@@ -5,7 +5,7 @@ RunID: `NOX-V16-E03-ONEHOST-PY-20261028` · Owner 3 · Scope `Packages/P03/Sourc
 ## Actual reusable source
 - `p03_onehost_port.py` plugs into **existing** PACK01 NoxPackHost and injects **existing** P02 OllamaClient. It does not instantiate Ollama, SQLite, HTTP, a second downloader, installer, RAG or an app host.
 - `catalog30.discovery.json` is generated from the existing P03 `ModelCatalog.cs` (Git blob SHA-1 `9b9e293be5a785369764fe378ee69c6c88c86b46`). All 30 families are REVIEW_REQUIRED, none enable downloads or assert legal rights, specific tags, digest, size or VRAM.
-- `test_p03_onehost_port.py` runs on Windows against pinned **real source** P02 owner branch commit `e5f5a5af7e58bd7c7d9f37c59034e7244ca1332b` and existing PACK01 native-host commit `33774d985dd7f05e413f1830f74392f49645fe29`. Only local fake /api/tags server; no weights, disk installs, P02 database migration or paid APIs.
+- `test_p03_onehost_port.py` runs on Windows against pinned **real source** P02 owner branch commit `71a32bf4e2d5ab7f1e17fc91de3502170a8885f7` and existing PACK01 native-host commit `be1fe05d88443e41b0d196617840508d9dd39b7d`. Only local fake /api/tags server; no weights, disk installs, P02 database migration or paid APIs.
 - `.github/workflows/e03-p03-python-onehost.yml` is owner3 component source CI; not a production EXE test.
 
 ## Three source-connected read-only routes
