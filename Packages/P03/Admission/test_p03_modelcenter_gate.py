@@ -552,5 +552,50 @@ class R06WindowsGgufPathRegressions(unittest.TestCase):
     def test_106_unc_share_not_local(self):
         self.check_path(r"\\server\share\file.gguf", "HOLD")
 
+
+class R07MalformedNativePayloadRegressions(unittest.TestCase):
+    """Untrusted IPC/JSON input must become HOLD, never a host/UI exception."""
+    def test_107_admission_non_mapping_evidence(self):
+        self.assertIn("INVALID_EVIDENCE_SHAPE", g.admit_for_existing_downloader([], {}, None).reasons)
+
+    def test_108_admission_non_mapping_context(self):
+        self.assertIn("INVALID_NATIVE_CONTEXT_SHAPE", g.admit_for_existing_downloader({}, [], None).reasons)
+
+    def test_109_admission_unhashable_kind(self):
+        e,c=example();e["kind"]=["ollama"]
+        self.assertIn("UNSUPPORTED_KIND",g.admit_for_existing_downloader(e,c,lambda _e,_c:True).reasons)
+
+    def test_110_admission_unhashable_external_lead(self):
+        e,c=example();e.update(kind="external",leadId={"ASR":"x"})
+        self.assertIn("UNKNOWN_EXTERNAL_WEIGHT_LEAD",g.admit_for_existing_downloader(e,c,lambda _e,_c:True).reasons)
+
+    def test_111_review_unhashable_lead(self):
+        self.assertEqual(g.review_lead(["qwen3:0.6b"]).status,"HOLD")
+
+    def test_112_progress_non_mapping_previous(self):
+        self.assertIn("INVALID_QUEUE_EVENT_SHAPE",g.progress_gate(None,{},TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
+
+    def test_113_progress_non_mapping_update(self):
+        self.assertIn("INVALID_QUEUE_EVENT_SHAPE",g.progress_gate({},["COMPLETED"],TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
+
+    def test_114_progress_unhashable_state(self):
+        old,new=queue_fixture();new["state"]=["COMPLETED"]
+        self.assertIn("UNKNOWN_QUEUE_STATE",g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
+
+    def test_115_retry_non_mapping_new_job(self):
+        old,new=retry_fixture()
+        self.assertIn("INVALID_QUEUE_EVENT_SHAPE",g.retry_gate(old,[],user_retry_consent=True,native_queue_attested=True,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
+
+    def test_116_retry_unhashable_terminal_state(self):
+        old,new=retry_fixture();old["state"]=["FAILED"]
+        self.assertIn("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE",g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
+
+    def test_117_prerequisite_invalid_shape(self):
+        self.assertIn("PREREQUISITE_PYTHON_UNVERIFIED",g.prerequisite_gates([],"TRAINING"))
+
+    def test_118_baseline_lock_rejects_bool_member_count(self):
+        e,c=example();c["nativeSourceLock"]["verifiedExtractedMemberCount"]=729.0
+        self.assertIn("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED",g.admit_for_existing_downloader(e,c,lambda _e,_c:True).reasons)
+
 if __name__ == "__main__":
     unittest.main()
