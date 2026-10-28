@@ -113,6 +113,8 @@ def _windows_local_gguf_path(value: Any) -> bool:
 
 def review_lead(tag_or_id: str) -> Decision:
     """25 Ollama tags + 17 multi-modal leads are all HOLD until attestations."""
+    if not isinstance(tag_or_id, str):
+        return Decision("HOLD", ("UNKNOWN_MODEL",))
     if tag_or_id in OLLAMA_TAG_LEADS:
         return Decision("HOLD", ("TAG_NOT_IMMUTABLE_PIN", "ARTIFACT_RIGHTS_SHA_UNVERIFIED"))
     if tag_or_id in dict(EXTERNAL_LEADS):
@@ -122,6 +124,10 @@ def review_lead(tag_or_id: str) -> Decision:
 
 def prerequisite_gates(facts: Mapping[str, Any], role: str) -> tuple[str, ...]:
     """Only host-measured and owner-attested facts count."""
+    if not isinstance(role, str):
+        return ("PREREQUISITE_ROLE_UNVERIFIED",)
+    if not isinstance(facts, Mapping):
+        facts = {}
     needed = ("ollama",) if role == "OLLAMA" else ("python", "git")
     if role in {"TRAINING", "GPU_TRAINING"}:
         needed = ("python", "git", "cuda", "torch", "peft", "trl", "accelerate")
@@ -141,9 +147,13 @@ def admit_for_existing_downloader(
     compatibility fallback: it would silently skip context/source verification.
     Supplied JSON by itself is NEVER license/hardware/source proof.
     """
+    if not isinstance(evidence, Mapping):
+        return Decision("HOLD", ("INVALID_EVIDENCE_SHAPE",))
+    if not isinstance(context, Mapping):
+        return Decision("HOLD", ("INVALID_NATIVE_CONTEXT_SHAPE",))
     reasons: list[str] = []
     kind = evidence.get("kind")
-    if kind not in {"ollama", "gguf", "external"}:
+    if not isinstance(kind, str) or kind not in {"ollama", "gguf", "external"}:
         return Decision("HOLD", ("UNSUPPORTED_KIND",))
     if context.get("sourceCommit") != BASE_COMMIT or context.get("sourceTree") != BASE_TREE:
         reasons.append("FROZEN_SOURCELOCK_MISMATCH")
@@ -152,7 +162,9 @@ def admit_for_existing_downloader(
     lock = context.get("nativeSourceLock")
     if (not isinstance(lock, Mapping)
             or lock.get("attested") is not True
+            or type(lock.get("verifiedRawPartCount")) is not int
             or lock.get("verifiedRawPartCount") != 3
+            or type(lock.get("verifiedExtractedMemberCount")) is not int
             or lock.get("verifiedExtractedMemberCount") != 729
             or not _sha(lock.get("ownerReceiptSha256"))
             or not _sha(lock.get("hostSourceReceiptSha256"))):
@@ -225,12 +237,12 @@ def admit_for_existing_downloader(
             reasons.append("GGUF_LOCAL_FILE_SHA_NOT_MATCHED")
         role = "EXTERNAL"
     else:
-        if evidence.get("leadId") not in dict(EXTERNAL_LEADS):
+        if not isinstance(evidence.get("leadId"), str) or evidence.get("leadId") not in dict(EXTERNAL_LEADS):
             reasons.append("UNKNOWN_EXTERNAL_WEIGHT_LEAD")
         # The owner3 queue supports Ollama and local GGUF only; no imaginary
         # external ASR/TTS/video transport or second downloader is permitted.
         reasons.append("EXTERNAL_WEIGHT_TRANSPORT_NOT_IN_EXISTING_QUEUE")
-        role = dict(EXTERNAL_LEADS).get(evidence.get("leadId"), "EXTERNAL")
+        role = dict(EXTERNAL_LEADS).get(evidence.get("leadId"), "EXTERNAL") if isinstance(evidence.get("leadId"), str) else "EXTERNAL"
     prereqs = context.get("verifiedPrerequisites")
     reasons.extend(prerequisite_gates(prereqs if isinstance(prereqs, Mapping) else {}, role))
     if reasons:
@@ -311,16 +323,18 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
     must verify receipt content/signature and measured downloaded bytes itself.
     This policy never calls a network, downloader, filesystem, or UI callback.
     """
+    if not isinstance(previous, Mapping) or not isinstance(update, Mapping):
+        return Decision("HOLD", ("INVALID_QUEUE_EVENT_SHAPE",))
     reasons = _queue_identity_errors(previous, update)
     reasons.extend(_trusted_queue_receipt_errors(previous, update, trusted_queue_verifier))
     before, after = previous.get("state"), update.get("state")
-    if before not in _QUEUE_STATES:
+    if not isinstance(before, str) or before not in _QUEUE_STATES:
         reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
-    if after in {"STOP", "CANCEL", "PAUSE", "RETRY"}:
+    if isinstance(after, str) and after in {"STOP", "CANCEL", "PAUSE", "RETRY"}:
         reasons.append("REQUEST_NOT_SERVER_CONFIRMED")
         if after == "STOP":
             reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
-    elif after not in _QUEUE_STATES:
+    elif not isinstance(after, str) or after not in _QUEUE_STATES:
         reasons.append("UNKNOWN_QUEUE_STATE")
     elif before in _QUEUE_TRANSITIONS and after not in _QUEUE_TRANSITIONS[before]:
         reasons.append("INVALID_OR_TERMINAL_QUEUE_TRANSITION")
@@ -332,7 +346,7 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
     if not (type(old_done) is int and type(new_done) is int and _positive(old_total)
             and 0 <= old_done <= new_done <= old_total):
         reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
-    if after in {"CANCEL_REQUESTED", "CANCELLING"}:
+    if isinstance(after, str) and after in {"CANCEL_REQUESTED", "CANCELLING"}:
         reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
     elif after == "CANCELLED" and not (_sha(update.get("cancelAckReceiptSha256"))
                                             and update.get("nativeCancelAttested") is True):
@@ -361,8 +375,10 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
     The existing P03 queue must create the NEW job/attempt and verify receipts.
     A stopped task may retry only after confirmed terminal CANCELLED or FAILED.
     """
+    if not isinstance(previous, Mapping) or not isinstance(new_job, Mapping):
+        return Decision("HOLD", ("INVALID_QUEUE_EVENT_SHAPE",))
     reasons = list(_trusted_queue_receipt_errors(previous, new_job, trusted_queue_verifier))
-    if previous.get("state") not in {"FAILED", "CANCELLED"}:
+    if not isinstance(previous.get("state"), str) or previous.get("state") not in {"FAILED", "CANCELLED"}:
         reasons.append("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE")
     elif previous.get("state") == "FAILED" and not (
             _sha(previous.get("failureReceiptSha256")) and previous.get("nativeFailureAttested") is True):
