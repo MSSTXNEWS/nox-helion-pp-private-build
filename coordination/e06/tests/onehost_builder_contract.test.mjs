@@ -143,7 +143,7 @@ test('payload manifest enumerates hidden and system files, matching owner P01 ex
   const manifest=script.indexOf('$manifest=[ordered]@');
   const verify=script.indexOf('& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verifyScript -Root $payload -Manifest $manifestPath');
   assert.ok(enumerate>0 && enumerate<manifest && manifest<verify);
-  assert.equal((script.match(/Get-ChildItem -LiteralPath \\$payload -File -Recurse -Force/g)||[]).length,1);
+  assert.equal(script.split('Get-ChildItem -LiteralPath $payload -File -Recurse -Force').length-1,1);
   assert.ok(!script.includes('Get-ChildItem -LiteralPath $payload -File -Recurse |'));
   assert.ok(script.includes('E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD'));
   assert.ok(!script.includes('Remove-Item -Recurse'));
