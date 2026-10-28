@@ -164,5 +164,28 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(self.seen, [{"text": "safe"}])
 
 
+    def test_catalog_rejects_boolean_or_float_native_owner(self):
+        for bad_owner in (True, 1.0, "1"):
+            with self.subTest(bad_owner=bad_owner):
+                catalog = json.loads(CATALOG.read_text("utf-8"))
+                for row in catalog["actions"]:
+                    if row["routeId"] == "media.subtitles":
+                        row["owner"] = bad_owner
+                with self.assertRaises(ValueError):
+                    bridge.NoxPackHost(catalog)
+
+    def test_catalog_rejects_unknown_risk_policy(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        for row in catalog["actions"]:
+            if row["routeId"] == "media.subtitles":
+                row["risk"] = "unverified"
+        with self.assertRaises(ValueError):
+            bridge.NoxPackHost(catalog)
+
+    def test_original_catalog_owner_risks_remain_valid(self):
+        original = json.loads(CATALOG.read_text("utf-8"))
+        self.assertEqual(len(bridge.NoxPackHost(original).routes), 50)
+
+
 if __name__ == "__main__":
     unittest.main()
