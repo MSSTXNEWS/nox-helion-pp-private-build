@@ -1,0 +1,21 @@
+--- a/coordination/source-lock/verify_original_archive.py
++++ b/coordination/source-lock/verify_original_archive.py
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env python3
+ """Fail-closed, read-only SHA-256 audit of the original three NOX ZIP parts."""
+ from __future__ import annotations
+-import argparse, hashlib, json, os, pathlib, re, stat, sys, tempfile, zipfile
++import argparse, hashlib, json, os, pathlib, re, stat, sys, tempfile, unicodedata, zipfile
+ 
+ PARTS = ("source_00.part", "source_01.part", "source_02.part")
+ EXPECTED_SIZE = 60364346
+@@ -16,7 +16,8 @@
+ RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$', re.I)
+ 
+ def safe_name(name: str) -> bool:
+-    if not name or name.startswith("/") or "\\" in name or BAD.search(name):
++    if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
++            or unicodedata.normalize("NFC", name) != name):
+         return False
+     parts = name.rstrip("/").split("/")
+     return bool(parts) and all(p not in ("", ".", "..")

@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_V16_W1_01_R17_OWNER_PATCH_V1",
+  "runId": "NOX-V16-W1-01-20261028T233223MSK-R17",
+  "owner": "W1-01 SourceLock independent patch, manual #1 only shared PR162 writer",
+  "target": "coordination/source-lock/verify_original_archive.py",
+  "verifiedPR162Head": "eebb89df8c280ae15d388514f1d0ec15fa80fc50",
+  "verifiedPR162Tree": "8ddb5cb6a816d65d11e743fe773a1d8b053d5bbe",
+  "preGitBlobSha1": "bcb76d738b863433c03a9c67907884f615557298",
+  "preSha256": "6f74402d0fb495142d0e39a70ab2b09e0dc1c4b3f91b14a5b4d27933ef9e7b63",
+  "candidatePostGitBlobSha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+  "candidatePostSha256": "089200b6be61a375346fc1825a7ab96bd507d61d57ae79461650381933770307",
+  "testSourceSha256": "01354884aa60e0cc520c66632f453de0dd8fdd4a086257f7acc4e88b608676aa",
+  "tests": "RED 4/8 failing on exact preimage, GREEN 8/8 on candidate plus py_compile",
+  "archivePhysicalSha256": "N/D",
+  "originalZip729Verified": 0,
+  "changeScope": "CANDIDATE ONLY; never changes PR162, main, original archive, host or installer",
+  "lesson": "CANONICAL_ZIP_NFC_PARITY_BEFORE_729_ADMISSION",
+  "release": "HOLD"
+}
