@@ -253,8 +253,11 @@ try
         await Task.Delay(20);
     }
     Assert(observedStart, "F18 actual worker claimed job before cross-window STOP");
-    Assert(await secondWindow.CancelAsync(waitingJob.Id),
-        "F19 second window persisted running-job cancellation");
+    var remoteStopAccepted = await secondWindow.CancelAsync(waitingJob.Id);
+    var stopSnapshot = (await remoteQueue.ReadAsync()).Single();
+    Assert(remoteStopAccepted,
+        "F19 second-window STOP accepted; state=" + stopSnapshot.State +
+        " error=" + stopSnapshot.Error);
     await operation.WaitAsync(TimeSpan.FromSeconds(8));
     var finished = (await remoteQueue.ReadAsync()).Single();
     Assert(finished.State == ModelJobState.Cancelled,
