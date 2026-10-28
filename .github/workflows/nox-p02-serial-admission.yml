@@ -24,6 +24,13 @@ jobs:
           ref: 33774d985dd7f05e413f1830f74392f49645fe29
           path: .nox-pinned-pack01
           persist-credentials: false
+      - name: Checkout exact approved P04 RAG source (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 8b86e706395bf75b847a19d678e11af811e52202
+          path: .nox-pinned-p04
+          persist-credentials: false
       - name: Reuse Python already provided by runner
         uses: actions/setup-python@v5
         with:
@@ -44,6 +51,12 @@ jobs:
         shell: pwsh
         run: |
           python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_owner_route_ports.py' -v
+      - name: Prove P02 current SQLite and P04 original local RAG are one scoped chat
+        shell: pwsh
+        env:
+          NOX_P04_SOURCE_DIR: ${{ github.workspace }}/.nox-pinned-p04/Packages/P04
+        run: |
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_p04_exact_owner.py' -v
       - name: Release gate (intentional)
         shell: pwsh
         run: |
