@@ -27,7 +27,7 @@ var result=await checker.CheckAsync(cfg);
 Ensure(result.Status=="UPDATE_AVAILABLE_VERIFIED"&&result.HasUpdate,"signed newer version accepted");
 Ensure(result.InstallerUrl?.Host=="updates.nox.example","installer origin held to manifest origin");
 Ensure(handler.Calls==1,"one HTTPS read-only check");
-Ensure(!result.HasUpdate || result.InstallerBytes == 73_000_000,"byte size verified from signed data");
+Ensure(!result.HasUpdate || result.Bytes == 73_000_000,"byte size verified from signed data");
 result=await checker.CheckAsync(cfg with {CurrentVersion="2.1.0"});
 Ensure(result.Status=="UP_TO_DATE","same version not advertised");
 handler.Value=signed with {Version="4.0.0"};
