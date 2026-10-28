@@ -1,0 +1,27 @@
+name: NOX FINISH R08 Windows diagnostic
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'diagnostics/r08/**'
+      - '.github/workflows/nox-finish-r08.yml'
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build original R08 Windows diagnostic from pinned bytes
+        shell: pwsh
+        run: ./diagnostics/r08/build_windows.ps1
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: nox-r08-WPF-diagnostic-NOT-RELEASE
+          path: ${{ runner.temp }}/nox-r08-publish
+          retention-days: 14
