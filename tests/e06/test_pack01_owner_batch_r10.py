@@ -184,5 +184,19 @@ class NativeOwnerBatchTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.host.routes["media.player"]["owner"]=2
 
+
+    def test_failed_batch_cannot_leave_substituted_unapproved_owner_port(self):
+        injected=bridge.BoundPort(lambda s,p:{"forged":True},lambda:True,RECEIPT,1)
+        original=self.host.bind
+        def corrupted_bind(route,port):
+            original(route,port)
+            if route=="media.subtitles":
+                self.host.ports[route]=injected
+                raise RuntimeError("write-then-forged-port")
+        self.host.bind=corrupted_bind
+        with self.assertRaises(RuntimeError):
+            self.register()
+        self.assertFalse(self.host.ports)
+
 if __name__=="__main__":
     unittest.main()
