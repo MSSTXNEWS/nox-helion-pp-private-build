@@ -384,7 +384,7 @@ class G2ComponentTests(unittest.TestCase):
         receipts["P02"] = "0" * 64
         got = binder.bind()
         self.assertIn("models.catalog", got)
-        self.assertEqual(self.host.ports["models.catalog"].receipt, OWNER_SHA["P03"])
+        self.assertEqual(self.host.ports["models.catalog"].evidence_id, OWNER_SHA["P03"])
 
     def test_32_reject_nonmapping_owner_receipt_contract(self):
         with self.assertRaises(G2Hold):
