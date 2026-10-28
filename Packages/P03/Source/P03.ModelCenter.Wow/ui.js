@@ -12,6 +12,7 @@ const state = {
 };
 const unknown = 'Н/Д';
 const numeric = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : null;
+const byteCount = x => Number.isSafeInteger(x) && x >= 0 ? x : null;
 const bytes = x => {const n=numeric(x);if(n===null)return unknown;
   if(n===0)return '0 Б';const units=['Б','КБ','МБ','ГБ','ТБ'];const i=Math.min(4,Math.floor(Math.log(n)/Math.log(1024)));
   return `${(n/Math.pow(1024,i)).toLocaleString('ru-RU',{maximumFractionDigits:i?1:0})} ${units[i]}`;};
@@ -88,7 +89,7 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   $('orbit').style.setProperty('--pct',realPct===null?'0%':realPct+'%');$('orbit').classList.toggle('working',j?.state==='Running'||j?.state==='Downloading');
   $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПЕРЕДАНО';
   const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?.status||'Нет активной операции';
-  $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
+  $('transfer').textContent=complete!==null?`${bytes(complete)} / ${total!==null&&total>0?bytes(total):unknown}`:'Н/Д';
   $('transferNote').textContent=realPct===null?'Без достоверного процента':`Передано ${realPct}% · установка требует receipt`;
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
   const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running'].includes(j.state);
@@ -165,7 +166,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
   let next=incoming?{...incoming}:null;
   if(next){
-    const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
+    const done=byteCount(next.completedBytes),total=byteCount(next.totalBytes)>0?next.totalBytes:null;
     if(done!==null&&total!==null&&done>total)return;
     next.completedBytes=done;next.totalBytes=total;
     if(old&&old.jobId===next.jobId&&old.modelTag===next.modelTag){
@@ -211,10 +212,13 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
      !['Completed','Failed','Cancelled'].includes(job.state)){
     if(typeof evt.status==='string')job.status=evt.status;
     if(evt.phase==='started'&&job.state==='Queued')job.state='Running';
-    const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
-    if(done!==null&&total!==null&&total>0&&done<=total&&
-       (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
-       (numeric(job.totalBytes)===null||total>=job.totalBytes)){
+    // A host can report bytes before it knows the total. Retain that evidence,
+    // keep the denominator unknown and never turn it into an invented percent.
+    const done=byteCount(evt.completedBytes)??byteCount(job.completedBytes);
+    const total=byteCount(evt.totalBytes)>0?evt.totalBytes:byteCount(job.totalBytes);
+    if((done===null||total===null||done<=total)&&
+       (byteCount(job.completedBytes)===null||done!==null&&done>=job.completedBytes)&&
+       (byteCount(job.totalBytes)===null||total!==null&&total>=job.totalBytes)){
       job.completedBytes=done;job.totalBytes=total;
     }
     const terminal={completed:'Completed',failed:'Failed',cancelled:'Cancelled'}[evt.phase];

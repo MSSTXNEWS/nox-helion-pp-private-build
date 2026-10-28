@@ -62,3 +62,36 @@ test('invalid progress snapshot admission is atomic', () => {
   snapshot(api, {...job(), completedBytes: 200, totalBytes: 100}, {models: [{id: 'qwen3', name: 'replacement'}]});
   assert.equal(api.state.models, original); assert.equal(api.state.activeJob.state, 'Running');
 });
+test('unknown-total progress preserves real transferred bytes without inventing percent', () => {
+  const api = boot(); snapshot(api, job('Running'));
+  event(api, 'progress', {completedBytes: 4096, totalBytes: null});
+  assert.equal(api.state.activeJob.completedBytes, 4096);
+  assert.equal(api.state.activeJob.totalBytes, null);
+  assert.equal(api.nodes.get('transfer').textContent, '4 КБ / Н/Д');
+  assert.equal(api.nodes.get('orbitLabel').textContent, 'Running');
+});
+test('unknown-total events cannot regress known byte counters', () => {
+  const api = boot(); snapshot(api, {...job('Running'), completedBytes: 4096, totalBytes: 8192});
+  event(api, 'progress', {completedBytes: 6144});
+  assert.equal(api.state.activeJob.completedBytes, 6144);
+  assert.equal(api.state.activeJob.totalBytes, 8192);
+  event(api, 'progress', {completedBytes: 2048});
+  assert.equal(api.state.activeJob.completedBytes, 6144);
+  event(api, 'progress', {completedBytes: 16384});
+  assert.equal(api.state.activeJob.completedBytes, 6144);
+});
+test('zero-total update keeps bytes visible and denominator unknown', () => {
+  const api = boot(); snapshot(api, job('Running'));
+  event(api, 'progress', {completedBytes: 1024, totalBytes: 0});
+  assert.equal(api.state.activeJob.completedBytes, 1024);
+  assert.equal(api.nodes.get('transfer').textContent, '1 КБ / Н/Д');
+});
+test('fractional and unsafe byte counts are not presented as measured progress', () => {
+  for (const amount of [0.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const api = boot(); snapshot(api, {...job('Running'), completedBytes: amount, totalBytes: amount});
+    assert.equal(api.state.activeJob.completedBytes, null);
+    assert.equal(api.state.activeJob.totalBytes, null);
+    event(api, 'progress', {completedBytes: amount, totalBytes: amount});
+    assert.equal(api.state.activeJob.completedBytes, null);
+  }
+});
