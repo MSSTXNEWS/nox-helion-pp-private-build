@@ -4,6 +4,7 @@ const bc = 'BroadcastChannel' in window ? new BroadcastChannel('nox-helion-theat
 const $ = id => document.getElementById(id);
 const video = $('video'), poster = $('poster'), status = $('media-status');
 let mediaURL = null, subtitleURL = null, subtitleTrack = null;
+let mediaEpoch = 0, subtitleEpoch = 0; // discard stale async subtitles
 function notice(message) { status.textContent = String(message).slice(0, 300); }
 function forgetSubtitles() {
   if (subtitleTrack) { subtitleTrack.remove(); subtitleTrack = null; }
@@ -46,7 +47,7 @@ $('file').onchange = e => {
   if (!/\.(mp4|webm|mov|m4v)$/i.test(file.name) || file.size < 1) {
     notice('HOLD: выберите непустой MP4, WebM, MOV или M4V.'); return;
   }
-  video.pause(); forgetSubtitles();
+  video.pause(); mediaEpoch++; subtitleEpoch++; forgetSubtitles();
   if (mediaURL) URL.revokeObjectURL(mediaURL);
   mediaURL = URL.createObjectURL(file);
   video.src = mediaURL;
@@ -60,18 +61,27 @@ $('subtitle-file').onchange = async e => {
   if (!ext || file.size < 1 || file.size > 5 * 1024 * 1024) {
     notice('HOLD: субтитры .srt/.vtt, размер до 5 МБ.'); return;
   }
+  const subtitleChoice = ++subtitleEpoch, movieChoice = mediaEpoch;
   try {
     const vtt = subtitleToVtt(await file.text(), ext);
-    // Preserve the existing track on a malformed import; replace it only after parsing succeeds.
+    if (subtitleChoice !== subtitleEpoch || movieChoice !== mediaEpoch || !mediaURL) return;
     const nextURL = URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }));
-    forgetSubtitles(); subtitleURL = nextURL;
-    subtitleTrack = document.createElement('track');
-    subtitleTrack.kind = 'subtitles'; subtitleTrack.label = 'Локальные субтитры';
-    subtitleTrack.srclang = 'ru'; subtitleTrack.src = subtitleURL; subtitleTrack.default = true;
-    video.appendChild(subtitleTrack);
-    if (video.textTracks?.length) video.textTracks[video.textTracks.length - 1].mode = 'showing';
+    const track = document.createElement('track');
+    track.kind = 'subtitles'; track.label = 'Локальные субтитры';
+    track.srclang = /\.(ru|es|en)\.(?:srt|vtt)$/i.exec(file.name)?.[1]?.toLowerCase() || 'und';
+    track.src = nextURL; track.default = true;
+    const enable = () => {
+      if (subtitleTrack === track && video.textTracks?.length)
+        video.textTracks[video.textTracks.length - 1].mode = 'showing';
+    };
+    track.addEventListener?.('load', enable);
+    forgetSubtitles(); subtitleURL = nextURL; subtitleTrack = track;
+    video.appendChild(track); enable();
     notice('Субтитры подключены: ' + file.name);
-  } catch (error) { notice('HOLD: файл субтитров не прочитан: ' + String(error?.message || error)); }
+  } catch (error) {
+    if (subtitleChoice === subtitleEpoch && movieChoice === mediaEpoch)
+      notice('HOLD: файл субтитров не прочитан: ' + String(error?.message || error));
+  }
 };
 $('play').onclick = play;
 $('pause').onclick = () => video.pause();
@@ -84,6 +94,7 @@ $('screens').onclick = async () => {
 };
 video.addEventListener('error', () => notice('HOLD: видео не открылось (формат или кодек).'));
 window.addEventListener('beforeunload', () => {
+  mediaEpoch++; subtitleEpoch++;
   video.pause(); forgetSubtitles();
   if (mediaURL) URL.revokeObjectURL(mediaURL);
   bc?.close();
