@@ -31,6 +31,7 @@ const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
 // E06 must have already authenticated the native owner ledger. This pure
 // projection ONLY checks internal consistency; a SHA-shaped string is not a
 // signature and this code must never be the authority that accepts a release.
+// Product progress counts ACCEPTED criteria ONLY, never component source proofs.
 const derivedLaneProgress = b => {
   if (!Number.isInteger(b.total_tasks) || b.total_tasks < 1 || b.total_tasks > 5000 ||
       !Array.isArray(b.task_ledger) || b.task_ledger.length !== b.total_tasks) return null;
@@ -43,12 +44,14 @@ const derivedLaneProgress = b => {
         !['SOURCE','HOLD','NOT_RUN','COMPONENT_VERIFIED','ACCEPTED'].includes(task.status)) return null;
     seen.add(task.task_id);
     denominator += task.weight;
+    // A green component test is not an accepted release criterion. Only the
+    // E06-attested ACCEPTED TaskID with its own owner receipt gets weight.
     if (task.status === 'ACCEPTED') {
       if (!sha(task.receipt_sha256)) return null;
       accepted += task.weight;
     } else if (task.status === 'COMPONENT_VERIFIED') {
-      if (!sha(task.receipt_sha256)) return null;
-    } else if (task.receipt_sha256 != null) return null;
+      if (!sha(task.receipt_sha256)) return null; // source proof, no readiness credit
+    } else if (task.receipt_sha256 != null) return null; // pending has no receipt
   }
   if (Math.abs(denominator - 100) > 0.000001) return null;
   return round2(accepted);
