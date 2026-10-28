@@ -1,0 +1,32 @@
+{
+  "block": 3,
+  "TaskID": "P02-STREAM-TERMINAL-SNAPSHOT",
+  "red": "Three deterministic cases RED: consumer promotes partial/revokes terminal; adapter mutates terminal during chat.delta",
+  "green": "targeted terminal + lifecycle + STOP suite: 22/22 PASS",
+  "lesson": "Freeze validated stream terminal state before yielding control; a consumer or native adapter may retain and mutate a frame.",
+  "prior_lesson_applied": "Authority/state checks are time-sensitive around blocking or suspension boundaries.",
+  "agent_id": "/root/a04",
+  "parent_commit": "af53b2526171043a07d09b5e632d28f5d947cfa0",
+  "local_commit": "9570dcbc9528f8106d6cad1fb0fa2c8849f4041b",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "pre_blob": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "post_blob": "19632f3a0d2abbd94a58dfa2af86db299347b87e",
+      "post_sha256": "9e09a0a25b85021e8ca5753997203ab3563d26edcfd90c08c986269358a297d1"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_blob": "fb7476d27e06aa7555342a0797d8a30cb9f699b2",
+      "post_blob": "d1e17c94d8456bcd3caa0a304e675745c45edaa1",
+      "post_sha256": "e420c111780b53a61b54c9a531f9e10f20b14cdce16f29b9efd61fb448d2ca70"
+    },
+    {
+      "path": "coordination/astra/agents/A04/test_stream_snapshot_r27.py",
+      "pre_blob": null,
+      "post_blob": "e602183e612692e9194cc525a2b20703a92c7e0e",
+      "post_sha256": "d8d43e532c3ef10c29f5c1487007db2a2cb59e74f37609a589d2f151fe26da45"
+    }
+  ],
+  "scope": "SOURCE_ONLY; native Windows/EXE/CI NOT_RUN"
+}

@@ -217,8 +217,11 @@ class OllamaClient:
                     if stop.is_set() or cancel.is_set():
                         raise Cancelled("STOP requested")
                     assert isinstance(payload, dict)
+                    # The consumer owns the yielded dictionary. Its edits must
+                    # never change the transport's already-validated terminal bit.
+                    terminal = payload["done"]
                     yield payload
-                    if payload["done"]:
+                    if terminal:
                         saw_done = True
                         break
                 elif kind == "error":
