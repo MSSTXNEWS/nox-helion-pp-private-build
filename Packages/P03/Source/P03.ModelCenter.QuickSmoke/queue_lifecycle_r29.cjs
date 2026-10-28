@@ -16,7 +16,7 @@ function boot() {
   const document = {getElementById(id) {if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id);},
     createElement: node, querySelectorAll: () => [], addEventListener() {}};
   const context = vm.createContext({document, window: {}, URL, setTimeout: () => 1, clearTimeout() {}});
-  vm.runInContext(source + '\nglobalThis.api = {state, processMessage, currentJob};', context);
+  vm.runInContext(source + '\nglobalThis.api = {state, processMessage, currentJob, hardwareCompatibility};', context);
   return {...context.api, nodes};
 }
 const id = '11111111-1111-1111-1111-111111111111';
@@ -94,4 +94,31 @@ test('fractional and unsafe byte counts are not presented as measured progress',
     event(api, 'progress', {completedBytes: amount, totalBytes: amount});
     assert.equal(api.state.activeJob.completedBytes, null);
   }
+});
+function reviewedModel(extra = {}) {return {id: 'deepseek-r1', name: 'DeepSeek', artifactVerified: true,
+  exactTag: 'deepseek-r1:1.5b', immutableRevision: 'reviewed-revision', license: 'reviewed-license',
+  licenseEvidenceUrl: 'https://example.invalid/license', artifactBytes: 1024, sha256: 'a'.repeat(64),
+  manifestSha256: 'b'.repeat(64), compatibilityReviewed: true, recommendedRamGiB: 8, ...extra};}
+test('reviewed RAM-only model uses actual available RAM', () => {
+  const api = boot(); api.state.hardware = {ramFreeGiB: 16, vramFreeGiB: null};
+  assert.equal(api.hardwareCompatibility(reviewedModel()), true);
+  api.state.hardware.ramFreeGiB = 4;
+  assert.equal(api.hardwareCompatibility(reviewedModel()), false);
+});
+test('RAM-only compatibility stays unknown for missing or invalid RAM reading', () => {
+  const api = boot(); for (const ramFreeGiB of [null, undefined, NaN, -1, '16']) {
+    api.state.hardware = {ramFreeGiB, vramFreeGiB: 24};
+    assert.equal(api.hardwareCompatibility(reviewedModel()), null);
+  }
+});
+test('positive GPU requirement cannot be bypassed by abundant system RAM', () => {
+  const api = boot(), model = reviewedModel({requiredVramGiB: 8});
+  api.state.hardware = {ramFreeGiB: 128, vramFreeGiB: 4};
+  assert.equal(api.hardwareCompatibility(model), false);
+  api.state.hardware.vramFreeGiB = null; assert.equal(api.hardwareCompatibility(model), null);
+  api.state.hardware.vramFreeGiB = 12; assert.equal(api.hardwareCompatibility(model), true);
+});
+test('unreviewed memory requirement never produces compatible status', () => {
+  const api = boot(); api.state.hardware = {ramFreeGiB: 128, vramFreeGiB: 24};
+  assert.equal(api.hardwareCompatibility(reviewedModel({artifactVerified: false})), null);
 });

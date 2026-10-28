@@ -110,13 +110,17 @@ function renderDna(){const m=current();const dl=$('dnaList');dl.replaceChildren(
 }
 function checkState(label,passed){const item=el('div','check '+(passed===true?'pass':passed===false?'fail':''));item.append(el('strong','',passed===true?'✓':passed===false?'×':'?'),el('span','',label));return item;}
 function hardwareCompatibility(m){if(!hasEvidence(m)||!state.hardware)return null;const h=state.hardware;
-  const requested=numeric(m.requiredVramGiB),available=numeric(h.vramFreeGiB);if(requested===null||available===null)return null;return available>=requested;
+  // Reviewed CPU artifacts have a RAM recommendation and no VRAM requirement.
+  // A positive GPU requirement still uses VRAM; system RAM cannot substitute it.
+  const gpu=numeric(m.requiredVramGiB)>0;
+  const requested=numeric(gpu?m.requiredVramGiB:m.recommendedRamGiB),available=numeric(gpu?h.vramFreeGiB:h.ramFreeGiB);
+  if(requested===null||requested<=0||available===null)return null;return available>=requested;
 }
 function renderPreflight(){const m=current(),h=state.hardware,verified=hasEvidence(m);
  const points=[['Официальный источник',isOfficial(m?.officialUrl)],['Лицензия и права',verified&&!!(m?.license&&m.licenseEvidenceUrl)||null],
   ['Неизменяемая ревизия',verified&&!!m?.immutableRevision||null],['SHA-256 артефакта',verified&&isDigest(m?.sha256)||null],
   ['Размер и место на диске',verified&&numeric(m?.requiredDiskGiB)!==null&&numeric(h?.diskFreeGiB)!==null?h.diskFreeGiB>=m.requiredDiskGiB:null],
-  ['Видеопамять ПК',hardwareCompatibility(m)]];
+  [numeric(m?.requiredVramGiB)>0?'Видеопамять ПК':'Оперативная память ПК',hardwareCompatibility(m)]];
   const container=$('preflightList');container.replaceChildren(...points.map(([label,result])=>checkState(label,result)));
   $('hardwareState').textContent=hardwareCompatibility(m)===true?'Подходит':hardwareCompatibility(m)===false?'Недостаточно':'Неизвестна';
   $('hardwareHint').textContent=h?`VRAM доступно: ${fmtRam(h.vramFreeGiB)}; RAM: ${fmtRam(h.ramFreeGiB)}`:'Нет показаний ПК';
