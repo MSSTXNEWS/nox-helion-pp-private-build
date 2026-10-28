@@ -447,7 +447,7 @@ class P02Store:
         with self._write_transaction():
             self._owned(tenant, user, chat)
             message_id = uuid.uuid4().hex
-            self.db.execute("INSERT INTO p02_messages VALUES(?,?,?,?,?)",
+            self.db.execute("INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",
                             (message_id, chat, role, content, int(time.time())))
             return message_id
 
