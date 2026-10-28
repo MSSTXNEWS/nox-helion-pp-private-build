@@ -19,7 +19,9 @@ public static class E05ApprovedSpace
         foreach (var f in (feeds ?? Array.Empty<FeedResult>()).Take(16))
         {
             if (f is null) continue;
-            approved?.TryGetValue(f.Id, out var src);
+            ApprovedFeed? src = null;
+            if (approved is not null && f.Id is not null)
+                approved.TryGetValue(f.Id, out src);
             var trust = E05FeedTrust.Classify(f, src, now);
             bool licensedAndFresh = trust.Status == "SOURCE_DATED" &&
                 f.FetchedAt.HasValue && f.FetchedAt <= now &&
