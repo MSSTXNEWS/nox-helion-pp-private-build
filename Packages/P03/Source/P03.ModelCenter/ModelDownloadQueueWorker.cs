@@ -23,6 +23,10 @@ public sealed class ModelDownloadQueueWorker(
                     Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }, ct);
                 return;
             }
+            // Hold one OS-backed lease through the transfer so a second window
+            // cannot misclassify this Running job as crashed during recovery.
+            using var executionLease = store.TryAcquireExecutionLease(job.Id);
+            if (executionLease is null) return;
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             lock (_running) _running[job.Id] = linked;
             // CancelQueuedAsync may win between snapshot and this transition.
