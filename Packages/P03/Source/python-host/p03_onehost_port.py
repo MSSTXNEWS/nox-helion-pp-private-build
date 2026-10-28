@@ -6,6 +6,7 @@ Only the trusted host passes owner services/NativeSession; unknown actions HOLD.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 import re
 from pathlib import Path
 from typing import Any, Callable
@@ -248,11 +249,11 @@ class P03OneHostPort:
                 ))
         host_routes = getattr(dispatcher, "routes", None)
         ports = getattr(dispatcher, "ports", None)
-        if not isinstance(host_routes, dict) or not isinstance(ports, dict):
+        if not isinstance(host_routes, Mapping) or not isinstance(ports, dict):
             raise P03PortHold("Existing PACK01 host ports/owner map required")
         ids = [route for route, _, _ in pending]
         if len(ids) != len(set(ids)) or any(
-                isinstance(host_routes.get(route), dict) is False
+                not isinstance(host_routes.get(route), Mapping)
                 or type(host_routes[route].get("owner")) is not int
                 or host_routes[route]["owner"] != 3 or route in ports
                 for route in ids):
@@ -291,8 +292,8 @@ class P03OneHostPort:
     @staticmethod
     def _bind(dispatcher, port_type, route, call, available, receipt):
         routes = getattr(dispatcher, "routes", None)
-        if (not isinstance(routes, dict)
-                or not isinstance(routes.get(route), dict)
+        if (not isinstance(routes, Mapping)
+                or not isinstance(routes.get(route), Mapping)
                 or type(routes[route].get("owner")) is not int
                 or routes[route]["owner"] != 3):
             raise P03PortHold("Owner-route map mismatch")
