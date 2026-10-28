@@ -2,7 +2,7 @@
 Stage only. Never writes originals, model files, user data or a second router.
 """
 from __future__ import annotations
-import hashlib, json, difflib, sys
+import hashlib, json, difflib, sys, stat
 from pathlib import Path
 
 RUN_ID = "NOX-V16-E06-EXPRESS-ONEHOST-20261028-R10"
@@ -14,13 +14,26 @@ REPLACEMENT = 'case "models.preflight":\n                    await RunDiagnostic
 def digest(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
+def trusted_path(value):
+    path = Path(value).absolute()
+    for node in (path, *path.parents):
+        try:
+            info = node.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(info.st_mode) or (getattr(info, "st_file_attributes", 0) &
+                                         getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+            raise SystemExit("OWNER6_REPARSE_PATH_HOLD")
+    return path
+
+
 def main():
     if len(sys.argv) != 4:
         raise SystemExit("USAGE: stage_onehost.py STAGED_R11 E06_ADDON_CS PYTHON_EXE")
-    stage = Path(sys.argv[1]).resolve()
-    e06 = Path(sys.argv[2]).resolve()
-    python_exe = Path(sys.argv[3]).resolve()
-    original = stage / "Integration" / "Pack01HostBridge.cs"
+    stage = trusted_path(sys.argv[1])
+    e06 = trusted_path(sys.argv[2])
+    python_exe = trusted_path(sys.argv[3])
+    original = trusted_path(stage / "Integration" / "Pack01HostBridge.cs")
     if not original.is_file() or original.is_symlink():
         raise SystemExit("OWNER6_WPF_SOURCE_MISSING")
     before = original.read_bytes()
@@ -38,11 +51,15 @@ def main():
         raise SystemExit("OWNER6_PARTIAL_FUNCTION_MISSING")
     if not python_exe.is_file() or python_exe.is_symlink() or digest(python_exe.read_bytes()) != ORIGINAL_EXE_SHA256:
         raise SystemExit("ORIGINAL_PYTHON_EXE_SHA_HOLD")
-    dest = stage / "Integration" / "OriginalPythonDiagnosticBridge.cs"
+    dest = trusted_path(stage / "Integration" / "OriginalPythonDiagnosticBridge.cs")
+    out = trusted_path(stage.parent / "E06_R10_SOURCE_RECEIPT.json")
+    if out.exists():
+        raise SystemExit("OWNER_CONFLICT_EXISTING_RECEIPT")
     if dest.exists():
         raise SystemExit("OWNER_CONFLICT_EXISTING_ADAPTER")
     original.write_bytes(patched)
-    dest.write_bytes(extra)
+    with dest.open("xb") as target:
+        target.write(extra)
     patch = "".join(difflib.unified_diff(old.splitlines(True), new_text.splitlines(True),
                                          fromfile="Pack01HostBridge.cs.pre", tofile="Pack01HostBridge.cs.post"))
     records = [
@@ -58,8 +75,8 @@ def main():
                "original_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
                "files": records, "owner3_compiler_overlay": "REQUIRES_OWNER_APPROVAL",
                "release_accepted": False, "windows_runtime_accepted": False}
-    out = stage.parent/"E06_R10_SOURCE_RECEIPT.json"
-    out.write_text(json.dumps(receipt, ensure_ascii=False, indent=2)+"\n")
+    with out.open("x", encoding="utf-8") as target:
+        target.write(json.dumps(receipt, ensure_ascii=False, indent=2)+"\n")
     print("E06_R10_STAGED_ONEHOST_SHA_PIN_PASS", digest(patched), digest(extra))
 if __name__ == "__main__":
     main()
