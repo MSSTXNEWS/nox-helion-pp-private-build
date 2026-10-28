@@ -1,0 +1,261 @@
+/* NOX CINEMA FX V16 — additive licensed-original D02 effects.
+   Trusted local WebView2 pages only. Does not overwrite approved image/video assets.
+   Deliberately avoids 3D runtimes, external fonts, HTTP and privileged host messages. */
+.nox-cinema-scope {
+  --nox-ice: rgba(155, 234, 238, .62);
+  --nox-ember: rgba(224, 120, 55, .52);
+  --nox-panel: rgba(13, 23, 31, .64);
+  --nox-border: rgba(169, 224, 232, .3);
+  --nox-fg: #eaf4f5;
+  --nox-wake: 1;
+  color-scheme: dark;
+}
+.nox-cinema-panel {
+  position:relative; isolation:isolate;
+  border:1px solid var(--nox-border);
+  border-radius:18px; color:var(--nox-fg);
+  background:linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.17),inset 0 -2px 12px rgba(0,0,0,.24),
+    0 10px 32px rgba(0,0,0,.32),0 0 24px rgba(107,194,209,.055);
+  backdrop-filter:blur(9px) saturate(1.13);
+  -webkit-backdrop-filter:blur(9px) saturate(1.13);
+  transition:box-shadow .28s ease,border-color .28s ease,background .28s ease;
+}
+.nox-cinema-panel::before {
+  content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(115deg,transparent 30%,rgba(178,237,245,.1) 49%,transparent 66%);
+  background-size:240% 100%;
+  animation:nox-cinema-sweep 16s ease-in-out infinite;
+}
+.nox-cinema-panel::after {
+  content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;
+  box-shadow:inset 1px 1px 0 rgba(193,249,253,.09),inset -1px -1px 0 rgba(217,105,54,.07);
+}
+.nox-cinema-panel:hover,.nox-cinema-panel:focus-within {
+  border-color:rgba(152,233,241,.51);
+  box-shadow:0 12px 32px rgba(0,0,0,.42),0 0 28px rgba(102,202,222,.13),
+    inset 0 1px rgba(233,254,255,.2);
+}
+.nox-cinema-control {
+  --nox-float-shift: 0px;
+  position:relative; isolation:isolate;overflow:hidden;
+  color:var(--nox-fg);background:linear-gradient(160deg,rgba(60,78,93,.44),rgba(9,18,26,.87));
+  border:1px solid rgba(154,224,232,.32);
+  border-radius:11px;
+  box-shadow:inset 0 1px rgba(255,255,255,.14),0 5px 14px #0005,0 0 12px #5ca6b111;
+  text-shadow:0 0 9px #c2fcff25;
+  transition:box-shadow .25s,border-color .25s,filter .25s;
+}
+.nox-cinema-control::before {
+  content:"";position:absolute;pointer-events:none;inset:0;
+  background:linear-gradient(120deg,transparent 32%,rgba(178,249,251,.18) 50%,transparent 70%);
+  background-size:260% 100%;
+  animation:nox-cinema-sweep 13s linear infinite;
+}
+.nox-cinema-control[data-nox-float="true"] { animation:none; }
+.nox-cinema-control[data-nox-float="true"]::after {
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 80%,rgba(160,234,239,.18),transparent 72%);
+  opacity:.5;
+  animation:nox-cinema-float 6s ease-in-out infinite;
+  animation-delay:var(--nox-delay, 0s);
+}
+.nox-cinema-control:hover:not(:disabled),.nox-cinema-control:focus-visible {
+  border-color:rgba(195,249,255,.86);filter:brightness(1.13);
+  box-shadow:0 9px 20px #0007,0 0 19px rgba(100,224,235,.29),inset 0 0 12px #b3f6ff1a;
+}
+.nox-cinema-control:active:not(:disabled) { filter:brightness(1.3); }
+.nox-cinema-control:focus-visible { outline:2px solid #c4ffff;outline-offset:3px; }
+.nox-cinema-control:disabled { opacity:.45;cursor:not-allowed;animation:none; }
+.nox-cinema-control:disabled::after,
+.nox-cinema-control[aria-disabled="true"]::after { animation:none!important; }
+.nox-cinema-scope[data-nox-state="running"] .nox-cinema-panel {
+  border-color:rgba(113,212,221,.5);
+}
+.nox-cinema-scope[data-nox-state="error"] .nox-cinema-panel {
+  border-color:rgba(241,138,129,.65);
+}
+.nox-cinema-scope[data-nox-state="paused"] .nox-cinema-panel {
+  border-color:rgba(228,166,92,.6);
+}
+/* Each orb preserves the original approved asset under/behind translucent layers. */
+.nox-cinema-orb {
+  position:relative;isolation:isolate;border-radius:50%;
+  --nox-orb-heat:.4;
+}
+.nox-cinema-orb__layers {
+  position:absolute;inset:-7%;z-index:2;overflow:visible;pointer-events:none;border-radius:50%;
+  contain:layout style;
+}
+.nox-cinema-orb__lava,.nox-cinema-orb__crust,.nox-cinema-orb__corona {
+  position:absolute;inset:8%;border-radius:50%;pointer-events:none;
+}
+.nox-cinema-orb__lava {
+  background:
+    conic-gradient(from 18deg,transparent 2%,rgba(198,75,33,.38) 8%,transparent 14%,
+      rgba(220,110,55,.14) 21%,transparent 31%,rgba(238,133,51,.42) 40%,
+      transparent 45%,rgba(214,96,35,.23) 55%,transparent 65%,rgba(237,133,57,.3) 79%,transparent 90%),
+    radial-gradient(ellipse at 63% 58%,rgba(224,116,47,.38),transparent 55%),
+    radial-gradient(ellipse at 39% 39%,rgba(233,99,43,.2),transparent 42%);
+  mix-blend-mode:screen;
+  filter:blur(2px) contrast(1.25);
+  opacity:.68;animation:nox-cinema-lava-flow 23s ease-in-out infinite alternate;
+}
+.nox-cinema-orb__crust {
+  background:radial-gradient(circle at 32% 25%,rgba(221,239,237,.13),transparent 25%),
+    conic-gradient(from 0deg,rgba(0,0,0,.13),rgba(10,12,15,.42),rgba(0,0,0,.15),rgba(20,19,18,.49),rgba(0,0,0,.13));
+  box-shadow:inset -13px -17px 19px rgba(0,0,0,.5),
+    inset 8px 6px 12px rgba(225,240,237,.045);
+  opacity:.5;animation:nox-cinema-crust-drift 39s linear infinite;
+}
+.nox-cinema-orb__corona {
+  inset:1%;border:1px solid rgba(224,132,78,.19);
+  box-shadow:0 0 11px rgba(231,101,50,.22),0 0 27px rgba(206,89,46,.16),
+    inset 0 0 18px rgba(221,124,55,.14);
+  opacity:.66;animation:nox-cinema-corona 6.5s ease-in-out infinite alternate;
+}
+.nox-cinema-orb[data-nox-state="running"] {--nox-orb-heat:.8;}
+.nox-cinema-orb[data-nox-state="offline"] .nox-cinema-orb__lava { opacity:.12; }
+.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__corona {border-color:#e99b91;box-shadow:0 0 20px #c55c4999;}
+.nox-cinema-orb__ejecta {
+  position:absolute;inset:0;width:100%;height:100%;z-index:3;
+  pointer-events:none;mix-blend-mode:screen;
+}
+@keyframes nox-cinema-float {
+  0%,100%{transform:translate3d(0,0,0) rotate(-.3deg)}
+  50%{transform:translate3d(0,-3px,0) rotate(.3deg)}
+}
+@keyframes nox-cinema-sweep { from{background-position:160% 0}to{background-position:-170% 0} }
+@keyframes nox-cinema-lava-flow {
+  0%{transform:rotate(-9deg) scale(.98);opacity:.55}
+  100%{transform:rotate(21deg) scale(1.045);opacity:.82}
+}
+@keyframes nox-cinema-crust-drift {to{transform:rotate(360deg)}}
+@keyframes nox-cinema-corona {
+  0%{transform:scale(.99);opacity:.43}
+  100%{transform:scale(1.026);opacity:.83}
+}
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-panel {backdrop-filter:none;-webkit-backdrop-filter:none;}
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__lava {filter:none;}
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-panel::before {animation-duration:25s;}
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-control[data-nox-float="true"]::after {animation-duration:10s;}
+@media(prefers-reduced-motion:reduce) {
+  .nox-cinema-scope *, .nox-cinema-scope *::before, .nox-cinema-scope *::after,
+  .nox-cinema-orb *, .nox-cinema-orb *::before, .nox-cinema-orb *::after {
+    animation:none!important;transition:none!important;
+  }
+}
+@media(forced-colors:active) {
+  .nox-cinema-panel,.nox-cinema-control {background:Canvas;color:CanvasText;border:1px solid CanvasText;}
+  .nox-cinema-control:focus-visible {outline:2px solid Highlight;}
+}
+
+/* V16 D02 · liquid obsidian, fissures and rare gravitationally returning ejecta.
+   These overlays are purely ornamental; original approved sphere artwork stays below. */
+.nox-cinema-orb__filaments {
+  position:absolute;inset:10%;border-radius:50%;pointer-events:none;
+  background:
+    repeating-conic-gradient(from 3deg at 45% 55%,
+      rgba(235,124,58,.08) 0deg,transparent 5deg,transparent 23deg,
+      rgba(241,111,59,.35) 27deg,transparent 30deg,transparent 60deg),
+    radial-gradient(ellipse at 52% 64%,transparent 39%,rgba(242,112,53,.24) 45%,transparent 52%),
+    radial-gradient(ellipse at 70% 38%,transparent 26%,rgba(233,126,71,.3) 35%,transparent 43%);
+  mix-blend-mode:screen;
+  -webkit-mask-image:radial-gradient(circle,#000 10%,#000 69%,transparent 76%);
+  mask-image:radial-gradient(circle,#000 10%,#000 69%,transparent 76%);
+  opacity:.77;
+  animation:nox-cinema-filament-flow 29s ease-in-out infinite alternate;
+}
+.nox-cinema-orb__rim {
+  position:absolute;inset:1%;pointer-events:none;border-radius:50%;
+  border:1px solid rgba(238,149,83,.19);
+  background:conic-gradient(from 130deg,transparent 4%,rgba(216,96,51,.22) 18%,
+    transparent 36%,rgba(230,123,67,.11) 49%,transparent 64%,
+    rgba(244,180,105,.2) 78%,transparent 89%);
+  box-shadow:inset 0 0 12px rgba(241,141,75,.15),0 0 17px rgba(207,77,51,.12);
+  opacity:.6;
+  animation:nox-cinema-rim-spin 47s linear infinite;
+}
+.nox-cinema-orb__ejecta path {
+  filter:drop-shadow(0 0 1.6px rgba(236,114,56,.55));
+}
+.nox-cinema-orb[data-nox-state="training"] .nox-cinema-orb__filaments,
+.nox-cinema-orb[data-nox-state="streaming"] .nox-cinema-orb__filaments {
+  opacity:.95;
+}
+.nox-cinema-orb[data-nox-state="paused"] .nox-cinema-orb__corona {
+  border-color:rgba(233,189,119,.37);
+  box-shadow:0 0 16px rgba(243,165,80,.26);
+}
+.nox-cinema-orb[data-nox-state="speaking"] .nox-cinema-orb__rim {
+  border-color:rgba(151,238,240,.48);
+  box-shadow:0 0 22px rgba(116,206,217,.17);
+}
+.nox-cinema-orb[data-nox-state="offline"] .nox-cinema-orb__filaments {opacity:.14;}
+.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__filaments {filter:hue-rotate(-20deg);}
+.nox-cinema-scope[data-nox-mode="max"] .nox-cinema-orb__corona {
+  box-shadow:0 0 14px rgba(243,142,64,.28),0 0 36px rgba(192,66,35,.22),
+    inset 0 0 20px rgba(233,147,83,.12);
+}
+/* Active secondary-screen controls only; decorative layer never receives clicks.
+   Keep original button handlers, keyboard focus and readable foreground intact. */
+.nox-cinema-scope .nox-cinema-control {will-change:auto;}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::after {
+  animation:nox-cinema-float 7.4s ease-in-out infinite;
+}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+2)::after {
+  animation-duration:8.9s;animation-delay:-2.7s;
+}
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+3)::after {
+  animation-duration:10.6s;animation-delay:-4.1s;
+}
+.nox-cinema-scope .nox-cinema-panel {
+  background-image:linear-gradient(130deg,rgba(107,161,175,.08),transparent 39%),
+    linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
+}
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__rim {
+  animation:none;filter:none;
+}
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-control,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-panel::before,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__corona {
+  animation:none!important;
+}
+@keyframes nox-cinema-filament-flow {
+  0% {transform:rotate(-15deg) scale(.94);opacity:.56;}
+  100% {transform:rotate(24deg) scale(1.045);opacity:.88;}
+}
+@keyframes nox-cinema-rim-spin {to{transform:rotate(360deg);}}
+@media(max-width:650px) {
+  .nox-cinema-orb__filaments {filter:none;opacity:.5;}
+  .nox-cinema-orb__rim {opacity:.4;}
+  .nox-cinema-scope .nox-cinema-panel {
+    -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .nox-cinema-orb__filaments,.nox-cinema-orb__rim,
+  .nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::after {
+    animation:none!important;
+  }
+}
+
+/* Pause CSS work as well as JavaScript rAF when E06 host hides the view.
+   Scope only our FX so original application controls never stop processing. */
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__corona,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-panel::before {
+  animation-play-state:paused!important;
+}
