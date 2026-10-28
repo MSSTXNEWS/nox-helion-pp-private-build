@@ -135,3 +135,16 @@ test('immutable WPF/Python/P01/creative inputs reject reparse ancestors before s
   assert.ok(script.includes('NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD'));
   assert.ok(!script.includes('Remove-Item -Recurse'));
 });
+
+// R09: reproduce a real source-level mismatch with the original P01 verifier:
+// that verifier uses Get-ChildItem -Recurse -Force -File and rejects extras.
+test('payload manifest enumerates hidden and system files, matching owner P01 exhaustive verifier',()=>{
+  const enumerate=script.indexOf('Get-ChildItem -LiteralPath $payload -File -Recurse -Force');
+  const manifest=script.indexOf('$manifest=[ordered]@');
+  const verify=script.indexOf('& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verifyScript -Root $payload -Manifest $manifestPath');
+  assert.ok(enumerate>0 && enumerate<manifest && manifest<verify);
+  assert.equal((script.match(/Get-ChildItem -LiteralPath \\$payload -File -Recurse -Force/g)||[]).length,1);
+  assert.ok(!script.includes('Get-ChildItem -LiteralPath $payload -File -Recurse |'));
+  assert.ok(script.includes('E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD'));
+  assert.ok(!script.includes('Remove-Item -Recurse'));
+});
