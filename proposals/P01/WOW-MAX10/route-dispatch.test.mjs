@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {createP01RouteDispatcher} from "./route-dispatch.mjs";
 
 test("native host ACK is mandatory for a real button",async()=>{
- const port={isAvailable:()=>true,invokeRoute:async req=>({
+ const port={isAvailable:()=>true,authorizeSensitive:async()=>true,invokeRoute:async req=>({
    ok:true,routeId:req.routeId,receiptId:"native-receipt-1"})};
  const d=createP01RouteDispatcher(port);
  assert.deepEqual(await d.invoke("system.update"),{
