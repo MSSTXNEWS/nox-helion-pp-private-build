@@ -71,7 +71,7 @@ class ImmutableSourceRegistryTests(unittest.TestCase):
     def test_e06_source_uses_safe_mapping_syntax(self):
         s=G2.read_text(encoding="utf-8")
         self.assertIn("from collections.abc import Mapping",s)
-        self.assertIn('isinstance(self.host.routes',s)
+        self.assertIn('isinstance(getattr(self.host, "routes", None), Mapping)',s)
         self.assertIn('for route, descriptor in self.host.routes.items()',s)
         self.assertNotIn("frozen_routes = copy.deepcopy(self.host.routes)",s)
         self.assertIn('isinstance(self.host.routes, dict)',s)
