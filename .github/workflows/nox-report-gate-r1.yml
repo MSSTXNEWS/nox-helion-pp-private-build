@@ -1,0 +1,29 @@
+name: NOX V16 report and learning gate contract
+on:
+  pull_request:
+    paths:
+      - 'coordination/reporting/**'
+      - 'tests/reporting/**'
+      - '.github/workflows/nox-report-gate-r1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  report-gate-r1:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate report gate Python syntax
+        shell: pwsh
+        run: |
+          python -m py_compile coordination/reporting/verify_run_report.py
+          python -m py_compile tests/reporting/test_report_gate.py
+      - name: Execute ten evidence-gate security and compatibility tests
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests/reporting -p 'test_report_gate.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_REPORT_GATE_TEST_FAILED' }
