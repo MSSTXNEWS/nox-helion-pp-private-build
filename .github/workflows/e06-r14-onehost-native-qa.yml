@@ -157,12 +157,17 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $stage=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION.__p01_stage'
-          $report=[ordered]@{schema='NOX_E06_R15_NSIS_STAGE_DIAGNOSTIC_V1';buildRun=40614012171;installerSha256='44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3';stagePresent=$false;manifestPresent=$false;listedFiles=0;missingFiles=@();wrongLength=@();unexpectedFiles=@();verifierStatus='NOT_RUN';verifierError=$null;noOriginalSourceModified=$true;releaseAccepted=$false}
+          $report=[ordered]@{schema='NOX_E06_R15_NSIS_STAGE_DIAGNOSTIC_V1';buildRun=40614012171;installerSha256='44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3';stagePresent=$false;manifestPresent=$false;stageOwnershipMarkerPresent=$false;rootPresent=$false;rootExecutablePresent=$false;priorBackupPresent=$false;listedFiles=0;missingFiles=@();wrongLength=@();unexpectedFiles=@();verifierStatus='NOT_RUN';verifierError=$null;noOriginalSourceModified=$true;releaseAccepted=$false}
           try {
             if (!(Test-Path -LiteralPath $stage -PathType Container)) {throw 'P01_STAGE_ABSENT'}
             $dir=Get-Item -LiteralPath $stage -Force
             if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {throw 'P01_STAGE_REPARSE_HOLD'}
             $report.stagePresent=$true
+            $report.stageOwnershipMarkerPresent=Test-Path -LiteralPath (Join-Path $stage 'nox-p01-owned.txt') -PathType Leaf
+            $root=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION'
+            $report.rootPresent=Test-Path -LiteralPath $root -PathType Container
+            $report.rootExecutablePresent=Test-Path -LiteralPath (Join-Path $root 'NOX.P01.Shell.exe') -PathType Leaf
+            $report.priorBackupPresent=Test-Path -LiteralPath ($root+'.__p01_previous') -PathType Container
             $manifest=Join-Path $stage 'payload.sha256.json'
             if (!(Test-Path -LiteralPath $manifest -PathType Leaf)) {throw 'P01_STAGE_MANIFEST_MISSING'}
             $report.manifestPresent=$true
