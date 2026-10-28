@@ -71,7 +71,14 @@ try {
      throw "E06_R14_DEST_PAYLOAD_SHA_HOLD:$rel"
    }
  }
- Copy-Item -LiteralPath $found[0].FullName -Destination (Join-Path $clean 'payload.sha256.json')
+ # Original frozen manifest stays byte-exact in extracted original. Correct ONLY version/RunID
+ # in the new derived packaging manifest to match current owner P01 validator.
+ # The 486 application file paths, lengths and SHA-256 remain unchanged.
+ $manifest.version='16.0.1'
+ $manifest.runId="NOX-V16-E06-R14-$env:GITHUB_RUN_ID"
+ [IO.File]::WriteAllText((Join-Path $clean 'payload.sha256.json'),
+   ($manifest | ConvertTo-Json -Depth 9),[Text.UTF8Encoding]::new($false))
+ $receipt.derivedManifestSha256=(Get-FileHash -LiteralPath (Join-Path $clean 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant()
  $receipt.manifestFiles=$seen.Count
  $receipt.manifestVerified=$true
  if((Get-FileHash -LiteralPath (Join-Path $clean 'Backend/NOX_HELION_PRIVATE_CANDIDATE.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -cne
