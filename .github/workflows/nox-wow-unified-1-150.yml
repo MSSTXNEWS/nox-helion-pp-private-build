@@ -1,0 +1,56 @@
+name: NOX V16 WOW 1–150 unified native event admission
+on:
+  pull_request:
+    paths:
+      - 'proposals/NOX-WOW-UNIFIED-1-150/**'
+      - '.github/workflows/nox-wow-unified-1-150.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  exact-windows-source:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check single admission layer
+        shell: pwsh
+        run: |
+          node --check proposals/NOX-WOW-UNIFIED-1-150/gate.mjs
+          node --check proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs
+      - name: Check original 51-100 and 101-150 tests plus admission
+        shell: pwsh
+        run: |
+          node --test proposals/NOX-WOW51-100/wow51-100.test.mjs proposals/NOX-WOW101-150/director.test.mjs proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs
+          if ($LASTEXITCODE -ne 0) {throw 'UNIFIED_WOW_REGRESSION'}
+      - name: Preserve exact pre-existing asset receipts
+        shell: pwsh
+        run: |
+          node --test proposals/NOX-WOW51-100/sha256.test.mjs
+          if ($LASTEXITCODE -ne 0) {throw 'WOW51_SOURCE_RECEIPT_DRIFT'}
+      - name: Create SHA256 receipts for new additive files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $paths=@('proposals/NOX-WOW-UNIFIED-1-150/gate.mjs',
+                   'proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs',
+                   'proposals/NOX-WOW-UNIFIED-1-150/scene.css',
+                   'proposals/NOX-WOW-UNIFIED-1-150/README.md')
+          $proof=@()
+          foreach($p in $paths){
+            if(-not(Test-Path $p)){throw "MISSING_$p"}
+            $b=[System.Text.Encoding]::UTF8.GetBytes([System.IO.File]::ReadAllText((Resolve-Path $p).Path).Replace("`r`n","`n"))
+            $hash=[Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($b)).ToLowerInvariant()
+            $proof+=@{path=$p;preimage='ABSENT';bytes=$b.Length;post_sha256=$hash}
+          }
+          @{schema='NOX-WOW1-150-ADDITIVE-RECEIPTS-V1';sourceOnly=$true;paths=$proof} |
+            ConvertTo-Json -Depth 8 | Set-Content nox-wow-unified-source-receipts.json -Encoding utf8
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nox-wow-unified-1-150-source-receipts
+          path: nox-wow-unified-source-receipts.json
+          retention-days: 30
+          if-no-files-found: error
