@@ -1,119 +1,403 @@
 {
-  "schema": "NOX-P03-MEDIA-WEIGHTS-V1",
-  "runId": "NOX-P03-WEIGHT-BUTTONS-20261028",
-  "note": "SOURCE_OPTIONS_ONLY: each media model needs an immutable revision and per-file SHA256 verified by host. No automatic full repo fetch, arbitrary URL, license bypass, or implicit model installation.",
-  "choices": [
+  "schema": "NOX-P03-MEDIA-WEIGHTS-V2",
+  "runId": "NOX-P03-MEDIA-WEIGHTS-20261028",
+  "note": "23 independent candidate download buttons with separate weight variants, SHA/revision+complete file manifests supplied by trusted P03 native host only; sources are discovery pages, not approval or guaranteed direct artifacts.",
+  "categories": [
+    "3d",
+    "video",
+    "photo"
+  ],
+  "models": [
     {
       "category": "3d",
-      "id": "hunyuan3d-mini",
-      "name": "Hunyuan3D 2 Mini · модель формы",
-      "repo": "tencent/Hunyuan3D-2mini",
+      "modelId": "hunyuan3d-mini",
+      "variantId": "hunyuan3d-mini-shape",
+      "name": "Hunyuan3D 2 Mini",
+      "variant": "Геометрия · Shape 0.6B",
       "source": "https://huggingface.co/tencent/Hunyuan3D-2mini",
-      "description": "6GB shape only; texture needs more",
-      "license": "tencent-hunyuan-community",
+      "huggingFaceRepo": "tencent/Hunyuan3D-2mini",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "3d",
-      "id": "hunyuan3d-21",
-      "name": "Hunyuan3D 2.1 · форма и материалы",
-      "repo": "tencent/Hunyuan3D-2.1",
+      "modelId": "hunyuan3d-21",
+      "variantId": "hunyuan3d-21-shape",
+      "name": "Hunyuan3D 2.1",
+      "variant": "Геометрия · Shape",
       "source": "https://huggingface.co/tencent/Hunyuan3D-2.1",
-      "description": "heavy shape+texture candidate",
-      "license": "tencent-hunyuan-community",
+      "huggingFaceRepo": "tencent/Hunyuan3D-2.1",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "3d",
-      "id": "trellis",
-      "name": "TRELLIS · Image → 3D",
-      "repo": "microsoft/TRELLIS-image-large",
+      "modelId": "hunyuan3d-21",
+      "variantId": "hunyuan3d-21-pbr",
+      "name": "Hunyuan3D 2.1",
+      "variant": "Текстуры · PBR",
+      "source": "https://huggingface.co/tencent/Hunyuan3D-2.1",
+      "huggingFaceRepo": "tencent/Hunyuan3D-2.1",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "3d",
+      "modelId": "trellis",
+      "variantId": "trellis-image-large",
+      "name": "TRELLIS Image Large",
+      "variant": "Полная 3D-модель",
       "source": "https://huggingface.co/microsoft/TRELLIS-image-large",
-      "description": "verify weights and memory",
-      "license": "MIT/review checkpoint",
+      "huggingFaceRepo": "microsoft/TRELLIS-image-large",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "3d",
+      "modelId": "trellis2",
+      "variantId": "trellis2-pbr-4b",
+      "name": "TRELLIS.2 4B",
+      "variant": "PBR · 4B",
+      "source": "https://huggingface.co/microsoft/TRELLIS.2-4B",
+      "huggingFaceRepo": "microsoft/TRELLIS.2-4B",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "video",
-      "id": "wan21-small",
-      "name": "Wan 2.1 T2V 1.3B",
-      "repo": "Wan-AI/Wan2.1-T2V-1.3B",
+      "modelId": "wan21",
+      "variantId": "wan21-t2v-13b",
+      "name": "Wan 2.1",
+      "variant": "Text → Video · 1.3B",
       "source": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
-      "description": "17.6GB full repo",
-      "license": "apache-2.0",
+      "huggingFaceRepo": "Wan-AI/Wan2.1-T2V-1.3B",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "video",
-      "id": "wan22-5b",
-      "name": "Wan 2.2 TI2V 5B",
-      "repo": "Wan-AI/Wan2.2-TI2V-5B",
+      "modelId": "wan21",
+      "variantId": "wan21-vace-13b",
+      "name": "Wan 2.1",
+      "variant": "VACE · видеообработка",
+      "source": "https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B",
+      "huggingFaceRepo": "Wan-AI/Wan2.1-VACE-1.3B",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "wan22",
+      "variantId": "wan22-ti2v-5b",
+      "name": "Wan 2.2",
+      "variant": "TI2V · 5B",
       "source": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B",
-      "description": "34.2GB full repo",
-      "license": "apache-2.0",
+      "huggingFaceRepo": "Wan-AI/Wan2.2-TI2V-5B",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "video",
-      "id": "hunyuan15",
+      "modelId": "wan22",
+      "variantId": "wan22-i2v-a14b",
+      "name": "Wan 2.2",
+      "variant": "Image → Video · A14B",
+      "source": "https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B",
+      "huggingFaceRepo": "Wan-AI/Wan2.2-I2V-A14B",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "wan22",
+      "variantId": "wan22-t2v-a14b",
+      "name": "Wan 2.2",
+      "variant": "Text → Video · A14B",
+      "source": "https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B",
+      "huggingFaceRepo": "Wan-AI/Wan2.2-T2V-A14B",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "hunyuanvideo15",
+      "variantId": "hunyuan15-t2v",
       "name": "HunyuanVideo 1.5",
-      "repo": "tencent/HunyuanVideo-1.5",
+      "variant": "Текст → видео",
       "source": "https://huggingface.co/tencent/HunyuanVideo-1.5",
-      "description": "large repo ~372GB, choose pinned minimal subset",
-      "license": "tencent-hunyuan-community",
+      "huggingFaceRepo": "tencent/HunyuanVideo-1.5",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "hunyuanvideo15",
+      "variantId": "hunyuan15-i2v",
+      "name": "HunyuanVideo 1.5",
+      "variant": "Фото → видео",
+      "source": "https://huggingface.co/tencent/HunyuanVideo-1.5",
+      "huggingFaceRepo": "tencent/HunyuanVideo-1.5",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "mochi",
+      "variantId": "mochi1-preview",
+      "name": "Mochi 1",
+      "variant": "Preview",
+      "source": "https://huggingface.co/genmo/mochi-1-preview",
+      "huggingFaceRepo": "genmo/mochi-1-preview",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "ltx",
+      "variantId": "ltx-video2b",
+      "name": "LTX-Video",
+      "variant": "2B · Distilled",
+      "source": "https://huggingface.co/Lightricks/LTX-Video",
+      "huggingFaceRepo": "Lightricks/LTX-Video",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "ltx",
+      "variantId": "ltx25-fast",
+      "name": "LTX 2.5",
+      "variant": "Fast",
+      "source": "https://huggingface.co/Lightricks/LTX-2.5",
+      "huggingFaceRepo": "Lightricks/LTX-2.5",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "skyreels",
+      "variantId": "skyreels2-i2v",
+      "name": "SkyReels V2",
+      "variant": "Фото → видео",
+      "source": "https://huggingface.co/Skywork/SkyReels-V2",
+      "huggingFaceRepo": "Skywork/SkyReels-V2",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "skyreels",
+      "variantId": "skyreels2-df",
+      "name": "SkyReels V2",
+      "variant": "Diffusion Forcing",
+      "source": "https://huggingface.co/Skywork/SkyReels-V2",
+      "huggingFaceRepo": "Skywork/SkyReels-V2",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "video",
+      "modelId": "cogvideo",
+      "variantId": "cogvideox-5b",
+      "name": "CogVideoX",
+      "variant": "5B",
+      "source": "https://huggingface.co/THUDM/CogVideoX-5b",
+      "huggingFaceRepo": "THUDM/CogVideoX-5b",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "photo",
-      "id": "flux2-klein",
+      "modelId": "flux2",
+      "variantId": "flux2-klein4b-bf16",
       "name": "FLUX.2 Klein 4B",
-      "repo": "black-forest-labs/FLUX.2-klein-4B",
+      "variant": "Стандартные BF16",
       "source": "https://huggingface.co/black-forest-labs/FLUX.2-klein-4B",
-      "description": "23.7GB full repo; single 7.75GB checkpoint option",
-      "license": "apache-2.0",
+      "huggingFaceRepo": "black-forest-labs/FLUX.2-klein-4B",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     },
     {
       "category": "photo",
-      "id": "qwen-image-2512",
-      "name": "Qwen Image 2512",
-      "repo": "Qwen/Qwen-Image-2512",
-      "source": "https://huggingface.co/Qwen/Qwen-Image-2512",
-      "description": "57.7GB full repo",
-      "license": "apache-2.0",
+      "modelId": "flux2",
+      "variantId": "flux2-klein4b-fp8",
+      "name": "FLUX.2 Klein 4B",
+      "variant": "Оптимизированные FP8",
+      "source": "https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-fp8",
+      "huggingFaceRepo": "black-forest-labs/FLUX.2-klein-4b-fp8",
       "downloadable": false,
-      "sha256": null,
-      "revision": null,
-      "verifiedBytes": null,
-      "status": "CATALOG_ONLY"
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "photo",
+      "modelId": "flux2",
+      "variantId": "flux2-dev",
+      "name": "FLUX.2 Dev",
+      "variant": "Высокое качество · Dev",
+      "source": "https://huggingface.co/black-forest-labs/FLUX.2-dev",
+      "huggingFaceRepo": "black-forest-labs/FLUX.2-dev",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "photo",
+      "modelId": "qwen",
+      "variantId": "qwen-image-2512",
+      "name": "Qwen Image",
+      "variant": "2512 · полные веса",
+      "source": "https://huggingface.co/Qwen/Qwen-Image-2512",
+      "huggingFaceRepo": "Qwen/Qwen-Image-2512",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "photo",
+      "modelId": "sd35",
+      "variantId": "stable-diffusion35-medium",
+      "name": "Stable Diffusion 3.5",
+      "variant": "Medium",
+      "source": "https://huggingface.co/stabilityai/stable-diffusion-3.5-medium",
+      "huggingFaceRepo": "stabilityai/stable-diffusion-3.5-medium",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
     }
   ]
 }
