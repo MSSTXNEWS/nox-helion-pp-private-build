@@ -39,7 +39,7 @@ if (-not $env:CI_PROJECT_DIR -or
 }
 if ($env:CI_COMMIT_REF_NAME -cne 'migration/nox-v16-gitlab-free-20261028-r01' -or
     $env:NOX_APPROVE_WINDOWS_BUILD -cne 'YES' -or
-    $env:CI_PIPELINE_SOURCE -cne 'web') {
+    $env:CI_PIPELINE_SOURCE -notin @('web','api')) {
     throw 'GITLAB_EXPLICIT_PRIVATE_MIGRATION_BRANCH_CONSENT_REQUIRED'
 }
 Set-Location -LiteralPath $repo
