@@ -38,3 +38,17 @@ test("native error and invalid routes fail closed",async()=>{
  assert.equal((await d.invoke("x<unsafe>")).ok,false);
  assert.equal((await d.invoke("model.pull")).reason,"NATIVE_ERROR");
 });
+
+test("self-improvement: host capability check throws but UI fails closed",async()=>{
+ const d=createP01RouteDispatcher({isAvailable:()=>{throw Error("disconnected")},
+   invokeRoute:async()=>({ok:true,routeId:"x",receiptId:"r"})});
+ assert.equal((await d.invoke("x")).reason,"CAPABILITY_CHECK_FAILED");
+});
+test("self-improvement: destroy/close stops new native actions",async()=>{
+ let calls=0;
+ const d=createP01RouteDispatcher({isAvailable:()=>true,
+   invokeRoute:async()=>{calls++;return {ok:true,routeId:"x",receiptId:"r"}}});
+ d.close();
+ assert.equal((await d.invoke("x")).reason,"PORT_CLOSED");
+ assert.equal(calls,0);
+});
