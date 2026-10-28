@@ -270,5 +270,23 @@ class ModelWeightBoundary(unittest.TestCase):
         network.assert_not_called()
 
 
+    def test_forged_receipt_symlink_is_not_followed_during_download(self):
+        target=self.studio.models/"sdxl-base"
+        target.mkdir(parents=True)
+        protected=self.root/"protected.txt"
+        protected.write_text("DO NOT REPLACE",encoding="utf-8")
+        (target/"RECEIPT.json").symlink_to(protected)
+        with self.assertRaisesRegex(StudioError,"receipt destination"):
+            self.request()
+        self.assertEqual(protected.read_text(encoding="utf-8"),"DO NOT REPLACE")
+        self.assertEqual(self.download_count,1)
+
+    def test_successful_receipt_commit_leaves_no_partial(self):
+        self.request()
+        target=self.studio.models/"sdxl-base"
+        self.assertTrue((target/"RECEIPT.json").is_file())
+        self.assertFalse(list(target.glob("*.receipt.partial")))
+
+
 if __name__=="__main__":
     unittest.main()
