@@ -151,9 +151,13 @@ class G2ComponentTests(unittest.TestCase):
 
     def test_01_exact_pinned_original_host_and_adapters(self):
         got = self.bind()
-        self.assertEqual(len(got), 16)
+        expected = {'helion.chat', 'core.chat', 'persona.chat', 'chat.model',
+                    'chat.history', 'chat.stop', 'chat.commands', 'models.catalog',
+                    'models.installed', 'models.digest', 'mobile.connect',
+                    'system.telemetry', *FEED_ID}
+        self.assertEqual(set(got), expected)
         self.assertEqual(len(self.host.routes), 50)
-        self.assertEqual(len(self.host.ports), 16)
+        self.assertEqual(set(self.host.ports), expected)
         self.assertTrue({"models.catalog", "models.installed", "models.digest"} <= got)
         self.assertTrue({"space.news", "space.brent", "system.telemetry"} <= got)
         self.assertEqual(self.host.execute("models.installed", {}, self.session)["models"][0]["tag"],
@@ -469,6 +473,9 @@ class G2ComponentTests(unittest.TestCase):
 
 
     def test_139_nested_native_route_acl_mutation_is_rolled_back(self):
+        # Isolate the deliberately mutable legacy fixture; canonical PACK01
+        # descriptors are immutable and must not be edited to arrange a test.
+        self.host.routes = {key: dict(value) for key, value in self.host.routes.items()}
         self.host.routes["space.news"]["_e06_test_acl"] = {"permissions": ["read"]}
         original = self.p02
         class MaliciousP02:
@@ -496,6 +503,7 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(self.host.ports, {})
 
     def test_141_malformed_descriptor_controlled_hold(self):
+        self.host.routes = dict(self.host.routes)
         self.host.routes["space.news"] = ["not", "an", "owner", "route"]
         with self.assertRaises(G2Hold):
             self.bind()
@@ -864,7 +872,7 @@ class G2ComponentTests(unittest.TestCase):
     def test_71_unverified_model_stop_denied(self):
         event, sent = verified_event(), []
         event.update(event_type="model.stopped", state="RUNNING", evidence_verified=False)
-        with self.assertRaises(G2Hold):
+        with self.assertRaisesRegex(G2Denied, "event type/state"):
             relay_existing_events_v3(event, run_id=G2_RUN,
                 trusted_owner=lambda: True,
                 existing_publish=lambda x: (sent.append(x) or True))
@@ -931,7 +939,7 @@ class G2ComponentTests(unittest.TestCase):
     def test_79_unverified_ready_denied(self):
         event, sent = verified_event(), []
         event.update(event_type="task.progress", state="READY", evidence_verified=False)
-        with self.assertRaises(G2Hold):
+        with self.assertRaisesRegex(G2Denied, "event type/state"):
             relay_existing_events_v3(event, run_id=G2_RUN,
                 trusted_owner=lambda: True,
                 existing_publish=lambda x: (sent.append(x) or True))
@@ -940,7 +948,7 @@ class G2ComponentTests(unittest.TestCase):
     def test_80_unverified_stopped_denied(self):
         event, sent = verified_event(), []
         event.update(event_type="task.progress", state="STOPPED", evidence_verified=False)
-        with self.assertRaises(G2Hold):
+        with self.assertRaisesRegex(G2Denied, "event type/state"):
             relay_existing_events_v3(event, run_id=G2_RUN,
                 trusted_owner=lambda: True,
                 existing_publish=lambda x: (sent.append(x) or True))

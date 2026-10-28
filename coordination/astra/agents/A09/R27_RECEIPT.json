@@ -1,0 +1,58 @@
+{
+  "run_id": "ASTRA-R27-A09-MOBILE-20261029-01",
+  "agent_id": "/root/a09",
+  "base_sha": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "branch": "astra/r27-a09-20261029",
+  "status": "TESTED_SOURCE_MEGABLOCK",
+  "completed_approaches": 1,
+  "planned_approaches": 10,
+  "matrix_approach": 6,
+  "matrix_task_ids": [],
+  "task_id_product_denominator": null,
+  "task_id_product_readiness": "N/D",
+  "changes": [
+    "Preserve and validate canonical immutable P02 Identity fields without coercion.",
+    "Reuse reviewed donor request/proof snapshot, bounded CSRF and finite-clock protections.",
+    "Re-attest native session after final capability advertisement to reject expiry/revocation/CSRF rotation.",
+    "Align six stale G2 fixtures with exact current contracts without weakening fail-closed behavior."
+  ],
+  "donor_reused": "97de71259b0cedcf7e21d277e38f5a0d15668041",
+  "pre_blobs": {
+    "coordination/e06/adapters/g2_space_mobile.py": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283",
+    "tests/e06/adapters/test_g2_space_mobile.py": "206a5ab421262577c292985e660a55ceccccd37a"
+  },
+  "post_blobs": {
+    "coordination/e06/adapters/g2_space_mobile.py": "acf1c35610d6bb4d252d27a87e5a4899bb486233",
+    "tests/e06/adapters/test_g2_space_mobile.py": "52b56560c03adb2bf87dc5c59ef123bea6466fbf",
+    "coordination/astra/agents/A09/test_mobile_r27.py": "f7593b8ca6a65d5ff2ec2eac2a5436eb659869da"
+  },
+  "verification": {
+    "runtime": "Python 3.12",
+    "combined_suite": [
+      "tests/e06/adapters/test_g2_space_mobile.py",
+      "coordination/astra/agents/A09/test_mobile_r27.py"
+    ],
+    "tests": 111,
+    "passed": 111,
+    "failed": 0,
+    "focused_before": {
+      "tests": 10,
+      "failed": 5,
+      "errors": 2,
+      "passed": 3
+    },
+    "focused_after": {
+      "tests": 10,
+      "passed": 10
+    },
+    "fixtures": "Exact pinned P02/P03/PACK01 source modules; deterministic native host boundary callbacks.",
+    "run_command": "NOX_G2_OWNER_FIXTURE_ROOT=<isolated exact pinned fixtures> python unittest loader over both listed modules"
+  },
+  "lesson": "A gateway proof must preserve the owner-defined principal type and pin the complete authorization epoch through the last native callback; a passing mock string identity can conceal a broken real P02 contract.",
+  "limits": [
+    "No live HTTPS gateway or Windows hardware verification.",
+    "No product-wide TaskID readiness claim; authoritative denominator unavailable.",
+    "No final cross-package integration, CI, EXE, NSIS or release.",
+    "Drive journal is delegated to root; no Drive write PASS claimed."
+  ]
+}
