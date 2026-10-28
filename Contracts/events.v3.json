@@ -62,7 +62,16 @@
   "allOf": [
     {
       "if": { "properties": { "event_type": { "const": "gpu.sample" } } },
-      "then": { "properties": { "package_id": { "const": "P04" } } }
+      "then": { "anyOf": [
+        { "properties": { "package_id": { "const": "P04" } } },
+        { "properties": {
+          "package_id": { "const": "P05" },
+          "action_id": { "const": "gpu_utilization" },
+          "source": { "const": "P05.Hardware" },
+          "state": { "const": "RUNNING" },
+          "evidence_verified": { "const": false }
+        } }
+      ] }
     },
     {
       "if": { "properties": { "event_type": { "enum": ["training.step", "checkpoint.saved", "model.stopped"] } } },
