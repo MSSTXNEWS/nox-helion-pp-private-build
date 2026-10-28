@@ -167,6 +167,21 @@ class LocalRag:
                 or type(data.get("vectorDimensions")) is not int
                 or not 0 <= data["vectorDimensions"] <= MAX_DIMENSIONS):
             raise RagHold("RAG_INDEX_SCHEMA_INVALID")
+        if len(data["sources"]) > 10000:
+            raise RagHold("RAG_INDEX_SOURCE_QUOTA_EXCEEDED")
+        # Detect ambiguous/duplicated provenance even in unqueried scopes.
+        # Do not rebuild the index or touch any existing C# / Python host.
+        identities = set()
+        for source in data["sources"]:
+            if not isinstance(source, dict):
+                raise RagHold("RAG_INDEX_SOURCE_SCHEMA_INVALID")
+            identity = tuple(source.get(k) for k in ("ownerSid", "conversationId", "sourceId"))
+            if (any(not isinstance(value, str) or not value for value in identity)
+                    or any(len(value) > limit for value, limit in zip(identity, (184, 256, 128)))):
+                raise RagHold("RAG_INDEX_SOURCE_SCHEMA_INVALID")
+            if identity in identities:
+                raise RagHold("RAG_INDEX_DUPLICATE_SOURCE_ID")
+            identities.add(identity)
         if data["sources"] and data.get("model") != self.model:
             raise RagHold("RAG_EMBEDDING_MODEL_CHANGED_REINDEX_REQUIRED")
         return data
@@ -317,7 +332,8 @@ class LocalRag:
 
     def search(self, owner_sid: str, conversation_id: str, query: str, top_k: int = 5) -> list[dict]:
         _scope(owner_sid, conversation_id)
-        if not isinstance(query, str) or not query.strip() or len(query) > MAX_QUERY_CHARS:
+        if (not isinstance(query, str) or not query.strip() or len(query) > MAX_QUERY_CHARS
+                or "\x00" in query):
             raise RagHold("RAG_QUERY_INVALID")
         if type(top_k) is not int or not 1 <= top_k <= 20:
             raise RagHold("RAG_TOPK_INVALID")
@@ -334,7 +350,15 @@ class LocalRag:
         for item in scoped:
             if not isinstance(item.get("chunks"), list) or not SHA_RE.fullmatch(str(item.get("sourceIdentitySha256", ""))):
                 raise RagHold("RAG_SOURCE_PROVENANCE_INVALID")
+            seen_chunk_indices = set()
             for chunk in item["chunks"]:
+                if not isinstance(chunk, dict):
+                    raise RagHold("RAG_CHUNK_PROVENANCE_INVALID")
+                chunk_index = chunk.get("chunkIndex")
+                if (type(chunk_index) is not int or chunk_index < 0
+                        or chunk_index in seen_chunk_indices):
+                    raise RagHold("RAG_CHUNK_INDEX_INVALID")
+                seen_chunk_indices.add(chunk_index)
                 content = chunk.get("text")
                 stored = chunk.get("vector")
                 if (not isinstance(content, str) or _sha(content.encode("utf-8")) != chunk.get("chunkSha256")
@@ -364,7 +388,8 @@ class LocalRag:
             header = f"[SOURCE: {name}#{hit['chunk_index'] + 1}; SHA256:{hit['chunk_sha256']}]\n"
             length = len(header) + len(hit["text"]) + (2 if parts else 0)
             if chars + length > MAX_CONTEXT_CHARS:
-                break
+                # A long first hit must not hide smaller valid cited passages.
+                continue
             parts.append(header + hit["text"])
             chars += length
             provenance.append({"source_id": hit["source_id"], "title": hit["title"],
@@ -373,6 +398,9 @@ class LocalRag:
 
     def delete_source(self, owner_sid: str, conversation_id: str, source_id: str) -> bool:
         _scope(owner_sid, conversation_id)
+        if (not isinstance(source_id, str) or not 0 < len(source_id) <= 128
+                or any(ord(c) < 32 for c in source_id)):
+            raise RagHold("RAG_SOURCE_ID_INVALID")
         with self._locked():
             data = self._read()
             prior = len(data["sources"])
