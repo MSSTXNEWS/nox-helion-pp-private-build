@@ -25,21 +25,21 @@
       "preSHA256": "1f00f30ecb53e895b94605ce084889a8880f8ed9a5bc7026ee644a9c164f3957",
       "postSHA256": "5e0df1e42410f1aea03368a87df6eb4558f99ae7c0c7aec3a89be32334b23a44",
       "preBlob": "da4a4e26d913636649bf22901ef4a07d37fdb718",
-      "postBlob": "READBACK_COMPUTED"
+      "postBlob": "0921f6832861fb361d7bbbb8258ae7fdfc1a77f9"
     },
     {
       "path": "integrations/wow200/runtime/home-scene.disposed-callback.r20.test.mjs",
       "preSHA256": "ABSENT",
-      "postSHA256": "COMPUTED_IN_GITHUB_READBACK",
+      "postSHA256": "fe06eefe2211e6395fbadc54a56d9e384b82251c4bfe1fa90010f0893b31ed99",
       "preBlob": "ABSENT",
-      "postBlob": "READBACK_COMPUTED"
+      "postBlob": "7b03371b59ea01fccc84dd097c31e9193b742816"
     },
     {
       "path": "integrations/wow200/runtime/E01_W2_R20_QUEUED_CALLBACK_OWNER_RECEIPT_20261029.json",
       "preSHA256": "ABSENT",
-      "postSHA256": "READBACK_COMPUTED",
+      "postSHA256": "SELF_HASH_REPORTED_IN_E06_READBACK",
       "preBlob": "ABSENT",
-      "postBlob": "READBACK_COMPUTED"
+      "postBlob": "SELF_BLOB_REPORTED_IN_E06_READBACK"
     }
   ],
   "redGreen": {
@@ -131,7 +131,7 @@
     ],
     "preBlob": "0c382ddf89ef0d721603c4986eb6f2d960411867",
     "previousCommit": "1e065f0a899ba3b1a376ae424c4f1aba615ff743",
-    "postSHA256": "SEE_OWNER_SOURCE_CHECKPOINT",
-    "status": "corrected in next owner-only CAS commit; full Node CLI NOT_RUN"
+    "postSHA256": "fe06eefe2211e6395fbadc54a56d9e384b82251c4bfe1fa90010f0893b31ed99",
+    "status": "fixed escaped test regex, same committed GitHub source executed in V8 4/4 PASS, Node CLI NOT_RUN"
   }
 }
