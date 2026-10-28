@@ -101,7 +101,7 @@ try {
     # P01 SourceLock: pin the checkout identity before touching the archived source.
     # The archive and its independent source-freeze binding remain authoritative.
     $checkoutCommit = (& git -C $root rev-parse HEAD 2>$null)
-    $checkoutTree = (& git -C $root rev-parse HEAD^{tree} 2>$null)
+    $checkoutTree = (& git -C $root rev-parse 'HEAD^{tree}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $checkoutCommit -or -not $checkoutTree) {
         throw 'P01_SOURCELOCK_CHECKOUT_UNAVAILABLE'
     }

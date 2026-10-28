@@ -1,0 +1,86 @@
+name: NOX E06 original Python Windows diagnostic (not release)
+on:
+  push:
+    branches:
+      - e06/v16-diagnostic-build-20261028
+    paths:
+      - .github/workflows/nox-e06-python-diagnostic.yml
+      - private_build.ps1
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-e06-python-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  frozen-original-candidate:
+    runs-on: windows-2025
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact source inputs without saving credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Python 3.12.10 pinned for original build
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+          check-latest: false
+      - name: Existing original exact offline build (no new host)
+        id: originalbuild
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & .\private_build.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record candidate identity without false acceptance
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $files=@('work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe','work/candidate/dist/NOX_HELION_BACKGROUND_CANDIDATE.exe')
+          $record=[ordered]@{
+             schema='NOX_E06_ORIGINAL_DIAGNOSTIC_RECEIPT_V1'
+             source_commit='${{ github.sha }}'
+             original_main_base='eb46b49fb8a022cefa679afb8606877016808db1'
+             run_id='${{ github.run_id }}'
+             build_outcome='${{ steps.originalbuild.outcome }}'
+             merged_p01_to_p05=$false
+             e07_same_exe_accepted=$false
+             release_accepted=$false
+             binaries=@()
+          }
+          foreach($file in $files) {
+            if (Test-Path -LiteralPath $file -PathType Leaf) {
+               $i=Get-Item -LiteralPath $file
+               $record.binaries+=@([ordered]@{path=$file;bytes=$i.Length;sha256=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()})
+            }
+          }
+          $record | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath e06-original-diagnostic-receipt.json -Encoding utf8
+          Write-Host ($record | ConvertTo-Json -Depth 6)
+      - name: Preserve actual EXEs, receipts and errors as candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-original-diagnostic-${{ github.run_id }}
+          path: |
+            e06-original-diagnostic-receipt.json
+            work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe
+            work/candidate/dist/NOX_HELION_BACKGROUND_CANDIDATE.exe
+            work/candidate/C_RELEASE_SPRINT_BUILD_RECEIPT.json
+            work/candidate/BUILD_STATUS.txt
+            ci-evidence/p01-sourcelock.json
+            ci-evidence/p01-prerequisites.json
+            ci-evidence/build-attempt.json
+            ci-evidence/windows-build-transcript.txt
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Fail if original Windows build failed
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.originalbuild.outcome }}' -ne 'success') {
+             throw 'ORIGINAL_WINDOWS_CANDIDATE_BUILD_HOLD'
+          }
