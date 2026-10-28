@@ -290,7 +290,6 @@ test('HELION aggregate honors an explicit uneven approved weighting',()=>{
 });
 console.log('R05 added 12 ledger, weighted CoreID and native CPU-temperature regression gates; Windows NOT_RUN.');
 
-
 // R06: one ambiguity-quarantine method for terminal origin, GPU identity,
 // duplicated priced feeds and app-side readback provenance. All synthetic.
 test('malformed same-run failure cannot be hidden behind a clean STOP',()=>{
