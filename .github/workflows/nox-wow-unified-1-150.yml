@@ -43,6 +43,13 @@ jobs:
           repository: MSSTXNEWS/nox-helion-pp-private-build
           ref: 002e387621b3058f42d96739b270e5fac7afd6be
           path: owner-pack02
+      - name: Materialize exact Git LF bytes for PACK02 receipt verification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          # This changes only the disposable CI worktree, NEVER Git objects or owner source.
+          git -C owner-pack02 -c core.autocrlf=false checkout-index --force --all
+          if ($LASTEXITCODE -ne 0) {throw 'PACK02_GIT_BLOB_CHECKOUT_FAILED'}
       - name: Cross-check all 100 function routes and all 150 WOW source IDs
         shell: pwsh
         run: |
