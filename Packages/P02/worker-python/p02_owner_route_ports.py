@@ -46,6 +46,7 @@ class OwnerTwoPorts:
                  rag_index: Any = None,
                  voice_pipeline: LocalVoicePipeline | None = None,
                  native_take_audio: Callable[[NativeScope, str], bytes] | None = None,
+                 native_mic_consent: Callable[[NativeScope, str], bool] | None = None,
                  native_store_output_audio: Callable[[NativeScope, bytes], str] | None = None,
                  native_call_history: Callable[[NativeScope, int], list[dict]] | None = None,
                  owner_ready: Callable[[str], bool] | None = None):
@@ -55,6 +56,9 @@ class OwnerTwoPorts:
         self.rag, self.voice, self.take_audio, self.call_history = (
             rag_index, voice_pipeline, native_take_audio, native_call_history)
         self.store_output_audio = native_store_output_audio
+        # Read-only trusted-native proof for this exact SID/session/capture id.
+        # Caller page flags are never microphone permission evidence.
+        self.mic_consent = native_mic_consent
         self.owner_ready = owner_ready
 
     def _session(self, scope: NativeScope, route: str) -> None:
@@ -79,6 +83,7 @@ class OwnerTwoPorts:
         implementations = {"chat.rag": callable(getattr(self.rag, "context", None)),
                            "chat.voice": isinstance(self.voice, LocalVoicePipeline)
                                          and callable(self.take_audio)
+                                         and callable(self.mic_consent)
                                          and callable(self.store_output_audio)
                                          and self.voice.approved_models,
                            "calls.history": callable(self.call_history)}
@@ -108,12 +113,24 @@ class OwnerTwoPorts:
         self._session(scope, "chat.voice")
         if not self.available("chat.voice"):
             raise RouteHold("INSTALLED_LOCAL_ASR_TTS_OR_HOST_CAPTURE_HOLD")
-        if not isinstance(args, dict) or "audio" in args or "audio_path" in args:
-            raise PermissionError("Audio must be retrieved from one-use native capture")
+        if (not isinstance(args, dict) or
+                any(key in args for key in ("audio", "audio_path", "microphone_consent", "mic_consent"))):
+            raise PermissionError("Audio and consent must come from trusted native capture")
         cap_id = args.get("capture_id")
         if not isinstance(cap_id, str) or not _TOKEN.fullmatch(cap_id):
             raise ValueError("Opaque native capture id required")
         # STOP before consumption must preserve the one-use native capture.
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
+        # The host must attest that OS microphone access and user consent still
+        # authorize THIS one-use capture in the authenticated native session.
+        # Missing/false/exceptional proof fails CLOSED before consuming audio.
+        try:
+            consented = self.mic_consent(scope, cap_id) is True
+        except Exception as exc:
+            raise RouteHold("NATIVE_MIC_PERMISSION_CHECK_HOLD") from exc
+        if not consented:
+            raise PermissionError("NATIVE_MIC_CONSENT_REQUIRED")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
         # Native host consumes capture exactly once; a second lookup MUST fail.
@@ -128,7 +145,7 @@ class OwnerTwoPorts:
         result = self.voice.run(
             scope.identity, audio, source=args.get("source"), target=args.get("target"),
             voice=args.get("voice"), mode=args.get("mode", "translate"),
-            level=args.get("level", "A2"), microphone_consent=True, stop=stop)
+            level=args.get("level", "A2"), microphone_consent=consented, stop=stop)
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
