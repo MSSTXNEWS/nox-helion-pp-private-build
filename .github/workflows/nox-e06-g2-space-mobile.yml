@@ -72,7 +72,7 @@ jobs:
                   print(name, path, "Git blob SHA-1", blob,
                         "SHA-256", hashlib.sha256(raw).hexdigest())
           '@ | python -
-      - name: Execute 32 in-process tests with genuine owner modules on Windows
+      - name: Execute 37 in-process tests with genuine owner modules on Windows
         shell: pwsh
         run: |
           $env:NOX_G2_OWNER_FIXTURE_ROOT = Join-Path $env:RUNNER_TEMP "nox-g2-owner"
