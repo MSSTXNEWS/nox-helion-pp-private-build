@@ -158,3 +158,65 @@ test('same-second ERROR wins over STOP so errors cannot be hidden by arrival ord
   assert.equal(projectCanonicalEvents([fail,stop],RUN,NOW).state,'ERROR');
 });
 console.log('PASSED '+n+' source-level Node assertions; Windows native/EXE NOT_RUN');
+
+// R04: new owner-only negative regressions; NONE constitutes native telemetry.
+test('one event_id with conflicting STOP vs ERROR is quarantined',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  const b=terminalEvent('task.failed','ERROR');
+  assert.deepEqual(projectCanonicalEvents([a,b],RUN,NOW),{state:'HOLD_EVENT_ID_COLLISION',errors:null});
+});
+test('one event_id with conflicting timestamp is quarantined',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  assert.equal(projectCanonicalEvents([a,{...a,timestamp_utc:'2026-10-28T03:44:59Z'}],RUN,NOW).state,'HOLD_EVENT_ID_COLLISION');
+});
+test('same event_id with conflicting task_id is quarantined',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  assert.equal(projectCanonicalEvents([a,{...a,task_id:'G1-05-OTHER'}],RUN,NOW).errors,null);
+});
+test('two identical canonical events with different property order count once',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  const b=Object.fromEntries(Object.entries(a).reverse());
+  assert.deepEqual(projectCanonicalEvents([a,b],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('a same-run ERROR is not hidden by 65 distinct later non-terminal events',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  const nonterminal=Array.from({length:65},(_,i)=>({...a,
+    event_id:'evt-noise-'+i,event_type:'task.progress',state:'RUNNING'}));
+  assert.deepEqual(projectCanonicalEvents([a,...nonterminal],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('large unbounded event log is HOLD not misleading STOP',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  assert.deepEqual(projectCanonicalEvents(Array(4097).fill(a),RUN,NOW),
+    {state:'HOLD_JOURNAL_OVERFLOW',errors:null});
+});
+test('normal bounded 4096 window still accepts unique error',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  assert.equal(projectCanonicalEvents([a,...Array(4095).fill(null)],RUN,NOW).state,'ERROR');
+});
+test('hardware sensor later than native polled time is never LIVE',()=>{
+  const f={...trustedFrame,polled_utc:'2026-10-28T03:44:57Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:f},NOW).hardware['cpu.system.percent'].stage,'N_D');
+});
+test('hardware sensor at native polled time may remain LIVE',()=>{
+  const f={...trustedFrame,polled_utc:'2026-10-28T03:44:58Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:f},NOW).hardware['cpu.system.percent'].value,39);
+});
+test('VRAM pair from same source but incoherent sample times is HOLD',()=>{
+  const s=(key,value,at)=>({key,value,unit:'bytes',source:'NVML',status:'LIVE',observed_at_utc:at});
+  const x=projectHardware([s('gpu.vram.used_bytes',1024,'2026-10-28T03:44:50Z'),
+    s('gpu.vram.total_bytes',2048,'2026-10-28T03:44:58Z')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].stage,'INCONSISTENT_VRAM');
+});
+test('feed source observation newer than actual fetch is N/D',()=>{
+  const f={...feed,source_at_utc:'2026-10-28T03:44:59Z',fetched_at_utc:'2026-10-28T03:44:50Z'};
+  assert.equal(projectFeeds([f],NOW)[0].stage,'N_D');
+});
+test('negative Brent price cannot be surfaced as actual price',()=>{
+  const f={...feed,id:'brent',value:-5};
+  assert.equal(projectFeeds([f],NOW)[0].value,null);
+});
+test('negative weather temperature is not discarded as impossible rate',()=>{
+  const f={...feed,value:-5};
+  assert.equal(projectFeeds([f],NOW)[0].value,-5);
+});
+console.log('R04 tests are synthetic JavaScript component gates only, not installed EXE or live devices.');
