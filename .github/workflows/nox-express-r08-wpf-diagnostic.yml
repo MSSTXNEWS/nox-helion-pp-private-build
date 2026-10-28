@@ -63,6 +63,11 @@ jobs:
         run: |
           python 'proposals/E06/express/diagnostic_p05_rawstring_fix.py' $env:NOX_R08_DIAG_ROOT
           if ($LASTEXITCODE -ne 0) { throw 'P05_DIAGNOSTIC_REPAIR_SHA_HOLD' }
+      - name: Apply preimage-guarded P02/P03/P05 compilation fixes (diagnostic only)
+        shell: pwsh
+        run: |
+          python 'proposals/E06/express/diagnostic_cross_owner_fixes.py' $env:NOX_R08_DIAG_ROOT
+          if ($LASTEXITCODE -ne 0) { throw 'R08_CROSS_OWNER_DIAGNOSTIC_SOURCE_HOLD' }
       - name: Restore official WebView2 NuGet dependency
         shell: pwsh
         run: |
