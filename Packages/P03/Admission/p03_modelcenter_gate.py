@@ -71,6 +71,10 @@ def _positive(value: Any) -> bool:
     return type(value) is int and 0 < value < (1 << 63)
 
 
+def _nonblank_license_id(value: Any) -> bool:
+    return isinstance(value, str) and 0 < len(value.strip()) <= 160
+
+
 def review_lead(tag_or_id: str) -> Decision:
     """25 Ollama tags + 17 multi-modal leads are all HOLD until attestations."""
     if tag_or_id in OLLAMA_TAG_LEADS:
@@ -84,7 +88,7 @@ def prerequisite_gates(facts: Mapping[str, Any], role: str) -> tuple[str, ...]:
     """Only host-measured and owner-attested facts count."""
     needed = ("ollama",) if role == "OLLAMA" else ("python", "git")
     if role in {"TRAINING", "GPU_TRAINING"}:
-        needed = ("python", "git", "cuda", "peft")
+        needed = ("python", "git", "cuda", "torch", "peft", "trl", "accelerate")
     return tuple("PREREQUISITE_" + x.upper() + "_UNVERIFIED"
                  for x in needed if facts.get(x) is not True)
 
@@ -114,7 +118,7 @@ def admit_for_existing_downloader(
         reasons.append("USER_DOWNLOAD_CONSENT_REQUIRED")
     if evidence.get("licenseAcknowledged") is not True:
         reasons.append("LICENSE_ACK_REQUIRED")
-    if not _https_url(evidence.get("licenseEvidenceUrl")) or not evidence.get("licenseId"):
+    if not _https_url(evidence.get("licenseEvidenceUrl")) or not _nonblank_license_id(evidence.get("licenseId")):
         reasons.append("LICENSE_EVIDENCE_MISSING")
     if not _sha(evidence.get("artifactSha256")) or not _sha(evidence.get("manifestSha256")):
         reasons.append("ARTIFACT_AND_MANIFEST_SHA_UNVERIFIED")
@@ -164,6 +168,10 @@ def admit_for_existing_downloader(
             reasons.append("WRONG_OR_NEW_DOWNLOADER_ROUTE")
         if not isinstance(evidence.get("localGgufPath"), str) or not evidence["localGgufPath"].lower().endswith(".gguf"):
             reasons.append("LOCAL_GGUF_PATH_REQUIRED")
+        if evidence.get("nativeGgufMagicVerified") is not True:
+            reasons.append("GGUF_NATIVE_MAGIC_UNVERIFIED")
+        if not (_sha(evidence.get("nativeLocalFileSha256")) and evidence.get("nativeLocalFileSha256") == evidence.get("artifactSha256")):
+            reasons.append("GGUF_LOCAL_FILE_SHA_NOT_MATCHED")
         role = "EXTERNAL"
     else:
         if evidence.get("leadId") not in dict(EXTERNAL_LEADS):
