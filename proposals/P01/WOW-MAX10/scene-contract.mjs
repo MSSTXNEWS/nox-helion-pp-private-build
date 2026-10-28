@@ -7,14 +7,15 @@ const MODES=new Set(["ECO","BALANCED","MAX","REDUCED"]);
 const inside=(root,node)=>!!node&&node.nodeType===1&&root.contains(node);
 function checkEntries(root,items,expected,kind){
   if(!Array.isArray(items)||items.length!==expected)throw Error(kind+"_COUNT");
-  const ids=new Set(),elements=new Set();
+  const ids=new Set(),routes=new Set(),elements=new Set();
   for(const x of items){
     if(!ID.test(x?.id)||!ID.test(x?.routeId)||
-       !inside(root,x?.element)||ids.has(x.id)||elements.has(x.element))
+       !inside(root,x?.element)||ids.has(x.id)||routes.has(x.routeId)||
+       elements.has(x.element))
       throw Error(kind+"_IDENTITY_OR_DOM");
-    ids.add(x.id);elements.add(x.element);
+    ids.add(x.id);routes.add(x.routeId);elements.add(x.element);
   }
-  return elements;
+  return {elements,routes};
 }
 export function validateOwnerP01(spec){
   const {root,orbs,menu,buttons,secondary,hostPort}=spec||{};
@@ -24,7 +25,9 @@ export function validateOwnerP01(spec){
   if(orbs.some(x=>!inside(root,x.element)))throw Error("ORIGINAL_NINE_ORBS_REQUIRED");
   const m=checkEntries(root,menu,8,"EIGHT_MENU");
   const b=checkEntries(root,buttons,5,"FIVE_BUTTONS");
-  const nodes=[...orbs.map(x=>x.element),...m,...b];
+  if([...b.routes].some(route=>m.routes.has(route)))
+    throw Error("MENU_BUTTON_ROUTE_COLLIDE");
+  const nodes=[...orbs.map(x=>x.element),...m.elements,...b.elements];
   if(new Set(nodes).size!==nodes.length)throw Error("ORIGINAL_NODES_COLLIDE");
   if(secondary!=null&&(!inside(root,secondary)||
      secondary.dataset?.noxWowSlot!=="secondary"||
@@ -38,12 +41,21 @@ export function validateOwnerP01(spec){
     wow51to200:secondary!=null,existingNodesPreserved:true});
 }
 export function shortcutRoute(e,{homeActive=false,searchRoute,fullscreenRoute,escapeRoute}={}){
-  if(!e||homeActive||e.defaultPrevented||e.isComposing||e.altKey)return null;
+  if(!e||e.defaultPrevented||e.isComposing||e.altKey||e.repeat||
+     e.isTrusted===false)return null;
   const key=String(e.key||"").toLowerCase();
   const mod=e.ctrlKey===true||e.metaKey===true;
-  if(mod&&key==="k"&&ID.test(searchRoute))return searchRoute;
-  if(!mod&&key==="f11"&&ID.test(fullscreenRoute))return fullscreenRoute;
-  if(!mod&&key==="escape"&&ID.test(escapeRoute))return escapeRoute;
+  const edit=Boolean(e.target?.isContentEditable ||
+    /^(INPUT|TEXTAREA|SELECT)$/i.test(e.target?.tagName||"") ||
+    e.target?.closest?.('[contenteditable="true"],[role="textbox"]'));
+  if(mod&&key==="k"&&!homeActive&&!e.shiftKey&&!edit&&
+     !(e.ctrlKey===true&&e.metaKey===true)&&ID.test(searchRoute))
+    return searchRoute;
+  // HOME keeps the approved native fullscreen/escape controls; only palette is hidden.
+  if(!mod&&!e.shiftKey&&key==="f11"&&ID.test(fullscreenRoute))
+    return fullscreenRoute;
+  if(!mod&&!e.shiftKey&&!edit&&key==="escape"&&ID.test(escapeRoute))
+    return escapeRoute;
   return null;
 }
 export function validateMode(mode){return MODES.has(mode);}
