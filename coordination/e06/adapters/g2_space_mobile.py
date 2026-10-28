@@ -199,31 +199,46 @@ class PrivateMobileContract:
                        for r in payload["want"])
                 or len(set(payload["want"])) != len(payload["want"])):
             raise G2Denied("Remote request may ask only safe registered capabilities")
-        proof = self.peer(session)   # Native host only; NEVER take proof from payload.
-        if not isinstance(proof, dict) or set(proof) != {
-            "identity", "verified_private_peer", "trusted_origin", "observed_origin",
-            "expected_csrf", "received_csrf", "native_session_approved", "expires_at"}:
-            raise G2Denied("Missing private host-attested device/session")
-        expiry = proof["expires_at"]
-        if type(expiry) not in (int, float) or not self.clock() < expiry <= self.clock() + 300:
-            raise G2Denied("Expired or implausible short-lived private authorization")
-        try:
-            ok = self.policy(proof["identity"],
-                             verified_private_peer=proof["verified_private_peer"],
-                             trusted_origin=proof["trusted_origin"],
-                             observed_origin=proof["observed_origin"],
-                             expected_csrf=proof["expected_csrf"],
-                             received_csrf=proof["received_csrf"],
-                             native_session_approved=proof["native_session_approved"])
-        except Exception as exc:
-            raise G2Denied("Private origin/CSRF verification failed") from exc
-        if ok is not True:
-            raise G2Denied("Private peer/CSRF/user consent denied")
-        # Native session-scoped capabilities, never a public URL or a token.
+        def attest() -> object:
+            # Recheck native proof after host advertisement too: a peer,
+            # session, CSRF or gateway can be revoked during an owner call.
+            proof = self.peer(session)  # Never trust request-supplied headers.
+            if not isinstance(proof, dict) or set(proof) != {
+                "identity", "verified_private_peer", "trusted_origin",
+                "observed_origin", "expected_csrf", "received_csrf",
+                "native_session_approved", "expires_at"}:
+                raise G2Denied("Missing private host-attested device/session")
+            expiry, now = proof["expires_at"], self.clock()
+            if (type(expiry) not in (int, float) or not math.isfinite(expiry)
+                    or not now < expiry <= now + 300):
+                raise G2Denied("Expired or implausible private authorization")
+            try:
+                ok = self.policy(proof["identity"],
+                                 verified_private_peer=proof["verified_private_peer"],
+                                 trusted_origin=proof["trusted_origin"],
+                                 observed_origin=proof["observed_origin"],
+                                 expected_csrf=proof["expected_csrf"],
+                                 received_csrf=proof["received_csrf"],
+                                 native_session_approved=proof["native_session_approved"])
+            except Exception as exc:
+                raise G2Denied("Private origin/CSRF verification failed") from exc
+            if ok is not True:
+                raise G2Denied("Private peer/CSRF/user consent denied")
+            return proof["identity"]
+
+        identity = attest()
         advertised = self.host.advertise(session)
+        if not self.available():
+            raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED")
+        if attest() != identity:
+            raise G2Denied("Private device identity changed during advertisement")
+        if not isinstance(advertised, dict):
+            raise G2Hold("Existing native host advertisement unavailable")
+        # Session-scoped capabilities, never a public URL or bearer token.
         return {"mode": "PRIVATE_NATIVE_ATTESTED", "gatewayListening": True,
                 "allowed": [r for r in payload["want"]
-                            if advertised.get(r, {}).get("enabled") is True]}
+                            if isinstance(advertised.get(r), dict)
+                            and advertised[r].get("enabled") is True]}
 
 
 def relay_existing_events_v3(event: dict, *, run_id: str,
@@ -291,18 +306,15 @@ class G2OneHostBinder:
             raise G2Hold("Current original app SourceLock / host serial lock missing")
         for owner in ("P02", "P03", "P05"):
             self._receipt(owner)
-        # This callback must re-hash exact original bytes and check owner map,
-        # same-root tree/preimage receipts; no string supplied by JS can pass.
-        if self.verify_preimages(self.source_lock, dict(self.receipts)) is not True:
-            raise G2Hold("Frozen original archive/preimage/owner conflict")
         if not isinstance(getattr(self.host, "routes", None), dict) or not isinstance(
                 getattr(self.host, "ports", None), dict):
             raise G2Hold("Existing PACK01 one-host route registry is mandatory")
         if not all(callable(getattr(self.p02, m, None)) for m in ("register",)) or (
                 not callable(getattr(self.p03, "register", None))):
             raise G2Hold("Original P02/P03 owner adapters are missing")
-        with self.lock:  # This MUST be the canonical host's existing registry lock.
+        with self.lock:  # Canonical host registry lock, never an E06 copy.
             before = dict(self.host.ports)
+            frozen_routes = dict(self.host.routes)
             e05_routes = {route for route in P05_ROUTES
                           if self.e05.available(route)}
             voice_routes = {}
@@ -327,6 +339,9 @@ class G2OneHostBinder:
                 if (route in before or self.host.routes.get(route, {}).get("owner") != owner):
                     raise G2Hold("Existing host route collision or wrong owner: " + route)
             try:
+                # Verify inside the existing host lock, not only before it.
+                if self.verify_preimages(self.source_lock, dict(self.receipts)) is not True:
+                    raise G2Hold("Frozen original archive/preimage/owner conflict")
                 p2 = self.p02.register(self.host, receipt=self._receipt("P02"))
                 p3 = self.p03.register(self.host, self.port_type,
                                       receipt=self._receipt("P03"))
@@ -343,11 +358,17 @@ class G2OneHostBinder:
                     self.host.bind("mobile.connect", self.port_type(
                         self.mobile.connect, self.mobile.available,
                         self._receipt("P02"), 6))
+                # An owner can revoke preimage readiness while registering.
+                # Reject changed source trees and modified pre-existing ports.
+                if (self.verify_preimages(self.source_lock, dict(self.receipts)) is not True
+                        or self.host.routes != frozen_routes
+                        or any(self.host.ports.get(r) is not p
+                               for r, p in before.items())):
+                    raise G2Hold("SourceLock or existing registry changed during binding")
             except Exception as exc:
-                # Registry lock excludes competing writers; never touch any
-                # pre-existing port or mutate the original owner's source.
-                for route in list(self.host.ports):
-                    if route not in before:
-                        del self.host.ports[route]
+                # Roll back even if a misbehaving owner overwrote an old port;
+                # original source/assets and existing host object stay intact.
+                self.host.ports.clear()
+                self.host.ports.update(before)
                 raise G2Hold("All-or-HOLD existing-host bindings rolled back") from exc
             return frozenset(set(p2) | set(p3) | intended)
