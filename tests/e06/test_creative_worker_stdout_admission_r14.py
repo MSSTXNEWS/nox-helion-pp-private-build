@@ -19,14 +19,12 @@ BRIDGE = ROOT / "integrations/creative/bridge/CreativeHostBridge.cs"
 
 
 def stdout_frame_block(source: str) -> str:
-    """Return the brace-balanced stdout *while body*, excluding outer catch."""
-    match = re.search(
-        r"while\s*\(await\s+process\.StandardOutput\.ReadLineAsync\(\)"
-        r"\s+is\s*\{\s*\}\s+line\)\s*\{", source,
-    )
-    if not match:
-        raise AssertionError("CREATIVE_STDOUT_READ_LOOP_MISSING")
-    start = match.end() - 1
+    """Extract the actual bounded stdout consumer, excluding its outer task."""
+    anchor = "var reader = new BoundedCreativeLineReader(process.StandardOutput);"
+    if source.count(anchor) != 1:
+        raise AssertionError("CREATIVE_BOUNDED_STDOUT_READER_MISSING")
+    start = source.index("while (true)", source.index(anchor))
+    start = source.index("{", start)
     depth = 0
     for index in range(start, len(source)):
         if source[index] == "{":
@@ -36,7 +34,6 @@ def stdout_frame_block(source: str) -> str:
             if depth == 0:
                 return source[start:index + 1]
     raise AssertionError("CREATIVE_STDOUT_UNBALANCED_LOOP")
-
 
 class CreativeWorkerStdoutAdmissionR14(unittest.TestCase):
     @classmethod
@@ -52,7 +49,9 @@ class CreativeWorkerStdoutAdmissionR14(unittest.TestCase):
         self.assertIn("CREATIVE_WORKER_PARENT_REPARSE_HOLD", self.source)
 
     def test_original_stdout_size_budget_remains(self):
-        self.assertIn("line.Length>8_000_000", self.frame)
+        self.assertIn("line.Length >= 8_000_000", self.source)
+        self.assertIn("if (oversized)", self.frame)
+        self.assertNotIn("StandardOutput.ReadLineAsync(", self.source)
 
     def test_frame_json_parse_exception_cannot_end_reader(self):
         # Catch must be within the read-loop body, NOT the surrounding Task.Run.
@@ -73,6 +72,17 @@ class CreativeWorkerStdoutAdmissionR14(unittest.TestCase):
         # Missing data is expected to be rejected without terminating stdout.
         self.assertNotIn('doc.RootElement.GetProperty("data")', self.frame)
         self.assertIn('TryGetProperty("data"', self.frame)
+
+    def test_bounded_reader_discards_overflow_before_allocating_full_line(self):
+        self.assertIn("private sealed class BoundedCreativeLineReader", self.source)
+        self.assertIn("new char[4096]", self.source)
+        self.assertIn("line.Clear();", self.source)
+        self.assertIn("ReadAsync(_chunk.AsMemory())", self.source)
+        self.assertIn("if (ch == '\\n')", self.source)
+
+    def test_stderr_drained_in_fixed_chunks(self):
+        self.assertIn("process.StandardError.ReadAsync(discard.AsMemory())", self.source)
+        self.assertNotIn("StandardError.ReadLineAsync(", self.source)
 
     def test_worker_stderr_not_forwarded_to_webview(self):
         self.assertIn("Do not surface arbitrary worker stderr", self.source)

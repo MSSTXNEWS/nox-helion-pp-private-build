@@ -173,6 +173,44 @@ public partial class MainWindow
         }
     }
 
+    // An untrusted child may emit an 8 MiB+ line WITHOUT a newline.
+    // StreamReader.ReadLineAsync would allocate the whole line before its
+    // length is checked. Keep only a bounded chunk buffer and discard the
+    // oversize frame through its delimiter, without losing later frames.
+    private sealed class BoundedCreativeLineReader(StreamReader source)
+    {
+        private readonly char[] _chunk = new char[4096];
+        private int _position, _length;
+
+        public async Task<(string? Text, bool Oversized)> ReadAsync()
+        {
+            var line = new StringBuilder();
+            var oversize = false;
+            while (true)
+            {
+                if (_position >= _length)
+                {
+                    _length = await source.ReadAsync(_chunk.AsMemory()).ConfigureAwait(false);
+                    _position = 0;
+                    if (_length == 0)
+                        return (oversize ? string.Empty : line.Length == 0 ? null : line.ToString(), oversize);
+                }
+                var ch = _chunk[_position++];
+                if (ch == '\n')
+                {
+                    if (!oversize && line.Length != 0 && line[line.Length - 1] == '\r')
+                        line.Length--;
+                    return (oversize ? string.Empty : line.ToString(), oversize);
+                }
+                if (!oversize)
+                {
+                    if (line.Length >= 8_000_000) { oversize = true; line.Clear(); }
+                    else line.Append(ch);
+                }
+            }
+        }
+    }
+
     private async Task<Process> EnsureCreativeWorkerAsync()
     {
         await _creativeStartGate.WaitAsync();
@@ -195,9 +233,12 @@ public partial class MainWindow
             {
                 try
                 {
-                    while (await process.StandardOutput.ReadLineAsync() is { } line)
+                    var reader = new BoundedCreativeLineReader(process.StandardOutput);
+                    while (true)
                     {
-                        if (line.Length>8_000_000) { WriteLog("CREATIVE_RESPONSE_TOO_LARGE"); continue; }
+                        var (line, oversized) = await reader.ReadAsync();
+                        if (line is null) break;
+                        if (oversized) { WriteLog("CREATIVE_RESPONSE_TOO_LARGE"); continue; }
                         // A malformed frame must not kill the long-lived reader:
                         // handle each line independently and preserve later pending requests.
                         try
@@ -237,7 +278,8 @@ public partial class MainWindow
                 try
                 {
                     // Do not surface arbitrary worker stderr (could contain user data).
-                    while(await process.StandardError.ReadLineAsync() is { } _){}
+                    var discard = new char[4096];
+                    while (await process.StandardError.ReadAsync(discard.AsMemory()).ConfigureAwait(false) > 0) { }
                 }
                 catch{}
             });
