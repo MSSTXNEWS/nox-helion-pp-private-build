@@ -552,7 +552,14 @@ def gpu_temperature(exe: str, gpu_uuid: str) -> float | None:
         )
         if result.returncode:
             return None
-        value = float(result.stdout.strip().splitlines()[0])
+        # A selected NVIDIA GPU UUID must have exactly one sensor row.
+        # Multiple rows (including blank ones) are ambiguous: thermal HOLD.
+        if not isinstance(result.stdout, str):
+            return None
+        lines = result.stdout.splitlines()
+        if len(lines) != 1:
+            return None
+        value = float(lines[0].strip())
         return value if 0 <= value <= 150 else None
     except (OSError, ValueError, IndexError, subprocess.TimeoutExpired):
         return None
