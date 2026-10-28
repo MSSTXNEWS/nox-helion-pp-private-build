@@ -125,4 +125,6 @@ class ComfyVideoPort(ComfyImagePort):
                         and ".." not in filename and filename.lower().endswith(VIDEO_EXT)
                         and item.get("type", "output") == "output"):
                         clips.append({"filename": filename, "type": "output"})
+        if not clips:
+            return {"status": "OUTPUT_MISSING_HOLD", "videos": []}
         return {"status": "RENDERED_IN_COMFY_NOT_IMPORTED", "videos": clips[:8]}
