@@ -38,7 +38,8 @@ class FilmTests(unittest.TestCase):
         self.assertEqual(len(STYLES),12)
         for s in STYLES:
             p=project(style=s,rating="ADULT_18" if s=="adult_anime_18" else "GENERAL",
-                      adult=s=="adult_anime_18")
+                      adult=s=="adult_anime_18",
+                      chars=(Character("adult-actor","Adult","verified adult",26,H,True,True),) if s=="adult_anime_18" else ())
             self.assertEqual(len(storyboard(p)),1)
 
     def test_adult_animation_requires_verified_adult_character(self):
