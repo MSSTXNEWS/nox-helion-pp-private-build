@@ -69,6 +69,7 @@ async function selectModel(id){
  const epoch=++modelSelectionEpoch;
  selectedModel=id;revision='';files=[];
  $('license').checked=false;
+ $('license').disabled=true;
  $('variants').replaceChildren();
  $('model-info').textContent='Запрашиваем реальные варианты и лицензию…';
  try{
@@ -77,6 +78,8 @@ async function selectModel(id){
   // revision, weight filenames, license or explicit consent.
   if(epoch!==modelSelectionEpoch||selectedModel!==id)return;
   revision=r.revision;
+  $('license').checked=false;
+  $('license').disabled=false;
   $('model-info').textContent=id+' · Revision: '+revision+' · License: '+r.license+' · '+r.files.length+' весовых файлов';
   for(const f of r.files){
    const label=document.createElement('label'),input=document.createElement('input');
