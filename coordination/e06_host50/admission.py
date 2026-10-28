@@ -19,6 +19,7 @@ import re
 import secrets
 import threading
 import time
+import unicodedata
 import uuid
 from urllib.parse import urlsplit
 
@@ -621,10 +622,18 @@ def _snapshot_source_bytes(path: Path) -> bytes:
 
 
 def _strict_json_object_pairs(pairs: list[tuple[str, object]]) -> dict:
+    # Cross-runtime .NET/Python contract: a property may have one identity only.
+    # Preserve original spelling for the approved schema, but reject aliases
+    # (casefold/NFC) before any policy check or signed source digest is issued.
     out = {}
+    normalized_keys = set()
     for key, value in pairs:
         if key in out:
             raise Hold("AUDIT_DUPLICATE_JSON_KEY")
+        identity = unicodedata.normalize("NFC", key).casefold()
+        if identity in normalized_keys:
+            raise Hold("AUDIT_AMBIGUOUS_JSON_PROPERTY")
+        normalized_keys.add(identity)
         out[key] = value
     return out
 

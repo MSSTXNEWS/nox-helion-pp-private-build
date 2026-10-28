@@ -1,0 +1,72 @@
+{
+  "schema": "NOX_V16_E06_HOST50_OWNER_PATCH_RECEIPT_R16",
+  "runId": "NOX-V16-W1-02-HOST50-20261029T003007MSK-R16",
+  "startedAt": "2026-10-29T00:30:07+03:00",
+  "receiptPreparedAt": "2026-10-29T00:34:46+03:00",
+  "owner": "E06/W1-02",
+  "baseSource": "R15 owner branch e06/v16-host50-r13-strict-source-json-20261028-2135",
+  "ownerParentCommit": "e718e4423c466f1ed2ff3f8f69f90279491fb90b",
+  "ownerParentTree": "5c03ca9f1ed8c7d9c307eb224aa434127522b647",
+  "historicalMainCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "currentIntegrationPR": 162,
+  "pr162ObservedHead": "3fa026eb563fc27e6b59389f41f07337bda541ea",
+  "pr162Modified": false,
+  "files": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "preSha256": "b2df8ae992367b09ee8c84d33c1063f80c238e60bda329b25b2524181f3350ab",
+      "postSha256": "7cbe9c5e9303720f9a2a6867008ace321e1c92bbd74c7572fb5a305fafcc8711",
+      "preGitBlobSha1": "f88d0f2de5a90bb0fc0186c2586044fcb85a2abf",
+      "postGitBlobSha1": "56e5b0cb189720ec11e800efbcd00e5ed73bc684"
+    },
+    {
+      "path": "coordination/e06_host50/test_source_key_identity_r16.py",
+      "owner": "E06",
+      "preSha256": "ABSENT",
+      "postSha256": "bf35ad9684364e280c6bddbb11449f84eb25ac9941f1089b1c002ba101903c70",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "f931b4ec19b3c4eceabe3f5d4c0e41655ed6deaf"
+    }
+  ],
+  "defect": "Source JSON registry parser accepted distinct raw keys sharing NFC/casefold property identity; .NET and Python consumers may disagree before native route admission.",
+  "change": "Reject ambiguous NFC+casefold key aliases recursively via existing object_pairs_hook, preserve exact raw duplicate error and source-byte snapshot SHA.",
+  "sourceOnlyEvidence": {
+    "redFailures": 4,
+    "redTotal": 7,
+    "greenPassed": 7,
+    "greenTotal": 7,
+    "priorR15RecursionTestsPassed": 4,
+    "priorR15RecursionTestsTotal": 4,
+    "overallPassed": 75,
+    "overallGroups": 8,
+    "pythonCompile": "PASS"
+  },
+  "TaskIdLedger": {
+    "canonicalTaskIds": 50,
+    "routeOwnerMatches": 50,
+    "sourceCandidates": 36,
+    "unbound": 14,
+    "nativeAttested": 0,
+    "windowsAccepted": 0,
+    "productTaskIdsNewDone": 0,
+    "sourceSecurityPatchDone": 1
+  },
+  "previousLesson": {
+    "id": "NESTED_UNTRUSTED_WIRE_RECURSION_FAIL_CLOSED",
+    "applied": true,
+    "regression": "R15 deep source document, page request, file picker mutation and signed ACK 4/4 PASS"
+  },
+  "newLesson": {
+    "id": "E06_JSON_NFC_CASEFOLD_PROPERTY_IDENTITY_BEFORE_NATIVE_ADMISSION",
+    "error": "Ambiguous registry JSON object keys passed source audit",
+    "rootCause": "Duplicate guard compared raw key spellings only",
+    "fix": "NFC normalize plus casefold before accepting any JSON object property",
+    "regression": "4 RED -> GREEN, 7/7 new, 75/75 all, 4/4 R15 preserved",
+    "prevention": "Always run source-bound negative tests for mixed-case and Unicode-equivalent key pairs before SourceLock/readmission"
+  },
+  "sourceReady": "HOLD original 729 raw source SHA plus verified native owner handler receipts absent",
+  "buildGate": "HOLD; NO_BINARY_BUILD",
+  "release": "HOLD; same BuildID/E07 10 native installed tests NOT_RUN",
+  "note": "Isolated E06 branch only; manual #1 owns PR162 integration after SHA/CAS and independent source readback. No second host, SQLite, LLM, trainer, installer or downloader."
+}
