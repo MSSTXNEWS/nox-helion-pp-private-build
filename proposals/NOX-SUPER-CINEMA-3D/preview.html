@@ -20,7 +20,7 @@ footer{padding:12px 0;color:#a7bbc5;font-size:12px}
 </style></head><body>
 <header><div><small>NOX HELION · NON-PRODUCTION / WEBGL</small><h1>SUPER CINEMA 3D</h1></div>
 <div class="controls"><label>Режим <select id="mode"><option>BALANCED</option><option>MAX</option><option>ECO</option><option>REDUCED</option></select></label>
-<label><input type="checkbox" id="training"> Идёт GPU-обучение (демо-ограничитель)</label></div></header>
+<label><input type="checkbox" id="training"> Идёт GPU-обучение (демо-ограничитель)</label><button type="button" id="record">Записать 8-секундный WebM</button><small id="record-status" aria-live="polite"></small></div></header>
 <main><div id="stage" data-nox-wow-slot="secondary" class="stage"></div><div id="cores" class="corebar"></div>
 <footer>Локальный демонстрационный WebGL-рендер. Оригинальный D02 HOME не заменён. Реальных показаний CPU/GPU или генерации изображений здесь нет. Для финального EXE требуется SourceLock и приёмка №7.</footer></main>
 <script src="./dist/nox-cinema3d.js"></script><script>
@@ -33,6 +33,20 @@ for(const id of host.CORE_IDS){let b=document.createElement("button");b.type="bu
 b.addEventListener("click",()=>view.selectCore(id));controls.append(b)}
 document.getElementById("mode").addEventListener("change",e=>view.setMode(e.target.value));
 document.getElementById("training").addEventListener("change",e=>view.setTrainingActive(e.target.checked));
+const recordButton=document.getElementById("record");
+recordButton.addEventListener("click",async()=>{
+ recordButton.disabled=true;
+ const status=document.getElementById("record-status");status.textContent="Запись по вашему запросу...";
+ try{
+  if(!view.ready||typeof view.recordClip!=="function")throw Error("WEBM_NOT_READY");
+  const clip=await view.recordClip({seconds:8,fps:24});
+  const url=URL.createObjectURL(clip.blob),a=document.createElement("a");
+  a.href=url;a.download="NOX_HELION_3D_DEMO.webm";document.body.append(a);a.click();a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+  status.textContent="WebM создан локально · "+clip.size+" байт";
+ }catch(e){status.textContent="Запись недоступна: "+String(e?.message||"error").slice(0,80)}
+ finally{recordButton.disabled=false}
+});
 window.addEventListener("pagehide",()=>view.destroy(),{once:true});
 })();
 </script></body></html>
