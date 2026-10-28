@@ -88,6 +88,12 @@ class VideoModelTests(unittest.TestCase):
         self.assertEqual(out["status"], "RENDERED_IN_COMFY_NOT_IMPORTED")
         self.assertEqual([v["filename"] for v in out["videos"]],["movie_001.mp4","final.webm"])
 
+    def test_finished_comfy_status_without_video_is_hold(self):
+        self.transport.answer = {PID: {"status": {"status_str": "success"},
+                                       "outputs": {"5": {"gifs": []}}}}
+        out = self.port.video_result(PID)
+        self.assertEqual(out, {"status":"OUTPUT_MISSING_HOLD", "videos":[]})
+
     def test_workflow_digest_immutable_and_budget_bounded(self):
         with self.assertRaises(Hold):
             self.port.prepare_video(**{**self.args, "workflow_digest":"b"*64})
