@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import json
 import re
-import urllib.parse
 from dataclasses import dataclass
 from typing import Callable, Mapping
 from p02_runtime import P02Error
 from p02_capabilities import Identity
+from p02_chat_bridge import ChatBridge
 
 P02_TYPES = frozenset({
     'chat.start', 'chat.delta', 'chat.complete', 'chat.error', 'chat.sources'
@@ -114,14 +114,8 @@ class P02EventRelay:
                         ('url' in row and
                          (not isinstance(row['url'], str) or len(row['url']) > 2048))):
                     raise P02Error('CHAT_SOURCES_SCHEMA_INVALID')
-                if 'url' in row:
-                    try:
-                        u = urllib.parse.urlsplit(row['url'])
-                        if (u.scheme != 'https' or not u.hostname or u.username or
-                                u.password or any(ord(c) < 32 for c in row['url'])):
-                            raise P02Error('CHAT_SOURCE_URL_FORBIDDEN')
-                    except ValueError as exc:
-                        raise P02Error('CHAT_SOURCE_URL_FORBIDDEN') from exc
+                if 'url' in row and not ChatBridge._safe_citation_url(row['url']):
+                    raise P02Error('CHAT_SOURCE_URL_FORBIDDEN')
         try:
             serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False)
             encoded = serialized.encode('utf-8', errors='strict')

@@ -122,4 +122,38 @@ class ExistingEventBusOnly(unittest.TestCase):
         with self.assertRaisesRegex(P02Error,'P02_EVENT_PAYLOAD_OVER_QUOTA'):
             relay.relay({'type':'chat.delta','run_id':rid,'text':'x'*70000})
 
+
+    def test_sources_reject_ambiguous_https_links_without_publishing(self):
+        seen = []
+        relay = P02EventRelay(self.binding(publish=lambda name, payload: seen.append((name, payload))))
+        rid = uuid.uuid4().hex
+        relay.relay({'type': 'chat.start', 'run_id': rid, 'model': 'installed:verified'})
+        suspicious = (
+            'https://example.org/%0a',
+            'https://@example.org/',
+            'https://example.org\\\\@evil.test/',
+            'https://example.org/%7f',
+            'https://example.org/%E2%80%AEevil',
+            'https://example.org:99999/path',
+            ' https://example.org/',
+            'https://example.org/\\u202ehidden',
+        )
+        for url in suspicious:
+            with self.subTest(url=url):
+                with self.assertRaisesRegex(P02Error, 'CHAT_SOURCE_URL_FORBIDDEN'):
+                    relay.relay({'type': 'chat.sources', 'run_id': rid, 'sources': [
+                        {'source_id': 'doc', 'title': 'Verified', 'url': url}]})
+        self.assertEqual(len(seen), 1, 'No invalid citation may reach the host bus')
+
+    def test_sources_accept_valid_https_after_rejections(self):
+        seen = []
+        relay = P02EventRelay(self.binding(publish=lambda name, payload: seen.append((name, payload))))
+        rid = uuid.uuid4().hex
+        relay.relay({'type': 'chat.start', 'run_id': rid, 'model': 'installed:verified'})
+        relay.relay({'type': 'chat.sources', 'run_id': rid, 'sources': [
+            {'source_id': 'ref-1', 'title': 'Verified source',
+             'url': 'https://example.org:8443/article?lang=es'}]})
+        self.assertEqual(len(seen), 2)
+        self.assertEqual(seen[-1][1]['sources'][0]['source_id'], 'ref-1')
+
 if __name__=='__main__': unittest.main()
