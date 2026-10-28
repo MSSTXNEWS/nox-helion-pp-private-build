@@ -1,0 +1,109 @@
+# E07-BLOCK-01/04: one immutable release identity; not a second ZIP validator.
+[CmdletBinding()]
+param(
+ [Parameter(Mandatory=$true)][string]$Original729Receipt,
+ [Parameter(Mandatory=$true)][string]$OneHostReceipt,
+ [Parameter(Mandatory=$true)][string]$SetupExe,
+ [Parameter(Mandatory=$true)][string]$PublishedExe,
+ [Parameter(Mandatory=$true)][string]$SourceCommitSha,
+ [Parameter(Mandatory=$true)][string]$Output,
+ [ValidateSet('BUILT','INSTALLED')][string]$Phase='BUILT',
+ [string]$InstalledExe='',
+ [string]$InstallLog='',
+ [string]$LaunchLog='',
+ [string]$UpdateLog='',
+ [string]$RollbackLog='',
+ [string]$UninstallLog=''
+)
+$ErrorActionPreference='Stop'
+Set-StrictMode -Version Latest
+function FileSha([string]$path) {
+ if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw "E07_FILE_MISSING:$path" }
+ $item=Get-Item -LiteralPath $path -Force
+ if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+   throw "E07_REPARSE_INPUT:$path"
+ }
+ return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+$commit=$SourceCommitSha.ToLowerInvariant()
+if ($commit -cnotmatch '^[0-9a-f]{40}$') { throw 'E07_SOURCE_COMMIT_INVALID' }
+$head=((& git rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $head -cne $commit) { throw 'E07_CHECKOUT_SHA_DRIFT' }
+$manifestSha=FileSha $Original729Receipt
+$onehostSha=FileSha $OneHostReceipt
+$setupSha=FileSha $SetupExe
+$exeSha=FileSha $PublishedExe
+$source=Get-Content -LiteralPath $Original729Receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+$onehost=Get-Content -LiteralPath $OneHostReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($source.schema -cne 'NOX_ORIGINAL_SOURCE_729_SHA256_V1' -or
+ $source.status -cne 'SOURCE_ARCHIVE_VERIFIED_ONLY_NOT_E07_RELEASE' -or
+ $source.zip_bytes -ne 60364346 -or
+ $source.zip_sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a' -or
+ $source.file_count -ne 729 -or @($source.files).Count -ne 729 -or
+ @($source.parts).Count -ne 3) { throw 'E07_ORIGINAL_729_SOURCELOCK_NOT_VERIFIED' }
+$paths=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($f in $source.files) {
+ if ([string]::IsNullOrWhiteSpace([string]$f.path) -or
+ !$paths.Add([string]$f.path) -or
+ [string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') {
+   throw 'E07_INVALID_ORIGINAL_SOURCE_RECEIPT'
+ }
+}
+if ($onehost.schema -cne 'NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1' -or
+ $onehost.release_accepted -ne $false -or
+ ([string]$onehost.installer_sha256).ToLowerInvariant() -cne $setupSha -or
+ ([string]$onehost.wpf_exe_sha256).ToLowerInvariant() -cne $exeSha) {
+ throw 'E07_SETUP_EXE_RECEIPT_SHA_DRIFT'
+}
+$identity="$($source.zip_sha256)|$commit|$setupSha|$exeSha"
+$hash=[Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($identity))
+$buildId='NOX-V16-'+([Convert]::ToHexString($hash).ToLowerInvariant().Substring(0,24))
+$installedSha=$null
+$logs=[ordered]@{}
+if ($Phase -ceq 'INSTALLED') {
+ if ([string]::IsNullOrWhiteSpace($InstalledExe)) { throw 'E07_INSTALLED_EXE_MISSING' }
+ $installedSha=FileSha $InstalledExe
+ if ($installedSha -cne $exeSha) { throw 'E07_INSTALLED_EXE_SHA_DRIFT' }
+ foreach ($entry in @(
+ @{name='install';file=$InstallLog},
+ @{name='launch';file=$LaunchLog},
+ @{name='update';file=$UpdateLog},
+ @{name='rollback';file=$RollbackLog},
+ @{name='uninstall';file=$UninstallLog})) {
+  if ([string]::IsNullOrWhiteSpace($entry.file)) { throw "E07_LIFECYCLE_LOG_MISSING:$($entry.name)" }
+  $logs[$entry.name]=FileSha $entry.file
+  if ((Get-Item -LiteralPath $entry.file).Length -le 0) {
+   throw "E07_LIFECYCLE_LOG_EMPTY:$($entry.name)"
+  }
+ }
+}
+$receipt=[ordered]@{
+ schema='NOX_V16_E07_IMMUTABLE_HANDOFF_V1'
+ build_id=$buildId;phase=$Phase
+ source_commit_sha1=$commit;original_zip_sha256=$source.zip_sha256
+ original_manifest_sha256=$manifestSha;source_files=729
+ e06_onehost_receipt_sha256=$onehostSha
+ setup_sha256=$setupSha;published_exe_sha256=$exeSha
+ installed_exe_sha256=$installedSha;lifecycle_log_sha256=$logs
+ # Presence of logs is not independent acceptance of their contents.
+ independent_e07_cases_accepted=0
+ release_accepted=$false
+ status='PENDING_E07_INDEPENDENT_SAME_SHA_QA'
+}
+if (Test-Path -LiteralPath $Output) { throw 'E07_HANDOFF_ALREADY_EXISTS' }
+$parent=Split-Path -Parent $Output
+if ([string]::IsNullOrWhiteSpace($parent)) { throw 'E07_OUTPUT_PARENT_REQUIRED' }
+New-Item -ItemType Directory -Path $parent -Force | Out-Null
+foreach ($ancestor in @(Get-Item -LiteralPath $parent) + @(Get-Item -LiteralPath $parent).Parent) {
+ if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+   throw 'E07_OUTPUT_REPARSE_PARENT'
+ }
+}
+[IO.File]::WriteAllText($Output,($receipt | ConvertTo-Json -Depth 8)+[Environment]::NewLine,
+ [Text.UTF8Encoding]::new($false))
+$actual=Get-Content -LiteralPath $Output -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($actual.build_id -cne $buildId -or $actual.setup_sha256 -cne $setupSha -or
+ $actual.published_exe_sha256 -cne $exeSha -or $actual.release_accepted -ne $false) {
+ throw 'E07_HANDOFF_READBACK_DRIFT'
+}
+Write-Host "E07_BUILDID_SEALED $buildId PHASE=$Phase RELEASE_NOT_ACCEPTED"
