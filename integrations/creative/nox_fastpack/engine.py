@@ -77,9 +77,54 @@ class Studio(CreativeExtensions):
         try: import trimesh; return True
         except ImportError: return False
 
+    def _installed_weights(self, model_id, repository):
+        """Receipt means files physically exist, not that inference is ready.
+
+        Read a small bounded manifest only; do not hash large model weights on
+        every UI catalog refresh. The native owner verifies model rights/SHA at
+        download and runtime admission separately.
+        """
+        target=self.models/model_id
+        receipt=target/"RECEIPT.json"
+        try:
+            if self.models.is_symlink() or target.is_symlink() or receipt.is_symlink():
+                return False
+            if not receipt.is_file() or receipt.stat().st_size > 131_072:
+                return False
+            data=json.loads(receipt.read_text(encoding="utf-8"))
+            if (type(data) is not dict or data.get("model")!=model_id or
+                data.get("source")!="https://huggingface.co/"+repository or
+                type(data.get("revision")) is not str or
+                not re.fullmatch(r"[0-9a-f]{40}",data["revision"])):
+                return False
+            rows=data.get("files")
+            if type(rows) is not list or not 0<len(rows)<=2000:
+                return False
+            for row in rows:
+                if type(row) is not dict:
+                    return False
+                name,size=row.get("filename"),row.get("bytes")
+                if (type(name) is not str or type(size) is not int or size<=0 or
+                    name.startswith("/") or "\\" in name or
+                    any(c in name for c in "*?[]") or
+                    ".." in PurePosixPath(name).parts or
+                    PurePosixPath(name).as_posix()!=name):
+                    return False
+                path=target
+                for part in PurePosixPath(name).parts:
+                    path=path/part
+                    if path.is_symlink():
+                        return False
+                if (not path.resolve().is_relative_to(target.resolve()) or
+                    not path.is_file() or path.stat().st_size!=size):
+                    return False
+            return True
+        except (OSError, UnicodeError, ValueError, TypeError, RecursionError):
+            return False
+
     def catalog(self):
         return {"models":[{"id":a,"name":b,"category":c,"repository":d,"vram":e,
-                          "url":"https://huggingface.co/"+d,"installed":(self.models/a/"RECEIPT.json").is_file()}
+                          "url":"https://huggingface.co/"+d,"installed":self._installed_weights(a,d)}
                           for a,b,c,d,e in MODEL_CATALOG],"categories":KINDS}
 
     def _model(self, model_id):
