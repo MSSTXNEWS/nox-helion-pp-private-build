@@ -1,19 +1,90 @@
 'use strict';
+// E06: existing projector WebView2, local user-selected media only. No second server or media endpoint.
 const bc = 'BroadcastChannel' in window ? new BroadcastChannel('nox-helion-theater') : null;
-const video=document.getElementById('video'), poster=document.getElementById('poster');
-let objectURL=null;
-const project=new URLSearchParams(location.search).get('project');if(project && /^[a-z0-9_-]{1,48}$/i.test(project)){video.src='/api/media/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';video.style.display='block';poster.style.display='none';}
-function command(d){if(!d || typeof d!=='object')return;
- if(d.action==='play' && video.src)video.play().catch(()=>{});
- if(d.action==='pause')video.pause();
- if(d.action==='title')document.getElementById('title').textContent=String(d.value||'NOX HELION').slice(0,120);
- if(d.action==='space')document.getElementById('space').textContent=String(d.value||'Кинозал').slice(0,120);
- if(d.action==='fullscreen')document.getElementById('stage').requestFullscreen?.().catch(()=>{});
+const $ = id => document.getElementById(id);
+const video = $('video'), poster = $('poster'), status = $('media-status');
+let mediaURL = null, subtitleURL = null, subtitleTrack = null;
+function notice(message) { status.textContent = String(message).slice(0, 300); }
+function forgetSubtitles() {
+  if (subtitleTrack) { subtitleTrack.remove(); subtitleTrack = null; }
+  if (subtitleURL) { URL.revokeObjectURL(subtitleURL); subtitleURL = null; }
 }
-if(bc)bc.onmessage=e=>command(e.data);
-document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;if(objectURL)URL.revokeObjectURL(objectURL);objectURL=URL.createObjectURL(f);video.src=objectURL;video.style.display='block';poster.style.display='none';};
-document.getElementById('play').onclick=()=>video.play().catch(()=>{});
-document.getElementById('pause').onclick=()=>video.pause();
-document.getElementById('full').onclick=()=>document.getElementById('stage').requestFullscreen?.().catch(()=>{});
-document.getElementById('screens').onclick=async()=>{try{if(!window.getScreenDetails){alert('Выбери монитор или проектор в настройках Windows и перетащи окно на него.');return;}const d=await window.getScreenDetails();alert('Обнаружено экранов: '+d.screens.length+'. Перемести окно на нужный экран, затем нажми полный экран.');}catch(e){alert('Разрешение на экраны не выдано. Используй перетаскивание окна.')}};
-window.addEventListener('beforeunload',()=>{if(objectURL)URL.revokeObjectURL(objectURL);bc?.close()});
+function subtitleToVtt(raw, ext) {
+  const text = raw.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  if (ext === '.vtt') {
+    if (!/^WEBVTT(?:[ \t].*)?\n/.test(text)) throw new Error('Некорректный WEBVTT');
+    return text;
+  }
+  if (ext !== '.srt' || !/\d{2}:\d{2}:\d{2},\d{3}\s+-->\s+\d{2}:\d{2}:\d{2},\d{3}/.test(text)) {
+    throw new Error('Некорректный SRT');
+  }
+  return 'WEBVTT\n\n' + text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
+    .replace(/^\s*\d+\s*\n(?=\d{2}:\d{2}:\d{2}\.\d{3}\s+-->)/gm, '');
+}
+function command(d) {
+  if (!d || typeof d !== 'object') return;
+  if (d.action === 'play') play();
+  if (d.action === 'pause') video.pause();
+  if (d.action === 'title') $('title').textContent = String(d.value || 'NOX HELION').slice(0, 120);
+  if (d.action === 'space') $('space').textContent = String(d.value || 'Кинозал').slice(0, 120);
+  if (d.action === 'fullscreen') fullscreen();
+}
+function play() {
+  if (!video.src) { notice('Сначала выберите локальный видеофайл.'); return; }
+  video.play().catch(() => notice('Воспроизведение заблокировано или кодек не поддерживается.'));
+}
+function fullscreen() {
+  Promise.resolve($('stage').requestFullscreen?.()).catch(() => notice('Полноэкранный режим недоступен.'));
+}
+if (bc) bc.onmessage = e => command(e.data);
+const project = new URLSearchParams(location.search).get('project');
+if (project && /^[a-z0-9_-]{1,48}$/i.test(project)) {
+  notice('Проект ' + project + ': выберите готовый видеофайл на компьютере. Автоматический доступ к закрытым файлам проекта не предоставляется.');
+}
+$('file').onchange = e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  if (!/\.(mp4|webm|mov|m4v)$/i.test(file.name) || file.size < 1) {
+    notice('HOLD: выберите непустой MP4, WebM, MOV или M4V.'); return;
+  }
+  video.pause(); forgetSubtitles();
+  if (mediaURL) URL.revokeObjectURL(mediaURL);
+  mediaURL = URL.createObjectURL(file);
+  video.src = mediaURL;
+  video.style.display = 'block'; poster.style.display = 'none';
+  notice('Видео загружено локально: ' + file.name + '. Можно добавить .srt или .vtt.');
+};
+$('subtitle-file').onchange = async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  const ext = /\.(srt|vtt)$/i.exec(file.name)?.[0]?.toLowerCase();
+  if (!video.src) { notice('Сначала выберите видео.'); return; }
+  if (!ext || file.size < 1 || file.size > 5 * 1024 * 1024) {
+    notice('HOLD: субтитры .srt/.vtt, размер до 5 МБ.'); return;
+  }
+  try {
+    const vtt = subtitleToVtt(await file.text(), ext);
+    // Preserve the existing track on a malformed import; replace it only after parsing succeeds.
+    const nextURL = URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }));
+    forgetSubtitles(); subtitleURL = nextURL;
+    subtitleTrack = document.createElement('track');
+    subtitleTrack.kind = 'subtitles'; subtitleTrack.label = 'Локальные субтитры';
+    subtitleTrack.srclang = 'ru'; subtitleTrack.src = subtitleURL; subtitleTrack.default = true;
+    video.appendChild(subtitleTrack);
+    if (video.textTracks?.length) video.textTracks[video.textTracks.length - 1].mode = 'showing';
+    notice('Субтитры подключены: ' + file.name);
+  } catch (error) { notice('HOLD: файл субтитров не прочитан: ' + String(error?.message || error)); }
+};
+$('play').onclick = play;
+$('pause').onclick = () => video.pause();
+$('full').onclick = fullscreen;
+$('screens').onclick = async () => {
+  try {
+    if (!window.getScreenDetails) { notice('Перенесите окно на нужный монитор Windows, затем нажмите полный экран.'); return; }
+    const d = await window.getScreenDetails(); notice('Экранов доступно: ' + d.screens.length + '. Перенесите окно на проектор.');
+  } catch (_) { notice('Разрешение на экраны не получено. Используйте перенос окна.'); }
+};
+video.addEventListener('error', () => notice('HOLD: видео не открылось (формат или кодек).'));
+window.addEventListener('beforeunload', () => {
+  video.pause(); forgetSubtitles();
+  if (mediaURL) URL.revokeObjectURL(mediaURL);
+  bc?.close();
+});
