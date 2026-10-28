@@ -164,8 +164,20 @@ foreach ($ancestor in @(Get-Item -LiteralPath $parent) + @(Get-Item -LiteralPath
    throw 'E07_OUTPUT_REPARSE_PARENT'
  }
 }
-[IO.File]::WriteAllText($Output,($receipt | ConvertTo-Json -Depth 8)+[Environment]::NewLine,
- [Text.UTF8Encoding]::new($false))
+# FileMode.CreateNew makes the no-clobber guarantee atomic across processes.
+# Test-Path above is advisory only; the exclusive create is authoritative.
+function WriteReceiptNoClobber([string]$path, [string]$content) {
+ $bytes=[Text.UTF8Encoding]::new($false).GetBytes($content)
+ $stream=[IO.FileStream]::new($path,[IO.FileMode]::CreateNew,
+   [IO.FileAccess]::Write,[IO.FileShare]::None)
+ try {
+  $stream.Write($bytes,0,$bytes.Length)
+  $stream.Flush($true)
+ } finally {
+  $stream.Dispose()
+ }
+}
+WriteReceiptNoClobber $Output (($receipt | ConvertTo-Json -Depth 8)+[Environment]::NewLine)
 $actual=Get-Content -LiteralPath $Output -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($actual.build_id -cne $buildId -or $actual.setup_sha256 -cne $setupSha -or
  $actual.published_exe_sha256 -cne $exeSha -or $actual.release_accepted -ne $false) {

@@ -54,6 +54,12 @@ jobs:
         throw 'AZURE_E07_HANDOFF_SINGLE_SEAL_AND_PART_PARITY_HOLD'
       }
       Write-Host 'E07_HANDOFF_PARSE_AND_SINGLE_SEAL_SOURCE_PASS_NOT_RELEASE'
+      # Execute actual writer AST with pre-existing receipt and 8 competing threads.
+      # This is a native PowerShell SOURCE gate, not installed E07.
+      & ./tests/e06/Test-E07NoClobberConcurrent.ps1
+      if ($LASTEXITCODE -ne 0 -or !$?) { throw 'AZURE_E07_RECEIPT_NO_CLOBBER_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_e07_no_clobber_source_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E07_RECEIPT_SOURCE_REGRESSION_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_azure_exact_python_pin.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_PYTHON_PIN_REGRESSION_HOLD' }
       python -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
