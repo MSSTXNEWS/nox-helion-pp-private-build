@@ -222,7 +222,15 @@ export function projectFeeds(feeds, nowMs) {
   // Apply the 16-tile cap AFTER excluding unknown/empty source IDs;
   // otherwise rejected padding can hide all licensed live SPACE sources.
   // Duplicate-market accounting above still scans the entire bounded batch.
-  return feeds.filter(f=>f && sourceIds.has(f.id)).slice(0,16).flatMap(f=>{
+  const recognized=feeds.filter(f=>f && sourceIds.has(f.id));
+  // Capacity is a DISPLAY quota, not a chance for rejected-but-known feeds
+  // to crowd out fully licensed observations. Preserve order within each
+  // group and leave denied cards visible when there is remaining capacity.
+  const licensed=recognized.filter(f=>f.license_status==='APPROVED' &&
+    sha(f.license_receipt_sha256));
+  const disabled=recognized.filter(f=>f.license_status!=='APPROVED' ||
+    !sha(f.license_receipt_sha256));
+  return [...licensed,...disabled].slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
       if (emittedMarkets.has(f.id)) return [];
       emittedMarkets.add(f.id);
