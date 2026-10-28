@@ -1,0 +1,747 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R29_LOADER_SOURCE_HANDOFF_V1",
+  "run_id": "ASTRA-R29-20261029-LOADER-SOURCE-01",
+  "recorded_at": "2026-10-28T23:57:57.770Z",
+  "timezone": "Europe/Moscow",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader-installer",
+  "status": "SOURCE_CANDIDATES_SAVED_CODE_COMPLETE_UNPROVEN",
+  "primary_branch": "astra/v16-code-complete-source-only-20261029",
+  "source_base_commit": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "source_base_git_tree_sha1": "ce1942cc8e743f3670e11577645e413bdae89ac2",
+  "spec": {
+    "document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "revision": "AHj4eMQ4EHl74wo1op2ZNnEowth-3brng0nP9_z_1oM_2OMXuWK5RtbkLrv9GmztMT3ulvLcxHy2O5RQ7Tp9eGMG7ZDBsHTXRJYMwwfp_M0",
+    "authority": "latest §56 R29: one controller plus six workers; no new standalone NOX backend"
+  },
+  "actual_worker_ids": [
+    "/root/a01",
+    "/root/a02",
+    "/root/a03",
+    "/root/a04",
+    "/root/a05",
+    "/root/a06"
+  ],
+  "concurrency": {
+    "controller": 1,
+    "workers": 6,
+    "observed_running_together": true
+  },
+  "owner_checkpoints": [
+    {
+      "phase": "R27",
+      "id": "A01",
+      "passes": 1,
+      "branch": "astra/r27-a01-20261029",
+      "sha": "f0090d5ccc2df4f29a878b595bd6689c69215290",
+      "created_at": "2026-10-28T23:21:55Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f0090d5ccc2df4f29a878b595bd6689c69215290"
+    },
+    {
+      "phase": "R27",
+      "id": "A02",
+      "passes": 3,
+      "branch": "astra/r27-a02-20261029",
+      "sha": "aee23543005edde9b15626b5747429725615933d",
+      "created_at": "2026-10-28T23:29:24Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/aee23543005edde9b15626b5747429725615933d"
+    },
+    {
+      "phase": "R27",
+      "id": "A03",
+      "passes": 1,
+      "branch": "astra/r27-a03-20261029",
+      "sha": "c881e989fd5e7e2041a3592791def7606bf2965f",
+      "created_at": "2026-10-28T23:21:48Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/c881e989fd5e7e2041a3592791def7606bf2965f"
+    },
+    {
+      "phase": "R27",
+      "id": "A04",
+      "passes": 5,
+      "branch": "astra/r27-a04-20261029",
+      "sha": "5ed25389bbe553e39c5293e417bc184909d53bf8",
+      "created_at": "2026-10-28T23:42:18Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/5ed25389bbe553e39c5293e417bc184909d53bf8"
+    },
+    {
+      "phase": "R27",
+      "id": "A05",
+      "passes": 5,
+      "branch": "astra/r27-a05-20261029",
+      "sha": "62a3e682a45b1ea34a85aa446828bd8cb76ecf19",
+      "created_at": "2026-10-28T23:30:58Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/62a3e682a45b1ea34a85aa446828bd8cb76ecf19"
+    },
+    {
+      "phase": "R27",
+      "id": "A06",
+      "passes": 3,
+      "branch": "astra/r27-a06-20261029",
+      "sha": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+      "created_at": "2026-10-28T23:28:57Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/e96ff6a87d0ab089029b3218ecea36759897e8bf"
+    },
+    {
+      "phase": "R27",
+      "id": "A07",
+      "passes": 1,
+      "branch": "astra/r27-a07-20261029",
+      "sha": "37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+      "created_at": "2026-10-28T23:25:24Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/37915c53f99a7fa91ad05a43abcf40eb0c0e51dd"
+    },
+    {
+      "phase": "R27",
+      "id": "A08",
+      "passes": 1,
+      "branch": "astra/r27-a08-20261029",
+      "sha": "e2fd3c50190ffac04abc30d2bd1b46caf9dab454",
+      "created_at": "2026-10-28T23:25:15Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/e2fd3c50190ffac04abc30d2bd1b46caf9dab454"
+    },
+    {
+      "phase": "R27",
+      "id": "A09",
+      "passes": 2,
+      "branch": "astra/r27-a09-20261029",
+      "sha": "e953a5a9cbb914080697e2e810d2f5af66a8a14d",
+      "created_at": "2026-10-28T23:30:57Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/e953a5a9cbb914080697e2e810d2f5af66a8a14d"
+    },
+    {
+      "phase": "R27",
+      "id": "A10",
+      "passes": 2,
+      "branch": "astra/r27-a10-20261029",
+      "sha": "b18db96810b37b8740dc143dd2ffb5e3aae9088b",
+      "created_at": "2026-10-28T23:29:07Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/b18db96810b37b8740dc143dd2ffb5e3aae9088b"
+    },
+    {
+      "phase": "R29",
+      "id": "A01",
+      "passes": 2,
+      "branch": "astra/r29-a01-20261029",
+      "sha": "755c7968a5ddbcb85b858a4dda53d31a956892b5",
+      "created_at": "2026-10-28T23:46:06Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/755c7968a5ddbcb85b858a4dda53d31a956892b5"
+    },
+    {
+      "phase": "R29",
+      "id": "A02",
+      "passes": 5,
+      "branch": "astra/r29-a02-20261029",
+      "sha": "f0f453e50fce8b4973098672aa17d4fe273c98c5",
+      "created_at": "2026-10-28T23:51:14Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f0f453e50fce8b4973098672aa17d4fe273c98c5"
+    },
+    {
+      "phase": "R29",
+      "id": "A03",
+      "passes": 3,
+      "branch": "astra/r29-a03-20261029",
+      "sha": "1d0b2e173b5722ba40d88029e72020b153c20b37",
+      "created_at": "2026-10-28T23:48:14Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/1d0b2e173b5722ba40d88029e72020b153c20b37"
+    },
+    {
+      "phase": "R29",
+      "id": "A04",
+      "passes": 4,
+      "branch": "astra/r29-a04-20261029",
+      "sha": "f62b87099472c33ab912e3727f958f94746dd3ce",
+      "created_at": "2026-10-28T23:48:48Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f62b87099472c33ab912e3727f958f94746dd3ce"
+    },
+    {
+      "phase": "R29",
+      "id": "A05",
+      "passes": 2,
+      "branch": "astra/r29-a05-20261029",
+      "sha": "a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22",
+      "created_at": "2026-10-28T23:47:04Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22"
+    },
+    {
+      "phase": "R29",
+      "id": "A06",
+      "passes": 2,
+      "branch": "astra/r29-a06-20261029",
+      "sha": "34f9b368fdd98a5a191becb8ed647ba5529e071f",
+      "created_at": "2026-10-28T23:45:49Z",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/34f9b368fdd98a5a191becb8ed647ba5529e071f"
+    }
+  ],
+  "r27_historical_source_blocks": 24,
+  "r29_source_blocks": 18,
+  "progress": {
+    "kind": "real source fix + targeted test + saved commit; not product readiness",
+    "r29_planned_passes": 60,
+    "r29_saved_passes": 18,
+    "remaining_product_taskids": null,
+    "weighted_product": {
+      "P01": {
+        "weight": 20,
+        "percent": null
+      },
+      "P02": {
+        "weight": 25,
+        "percent": null
+      },
+      "P03": {
+        "weight": 20,
+        "percent": null
+      },
+      "P04": {
+        "weight": 25,
+        "percent": null
+      },
+      "P05": {
+        "weight": 10,
+        "percent": null
+      }
+    },
+    "total_percent": null,
+    "why": "No complete normalized fixed TaskID denominator with current source receipts"
+  },
+  "throughput": {
+    "source_blocks": 42,
+    "from_utc": "2026-10-28T23:18:27Z",
+    "to_last_source_commit_utc": "2026-10-28T23:51:14Z",
+    "elapsed_minutes": 32.7833,
+    "blocks_per_minute": 1.2811,
+    "limitations": "Approximate launch start from local context creation; heterogeneous fixes, some reused donors, six parallel slots; not interchangeable product TaskIDs.",
+    "loader_finish_eta": null,
+    "whole_nox_finish_eta": null,
+    "comparison_time_delta": null,
+    "withdrawn_estimate": "03:50 MSK was arbitrary queue extrapolation, not product completion"
+  },
+  "initial_p02_verification": {
+    "commits": [
+      "614882078cc1c07f3fd6d2b50e7d12a2c56ef943",
+      "b8680093c727ac59338aa132fa2f43364f6b960f"
+    ],
+    "existing_python_tests_passed": 18,
+    "source": "R27 A04 exact baseline test execution; finished Mapping fix preserved"
+  },
+  "owners": [
+    {
+      "id": "A01",
+      "scope": "P01 shell/installer",
+      "changes": [
+        "Rollback reuses path/ownership preflight before renames",
+        "Uninstall requires registered entrypoint before deletion"
+      ],
+      "tests": {
+        "source_control_flow_passes": [
+          2,
+          1
+        ],
+        "native_powershell": "NOT_RUN"
+      },
+      "receipts": [
+        "stage/proposals/P01/C09/Installer/R29-A01-B01.json",
+        "stage/proposals/P01/C09/Installer/R29-A01-B02.json"
+      ]
+    },
+    {
+      "id": "A02",
+      "scope": "P02 existing host/chat/voice wiring",
+      "changes": [
+        "Complete framed stream writes",
+        "Immutable host event snapshot and exact native boolean",
+        "Session STOP contract for captured voice",
+        "MappingProxyType NoxPackHost registration",
+        "TIMEOUT distinct from STOP and connection failure"
+      ],
+      "tests": {
+        "targeted_suite_passes": [
+          12,
+          13,
+          18,
+          16,
+          28
+        ],
+        "counts_overlap": true,
+        "native_windows": "NOT_RUN"
+      },
+      "receipts": [
+        "Packages/P02/evidence/R29_A02_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "A03",
+      "scope": "P03 ModelCenter downloader UI",
+      "changes": [
+        "Active background queue retains terminal events after selection change",
+        "Unknown total retains observed byte progress",
+        "RAM-only artifacts use actual RAM compatibility"
+      ],
+      "tests": {
+        "actual_js_suite_passed": 16,
+        "native_download": "NOT_RUN"
+      },
+      "receipts": [
+        "Packages/P03/Source/receipts/ASTRA_R29_A03_QUEUE_UI_20261029.json"
+      ]
+    },
+    {
+      "id": "A04",
+      "scope": "P04 existing installation preflight",
+      "changes": [
+        "Malformed model index produces HOLD",
+        "Invalid GPU/settings/dependency metadata produces HOLD",
+        "Safetensors header validation",
+        "CUDA environment restored and initialized runtime rejected for preflight"
+      ],
+      "tests": {
+        "targeted_suite_passes": [
+          10,
+          6,
+          13,
+          7
+        ],
+        "hardware": "NOT_RUN"
+      },
+      "receipts": [
+        "Packages/P04/ASTRA_R29_A04_01_RECEIPT.json",
+        "Packages/P04/ASTRA_R29_A04_02_RECEIPT.json",
+        "Packages/P04/ASTRA_R29_A04_03_RECEIPT.json",
+        "Packages/P04/ASTRA_R29_A04_04_RECEIPT.json"
+      ]
+    },
+    {
+      "id": "A05",
+      "scope": "P05 installer progress",
+      "changes": [
+        "Known block progress retained when another denominator unknown",
+        "FAILED criterion retains denominator with zero credit"
+      ],
+      "tests": {
+        "space_suite_passed": 34,
+        "native_dotnet": "NOT_RUN"
+      },
+      "receipts": [
+        "coordination/astra/agents/A05/R29_PASS1_RECEIPT.json",
+        "coordination/astra/agents/A05/R29_PASS1_PREIMAGE_CORRECTION.json"
+      ]
+    },
+    {
+      "id": "A06",
+      "scope": "E06 SourceLock and original host handoff",
+      "changes": [
+        "Non-clobber archive staging and exclusive atomic receipt publication",
+        "Reject redirected staging/input paths and existing output receipts"
+      ],
+      "tests": {
+        "new_source_lock": 5,
+        "existing_source_lock": 31,
+        "stage_paths": 4,
+        "physical_729": "NOT_RUN"
+      },
+      "evidence": {
+        "run_id": "ASTRA-R29-A06-20261029-SOURCELOCK-NOLOSS",
+        "role": "E06 loader SourceLock and host staging",
+        "branch": "astra/r29-a06-20261029",
+        "base_commit": "f04f616091ffae9b2421a1d353e6610550edf327",
+        "head": "34f9b368fdd98a5a191becb8ed647ba5529e071f",
+        "tree": "f5dba65de2d328ed3b75e03ad24c1c66e0f09144",
+        "completed_passes": 2,
+        "planned_passes": 10,
+        "commits": [
+          "21abf41bbf5015203732cff6245aba0f03a4af75",
+          "34f9b368fdd98a5a191becb8ed647ba5529e071f"
+        ],
+        "tests": [
+          {
+            "command": "python -m unittest discover -s coordination/e06 -p test_sourcelock_publication_r29.py",
+            "passed": 5,
+            "red": "3 failures + 1 error; 1 pass"
+          },
+          {
+            "command": "python -m unittest discover -s tests/e06 -p 'test_original*.py'",
+            "passed": 31
+          },
+          {
+            "command": "python -m unittest discover -s coordination/e06 -p test_stage_onehost_paths_r29.py",
+            "passed": 4,
+            "red": "3 failed + 1 pass"
+          }
+        ],
+        "files": [
+          {
+            "path": "coordination/e06/source_deep_inventory.py",
+            "pre_blob": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65",
+            "post_blob": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c",
+            "post_sha256": "72a23fb013db4b651c9b7b0e209e0aeda6541ad3f433cf6d1161fce69eab2fdd",
+            "bytes": 5766
+          },
+          {
+            "path": "coordination/e06/verify_original_729_source.py",
+            "pre_blob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+            "post_blob": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a",
+            "post_sha256": "601991af00f1c03d59d1af3d63eaee1984107c82fe03ca8a411e2f3d3f836595",
+            "bytes": 11773
+          },
+          {
+            "path": "coordination/e06/test_sourcelock_publication_r29.py",
+            "pre_blob": null,
+            "post_blob": "cb004bd7e728fa91ce4e1c818652a76c7a1f6c70",
+            "post_sha256": "9c5266441ebd32ddb0fd1059ed28555210cc3df01a33ecf641fc68ced4b1dbd1",
+            "bytes": 4139
+          },
+          {
+            "path": "coordination/e06/stage_onehost.py",
+            "pre_blob": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+            "post_blob": "8ae8523d83e175cb83a32ca497bb2c15f08948ca",
+            "post_sha256": "cc567f2ab9406b293dec55796723a2e562b5e32880ba2bb628973230f4097b31",
+            "bytes": 4259
+          },
+          {
+            "path": "coordination/e06/test_stage_onehost_paths_r29.py",
+            "pre_blob": null,
+            "post_blob": "03e618b5594b609726b07fdb544a6a262874463a",
+            "post_sha256": "a3ce3d9cec05d21926ff0b60891f418cf66604e8a6248a660627e8f2afffa793",
+            "bytes": 3455
+          }
+        ],
+        "readback": "5/5 exact UTF8 content matched commits",
+        "lesson": "Exclusive create alone prevents overwrite but fsync failure can leave apparently complete evidence. Reuse canonical fsync-before-link publication and private temp archives; reject redirected/preexisting output before mutating pinned staged host source.",
+        "limits": [
+          "Physical original 729 bytes NOT_RUN; tests use fixture ZIP/source",
+          "Windows runtime NOT_RUN, no EXE/NSIS/CI/GitLab/integration",
+          "No global TaskID denominator; 2/10 is approach throughput only",
+          "No claim whole multi-file stage is transactionally atomic against concurrent hostile directory swaps"
+        ],
+        "remaining": "Confirm current owner source route handoff for system.update and system.pc_control; preserve existing system.backup. No binary transport blocker: fetch_file encoding=base64 succeeded.",
+        "recovery": {
+          "status": "EXACT_PINNED_BRIDGE_RECOVERED",
+          "commit": "6f41831c69d41adec6899b07c074b0b19cd68b28",
+          "archive_path": "proposals/E06/express/NOX_R08_WPF_DIAG_CODE_ONLY.zip",
+          "archive_bytes": 317125,
+          "archive_sha256": "fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9",
+          "bridge_path": "R11/Integration/Pack01HostBridge.cs",
+          "bridge_sha256": "ee978b13a7f1058b1a509a506feef495efe440f410ab63103088fefa08e1d86f",
+          "backup": "IMPLEMENTED: native selection+consent -> original BackupRestoreService.CreateBackupAsync",
+          "update_pc_control": "Absent from exact historical18-route registry/switch; current owner replacement/handoff unverified",
+          "not_counted_as_source_pass": true
+        },
+        "physical_original_729": {
+          "status": "HOLD_BINARY_PAYLOAD_NOT_RETURNED",
+          "source_ref": "f04f616091ffae9b2421a1d353e6610550edf327",
+          "path": "source_00.part",
+          "expected_bytes": 20971520,
+          "expected_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "fetch_file_base64": {
+            "isError": false,
+            "content_length": 0,
+            "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+          },
+          "fetch_blob": {
+            "isError": true,
+            "error": "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xba in position 15: invalid start byte"
+          },
+          "remaining_parts_fetched": false,
+          "physical_729_audit": "NOT_RUN",
+          "code_pass_increment": 0
+        }
+      }
+    }
+  ],
+  "r27_a06_receipt": {
+    "agent": "A06",
+    "run_id": "ASTRA-R27-A06-COMMAND-BINDING-20261029",
+    "base": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+    "branch": "astra/r27-a06-20261029",
+    "commit": "ea3045210002592cff2d91f17e66da6dbb5956c3",
+    "passes_completed": 1,
+    "planned_passes": 10,
+    "task_ids": [
+      "P03-R27-APPROVED-COMMAND-BINDING",
+      "P03-R27-NATIVE-SCOPE-RECHECK",
+      "P03-R27-REGRESSION-FIXTURES"
+    ],
+    "source_status": "SOURCE_CANDIDATE",
+    "readback": "4/4 EXACT",
+    "tests": {
+      "baseline": "64 tests: 62 PASS, 2 fixture ERROR",
+      "red": "8 new tests; 16 failed subcases",
+      "green": "72/72 PASS",
+      "command": "NOX_PINNED_P02_PATH=Packages/P02/worker-python NOX_PINNED_PACK01_PATH=proposals/NOX-PACK01-50 python -m unittest discover -s Packages/P03/Source/python-host -v",
+      "limitations": "actual Python module with local HTTP and synthetic native consent/backend; no live weights/download/GPU/Windows"
+    },
+    "lesson": "Pin the whole bounded command and native scope across every callback, then detach payload again before handing it to the existing queue. Do not treat frozen registry fixtures as mutable dictionaries.",
+    "files": [
+      {
+        "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "pre_blob": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+        "pre_sha256": "04bf0282ef4a1b13a8a68ff31912310fac1d5a96fb44d53ef973d782efb9b86e",
+        "post_blob": "c04d5a56c9fc6547488386f3b4a3eefd9795efee",
+        "post_sha256": "4ea8ab09d6f1de733da5be937e689d16db69213f47a5a213b3acc79a0239fce9"
+      },
+      {
+        "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+        "pre_blob": "c18a1dcbb543de7ab00172ad0b9b585c9b26bf92",
+        "pre_sha256": "591528b08b8252dfc6a0b26420dec15c601d970e4dec798bc935297156657844",
+        "post_blob": "f8d55e09e694c460d0339d62a1946fe88f3672d9",
+        "post_sha256": "d1e8d49dde3b17ced72a196f2d6c82945e408d2cbbe83cea9af516663855c7fe"
+      },
+      {
+        "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+        "pre_blob": "b9bde7aeb502e86adb9cb2aa0781d40306c48199",
+        "pre_sha256": "d2a4aa41d57cf8ae43fa71539fb84997598fe7a1324f4a17409403949312f9f9",
+        "post_blob": "ed47b2e0052203db184617d819650761b0937f5c",
+        "post_sha256": "c1997057be41ca8d100d497a3296ff53146c9cee56641fe60201e24c3484db70"
+      },
+      {
+        "path": "Packages/P03/Source/python-host/test_p03_command_binding_r27.py",
+        "pre_blob": null,
+        "pre_sha256": null,
+        "post_blob": "8c0c9d7976110db75b0a7e28044d79a5b442f19b",
+        "post_sha256": "f741aea6fc93dc6e582e573d08b1e6251cceb4d992be9a5788d20ba094e8354a"
+      }
+    ]
+  },
+  "no_loss_git_metadata": [
+    {
+      "phase": "R27",
+      "id": "A01",
+      "commit": "f0090d5ccc2df4f29a878b595bd6689c69215290",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A02",
+      "commit": "aee23543005edde9b15626b5747429725615933d",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A03",
+      "commit": "c881e989fd5e7e2041a3592791def7606bf2965f",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A04",
+      "commit": "5ed25389bbe553e39c5293e417bc184909d53bf8",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A05",
+      "commit": "62a3e682a45b1ea34a85aa446828bd8cb76ecf19",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A06",
+      "commit": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A07",
+      "commit": "37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A08",
+      "commit": "e2fd3c50190ffac04abc30d2bd1b46caf9dab454",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A09",
+      "commit": "e953a5a9cbb914080697e2e810d2f5af66a8a14d",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R27",
+      "id": "A10",
+      "commit": "b18db96810b37b8740dc143dd2ffb5e3aae9088b",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A01",
+      "commit": "755c7968a5ddbcb85b858a4dda53d31a956892b5",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A02",
+      "commit": "f0f453e50fce8b4973098672aa17d4fe273c98c5",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A03",
+      "commit": "1d0b2e173b5722ba40d88029e72020b153c20b37",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A04",
+      "commit": "f62b87099472c33ab912e3727f958f94746dd3ce",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A05",
+      "commit": "a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    },
+    {
+      "phase": "R29",
+      "id": "A06",
+      "commit": "34f9b368fdd98a5a191becb8ed647ba5529e071f",
+      "baseline_paths_present": 968,
+      "missing": [],
+      "changed_protected_parts": [],
+      "physical_729": "NOT_VERIFIED",
+      "truncated": false
+    }
+  ],
+  "physical_source_lock": {
+    "status": "HOLD_BINARY_PAYLOAD_NOT_RETURNED",
+    "source_ref": "f04f616091ffae9b2421a1d353e6610550edf327",
+    "path": "source_00.part",
+    "expected_bytes": 20971520,
+    "expected_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+    "fetch_file_base64": {
+      "isError": false,
+      "content_length": 0,
+      "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+    },
+    "fetch_blob": {
+      "isError": true,
+      "error": "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xba in position 15: invalid start byte"
+    },
+    "remaining_parts_fetched": false,
+    "physical_729_audit": "NOT_RUN",
+    "code_pass_increment": 0
+  },
+  "native_bridge_recovery": {
+    "status": "EXACT_PINNED_BRIDGE_RECOVERED",
+    "commit": "6f41831c69d41adec6899b07c074b0b19cd68b28",
+    "archive_path": "proposals/E06/express/NOX_R08_WPF_DIAG_CODE_ONLY.zip",
+    "archive_bytes": 317125,
+    "archive_sha256": "fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9",
+    "bridge_path": "R11/Integration/Pack01HostBridge.cs",
+    "bridge_sha256": "ee978b13a7f1058b1a509a506feef495efe440f410ab63103088fefa08e1d86f",
+    "backup": "IMPLEMENTED: native selection+consent -> original BackupRestoreService.CreateBackupAsync",
+    "update_pc_control": "Absent from exact historical18-route registry/switch; current owner replacement/handoff unverified",
+    "not_counted_as_source_pass": true
+  },
+  "retained_limits": [
+    "Current owner handoff for system.update and system.pc_control unresolved; absent in recovered historical bridge does not prove absence everywhere.",
+    "Existing native voice session STOP token provider not bound; no fake token or duplicate host introduced.",
+    "Windows/Python/CUDA wheel hash lock, actual model rights/provider/hardware evidence and independent Windows acceptance remain unverified.",
+    "P01 regression verification is source-control-flow only; PowerShell runtime unavailable.",
+    "R27 and R29 are separate immutable owner candidates. Shared source hunks, including P02 and P05 paths, require independent comparison; no automatic merge has occurred.",
+    "D02/WOW active source overlays must be reviewed against preserved donor pins before future staging; pins were not rewritten to imply acceptance.",
+    "Earlier optional theater harness has window.location errors; targeted playback suite PASS does not imply all historical tests PASS."
+  ],
+  "build_boundary": {
+    "provider_future_only": "GitLab Free s-grouptwet/nox-helion-pp-private-build",
+    "gitlab_live_head": null,
+    "gitlab_writes": false,
+    "exe_nsis": false,
+    "windows_release_ci": false,
+    "final_integration": false,
+    "main_pr162_changes": false
+  },
+  "gate_correction": "R27 owner removes manual-chat stop confirmation. All15 prior automations disabled earlier. Never restore obsolete manual-stop gate.",
+  "journal_readback": [
+    {
+      "key": "master",
+      "exact_readback": true,
+      "occurrences": 1,
+      "revision": "AHj4eMSf2YBXVDq7ru679g56PM0fdSVeX4Uim5NfK2q2j8LFCPsS5X4f5Sp-SyPurGEerzoV2v9PNiM4yxtDBitGV--g00ovJIKG1kVQJDc"
+    },
+    {
+      "key": "report",
+      "exact_readback": true,
+      "occurrences": 1,
+      "revision": "AHj4eMRvoCqHZt0IovABmqbF89rBblWBabGLwLuU7iya_dFBN0SlLwwHqhBRPQuwD3X7uuCKylfZeHEQ0smsdE2o5bUa-_oAm9Fq01ZYK3A"
+    },
+    {
+      "key": "lesson",
+      "exact_readback": true,
+      "occurrences": 1,
+      "revision": "AHj4eMTd3UI8-R4-VJs5mBksw9M5_x0puq29foJTU_PonrX8-Qg9tp_S4hKikp5mokQI-Unst96ThXF00UOj9AyAZtTOWZKtQdEAfYklRA0"
+    }
+  ],
+  "journal_payloads": {
+    "master": "\n=== ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n29.10.2026 Europe/Moscow. Source-only NOX HELION EXPRESS INTEGRATOR; canonical V16 §56 R29, not independent main NOX application. Primary source base f04f616091ffae9b2421a1d353e6610550edf327. Actual R29 workers /root/a01 /root/a02 /root/a03 /root/a04 /root/a05 /root/a06 were concurrently active, six distinct owner paths; no A07–A10 active in R29. R27 historical ten-worker wave is retained separately, not relabelled as R29.\nCORRECTION: owner's R27 explicitly removes manual-chat-stop confirmation gate. Earlier R26 lesson demanding that gate is SUPERSEDED, not an active blocker. Fifteen automations were disabled previously; no rescheduling performed. R27 produced24 saved source blocks; R29 produced18 more. These42 source changes are not42 accepted product TaskIDs. Historical03:50 queue ETA is withdrawn; about1 source fix/min is an observed mixed-work throughput, not full NOX or installer completion time. Global fixed remaining TaskID denominator unknown; product ETA=N/D.\nR29 source fixes: A01 rollback ancestry+ownership and uninstall entrypoint; A02 framed shortwrite, immutable host events, voice STOP contract, actual MappingProxy host registration, TIMEOUT distinction; A03 active download lifecycle, unknown-total byte progress, real RAM admission; A04 model index/header+GPU metadata/environment preflight; A05 independently known block progress and FAILED denominator; A06 non-clobber SourceLock publication/staging.\nTests: A01 source-control-flow checks2+1 PASS; native PowerShell tests NOT_RUN. A02 targeted suites12/13/18/16/28 PASS (overlap, not unique totals), including real Python subprocess and actual unchanged host fixture. A03 actualJS16/16; A04 targeted10/6/13/7 PASS; A05 SPACE34/34; A06 new5+existing31 and staging4 PASS. These are component/source fixtures, not installed Windows acceptance.\nHOLD: original60,364,346-byte/729-member physical audit NOT_RUN; fetch_file base64 for source_00.part returned0bytes for expected20,971,520, fetch_blob UnicodeDecodeError. Small317125-byte R08 ZIP did decode; recovered15937-byte Pack01HostBridge SHA256 ee978b13a7f1058b1a509a506feef495efe440f410ab63103088fefa08e1d86f exactly matches pin. system.backup already implemented; system.update/pc_control current owner bindings unverified (not proved absent globally). Session-native voice STOP token provider unbound. Windows/Python/CUDA hash-lock/model rights/native runtime proofs pending. R27/R29 owner candidates are not auto-integrated; overlapping source hunks need later independent comparison.\nNo-loss Git metadata at all16 recorded owner HEADs:968/968 baseline paths present, source_00/01/02.part Git blob SHAs unchanged. This is not physical729 content proof. No EXE/NSIS, training, Windows release CI, GitLab write, final integration, PR162/main change. GitLab Free remains future builder only.\nFull immutable owner SHA/receipt references: https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_LOADER_SOURCE_01.json\n=== END ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n",
+    "report": "\n=== ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n29.10.2026 Europe/Moscow. Source-only NOX HELION EXPRESS INTEGRATOR; canonical V16 §56 R29, not independent main NOX application. Primary source base f04f616091ffae9b2421a1d353e6610550edf327. Actual R29 workers /root/a01 /root/a02 /root/a03 /root/a04 /root/a05 /root/a06 were concurrently active, six distinct owner paths; no A07–A10 active in R29. R27 historical ten-worker wave is retained separately, not relabelled as R29.\nR29 source fixes: A01 rollback ancestry+ownership and uninstall entrypoint; A02 framed shortwrite, immutable host events, voice STOP contract, actual MappingProxy host registration, TIMEOUT distinction; A03 active download lifecycle, unknown-total byte progress, real RAM admission; A04 model index/header+GPU metadata/environment preflight; A05 independently known block progress and FAILED denominator; A06 non-clobber SourceLock publication/staging.\nTests: A01 source-control-flow checks2+1 PASS; native PowerShell tests NOT_RUN. A02 targeted suites12/13/18/16/28 PASS (overlap, not unique totals), including real Python subprocess and actual unchanged host fixture. A03 actualJS16/16; A04 targeted10/6/13/7 PASS; A05 SPACE34/34; A06 new5+existing31 and staging4 PASS. These are component/source fixtures, not installed Windows acceptance.\nA01 [##........] 2/10 755c7968a5ddbcb85b858a4dda53d31a956892b5\nA02 [#####.....] 5/10 f0f453e50fce8b4973098672aa17d4fe273c98c5\nA03 [###.......] 3/10 1d0b2e173b5722ba40d88029e72020b153c20b37\nA04 [####......] 4/10 f62b87099472c33ab912e3727f958f94746dd3ce\nA05 [##........] 2/10 a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22\nA06 [##........] 2/10 34f9b368fdd98a5a191becb8ed647ba5529e071f\nP01/P02/P03/P04/P05 weights20/25/20/25/10: all N/D, fixed complete TaskID denominator not established. No completed matrix goals inferred from pass counts. 18/60 planned passes have code/test/save evidence; remaining42 planned approaches are NOT the measured product remainder. Prior R27 count24 preserved separately.\nCORRECTION: owner's R27 explicitly removes manual-chat-stop confirmation gate. Earlier R26 lesson demanding that gate is SUPERSEDED, not an active blocker. Fifteen automations were disabled previously; no rescheduling performed. R27 produced24 saved source blocks; R29 produced18 more. These42 source changes are not42 accepted product TaskIDs. Historical03:50 queue ETA is withdrawn; about1 source fix/min is an observed mixed-work throughput, not full NOX or installer completion time. Global fixed remaining TaskID denominator unknown; product ETA=N/D.\nHOLD: original60,364,346-byte/729-member physical audit NOT_RUN; fetch_file base64 for source_00.part returned0bytes for expected20,971,520, fetch_blob UnicodeDecodeError. Small317125-byte R08 ZIP did decode; recovered15937-byte Pack01HostBridge SHA256 ee978b13a7f1058b1a509a506feef495efe440f410ab63103088fefa08e1d86f exactly matches pin. system.backup already implemented; system.update/pc_control current owner bindings unverified (not proved absent globally). Session-native voice STOP token provider unbound. Windows/Python/CUDA hash-lock/model rights/native runtime proofs pending. R27/R29 owner candidates are not auto-integrated; overlapping source hunks need later independent comparison.\nNo-loss Git metadata at all16 recorded owner HEADs:968/968 baseline paths present, source_00/01/02.part Git blob SHAs unchanged. This is not physical729 content proof. No EXE/NSIS, training, Windows release CI, GitLab write, final integration, PR162/main change. GitLab Free remains future builder only.\nHandoff: https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_LOADER_SOURCE_01.json\n=== END ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n",
+    "lesson": "\n=== ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n29.10.2026 Europe/Moscow. Source-only NOX HELION EXPRESS INTEGRATOR; canonical V16 §56 R29, not independent main NOX application. Primary source base f04f616091ffae9b2421a1d353e6610550edf327. Actual R29 workers /root/a01 /root/a02 /root/a03 /root/a04 /root/a05 /root/a06 were concurrently active, six distinct owner paths; no A07–A10 active in R29. R27 historical ten-worker wave is retained separately, not relabelled as R29.\nONE PROCESS LESSON: USE_MEASURED_SCOPE_AND_TYPED_EVIDENCE. Observed error: a100-pass work queue and source-fix/min rate were presented as a completion-time anchor, while current specification is an existing loader and no fixed remaining TaskID count exists. Prevention applied: read actual latest R29; six disjoint loader owners reuse finished code; publish source/test/SHA milestones; give product ETA=N/D until remaining TaskIDs are evidenced. Do not fill ten passes with unrelated features. An encoding failure is not proof binary source is inaccessible: encoding=base64 recovered the pinned native backup handler and prevented rewriting it; separately20MB original transfer returned no payload, so physical proof remainsHOLD. R27 manual-stop gate is superseded by owner, not carried into future runs. Prior authorization-boundary/snapshot lesson applied in immutable host event map and nativeSTOP binding; no false native PASS.\nA01 [##........] 2/10 755c7968a5ddbcb85b858a4dda53d31a956892b5\nA02 [#####.....] 5/10 f0f453e50fce8b4973098672aa17d4fe273c98c5\nA03 [###.......] 3/10 1d0b2e173b5722ba40d88029e72020b153c20b37\nA04 [####......] 4/10 f62b87099472c33ab912e3727f958f94746dd3ce\nA05 [##........] 2/10 a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22\nA06 [##........] 2/10 34f9b368fdd98a5a191becb8ed647ba5529e071f\nSource evidence: https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_LOADER_SOURCE_01.json\n=== END ASTRA-R29-20261029-LOADER-SOURCE-01 ===\n"
+  },
+  "lessons": [
+    "Use actual loader TaskID remainder for ETA; pass queues are not product scope.",
+    "Binary files require explicit base64; distinguish successful small pinned recovery from missing20MB payload.",
+    "Preserve exact tested owner source and mandatory HOLD; do not manufacture passes to fill10."
+  ]
+}
