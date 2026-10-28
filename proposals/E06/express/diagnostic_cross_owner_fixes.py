@@ -42,9 +42,9 @@ change("R11/MainWindow.xaml.cs",
 
 change("R11/Packages/P02/OpenAI/OpenAiResponsesProvider.cs",
     "968860590cb112b76b6399ad72d868269eebe6daec545bfead94fecd3e161449",
-    "ccca87587fc80fc40e197a0b0f119210674edcd1b3f1b5c9523c89fe17916034",
+    "a5c30ca4e05a3d258d3af485c7694d698fdc0f71177dc018e3e4f37cc59c6692",
     lambda s: single(s, "using System.Collections.Concurrent;",
-        "using System.Net.Http;\nusing System.Collections.Concurrent;"))
+        "using System.IO;\nusing System.Net.Http;\nusing System.Collections.Concurrent;"))
 
 change("R11/Packages/P05/InstallerRunReport.cs",
     "1a6fcfff72924260a9e913f8af26a7c1009482bbdef67b85e5c11c0709ca8a4e",
