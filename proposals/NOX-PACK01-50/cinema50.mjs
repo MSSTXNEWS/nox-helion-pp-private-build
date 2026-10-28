@@ -4,9 +4,6 @@
  */
 import {admitNativeVisualEvent} from "./cinema50-events.mjs";
 const MODES=Object.freeze(["eco","balanced","max","reduced"]);
-const STATES=Object.freeze(["running","streaming","training","downloading","completed","paused","error","offline"]);
-const NATIVE_SOURCE="NOX_EVENT_V3_VERIFIED";
-const RE=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export function visualPreset(action,index){
   if(!action||!["chat","models","learning","voice","space"].includes(action.category)||
@@ -107,6 +104,11 @@ export function mountCinematic(root,catalog,{subscribeVerifiedNative=null,now=()
       document.removeEventListener("visibilitychange",onVisibility);
       if(motion?.removeEventListener)motion.removeEventListener("change",onReduced);
       if(viewport)viewport.disconnect();
+      if(expiryTimer!==null){clearTimeout(expiryTimer);expiryTimer=null;}
+      live.clear();lastIds.clear();lastSequenceByRun.clear();
+      root.removeAttribute("data-cinema-ready");
+      root.removeAttribute("data-cinema-mode");
+      root.removeAttribute("data-cinema-paused");
       throw err;
     }
   }
