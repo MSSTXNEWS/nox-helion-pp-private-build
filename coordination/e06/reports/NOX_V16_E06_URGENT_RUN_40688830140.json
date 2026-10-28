@@ -1,0 +1,68 @@
+{
+  "schema": "NOX_V16_E06_URGENT_EXPRESS_CI_FALLBACK_V1",
+  "owner": 6,
+  "task_id": "NOX-V16-E06-URGENT-ONEHOST",
+  "unified_source_parent_sha1": "833a37bca2930e0cb9b272ae07f5d6545e3d5096",
+  "upstream_latest_sha1_when_checked": "98df0d06ca2cdd2e807bbf067407787781b145ce",
+  "pr": 181,
+  "original_main_unchanged": true,
+  "original_p01_to_p05_files_modified": 0,
+  "original_729_files_deleted": 0,
+  "new_files_deleted": 0,
+  "owned_source_changes": [
+    "coordination/e06/build_onehost_installer.ps1",
+    "coordination/e06/express_per_run_report.py",
+    "coordination/e06/stage_chatlog_order_compat.py",
+    ".github/workflows/nox-e06-express-oneblock.yml"
+  ],
+  "known_sha_blobs": {
+    "builder_before": "1d9ac9efa29c25fc4b9277ad854e31a5e729e18d",
+    "builder_after": "c0537c87898663fb589a315be7417312b8b81f9c",
+    "original_reporter": "1c65fe9029bfd14e2a38bcac2028e61242f30e63",
+    "source_original_R11_html_sha256": "3a8e027ed98ba5fbcae6e047b2d559ba9ac8c5270fb1be36b1379ee226ad2a76"
+  },
+  "historical_source_progress": {
+    "bound": 37,
+    "total": 50,
+    "percent": 74,
+    "integrated_current_install_accepted": 0,
+    "source_not_release": true
+  },
+  "local_execution": {
+    "archived_R11_general_python_tests_pass": 19,
+    "archived_R11_general_python_tests_fail": 1,
+    "archived_R11_P01_python_tests_pass": 6,
+    "archived_R11_P01_python_tests_fail": 1,
+    "chatlog_legacy_local_tests_pass": 4,
+    "chatlog_legacy_local_tests_total": 4,
+    "chromium_red": "Cannot access 'chatLog' before initialization",
+    "chromium_green_with_stubs": "0 JS page errors, 8 CoreID and 8 menu actions",
+    "limitations": "Historical archived R11, not independently tested latest WPF/Windows production EXE; browser sessionStorage and crypto mocked because test-only about:blank origin"
+  },
+  "release_gates": {
+    "CI_RUNNER_STARTED": "HOLD",
+    "SOURCELOCK_729_VERIFIED": "HOLD",
+    "NATIVE_COMBINED_NSIS_INSTALLED": "HOLD",
+    "ONE_HOST_REAL_FUNCTIONS_E2E": "HOLD",
+    "E07_FINAL_SAME_SHA": "HOLD"
+  },
+  "release_progress_accepted_gates": 0,
+  "release_progress_total_gates": 5,
+  "weighted_product_progress": "N/D",
+  "E07_native_acceptance": "0/10 NOT_RUN",
+  "status": "NOT_FINAL_RELEASE_NO_LOSS_SOURCE_CANDIDATE",
+  "run_id": "40688830140",
+  "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/40688830140",
+  "workflow_source_sha1": "578dec897dfb39de917c458f4e1bed171c737531",
+  "run_conclusion": "failure",
+  "job_id": "not-read-in-this-run",
+  "job_steps": null,
+  "artifact_count": 0,
+  "root_cause": "UNKNOWN; runner job did not provide executable steps; cannot attribute to app code",
+  "meaning": "EARLIER_URGENT_RUN_FAILED_NO_NATIVE_ARTIFACT",
+  "compiler_executed": false,
+  "native_installed": false,
+  "E07_accepted": false,
+  "release_accepted": false,
+  "remedy": "Restore GitHub hosted Actions job execution (check billing/actions settings/runner eligibility); rerun exact current HEAD; require same-SHA Windows install/rollback/functional E07 evidence."
+}
