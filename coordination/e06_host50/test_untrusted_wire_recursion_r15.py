@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from admission import Denied, Hold, NativeFileSelection, run_read_only_audit
-from test_native_callback_failclosed_r14 import NativeCallbackErrors
+import test_native_callback_failclosed_r14 as fixture
 
 
 def deep():
@@ -13,7 +13,13 @@ def deep():
     return item
 
 
-class MalformedWire(NativeCallbackErrors):
+class MalformedWire(unittest.TestCase):
+    def setUp(self):
+        fixture.NativeCallbackErrors.setUp(self)
+
+    def request(self, route):
+        return fixture.NativeCallbackErrors.request(self, route)
+
     def test_page_frame_depth_denied(self):
         req = self.request('chat.attach')
         req['settings'] = deep()

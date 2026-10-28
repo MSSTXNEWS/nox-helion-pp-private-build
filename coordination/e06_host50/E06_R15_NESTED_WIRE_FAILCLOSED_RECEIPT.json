@@ -20,9 +20,9 @@
     {
       "path": "coordination/e06_host50/test_untrusted_wire_recursion_r15.py",
       "preSha256": "ABSENT",
-      "postSha256": "6e81ed6dbee6973f5739e8128cf0d640d90903ba53e147f51562edb2d5c41edc",
+      "postSha256": "6594b135e6403eeacb571c7a709e8612cce383500451eb22352b53b1fa5e83e0",
       "preGitBlob": "ABSENT",
-      "postGitBlob": "4188b19164e6a6324ffd4f6326683e34905d69a5",
+      "postGitBlob": "772be7e185635cd5e6e9c9ee85b8404fe5d59856",
       "change": "4 adversarial depth RED->GREEN source-only cases; inherits 2 existing callback regressions"
     }
   ],
@@ -30,9 +30,10 @@
   "sourcePatchTaskId": "E06-R15-NESTED-WIRE-RECURSION-FAILCLOSED",
   "tests": {
     "baselineRED": "4 independent RecursionError exceptions; original",
-    "patchedGREEN": "4/4 new adversarial cases; 72 test invocations in 7 independently run Python groups (70 distinct methods; 2 inherited tests rerun); Python compilation PASS",
+    "patchedGREEN": "4/4 new independent adversarial cases; 68/68 Python test invocations across 7 separately executed groups; Python compilation PASS",
     "windows": "NOT_RUN",
-    "nativeHandlers": "NOT_ATTESTED"
+    "nativeHandlers": "NOT_ATTESTED",
+    "testDuplicationAvoided": "New R15 unittest class reuses fixture setUp, does not inherit/rediscover R14 methods"
   },
   "routeLedger": {
     "policyTaskIDs": 50,
