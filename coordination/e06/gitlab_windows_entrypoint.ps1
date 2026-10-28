@@ -96,6 +96,8 @@ try {
     $env:PATH=(Split-Path -Parent $python) + ';' + $env:PATH
     & python -c 'import sys; assert sys.version_info[:3] == (3,12,10)'
     Require-Exit 'PYTHON_VERSION_RECHECK'
+    & python -m unittest discover -s tests/e06 -p 'test_gitlab_free_source_gate.py' -v
+    Require-Exit 'GITLAB_MIGRATION_SOURCE_GATE'
 
     $sdk=@()
     if (Get-Command dotnet -ErrorAction SilentlyContinue) {
