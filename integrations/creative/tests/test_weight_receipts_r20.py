@@ -111,13 +111,14 @@ class ModelReceiptTests(unittest.TestCase):
             self.skipTest("OS symlinks unavailable")
         self.assertFalse(self.installed()["installed"])
 
-    def fake_hf(self,*,hub_size=len(WEIGHT),body=WEIGHT):
+    def fake_hf(self,*,hub_size=len(WEIGHT),body=WEIGHT,hub_sha256=None):
         module=ModuleType("huggingface_hub")
         class HfApi:
             def model_info(self,repo_id,revision,files_metadata):
                 assert repo_id==REPO and revision==REV and files_metadata is True
                 return SimpleNamespace(sha=REV,siblings=[
-                    SimpleNamespace(rfilename="weights.gguf",size=hub_size)])
+                    SimpleNamespace(rfilename="weights.gguf",size=hub_size,
+                                    lfs={"sha256":hub_sha256} if hub_sha256 else None)])
         def snapshot_download(*,repo_id,revision,allow_patterns,local_dir,max_workers):
             assert repo_id==REPO and revision==REV
             assert allow_patterns==["weights.gguf"]
@@ -151,6 +152,37 @@ class ModelReceiptTests(unittest.TestCase):
         with patch.dict(sys.modules,{"huggingface_hub":self.fake_hf()}):
             with self.assertRaises(StudioError):
                 self.studio.download(MODEL,["setup.py"],REV,True)
+
+    def test_legacy_receipt_preserves_existing_weights_without_false_sha_claim(self):
+        old={"model":MODEL,"source":"https://huggingface.co/"+REPO,
+             "revision":REV,"files":[{"filename":"weights.gguf","bytes":len(WEIGHT)}]}
+        (self.folder/"weights.gguf").write_bytes(WEIGHT)
+        (self.folder/"RECEIPT.json").write_text(json.dumps(old),encoding="utf-8")
+        item=self.installed()
+        self.assertTrue(item["installed"])
+        self.assertEqual(item["checksum"],"LEGACY_UNVERIFIED")
+        with self.assertRaises(StudioError):
+            self.studio.verify_model(MODEL)
+
+    def test_legacy_receipt_with_missing_weights_is_not_installed(self):
+        old={"model":MODEL,"source":"https://huggingface.co/"+REPO,
+             "revision":REV,"files":[{"filename":"weights.gguf","bytes":len(WEIGHT)}]}
+        (self.folder/"RECEIPT.json").write_text(json.dumps(old),encoding="utf-8")
+        self.assertFalse(self.installed()["installed"])
+
+    def test_upstream_hub_lfs_checksum_matches_local_weight(self):
+        remote=hashlib.sha256(WEIGHT).hexdigest()
+        with patch.dict(sys.modules,{"huggingface_hub":self.fake_hf(hub_sha256=remote)}):
+            result=self.studio.download(MODEL,["weights.gguf"],REV,True)
+        self.assertEqual(result["receipt"]["files"][0]["upstream_sha256"],remote)
+        self.assertEqual(self.studio.verify_model(MODEL)["status"],"VERIFIED_LOCAL_SHA256")
+
+    def test_upstream_hub_lfs_checksum_mismatch_denies_success(self):
+        false_remote=hashlib.sha256(b"not the approved bytes").hexdigest()
+        with patch.dict(sys.modules,{"huggingface_hub":self.fake_hf(hub_sha256=false_remote)}):
+            with self.assertRaises(StudioError):
+                self.studio.download(MODEL,["weights.gguf"],REV,True)
+        self.assertFalse((self.folder/"RECEIPT.json").exists())
 
     def test_redirected_model_folder_cannot_receive_download(self):
         outside=Path(self.temp.name)/"outside"
