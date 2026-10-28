@@ -1,0 +1,57 @@
+name: NOX EXPRESS WOW E01 owner-preserving source gate
+on:
+  push:
+    branches:
+      - integration/nox-v16-express-wow-final-r12-20261028
+  pull_request:
+    paths:
+      - 'integrations/wow200/**'
+      - 'integrations/express-wow/**'
+      - '.github/workflows/nox-express-wow-r12.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check active E01 source and preserved archived PR30
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = "a0bc34add0990b3f70bdbfd94fe52615193a4c08"
+          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.css)" = "77417160147607f2d7350209b865d86bfe49abd0"
+          test -f integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs
+          grep -Fq 'OWNER1_D02_ENGINE' integrations/wow200/stage_wow200.py
+          grep -Fq "from '../proposals/NOX-CINEMA-FX/nox-cinema.mjs'" integrations/wow200/runtime/home-scene.mjs
+          test -f integrations/wow200/DONOR_BLOBS.json
+          test -f integrations/creative/web/studio.html
+      - name: Actual 9-orb test paths and source staging regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check integrations/wow200/runtime/home-scene.mjs
+          node --check integrations/wow200/runtime/loader.mjs
+          node --test integrations/wow200/tests/test_home_scene.mjs
+          python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+          python -m py_compile integrations/express-wow/apply_express.py integrations/wow200/stage_wow200.py
+          python -m unittest discover -s integrations/express-wow/tests -p 'test_one_shot_order.py' -v
+          python -m unittest discover -s integrations/express-wow/tests -p 'test_utf8_bridge_limit.py' -v
+          python -m unittest discover -s integrations/creative/tests -p 'test_projector_contract.py' -v
+          python -m unittest discover -s integrations/creative/tests -p 'test_persona_media.py' -v
+          node --check integrations/creative/web/persona-media.js
+          node --check integrations/creative/web/theater.js
+          node --check integrations/creative/web/studio.js
+          node --check integrations/creative/web/entry.js
+      - name: Evidence limited to source checks
+        shell: bash
+        run: |
+          printf 'commit=%s\nsource_only=true\nwindows_accepted=false\ne07_accepted=false\n' "$GITHUB_SHA"
