@@ -42,7 +42,7 @@ jobs:
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs
-      - name: Execute all E03 offline regressions (minimum 106, no downloads)
+      - name: Execute all E03 offline regressions (minimum 118, no downloads)
         shell: bash
         run: |
           python - <<'PY_E03'
@@ -50,8 +50,8 @@ jobs:
           import unittest
           suite = unittest.defaultTestLoader.discover('Packages/P03/Admission', pattern='test_*.py')
           count = suite.countTestCases()
-          if count < 106:
-              sys.exit(f'E03 regression suite shrank: {count} < 106')
+          if count < 118:
+              sys.exit(f'E03 regression suite shrank: {count} < 118')
           result = unittest.TextTestRunner(verbosity=2).run(suite)
           sys.exit(0 if result.wasSuccessful() else 1)
           PY_E03
