@@ -1,0 +1,77 @@
+{
+  "schema": "NOX-E04-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-E04-C29-20261028",
+  "owner": 4,
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "e04/v16-gpu-control-receipt-gate-20261028-c29",
+  "source_base_commit_sha1": "4faff41270985be5fd3eb23905e6835b5990fd68",
+  "source_head_commit_sha1": "8e2afe305da89b996168054bee6390f6f5570f7b",
+  "pr": 65,
+  "status": "SOURCE_PATCHED_CI_INFRA_HOLD",
+  "source_lock_integrated": false,
+  "files": [
+    {
+      "task_id": "E04-C29-01",
+      "path": "Packages/P04/GpuGuardian/GpuGuardian.cs",
+      "preimage_git_blob_sha1": "ae2a91d4e1beb840ff3d7607996a9553d50112e9",
+      "preimage_sha256": "f6bd67df5889e6903bb44997a8b4720b02b5b43f919566ad88ee1cdb24d66c15",
+      "postimage_git_blob_sha1": "507065c7995827a3f2a98d8fd56273770266203a",
+      "postimage_sha256": "0f1c1a012767ea6af4701eaeee8ab4862c9c17fa5682c2a5026b6683bb7303ba",
+      "patch_sha256": "eb296afdc524a60ce3348ab899fa4916627baf1de1f0121a42506314ea2397f6"
+    },
+    {
+      "task_id": "E04-C29-02",
+      "path": "tests/P04/GpuWorkerReceiptHarness.cs",
+      "preimage_git_blob_sha1": null,
+      "preimage_sha256": null,
+      "postimage_git_blob_sha1": "6e135110073e87ce1bc7a5e72d3abc8eac75d2d3",
+      "postimage_sha256": "07acdc99a65cfb679a7478f14f73c4ce9f76ae559c6a6d543f36a007d9474252",
+      "patch_sha256": "2fcd3537519e72c2fc29b0a7d71c87e1a9fd89ea70b63c82a094aff099f2a382"
+    },
+    {
+      "task_id": "E04-C29-03",
+      "path": "tests/P04/GpuWorkerReceiptHarness.csproj",
+      "preimage_git_blob_sha1": null,
+      "preimage_sha256": null,
+      "postimage_git_blob_sha1": "4d791303b325f00d7d4bfc81b6b8c9c422f88771",
+      "postimage_sha256": "cd0a3ac209bcf5849493ea3006aa699ced266c2575b19bf3cfc89bc0656807e0",
+      "patch_sha256": "f511a784806184182691658ac7cbdfcdd500bc03eebf3685217c137881e0aabe"
+    },
+    {
+      "task_id": "E04-C29-04",
+      "path": ".github/workflows/nox-e04-worker-receipt-contract.yml",
+      "preimage_git_blob_sha1": null,
+      "preimage_sha256": null,
+      "postimage_git_blob_sha1": "56ff9c61c6c0eb3251c9ffb6f7705063f0b5e420",
+      "postimage_sha256": "e52b8c349e74461054beacdc67156eadbe6ae445e2a8cfcbd86f0d8cbf8ba399",
+      "patch_sha256": "eb2496a98adf964dc51c68a5c2ca36db873c8ce0f858b13d0fd56c01708687cc"
+    }
+  ],
+  "tests": {
+    "native_windows": "NOT_RUN",
+    "ubuntu_compile": "NOT_RUN",
+    "ci_state": "HOLD_RUNNER_INFRASTRUCTURE",
+    "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/40624491502",
+    "observation": "Both jobs concluded failure before any runner assignment or steps; no PASS is claimed.",
+    "targeted_case_count": 11,
+    "note": "Added a native in-flight PauseAsync/DisposeAsync regression. CI run with previous harness failed before runner execution; latest source still untested.",
+    "last_known_retry_attempt": 2
+  },
+  "gpu_training": {
+    "status": "HOLD_NO_AUTHORIZED_LOCAL_GPU_MODEL_DATASET",
+    "optimizer_steps": 0,
+    "checkpoint": null,
+    "training_loss": null,
+    "evaluation_loss": null,
+    "merge": null
+  },
+  "acceptance": {
+    "main_integrated": false,
+    "real_gpu_end_to_end": false,
+    "e07_same_exe": false,
+    "overall_percentage": null
+  },
+  "handoff": "Owner #6 must serialize PR7 -> PR12 -> PR57 -> PR65; PR62 is separate overlapping rag patch and must be reconciled with PR57 before main admission. Bind native control acknowledgement to actual immutable v2 training/checkpoint receipts before claiming PAUSED/STOPPED/RESUMED. Owner #7 to accept one EXE SHA.",
+  "original_files_removed": 0,
+  "provenance_note": "Git 40-hex blob SHA-1 and 64-hex file/patch SHA-256 intentionally separate; patchSha256 computed from GitHub PR65 per-file patch text."
+}
