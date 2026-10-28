@@ -251,7 +251,13 @@ class PrivateMobileContract:
                 "observed_origin", "expected_csrf", "received_csrf",
                 "native_session_approved", "expires_at"}:
                 raise G2Denied("Missing private host-attested device/session")
-            expiry, now = proof["expires_at"], self.clock()
+            expiry = proof["expires_at"]
+            try:
+                now = self.clock()
+            except Exception as exc:
+                raise G2Hold("Existing private host clock unavailable") from exc
+            if type(now) not in (int, float) or not math.isfinite(now):
+                raise G2Hold("Existing private host clock unavailable")
             if (type(expiry) not in (int, float) or not math.isfinite(expiry)
                     or not now < expiry <= now + 300):
                 raise G2Denied("Expired or implausible private authorization")
@@ -273,6 +279,7 @@ class PrivateMobileContract:
             csrf, presented = proof_epoch[4], proof_epoch[5]
             csrf_ok = (type(csrf) in (bytes, str) and type(presented) is type(csrf)
                        and 16 <= len(csrf) <= 512
+                       and len(presented) == len(csrf)
                        and (type(csrf) is bytes or (csrf.isascii() and presented.isascii()))
                        and hmac.compare_digest(csrf, presented))
             if (type(proof_epoch[0]) is not str or not 0 < len(proof_epoch[0]) <= 160
@@ -329,6 +336,15 @@ class PrivateMobileContract:
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED_AFTER_FINAL_ADVERTISEMENT")
         if type(final_advertised) is not dict or approved(final_advertised) != first_caps:
             raise G2Hold("EXISTING_NATIVE_CAPABILITY_EPOCH_CHANGED_AFTER_ATTESTATION")
+        # Final native advertise() can block past the session's expiry.
+        try:
+            final_now = self.clock()
+        except Exception as exc:
+            raise G2Hold("Existing private host clock unavailable") from exc
+        if type(final_now) not in (int, float) or not math.isfinite(final_now):
+            raise G2Hold("Existing private host clock unavailable")
+        if final_now >= identity[7]:
+            raise G2Denied("Private native session expired before capability response")
         # Session-scoped capabilities, never a public URL or bearer token.
         return {"mode": "PRIVATE_NATIVE_ATTESTED", "gatewayListening": True,
                 "allowed": list(first_caps)}
