@@ -1,0 +1,176 @@
+{
+  "schema": "NOX_V16_EXPRESS_STAGE_A_SOURCELOCK_V1",
+  "run_id": "NOX-V16-E06-EXPRESS-BLOCK1-20261028",
+  "main_base_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "canonical_visible_host": "R11_WPF_WEBVIEW2",
+  "host_source_archive": {
+    "kind": "frozen_original_R08_full",
+    "sha256": "67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689",
+    "size_bytes": 43873264,
+    "drive_file_id": "1Y5m3U6rPE5zMUPqTaMoztWoPUpHewICl"
+  },
+  "original_python_source_archive": {
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "size_bytes": 60364346,
+    "chunks": [
+      "source_00.part",
+      "source_01.part",
+      "source_02.part"
+    ]
+  },
+  "diagnostic_wpf_artifact": {
+    "github_run_id": 40609548405,
+    "github_commit": "a996f032253721f5649ffbf8ee1e32d4d04f12fa",
+    "artifact_id": 12782179053,
+    "exe_name": "NOX.P01.Shell.exe",
+    "exe_sha256": "f7609e8e5060ca8e21112b06cce5221a58399910abdbc0e663513d0cfc9706b9",
+    "original_d02_images_included": true
+  },
+  "diagnostic_python_artifact": {
+    "github_run_id": 40609239316,
+    "github_commit": "ff28eef5c7cc0e01473fb8ba65656b08b1e348ef",
+    "artifact_id": 12781339660,
+    "exe_name": "NOX_HELION_PRIVATE_CANDIDATE.exe",
+    "exe_sha256": "4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3",
+    "background_exe_sha256": "42bb9f3bac340826631554ed6f5c1af5932cdc8ad356d2ed633237b9f14b3406"
+  },
+  "installer_owner": {
+    "pr": 28,
+    "sha": "8e42bb15aecbee8412c342b0e9049b6cce044297",
+    "native_synthetic_ci": 40605310765
+  },
+  "owners": [
+    {
+      "number": 9,
+      "head_sha": "0c595bb433238eb22b76f08928a8ddde8c40eda7",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "P05"
+    },
+    {
+      "number": 12,
+      "head_sha": "912ed739861c4a18c728d5a155d22679560d3c79",
+      "base": "codex/p04-create-rag-training-gpu-20261027",
+      "merged": false,
+      "draft": true,
+      "owner": "P04"
+    },
+    {
+      "number": 13,
+      "head_sha": "71a32bf4e2d5ab7f1e17fc91de3502170a8885f7",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "P02"
+    },
+    {
+      "number": 17,
+      "head_sha": "fc0a1757fc79a7ad009146361a7a2522dd127329",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "P03"
+    },
+    {
+      "number": 18,
+      "head_sha": "b44911fb022d98fe011d165b1382b8828cd087ed",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "voice"
+    },
+    {
+      "number": 19,
+      "head_sha": "2fdb38b89dfc5bb107272bdc278631f82eaa5840",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "no_loss"
+    },
+    {
+      "number": 20,
+      "head_sha": "0a832004d4b57127f08d3b045dc864ddf149d8a4",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "E06"
+    },
+    {
+      "number": 28,
+      "head_sha": "8e42bb15aecbee8412c342b0e9049b6cce044297",
+      "base": "e01/v16-c09-turbo10-source-20261028",
+      "merged": false,
+      "draft": true,
+      "owner": "P01"
+    },
+    {
+      "number": 30,
+      "head_sha": "09751ef996074ea4d1dbe12d565dc87cf155e90e",
+      "base": "main",
+      "merged": false,
+      "draft": true,
+      "owner": "WOW_design"
+    },
+    {
+      "number": 31,
+      "head_sha": "50592a6b9d41cab2a7abd8e02881cb933d2b69d9",
+      "base": "nox-v16-wow-gravity-live-20261028",
+      "merged": false,
+      "draft": true,
+      "owner": "WOW_design"
+    },
+    {
+      "number": 34,
+      "head_sha": "4fb41e3af0c97aa06ea2ce997a52a3b6732fd040",
+      "base": "nox-v16-wow101-150-director-20261028",
+      "merged": false,
+      "draft": true,
+      "owner": "WOW_design"
+    },
+    {
+      "number": 38,
+      "head_sha": "6506d25a568bdf47f66c08db936daf04a310d893",
+      "base": "nox-v16-pack01-wow50-v2-20261028",
+      "merged": false,
+      "draft": true,
+      "owner": "WOW_design"
+    },
+    {
+      "number": 39,
+      "head_sha": "3bc117618da7f699d353acae25713181717b07f5",
+      "base": "nox-v16-wow101-150-director-20261028",
+      "merged": false,
+      "draft": true,
+      "owner": "WOW_design"
+    },
+    {
+      "number": 40,
+      "head_sha": "a996f032253721f5649ffbf8ee1e32d4d04f12fa",
+      "base": "codex/v16-executor2-ollama-contract-20261027",
+      "merged": false,
+      "draft": true,
+      "owner": "WPF_D02"
+    }
+  ],
+  "constraints": {
+    "no_delete": true,
+    "no_reset_other_branches": true,
+    "one_primary_UI_host": true,
+    "keep_unintegrated_workers_inert": true,
+    "retained_d02": true,
+    "owner_approval_required_before_merge": true,
+    "source_lock_is_inventory_not_production_release": true,
+    "release_accepted": false,
+    "E07_same_sha_accepted": false
+  },
+  "pending": [
+    "owner_file_matrix_exact_current_preimages",
+    "serial_p01_to_p05_merge_with_live_qa",
+    "real_wpf_python_same_host_bridge",
+    "real_GPU_LoRA_eval_licensing",
+    "real_ASR_TTS_SIP_provider",
+    "real_full_D02_WOW_10_10_10_Windows",
+    "E07_final_same_sha_qa"
+  ]
+}
