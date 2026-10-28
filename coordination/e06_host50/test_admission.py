@@ -288,5 +288,97 @@ class HostSettingPolicyTests(unittest.TestCase):
                     host.admit(session=self.s,actual_origin=self.s.origin,
                         request=self.request,native_option_verifier=lambda *_:True)
 
+class HostThreadSafetyTests(unittest.TestCase):
+    """Offline race and type checks; no genuine native owner capability."""
+    def setUp(self):
+        HostScopeAndReceiptTests.setUp(self)
+
+    def _owner_one(self, owner):
+        from admission import Host50Admission, Capability
+        import secrets
+        route='browser.open'
+        index=37  # NIP01-38 original owner E01; synthetic descriptor only
+        self.mapping['routes'][index]['sourceBinding']='owner1:browser.open'
+        self.host.capabilities[route]=Capability(route,owner,'owner1:browser.open',
+                                                  'e'*64,BASE_TREE,True,True)
+        host=Host50Admission(self.cat,self.mapping,signing_key=secrets.token_bytes(32),
+                allowed_origins={'https://nox.invalid'},active_tree=BASE_TREE,
+                capabilities=self.host.capabilities)
+        scope=host.issue_session(tenant='tenant',principal='person',chat='chat1',
+            origin='https://nox.invalid',scopes=(route,),sensitive=(route,))
+        req=HostScopeAndReceiptTests.req(self,route,'NIP01-38')
+        return host,scope,req
+
+    def test_boolean_native_capability_owner_cannot_equal_owner_one(self):
+        host,scope,req=self._owner_one(True)
+        with self.assertRaisesRegex(Hold,'NATIVE_OWNER_CAPABILITY_UNVERIFIED'):
+            host.admit(session=scope,actual_origin=scope.origin,request=req)
+
+    def test_boolean_signed_ack_owner_cannot_equal_owner_one(self):
+        host,scope,req=self._owner_one(1)
+        ticket=host.admit(session=scope,actual_origin=scope.origin,request=req)
+        ack={key:ticket[key] for key in ('runId','taskId','routeId','owner',
+            'ownerReceiptSha256','payloadSha256','sourceLockTree','sessionScopeSha256',
+            'targetRunId','fileSha256','fileTicketSha256')}
+        ack.update(event='DONE',proofSha256='a'*64,owner=True)
+        ack['seal']=host._seal(ack)
+        with self.assertRaisesRegex(Denied,'NATIVE_ACK_INVALID'):
+            host.finish(ticket['runId'],ack)
+
+    def test_concurrent_native_ack_is_consumed_at_most_once(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        ticket=self.host.admit(session=self.s,actual_origin=self.s.origin,
+            request=HostScopeAndReceiptTests.req(self,'helion.chat','NIP01-01'))
+        ack={key:ticket[key] for key in ('runId','taskId','routeId','owner',
+            'ownerReceiptSha256','payloadSha256','sourceLockTree','sessionScopeSha256',
+            'targetRunId','fileSha256','fileTicketSha256')}
+        ack.update(event='DONE',proofSha256='a'*64)
+        ack['seal']=self.host._seal(ack)
+        normal_seal=self.host._seal
+        both_entered=threading.Event()
+        counter_lock=threading.Lock()
+        entered=[0]
+        def slow_seal(body):
+            if threading.current_thread().name.startswith('R06_ACK'):
+                with counter_lock:
+                    entered[0]+=1
+                    if entered[0]>=2:both_entered.set()
+                both_entered.wait(timeout=.08)
+            return normal_seal(body)
+        self.host._seal=slow_seal
+        start=threading.Barrier(3)
+        def worker():
+            start.wait(timeout=3)
+            try:
+                self.host.finish(ticket['runId'],dict(ack))
+                return 'ACK'
+            except Denied:
+                return 'DENIED'
+            except Exception as e:
+                return type(e).__name__
+        with ThreadPoolExecutor(max_workers=2,thread_name_prefix='R06_ACK') as pool:
+            a=pool.submit(worker);b=pool.submit(worker)
+            start.wait(timeout=3)
+            outcomes=sorted([a.result(timeout=4),b.result(timeout=4)])
+        self.assertEqual(outcomes,['ACK','DENIED'])
+        self.assertNotIn(ticket['runId'],self.host.pending)
+
+    def test_native_admission_queue_stays_bounded_under_concurrency(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from admission import MAX_PENDING
+        req=HostScopeAndReceiptTests.req(self,'helion.chat','NIP01-01')
+        def worker(_):
+            try:
+                self.host.admit(session=self.s,actual_origin=self.s.origin,request=req)
+                return 'ADMITTED'
+            except Hold:
+                return 'HOLD'
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            results=list(pool.map(worker,range(MAX_PENDING+40)))
+        self.assertEqual(results.count('ADMITTED'),MAX_PENDING)
+        self.assertEqual(results.count('HOLD'),40)
+        self.assertEqual(len(self.host.pending),MAX_PENDING)
+
 if __name__ == "__main__":
     unittest.main()
