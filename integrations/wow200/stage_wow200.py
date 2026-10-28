@@ -18,6 +18,19 @@ D02 = {
 # This prevents a fabricated 50-entry placeholder list passing as "WOW 1-200".
 DONOR_MANIFEST_BLOB = "de7c6305c02023bd61c5acba3ffea5f62953a0d1"
 DONOR_FILE_COUNT = 56
+# E01 PR144 HEAD f8bb7db02a5b01385d5d08329358be8c0936dfc2
+# Source blobs verified identical in the frozen E06 PR162 candidate.
+# Keep the old WOW200 donor *unchanged* as a separate legacy payload.
+OWNER1_D02_ENGINE = {
+    "proposals/NOX-CINEMA-FX/nox-cinema.mjs": {
+        "active_blob": "a0bc34add0990b3f70bdbfd94fe52615193a4c08",
+        "legacy_blob": "f7724e99b37ccbc84f1756dc797980267d58ec4e",
+    },
+    "proposals/NOX-CINEMA-FX/nox-cinema.css": {
+        "active_blob": "77417160147607f2d7350209b865d86bfe49abd0",
+        "legacy_blob": "95b2562e8b6f5c07b785d3a381661d0dbfe5de83",
+    },
+}
 REQUIRED_DONORS = frozenset({
     "proposals/NOX-WOW51-100/catalog.mjs",
     "proposals/NOX-WOW51-100/wow51-100.mjs",
@@ -55,6 +68,18 @@ def stage(root:Path, source:Path)->dict:
         raise ValueError("WOW200_DONOR_COUNT_HOLD")
     if not REQUIRED_DONORS.issubset(set(files)):
         raise ValueError("WOW200_REQUIRED_ENGINE_MISSING_HOLD")
+    # Verify both byte-identical immutable versions BEFORE touching the staged tree.
+    # source is <repo>/integrations/wow200; owner1 source is <repo>/proposals/.
+    owner1_root=source.parents[1]
+    for rel,pins in OWNER1_D02_ENGINE.items():
+        archived=source/rel
+        active=owner1_root/rel
+        if (not archived.is_file() or archived.is_symlink() or
+            gitsha(archived.read_bytes())!=pins["legacy_blob"]):
+            raise ValueError("D02_LEGACY_ENGINE_SHA_HOLD:"+rel)
+        if (not active.is_file() or active.is_symlink() or
+            gitsha(active.read_bytes())!=pins["active_blob"]):
+            raise ValueError("OWNER1_D02_ENGINE_SHA_HOLD:"+rel)
     dest=root/"Assets/creative/wow200"
     if dest.exists():raise ValueError("WOW200_ALREADY_INSTALLED_HOLD")
     plans=[]
@@ -64,7 +89,13 @@ def stage(root:Path, source:Path)->dict:
         origin=source/rel
         if not origin.is_file() or origin.is_symlink() or gitsha(origin.read_bytes())!=expected:
             raise ValueError("WOW_DONOR_BLOB_IDENTITY_HOLD:"+rel)
-        plans.append((origin,dest/rel))
+        if rel in OWNER1_D02_ENGINE:
+            # Active runtime import stays inside wow200/proposals/ and loads ONLY owner1.
+            # Archive the original PR30 donor under a non-imported legacy directory.
+            plans.append((origin,dest/"legacy/d02-pr30"/Path(rel).name))
+            plans.append((owner1_root/rel,dest/rel))
+        else:
+            plans.append((origin,dest/rel))
     # Do not modify approved art or any existing source file until all inputs pass.
     for rel in ["runtime/loader.mjs","runtime/stage.css","runtime/home-scene.mjs","runtime/home-guard.css"]:
         origin=source/rel
@@ -115,7 +146,13 @@ def stage(root:Path, source:Path)->dict:
         receipt={"schema":"NOX_V16_WOW200_ADDITIVE_R13_STAGE", "source":"PR44/PR38/PR14/PR15 immutable Git blobs", "files":copied,
           "count":len(copied),"D02_original_SHA256":D02,"same_EXE_QA":"NOT_RUN","GPU":"NOT_RUN",
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
-          "home_pr30_renderer_staged":True,"complete_200_runtime_verified":False}
+          "home_pr30_renderer_staged":True,
+          "active_d02_engine":"OWNER1_PR144_PINNED",
+          "active_d02_git_blobs":{rel:p["active_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
+          "retained_legacy_d02_git_blobs":{rel:p["legacy_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
+          "active_d02_runtime_path":"Assets/creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+          "legacy_d02_runtime_imported":False,
+          "complete_200_runtime_verified":False}
         out.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
         return receipt
     except BaseException:
