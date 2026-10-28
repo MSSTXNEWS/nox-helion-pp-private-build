@@ -1,0 +1,36 @@
+name: NOX P02 .NET-to-existing Python native framed duplex component
+on:
+  pull_request:
+    paths:
+      - 'Packages/P02/worker-chat/NativePythonPipe.cs'
+      - 'Packages/P02/worker-chat/pipe-smoke/**'
+      - '.github/workflows/nox-e02-native-duplex.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-p02-framed-duplex:
+    runs-on: windows-2025
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify P02 original owner frame modules and Python syntax
+        shell: pwsh
+        run: |
+          python -m py_compile Packages/P02/worker-python/p02_native_ingress.py Packages/P02/worker-python/p02_framed_worker.py Packages/P02/worker-chat/pipe-smoke/fixture_existing_owner.py
+      - name: One existing Python runtime through real .NET Windows process pipes
+        shell: pwsh
+        env:
+          PYTHON: python
+        run: |
+          dotnet run --project Packages/P02/worker-chat/pipe-smoke/P02.NativePipeSmoke.csproj --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_DUPLEX_PIPE_HOLD' }
+          Write-Host 'P02_NATIVE_WINDOWS_PROCESS_COMPONENT=PASS; ORIGINAL_NOX_HOST_INTEGRATED=NO; E07_FINAL_RELEASE=NO'
