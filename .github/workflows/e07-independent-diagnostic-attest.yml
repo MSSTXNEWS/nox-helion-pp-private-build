@@ -1,0 +1,54 @@
+name: E07 independent frozen diagnostic installer attestation (NOT final release)
+on:
+  pull_request:
+    paths:
+      - 'coordination/e07/**'
+      - '.github/workflows/e07-independent-diagnostic-attest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  frozen-diagnostic-readback:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify immutable GitHub artifact ID and source run SHA before downloading
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $artifact=gh api repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/12782319970 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {throw 'E07_ARTIFACT_API_FAILED'}
+          if ($artifact.id -ne 12782319970 -or $artifact.expired -or
+              $artifact.name -cne 'nox-e06-real-wpf-nsis-nonfinal-40611423342' -or
+              $artifact.workflow_run.id -ne 40611423342 -or
+              $artifact.workflow_run.head_sha -cne '87faa41b1602a94d8f981c2a872d36c568a95039') {
+            throw 'E07_ARTIFACT_PROVENANCE_HOLD'
+          }
+          $dir=Join-Path $env:RUNNER_TEMP 'nox-e07-diagnostic-only'
+          if (Test-Path -LiteralPath $dir) {throw 'E07_OUTPUT_ALREADY_EXISTS'}
+          New-Item -ItemType Directory -Path $dir | Out-Null
+          gh run download 40611423342 --repo MSSTXNEWS/nox-helion-pp-private-build --name nox-e06-real-wpf-nsis-nonfinal-40611423342 --dir $dir
+          if ($LASTEXITCODE -ne 0) {throw 'E07_FROZEN_ARTIFACT_DOWNLOAD_FAILED'}
+          "NOX_E07_DIAG_ROOT=$dir" >> $env:GITHUB_ENV
+      - name: Independent SHA-256 / original D02 / original lifecycle receipt verification
+        shell: pwsh
+        run: |
+          python coordination/e07/independent_diagnostic_attest.py --root "$env:NOX_E07_DIAG_ROOT" --out "e07-diagnostic-attestation.json"
+          if ($LASTEXITCODE -ne 0) {throw 'E07_DIAGNOSTIC_ATTESTATION_HOLD'}
+      - name: Retain diagnostic evidence (never signed final release)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e07-frozen-diagnostic-readback
+          path: e07-diagnostic-attestation.json
+          retention-days: 14
+          if-no-files-found: warn
