@@ -1,0 +1,34 @@
+{
+  "schema": "NOX_V16_E06_W1_01_R20_SOURCE_ONLY_V1",
+  "run_id": "NOX-V16-W1-01-20261029T013523MSK-R20",
+  "owner": "W1-01",
+  "task_id": "W1.01.R20.ZIP_DIRECTORY_SEPARATOR_PARITY",
+  "pr162_immutable_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "git_tree_sha1": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "modified": {
+    "path": "coordination/source-lock/verify_original_archive.py",
+    "pre_sha256": "089200b6be61a375346fc1825a7ab96bd507d61d57ae79461650381933770307",
+    "post_sha256": "698586a4eb256503286c122566e2bf757d1d2bab11a2e25fc42fbca4740abe23",
+    "pre_git_blob_sha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+    "post_git_blob_sha1": "e61da4c0108bdd36726ef78bd2a7ac4e5ebba456"
+  },
+  "test": {
+    "path": "tests/e06/test_r20_zip_trailing_slash_parity.py",
+    "pre": "ABSENT",
+    "post_sha256": "24c5393a6a9f442a2efc26ecf918dd21fa31895ae5deb2edaad49280d51f5eef",
+    "post_git_blob_sha1": "abdf1e64fe171e95aee1b56329cc110927ca7b26",
+    "before": "RED 5/9 (4 failures)",
+    "after": "GREEN 9/9",
+    "prior_lesson": "R18 canonical limits RED 5/7 -> GREEN 7/7"
+  },
+  "previous_lesson_id": "CANONICAL_CROSS_VERIFIER_LIMITS_BEFORE_729_ADMISSION",
+  "previous_lesson_applied": true,
+  "lesson_id": "CANONICAL_DIRECTORY_SUFFIX_EXACTLY_ONE_SLASH",
+  "source_status": "OWNER_BRANCH_SOURCE_PATCH_VERIFIED_NOT_PR162_INTEGRATED",
+  "physical_parts_sha256": "N/D",
+  "physical_729_sha256": "0/729",
+  "source_ready": "HOLD",
+  "new_accepted_product_tasks": 0,
+  "windows_build": "PROHIBITED_R20",
+  "no_loss": "no deletions; no PR162/main writes"
+}
