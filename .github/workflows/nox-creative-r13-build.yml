@@ -190,6 +190,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_STAGE_HOLD' }
           python -m unittest discover -s integrations/wow200/tests -v
           if ($LASTEXITCODE -ne 0) { throw 'WOW200_NOLOSS_TESTS_HOLD' }
+          node --check integrations/creative/web/entry.js
+          if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_CHAT_NAV_JS_SYNTAX_HOLD' }
+          node --check integrations/wow200/runtime/loader.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_ROUTE_UI_SYNTAX_HOLD' }
           node --check integrations/wow200/runtime/home-scene.mjs
           if ($LASTEXITCODE -ne 0) { throw 'D02_NINE_SPHERE_SOURCE_SYNTAX_HOLD' }
           node --test integrations/wow200/tests/test_home_scene.mjs
