@@ -6,7 +6,8 @@ param(
  [Parameter(Mandatory=$true)][string]$PythonExe,
  [Parameter(Mandatory=$true)][string]$OutputRoot,
  [Parameter(Mandatory=$true)][string]$RunId,
- [Parameter()][string]$ApprovedP01InstallerRoot = ''
+ [Parameter()][string]$ApprovedP01InstallerRoot = '',
+ [Parameter()][string]$ApprovedCreativeWebRoot = ''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -56,6 +57,34 @@ if ($sourceCanon -ieq $outputCanon -or
 }
 if (!(Test-Path -LiteralPath $project -PathType Leaf)) { throw 'EXISTING_WPF_SOURCE_MISSING' }
 if (!(Test-Path -LiteralPath $nsisScript -PathType Leaf)) { throw 'ORIGINAL_NSIS_OWNER_SOURCE_MISSING' }
+
+# E06 fail-closed admission: the existing WPF projector maps
+# https://nox.local/creative/theater.html onto the original Assets directory.
+# An absent/unpinned theater cannot be shipped as a working cinema route.
+if ([string]::IsNullOrWhiteSpace($ApprovedCreativeWebRoot)) { throw 'E06_APPROVED_THEATER_WEB_ROOT_REQUIRED_HOLD' }
+$creativeRoot=(Resolve-Path -LiteralPath $ApprovedCreativeWebRoot -ErrorAction Stop).Path
+$creativeInfo=Get-Item -LiteralPath $creativeRoot -Force
+if (!$creativeInfo.PSIsContainer -or ($creativeInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'E06_THEATER_SOURCE_DIRECTORY_HOLD' }
+$creativeCanon=[IO.Path]::GetFullPath($creativeRoot).TrimEnd('\')
+if ($creativeCanon -ieq $outputCanon -or
+    $creativeCanon.StartsWith($outputCanon + '\',[StringComparison]::OrdinalIgnoreCase) -or
+    $outputCanon.StartsWith($creativeCanon + '\',[StringComparison]::OrdinalIgnoreCase)) {
+  throw 'NO_LOSS_CREATIVE_OUTPUT_PATH_OVERLAP'
+}
+$creativeHashes=[ordered]@{
+ 'theater.html'='59823e151104200c6ba64d2b56ff6ea1a4a1f72a97bcf12f75b749fc05468f11'
+ 'theater.js'='62562ac81c5ff565e5e9c584c9201a26809bb390155a23b6c5cfee0948da6b42'
+}
+foreach ($name in $creativeHashes.Keys) {
+  $from=Join-Path $creativeRoot $name
+  if (!(Test-Path -LiteralPath $from -PathType Leaf)) { throw "E06_THEATER_SOURCE_MISSING:$name" }
+  $sourceItem=Get-Item -LiteralPath $from -Force
+  if (($sourceItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+      (Get-FileHash -LiteralPath $from -Algorithm SHA256).Hash.ToLowerInvariant() -cne $creativeHashes[$name]) {
+    throw "E06_THEATER_SOURCE_SHA_HOLD:$name"
+  }
+}
+
 if (Test-Path -LiteralPath $OutputRoot) { throw 'OUTPUT_ALREADY_EXISTS_NO_OVERWRITE' }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $out=(Resolve-Path $OutputRoot).Path
@@ -80,6 +109,34 @@ foreach($name in $assets.Keys) {
  if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "D02_APPROVED_ASSET_MISSING:$name" }
  if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() -cne $assets[$name]) { throw "D02_ASSET_SHA_HOLD:$name" }
 }
+
+# Stage ONLY the two hash-locked E06 theater resources. Original D02 binaries
+# remain byte-identical. Never overwrite a foreign WPF asset or follow a reparse.
+$assetsDest=Join-Path $payload 'Assets'
+if (!(Test-Path -LiteralPath $assetsDest -PathType Container) -or
+    ((Get-Item -LiteralPath $assetsDest -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'E06_ORIGINAL_ASSET_ROOT_HOLD'
+}
+$creativeDest=Join-Path $assetsDest 'creative'
+if (Test-Path -LiteralPath $creativeDest) {
+  $targetDir=Get-Item -LiteralPath $creativeDest -Force
+  if (!$targetDir.PSIsContainer -or ($targetDir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'E06_THEATER_DEST_DIRECTORY_HOLD' }
+} else { New-Item -ItemType Directory -Path $creativeDest | Out-Null }
+foreach ($name in $creativeHashes.Keys) {
+  $from=Join-Path $creativeRoot $name
+  if (!(Test-Path -LiteralPath $from -PathType Leaf) -or
+      ((Get-Item -LiteralPath $from -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+      (Get-FileHash -LiteralPath $from -Algorithm SHA256).Hash.ToLowerInvariant() -cne $creativeHashes[$name]) { throw "E06_THEATER_SOURCE_CHANGED_DURING_BUILD_HOLD:$name" }
+  $to=Join-Path $creativeDest $name
+  if (Test-Path -LiteralPath $to) {
+    if (!(Test-Path -LiteralPath $to -PathType Leaf)) { throw "E06_THEATER_DEST_CONFLICT_HOLD:$name" }
+    $destItem=Get-Item -LiteralPath $to -Force
+    if (($destItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        (Get-FileHash -LiteralPath $to -Algorithm SHA256).Hash.ToLowerInvariant() -cne $creativeHashes[$name]) { throw "E06_THEATER_DEST_CONFLICT_HOLD:$name" }
+  } else { Copy-Item -LiteralPath $from -Destination $to -ErrorAction Stop }
+  if ((Get-FileHash -LiteralPath $to -Algorithm SHA256).Hash.ToLowerInvariant() -cne $creativeHashes[$name]) { throw "E06_THEATER_STAGED_SHA_HOLD:$name" }
+}
+
 # Include the existing program files in the conservative NSIS manifest.
 $entries=@(Get-ChildItem -LiteralPath $payload -File -Recurse | Sort-Object FullName | ForEach-Object {
   if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'NO_REPARSE_PAYLOAD' }
@@ -113,7 +170,7 @@ $receipt=[ordered]@{
  wpf_exe_sha256=(Get-FileHash -LiteralPath $wpf -Algorithm SHA256).Hash.ToLowerInvariant();
  python_backend_sha256=$exeDigest;installer_sha256=$sha;installer_bytes=(Get-Item $setup).Length;
  payload_manifest_sha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant();
- original_D02_sha256=$assets;
+ original_D02_sha256=$assets;creative_web_sha256=$creativeHashes;creative_route='https://nox.local/creative/theater.html';
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
  one_visible_host=$true;native_bridge_scope='ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE';
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
