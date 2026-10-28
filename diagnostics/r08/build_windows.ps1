@@ -17,6 +17,8 @@ foreach ($file in @('NOX.P01.Shell.csproj','MainWindow.xaml','MainWindow.xaml.cs
   if (-not (Test-Path -LiteralPath (Join-Path $root $file) -PathType Leaf)) { throw "NOX_R08_MISSING:$file" }
 }
 python (Join-Path $PSScriptRoot 'fix_p05_raw_string.py') $root
+python (Join-Path $PSScriptRoot 'fix_r08_stage2.py') $root
+if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_STAGE2_FAILED' }
 if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_P05_FIX_FAILED' }
 $project = Join-Path $root 'NOX.P01.Shell.csproj'
 dotnet restore $project --nologo
