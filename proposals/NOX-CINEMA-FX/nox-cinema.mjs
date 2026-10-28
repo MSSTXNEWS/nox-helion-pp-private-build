@@ -173,7 +173,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     decorate(controls,"nox-cinema-control");
     decorate(panels,"nox-cinema-panel");
     root.classList.add("nox-cinema-scope");ownerRoot=true;
-    root.dataset.noxFxMode=profile.toLowerCase();
+    root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
     root.dataset.noxFxVisible="true";
     root.dataset.noxFxState=state;
   }catch(error){undoOwnedDom();throw error;}
@@ -233,7 +233,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     clearParticles();
   }
   function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
-  const onMotion=e=>{preference=!!e.matches;if(preference)sleep();else wake();};
+  const onMotion=e=>{if(disposed)return;preference=!!e.matches;
+    root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
+    if(preference)sleep();else wake();};
   let listenerReady=false,motionReady=false,observer=null;
   // R08-06..09: handle browser registration exceptions atomically.
   try{
@@ -318,7 +320,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
         for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
           (lastFrame||initialNow)+newPolicy.minimumBurstMs);
       }
-      mode=next;root.dataset.noxFxMode=next.toLowerCase();
+      mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },
     setState:applyState,

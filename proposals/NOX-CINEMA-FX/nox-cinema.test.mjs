@@ -252,3 +252,24 @@ test("R09-07 rejects timestamp overflow",()=>{const p={started:-1e308,duration:2
 test("R09-08 invalid frame time stops decorative particles",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});o.tick(12000);assert.ok(fx.snapshot().particles>0);o.tick(Infinity);assert.equal(fx.snapshot().particles,0);assert.equal(o.pending,0);fx.destroy();});
 test("R09-09 MAX to ECO prunes EXISTING particles now",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});o.tick(12000);assert.ok(fx.snapshot().particles>PROFILES.ECO.maxParticles);assert.equal(fx.setProfile("ECO"),true);assert.ok(fx.snapshot().particles<=PROFILES.ECO.maxParticles);assert.equal(o.root.dataset.noxFxMode,"eco");fx.destroy();});
 test("R09-10 reduced/hidden teardown preserve native state",()=>{const o=fakeScene();o.root.dataset.noxState="HOST_RUNNING";const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});o.tick(12000);o.reduced(true);assert.equal(fx.snapshot().particles,0);o.visibility(false);fx.destroy();assert.equal(o.root.dataset.noxState,"HOST_RUNNING");assert.ok(o.orbs.every(x=>!x.element.querySelector(".nox-cinema-orb__layers")));});
+test("R15-01 initial OS Reduced Motion syncs CSS before RAF",()=>{
+  const o=fakeScene();o.reduced(true);
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX"});
+  assert.equal(o.root.dataset.noxFxMode,"reduced");
+  assert.equal(fx.snapshot().profile,"REDUCED");
+  assert.equal(o.pending,0);fx.destroy();
+});
+test("R15-02 OS motion toggles CSS without altering selected mode",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"ECO"});
+  o.reduced(true);assert.equal(o.root.dataset.noxFxMode,"reduced");
+  assert.equal(fx.snapshot().profile,"REDUCED");
+  o.reduced(false);assert.equal(o.root.dataset.noxFxMode,"eco");
+  assert.equal(fx.snapshot().profile,"ECO");fx.destroy();
+});
+test("R15-03 user MAX cannot override active OS motion reduction",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs});
+  o.reduced(true);assert.equal(fx.setProfile("MAX"),true);
+  assert.equal(o.root.dataset.noxFxMode,"reduced");
+  assert.equal(fx.snapshot().profile,"REDUCED");
+  assert.equal(o.pending,0);fx.destroy();
+});
