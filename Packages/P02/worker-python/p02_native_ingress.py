@@ -171,15 +171,21 @@ class NativeIngress:
         try:
             # Only host-supplied session objects; do not import an identity
             # from untrusted WebView JSON or invent a local user account.
-            trusted_session = self._session()
-            if trusted_session is None:
-                raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
             if route == "chat.stop":
+                trusted_session = self._session()
+                if trusted_session is None:
+                    raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
                 result = self._dispatch.execute(route, payload, trusted_session)
             else:
                 # Shared native SQLite connections may not be thread safe.
                 # STOP is deliberately not queued behind this lock.
                 with self._serial:
+                    # Native revocation may happen while waiting for another
+                    # operation. Resolve at dispatch admission, never before
+                    # a potentially blocking serial wait.
+                    trusted_session = self._session()
+                    if trusted_session is None:
+                        raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
                     result = self._dispatch.execute(route, payload, trusted_session)
             answer = {"protocol": "NOX-P02-NATIVE-v1", "runId": self.run_id,
                       "requestId": nonce, "status": "OK", "result": result}

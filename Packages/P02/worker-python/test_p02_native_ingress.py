@@ -187,6 +187,38 @@ class IngressTests(unittest.TestCase):
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
             ingress.handle(packet(8))
 
+    def test_queued_request_resolves_session_after_serial_admission(self):
+        # A session can be revoked while a previous SQLite/chat operation owns
+        # the serial lane. Never dispatch using a pre-wait identity snapshot.
+        entered = threading.Event()
+        release = threading.Event()
+        class SerialGate:
+            def __enter__(self):
+                entered.set()
+                if not release.wait(2):
+                    raise RuntimeError("test serial admission timeout")
+            def __exit__(self, *_): pass
+        self.router._serial = SerialGate()
+        outcome = []
+        def request():
+            try:
+                outcome.append(self.router.handle(packet(240)))
+            except Exception as exc:
+                outcome.append(exc)
+        task = threading.Thread(target=request)
+        task.start()
+        try:
+            self.assertTrue(entered.wait(1))
+            self.trusted = None
+        finally:
+            release.set()
+            task.join(2)
+        self.assertFalse(task.is_alive())
+        self.assertEqual(len(outcome), 1)
+        self.assertIsInstance(outcome[0], ProtocolHold)
+        self.assertIn("AUTHENTICATED", str(outcome[0]))
+        self.assertEqual(self.provider.seen, [])
+
 
     def test_r27_immutable_host50_mapping_proxy_allows_p03_readonly_routes(self):
         # Actual native PACK01 freezes both the registry and descriptors as
