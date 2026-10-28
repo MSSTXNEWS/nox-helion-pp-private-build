@@ -32,7 +32,7 @@
       "owner": "E06",
       "pre_commit": "b5e72d02f7a489407a77486fd378a756ad701b6d",
       "pre_sha256": "f9eb07f4d0e4e45ca8a5e245ede1c0f74a087082bb8382c89a466ef4a694e963",
-      "post_sha256": "EXTERNAL_READBACK_REQUIRED",
+      "post_sha256": "43cfcef256f036a7f694663383aa2c728faf8c90526771c39b698d14fa241b3b",
       "pre_git_blob_sha1": "7f6c750a623b10412be5481ebe4670c49e6ab2fe",
       "post_git_blob_sha1": "2f7c3c0e820fb1c5ca7ce8c4d780bd281a245e66",
       "diff": "Fixed matcher to assert precisely two original Verify-Payload invocations; no changes to original host/NSIS/creative assets."
@@ -54,7 +54,8 @@
     "native_install_update_rollback": "HOLD",
     "E07_one_BuildID": "HOLD",
     "adapted_V8": "9/9 PASS; theater SHA crypto test NOT_RUN in V8",
-    "original_Node": "NOT_RUN_LINUX_NODE_AVAILABLE_BUT_REPO_PRIVATE_FILES_NOT_MATERIALIZED"
+    "original_Node": "NOT_RUN_LINUX_NODE_AVAILABLE_BUT_REPO_PRIVATE_FILES_NOT_MATERIALIZED",
+    "exact_r07_test": "9 adapted V8 assertions PASS, 1 crypto-specific NOT_RUN; native Node/Windows NOT_RUN"
   },
   "taskIDs": [
     "E06-R07-01 PRE_READ_V16_MASTER_E06_LESSONS",
@@ -73,5 +74,6 @@
   "source_loss": 0,
   "foreign_owner_code_edits": 0,
   "one_practical_lesson": "REVERIFY_THE_STAGED_BYTESET_AT_LAST_MILE: admitted P01 manifest and payload must be checked again after tool installation and before compiler; matching owner NSIS script SHA alone is not enough.",
-  "receipt_previous_git_blob_sha1": "cf2bf78fabf1cc8cf2ed3f00a20606164533cacf"
+  "receipt_previous_git_blob_sha1": "cf2bf78fabf1cc8cf2ed3f00a20606164533cacf",
+  "receipt_self_external_sha256_before_update": "64ee14d6b189b42858a7c4e75e695738d6f80afbaf0c58831d397d1a9e9a1f36"
 }
