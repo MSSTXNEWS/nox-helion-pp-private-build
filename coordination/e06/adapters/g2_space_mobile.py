@@ -461,6 +461,7 @@ class G2OneHostBinder:
                 not callable(getattr(self.p03, "register", None))):
             raise G2Hold("Original P02/P03 owner adapters are missing")
         with self.lock:  # Canonical host registry lock, never an E06 copy.
+            original_routes = self.host.routes
             before = dict(self.host.ports)
             try:
                 # dict() aliases nested owner permissions: freeze the actual ACL.
@@ -565,9 +566,13 @@ class G2OneHostBinder:
                 self.host.ports.update(before)
                 # Restore owner-mutated nested route ACLs, but never rewrite
                 # native routes when their pre-bind value is unchanged.
-                if self.host.routes != frozen_routes and isinstance(self.host.routes, dict):
-                    # Only legacy mutable host maps can be restored in place.
-                    # Never attempt .clear() on the canonical MappingProxyType.
+                if self.host.routes is not original_routes:
+                    # An untrusted owner may have swapped the entire route map.
+                    # Restore the exact original read-only object, never a mutable
+                    # dict copy that silently reopens owner/risk-policy edits.
+                    self.host.routes = original_routes
+                elif self.host.routes != frozen_routes and isinstance(self.host.routes, dict):
+                    # Legacy mutable host only; preserve original container.
                     self.host.routes.clear()
                     self.host.routes.update(copy.deepcopy(frozen_routes))
                 raise G2Hold("All-or-HOLD existing-host bindings rolled back") from exc
