@@ -111,7 +111,9 @@ class ChatBridge:
                     if item["delta"]:
                         total_chars += len(item["delta"])
                         if total_chars > 1_000_000:
-                            self.ollama.stop()  # cancel runaway generation
+                            # The enclosing per-run closing() releases this
+                            # transport. OllamaClient.stop() targets whichever
+                            # request is current and must not be used here.
                             raise P02Error("Ollama reply exceeded persistence quota")
                         parts.append(item["delta"])
                         yield {"type": "chat.delta", "run_id": run, "text": item["delta"]}

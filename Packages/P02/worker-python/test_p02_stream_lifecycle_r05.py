@@ -90,13 +90,33 @@ class StreamLifecycleR05(unittest.TestCase):
         self.assertEqual(result[-1]['code'],'OLLAMA_ERROR')
         self.assertTrue(self.ollama.current.closed)
         self.assertEqual(self.store.rows,[('user','prompt')])
-    def test_runaway_reply_closes_transport_and_signals_existing_stop(self):
+    def test_runaway_reply_closes_only_own_transport(self):
         self.ollama.frames = [{'delta':'x'*1_000_001,'done':False}]
         result = list(self.send())
         self.assertEqual(result[-1]['code'],'OLLAMA_ERROR')
         self.assertTrue(self.ollama.current.closed)
-        self.assertEqual(self.ollama.global_stop_called,1)
+        self.assertEqual(self.ollama.global_stop_called,0)
         self.assertEqual(self.store.rows,[('user','prompt')])
+    def test_reply_quota_never_cancels_an_unrelated_existing_consumer(self):
+        # The global stop() hook is intentionally adversarial: it would tear
+        # down a different existing consumer. A single owner stream must be
+        # closed via its own retained transport, never through global stop.
+        class SharedClient(RetainingOllama):
+            def __init__(self):
+                super().__init__([{'delta':'z'*1_000_001,'done':False}])
+                self.other_consumer_alive = True
+            def stop(self):
+                super().stop()
+                self.other_consumer_alive = False
+        self.ollama = SharedClient()
+        self.chat = bridge.ChatBridge(self.store, self.ollama)
+        frames = list(self.send())
+        self.assertEqual(frames[-1]['code'], 'OLLAMA_ERROR')
+        self.assertEqual(self.ollama.global_stop_called, 0)
+        self.assertTrue(self.ollama.other_consumer_alive)
+        self.assertTrue(self.ollama.current.closed)
+        self.assertEqual(self.store.rows,[('user','prompt')])
+
     def test_cancel_during_next_blocks_late_delta_and_closes(self):
         self.ollama.callback = self.stop.set
         result = list(self.send())
