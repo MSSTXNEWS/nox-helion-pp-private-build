@@ -155,5 +155,23 @@ class NativeOwnerBatchTests(unittest.TestCase):
             self.register()
         self.assertFalse(self.host.ports)
 
+
+    def test_failed_batch_does_not_erase_other_owner_registration(self):
+        external=bridge.BoundPort(
+            lambda s,p:{"unrelated":True},lambda:True,
+            "already-reviewed",2)
+        original=self.host.bind
+        def interrupted(route,port):
+            original(route,port)
+            if route=="media.subtitles":
+                original("chat.history",external)
+            if route=="browser.bookmarks":
+                raise RuntimeError("batch interrupted after separate owner's registration")
+        self.host.bind=interrupted
+        with self.assertRaises(RuntimeError):
+            self.register()
+        self.assertEqual(set(self.host.ports),{"chat.history"})
+        self.assertIs(self.host.ports["chat.history"],external)
+
 if __name__=="__main__":
     unittest.main()
