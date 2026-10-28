@@ -56,5 +56,28 @@ class TestFullEventHistoryResume(unittest.TestCase):
         self.mutate(-1,lambda r:r.__setitem__('run_id','foreign-run'))
         self.verify_reject()
 
+    # R20: existing historical identity tests did not cover the full
+    # emitted provenance envelope. These are intentional RED cases on the
+    # pinned source until the P04 owner validates all mandatory fields.
+    def test_negative_missing_package_id_on_resume(self):
+        self.mutate(0,lambda r:r.pop('package_id'))
+        self.verify_reject()
+    def test_negative_missing_timestamp_on_resume(self):
+        self.mutate(1,lambda r:r.pop('timestamp_utc'))
+        self.verify_reject()
+    def test_negative_wrong_source_on_resume(self):
+        self.mutate(-1,lambda r:r.__setitem__('source','FORGED-WORKER'))
+        self.verify_reject()
+    def test_negative_forged_acceptance_on_resume(self):
+        self.mutate(0,lambda r:r.__setitem__('evidence_verified',True))
+        self.verify_reject()
+    def test_negative_duplicate_raw_json_key_from_previous_lesson(self):
+        lines=self.path.read_text(encoding='utf-8').splitlines()
+        self.assertIn('"schema":',lines[0])
+        lines[0]=lines[0].replace('"schema":',
+            '"schema":"NOX-INSTALLER-EVENT-v3","schema":',1)
+        self.path.write_text('\n'.join(lines)+'\n',encoding='utf-8')
+        self.verify_reject()
+
 if __name__=='__main__':
     unittest.main(argv=[__file__]+REMAINING,verbosity=2)
