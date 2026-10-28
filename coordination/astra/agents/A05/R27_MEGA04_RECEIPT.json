@@ -1,0 +1,25 @@
+{
+  "agent": "/root/a05",
+  "run_id": "ASTRA-R27-A05-20261029-04",
+  "approaches_completed": 4,
+  "planned_approaches": 10,
+  "source_parent": "930149e016abe5d7132062bb7cc6deba14b93e85",
+  "task": "fix(p02): retain voice model rights and pin providers across async stage boundaries",
+  "test_result": "6 focused imported-module lifecycle tests PASS; every ASR/LLM/TTS cancellation boundary, revocation, hot-swap, exact consent flags and normal flow",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_sha256": "f0663045dfea3aaa8e6fc8cec29c17e0e24ae6f55241f2643a1dbbd50a5acbd6",
+      "post_sha256": "ff69f278aa61aad4be7147083099361d8d07f9bd520a3ecc940ec77b99d576cc",
+      "git_blob": "13e1c5244bd6da3059b40af46c61eb7491d4aee9"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py",
+      "pre_sha256": null,
+      "post_sha256": "fc0500c450c8f6d2e6d43c0f2b4e87544579cdcb2867ff2816582cb2cb37ccbd",
+      "git_blob": "09e2ab822fe9c0b872197f0cf2761b29877b0f73"
+    }
+  ],
+  "native_hardware": "NOT_RUN",
+  "no_final_integration": true
+}
