@@ -21,7 +21,8 @@ export function collectReceipt(){
     throw Error("P01_C7_NO_LOSS_DELETION");
   const rows=[];
   for(const name of names.sort()){
-    const bytes=fs.readFileSync(name);
+    const bytes=execFileSync("git",["show","HEAD:"+name]);
+    if(!fs.existsSync(name))throw Error("P01_C7_CHECKOUT_PATH_MISSING:"+name);
     if(!bytes.length)throw Error("P01_C7_EMPTY_FILE:"+name);
     const diff=execFileSync("git",["diff","--no-ext-diff","--binary",BASE,head,"--",name]);
     if(!diff.length)throw Error("P01_C7_EMPTY_PATCH:"+name);
