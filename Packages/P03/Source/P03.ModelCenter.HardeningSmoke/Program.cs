@@ -253,6 +253,10 @@ try
         await Task.Delay(20);
     }
     Assert(observedStart, "F18 actual worker claimed job before cross-window STOP");
+    Assert(await remoteQueue.RecoverInterruptedAsync() == 0,
+        "F22 second NOX window cannot recover a live working job");
+    Assert((await remoteQueue.ReadAsync()).Single().State == ModelJobState.Running,
+        "F23 active worker state survives another window startup");
     var remoteStopAccepted = await secondWindow.CancelAsync(waitingJob.Id);
     var stopSnapshot = (await remoteQueue.ReadAsync()).Single();
     Assert(remoteStopAccepted,
