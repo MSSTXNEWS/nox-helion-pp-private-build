@@ -179,6 +179,30 @@ class P03HostPortTests(unittest.TestCase):
             with self.assertRaises(P03PortHold):
                 P03OneHostPort(self.client,catalog_path=path)
 
+    def test_14_collision_rejects_without_partial_registration(self):
+        other = pack01.NoxPackHost(self.catalog)
+        other.bind("models.digest", pack01.BoundPort(
+            lambda s, p: {"already": True}, lambda: True, "owner3-old", 3))
+        before = dict(other.ports)
+        with self.assertRaises(P03PortHold):
+            self.port.register(other, pack01.BoundPort, receipt="P03_TEST_LOCK")
+        self.assertEqual(other.ports, before)
+        self.assertNotIn("models.catalog", other.ports)
+        self.assertNotIn("models.installed", other.ports)
+
+    def test_15_wrong_owner_map_rejects_without_mutation(self):
+        other = pack01.NoxPackHost(self.catalog)
+        other.routes["models.installed"] = dict(other.routes["models.installed"], owner=2)
+        with self.assertRaises(P03PortHold):
+            self.port.register(other, pack01.BoundPort, receipt="P03_TEST_LOCK")
+        self.assertEqual(other.ports, {})
+
+    def test_16_existing_dispatcher_preserved_on_bad_receipt(self):
+        other = pack01.NoxPackHost(self.catalog)
+        with self.assertRaises(P03PortHold):
+            self.port.register(other, pack01.BoundPort, receipt="   ")
+        self.assertEqual(other.ports, {})
+
     def test_08_existing_50_route_host_not_replaced(self):
         self.assertEqual(len(self.dispatch.routes),50)
         self.assertEqual(len(self.dispatch.ports),3)
