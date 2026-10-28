@@ -2,6 +2,7 @@
 [CmdletBinding()]
 param(
  [Parameter(Mandatory=$true)][string]$Original729Receipt,
+ [Parameter(Mandatory=$true)][string]$Owner729Receipt,
  [Parameter(Mandatory=$true)][string]$OneHostReceipt,
  [Parameter(Mandatory=$true)][string]$SetupExe,
  [Parameter(Mandatory=$true)][string]$PublishedExe,
@@ -30,10 +31,12 @@ if ($commit -cnotmatch '^[0-9a-f]{40}$') { throw 'E07_SOURCE_COMMIT_INVALID' }
 $head=((& git rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
 if ($LASTEXITCODE -ne 0 -or $head -cne $commit) { throw 'E07_CHECKOUT_SHA_DRIFT' }
 $manifestSha=FileSha $Original729Receipt
+$ownerSha=FileSha $Owner729Receipt
 $onehostSha=FileSha $OneHostReceipt
 $setupSha=FileSha $SetupExe
 $exeSha=FileSha $PublishedExe
 $source=Get-Content -LiteralPath $Original729Receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+$owner=Get-Content -LiteralPath $Owner729Receipt -Raw -Encoding UTF8 | ConvertFrom-Json
 $onehost=Get-Content -LiteralPath $OneHostReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($source.schema -cne 'NOX_ORIGINAL_SOURCE_729_SHA256_V1' -or
  $source.status -cne 'SOURCE_ARCHIVE_VERIFIED_ONLY_NOT_E07_RELEASE' -or
@@ -47,6 +50,51 @@ foreach ($f in $source.files) {
  !$paths.Add([string]$f.path) -or
  [string]$f.sha256 -cnotmatch '^[0-9a-f]{64}$') {
    throw 'E07_INVALID_ORIGINAL_SOURCE_RECEIPT'
+ }
+}
+# Existing owner-specific and canonical 729 member SHA receipts must agree.
+# This parity check does not create another ZIP validator or award E07 acceptance.
+if ($owner.schema -cne 'NOX_V16_ORIGINAL_729_INNER_SHA256_SOURCELOCK_V1' -or
+    $owner.status -cne 'ORIGINAL_ARCHIVE_BYTES_AND_INNER_FILES_VERIFIED_ONLY' -or
+    $owner.fileCount -ne 729 -or @($owner.files).Count -ne 729 -or
+    ([string]$owner.combinedZip.sha256).ToLowerInvariant() -cne
+    ([string]$source.zip_sha256).ToLowerInvariant() -or
+    $owner.combinedZip.bytes -ne $source.zip_bytes -or
+    @($owner.combinedZip.sourceParts).Count -ne 3 -or
+    $owner.nativeWindowsAccepted -ne $false -or $owner.releaseAccepted -ne $false) {
+ throw 'E07_OWNER_729_SOURCELOCK_CONTRACT_MISMATCH'
+}
+$canonicalByPath=@{}
+foreach ($f in $source.files) {
+ $key=([string]$f.path).ToLowerInvariant()
+ if ($canonicalByPath.ContainsKey($key)) { throw 'E07_CANONICAL_729_DUPLICATE_PATH' }
+ $canonicalByPath[$key]=$f
+}
+$ownerSeen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($f in $owner.files) {
+ $key=([string]$f.path).ToLowerInvariant()
+ if ([string]::IsNullOrWhiteSpace($key) -or !$ownerSeen.Add($key) -or
+     !$canonicalByPath.ContainsKey($key)) {
+  throw 'E07_OWNER_729_PATH_SET_DIFFERS'
+ }
+ $matched=$canonicalByPath[$key]
+ if ([string]$f.path -cne [string]$matched.path -or
+     [long]$f.bytes -ne [long]$matched.bytes -or
+     ([string]$f.sha256).ToLowerInvariant() -cne ([string]$matched.sha256).ToLowerInvariant()) {
+  throw "E07_OWNER_729_FILE_SHA_DIFFERS:$key"
+ }
+}
+if ($ownerSeen.Count -ne $canonicalByPath.Count) {
+ throw 'E07_OWNER_729_FILE_SET_INCOMPLETE'
+}
+foreach ($expected in @($source.parts)) {
+ $matching=@($owner.combinedZip.sourceParts | Where-Object {
+  $_.path -ceq $expected.name -and $_.bytes -eq $expected.bytes
+ })
+ if ($matching.Count -ne 1 -or
+     ([string]$matching[0].sha256) -cnotmatch '^[0-9a-f]{64}$' -or
+     ([string]$matching[0].gitBlobSha1) -cnotmatch '^[0-9a-f]{40}$') {
+  throw 'E07_OWNER_SOURCE_PART_IDENTITY_MISMATCH'
  }
 }
 if ($onehost.schema -cne 'NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1' -or
@@ -77,11 +125,24 @@ if ($Phase -ceq 'INSTALLED') {
   }
  }
 }
+# Reject any source receipt or binary mutation between admission and sealing.
+if ((FileSha $Original729Receipt) -cne $manifestSha -or
+    (FileSha $Owner729Receipt) -cne $ownerSha -or
+    (FileSha $OneHostReceipt) -cne $onehostSha -or
+    (FileSha $SetupExe) -cne $setupSha -or
+    (FileSha $PublishedExe) -cne $exeSha) {
+ throw 'E07_BUILD_INPUT_MUTATED_DURING_HANDOFF'
+}
+if ($Phase -ceq 'INSTALLED' -and
+    (FileSha $InstalledExe) -cne $installedSha) {
+ throw 'E07_INSTALLED_EXE_MUTATED_DURING_HANDOFF'
+}
 $receipt=[ordered]@{
  schema='NOX_V16_E07_IMMUTABLE_HANDOFF_V1'
  build_id=$buildId;phase=$Phase
  source_commit_sha1=$commit;original_zip_sha256=$source.zip_sha256
- original_manifest_sha256=$manifestSha;source_files=729
+ original_manifest_sha256=$manifestSha;owner_729_manifest_sha256=$ownerSha;
+ source_receipts_729_parity_verified=$true;source_files=729
  e06_onehost_receipt_sha256=$onehostSha
  setup_sha256=$setupSha;published_exe_sha256=$exeSha
  installed_exe_sha256=$installedSha;lifecycle_log_sha256=$logs

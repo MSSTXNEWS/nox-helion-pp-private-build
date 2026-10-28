@@ -83,6 +83,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_R11_SOURCELOCK_HOLD' }
           python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
           if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_729_SOURCELOCK_HOLD' }
+          # The E06 owner-specific original 729 receipt must independently match.
+          python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-V16-E06-${{ github.run_id }}"
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_OWNER_729_SOURCELOCK_HOLD' }
       - name: Build one diagnostic WPF + Python + pinned owner1 D02 / Creative NSIS
         shell: pwsh
         run: |
@@ -128,6 +131,7 @@ jobs:
           Write-Host 'D02_PUBLISHED_ASSETS_PIN_PASS / E07_NOT_RUN'
           $handoffArgs=@{
             Original729Receipt='work/e06/original-729-manifest.json'
+            Owner729Receipt='work/e06/original-729-owner-pinned.json'
             OneHostReceipt=(Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
             SetupExe=(Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
             PublishedExe=(Join-Path $out 'payload/NOX.P01.Shell.exe')
@@ -149,6 +153,7 @@ jobs:
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
             work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/original-729-manifest.json
+            work/e06/original-729-owner-pinned.json
             work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
