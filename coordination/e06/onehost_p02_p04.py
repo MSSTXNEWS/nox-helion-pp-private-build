@@ -202,6 +202,21 @@ class P02P04OneHost:
         owner_frames = self.chat.send(scope.tenant, scope.principal,
                                       scope.conversation_id, model, prompt,
                                       native_stop)
+        # P02 ChatBridge.send returns a CLOSABLE generator. WebView2 STOP,
+        # revoked consent and early terminal delivery must always be able to
+        # release the original Ollama iterator. Reject a substituted bare
+        # iterator BEFORE it can yield private RAG citations or a chat delta.
+        # No additional owner stream or listener is constructed here.
+        close_owner = getattr(owner_frames, "close", None)
+        if (not callable(getattr(owner_frames, "__next__", None))
+                or not callable(close_owner)):
+            native_stop.set()
+            if callable(close_owner):
+                try:
+                    close_owner()
+                except Exception as exc:
+                    raise OneHostHold("EXISTING_P02_OWNER_STREAM_CLOSE_FAILED") from exc
+            raise OneHostHold("EXISTING_P02_ABORTABLE_OWNER_STREAM_REQUIRED")
 
         def guarded_stream():
             try:
