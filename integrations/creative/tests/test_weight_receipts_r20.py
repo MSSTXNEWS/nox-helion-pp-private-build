@@ -203,5 +203,26 @@ class ModelReceiptTests(unittest.TestCase):
                 self.studio.download(MODEL,["weights.gguf"],REV,True)
         self.assertEqual(list(outside.iterdir()),[])
 
+class ModelSelectionSourceContracts(unittest.TestCase):
+    """UI source assertions; real WebView interaction still requires Windows E07."""
+    @classmethod
+    def setUpClass(cls):
+        cls.js=(ROOT/"web"/"studio.js").read_text(encoding="utf-8")
+
+    def test_model_switch_revokes_prior_license_consent(self):
+        self.assertIn("selectedModel=id;revision='';files=[];",self.js)
+        self.assertIn("$('license').checked=false;",self.js)
+
+    def test_delayed_model_metadata_cannot_replace_new_selection(self):
+        self.assertIn("let modelSelectionEpoch=0;",self.js)
+        self.assertIn("const epoch=++modelSelectionEpoch;",self.js)
+        self.assertIn("if(epoch!==modelSelectionEpoch||selectedModel!==id)return;",self.js)
+
+    def test_weight_verifier_is_real_action_not_a_fake_status_button(self):
+        self.assertIn("rpc('verify_model',{model_id:m.id})",self.js)
+        self.assertIn("if(m.checksum==='LEGACY_UNVERIFIED')",self.js)
+        self.assertNotIn("innerHTML=",self.js)
+
+
 if __name__=="__main__":
     unittest.main()
