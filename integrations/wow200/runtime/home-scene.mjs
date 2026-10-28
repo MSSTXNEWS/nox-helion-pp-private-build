@@ -27,8 +27,11 @@ export function mountApprovedHome(doc=document){
   const orbs=[{id:'HELION',element:central},...items.map((element,i)=>({id:CANONICAL_CORES[i],element}))];
   const view=doc.defaultView;
   if(!view)throw Error('D02_WINDOW_REQUIRED');
+  const reducedMotion=view.matchMedia?.('(prefers-reduced-motion: reduce)')??null;
+  let requestedProfile=null;
   function chosenMode(){
-    if(view.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return 'REDUCED';
+    if(reducedMotion?.matches)return 'REDUCED';
+    if(requestedProfile!==null)return requestedProfile;
     const body=doc.body;
     return body.classList.contains('nox-wow-eco')?'ECO':
       body.classList.contains('nox-wow-max')?'MAX':'BALANCED';
@@ -36,6 +39,7 @@ export function mountApprovedHome(doc=document){
   // Existing approved PR30 source owns the visual physics of these exact nine
   // elements. No trusted events are supplied until the native bridge is attested.
   const scene=installNoxCinemaFX({root:stage,orbs,profile:chosenMode()});
+  let detachMotion=()=>{};
   try{
     const sync=()=>{scene.setVisible(home.classList.contains('active'));
       scene.setProfile(chosenMode());};
@@ -43,17 +47,24 @@ export function mountApprovedHome(doc=document){
     observer.observe(home,{attributes:true,attributeFilter:['class']});
     bodyObserver=new view.MutationObserver(sync);
     bodyObserver.observe(doc.body,{attributes:true,attributeFilter:['class']});
+    if(typeof reducedMotion?.addEventListener==='function'){
+      reducedMotion.addEventListener('change',sync);
+      detachMotion=()=>reducedMotion.removeEventListener?.('change',sync);
+    }else if(typeof reducedMotion?.addListener==='function'){
+      reducedMotion.addListener(sync);
+      detachMotion=()=>reducedMotion.removeListener?.(sync);
+    }
     for(const element of [central,...items])element.dataset.noxVerifiedFx='active';
     sync();
     mounted=Object.freeze({
       snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'PR30'}),
-      setProfile:mode=>scene.setProfile(mode),
-      destroy(){observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;
+      setProfile:mode=>{requestedProfile=mode;return scene.setProfile(chosenMode());},
+      destroy(){detachMotion();observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;
         for(const element of [central,...items])delete element.dataset.noxVerifiedFx;
         scene.destroy();mounted=null;}
     });
     return mounted;
-  }catch(error){observer?.disconnect();bodyObserver?.disconnect();scene.destroy();throw error;}
+  }catch(error){detachMotion();observer?.disconnect();bodyObserver?.disconnect();scene.destroy();throw error;}
 }
 function boot(){
   try{mountApprovedHome(document)}
