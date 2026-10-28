@@ -172,5 +172,90 @@ class HostScopeAndReceiptTests(unittest.TestCase):
         self.assertEqual(d['windowsAccepted'],0)
         self.assertEqual(d['weightedProductProgress'],'N/D')
 
+class HostSettingPolicyTests(unittest.TestCase):
+    """Synthetic owner-capability tests; no actual installed model or native host."""
+    def setUp(self):
+        HostScopeAndReceiptTests.setUp(self)
+        from admission import Host50Admission
+        self.make = lambda: Host50Admission(self.cat,self.mapping,signing_key=self.host.key,
+              allowed_origins={'https://nox.invalid'},active_tree=BASE_TREE,
+              capabilities=self.host.capabilities)
+        self.action = self.cat['actions'][0]
+        self.request = HostScopeAndReceiptTests.req(self,'helion.chat','NIP01-01')
+
+    def test_static_select_rejects_outside_allowed_options(self):
+        self.action['settings']=[{'key':'profile','kind':'select',
+            'options':[['eco','ECO'],['balanced','Balanced']]}]
+        host=self.make()
+        self.request['settings']={'profile':'DROP TABLE'}
+        with self.assertRaisesRegex(Denied,'STATIC_SELECT_OPTION_DENIED'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=self.request)
+
+    def test_static_select_accepts_exact_value_as_admitted_not_done(self):
+        self.action['settings']=[{'key':'profile','kind':'select',
+            'options':[['eco','ECO'],['balanced','Balanced']]}]
+        host=self.make();self.request['settings']={'profile':'eco'}
+        result=host.admit(session=self.s,actual_origin=self.s.origin,request=self.request)
+        self.assertEqual(result['state'],'ADMITTED_NOT_EXECUTED')
+
+    def test_source_select_requires_native_verifier(self):
+        self.action['settings']=[{'key':'model','kind':'select','source':'host.models.installed'}]
+        host=self.make();self.request['settings']={'model':'uninstalled-model'}
+        with self.assertRaisesRegex(Hold,'NATIVE_SELECT_VERIFIER_MISSING'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=self.request)
+
+    def test_source_select_rejects_owner_verifier_false_or_exception(self):
+        self.action['settings']=[{'key':'model','kind':'select','source':'host.models.installed'}]
+        host=self.make();self.request['settings']={'model':'uninstalled-model'}
+        with self.assertRaisesRegex(Denied,'UNVERIFIED_NATIVE_SELECT'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=self.request,
+                native_option_verifier=lambda *_:False)
+        with self.assertRaisesRegex(Hold,'NATIVE_SELECT_VERIFIER_FAILED'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=self.request,
+                native_option_verifier=lambda *_:1/0)
+        with self.assertRaisesRegex(Denied,'UNVERIFIED_NATIVE_SELECT'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=self.request,
+                native_option_verifier=lambda *_:1)
+
+    def test_source_select_native_verifier_exact_call_but_no_execution(self):
+        self.action['settings']=[{'key':'model','kind':'select','source':'host.models.installed'}]
+        host=self.make();self.request['settings']={'model':'installed-by-host'}
+        calls=[]
+        def verifier(*args):
+            calls.append(args)
+            return args[0]==self.s and args[1:]==('helion.chat','model','host.models.installed','installed-by-host')
+        result=host.admit(session=self.s,actual_origin=self.s.origin,request=self.request,
+            native_option_verifier=verifier)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(result['state'],'ADMITTED_NOT_EXECUTED')
+
+    def test_catalog_rejects_unknown_native_source(self):
+        self.action['settings']=[{'key':'model','kind':'select','source':'host.run.shell'}]
+        with self.assertRaisesRegex(Hold,'UNTRUSTED_NATIVE_OPTION_SOURCE'):
+            self.make()
+
+    def test_catalog_rejects_duplicate_or_invalid_selects(self):
+        bad=[
+            [{'key':'profile','kind':'select','options':[['eco','ECO'],['eco','dup']]}],
+            [{'key':'profile','kind':'select','options':[['eco','ECO']], 'source':'host.models.installed'}],
+            [{'key':'profile','kind':'input','options':[['eco','ECO']]}],
+            [{'key':'profile','kind':'select','options':[]}],
+            [{'key':'profile','kind':'select','options':[['eco']]}],
+        ]
+        for settings in bad:
+            with self.subTest(settings=settings):
+                self.action['settings']=settings
+                with self.assertRaises(Hold):self.make()
+
+    def test_native_select_bool_and_object_never_pass(self):
+        self.action['settings']=[{'key':'model','kind':'select','source':'host.models.installed'}]
+        host=self.make()
+        for bad in (True,42,{'x':'y'},['a']):
+            with self.subTest(bad=bad):
+                self.request['settings']={'model':bad}
+                with self.assertRaises(Denied):
+                    host.admit(session=self.s,actual_origin=self.s.origin,
+                        request=self.request,native_option_verifier=lambda *_:True)
+
 if __name__ == "__main__":
     unittest.main()
