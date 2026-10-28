@@ -42,7 +42,10 @@ public static class EvidenceProgress
 public sealed class SpaceFeedClient
 {
     private readonly HttpClient _http;
-    private readonly ConcurrentDictionary<string, FeedSnapshot> _cache = new();
+    // A cache entry is bound to the exact provider AND approved HTTPS endpoint.
+    // FeedId alone is not an authorization or provenance identity.
+    private readonly record struct CacheIdentity(string FeedId, string Provider, string Endpoint);
+    private readonly ConcurrentDictionary<CacheIdentity, FeedSnapshot> _cache = new();
     private readonly TimeSpan _ttl;
     private readonly TimeSpan _timeout;
     public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout)
@@ -59,11 +62,16 @@ public sealed class SpaceFeedClient
         CancellationToken stop = default)
     {
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(provider) ||
-            endpoint is null || endpoint.Scheme != Uri.UriSchemeHttps ||
+            endpoint is null || !endpoint.IsAbsoluteUri ||
+            endpoint.Scheme != Uri.UriSchemeHttps ||
             !string.IsNullOrWhiteSpace(endpoint.UserInfo))
             throw new ArgumentException("Provider must use an authenticated, approved HTTPS endpoint.");
+        var key = new CacheIdentity(id, provider, endpoint.AbsoluteUri);
         var now = DateTimeOffset.UtcNow;
-        if (_cache.TryGetValue(id, out var old) && now - old.FetchedAt < _ttl)
+        // Never reuse an earlier provider's bytes, even during its TTL or
+        // during an offline fallback from a different approved endpoint.
+        if (_cache.TryGetValue(key, out var old) &&
+            now >= old.FetchedAt && now - old.FetchedAt < _ttl)
             return old with { Status = "CACHE" };
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
         timeout.CancelAfter(_timeout);
@@ -81,7 +89,7 @@ public sealed class SpaceFeedClient
             var snapshot = new FeedSnapshot(id, provider, observed,
                 DateTimeOffset.UtcNow, cloned, observed is null ? "UNVERIFIED_TIMESTAMP" : "LIVE",
                 observed is null ? "SOURCE_TIME_MISSING" : null, false);
-            _cache[id] = snapshot;
+            _cache[key] = snapshot;
             return snapshot;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
