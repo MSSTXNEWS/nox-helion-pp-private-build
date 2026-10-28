@@ -206,7 +206,11 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   const terminal=[];
   const seen=new Map();
   for (const e of events) {
-    if (e?.run_id===runId && (e.event_type==='task.failed' || e.event_type==='model.stopped') && !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
+    // A same-run task.failed/model.stopped with a broken envelope is NOT a
+    // harmless nonterminal. Quarantine it, or a malformed error can disappear
+    // behind a later clean STOP. Foreign runs and nonterminals stay ignored.
+    if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
+        !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
         !ago(e.timestamp_utc,nowMs,30000)) continue;
     // Same event_id + DIFFERENT canonical terminal contents is a broken or
