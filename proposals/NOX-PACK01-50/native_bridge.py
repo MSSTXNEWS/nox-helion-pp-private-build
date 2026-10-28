@@ -111,7 +111,13 @@ class NoxPackHost:
         session.validate()
         if route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
-        if not isinstance(payload,dict) or len(json.dumps(payload,ensure_ascii=False)) > 2*1024*1024:
+        if not isinstance(payload, dict):
+            raise HostDenied("Missing/oversize request")
+        try:
+            raw = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError, UnicodeError, RecursionError, OverflowError) as exc:
+            raise HostDenied("Invalid native JSON request") from exc
+        if len(raw) > 2 * 1024 * 1024:
             raise HostDenied("Missing/oversize request")
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
