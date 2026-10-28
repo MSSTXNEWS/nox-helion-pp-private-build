@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Astra ten-agent/ten-pass evidence-only dashboard. SOURCE ONLY, NO BUILD.
+"""Astra six-subagent/ten-pass evidence-only dashboard for FIN ZAGR loader. SOURCE ONLY, NO BUILD.
 python coordination/astra/render_astra_progress_r24.py --matrix coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json
 A matrix with only planned work prints 0/10 and PRODUCT=N/D, not fake 100%.
 """
@@ -13,7 +13,7 @@ import sys
 SHA=re.compile(r"^[0-9a-f]{40}$")
 
 def actual_done(p: dict)->bool:
-    """Only verified source passes with immutable Git SHA + actual test PASS count."""
+    """Only verified loader source passes with immutable Git SHA + actual test PASS count."""
     if p.get("status")!="COMPLETED":
         return False
     if not isinstance(p.get("evidence_git_sha"),str) or not SHA.fullmatch(p["evidence_git_sha"]):
@@ -27,9 +27,9 @@ def actual_done(p: dict)->bool:
 
 def report(matrix:dict)->str:
     agents=matrix["agents"]
-    if len(agents)!=10 or len({a["id"] for a in agents})!=10:
-        raise ValueError("EXPECTED_EXACTLY_TEN_AGENT_ROLES")
-    rendered=["NOX ASTRA SOURCE R24 | EVIDENCE-BASED PROGRESS (NOT RELEASE ACCEPTANCE)"]
+    if len(agents)!=6 or len({a["id"] for a in agents})!=6:
+        raise ValueError("EXPECTED_EXACTLY_SIX_LOADER_AGENT_ROLES")
+    rendered=["NOX FIN ZAGR EXPRESS INTEGRATOR R29 | 1 ASTRA + 6 SUBAGENTS | REAL PROGRESS"]
     total=0
     for agent in agents:
         if len(agent.get("approaches",[]))!=10:
@@ -40,7 +40,7 @@ def report(matrix:dict)->str:
         spawned=("SPAWN_RECEIPT_PRESENT" if agent.get("actual_spawn_receipt")
                  else "SPAWN_NOT_VERIFIED")
         rendered.append(f'{agent["id"]} {bar} {completed}/10 PASSES | {spawned} | {agent["role"]}')
-    rendered.append(f'REAL SOURCE APPROACHES: {total}/100 (ONLY EVIDENCE-VERIFIED)')
+    rendered.append(f'REAL SOURCE APPROACHES: {total}/60 (ONLY EVIDENCE-VERIFIED)')
     for block,weight in (("P01",20),("P02",25),("P03",20),("P04",25),("P05",10)):
         score=matrix.get("product_verified_task_progress",{}).get(block)
         if (not isinstance(score,dict) or
@@ -57,7 +57,7 @@ def report(matrix:dict)->str:
 
 def main()->int:
     p=argparse.ArgumentParser()
-    p.add_argument("--matrix",default="coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json")
+    p.add_argument("--matrix",default="coordination/astra/ASTRA_R29_ONE_ASTRA_PLUS_6_AGENTS_10_PASSES.json")
     a=p.parse_args()
     try:
         matrix=json.loads(pathlib.Path(a.matrix).read_text(encoding="utf-8"))
