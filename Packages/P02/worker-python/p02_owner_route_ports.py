@@ -6,6 +6,7 @@ exact route and bind its existing provider. All unbound ports remain HOLD.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from collections.abc import Mapping
 import re
 import threading
 from typing import Callable, Any
@@ -193,13 +194,13 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
     # A late foreign owner/missing route must not leave two live P02 ports.
     routes = getattr(dispatcher, "routes", None)
     ports = getattr(dispatcher, "ports", None)
-    if not isinstance(routes, dict) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
+    if not isinstance(routes, Mapping) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
         raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
     for route in mapping:
         if route in ports:
             raise RouteHold("EXISTING_ROUTE_ALREADY_BOUND_NO_OVERRIDE")
         info = routes.get(route)
-        if not isinstance(info, dict) or type(info.get("owner")) is not int or info["owner"] != 2:
+        if not isinstance(info, Mapping) or type(info.get("owner")) is not int or info["owner"] != 2:
             raise RouteHold("CANONICAL_PACK01_OWNER_ROUTE_REQUIRED")
     staged = {}
     for route, handler in mapping.items():
