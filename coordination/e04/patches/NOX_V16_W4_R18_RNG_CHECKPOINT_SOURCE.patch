@@ -17,7 +17,7 @@ Actual source write: NOT_SAVED (GitHub connector rejected content write); do not
          raise ValueError("RESUME_CHECKPOINT_SYMLINK_IN_TREE")
      rng = list(real.glob("rng_state*.pth"))
 -    if not rng or any(not path.is_file() or path.is_symlink() or path.stat().st_size == 0 for path in rng):
-+    if (len(rng) != 1 or re.fullmatch(r"rng_state(?:_[0-9]+)?\\.pth", rng[0].name) is None
++    if (len(rng) != 1 or re.fullmatch(r"rng_state(?:_[0-9]+)?\.pth", rng[0].name) is None
 +            or not rng[0].is_file() or rng[0].is_symlink() or rng[0].stat().st_size == 0):
          raise ValueError("RESUME_CHECKPOINT_RNG_MISSING")
      return step, sha256_tree(real)
