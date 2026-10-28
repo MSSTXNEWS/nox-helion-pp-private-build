@@ -312,9 +312,29 @@ public partial class MainWindow
             var size=new FileInfo(path).Length;
             if(size<1 || size>268435456L)throw new InvalidOperationException("Only 1..256 MiB files accepted");
             var folder=Path.Combine(_data,"creative","projects",project,"assets");
+            var trustedRoot=Path.GetFullPath(_data).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
+            var fullFolder=Path.GetFullPath(folder);
+            if (!fullFolder.StartsWith(trustedRoot+Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase))
+                throw new IOException("CREATIVE_IMPORT_OUTSIDE_DATA_ROOT");
+            // Reject an existing junction/symlink at any directory ancestor,
+            // including the data root, before creating or writing the import.
+            // Windows E07 must still verify directory-swap races and ACL.
+            void VerifyTrustedFolder()
+            {
+                for (DirectoryInfo? node=new DirectoryInfo(fullFolder);
+                     node is not null; node=node.Parent)
+                {
+                    if (node.Exists && (node.Attributes & FileAttributes.ReparsePoint)!=0)
+                        throw new IOException("CREATIVE_IMPORT_REPARSE_HOLD");
+                }
+            }
+            VerifyTrustedFolder();
             Directory.CreateDirectory(folder);
+            VerifyTrustedFolder();
             var name=Guid.NewGuid().ToString("N")[..10]+"_"+Path.GetFileName(path);
             var dest=Path.Combine(folder,name);
+            VerifyTrustedFolder();
             File.Copy(path,dest,overwrite:false);
             PostMessage(new {kind="creativeResult",requestId,ok=true,data=new {status="IMPORTED",project_id=project,path="assets/"+name,bytes=size}});
         }
