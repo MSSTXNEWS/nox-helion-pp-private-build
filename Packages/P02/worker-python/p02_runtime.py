@@ -301,14 +301,18 @@ class P02Store:
                 if not str(row[0]).startswith('sqlite_')))
 
     @contextlib.contextmanager
-    def _write_transaction(self):
+    def _write_transaction(self, *, stop: threading.Event | None = None):
         """Never silently commit an unrelated host transaction on the SHARED DB.
 
         #6 must serialize use of the supplied connection across host modules.
         SQLite savepoints alone cannot tell a P02 write from the host's pending
         transaction, so reject a busy connection instead of adopting its commit.
         """
+        if stop is not None and not isinstance(stop, threading.Event):
+            raise TypeError('P02_STOP_EVENT_REQUIRED')
         with self._lock:
+            if stop is not None and stop.is_set():
+                raise Cancelled('STOP before P02 SQLite BEGIN')
             if self.db.in_transaction:
                 raise P02Error('HOST_SQLITE_TRANSACTION_ACTIVE')
             # Host may reopen the shared SQLite connection with FK enforcement
@@ -322,6 +326,10 @@ class P02Store:
             self.db.execute('BEGIN IMMEDIATE')
             with self.db:
                 yield
+                # Abort this original shared SQLite transaction on observed STOP.
+                # Native host must still serialize STOP-vs-COMMIT for full atomicity.
+                if stop is not None and stop.is_set():
+                    raise Cancelled('STOP before P02 SQLite commit')
 
     def initialize(self):
         """Fail-closed shared DB admission and atomic P02-only schema creation.
@@ -448,10 +456,11 @@ class P02Store:
         with self._write_transaction():
             self.db.execute("INSERT INTO p02_chats VALUES(?,?,?,?)", (chat, tenant, user, int(time.time())))
 
-    def add_message(self, tenant: str, user: str, chat: str, role: str, content: str) -> str:
+    def add_message(self, tenant: str, user: str, chat: str, role: str, content: str,
+                    *, stop: threading.Event | None = None) -> str:
         if role not in ("user", "assistant", "tool") or not isinstance(content, str) or len(content) > 1_000_000:
             raise ValueError("Invalid role/content")
-        with self._write_transaction():
+        with self._write_transaction(stop=stop):
             self._owned(tenant, user, chat)
             message_id = uuid.uuid4().hex
             self.db.execute("INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",

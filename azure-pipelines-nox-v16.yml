@@ -89,6 +89,8 @@ jobs:
       # Read-only native ingress and training validation before source staging.
       python Packages/P02/worker-python/test_p02_native_ingress.py
       if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_INGRESS_UNIT_HOLD' }
+      python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_sqlite_stop_before_commit_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P02_REAL_SQLITE_STOP_PRECOMMIT_HOLD' }
       python tests/P04/test_training_failure_status.py
       if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
       python tests/P04/test_gpu_inventory_identity_gate_r13.py
