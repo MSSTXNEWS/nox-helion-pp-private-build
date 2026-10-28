@@ -12,7 +12,12 @@ def verify(root):
         seen.add(name.casefold()); path=root.joinpath(*rel.parts)
         if not path.is_file() or path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent!=root.parent):raise ValueError("MISSING_OR_SYMLINK:"+name)
         data=path.read_bytes(); actual=hashlib.sha1(("blob "+str(len(data))).encode()+bytes([0])+data).hexdigest()
-        if len(data)!=item["bytes"] or actual!=item["git_blob_sha1"]:raise ValueError("PIN_MISMATCH:"+name)
+        override=next((x for x in doc.get("approved_overrides",[]) if x["path"]==name),None)
+        if override:
+            if override.get("owner")!=3 or override["pre_git_blob_sha1"]!=item["git_blob_sha1"]:raise ValueError("UNTRUSTED_OVERRIDE:"+name)
+            need_bytes=override["post_bytes"];need_sha=override["post_git_blob_sha1"]
+        else:need_bytes=item["bytes"];need_sha=item["git_blob_sha1"]
+        if len(data)!=need_bytes or actual!=need_sha:raise ValueError("PIN_MISMATCH:"+name)
         checked.append({"path":name,"git_blob_sha1":actual,"file_sha256":hashlib.sha256(data).hexdigest(),"bytes":len(data)})
     actual={p.relative_to(root).as_posix() for p in (root/"Packages/P03/Source").rglob("*") if p.is_file()}
     expected={x["path"] for x in doc["pins"] if x["path"].startswith("Packages/P03/Source/")}

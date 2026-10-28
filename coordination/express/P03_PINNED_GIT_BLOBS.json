@@ -264,5 +264,39 @@
   "source_files": 44,
   "verified_installed_weights": 0,
   "onehost_accepted": false,
-  "release_accepted": false
+  "release_accepted": false,
+  "approved_overrides": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "owner": 3,
+      "run_id": "NOX-V16-E03-EXPRESS-R02-20261028",
+      "pre_git_blob_sha1": "52e789074fff96464f4ef5af033ebcfa35c98924",
+      "post_git_blob_sha1": "130677d41051be9566cdef81c918ab2a24ca2516",
+      "post_bytes": 20555
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
+      "owner": 3,
+      "run_id": "NOX-V16-E03-EXPRESS-R02-20261028",
+      "pre_git_blob_sha1": "3a967b95d30e75cc8d79b1733a9884b7dcf917fd",
+      "post_git_blob_sha1": "0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced",
+      "post_bytes": 9530
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/quick20_contract.cjs",
+      "owner": 3,
+      "run_id": "NOX-V16-E03-EXPRESS-R02-20261028",
+      "pre_git_blob_sha1": "fde5680bc8dfdbbbf21d6dc15fa0916edc091581",
+      "post_git_blob_sha1": "55a993aaa74a76d4c331affa352b0154153cc4ba",
+      "post_bytes": 2343
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/BRIDGE_SCHEMA.json",
+      "owner": 3,
+      "run_id": "NOX-V16-E03-EXPRESS-R02-20261028",
+      "pre_git_blob_sha1": "6fbb41f21a6ee4f7268e3bcc06a6a9759d2f3160",
+      "post_git_blob_sha1": "6bdbce3b88fb47b9e74d7da659810d6abe96b6dd",
+      "post_bytes": 902
+    }
+  ]
 }

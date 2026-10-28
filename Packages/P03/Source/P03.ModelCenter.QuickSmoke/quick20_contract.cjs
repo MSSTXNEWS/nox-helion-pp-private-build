@@ -19,9 +19,10 @@ assert.ok(html.includes('id="quickInstallGrid"'),'Quick actions must be visible'
 assert.ok(js.includes("sendAction('pull')"),'Existing one-host route is required');
 assert.ok(js.includes("m.id===state.activeId&&$('licenseAck').checked"),'License consent must be tied to selected model');
 assert.ok(js.includes("$('licenseAck').addEventListener('change',()=>{renderHero();renderQuick20();});"),'License ACK must update all 20 buttons');
-assert.ok(js.includes("state.pending.add(action);renderHero();renderQuick20();"),'Pending must disable quick actions');
-assert.ok(js.includes("state.pending.delete(data.action);renderHero();renderQuick20();"),'Host ACK must refresh quick actions');
-assert.ok(js.includes("['Queued','Running','Downloading'].includes(j.state)"),'Queued STOP must be available');
+assert.ok(js.includes("state.pending.set(action,pending);renderHero();renderQuick20();"),'Pending must disable quick actions');
+assert.ok(js.includes("pending.commandId!==data.commandId"),'ACK must match request ID');
+assert.ok(js.includes("state.pending.delete(data.action);renderHero();renderQuick20();"),'Matching ACK refreshes quick actions');
+assert.ok(js.includes("['Queued','Running'].includes(j.state)"),'Queued STOP must be available');
 assert.ok(!js.includes("['Failed','Cancelled','Paused'].includes(j.state)"),'Paused must not be faked before backend supports it');
 assert.ok(js.includes("verified?bytes(m?.artifactBytes):unknown"),'Unreviewed size not displayed as verified');
 assert.ok(js.includes("new Date(evt.atUtc||evt.AtUtc||'')"),'Events without host time must not use fake current time');
