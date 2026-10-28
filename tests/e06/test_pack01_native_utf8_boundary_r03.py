@@ -115,5 +115,21 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(self.seen, [{"nested": [{"value": "before"}]}])
 
 
+    def test_native_owner_identity_rejects_bool_and_float(self):
+        for fake_owner in (True, 1.0, "1"):
+            with self.subTest(owner=fake_owner):
+                other = bridge.NoxPackHost(json.loads(CATALOG.read_text("utf-8")))
+                port = bridge.BoundPort(
+                    lambda session, data: "OK", lambda: True,
+                    "NATIVE_OWNER_SOURCE_RECEIPT", fake_owner)
+                with self.assertRaises(bridge.HostHold):
+                    other.bind("media.subtitles", port)
+                self.assertFalse(other.ports)
+
+    def test_registered_integer_owner_still_admitted(self):
+        self.assertEqual(self.dispatch.ports["media.subtitles"].owner, 1)
+        self.assertEqual(self.request({"text": "safe"}), {"status": "owner-executed"})
+
+
 if __name__ == "__main__":
     unittest.main()
