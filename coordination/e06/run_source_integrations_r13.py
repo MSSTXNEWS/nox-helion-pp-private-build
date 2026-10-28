@@ -27,6 +27,7 @@ SUITES=(
     ("Immutable P02/P03/E06 contracts",E06_TESTS,"test_immutable_routes_p03_e06_r11.py"),
     ("G2 source binder and rollback",E06_TESTS,"test_immutable_onehost_binder_r12.py"),
     ("WOW owner/runtime registry",E06_TESTS,"test_wow_owner_runtime_preflight_r06.py"),
+    ("Creative verified worker STOP R19",E06_TESTS,"test_creative_stop_exit_attestation_r19.py"),
     ("P02 native frames",P02,"test_p02_native_ingress.py"),
     ("P03 ModelCenter real owner adapter",P03,"test_p03_onehost_port.py"),
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
