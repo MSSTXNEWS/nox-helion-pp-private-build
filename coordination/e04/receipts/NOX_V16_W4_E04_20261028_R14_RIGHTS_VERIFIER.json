@@ -1,0 +1,40 @@
+{
+  "schema": "NOX-V16-E04-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-01-E04-20261028T1909MSK-R14",
+  "task_id": "V16.26.6/E04-RIGHTS-VERIFIER-R14",
+  "owner": "E04/P04",
+  "immutable_source": {
+    "pr": 162,
+    "head_commit": "eb38c599709cafeac9d64f374b43628df04a18be",
+    "head_tree": "a5c72238187a99c5543925b5b119cad00cf74d05",
+    "owner_blob_sha1": "41eead1fb45451bd44c265199670b37422ebdb2a",
+    "owner_sha256": "409fad0056c77774fe84d0cfa0d4d45c6e4084d229eda66e59ebb6b5e6b0ca95"
+  },
+  "changes": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "pre_sha256": "409fad0056c77774fe84d0cfa0d4d45c6e4084d229eda66e59ebb6b5e6b0ca95",
+      "post_sha256": "0a22a403d612d7a5eb4892962f002b00ca8cc7638e4560fa993e0b1ce7f90a16",
+      "pre_git_blob_sha1": "41eead1fb45451bd44c265199670b37422ebdb2a",
+      "post_git_blob_sha1": "a42db68117e7b4eec606fe7ae1a27988c3f977fa",
+      "diff": "Catch OSError/TimeoutExpired in existing rights verifier subprocess; fail closed with RIGHTS_VERIFIER_UNAVAILABLE HOLD before CUDA."
+    },
+    {
+      "path": "tests/P04/test_e04_rights_verifier_unavailable_r14.py",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "89feaeca35fc0ac37a20c9855cbf3b5ca3823ea4b5f3a762702b125edf20c736",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "72c95c72453100bb2f703a230f46a779fd3c2633",
+      "diff": "5 direct-import CPU unittest: timeout, denied/unavailable, rejection, valid attestation, HOLD classification."
+    }
+  ],
+  "tests": {
+    "isolated": "4/4 PASS in local Python exact subprocess gate, NOT production-import",
+    "direct_import": "NOT_RUN",
+    "GPU": "NOT_RUN",
+    "Azure": "NOT_RUN",
+    "Windows_E07": "NOT_RUN"
+  },
+  "lesson": "RIGHTS_VERIFIER_OUTAGE_FAIL_CLOSED: classify local rights verifier timeout/OS failures as authorization HOLD, preserving all successful attestation checks and never starting CUDA without a decision.",
+  "no_loss": "No PR162 or main writes; no duplicate trainer/DB/RAG/LLM/events."
+}

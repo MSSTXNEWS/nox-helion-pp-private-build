@@ -282,11 +282,14 @@ def verify_manifest(manifest_path: Path, train_path: Path, holdout_path: Path,
         raise ValueError("RIGHTS_VERIFIER_NOT_REGULAR_FILE")
     manifest_sha = sha256_file(manifest_path)
     # The verifier is an explicit local executable, not a shell command.
-    result = subprocess.run(
-        [str(verifier.resolve(strict=True)), "--manifest", str(manifest_path.resolve(strict=True)),
-         "--intent", "training", "--manifest-sha256", manifest_sha],
-        check=False, capture_output=True, text=True, timeout=30, shell=False,
-    )
+    try:
+        result = subprocess.run(
+            [str(verifier.resolve(strict=True)), "--manifest", str(manifest_path.resolve(strict=True)),
+             "--intent", "training", "--manifest-sha256", manifest_sha],
+            check=False, capture_output=True, text=True, timeout=30, shell=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError("RIGHTS_VERIFIER_UNAVAILABLE") from exc
     if result.returncode != 0:
         raise ValueError("RIGHTS_VERIFIER_REJECTED_MANIFEST")
     attestation = parse_rights_verifier_response(result.stdout)
