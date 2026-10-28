@@ -1,5 +1,8 @@
 name: NOX FINISH R16 owner1 NSIS native Windows runner fallback
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/nox-finish-r16-windows-fallback.yml'
   push:
     branches:
       - codex/v16-executor2-ollama-contract-20261027
