@@ -90,11 +90,16 @@ class ChatBridge:
             raise Cancelled("STOP during model/RAG preflight")
         self.store.add_message(tenant, principal, chat_id, "user", prompt)
         yield {"type": "chat.start", "run_id": run, "model": model}
-        if evidence:
-            yield {"type": "chat.sources", "run_id": run, "sources": evidence}
         parts: list[str] = []
         total_chars = 0
         try:
+            # chat.start suspends the generator. STOP or a host cancellation
+            # can arrive before private RAG sources would be handed to the UI.
+            # Emit no citations after STOP and retain the existing error frame.
+            if stop.is_set():
+                raise Cancelled("STOP before RAG citation emission")
+            if evidence:
+                yield {"type": "chat.sources", "run_id": run, "sources": evidence}
             # chat.start/chat.sources are generator suspension points: the caller
             # may issue STOP before the producer is entered or between frames.
             if stop.is_set():
