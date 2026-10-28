@@ -6,6 +6,7 @@ Source component candidate: native Windows/LLM/GPU/E07 acceptance is HOLD.
 """
 from __future__ import annotations
 
+import json
 import re
 import threading
 from collections.abc import Callable, Mapping
@@ -26,6 +27,24 @@ _GPU_EVENTS = frozenset({"task.started", "task.progress", "training.step",
 
 class OneHostHold(RuntimeError):
     """The existing owner/native contract has not been proved; do not fake success."""
+
+
+def _owner_wire_snapshot(payload: Mapping, *, kind: str, max_bytes: int = 262144) -> dict:
+    """Freeze ONE verified-owner JSON payload before callbacks can mutate it.
+
+    This is a local value copy, NOT a new message bus, certificate or GPU
+    receipt. Native callbacks still bear the burden of authenticity.
+    """
+    if not isinstance(payload, Mapping) or any(type(k) is not str for k in payload):
+        raise OneHostHold(f"{kind}_OWNER_JSON_OBJECT_REQUIRED")
+    try:
+        raw = json.dumps(dict(payload), ensure_ascii=False, allow_nan=False,
+                         sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        raise OneHostHold(f"{kind}_OWNER_JSON_VALUE_INVALID") from exc
+    if len(raw.encode("utf-8")) > max_bytes:
+        raise OneHostHold(f"{kind}_OWNER_JSON_OVER_LIMIT")
+    return json.loads(raw)
 
 
 class P02P04OneHost:
@@ -159,9 +178,13 @@ class P02P04OneHost:
         self._admit(scope, command)
         if not callable(self._gpu) or not callable(self._verify_ack):
             raise OneHostHold("EXISTING_P04_GPU_WORKER_CONTROL_NOT_BOUND")
-        reply = self._gpu(scope, command, worker_id)
-        if (not isinstance(reply, dict) or reply.get("worker_id") != worker_id
-                or reply.get("command") != command or self._verify_ack(reply) is not True):
+        reply = _owner_wire_snapshot(self._gpu(scope, command, worker_id),
+                                     kind="GPU_ACK")
+        # Never let a verifier mutate the ACK that the UI receives. Only the
+        # original owner bytes (captured before verify) may cross this seam.
+        if (reply.get("worker_id") != worker_id
+                or reply.get("command") != command
+                or self._verify_ack(_owner_wire_snapshot(reply, kind="GPU_ACK")) is not True):
             raise OneHostHold("GPU_OWNER_OBSERVED_ACK_RECEIPT_REQUIRED")
         # Native authorization can expire while a GPU owner port blocks.
         # Recheck before returning even an ACK to the UI.
@@ -173,16 +196,18 @@ class P02P04OneHost:
     def publish_owner_gpu_event(self, scope: NativeScope, event: Mapping) -> None:
         """Forward one owner/P05-verified event unchanged, never synthesize GPU data."""
         self._admit(scope, "gpu.observe")
-        if (not isinstance(event, Mapping)
-                or event.get("schema") != "NOX-INSTALLER-EVENT-v3"
-                or event.get("package_id") != "P04"
-                or event.get("event_type") not in _GPU_EVENTS
-                or event.get("evidence_verified") is not True
+        snapshot = _owner_wire_snapshot(event, kind="P05_EVENT")
+        if (snapshot.get("schema") != "NOX-INSTALLER-EVENT-v3"
+                or snapshot.get("package_id") != "P04"
+                or snapshot.get("event_type") not in _GPU_EVENTS
+                or snapshot.get("evidence_verified") is not True
                 or not callable(self._verify_v3)
                 or not callable(self._publish_v3)
-                or self._verify_v3(dict(event)) is not True):
+                or self._verify_v3(_owner_wire_snapshot(snapshot, kind="P05_EVENT")) is not True):
             raise OneHostHold("EXISTING_P05_V3_VERIFIED_EVENT_REQUIRED")
         # Event verification may await an owner receipt; refuse publication
         # if native scope was revoked while that verification was in flight.
         self._admit(scope, "gpu.observe")
-        self._publish_v3(dict(event))
+        # Verification may mutate its argument or the caller may mutate the
+        # source mapping mid-callback; publish only the PRE-VERIFICATION bytes.
+        self._publish_v3(_owner_wire_snapshot(snapshot, kind="P05_EVENT"))
