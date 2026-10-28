@@ -125,8 +125,13 @@ class P02EventRelay:
             raise P02Error('P02_EVENT_NOT_SERIALIZABLE') from exc
         if len(encoded) > 65536:
             raise P02Error('P02_EVENT_PAYLOAD_OVER_QUOTA')
+        # The JSON bytes above were the checked, size-bounded native wire
+        # frame. Publish a detached deep snapshot: the original WebView/worker
+        # may mutate nested sources after validation (or the publisher may
+        # retain a reference). Never let those mutations bypass citation gates.
+        verified_payload = json.loads(encoded.decode('utf-8'))
         mapped = self._binding.route_map[kind]
-        self._binding.publish(mapped, payload)
+        self._binding.publish(mapped, verified_payload)
         if kind == 'chat.start':
             self._started, self._last_run = True, run
         if kind in ('chat.complete','chat.error'):
