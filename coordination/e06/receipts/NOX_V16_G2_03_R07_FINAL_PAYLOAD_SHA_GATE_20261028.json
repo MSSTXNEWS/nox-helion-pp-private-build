@@ -55,7 +55,13 @@
     "E07_one_BuildID": "HOLD",
     "adapted_V8": "9/9 PASS; theater SHA crypto test NOT_RUN in V8",
     "original_Node": "NOT_RUN_LINUX_NODE_AVAILABLE_BUT_REPO_PRIVATE_FILES_NOT_MATERIALIZED",
-    "exact_r07_test": "9 adapted V8 assertions PASS, 1 crypto-specific NOT_RUN; native Node/Windows NOT_RUN"
+    "exact_r07_test": "9 adapted V8 assertions PASS, 1 crypto-specific NOT_RUN; native Node/Windows NOT_RUN",
+    "saved_node_contract_callbacks_V8_adapted": "10/10 PASS (UTF8 SHA256 reference implementation; offline V8 adaptation)",
+    "theater_sha_verified": {
+      "theater.html": "59823e151104200c6ba64d2b56ff6ea1a4a1f72a97bcf12f75b749fc05468f11",
+      "theater.js": "62562ac81c5ff565e5e9c584c9201a26809bb390155a23b6c5cfee0948da6b42"
+    },
+    "release_gate": "HOLD, no native Windows run"
   },
   "taskIDs": [
     "E06-R07-01 PRE_READ_V16_MASTER_E06_LESSONS",
