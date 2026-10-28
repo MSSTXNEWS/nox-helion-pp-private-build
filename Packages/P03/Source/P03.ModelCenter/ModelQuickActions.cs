@@ -74,6 +74,26 @@ public static class ModelQuickActions
         return true;
     }
 
+    /// <summary>Exact tags are discovery leads, not immutable pins. The existing
+    /// queue is used only after independent artifact and host approval.</summary>
+    public static bool TryResolveApprovedOllamaPullExactTag(
+        string? exactTag, IReadOnlyCollection<ModelCatalogEntry> approvedCatalog,
+        bool licenseAcknowledged, bool hostPullCapability, out ModelCatalogEntry? model)
+    {
+        model = null;
+        if (!licenseAcknowledged || !hostPullCapability || approvedCatalog is null ||
+            string.IsNullOrWhiteSpace(exactTag)) return false;
+        var lead = ModelTagReviewLeads.ExactTags.FirstOrDefault(x =>
+            string.Equals(x.ExactTag, exactTag, StringComparison.Ordinal));
+        if (lead is null) return false;
+        var matches = approvedCatalog.Where(x =>
+            string.Equals(x.ExactTag, exactTag, StringComparison.Ordinal) &&
+            string.Equals(x.Id, lead.FamilyId, StringComparison.Ordinal)).Take(2).ToArray();
+        if (matches.Length != 1 || !matches[0].CanOfferOneClickPull) return false;
+        model = matches[0];
+        return true;
+    }
+
     public static bool VerifyDiscoveryIntegrity() =>
         OllamaSlots.Length >= 20 &&
         OllamaSlots.Select(x=>x.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() == OllamaSlots.Length &&
