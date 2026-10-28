@@ -267,6 +267,27 @@ public sealed class ModelDownloadQueueStore
 
     /// <summary>Call once at host startup. Interrupted operations require explicit retry;
     /// retained byte counters do not prove that the remote operation completed.</summary>
+    /// <summary>
+    /// A job lease remains held for its entire transfer. It distinguishes a
+    /// live download in another NOX window from an orphan left by a crash.
+    /// Do not delete the lease file: replacing its inode would defeat the lock.
+    /// </summary>
+    public FileStream? TryAcquireExecutionLease(Guid jobId)
+    {
+        if (jobId == Guid.Empty) throw new ArgumentException("Valid job identity required.", nameof(jobId));
+        var path = _path + ".running." + jobId.ToString("N") + ".lock";
+        ModelLocalAttestation.RequireNoExistingReparsePoint(path);
+        try
+        {
+            return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite,
+                FileShare.None, 1, FileOptions.None);
+        }
+        catch (IOException)
+        {
+            return null; // Contention or inaccessible lock: fail closed.
+        }
+    }
+
     public async Task<int> RecoverInterruptedAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
