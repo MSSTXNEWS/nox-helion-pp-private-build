@@ -154,21 +154,51 @@ def migrate_host_history(db: sqlite3.Connection, backup_path: str | os.PathLike,
         raise
 
 
-def stable_history(db: sqlite3.Connection, tenant: str, principal: str,
-                   chat: str, limit: int = 250) -> list[dict]:
-    """Read the original authorized P02 messages with V2 vacuum-stable order."""
-    if not isinstance(db, sqlite3.Connection) or _version(db) != '2':
+
+def verify_v2_contract(db: sqlite3.Connection) -> None:
+    """Read-only, fail-closed V2 admission for the original P02Store.
+
+    This does not create or migrate anything. The verified Git source defines
+    the writer, while this function checks the *actual* attached SQLite state.
+    """
+    if not isinstance(db, sqlite3.Connection) or _version(db) != "2":
         raise HistoryHold("P02_V2_ADMISSION_REQUIRED")
-    if type(limit) is not int or not 1 <= limit <= 1000:
-        raise ValueError("History limit 1..1000")
+    if db.execute("PRAGMA foreign_keys").fetchone() != (1,):
+        raise HistoryHold("P02_V2_FOREIGN_KEYS_REQUIRED")
+    if db.execute("PRAGMA quick_check").fetchone() != ("ok",):
+        raise HistoryHold("P02_V2_DATABASE_INTEGRITY_HOLD")
     cols = {r[1] for r in db.execute("PRAGMA table_info(p02_messages)")}
     if cols != {"id", "chat_id", "role", "content", "created_at", "stable_seq"}:
         raise HistoryHold("P02_V2_COLUMN_SCHEMA_HOLD")
-    indexes = {r[1] for r in db.execute("PRAGMA index_list(p02_messages)")}
-    triggers = {r[0] for r in db.execute(
-        "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='p02_messages'")}
-    if "p02_messages_stable_seq" not in indexes or "p02_messages_stable_insert" not in triggers:
-        raise HistoryHold("P02_V2_SEQUENCE_CONTRACT_HOLD")
+    indexed = False
+    for row in db.execute("PRAGMA index_list(p02_messages)"):
+        if row[1] == "p02_messages_stable_seq":
+            if row[2] != 1 or [r[2] for r in db.execute(
+                    "PRAGMA index_info(p02_messages_stable_seq)")] != ["stable_seq"]:
+                raise HistoryHold("P02_V2_INDEX_INVALID")
+            indexed = True
+    if not indexed:
+        raise HistoryHold("P02_V2_INDEX_MISSING")
+    row = db.execute("""SELECT sql FROM sqlite_master WHERE type='trigger'
+                AND tbl_name='p02_messages' AND name='p02_messages_stable_insert'""").fetchone()
+    sql = row[0].lower() if row and isinstance(row[0], str) else ""
+    if not all(token in " ".join(sql.split()) for token in (
+            "after insert", "when new.stable_seq is null", "update p02_messages set stable_seq",
+            "max(stable_seq)", "where rowid = new.rowid")):
+        raise HistoryHold("P02_V2_TRIGGER_MISSING_OR_INVALID")
+    if db.execute("""SELECT 1 FROM p02_messages
+                   WHERE stable_seq IS NULL OR stable_seq<1 LIMIT 1""").fetchone():
+        raise HistoryHold("P02_V2_SEQUENCE_DATA_INVALID")
+    if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+        raise HistoryHold("P02_V2_FOREIGN_KEY_HOLD")
+
+
+def stable_history(db: sqlite3.Connection, tenant: str, principal: str,
+                   chat: str, limit: int = 250) -> list[dict]:
+    """Read the original authorized P02 messages with V2 vacuum-stable order."""
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise ValueError("History limit 1..1000")
+    verify_v2_contract(db)
     if any(not isinstance(x, str) or not x or len(x) > 256 or x.strip() != x
            or any(ord(ch) < 32 for ch in x) for x in (tenant, principal, chat)):
         raise ValueError("Invalid native scope")
