@@ -242,6 +242,18 @@ class P02P04OneHost:
                     # or observe cancellation. No fabricated STOP frame.
                     if native_stop.is_set():
                         return
+                    # P02 may suspend on its terminal yield while WebView2
+                    # stops consuming immediately at chat.complete/chat.error.
+                    # Close the ORIGINAL owner generator before publishing that
+                    # terminal frame so its Ollama stream/lease is released even
+                    # if the outer UI iterator is never advanced/closed again.
+                    # No extra process, stream, RAG callback or STOP frame.
+                    if wire["type"] in ("chat.complete", "chat.error"):
+                        owner_frames.close()
+                        # A close/finalizer can observe a concurrent native STOP.
+                        # Do not emit even a terminal frame after cancellation.
+                        if native_stop.is_set():
+                            return
                     yield wire
             finally:
                 # Releasing a partially consumed stream must cancel the native
