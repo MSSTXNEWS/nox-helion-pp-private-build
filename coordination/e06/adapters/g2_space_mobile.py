@@ -7,6 +7,7 @@ proposal: it cannot activate until the original whole-app SourceLock is sealed.
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping
 import json
 import math
 import hmac
@@ -453,17 +454,26 @@ class G2OneHostBinder:
             raise G2Hold("Current original app SourceLock / host serial lock missing")
         for owner in ("P02", "P03", "P05"):
             self._receipt(owner)
-        if not isinstance(getattr(self.host, "routes", None), dict) or not isinstance(
+        if not isinstance(getattr(self.host, "routes", None), Mapping) or not isinstance(
                 getattr(self.host, "ports", None), dict):
             raise G2Hold("Existing PACK01 one-host route registry is mandatory")
         if not all(callable(getattr(self.p02, m, None)) for m in ("register",)) or (
                 not callable(getattr(self.p03, "register", None))):
             raise G2Hold("Original P02/P03 owner adapters are missing")
         with self.lock:  # Canonical host registry lock, never an E06 copy.
+            original_routes = self.host.routes
             before = dict(self.host.ports)
             try:
                 # dict() aliases nested owner permissions: freeze the actual ACL.
-                frozen_routes = copy.deepcopy(self.host.routes)
+                # Read-only MappingProxyType cannot be deep-copied as an object.
+                # Clone each approved descriptor without changing the live ACL.
+                frozen_routes = {
+                    route: copy.deepcopy(dict(descriptor))
+                    for route, descriptor in self.host.routes.items()
+                    if isinstance(descriptor, Mapping)
+                }
+                if len(frozen_routes) != len(self.host.routes):
+                    raise G2Hold("Non-mapping native route descriptor")
             except Exception as exc:
                 raise G2Hold("Native route descriptors cannot be frozen") from exc
             e05_routes = {route for route in P05_ROUTES
@@ -555,7 +565,12 @@ class G2OneHostBinder:
                 self.host.ports.update(before)
                 # Restore owner-mutated nested route ACLs, but never rewrite
                 # native routes when their pre-bind value is unchanged.
-                if self.host.routes != frozen_routes:
+                if self.host.routes is not original_routes:
+                    # Restore original read-only registry object, never a
+                    # mutable replacement that weakens route permissions.
+                    self.host.routes = original_routes
+                elif self.host.routes != frozen_routes and isinstance(self.host.routes, dict):
+                    # Original mutable-host legacy fallback only.
                     self.host.routes.clear()
                     self.host.routes.update(copy.deepcopy(frozen_routes))
                 raise G2Hold("All-or-HOLD existing-host bindings rolled back") from exc
