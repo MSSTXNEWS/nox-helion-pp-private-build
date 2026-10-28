@@ -209,7 +209,20 @@ class Studio(CreativeExtensions):
             if not p.is_file():raise StudioError("Download incomplete: "+f)
             files.append({"filename":f,"bytes":p.stat().st_size})
         receipt={"model":model_id,"revision":revision,"files":files,"source":"https://huggingface.co/"+model[3]}
-        (target/"RECEIPT.json").write_text(json.dumps(receipt,indent=2),encoding="utf-8")
+        # Never follow a pre-existing symlink/junction at the receipt path.
+        # Commit the evidence atomically only after every selected weight exists.
+        receipt_path=target/"RECEIPT.json"
+        if self._is_untrusted_link(receipt_path):
+            raise StudioError("Untrusted model receipt destination")
+        temporary=target/(uuid.uuid4().hex+".receipt.partial")
+        try:
+            with temporary.open("x",encoding="utf-8") as stream:
+                json.dump(receipt,stream,indent=2)
+            if self._is_untrusted_link(target) or not target.resolve().is_relative_to(self.root):
+                raise StudioError("Model root changed before receipt commit")
+            temporary.replace(receipt_path)
+        finally:
+            temporary.unlink(missing_ok=True)
         return {"status":"DOWNLOADED","receipt":receipt,"note":"Weights downloaded, but inference backend may need setup"}
 
     def _text(self, prompt, format_json=False):
