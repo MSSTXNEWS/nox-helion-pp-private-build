@@ -107,6 +107,20 @@ change("R11/Packages/P03/worker-window/ModelDownloaderWindow.xaml.cs",
     "c2c7470d51ba3fc238517fd138666eee73a3d7c8a68cc8532d1585bd57c88166",
     duplicate_methods)
 
+# Existing P03 backup logic remains intact: only resolve its System.IO types.
+change("R11/Packages/P03/module/BackupRestoreService.cs",
+    "7ca302da2ff7edc9a8905884a1303d35d5202f7c10f40d951237385302dcc13d",
+    "8f2371b166555d228b23e7a06649a1057578420c26ef18bbf7b20324d013d66e",
+    lambda s: single(s, "using System.IO.Compression;",
+        "using System.IO;\nusing System.IO.Compression;"))
+
+# Preserve full durable queue and recovery logic, fix only a mistyped item type.
+change("R11/Packages/P03/worker-queue/ModelDownloadQueueStore.cs",
+    "0d16e6e9673a7c069e91cadb674a1aea9123901756748f10609a4429fdf4efa0",
+    "a79482f9d16144f55fb99088d482be5735a7719e729baf31fc0af0592779b335",
+    lambda s: single(s,"new List<PersistedItem>(records.Count)",
+        "new List<PersistedQueueItem>(records.Count)"))
+
 out = Path("ci-evidence")
 out.mkdir(exist_ok=True)
 (out / "r08-cross-owner-compile-fixes.json").write_text(
