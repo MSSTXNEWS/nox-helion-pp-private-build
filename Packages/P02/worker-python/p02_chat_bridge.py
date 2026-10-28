@@ -3,6 +3,7 @@ No UI, additional server, account system, or database is created by this file.
 """
 from __future__ import annotations
 import threading
+from contextlib import closing
 import urllib.parse
 import uuid
 from typing import Callable, Iterator
@@ -98,25 +99,31 @@ class ChatBridge:
             # may issue STOP before the producer is entered or between frames.
             if stop.is_set():
                 raise Cancelled("STOP before Ollama stream")
-            for item in self.ollama.stream(model, messages, stop):
-                if stop.is_set():
-                    raise Cancelled("STOP before streaming event")
-                if item["delta"]:
-                    total_chars += len(item["delta"])
-                    if total_chars > 1_000_000:
-                        self.ollama.stop()  # cancel runaway generation
-                        raise P02Error("Ollama reply exceeded persistence quota")
-                    parts.append(item["delta"])
-                    yield {"type": "chat.delta", "run_id": run, "text": item["delta"]}
-                if item["done"]:
-                    # A yielded delta can be suspended by the UI just before the
-                    # done frame. Never mark a cancelled turn as completed.
+            # The caller can close the OUTER UI iterator after chat.delta.
+            # A for-loop alone does not guarantee the retained inner transport
+            # generator is closed (e.g. async adapters retain a reference).
+            # Closing the exact run's iterator releases its Ollama lease;
+            # calling OllamaClient.stop() here would risk another session.
+            with closing(self.ollama.stream(model, messages, stop)) as chunks:
+                for item in chunks:
                     if stop.is_set():
-                        raise Cancelled("STOP before assistant persistence")
-                    text = "".join(parts)
-                    self.store.add_message(tenant, principal, chat_id, "assistant", text)
-                    yield {"type": "chat.complete", "run_id": run, "chars": len(text)}
-                    return
+                        raise Cancelled("STOP before streaming event")
+                    if item["delta"]:
+                        total_chars += len(item["delta"])
+                        if total_chars > 1_000_000:
+                            self.ollama.stop()  # cancel runaway generation
+                            raise P02Error("Ollama reply exceeded persistence quota")
+                        parts.append(item["delta"])
+                        yield {"type": "chat.delta", "run_id": run, "text": item["delta"]}
+                    if item["done"]:
+                        # A yielded delta can be suspended by the UI just before the
+                        # done frame. Never mark a cancelled turn as completed.
+                        if stop.is_set():
+                            raise Cancelled("STOP before assistant persistence")
+                        text = "".join(parts)
+                        self.store.add_message(tenant, principal, chat_id, "assistant", text)
+                        yield {"type": "chat.complete", "run_id": run, "chars": len(text)}
+                        return
             raise P02Error("Stream ended without done")
         except (Cancelled, P02Error) as exc:
             # Do not store incomplete assistant text as a successful answer.
