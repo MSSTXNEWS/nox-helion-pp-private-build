@@ -1,0 +1,44 @@
+name: NOX Super Cinema 3D + AI visual planning Windows
+on:
+  push:
+    paths:
+      - 'proposals/NOX-SUPER-CINEMA-3D/**'
+      - '.github/workflows/nox-super-cinema-3d.yml'
+  pull_request:
+    paths:
+      - 'proposals/NOX-SUPER-CINEMA-3D/**'
+      - '.github/workflows/nox-super-cinema-3d.yml'
+jobs:
+  real-threejs-source:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: proposals/NOX-SUPER-CINEMA-3D
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: proposals/NOX-SUPER-CINEMA-3D/package-lock.json
+      - name: Install pinned Three.js and esbuild
+        run: npm ci --no-audit --no-fund
+      - name: Test all AI generation profiles, every cinema composition and D02 gates
+        run: npm test
+      - name: Build real local Three.js WebGL bundle
+        run: npm run build
+      - name: Check production build and preview
+        shell: pwsh
+        run: |
+          if (!(Test-Path dist/nox-cinema3d.js)) { throw "THREE_BUNDLE_MISSING" }
+          $length = (Get-Item dist/nox-cinema3d.js).Length
+          if ($length -lt 120000 -or $length -gt 1200000) { throw "UNEXPECTED_BUNDLE_SIZE_$length" }
+          if (!(Test-Path preview.html)) { throw "PREVIEW_MISSING" }
+          Write-Host "SOURCE_BUNDLE_OK bytes=$length"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NOX_SUPER_CINEMA_3D_SOURCE_BUNDLE
+          path: |
+            proposals/NOX-SUPER-CINEMA-3D/dist/nox-cinema3d.js
+            proposals/NOX-SUPER-CINEMA-3D/preview.html
+          retention-days: 30
