@@ -23,6 +23,7 @@ PACKAGES = (
 
 
 def inspect(profile: str, gpu_index: int) -> dict:
+    """Inspect in a dedicated worker process; CUDA state is process-global."""
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
         "status": "HOLD",
@@ -87,7 +88,15 @@ def inspect(profile: str, gpu_index: int) -> dict:
 
     if not report["errors"]:
         # This proves local package installations, not CUDA runtime functionality.
+        cuda_environment = {name: os.environ.get(name) for name in
+                            ("CUDA_DEVICE_ORDER", "CUDA_VISIBLE_DEVICES")}
         try:
+            # A previously initialized runtime cannot be rebound by rewriting
+            # environment variables; one visible device may be the wrong GPU.
+            loaded_torch = sys.modules.get("torch")
+            if loaded_torch is not None and loaded_torch.cuda.is_initialized():
+                report["errors"].append("CUDA_PREFLIGHT_FRESH_PROCESS_REQUIRED")
+                return report
             # Match training's single approved UUID before importing CUDA.
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
@@ -101,6 +110,14 @@ def inspect(profile: str, gpu_index: int) -> dict:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
+        finally:
+            # Do not leave the installer's later worker launches pinned to this
+            # probe's selection, including failure/HOLD paths.
+            for name, original in cuda_environment.items():
+                if original is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = original
     report["status"] = "HARDWARE_READY_ONLY" if not report["errors"] else "HOLD"
     return report
 

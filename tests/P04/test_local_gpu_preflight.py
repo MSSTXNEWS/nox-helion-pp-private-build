@@ -68,7 +68,8 @@ class HardwarePreflightContracts(unittest.TestCase):
     def test_selected_uuid_and_sufficient_actual_free_memory_semantics(self):
         device = {"index": "1", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
                   "name": "Test NVIDIA", "memory_total_mib": "12288"}
-        cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1)
+        cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1,
+                               is_initialized=lambda: False)
         fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
             probe.metadata, "version", return_value="fixture"
@@ -84,6 +85,38 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertFalse(result["dataset_rights_verified"])
         self.assertEqual(result["gpu"]["free_mib"], 11000)
         self.assertFalse(result["runtime_training_verified"])
+
+    def test_preflight_restores_cuda_environment_and_rejects_initialized_runtime(self):
+        device = {"index": "0", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
+                  "name": "Test NVIDIA", "memory_total_mib": "12288"}
+        for initialized, available in ((False, True), (False, False), (True, True)):
+            with self.subTest(initialized=initialized, available=available):
+                calls = []
+                def is_available():
+                    calls.append(True)
+                    self.assertEqual(probe.os.environ["CUDA_VISIBLE_DEVICES"], device["uuid"])
+                    return available
+                cuda = SimpleNamespace(is_available=is_available, device_count=lambda: 1,
+                                       is_initialized=lambda: initialized)
+                fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
+                with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+                    probe.metadata, "version", return_value="fixture"
+                ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
+                    probe.train_qlora, "gpu_inventory", return_value=[device]
+                ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
+                    probe.train_qlora, "gpu_vram_headroom", return_value={"free_mib": 11000}
+                ), patch.dict(sys.modules, {"torch": fake_torch}), patch.dict(
+                    probe.os.environ, {"CUDA_VISIBLE_DEVICES": "original-device"}, clear=True
+                ):
+                    result = probe.inspect("BALANCED", 0)
+                    self.assertEqual(probe.os.environ.get("CUDA_VISIBLE_DEVICES"), "original-device")
+                    self.assertNotIn("CUDA_DEVICE_ORDER", probe.os.environ)
+                if initialized:
+                    self.assertEqual(result["status"], "HOLD")
+                    self.assertIn("CUDA_PREFLIGHT_FRESH_PROCESS_REQUIRED", result["errors"])
+                    self.assertFalse(calls)
+                else:
+                    self.assertEqual(result["status"], "HARDWARE_READY_ONLY" if available else "HOLD")
 
 
 if __name__ == "__main__":
