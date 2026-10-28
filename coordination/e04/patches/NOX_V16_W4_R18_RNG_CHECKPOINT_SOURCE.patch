@@ -1,0 +1,28 @@
+NOX V16 R18 · OWNED P04 PATCH CONTRACT (SOURCE-ONLY)
+RunID: NOX-V16-W4-01-E04-20261029T0105MSK-R18
+TaskID: E04-P04-CHECKPOINT-RNG-IDENTITY-R18
+Owner: E04 / W4.01
+PR162 HEAD preimage commit: 817bb4146db0a2c79407d249d54fdeeb22261bb6
+Tree: 0f891c70e237ee65a7a5941304023849bdf0f251
+Path: Packages/P04/train_qlora.py
+Pre SHA256: 836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712
+Pre Git blob SHA1: 82fad1f4aec3bc9ebb34958ece3fd5786e1adbea
+Proposed post SHA256: d32e22b0432f25ea3b43657d413d5543177915d3f89b4570cdc94ac7ca626999
+Actual source write: NOT_SAVED (GitHub connector rejected content write); do not claim admission.
+
+--- a/Packages/P04/train_qlora.py
++++ b/Packages/P04/train_qlora.py
+@@ -742,8 +742,9 @@ def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str]:
+     if any(item.is_symlink() for item in real.rglob("*")):
+         raise ValueError("RESUME_CHECKPOINT_SYMLINK_IN_TREE")
+     rng = list(real.glob("rng_state*.pth"))
+-    if not rng or any(not path.is_file() or path.is_symlink() or path.stat().st_size == 0 for path in rng):
++    if (len(rng) != 1 or re.fullmatch(r"rng_state(?:_[0-9]+)?\\.pth", rng[0].name) is None
++            or not rng[0].is_file() or rng[0].is_symlink() or rng[0].stat().st_size == 0):
+         raise ValueError("RESUME_CHECKPOINT_RNG_MISSING")
+     return step, sha256_tree(real)
+
+RED: five focused source-derived offline tests, 2 failures (rng_state_backup.pth; both backup+canonical).
+GREEN after in-memory patch: 5/5 PASS on source-derived offline harness. Full production source test NOT_RUN.
+Previous lesson R17 NFC/casefold: read_object() still used for trainer_state; prior guard preserved.
+GPU rights/hardware NOT_VERIFIED; QLoRA TRAINING_NOT_RUN. No EXE/NSIS/CI/E07.
