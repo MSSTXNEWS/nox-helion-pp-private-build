@@ -289,3 +289,36 @@ test('HELION aggregate honors an explicit uneven approved weighting',()=>{
   assert.equal(projectCorePersona(c,NOW).helion,null);
 });
 console.log('R05 added 12 ledger, weighted CoreID and native CPU-temperature regression gates; Windows NOT_RUN.');
+
+
+// R06: one ambiguity-quarantine method for terminal origin, GPU identity,
+// duplicated priced feeds and app-side readback provenance. All synthetic.
+test('malformed same-run failure cannot be hidden behind a clean STOP',()=>{
+  const broken={...terminalEvent('task.failed','ERROR'),event_id:'broken',message:42};
+  assert.deepEqual(projectCanonicalEvents([terminalEvent('model.stopped','STOPPED'),broken],RUN,NOW),
+    {state:'HOLD_MALFORMED_TERMINAL',errors:null});
+});
+test('same-run terminal without a bounded source is quarantined',()=>{
+  const broken={...terminalEvent('model.stopped','STOPPED'),source:'\n'};
+  assert.equal(projectCanonicalEvents([broken],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
+});
+test('malformed terminal of another RunID cannot stop current run',()=>{
+  const foreign={...terminalEvent('task.failed','ERROR'),run_id:'OTHER',message:42};
+  assert.equal(projectCanonicalEvents([foreign],RUN,NOW).state,'N_D');
+});
+const vram=(key,value,deviceId)=>({key,value,unit:'bytes',source:'NVML',status:'LIVE',
+  observed_at_utc:'2026-10-28T03:44:58Z',...(deviceId===null?{}:{device_id:deviceId})});
+test('two VRAM counters without hardware identity cannot be combined',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,null),vram('gpu.vram.total_bytes',8192,null)],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].stage,'INCONSISTENT_VRAM');
+  assert.equal(x['gpu.vram.total_bytes'].value,null);
+});
+test('different GPU identifiers cannot be mixed into one VRAM pair',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,'GPU-0'),vram('gpu.vram.total_bytes',8192,'GPU-1')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].value,null);
+});
+test('matching GPU device identifier and native observation permits truthful VRAM',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,'GPU-0'),vram('gpu.vram.total_bytes',8192,'GPU-0')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].value,2048);
+  assert.equal(x['gpu.vram.total_bytes'].deviceId,'GPU-0');
+});
