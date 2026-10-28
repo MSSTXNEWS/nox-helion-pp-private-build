@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 from .creative_extensions import CreativeExtensions
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -30,6 +30,7 @@ MODEL_CATALOG = [
     ("musicgen-small", "MusicGen Small", "sound", "facebook/musicgen-small", "varies"),
     ("kokoro-82m", "Kokoro 82M TTS", "voice", "hexgrad/Kokoro-82M", "varies"),
 ]
+MAX_COMFY_MEDIA_BYTES = 4 * 1024 * 1024 * 1024  # bounded 4 GiB cinema asset; no giant in-memory buffer
 KINDS = ("movie", "cartoon2d", "cartoon3d", "anime", "adult18", "video", "photo", "3d", "voice", "sound", "slides", "site", "code", "memory", "learning")
 TERMS = {"фильм":"movie", "кино":"movie", "мультик":"cartoon2d", "мультфильм":"cartoon2d", "аниме":"anime", "хентай":"adult18", "18+":"adult18", "видео":"video", "ролик":"video", "фото":"photo", "изображен":"photo", "картинк":"photo", "3д":"3d", "3d":"3d", "озвуч":"voice", "музык":"sound", "презентац":"slides", "сайт":"site", "код":"code", "программ":"code", "памят":"memory", "обучен":"learning"}
 
@@ -58,7 +59,15 @@ class Studio(CreativeExtensions):
 
     def _project(self, project_id: str):
         if not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I): raise StudioError("Invalid project ID")
-        p=self.projects/project_id; p.mkdir(parents=True,exist_ok=True); return p
+        if self._is_untrusted_link(self.projects) or not self.projects.resolve().is_relative_to(self.root):
+            raise StudioError("Untrusted NOX projects root")
+        p=self.projects/project_id
+        if self._is_untrusted_link(p):
+            raise StudioError("Untrusted NOX project directory")
+        p.mkdir(parents=True,exist_ok=True)
+        if not p.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("Project outside approved NOX data root")
+        return p
 
     @staticmethod
     def _within(root:Path, path:Path):
@@ -77,9 +86,61 @@ class Studio(CreativeExtensions):
         try: import trimesh; return True
         except ImportError: return False
 
+    @staticmethod
+    def _is_untrusted_link(path):
+        # Windows junctions are reparse points, but not always symlinks.
+        # Python 3.12+ exposes Path.is_junction; keep older builds compatible.
+        return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
+
+    def _installed_weights(self, model_id, repository):
+        """Receipt means files physically exist, not that inference is ready.
+
+        Read a small bounded manifest only; do not hash large model weights on
+        every UI catalog refresh. The native owner verifies model rights/SHA at
+        download and runtime admission separately.
+        """
+        target=self.models/model_id
+        receipt=target/"RECEIPT.json"
+        try:
+            if self._is_untrusted_link(self.models) or self._is_untrusted_link(target) or self._is_untrusted_link(receipt):
+                return False
+            if not receipt.is_file() or receipt.stat().st_size > 131_072:
+                return False
+            data=json.loads(receipt.read_text(encoding="utf-8"))
+            if (type(data) is not dict or data.get("model")!=model_id or
+                data.get("source")!="https://huggingface.co/"+repository or
+                type(data.get("revision")) is not str or
+                not re.fullmatch(r"[0-9a-f]{40}",data["revision"])):
+                return False
+            rows=data.get("files")
+            if type(rows) is not list or not 0<len(rows)<=2000:
+                return False
+            for row in rows:
+                if type(row) is not dict:
+                    return False
+                name,size=row.get("filename"),row.get("bytes")
+                if (type(name) is not str or type(size) is not int or size<=0 or
+                    not re.search(r"\.(?:safetensors|gguf|ckpt|bin|pth)$",name,re.I) or
+                    name.startswith("/") or "\\" in name or
+                    any(c in name for c in "*?[]") or
+                    ".." in PurePosixPath(name).parts or
+                    PurePosixPath(name).as_posix()!=name):
+                    return False
+                path=target
+                for part in PurePosixPath(name).parts:
+                    path=path/part
+                    if self._is_untrusted_link(path):
+                        return False
+                if (not path.resolve().is_relative_to(target.resolve()) or
+                    not path.is_file() or path.stat().st_size!=size):
+                    return False
+            return True
+        except (OSError, UnicodeError, ValueError, TypeError, RecursionError):
+            return False
+
     def catalog(self):
         return {"models":[{"id":a,"name":b,"category":c,"repository":d,"vram":e,
-                          "url":"https://huggingface.co/"+d,"installed":(self.models/a/"RECEIPT.json").is_file()}
+                          "url":"https://huggingface.co/"+d,"installed":self._installed_weights(a,d)}
                           for a,b,c,d,e in MODEL_CATALOG],"categories":KINDS}
 
     def _model(self, model_id):
@@ -98,24 +159,70 @@ class Studio(CreativeExtensions):
 
     def download(self, model_id, filenames, revision, license_confirmed=False):
         model=self._model(model_id)
-        if not license_confirmed:raise StudioError("Confirm license, size and storage before download")
+        if license_confirmed is not True:raise StudioError("Confirm license, size and storage before download")
         if not revision or not re.fullmatch(r"[0-9a-f]{40}",revision):raise StudioError("Pin a model revision from variants()")
         if not isinstance(filenames,list) or not filenames:raise StudioError("Choose one or more exact weight files")
         try: from huggingface_hub import HfApi,snapshot_download
         except ImportError as exc:raise StudioError("Install optional huggingface_hub") from exc
         info=HfApi().model_info(model[3],revision=revision,files_metadata=True)
+        if getattr(info, "sha", None) != revision:raise StudioError("Model metadata revision changed; re-review pinned source")
         valid={s.rfilename for s in info.siblings or []}
-        if any(not isinstance(x,str) or x not in valid or x.startswith("/") or ".." in Path(x).parts or "\\" in x for x in filenames):
-            raise StudioError("Unapproved weight filename")
-        target=self.models/model_id;target.mkdir(parents=True,exist_ok=True)
+        # snapshot_download treats allow_patterns as GLOBS, not exact filenames.
+        # Reject metacharacters and any upstream traversal/reparse path BEFORE
+        # creating a model directory or issuing a network download.
+        if (any(type(x) is not str for x in filenames) or
+            len(set(filenames)) != len(filenames) or
+            any(x not in valid or
+                not re.search(r"\.(?:safetensors|gguf|ckpt|bin|pth)$",x,re.I) or
+                x.startswith("/") or "\\" in x or
+                any(c in x for c in "*?[]") or
+                ".." in PurePosixPath(x).parts or
+                PurePosixPath(x).as_posix()!=x for x in filenames)):
+            raise StudioError("Unapproved literal weight filename")
+        if self._is_untrusted_link(self.models) or (self.models.exists() and not self.models.is_dir()):
+            raise StudioError("Untrusted model root")
+        self.models.mkdir(parents=True,exist_ok=True)
+        target=self.models/model_id
+        if self._is_untrusted_link(target) or (target.exists() and not target.is_dir()):
+            raise StudioError("Untrusted model destination")
+        target.mkdir(parents=True,exist_ok=True)
+        if not target.resolve().is_relative_to(self.root):
+            raise StudioError("Model destination outside approved Studio root")
+        def checked_weight(name):
+            p=target
+            for part in PurePosixPath(name).parts:
+                p=p/part
+                if self._is_untrusted_link(p):
+                    raise StudioError("Weight file or directory is a reparse link")
+            if not p.resolve().is_relative_to(target.resolve()):
+                raise StudioError("Weight path outside approved model directory")
+            return p
+        for f in filenames:
+            checked_weight(f)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
+        if (self._is_untrusted_link(self.models) or self._is_untrusted_link(target) or
+            not target.resolve().is_relative_to(self.root)):
+            raise StudioError("Model destination changed during download")
         files=[]
         for f in filenames:
-            p=self._within(target,target/f)
+            p=checked_weight(f)
             if not p.is_file():raise StudioError("Download incomplete: "+f)
             files.append({"filename":f,"bytes":p.stat().st_size})
         receipt={"model":model_id,"revision":revision,"files":files,"source":"https://huggingface.co/"+model[3]}
-        (target/"RECEIPT.json").write_text(json.dumps(receipt,indent=2),encoding="utf-8")
+        # Never follow a pre-existing symlink/junction at the receipt path.
+        # Commit the evidence atomically only after every selected weight exists.
+        receipt_path=target/"RECEIPT.json"
+        if self._is_untrusted_link(receipt_path):
+            raise StudioError("Untrusted model receipt destination")
+        temporary=target/(uuid.uuid4().hex+".receipt.partial")
+        try:
+            with temporary.open("x",encoding="utf-8") as stream:
+                json.dump(receipt,stream,indent=2)
+            if self._is_untrusted_link(target) or not target.resolve().is_relative_to(self.root):
+                raise StudioError("Model root changed before receipt commit")
+            temporary.replace(receipt_path)
+        finally:
+            temporary.unlink(missing_ok=True)
         return {"status":"DOWNLOADED","receipt":receipt,"note":"Weights downloaded, but inference backend may need setup"}
 
     def _text(self, prompt, format_json=False):
@@ -229,11 +336,32 @@ class Studio(CreativeExtensions):
             raise StudioError("Only completed, reported ComfyUI assets may be imported")
         name=asset["filename"]
         if not re.fullmatch(r"[^/\\]{1,220}",name):raise StudioError("Bad output filename")
-        folder=self._project(project_id)/"assets";folder.mkdir(parents=True,exist_ok=True)
+        folder=self._project(project_id)/"assets"
+        if self._is_untrusted_link(folder):
+            raise StudioError("Untrusted project assets folder")
+        folder.mkdir(parents=True,exist_ok=True)
+        if not folder.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("Assets destination outside NOX data root")
         output=folder/(uuid.uuid4().hex[:8]+"_"+name)
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
-        with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("wb") as out:shutil.copyfileobj(inp,out)
-        return {"status":"IMPORTED","file":str(output),"bytes":output.stat().st_size}
+        total=0
+        try:
+            # Prevent a local ComfyUI adapter error/oversized response from
+            # consuming unbounded disk. Keep large video files streaming.
+            with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("xb") as out:
+                while True:
+                    chunk=inp.read(1024*1024)
+                    if not chunk:break
+                    total+=len(chunk)
+                    if total>MAX_COMFY_MEDIA_BYTES:
+                        raise StudioError("ComfyUI asset exceeds approved cinema media limit")
+                    out.write(chunk)
+            if total==0:
+                raise StudioError("ComfyUI returned empty media")
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
+        return {"status":"IMPORTED","file":str(output),"bytes":total}
 
     def assemble(self,project_id,clips,soundtrack="",subtitle_file=""):
         with self._assemble_lock:
