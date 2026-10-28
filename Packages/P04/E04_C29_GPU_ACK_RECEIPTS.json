@@ -5,7 +5,7 @@
   "repository": "MSSTXNEWS/nox-helion-pp-private-build",
   "branch": "e04/v16-gpu-control-receipt-gate-20261028-c29",
   "source_base_commit_sha1": "4faff41270985be5fd3eb23905e6835b5990fd68",
-  "source_head_commit_sha1": "8859a769c46405eaea174f4735641d58d0eb7663",
+  "source_head_commit_sha1": "8e2afe305da89b996168054bee6390f6f5570f7b",
   "pr": 65,
   "status": "SOURCE_PATCHED_CI_INFRA_HOLD",
   "source_lock_integrated": false,
@@ -24,9 +24,9 @@
       "path": "tests/P04/GpuWorkerReceiptHarness.cs",
       "preimage_git_blob_sha1": null,
       "preimage_sha256": null,
-      "postimage_git_blob_sha1": "152196270e85cda70ab7533fb6e89d1275083d66",
-      "postimage_sha256": "eefa49a5d8041b0e26bd102e72ca04455148bfe9d0a0028d4ba9bc9d098bac58",
-      "patch_sha256": "4f61e8d2d1f41b4173dc1883c42d18e70a64503e6ac858edf6b805e0048db06e"
+      "postimage_git_blob_sha1": "6e135110073e87ce1bc7a5e72d3abc8eac75d2d3",
+      "postimage_sha256": "07acdc99a65cfb679a7478f14f73c4ce9f76ae559c6a6d543f36a007d9474252",
+      "patch_sha256": "2fcd3537519e72c2fc29b0a7d71c87e1a9fd89ea70b63c82a094aff099f2a382"
     },
     {
       "task_id": "E04-C29-03",
@@ -52,7 +52,10 @@
     "ubuntu_compile": "NOT_RUN",
     "ci_state": "HOLD_RUNNER_INFRASTRUCTURE",
     "workflow_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/40624491502",
-    "observation": "Both jobs concluded failure before any runner assignment or steps; no PASS is claimed."
+    "observation": "Both jobs concluded failure before any runner assignment or steps; no PASS is claimed.",
+    "targeted_case_count": 11,
+    "note": "Added a native in-flight PauseAsync/DisposeAsync regression. CI run with previous harness failed before runner execution; latest source still untested.",
+    "last_known_retry_attempt": 2
   },
   "gpu_training": {
     "status": "HOLD_NO_AUTHORIZED_LOCAL_GPU_MODEL_DATASET",
