@@ -35,8 +35,22 @@ function play() {
   video.play().catch(() => notice('Воспроизведение заблокировано или кодек не поддерживается.'));
 }
 function fullscreen() {
-  Promise.resolve($('stage').requestFullscreen?.()).catch(() => notice('Полноэкранный режим недоступен.'));
+  const stage = $('stage');
+  if (typeof stage.requestFullscreen !== 'function') {
+    notice('Полноэкранный режим недоступен. Используйте F11 в окне Windows.');
+    return;
+  }
+  Promise.resolve().then(() => stage.requestFullscreen()).catch(() => notice('Полноэкранный режим недоступен.'));
 }
+window.addEventListener('keydown', e => {
+  if (e.key === 'F11') { e.preventDefault(); fullscreen(); }
+  else if (e.key === 'Escape' && document.fullscreenElement) {
+    e.preventDefault();
+    if (typeof document.exitFullscreen === 'function')
+      Promise.resolve().then(() => document.exitFullscreen()).catch(() => notice('Не удалось выйти из полного экрана.'));
+    else notice('Выход из полного экрана недоступен.');
+  }
+});
 if (bc) bc.onmessage = e => command(e.data);
 const project = new URLSearchParams(location.search).get('project');
 if (project && /^[a-z0-9_-]{1,48}$/i.test(project)) {

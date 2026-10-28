@@ -10,6 +10,8 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+if ($RunId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'E06_INVALID_RUN_ID_HOLD' }
+if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem) { throw 'E06_WINDOWS_X64_REQUIRED' }
 $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
@@ -102,7 +104,7 @@ if (-not $makensis) {
 $makensisPath = if ($makensis -is [System.IO.FileInfo]) { $makensis.FullName } else { $makensis.Source }
 if ([string]::IsNullOrWhiteSpace($makensisPath) -or !(Test-Path -LiteralPath $makensisPath -PathType Leaf)) { throw 'NSIS_BINARY_PATH_HOLD' }
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
-& $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$$verifyScript" "/DPREFLIGHT_SCRIPT=$$preflightScript" "/DREMOVE_SCRIPT=$$removeScript" "/DOUTPUT_SETUP=$setup" "/DAPP_VERSION=$appVersion" $nsisScript
+& $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$verifyScript" "/DPREFLIGHT_SCRIPT=$preflightScript" "/DREMOVE_SCRIPT=$removeScript" "/DOUTPUT_SETUP=$setup" "/DAPP_VERSION=$appVersion" $nsisScript
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }
 $sha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 $wpf=Join-Path $payload 'NOX.P01.Shell.exe'
