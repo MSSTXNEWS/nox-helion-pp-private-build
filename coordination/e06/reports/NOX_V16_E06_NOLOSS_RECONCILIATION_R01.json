@@ -30,7 +30,7 @@
     "windows_accepted": 0
   },
   "retained_installer_evidence": {
-    "historical_WPF_native_setup_sha256": "03e026141854a7dada0c94db9066f31d7f9345ca7e357310",
+    "historical_WPF_native_setup_sha256": "03e026141854a7dada0c94db9066f31d7f9345ca7e35a37f7a73efa9e1657310",
     "WPF_CI_run_id": 40611423342,
     "WPF_CI_status": "success",
     "historical_onehost_diagnostic_setup_sha256": "44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3",
