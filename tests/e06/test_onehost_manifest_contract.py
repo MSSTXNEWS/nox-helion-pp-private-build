@@ -46,7 +46,9 @@ class OneHostManifestContract(unittest.TestCase):
         supplied = set(re.findall(r"(\w+)\s*=", args.group(1)))
         self.assertTrue(required)
         self.assertEqual(required - supplied, set())
-        self.assertIn("Owner729Receipt=$pinnedManifest", azure)
+        self.assertIn("Owner729Receipt=(Join-Path", azure)
+        self.assertIn("nox-original-729-owner-pinned.json", azure)
+        self.assertNotIn("Owner729Receipt=$pinnedManifest", azure)
         self.assertIn("--out $pinnedManifest", azure)
         self.assertIn("BUILD_ONLY_NOT_E07_ACCEPTED", azure)
 
