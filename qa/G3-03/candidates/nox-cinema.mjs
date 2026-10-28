@@ -84,7 +84,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
   let preference=!!motion?.matches;
   let mode=profile;
-  let disposed=false,active=true,raf=0,lastFrame=0,frameCount=0;
+  let disposed=false,hostVisible=true,intersectVisible=true,raf=0,lastFrame=0,frameCount=0;
   let state="idle",stateRunId=null,emissions=0,particleCount=0;
   let ownerRoot=false;
   const decorated=[];
@@ -127,6 +127,11 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     for(const p of particles){p.node.remove();}
     particles.length=0;particleCount=0;
   }
+  function isActive(){return !disposed&&!doc.hidden&&hostVisible&&intersectVisible;}
+  function syncVisible(){
+    root.dataset.noxFxVisible=isActive()?"true":"false";
+    if(isActive())wake();else sleep();
+  }
   function nextDelay(policy){return policy.minimumBurstMs+
     random()*(policy.maximumBurstMs-policy.minimumBurstMs);}
   function makeParticle(orb,now){
@@ -145,7 +150,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   function loop(now){
     raf=0;
-    if(disposed||!active||doc.hidden)return;
+    if(!isActive())return;
     const policy=profileFor(mode,preference);
     if(policy.fps===0){clearParticles();return;}
     raf=win.requestAnimationFrame(loop);
@@ -168,7 +173,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     }
   }
   function wake(){
-    if(!disposed&&active&&!doc.hidden&&!preference&&!raf){
+    if(isActive()&&!preference&&profileFor(mode,false).fps>0&&!raf){
       lastFrame=0;raf=win.requestAnimationFrame(loop);
     }
   }
@@ -176,9 +181,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(raf){win.cancelAnimationFrame(raf);raf=0;}
     clearParticles();
   }
-  function onVisibility(){root.dataset.noxFxVisible=(!doc.hidden&&active)?"true":"false";if(doc.hidden)sleep();else wake();}
+  function onVisibility(){syncVisible();}
   doc.addEventListener("visibilitychange",onVisibility);
-  const onMotion=e=>{preference=!!e.matches;if(preference)sleep();else wake();};
+  const onMotion=e=>{preference=!!e.matches;if(preference)sleep();else syncVisible();};
   if(motion){
     if(typeof motion.addEventListener==="function")
       motion.addEventListener("change",onMotion);
@@ -186,9 +191,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   const observer=typeof win.IntersectionObserver==="function"?
     new win.IntersectionObserver(items=>{
-      active=items.some(x=>x.isIntersecting);
-      root.dataset.noxFxVisible=active?"true":"false";
-      if(active)wake();else sleep();
+      intersectVisible=items.some(x=>x.isIntersecting);
+      syncVisible();
     },{threshold:.001}):null;
   if(observer)observer.observe(root);
   function applyState(next,runId=null,coreId=null){
@@ -217,18 +221,17 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(typeof un!=="function")throw new Error("NOX_FX_SUBSCRIBE_REQUIRES_CLEANUP");
     unsubscribe=un;
   }
-  mounted.set(root,true);wake();
+  mounted.set(root,true);syncVisible();
   return Object.freeze({
     setProfile(next){
       if(!profileSet.has(next))return false;
       mode=next;root.dataset.noxMode=next.toLowerCase();
-      if(next==="REDUCED")sleep();else wake();return true;
+      if(next==="REDUCED")sleep();else syncVisible();return true;
     },
     setState:applyState,
-    setVisible(value){active=value===true;root.dataset.noxFxVisible=active?"true":"false";
-      if(active)wake();else sleep();},
+    setVisible(value){hostVisible=value===true;syncVisible();},
     snapshot(){return Object.freeze({profile:preference?"REDUCED":mode,
-      active:!doc.hidden&&active&&!disposed,coreCount:CORE_COUNT,
+      active:isActive(),coreCount:CORE_COUNT,
       particles:particleCount,emitted:emissions,frames:frameCount,
       state,stateRunId,telemetry:"HOST_ONLY"});},
     destroy(){
