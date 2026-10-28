@@ -25,3 +25,15 @@ jobs:
           name: nox-r08-WPF-diagnostic-NOT-RELEASE
           path: ${{ runner.temp }}/nox-r08-publish
           retention-days: 14
+      - name: Build candidate NSIS using original P01 installer source
+        shell: pwsh
+        run: ./diagnostics/r08/build_installer.ps1
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: nox-r08-NSIS-diagnostic-NOT-RELEASE
+          path: |
+            ${{ runner.temp }}/nox-r08-installer/NOX-HELION-Setup-CANDIDATE.exe
+            ${{ runner.temp }}/nox-r08-installer/p01-nsis-build-receipt.json
+            ${{ runner.temp }}/nox-r08-installer/NOX_DIAGNOSTIC_NSIS_RECEIPT.json
+          retention-days: 14
