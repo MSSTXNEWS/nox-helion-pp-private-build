@@ -124,9 +124,12 @@ class P02EventRelay:
                         raise P02Error('CHAT_SOURCE_URL_FORBIDDEN') from exc
         try:
             serialized = json.dumps(payload, ensure_ascii=False, allow_nan=False)
-        except (TypeError, ValueError, OverflowError) as exc:
+            encoded = serialized.encode('utf-8', errors='strict')
+        except (TypeError, ValueError, OverflowError, UnicodeEncodeError) as exc:
+            # Lone UTF-16 surrogates can arrive from malformed JSON escapes.
+            # Never let a raw UnicodeEncodeError escape the native host relay.
             raise P02Error('P02_EVENT_NOT_SERIALIZABLE') from exc
-        if len(serialized.encode('utf-8')) > 65536:
+        if len(encoded) > 65536:
             raise P02Error('P02_EVENT_PAYLOAD_OVER_QUOTA')
         mapped = self._binding.route_map[kind]
         self._binding.publish(mapped, payload)
