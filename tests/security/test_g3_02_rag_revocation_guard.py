@@ -42,7 +42,15 @@ return result;
         self.assertEqual(audit_source("var result = await Foo(); return result;")["finding"],
                          "EXPECTED_ORIGINAL_RAG_PATH_MISSING")
 
-    def test_06_git_blob_sha_is_distinct_from_file_sha256(self):
+    def test_06_reject_noop_post_await_callback(self):
+        source = PREFIX + "var ignored = _authorizeNativeSession(nativeScope);\nreturn result;"
+        self.assertEqual(audit_source(source)["status"], "HOLD")
+
+    def test_07_reject_if_without_throw(self):
+        source = PREFIX + "if (_authorizeNativeSession(nativeScope) is not true) LogOnly();\nreturn result;"
+        self.assertEqual(audit_source(source)["status"], "HOLD")
+
+    def test_08_git_blob_sha_is_distinct_from_file_sha256(self):
         self.assertEqual(git_blob_sha1(b"hello\n"), "ce013625030ba8dba906f756967f9e9ca394464a")
 
 
