@@ -15,7 +15,8 @@ export function createD02NativeVisualBus(hostPort,fx,coreIds,options={}){
   if(typeof hostPort?.subscribeNative!=="function" ||
      typeof fx?.setState!=="function" ||
      !Array.isArray(coreIds)||coreIds.length!==8 ||
-     new Set(coreIds).size!==8||coreIds.some(id=>!VALID_ID.test(id)||id==="HELION")||
+     new Set(coreIds).size!==8||coreIds.some(id=>typeof id!=="string"||
+       !VALID_ID.test(id)||id==="HELION")||
      [now,schedule,cancel].some(fn=>typeof fn!=="function"))
     throw Error("D02_NATIVE_SOURCE_AND_EIGHT_CORES_REQUIRED");
   const valid=new Set(["HELION",...coreIds]);
