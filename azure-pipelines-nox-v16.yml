@@ -70,6 +70,8 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'E07_DUAL_PART_RECEIPT_PARITY_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'E06_PART_PIN_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_r17_nfc_namespace_gate.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'SOURCELOCK_NFC_NAMESPACE_REGRESSION_HOLD' }
       $pinnedManifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-owner-pinned.json'
       python coordination/e06/verify_original_729_source.py --parts-dir . --out $pinnedManifest --run-id 'NOX-V16-AZURE-$(Build.BuildId)'
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_THREE_PART_PIN_SHA_HOLD' }
@@ -101,6 +103,18 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_PRELAUNCH_SOURCE_GATE_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_creative_worker_stdout_admission_r14.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_STDOUT_SOURCE_GATE_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_request_replay_r17.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_DUPLICATE_REQUEST_REGRESSION_HOLD' }
+      python -m unittest discover -s coordination/e06_host50 -p 'test_untrusted_wire_recursion_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'HOST50_NESTED_WIRE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_p02_pack01_atomic_bind_r16.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'PACK01_ATOMIC_BIND_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_p03_queue_claim_cleanup_r16.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P03_QUEUE_CLAIM_SOURCE_REGRESSION_HOLD' }
+      # Offline .NET8 smoke only: verifies duplicate nested C# RAG-index
+      # provenance keys are rejected BEFORE the existing deserializer.
+      dotnet run --project qa/e07/P04NativeIndexDuplicateR10/P04NativeIndexDuplicateR10.csproj
+      if ($LASTEXITCODE -ne 0) { throw 'P04_CSHARP_RAG_INDEX_DUPLICATE_REGRESSION_HOLD' }
       python -m unittest discover -s Packages/P03/Source/python-host -p 'test_p03_scope_shape_r10.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_OWNER_SCOPE_REGRESSION_HOLD' }
       python -m unittest discover -s tests/P04 -p 'test_e04_rights_verifier_unavailable_r14.py' -v
