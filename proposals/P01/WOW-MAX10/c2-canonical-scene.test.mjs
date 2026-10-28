@@ -1,8 +1,8 @@
 import test from "node:test";import assert from "node:assert/strict";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
-const node=()=>({nodeType:1,addEventListener(){},contains(){return false}});
+const node=()=>({nodeType:1,inside:true,addEventListener(){},contains(){return false}});
 function make(){
- const root={nodeType:1,ownerDocument:{addEventListener(){}},contains:n=>n?.nodeType===1&&n!==root};
+ const root={nodeType:1,ownerDocument:{addEventListener(){}},contains:n=>n?.nodeType===1&&n.inside===true&&n!==root};
  const orbs=["HELION",...Array.from({length:8},(_,i)=>"CORE"+(i+1))].map(id=>({id,element:node()}));
  const entries=(n,p)=>Array.from({length:n},(_,i)=>({id:p+i,routeId:p+"."+i,element:node()}));
  return {root,orbs,menu:entries(8,"menu"),buttons:entries(5,"button"),
