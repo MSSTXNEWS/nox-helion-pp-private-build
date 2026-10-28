@@ -110,6 +110,9 @@ class ValidatorTests(unittest.TestCase):
 
     def test_blocked_tasks_are_not_counted_complete(self):
         x=fixture();task=x["tasks"][0];task["status"]="HOLD";task["blocker"]="GPU unavailable"
+        with self.assertRaisesRegex(module.ReportInvalid,"TEN_REAL_TASKS_REQUIRED"):
+            module.validate(x)
+        x["quality_gates"]["G2"]["status"]="HOLD"
         got=module.validate(x)
         self.assertEqual(got["completed_unique_tasks"],9)
         self.assertEqual(got["blocked_tasks"],1)
