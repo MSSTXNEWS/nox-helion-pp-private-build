@@ -62,6 +62,7 @@ function refresh(){
  elements.time.textContent=duration(total);
  let start=0;
  for(const s of ui.scenes){
+  const timeStart=start;
   const card=text("article","","scene-card"+(ui.selected===s.id?" selected":""));
   const meta=text("div","","scene-meta");
   meta.append(text("strong",s.title),text("small",duration(start)+" – "+duration(start+s.seconds)));
@@ -69,7 +70,7 @@ function refresh(){
   const detail=text("p",s.prompt.slice(0,150));
   const button=text("button","Выбрать сцену");button.type="button";
   button.addEventListener("click",()=>{ui.selected=s.id;elements.headline.textContent=s.title;
-    elements.detail.textContent=s.prompt;elements.timecode.textContent=duration(start-s.seconds+ s.seconds);
+    elements.detail.textContent=s.prompt;elements.timecode.textContent=duration(timeStart);
     refresh()});
   card.append(meta,info,detail,button);elements.list.append(card);
   start+=s.seconds;
