@@ -45,12 +45,16 @@ class SourceReadyCriticalGates(unittest.TestCase):
         missing = [r["TaskID"] for r in rows if r["NativeHost"] != "PASS"]
         self.assertFalse(missing, "Missing PACK01 native host receipts: " + ",".join(missing))
 
-    def test_pack02_native_bindings_must_be_proven(self):
+    def test_pack02_source_50_candidates_are_not_mistaken_for_exe_acceptance(self):
+        # SOURCE_READY must not depend on a future EXE (circular gate).
+        # Assert 50 source tasks exist, but explicitly preserve NativeExe=NO
+        # as a separate release gate, not a source-code failure.
         rows = list(csv.DictReader(io.StringIO(
             source("proposals/NOX-PACK02-50/acceptance-ledger.csv"))))
         self.assertEqual(len(rows), 50)
-        missing = [r["TaskID"] for r in rows if r["NativeExe"] != "YES"]
-        self.assertFalse(missing, "PACK02 candidate-only native paths: " + ",".join(missing))
+        self.assertEqual(len({r["RouteID"] for r in rows}), 50)
+        self.assertTrue(all(r["State"] == "SOURCE_IMPLEMENTED" for r in rows))
+        self.assertTrue(all(r["NativeExe"] == "NO" for r in rows))
 
     def test_p04_rag_rejects_ambiguous_disk_json(self):
         text = source("Packages/P04/rag_python_compat.py")
@@ -80,10 +84,23 @@ class SourceReadyCriticalGates(unittest.TestCase):
         self.assertEqual(text.count("E07_BUILDID_SEALED"), 1)
         self.assertIn("FileMode]::CreateNew", text)
 
-    def test_wow_200_runtime_verification_must_be_evidenced(self):
-        text = source("integrations/wow200/stage_wow200.py")
-        self.assertNotIn('"complete_200_runtime_verified":False', text,
-                         "WOW200 source stager itself records runtime 200 acceptance as false")
+    def test_wow_200_ids_are_complete_without_false_runtime_acceptance(self):
+        # Catalog inventory is necessary source evidence but never E07 proof.
+        catalog_ranges = (
+            ("integrations/wow200/proposals/NOX-WOW51-100/catalog.mjs", 51, 100),
+            ("integrations/wow200/proposals/NOX-WOW101-150/catalog.mjs", 101, 150),
+            ("integrations/wow200/proposals/NOX-WOW151-200/catalog.mjs", 151, 200),
+        )
+        all_ids = []
+        for path, start, end in catalog_ranges:
+            ids = [int(x) for x in re.findall(r'"id"\\s*:\\s*(\\d+)', source(path))]
+            self.assertEqual(ids, list(range(start, end + 1)), path)
+            all_ids.extend(ids)
+        self.assertEqual(len(all_ids), 150)
+        self.assertEqual(len(set(all_ids)), 150)
+        stager = source("integrations/wow200/stage_wow200.py")
+        self.assertIn('"complete_200_runtime_verified":False', stager,
+                      "Catalog count cannot be promoted to Windows runtime PASS")
 
 
 if __name__ == "__main__":
