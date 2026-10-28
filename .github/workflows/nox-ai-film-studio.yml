@@ -1,0 +1,27 @@
+name: NOX AI Film Studio V16 - native storyboard and film montage
+on:
+  push:
+    paths:
+      - 'proposals/NOX-AI-FILM-STUDIO/**'
+      - '.github/workflows/nox-ai-film-studio.yml'
+  pull_request:
+    paths:
+      - 'proposals/NOX-AI-FILM-STUDIO/**'
+      - '.github/workflows/nox-ai-film-studio.yml'
+jobs:
+  film-studio-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native film scene, ComfyUI reuse, adult-age and FFmpeg export contracts
+        run: python -m unittest discover -s proposals/NOX-AI-FILM-STUDIO -p 'test_*.py' -v
+      - name: Film Studio browser UI parser
+        run: |
+          node --check proposals/NOX-AI-FILM-STUDIO/film-studio.js
+          node --test proposals/NOX-AI-FILM-STUDIO/test_ui.mjs
