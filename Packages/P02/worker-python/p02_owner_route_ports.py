@@ -113,6 +113,9 @@ class OwnerTwoPorts:
         cap_id = args.get("capture_id")
         if not isinstance(cap_id, str) or not _TOKEN.fullmatch(cap_id):
             raise ValueError("Opaque native capture id required")
+        # STOP before consumption must preserve the one-use native capture.
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
         # Native host consumes capture exactly once; a second lookup MUST fail.
         try:
             audio = self.take_audio(scope, cap_id)
@@ -120,10 +123,15 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
         if not isinstance(audio, bytes) or not 0 < len(audio) <= 16*1024*1024:
             raise RouteHold("NATIVE_AUDIO_CAPTURE_UNAVAILABLE")
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
         result = self.voice.run(
             scope.identity, audio, source=args.get("source"), target=args.get("target"),
             voice=args.get("voice"), mode=args.get("mode", "translate"),
             level=args.get("level", "A2"), microphone_consent=True, stop=stop)
+        # A STOP while ASR/LLM/TTS was running must not publish new audio.
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):

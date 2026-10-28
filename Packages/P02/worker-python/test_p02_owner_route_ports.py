@@ -61,6 +61,33 @@ class RouteTests(unittest.TestCase):
         self.assertNotIn('audio',res)
         with self.assertRaises(RouteHold):self.ports.captured_voice(self.scope,{
             'capture_id':'a'*32,'source':'ru','target':'es','voice':'es-v'})
+    def test_native_stop_before_capture_does_not_consume_one_use_audio(self):
+        import threading
+        stopped = threading.Event()
+        stopped.set()
+        with self.assertRaisesRegex(RouteHold, "NATIVE_VOICE_STOPPED_BEFORE_CAPTURE"):
+            self.ports.captured_voice(self.scope, {
+                'capture_id': 'a'*32, 'source': 'ru', 'target': 'es', 'voice': 'es-v'
+            }, stop=stopped)
+        self.assertEqual(self.audio['a'*32], b'voice')
+
+    def test_native_stop_after_voice_run_does_not_publish_output(self):
+        import threading
+        from types import SimpleNamespace
+        stopped = threading.Event()
+        published = []
+        def finish_after_stop(*args, **kwargs):
+            stopped.set()
+            return SimpleNamespace(audio=b'audio', transcript='privet',
+                                   response='hola', target_lang='es', mode='translate')
+        self.ports.voice.run = finish_after_stop
+        self.ports.store_output_audio = lambda scope, audio: published.append(audio) or 'b'*32
+        with self.assertRaisesRegex(RouteHold, "NATIVE_VOICE_STOPPED_BEFORE_OUTPUT"):
+            self.ports.captured_voice(self.scope, {
+                'capture_id': 'a'*32, 'source': 'ru', 'target': 'es', 'voice': 'es-v'
+            }, stop=stopped)
+        self.assertEqual(published, [])
+
     def test_voice_rejects_page_audio(self):
         with self.assertRaises(PermissionError):self.ports.captured_voice(self.scope,{
             'capture_id':'a'*32,'audio':b'evil'})
