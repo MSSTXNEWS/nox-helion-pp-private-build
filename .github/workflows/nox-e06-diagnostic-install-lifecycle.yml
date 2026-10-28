@@ -1,0 +1,47 @@
+name: NOX EXPRESS diagnostic NSIS install-verify-uninstall on Windows
+on:
+  pull_request:
+    paths:
+      - 'coordination/e06/Smoke-NoxExpressInstaller.ps1'
+      - '.github/workflows/nox-e06-diagnostic-install-lifecycle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-e06-installer-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  clean-runner-installer-lifecycle:
+    runs-on: windows-2025
+    timeout-minutes: 18
+    steps:
+      - name: Checkout only smoke scripts, never modify original R08 P01 source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download the exact immutable successful Windows diagnostic installer
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-express-block1-combined-diagnostic
+          run-id: 40611023212
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          github-token: ${{ github.token }}
+          path: input/combined
+      - name: Check isolated-runner preimage and run the actual NSIS installer and uninstaller
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          & 'coordination/e06/Smoke-NoxExpressInstaller.ps1' `
+            -Installer 'input/combined/NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe' `
+            -BuildReceipt 'input/combined/NOX_EXPRESS_BLOCK1_COMBINED_RECEIPT.json' `
+            -EvidencePath 'ci-evidence/NOX_EXPRESS_INSTALL_UNINSTALL_RECEIPT.json'
+          if ($LASTEXITCODE -ne 0) { throw 'NOX_EXPRESS_INSTALL_LIFECYCLE_HOLD' }
+      - name: Preserve evidence and failures without silently accepting the release
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-express-installer-smoke-evidence
+          path: ci-evidence/NOX_EXPRESS_INSTALL_UNINSTALL_RECEIPT.json
+          retention-days: 30
+          if-no-files-found: warn
