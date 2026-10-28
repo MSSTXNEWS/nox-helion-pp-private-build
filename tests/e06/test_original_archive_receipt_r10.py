@@ -78,6 +78,8 @@ class ExclusiveManifestTests(unittest.TestCase):
     def test_original_archive_contract_is_not_changed(self):
         self.assertEqual(archive.PARTS, ('source_00.part', 'source_01.part', 'source_02.part'))
         self.assertEqual(archive.EXPECTED_SIZE, 60364346)
+        self.assertEqual(archive.EXPECTED_PART_SIZES, (20971520, 20971520, 18421306))
+        self.assertEqual(len(archive.EXPECTED_PART_GIT_BLOBS), 3)
         self.assertEqual(archive.EXPECTED_SHA256,
             'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a')
 
@@ -89,7 +91,10 @@ class ExclusiveManifestTests(unittest.TestCase):
         splits = (payload[:15], payload[15:30], payload[30:])
         for i, fragment in enumerate(splits):
             (self.root/f'source_0{i}.part').write_bytes(fragment)
+        synthetic_pins = tuple(hashlib.sha1(b'blob ' + str(len(p)).encode() + b'\0' + p).hexdigest() for p in splits)
         with patch.object(archive, 'EXPECTED_SIZE', len(payload)), \
+             patch.object(archive, 'EXPECTED_PART_SIZES', tuple(map(len, splits))), \
+             patch.object(archive, 'EXPECTED_PART_GIT_BLOBS', synthetic_pins), \
              patch.object(archive, 'EXPECTED_SHA256', hashlib.sha256(payload).hexdigest()):
             receipt = archive.audit(self.root, expected_files=1)
         self.assertEqual(receipt['file_count'], 1)

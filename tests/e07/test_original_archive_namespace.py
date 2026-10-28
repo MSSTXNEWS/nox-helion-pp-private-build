@@ -43,10 +43,13 @@ class ExistingValidatorNamespaceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="e07-source03-") as temp:
             root = pathlib.Path(temp)
             cuts = (len(blob) // 3, len(blob) * 2 // 3)
-            for part, chunk in zip(validator.PARTS, (
-                    blob[:cuts[0]], blob[cuts[0]:cuts[1]], blob[cuts[1]:])):
+            fragments = (blob[:cuts[0]], blob[cuts[0]:cuts[1]], blob[cuts[1]:])
+            for part, chunk in zip(validator.PARTS, fragments):
                 (root / part).write_bytes(chunk)
+            pins = tuple(hashlib.sha1(b"blob " + str(len(p)).encode() + b"\0" + p).hexdigest() for p in fragments)
             with patch.object(validator, "EXPECTED_SIZE", len(blob)), \
+                 patch.object(validator, "EXPECTED_PART_SIZES", tuple(map(len, fragments))), \
+                 patch.object(validator, "EXPECTED_PART_GIT_BLOBS", pins), \
                  patch.object(validator, "EXPECTED_SHA256",
                                    hashlib.sha256(blob).hexdigest()):
                 with self.assertRaisesRegex(ValueError, code):
@@ -88,16 +91,40 @@ class ExistingValidatorNamespaceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="e07-source03-ok-") as temp:
             root = pathlib.Path(temp)
             cuts = (len(blob) // 3, len(blob) * 2 // 3)
-            for part, chunk in zip(validator.PARTS, (
-                    blob[:cuts[0]], blob[cuts[0]:cuts[1]], blob[cuts[1]:])):
+            fragments = (blob[:cuts[0]], blob[cuts[0]:cuts[1]], blob[cuts[1]:])
+            for part, chunk in zip(validator.PARTS, fragments):
                 (root / part).write_bytes(chunk)
+            pins = tuple(hashlib.sha1(b"blob " + str(len(p)).encode() + b"\0" + p).hexdigest() for p in fragments)
             with patch.object(validator, "EXPECTED_SIZE", len(blob)), \
+                 patch.object(validator, "EXPECTED_PART_SIZES", tuple(map(len, fragments))), \
+                 patch.object(validator, "EXPECTED_PART_GIT_BLOBS", pins), \
                  patch.object(validator, "EXPECTED_SHA256",
                                    hashlib.sha256(blob).hexdigest()):
                 receipt = validator.audit(root, 2)
             self.assertEqual(receipt["file_count"], 2)
             self.assertEqual(receipt["zip_sha256"], hashlib.sha256(blob).hexdigest())
             self.assertEqual(len(receipt["files"]), 2)
+
+
+    def test_equal_combined_zip_sha_cannot_hide_shifted_part_boundary(self):
+        blob = archive_bytes([("good/file.txt", stat.S_IFREG)])
+        cuts = (len(blob) // 3, len(blob) * 2 // 3)
+        original = (blob[:cuts[0]], blob[cuts[0]:cuts[1]], blob[cuts[1]:])
+        shifted = (blob[:cuts[0] + 1], blob[cuts[0] + 1:cuts[1]], blob[cuts[1]:])
+        self.assertEqual(b"".join(shifted), blob)
+        self.assertEqual(hashlib.sha256(b"".join(shifted)).hexdigest(),
+                         hashlib.sha256(blob).hexdigest())
+        with tempfile.TemporaryDirectory(prefix="e07-boundary-") as temp:
+            root = pathlib.Path(temp)
+            for name, contents in zip(validator.PARTS, shifted):
+                (root / name).write_bytes(contents)
+            pins = tuple(hashlib.sha1(b"blob " + str(len(p)).encode() + b"\0" + p).hexdigest() for p in original)
+            with patch.object(validator, "EXPECTED_SIZE", len(blob)), \
+                 patch.object(validator, "EXPECTED_PART_SIZES", tuple(map(len, original))), \
+                 patch.object(validator, "EXPECTED_PART_GIT_BLOBS", pins), \
+                 patch.object(validator, "EXPECTED_SHA256", hashlib.sha256(blob).hexdigest()):
+                with self.assertRaisesRegex(ValueError, "Part sizes mismatch"):
+                    validator.audit(root, 1)
 
 
 if __name__ == "__main__":

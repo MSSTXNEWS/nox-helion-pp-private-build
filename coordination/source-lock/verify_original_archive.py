@@ -5,6 +5,12 @@ import argparse, hashlib, json, os, pathlib, re, stat, sys, tempfile, zipfile
 
 PARTS = ("source_00.part", "source_01.part", "source_02.part")
 EXPECTED_SIZE = 60364346
+EXPECTED_PART_SIZES = (20971520, 20971520, 18421306)
+EXPECTED_PART_GIT_BLOBS = (
+    "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+    "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+    "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+)
 EXPECTED_SHA256 = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
 BAD = re.compile(r'[<>:"|?*\x00-\x1f]')
 RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$', re.I)
@@ -57,17 +63,28 @@ def audit(directory: pathlib.Path, expected_files: int):
     if any(not p.is_file() or p.is_symlink() for p in paths):
         raise ValueError("Missing or nonregular part / symlink detected")
     sizes = [p.stat().st_size for p in paths]
-    if sum(sizes) != EXPECTED_SIZE:
-        raise ValueError(f"Part sizes mismatch {sizes}")
+    if sum(sizes) != EXPECTED_SIZE or tuple(sizes) != EXPECTED_PART_SIZES:
+        raise ValueError(f"Part sizes mismatch {sizes}; expected {EXPECTED_PART_SIZES}")
     sha = hashlib.sha256()
+    part_receipts = []
     with tempfile.TemporaryDirectory(prefix="nox-original-audit-") as tmp:
         out = pathlib.Path(tmp) / "input-original.zip"
         with out.open("wb") as dest:
-            for p in paths:
+            for index, p in enumerate(paths):
+                part_git = hashlib.sha1(f"blob {sizes[index]}\0".encode("ascii"))
+                part_sha256 = hashlib.sha256()
                 with p.open("rb") as stream:
                     for chunk in iter(lambda: stream.read(1024*1024), b""):
                         sha.update(chunk)
+                        part_git.update(chunk)
+                        part_sha256.update(chunk)
                         dest.write(chunk)
+                actual_part_blob = part_git.hexdigest()
+                if actual_part_blob != EXPECTED_PART_GIT_BLOBS[index]:
+                    raise ValueError(f"Part Git blob mismatch: {p.name}")
+                part_receipts.append({"name": p.name, "bytes": sizes[index],
+                                      "git_blob_sha1": actual_part_blob,
+                                      "sha256": part_sha256.hexdigest()})
         actual = sha.hexdigest()
         if actual != EXPECTED_SHA256:
             raise ValueError(f"ZIP SHA256 mismatch: {actual}")
@@ -95,7 +112,7 @@ def audit(directory: pathlib.Path, expected_files: int):
     return {"schema": "NOX_ORIGINAL_SOURCE_729_SHA256_V1",
             "status": "SOURCE_ARCHIVE_VERIFIED_ONLY_NOT_E07_RELEASE",
             "zip_bytes": EXPECTED_SIZE, "zip_sha256": actual,
-            "parts": [{"name": name, "bytes": length} for name, length in zip(PARTS, sizes)],
+            "parts": part_receipts,
             "file_count": len(entries), "files": entries}
 
 

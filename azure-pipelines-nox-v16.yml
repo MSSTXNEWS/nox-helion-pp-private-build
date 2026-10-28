@@ -34,6 +34,13 @@ jobs:
       Write-Host "SOURCE_COMMIT_SHA=$head"
       python -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NAMESPACE_TEST_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'E06_PART_PIN_REGRESSION_HOLD' }
+      $pinnedManifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-owner-pinned.json'
+      python coordination/e06/verify_original_729_source.py --parts-dir . --out $pinnedManifest --run-id 'NOX-V16-AZURE-$(Build.BuildId)'
+      if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_THREE_PART_PIN_SHA_HOLD' }
+      $pinReceipt=Get-Content -LiteralPath $pinnedManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($pinReceipt.fileCount -ne 729 -or $pinReceipt.combinedZip.sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a') { throw 'E06_PINNED_SOURCE_RECEIPT_INVALID' }
       $manifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-sha256.json'
       python coordination/source-lock/verify_original_archive.py --parts-dir . --output $manifest --expected-files 729
       if ($LASTEXITCODE -ne 0) { throw 'REAL_SOURCE_729_SHA_HOLD' }
@@ -45,6 +52,13 @@ jobs:
       $ErrorActionPreference='Stop'
       $env:GITHUB_RUN_ID='AZURE-$(Build.BuildId)'
       $env:GITHUB_SHA='$(Build.SourceVersion)'
+      # Read-only native ingress and training validation before source staging.
+      python Packages/P02/worker-python/test_p02_native_ingress.py
+      if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_INGRESS_UNIT_HOLD' }
+      python tests/P04/test_training_failure_status.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
+      python tests/P04/test_e04_role_type_before_membership.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
       & ./private_build.ps1
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
       python coordination/e06/stage_p01.py
@@ -81,6 +95,7 @@ jobs:
       New-Item -ItemType Directory -Path $dst -Force | Out-Null
       $files=@(
         @('$(Agent.TempDirectory)/nox-original-729-sha256.json','original-729-sha256.json'),
+        @('$(Agent.TempDirectory)/nox-original-729-owner-pinned.json','original-729-owner-pinned.json'),
         @('work/e06/azure-onehost-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json','ONEHOST_DIAGNOSTIC_RECEIPT.json'),
         @('work/e06/azure-onehost-diagnostic/E07_BUILT_HANDOFF.json','E07_BUILT_HANDOFF.json'),
         @('work/e06/azure-onehost-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json','D02_VISUAL_PUBLISH_RECEIPT.json'),

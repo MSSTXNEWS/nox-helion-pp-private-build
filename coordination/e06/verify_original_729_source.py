@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import os
+import importlib.util
 from pathlib import Path, PurePosixPath
 import re
 import tempfile
@@ -33,6 +34,32 @@ DEVICE = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$", re.I)
 
 class SourceHold(RuntimeError):
     """An evidence failure: do not claim SourceLock, build or Windows acceptance."""
+
+# Same immutable canonical ZIP namespace gate as the existing R11 owner stage.
+# Do not introduce an independent validator or duplicate security logic.
+CANONICAL_VALIDATOR = Path(__file__).resolve().parents[1] / "source-lock/verify_original_archive.py"
+
+def verify_zip_namespace(infos) -> None:
+    if not CANONICAL_VALIDATOR.is_file() or CANONICAL_VALIDATOR.is_symlink():
+        raise SourceHold("CANONICAL_ZIP_VALIDATOR_UNAVAILABLE")
+    spec = importlib.util.spec_from_file_location("nox_original_zip_namespace", CANONICAL_VALIDATOR)
+    if spec is None or spec.loader is None:
+        raise SourceHold("CANONICAL_ZIP_VALIDATOR_INVALID")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not callable(getattr(mod, "validate_members", None)):
+        raise SourceHold("CANONICAL_ZIP_NAMESPACE_FUNCTION_MISSING")
+    try:
+        mod.validate_members(infos)
+    except ValueError as exc:
+        # Preserve earlier public error codes for existing E06 consumers while
+        # rejecting new dangerous ancestor and nonregular UNIX ZIP members.
+        reason = str(exc)
+        if reason.startswith("Duplicate/case collision:"):
+            raise SourceHold("ZIP_DUPLICATE_WINDOWS_NAME: " + reason) from exc
+        if reason.startswith("Symlink/special file:"):
+            raise SourceHold("ZIP_SYMLINK_NOT_ALLOWED_OR_SPECIAL_UNIX: " + reason) from exc
+        raise SourceHold("ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD: " + reason) from exc
 
 
 def safe_member(name: str, directory: bool) -> str:
@@ -105,6 +132,13 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
             infos = archive.infolist()
             if len(infos) > MAX_FILES + 4096:
                 raise SourceHold("ZIP_TOO_MANY_MEMBERS")
+            # File-as-parent (either order), implicit Windows casefold collisions
+            # and UNIX special nodes are denied before reading member bytes.
+            # Keep original E06 unsafe-name error codes before the stricter
+            # shared parent/type preflight, so existing consumers do not regress.
+            for entry in infos:
+                safe_member(entry.filename, entry.is_dir())
+            verify_zip_namespace(infos)
             for entry in infos:
                 directory = entry.is_dir()
                 name = safe_member(entry.filename, directory)
