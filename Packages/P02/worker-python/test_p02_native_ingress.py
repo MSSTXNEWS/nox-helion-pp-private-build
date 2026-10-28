@@ -167,7 +167,7 @@ class IngressTests(unittest.TestCase):
 
     def test_excessive_nesting_in_valid_envelope_is_invalid_json(self):
         inner = b"[" * 515 + b"0" + b"]" * 515
-        raw = packet(32, payload={"list": []}).replace(b'"list":[]', b'"list":' + inner)
+        raw = packet(32, payload={"list": []}).replace(b'"list": []', b'"list":' + inner)
         with self.assertRaisesRegex(ProtocolHold, "NATIVE_FRAME_INVALID_JSON"):
             self.router.handle(raw)
         self.assertEqual(self.provider.seen, [])
