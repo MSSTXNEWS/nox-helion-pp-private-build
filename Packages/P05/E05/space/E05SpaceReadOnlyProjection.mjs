@@ -4,6 +4,7 @@ export const EVENT_SCHEMA = 'NOX-INSTALLER-EVENT-v3';
 export const LOCKED_BASELINE = '0b3a7d435be735148d64171deb9027093a89646e';
 const weights = [0.20, 0.25, 0.20, 0.25, 0.10];
 const sourceIds = new Set(['weather','nox-news','msstx-news','eur-usd','usd-eur','eur-rub','bitcoin','brent','finance-news']);
+const singletonMarketIds = new Set(['eur-usd','usd-eur','eur-rub','bitcoin','brent']);
 const maximumAges = Object.freeze({weather:2700000,'nox-news':172800000,'msstx-news':172800000,'eur-usd':864000000,'usd-eur':864000000,'eur-rub':864000000,bitcoin:300000,brent:86400000,'finance-news':172800000});
 const sha = v => typeof v === 'string' && /^[a-f0-9]{64}$/i.test(v);
 const pct = v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
@@ -105,14 +106,19 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
       // A sensor cannot be observed AFTER the enclosing native polling frame.
       (polledUtc===null || (isoUtc(polledUtc) && Date.parse(s.observed_at_utc)<=Date.parse(polledUtc)));
     result[key]={value: valid?s.value:null, source:valid?s.source:null, stage:valid?'LIVE':'N_D',
-      observedUtc:valid?s.observed_at_utc:null};
+      observedUtc:valid?s.observed_at_utc:null,
+      deviceId:valid && typeof s.device_id==='string' && /^[A-Za-z0-9:._\/-]{1,120}$/.test(s.device_id)
+        ?s.device_id:null};
   }
   const used=result['gpu.vram.used_bytes'],total=result['gpu.vram.total_bytes'];
   if (used.value!==null && total.value!==null &&
       (total.value===0 || used.value>total.value || used.source!==total.source ||
+       // One NVML provider can report several physical GPUs. Never pair a
+       // GPU-0 used counter with GPU-1 total or with unidentified hardware.
+       !used.deviceId || used.deviceId!==total.deviceId ||
        Math.abs(Date.parse(used.observedUtc)-Date.parse(total.observedUtc))>5000)) {
     used.value=total.value=null; used.stage=total.stage='INCONSISTENT_VRAM';
-    used.observedUtc=total.observedUtc=null;
+    used.observedUtc=total.observedUtc=null;used.deviceId=total.deviceId=null;
   }
   return result;
 }
