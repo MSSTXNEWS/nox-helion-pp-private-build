@@ -42,9 +42,19 @@ jobs:
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs
           test -f _pinned_owner3_donor/Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs
-      - name: 32 real offline no-download ModelCenter admission regressions
+      - name: Execute all E03 offline regressions (minimum 106, no downloads)
         shell: bash
-        run: python -m unittest discover -s Packages/P03/Admission -p 'test_*.py' -v
+        run: |
+          python - <<'PY_E03'
+          import sys
+          import unittest
+          suite = unittest.defaultTestLoader.discover('Packages/P03/Admission', pattern='test_*.py')
+          count = suite.countTestCases()
+          if count < 106:
+              sys.exit(f'E03 regression suite shrank: {count} < 106')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          sys.exit(0 if result.wasSuccessful() else 1)
+          PY_E03
       - name: Python syntax
         shell: bash
         run: python -m py_compile Packages/P03/Admission/p03_modelcenter_gate.py
