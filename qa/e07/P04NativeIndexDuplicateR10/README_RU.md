@@ -6,9 +6,9 @@ Pinned PR162 preimage: `eebb89df8c280ae15d388514f1d0ec15fa80fc50`
 Existing owner C# source Git blob: `35dcaffad780ce5b0501422a2bc406ec52e12b26`  
 Existing Python RAG Git blob: `58af025bd05f0e99a445b56c307e12d600b8f19f`
 
-No product code changed. This QA-only project references existing `Packages/P04/NoxP04.csproj`, with a real local disk index. It requests a SID/conversation that does not own any sources: **no Ollama/network request** is needed. Cases: valid empty index; duplicate schema; case-insensitive schema alias; duplicate sources; duplicate ownerSid of an unrelated owner; duplicate chunkSha256 in an unrelated owner source.
+No product code changed. This QA-only project references existing `Packages/P04/NoxP04.csproj`, with a real local disk index. It requests a SID/conversation that does not own any sources: **no Ollama/network request** is needed. Cases (8): valid empty index; valid isolated foreign source; duplicate schema; case-insensitive schema alias; duplicate sources; duplicate ownerSid of an unrelated owner; case-insensitive nested OwnerSid alias; duplicate chunkSha256 in an unrelated owner source.
 
-Expected current behavior: first test succeeds, subsequent duplicate-key tests should FAIL (negative RED). Passing status is reserved for future existing-owner C# fix. **Do not count a RED run as product QA pass.**
+Expected current behavior: two valid-index controls succeed, while all six duplicate-key negative cases should FAIL (negative RED). Passing status is reserved for future existing-owner C# fix. **Do not count a RED run as product QA pass.**
 
 To run on .NET8 SDK:
 ```powershell

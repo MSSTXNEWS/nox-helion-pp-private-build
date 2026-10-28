@@ -58,7 +58,17 @@ internal static class Program
         await Check("foreign-citation-duplicate", """
             {"schema":"NOX-RAG-INDEX-v1","model":"fixture","vectorDimensions":0,"sources":[{"ownerSid":"S-1-5-21-1111","conversationId":"foreign","sourceId":"x","chunks":[{"chunkIndex":0,"chunkSha256":"a","chunkSha256":"b","text":"x","vector":[1.0]}]}]}
             """, true);
-        Console.WriteLine("E07_P04_NATIVE_INDEX_6_CASES_PASS");
+        // Positive control: a valid foreign source must remain readable, but
+        // never be returned to another Windows SID or require Ollama.
+        await Check("foreign-owner-valid", """
+            {"schema":"NOX-RAG-INDEX-v1","model":"fixture","vectorDimensions":0,"sources":[{"ownerSid":"S-1-5-21-1111","conversationId":"foreign","sourceId":"x","chunks":[]}]}
+            """, false);
+        // Web JSON defaults are case-insensitive; enforce identical semantics
+        // at every object depth, not just for root metadata.
+        await Check("foreign-owner-case-alias", """
+            {"schema":"NOX-RAG-INDEX-v1","model":"fixture","vectorDimensions":0,"sources":[{"ownerSid":"S-1-5-21-1111","OwnerSid":"S-1-5-21-2222","conversationId":"foreign","sourceId":"x","chunks":[]}]}
+            """, true);
+        Console.WriteLine("E07_P04_NATIVE_INDEX_8_CASES_PASS");
         return 0;
     }
 }
