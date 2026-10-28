@@ -4,6 +4,7 @@ No UI, additional server, account system, or database is created by this file.
 from __future__ import annotations
 import threading
 from contextlib import closing
+import unicodedata
 import urllib.parse
 import uuid
 from typing import Callable, Iterator
@@ -26,6 +27,35 @@ class ChatBridge:
         return requested
 
     @staticmethod
+    def _unsafe_citation_text(value: str) -> bool:
+        # Control/format/surrogate characters can spoof source labels or UI frames.
+        return any(unicodedata.category(ch) in ("Cc", "Cf", "Cs") for ch in value)
+
+    @staticmethod
+    def _safe_citation_url(url: str) -> bool:
+        # urlsplit silently normalizes leading space/C0 and some web renderers
+        # reinterpret backslashes or empty @userinfo. Preserve only unambiguous
+        # verified HTTPS citation targets; never download/fetch URLs here.
+        if (not url or url != url.strip() or "\\" in url or
+                any(ch.isspace() for ch in url) or
+                ChatBridge._unsafe_citation_text(url)):
+            return False
+        raw = urllib.parse.unquote_to_bytes(url)
+        if (any(ch < 32 or ch == 127 for ch in raw) or
+                ChatBridge._unsafe_citation_text(urllib.parse.unquote(url, errors="replace"))):
+            return False
+        try:
+            parsed = urllib.parse.urlsplit(url)
+            # Accessing port validates a malformed explicit port without requiring
+            # one; a legal non-default HTTPS port remains a citation, not a fetch.
+            _port = parsed.port
+            return (parsed.scheme == "https" and bool(parsed.hostname) and
+                    "@" not in parsed.netloc and "%" not in parsed.netloc and
+                    parsed.username is None and parsed.password is None)
+        except ValueError:
+            return False
+
+    @staticmethod
     def _rag_evidence(result: object) -> tuple[str, list[dict]]:
         if isinstance(result, str):
             if len(result) > 32000:
@@ -42,20 +72,17 @@ class ChatBridge:
             if not isinstance(row, dict) or row.get("verified") is not True:
                 continue
             source_id, title, url = row.get("source_id"), row.get("title"), row.get("url")
-            if not isinstance(source_id, str) or not 0 < len(source_id) <= 128:
+            if (not isinstance(source_id, str) or not 0 < len(source_id) <= 128 or
+                    ChatBridge._unsafe_citation_text(source_id)):
                 continue
-            if not isinstance(title, str) or not 0 < len(title) <= 200:
+            if (not isinstance(title, str) or not 0 < len(title) <= 200 or
+                    ChatBridge._unsafe_citation_text(title)):
                 continue
             item = {"source_id": source_id, "title": title}
             if url is not None:
                 if not isinstance(url, str) or len(url) > 2048:
                     continue
-                try:
-                    parsed = urllib.parse.urlsplit(url)
-                    if (parsed.scheme != "https" or not parsed.hostname or parsed.username or
-                            parsed.password or any(ord(c) < 32 for c in url)):
-                        continue
-                except ValueError:
+                if not ChatBridge._safe_citation_url(url):
                     continue
                 item["url"] = url
             evidence.append(item)
