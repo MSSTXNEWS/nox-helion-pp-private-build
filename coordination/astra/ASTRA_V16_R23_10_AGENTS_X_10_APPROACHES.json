@@ -1,6 +1,6 @@
 {
-  "schema": "NOX_V16_R23_ASTRA_TEN_AGENTS_TEN_APPROACHES_V1",
-  "version": "R23",
+  "schema": "NOX_V16_R24_ASTRA_TEN_AGENTS_TEN_APPROACHES_WITH_MANDATORY_ERROR_JOURNAL",
+  "version": "R24",
   "owner_directive": "10 real subagents if tools support them; each attempts 10 substantive source development approaches. Never claim actual spawn or approach DONE without tool events, changed code and evidence. If no real subagent tool, report SUBAGENT_SPAWN_UNAVAILABLE and run 10 isolated work queues sequentially, labeled simulated, with 10 planned approaches, not pretend 10 agents.",
   "initial_immutable_source_commit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
   "primary_astra_branch": "astra/v16-code-complete-source-only-20261029",
@@ -13,7 +13,10 @@
     "requirements_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
     "run_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
     "self_improvement_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
-    "master_journal_doc": "1qPG5zZIrqHvAxOzjeNf0Pj4bHMJrjS50"
+    "master_journal_doc": "1qPG5zZIrqHvAxOzjeNf0Pj4bHMJrjS50",
+    "error_master_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historical_error_journal_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "earlier_growth_master_doc": "1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98"
   },
   "metrics": {
     "total_approach_checkpoints": 100,
@@ -146,7 +149,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A02",
@@ -258,7 +266,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A03",
@@ -370,7 +383,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A04",
@@ -484,7 +502,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A05",
@@ -597,7 +620,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A06",
@@ -708,7 +736,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A07",
@@ -822,7 +855,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A08",
@@ -938,7 +976,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A09",
@@ -1049,7 +1092,12 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     },
     {
       "id": "A10",
@@ -1161,7 +1209,29 @@
           "evidence_git_sha": null,
           "blocked_reason": null
         }
-      ]
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
     }
-  ]
+  ],
+  "requirements_56_checklist_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+  "per_launch_journal_contract_path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+  "mandatory_read_before_every_launch": [
+    "full 56/56 V15 consolidated numbered rules from exact local copy and latest V16 §54",
+    "current master-error journal delta since last verified RunID",
+    "historical C34 error journal relevant prior lessons",
+    "E06 report last RunID and code SHA",
+    "E06 self-improvement prior lesson applicable to next code change"
+  ],
+  "mandatory_write_every_launch": [
+    "active V16 master errors append with RunID/code SHA/error delta and readback",
+    "E06 run report append RunID/10 progress bars/actual TaskID + SHA tests and readback",
+    "E06 self-improvement append genuine lesson or NO_NEW_LESSON with evidence and readback",
+    "C34 historical log read always; if permitted and needed append RunID pointer with readback; avoid needless rewrite"
+  ],
+  "journal_failure_policy": "REPORT_GATE=HOLD, commit write payload as immutable GitHub fallback, never falsely claim Drive saved; do not overwrite earlier text; single supervisor writer CAS revision",
+  "default_agent_spawn": "NOT_STARTED_NO_ACTUAL_SPAWN_RECEIPTS"
 }
