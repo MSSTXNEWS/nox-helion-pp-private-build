@@ -1,0 +1,61 @@
+{
+  "schema": "NOX-V16-LANE2-FINAL-SOURCE-RECEIPT-v1",
+  "task_id": "V16.26.4/P02-STRICT-JSON-FINITE-EXPONENT",
+  "run_id": "NOX-V16-L2-20261028-R16",
+  "owner": "Manual #2 CODE FIXER",
+  "base_head": "635c741dee6b4c14ee0fb2fbb614ac7beb6aad0c",
+  "branch": "fix/lane2-v16-final-p02-p04-p05-20261028-r16",
+  "changed": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_blob_sha1": "cc05e7d2897e7c1183255836c413846ceb5ff520",
+      "post_blob_sha1": "16c008366a00507a8f76286cc28cfa43a03d5257",
+      "pre_sha256": "de481593172733c230ca58d32cb1248c359b8c180b434e6de50cec1df6c17b32",
+      "post_sha256": "cf06894d5e112fb921494704ecf98bc811ddce8c0bc6e3d8b6fc923d04f9a037",
+      "source_commit": "16da2ee904614523ba48249e758b96c633cb1d18",
+      "scope": "Only reject overflowed finite JSON exponent before native owner dispatch; no new DB, LLM or public service"
+    }
+  ],
+  "declined_or_blocked_writes": [
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "status": "TOOL_WRITE_DENIED; R14 existing regression donor test blob 8b1a252b14cf45e92cde7a68d464e2a2f406f2db remains preserved"
+    },
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "status": "TOOL_WRITE_DENIED; R14 complete donor has NVIDIA_GPU_INVENTORY_FAILED guard, but shared P04 has newer unrelated dataset-role guard and cannot be overwritten"
+    }
+  ],
+  "other_isolated_donors": [
+    {
+      "branch": "fix/lane2-v16-express-p02-p03-p04-20261028-r13",
+      "receipt": "coordination/final-lane2/receipts/NOX_V16_L2_20261028_R14_SEVEN.json",
+      "status": "P02 test plus P04 delta must be owner-rebased, not blind cherry-picked"
+    },
+    {
+      "branch": "fix/lane2-p05-event-v3-parity-20261028-r15",
+      "commit": "b7e4500e584bb7a4b66f51fcec1a508deed1f46d",
+      "receipt": "coordination/final-lane2/receipts/NOX_V16_L2_20261028_R15_P05_EVENTS.json",
+      "status": "P05 three-file schema parity patch pending owner #1 current preimage admission"
+    }
+  ],
+  "tests": {
+    "github_blob_readback": "PASS",
+    "sha256_known_answer": "PASS abc and 120 bytes",
+    "offline_extracted_helper": "4/4 PASS on local R14 replica, not a native repo module test",
+    "real_ollama": "NOT_RUN",
+    "actual_python_repo_unittest": "NOT_RUN",
+    "dotnet_windows": "NOT_RUN",
+    "gpu_training": "NOT_RUN",
+    "E07_windows": "0/10 NOT_RUN"
+  },
+  "no_loss": "No files deleted, shared PR162/master untouched by Manual #2, original D02/WOW/8 CoreID/5 Persona and user data unchanged",
+  "critical_external_blockers": [
+    "GitHub Actions may have billing/spending gate; no real Windows runner steps",
+    "Original 729-member ZIP physical byte proof missing",
+    "Existing installer diagnostic-only, not full installed live ONEHOST",
+    "No frozen Windows EXE+Setup BuildID and SHA for independent E07"
+  ],
+  "one_improvement": "ONE_OWNER_MINIMAL_DELTA: avoid overwriting newer shared QLoRA source; prepare only a verified one-path P02 fix and link accepted owner donor receipts. Never turn denied write into fake success.",
+  "release": "HOLD"
+}
