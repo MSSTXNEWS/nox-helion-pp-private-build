@@ -111,6 +111,13 @@ class P02P04OneHost:
         self._authorize = native_authorize
         self._cores = approved_core_ids | frozenset({"HELION"})
         self._personas = approved_personas
+        # The owner objects are mutable Python instances. One-time type and
+        # loopback validation is insufficient: a callback can silently swap
+        # ChatBridge.store/ollama/rag_context or redirect P04 embeddings while
+        # an owner request awaits. Pin existing identities; never clone them.
+        self._owner_ollama = chat.ollama
+        self._owner_ollama_endpoint = chat.ollama.base
+        self._owner_rag_endpoint = rag.endpoint
         self._gpu = owner_gpu_control
         self._verify_ack = native_verify_gpu_ack
         self._verify_v3 = native_verify_v3
@@ -118,9 +125,24 @@ class P02P04OneHost:
 
         # The only RAG binding is the existing P04 callback. Never create a new
         # index or mutable per-user callback on the shared ChatBridge.
-        self.chat.rag_context = p02_callback(rag, native_sid)
+        self._pinned_rag_callback = p02_callback(rag, native_sid)
+        self.chat.rag_context = self._pinned_rag_callback
+
+    def _verify_owner_bindings(self) -> None:
+        """Fail closed on drift of the ONE already-approved owner graph.
+
+        This is an admission check, not a mutex against an adversarial Python
+        thread or a substitute for native IPC identity/Windows E2E evidence.
+        """
+        if (self.chat.store is not self.store
+                or self.chat.ollama is not self._owner_ollama
+                or self.chat.ollama.base != self._owner_ollama_endpoint
+                or self.rag.endpoint != self._owner_rag_endpoint
+                or self.chat.rag_context is not self._pinned_rag_callback):
+            raise OneHostHold("OWNER_RUNTIME_BINDING_CHANGED")
 
     def _admit(self, scope: NativeScope, operation: str) -> None:
+        self._verify_owner_bindings()
         if type(scope) is not NativeScope:
             raise PermissionError("NATIVE_SCOPE_REQUIRED_NOT_WEBVIEW_JSON")
         who = scope.identity
@@ -136,6 +158,9 @@ class P02P04OneHost:
             raise PermissionError("NATIVE_CONTEXT_NOT_BOUND_TO_EXISTING_CHAT")
         if self._authorize(scope, operation) is not True:
             raise PermissionError("NATIVE_OWNER_ROUTE_DENIED")
+        # A host callback itself can be blocking or can rebind an owner object.
+        # Recheck BEFORE even the read-only existing SQLite history admission.
+        self._verify_owner_bindings()
         # This checks the same existing SQLite history and tenant ACL. No
         # initialize(), CREATE TABLE, connection.open() or migration happens here.
         self.store.history(scope.tenant, scope.principal, scope.conversation_id, 1)
