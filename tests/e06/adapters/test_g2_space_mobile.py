@@ -716,5 +716,89 @@ class G2ComponentTests(unittest.TestCase):
                 existing_publish=lambda _: True)
 
 
+    def test_60_evidence_callback_cannot_rewrite_published_snapshot(self):
+        event = verified_event()
+        event["metadata"] = {"devices": ["native"]}
+        published = []
+        def attestor(copy):
+            copy["metadata"]["devices"].append("injected")
+            copy["message"] = "rewritten"
+            return True
+        self.assertTrue(relay_existing_events_v3(
+            event, run_id=G2_RUN, trusted_owner=lambda: True,
+            trusted_evidence=attestor,
+            existing_publish=lambda x: (published.append(x) or True)))
+        self.assertEqual(published[0]["metadata"], {"devices": ["native"]})
+        self.assertEqual(published[0]["message"], "fixture")
+        self.assertEqual(event["metadata"], {"devices": ["native"]})
+
+    def test_61_caller_mutation_during_evidence_denies_publish(self):
+        event, published = verified_event(), []
+        def attestor(_copy):
+            event["message"] = "late mutation"
+            return True
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(
+                event, run_id=G2_RUN, trusted_owner=lambda: True,
+                trusted_evidence=attestor,
+                existing_publish=lambda x: (published.append(x) or True))
+        self.assertEqual(published, [])
+
+    def test_62_owner_mutation_before_publish_denies(self):
+        event, published, state = verified_event(), [], [0]
+        def owner():
+            state[0] += 1
+            if state[0] == 3:
+                event["source"] = "unexpected"
+            return True
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(
+                event, run_id=G2_RUN, trusted_owner=owner,
+                trusted_evidence=lambda _: True,
+                existing_publish=lambda x: (published.append(x) or True))
+        self.assertEqual(published, [])
+
+    def test_63_binary_event_extra_denied(self):
+        event = verified_event()
+        event["binary"] = b"secret"
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_64_nonfinite_event_extra_denied(self):
+        event = verified_event()
+        event["value"] = float("nan")
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_65_oversized_event_extra_denied(self):
+        event = verified_event()
+        event["padding"] = "X" * 8193
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_66_noncanonical_tuple_denied(self):
+        event = verified_event()
+        event["tuple_payload"] = ("one", "two")
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_67_valid_unicode_stable_event(self):
+        event = verified_event()
+        event["message"] = "Luz — свет"
+        published = []
+        self.assertTrue(relay_existing_events_v3(event, run_id=G2_RUN,
+            trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+            existing_publish=lambda x: (published.append(x) or True)))
+        self.assertEqual(published, [event])
+
+
 if __name__ == "__main__":
     unittest.main()
