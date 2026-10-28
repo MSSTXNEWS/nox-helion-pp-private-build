@@ -46,6 +46,8 @@ jobs:
           python -m unittest discover -s integrations/express-wow/tests -p 'test_one_shot_order.py' -v
           python -m unittest discover -s integrations/express-wow/tests -p 'test_utf8_bridge_limit.py' -v
           python -m unittest discover -s integrations/creative/tests -p 'test_projector_contract.py' -v
+          python -m unittest discover -s integrations/creative/tests -p 'test_persona_media.py' -v
+          node --check integrations/creative/web/persona-media.js
           node --check integrations/creative/web/theater.js
           node --check integrations/creative/web/studio.js
           node --check integrations/creative/web/entry.js

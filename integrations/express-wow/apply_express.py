@@ -15,7 +15,7 @@ D02={
 }
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
-def execute(input_r11:Path,repo:Path,output:Path):
+def execute(input_r11:Path,repo:Path,output:Path,persona_bundle:Path|None=None):
  input_r11=input_r11.resolve(strict=True);repo=repo.resolve(strict=True)
  output=output.absolute()
  if output.exists() or output.is_symlink():raise ValueError('NOLOSS_OUTPUT_EXISTS')
@@ -43,6 +43,12 @@ def execute(input_r11:Path,repo:Path,output:Path):
   if chat_html.index("const chatModel=document.getElementById")>chat_html.index("chatLog.addEventListener"):
    raise ValueError('R13_CHAT_STILL_HAS_TDZ_HOLD')
   wow=stage_wow200.stage(src,repo/'integrations/wow200')
+  persona_receipt={'installed':False,'active_count':0,'identity_candidate_hold':1}
+  if persona_bundle is not None:
+   import stage_persona_media
+   persona_receipt=stage_persona_media.stage(src,Path(persona_bundle))
+   if persona_receipt.get('active_count')!=4 or persona_receipt.get('identity_candidate_hold')!=1:
+    raise ValueError('PERSONA_APPROVED_SOURCE_COUNT_HOLD')
   if wow['donor_file_count']!=56 or wow.get('active_d02_engine')!='OWNER1_PR144_PINNED' or wow.get('legacy_d02_runtime_imported') is not False:
    raise ValueError('WOW_OWNER_NOT_CONNECTED')
   html=(src/'Assets/index.html').read_text(encoding='utf-8-sig')
@@ -65,6 +71,10 @@ def execute(input_r11:Path,repo:Path,output:Path):
    'original_protected_d02_sha256':D02,
    'creative_src_files':len(creative.get('files',[])),
    'chat_initialization_fixed':True,
+   'persona_media_source':bool(persona_bundle is not None),
+   'persona_camera_loops':persona_receipt.get('active_count',0),
+   'persona_identity_pending':persona_receipt.get('identity_candidate_hold',1),
+   'persona_lip_sync_accepted':False,
    'chat_initialization_receipt_sha256':sha(chat_receipt),
    'wow_donor_files':wow['donor_file_count'],
    'single_active_owner': 'E01',
@@ -87,7 +97,7 @@ def execute(input_r11:Path,repo:Path,output:Path):
   raise
 
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--r13',type=Path,required=True);parser.add_argument('--repo',type=Path,required=True);parser.add_argument('--out',type=Path,required=True)
+ parser=argparse.ArgumentParser();parser.add_argument('--r13',type=Path,required=True);parser.add_argument('--repo',type=Path,required=True);parser.add_argument('--out',type=Path,required=True);parser.add_argument('--persona-bundle',type=Path)
  args=parser.parse_args()
- try:print(json.dumps(execute(args.r13,args.repo,args.out),ensure_ascii=False,indent=2))
+ try:print(json.dumps(execute(args.r13,args.repo,args.out,args.persona_bundle),ensure_ascii=False,indent=2))
  except Exception as e:raise SystemExit('HOLD_NOLOSS: '+repr(e))
