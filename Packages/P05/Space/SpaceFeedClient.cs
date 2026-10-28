@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -41,6 +42,10 @@ public static class EvidenceProgress
 }
 public sealed class SpaceFeedClient
 {
+    // Limit BOTH announced and streamed provider bytes before JSON materialization.
+    // ResponseHeadersRead and request timeout alone do not bound response size.
+    private const int MaximumFeedResponseBytes = 8 * 1024 * 1024;
+    private sealed class FeedResponseTooLargeException : Exception { }
     private readonly HttpClient _http;
     // A cache entry is bound to the exact provider AND approved HTTPS endpoint.
     // FeedId alone is not an authorization or provenance identity.
@@ -84,8 +89,26 @@ public sealed class SpaceFeedClient
             using var response = await _http.SendAsync(request,
                 HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
+            // Content-Length is only an early rejection: chunked streams may omit
+            // it, and an untrusted server may understate it. Always count bytes.
+            if (response.Content.Headers.ContentLength is long announced &&
+                announced > MaximumFeedResponseBytes)
+                throw new FeedResponseTooLargeException();
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
-            using var json = await JsonDocument.ParseAsync(stream,
+            using var bounded = new MemoryStream();
+            var chunk = new byte[16 * 1024];
+            int bytesRead;
+            while ((bytesRead = await stream.ReadAsync(chunk.AsMemory(), timeout.Token)
+                .ConfigureAwait(false)) != 0)
+            {
+                // Check BEFORE allocation/copy, even for a missing or forged length.
+                if (bytesRead > MaximumFeedResponseBytes - bounded.Length)
+                    throw new FeedResponseTooLargeException();
+                await bounded.WriteAsync(chunk.AsMemory(0, bytesRead), timeout.Token)
+                    .ConfigureAwait(false);
+            }
+            bounded.Position = 0;
+            using var json = await JsonDocument.ParseAsync(bounded,
                 cancellationToken: timeout.Token).ConfigureAwait(false);
             var cloned = json.RootElement.Clone();
             var observed = extractSourceTime(cloned);
@@ -96,9 +119,11 @@ public sealed class SpaceFeedClient
             return snapshot;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
-        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or
+            JsonException or FeedResponseTooLargeException)
         {
-            string error = ex is OperationCanceledException ? "TIMEOUT" :
+            string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
+                ex is OperationCanceledException ? "TIMEOUT" :
                 ex is JsonException ? "INVALID_JSON" : "NETWORK_ERROR";
             if (old is not null)
                 return old with { Status = "OFFLINE_CACHE", ErrorCode = error, IsStale = true };
