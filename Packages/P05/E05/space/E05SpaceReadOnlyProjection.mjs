@@ -225,14 +225,24 @@ export function projectFeeds(feeds, nowMs) {
   const disabled=recognized.filter(f=>!licenseReady(f));
   // Scan ALL licensed observations before the cap. Unlicensed submissions
   // cannot turn an otherwise valid quote into HOLD_DUPLICATE_FEED.
-  const marketCounts=new Map();
-  for (const f of licensed) if (singletonMarketIds.has(f.id))
-    marketCounts.set(f.id,(marketCounts.get(f.id)||0)+1);
+  // Identical native feed replays are one observation; distinct prices HOLD.
+  // All source fields affect identity: license, timestamp, provider, quote.
+  const snapshotIdentity=f=>JSON.stringify(Object.keys(f).sort().map(k=>[k,f[k]]));
+  const uniqueLicensed=[];
+  const distinctMarkets=new Map();
+  for (const f of licensed) {
+    if (!singletonMarketIds.has(f.id)) { uniqueLicensed.push(f); continue; }
+    let signatures=distinctMarkets.get(f.id);
+    if (!signatures) { signatures=new Set(); distinctMarkets.set(f.id,signatures); }
+    const signature=snapshotIdentity(f);
+    if (signatures.has(signature)) continue;
+    signatures.add(signature);
+    uniqueLicensed.push(f);
+  }
+  const marketCounts=new Map([...distinctMarkets].map(([id,signatures])=>[id,signatures.size]));
   const emittedMarkets=new Set();
-  const licensedMarketIds=new Set(licensed.filter(f=>singletonMarketIds.has(f.id)).map(f=>f.id));
-  // Preserve a disabled card when no licensed market source exists, but do
-  // not render a second market tile beside a licensed single-quote card.
-  const visible=[...licensed,...disabled.filter(f=>
+  const licensedMarketIds=new Set(distinctMarkets.keys());
+  const visible=[...uniqueLicensed,...disabled.filter(f=>
     !singletonMarketIds.has(f.id) || !licensedMarketIds.has(f.id))];
   return visible.slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
