@@ -33,6 +33,13 @@ jobs:
           $sha=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sha -cne '44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3') {throw 'ORIGINAL_SETUP_SHA_HOLD'}
           Write-Host 'FROZEN_ORIGINAL_SETUP_BYTES_PASS'
+      - name: Checkout sealed R08 source for read-only forensic verifier
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 6f41831c69d41adec6899b07c074b0b19cd68b28
+          path: .e06-pinned-r08-forensics
+          persist-credentials: false
       - name: Install official Microsoft WebView2 Evergreen prerequisite on disposable CI only
         shell: pwsh
         run: |
@@ -144,6 +151,66 @@ jobs:
           }
           if ($receipt.pythonDiagnose -cne 'PASS') {throw 'ORIGINAL_PYTHON_RUNTIME_NOT_VERIFIED'}
           if ($receipt.nativeSetup -cne 'PASS') {throw 'NATIVE_ONEHOST_INSTALL_HOLD'}
+      - name: Forensic original P01 staged payload verify after native diagnostic
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $stage=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION.__p01_stage'
+          $report=[ordered]@{schema='NOX_E06_R15_NSIS_STAGE_DIAGNOSTIC_V1';buildRun=40614012171;installerSha256='44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3';stagePresent=$false;manifestPresent=$false;listedFiles=0;missingFiles=@();wrongLength=@();unexpectedFiles=@();verifierStatus='NOT_RUN';verifierError=$null;noOriginalSourceModified=$true;releaseAccepted=$false}
+          try {
+            if (!(Test-Path -LiteralPath $stage -PathType Container)) {throw 'P01_STAGE_ABSENT'}
+            $dir=Get-Item -LiteralPath $stage -Force
+            if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {throw 'P01_STAGE_REPARSE_HOLD'}
+            $report.stagePresent=$true
+            $manifest=Join-Path $stage 'payload.sha256.json'
+            if (!(Test-Path -LiteralPath $manifest -PathType Leaf)) {throw 'P01_STAGE_MANIFEST_MISSING'}
+            $report.manifestPresent=$true
+            $m=Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
+            $report.listedFiles=@($m.files).Count
+            $known=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+            foreach($item in $m.files){
+              $name=[string]$item.path
+              if ($name -match '(^|[\\/])\.\.([\\/]|$)' -or [IO.Path]::IsPathRooted($name)) {throw 'MANIFEST_UNSAFE_PATH'}
+              $name=$name.Replace('/','\')
+              [void]$known.Add($name)
+              $fp=Join-Path $stage $name
+              if(!(Test-Path -LiteralPath $fp -PathType Leaf)) {
+                if($report.missingFiles.Count -lt 30){$report.missingFiles+=@($name)}
+                continue
+              }
+              if ((Get-Item -LiteralPath $fp).Length -ne [long]$item.bytes) {
+                if($report.wrongLength.Count -lt 30){$report.wrongLength+=@($name)}
+              }
+            }
+            $rootFull=[IO.Path]::GetFullPath($stage).TrimEnd('\')
+            foreach($file in @(Get-ChildItem -LiteralPath $stage -Recurse -Force -File)){
+              $relative=$file.FullName.Substring($rootFull.Length+1)
+              if($relative -ine 'payload.sha256.json' -and !$known.Contains($relative)){
+                if($report.unexpectedFiles.Count -lt 30){$report.unexpectedFiles+=@($relative)}
+              }
+            }
+            $source='.e06-pinned-r08-forensics/proposals/E06/express/NOX_R08_WPF_DIAG_CODE_ONLY.zip'
+            if((Get-FileHash $source -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9') {throw 'R08_SOURCE_SHA_MISMATCH'}
+            New-Item -ItemType Directory -Path 'forensic-owner-verifier' -Force | Out-Null
+            Expand-Archive -LiteralPath $source -DestinationPath 'forensic-owner-verifier'
+            $verify='forensic-owner-verifier/R11/Installer/Verify-Payload.ps1'
+            if ((Get-FileHash $verify -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'e741c131ddc1af45391ed64b4cdce686895aa78bd67e6bd4795fa97f548d455b') {throw 'R08_VERIFY_OWNER_SOURCE_MISMATCH'}
+            $previousPreference=$ErrorActionPreference
+            try {
+              $ErrorActionPreference='Continue'
+              $result=(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verify -Root $stage -Manifest $manifest 2>&1 | Out-String)
+              $code=$LASTEXITCODE
+            }finally{$ErrorActionPreference=$previousPreference}
+            $report.verifierStatus=if($code -eq 0){'PASS'}else{'HOLD'}
+            $report.verifierError=$result.Substring(0,[Math]::Min(2500,$result.Length))
+          }catch{
+            $report.verifierStatus='HOLD'
+            $report.verifierError=$_.Exception.Message
+          }finally{
+            $report | ConvertTo-Json -Depth 7 | Set-Content 'e06-r15-stage-forensics.json'
+            Write-Host ($report | ConvertTo-Json -Depth 7)
+          }
       - name: Independently uninstall combined app without removing user state
         shell: pwsh
         run: |
@@ -181,5 +248,6 @@ jobs:
           path: |
             e06-r14-onehost-native-runtime.json
             e06-r14-uninstall-data-receipt.json
+            e06-r15-stage-forensics.json
           retention-days: 30
           if-no-files-found: warn
