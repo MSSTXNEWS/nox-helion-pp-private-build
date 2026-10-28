@@ -27,12 +27,21 @@ def execute(input_r11:Path,repo:Path,output:Path):
   if not p.is_file() or p.is_symlink() or sha(p)!=expected:raise ValueError('ORIGINAL_D02_SHA_HOLD:'+n)
  sys.path.insert(0,str(repo/'integrations/creative'))
  sys.path.insert(0,str(repo/'integrations/wow200'))
- import stage_creative,stage_wow200
+ import stage_creative,stage_wow200,fix_r13_chat_init
  tmp=Path(tempfile.mkdtemp(prefix='NOX_EXPRESS_STAGE_',dir=output.parent))
  try:
   src=tmp/'R11'
   shutil.copytree(input_r11,src,symlinks=True)
   creative=stage_creative.stage(src,repo/'integrations/creative')
+  # R13's original HTML raises ReferenceError: chatLog before initialization.
+  # This exact preimage-locked fix MUST run before any WOW HTML injection.
+  chat_fix=fix_r13_chat_init.stage(src)
+  chat_receipt=src.parent/'E06_CHAT_TDZ_RECEIPT.json'
+  if chat_fix.get('schema')!='NOX_E06_R13_CHAT_TDZ_V1' or not chat_receipt.is_file():
+   raise ValueError('R13_CHAT_PREIMAGE_AND_RECEIPT_HOLD')
+  chat_html=(src/'Assets/index.html').read_text(encoding='utf-8-sig')
+  if chat_html.index("const chatModel=document.getElementById")>chat_html.index("chatLog.addEventListener"):
+   raise ValueError('R13_CHAT_STILL_HAS_TDZ_HOLD')
   wow=stage_wow200.stage(src,repo/'integrations/wow200')
   if wow['donor_file_count']!=56 or wow.get('active_d02_engine')!='OWNER1_PR144_PINNED' or wow.get('legacy_d02_runtime_imported') is not False:
    raise ValueError('WOW_OWNER_NOT_CONNECTED')
@@ -55,6 +64,8 @@ def execute(input_r11:Path,repo:Path,output:Path):
    'source_root':'R13 exact user-supplied staged R11',
    'original_protected_d02_sha256':D02,
    'creative_src_files':len(creative.get('files',[])),
+   'chat_initialization_fixed':True,
+   'chat_initialization_receipt_sha256':sha(chat_receipt),
    'wow_donor_files':wow['donor_file_count'],
    'single_active_owner': 'E01',
    'active_owner_git_blob_sha1':wow['active_d02_git_blobs'],
