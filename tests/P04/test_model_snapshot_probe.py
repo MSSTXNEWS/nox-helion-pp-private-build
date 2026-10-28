@@ -103,6 +103,42 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                 self.assertEqual(result["status"], "HOLD")
                 self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_INVALID")
 
+    def test_malformed_safetensors_header_is_hold_before_hashing_weights(self):
+        valid = {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}
+        cases = [
+            {"q": {**valid, "shape": [-1]}},
+            {"q": {**valid, "shape": [True]}},
+            {"q": {**valid, "shape": ["1"]}},
+            {"q": {**valid, "data_offsets": [1, 4]}},
+            {"q": {**valid, "data_offsets": [0, 3]}},
+            {"q": valid, "r": valid},
+            {"q": valid, "__metadata__": {"format": 1}},
+        ]
+        for header in cases:
+            with self.subTest(header=header):
+                encoded = json.dumps(header).encode("utf-8")
+                (self.root / "model.safetensors").write_bytes(
+                    len(encoded).to_bytes(8, "little") + encoded + bytes(4))
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_duplicate_tensor_names_are_rejected(self):
+        tensor = '{"dtype":"F32","shape":[1],"data_offsets":[0,4]}'
+        encoded = ('{"q":' + tensor + ',"q":' + tensor + '}').encode()
+        (self.root / "model.safetensors").write_bytes(
+            len(encoded).to_bytes(8, "little") + encoded + bytes(4))
+        self.assertEqual(probe.inspect(self.root, REV)["status"], "HOLD")
+
+    def test_empty_and_scalar_tensors_keep_valid_format_semantics(self):
+        header = {"empty": {"dtype": "F32", "shape": [0], "data_offsets": [0, 0]},
+                  "scalar": {"dtype": "F32", "shape": [], "data_offsets": [0, 4]},
+                  "__metadata__": {"format": "pt"}}
+        encoded = json.dumps(header).encode()
+        (self.root / "model.safetensors").write_bytes(
+            len(encoded).to_bytes(8, "little") + encoded + bytes(4))
+        self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
+
 
 if __name__ == "__main__":
     unittest.main()

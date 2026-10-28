@@ -74,19 +74,42 @@ def _weight_header(path: Path) -> int:
         if length < 2 or length > MAX_JSON_BYTES or size < length + 8:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
         try:
-            header = json.loads(f.read(length))
-        except (UnicodeError, ValueError) as exc:
+            def unique_pairs(pairs):
+                values = {}
+                for key, value in pairs:
+                    if key in values:
+                        raise ValueError("duplicate tensor metadata key")
+                    values[key] = value
+                return values
+            raw_header = f.read(length)
+            if not raw_header.startswith(b"{"):
+                raise ValueError("invalid safetensors header prefix")
+            header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs)
+        except (UnicodeError, ValueError, RecursionError) as exc:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
     capacity = size - length - 8
     if not tensors or any(
         not isinstance(t, dict) or not isinstance(t.get("dtype"), str) or
         not isinstance(t.get("shape"), list) or
+        any(type(n) is not int or n < 0 for n in t["shape"]) or
         type(t.get("data_offsets")) is not list or len(t["data_offsets"]) != 2 or
         any(type(n) is not int for n in t["data_offsets"]) or
         not (0 <= t["data_offsets"][0] <= t["data_offsets"][1] <= capacity)
         for t in tensors
     ):
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    metadata = header.get("__metadata__", {})
+    if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    # Safetensors requires complete, nonoverlapping byte-buffer coverage.
+    # Empty tensors use zero-width intervals and scalar shape [] is valid.
+    cursor = 0
+    for start, end in sorted(t["data_offsets"] for t in tensors):
+        if start != cursor:
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+        cursor = end
+    if cursor != capacity:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
     return len(tensors)
 
