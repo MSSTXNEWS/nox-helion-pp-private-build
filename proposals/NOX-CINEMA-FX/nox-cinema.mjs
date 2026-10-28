@@ -291,11 +291,16 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     let un;
     try{un=hostEvents.subscribe(event=>{
       if(disposed)return;
-      if(!event||typeof event!=="object"||event.trusted!==true ||
-         typeof event.state!=="string")return;
-      // No fabricated training progress: CSS data-state is just a host-attested state.
-      applyState(event.state,event.runId===undefined?null:event.runId,
-        event.coreId===undefined?null:event.coreId);
+      try{
+        if(!event||typeof event!=="object"||event.trusted!==true ||
+           typeof event.state!=="string")return;
+        // Host event envelopes may be foreign or Proxy objects. Never let a
+        // throwing accessor escape from decorative FX into the native bus.
+        applyState(event.state,event.runId===undefined?null:event.runId,
+          event.coreId===undefined?null:event.coreId);
+      }catch(_){
+        // Malformed payload: preserve the last confirmed visual state.
+      }
     });}catch(error){rollbackFailedMount();throw error;}
     if(typeof un!=="function"){rollbackFailedMount();
       throw new Error("NOX_FX_SUBSCRIBE_REQUIRES_CLEANUP");}

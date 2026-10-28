@@ -273,3 +273,24 @@ test("R15-03 user MAX cannot override active OS motion reduction",()=>{
   assert.equal(fx.snapshot().profile,"REDUCED");
   assert.equal(o.pending,0);fx.destroy();
 });
+
+test("E01-W2-R16-01 hostile native event getters cannot crash the host bus",()=>{
+  const o=fakeScene();let notify;
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,
+    hostEvents:{subscribe(fn){notify=fn;return()=>{};}}});
+  const bad=[
+    new Proxy({}, {get(){throw new Error("HOSTILE_TRUSTED_GETTER");}}),
+    new Proxy({trusted:true,state:"training"}, {get(target,key){
+      if(key==="runId")throw new Error("HOSTILE_RUN_ID_GETTER");return target[key];}}),
+    new Proxy({trusted:true,state:"training",runId:"R-1"}, {get(target,key){
+      if(key==="coreId")throw new Error("HOSTILE_CORE_ID_GETTER");return target[key];}})
+  ];
+  for(const event of bad)assert.doesNotThrow(()=>notify(event));
+  assert.equal(o.root.dataset.noxFxState,"idle");
+  assert.ok(o.orbs.every(x=>x.element.dataset.noxFxState==="idle"));
+  notify({trusted:true,state:"training",runId:"R-OK"});
+  assert.equal(o.root.dataset.noxFxState,"training");
+  assert.equal(fx.snapshot().stateRunId,"R-OK");
+  fx.destroy();
+  assert.equal(o.root.dataset.noxFxState,undefined);
+});
