@@ -90,8 +90,14 @@ class ValidatorTests(unittest.TestCase):
 
     def test_master_hold_is_safe_without_destructive_overwrite(self):
         self.assertEqual(module.validate(fixture())["owner"],2)
-        x=fixture();x["writes"]["master"]={"status":"PASS","readback_revision":"rev-master"}
+        x=fixture();x["writes"]["master"]={"status":"PASS","integrity_verified":True,"readback_revision":"rev-master"}
         self.assertEqual(module.validate(x)["owner"],2)
+
+    def test_master_append_refused_without_verified_history_integrity(self):
+        x=fixture()
+        x["writes"]["master"]={"status":"PASS","readback_revision":"rev-master"}
+        with self.assertRaisesRegex(module.ReportInvalid,"MASTER_APPEND_REQUIRES_VERIFIED_INTEGRITY"):
+            module.validate(x)
 
     def test_reject_duplicate_ten_tasks(self):
         x=fixture();x["tasks"][1]["task_id"]=x["tasks"][0]["task_id"]
