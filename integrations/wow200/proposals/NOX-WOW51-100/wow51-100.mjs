@@ -40,11 +40,12 @@ export function createCinematicCues(root,{mode="BALANCED",eventPort=null,reduced
  let reduced=!!reducedMotion;
  const media=doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")||null;
  function applyReduced(){
+   if(disposed)return;
    surface.dataset.mode=reduced||!!media?.matches?"REDUCED":currentMode;
  }
  const onMotion=()=>applyReduced();
  media?.addEventListener?.("change",onMotion);
- const onVisibility=()=>{surface.dataset.hidden=doc.hidden?"true":"false"};
+ const onVisibility=()=>{if(disposed)return;surface.dataset.hidden=doc.hidden?"true":"false"};
  doc.addEventListener?.("visibilitychange",onVisibility);
  applyReduced();onVisibility();
  const label=doc.createElement("output");
@@ -78,15 +79,27 @@ export function createCinematicCues(root,{mode="BALANCED",eventPort=null,reduced
    show(eventMap.get(evt.event_type),"VERIFIED_EVENT");
    return true;
  }
- if(eventPort){unsubscribe=eventPort.subscribe(receiveEvent);if(unsubscribe!=null&&typeof unsubscribe!=="function")throw Error("INVALID_EVENT_UNSUBSCRIBE");}
+ function destroy(){
+   if(disposed)return;disposed=true;
+   let failure;
+   for(const cleanup of [()=>{if(typeof unsubscribe==="function")unsubscribe()},
+     ()=>media?.removeEventListener?.("change",onMotion),
+     ()=>doc.removeEventListener?.("visibilitychange",onVisibility),
+     ()=>surface.remove(),()=>label.remove(),()=>root.classList.remove("nox-w51-slot")]){
+     try{cleanup()}catch(error){failure??=error}
+   }
+   mounted.delete(root);
+   if(failure)throw failure;
+ }
+ try{
+   if(eventPort){unsubscribe=eventPort.subscribe(receiveEvent);if(typeof unsubscribe!=="function")throw Error("INVALID_EVENT_UNSUBSCRIBE");}
+ }catch(error){try{destroy()}catch{}throw error;}
  const api=Object.freeze({
    preview,activate,receiveEvent,
    setMode(next){if(disposed)throw Error("WOW_DESTROYED");if(!MODES.has(next))throw Error("UNKNOWN_PERFORMANCE_PROFILE");currentMode=next;applyReduced();},
    setReducedMotion(value){if(disposed)throw Error("WOW_DESTROYED");reduced=value===true;applyReduced();},
    current(){return Object.freeze({cue:selected,mode:surface.dataset.mode,provenance:surface.dataset.provenance||null});},
-   destroy(){if(disposed)return;disposed=true;unsubscribe?.();media?.removeEventListener?.("change",onMotion);
-     doc.removeEventListener?.("visibilitychange",onVisibility);
-     surface.remove();label.remove();root.classList.remove("nox-w51-slot");mounted.delete(root);}
+   destroy
  });
  mounted.set(root,api);
  return api;

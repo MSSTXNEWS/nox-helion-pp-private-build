@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: source-only catalogs cover 51–150 and leave 1–50 separate
+ok 1 - source-only catalogs cover 51–150 and leave 1–50 separate
+  ---
+  duration_ms: 2.236959
+  type: 'test'
+  ...
+# Subtest: exact documented canonical events map only to truthful WOW semantics
+ok 2 - exact documented canonical events map only to truthful WOW semantics
+  ---
+  duration_ms: 1.509217
+  type: 'test'
+  ...
+# Subtest: 150 secondary visual scenes are selectable without replacing HOME art
+ok 3 - 150 secondary visual scenes are selectable without replacing HOME art
+  ---
+  duration_ms: 3.241268
+  type: 'test'
+  ...
+# Subtest: real events require trusted port and monotonic sequence, never fake speech
+ok 4 - real events require trusted port and monotonic sequence, never fake speech
+  ---
+  duration_ms: 0.753031
+  type: 'test'
+  ...
+# Subtest: host denial does not switch to approved director cue
+ok 5 - host denial does not switch to approved director cue
+  ---
+  duration_ms: 0.770497
+  type: 'test'
+  ...
+# Subtest: mount failures are reversible; no duplicate roots or D02 entry
+ok 6 - mount failures are reversible; no duplicate roots or D02 entry
+  ---
+  duration_ms: 2.525052
+  type: 'test'
+  ...
+# Subtest: CSS has one active scene, no new networking, GPU or native host
+ok 7 - CSS has one active scene, no new networking, GPU or native host
+  ---
+  duration_ms: 0.555865
+  type: 'test'
+  ...
+# Subtest: 151-200 use same optics/director, native composition approval only
+ok 8 - 151-200 use same optics/director, native composition approval only
+  ---
+  duration_ms: 0.796016
+  type: 'test'
+  ...
+# Subtest: composition action denied without native authorized callback
+ok 9 - composition action denied without native authorized callback
+  ---
+  duration_ms: 0.426982
+  type: 'test'
+  ...
+# Subtest: never start two compositors on one secondary stage
+ok 10 - never start two compositors on one secondary stage
+  ---
+  duration_ms: 0.698729
+  type: 'test'
+  ...
+# Subtest: verified training visual expires and frees the scene, never loops as fake training
+ok 11 - verified training visual expires and frees the scene, never loops as fake training
+  ---
+  duration_ms: 0.460662
+  type: 'test'
+  ...
+# Subtest: R27 OS reduction can release the explicit startup override in real engines
+ok 12 - R27 OS reduction can release the explicit startup override in real engines
+  ---
+  duration_ms: 0.383966
+  type: 'test'
+  ...
+# Subtest: R27 every composition starts three actual tracks after a cue preview
+ok 13 - R27 every composition starts three actual tracks after a cue preview
+  ---
+  duration_ms: 2.448477
+  type: 'test'
+  ...
+# Subtest: R27 failed unified subscription revokes captured callback before cleanup
+ok 14 - R27 failed unified subscription revokes captured callback before cleanup
+  ---
+  duration_ms: 0.441954
+  type: 'test'
+  ...
+# Subtest: R27 authorization cannot resurrect a scene destroyed by the host callback
+ok 15 - R27 authorization cannot resurrect a scene destroyed by the host callback
+  ---
+  duration_ms: 0.37954
+  type: 'test'
+  ...
+# Subtest: R27 unified cleanup completes when a child DOM cleanup throws
+ok 16 - R27 unified cleanup completes when a child DOM cleanup throws
+  ---
+  duration_ms: 0.435074
+  type: 'test'
+  ...
+# Subtest: R27 cue subscription failures rollback DOM/listeners and revoke callbacks
+ok 17 - R27 cue subscription failures rollback DOM/listeners and revoke callbacks
+  ---
+  duration_ms: 1.920774
+  type: 'test'
+  ...
+# Subtest: R27 cue unsubscribe failure still frees both listeners and remount identity
+ok 18 - R27 cue unsubscribe failure still frees both listeners and remount identity
+  ---
+  duration_ms: 0.583546
+  type: 'test'
+  ...
+# Subtest: R27 queued media/visibility callbacks are inert after both engine disposals
+ok 19 - R27 queued media/visibility callbacks are inert after both engine disposals
+  ---
+  duration_ms: 1.783107
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 117.219485

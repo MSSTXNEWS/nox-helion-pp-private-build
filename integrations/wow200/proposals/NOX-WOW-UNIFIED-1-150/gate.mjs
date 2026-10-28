@@ -106,6 +106,20 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
   let cues=null,director=null,unsubscribe=null,disposed=false,selected=null;
   let nativeVisualAt=null,expiryTimer=null;
   const lastByRun=new Map();
+  function cleanup(){
+    if(disposed)return;disposed=true;
+    if(expiryTimer!==null){clearTimeout(expiryTimer);expiryTimer=null;}
+    nativeVisualAt=null;
+    let failure;
+    for(const step of [()=>{if(typeof unsubscribe==="function")unsubscribe()},
+      ()=>director?.destroy(),()=>cues?.destroy(),()=>root.classList.remove("nox-unified-wow")]){
+      try{step()}catch(error){failure??=error}
+    }
+    delete root.dataset.unifiedWow;delete root.dataset.noxWowEvidence;
+    delete root.dataset.noxWowComposition;delete root.dataset.noxMode;
+    lastByRun.clear();adopted.delete(root);
+    if(failure)throw failure;
+  }
   try {
     cues=createCinematicCues(root,{mode,reducedMotion});
     director=mountDirector(root,{mode,reducedMotion,authorize:nativeAuthorizeShot});
@@ -197,7 +211,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         director.setReducedMotion(reducedMotion);
         let shot;
         try {shot=director.activate(id);}
-        catch(err){if(prev==="cue")director.setReducedMotion(true);throw err;}
+        catch(err){if(!disposed&&prev==="cue")director.setReducedMotion(true);throw err;}
         clearNativeExpiry();
         choose("director");selected=id;
         root.dataset.noxWowEvidence="native-shot";delete root.dataset.noxWowComposition;
@@ -210,6 +224,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         // This callback MUST be supplied by native trusted host, not a page action.
         if(!nativeAuthorizeComposition||nativeAuthorizeComposition(item)!==true)
           throw Error("HOST_COMPOSITION_APPROVAL_REQUIRED");
+        if(disposed)throw Error("NOX_UNIFIED_DISPOSED");
         choose("composition");
         cues.preview(item.opticalId);director.preview(item.directorId);
         clearNativeExpiry();selected=id;
@@ -237,32 +252,12 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         visualEvidence:root.dataset.noxWowEvidence,
         sourceOnly:true,acceptedExe:false,hostRunCount:lastByRun.size});
       },
-      destroy(){
-        if(disposed)return;disposed=true;
-        clearNativeExpiry();
-        try{unsubscribe?.()}finally{
-          director?.destroy();cues?.destroy();
-          root.classList.remove("nox-unified-wow");
-          delete root.dataset.unifiedWow;
-          delete root.dataset.noxWowEvidence;
-          delete root.dataset.noxWowComposition;
-          delete root.dataset.noxMode;
-          lastByRun.clear();adopted.delete(root);
-        }
-      }
+      destroy:cleanup
     });
     adopted.set(root,api);
     return api;
   }catch(err){
-    if(expiryTimer!==null)clearTimeout(expiryTimer);
-    try{if(typeof unsubscribe==="function")unsubscribe()}finally{
-      director?.destroy();cues?.destroy();
-      root.classList.remove("nox-unified-wow");
-      delete root.dataset.unifiedWow;
-      delete root.dataset.noxWowEvidence;
-      delete root.dataset.noxWowComposition;
-      delete root.dataset.noxMode;
-    }
+    try{cleanup()}catch{}
     throw err;
   }
 }

@@ -41,13 +41,14 @@ export function mountDirector(root,{mode="BALANCED",authorize=null,reducedMotion
  const motionMedia=doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")||null;
  const effective=()=>reduced||motionMedia?.matches?"REDUCED":profile;
  const cancel=()=>{for(const a of animations)a.cancel?.();animations=[]};
- function motionChange(){stage.dataset.mode=effective();if(effective()==="REDUCED")cancel()}
- function visibility(){if(doc.hidden){for(const a of animations)a.pause?.()}else{for(const a of animations)a.play?.()}}
+ function motionChange(){if(done)return;stage.dataset.mode=effective();if(effective()==="REDUCED")cancel()}
+ function visibility(){if(done)return;if(doc.hidden){for(const a of animations)a.pause?.()}else{for(const a of animations)a.play?.()}}
  motionMedia?.addEventListener?.("change",motionChange);doc.addEventListener?.("visibilitychange",visibility);motionChange();
  function show(id,provenance){
   if(done)throw Error("DIRECTOR_DISPOSED");
   const shot=BY_ID.get(id);if(!shot)throw Error("UNKNOWN_SHOT");
   if(provenance==="APPROVED_INTERACTION"&&(!authorize||authorize(shot)!==true))throw Error("HOST_APPROVAL_REQUIRED");
+  if(done)throw Error("DIRECTOR_DISPOSED");
   cancel();activeId=id;source=provenance;stage.dataset.shot=String(id);stage.dataset.family=shot.family;stage.dataset.source=provenance;
   stage.dataset.mode=effective();label.textContent=(provenance==="DEMO"?"ДЕМО · ":"ПОДТВЕРЖДЕНО · ")+id+" · "+shot.name;
   if(effective()!=="REDUCED"&&!doc.hidden){
@@ -61,6 +62,14 @@ export function mountDirector(root,{mode="BALANCED",authorize=null,reducedMotion
   setMode(v){if(done)throw Error("DIRECTOR_DISPOSED");if(!Object.hasOwn(MODES,v))throw Error("INVALID_PROFILE");profile=v;motionChange()},
   setReducedMotion(v){if(done)throw Error("DIRECTOR_DISPOSED");reduced=v===true;motionChange()},
   current(){return {id:activeId,source,mode:effective(),runningAnimations:animations.length}},
-  destroy(){if(done)return;done=true;cancel();motionMedia?.removeEventListener?.("change",motionChange);doc.removeEventListener?.("visibilitychange",visibility);stage.remove();label.remove();root.classList.remove("nox-d101-slot");installed.delete(root)}
+  destroy(){
+   if(done)return;done=true;let failure;
+   for(const cleanup of [cancel,()=>motionMedia?.removeEventListener?.("change",motionChange),
+     ()=>doc.removeEventListener?.("visibilitychange",visibility),()=>stage.remove(),()=>label.remove(),
+     ()=>root.classList.remove("nox-d101-slot")]){
+    try{cleanup()}catch(error){failure??=error}
+   }
+   installed.delete(root);if(failure)throw failure;
+  }
  });installed.set(root,api);return api;
 }

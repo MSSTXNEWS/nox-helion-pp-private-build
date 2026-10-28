@@ -233,3 +233,28 @@ test("R27 every composition starts three actual tracks after a cue preview",()=>
  }
  ui.destroy();
 });
+
+test('R27 failed unified subscription revokes captured callback before cleanup',()=>{
+ const {root}=fixture();let callback;
+ assert.throws(()=>mountUnifiedCinema(root,{trustedEventPort:{subscribe(fn){callback=fn;return false}}}),/UNSUBSCRIBE/);
+ assert.equal(callback(base),false);assert.equal(root.dataset.unifiedWow,undefined);
+ assert.doesNotThrow(()=>mountUnifiedCinema(root).destroy());
+});
+test('R27 authorization cannot resurrect a scene destroyed by the host callback',()=>{
+ for(const kind of ['Shot','Composition']){
+  const {root}=fixture();let ui;
+  ui=mountUnifiedCinema(root,{['nativeAuthorize'+kind]:()=>{ui.destroy();return true}});
+  assert.throws(()=>ui['activateApproved'+kind](kind==='Shot'?101:151),/DISPOSED/);
+  assert.equal(root.dataset.unifiedWow,undefined);assert.equal(root.dataset.noxWowEvidence,undefined);
+  assert.equal(renderedTracks(root).length,0);
+ }
+});
+test('R27 unified cleanup completes when a child DOM cleanup throws',()=>{
+ const {root,listeners}=fixture();let off=0;
+ const ui=mountUnifiedCinema(root,{trustedEventPort:{subscribe(){return ()=>off++}}});
+ root.children.find(x=>x.className==='nox-d101-stage').remove=()=>{throw Error('DOM cleanup failed')};
+ assert.throws(()=>ui.destroy(),/DOM cleanup failed/);
+ assert.equal(off,1);assert.equal(listeners.size,0);
+ assert.equal(root.dataset.unifiedWow,undefined);assert.equal(root.classList.contains('nox-w51-slot'),false);
+ assert.doesNotThrow(()=>mountUnifiedCinema(root).destroy());
+});
