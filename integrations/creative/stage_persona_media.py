@@ -19,7 +19,9 @@ def stage(stage_root:Path,bundle:Path):
     if sha(bundle.read_bytes())!=PINNED_BUNDLE_SHA256:raise ValueError('PERSONA_BUNDLE_SHA_HOLD')
     if not (stage_root/'NOX.P01.Shell.csproj').is_file():raise ValueError('ORIGINAL_ONEHOST_REQUIRED')
     dest=stage_root/'Assets/creative/personas'
-    if dest.exists():raise ValueError('PERSONA_ASSETS_ALREADY_PRESENT_NO_OVERWRITE')
+    receipt_path=stage_root.parent/'PERSONA_STAGE_RECEIPT.json'
+    if dest.exists() or dest.is_symlink():raise ValueError('PERSONA_ASSETS_ALREADY_PRESENT_NO_OVERWRITE')
+    if receipt_path.exists() or receipt_path.is_symlink():raise ValueError('PERSONA_RECEIPT_ALREADY_PRESENT_NO_OVERWRITE')
     with ZipFile(bundle) as z:
         names=z.namelist()
         if names.count('PERSONA_MOTION_MANIFEST.json')!=1 or len(names)!=len(set(names)):
@@ -43,21 +45,28 @@ def stage(stage_root:Path,bundle:Path):
                 data=z.read(fname)
                 if sha(data)!=row[checksum] or not data:raise ValueError('PERSONA_SHA_HOLD')
                 plans.append((fname,data))
-        # No writes until entire source verified (including all four source SHA pins).
+        # No writes until every source member and receipt destination pass preflight.
+        receipt={'schema':'NOX_PERSONA_STAGED_R15','active_count':len(ACTIVE),'identity_candidate_hold':len(BLOCKED),
+                 'source_bundle_sha256':sha(bundle.read_bytes()),'media_files':len(plans),
+                 'files':{name:sha(data) for name,data in plans},
+                 'camera_motion_real':True,'facial_animation':False,'lip_sync':False,
+                 'native_windows_accepted':False}
         dest.mkdir(parents=True,exist_ok=False)
+        receipt_created=False
         try:
             for fname,data in plans:
                 p=dest/fname;p.write_bytes(data)
                 if sha(p.read_bytes())!=sha(data):raise ValueError('PERSONA_COPY_READBACK')
+            # Atomic exclusive receipt creation: never clobber an owner/peer receipt.
+            with receipt_path.open('x',encoding='utf-8') as f:
+                receipt_created=True
+                f.write(json.dumps(receipt,indent=2,ensure_ascii=False)+'\n')
+            if not receipt_path.is_file() or json.loads(receipt_path.read_text(encoding='utf-8'))!=receipt:
+                raise ValueError('PERSONA_RECEIPT_READBACK_FAILED')
         except BaseException:
             shutil.rmtree(dest,ignore_errors=True)
+            if receipt_created:receipt_path.unlink(missing_ok=True)
             raise
-    receipt={'schema':'NOX_PERSONA_STAGED_R15','active_count':len(ACTIVE),'identity_candidate_hold':len(BLOCKED),
-             'source_bundle_sha256':sha(bundle.read_bytes()),'media_files':len(plans),
-             'files':{name:sha(data) for name,data in plans},
-             'camera_motion_real':True,'facial_animation':False,'lip_sync':False,
-             'native_windows_accepted':False}
-    (stage_root.parent/'PERSONA_STAGE_RECEIPT.json').write_text(json.dumps(receipt,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
     return receipt
 
 if __name__=='__main__':

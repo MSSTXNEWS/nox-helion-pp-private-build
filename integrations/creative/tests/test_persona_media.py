@@ -40,6 +40,13 @@ class PersonaMediaTests(unittest.TestCase):
   self.assertFalse((self.root/'Assets/creative/personas'/'NOX_PERSONA_EV_CAMERA_LOOP.mp4').exists())
   self.assertFalse(receipt['facial_animation'])
   self.assertFalse(receipt['native_windows_accepted'])
+ def test_existing_receipt_blocks_before_media_write(self):
+  receipt=self.root.parent/'PERSONA_STAGE_RECEIPT.json'
+  receipt.write_text('ORIGINAL_OTHER_OWNER_RECEIPT',encoding='utf-8')
+  with self.assertRaisesRegex(ValueError,'RECEIPT_ALREADY_PRESENT_NO_OVERWRITE'):
+   stage(self.root,self.bundle)
+  self.assertEqual(receipt.read_text(encoding='utf-8'),'ORIGINAL_OTHER_OWNER_RECEIPT')
+  self.assertFalse((self.root/'Assets/creative/personas').exists())
  def test_does_not_overwrite(self):
   stage(self.root,self.bundle)
   with self.assertRaisesRegex(ValueError,'NO_OVERWRITE'):stage(self.root,self.bundle)
