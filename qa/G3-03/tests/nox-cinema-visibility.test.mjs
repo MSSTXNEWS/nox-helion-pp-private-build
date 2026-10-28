@@ -76,7 +76,8 @@ function fakeScene(){
     },
     reduced(value){media.matches=value;for(const fn of [...mediaHandlers])fn({matches:value});},
     intersect(value){for(const x of [...intersections])x.cb([{isIntersecting:value}]);},
-    get pending(){return frames.size;}};
+    get pending(){return frames.size;},
+    get observerCallback(){return intersections[0]?.cb;}};
 }
 
 test("require only canonical HELION + eight unique CoreIDs",()=>{
@@ -155,7 +156,7 @@ test("hidden tab, ECO, reduced motion stop animation and release particles",()=>
   assert.equal(o.root.dataset.noxFxVisible,"true");
   assert.ok(o.pending>0);
   assert.equal(scene.setProfile("ECO"),true);
-  assert.equal(o.root.dataset.noxMode,"eco");
+  assert.equal(o.root.dataset.noxFxMode,"eco");
   assert.equal(scene.setProfile("REDUCED"),true);
   assert.equal(o.pending,0);
   assert.equal(scene.snapshot().profile,"REDUCED");
@@ -192,7 +193,7 @@ test("no additional GPU/API engines or dangerous process hooks in FX code",async
 
 test("host hide beats intersect-true callback",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX"});fx.setVisible(false);o.intersect(true);assert.equal(o.pending,0);assert.equal(fx.snapshot().active,false);assert.equal(o.root.dataset.noxFxVisible,"false");fx.destroy();});
 test("tab hidden + offscreen cannot start rAF",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX"});o.intersect(false);fx.setVisible(true);assert.equal(o.pending,0);o.visibility(false);o.intersect(true);assert.equal(o.pending,0);assert.equal(o.root.dataset.noxFxVisible,"false");o.visibility(true);assert.equal(o.pending,1);fx.destroy();});
-test("reduced mode and offscreen pause includes floating pseudo-element",async()=>{const fs=await import("node:fs");const css=fs.readFileSync(new URL("../candidates/nox-cinema.css",import.meta.url),"utf8");assert.match(css,/data-nox-mode="reduced"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.match(css,/data-nox-fx-visible="false"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.equal(css.includes('data-nox-state="running"'),false);});
+test("reduced mode and offscreen pause includes floating pseudo-element",async()=>{const fs=await import("node:fs");const css=fs.readFileSync(new URL("../candidates/nox-cinema.css",import.meta.url),"utf8");assert.match(css,/data-nox-fx-mode="reduced"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.match(css,/data-nox-fx-visible="false"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.equal(css.includes('data-nox-state="running"'),false);});
 
 
 test("the FX layer preserves preexisting native owner state on mount, updates and teardown",()=>{
@@ -242,4 +243,38 @@ test("teardown preserves owner DOM even when native unsubscribe throws",()=>{
   assert.ok(o.orbs.every(v=>!v.element.querySelector(".nox-cinema-orb__layers")));
   assert.equal(o.root.classList.contains("nox-cinema-scope"),false);
   assert.equal(o.pending,0);
+});
+
+// R05: immutable QA-candidate negative gates; never mutate owner's real state.
+test("FX profile namespace never replaces real host data-nox-mode",()=>{
+  const o=fakeScene();o.root.dataset.noxMode="native-owner-mode";
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"ECO"});
+  assert.equal(o.root.dataset.noxMode,"native-owner-mode");
+  assert.equal(o.root.dataset.noxFxMode,"eco");
+  assert.equal(fx.setProfile("MAX"),true);
+  assert.equal(o.root.dataset.noxMode,"native-owner-mode");
+  assert.equal(o.root.dataset.noxFxMode,"max");
+  fx.destroy();
+  assert.equal(o.root.dataset.noxMode,"native-owner-mode");
+  assert.equal(o.root.dataset.noxFxMode,undefined);
+});
+test("stale observer callback cannot recreate FX-owned data after destroy",()=>{
+  const o=fakeScene();
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs});
+  const callback=o.observerCallback;
+  assert.equal(typeof callback,"function");
+  fx.destroy();
+  callback([{isIntersecting:true}]);
+  assert.equal(o.root.dataset.noxFxVisible,undefined);
+  assert.equal(o.root.dataset.noxFxState,undefined);
+  assert.equal(o.pending,0);
+});
+test("R05 CSS only touches FX motion and uses the isolated FX profile",async()=>{
+  const fs=await import("node:fs");
+  const css=fs.readFileSync(new URL("../candidates/nox-cinema.css",import.meta.url),"utf8");
+  assert.equal(css.includes("data-nox-mode="),false);
+  assert.match(css,/data-nox-fx-mode="eco"/);
+  assert.match(css,/data-nox-fx-mode="reduced"/);
+  assert.equal(css.includes(".nox-cinema-scope *,"),false);
+  assert.match(css,/prefers-reduced-motion:reduce/);
 });
