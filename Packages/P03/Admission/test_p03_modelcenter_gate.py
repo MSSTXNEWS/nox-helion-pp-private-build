@@ -597,5 +597,71 @@ class R07MalformedNativePayloadRegressions(unittest.TestCase):
         e,c=example();c["nativeSourceLock"]["verifiedExtractedMemberCount"]=729.0
         self.assertIn("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED",g.admit_for_existing_downloader(e,c,lambda _e,_c:True).reasons)
 
+class R08EvidenceUriRegressions(unittest.TestCase):
+    """Fail-closed lexical evidence screening. Never fetch a URL or any weights."""
+
+    def license_url(self, value, reason="LICENSE_EVIDENCE_MISSING"):
+        e,c=example();e["licenseEvidenceUrl"]=value
+        got=g.admit_for_existing_downloader(e,c,lambda _e,_c:True)
+        self.assertIn(reason,got.reasons,f"{value!r}: {got}")
+        self.assertIsNone(got.existing_route)
+
+    def license_id(self, value):
+        e,c=example();e["licenseId"]=value
+        got=g.admit_for_existing_downloader(e,c,lambda _e,_c:True)
+        self.assertIn("LICENSE_EVIDENCE_MISSING",got.reasons,f"{value!r}: {got}")
+
+    def test_119_url_leading_newline_must_hold(self):
+        self.license_url("\nhttps://example.org/license")
+
+    def test_120_url_internal_lf_must_hold(self):
+        self.license_url("https://example.org/\nother")
+
+    def test_121_url_internal_tab_must_hold(self):
+        self.license_url("https://example.org/\tlicense")
+
+    def test_122_url_empty_userinfo_must_hold(self):
+        self.license_url("https://@example.org/license")
+
+    def test_123_host_leading_dot_must_hold(self):
+        self.license_url("https://.example.org/license")
+
+    def test_124_host_empty_label_must_hold(self):
+        self.license_url("https://example..org/license")
+
+    def test_125_host_hyphen_prefix_must_hold(self):
+        self.license_url("https://-example.org/license")
+
+    def test_126_single_label_host_must_hold(self):
+        self.license_url("https://example/license")
+
+    def test_127_uri_bidi_override_must_hold(self):
+        self.license_url("https://example.org/\u202eevidence")
+
+    def test_128_percent_encoded_crlf_must_hold(self):
+        self.license_url("https://example.org/license%0D%0AInjected")
+
+    def test_129_license_id_newline_must_hold(self):
+        self.license_id("MIT\napproved")
+
+    def test_130_license_id_bidi_override_must_hold(self):
+        self.license_id("Apache-2.0\u202e")
+
+    def test_131_license_id_control_tab_must_hold(self):
+        self.license_id("MIT\tAPPROVED")
+
+    def test_132_normal_https_and_license_id_preserved(self):
+        e,c=example(); e["licenseEvidenceUrl"]="https://huggingface.co/Qwen/Qwen3-ASR-0.6B-hf"
+        e["licenseId"]="Apache-2.0"
+        self.assertEqual(g.admit_for_existing_downloader(e,c,lambda _e,_c:True).status,"PASS_FOR_EXISTING_QUEUE")
+
+    def test_133_global_https_ipv4_preserved(self):
+        self.assertTrue(g._https_url("https://8.8.8.8/licensing"))
+
+    def test_134_local_ip_and_wrong_port_hold(self):
+        self.license_url("https://127.0.0.1/licensing")
+        self.license_url("https://example.org:8080/licensing")
+
+
 if __name__ == "__main__":
     unittest.main()
