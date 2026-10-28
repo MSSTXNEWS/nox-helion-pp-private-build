@@ -266,7 +266,7 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
         raise HostHold("Native method map and health probe required")
     if type(receipt) is not str or not re.fullmatch(r"[0-9a-f]{64}", receipt):
         raise HostHold("SHA-256 owner source receipt required")
-    if type(dispatcher) is not NoxPackHost:
+    if not isinstance(dispatcher, NoxPackHost):
         raise HostDenied("Existing single native host required")
 
     # Preflight everything without touching dispatcher.ports; a late missing
@@ -286,7 +286,7 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
             raise HostHold("Native dangerous-action consent is not installed")
         try:
             fn = getattr(provider, method)
-        except (AttributeError, Exception) as exc:
+        except Exception as exc:
             raise HostHold("Native owner implementation missing: "+route) from exc
         if not callable(fn):
             raise HostHold("Native owner implementation missing: "+route)
