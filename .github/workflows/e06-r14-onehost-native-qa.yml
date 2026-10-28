@@ -1,0 +1,185 @@
+name: NOX E06 R14 corrected onehost native install + original Python runtime
+on:
+  push:
+    branches: [e06/v16-r14-corrected-onehost-native-qa-20261028]
+    paths: ['.github/workflows/e06-r14-onehost-native-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-python-runtime:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Checkout frozen E06 source (does not modify original)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Download exact proven diagnostic onehost installer from GitHub only
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $meta=gh api repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/12783972325 | ConvertFrom-Json
+          if ($meta.id -ne 12783972325 -or $meta.expired -or
+              $meta.workflow_run.id -ne 40614012171 -or
+              $meta.workflow_run.head_sha -cne '48efe948051c987d9922c172740a6aa2115f2970') {throw 'ORIGINAL_ARTIFACT_PROVENANCE_HOLD'}
+          New-Item -ItemType Directory 'diagnostic-payload' -Force | Out-Null
+          gh run download 40614012171 --repo MSSTXNEWS/nox-helion-pp-private-build --name nox-e06-onehost-installer-40614012171 --dir diagnostic-payload
+          if ($LASTEXITCODE -ne 0) {throw 'ORIGINAL_ARTIFACT_DOWNLOAD_HOLD'}
+          $setup='diagnostic-payload/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+          $sha=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -cne '44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3') {throw 'ORIGINAL_SETUP_SHA_HOLD'}
+          Write-Host 'FROZEN_ORIGINAL_SETUP_BYTES_PASS'
+      - name: Install official Microsoft WebView2 Evergreen prerequisite on disposable CI only
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $installer=Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebview2Setup.exe'
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer -MaximumRedirection 8
+          if (!(Test-Path -LiteralPath $installer -PathType Leaf) -or (Get-Item $installer).Length -lt 50000) {throw 'MICROSOFT_WEBVIEW2_BOOTSTRAPPER_MISSING'}
+          $sign=Get-AuthenticodeSignature -FilePath $installer
+          if ($sign.Status -ne 'Valid' -or $sign.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {throw 'MICROSOFT_WEBVIEW2_SIGNER_INVALID'}
+          $process=Start-Process -FilePath $installer -ArgumentList @('/silent','/install') -PassThru -Wait
+          if ($process.ExitCode -notin @(0,1638,3010)) {throw ('WEBVIEW2_INSTALL_EXIT_'+$process.ExitCode)}
+          $found=$false
+          foreach ($key in @(
+            'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+            'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+            'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          )){
+            try {$pv=(Get-ItemProperty -LiteralPath $key -ErrorAction Stop).pv;if ($pv -and $pv -ne '0.0.0.0') {$found=$true;break}}catch{}
+          }
+          if (!$found) {throw 'MICROSOFT_WEBVIEW2_EVERGREEN_NOT_REGISTERED'}
+          Write-Host 'OFFICIAL_MICROSOFT_WEBVIEW2_RUNTIME_REGISTERED_PASS'
+      - name: Diagnose actual native installer failure and run frozen Python --diagnose
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $receipt=[ordered]@{
+            schema='NOX-E06-R14-ORIGINAL-HOST-RUNTIME-V1'
+            runId=$env:GITHUB_RUN_ID
+            sourceHead=$env:GITHUB_SHA
+            candidateSetupSha256='44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3'
+            expectedOriginalPythonSha256='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+            webView2Registered=$false
+            nativeSetup='HOLD'
+            setupExitCode=$null
+            stageExists=$false
+            originalPythonShaValid=$false
+            pythonDiagnose='NOT_RUN'
+            pythonExitCode=$null
+            pythonRoutes=$null
+            pythonCores=$null
+            sourceOriginalUnchanged=$true
+            fullProductAccepted=$false
+            E07Accepted=$false
+            failure=$null
+          }
+          try {
+            foreach ($p in @(
+              'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+              'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}',
+              'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+            )) {
+              try {$v=(Get-ItemProperty -LiteralPath $p -ErrorAction Stop).pv; if($v -and $v -ne '0.0.0.0') {$receipt.webView2Registered=$true;break}}catch{}
+            }
+            $setup=(Resolve-Path 'diagnostic-payload/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe').Path
+            $root=Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION'
+            foreach($p in @($root,($root+'.__p01_stage'),($root+'.__p01_previous'),($root+'.__p01_rollback_saved'))) {
+              if(Test-Path -LiteralPath $p) {throw ('UNSAFE_PREEXISTING_INSTALL_PATH:'+ $p)}
+            }
+            $p=Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+            $receipt.setupExitCode=$p.ExitCode
+            $receipt.stageExists=(Test-Path -LiteralPath ($root+'.__p01_stage'))
+            $python=Join-Path $root 'Backend\NOX_HELION_PRIVATE_CANDIDATE.exe'
+            if ($p.ExitCode -eq 0 -and (Test-Path -LiteralPath $python -PathType Leaf)) {
+              $receipt.nativeSetup='PASS'
+            } else {
+              $receipt.nativeSetup='HOLD'
+              $receipt.failure='NSIS_ABORT_OR_MISSING_INSTALLED_BACKEND'
+            }
+            if (!(Test-Path -LiteralPath $python -PathType Leaf)) {
+              $sevenZip=Join-Path $env:ProgramFiles '7-Zip\7z.exe'
+              if (!(Test-Path -LiteralPath $sevenZip -PathType Leaf)) {
+                if (!(Get-Command '7z.exe' -ErrorAction SilentlyContinue)) {throw 'INSTALLED_BACKEND_ABSENT_AND_7ZIP_UNAVAILABLE'}
+                $sevenZip='7z.exe'
+              }
+              New-Item -ItemType Directory -Path 'forensic-extraction' -Force | Out-Null
+              & $sevenZip x $setup '-oforensic-extraction' -y | Out-Null
+              if ($LASTEXITCODE -ne 0) {throw 'SEVEN_ZIP_INSTALLER_EXTRACTION_FAILED'}
+              $python=Get-ChildItem 'forensic-extraction' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' | Select-Object -First 1 -ExpandProperty FullName
+              if (!$python) {throw 'BACKEND_IN_SETUP_ABSENT'}
+            }
+            $sha=(Get-FileHash -LiteralPath $python -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($sha -cne $receipt.expectedOriginalPythonSha256) {throw 'ORIGINAL_PYTHON_BYTE_MISMATCH'}
+            $receipt.originalPythonShaValid=$true
+            $o=Join-Path $env:RUNNER_TEMP 'nox-e06-py-out.txt'
+            $e=Join-Path $env:RUNNER_TEMP 'nox-e06-py-err.txt'
+            $process=Start-Process -FilePath $python -ArgumentList '--diagnose' -RedirectStandardOutput $o -RedirectStandardError $e -PassThru
+            try {
+              if (!$process.WaitForExit(60000)) {
+                $process.Kill($true)
+                throw 'ORIGINAL_PYTHON_DIAGNOSE_TIMEOUT'
+              }
+              $receipt.pythonExitCode=$process.ExitCode
+              if ($receipt.pythonExitCode -ne 0) {throw 'ORIGINAL_PYTHON_DIAGNOSE_EXIT_HOLD'}
+              $raw=[IO.File]::ReadAllText($o)
+              if ($raw.Length -gt 65536) {throw 'ORIGINAL_DIAGNOSE_JSON_TOO_LARGE'}
+              $data=$raw | ConvertFrom-Json
+              if ($data.routes_total -lt 1 -or @($data.cores).Count -ne 8) {throw 'ORIGINAL_DIAGNOSE_ROUTES_CORES_CONTRACT_HOLD'}
+              $receipt.pythonRoutes=[int]$data.routes_total
+              $receipt.pythonCores=@($data.cores).Count
+              $receipt.pythonDiagnose='PASS'
+              Write-Host 'REAL_PINNED_ORIGINAL_PYTHON_BINARY_DIAGNOSE_PASS'
+            } finally { if(!$process.HasExited) {$process.Kill($true)} }
+          } catch {
+            if (!$receipt.failure) {$receipt.failure=$_.Exception.Message}
+            Write-Warning ("E06_R12_RUNTIME_HOLD: "+$receipt.failure)
+          } finally {
+            $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'e06-r14-onehost-native-runtime.json' -Encoding utf8
+            Write-Host ($receipt | ConvertTo-Json -Depth 5)
+          }
+          if ($receipt.pythonDiagnose -cne 'PASS') {throw 'ORIGINAL_PYTHON_RUNTIME_NOT_VERIFIED'}
+          if ($receipt.nativeSetup -cne 'PASS') {throw 'NATIVE_ONEHOST_INSTALL_HOLD'}
+      - name: Independently uninstall combined app without removing user state
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $previous=Get-Content 'e06-r14-onehost-native-runtime.json' -Raw | ConvertFrom-Json
+          if ($previous.nativeSetup -cne 'PASS' -or $previous.pythonDiagnose -cne 'PASS') {throw 'PREVIOUS_COMBINED_NATIVE_QA_NOT_PASS'}
+          $root=Join-Path $env:LOCALAPPDATA 'Programs/NOX HELION'
+          $uninstall=Join-Path $root 'Uninstall.exe'
+          if (!(Test-Path -LiteralPath $uninstall -PathType Leaf)) {throw 'P01_INSTALLED_UNINSTALL_EXE_ABSENT'}
+          $userData=Join-Path $env:LOCALAPPDATA 'NOX_HELION/E06_R14_DATA_SENTINEL'
+          if (Test-Path -LiteralPath $userData) {throw 'P01_SENTINEL_PREEXISTS'}
+          New-Item -ItemType Directory -Path $userData -Force | Out-Null
+          $sentinel=Join-Path $userData 'preserve.txt'
+          [IO.File]::WriteAllText($sentinel,'NOX E06 R14 user state must survive conservative uninstall')
+          $before=(Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash.ToLowerInvariant()
+          $proc=Start-Process -FilePath $uninstall -ArgumentList '/S' -PassThru -Wait
+          if ($proc.ExitCode -ne 0) {throw ('P01_UNINSTALL_EXIT_'+$proc.ExitCode)}
+          if ((Get-FileHash $sentinel -Algorithm SHA256).Hash.ToLowerInvariant() -cne $before) {throw 'P01_USER_DATA_CHANGED'}
+          if (Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt')) {throw 'P01_UNINSTALL_OWNERSHIP_MARKER_REMAINS'}
+          [ordered]@{
+            schema='E06_R14_COMBINED_UNINSTALL_WITH_USER_DATA_V1'
+            sourceRun=40614012171
+            installerSha256='44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3'
+            uninstall='PASS'
+            userDataPreserved='PASS'
+            E07Accepted=$false
+            fullProductIntegrated=$false
+          } | ConvertTo-Json | Set-Content 'e06-r14-uninstall-data-receipt.json'
+          Write-Host 'E06_R14_COMBINED_INSTALL_UNINSTALL_USER_DATA_PASS'
+      - name: Upload forensic receipt including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r14-onehost-runtime-${{ github.run_id }}
+          path: |
+            e06-r14-onehost-native-runtime.json
+            e06-r14-uninstall-data-receipt.json
+          retention-days: 30
+          if-no-files-found: warn
