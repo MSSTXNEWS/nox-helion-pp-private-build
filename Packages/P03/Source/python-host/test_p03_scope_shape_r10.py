@@ -5,7 +5,7 @@ No Ollama network, weights, installer or fake downloader.
 """
 import unittest
 from types import SimpleNamespace
-from p03_onehost_port import P03OneHostPort, P03PortDenied
+from p03_onehost_port import P03OneHostPort, P03PortDenied, P03PortHold
 
 
 class NativeScopeShapeTests(unittest.TestCase):
@@ -59,6 +59,55 @@ class NativeScopeShapeTests(unittest.TestCase):
             self.port._ensure_native_scope(self.session(frozenset({"models.pull"}),
                                                         frozenset({"models.pull"})), "models.pull", {})
 
+
+
+class NativeOwnerRouteMapR11Tests(unittest.TestCase):
+    """P03 must HOLD malformed one-host owner-map rows before any bind."""
+    def setUp(self):
+        self.port = object.__new__(P03OneHostPort)
+        self.port.backend = None
+        self.port.native_approve = None
+
+    @staticmethod
+    def host():
+        routes = {r: {"owner": 3} for r in ("models.catalog", "models.installed", "models.digest")}
+        ports = {}
+        host = SimpleNamespace(routes=routes, ports=ports)
+        host.bind = lambda route, port: ports.__setitem__(route, port)
+        return host
+
+    def test_r11_01_bad_owner_row_types_fail_closed_without_partial_registration(self):
+        for invalid in (None, 42, [], ["owner"], "owner", True):
+            with self.subTest(row=repr(invalid)):
+                host = self.host()
+                host.routes["models.installed"] = invalid
+                with self.assertRaises(P03PortHold):
+                    self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+                self.assertEqual(host.ports, {})
+
+    def test_r11_02_wrong_or_missing_owner_holds_without_bind(self):
+        for invalid in ({"owner": 2}, {"owner": "3"}, {}):
+            with self.subTest(row=invalid):
+                host = self.host()
+                host.routes["models.digest"] = invalid
+                with self.assertRaises(P03PortHold):
+                    self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+                self.assertEqual(host.ports, {})
+
+    def test_r11_03_existing_foreign_port_remains_untouched(self):
+        host = self.host()
+        foreign = object()
+        host.ports["models.catalog"] = foreign
+        with self.assertRaises(P03PortHold):
+            self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+        self.assertIs(host.ports["models.catalog"], foreign)
+        self.assertEqual(len(host.ports), 1)
+
+    def test_r11_04_valid_owner_rows_still_register_three_read_only_routes(self):
+        host = self.host()
+        registered = self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+        self.assertEqual(registered, frozenset(host.routes))
+        self.assertEqual(set(host.ports), set(host.routes))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
