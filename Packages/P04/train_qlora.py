@@ -294,6 +294,11 @@ def parse_dataset_record(line: str, label: str, number: int) -> dict[str, Any]:
         raise ValueError(f"{label}_INVALID_JSONL_{number}") from exc
     if not isinstance(row, dict):
         raise ValueError(f"{label}_ROW_NOT_OBJECT_{number}")
+    # SFTTrainer may prefer conversational/prompt-completion columns over
+    # `text`. Accept exactly one supervised representation per record so
+    # the leakage fingerprint cannot describe different data than the GPU sees.
+    if ("text" in row and "messages" in row) or "prompt" in row or "completion" in row:
+        raise ValueError(f"{label}_AMBIGUOUS_TRAINING_COLUMNS_{number}")
     return row
 
 
