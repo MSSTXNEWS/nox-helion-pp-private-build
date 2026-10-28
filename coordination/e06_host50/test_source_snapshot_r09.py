@@ -64,7 +64,7 @@ class SourceSnapshotR09Tests(unittest.TestCase):
             run_read_only_audit(str(self.catalog), str(self.bindings))
 
     def test_non_utf8_source_fails_closed(self):
-        self.catalog.write_bytes(b'\\xff' + self.cat_bytes)
+        self.catalog.write_bytes(b'\xff' + self.cat_bytes)
         with self.assertRaisesRegex(Hold, "AUDIT_INVALID_UTF8_JSON"):
             run_read_only_audit(str(self.catalog), str(self.bindings))
 
