@@ -37,12 +37,43 @@ async function task(action,extra={},target='chat-output'){
  catch(e){output(target,{status:'HOLD / FAILED',reason:String(e.message||e)});showToast(String(e.message||e),true)}finally{busy=false}
 }
 function renderCategories(){const grid=$('categories'),select=$('kind');for(const [key,emoji,title] of CATS){const btn=document.createElement('button');btn.className='tile';const b=document.createElement('b');b.textContent=emoji+' '+title;const hint=document.createElement('small');hint.textContent=key==='adult18'?'Только совершеннолетние персонажи и зрители':'Выбор инструмента';btn.append(b,hint);btn.onclick=()=>{selectedKind=key;select.value=key;showToast('Выбрано: '+title);$('prompt').focus()};grid.append(btn);const o=document.createElement('option');o.value=key;o.textContent=title;select.append(o)}select.onchange=()=>selectedKind=select.value}
-async function refresh(){try{const s=await rpc('status');const summary=Object.entries(s.engines).map(([k,v])=>'<div class="status-line"><span>'+k+'</span><strong class="'+(v?'ok':'error')+'">'+(v?'Готов':'OFFLINE')+'</strong></div>').join('');$('quick-status').innerHTML=summary;$('status').innerHTML=summary+'<pre>'+JSON.stringify(s,null,2)+'</pre>'}catch(e){$('quick-status').textContent='Backend HOLD: '+e.message;$('status').textContent='Backend HOLD: '+e.message}}
+function renderEngineRows(report){
+ const engines=report?.engines;
+ if(!engines || typeof engines!=='object' || Array.isArray(engines))throw Error('Некорректный ответ о движках');
+ const rows=document.createDocumentFragment();
+ for(const [name,ready] of Object.entries(engines)){
+  if(!name || name.length>128 || typeof ready!=='boolean')throw Error('Неверный статус движка');
+  const row=document.createElement('div');row.className='status-line';
+  const title=document.createElement('span');title.textContent=name;
+  const state=document.createElement('strong');state.className=ready?'ok':'error';
+  state.textContent=ready?'Готов':'OFFLINE';row.append(title,state);rows.append(row);
+ }
+ return rows;
+}
+async function refresh(){
+ try{
+  const report=await rpc('status');
+  const rows=renderEngineRows(report);
+  const quick=$('quick-status'),detail=$('status');
+  quick.replaceChildren(rows.cloneNode(true));
+  const full=document.createElement('pre');full.textContent=JSON.stringify(report,null,2);
+  detail.replaceChildren(rows,full);
+ }catch(e){
+  $('quick-status').textContent='Backend HOLD: '+e.message;
+  $('status').textContent='Backend HOLD: '+e.message;
+ }
+}
 async function renderModels(){try{const r=await rpc('catalog');$('models').replaceChildren();for(const m of r.models){const card=document.createElement('div');card.className='model';const h=document.createElement('h3');h.textContent=m.name;const p=document.createElement('p');p.textContent=m.vram+' · '+m.category+(m.installed?' · Установлена':' · Ещё не загружена');const link=document.createElement('a');link.href=m.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Карточка модели / лицензия';const btn=document.createElement('button');btn.className='action';btn.textContent='Выбрать веса';btn.onclick=()=>selectModel(m.id);card.append(h,p,link,document.createElement('br'),btn);$('models').append(card)}}catch(e){$('models').textContent='Каталог недоступен: '+e.message}}
 async function selectModel(id){selectedModel=id;revision='';files=[];$('variants').replaceChildren();$('model-info').textContent='Запрашиваем реальные варианты и лицензию…';try{const r=await rpc('variants',{model_id:id});revision=r.revision;$('model-info').textContent=id+' · Revision: '+revision+' · License: '+r.license+' · '+r.files.length+' весовых файлов';for(const f of r.files){const label=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.style.width='20px';input.style.minHeight='20px';input.value=f.path;input.onchange=()=>{files=[...document.querySelectorAll('#variants input:checked')].map(x=>x.value)};label.append(input,document.createTextNode(' '+f.path+' · '+(f.bytes==null?'размер неизвестен':Math.round(f.bytes/1048576)+' МБ')));$('variants').append(label)}}catch(e){$('model-info').textContent='HOLD: '+e.message}}
 const popup=(action,value)=>bc?.postMessage({action,value});
 function openTheater(){
- if(window.parent!==window){window.parent.postMessage({type:'nox.creative.projector.v1'},location.origin);showToast('Окно проектора запрошено у NOX Windows');return;}
+ const project=$('project').value.trim();
+ if(project&&!/^[a-z0-9_-]{1,48}$/i.test(project)){showToast('Неверный ID проекта для кинозала',true);return;}
+ if(window.parent!==window){
+   window.parent.postMessage({type:'nox.creative.projector.v1',project_id:project},location.origin);
+   showToast('Окно проектора запрошено у NOX Windows');return;
+ }
+ // Browser preview does not claim access to native Windows project files.
  theater=window.open('theater.html','nox-helion-projector','popup,width=1100,height=700');
  if(!theater)showToast('Разреши всплывающее окно для проектора',true);else showToast('Окно открыто — перенеси на проектор');
 }

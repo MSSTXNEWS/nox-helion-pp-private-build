@@ -5,8 +5,18 @@ const video=$('video'),poster=$('poster'),stage=$('stage'),status=$('status');
 const bc=typeof BroadcastChannel==='function'?new BroadcastChannel('nox-helion-theater'):null;
 let videoUrl=null,subtitleUrl=null,track=null;
 const note=t=>{status.textContent=t};
-const project=new URLSearchParams(window.location.search).get('project');
-if(project&&/^[a-z0-9_-]{1,48}$/i.test(project))note('Проект '+project+': выберите MP4/WebM через кнопку файла');
+const query=new URLSearchParams(window.location.search);
+const project=query.get('project');
+const nativeMedia=query.get('local_project_media')==='1';
+// Only WPF's scoped virtual host may enable this media mapping.
+if(nativeMedia && project && /^[a-z0-9_-]{1,48}$/i.test(project)){
+ video.src='https://nox-projects.invalid/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';
+ video.style.display='block';poster.style.display='none';
+ note('NOX · локальный фильм '+project+' · нажмите ▶');
+ video.addEventListener('error',()=>{video.removeAttribute('src');video.load();video.style.display='none';poster.style.display='block';note('Фильм ещё не готов — выберите локальный MP4');},{once:true});
+}else if(project&&/^[a-z0-9_-]{1,48}$/i.test(project)){
+ note('Проект '+project+': выберите MP4/WebM через кнопку файла');
+}
 function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null}}
 function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
 function chooseVideo(file){

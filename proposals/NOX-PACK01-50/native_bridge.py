@@ -111,20 +111,30 @@ class NoxPackHost:
         session.validate()
         if route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
-        if not isinstance(payload,dict) or len(json.dumps(payload,ensure_ascii=False)) > 2*1024*1024:
+        if not isinstance(payload, dict):
             raise HostDenied("Missing/oversize request")
+        try:
+            raw = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError, UnicodeError, RecursionError, OverflowError) as exc:
+            raise HostDenied("Invalid native JSON request") from exc
+        if len(raw) > 2 * 1024 * 1024:
+            raise HostDenied("Missing/oversize request")
+        # Capture the exact JSON approved at this native boundary. Neither the
+        # source caller nor a provider-ready check may change the execution data.
+        frozen_payload = json.loads(raw)
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
         if risk == "dangerous" and (
-            not callable(self.native_approve) or self.native_approve(session,route,payload) is not True):
+            not callable(self.native_approve) or
+            self.native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
         port = self.ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
         if not ready:raise HostHold("Owner backend unavailable")
-        return port.call(session,payload)
+        return port.call(session,frozen_payload)
 
 
 class ExistingP02Adapter:
