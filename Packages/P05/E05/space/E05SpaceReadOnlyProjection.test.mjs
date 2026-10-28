@@ -3,9 +3,9 @@ import {projectSpaceView,projectReadiness,projectFeeds,projectHardware,projectCo
   projectCanonicalEvents,LOCKED_BASELINE,EVENT_SCHEMA} from './E05SpaceReadOnlyProjection.mjs';
 const NOW=Date.parse('2026-10-28T03:45:00Z');
 const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R03';
-const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,
+const bar=i=>({executor:i,stage:'CRITERIA_ACCEPTED',percent:i*10,total_tasks:10,
   task_ledger:Array.from({length:10},(_,j)=>({task_id:`E0${i}-TASK-${j+1}`,weight:10,
-    status:j<i?'COMPONENT_VERIFIED':'HOLD',...(j<i?{receipt_sha256:H}:{})})),
+    status:j<i?'ACCEPTED':'HOLD',...(j<i?{receipt_sha256:H}:{})})),
   manifest_sha256:H,receipt_sha256:H});
 const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:44:58Z',
   native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
@@ -536,8 +536,8 @@ console.log('R09 GPU tile strict provider/time/sample guards; native Windows NOT
 
 // R10: reject identity collisions across sealed P01–P05 task ledgers and
 // missing/impossible native terminal timestamps before presenting STOP.
-const oneTaskBar=(i,taskId)=>({executor:i,stage:'CRITERIA_VERIFIED',percent:100,total_tasks:1,
-  task_ledger:[{task_id:taskId,weight:100,status:'COMPONENT_VERIFIED',receipt_sha256:H}],
+const oneTaskBar=(i,taskId)=>({executor:i,stage:'CRITERIA_ACCEPTED',percent:100,total_tasks:1,
+  task_ledger:[{task_id:taskId,weight:100,status:'ACCEPTED',receipt_sha256:H}],
   manifest_sha256:H,receipt_sha256:H});
 const oneTaskReadiness=ids=>({...readiness,overall:100,
   bars:ids.map((id,i)=>oneTaskBar(i+1,id)).concat(readiness.bars.slice(5))});
@@ -591,3 +591,35 @@ test('R10 distinct global TaskIDs retain the 20/25/20/25/10 formula',()=>{
   assert.equal(r.overall,100);assert.equal(r.reason,'E06_OWNER_PROJECTED');
 });
 console.log('R10 TOTAL PASSED '+n+' assertions; Native Windows EXE = NOT_RUN');
+
+test('EXPRESS no COMPONENT_VERIFIED task contributes to accepted readiness',()=>{
+  const r=structuredClone(readiness);
+  for(const lane of r.bars.slice(0,5)){
+    for(const task of lane.task_ledger)
+      if(task.status==='ACCEPTED') task.status='COMPONENT_VERIFIED';
+    lane.percent=0;
+  }
+  r.overall=0;
+  const x=projectReadiness(r,RUN,NOW);
+  assert.equal(x.overall,0);
+  assert.deepEqual(x.bars.slice(0,5).map(b=>b.percent),[0,0,0,0,0]);
+});
+test('EXPRESS prior source-only 28 percent is rejected as RELEASE progress',()=>{
+  const r=structuredClone(readiness);
+  for(const lane of r.bars.slice(0,5))
+    for(const task of lane.task_ledger)
+      if(task.status==='ACCEPTED') task.status='COMPONENT_VERIFIED';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('EXPRESS mixed accepted and component evidence counts only ACCEPTED TaskIDs',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[0].status='COMPONENT_VERIFIED';
+  r.bars[0].percent=0;
+  r.overall=26;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,26);
+});
+test('EXPRESS legacy CRITERIA_VERIFIED stage cannot attest finished product',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].stage='CRITERIA_VERIFIED';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
