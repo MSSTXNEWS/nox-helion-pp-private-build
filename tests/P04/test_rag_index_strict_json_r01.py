@@ -107,7 +107,9 @@ class RagIndexStrictJsonTests(unittest.TestCase):
 
     def test_deep_json_returns_existing_hold_not_recursion_crash(self):
         deep = "[" * 1300 + "0" + "]" * 1300
-        self.reject_unchanged(deep, "RAG_INDEX_INVALID_JSON")
+        # CPython may parse 1300 nested arrays before root schema validation;
+        # both parser-depth rejection and schema rejection are safe HOLDs.
+        self.reject_unchanged(deep, r"RAG_INDEX_(?:INVALID_JSON|SCHEMA_INVALID)")
 
     def test_no_false_index_creation_when_missing(self):
         self.assertEqual(self.index._read()["sources"], [])
