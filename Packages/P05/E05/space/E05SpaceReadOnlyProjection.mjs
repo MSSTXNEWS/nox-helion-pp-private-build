@@ -40,7 +40,7 @@ const derivedLaneProgress = b => {
     if (!task || !validRunId(task.task_id) || seen.has(task.task_id) ||
         typeof task.weight !== 'number' || !Number.isFinite(task.weight) ||
         task.weight <= 0 || task.weight > 100 ||
-        !['SOURCE','HOLD','NOT_RUN','COMPONENT_VERIFIED'].includes(task.status)) return null;
+        !['SOURCE','HOLD','FAILED','NOT_RUN','COMPONENT_VERIFIED'].includes(task.status)) return null;
     seen.add(task.task_id);
     denominator += task.weight;
     if (task.status === 'COMPONENT_VERIFIED') {
