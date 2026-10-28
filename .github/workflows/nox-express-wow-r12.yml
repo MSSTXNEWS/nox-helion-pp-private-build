@@ -45,6 +45,10 @@ jobs:
           python -m py_compile integrations/express-wow/apply_express.py integrations/wow200/stage_wow200.py
           python -m unittest discover -s integrations/express-wow/tests -p 'test_one_shot_order.py' -v
           python -m unittest discover -s integrations/express-wow/tests -p 'test_utf8_bridge_limit.py' -v
+          python -m unittest discover -s integrations/creative/tests -p 'test_projector_contract.py' -v
+          node --check integrations/creative/web/theater.js
+          node --check integrations/creative/web/studio.js
+          node --check integrations/creative/web/entry.js
       - name: Evidence limited to source checks
         shell: bash
         run: |

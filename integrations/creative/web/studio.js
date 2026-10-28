@@ -42,7 +42,13 @@ async function renderModels(){try{const r=await rpc('catalog');$('models').repla
 async function selectModel(id){selectedModel=id;revision='';files=[];$('variants').replaceChildren();$('model-info').textContent='Запрашиваем реальные варианты и лицензию…';try{const r=await rpc('variants',{model_id:id});revision=r.revision;$('model-info').textContent=id+' · Revision: '+revision+' · License: '+r.license+' · '+r.files.length+' весовых файлов';for(const f of r.files){const label=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.style.width='20px';input.style.minHeight='20px';input.value=f.path;input.onchange=()=>{files=[...document.querySelectorAll('#variants input:checked')].map(x=>x.value)};label.append(input,document.createTextNode(' '+f.path+' · '+(f.bytes==null?'размер неизвестен':Math.round(f.bytes/1048576)+' МБ')));$('variants').append(label)}}catch(e){$('model-info').textContent='HOLD: '+e.message}}
 const popup=(action,value)=>bc?.postMessage({action,value});
 function openTheater(){
- if(window.parent!==window){window.parent.postMessage({type:'nox.creative.projector.v1'},location.origin);showToast('Окно проектора запрошено у NOX Windows');return;}
+ const project=$('project').value.trim();
+ if(project&&!/^[a-z0-9_-]{1,48}$/i.test(project)){showToast('Неверный ID проекта для кинозала',true);return;}
+ if(window.parent!==window){
+   window.parent.postMessage({type:'nox.creative.projector.v1',project_id:project},location.origin);
+   showToast('Окно проектора запрошено у NOX Windows');return;
+ }
+ // Browser preview does not claim access to native Windows project files.
  theater=window.open('theater.html','nox-helion-projector','popup,width=1100,height=700');
  if(!theater)showToast('Разреши всплывающее окно для проектора',true);else showToast('Окно открыто — перенеси на проектор');
 }

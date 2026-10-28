@@ -54,7 +54,7 @@ def stage(root:Path, source:Path)->dict:
         raise ValueError('CREATIVE_WEB_ASSETS_INCOMPLETE_HOLD')
     for name in found:
         safe_source_file(web/name)
-    patched=native.replace(ANCHOR,ANCHOR+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(); break;')
+    patched=native.replace(ANCHOR,ANCHOR+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;')
     patched=patched.replace(LIFECYCLE,LIFECYCLE+'\n        Closing += (_, _) => StopCreativeWorker();')
     patched_html=page.replace('</body>','<script src="creative/entry.js"></script></body>')
     # No original D02, R13 owner archive, installer, P03/P04/P05 source is overwritten.

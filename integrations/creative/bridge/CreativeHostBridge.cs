@@ -169,17 +169,51 @@ public partial class MainWindow
         }
     }
 
-    private async Task OpenCreativeProjectorAsync()
+    private string? _creativeProjectorProjectId;
+
+    private async Task OpenCreativeProjectorAsync(string? requestedProjectId = null)
     {
         try
         {
-            if(_creativeProjector is {IsVisible:true} current){current.Activate();return;}
+            // Never accept a path, URL, encoded slash, or arbitrary Windows file.
+            // The user must explicitly select a project in the trusted NOX studio.
+            string? projectId = null;
+            string? projectRoot = null;
+            if (!string.IsNullOrEmpty(requestedProjectId))
+            {
+                if (!Regex.IsMatch(requestedProjectId, @"\A[a-zA-Z0-9_-]{1,48}\z"))
+                    throw new InvalidOperationException("Invalid NOX project identity");
+                projectRoot = Path.Combine(_data, "creative", "projects");
+                var projectFolder = Path.Combine(projectRoot, requestedProjectId);
+                var movie = Path.Combine(projectFolder, "NOX_MOVIE_FINAL.mp4");
+                // Fail closed on junction/symlink redirection; don't expose wider data roots.
+                if (Directory.Exists(projectRoot) && Directory.Exists(projectFolder) && File.Exists(movie) &&
+                    (new DirectoryInfo(projectRoot).Attributes & FileAttributes.ReparsePoint) == 0 &&
+                    (new DirectoryInfo(projectFolder).Attributes & FileAttributes.ReparsePoint) == 0 &&
+                    (new FileInfo(movie).Attributes & FileAttributes.ReparsePoint) == 0 &&
+                    new FileInfo(movie).Length > 0)
+                    projectId = requestedProjectId;
+                else
+                    WriteLog("CREATIVE_PROJECTOR_MP4_NOT_READY");
+            }
+            if(_creativeProjector is {IsVisible:true} current)
+            {
+                if (string.Equals(_creativeProjectorProjectId, projectId, StringComparison.Ordinal))
+                { current.Activate(); return; }
+                // A new selected movie must not leave the old projector playing.
+                current.Close();
+            }
             var theater=new Window{Title="NOX HELION · CINEMA / PROJECTOR",Width=1100,Height=700,
                 MinWidth=350,MinHeight=300,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner};
             var viewer=new Microsoft.Web.WebView2.Wpf.WebView2();
             theater.Content=viewer;
             _creativeProjector=theater;
-            theater.Closed+=(_,_)=>{if(ReferenceEquals(_creativeProjector,theater))_creativeProjector=null;};
+            _creativeProjectorProjectId=projectId;
+            theater.Closed+=(_,_)=>{
+                if(ReferenceEquals(_creativeProjector,theater)){
+                    _creativeProjector=null;_creativeProjectorProjectId=null;
+                }
+            };
             theater.Show();
             var env=View.CoreWebView2?.Environment ?? throw new InvalidOperationException("WebView2 is offline");
             await viewer.EnsureCoreWebView2Async(env);
@@ -188,10 +222,21 @@ public partial class MainWindow
             viewer.CoreWebView2.Settings.IsWebMessageEnabled=false;
             viewer.CoreWebView2.NewWindowRequested+=(_,e)=>{e.Handled=true;};
             viewer.CoreWebView2.NavigationStarting+=(_,e)=>{
-                if(!Uri.TryCreate(e.Uri,UriKind.Absolute,out var uri) || uri.Scheme!="https" || !uri.Host.Equals("nox.local",StringComparison.OrdinalIgnoreCase))e.Cancel=true;
+                if(!Uri.TryCreate(e.Uri,UriKind.Absolute,out var uri) || uri.Scheme!="https" ||
+                   !uri.Host.Equals("nox.local",StringComparison.OrdinalIgnoreCase))e.Cancel=true;
             };
-            viewer.CoreWebView2.SetVirtualHostNameToFolderMapping("nox.local",Path.Combine(AppContext.BaseDirectory,"Assets"),CoreWebView2HostResourceAccessKind.DenyCors);
-            viewer.CoreWebView2.Navigate("https://nox.local/creative/theater.html");
+            viewer.CoreWebView2.SetVirtualHostNameToFolderMapping("nox.local",
+                Path.Combine(AppContext.BaseDirectory,"Assets"),CoreWebView2HostResourceAccessKind.DenyCors);
+            var theaterUrl="https://nox.local/creative/theater.html";
+            if(projectId is not null && projectRoot is not null)
+            {
+                // Separate virtual origin: media as <video src> only; CORS fetch denied.
+                // No Python server, unrestricted file:// access, or privileged JS bridge.
+                viewer.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "nox-projects.invalid",projectRoot,CoreWebView2HostResourceAccessKind.DenyCors);
+                theaterUrl += "?local_project_media=1&project="+Uri.EscapeDataString(projectId);
+            }
+            viewer.CoreWebView2.Navigate(theaterUrl);
         }
         catch(Exception ex){WriteLog("CREATIVE_PROJECTOR "+ex.GetType().Name);}
     }
