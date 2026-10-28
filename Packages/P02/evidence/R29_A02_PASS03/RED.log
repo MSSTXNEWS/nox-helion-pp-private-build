@@ -1,0 +1,64 @@
+test_call_history_malformed_rejected (test_p02_owner_route_ports.RouteTests.test_call_history_malformed_rejected) ... ok
+test_call_history_sanitizes_provider_data (test_p02_owner_route_ports.RouteTests.test_call_history_sanitizes_provider_data) ... ok
+test_cross_tenant_call_history_blocked (test_p02_owner_route_ports.RouteTests.test_cross_tenant_call_history_blocked) ... ok
+test_limits_bool_rejected (test_p02_owner_route_ports.RouteTests.test_limits_bool_rejected) ... ok
+test_native_route_denial (test_p02_owner_route_ports.RouteTests.test_native_route_denial) ... ok
+test_native_stop_after_voice_run_does_not_publish_output (test_p02_owner_route_ports.RouteTests.test_native_stop_after_voice_run_does_not_publish_output) ... ok
+test_native_stop_before_capture_does_not_consume_one_use_audio (test_p02_owner_route_ports.RouteTests.test_native_stop_before_capture_does_not_consume_one_use_audio) ... ok
+test_rag_existing_index_and_sources (test_p02_owner_route_ports.RouteTests.test_rag_existing_index_and_sources) ... ok
+test_rag_rejects_unverified_source (test_p02_owner_route_ports.RouteTests.test_rag_rejects_unverified_source) ... ok
+test_requires_existing_host_chat_acl (test_p02_owner_route_ports.RouteTests.test_requires_existing_host_chat_acl) ... ok
+test_sid_mismatch_blocked (test_p02_owner_route_ports.RouteTests.test_sid_mismatch_blocked) ... ok
+test_unavailable_routes_hold (test_p02_owner_route_ports.RouteTests.test_unavailable_routes_hold) ... ok
+test_voice_capture_and_one_time_use (test_p02_owner_route_ports.RouteTests.test_voice_capture_and_one_time_use) ... ok
+test_voice_rejects_page_audio (test_p02_owner_route_ports.RouteTests.test_voice_rejects_page_audio) ... ok
+test_invalid_resolved_stop_fails_before_capture (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_invalid_resolved_stop_fails_before_capture) ... ERROR
+test_preexisting_native_stop_reaches_capture_gate (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_preexisting_native_stop_reaches_capture_gate) ... ERROR
+test_stop_during_asr_prevents_llm_and_audio_output (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_stop_during_asr_prevents_llm_and_audio_output) ... ERROR
+test_unbound_native_stop_keeps_voice_hold_without_consuming_capture (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_unbound_native_stop_keeps_voice_hold_without_consuming_capture) ... FAIL
+
+======================================================================
+ERROR: test_invalid_resolved_stop_fails_before_capture (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_invalid_resolved_stop_fails_before_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 63, in test_invalid_resolved_stop_fails_before_capture
+    port=self.bind(native_stop_from_session=lambda _,v=result:v)['chat.voice']
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 27, in bind
+    register_with_existing_pack01(d,Port,lambda session:self.scope,self.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'native_stop_from_session'
+
+======================================================================
+ERROR: test_preexisting_native_stop_reaches_capture_gate (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_preexisting_native_stop_reaches_capture_gate)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 44, in test_preexisting_native_stop_reaches_capture_gate
+    ports=self.bind(native_stop_from_session=lambda value:seen.append(value) or stop)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 27, in bind
+    register_with_existing_pack01(d,Port,lambda session:self.scope,self.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'native_stop_from_session'
+
+======================================================================
+ERROR: test_stop_during_asr_prevents_llm_and_audio_output (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_stop_during_asr_prevents_llm_and_audio_output)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 57, in test_stop_during_asr_prevents_llm_and_audio_output
+    port=self.bind(native_stop_from_session=lambda _:stop)['chat.voice']
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 27, in bind
+    register_with_existing_pack01(d,Port,lambda session:self.scope,self.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'native_stop_from_session'
+
+======================================================================
+FAIL: test_unbound_native_stop_keeps_voice_hold_without_consuming_capture (test_p02_loader_voice_stop_r29.VoiceStopWiring.test_unbound_native_stop_keeps_voice_hold_without_consuming_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py", line 35, in test_unbound_native_stop_keeps_voice_hold_without_consuming_capture
+    self.assertFalse(ports['chat.voice'].available())
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.018s
+
+FAILED (failures=1, errors=3)

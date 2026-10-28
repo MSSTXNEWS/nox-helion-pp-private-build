@@ -1,0 +1,37 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS03",
+  "agent_id": "/root/a02",
+  "parent_commit": "3f6f867c236b411d41f263e22062caa326134358",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 3,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-LOADER-VOICE-NATIVE-STOP-WIRING"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "post_git_blob": "ed346d450b8c8a65436cc5a0fa51718ccbe865bf",
+      "pre_sha256": "094ec8369033ffaf95b08d5955b19c79ef2e11483d19822132d56034792fb1ed",
+      "post_sha256": "b9c93d806d7f29099bbd62df78b2d05b6e1ec0ecb12216c664f1cd539d54b34a"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "b43813352867332958bb0f2cc91d52597fb05c5f",
+      "pre_sha256": null,
+      "post_sha256": "532d45ce4a4d0e51b6db8cebbbd3b80e033194a1e5c8a6d8a9f83b913aaf66dc"
+    }
+  ],
+  "lesson": "A STOP-capable provider is not enough: the registered installer route must pass the actual native session cancellation token. Missing token wiring must remain HOLD before consuming one-use audio.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

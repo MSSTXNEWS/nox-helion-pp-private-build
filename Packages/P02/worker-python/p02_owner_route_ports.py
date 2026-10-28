@@ -176,7 +176,8 @@ class OwnerTwoPorts:
 
 def register_with_existing_pack01(dispatcher, bound_port_type,
                                   host_scope_from_session: Callable,
-                                  owner_ports: OwnerTwoPorts, *, receipt: str) -> frozenset[str]:
+                                  owner_ports: OwnerTwoPorts, *, receipt: str,
+                                  native_stop_from_session: Callable | None = None) -> frozenset[str]:
     """Bind three owner #2 ports to #6's already-existing PACK01 dispatcher.
 
     The native scope resolver is provided by the integrator, never page input;
@@ -185,6 +186,8 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
     if (not callable(host_scope_from_session) or not isinstance(owner_ports, OwnerTwoPorts)
             or not _bounded(receipt, 256)):
         raise RouteHold("CURRENT_OWNER_RECEIPT_AND_NATIVE_SCOPE_REQUIRED")
+    if native_stop_from_session is not None and not callable(native_stop_from_session):
+        raise RouteHold("NATIVE_VOICE_STOP_BINDING_REQUIRED")
     mapping = owner_ports.route_methods()
     # Preflight all three canonical owner routes BEFORE publishing any handler.
     # A late foreign owner/missing route must not leave two live P02 ports.
@@ -200,11 +203,21 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
             raise RouteHold("CANONICAL_PACK01_OWNER_ROUTE_REQUIRED")
     staged = {}
     for route, handler in mapping.items():
-        def call(session, args, fn=handler):
+        def call(session, args, fn=handler, name=route):
             native_scope = host_scope_from_session(session)
+            if name == "chat.voice":
+                if native_stop_from_session is None:
+                    raise RouteHold("NATIVE_VOICE_STOP_BINDING_REQUIRED")
+                # Reuse the host session's existing cancellation token. Never
+                # create a disconnected Event or read STOP authority from args.
+                stop = native_stop_from_session(session)
+                if not isinstance(stop, threading.Event):
+                    raise RouteHold("NATIVE_VOICE_STOP_TOKEN_REQUIRED")
+                return fn(native_scope, args, stop=stop)
             return fn(native_scope, args)
-        staged[route] = bound_port_type(
-            call, lambda name=route: owner_ports.available(name), receipt, 2)
+        def available(name=route):
+            return (name != "chat.voice" or native_stop_from_session is not None) and owner_ports.available(name)
+        staged[route] = bound_port_type(call, available, receipt, 2)
     try:
         for route, port in staged.items():
             dispatcher.bind(route, port)
