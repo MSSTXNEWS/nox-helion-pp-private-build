@@ -165,6 +165,11 @@ class ExistingDispatcherBindingTests(RouteTests):
         self.assertEqual(set(host.ports),set(host.routes))
         self.assertEqual(host.ports['chat.rag'].call(None,{'query':'facts'})['context'],'data')
         self.assertEqual(host.ports['calls.history'].call(None,{})['calls'][0]['call_id'],'id1')
+        voice=host.ports['chat.voice'].call(None,{
+            'capture_id':'a'*32,'source':'ru','target':'es','voice':'es-v'})
+        self.assertEqual(voice['response'],'hola')
+        self.assertEqual(voice['output_audio_id'],'b'*32)
+        self.assertNotIn('audio',voice)
         self.assertEqual(host.ports['chat.voice'].owner,2)
         with self.assertRaises(TypeError):
             host.routes['chat.voice']['owner']=1
