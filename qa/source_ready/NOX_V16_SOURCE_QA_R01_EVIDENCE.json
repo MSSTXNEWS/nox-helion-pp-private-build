@@ -1,0 +1,136 @@
+{
+  "schema": "NOX-V16-46-INDEPENDENT-SOURCE-QA-RECEIPT-v1",
+  "run_id": "NOX-V16-SOURCE-QA-M2-20261028-R01",
+  "source_ref_at_initial_audit": "c15703041f69b33c90b0b5438a400f7f338bec63",
+  "live_head_last_seen": "2501bdc12e01a7773a0b416b5aab5c3c140b5126",
+  "product_code_mutated": false,
+  "qa_branch": "qa/v16-independent-source-review-20261028-r01",
+  "qa_source_files": [
+    {
+      "path": "qa/source_ready/test_p02_framed_json_depth_r01.py",
+      "pre": "ABSENT",
+      "git_blob_sha1": "94a46430e070e406f256fc562bb95345ffeb92fb",
+      "sha256": "6fd8bde2b17cce70a7e7e6988a9b37af5840a69fc47f4e5825bd1c9e6ce50157",
+      "test_count": 1,
+      "execution": "NOT_RUN against repo; independently reproduced Python json.loads RecursionError under recursionlimit 1000 on 12000-level JSON"
+    },
+    {
+      "path": "qa/source_ready/test_v16_source_ready_gates_r01.py",
+      "pre": "ABSENT",
+      "git_blob_sha1": "14b404b01f320df8ffa3fe8049bd7b7400837dac",
+      "sha256": "2c5357b1876936394a1f67a06fdabefb1d1c7c8dadb0d759bdb193d19b2e9894",
+      "test_count": 5,
+      "execution": "NOT_RUN on same exact source checkout; intentionally RED while gates undocumented"
+    }
+  ],
+  "findings": [
+    {
+      "priority": "P0",
+      "task_id": "V16.46.SR.P0.HOST50-BIND-LEDGER",
+      "category": "EVIDENCE_AND_POTENTIAL_HANDLER_GAP",
+      "file": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+      "git_blob_sha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+      "facts": "This historical dated 06:10 ledger reports countSourceBound=37, countHold=13, integrated=0. Original PACK01 acceptance ledger 50/50 NativeHost=HOLD. This is not proof 13 current source handlers are absent, but proves no fresh canonical 50/50 binding admission receipt supplied in this ledger.",
+      "affected_task_ids": [
+        "NIP01-08",
+        "NIP01-26",
+        "NIP01-30",
+        "NIP01-35",
+        "NIP01-36",
+        "NIP01-37",
+        "NIP01-38",
+        "NIP01-39",
+        "NIP01-40",
+        "NIP01-47",
+        "NIP01-48",
+        "NIP01-49",
+        "NIP01-50"
+      ],
+      "owner": "manual #1 + W1-02/W3",
+      "test_id": "QA-SR-P0-HOST50",
+      "expected": "New pinned current-head 50-route ledger with real owner handler, native binding, signed SHA/consent receipts for every mandatory route."
+    },
+    {
+      "priority": "P0",
+      "task_id": "V16.46.SR.P0.ONEHOST-BRIDGE",
+      "category": "SOURCE_INTEGRATION_INCOMPLETE",
+      "file": "coordination/e06/build_onehost_installer.ps1",
+      "git_blob_sha1": "9315c2d7d3fe753dbeb5850bea70493bb1ca1dec",
+      "facts": "Canonical builder still declares native_bridge_scope=ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE and release_accepted=false; OriginalPythonDiagnosticBridge.cs invokes only --diagnose. This does not prove live production WPF→Python→Ollama/P03/P04/P05 handlers.",
+      "owner": "manual #1 + W2-02/W3-03",
+      "test_id": "QA-SR-P0-ONEHOST",
+      "expected": "Show exact source integration host route dispatch and permissions into ONE live owner; regression from actual implementation, not diagnostic banner."
+    },
+    {
+      "priority": "P0",
+      "task_id": "V16.46.SR.P0-SOURCELOCK-729",
+      "category": "PHYSICAL_PROVENANCE_GATE",
+      "file": "coordination/e06/verify_original_729_source.py",
+      "git_blob_sha1": "49c83214f3fcfcccc915d55212a52551411028ef",
+      "facts": "Current HEAD's physical 3-part SHA/729-inner member audit and owner receipt not independently observed; historical successful 729 manifest/ZIP evidence is from other run/head. Expected archive 60364346 bytes SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a.",
+      "owner": "manual #1 + W1-01; independent manual #2 verifies",
+      "test_id": "QA-SR-P0-729",
+      "expected": "Execute original verifier in pinned checkout, publish 729 member checksums, original part hashes and one-head owner receipts; never infer from Git blobs alone."
+    },
+    {
+      "priority": "P1",
+      "task_id": "V16.46.P02.FRAMED-JSON-RECURSION",
+      "category": "REPRODUCIBLE_SOURCE_BUG",
+      "file": "Packages/P02/worker-python/p02_framed_worker.py",
+      "git_blob_sha1": "d65279cd166fdf4bda503f5b02e39d6ab2f5eaee",
+      "facts": "Before NativeIngress depth gate, serve_native_frames calls json.loads(data.decode('utf-8')) and catches only ValueError/UnicodeError, not RecursionError. Local Python with recursionlimit 1000 and 12000-level JSON produced RecursionError outside this catch; bounded frame <=64KB. Source test asserts malformed frame HOLD and next valid frame success.",
+      "owner": "manual #1 P02 + W3-01",
+      "test_id": "QA-P02-FRAMED-DEPTH-R01",
+      "expected": "Catch RecursionError/fail closed or use owner's existing bounded JSON probe before preliminary route dispatch. Retain STOP priority and process liveness."
+    },
+    {
+      "priority": "P1",
+      "task_id": "V16.46.SR.P1.WOW001-200",
+      "category": "FUNCTIONAL_SOURCE_PROOF_GAP",
+      "file": "integrations/wow200/stage_wow200.py",
+      "git_blob_sha1": "393b47edf1c9b6f92716b6dea44a02f7797fb5b4",
+      "facts": "The source stage receipt still asserts complete_200_runtime_verified=false; PR204 is draft and owner handoff states Persona/Express source donor integration remains pending. Catalogues/asset counts are not 200 verified working FX.",
+      "owner": "manual #1 P01 + W2-01/W2-03; temporary manual #3 for approved owner deltas",
+      "test_id": "QA-SR-P1-WOW200",
+      "expected": "Verify WOW001–200 ID→loader→real target/effect/permission and actual source component test coverage, then sign receipt; don't convert boolean to true without real proof."
+    },
+    {
+      "priority": "P1",
+      "task_id": "V16.46.SR.P1.PACK02-NATIVE",
+      "category": "FUNCTIONAL_SOURCE_PROOF_GAP",
+      "file": "proposals/NOX-PACK02-50/acceptance-ledger.csv",
+      "git_blob_sha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "facts": "50 TaskID NIP02-01..50 are marked SOURCE_IMPLEMENTED but all NativeExe=NO and Accepted=NO; no verified end-to-end native route binding in this artifact.",
+      "owner": "manual #1 + W1-02, W3; manual #3 for delegated source",
+      "test_id": "QA-SR-P1-PACK02",
+      "expected": "Bind and independently verify applicable owner routes to existing host, without creating duplicate dispatcher; record exact current TaskID/handler receipts."
+    }
+  ],
+  "task_weight_ledger": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10,
+    "verified_completed_percent": "N/D",
+    "note": "Older DONE not reset. These weights are not completed percentages. Full normalized fixed P01–P05 TaskID+owner SHA/receipt denominator currently not independently signed."
+  },
+  "source_states": {
+    "CODE_COMPLETE": "HOLD_NOT_PROVEN",
+    "SOURCE_READY": "HOLD",
+    "INTEGRATED": "HOLD_NOT_PROVEN",
+    "WINDOWS_BUILD": "NOT_RUN_AFTER_SOURCE_READY",
+    "E07_ACCEPTED": "0/10_NOT_RUN"
+  },
+  "automations": {
+    "active_count": 15,
+    "recorded_in_progress": 3,
+    "recorded_completed": 12,
+    "latest_results_retrievable": 0,
+    "note": "Automation peek read recorded statuses, not code-completion proof; no schedules or prompts changed."
+  },
+  "no_loss": "Original and merged source branches/main unchanged by this QA run. Two new QA source files only; all prior DONE/owner receipts retained.",
+  "single_self_improvement": "VALIDATE_OUTER_JSON_BEFORE_NATIVE_ROUTE_PROBE: regression must exercise 64KiB framed boundary and prove it remains responsive after malformed deep payload, not merely test inner NativeIngress.",
+  "release": "HOLD",
+  "tests_execution_caveat": "Actual repo unittest/Windows/GPU/voice not run in this independent connected-source audit; all test definitions committed and GitHub readback PASS."
+}
