@@ -3,9 +3,9 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
 const raw=readFileSync(new URL('./home-scene.mjs',import.meta.url),'utf8');
-const clean=raw.replace(/^import \\{installNoxCinemaFX\\} from .*;\\r?\\n/m,'').replace(/^export /gm,'')
-  .replace(/^if\\(typeof document!=='undefined'\\)\\{[\\s\\S]*$/m,'');
-const factory=new Function('installNoxCinemaFX','document','console',clean+'\\nreturn mountApprovedHome');
+const clean=raw.replace(/^import \{installNoxCinemaFX\} from .*;\r?\n/m,'').replace(/^export /gm,'')
+  .replace(/^if\(typeof document!=='undefined'\)\{[\s\S]*$/m,'');
+const factory=new Function('installNoxCinemaFX','document','console',clean+'\nreturn mountApprovedHome');
 
 function fixture({failInitial=false}={}){
   const ids=['CONSCIOUSNESS','PERSONA','ATLAS','VOICE','REFLECTION','CORE','NEXUS','FORGE'];

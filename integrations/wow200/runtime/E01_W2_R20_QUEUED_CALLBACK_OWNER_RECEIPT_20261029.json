@@ -30,7 +30,7 @@
     {
       "path": "integrations/wow200/runtime/home-scene.disposed-callback.r20.test.mjs",
       "preSHA256": "ABSENT",
-      "postSHA256": "b720af18dd0eafa24db3b264f3949f291ac874fe517064f9363cc1d280e55cd1",
+      "postSHA256": "COMPUTED_IN_GITHUB_READBACK",
       "preBlob": "ABSENT",
       "postBlob": "READBACK_COMPUTED"
     },
@@ -101,5 +101,37 @@
     "E07": "NOT_RUN",
     "WEIGHTED": "N/D"
   },
-  "lesson": "D02_QUEUED_CALLBACK_DISPOSE_ADMISSION"
+  "lesson": "D02_QUEUED_CALLBACK_DISPOSE_ADMISSION",
+  "testCorrection": {
+    "reason": "Escape double-encoding in published test regex/source strings prevented full original import from being stripped by new Function.",
+    "red": [
+      {
+        "name": "module_parse",
+        "status": "FAIL",
+        "reason": "Cannot use import statement outside a module"
+      }
+    ],
+    "green": [
+      {
+        "name": "E01-W2-R20-01 queued MutationObserver never calls a disposed D02 renderer",
+        "status": "PASS"
+      },
+      {
+        "name": "E01-W2-R20-02 queued OS Reduced Motion callback cannot resurrect disposed D02",
+        "status": "PASS"
+      },
+      {
+        "name": "regression R17: partial failed mount also fences queued MutationObserver",
+        "status": "PASS"
+      },
+      {
+        "name": "regression: live D02 observers still update state until destroy",
+        "status": "PASS"
+      }
+    ],
+    "preBlob": "0c382ddf89ef0d721603c4986eb6f2d960411867",
+    "previousCommit": "1e065f0a899ba3b1a376ae424c4f1aba615ff743",
+    "postSHA256": "SEE_OWNER_SOURCE_CHECKPOINT",
+    "status": "corrected in next owner-only CAS commit; full Node CLI NOT_RUN"
+  }
 }
