@@ -1,19 +1,67 @@
 'use strict';
-const bc = 'BroadcastChannel' in window ? new BroadcastChannel('nox-helion-theater') : null;
-const video=document.getElementById('video'), poster=document.getElementById('poster');
-let objectURL=null;
-const project=new URLSearchParams(location.search).get('project');if(project && /^[a-z0-9_-]{1,48}$/i.test(project)){video.src='/api/media/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';video.style.display='block';poster.style.display='none';}
-function command(d){if(!d || typeof d!=='object')return;
- if(d.action==='play' && video.src)video.play().catch(()=>{});
- if(d.action==='pause')video.pause();
- if(d.action==='title')document.getElementById('title').textContent=String(d.value||'NOX HELION').slice(0,120);
- if(d.action==='space')document.getElementById('space').textContent=String(d.value||'Кинозал').slice(0,120);
- if(d.action==='fullscreen')document.getElementById('stage').requestFullscreen?.().catch(()=>{});
+// E06: Keep the existing WPF WebView2 projector; no HTTP media API or second host.
+const $=id=>document.getElementById(id);
+const video=$('video'),poster=$('poster'),stage=$('stage'),status=$('status');
+const bc=typeof BroadcastChannel==='function'?new BroadcastChannel('nox-helion-theater'):null;
+let videoUrl=null,subtitleUrl=null,track=null;
+const note=t=>{status.textContent=t};
+const project=new URLSearchParams(window.location.search).get('project');
+if(project&&/^[a-z0-9_-]{1,48}$/i.test(project))note('Проект '+project+': выберите MP4/WebM через кнопку файла');
+function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null}}
+function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
+function chooseVideo(file){
+ if(!file)return;
+ releaseVideo();videoUrl=URL.createObjectURL(file);video.src=videoUrl;
+ video.style.display='block';poster.style.display='none';video.load();
+ note('Видео выбрано: '+file.name+' — нажмите ▶');
+}
+function toWebVtt(text,name){
+ const body=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
+ if(/\.vtt$/i.test(name)){if(!/^WEBVTT(?:\s|$)/.test(body))throw Error('Неверный заголовок VTT');return body+'\n'}
+ if(!/\.srt$/i.test(name)||!/\d{1,2}:\d{2}:\d{2},\d{1,3}\s*-->/.test(body))throw Error('Неверный формат SRT');
+ return 'WEBVTT\n\n'+body.replace(/(\d{1,2}:\d{2}:\d{2}),(\d{1,3})/g,(_,h,ms)=>h+'.'+ms.padEnd(3,'0'))+'\n';
+}
+async function chooseSubtitle(file){
+ if(!file)return;
+ if(file.size>2*1024*1024){note('Субтитры больше 2 МиБ — HOLD');return}
+ try{
+  const source=await file.text();const vtt=toWebVtt(source,file.name);
+  releaseSubtitle();subtitleUrl=URL.createObjectURL(new Blob([vtt],{type:'text/vtt'}));
+  track=document.createElement('track');track.kind='subtitles';track.label=file.name;track.srclang='ru';track.default=true;track.src=subtitleUrl;video.appendChild(track);
+  track.addEventListener('load',()=>{if(track&&track.track)track.track.mode='showing'});
+  note('Субтитры загружены: '+file.name);
+ }catch(error){note('Субтитры не подключены: '+String(error.message||error))}
+}
+async function toggleFullscreen(){
+ try{if(document.fullscreenElement){await document.exitFullscreen();note('Обычный режим')}
+ else{if(typeof stage.requestFullscreen!=='function')throw Error('Недоступен в WebView2');await stage.requestFullscreen();note('Полный экран')}}
+ catch(error){note('Полный экран отклонён: '+String(error.message||error)+'; используйте кнопку окна')}
+}
+async function play(){if(!video.src){note('Сначала выберите видео');return}try{await video.play();note('Воспроизведение')}catch(error){note('Не удалось запустить видео: '+String(error.message||error))}}
+function pause(){video.pause();note('Пауза')}
+function command(data){
+ if(!data||typeof data!=='object')return;
+ if(data.action==='play')void play();
+ if(data.action==='pause')pause();
+ if(data.action==='title')$('title').textContent=String(data.value||'NOX HELION').slice(0,120);
+ if(data.action==='space')$('space').textContent=String(data.value||'Кинозал').slice(0,120);
+ if(data.action==='fullscreen')void toggleFullscreen();
 }
 if(bc)bc.onmessage=e=>command(e.data);
-document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;if(objectURL)URL.revokeObjectURL(objectURL);objectURL=URL.createObjectURL(f);video.src=objectURL;video.style.display='block';poster.style.display='none';};
-document.getElementById('play').onclick=()=>video.play().catch(()=>{});
-document.getElementById('pause').onclick=()=>video.pause();
-document.getElementById('full').onclick=()=>document.getElementById('stage').requestFullscreen?.().catch(()=>{});
-document.getElementById('screens').onclick=async()=>{try{if(!window.getScreenDetails){alert('Выбери монитор или проектор в настройках Windows и перетащи окно на него.');return;}const d=await window.getScreenDetails();alert('Обнаружено экранов: '+d.screens.length+'. Перемести окно на нужный экран, затем нажми полный экран.');}catch(e){alert('Разрешение на экраны не выдано. Используй перетаскивание окна.')}};
-window.addEventListener('beforeunload',()=>{if(objectURL)URL.revokeObjectURL(objectURL);bc?.close()});
+$('file').onchange=e=>chooseVideo(e.target.files?.[0]);
+$('subtitles').onchange=e=>void chooseSubtitle(e.target.files?.[0]);
+$('play').onclick=()=>void play();
+$('pause').onclick=pause;
+$('full').onclick=()=>void toggleFullscreen();
+$('screens').onclick=async()=>{
+ try{
+  if(typeof window.getScreenDetails!=='function'){note('Для проектора перенесите окно на нужный монитор Windows');return}
+  const details=await window.getScreenDetails();
+  note('Экранов обнаружено: '+details.screens.length+'. Перенесите окно и нажмите ⛶');
+ }catch(error){note('Доступ к списку экранов не выдан; переносите окно средствами Windows')}
+};
+window.addEventListener('keydown',event=>{
+ if(event.key==='F11'&&!event.repeat){event.preventDefault();void toggleFullscreen()}
+ if(event.key==='Escape'&&document.fullscreenElement){event.preventDefault();void document.exitFullscreen().catch(()=>{})}
+});
+window.addEventListener('beforeunload',()=>{releaseSubtitle();releaseVideo();bc?.close()});
