@@ -286,6 +286,10 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
   const terminal=[];
   const seen=new Map();
+  // errors is the deduplicated, verified count for THIS bounded RunID journal,
+  // not merely the most recent 30-second LIVE status window. An older native
+  // failure must not silently turn into a false “0 errors” after it ages out.
+  let runErrorCount=0;
   for (const e of events) {
     // A same-run task.failed/model.stopped with a broken envelope is NOT a
     // harmless nonterminal. Quarantine it, or a malformed error can disappear
@@ -298,7 +302,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
         !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
-        !ago(e.timestamp_utc,nowMs,30000)) continue;
+        Date.parse(e.timestamp_utc)>nowMs) continue;
     // A schema-valid terminal with evidence_verified:false is only a report,
     // NOT proof that STOP completed or that the failure was authenticated.
     // It must not overwrite an actually verified error or STOP in this tile.
@@ -314,12 +318,15 @@ export function projectCanonicalEvents(events, runId, nowMs) {
       continue; // Identical replay, counted once.
     }
     seen.set(e.event_id,fingerprint);
-    terminal.push(e);
+    if (e.event_type==='task.failed') runErrorCount++;
+    // Only recent terminals determine the current LIVE state; older verified
+    // errors remain counted as history without becoming a current error tile.
+    if (ago(e.timestamp_utc,nowMs,30000)) terminal.push(e);
   }
   terminal.sort((a,b)=>Date.parse(a.timestamp_utc)-Date.parse(b.timestamp_utc) ||
     (a.state==='ERROR'?1:0)-(b.state==='ERROR'?1:0));
   return {state:terminal.length===0?'N_D':terminal.at(-1).state,
-    errors:terminal.filter(e=>e.event_type==='task.failed').length};
+    errors:runErrorCount};
 }
 
 // E06 must project the original native DTO into these same-run envelopes.
