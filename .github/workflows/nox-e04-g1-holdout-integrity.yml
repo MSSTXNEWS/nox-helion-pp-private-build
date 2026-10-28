@@ -1,0 +1,30 @@
+name: NOX E04 G1 real-module dataset duplicate integrity
+on:
+  push:
+    branches: [e04/v16-g1-04-holdout-integrity-20261028-r02]
+    paths:
+      - 'Packages/P04/train_qlora.py'
+      - 'tests/P04/test_e04_holdout_duplicate_gate.py'
+      - '.github/workflows/nox-e04-g1-holdout-integrity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  e04-python-source:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile same P04 worker source
+        run: python -m py_compile Packages/P04/train_qlora.py
+      - name: Execute actual-module duplicate and holdout fixture tests
+        run: python -m unittest discover -s tests/P04 -p 'test_e04_holdout_duplicate_gate.py' -v
+      - name: Execute existing P04 source integrity guards
+        run: python -m unittest discover -s tests/P04 -p 'test_turbo10_integrity_guards.py' -v

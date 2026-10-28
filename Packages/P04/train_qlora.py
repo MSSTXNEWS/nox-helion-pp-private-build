@@ -336,13 +336,24 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
         if count == 0:
             raise ValueError(label + "_EMPTY")
 
-    train_digests = set(records(train_path, "TRAIN"))
-    train_rows = len(train_digests)
+    # Count physical examples, not unique hashes; duplicate records inflate
+    # optimizer/evaluation statistics and can mask a corrupted holdout.
+    train_digests = set()
+    train_rows = 0
+    for digest in records(train_path, "TRAIN"):
+        train_rows += 1
+        if digest in train_digests:
+            raise ValueError("DATASET_TRAIN_DUPLICATE_EXAMPLE")
+        train_digests.add(digest)
+    holdout_digests = set()
     holdout_rows = 0
     for digest in records(holdout_path, "HOLDOUT"):
         holdout_rows += 1
         if digest in train_digests:
             raise ValueError("DATASET_TRAIN_HOLDOUT_EXAMPLE_OVERLAP")
+        if digest in holdout_digests:
+            raise ValueError("DATASET_HOLDOUT_DUPLICATE_EXAMPLE")
+        holdout_digests.add(digest)
     return train_rows, holdout_rows
 
 
