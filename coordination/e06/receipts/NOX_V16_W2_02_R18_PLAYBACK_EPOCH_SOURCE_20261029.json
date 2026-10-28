@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_V16_W2_02_SOURCE_ONLY_OWNER_RECEIPT_V2",
+  "runId": "NOX-V16-W2-02-20261029T0145MSK-R18-PLAYBACK-EPOCH",
+  "sourceStagePr": 162,
+  "branch": "owner/w2-02/r20-theater-playback-epoch-20261029-r18",
+  "owner": "W2.02 / E06 P01 Creative WebView2 theater",
+  "sourceBaseCommit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "sourceBaseTree": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "historicalProvenance": "0b3a7d435be735148d64171deb9027093a89646e",
+  "sourceLock729": "NOT_VERIFIED",
+  "sourceOnly": true,
+  "build": "PROHIBITED_R20",
+  "tasks": [
+    {
+      "id": "W2.02.R18.STALE_PLAY_SUCCESS_AFTER_MEDIA_SWITCH",
+      "result": "SOURCE_PATCHED_TESTED_V8_NOT_PRODUCT_ACCEPTED"
+    },
+    {
+      "id": "W2.02.R18.STALE_PLAY_SETTLEMENT_AFTER_PAUSE_OR_ERROR",
+      "result": "SOURCE_PATCHED_TESTED_V8_NOT_PRODUCT_ACCEPTED"
+    }
+  ],
+  "files": [
+    {
+      "path": "integrations/creative/web/theater.js",
+      "owner": "W2.02/E06",
+      "preSha256": "b3f5ae38ff109ff986550dee702fcf6f9cad39fe0c78c9104373ce39e3b6d0e2",
+      "postSha256": "13a3f7b6ab8fc7307c1ab585675593384a10137f26fc8fdfb5e1f4c9faae120a",
+      "preGitBlobSha1": "bf8b4919b1b02462d733e6a5636f418f809b953c",
+      "postGitBlobSha1": "14b7dae704bf3478d6d93c296804f45d88094578",
+      "diff": "7 targeted hunks: playbackGeneration token on file switch, mapped/local media error, pause, unload; async play() status only when same epoch and source"
+    },
+    {
+      "path": "tests/e06/test_theater_playback_generation_r18.cjs",
+      "owner": "W2.02/E06",
+      "preSha256": "ABSENT",
+      "postSha256": "022b1cfe1d2187e591cc51e6f4469155f8d3507636d843df6f97d0683c46a5a3",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "c38532253f10766c0e25af429ac6a2c964505bfd",
+      "diff": "5 targeted source-only Node regressions of delayed play outcomes and current play status"
+    }
+  ],
+  "tests": {
+    "sourceUnderTest": "bf8b4919b1b02462d733e6a5636f418f809b953c",
+    "sourceNegative": "3 FAIL / 2 PASS on identical source in isolated JS V8 DOM mock",
+    "sourcePositive": "5 PASS / 0 FAIL on candidate source in isolated JS V8 DOM mock",
+    "cjsSyntaxParse": "PASS in JS V8",
+    "nativeNode": "NOT_RUN",
+    "windowsExeNsisCi": "NOT_RUN_POLICY_R20",
+    "e07": "NOT_RUN"
+  },
+  "previousLesson": {
+    "id": "CHECK_ALL_EXISTING_PATH_ANCESTORS_BEFORE_FIRST_WRITE",
+    "applied": "N/A: no filesystem/path-related code changed; existing R17 host guard left untouched"
+  },
+  "lesson": "ASYNC_PLAY_STATUS_MUST_MATCH_CURRENT_MEDIA_EPOCH",
+  "newProductTaskDone": 0,
+  "newOwnerSourceDefectsFixed": 2,
+  "remaining": "SOURCE_READY HOLD: owner review + actual Node tests on complete checkout + original 729-member physical SHA + pending P01 UI/native handlers",
+  "noLoss": "No files deleted or original D02/WOW/CoreID/Persona/native P01/P02-P05 modified; no main or PR162 merge",
+  "startedAtUtc": "2026-10-28T22:48:04.627Z",
+  "checkpointAtUtc": "2026-10-28T22:48:11.625Z"
+}

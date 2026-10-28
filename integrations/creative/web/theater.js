@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const video=$('video'),poster=$('poster'),stage=$('stage'),status=$('status');
 const bc=typeof BroadcastChannel==='function'?new BroadcastChannel('nox-helion-theater'):null;
-let videoUrl=null,subtitleUrl=null,track=null,subtitleGeneration=0,nativeErrorHandler=null;
+let videoUrl=null,subtitleUrl=null,track=null,subtitleGeneration=0,nativeErrorHandler=null,playbackGeneration=0;
 const note=t=>{status.textContent=t};
 const query=new URLSearchParams(window.location.search);
 const project=query.get('project');
@@ -13,7 +13,7 @@ if(nativeMedia && project && /^[a-z0-9_-]{1,48}$/i.test(project)){
  video.src='https://nox-projects.invalid/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';
  video.style.display='block';poster.style.display='none';
  note('NOX · локальный фильм '+project+' · нажмите ▶');
- nativeErrorHandler=()=>{nativeErrorHandler=null;video.removeAttribute('src');video.load();video.style.display='none';poster.style.display='block';note('Фильм ещё не готов — выберите локальный MP4');};
+ nativeErrorHandler=()=>{playbackGeneration++;nativeErrorHandler=null;video.removeAttribute('src');video.load();video.style.display='none';poster.style.display='block';note('Фильм ещё не готов — выберите локальный MP4');};
  video.addEventListener('error',nativeErrorHandler,{once:true});
 }else if(project&&/^[a-z0-9_-]{1,48}$/i.test(project)){
  note('Проект '+project+': выберите MP4/WebM через кнопку файла');
@@ -22,6 +22,7 @@ function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null
 function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
 function chooseVideo(file){
  if(!file)return;
+ playbackGeneration++;
  // Switching to a user-selected file must disarm the old project's error listener.
  if(nativeErrorHandler){video.removeEventListener('error',nativeErrorHandler);nativeErrorHandler=null;}
  // A new film invalidates the previous film's captions and pending file reads.
@@ -33,6 +34,7 @@ function chooseVideo(file){
 // A selected local movie may fail *after* the file picker succeeds. Restore a usable poster.
 video.addEventListener('error',()=>{
  if(!videoUrl)return;
+ playbackGeneration++;
  subtitleGeneration++;releaseSubtitle();releaseVideo();
  video.removeAttribute('src');video.load();
  video.style.display='none';poster.style.display='block';
@@ -67,8 +69,17 @@ async function toggleFullscreen(){
  else{if(typeof stage.requestFullscreen!=='function')throw Error('Недоступен в WebView2');await stage.requestFullscreen();note('Полный экран')}}
  catch(error){note('Полный экран отклонён: '+String(error.message||error)+'; используйте кнопку окна')}
 }
-async function play(){if(!video.src){note('Сначала выберите видео');return}try{await video.play();note('Воспроизведение')}catch(error){note('Не удалось запустить видео: '+String(error.message||error))}}
-function pause(){video.pause();note('Пауза')}
+async function play(){
+ if(!video.src){note('Сначала выберите видео');return}
+ const generation=++playbackGeneration,source=video.src;
+ try{
+  await video.play();
+  if(generation===playbackGeneration&&video.src===source)note('Воспроизведение');
+ }catch(error){
+  if(generation===playbackGeneration&&video.src===source)note('Не удалось запустить видео: '+String(error.message||error));
+ }
+}
+function pause(){playbackGeneration++;video.pause();note('Пауза')}
 function command(data){
  if(!data||typeof data!=='object')return;
  if(data.action==='play')void play();
@@ -94,4 +105,4 @@ window.addEventListener('keydown',event=>{
  if(event.key==='F11'&&!event.repeat){event.preventDefault();void toggleFullscreen()}
  if(event.key==='Escape'&&document.fullscreenElement){event.preventDefault();void document.exitFullscreen().catch(()=>{})}
 });
-window.addEventListener('beforeunload',()=>{subtitleGeneration++;releaseSubtitle();releaseVideo();bc?.close()});
+window.addEventListener('beforeunload',()=>{playbackGeneration++;subtitleGeneration++;releaseSubtitle();releaseVideo();bc?.close()});
