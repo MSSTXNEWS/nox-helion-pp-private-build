@@ -13,11 +13,12 @@ const base={schema:"NOX-INSTALLER-EVENT-v3",run_id:"test-1",event_id:"event-1",
 
 test("source-only catalogs cover 51–150 and leave 1–50 separate",()=>{
  const status=reviewWowScopes();
- assert.equal(status.groups.aggregate,100);
+ assert.equal(status.groups.aggregate,150);
+ assert.equal(status.groups.cinematicFinale151to200,50);
  assert.equal(status.externalUiPrerequisite,true);
  const actions=Array.from({length:50},(_,i)=>({routeId:"route-"+i}));
  const all=reviewWowScopes({actions});
- assert.equal(all.groups.aggregate,150);
+ assert.equal(all.groups.aggregate,200);
  assert.equal(all.groups.uiFirst50,50);
  assert.equal(CUES.length,50);assert.equal(SHOTS.length,50);
  assert.deepEqual(all.hostDrivenAvailable,[81,85,86,87,89]);
@@ -78,13 +79,15 @@ function fixture(){
  const root=new MockElement(doc);root.dataset.noxWowSlot="secondary";
  return {root,doc,media,listeners};
 }
-test("100 visual scenes are selectable without replacing HOME art",()=>{
+test("150 secondary visual scenes are selectable without replacing HOME art",()=>{
  const {root,listeners}=fixture();const ui=mountUnifiedCinema(root);
- for(let id=51;id<=150;id++){
+ for(let id=51;id<=200;id++){
    ui.preview(id);
    assert.equal(ui.current().selected,id);
  }
- assert.equal(ui.current().active,"director");
+ assert.equal(ui.current().active,"composition");
+ assert.equal(ui.current().visualEvidence,"demo");
+ assert.equal(root.dataset.noxWowComposition,"200");
  assert.equal(ui.current().acceptedExe,false);
  assert.equal(root.children.length,4); // both layers and their labels only
  ui.preview(54);assert.equal(ui.current().active,"cue");
@@ -95,13 +98,15 @@ test("real events require trusted port and monotonic sequence, never fake speech
  const {root}=fixture();let callback,off=0;
  const ui=mountUnifiedCinema(root,{trustedEventPort:{subscribe(fn){callback=fn;return ()=>off++}}});
  assert.equal(typeof callback,"function");
- assert.equal(ui.receiveCanonicalEvent(base),true);
- assert.equal(ui.current().selected,87);
+ // Public page methods cannot spoof training status even with a copied valid envelope.
  assert.equal(ui.receiveCanonicalEvent(base),false);
- assert.equal(ui.receiveCanonicalEvent({...base,event_sequence:2,event_id:"event-2"}),true);
- assert.equal(ui.receiveCanonicalEvent({...base,event_sequence:1,event_id:"event-3"}),false);
- assert.equal(ui.receiveCanonicalEvent({...base,event_sequence:3,event_id:"event-4",event_type:"voice.listening"}),false);
- ui.destroy();assert.equal(off,1);assert.equal(ui.receiveCanonicalEvent(base),false);
+ assert.equal(callback(base),true);
+ assert.equal(ui.current().selected,87);
+ assert.equal(callback(base),false);
+ assert.equal(callback({...base,event_sequence:2,event_id:"event-2"}),true);
+ assert.equal(callback({...base,event_sequence:1,event_id:"event-3"}),false);
+ assert.equal(callback({...base,event_sequence:3,event_id:"event-4",event_type:"voice.listening"}),false);
+ ui.destroy();assert.equal(off,1);assert.equal(callback(base),false);
 });
 test("host denial does not switch to approved director cue",()=>{
  const {root}=fixture();
@@ -137,4 +142,40 @@ test("CSS has one active scene, no new networking, GPU or native host",()=>{
  assert.equal(js.includes("fetch("),false);
  assert.equal(js.includes("innerHTML"),false);
  assert.equal(js.includes("child_process"),false);
+});
+
+test("151-200 use same optics/director, native composition approval only",()=>{
+ const {root}=fixture();
+ let nativeCalls=0;
+ const ui=mountUnifiedCinema(root,{
+  nativeAuthorizeComposition:item=>{nativeCalls++;return item.id===200},
+  mode:"BALANCED"
+ });
+ const childCount=root.children.length;
+ for(let id=151;id<=200;id++){
+   const item=ui.preview(id);
+   assert.equal(item.id,id);
+   assert.equal(ui.current().visualEvidence,"demo");
+   assert.equal(ui.current().active,"composition");
+   assert.equal(root.children.length,childCount);
+ }
+ assert.equal(nativeCalls,0); // Pure source preview does NOT claim native authorization.
+ assert.throws(()=>ui.activateApprovedComposition(199),/HOST_COMPOSITION_APPROVAL_REQUIRED/);
+ assert.equal(ui.current().selected,200);
+ const accepted=ui.activateApprovedComposition(200);
+ assert.equal(accepted.id,200);
+ assert.equal(ui.current().visualEvidence,"native-composition");
+ assert.equal(ui.current().acceptedExe,false);
+ ui.setMode("ECO");assert.equal(root.dataset.noxMode,"ECO");
+ ui.setMode("REDUCED");assert.equal(root.dataset.noxMode,"REDUCED");
+ ui.destroy();assert.equal(root.dataset.noxWowComposition,undefined);
+ assert.equal(root.dataset.noxMode,undefined);
+});
+test("composition action denied without native authorized callback",()=>{
+ const {root}=fixture();
+ const ui=mountUnifiedCinema(root);
+ ui.preview(151);
+ assert.throws(()=>ui.activateApprovedComposition(151),/HOST_COMPOSITION_APPROVAL_REQUIRED/);
+ assert.equal(ui.current().visualEvidence,"demo");
+ ui.destroy();
 });
