@@ -290,11 +290,20 @@ def verify_manifest(manifest_path: Path, train_path: Path, holdout_path: Path,
         "holdout_sha256": manifest["holdout_sha256"].lower(),
         "intent": "training",
     }
-    if (not isinstance(attestation, dict)
-            or any(not isinstance(attestation.get(key), str)
-                   or attestation[key].lower() != expected.lower()
-                   for key, expected in attested_fields.items())
-            or not isinstance(attestation.get("attestation_id"), str)
+    # Identity-bearing rights claims are case-sensitive. Only the ASCII
+    # hexadecimal representation of SHA-256 digests may change case.
+    digest_fields = {"manifest_sha256", "train_sha256", "holdout_sha256"}
+    for key, expected in attested_fields.items():
+        actual = attestation.get(key)
+        if not isinstance(actual, str):
+            raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+        if key in digest_fields:
+            if (re.fullmatch(r"[0-9a-fA-F]{64}", actual) is None
+                    or actual.casefold() != expected.casefold()):
+                raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+        elif actual != expected:
+            raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+    if (not isinstance(attestation.get("attestation_id"), str)
             or not attestation["attestation_id"].strip()):
         raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
     manifest["_rights_attestation_id"] = attestation["attestation_id"].strip()
