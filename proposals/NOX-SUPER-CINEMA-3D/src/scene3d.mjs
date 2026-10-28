@@ -5,6 +5,7 @@ import {RenderPass} from "three/addons/postprocessing/RenderPass.js";
 import {UnrealBloomPass} from "three/addons/postprocessing/UnrealBloomPass.js";
 import {OutputPass} from "three/addons/postprocessing/OutputPass.js";
 import {parseApprovedGLB} from "./glb.mjs";
+import {recordCinemaClip} from "./record.mjs";
 export const CORE_IDS=Object.freeze(["CONSCIOUSNESS","PERSONA","ATLAS","VOICE","REFLECTION","CORE","NEXUS","FORGE"]);
 export const PROFILES=Object.freeze({
  ECO:Object.freeze({fps:12,dpr:1,segments:20,stars:90,bloom:false,motion:.2}),
@@ -164,6 +165,12 @@ export function mountCinema3D(root,{mode="BALANCED",trainingActive=false,reduced
   }
   configureBloom();resize();begin();
   const api=Object.freeze({ready:true,coreIds:CORE_IDS,
+   async recordClip(options={}){
+    if(dead)throw Error("CINEMA_DESTROYED");
+    if(training)throw Error("GPU_TRAINING_PRIORITY");
+    if(effective().fps===0)throw Error("REDUCED_MOTION_RECORDING_HOLD");
+    return await recordCinemaClip(canvas,options);
+   },
    async importApprovedGLB(asset,bytes){
     if(dead)throw Error("CINEMA_DESTROYED");
     const object=await parseApprovedGLB(asset,bytes);
