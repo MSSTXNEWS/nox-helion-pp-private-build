@@ -64,6 +64,9 @@ export function projectReadiness(readiness, runId, nowMs) {
     return {bars, overall:null, reason:'FROZEN_OWNER_EVIDENCE_REQUIRED'};
   }
   const five = [];
+  // TaskID identifies a single project criterion across P01–P05. Duplicate
+  // IDs in different owner ledgers are not independent evidence or weight.
+  const globalTaskIds = new Set();
   for (let i=0; i<5; i++) {
     const b = readiness.bars[i];
     if (!b || b.executor !== i+1 || b.stage !== 'CRITERIA_VERIFIED' ||
@@ -72,6 +75,9 @@ export function projectReadiness(readiness, runId, nowMs) {
         Math.abs(b.percent - derivedLaneProgress(b)) > 0.005) {
       return {bars, overall:null, reason:'LANE_OWNER_SEAL_MISSING'};
     }
+    if (b.task_ledger.some(t=>globalTaskIds.has(t.task_id)))
+      return {bars,overall:null,reason:'CROSS_LANE_TASK_COLLISION'};
+    for (const task of b.task_ledger) globalTaskIds.add(task.task_id);
     five.push(b.percent);
   }
   for (let i=0; i<5; i++) bars[i] = {executor:i+1,percent:five[i],stage:'COMPONENT_VERIFIED'};
@@ -272,6 +278,11 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // behind a later clean STOP. Foreign runs and nonterminals stay ignored.
     if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
         !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
+    // A terminal failure with a missing, impossible or non-UTC timestamp may
+    // otherwise vanish behind a later verified STOP. Missing time is not
+    // evidence of successful termination; quarantine rather than skip it.
+    if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
+        !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
         !ago(e.timestamp_utc,nowMs,30000)) continue;
     // A schema-valid terminal with evidence_verified:false is only a report,
