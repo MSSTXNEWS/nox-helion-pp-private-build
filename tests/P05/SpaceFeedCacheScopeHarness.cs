@@ -98,6 +98,29 @@ static class Program
             Require(handler.Requested.Count == 4, "RELATIVE_URI_DID_NETWORK");
         }
         Console.WriteLine("PASS relative endpoint rejected");
-        Console.WriteLine("P05_SPACE_CACHE_SCOPE_6_OF_6_PASS_SOURCE_ONLY");
+
+        // 7. STOP must not be bypassed by an already-cached snapshot.
+        using (var canceled = new CancellationTokenSource()) {
+            canceled.Cancel();
+            try {
+                await client.FetchAsync("weather", sourceA, "PROVIDER_A", SourceClock, canceled.Token);
+                throw new InvalidOperationException("P05_CACHE_SCOPE_STOP_BYPASSED");
+            }
+            catch (OperationCanceledException) {
+                Require(handler.Requested.Count == 4, "STOP_DID_NETWORK");
+            }
+        }
+        Console.WriteLine("PASS STOP before cached response");
+
+        // 8. Cached entries do not bypass the timestamp/provenance callback.
+        try {
+            await client.FetchAsync("weather", sourceA, "PROVIDER_A", null!);
+            throw new InvalidOperationException("P05_CACHE_SCOPE_NULL_PROVENANCE_ACCEPTED");
+        }
+        catch (ArgumentNullException) {
+            Require(handler.Requested.Count == 4, "NULL_PROVENANCE_DID_NETWORK");
+        }
+        Console.WriteLine("PASS provenance callback required");
+        Console.WriteLine("P05_SPACE_CACHE_SCOPE_8_OF_8_PASS_SOURCE_ONLY");
     }
 }
