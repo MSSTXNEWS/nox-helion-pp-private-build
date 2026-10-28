@@ -107,6 +107,7 @@ class Turbo10IntegrityTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     train.validate_training_limits(profile, steps, epochs, save, ev)
         train.validate_training_limits(profile, 2, 1.0, 1, 1)
+        train.validate_training_limits(profile, 1, 1.0, 5, 5)
 
     def test_10_training_and_merge_reparse_ancestors_rejected(self):
         outside = self.root / "outside"
