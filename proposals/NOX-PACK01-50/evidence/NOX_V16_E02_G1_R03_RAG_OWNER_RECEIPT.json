@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_V16_E02_G1_R03_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-G1-R03-20261028T0750MSK",
+  "status": "SOURCE_CANDIDATE_E06_WINDOWS_HOLD",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "global_baseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_comparison": "IDENTICAL_2026-10-28",
+    "pr66": "INVENTORY_ONLY",
+    "raw_729_source_lock": "N/D_HOLD"
+  },
+  "owner_preimage": {
+    "source_pr": 27,
+    "exact_parent_commit": "be1fe05d88443e41b0d196617840508d9dd39b7d",
+    "owner": 2,
+    "owner_binding": "NIP01-07_CHAT_RAG"
+  },
+  "files": [
+    {
+      "path": "proposals/NOX-PACK01-50/P02RagChatOwnerPort.cs",
+      "owner": "E02",
+      "pre_sha256": "f16e36c9c26f2d1cc642be17b615ea70221fad4fdd45ed6b35182bf732997154",
+      "pre_git_blob_sha1": "3cf0d077e7598269819597267b5afbf768b7f743",
+      "post_sha256": "3a9c07bacd0d49693178d48b06154e30aebe0a28e7d3b101304b80050396c4fc",
+      "post_git_blob_sha1": "0dd4bc4956a2e5e99d449ebe9af9554a0ed75a77",
+      "diff": "After awaited original P04 retrieval, honor STOP and native SID/session revocation before any private RAG context/citations are returned."
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p02_rag_revocation_gate.py",
+      "owner": "E02",
+      "pre_sha256": "ABSENT",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_sha256": "62926b6070ea0697f87c293bf5938b3c9bbdcd75f3b58dffe4383b213ac207fd",
+      "post_git_blob_sha1": "d3a917d5e348f2b5787e4a388acc61046c88d5da",
+      "diff": "Six source-only positive and negative regression gates for post-await trusted authorization, STOP and provenance."
+    }
+  ],
+  "receipt_file": {
+    "path": "proposals/NOX-PACK01-50/evidence/NOX_V16_E02_G1_R03_RAG_OWNER_RECEIPT.json",
+    "owner": "E02",
+    "pre_sha256": "ABSENT",
+    "pre_git_blob_sha1": "ABSENT",
+    "post_hash_receipt": "Recorded in master/E06 report after GitHub readback; self-hash intentionally not embedded"
+  },
+  "tests": {
+    "committed_source_static": "6/6 LOCAL_PASS",
+    "extended_local_static": "10/10 LOCAL_PASS",
+    "CSharp_compiler": "NOT_INSTALLED_LOCAL",
+    "GitHub_Windows": "NOT_RUN",
+    "native_P02_P04": "NOT_RUN",
+    "real_ollama_mic_weights": "NOT_VERIFIED"
+  },
+  "no_loss": "No main/owner-P01/P03/P04/P05/E06 files overwritten. Existing P02/P04 provider, SQLite, Ollama, D02/WOW, 8 CoreID, 5 Persona and EXE unchanged.",
+  "integrator_6": "Confirm one real host SourceLock & ownership; compile C# against exact original P04; exercise async in-flight revoke/STOP and old/fake SID negative tests on one Windows installed EXE before promoting source."
+}

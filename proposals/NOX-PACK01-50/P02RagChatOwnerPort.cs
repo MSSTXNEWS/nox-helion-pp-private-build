@@ -43,6 +43,12 @@ public sealed class P02RagChatOwnerPort
         var result=await _existingP04.RetrieveAsync(nativeScope.WindowsSid,
             nativeScope.ConversationId,userMessage,topK,stop).ConfigureAwait(false);
 
+        // The private native session can be revoked while P04 is awaited.
+        // Re-evaluate trusted host authorization before returning any context/citations.
+        stop.ThrowIfCancellationRequested();
+        if (_authorizeNativeSession(nativeScope) is not true)
+            throw new UnauthorizedAccessException("Native NOX session revoked during RAG retrieval");
+
         // Defensive validation against a misconfigured embedding provider/owner.
         if (result is null || result.ContextText.Length > 24000 ||
             result.Sources.Any(x=>x.OwnerSid != nativeScope.WindowsSid ||
