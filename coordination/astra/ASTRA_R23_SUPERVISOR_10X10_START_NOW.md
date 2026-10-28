@@ -1,3 +1,7 @@
+# NOX ASTRA R24 · ABSOLUTE STARTUP CONTROL · 56 RULES + ERROR JOURNAL EVERY RUN
+
+**HIGHEST PRIORITY:** Before writing ANY product code or creating ten subagents, read and check all **56 numbered V15 rules** from `coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md`. Then read new/current errors from **active V16 master**, historical NOX C34 Error Journal, last E06 run report and last self-improvement lesson. After every actual launch, append fresh error status, run report and one genuine process lesson to **three active Google Docs** with CAS and verified readback; C34 is read every launch and linked by append when authorized. Failure to save = REPORT_GATE HOLD + GitHub receipt fallback, NEVER silently claim a write. Required authoritative contract with exact four Google Docs links and procedure: `coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md`. This clause overrides any ambiguity in older text. Ten agents × ten passes per agent is an actual tool-spawn requirement **only where a real subagent creation tool exists**, otherwise explicitly declare unavailable and execute sequential real owner work queues—no simulated agents or fictitious 100/100. All V15 original files, D02/WOW200 and previous DONE preserved; no early builds or final integration.
+
 # NOX HELION V16 · ASTRA PRO · R23 SUPERVISOR · 10 REAL SUBAGENTS × 10 SOURCE-CODING PASSES
 ## 29.10.2026 · binding single-owner development directive
 
