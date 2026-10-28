@@ -40,7 +40,7 @@ class SourceHold(RuntimeError):
 # Do not introduce an independent validator or duplicate security logic.
 CANONICAL_VALIDATOR = Path(__file__).resolve().parents[1] / "source-lock/verify_original_archive.py"
 
-def verify_zip_namespace(infos) -> None:
+def canonical_archive_module():
     if not CANONICAL_VALIDATOR.is_file() or CANONICAL_VALIDATOR.is_symlink():
         raise SourceHold("CANONICAL_ZIP_VALIDATOR_UNAVAILABLE")
     spec = importlib.util.spec_from_file_location("nox_original_zip_namespace", CANONICAL_VALIDATOR)
@@ -50,6 +50,11 @@ def verify_zip_namespace(infos) -> None:
     spec.loader.exec_module(mod)
     if not callable(getattr(mod, "validate_members", None)):
         raise SourceHold("CANONICAL_ZIP_NAMESPACE_FUNCTION_MISSING")
+    return mod
+
+
+def verify_zip_namespace(infos) -> None:
+    mod = canonical_archive_module()
     try:
         mod.validate_members(infos)
     except ValueError as exc:
@@ -218,10 +223,11 @@ def main() -> int:
         encoded = (json.dumps(receipt, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
         # Exclusive create: never overwrite an existing receipt or owner file.
         _trusted_output_parent(args.out)
-        with args.out.open("xb") as target:
-            target.write(encoded)
-            target.flush()
-            os.fsync(target.fileno())
+        # Use the existing fsync-before-publication, no-clobber implementation.
+        # A failed write must not leave a receipt that looks like complete evidence.
+        publisher = canonical_archive_module()
+        publisher.publish_manifest_exclusive(args.out, receipt)
+        encoded = args.out.read_bytes()
         print("ORIGINAL_729_SOURCELOCK_INNER_SHA_PASS", hashlib.sha256(encoded).hexdigest())
         return 0
     except (SourceHold, OSError, ValueError) as exc:
