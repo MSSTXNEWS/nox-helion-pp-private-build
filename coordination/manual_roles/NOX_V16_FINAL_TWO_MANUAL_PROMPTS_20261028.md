@@ -1,3 +1,5 @@
+> **АКТУАЛЬНЫЙ КАНОН · 29.10.2026 · ТЗ V16 §52.** РОВНО ДВА РУЧНЫХ: №1 FINAL BUILDER + CODE FIXER + ONE MERGER, №2 INDEPENDENT SOURCE/E07 QA. Старые упоминания №2 CODE FIXER или №3 QA считать историческими. Пятнадцать автоматических W1–W5 и их почасовые расписания не меняются. Все 56 правил §33, прежние DONE TaskID, source SHA/729, WOW и функции остаются обязательными. SOURCE_READY предшествует финальному EXE; E07 независим от разработчика. Последнее ТЗ §52 и GitHub #177 имеют приоритет над прежними формулировками о ролях.
+
 # NOX V16 FINAL · TWO MANUAL LANES + FIFTEEN UNCHANGED AUTOMATIONS
 Canonical owner directive: 2026-10-28 21:21 Europe/Moscow. Supersedes old §46 THREE-manual allocation only. No deletion of work, code, original archives, WOW, or automation IDs. Do not reinterpret owner TaskID completion as native release acceptance.
 
