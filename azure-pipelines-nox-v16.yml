@@ -70,14 +70,15 @@ jobs:
       Write-Host 'E06_MOCK_CONTRACT_GATE_ONLY_NOT_E07_NATIVE_ACCEPTANCE'
       & ./private_build.ps1
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_azure_visual_single_stage.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_VISUAL_SINGLE_STAGE_CONTRACT_HOLD' }
       python coordination/e06/stage_p01.py
       if ($LASTEXITCODE -ne 0) { throw 'EXACT_P01_R11_STAGE_HOLD' }
       python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'WOW200_SOURCE_TEST_HOLD' }
-      python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
-      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_STAGE_HOLD' }
-      python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
-      if ($LASTEXITCODE -ne 0) { throw 'D02_WOW_STAGE_HOLD' }
+      # The canonical build_onehost_installer.ps1 stages both Creative and WOW
+      # once after SHA-pinned source validation; double staging causes an
+      # intentional D02_CREATIVE_STAGE_ALREADY_PRESENT fail-closed error.
     displayName: 'Original Python candidate + approved P01/Creative/WOW source staging'
   - pwsh: |
       $ErrorActionPreference='Stop'
