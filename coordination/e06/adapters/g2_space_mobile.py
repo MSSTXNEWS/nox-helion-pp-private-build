@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from g2_gpu_provenance import valid_source, valid_device, reconcile_gpu_tile
 from datetime import datetime, timezone
 from typing import Any, Callable
 
@@ -135,7 +136,7 @@ class ExistingE05Projection:
         sensors = raw.get("Hardware")
         if not isinstance(sensors, list) or len(sensors) > 32:
             raise G2Hold("E05 hardware payload malformed")
-        seen, safe, observed_by_key = set(), {}, {}
+        seen, safe, observed_by_key, device_by_key = set(), {}, {}, {}
         for sample in sensors:
             if (not isinstance(sample, dict) or type(sample.get("Key")) is not str
                     or sample.get("Key") not in SENSORS):
@@ -146,34 +147,30 @@ class ExistingE05Projection:
                 continue
             seen.add(key)
             value = sample.get("Value")
+            # Both original E05 C# DeviceId and P05 JS device_id name are
+            # accepted only when unambiguous. Unknown device => GPU N/D.
+            native_device = sample.get("DeviceId", sample.get("device_id"))
+            if ("DeviceId" in sample and "device_id" in sample
+                    and sample["DeviceId"] != sample["device_id"]):
+                native_device = None
             good = (sample.get("Status") == "LIVE"
                     and type(value) in (int, float) and math.isfinite(value)
                     and value >= 0
                     and (not key.endswith("_bytes") or type(value) is int)
                     and (not key.endswith("percent") or value <= 100)
                     and (key != "gpu.temperature.c" or value <= 150)
-                    and isinstance(sample.get("Source"), str)
-                    and bool(sample["Source"])
+                    and valid_source(sample.get("Source"))
+                    and (not key.startswith("gpu.") or valid_device(native_device))
                     and _fresh(sample.get("ObservedAtUtc"), now, 30)
                     and _stamp(sample.get("ObservedAtUtc")) <= _stamp(raw.get("SnapshotUtc")))
             safe[key] = {"value": value if good else None,
                          "status": "LIVE" if good else "N_D",
                          "source": sample["Source"] if good else None}
             observed_by_key[key] = sample.get("ObservedAtUtc") if good else None
-        used, total = safe.get("gpu.vram.used_bytes"), safe.get("gpu.vram.total_bytes")
-        # Two VRAM counters form ONE sample: partial or fractional bytes are N/D.
-        if used is not None or total is not None:
-            paired = (
-                used is not None and total is not None
-                and used["value"] is not None and total["value"] is not None
-                and total["value"] > 0 and used["value"] <= total["value"]
-                and used["source"] == total["source"]
-                and observed_by_key.get("gpu.vram.used_bytes") ==
-                    observed_by_key.get("gpu.vram.total_bytes")
-            )
-            if not paired:
-                for key in ("gpu.vram.used_bytes", "gpu.vram.total_bytes"):
-                    safe[key] = {"value": None, "status": "N_D", "source": None}
+            device_by_key[key] = native_device if good and key.startswith("gpu.") else None
+        # One physical GPU and one VRAM sample, consistent with owner E05 R08.
+        # No second sensor, poller or events bus.
+        reconcile_gpu_tile(safe, observed_by_key, device_by_key)
         seal = getattr(self.owner, "product_receipts_sealed", None)
         percent = raw.get("ProductProgress")
         verified = callable(seal) and seal() is True
