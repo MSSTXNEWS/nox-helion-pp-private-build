@@ -62,7 +62,8 @@ public static class E05CanonicalEventFactory
             if (e.PackageId != "P04") return false;
         if (e.EventType == "gpu.sample" &&
             !(e.PackageId == "P04" || (e.PackageId == "P05" &&
-              e.ActionId == "gpu_utilization" && !e.EvidenceVerified)))
+              e.ActionId == "gpu_utilization" && e.Source == "P05.Hardware" &&
+              e.State == "RUNNING" && !e.EvidenceVerified)))
             return false;
         if (e.Numerator.HasValue != e.Denominator.HasValue) return false;
         if (e.Denominator.HasValue && (e.Denominator <= 0 || e.Numerator < 0 || e.Numerator > e.Denominator)) return false;
