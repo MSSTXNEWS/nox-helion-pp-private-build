@@ -70,5 +70,38 @@ class HoldoutIntegrityTests(unittest.TestCase):
         self.assertEqual(self.rows([message("A")], [message("B")]), (1, 1))
 
 
+    def test_duplicate_top_level_json_key_rejected_before_gpu(self):
+        self.training.write_text('{"text":"one","text":"two"}\\n', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "TRAIN_JSON_DUPLICATE_KEY_1"):
+            train.validate_jsonl(self.training, "TRAIN")
+
+    def test_duplicate_nested_message_key_rejected_before_gpu(self):
+        self.holdout.write_text(
+            '{"messages":[{"role":"assistant","content":"x","content":"y"}]}\\n',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(ValueError, "HOLDOUT_JSON_DUPLICATE_KEY_1"):
+            train.validate_jsonl(self.holdout, "HOLDOUT")
+
+    def test_leakage_scan_also_rejects_ambiguous_json(self):
+        self.training.write_text('{"text":"train"}\\n', encoding="utf-8")
+        self.holdout.write_text('{"text":"other","text":"replaced"}\\n', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "HOLDOUT_JSON_DUPLICATE_KEY_1"):
+            train.validate_holdout_separation(self.training, self.holdout)
+
+    def test_reject_nan_and_overflow_float_before_gpu(self):
+        for malformed in ('{"text":"a","weight":NaN}', '{"text":"a","weight":1e99999}'):
+            with self.subTest(malformed=malformed):
+                self.training.write_text(malformed + "\\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "TRAIN_JSON_NONFINITE_1"):
+                    train.validate_jsonl(self.training, "TRAIN")
+
+    def test_valid_finite_json_numbers_still_work(self):
+        self.assertEqual(self.rows(
+            [{"text": "train", "weight": 0.125}],
+            [{"text": "holdout", "weight": -0.25}],
+        ), (1, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
