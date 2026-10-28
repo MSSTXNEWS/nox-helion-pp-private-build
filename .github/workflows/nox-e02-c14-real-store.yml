@@ -1,0 +1,40 @@
+name: E02 C14 original P02Store V1-V2 source regression
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - e02/v16-c13-original-store-20261028
+    paths:
+      - 'Packages/P02/worker-python/**'
+      - '.github/workflows/nox-e02-c14-real-store.yml'
+permissions:
+  contents: read
+jobs:
+  original-store:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile exact owner Python source
+        shell: bash
+        run: python -m compileall -q Packages/P02/worker-python
+      - name: Existing owner P02Store and 75-case SQLite/Ollama fixture suite
+        shell: bash
+        env:
+          PYTHONPATH: Packages/P02/worker-python
+        run: |
+          python -m unittest discover -s Packages/P02/worker-python -p 'test_p02*.py' -v
+      - name: Explicit component-only result; original EXE not accepted
+        shell: bash
+        run: |
+          echo 'C14_SOURCE_COMPONENT=PASS'
+          echo 'NATIVE_WINDOWS_EXE=HOLD; REAL_OLLAMA=HOLD; E07_SAME_SHA=NOT_RUN'
