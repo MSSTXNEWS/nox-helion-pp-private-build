@@ -20,19 +20,9 @@ export function visualPreset(action,index){
   });
 }
 
-export function validateLiveVisualEvent(event,knownRoutes){
-  if(!event||event.source!==NATIVE_SOURCE||event.evidenceVerified!==true||
-     typeof event.eventId!=="string"||typeof event.runId!=="string"||
-     !RE.test(event.eventId)||!RE.test(event.runId)||
-     !knownRoutes.has(event.routeId)||!STATES.includes(event.state))
-    return false;
-  if(event.progress!==undefined){
-    const p=event.progress;
-    if(!p||!Number.isInteger(p.numerator)||!Number.isInteger(p.denominator)||
-       p.denominator<1||p.numerator<0||p.numerator>p.denominator)return false;
-  }
-  return true;
-}
+// Backward-compatible legacy validator: the original source/evidence boolean
+// was writable by any in-page script and must NOT be treated as native proof.
+export function validateLiveVisualEvent(_legacyEvent,_knownRoutes){return false;}
 
 export function mountCinematic(root,catalog,{subscribeVerifiedNative=null,now=()=>Date.now()}={}){
   if(typeof document==="undefined"||!root||root.nodeType!==1||
