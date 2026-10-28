@@ -277,9 +277,12 @@ export function projectCanonicalEvents(events, runId, nowMs) {
 export function projectSpaceView(host, nowMs=Date.now()) {
   if (!host || !validRunId(host.run_id) || !Number.isFinite(nowMs)) return null;
   const hardwareFrame=host.hardware;
+  // UNAVAILABLE is a native poll outcome, not permission to render values.
+  // Old projection admitted a nested LIVE sensor even when its enclosing
+  // same-run poll explicitly denied hardware availability. Fail closed here.
   const sameRunFrame=hardwareFrame?.run_id===host.run_id &&
     ago(hardwareFrame.polled_utc,nowMs,30000) &&
-    ['LIVE','PARTIAL_OR_LIVE','UNAVAILABLE'].includes(hardwareFrame.state);
+    (hardwareFrame.state==='LIVE' || hardwareFrame.state==='PARTIAL_OR_LIVE');
   const sameRunCore=host.core?.run_id===host.run_id ? host.core : null;
   // Feeds are host-owned approvals, never auto-fetched or shared across runs.
   const sameRunFeeds=Array.isArray(host.feeds) ?
