@@ -3,8 +3,8 @@
 **Authority:** NOX V16 sections 26–32, inherited V15 56 rules; main spec https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit. This is an additive coordinator contract, **NOT a finished EXE, not a background automation and not an authorization to delete/overwrite any original**.
 
 ## Unambiguous short trigger
-- `111111111` means **exactly nine ordered execution cycles**, not nine workers, nine feature cards, a number to reinterpret as a random TaskID or an autonomous background queue. Each cycle attempts **ten distinct physical TaskIDs** in the executor's own area. A safe blocker counts as HOLD, not a completed task; continue with another independently safe task.
-- `1111111111` means ten cycles in the historical ten-cycle mode (do not confuse with nine), `11` is two-cycle legacy shorthand only in flows already using that convention. `1` and other lengths retain any more specific previously approved role/local segment meaning. **Explicit written instructions always override shorthand**.
+- **ЕДИНОЕ ПРАВИЛО:** любая строка, состоящая только из символов `1`, означает ровно столько последовательных циклов, сколько в ней единиц. `1` = 1 цикл; `11` = 2; `111` = 3; `111111111` = 9; `1111111111` = 10. Никаких исключений для коротких команд и никаких альтернативных интерпретаций. Каждая единица запускает один цикл, в котором нужно попытаться выполнить 10 различных физических TaskID своего блока. HOLD-задачи не считаются DONE. Количество единиц не создаёт реальных автономных субагентов и не позволяет обещать фоновую работу.
+- Явная текстовая команда владельца определяет содержание цикла; число единиц определяет **количество циклов**, если владелец не указал иного явного требования. Команды с буквами/пробелами — не этот сокращённый протокол.
 - The "nine" cycle count is a request to work in the **current explicitly active session**. No claim that nine separate AI agents or scheduled jobs have been created. Do not promise unattended execution or future delivery without actual automation.
 
 ## Each launch/cycle has an obligatory five-stage proof chain
