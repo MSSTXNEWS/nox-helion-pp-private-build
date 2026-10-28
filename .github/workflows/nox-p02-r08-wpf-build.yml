@@ -109,7 +109,15 @@ jobs:
             fullProductIntegrated=$false
             E07Accepted=$false
           } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath 'work/e06/staged/diagnostic-receipt.json'
+          Write-Host ('WPF_DIAGNOSTIC_EXE_SHA256=' + (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant())
           Write-Host 'WPF_DIAGNOSTIC_EXE_BUILT_NOT_FINAL_RELEASE'
+      - name: Retain diagnostic WPF executable and managed dependencies, not an installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r08-wpf-diagnostic-exe-NOT-RELEASE
+          path: work/e06/staged/diagnostic-payload/
+          if-no-files-found: error
+          retention-days: 14
       - name: Preserve diagnostic evidence even if compile fails
         if: always()
         uses: actions/upload-artifact@v4
