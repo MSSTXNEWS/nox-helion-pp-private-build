@@ -56,6 +56,9 @@ export function gravitationalSample(p,timeMs){
   const angle=p.angle;
   const x=100+Math.cos(angle)*radius-Math.sin(angle)*sideways;
   const y=100+Math.sin(angle)*radius+Math.cos(angle)*sideways;
+  if(!Number.isFinite(radius)||!Number.isFinite(sideways)||
+     !Number.isFinite(x)||!Number.isFinite(y))
+    throw new Error("NOX_FX_NONFINITE_GEOMETRY");
   const opacity=(t<=0||t>=1)?0:clamp(Math.pow(arc,.6)*p.brightness,0,1);
   return {x,y,opacity,angle:t*320+p.rotation,done:t>=1,t,radius};
 }
