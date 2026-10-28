@@ -33,6 +33,27 @@ jobs:
           $sha=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sha -cne 'ba0b96ecc3e05eb79a773e3147157e597711777ba42a917016aae990aeb0d554') {throw 'ORIGINAL_SETUP_SHA_HOLD'}
           Write-Host 'FROZEN_ORIGINAL_SETUP_BYTES_PASS'
+      - name: Install official Microsoft WebView2 Evergreen prerequisite on disposable CI only
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $installer=Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebview2Setup.exe'
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $installer -MaximumRedirection 8
+          if (!(Test-Path -LiteralPath $installer -PathType Leaf) -or (Get-Item $installer).Length -lt 50000) {throw 'MICROSOFT_WEBVIEW2_BOOTSTRAPPER_MISSING'}
+          $sign=Get-AuthenticodeSignature -FilePath $installer
+          if ($sign.Status -ne 'Valid' -or $sign.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {throw 'MICROSOFT_WEBVIEW2_SIGNER_INVALID'}
+          $process=Start-Process -FilePath $installer -ArgumentList @('/silent','/install') -PassThru -Wait
+          if ($process.ExitCode -notin @(0,1638,3010)) {throw ('WEBVIEW2_INSTALL_EXIT_'+$process.ExitCode)}
+          $found=$false
+          foreach ($key in @(
+            'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
+            'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
+            'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}'
+          )){
+            try {$pv=(Get-ItemProperty -LiteralPath $key -ErrorAction Stop).pv;if ($pv -and $pv -ne '0.0.0.0') {$found=$true;break}}catch{}
+          }
+          if (!$found) {throw 'MICROSOFT_WEBVIEW2_EVERGREEN_NOT_REGISTERED'}
+          Write-Host 'OFFICIAL_MICROSOFT_WEBVIEW2_RUNTIME_REGISTERED_PASS'
       - name: Diagnose actual native installer failure and run frozen Python --diagnose
         shell: pwsh
         run: |
