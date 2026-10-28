@@ -26,6 +26,31 @@ const ago = (iso, now, max) => isoUtc(iso) && now - Date.parse(iso) >= 0 && now 
 const validRunId = v => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,160}$/.test(v);
 const status = v => typeof v === 'string' && /^[A-Z_]{1,40}$/.test(v) ? v : 'N_D';
 const unique = (items, n) => Array.isArray(items) && items.length === n && items.every(v => typeof v === 'string' && v.length > 0) && new Set(items).size === n;
+const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+// E06 must have already authenticated the native owner ledger. This pure
+// projection ONLY checks internal consistency; a SHA-shaped string is not a
+// signature and this code must never be the authority that accepts a release.
+const derivedLaneProgress = b => {
+  if (!Number.isInteger(b.total_tasks) || b.total_tasks < 1 || b.total_tasks > 5000 ||
+      !Array.isArray(b.task_ledger) || b.task_ledger.length !== b.total_tasks) return null;
+  let denominator = 0, accepted = 0;
+  const seen = new Set();
+  for (const task of b.task_ledger) {
+    if (!task || !validRunId(task.task_id) || seen.has(task.task_id) ||
+        typeof task.weight !== 'number' || !Number.isFinite(task.weight) ||
+        task.weight <= 0 || task.weight > 100 ||
+        !['SOURCE','HOLD','NOT_RUN','COMPONENT_VERIFIED'].includes(task.status)) return null;
+    seen.add(task.task_id);
+    denominator += task.weight;
+    if (task.status === 'COMPONENT_VERIFIED') {
+      if (!sha(task.receipt_sha256)) return null;
+      accepted += task.weight;
+    } else if (task.receipt_sha256 != null) return null; // reject claiming a receipt for pending work
+  }
+  if (Math.abs(denominator - 100) > 0.000001) return null;
+  return round2(accepted);
+};
+
 
 // Only an E06 *native* sealed DTO is admissible; a JavaScript flag is not a
 // cryptographic owner receipt. Consumers must never promote this view to QA.
@@ -42,7 +67,8 @@ export function projectReadiness(readiness, runId, nowMs) {
     const b = readiness.bars[i];
     if (!b || b.executor !== i+1 || b.stage !== 'CRITERIA_VERIFIED' ||
         !sha(b.manifest_sha256) || !sha(b.receipt_sha256) ||
-        !pct(b.percent) || !Number.isInteger(b.total_tasks) || b.total_tasks < 1) {
+        !pct(b.percent) || derivedLaneProgress(b) === null ||
+        Math.abs(b.percent - derivedLaneProgress(b)) > 0.005) {
       return {bars, overall:null, reason:'LANE_OWNER_SEAL_MISSING'};
     }
     five.push(b.percent);
@@ -68,7 +94,7 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
   const expected = {'cpu.system.percent':['%',100], 'gpu.percent':['%',100],
     'gpu.vram.used_bytes':['bytes',Number.MAX_SAFE_INTEGER],
     'gpu.vram.total_bytes':['bytes',Number.MAX_SAFE_INTEGER],
-    'gpu.temperature.c':['°C',150]};
+    'gpu.temperature.c':['°C',150], 'cpu.temperature.c':['°C',150]};
   const result = {};
   for (const [key,[unit,max]] of Object.entries(expected)) {
     const found = Array.isArray(sensors) ? sensors.filter(s=>s?.key===key) : [];
@@ -113,8 +139,21 @@ export function projectCorePersona(core, nowMs) {
     outPersonas.push({id:p.id,stage:valid?p.status:'OFFLINE'});
   }
   const complete=outCores.every(c=>c.percent!==null);
-  return {helion:complete?Math.round(outCores.reduce((a,c)=>a+c.percent,0)/8*100)/100:null,
-    coreIds:outCores,personas:outPersonas,stage:complete?'SOURCE_DATED':'N_D'};
+  // Equal-weight mean would invent a project-level formula if the owner has
+  // not frozen one. Accept only the E06-approved CoreID weight manifest.
+  const agg=core.aggregation;
+  const validWeights=agg?.method==='WEIGHTED_V1' && sha(agg.receipt_sha256) &&
+    Array.isArray(agg.weights) && agg.weights.length===8 &&
+    agg.weights.every(x=>x && typeof x.id==='string' &&
+      core.approved_core_ids.includes(x.id) && typeof x.weight==='number' &&
+      Number.isFinite(x.weight) && x.weight>0 && x.weight<=100) &&
+    new Set(agg.weights.map(x=>x.id)).size===8 &&
+    Math.abs(agg.weights.reduce((a,c)=>a+c.weight,0)-100)<0.000001;
+  const values=new Map(outCores.map(c=>[c.id,c.percent]));
+  const helion=complete && validWeights ?
+    round2(agg.weights.reduce((a,c)=>a+values.get(c.id)*c.weight/100,0)):null;
+  return {helion,coreIds:outCores,personas:outPersonas,
+    stage:complete && validWeights?'SOURCE_DATED':'N_D'};
 }
 
 export function projectFeeds(feeds, nowMs) {

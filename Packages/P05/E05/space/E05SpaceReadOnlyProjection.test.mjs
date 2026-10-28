@@ -3,7 +3,10 @@ import {projectSpaceView,projectReadiness,projectFeeds,projectHardware,projectCo
   projectCanonicalEvents,LOCKED_BASELINE,EVENT_SCHEMA} from './E05SpaceReadOnlyProjection.mjs';
 const NOW=Date.parse('2026-10-28T03:45:00Z');
 const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R03';
-const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,manifest_sha256:H,receipt_sha256:H});
+const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,
+  task_ledger:Array.from({length:10},(_,j)=>({task_id:`E0${i}-TASK-${j+1}`,weight:10,
+    status:j<i?'COMPONENT_VERIFIED':'HOLD',...(j<i?{receipt_sha256:H}:{})})),
+  manifest_sha256:H,receipt_sha256:H});
 const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:44:58Z',
   native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
     {executor:6,stage:'HOLD',percent:null},{executor:7,stage:'NOT_RUN',percent:null}]),overall:28};
@@ -35,7 +38,9 @@ test('eight approved CoreIDs and five Persona IDs only',()=>{
   const c={owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'core-'+i),
     approved_persona_ids:Array.from({length:5},(_,i)=>'person-'+i),
     core_ids:Array.from({length:8},(_,i)=>({id:'core-'+i,percent:20,status:'VERIFIED',receipt_sha256:H,measured_at_utc:'2026-10-28T03:44:00Z'})),
-    personas:Array.from({length:5},(_,i)=>({id:'person-'+i,status:'AVAILABLE',observed_at_utc:'2026-10-28T03:44:00Z'}))};
+    personas:Array.from({length:5},(_,i)=>({id:'person-'+i,status:'AVAILABLE',observed_at_utc:'2026-10-28T03:44:00Z'})),
+    aggregation:{method:'WEIGHTED_V1',receipt_sha256:H,
+      weights:Array.from({length:8},(_,i)=>({id:'core-'+i,weight:12.5}))}};
   assert.equal(projectCorePersona(c,NOW).helion,20);assert.equal(projectCorePersona({...c,core_ids:[...c.core_ids.slice(0,7),c.core_ids[0]]},NOW).helion,null);
 });
 test('approved dated weather values may display',()=>assert.equal(projectFeeds([feed],NOW)[0].value,14));
@@ -220,3 +225,67 @@ test('negative weather temperature is not discarded as impossible rate',()=>{
   assert.equal(projectFeeds([f],NOW)[0].value,-5);
 });
 console.log('R04 tests are synthetic JavaScript component gates only, not installed EXE or live devices.');
+
+// R05: false-positive percent defense. Read-only checks do NOT attest native bytes.
+test('readiness refuses summary percent without underlying TaskID ledger',()=>{
+  const r={...readiness,bars:readiness.bars.map((b,i)=>i===0?{...b,task_ledger:undefined}:b)};
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses repeated TaskIDs even if the sum is 100',()=>{
+  const r=structuredClone(readiness);r.bars[0].task_ledger[1].task_id=r.bars[0].task_ledger[0].task_id;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses 100 percent when accepted receipts cover 10 percent',()=>{
+  const r=structuredClone(readiness);r.bars[0].percent=100;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses missing owner receipt for a COMPONENT_VERIFIED task',()=>{
+  const r=structuredClone(readiness);delete r.bars[0].task_ledger[0].receipt_sha256;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses over/underweight manifest totals',()=>{
+  const r=structuredClone(readiness);r.bars[0].task_ledger[0].weight=9;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses NaN weight even when summary is plausible',()=>{
+  const r=structuredClone(readiness);r.bars[0].task_ledger[0].weight=NaN;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness refuses false receipt for an unaccepted task',()=>{
+  const r=structuredClone(readiness);r.bars[0].task_ledger[1].receipt_sha256=H;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('readiness recomputes the full weighted total from admitted ledgers',()=>{
+  const r=projectReadiness(readiness,RUN,NOW);
+  assert.deepEqual(r.bars.slice(0,5).map(b=>b.percent),[10,20,30,40,50]);
+  assert.equal(r.overall,28);
+});
+test('native CPU temperature remains N/D absent an observation',()=>{
+  assert.equal(projectHardware([],NOW)['cpu.temperature.c'].value,null);
+});
+test('native CPU temperature may be displayed only with fresh provider/time',()=>{
+  const s={key:'cpu.temperature.c',value:57,unit:'°C',source:'WMI-hwmon',status:'LIVE',
+    observed_at_utc:'2026-10-28T03:44:58Z'};
+  assert.equal(projectHardware([s],NOW)['cpu.temperature.c'].value,57);
+  assert.equal(projectHardware([{...s,source:''}],NOW)['cpu.temperature.c'].value,null);
+});
+test('HELION aggregate is N/D without an explicit owner CoreID weight manifest',()=>{
+  const c={owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'c'+i),
+    approved_persona_ids:Array.from({length:5},(_,i)=>'p'+i),
+    core_ids:Array.from({length:8},(_,i)=>({id:'c'+i,percent:i*10,status:'VERIFIED',
+      receipt_sha256:H,measured_at_utc:'2026-10-28T03:44:00Z'})),
+    personas:Array.from({length:5},(_,i)=>({id:'p'+i,status:'AVAILABLE',observed_at_utc:'2026-10-28T03:44:00Z'}))};
+  assert.equal(projectCorePersona(c,NOW).helion,null);
+});
+test('HELION aggregate honors an explicit uneven approved weighting',()=>{
+  const c={owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'c'+i),
+    approved_persona_ids:Array.from({length:5},(_,i)=>'p'+i),
+    core_ids:Array.from({length:8},(_,i)=>({id:'c'+i,percent:i*10,status:'VERIFIED',
+      receipt_sha256:H,measured_at_utc:'2026-10-28T03:44:00Z'})),
+    personas:Array.from({length:5},(_,i)=>({id:'p'+i,status:'AVAILABLE',observed_at_utc:'2026-10-28T03:44:00Z'})),
+    aggregation:{method:'WEIGHTED_V1',receipt_sha256:H,weights:Array.from({length:8},(_,i)=>({id:'c'+i,weight:i===0?30:10}))}};
+  assert.equal(projectCorePersona(c,NOW).helion,28);
+  c.aggregation.weights[0].weight=20;
+  assert.equal(projectCorePersona(c,NOW).helion,null);
+});
+console.log('R05 added 12 ledger, weighted CoreID and native CPU-temperature regression gates; Windows NOT_RUN.');
