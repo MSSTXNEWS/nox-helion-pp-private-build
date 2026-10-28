@@ -59,7 +59,12 @@ function create(){
     if(!Array.isArray(catalog.actions)||catalog.actions.length!==50)throw Error('P01 original routes incomplete');
     for(const action of catalog.actions){const button=document.createElement('button');button.className='nox-pack01__tile';button.type='button';button.dataset.routeId=action.routeId;button.dataset.state='HOLD';button.textContent=action.title||action.routeId;
       const description=document.createElement('span');description.textContent='FX preview / без вызова действия';button.append(description);
-      button.onclick=()=>{note('WOW 001–050 · '+action.routeId+' · визуальный пресет. Работа функции проверяется в основном NOX, не здесь.')};
+      button.onclick=()=>{
+        // UI gesture opens the real existing P01 function panel. Never auto-execute
+        // privileged actions or simulate a successful backend operation.
+        window.parent?.postMessage({type:'nox.creative.navigate.v1',routeId:action.routeId},window.location.origin);
+        note('NOX · переход к штатной функции '+action.routeId+' · запуск и права проверяются в основном NOX');
+      };
       routes.append(button)}
     pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(mod.value.toLowerCase());
   }).catch(e=>{routes.textContent='WOW 001–050: исходный маршрутный каталог недоступен · HOLD · '+e.message});
