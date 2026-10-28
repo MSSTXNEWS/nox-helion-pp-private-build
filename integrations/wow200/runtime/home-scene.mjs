@@ -40,6 +40,20 @@ export function mountApprovedHome(doc=document){
   // elements. No trusted events are supplied until the native bridge is attested.
   const scene=installNoxCinemaFX({root:stage,orbs,profile:chosenMode()});
   let detachMotion=()=>{};
+  // FX-owned DOM markers and observers form one rollback transaction.
+  let disposed=false;
+  function releaseFx(){
+    if(disposed)return;
+    disposed=true;
+    try{detachMotion();}catch(_){}
+    try{observer?.disconnect();}catch(_){}
+    try{bodyObserver?.disconnect();}catch(_){}
+    observer=null;bodyObserver=null;
+    for(const element of [central,...items]){
+      try{delete element.dataset.noxVerifiedFx;}catch(_){}
+    }
+    try{scene.destroy();}finally{mounted=null;}
+  }
   try{
     const sync=()=>{scene.setVisible(home.classList.contains('active'));
       scene.setProfile(chosenMode());};
@@ -67,12 +81,10 @@ export function mountApprovedHome(doc=document){
         if(accepted===true)requestedProfile=mode;
         return accepted;
       },
-      destroy(){detachMotion();observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;
-        for(const element of [central,...items])delete element.dataset.noxVerifiedFx;
-        scene.destroy();mounted=null;}
+      destroy(){releaseFx();}
     });
     return mounted;
-  }catch(error){detachMotion();observer?.disconnect();bodyObserver?.disconnect();scene.destroy();throw error;}
+  }catch(error){try{releaseFx();}catch(_){}throw error;}
 }
 function boot(){
   try{mountApprovedHome(document)}

@@ -50,6 +50,45 @@ try {
   $upgradeManifest=(Get-FileHash -LiteralPath (Join-Path $root 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($upgradeManifest -ceq $firstManifest) { throw 'UPGRADE_PAYLOAD_NOT_DISTINCT' }
   $results.update='PASS'
+  # Negative regression: a corrupt prior payload MUST NOT be activated.
+  # Mutate one byte in this disposable CI install, restore it in finally.
+  $backupExe=Join-Path $backup 'NOX.P01.Shell.exe'
+  if(-not (Test-Path -LiteralPath $backupExe -PathType Leaf)) {throw 'BACKUP_EXE_MISSING_FOR_NEGATIVE'}
+  $backupExeSha=(Get-FileHash -LiteralPath $backupExe -Algorithm SHA256).Hash.ToLowerInvariant()
+  $stream=[IO.File]::Open($backupExe,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+  $byteBefore=-1
+  try {
+    $byteBefore=$stream.ReadByte()
+    if ($byteBefore -lt 0) {throw 'EMPTY_BACKUP_EXE'}
+    [void]$stream.Seek(0,[IO.SeekOrigin]::Begin)
+    $stream.WriteByte([byte]($byteBefore -bxor 1))
+    $stream.Flush($true)
+  } finally { $stream.Dispose() }
+  try {
+    $errorOnCorrupt=$null
+    try { Exec-Setup $UpgradeSetup @('/S','/ROLLBACK') }
+    catch { $errorOnCorrupt=$_.ToString() }
+    if (-not $errorOnCorrupt) {throw 'CORRUPT_BACKUP_WAS_ACCEPTED'}
+    if (-not (Test-Path -LiteralPath $backupExe -PathType Leaf) -or
+        -not (Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt')) -or
+        (Test-Path -LiteralPath $rollbackSaved)) {
+      throw 'CORRUPT_BACKUP_CHANGED_APPLICATION_DIRS'
+    }
+    if ((Get-FileHash -LiteralPath (Join-Path $root 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant() -cne $upgradeManifest) {
+      throw 'CORRUPT_BACKUP_CHANGED_CURRENT_PAYLOAD'
+    }
+  } finally {
+    $stream=[IO.File]::Open($backupExe,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+    try {
+      [void]$stream.Seek(0,[IO.SeekOrigin]::Begin)
+      $stream.WriteByte([byte]$byteBefore)
+      $stream.Flush($true)
+    } finally { $stream.Dispose() }
+  }
+  if ((Get-FileHash -LiteralPath $backupExe -Algorithm SHA256).Hash.ToLowerInvariant() -cne $backupExeSha) {
+    throw 'BACKUP_NEGATIVE_TEST_DID_NOT_RESTORE_EXACT_BYTES'
+  }
+  $results.corruptBackupRejected='PASS'
   Exec-Setup $UpgradeSetup @('/S','/ROLLBACK')
   if(-not (Test-Path -LiteralPath (Join-Path $rollbackSaved 'nox-p01-owned.txt'))) {throw 'ROLLED_BACK_NEWER_APP_NOT_RETAINED'}
   if((Get-FileHash -LiteralPath (Join-Path $root 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant() -cne $firstManifest){throw 'ROLLBACK_VERSION_NOT_RESTORED'}

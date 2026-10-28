@@ -140,6 +140,18 @@ Function RestorePrevious
   StrCpy $TmpDir "$INSTDIR.__p01_rollback_saved"
   IfFileExists "$TmpDir" 0 +2
     Abort "Rollback-save exists; resolve it first."
+  ; Verify every previous payload hash BEFORE moving either app directory.
+  ; A mere ownership marker is not evidence of unmodified program files.
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    SetErrorLevel 2
+    Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
+  ${EndIf}
   Rename "$INSTDIR" "$TmpDir"
   IfErrors 0 +2
     Abort "Cannot move current app. Close NOX first."

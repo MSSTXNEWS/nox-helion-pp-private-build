@@ -6,6 +6,7 @@ Only the trusted host passes owner services/NativeSession; unknown actions HOLD.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping
 import re
 from pathlib import Path
@@ -163,7 +164,26 @@ class P03OneHostPort:
                 raw = response.read(2 * 1024 * 1024 + 1)
             if len(raw) > 2 * 1024 * 1024:
                 raise P03PortHold("Ollama metadata exceeds owner2 size cap")
-            data = json.loads(raw)
+            # R16: Ollama metadata is evidence, not an ambiguously decoded JSON claim.
+            def unique_object(pairs):
+                obj = {}
+                for key, value in pairs:
+                    if key in obj:
+                        raise P03PortHold("Duplicate Ollama metadata JSON key")
+                    obj[key] = value
+                return obj
+
+            def reject_constant(_value):
+                raise P03PortHold("Invalid Ollama metadata JSON constant")
+
+            def finite_float(value):
+                number = float(value)
+                if not math.isfinite(number):
+                    raise P03PortHold("Non-finite Ollama metadata JSON number")
+                return number
+
+            data = json.loads(raw, object_pairs_hook=unique_object,
+                              parse_constant=reject_constant, parse_float=finite_float)
         except P03PortHold:
             raise
         except Exception as exc:

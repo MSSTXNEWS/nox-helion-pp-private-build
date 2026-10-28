@@ -12,12 +12,37 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+# Reject redirected input/output ancestors BEFORE resolve or publish (source gate).
+# This does not attest Windows races/ACLs; native acceptance remains HOLD.
+function Assert-E06PlainPathAncestors {
+  param([Parameter(Mandatory=$true)][string]$Candidate,
+        [Parameter(Mandatory=$true)][string]$Scope)
+  $cursor=[IO.Path]::GetFullPath($Candidate)
+  while ($true) {
+    try {
+      $attributes=[IO.File]::GetAttributes($cursor)
+      if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "E06_${Scope}_REPARSE_ANCESTOR_HOLD"
+      }
+    }
+    catch [IO.FileNotFoundException] { }
+    catch [IO.DirectoryNotFoundException] { }
+    $parent=[IO.Directory]::GetParent($cursor)
+    if ($null -eq $parent) { break }
+    $cursor=$parent.FullName
+  }
+}
+Assert-E06PlainPathAncestors -Candidate $SourceRoot -Scope 'SOURCE'
+Assert-E06PlainPathAncestors -Candidate $PythonExe -Scope 'PYTHON'
+Assert-E06PlainPathAncestors -Candidate $OutputRoot -Scope 'OUTPUT'
 $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
 if ((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $exeDigest) { throw 'PYTHON_ORIGINAL_BINARY_SHA_HOLD' }
 $project=Join-Path $source 'NOX.P01.Shell.csproj'
 $installer=Join-Path $source 'Installer'
+Assert-E06PlainPathAncestors -Candidate $project -Scope 'WPF_PROJECT'
+Assert-E06PlainPathAncestors -Candidate (Join-Path $installer 'NOX-HELION-Setup.nsi') -Scope 'NSIS_OWNER'
 if (!(Test-Path -LiteralPath $project -PathType Leaf)) { throw 'EXISTING_WPF_SOURCE_MISSING' }
 if (!(Test-Path -LiteralPath (Join-Path $installer 'NOX-HELION-Setup.nsi') -PathType Leaf)) { throw 'ORIGINAL_NSIS_OWNER_SOURCE_MISSING' }
 # The original diagnostic builder keeps its existing behavior unless BOTH visual
@@ -34,12 +59,15 @@ if ($wantsCreative) {
   # Mutating visual stages operate only on stage_p01.py's disposable source,
   # never on historical archives, pristine HOME or the Git checkout source.
   $lockPath=Join-Path (Split-Path -Parent $source) 'source_lock.json'
+  Assert-E06PlainPathAncestors -Candidate $lockPath -Scope 'SOURCELOCK'
   if (!(Test-Path -LiteralPath $lockPath -PathType Leaf)) { throw 'D02_DISPOSABLE_SOURCELOCK_REQUIRED' }
   $lock=Get-Content -LiteralPath $lockPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if ($lock.schema -cne 'NOX-E06-P01-WINDOWS-DIAGNOSTIC-SOURCE-v1' -or
       $lock.source_unchanged -ne $true -or $lock.release_accepted -ne $false) {
     throw 'D02_DISPOSABLE_SOURCELOCK_INVALID'
   }
+  Assert-E06PlainPathAncestors -Candidate $CreativeSourceRoot -Scope 'CREATIVE'
+  Assert-E06PlainPathAncestors -Candidate $WowSourceRoot -Scope 'WOW'
   $creative=(Resolve-Path -LiteralPath $CreativeSourceRoot).Path
   $wow=(Resolve-Path -LiteralPath $WowSourceRoot).Path
   $creativeScript=Join-Path $creative 'stage_creative.py'
@@ -98,6 +126,7 @@ if ($wantsCreative) {
     if (!(Test-Path -LiteralPath $personaScript -PathType Leaf)) { throw 'PERSONA_OWNER_STAGE_SCRIPT_MISSING' }
     $personaBlob=(& $git.Source hash-object -- $personaScript).Trim().ToLowerInvariant()
     if ($personaBlob -cne '5eed031e9f8dc5fb9c829e0dfa0668014b7eda36') { throw 'PERSONA_STAGE_SCRIPT_SHA_HOLD' }
+    Assert-E06PlainPathAncestors -Candidate $PersonaBundlePath -Scope 'PERSONA'
     $personaBundle=(Resolve-Path -LiteralPath $PersonaBundlePath -ErrorAction Stop).Path
     $personaFile=Get-Item -LiteralPath $personaBundle -Force
     if ($personaFile.PSIsContainer -or
@@ -122,6 +151,7 @@ if ($wantsCreative) {
 }
 if (Test-Path -LiteralPath $OutputRoot) { throw 'OUTPUT_ALREADY_EXISTS_NO_OVERWRITE' }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
+Assert-E06PlainPathAncestors -Candidate $OutputRoot -Scope 'OUTPUT_POST_CREATE'
 $out=(Resolve-Path $OutputRoot).Path
 $payload=Join-Path $out 'payload'
 # One native UI process, original Python runtime invoked ONLY by fixed --diagnose, not auto-started.
