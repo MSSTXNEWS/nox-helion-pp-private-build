@@ -4,7 +4,7 @@ import sqlite3
 import tempfile
 import unittest
 import uuid
-from p02_history_stable import migrate_host_history, stable_history, HistoryHold
+from p02_history_stable import migrate_host_history, stable_history, verify_v2_contract, HistoryHold
 
 SCHEMA = """
 CREATE TABLE p02_chats(id TEXT PRIMARY KEY,tenant TEXT NOT NULL,principal TEXT NOT NULL,created_at INTEGER NOT NULL);
@@ -44,7 +44,7 @@ class V2Tests(unittest.TestCase):
         self.migrate()
         self.db.execute('DROP TRIGGER p02_messages_stable_insert')
         self.db.commit()
-        with self.assertRaisesRegex(HistoryHold,'P02_V2_SEQUENCE_CONTRACT_HOLD'):
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_TRIGGER_MISSING_OR_INVALID'):
             stable_history(self.db,'t','u','c')
     def test_00d_old_positional_insert_breaks_without_fix(self):
         self.migrate()
@@ -116,5 +116,72 @@ class V2Tests(unittest.TestCase):
     def test_17_tail_read_last_two(self):
         self.migrate()
         self.assertEqual([x['content'] for x in stable_history(self.db,'t','u','c',2)],['1','2'])
+
+
+    def test_18_v2_contract_is_read_only(self):
+        self.migrate()
+        before=self.db.total_changes
+        verify_v2_contract(self.db)
+        self.assertEqual(self.db.total_changes,before)
+
+    def test_19_v2_missing_index_holds(self):
+        self.migrate()
+        self.db.execute('DROP INDEX p02_messages_stable_seq');self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_INDEX_MISSING'):
+            stable_history(self.db,'t','u','c')
+
+    def test_20_v2_forged_nonunique_index_holds(self):
+        self.migrate()
+        self.db.execute('DROP INDEX p02_messages_stable_seq')
+        self.db.execute('CREATE INDEX p02_messages_stable_seq ON p02_messages(stable_seq)');self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_INDEX_INVALID'):
+            stable_history(self.db,'t','u','c')
+
+    def test_21_v2_wrong_index_column_holds(self):
+        self.migrate()
+        self.db.execute('DROP INDEX p02_messages_stable_seq')
+        self.db.execute('CREATE UNIQUE INDEX p02_messages_stable_seq ON p02_messages(id)');self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_INDEX_INVALID'):
+            stable_history(self.db,'t','u','c')
+
+    def test_22_v2_noop_trigger_holds(self):
+        self.migrate()
+        self.db.execute('DROP TRIGGER p02_messages_stable_insert')
+        self.db.execute('''CREATE TRIGGER p02_messages_stable_insert AFTER INSERT ON p02_messages BEGIN SELECT 1; END''')
+        self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_TRIGGER_MISSING_OR_INVALID'):
+            stable_history(self.db,'t','u','c')
+
+    def test_23_v2_missing_sequence_holds(self):
+        self.migrate()
+        self.db.execute("UPDATE p02_messages SET stable_seq=NULL WHERE content='0'");self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_SEQUENCE_DATA_INVALID'):
+            stable_history(self.db,'t','u','c')
+
+    def test_24_v2_zero_sequence_holds(self):
+        self.migrate()
+        self.db.execute("UPDATE p02_messages SET stable_seq=0 WHERE content='0'");self.db.commit()
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_SEQUENCE_DATA_INVALID'):
+            stable_history(self.db,'t','u','c')
+
+    def test_25_v2_foreign_keys_disabled_holds(self):
+        self.migrate()
+        self.db.execute('PRAGMA foreign_keys=OFF')
+        with self.assertRaisesRegex(HistoryHold,'P02_V2_FOREIGN_KEYS_REQUIRED'):
+            stable_history(self.db,'t','u','c')
+
+    def test_26_v2_after_restart_reads(self):
+        self.migrate()
+        self.db.close()
+        self.db=sqlite3.connect(self.root/'canonical-host.sqlite')
+        self.db.execute('PRAGMA foreign_keys=ON')
+        self.assertEqual([x['content'] for x in stable_history(self.db,'t','u','c')],['0','1','2'])
+
+    def test_27_v2_after_vacuum_insert_reads(self):
+        self.migrate()
+        self.db.execute('VACUUM')
+        self.db.execute('INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)',('new','c','assistant','new',100))
+        self.db.commit()
+        self.assertEqual([x['content'] for x in stable_history(self.db,'t','u','c')],['0','1','2','new'])
 
 if __name__ == '__main__':unittest.main()
