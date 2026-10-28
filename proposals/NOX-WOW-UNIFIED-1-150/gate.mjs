@@ -135,7 +135,8 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
           const out=cues.preview(id);choose("cue");selected=id;return out;
         }
         if(Number.isInteger(id)&&id>=101&&id<=150){
-          choose("director");selected=id;return director.preview(id);
+          choose("director");
+          const out=director.preview(id);selected=id;return out;
         }
         throw Error("UNKNOWN_WOW_51_150");
       },
@@ -144,7 +145,13 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         if(!Number.isInteger(id)||id<101||id>150)
           throw Error("APPROVED_SHOT_101_150_ONLY");
         // Existing director independently enforces trusted host authorization.
-        const shot=director.activate(id);choose("director");selected=id;return shot;
+        // Do not change current source/selected cue when host denies it.
+        const prev=root.dataset.unifiedWow;
+        director.setReducedMotion(reducedMotion);
+        let shot;
+        try {shot=director.activate(id);}
+        catch(err){if(prev==="cue")director.setReducedMotion(true);throw err;}
+        choose("director");selected=id;return shot;
       },
       receiveCanonicalEvent,
       setMode(next){
