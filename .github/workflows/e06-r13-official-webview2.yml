@@ -1,0 +1,49 @@
+name: NOX E06 R13 official WebView2 standalone prerequisite gate (not release)
+on:
+  push:
+    branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Test-OfficialWebView2Prereq.ps1'
+      - '.github/workflows/e06-r13-official-webview2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prerequisite:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install and verify official Microsoft-signed standalone on disposable runner
+        shell: pwsh
+        run: |
+          ./coordination/e06/Test-OfficialWebView2Prereq.ps1
+      - name: Verify exact unmodified P01 owner preflight contract against installed runtime
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $url='repos/MSSTXNEWS/nox-helion-pp-private-build/contents/stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1?ref=8e42bb15aecbee8412c342b0e9049b6cce044297'
+          $data=gh api $url | ConvertFrom-Json
+          if ($data.sha -cne 'eb45add5a929eee99bc09ef87f2db3735556b78b') {throw 'E06_OWNER1_PREFLIGHT_BLOB_DRIFT_HOLD'}
+          $bytes=[Convert]::FromBase64String(($data.content -replace '\s',''))
+          $p=Join-Path $env:RUNNER_TEMP 'P01-Original-Preflight-ReadOnly.ps1'
+          [IO.File]::WriteAllBytes($p,$bytes)
+          $root=Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION'
+          foreach($suffix in @('','.__p01_stage','.__p01_previous','.__p01_rollback_saved')){
+            if(Test-Path -LiteralPath ($root+$suffix)){throw 'E06_PREEXISTING_INSTALL_DIRECTORY_HOLD'}
+          }
+          $output=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $p -InstallRoot $root 2>&1
+          if($LASTEXITCODE -ne 0 -or $output -notcontains 'P01_PREFLIGHT_PASS'){throw "E06_EXACT_OWNER1_PREFLIGHT_FAIL $output"}
+          Write-Host 'E06_R13_EXACT_OWNER1_PREFLIGHT_PASS'
+      - name: Upload immutable prerequisite receipt even when blocked
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r13-webview2-${{ github.run_id }}
+          path: e06-r13-webview2-evidence.json
+          retention-days: 30
+          if-no-files-found: warn

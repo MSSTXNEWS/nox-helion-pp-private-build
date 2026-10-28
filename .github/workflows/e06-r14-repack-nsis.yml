@@ -1,0 +1,40 @@
+name: NOX E06 R14 real onehost repack with pinned owner P01 NSIS (not final)
+on:
+  push:
+    branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Repack-FrozenOneHost-OwnerP01.ps1'
+      - '.github/workflows/e06-r14-repack-nsis.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-repack:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Signed official WebView2 standalone prerequisite
+        shell: pwsh
+        run: |
+          ./coordination/e06/Test-OfficialWebView2Prereq.ps1
+      - name: Restore byte-exact original WPF+Python payload and rebuild only original owner P01 NSIS
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./coordination/e06/Repack-FrozenOneHost-OwnerP01.ps1
+      - name: Preserve immutable original payload and diagnostic setup receipts on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r14-repack-${{ github.run_id }}
+          path: |
+            e06-r13-webview2-evidence.json
+            e06-r14-output/E06_R14_REPACK_RECEIPT.json
+            e06-r14-output/NOX-HELION-R14-DIAGNOSTIC-ONEHOST-SETUP.exe
+          if-no-files-found: warn
+          retention-days: 30

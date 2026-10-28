@@ -1,0 +1,106 @@
+{
+  "schema": "NOX_E06_R14_EXACT_FILE_SHA256_RECEIPTS_V1",
+  "runId": "NOX-V16-E06-EXPRESS-R13-R14-20261028",
+  "owner": 6,
+  "gitSourceBaseSha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "gitSnapshotSha1": "c1628492a3a718f29a4ccba55e07e56706ccf77a",
+  "algorithm": "UTF8_SHA256_ON_EXACT_GITHUB_SOURCE_FILE",
+  "patchReceipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/48/files",
+  "noMerge": true,
+  "rollback": "Close PR48. Preserve immutable original ZIPs/main/other owner branches.",
+  "ownerAccepted": false,
+  "WindowsNativeAccepted": false,
+  "E07Accepted": false,
+  "rows": [
+    {
+      "path": "coordination/e06/Test-OfficialWebView2Prereq.ps1",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "020ebac0a9004450322e9eb8cd6f50e46ebf061bd3e1e61af7796b63ec3dbb77",
+      "post_git_blob_sha1": "c1ad55b88dc5b9f3e19704493052d82d234eba0c",
+      "post_bytes": 3651,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": "coordination/e06/Test-CombinedOneHostInstall.ps1",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "8d6b388b2172ff514419da3fec32ab750b70d3a112437e1943a16a6d05da1204",
+      "post_git_blob_sha1": "b8d175077ca11f2adeea212dfaea871337f24840",
+      "post_bytes": 6573,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": "coordination/e06/Repack-FrozenOneHost-OwnerP01.ps1",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "79036703ff90a74743b38092c458abcc17c0c17f730f15ee73b3d792b898f011",
+      "post_git_blob_sha1": "c558dcd5e9939bb06f7d2d395c40bd10d50fae6a",
+      "post_bytes": 10186,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": "coordination/e06/Diagnose-ExactRepack-NSIS.ps1",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "307b4d5419cf16067fd814f57e3fd9dc280e1a010ff9093fccb36681f8f9a208",
+      "post_git_blob_sha1": "621a82d9b00ee74a4001aa096135d0b6dc39e5c1",
+      "post_bytes": 5370,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": "coordination/e06/R13_PINNED_OWNER_QUEUE.json",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "95c1b93300964eae6762f49434c7fdb599ed8d989393b9f94dd44f787c0f38e3",
+      "post_git_blob_sha1": "10df8f0be117e17f158a2869dc88c70221e8471e",
+      "post_bytes": 2985,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": ".github/workflows/e06-r13-official-webview2.yml",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "b54e49d424b214060750b38d5316b3f938e8182da00e16eb7a6c32c63f3e8581",
+      "post_git_blob_sha1": "3dc0757196ac0f39ea7d1d04a0b7b97fb219008f",
+      "post_bytes": 2346,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": ".github/workflows/e06-r13-combined-native-install.yml",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "2a33a1c8e8a53f22a41560d417633e7671aa097b4c90ecd1db9fd8ad706ec22a",
+      "post_git_blob_sha1": "c1e448546d6fbc3f6856ecfe515f4f50762f59a2",
+      "post_bytes": 1346,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": ".github/workflows/e06-r14-repack-nsis.yml",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "183e2a1932020a387d8eec9ba52379ee037f14ed9091e71b7a56fadbfaeb73e3",
+      "post_git_blob_sha1": "ca6c05264cf83d8eeffac1516fd50f4c5dfda225",
+      "post_bytes": 1404,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    },
+    {
+      "path": ".github/workflows/e06-r14-nsexec-forensic.yml",
+      "owner": 6,
+      "pre_sha256": null,
+      "pre_state": "ABSENT_ON_MAIN",
+      "post_sha256": "25d4f7f9e49357952f00af982aa064b7e752de8688c556a7c39820b440246323",
+      "post_git_blob_sha1": "e622f1d3825f9f35f525940fb582bcd0abc61729",
+      "post_bytes": 1226,
+      "status": "ISOLATED_PR48_SOURCE_ONLY_NOT_INTEGRATED"
+    }
+  ]
+}
