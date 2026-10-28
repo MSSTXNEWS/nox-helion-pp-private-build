@@ -40,6 +40,8 @@ On GitHub in current turn:
 - Never force-push, reimport the project, silently replace GitLab source with old migration snapshot or auto-merge historical diverged branches. Preserve unique 21 migration-side commits and reconcile only verified non-duplicated code during the later single SOURCE_FREEZE handoff.
 - Astra's starting source SHA is `817bb4146db0a2c79407d249d54fdeeb22261bb6` plus Astra-only instruction/manifest commits; this is NOT current GitLab pipeline build SHA. GitLab last known pipeline #3000422727 used earlier migration source, failed P02.
 
+**Проверка исторических исходников GitLab vs Astra:** прочитай `coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json` — инвентаризованы 27 уникальных файлов миграции, 41 изменённый общий файл, защищённые оригинальные 3 source_0*.part. Ветка GitLab не равна Astra. Не синхронизировать или переписывать GitLab до полного SOURCE_CODE_COMPLETE и отдельной независимой интеграции.
+
 ## SOURCE FIRST — EXACT REQUIRED HANDOFF SEQUENCE
 Astra SOLO agents A01..A10 on GitHub `astra/v16-code-complete-source-only-20261029` finish 100% V15/V16 **source implementation** and focused source regressions; preserve original 56 §33 consolidated rules, original 3 raw archive parts/729 members, 968 baseline Git blobs, D02/WOW200, 8 CoreIDs, 5 Personas, 50+50 routes, Voice RU↔ES, RAG/LoRA/GPU, SPACE, user data, earlier DONE. Google Drive source journal read/write every actual run, errors and self-improvement.
 **DO NOT run GitLab CI, Azure, Windows build, NSIS, diagnostic EXE or any premature cross-owner integration while source still changes**.
