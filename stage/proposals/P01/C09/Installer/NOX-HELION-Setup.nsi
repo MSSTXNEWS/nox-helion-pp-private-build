@@ -149,6 +149,7 @@ Function RestorePrevious
   Pop $CheckResult
   ${If} $ExitCode != "0"
     DetailPrint "$CheckResult"
+    SetErrorLevel 2
     Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
   ${EndIf}
   Rename "$INSTDIR" "$TmpDir"
