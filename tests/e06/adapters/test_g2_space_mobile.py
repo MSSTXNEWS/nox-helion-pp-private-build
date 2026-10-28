@@ -800,5 +800,118 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(published, [event])
 
 
+    def test_68_list_event_type_denied(self):
+        event, sent = verified_event(), []
+        event["event_type"] = ["task.completed"]
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_69_dict_event_state_denied(self):
+        event, sent = verified_event(), []
+        event["state"] = {"state": "COMPLETED"}
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_70_unverified_completed_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="task.completed", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_71_unverified_model_stop_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="model.stopped", state="RUNNING", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_72_unverified_checkpoint_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="checkpoint.saved", state="RUNNING", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_73_unverified_acceptance_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="acceptance.updated", state="RUNNING", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_74_verified_terminal_with_owner_receipt(self):
+        event, sent, seen = verified_event(), [], []
+        self.assertTrue(relay_existing_events_v3(event, run_id=G2_RUN,
+            trusted_owner=lambda: True,
+            trusted_evidence=lambda x: (seen.append(x) or True),
+            existing_publish=lambda x: (sent.append(x) or True)))
+        self.assertEqual(seen, [event])
+        self.assertEqual(sent, [event])
+
+    def test_75_unverified_running_progress_permitted(self):
+        event, sent = verified_event(), []
+        event.update(event_type="task.progress", state="RUNNING", evidence_verified=False)
+        self.assertTrue(relay_existing_events_v3(event, run_id=G2_RUN,
+            trusted_owner=lambda: True,
+            existing_publish=lambda x: (sent.append(x) or True)))
+        self.assertEqual(sent, [event])
+
+    def test_76_unhashable_sensor_does_not_abort_cpu(self):
+        self.e05_fake.sensors = [
+            {"Key": ["gpu.percent"], "Value": 99, "Status": "LIVE",
+             "Source": "UNTRUSTED", "ObservedAtUtc": utc()},
+            {"Key": "cpu.system.percent", "Value": 17, "Status": "LIVE",
+             "Source": "OWNER5_HARDWARE", "ObservedAtUtc": utc()}]
+        self.bind()
+        sensors = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertEqual(sensors["cpu.system.percent"]["value"], 17)
+        self.assertNotIn("gpu.percent", sensors)
+
+    def test_77_unhashable_route_denied(self):
+        with self.assertRaises(G2Denied):
+            self.e05.read(self.session, ["space.news"], {})
+
+    def test_78_source_lock_callback_error_hold(self):
+        def broken():
+            raise RuntimeError("SourceLock unavailable")
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(verified_event(), run_id=G2_RUN,
+                trusted_owner=broken, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_79_unverified_ready_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="task.progress", state="READY", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+    def test_80_unverified_stopped_denied(self):
+        event, sent = verified_event(), []
+        event.update(event_type="task.progress", state="STOPPED", evidence_verified=False)
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True,
+                existing_publish=lambda x: (sent.append(x) or True))
+        self.assertEqual(sent, [])
+
+
 if __name__ == "__main__":
     unittest.main()

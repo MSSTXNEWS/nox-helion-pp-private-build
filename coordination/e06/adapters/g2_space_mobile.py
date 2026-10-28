@@ -98,7 +98,7 @@ class ExistingE05Projection:
             return False
 
     def read(self, session: object, route: str, args: dict) -> dict:
-        if route not in P05_ROUTES or not isinstance(args, dict) or args:
+        if type(route) is not str or route not in P05_ROUTES or not isinstance(args, dict) or args:
             raise G2Denied("P05 read-only route takes no untrusted filters or URLs")
         if not self.available(route):
             raise G2Hold("Existing owner5 telemetry/feed is not ready")
@@ -137,7 +137,8 @@ class ExistingE05Projection:
             raise G2Hold("E05 hardware payload malformed")
         seen, safe, observed_by_key = set(), {}, {}
         for sample in sensors:
-            if not isinstance(sample, dict) or sample.get("Key") not in SENSORS:
+            if (not isinstance(sample, dict) or type(sample.get("Key")) is not str
+                    or sample.get("Key") not in SENSORS):
                 continue
             key = sample["Key"]
             if key in seen:
@@ -281,7 +282,13 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
                              existing_publish: Callable[[dict], bool],
                               trusted_evidence: Callable[[dict], bool] | None = None) -> bool:
     """One existing host events.v3 publisher. No bus, queue or invented event."""
-    if not callable(trusted_owner) or trusted_owner() is not True:
+    if not callable(trusted_owner):
+        raise G2Hold("Existing events.v3 SourceLock callback missing")
+    try:
+        initial_seal = trusted_owner() is True
+    except Exception as exc:
+        raise G2Hold("Existing events.v3 SourceLock callback failed") from exc
+    if not initial_seal:
         raise G2Hold("Existing events.v3 SourceLock not admitted")
     if not callable(existing_publish) or type(event) is not dict:
         raise G2Hold("Canonical existing publisher required")
@@ -291,8 +298,10 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
                 "source", "message", "evidence_verified")
     if (not all(k in event for k in required) or frozen.get("schema") !=
             "NOX-INSTALLER-EVENT-v3" or frozen.get("run_id") != run_id
-            or frozen.get("event_type") not in EVENT_TYPES
-            or frozen.get("state") not in EVENT_STATES
+            or type(frozen.get("event_type")) is not str
+            or frozen["event_type"] not in EVENT_TYPES
+            or type(frozen.get("state")) is not str
+            or frozen["state"] not in EVENT_STATES
             or type(frozen.get("evidence_verified")) is not bool
             or not isinstance(frozen.get("message"), str)
             or len(frozen["message"]) > 480
@@ -308,6 +317,12 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
         n, d = frozen.get("numerator"), frozen.get("denominator")
         if type(n) is not int or type(d) is not int or not 0 <= n <= d or d <= 0:
             raise G2Denied("Evidence numerator/denominator must be bounded integers")
+    # Terminal/accepted states cannot be projected LIVE without native proof.
+    terminal = (frozen["event_type"] in ("task.completed", "model.stopped",
+                "checkpoint.saved", "acceptance.updated")
+                or frozen["state"] in ("COMPLETED", "STOPPED", "READY"))
+    if terminal and frozen["evidence_verified"] is not True:
+        raise G2Hold("Unverified terminal/accepted event cannot be published")
     # Untrusted event.evidence_verified flag is never a native receipt.
     if frozen["evidence_verified"] is True:
         try:
