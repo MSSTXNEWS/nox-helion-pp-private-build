@@ -65,16 +65,23 @@ public sealed class E05SamplingLoop
 
     public async Task RunAsync(string runId, CancellationToken stop)
     {
-        if (string.IsNullOrWhiteSpace(runId)) throw new ArgumentException("RunID", nameof(runId));
+        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 160)
+            throw new ArgumentException("RunID", nameof(runId));
+        // NO-LOSS: both constructors keep the original periodic polling.
+        // Legacy still fails closed at its first PollOnceAsync until the
+        // canonical host is bound; it must NOT silently become a one-shot API.
+        stop.ThrowIfCancellationRequested();
         if (legacyPublisher is not null)
-        {
-            // Preserves the pre-existing intentional fail-closed behavior.
             await legacyPublisher.PollOnceAsync(runId, stop).ConfigureAwait(false);
-            return;
-        }
-        await PollVerifiedOnceAsync(runId, stop).ConfigureAwait(false);
+        else
+            await PollVerifiedOnceAsync(runId, stop).ConfigureAwait(false);
         using var timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(stop).ConfigureAwait(false))
-            await PollVerifiedOnceAsync(runId, stop).ConfigureAwait(false);
+        {
+            if (legacyPublisher is not null)
+                await legacyPublisher.PollOnceAsync(runId, stop).ConfigureAwait(false);
+            else
+                await PollVerifiedOnceAsync(runId, stop).ConfigureAwait(false);
+        }
     }
 }
