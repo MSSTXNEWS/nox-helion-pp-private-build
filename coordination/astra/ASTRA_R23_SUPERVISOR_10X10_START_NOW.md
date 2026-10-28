@@ -9,7 +9,7 @@ Primary Windows build platform **is GitLab Free**, not Azure or GitHub Actions: 
 # NOX HELION V16 · ASTRA PRO · R23 SUPERVISOR · 10 REAL SUBAGENTS × 10 SOURCE-CODING PASSES
 ## 29.10.2026 · binding single-owner development directive
 
-**START THE PROGRAMMING NOW. You are the one SOURCE-code authority, operating 10 nonoverlapping owner agents.** The user explicitly requests ten subagents and ten substantive attempts per agent, a total **100 planned passes**. These are a plan, not 100 claimed executions or 100 DONE requirements. Do not confuse approach count with product progress.
+**START THE PROGRAMMING NOW. You are the one SOURCE-code authority.** Ten parallel agents are a best-effort capability, NOT a precondition for writing the first real patch. If spawn is unavailable, move immediately to source coding yourself. Never end a launch merely because ten agents or other manual chat shutdown cannot be verified. The user explicitly requests ten subagents and ten substantive attempts per agent, a total **100 planned passes**. These are a plan, not 100 claimed executions or 100 DONE requirements. Do not confuse approach count with product progress.
 
 ### 0. Spawn contract — MUST be truthful
 1. Check whether your current Astra session exposes an actual subagent/task-spawn tool, e.g. a callable tool that starts independent worker contexts and returns task/process IDs. If available, **actually invoke it to create exactly 10 agents A01–A10**, each with its own isolated role brief, bounded resource budget and specific Git branch/worktree. Record actual tool call IDs and worker statuses in `coordination/astra/ASTRA_R23_SPAWN_RECEIPT.json`; do NOT claim creation just because you wrote prompts.
