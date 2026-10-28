@@ -432,6 +432,19 @@ class Host50Admission:
         else:
             if "runId" in request:
                 raise Denied("WEB_SUPPLIED_RUNID_FORBIDDEN")
+        # A native picker, consent dialog, or device prompt can change what is
+        # actually installed. Recheck live native-select membership after them.
+        # The canonical owner must STILL validate selections at dispatch time.
+        for key, value in opts.items():
+            selected = row["settingPolicy"][key]
+            if "source" in selected:
+                try:
+                    verified = native_option_verifier(session, route, key,
+                                                     selected["source"], value)
+                except Exception as exc:
+                    raise Hold("NATIVE_SELECT_RECHECK_FAILED") from exc
+                if verified is not True:
+                    raise Denied("UNVERIFIED_NATIVE_SELECT_VALUE")
         run_id = str(uuid.uuid4())
         ticket = {"runId":run_id,"taskId":row["taskId"],"routeId":route,
                   "owner":row["owner"],"sourceLockTree":BASE_TREE,
@@ -458,6 +471,14 @@ class Host50Admission:
                 raise Denied("REQUEST_MUTATED_DURING_NATIVE_CHECKS")
             if self._cap(row) != cap:
                 raise Hold("NATIVE_CAPABILITY_CHANGED_DURING_ADMISSION")
+            if route in STOP_ROUTES:
+                # STOP can become stale while the request is being admitted.
+                # The native executor must still enforce its own atomic STOP.
+                still_active = (active_runs or {}).get(request["runId"])
+                if (not isinstance(still_active, tuple) or len(still_active) != 4 or
+                    still_active[:3] != (session.tenant, session.principal, session.chat) or
+                    still_active[3] not in STOP_TARGETS[route]):
+                    raise Denied("STOP_SCOPE_OR_OWNER_MISMATCH")
             # Only the existing native owner may execute the exact approved
             # payload; the page request object is never a dispatch authority.
             # Its hash must match payloadSha256 in the eventual sealed ACK.
@@ -484,7 +505,10 @@ class Host50Admission:
             self.pending.pop(run_id, None)
             self.pending_deadlines.pop(run_id, None)
             raise Denied("NATIVE_ACK_LEASE_EXPIRED")
-        if (not isinstance(native_ack,dict) or set(native_ack)-ACK_FIELDS or
+        # Every signed receipt must bind all fields, including explicit nulls.
+        # Allowing missing file fields made a validly signed but incomplete
+        # "DONE" receipt indistinguishable from a complete native proof.
+        if (not isinstance(native_ack,dict) or set(native_ack) != ACK_FIELDS or
             any(not isinstance(k,str) for k in native_ack)):
             raise Denied("NATIVE_ACK_SCHEMA_INVALID")
         sign=native_ack.get("seal")
