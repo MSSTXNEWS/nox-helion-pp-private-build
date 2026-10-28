@@ -231,18 +231,22 @@ class PrivateMobileContract:
     def connect(self, session: object, payload: dict) -> dict:
         if not self.available():
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_NOT_READY")
-        if (not isinstance(payload, dict) or set(payload) != {"want"}
-                or not isinstance(payload["want"], list)
+        if (type(payload) is not dict or set(payload) != {"want"}
+                or type(payload["want"]) is not list
                 or len(payload["want"]) > 18
-                or any(not isinstance(r, str) or r not in REMOTE_SAFE
-                       for r in payload["want"])
-                or len(set(payload["want"])) != len(payload["want"])):
+                or any(type(r) is not str or r not in REMOTE_SAFE
+                       for r in payload["want"])):
             raise G2Denied("Remote request may ask only safe registered capabilities")
+        # Freeze the validated request before ANY native policy/peer callback:
+        # the caller must not rewrite capabilities while authorization runs.
+        requested = tuple(payload["want"])
+        if len(set(requested)) != len(requested):
+            raise G2Denied("Duplicate requested mobile capability")
         def attest() -> object:
             # Recheck native proof after host advertisement too: a peer,
             # session, CSRF or gateway can be revoked during an owner call.
             proof = self.peer(session)  # Never trust request-supplied headers.
-            if not isinstance(proof, dict) or set(proof) != {
+            if type(proof) is not dict or set(proof) != {
                 "identity", "verified_private_peer", "trusted_origin",
                 "observed_origin", "expected_csrf", "received_csrf",
                 "native_session_approved", "expires_at"}:
@@ -251,46 +255,47 @@ class PrivateMobileContract:
             if (type(expiry) not in (int, float) or not math.isfinite(expiry)
                     or not now < expiry <= now + 300):
                 raise G2Denied("Expired or implausible private authorization")
+            proof_epoch = (proof["identity"], proof["verified_private_peer"],
+                           proof["trusted_origin"], proof["observed_origin"],
+                           proof["expected_csrf"], proof["received_csrf"],
+                           proof["native_session_approved"], expiry)
+            # Reject forged private proof BEFORE calling the owner policy.
+            origin = proof_epoch[2]
             try:
-                ok = self.policy(proof["identity"],
-                                 verified_private_peer=proof["verified_private_peer"],
-                                 trusted_origin=proof["trusted_origin"],
-                                 observed_origin=proof["observed_origin"],
-                                 expected_csrf=proof["expected_csrf"],
-                                 received_csrf=proof["received_csrf"],
-                                 native_session_approved=proof["native_session_approved"])
+                parsed = urlsplit(origin) if type(origin) is str else None
+                origin_ok = (parsed is not None and len(origin) <= 255
+                             and parsed.scheme == "https" and bool(parsed.hostname)
+                             and parsed.username is None and parsed.password is None
+                             and not parsed.path and not parsed.query and not parsed.fragment
+                             and origin == "https://" + parsed.netloc and parsed.port != 0)
+            except ValueError:
+                origin_ok = False
+            csrf, presented = proof_epoch[4], proof_epoch[5]
+            csrf_ok = (type(csrf) in (bytes, str) and type(presented) is type(csrf)
+                       and 16 <= len(csrf) <= 512
+                       and (type(csrf) is bytes or (csrf.isascii() and presented.isascii()))
+                       and hmac.compare_digest(csrf, presented))
+            if (type(proof_epoch[0]) is not str or not 0 < len(proof_epoch[0]) <= 160
+                    or proof_epoch[1] is not True or proof_epoch[6] is not True
+                    or type(proof_epoch[3]) is not str
+                    or not origin_ok or proof_epoch[3] != origin or not csrf_ok):
+                raise G2Denied("Native private peer/origin/CSRF invariants failed")
+            try:
+                ok = self.policy(proof_epoch[0],
+                                 verified_private_peer=proof_epoch[1],
+                                 trusted_origin=proof_epoch[2],
+                                 observed_origin=proof_epoch[3],
+                                 expected_csrf=proof_epoch[4],
+                                 received_csrf=proof_epoch[5],
+                                 native_session_approved=proof_epoch[6])
             except Exception as exc:
                 raise G2Denied("Private origin/CSRF verification failed") from exc
             if ok is not True:
                 raise G2Denied("Private peer/CSRF/user consent denied")
-            # Pin the complete native authorization epoch, not just identity/CSRF.
-            return (proof["identity"], proof["verified_private_peer"],
-                    proof["trusted_origin"], proof["observed_origin"],
-                    proof["expected_csrf"], proof["received_csrf"],
-                    proof["native_session_approved"], expiry)
+            # The same validated epoch is passed to both P02 approvals.
+            return proof_epoch
 
         identity = attest()
-        # Native P02 policy remains authoritative, but it must not be the
-        # only barrier when a callback accidentally accepts invalid proof.
-        origin = identity[2]
-        try:
-            parsed = urlsplit(origin) if type(origin) is str else None
-            origin_ok = (parsed is not None and len(origin) <= 255
-                         and parsed.scheme == "https" and bool(parsed.hostname)
-                         and parsed.username is None and parsed.password is None
-                         and not parsed.path and not parsed.query and not parsed.fragment
-                         and origin == "https://" + parsed.netloc and parsed.port != 0)
-        except ValueError:
-            origin_ok = False
-        csrf, presented = identity[4], identity[5]
-        csrf_ok = (type(csrf) in (bytes, str) and type(presented) is type(csrf)
-                   and 16 <= len(csrf) <= 512
-                   and (type(csrf) is bytes or csrf.isascii())
-                   and hmac.compare_digest(csrf, presented))
-        if (type(identity[0]) is not str or not 0 < len(identity[0]) <= 160
-                or identity[1] is not True or identity[6] is not True
-                or not origin_ok or identity[3] != origin or not csrf_ok):
-            raise G2Denied("Native private peer/origin/CSRF invariants failed")
         try:
             advertised = self.host.advertise(session)
         except Exception as exc:
@@ -299,7 +304,7 @@ class PrivateMobileContract:
         if type(advertised) is not dict:
             raise G2Hold("Existing native host advertisement unavailable")
         def approved(snapshot: dict) -> tuple[str, ...]:
-            return tuple(route for route in payload["want"]
+            return tuple(route for route in requested
                          if type(snapshot.get(route)) is dict
                          and snapshot[route].get("enabled") is True)
         # Snapshot the FIRST owner capability state before a peer/policy

@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_E06_SOURCE_ONLY_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-W4-03-20261029T0105MSK-R17-SOURCE-POLICY",
+  "owner": "E06/W4-03",
+  "branch": "owner/e06/w4-03-r17-private-proof-source-only-20261029",
+  "parent_commit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "parent_tree": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "previous_lesson": "PIN_NATIVE_CAPABILITIES_ACROSS_LAST_AUTH_ATTESTATION",
+  "previous_lesson_applied": "YES: unchanged peer/CSRF epoch and final gateway recheck; focused regression validates last gateway revoke",
+  "new_lesson": "FREEZE_REQUEST_AND_VALIDATE_PROOF_BEFORE_NATIVE_POLICY",
+  "task_ids": [
+    {
+      "id": "V16.W4.03.R17.REQUEST_CAPABILITY_FREEZE",
+      "status": "SOURCE_FIXED_TESTED_IN_EXTRACTED_CLASS"
+    },
+    {
+      "id": "V16.W4.03.R17.NATIVE_PROOF_BEFORE_POLICY",
+      "status": "SOURCE_FIXED_TESTED_IN_EXTRACTED_CLASS"
+    },
+    {
+      "id": "V16.W4.03.R17.NONASCII_CSRF_FAIL_CLOSED",
+      "status": "SOURCE_FIXED_TESTED_IN_EXTRACTED_CLASS"
+    }
+  ],
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "88e2921a5f04ff7e754e2567940f8b7525db64abfd932604e9a2daeb998359c9",
+      "post_sha256": "2f0464e247c736961c2595f8e4433a64bc03443c61dad21d442e694e55e7f8ff",
+      "pre_git_blob_sha1": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283",
+      "post_git_blob_sha1": "394f9838b068ef563d5ea2dc001b879b4e396c66"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_mobile_prepolicy_request_r17.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "e52795ab15f9a10b572d17463c62bead48f701df04e626ba4ec2e8c01dea174e",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "dcb8bfa197f961d38b20e02f8877f786c1e9f747"
+    }
+  ],
+  "exact_diff": {
+    "requested": "Copy exact validated want list to immutable requested tuple before native callbacks; exact dict/list/str types and duplicate check.",
+    "native_policy": "Reject malformed peer, origin and CSRF before both P02 policy invocations; pass frozen native proof_epoch to callback.",
+    "csrf": "Reject non-ASCII presented CSRF with G2Denied instead of leaked TypeError."
+  },
+  "tests": {
+    "red": "Source-derived extracted class: 7 cases => 3 FAIL + 1 ERROR + 3 PASS",
+    "green": "Source-derived extracted class: 9/9 PASS, Python compile PASS",
+    "full_git_module": "NOT_RUN",
+    "windows_exe": "PROHIBITED_R20"
+  },
+  "no_loss": "P01-P05, D02/WOW200/8 CoreID/5 Persona/source729/SQLite/Ollama/voice/host unchanged",
+  "product_accepted_done": 0,
+  "feature_code_complete": "HOLD",
+  "source_freeze": "HOLD",
+  "e07": "0/10 NOT_RUN"
+}
