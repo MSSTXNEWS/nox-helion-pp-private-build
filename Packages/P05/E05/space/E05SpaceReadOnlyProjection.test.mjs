@@ -532,3 +532,62 @@ test('R09 missing any real GPU samples stays N/D without inferred zeros',()=>{
   assert.equal(h['gpu.temperature.c'].value,null);
 });
 console.log('R09 GPU tile strict provider/time/sample guards; native Windows NOT_RUN.');
+
+
+// R10: reject identity collisions across sealed P01–P05 task ledgers and
+// missing/impossible native terminal timestamps before presenting STOP.
+const oneTaskBar=(i,taskId)=>({executor:i,stage:'CRITERIA_VERIFIED',percent:100,total_tasks:1,
+  task_ledger:[{task_id:taskId,weight:100,status:'COMPONENT_VERIFIED',receipt_sha256:H}],
+  manifest_sha256:H,receipt_sha256:H});
+const oneTaskReadiness=ids=>({...readiness,overall:100,
+  bars:ids.map((id,i)=>oneTaskBar(i+1,id)).concat(readiness.bars.slice(5))});
+const datedError=(time)=>({...terminalEvent('task.failed','ERROR'),event_id:'R10-bad-time',timestamp_utc:time});
+const laterStop={...terminalEvent('model.stopped','STOPPED'),event_id:'R10-later-stop',
+  timestamp_utc:'2026-10-28T03:44:59Z'};
+test('R10 missing same-run ERROR timestamp cannot hide under a later STOP',()=>{
+  assert.equal(projectCanonicalEvents([datedError(undefined),laterStop],RUN,NOW).state,
+    'HOLD_MALFORMED_TERMINAL_TIMESTAMP');
+});
+test('R10 malformed same-run ERROR timestamp cannot hide under a later STOP',()=>{
+  assert.equal(projectCanonicalEvents([datedError('INVALID'),laterStop],RUN,NOW).state,
+    'HOLD_MALFORMED_TERMINAL_TIMESTAMP');
+});
+test('R10 impossible calendar timestamp is quarantined',()=>{
+  assert.equal(projectCanonicalEvents([datedError('2026-02-30T03:44:58Z')],RUN,NOW).state,
+    'HOLD_MALFORMED_TERMINAL_TIMESTAMP');
+});
+test('R10 numeric-offset timestamp not in canonical UTC schema is quarantined',()=>{
+  assert.equal(projectCanonicalEvents([datedError('2026-10-28T03:44:58+00:00')],RUN,NOW).state,
+    'HOLD_MALFORMED_TERMINAL_TIMESTAMP');
+});
+test('R10 missing model.stopped timestamp is quarantined',()=>{
+  assert.equal(projectCanonicalEvents([{...laterStop,timestamp_utc:null}],RUN,NOW).state,
+    'HOLD_MALFORMED_TERMINAL_TIMESTAMP');
+});
+test('R10 invalid timestamp on a nonterminal does not forge ERROR',()=>{
+  const noise={...datedError('INVALID'),event_type:'task.progress',state:'RUNNING'};
+  assert.equal(projectCanonicalEvents([noise,laterStop],RUN,NOW).state,'STOPPED');
+});
+test('R10 foreign-run invalid timestamp cannot poison current run',()=>{
+  assert.equal(projectCanonicalEvents([{...datedError('INVALID'),run_id:'OTHER'},laterStop],RUN,NOW).state,
+    'STOPPED');
+});
+test('R10 old but correctly dated terminal remains outside 30-second window',()=>{
+  assert.equal(projectCanonicalEvents([datedError('2026-10-28T03:40:00Z')],RUN,NOW).state,'N_D');
+});
+test('R10 valid terminal time still displays verified ERROR',()=>{
+  assert.equal(projectCanonicalEvents([datedError('2026-10-28T03:44:58Z')],RUN,NOW).state,'ERROR');
+});
+test('R10 same TaskID in two valid owner lanes cannot be double counted',()=>{
+  const r=projectReadiness(oneTaskReadiness(['P01-A','P02-B','P03-C','P04-D','P01-A']),RUN,NOW);
+  assert.equal(r.overall,null);assert.equal(r.reason,'CROSS_LANE_TASK_COLLISION');
+});
+test('R10 identical TaskID repeated in all five lanes is quarantined',()=>{
+  assert.equal(projectReadiness(oneTaskReadiness(Array(5).fill('ONE-TASK')),RUN,NOW).reason,
+    'CROSS_LANE_TASK_COLLISION');
+});
+test('R10 distinct global TaskIDs retain the 20/25/20/25/10 formula',()=>{
+  const r=projectReadiness(oneTaskReadiness(['P01-A','P02-B','P03-C','P04-D','P05-E']),RUN,NOW);
+  assert.equal(r.overall,100);assert.equal(r.reason,'E06_OWNER_PROJECTED');
+});
+console.log('R10 TOTAL PASSED '+n+' assertions; Native Windows EXE = NOT_RUN');
