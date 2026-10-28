@@ -1,3 +1,7 @@
+# R26 SOURCE/BUILD TARGET CORRECTION — OWNER CHOSE GITLAB FREE (2026-10-28)
+
+Primary Windows build platform **is GitLab Free**, not Azure or GitHub Actions: private `https://gitlab.com/s-grouptwet/nox-helion-pp-private-build`, historical branch `migration/nox-v16-gitlab-free-20261028-r01`; pipeline `3000422727`, Windows job `17549234693`, runner `saas-windows-medium-amd64`; P02 test failed, no EXE. GitLab CI source files (present on GitHub migration branch): `.gitlab-ci.yml` → `coordination/e06/gitlab_windows_entrypoint.ps1` → existing stage descriptions `azure-pipelines-nox-v16.yml` → original `private_build.ps1` + `coordination/e06/build_onehost_installer.ps1` → receipts under `work/gitlab-artifacts/`. GitLab branch not proven synced with current Astra; source Git histories diverge. **Read the exact verified handoff** `coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md` before acting on build assumptions. Astra edits only source in its GitHub working branch; GitLab final synchronization/build belong to later separate integrator after full source completion and SourceLock. DO NOT launch GitLab CI/EXE/NSIS now. Old instructions leaving build provider "undecided" are superseded. 56 V15 rules, 10x10 agent matrix, Drive error/lesson readback remain binding.
+
 # NOX HELION · ASTRA R24 · 56 V15 RULES + ERROR JOURNAL + SELF-IMPROVEMENT
 ## MANDATORY before/after EVERY actual Astra supervisor LAUNCH, append-only, evidence-first
 
