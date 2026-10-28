@@ -28,7 +28,7 @@ public static class ModelQuickActions
         new("gpt-oss", "GPT-OSS", "REASON"),
         new("qwen3-vl", "Qwen 3 VL", "VISION"),
         new("llava", "LLaVA", "VISION"),
-        new("nomic-embed-text", "Nomic Embed Text", "EMBEDDING"),
+        new("gemma2", "Gemma 2", "CHAT"),
         new("mxbai-embed-large", "Mixedbread Embed", "EMBEDDING"),
         new("devstral", "Devstral", "CODE"),
         new("granite3.1-dense", "Granite", "CHAT"),

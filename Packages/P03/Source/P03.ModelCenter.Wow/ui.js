@@ -34,7 +34,7 @@ function lineItem(k,v){const dt=el('dt','',k),dd=el('dd','',v);return [dt,dd];}
 /* One real action path for all 20 cards: the existing host pull route.
    No downloads are made by the WebView. Family cards stay disabled until
    host supplies approved immutable metadata and download capability. */
-const quick20Ids = ["qwen3","qwen3-coder","qwen2.5","qwen2.5-coder","llama3.1","llama3.2","deepseek-r1","gemma3","mistral","phi4","tinyllama","gpt-oss","qwen3-vl","llava","nomic-embed-text","mxbai-embed-large","devstral","granite3.1-dense","mistral-nemo","phi3"];
+const quick20Ids = ["qwen3","qwen3-coder","qwen2.5","qwen2.5-coder","llama3.1","llama3.2","deepseek-r1","gemma3","mistral","phi4","tinyllama","gpt-oss","qwen3-vl","llava","gemma2","mxbai-embed-large","devstral","granite3.1-dense","mistral-nemo","phi3"];
 
 function renderWeightLeads(){
  const root=$('externalLeadsGrid');if(!root)return;root.replaceChildren();
