@@ -1,0 +1,105 @@
+{
+  "schema": "NOX_V16_E06_EXPRESS_RUN_FAILURE_V1",
+  "run_id": "40686231902",
+  "attempt": 1,
+  "task_id": "NOX-V16-E06-EXPRESS-P0",
+  "source_head_sha1": "b3fdf814b5a9f144a3730338f09513d2d092fe1b",
+  "baseline_main_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "workflow": "NOX E06 EXPRESS one-block real WPF Python NSIS and mandatory report",
+  "run_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/actions/runs/40686231902",
+  "workflow_conclusion": "failure",
+  "runner_steps": null,
+  "runner_step_count": 0,
+  "artifact_count": 0,
+  "ci_execution": "NOT_STARTED_OR_NOT_REPORTED",
+  "ci_failure_root_cause": "UNKNOWN",
+  "source_changes": {
+    "original_archives_modified": false,
+    "owners_E01_E05_modified": false,
+    "main_modified": false,
+    "touched": [
+      {
+        "path": "coordination/e06/build_onehost_installer.ps1",
+        "pre_blob": "866a2ce64941c47b039d68f8a17fa366cba9b750",
+        "post_blob": "c0537c87898663fb589a315be7417312b8b81f9c"
+      },
+      {
+        "path": "coordination/e06/express_per_run_report.py",
+        "pre_blob": null,
+        "post_blob": "1c65fe9029bfd14e2a38bcac2028e61242f30e63"
+      },
+      {
+        "path": ".github/workflows/nox-e06-express-oneblock.yml",
+        "pre_blob": null,
+        "post_blob": "7b661af89e820fcbf3de521a8171ce6ede69b4a8"
+      }
+    ],
+    "p01_manifest_force_source": "PATCHED_NOT_WINDOWS_VERIFIED",
+    "p01_numeric_manifest_and_nsi": "PATCHED_NOT_WINDOWS_VERIFIED",
+    "p01_versioned_upgrade": "PATCHED_NOT_WINDOWS_VERIFIED",
+    "per_run_reporting": "COMMITTED_RUNNER_EXECUTION_BLOCKED"
+  },
+  "five_gates": {
+    "CI_EXECUTED": "HOLD",
+    "SOURCELOCK_729_ACCEPTED": "HOLD",
+    "COMBINED_NSIS_INSTALLED": "HOLD",
+    "ONE_HOST_FUNCTIONS_ACCEPTED": "HOLD",
+    "E07_SAME_SHA_ACCEPTED": "HOLD"
+  },
+  "accepted_gates": 0,
+  "total_gates": 5,
+  "remaining_gates": 5,
+  "gate_completion_percent": 0,
+  "development_percent": null,
+  "weighted_product_percent": null,
+  "formula": "0.20*E01+0.25*E02+0.20*E03+0.25*E04+0.10*E05",
+  "seven_lanes": {
+    "E01": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E02": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E03": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E04": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E05": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E06": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    },
+    "E07": {
+      "source": "CANDIDATE",
+      "integrated": "HOLD",
+      "native_windows": "NOT_RUN",
+      "accepted_percent": null
+    }
+  },
+  "independent_E07_QA_passed": 0,
+  "independent_E07_QA_total": 10,
+  "release_accepted": false,
+  "one_host_accepted": false,
+  "note": "This fallback report was created via connected GitHub after Actions failed before any steps; it is evidence of failure and does not imply CI or product passed."
+}
