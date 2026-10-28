@@ -6,23 +6,44 @@ No network, no second media host, no P02-P05 mutations.
 """
 from pathlib import Path
 from zipfile import ZipFile
-import json,hashlib,os,shutil,sys
+from io import BytesIO
+import json,hashlib,os,shutil,sys,stat
 
 ACTIVE=('KV','AM','LA','KW')
 BLOCKED=('EV',)
 PINNED_BUNDLE_SHA256='9abc124ce1a543417afcd2a08097c5d72b5901a10830869cf495fa7045330ec7'
 
 def sha(data):return hashlib.sha256(data).hexdigest()
+
+def reject_reparse_ancestors(path:Path):
+    # Inspect the lexical path before resolve() can erase a symlink/junction.
+    # Native Windows acceptance must still check concurrent directory swaps.
+    path=Path(os.path.abspath(path))
+    for node in (path,*path.parents):
+        try:info=node.lstat()
+        except FileNotFoundError:continue
+        if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0)&stat.FILE_ATTRIBUTE_REPARSE_POINT:
+            raise ValueError('PERSONA_STAGE_REPARSE_HOLD')
+
 def stage(stage_root:Path,bundle:Path):
+    reject_reparse_ancestors(stage_root)
+    reject_reparse_ancestors(bundle)
     stage_root=stage_root.resolve(strict=True);bundle=bundle.resolve(strict=True)
     if bundle.suffix.lower()!='.zip':raise ValueError('PERSONA_MEDIA_ZIP_ONLY')
-    if sha(bundle.read_bytes())!=PINNED_BUNDLE_SHA256:raise ValueError('PERSONA_BUNDLE_SHA_HOLD')
+    # Parse the same bytes whose pin was checked, never reopen a replaceable
+    # pathname between approval, ZIP reads and the source receipt.
+    bundle_bytes=bundle.read_bytes()
+    bundle_sha256=sha(bundle_bytes)
+    if bundle_sha256!=PINNED_BUNDLE_SHA256:raise ValueError('PERSONA_BUNDLE_SHA_HOLD')
+    reject_reparse_ancestors(stage_root/'NOX.P01.Shell.csproj')
     if not (stage_root/'NOX.P01.Shell.csproj').is_file():raise ValueError('ORIGINAL_ONEHOST_REQUIRED')
     dest=stage_root/'Assets/creative/personas'
     receipt_path=stage_root.parent/'PERSONA_STAGE_RECEIPT.json'
+    reject_reparse_ancestors(dest)
+    reject_reparse_ancestors(receipt_path)
     if dest.exists() or dest.is_symlink():raise ValueError('PERSONA_ASSETS_ALREADY_PRESENT_NO_OVERWRITE')
     if receipt_path.exists() or receipt_path.is_symlink():raise ValueError('PERSONA_RECEIPT_ALREADY_PRESENT_NO_OVERWRITE')
-    with ZipFile(bundle) as z:
+    with ZipFile(BytesIO(bundle_bytes)) as z:
         names=z.namelist()
         if names.count('PERSONA_MOTION_MANIFEST.json')!=1 or len(names)!=len(set(names)):
             raise ValueError('PERSONA_BUNDLE_MANIFEST_DRIFT')
@@ -47,17 +68,21 @@ def stage(stage_root:Path,bundle:Path):
                 plans.append((fname,data))
         # No writes until every source member and receipt destination pass preflight.
         receipt={'schema':'NOX_PERSONA_STAGED_R15','active_count':len(ACTIVE),'identity_candidate_hold':len(BLOCKED),
-                 'source_bundle_sha256':sha(bundle.read_bytes()),'media_files':len(plans),
+                 'source_bundle_sha256':bundle_sha256,'media_files':len(plans),
                  'files':{name:sha(data) for name,data in plans},
                  'camera_motion_real':True,'facial_animation':False,'lip_sync':False,
                  'native_windows_accepted':False}
+        reject_reparse_ancestors(dest)
         dest.mkdir(parents=True,exist_ok=False)
         receipt_created=False
         try:
+            reject_reparse_ancestors(dest)
             for fname,data in plans:
+                reject_reparse_ancestors(dest)
                 p=dest/fname;p.write_bytes(data)
                 if sha(p.read_bytes())!=sha(data):raise ValueError('PERSONA_COPY_READBACK')
             # Atomic exclusive receipt creation: never clobber an owner/peer receipt.
+            reject_reparse_ancestors(receipt_path)
             with receipt_path.open('x',encoding='utf-8') as f:
                 receipt_created=True
                 f.write(json.dumps(receipt,indent=2,ensure_ascii=False)+'\n')
