@@ -299,6 +299,10 @@ public sealed class ModelDownloadQueueStore
             for (var i = 0; i < jobs.Count; i++)
             {
                 if (jobs[i].State is not (ModelJobState.Running or ModelJobState.Cancelling)) continue;
+                // Recovery in a second window must NOT fail another window's
+                // still-running worker. OS releases the lease after a crash.
+                using var orphanLease = TryAcquireExecutionLease(jobs[i].Id);
+                if (orphanLease is null) continue;
                 jobs[i] = jobs[i] with { State = ModelJobState.Failed,
                     Status = "Interrupted; explicit retry required", Error = "INTERRUPTED_RETRY_REQUIRED",
                     UpdatedAtUtc = DateTimeOffset.UtcNow };
