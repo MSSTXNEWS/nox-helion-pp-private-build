@@ -51,7 +51,13 @@ class NativeSession:
         if not all(isinstance(s, str) and 0 < len(s) <= 128
                    for s in (self.tenant, self.principal, self.chat_id)):
             raise HostDenied("Invalid authenticated native session")
-        if not self.allowed.issubset(ALLOWED_ROUTES):
+        # Native host only: permissions are immutable exact sets, never a
+        # page-provided string or mutable set that callbacks could change.
+        if type(self.allowed) is not frozenset or type(self.private_approved) is not frozenset:
+            raise HostDenied("Immutable native route scopes required")
+        if (not self.allowed.issubset(ALLOWED_ROUTES) or
+                not self.private_approved.issubset(self.allowed) or
+                any(type(route) is not str for route in self.allowed | self.private_approved)):
             raise HostDenied("Invalid route scopes")
 
 @dataclass(frozen=True)
