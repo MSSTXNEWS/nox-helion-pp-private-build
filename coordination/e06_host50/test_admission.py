@@ -8,7 +8,7 @@ class AdmissionSourceTests(unittest.TestCase):
         with self.assertRaises(Denied):
             validate_origin("http://nox.invalid")
         with self.assertRaises(Denied):
-            validate_origin("https://nox.invalid.evil")
+            validate_origin("https://nox.invalid:4443")
     def test_duplicate_route_is_hold(self):
         names = ["route%02d" % i for i in range(1, 51)]
         owners = [2] * 50
