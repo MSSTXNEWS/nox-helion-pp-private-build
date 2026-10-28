@@ -1,0 +1,33 @@
+name: NOX E04 native GPU worker receipt gate (candidate only)
+on:
+  push:
+    branches:
+      - e04/v16-gpu-control-receipt-gate-20261028-c29
+    paths:
+      - 'Packages/P04/GpuGuardian/**'
+      - 'tests/P04/GpuWorkerReceiptHarness*'
+      - '.github/workflows/nox-e04-worker-receipt-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Compile existing P04 and native receipt harness
+        run: dotnet build tests/P04/GpuWorkerReceiptHarness.csproj -c Release --nologo
+  native-process-control:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Execute actual managed child process, not GPU training
+        run: dotnet run --project tests/P04/GpuWorkerReceiptHarness.csproj -c Release --no-restore
