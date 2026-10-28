@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_V16_E02_EXPRESS_SOURCE_RECEIPT_V1",
+  "owner": "E02 + E06 integrator",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "branch": "integration/nox-v16-express-onehost-lock-20261028-r01",
+  "head": "a2d28d55afc2d3e027e4ec1d8e933e244704ecf7",
+  "verified_original_25_git_blobs": true,
+  "source_files": [
+    {
+      "component": "sqlite",
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "git_blob_sha1": "59fd9cfdc4243eac7f2c10aa5e58983d283b82a1",
+      "source_characters": 36022
+    },
+    {
+      "component": "chat",
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "git_blob_sha1": "03b5f43b34ca0216cb1e957b3f9aafc29d42d9e8",
+      "source_characters": 11207
+    },
+    {
+      "component": "native_ingress",
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "git_blob_sha1": "f3c74f2c46d0f9f7c4281efeeeb4d6fb87900e65",
+      "source_characters": 5498
+    },
+    {
+      "component": "pipe",
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "git_blob_sha1": "d65279cd166fdf4bda503f5b02e39d6ab2f5eaee",
+      "source_characters": 6418
+    },
+    {
+      "component": "voice_sip",
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "git_blob_sha1": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+      "source_characters": 11142
+    },
+    {
+      "component": "owner_ports",
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "git_blob_sha1": "c5abaaec07dd711994f669996ace0e7da9b34373",
+      "source_characters": 10134
+    },
+    {
+      "component": "history",
+      "path": "Packages/P02/worker-python/p02_history_stable.py",
+      "git_blob_sha1": "0ec3a074b17c618b3665b126419d5625d84b99f5",
+      "source_characters": 10637
+    },
+    {
+      "component": "rag",
+      "path": "Packages/P04/rag_python_compat.py",
+      "git_blob_sha1": "77cae9dacfcd36ad2b5199268654a55a71ee03b2",
+      "source_characters": 22434
+    },
+    {
+      "component": "native_dispatcher",
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "git_blob_sha1": "486e4d29a2f4d859a2923122706657915da011aa",
+      "source_characters": 16420
+    },
+    {
+      "component": "catalog",
+      "path": "proposals/NOX-PACK01-50/catalog.json",
+      "git_blob_sha1": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+      "source_characters": 15827
+    },
+    {
+      "component": "dotnet_pipe",
+      "path": "Packages/P02/worker-chat/NativePythonPipe.cs",
+      "git_blob_sha1": "711644bf4d2052d812bf71a0b679d8531a3ca76e",
+      "source_characters": 9669
+    },
+    {
+      "component": "express_gate",
+      "path": "coordination/express/verify_stage.py",
+      "git_blob_sha1": "4343edd4b005b117f3fe3495c4e1078395e9e90d",
+      "source_characters": 7917
+    },
+    {
+      "component": "express_ci",
+      "path": ".github/workflows/nox-v16-express-p02-contract.yml",
+      "git_blob_sha1": "37e0e4c7073704c824e3b9f5306f7ea70b6bd6c3",
+      "source_characters": 2842
+    }
+  ],
+  "source_file_gaps": [],
+  "local_python_fixture": {
+    "python": "3.13.5",
+    "run_time": "2026-10-28",
+    "tests_discovered": 144,
+    "tests_passed": 135,
+    "tests_skipped": 9,
+    "skipped_reason": "4 PACK01 + 5 P04 exact external source checkout not supplied to local test run",
+    "note": "Local tested C14 P02Store and original older ChatBridge; latest R10 ChatBridge is SHA-verified in GitHub but NOT executed in local fixture"
+  },
+  "github_windows_linux_ci": {
+    "source_lock_run": 40688062225,
+    "p02_cross_owner_run": 40689016200,
+    "status": "HOLD",
+    "runner_steps_executed": 0,
+    "root_cause": "not yet confirmed"
+  },
+  "product": {
+    "original_729_file_zip_sha256": "NOT_VERIFIED_ON_CURRENT_STAGED_TREE",
+    "original_windows_host_bound": false,
+    "real_ollama": false,
+    "real_rag_p04_e2e": false,
+    "voice_asr_tts": false,
+    "sip_call": false,
+    "nsis_install": false,
+    "e07_accepted": false,
+    "release": "BLOCKED"
+  },
+  "no_loss": "No original source/weights/WOW/D02 deleted; all 25 frozen main blobs match"
+}
