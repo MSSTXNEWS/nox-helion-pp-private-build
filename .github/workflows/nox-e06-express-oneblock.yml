@@ -189,6 +189,24 @@ jobs:
           }
           [ordered]@{schema='E06_R16_OWNER1_COMPLETE_NSIS_SOURCE_ADMISSION';runId=$env:GITHUB_RUN_ID;owner=1;integrator=6;approvedCommit='8e42bb15aecbee8412c342b0e9049b6cce044297';stagedOnly=$true;sourceOriginalUnchanged=$true;releaseAccepted=$false;files=$rows} | ConvertTo-Json -Depth 6 | Set-Content 'work/e06/staged/R16-P01-owner-verified-installer.json'
           Write-Host 'E06_R16_ALL_4_OWNER1_INSTALLER_FILES_STAGED_SHA_PASS'
+      - name: R22 fail-closed x64 PowerShell adapter for three pinned P01 NSIS calls (isolated stage only)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -m unittest -v coordination/e06/test_r18_nsexec_x64_adapter.py
+          if($LASTEXITCODE -ne 0){ throw 'R22_P01_ADAPTER_TESTS_HOLD' }
+          $owner='work/e06/staged/R11/Installer/NOX-HELION-Setup.nsi'
+          $candidate='work/e06/r22-x64/NOX-HELION-Setup.nsi'
+          $receipt='work/e06/staged/R22_P01_BITNESS_SHA_RECEIPT.json'
+          python coordination/e06/r18_nsexec_x64_adapter.py --owner-nsi $owner --candidate-nsi $candidate --receipt $receipt --patch 'work/e06/staged/R22_P01_BITNESS.patch' --run-id $env:GITHUB_RUN_ID
+          if($LASTEXITCODE -ne 0){ throw 'R22_OWNER_PREIMAGE_BITNESS_HOLD' }
+          $x=Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+          if($x.releaseAllowed -ne $false -or $x.nativeInstallAccepted -ne $false -or $x.changedNSExecCalls -ne 3){throw 'R22_BITNESS_RECEIPT_INVALID'}
+          if((Get-FileHash $owner -Algorithm SHA256).Hash.ToLowerInvariant() -cne $x.ownerPreSha256){throw 'R22_BITNESS_PREIMAGE_CHANGED'}
+          if((Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -cne $x.candidatePostSha256){throw 'R22_BITNESS_POSTIMAGE_CHANGED'}
+          Copy-Item -LiteralPath $candidate -Destination $owner -Force
+          if((Get-FileHash $owner -Algorithm SHA256).Hash.ToLowerInvariant() -cne $x.candidatePostSha256){throw 'R22_BITNESS_STAGE_COPY_CHANGED'}
+          Write-Host 'E06_R22_PINNED_P01_BITNESS_SOURCE_STAGED_NOT_NATIVE_ACCEPTANCE'
       - name: Apply E06's original exact-SHA P05 HTML compatibility fix to staged bytes only
         shell: pwsh
         run: python coordination/e06/patch_legacy_p05_html.py
@@ -334,6 +352,8 @@ jobs:
           name: nox-e02-r08-pinned-diagnostic-evidence
           path: |
             work/e06/staged/R16-P01-owner-verified-installer.json
+            work/e06/staged/R22_P01_BITNESS_SHA_RECEIPT.json
+            work/e06/staged/R22_P01_BITNESS.patch
             work/e06/staged/R08-source-seal.txt
             work/e06/staged/P05-diagnostic-repair-receipt.json
             work/e06/staged/legacy-compiler-repair-receipts.json
