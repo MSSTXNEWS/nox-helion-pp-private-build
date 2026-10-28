@@ -68,13 +68,13 @@ test('Drive readback never claimed without same-run proof',()=>{
 });
 test('STOP requires full canonical event schema (not a UI hint)',()=>{
   const bad={schema:EVENT_SCHEMA,run_id:RUN,event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
-  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'N_D');
+  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
 });
 test('STOP with wrong canonical state is rejected',()=>{
-  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'N_D');
+  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
 });
 test('failed task with wrong state is rejected',()=>{
-  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,0);
+  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,null);
 });
 test('duplicate event_id does not double-count failures',()=>{
   const e=terminalEvent('task.failed','ERROR');
