@@ -223,14 +223,45 @@ export function projectFeeds(feeds, nowMs) {
   const recognized=feeds.filter(f=>f && sourceIds.has(f.id));
   const licensed=recognized.filter(licenseReady);
   const disabled=recognized.filter(f=>!licenseReady(f));
-  // Scan ALL licensed observations before the cap. Unlicensed submissions
-  // cannot turn an otherwise valid quote into HOLD_DUPLICATE_FEED.
-  // Identical native feed replays are one observation; distinct prices HOLD.
-  // All source fields affect identity: license, timestamp, provider, quote.
-  const snapshotIdentity=f=>JSON.stringify(Object.keys(f).sort().map(k=>[k,f[k]]));
+  // A licensed record is not necessarily a CURRENT independent observation:
+  // malformed timestamps, stale cache, or unparsed numbers cannot veto a
+  // fresh owner-parsed market quote. Retain those as N_D/STALE fallback only.
+  const currentMarket=f=>{
+    if (!singletonMarketIds.has(f.id) || f.parsed_by_owner!==true ||
+        !['LIVE','CACHE'].includes(f.status) ||
+        typeof f.value!=='number' || !Number.isFinite(f.value) || f.value<=0)
+      return false;
+    const fxDate=f.id==='eur-usd'||f.id==='usd-eur';
+    const supplied=fxDate && f.observation_date!==undefined;
+    const sourceTime=supplied ?
+      (observationUtc(f.observation_date) ? f.observation_date+'T00:00:00Z' : null) :
+      f.source_at_utc;
+    const ttl=Number.isInteger(f.ttl_ms)&&f.ttl_ms>0&&f.ttl_ms<=86400000?f.ttl_ms:0;
+    return ttl>0 && ago(f.fetched_at_utc,nowMs,ttl) &&
+      ago(sourceTime,nowMs,maximumAges[f.id]) &&
+      Date.parse(sourceTime)<=Date.parse(f.fetched_at_utc);
+  };
+  const current=licensed.filter(f=>!singletonMarketIds.has(f.id) || currentMarket(f));
+  const fallback=licensed.filter(f=>singletonMarketIds.has(f.id) && !currentMarket(f));
+  // Scan ALL current, owner-parsed market observations before the cap.
+  // Invalid/unparsed/stale market records cannot fabricate quote conflicts.
+  // A repeated POLL is not an independent market observation. Identity must
+  // follow the owner-dated quote, NOT transport fields (fetch time, TTL,
+  // LIVE/CACHE) or arbitrary provider metadata. This bounded tuple also avoids
+  // serializing untrusted nested records/cyclic objects in the WebView2 view.
+  // Different owner epoch, provider, receipt, price, instrument or unit MUST
+  // still be treated as independent evidence and trigger conflict HOLD.
+  const snapshotIdentity=f=>JSON.stringify([
+    f.id, f.run_id ?? null, f.provider, f.license_receipt_sha256,
+    (f.id==='eur-usd'||f.id==='usd-eur') && f.observation_date!==undefined
+      ? ['ECB_DATE',f.observation_date] : ['SOURCE_UTC',f.source_at_utc],
+    f.value,
+    ...['unit','currency','base_currency','quote_currency'].map(k=>
+      typeof f[k]==='string' ? f[k] : null)
+  ]);
   const uniqueLicensed=[];
   const distinctMarkets=new Map();
-  for (const f of licensed) {
+  for (const f of current) {
     if (!singletonMarketIds.has(f.id)) { uniqueLicensed.push(f); continue; }
     let signatures=distinctMarkets.get(f.id);
     if (!signatures) { signatures=new Set(); distinctMarkets.set(f.id,signatures); }
@@ -241,9 +272,15 @@ export function projectFeeds(feeds, nowMs) {
   }
   const marketCounts=new Map([...distinctMarkets].map(([id,signatures])=>[id,signatures.size]));
   const emittedMarkets=new Set();
-  const licensedMarketIds=new Set(distinctMarkets.keys());
-  const visible=[...uniqueLicensed,...disabled.filter(f=>
-    !singletonMarketIds.has(f.id) || !licensedMarketIds.has(f.id))];
+  const currentMarketIds=new Set(distinctMarkets.keys());
+  const approvedMarketIds=new Set(licensed.filter(f=>singletonMarketIds.has(f.id)).map(f=>f.id));
+  const fallbackShown=new Set();
+  const visible=[...uniqueLicensed,...fallback.filter(f=>{
+    if (currentMarketIds.has(f.id) || fallbackShown.has(f.id)) return false;
+    fallbackShown.add(f.id);
+    return true;
+  }),...disabled.filter(f=>
+    !singletonMarketIds.has(f.id) || !approvedMarketIds.has(f.id))];
   return visible.slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
       if (emittedMarkets.has(f.id)) return [];
