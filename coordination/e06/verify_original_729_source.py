@@ -134,6 +134,10 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
                 raise SourceHold("ZIP_TOO_MANY_MEMBERS")
             # File-as-parent (either order), implicit Windows casefold collisions
             # and UNIX special nodes are denied before reading member bytes.
+            # Keep original E06 unsafe-name error codes before the stricter
+            # shared parent/type preflight, so existing consumers do not regress.
+            for entry in infos:
+                safe_member(entry.filename, entry.is_dir())
             verify_zip_namespace(infos)
             for entry in infos:
                 directory = entry.is_dir()
