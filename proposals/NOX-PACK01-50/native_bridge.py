@@ -82,7 +82,7 @@ class NoxPackHost:
     def bind(self, route:str, port:BoundPort):
         if route not in self.routes or not isinstance(port,BoundPort):
             raise ValueError("Unapproved native port")
-        if port.owner != self.routes[route]["owner"] or not isinstance(port.evidence_id,str) or not port.evidence_id.strip():
+        if type(port.owner) is not int or port.owner != self.routes[route]["owner"] or not isinstance(port.evidence_id,str) or not port.evidence_id.strip():
             raise HostHold("Matching owner receipt required")
         if not callable(port.call) or not callable(port.available):
             raise HostHold("Callable owner backend/probe required")

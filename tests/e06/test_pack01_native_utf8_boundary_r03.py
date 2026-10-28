@@ -74,5 +74,62 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(self.seen, [])
 
 
+    def test_native_approval_must_not_mutate_executed_payload(self):
+        payload = {"target": {"name": "original"}}
+        approved = []
+        def approve(session, route, approved_copy):
+            approved.append(approved_copy)
+            approved_copy["target"]["name"] = "changed-during-consent"
+            payload["target"]["name"] = "changed-by-caller"
+            return True
+        self.dispatch.native_approve = approve
+        self.dispatch.bind("system.pc_control", bridge.BoundPort(
+            lambda session, data: self.seen.append(data) or {"done": True},
+            lambda: True, "NATIVE_EXACT_ACTION_RECEIPT", 1))
+        privileged = bridge.NativeSession("test_tenant", "test_owner", "test_chat",
+            allowed=frozenset({"system.pc_control"}),
+            private_approved=frozenset({"system.pc_control"}))
+        result = self.dispatch.execute("system.pc_control", payload, privileged)
+        self.assertEqual(result, {"done": True})
+        self.assertEqual(approved[0]["target"]["name"], "changed-during-consent")
+        self.assertEqual(self.seen, [{"target": {"name": "original"}}])
+
+    def test_backend_availability_callback_cannot_swap_request_data(self):
+        original = {"text": "original"}
+        other = bridge.NoxPackHost(json.loads(CATALOG.read_text("utf-8")))
+        def readiness():
+            original["text"] = "swapped-on-ready-check"
+            return True
+        observed = []
+        other.bind("media.subtitles", bridge.BoundPort(
+            lambda session, data: observed.append(data) or "OK",
+            readiness, "NATIVE_PROBE_RECEIPT", 1))
+        self.assertEqual(other.execute("media.subtitles", original, self.session), "OK")
+        self.assertEqual(observed, [{"text": "original"}])
+
+    def test_nested_payload_snapshot_is_separate_from_original(self):
+        payload = {"nested": [{"value": "before"}]}
+        result = self.request(payload)
+        payload["nested"][0]["value"] = "after"
+        self.assertEqual(result, {"status": "owner-executed"})
+        self.assertEqual(self.seen, [{"nested": [{"value": "before"}]}])
+
+
+    def test_native_owner_identity_rejects_bool_and_float(self):
+        for fake_owner in (True, 1.0, "1"):
+            with self.subTest(owner=fake_owner):
+                other = bridge.NoxPackHost(json.loads(CATALOG.read_text("utf-8")))
+                port = bridge.BoundPort(
+                    lambda session, data: "OK", lambda: True,
+                    "NATIVE_OWNER_SOURCE_RECEIPT", fake_owner)
+                with self.assertRaises(bridge.HostHold):
+                    other.bind("media.subtitles", port)
+                self.assertFalse(other.ports)
+
+    def test_registered_integer_owner_still_admitted(self):
+        self.assertEqual(self.dispatch.ports["media.subtitles"].owner, 1)
+        self.assertEqual(self.request({"text": "safe"}), {"status": "owner-executed"})
+
+
 if __name__ == "__main__":
     unittest.main()
