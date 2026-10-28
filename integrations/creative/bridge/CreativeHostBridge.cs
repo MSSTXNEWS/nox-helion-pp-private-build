@@ -197,15 +197,36 @@ public partial class MainWindow
                     while (await process.StandardOutput.ReadLineAsync() is { } line)
                     {
                         if (line.Length>8_000_000) { WriteLog("CREATIVE_RESPONSE_TOO_LARGE"); continue; }
-                        using var doc=JsonDocument.Parse(line);
-                        if (!doc.RootElement.TryGetProperty("request_id",out var id) || id.ValueKind!=JsonValueKind.String ||
-                            !Guid.TryParseExact(id.GetString(),"D",out _))continue;
-                        if (!_creativePending.TryRemove(id.GetString()!,out _)) continue;
-                        var ok=doc.RootElement.TryGetProperty("ok",out var good) && good.ValueKind==JsonValueKind.True;
-                        object response=ok
-                            ? new {kind="creativeResult",requestId=id.GetString(),ok=true,data=doc.RootElement.GetProperty("data").Clone()}
-                            : new {kind="creativeResult",requestId=id.GetString(),ok=false,error=doc.RootElement.TryGetProperty("error",out var er)?er.GetString():"Worker error"};
-                        await Dispatcher.InvokeAsync(()=>PostMessage(response));
+                        // A malformed frame must not kill the long-lived reader:
+                        // handle each line independently and preserve later pending requests.
+                        try
+                        {
+                            using var doc=JsonDocument.Parse(line);
+                            var record=doc.RootElement;
+                            if (record.ValueKind!=JsonValueKind.Object)
+                            {
+                                WriteLog("CREATIVE_STDOUT_NOT_OBJECT");
+                                continue;
+                            }
+                            if (!record.TryGetProperty("request_id",out var id) || id.ValueKind!=JsonValueKind.String ||
+                                !Guid.TryParseExact(id.GetString(),"D",out _))continue;
+                            var responseId=id.GetString()!;
+                            if (!_creativePending.TryRemove(responseId,out _)) continue;
+                            var ok=record.TryGetProperty("ok",out var good) && good.ValueKind==JsonValueKind.True;
+                            object response;
+                            if (ok && record.TryGetProperty("data",out var data))
+                                response=new {kind="creativeResult",requestId=responseId,ok=true,data=data.Clone()};
+                            else
+                            {
+                                var errorText=ok ? "Creative worker response missing data" :
+                                    record.TryGetProperty("error",out var er) && er.ValueKind==JsonValueKind.String
+                                        ? er.GetString() : "Worker error";
+                                response=new {kind="creativeResult",requestId=responseId,ok=false,error=errorText};
+                            }
+                            await Dispatcher.InvokeAsync(()=>PostMessage(response));
+                        }
+                        catch(JsonException) { WriteLog("CREATIVE_STDOUT_INVALID_JSON"); }
+                        catch(InvalidOperationException) { WriteLog("CREATIVE_STDOUT_INVALID_SHAPE"); }
                     }
                 }
                 catch(Exception ex){WriteLog("CREATIVE_WORKER_READ "+ex.GetType().Name);}
