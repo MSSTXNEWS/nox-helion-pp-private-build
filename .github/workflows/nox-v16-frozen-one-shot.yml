@@ -1,0 +1,102 @@
+name: NOX V16 ONE-SHOT FROZEN 729 SourceLock + Windows ONEHOST EXE
+on:
+  push:
+    branches:
+      - 'release/nox-v16-frozen-onehost-20261028-r01'
+    paths:
+      - '.github/workflows/nox-v16-frozen-one-shot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-v16-frozen-one-shot
+  cancel-in-progress: false
+jobs:
+  windows-frozen-onehost:
+    runs-on: windows-2025
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Freeze exact Git source identity and verify all 729 original ZIP bytes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $actual=((& git rev-parse HEAD) | Out-String).Trim()
+          if ($actual -cne '${{ github.sha }}') { throw 'FROZEN_GIT_SHA_CHANGED' }
+          $tmp=$env:RUNNER_TEMP
+          python coordination/source-lock/verify_original_archive.py --parts-dir . --output (Join-Path $tmp 'canonical729.json') --expected-files 729
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_729_CANONICAL_SHA_HOLD' }
+          python coordination/e06/verify_original_729_source.py --parts-dir . --out (Join-Path $tmp 'owner729.json') --run-id "NOX-FROZEN-${{ github.run_id }}"
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_729_OWNER_SHA_HOLD' }
+      - name: Run original E06/ZIP and D02 source regressions
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'SOURCELOCK_OWNER_REGRESSION_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_stage_p01_shared_zip_guard.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'R11_STAGE_REGRESSION_HOLD' }
+          python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'D02_STAGE_REGRESSION_HOLD' }
+      - name: Build ORIGINAL private Python candidate and immutable R11 WPF source
+        shell: pwsh
+        run: |
+          & ./private_build.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PRIVATE_BINARY_BUILD_HOLD' }
+          python coordination/e06/stage_p01.py
+          if ($LASTEXITCODE -ne 0) { throw 'PINNED_R11_STAGE_SOURCELOCK_HOLD' }
+      - name: Build and verify exact ONEHOST WPF/Python/Creative/D02/NSIS
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $want='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+          $pinned=@(Get-ChildItem -LiteralPath 'work/candidate' -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' -File -Recurse | Where-Object {
+            (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $want
+          })
+          if ($pinned.Count -ne 1) { throw 'PINNED_ORIGINAL_PRIVATE_EXE_NOT_FOUND' }
+          & ./coordination/e06/build_onehost_installer.ps1 `
+            -SourceRoot work/e06/staged/R11 `
+            -PythonExe $pinned[0].FullName `
+            -OutputRoot work/e06/frozen-onehost `
+            -RunId "NOX-FROZEN-${{ github.run_id }}" `
+            -CreativeSourceRoot integrations/creative `
+            -WowSourceRoot integrations/wow200
+          if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_NSIS_BUILD_HOLD' }
+          $out='work/e06/frozen-onehost'
+          $receipt=Get-Content (Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json') -Raw | ConvertFrom-Json
+          if ($receipt.release_accepted -ne $false) { throw 'FALSE_RELEASE_ACCEPTANCE' }
+          $proof=@{
+            Original729Receipt=(Join-Path $env:RUNNER_TEMP 'canonical729.json')
+            Owner729Receipt=(Join-Path $env:RUNNER_TEMP 'owner729.json')
+            OneHostReceipt=(Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
+            SetupExe=(Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
+            PublishedExe=(Join-Path $out 'payload/NOX.P01.Shell.exe')
+            SourceCommitSha='${{ github.sha }}'
+            Output=(Join-Path $out 'E07_BUILT_HANDOFF.json')
+            Phase='BUILT'
+          }
+          & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 @proof
+          if ($LASTEXITCODE -ne 0) { throw 'FROZEN_E07_BUILDID_HOLD' }
+      - name: Preserve SHA-pinned candidate receipts and Setup (NOT E07 accepted)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nox-v16-frozen-candidate-${{ github.sha }}-${{ github.run_id }}
+          path: |
+            work/e06/staged/source_lock.json
+            work/e06/frozen-onehost/ONEHOST_DIAGNOSTIC_RECEIPT.json
+            work/e06/frozen-onehost/E07_BUILT_HANDOFF.json
+            work/e06/frozen-onehost/D02_VISUAL_PUBLISH_RECEIPT.json
+            work/e06/frozen-onehost/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
+            ${{ runner.temp }}/canonical729.json
+            ${{ runner.temp }}/owner729.json
+          retention-days: 21
+          if-no-files-found: warn
