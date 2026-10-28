@@ -162,10 +162,23 @@ class P02P04OneHost:
         def guarded_stream():
             try:
                 while True:
+                    # A STOP delivered between yields must not advance the
+                    # existing owner generator (which can read private RAG and
+                    # write to the original SQLite history during next()).
+                    if native_stop.is_set():
+                        return
                     self._admit(scope, "chat.send")
+                    if native_stop.is_set():
+                        return
                     try:
                         frame = next(owner_frames)
                     except StopIteration:
+                        return
+                    # STOP may arrive inside a blocking owner/RAG/Ollama next().
+                    # Drop the returned frame before citations reach WebView2.
+                    # This cannot undo writes already done INSIDE the owner;
+                    # native atomic SQLite/worker E2E remains HOLD.
+                    if native_stop.is_set():
                         return
                     # Freeze the original P02 frame BEFORE the post-await
                     # native authorization callback. Like GPU/event receipts,
@@ -180,6 +193,10 @@ class P02P04OneHost:
                     # after native permission was revoked. Pre-next admission
                     # alone cannot protect the newly produced frame.
                     self._admit(scope, "chat.send")
+                    # Recheck after host authorization, which may itself block
+                    # or observe cancellation. No fabricated STOP frame.
+                    if native_stop.is_set():
+                        return
                     yield wire
             finally:
                 # Releasing a partially consumed stream must cancel the native
