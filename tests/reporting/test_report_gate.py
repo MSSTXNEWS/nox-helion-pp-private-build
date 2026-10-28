@@ -58,6 +58,20 @@ class ValidatorTests(unittest.TestCase):
         self.assertEqual(x["completed_unique_tasks"],10)
         self.assertEqual(x["result"],"SCHEMA_PASS_REMOTE_DRIVE_READBACK_STILL_REQUIRED")
 
+    def test_every_one_means_one_cycle_no_exceptions(self):
+        for count in (1,2,3,4,5,6,7,8,9,10,11):
+            x=fixture()
+            x["trigger"]="1"*count
+            x["cycle_count"]=count
+            x["cycle_index"]=count
+            out=module.validate(x)
+            self.assertEqual(out["cycle_count"],count)
+        bad=fixture()
+        bad["trigger"]="11"
+        bad["cycle_count"]=3
+        with self.assertRaisesRegex(module.ReportInvalid,"TRIGGER_LENGTH_CYCLE_COUNT_MISMATCH"):
+            module.validate(bad)
+
     def test_ten_units_are_not_nine(self):
         x=fixture();x["trigger"]="1111111111"
         with self.assertRaisesRegex(module.ReportInvalid,"CYCLE_COUNT"):
@@ -89,7 +103,7 @@ class ValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(module.ReportInvalid,"NO_PHYSICAL_FILE_DELTA"):
             module.validate(x)
         x=fixture();x["evidence"]["native_exe_accepted"]=True
-        with self.assertRaisesRegex(module.ReportInvalid,"EXE_SHA_REQUIRED"):
+        with self.assertRaisesRegex(module.ReportInvalid,"MISSING_EXE_SHA256"):
             module.validate(x)
 
     def test_prestart_and_previous_lesson_mandatory(self):
