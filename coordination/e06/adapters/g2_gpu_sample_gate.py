@@ -65,4 +65,3 @@ def enforce_gpu_tile_sample(
     if not valid:
         for key in live:
             safe[key] = {"value": None, "status": "N_D", "source": None}
-
