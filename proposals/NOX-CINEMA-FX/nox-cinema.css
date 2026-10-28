@@ -204,6 +204,10 @@
 .nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+3)::before {
   animation-duration:10.6s;animation-delay:-4.1s;
 }
+/* Keep ECO animation at >=10s: it must override later nth-child timing. */
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control[data-nox-float="true"]::before {
+  animation-duration:10s;
+}
 .nox-cinema-scope .nox-cinema-panel {
   background-image:linear-gradient(130deg,rgba(107,161,175,.08),transparent 39%),
     linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
