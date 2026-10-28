@@ -1,0 +1,33 @@
+{
+  "run_id": "NOX-V16-W3-01-20261029T0151MSK-R18",
+  "role": "W3·01 AUTO P02 owner",
+  "mode": "R20 SOURCE_ONLY / NOT_EXE",
+  "task_id": "P02-VOICE-NATIVE-OUTPUT-STOP-ACK-GATE",
+  "task_result": "SOURCE_PATCH_WITH_FOCUSED_REGRESSION; PRODUCT_ACCEPTED_DONE=0",
+  "base_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "owner_parent_commit": "dd32c068310e7a6736589c7cbb75fa9421f2d306",
+  "owner_parent_tree": "62454f4d9dfab8f7b2b3df361b35d0a7fd954a26",
+  "branch": "owner/p02/w3-01-r17-native-mic-proof-20261029",
+  "source_path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+  "pre_sha256": "f2c0e84f798c0b82801d2b19ac6a271b50521d95dfda82310ab07828ffc3be80",
+  "post_sha256": "bdb59f6b1da0e476fb1c7e17d55c9e959c10905838a1aefad9bceca7f0deb1bb",
+  "pre_git_blob_sha1": "30f515b27f94c95039bbc85b418d60bce8a1f68d",
+  "post_git_blob_sha1": "83bf1193abd771be2c5a0c8af772a042be04cbee",
+  "test_path": "Packages/P02/worker-python/test_p02_voice_late_stop_output_r18.py",
+  "test_pre": "ABSENT",
+  "test_sha256": "4fd1e1bcaecb7d319671346768083120e1c2b05493fe4ef1f5d0baeb3b0eda82",
+  "test_git_blob_sha1": "41dcd48c6f2edf3296daef95099716849ba96e00",
+  "tests": {
+    "original_negative": "same-source RED 2 FAIL / 2 PASS",
+    "candidate_negative": "same-source GREEN 4/4 PASS",
+    "r17_regression": "6/6 PASS",
+    "python_compile": "PASS",
+    "microphone_asr_tts_windows": "NOT_RUN"
+  },
+  "root_cause": "Native output persistence may block; STOP arrives inside native_store_output_audio and returned success was previously published without a post-write STOP gate.",
+  "fix": "Check STOP immediately after native output callback before returning transcript/output receipt. The already-written audio requires host-owned cleanup; NOT claimed atomic.",
+  "previous_lesson": "R17_NATIVE_CAPTURE_CONSENT_BEFORE_ONE_USE_AUDIO applied YES via existing native consent gate and R17 6/6 test",
+  "one_new_lesson": "R18_CANCEL_AFTER_BLOCKING_NATIVE_OUTPUT_BEFORE_SUCCESS_ACK",
+  "hold": "Host-native temporary audio cleanup/revoke and real microphone ASR/TTS permission/runtime NOT_VERIFIED; owner source patch not merged into PR162.",
+  "no_loss": "Only existing P02 owner Python path and one focused owner test/receipt; PR162/main and other owners unchanged."
+}

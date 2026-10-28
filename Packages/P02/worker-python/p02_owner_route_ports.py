@@ -151,6 +151,11 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
+        # Native output storage can block while STOP is raised. Do not
+        # publish a successful transcript/audio receipt for a cancelled turn.
+        # Any already-stored temporary audio needs host-side cleanup (HOLD).
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
         return {"transcript": result.transcript, "response": result.response,
