@@ -6,7 +6,7 @@ import {mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync} from 'node:
 import {join,dirname} from 'node:path';
 import {tmpdir} from 'node:os';
 import {pathToFileURL,fileURLToPath} from 'node:url';
-const home=fileURLToPath(new URL('../home-scene.mjs',import.meta.url));
+const home=fileURLToPath(new URL('../runtime/home-scene.mjs',import.meta.url));
 const temp=mkdtempSync(join(tmpdir(),'nox-home-mount-'));
 const target=join(temp,'runtime','home-scene.mjs');mkdirSync(dirname(target),{recursive:true});copyFileSync(home,target);
 const donor=join(temp,'proposals','NOX-CINEMA-FX','nox-cinema.mjs');mkdirSync(dirname(donor),{recursive:true});

@@ -2,7 +2,20 @@
 const bc = 'BroadcastChannel' in window ? new BroadcastChannel('nox-helion-theater') : null;
 const video=document.getElementById('video'), poster=document.getElementById('poster');
 let objectURL=null;
-const project=new URLSearchParams(location.search).get('project');if(project && /^[a-z0-9_-]{1,48}$/i.test(project)){video.src='/api/media/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';video.style.display='block';poster.style.display='none';}
+// The native projector is a separate, non-privileged WebView2. The original
+// /api/media route never existed on nox.local's static Assets mapping.
+// Only native WPF may opt this page into a private read-only project mapping.
+const query=new URLSearchParams(location.search);
+const project=query.get('project');
+const nativeMedia=query.get('local_project_media')==='1';
+if(nativeMedia && project && /^[a-z0-9_-]{1,48}$/i.test(project)){
+ video.src='https://nox-projects.invalid/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';
+ video.style.display='block';poster.style.display='none';
+ video.addEventListener('error',()=>{
+   video.style.display='none';poster.style.display='block';
+   document.getElementById('space').textContent='Фильм пока недоступен. Выбери локальный MP4.';
+ },{once:true});
+}
 function command(d){if(!d || typeof d!=='object')return;
  if(d.action==='play' && video.src)video.play().catch(()=>{});
  if(d.action==='pause')video.pause();
