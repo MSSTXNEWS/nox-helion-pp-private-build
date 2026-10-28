@@ -84,4 +84,30 @@ class TestPreflightOrder(unittest.TestCase):
         self.script.write_text('<#\n'+GOOD+'#>\n')
         with self.assertRaisesRegex(ValueError, 'BLOCK_COMMENT'): self.verify()
 
+    def test_helper_in_here_string_does_not_execute(self):
+        invocation_and_guard = GOOD.split('$source=')[0]
+        fake = "$evidence = @'\n" + invocation_and_guard + "'@\n$source=" + GOOD.split('$source=')[1]
+        self.script.write_text(fake)
+        with self.assertRaisesRegex(ValueError, 'HERESTRING'):
+            self.verify()
+
+    def test_helper_inside_dead_conditional_not_accepted(self):
+        invocation_and_guard = GOOD.split('$source=')[0]
+        fake = 'if ($false) {\n' + invocation_and_guard + '}\n$source=' + GOOD.split('$source=')[1]
+        self.script.write_text(fake)
+        with self.assertRaisesRegex(ValueError, 'TOP_LEVEL'):
+            self.verify()
+
+    def test_non_throw_message_does_not_satisfy_guard(self):
+        self.script.write_text(GOOD.replace("throw 'INVALID_E07_RECEIPT'", 'Write-Host "throw"'))
+        with self.assertRaisesRegex(ValueError, 'IMMEDIATELY_GUARDED'):
+            self.verify()
+
+    def test_nested_function_not_accepted(self):
+        invocation_and_guard = GOOD.split('$source=')[0]
+        fake = 'function NeverCalled {\n' + invocation_and_guard + '}\n$source=' + GOOD.split('$source=')[1]
+        self.script.write_text(fake)
+        with self.assertRaisesRegex(ValueError, 'TOP_LEVEL'):
+            self.verify()
+
 if __name__ == '__main__': unittest.main()
