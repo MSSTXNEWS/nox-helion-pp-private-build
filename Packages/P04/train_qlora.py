@@ -340,11 +340,13 @@ def verify_model_lock(lock_path: Path, model_path: Path, expected_revision: str)
     lock = read_object(lock_path)
     if lock.get("schema") != "nox-model-lock-v1":
         raise ValueError("MODEL_LOCK_SCHEMA_UNSUPPORTED")
-    if lock.get("license_status") != "APPROVED" or not lock.get("owner_approval_id"):
+    if (lock.get("license_status") != "APPROVED"
+            or not isinstance(lock.get("owner_approval_id"), str)
+            or not lock["owner_approval_id"].strip()):
         raise ValueError("MODEL_LICENSE_OR_OWNER_APPROVAL_MISSING")
     if lock.get("revision") != expected_revision or not re.fullmatch(r"[0-9a-fA-F]{40}", expected_revision):
         raise ValueError("MODEL_REVISION_LOCK_MISMATCH")
-    if lock.get("model_id") is None or not isinstance(lock["model_id"], str):
+    if not isinstance(lock.get("model_id"), str) or not lock["model_id"].strip():
         raise ValueError("MODEL_ID_MISSING")
     actual_tree = sha256_tree(model_path)
     expected_tree = lock.get("snapshot_sha256")
