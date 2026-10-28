@@ -86,20 +86,27 @@ class Studio(CreativeExtensions):
                 digest.update(chunk)
         return digest.hexdigest()
 
-    def _model_receipt_ok(self, model_id, repository, *, verify_hashes=False):
+    def _model_receipt_ok(self, model_id, repository, *, verify_hashes=False, allow_legacy=False):
         # A standalone RECEIPT.json is NOT evidence of installed weights.
         # This only reads the existing Studio folder; it never downloads.
         root=self.models/model_id
         receipt=root/"RECEIPT.json"
         try:
-            if root.is_symlink() or receipt.is_symlink() or not receipt.is_file():
+            if (self.models.is_symlink() or root.is_symlink() or receipt.is_symlink()
+                    or not receipt.is_file()):
                 return False
             if receipt.stat().st_size > 65536:
                 return False
             meta=json.loads(receipt.read_text(encoding="utf-8"))
-            if (not isinstance(meta,dict) or meta.get("schema")!="NOX-CREATIVE-WEIGHTS-SHA256-V1"
-                    or meta.get("model")!=model_id
-                    or meta.get("repository")!=repository
+            if not isinstance(meta,dict):
+                return False
+            legacy=meta.get("schema") is None
+            if (legacy and not allow_legacy) or (
+                    not legacy and meta.get("schema")!="NOX-CREATIVE-WEIGHTS-SHA256-V1"):
+                return False
+            if (meta.get("model")!=model_id
+                    or (legacy and meta.get("source")!="https://huggingface.co/"+repository)
+                    or (not legacy and meta.get("repository")!=repository)
                     or not isinstance(meta.get("revision"),str)
                     or not re.fullmatch(r"[0-9a-f]{40}",meta["revision"])):
                 return False
@@ -118,8 +125,9 @@ class Studio(CreativeExtensions):
                 if relative.is_absolute() or not relative.parts or ".." in relative.parts:
                     return False
                 seen.add(name)
-                if (type(item.get("bytes")) is not int or item["bytes"]<=0
-                        or not isinstance(item.get("sha256"),str)
+                if type(item.get("bytes")) is not int or item["bytes"]<=0:
+                    return False
+                if not legacy and (not isinstance(item.get("sha256"),str)
                         or not re.fullmatch(r"[a-f0-9]{64}",item["sha256"])):
                     return False
                 file=root/relative
@@ -128,18 +136,22 @@ class Studio(CreativeExtensions):
                     return False
                 if not file.is_file() or file.stat().st_size!=item["bytes"]:
                     return False
-                if verify_hashes and self._digest_file(file)!=item["sha256"]:
+                if verify_hashes and (legacy or self._digest_file(file)!=item["sha256"]):
                     return False
             return True
         except (OSError,ValueError,TypeError,UnicodeError):
             return False
 
     def catalog(self):
-        return {"models":[{"id":a,"name":b,"category":c,"repository":d,"vram":e,
-                          "url":"https://huggingface.co/"+d,
-                          "installed":self._model_receipt_ok(a,d),
-                          "checksum":"ON_DEMAND" if self._model_receipt_ok(a,d) else "HOLD"}
-                          for a,b,c,d,e in MODEL_CATALOG],"categories":KINDS}
+        def card(a,b,c,d,e):
+            current=self._model_receipt_ok(a,d)
+            legacy=(not current and self._model_receipt_ok(a,d,allow_legacy=True))
+            return {"id":a,"name":b,"category":c,"repository":d,"vram":e,
+                    "url":"https://huggingface.co/"+d,"installed":bool(current or legacy),
+                    "checksum":"ON_DEMAND" if current else
+                               "LEGACY_UNVERIFIED" if legacy else "HOLD"}
+        return {"models":[card(a,b,c,d,e) for a,b,c,d,e in MODEL_CATALOG],
+                "categories":KINDS}
 
     def verify_model(self,model_id):
         model=self._model(model_id)
