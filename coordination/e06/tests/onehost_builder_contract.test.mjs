@@ -29,3 +29,26 @@ test('one WPF host, original NSIS rollback/verify and no source overwrite',()=>{
     assert.ok(script.includes(marker));
   assert.ok(!script.includes('Remove-Item -Recurse'));
 });
+
+import { createHash } from 'node:crypto';
+const theaterPage = fs.readFileSync(new URL('../../../integrations/creative/web/theater.html', import.meta.url));
+const theaterScript = fs.readFileSync(new URL('../../../integrations/creative/web/theater.js', import.meta.url));
+test('projector files must pass pre-stage SHA before output creation and enter NSIS manifest',()=>{
+  assert.ok(script.includes('E06_APPROVED_THEATER_WEB_ROOT_REQUIRED_HOLD'));
+  assert.ok(script.indexOf('E06_THEATER_SOURCE_SHA_HOLD') < script.indexOf('New-Item -ItemType Directory -Path $OutputRoot'));
+  assert.ok(script.includes("Join-Path $assetsDest 'creative'"));
+  assert.ok(script.indexOf('E06_THEATER_STAGED_SHA_HOLD') < script.indexOf('# Include the existing program files'));
+  for (const marker of ['E06_THEATER_DEST_CONFLICT_HOLD','E06_THEATER_SOURCE_CHANGED_DURING_BUILD_HOLD','NO_LOSS_CREATIVE_OUTPUT_PATH_OVERLAP','E06_ORIGINAL_ASSET_ROOT_HOLD'])
+    assert.ok(script.includes(marker));
+});
+test('existing theater HTML references the SHA-approved original D02 MENU asset and same script',()=>{
+  assert.match(theaterPage.toString('utf8'), /url\('\/menu_sections\.png'\)/);
+  assert.ok(!theaterPage.toString('utf8').includes('NOX_HELION_MENU_8_SECTIONS_COLLAGE_APPROVED_20261020.png'));
+  assert.match(theaterPage.toString('utf8'), /<script src="theater\.js"><\/script>/);
+});
+test('source-to-payload theater SHA contract pins exact UTF-8 bytes',()=>{
+  for (const [name,bytes] of [['theater.html',theaterPage],['theater.js',theaterScript]]) {
+    const digest=createHash('sha256').update(bytes).digest('hex');
+    assert.ok(script.includes("'"+name+"'='"+digest+"'"), name+': SHA mismatch');
+  }
+});
