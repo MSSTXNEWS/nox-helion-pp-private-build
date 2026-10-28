@@ -264,6 +264,7 @@ Check(SpaceParsers.ParseRss(safeNews, "fixture").Count == 1,
     "C09-10 valid HTTPS news link remains available");
 await E05HostTelemetryChecks.RunAsync();
 E05VerifiedProjectionChecks.Run();
+await E05FinishChecks.RunAsync();
 Console.WriteLine("ALL E05 mocked/offline checks passed (no real hardware/network)");
 
 sealed class DocsFixtureHandler : HttpMessageHandler
