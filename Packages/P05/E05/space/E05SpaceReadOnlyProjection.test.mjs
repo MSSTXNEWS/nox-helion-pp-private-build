@@ -464,7 +464,6 @@ test('R08 direct hardware projection stays independent of native frame-status ad
 });
 console.log('R08: native UNAVAILABLE frame cannot report hardware LIVE; E07/Windows NOT_RUN.');
 
-
 // R09: one-GPU-tile provenance: do not conflate different providers or samples.
 const r09Gpu=(key,value,{source='NVML',sample_id,at='2026-10-28T03:44:58Z',device_id='GPU-0'}={})=>({
   key,value,source,device_id,...(sample_id===undefined?{}:{sample_id}),
