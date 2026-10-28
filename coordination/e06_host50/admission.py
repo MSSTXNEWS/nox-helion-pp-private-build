@@ -27,6 +27,13 @@ STOP_TARGETS = {"chat.stop": frozenset({"helion.chat", "core.chat", "persona.cha
                 "models.cancel": frozenset({"models.pull"}),
                 "training.pause": frozenset({"training.start"})}
 STOP_ROUTES = frozenset(STOP_TARGETS)
+MAX_PENDING = 256
+ACK_LEASE_SECONDS = 180
+ACK_FIELDS = frozenset({
+    "runId", "taskId", "routeId", "owner", "ownerReceiptSha256",
+    "payloadSha256", "sourceLockTree", "sessionScopeSha256", "targetRunId",
+    "fileSha256", "fileTicketSha256", "event", "proofSha256", "seal",
+})
 MIC_ROUTES = frozenset({"chat.voice", "translate.ru_es", "maestro.spanish", "calls.dial"})
 PICKER_ROUTES = frozenset({"chat.attach", "models.gguf.import", "rag.import",
                            "datasets.review", "media.player", "media.subtitles",
@@ -162,6 +169,7 @@ class NativeFileSelection:
     size_bytes: int
     tenant: str
     principal: str
+    chat: str
 
 
 class Host50Admission:
@@ -185,6 +193,14 @@ class Host50Admission:
         self.by_route = {x["routeId"]: x for x in self.audit["routes"]}
         self.capabilities = dict(capabilities)
         self.pending = {}
+        self.pending_deadlines = {}
+
+    def _reap_pending(self, now: float) -> None:
+        """Bound the existing in-process admission store, never a second database."""
+        for run_id, deadline in tuple(self.pending_deadlines.items()):
+            if deadline <= now:
+                self.pending_deadlines.pop(run_id, None)
+                self.pending.pop(run_id, None)
 
     def _seal(self, body: dict) -> str:
         return hmac.new(self.key, canonical(body), hashlib.sha256).hexdigest()
@@ -251,6 +267,10 @@ class Host50Admission:
                or type(v) not in (str,int,bool) or len(str(v))>256 for k,v in opts.items()):
             raise Denied("UNSAFE_SETTING")
         cap = self._cap(row)
+        now = time.monotonic()
+        self._reap_pending(now)
+        if len(self.pending) >= MAX_PENDING:
+            raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
         if row["risk"] != "safe" and route not in session.sensitive:
             raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
         if row["risk"] == "dangerous" and (
@@ -267,14 +287,20 @@ class Host50Admission:
             file_info = native_file_picker(session,route)
             if (not isinstance(file_info,NativeFileSelection) or
                 file_info.tenant != session.tenant or file_info.principal != session.principal or
-                not isinstance(file_info.ticket,str) or len(file_info.ticket)<16 or
+                file_info.chat != session.chat or
+                not isinstance(file_info.ticket,str) or not 16<=len(file_info.ticket)<=256 or
                 not SHA256.fullmatch(file_info.sha256) or
                 type(file_info.size_bytes) is not int or not 0<file_info.size_bytes<=20000000000):
                 raise Denied("UNTRUSTED_NATIVE_FILE_SELECTION")
         if route in STOP_ROUTES:
             run_id = request.get("runId")
-            if not isinstance(run_id,str) or not re.fullmatch(r"[0-9a-f-]{36}",run_id):
+            if not isinstance(run_id,str):
                 raise Denied("STOP_NEEDS_EXACT_RUNID")
+            try:
+                if str(uuid.UUID(run_id)) != run_id:
+                    raise ValueError("Noncanonical UUID")
+            except (ValueError, AttributeError) as exc:
+                raise Denied("STOP_NEEDS_EXACT_RUNID") from exc
             active = (active_runs or {}).get(run_id)
             if (not isinstance(active,tuple) or len(active)!=4 or
                 active[:3] != (session.tenant,session.principal,session.chat) or
@@ -292,8 +318,12 @@ class Host50Admission:
                     "principal":session.principal,"chat":session.chat,"origin":session.origin}),
                   "targetRunId":request.get("runId") if route in STOP_ROUTES else None,
                   "fileSha256":file_info.sha256 if file_info else None,
+                  # Native opaque ticket is NOT returned to the WebView2 page.
+                  "fileTicketSha256":hashlib.sha256(file_info.ticket.encode("utf-8")).hexdigest()
+                      if file_info else None,
                   "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
         self.pending[run_id] = ticket
+        self.pending_deadlines[run_id] = time.monotonic() + ACK_LEASE_SECONDS
         return dict(ticket)
 
     def finish(self, run_id: str, native_ack: dict) -> dict:
@@ -302,10 +332,21 @@ class Host50Admission:
         """
         ticket=self.pending.get(run_id)
         if not ticket:raise Denied("UNKNOWN_OR_REPLAYED_RUNID")
-        if not isinstance(native_ack,dict):raise Denied("NATIVE_ACK_REQUIRED")
+        now = time.monotonic()
+        if self.pending_deadlines.get(run_id, 0) <= now:
+            self.pending.pop(run_id, None)
+            self.pending_deadlines.pop(run_id, None)
+            raise Denied("NATIVE_ACK_LEASE_EXPIRED")
+        if (not isinstance(native_ack,dict) or set(native_ack)-ACK_FIELDS or
+            any(not isinstance(k,str) for k in native_ack)):
+            raise Denied("NATIVE_ACK_SCHEMA_INVALID")
         sign=native_ack.get("seal")
         body={k:v for k,v in native_ack.items() if k!="seal"}
-        if (not isinstance(sign,str) or not hmac.compare_digest(sign,self._seal(body)) or
+        try:
+            authenticated = isinstance(sign,str) and hmac.compare_digest(sign,self._seal(body))
+        except (TypeError, ValueError, OverflowError):
+            authenticated = False
+        if (not authenticated or
             body.get("runId")!=run_id or body.get("taskId")!=ticket["taskId"] or
             body.get("routeId")!=ticket["routeId"] or body.get("owner")!=ticket["owner"] or
             body.get("ownerReceiptSha256")!=ticket["ownerReceiptSha256"] or
@@ -313,7 +354,11 @@ class Host50Admission:
             body.get("sourceLockTree")!=ticket["sourceLockTree"] or
             body.get("sessionScopeSha256")!=ticket["sessionScopeSha256"] or
             body.get("targetRunId","MISSING")!=ticket["targetRunId"] or
+            body.get("fileSha256")!=ticket["fileSha256"] or
+            body.get("fileTicketSha256")!=ticket["fileTicketSha256"] or
             body.get("event") not in ("DONE","STOP_REQUESTED","HOLD","FAILED") or
+            (ticket["routeId"] in STOP_ROUTES and body.get("event") == "DONE") or
+            (ticket["routeId"] not in STOP_ROUTES and body.get("event") == "STOP_REQUESTED") or
             not isinstance(body.get("proofSha256"),str) or not SHA256.fullmatch(body["proofSha256"])):
             raise Denied("NATIVE_ACK_INVALID")
         result=dict(ticket)
@@ -323,6 +368,7 @@ class Host50Admission:
         result["nativeAck"]="VERIFIED_HMAC"
         result["nativeProofSha256"]=body["proofSha256"]
         del self.pending[run_id]
+        self.pending_deadlines.pop(run_id, None)
         return result
 
 
