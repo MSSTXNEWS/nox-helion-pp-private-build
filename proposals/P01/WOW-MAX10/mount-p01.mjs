@@ -18,6 +18,14 @@ export function mountP01Owner(spec){
     throw Error("P01_DUPLICATE_MOUNT_OR_UNTRUSTED_DECORATION");
   const dispatcher=createP01RouteDispatcher(hostPort);
   const cleanups=[];let fx=null,wow=null,disposed=false;
+  const saved=new Map([...menu,...buttons].map(x=>[x.element,{
+    ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
+    hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
+    hadReceipt:Object.hasOwn(x.element.dataset||{},"noxNativeReceipt")}]));
+  const restore=()=>{for(const [el,s] of saved){
+    if(s.hadAck)el.dataset.noxNativeAck=s.ack;else delete el.dataset.noxNativeAck;
+    if(s.hadReceipt)el.dataset.noxNativeReceipt=s.receipt;else delete el.dataset.noxNativeReceipt;
+  }};
   const watch=(element,type,handler)=>{
     element.addEventListener(type,handler);
     cleanups.push(()=>element.removeEventListener(type,handler));
@@ -80,13 +88,16 @@ export function mountP01Owner(spec){
           windowsExeAccepted:false});
       },
       destroy(){
-        if(disposed)return;disposed=true;
+        if(disposed)return;disposed=true;dispatcher.close();
         while(cleanups.length)cleanups.pop()();
+        restore();
         try{wow?.destroy();}finally{fx?.destroy();mounted.delete(root);}
       }
     });
   }catch(err){
+    dispatcher.close();
     while(cleanups.length)cleanups.pop()();
+    restore();
     try{wow?.destroy();}finally{fx?.destroy();}
     throw err;
   }
