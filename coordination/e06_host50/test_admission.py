@@ -175,6 +175,36 @@ class HostScopeAndReceiptTests(unittest.TestCase):
                 self.host.finish(t['runId'],spoof)
         ack['seal']=self.host._seal(ack)
         self.assertEqual(self.host.finish(t['runId'],ack)['nativeAck'],'VERIFIED_HMAC')
+    def test_signed_ack_must_include_every_binding_field_even_when_none(self):
+        # In R07 a signed ACK silently omitted required null binding fields.
+        for omitted in ('targetRunId', 'fileSha256', 'fileTicketSha256'):
+            with self.subTest(omitted=omitted):
+                t=self.host.admit(session=self.s,actual_origin=self.s.origin,
+                     request=self.req('helion.chat','NIP01-01'))
+                ack={key:t[key] for key in ('runId','taskId','routeId','owner',
+                    'ownerReceiptSha256','payloadSha256','sourceLockTree',
+                    'sessionScopeSha256','targetRunId','fileSha256','fileTicketSha256')}
+                ack.update(event='DONE',proofSha256='b'*64)
+                ack.pop(omitted)
+                ack['seal']=self.host._seal(ack)
+                with self.assertRaisesRegex(Denied,'NATIVE_ACK_SCHEMA_INVALID'):
+                    self.host.finish(t['runId'],ack)
+
+    def test_stop_target_disappeared_before_reservation_is_denied(self):
+        # A real in-process run can finish after the first active-runs check.
+        r=self.req('chat.stop','NIP01-09');r['runId']='12345678-1234-1234-1234-123456789012'
+        class ChangesBetweenChecks(dict):
+            def __init__(self):
+                super().__init__({r['runId']:('tenant','person','chat1','helion.chat')})
+                self.checks=0
+            def get(self,key,default=None):
+                self.checks+=1
+                return ('tenant','person','chat1','helion.chat') if self.checks==1 else None
+        live=ChangesBetweenChecks()
+        with self.assertRaisesRegex(Denied,'STOP_SCOPE_OR_OWNER_MISMATCH'):
+            self.host.admit(session=self.s,actual_origin=self.s.origin,request=r,active_runs=live)
+        self.assertGreaterEqual(live.checks,2)
+
     def test_ack_rejects_unexpected_signed_fields(self):
         t=self.host.admit(session=self.s,actual_origin=self.s.origin,
                           request=self.req('helion.chat','NIP01-01'))
@@ -257,8 +287,30 @@ class HostSettingPolicyTests(unittest.TestCase):
             return args[0]==self.s and args[1:]==('helion.chat','model','host.models.installed','installed-by-host')
         result=host.admit(session=self.s,actual_origin=self.s.origin,request=self.request,
             native_option_verifier=verifier)
-        self.assertEqual(len(calls),1)
+        self.assertEqual(len(calls),2)
         self.assertEqual(result['state'],'ADMITTED_NOT_EXECUTED')
+
+    def test_native_option_revoked_during_file_picker_is_denied(self):
+        # A model admitted before a native callback can be uninstalled during it.
+        from admission import Host50Admission, NativeFileSelection
+        self.cat['actions'][5]['settings']=[{'key':'model','kind':'select',
+                                              'source':'host.models.installed'}]
+        host=self.make()
+        req=HostScopeAndReceiptTests.req(self,'chat.attach','NIP01-06')
+        req['settings']={'model':'installed-model'}
+        installed={'ok':True}
+        calls=[]
+        def verifier(*_):
+            calls.append(installed['ok'])
+            return installed['ok']
+        def picker(*_):
+            installed['ok']=False
+            return NativeFileSelection(ticket='opaque-ticket-native-777',sha256='a'*64,
+                size_bytes=123,tenant='tenant',principal='person',chat='chat1')
+        with self.assertRaisesRegex(Denied,'UNVERIFIED_NATIVE_SELECT_VALUE'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=req,
+                native_option_verifier=verifier,native_file_picker=picker)
+        self.assertEqual(calls,[True,False])
 
     def test_catalog_rejects_unknown_native_source(self):
         self.action['settings']=[{'key':'model','kind':'select','source':'host.run.shell'}]
