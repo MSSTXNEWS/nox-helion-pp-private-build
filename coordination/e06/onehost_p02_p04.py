@@ -138,6 +138,10 @@ class P02P04OneHost:
                         frame = next(owner_frames)
                     except StopIteration:
                         return
+                    # A blocking owner generator may complete a RAG/LLM await
+                    # after native permission was revoked. Pre-next admission
+                    # alone cannot protect the newly produced frame.
+                    self._admit(scope, "chat.send")
                     yield frame
             finally:
                 # Releasing a partially consumed stream must cancel the native
@@ -159,6 +163,9 @@ class P02P04OneHost:
         if (not isinstance(reply, dict) or reply.get("worker_id") != worker_id
                 or reply.get("command") != command or self._verify_ack(reply) is not True):
             raise OneHostHold("GPU_OWNER_OBSERVED_ACK_RECEIPT_REQUIRED")
+        # Native authorization can expire while a GPU owner port blocks.
+        # Recheck before returning even an ACK to the UI.
+        self._admit(scope, command)
         # A verified command ACK is not proof of a completed training step,
         # checkpoint, evaluation, CUDA availability or resumed optimizer.
         return reply
@@ -175,4 +182,7 @@ class P02P04OneHost:
                 or not callable(self._publish_v3)
                 or self._verify_v3(dict(event)) is not True):
             raise OneHostHold("EXISTING_P05_V3_VERIFIED_EVENT_REQUIRED")
+        # Event verification may await an owner receipt; refuse publication
+        # if native scope was revoked while that verification was in flight.
+        self._admit(scope, "gpu.observe")
         self._publish_v3(dict(event))
