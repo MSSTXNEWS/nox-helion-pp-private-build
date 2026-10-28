@@ -30,7 +30,7 @@
   "sourcePatchTaskId": "E06-R15-NESTED-WIRE-RECURSION-FAILCLOSED",
   "tests": {
     "baselineRED": "4 independent RecursionError exceptions; original",
-    "patchedGREEN": "4/4 new targeted cases; 68 tests over seven independent Python groups; Python compilation PASS",
+    "patchedGREEN": "4/4 new adversarial cases; 72 test invocations in 7 independently run Python groups (70 distinct methods; 2 inherited tests rerun); Python compilation PASS",
     "windows": "NOT_RUN",
     "nativeHandlers": "NOT_ATTESTED"
   },
