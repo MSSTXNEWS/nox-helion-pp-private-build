@@ -214,23 +214,27 @@ export function projectFeeds(feeds, nowMs) {
   if (!Array.isArray(feeds) || feeds.length>4096) return [];
   // Single current quotes for financial instruments only. News may contain
   // multiple articles; market duplicates must never show conflicting prices.
-  // Scan the entire bounded batch, not only the first 16 display records.
+  // One shared license gate: invalid/blank provider attribution cannot
+  // consume a trusted tile quota or invalidate an approved market quote.
+  // The host/E06 verifies the receipt; a SHA-shaped string alone is not proof.
+  const licenseReady=f=>f.license_status==='APPROVED' &&
+    sha(f.license_receipt_sha256) && typeof f.provider==='string' &&
+    f.provider.length<=120 && f.provider.trim().length>0;
+  const recognized=feeds.filter(f=>f && sourceIds.has(f.id));
+  const licensed=recognized.filter(licenseReady);
+  const disabled=recognized.filter(f=>!licenseReady(f));
+  // Scan ALL licensed observations before the cap. Unlicensed submissions
+  // cannot turn an otherwise valid quote into HOLD_DUPLICATE_FEED.
   const marketCounts=new Map();
-  for (const f of feeds) if (f && singletonMarketIds.has(f.id))
+  for (const f of licensed) if (singletonMarketIds.has(f.id))
     marketCounts.set(f.id,(marketCounts.get(f.id)||0)+1);
   const emittedMarkets=new Set();
-  // Apply the 16-tile cap AFTER excluding unknown/empty source IDs;
-  // otherwise rejected padding can hide all licensed live SPACE sources.
-  // Duplicate-market accounting above still scans the entire bounded batch.
-  const recognized=feeds.filter(f=>f && sourceIds.has(f.id));
-  // Capacity is a DISPLAY quota, not a chance for rejected-but-known feeds
-  // to crowd out fully licensed observations. Preserve order within each
-  // group and leave denied cards visible when there is remaining capacity.
-  const licensed=recognized.filter(f=>f.license_status==='APPROVED' &&
-    sha(f.license_receipt_sha256));
-  const disabled=recognized.filter(f=>f.license_status!=='APPROVED' ||
-    !sha(f.license_receipt_sha256));
-  return [...licensed,...disabled].slice(0,16).flatMap(f=>{
+  const licensedMarketIds=new Set(licensed.filter(f=>singletonMarketIds.has(f.id)).map(f=>f.id));
+  // Preserve a disabled card when no licensed market source exists, but do
+  // not render a second market tile beside a licensed single-quote card.
+  const visible=[...licensed,...disabled.filter(f=>
+    !singletonMarketIds.has(f.id) || !licensedMarketIds.has(f.id))];
+  return visible.slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
       if (emittedMarkets.has(f.id)) return [];
       emittedMarkets.add(f.id);
@@ -250,8 +254,7 @@ export function projectFeeds(feeds, nowMs) {
     const strictlyPositive=new Set(['eur-usd','usd-eur','eur-rub','bitcoin','brent']).has(f.id);
     const numericValid=typeof f.value==='number' && Number.isFinite(f.value) &&
       (!strictlyPositive || f.value>0);
-    const approved=f.license_status==='APPROVED' && sha(f.license_receipt_sha256) &&
-      typeof f.provider==='string' && f.provider.length>0;
+    const approved=licenseReady(f);
     const stale=['OFFLINE_CACHE','STALE_CACHE','STALE_SOURCE','OFFLINE'].includes(f.status);
     const stage=!approved?'DISABLED':stale?'STALE_CACHE':
       temporalOrder && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
