@@ -43,6 +43,33 @@ try {
  $receipt.installedMarker=Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt') -PathType Leaf
  $receipt.wpfExecutable=Test-Path -LiteralPath (Join-Path $root 'NOX.P01.Shell.exe') -PathType Leaf
  if($p.ExitCode -ne 0 -or !$receipt.installedMarker -or !$receipt.wpfExecutable){
+   # Read-only analysis of the immutable setup. No installed data altered.
+   $receipt.rootExists=Test-Path -LiteralPath $root
+   $receipt.stageRootExists=Test-Path -LiteralPath $stage
+   $receipt.bundledPreflight='NOT_FOUND'
+   $receipt.bundledPreflightExitCode=$null
+   $receipt.bundledPreflightOutput=$null
+   try {
+     $sevenZip=Get-Command 7z.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+     if(!$sevenZip){$candidate=Join-Path $env:ProgramFiles '7-Zip\7z.exe';if(Test-Path -LiteralPath $candidate){$sevenZip=Get-Item $candidate}}
+     if($sevenZip){
+       $destination=Join-Path $env:RUNNER_TEMP 'E06-R13-Frozen-Setup-ReadOnly'
+       New-Item -ItemType Directory -Path $destination -Force | Out-Null
+       & $sevenZip.Source x $setup "-o$destination" -y | Out-Null
+       if($LASTEXITCODE -eq 0){
+         $original=Get-ChildItem -LiteralPath $destination -File -Recurse -Filter 'Preflight-InstallPath.ps1' |
+                   Select-Object -First 1
+         if($original){
+           $receipt.bundledPreflight=(Get-FileHash -LiteralPath $original.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+           $results=@(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $original.FullName -InstallRoot $root 2>&1)
+           $receipt.bundledPreflightExitCode=$LASTEXITCODE
+           $receipt.bundledPreflightOutput=($results | Out-String).Substring(0,[Math]::Min(1000,($results | Out-String).Length))
+         }
+       }
+     }
+   } catch {
+     $receipt.bundledPreflightOutput="FORENSIC_READ_ONLY_ERROR:"+$_.Exception.GetType().Name
+   }
    throw "E06_NSIS_INSTALL_HOLD_EXIT_$($p.ExitCode)_STAGE_$($receipt.stageExists)"
  }
  $backend=Join-Path $root 'Backend\NOX_HELION_PRIVATE_CANDIDATE.exe'
