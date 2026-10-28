@@ -33,7 +33,7 @@ function Find-Python31210 {
 
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 if (-not $env:CI_PROJECT_DIR -or
-    [IO.Path]::GetFullPath($env:CI_PROJECT_DIR).TrimEnd('\') -cne
+    [IO.Path]::GetFullPath($env:CI_PROJECT_DIR).TrimEnd('\') -ine
     [IO.Path]::GetFullPath($repo).TrimEnd('\')) {
     throw 'GITLAB_CHECKOUT_ROOT_MISMATCH'
 }
@@ -42,6 +42,7 @@ if ($env:CI_COMMIT_REF_NAME -cne 'migration/nox-v16-gitlab-free-20261028-r01' -o
     $env:CI_PIPELINE_SOURCE -cne 'web') {
     throw 'GITLAB_EXPLICIT_PRIVATE_MIGRATION_BRANCH_CONSENT_REQUIRED'
 }
+Set-Location -LiteralPath $repo
 if ($env:CI_COMMIT_SHA -cnotmatch '^[0-9a-f]{40}$' -or
     $env:CI_PIPELINE_ID -notmatch '^[0-9]+$') {
     throw 'GITLAB_PINNED_SHA_OR_RUNID_MISSING'
@@ -76,8 +77,11 @@ try {
     & python -c 'import sys; assert sys.version_info[:3] == (3,12,10)'
     Require-Exit 'PYTHON_VERSION_RECHECK'
 
-    $sdk=@(& dotnet --list-sdks 2>$null)
-    if ($LASTEXITCODE -ne 0 -or -not @($sdk | Where-Object { $_ -match '^8\.' }).Count) {
+    $sdk=@()
+    if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+        try { $sdk=@(& dotnet --list-sdks 2>$null) } catch { $sdk=@() }
+    }
+    if (-not @($sdk | Where-Object { $_ -match '^8\.' }).Count) {
         if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
             throw 'GITLAB_DOTNET8_REQUIRED_NO_INSTALLER'
         }
@@ -149,6 +153,12 @@ try {
         '$(Build.ArtifactStagingDirectory)'=$logroot
     }
     $shell=Get-Command pwsh -ErrorAction SilentlyContinue
+    if (-not $shell -and (Get-Command choco -ErrorAction SilentlyContinue)) {
+        & choco install powershell-core --yes --no-progress --limit-output
+        Require-Exit 'POWERSHELL7_INSTALL'
+        $env:PATH=(Join-Path $env:ProgramFiles 'PowerShell\7') + ';' + $env:PATH
+        $shell=Get-Command pwsh -ErrorAction SilentlyContinue
+    }
     if (-not $shell) { throw 'GITLAB_POWERSHELL7_REQUIRED' }
     for ($i=0; $i -lt $blocks.Count; $i++) {
         $code=$blocks[$i]
