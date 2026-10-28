@@ -1,0 +1,647 @@
+{
+  "schema": "NOX_V16_E06_BLOCK1_OWNER_FILE_ADMISSION_V1",
+  "run_id": "NOX-V16-E06-BLOCK1-20261028",
+  "current_frozen_main": "eb46b49fb8a022cefa679afb8606877016808db1",
+  "integration_branch": "e06/express-finish-wpf-diagnostic-20261028",
+  "owner_snapshots": [
+    {
+      "owner": "P01",
+      "pr": 28,
+      "head_sha1": "8e42bb15aecbee8412c342b0e9049b6cce044297",
+      "base": "e01/v16-c09-turbo10-source-20261028",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/p01-c11-native.yml",
+        ".github/workflows/p01-c12-nsis-compile.yml",
+        "stage/proposals/P01/C09/Installer/Build-NSIS.ps1",
+        "stage/proposals/P01/C09/Installer/Get-P01Prerequisites.ps1",
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "stage/proposals/P01/C09/Installer/Test-NSIS-Windows.ps1",
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "stage/proposals/P01/C09/QA/P01_E01_C09/Test-P01Native-C09.ps1",
+        "stage/proposals/P01/C11/QA/Test-P01C11.ps1",
+        "stage/proposals/P01/C11/QA/emit-receipts.cjs"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    },
+    {
+      "owner": "P02",
+      "pr": 13,
+      "head_sha1": "c1b23eb597877200f246b1c3d3b635b9defd3433",
+      "base": "main",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/nox-p02-r08-wpf-build.yml",
+        ".github/workflows/nox-p02-serial-admission.yml",
+        "Packages/P02/INTEGRATION.md",
+        "Packages/P02/INTEGRATOR_6_HANDOFF.md",
+        "Packages/P02/P02.Candidate.csproj",
+        "Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py",
+        "Packages/P02/diagnostics/r08_exact_reuse_e06_repairs.py",
+        "Packages/P02/evidence/P02_C4_NOLOSS.patch",
+        "Packages/P02/evidence/P02_C4_NOLOSS_RECEIPT.json",
+        "Packages/P02/evidence/P02_C5.patch",
+        "Packages/P02/evidence/P02_C5_RECEIPT.json",
+        "Packages/P02/evidence/P02_C6.patch",
+        "Packages/P02/evidence/P02_C6_RECEIPT.json",
+        "Packages/P02/evidence/P02_NATIVE_INGRESS_RECEIPT.json",
+        "Packages/P02/evidence/P02_TURBO10.patch",
+        "Packages/P02/evidence/P02_TURBO10_RECEIPT.json",
+        "Packages/P02/evidence/P02_V16_E2_component.patch",
+        "Packages/P02/evidence/receipt.json",
+        "Packages/P02/smoke/P02.Smoke.csproj",
+        "Packages/P02/smoke/Program.cs",
+        "Packages/P02/worker-chat/AttachmentPipeline.cs",
+        "Packages/P02/worker-chat/ChatSqliteStore.cs",
+        "Packages/P02/worker-chat/OllamaChatClient.cs",
+        "Packages/P02/worker-chat/SpaceBrowserBoundary.cs",
+        "Packages/P02/worker-python/C4_NOLOSS_HANDOFF.md",
+        "Packages/P02/worker-python/C5_NOLOSS_HANDOFF.md",
+        "Packages/P02/worker-python/C6_HISTORY_HANDOFF.md",
+        "Packages/P02/worker-python/NATIVE_INGRESS_HANDOFF.md",
+        "Packages/P02/worker-python/README.md",
+        "Packages/P02/worker-python/TURBO10_HANDOFF.md",
+        "Packages/P02/worker-python/p02_capabilities.py",
+        "Packages/P02/worker-python/p02_chat_bridge.py",
+        "Packages/P02/worker-python/p02_host_admission.py",
+        "Packages/P02/worker-python/p02_host_probe.py",
+        "Packages/P02/worker-python/p02_native_ingress.py",
+        "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "Packages/P02/worker-python/p02_runtime.py",
+        "Packages/P02/worker-python/run_pack01_owner_gate.py",
+        "Packages/P02/worker-python/test_p02_admission.py",
+        "Packages/P02/worker-python/test_p02_c5_integrity.py",
+        "Packages/P02/worker-python/test_p02_c6_history_order.py",
+        "Packages/P02/worker-python/test_p02_ingress_pack01.py",
+        "Packages/P02/worker-python/test_p02_native_ingress.py",
+        "Packages/P02/worker-python/test_p02_no_loss_c4.py",
+        "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+        "Packages/P02/worker-python/test_p02_p04_exact_owner.py",
+        "Packages/P02/worker-python/test_p02_runtime.py",
+        "Packages/P02/worker-python/test_p02_turbo10.py",
+        "Packages/P02/wow/WOW5_NOTES.txt",
+        "Packages/P02/wow/WOW_HANDOFF.md",
+        "Packages/P02/wow/p02-five-wow.css",
+        "Packages/P02/wow/p02-state-wow.css"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    },
+    {
+      "owner": "P03",
+      "pr": 17,
+      "head_sha1": "64f5e4beeec5aaadefa0d216e71744b9692c0d66",
+      "base": "main",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/e03-p03-python-onehost.yml",
+        ".github/workflows/p03-c40-component.yml",
+        "Packages/P03/C40/INTEGRATION_RECEIPT.md",
+        "Packages/P03/C40/NOX_V16_E03_C40_P03_CLOSURE_CANDIDATE.zip",
+        "Packages/P03/C40/NOX_V16_E03_TURBO10_from_C40.patch",
+        "Packages/P03/C40/NOX_V16_E03_TURBO11_from_TURBO10.patch",
+        "Packages/P03/C40/NOX_V16_E03_TURBO12_additive_hardening.patch",
+        "Packages/P03/Source/E03_CONSOLIDATED_RECEIPT.json",
+        "Packages/P03/Source/E03_FINAL_SELFIMPROVE_RECEIPT.json",
+        "Packages/P03/Source/OWNER6_INTEGRATION_HANDOFF.md",
+        "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/P03.ModelCenter.HardeningSmoke.csproj",
+        "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+        "Packages/P03/Source/P03.ModelCenter.Smoke/P03.ModelCenter.Smoke.csproj",
+        "Packages/P03/Source/P03.ModelCenter.Smoke/Program.cs",
+        "Packages/P03/Source/P03.ModelCenter.Wow/BRIDGE_SCHEMA.json",
+        "Packages/P03/Source/P03.ModelCenter.Wow/README.md",
+        "Packages/P03/Source/P03.ModelCenter.Wow/THIRD_PARTY_LICENSES.txt",
+        "Packages/P03/Source/P03.ModelCenter.Wow/icons/checkmark.svg",
+        "Packages/P03/Source/P03.ModelCenter.Wow/icons/info.svg",
+        "Packages/P03/Source/P03.ModelCenter.Wow/icons/play.svg",
+        "Packages/P03/Source/P03.ModelCenter.Wow/icons/search.svg",
+        "Packages/P03/Source/P03.ModelCenter.Wow/index.html",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.css",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+        "Packages/P03/Source/P03.ModelCenter/MODEL_LEADS_SPEECH_GPU_REVIEW_REQUIRED.json",
+        "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
+        "Packages/P03/Source/P03.ModelCenter/OFFICIAL_SOURCES_15_REVIEW_REQUIRED.json",
+        "Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs",
+        "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs",
+        "Packages/P03/Source/P03.ModelCenter/P03.ModelCenter.csproj",
+        "Packages/P03/Source/P03.ModelCenter/PIN_REVIEW_TEMPLATE_15.json",
+        "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs",
+        "Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md",
+        "Packages/P03/Source/python-host/catalog30.discovery.json",
+        "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "Packages/P03/Source/python-host/test_p03_onehost_port.py"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    },
+    {
+      "owner": "P04",
+      "pr": 12,
+      "head_sha1": "912ed739861c4a18c728d5a155d22679560d3c79",
+      "base": "codex/p04-create-rag-training-gpu-20261027",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/nox-p04-candidate-ci.yml",
+        "Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json",
+        "Packages/P04/E04_C11_RECEIPT.json",
+        "Packages/P04/E04_C12_RECEIPT.json",
+        "Packages/P04/E04_C14_CLOSURE_RECEIPTS.json",
+        "Packages/P04/E04_FAST_C13_RECEIPT.json",
+        "Packages/P04/E04_FINAL_HANDOFF.md",
+        "Packages/P04/E04_HANDOFF_RECEIPTS.json",
+        "Packages/P04/E04_ONEHOST_BRIDGE_RECEIPTS.json",
+        "Packages/P04/E04_TURBO10_RECEIPTS.json",
+        "Packages/P04/GpuGuardian/GpuGuardian.cs",
+        "Packages/P04/NoxP04.csproj",
+        "Packages/P04/PYTHON_HOST_INTEGRATION.md",
+        "Packages/P04/Rag/RagIngestionService.cs",
+        "Packages/P04/Rag/RagService.cs",
+        "Packages/P04/merge_qlora_adapter.py",
+        "Packages/P04/model_snapshot_probe.py",
+        "Packages/P04/preflight_local_gpu.py",
+        "Packages/P04/rag_python_compat.py",
+        "Packages/P04/train_qlora.py",
+        "Packages/P04/verify_components.ps1",
+        "tests/P04/RagComponentHarness.cs",
+        "tests/P04/RagComponentHarness.csproj",
+        "tests/P04/RagLiveSmoke.cs",
+        "tests/P04/RagLiveSmoke.csproj",
+        "tests/P04/test_checkpoint_state_integrity.py",
+        "tests/P04/test_dataset_jsonl_bounds.py",
+        "tests/P04/test_dataset_preload_integrity.py",
+        "tests/P04/test_event_file_safety.py",
+        "tests/P04/test_event_resume_sequence.py",
+        "tests/P04/test_gpu_vram_headroom.py",
+        "tests/P04/test_local_gpu_preflight.py",
+        "tests/P04/test_merge_and_path_guards.py",
+        "tests/P04/test_model_snapshot_probe.py",
+        "tests/P04/test_p02_bridge_integration.py",
+        "tests/P04/test_python_host_rag_compat.py",
+        "tests/P04/test_train_holdout_separation.py",
+        "tests/P04/test_training_gate_contract.py",
+        "tests/P04/test_training_receipt_atomicity.py"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    },
+    {
+      "owner": "P05",
+      "pr": 9,
+      "head_sha1": "0c595bb433238eb22b76f08928a8ddde8c40eda7",
+      "base": "main",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/e05-component.yml",
+        ".github/workflows/e05-owner-compatibility.yml",
+        "Packages/P05/E05/checks/E05Checks.csproj",
+        "Packages/P05/E05/checks/E05HostTelemetryChecks.cs",
+        "Packages/P05/E05/checks/E05VerifiedProjectionChecks.cs",
+        "Packages/P05/E05/checks/Program.cs",
+        "Packages/P05/E05/docs/E05_C13_OWNER_RECEIPT.json",
+        "Packages/P05/E05/docs/E05_EVENTS_V3_ADMISSION.md",
+        "Packages/P05/E05/docs/R11_SOURCE_RECOVERY_RECEIPT.json",
+        "Packages/P05/E05/optional_wow/assets/nox-wow2.css",
+        "Packages/P05/E05/optional_wow/assets/nox-wow2.mjs",
+        "Packages/P05/E05/optional_wow/assets/nox-wow5.css",
+        "Packages/P05/E05/optional_wow/assets/nox-wow5.mjs",
+        "Packages/P05/E05/optional_wow/tests/wow2.test.mjs",
+        "Packages/P05/E05/optional_wow/tests/wow5.test.mjs",
+        "Packages/P05/E05/src/E05ActivityTimeline.cs",
+        "Packages/P05/E05/src/E05ApprovedSpace.cs",
+        "Packages/P05/E05/src/E05CanonicalEvents.cs",
+        "Packages/P05/E05/src/E05CorePersonaSnapshot.cs",
+        "Packages/P05/E05/src/E05CriterionSeal.cs",
+        "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "Packages/P05/E05/src/E05EcbCsv.cs",
+        "Packages/P05/E05/src/E05EvidenceProjection.cs",
+        "Packages/P05/E05/src/E05FeedTrust.cs",
+        "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "Packages/P05/E05/src/E05HostGpuPublisher.cs",
+        "Packages/P05/E05/src/E05HostTelemetryFacade.cs",
+        "Packages/P05/E05/src/E05Progress.cs",
+        "Packages/P05/E05/src/E05ReadOnlySpace.cs",
+        "Packages/P05/E05/src/E05SafeFeedClient.cs",
+        "Packages/P05/E05/src/E05SamplingLoop.cs",
+        "Packages/P05/E05/src/E05SpaceFeedPolicy.cs",
+        "Packages/P05/E05/src/E05SpaceParsing.cs",
+        "Packages/P05/E05/src/E05Telemetry.cs",
+        "Packages/P05/E05/src/E05TelemetryReadOnly.cs",
+        "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+        "Packages/P05/E05/src/E05VisualCompatibility.cs",
+        "Packages/P05/E05/src/NoxHelion.E05.csproj",
+        "Packages/P05/Space/SpaceFeedClient.cs",
+        "Packages/P05/Space/SpaceFeedPolicy.cs"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    },
+    {
+      "owner": "E06_diagnostic",
+      "pr": 41,
+      "head_sha1": "87faa41b1602a94d8f981c2a872d36c568a95039",
+      "base": "main",
+      "draft": true,
+      "merged": false,
+      "changed_paths": [
+        ".github/workflows/nox-e06-real-nsis-diagnostic.yml",
+        ".github/workflows/nox-p02-r08-wpf-build.yml",
+        ".github/workflows/nox-p02-serial-admission.yml",
+        "Packages/P02/INTEGRATION.md",
+        "Packages/P02/INTEGRATOR_6_HANDOFF.md",
+        "Packages/P02/P02.Candidate.csproj",
+        "Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py",
+        "Packages/P02/diagnostics/r08_exact_reuse_e06_repairs.py",
+        "Packages/P02/evidence/P02_C4_NOLOSS.patch",
+        "Packages/P02/evidence/P02_C4_NOLOSS_RECEIPT.json",
+        "Packages/P02/evidence/P02_C5.patch",
+        "Packages/P02/evidence/P02_C5_RECEIPT.json",
+        "Packages/P02/evidence/P02_C6.patch",
+        "Packages/P02/evidence/P02_C6_RECEIPT.json",
+        "Packages/P02/evidence/P02_TURBO10.patch",
+        "Packages/P02/evidence/P02_TURBO10_RECEIPT.json",
+        "Packages/P02/evidence/P02_V16_E2_component.patch",
+        "Packages/P02/evidence/receipt.json",
+        "Packages/P02/smoke/P02.Smoke.csproj",
+        "Packages/P02/smoke/Program.cs",
+        "Packages/P02/worker-chat/AttachmentPipeline.cs",
+        "Packages/P02/worker-chat/ChatSqliteStore.cs",
+        "Packages/P02/worker-chat/OllamaChatClient.cs",
+        "Packages/P02/worker-chat/SpaceBrowserBoundary.cs",
+        "Packages/P02/worker-python/C4_NOLOSS_HANDOFF.md",
+        "Packages/P02/worker-python/C5_NOLOSS_HANDOFF.md",
+        "Packages/P02/worker-python/C6_HISTORY_HANDOFF.md",
+        "Packages/P02/worker-python/README.md",
+        "Packages/P02/worker-python/TURBO10_HANDOFF.md",
+        "Packages/P02/worker-python/p02_capabilities.py",
+        "Packages/P02/worker-python/p02_chat_bridge.py",
+        "Packages/P02/worker-python/p02_host_admission.py",
+        "Packages/P02/worker-python/p02_host_probe.py",
+        "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "Packages/P02/worker-python/p02_runtime.py",
+        "Packages/P02/worker-python/run_pack01_owner_gate.py",
+        "Packages/P02/worker-python/test_p02_admission.py",
+        "Packages/P02/worker-python/test_p02_c5_integrity.py",
+        "Packages/P02/worker-python/test_p02_c6_history_order.py",
+        "Packages/P02/worker-python/test_p02_no_loss_c4.py",
+        "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+        "Packages/P02/worker-python/test_p02_p04_exact_owner.py",
+        "Packages/P02/worker-python/test_p02_runtime.py",
+        "Packages/P02/worker-python/test_p02_turbo10.py",
+        "Packages/P02/wow/WOW5_NOTES.txt",
+        "Packages/P02/wow/WOW_HANDOFF.md",
+        "Packages/P02/wow/p02-five-wow.css",
+        "Packages/P02/wow/p02-state-wow.css"
+      ],
+      "stage": "ADMISSION_HOLD_EXACT_PREIMAGE_NOT_CHECKED"
+    }
+  ],
+  "exact_path_overlaps": [
+    {
+      "path": ".github/workflows/nox-p02-r08-wpf-build.yml",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": ".github/workflows/nox-p02-serial-admission.yml",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/INTEGRATION.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/INTEGRATOR_6_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/P02.Candidate.csproj",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/diagnostics/r08_exact_reuse_e06_repairs.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C4_NOLOSS.patch",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C4_NOLOSS_RECEIPT.json",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C5.patch",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C5_RECEIPT.json",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C6.patch",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_C6_RECEIPT.json",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_TURBO10.patch",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_TURBO10_RECEIPT.json",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/P02_V16_E2_component.patch",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/evidence/receipt.json",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/smoke/P02.Smoke.csproj",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/smoke/Program.cs",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-chat/AttachmentPipeline.cs",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-chat/ChatSqliteStore.cs",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-chat/OllamaChatClient.cs",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-chat/SpaceBrowserBoundary.cs",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/C4_NOLOSS_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/C5_NOLOSS_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/C6_HISTORY_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/README.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/TURBO10_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_host_probe.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/run_pack01_owner_gate.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_admission.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_c5_integrity.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_c6_history_order.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_no_loss_c4.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_p04_exact_owner.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_runtime.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_turbo10.py",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/wow/WOW5_NOTES.txt",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/wow/WOW_HANDOFF.md",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/wow/p02-five-wow.css",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    },
+    {
+      "path": "Packages/P02/wow/p02-state-wow.css",
+      "owners": [
+        "P02",
+        "E06_diagnostic"
+      ]
+    }
+  ],
+  "distinct_changed_paths": 186,
+  "warning": "Same path count only. Runtime/ownership/semantic conflicts remain HOLD, even when paths differ.",
+  "branch_snapshots_not_updating_automatically": true,
+  "main_unmodified": true,
+  "do_not_merge_all_prs": true,
+  "one_approved_visible_host": "WPF_WebView2",
+  "full_owner_p01_p05_integrated": false,
+  "E07_final_accepted": false,
+  "deleted_items": 0
+}
