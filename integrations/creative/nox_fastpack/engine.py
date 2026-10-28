@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 from .creative_extensions import CreativeExtensions
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -98,20 +98,49 @@ class Studio(CreativeExtensions):
 
     def download(self, model_id, filenames, revision, license_confirmed=False):
         model=self._model(model_id)
-        if not license_confirmed:raise StudioError("Confirm license, size and storage before download")
+        if license_confirmed is not True:raise StudioError("Confirm license, size and storage before download")
         if not revision or not re.fullmatch(r"[0-9a-f]{40}",revision):raise StudioError("Pin a model revision from variants()")
         if not isinstance(filenames,list) or not filenames:raise StudioError("Choose one or more exact weight files")
         try: from huggingface_hub import HfApi,snapshot_download
         except ImportError as exc:raise StudioError("Install optional huggingface_hub") from exc
         info=HfApi().model_info(model[3],revision=revision,files_metadata=True)
+        if getattr(info, "sha", None) != revision:raise StudioError("Model metadata revision changed; re-review pinned source")
         valid={s.rfilename for s in info.siblings or []}
-        if any(not isinstance(x,str) or x not in valid or x.startswith("/") or ".." in Path(x).parts or "\\" in x for x in filenames):
-            raise StudioError("Unapproved weight filename")
-        target=self.models/model_id;target.mkdir(parents=True,exist_ok=True)
+        # snapshot_download treats allow_patterns as GLOBS, not exact filenames.
+        # Reject metacharacters and any upstream traversal/reparse path BEFORE
+        # creating a model directory or issuing a network download.
+        if (len(set(filenames)) != len(filenames) or
+            any(not isinstance(x,str) or x not in valid or
+                not re.search(r"\\.(?:safetensors|gguf|ckpt|bin|pth)$",x,re.I) or
+                x.startswith("/") or "\\" in x or
+                any(c in x for c in "*?[]") or
+                ".." in PurePosixPath(x).parts or
+                PurePosixPath(x).as_posix()!=x for x in filenames)):
+            raise StudioError("Unapproved literal weight filename")
+        if self.models.is_symlink() or (self.models.exists() and not self.models.is_dir()):
+            raise StudioError("Untrusted model root")
+        self.models.mkdir(parents=True,exist_ok=True)
+        target=self.models/model_id
+        if target.is_symlink() or (target.exists() and not target.is_dir()):
+            raise StudioError("Untrusted model destination")
+        target.mkdir(parents=True,exist_ok=True)
+        if not target.resolve().is_relative_to(self.root):
+            raise StudioError("Model destination outside approved Studio root")
+        def checked_weight(name):
+            p=target
+            for part in PurePosixPath(name).parts:
+                p=p/part
+                if p.is_symlink():
+                    raise StudioError("Weight file or directory is a reparse link")
+            if not p.resolve().is_relative_to(target.resolve()):
+                raise StudioError("Weight path outside approved model directory")
+            return p
+        for f in filenames:
+            checked_weight(f)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
         files=[]
         for f in filenames:
-            p=self._within(target,target/f)
+            p=checked_weight(f)
             if not p.is_file():raise StudioError("Download incomplete: "+f)
             files.append({"filename":f,"bytes":p.stat().st_size})
         receipt={"model":model_id,"revision":revision,"files":files,"source":"https://huggingface.co/"+model[3]}
