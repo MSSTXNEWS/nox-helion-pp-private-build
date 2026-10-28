@@ -300,11 +300,15 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
         for route, port in planned:
             dispatcher.bind(route, port)
     except Exception:
-        # Roll back under the caller's EXISTING native host serialization lock.
-        # Never remove a previously installed port, even when a hostile bind()
-        # writes first and then raises.
-        dispatcher.ports.clear()
-        dispatcher.ports.update(before)
+        # Undo ONLY writes owned by this batch. A broad clear/update would also
+        # destroy another owner's independent registration if the native caller
+        # accidentally failed to serialize an overlapping operation.
+        for route, port in planned:
+            if dispatcher.ports.get(route) is port:
+                dispatcher.ports.pop(route)
+        for route, old_port in before.items():
+            if dispatcher.ports.get(route) is not old_port:
+                dispatcher.ports[route] = old_port
         raise
     return frozenset(route for route, _ in planned)
 
