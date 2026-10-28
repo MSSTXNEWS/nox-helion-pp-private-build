@@ -571,13 +571,41 @@ class P02Store:
             storage, sha, expected = found
             self._assert_storage_roots()
             path = _safe_blob_path(self.blobs, storage)
-            fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            # O_NOFOLLOW is unavailable on some Windows Python builds.
+            # Do not trust fstat alone: it follows reparse points/symlinks.
+            try:
+                before = path.lstat()
+            except OSError as exc:
+                raise P02Error('ATTACHMENT_STORAGE_UNAVAILABLE') from exc
+            if not stat.S_ISREG(before.st_mode):
+                raise P02Error('ATTACHMENT_STORAGE_UNSAFE_FILE_TYPE')
+            if before.st_nlink != 1:
+                raise P02Error('ATTACHMENT_HARDLINK_ALIAS_DENIED')
+            if before.st_ino == 0 and not getattr(os, "O_NOFOLLOW", 0):
+                raise P02Error('ATTACHMENT_NO_SAFE_FILE_ID')
+            try:
+                fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                             | getattr(os, "O_BINARY", 0))
+            except OSError as exc:
+                raise P02Error('ATTACHMENT_STORAGE_OPEN_DENIED') from exc
             with os.fdopen(fd, "rb") as f:
                 file_stat = os.fstat(f.fileno())
-                if not stat.S_ISREG(file_stat.st_mode):
-                    raise P02Error('Not a regular stored file')
+                # A replaced regular file must also fail, even if it has the
+                # same bytes: avoid a pre-stat -> open pathname substitution.
+                if (not stat.S_ISREG(file_stat.st_mode) or
+                        (file_stat.st_dev, file_stat.st_ino) !=
+                        (before.st_dev, before.st_ino)):
+                    raise P02Error('ATTACHMENT_STORAGE_CHANGED')
                 if file_stat.st_nlink != 1:
                     raise P02Error('ATTACHMENT_HARDLINK_ALIAS_DENIED')
+                try:
+                    after = path.lstat()
+                except OSError as exc:
+                    raise P02Error('ATTACHMENT_STORAGE_CHANGED') from exc
+                if (not stat.S_ISREG(after.st_mode) or
+                        (after.st_dev, after.st_ino) !=
+                        (file_stat.st_dev, file_stat.st_ino)):
+                    raise P02Error('ATTACHMENT_STORAGE_CHANGED')
                 content = f.read(MAX_FILE + 1)
             if len(content) != expected or hashlib.sha256(content).hexdigest() != sha:
                 raise P02Error("Stored attachment checksum mismatch")

@@ -118,6 +118,59 @@ class C5Safety(unittest.TestCase):
         link.unlink()
         self.assertEqual(self.store.collect_garbage(),1)
 
+    def test_09b_symlink_blob_denied_and_original_receipt_survives(self):
+        ack = self.store.store_file('tenant', 'alice', 'chat', 'application/pdf',
+                                    io.BytesIO(b'%PDF-1.7\\noriginal'))
+        (storage,) = self.db.execute('SELECT storage FROM p02_attachments').fetchone()
+        blob = self.store.blobs / (storage + '.blob')
+        original = blob.read_bytes()
+        secret = self.base / 'private'
+        secret.write_bytes(b'NEVER_DISCLOSE')
+        blob.unlink()
+        try:
+            blob.symlink_to(secret)
+        except (OSError, NotImplementedError):
+            blob.write_bytes(original)
+            self.skipTest('Symlink creation unavailable on runner')
+        try:
+            with self.assertRaisesRegex(P02Error, 'ATTACHMENT_STORAGE_UNSAFE_FILE_TYPE'):
+                self.store.read_file('tenant', 'alice', 'chat', ack['stored_id'])
+        finally:
+            blob.unlink()
+            blob.write_bytes(original)
+        self.assertEqual(self.store.read_file('tenant', 'alice', 'chat', ack['stored_id']),
+                         original)
+
+    def test_09c_path_swap_is_denied_even_if_new_regular_file_has_same_bytes(self):
+        ack = self.store.store_file('tenant', 'alice', 'chat', 'application/pdf',
+                                    io.BytesIO(b'%PDF-1.7\\noriginal'))
+        (storage,) = self.db.execute('SELECT storage FROM p02_attachments').fetchone()
+        blob = self.store.blobs / (storage + '.blob')
+        decoy = self.base / 'decoy'
+        decoy.write_bytes(blob.read_bytes())
+        backup = self.base / 'backup'
+        real_open = os.open
+        swapped = [False]
+
+        def replace_at_open(path, flags, *args, **kwargs):
+            if pathlib.Path(path) == blob and not swapped[0]:
+                swapped[0] = True
+                blob.rename(backup)
+                os.replace(decoy, blob)
+            return real_open(path, flags, *args, **kwargs)
+
+        try:
+            with mock.patch('p02_runtime.os.open', side_effect=replace_at_open):
+                with self.assertRaisesRegex(P02Error, 'ATTACHMENT_STORAGE_CHANGED'):
+                    self.store.read_file('tenant', 'alice', 'chat', ack['stored_id'])
+        finally:
+            if swapped[0]:
+                blob.unlink()
+                backup.rename(blob)
+        self.assertTrue(swapped[0])
+        self.assertEqual(self.store.read_file('tenant', 'alice', 'chat', ack['stored_id']),
+                         b'%PDF-1.7\\noriginal')
+
     def _relay(self):
         allowed = {typ:'native.'+typ for typ in P02_TYPES}
         calls=[]
