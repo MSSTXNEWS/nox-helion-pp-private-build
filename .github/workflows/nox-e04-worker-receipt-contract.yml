@@ -30,4 +30,4 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - name: Execute actual managed child process, not GPU training
-        run: dotnet run --project tests/P04/GpuWorkerReceiptHarness.csproj -c Release --no-restore
+        run: dotnet run --project tests/P04/GpuWorkerReceiptHarness.csproj -c Release
