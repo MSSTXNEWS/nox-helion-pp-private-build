@@ -53,6 +53,17 @@ if($LASTEXITCODE -ne 0){throw 'CREATIVE_PROTOCOL_TEST_HOLD'}
 if($LASTEXITCODE -ne 0){throw 'CREATIVE_WORKER_COMPILE_HOLD'}
 & $python (Join-Path $patchRoot 'stage_creative.py') $stage $patchRoot
 if($LASTEXITCODE -ne 0){throw 'CREATIVE_STAGE_HOLD'}
+# Original R13 chat has a JavaScript temporal-dead-zone error:
+# must fix the exact staged HTML before WOW adds its own module tags.
+& $python (Join-Path $patchRoot 'fix_r13_chat_init.py') $stage
+if($LASTEXITCODE -ne 0){throw 'R13_CHAT_TDZ_FIX_HOLD'}
+$chatReceipt=Join-Path $workspace 'E06_CHAT_TDZ_RECEIPT.json'
+if(!(Test-Path -LiteralPath $chatReceipt -PathType Leaf)){throw 'R13_CHAT_TDZ_RECEIPT_MISSING'}
+$chatPost=(Get-Content -LiteralPath $chatReceipt -Raw -Encoding UTF8 | ConvertFrom-Json)
+if($chatPost.schema -cne 'NOX_E06_R13_CHAT_TDZ_V1' -or
+    $chatPost.source_only -ne $true -or
+    $chatPost.windows_accepted -ne $false){throw 'R13_CHAT_TDZ_RECEIPT_INVALID'}
+
 & $python -m unittest discover -s (Join-Path $wow 'tests') -v
 if($LASTEXITCODE -ne 0){throw 'WOW200_SHA_GATES_TEST_HOLD'}
 & $python (Join-Path $wow 'stage_wow200.py') $stage $wow
