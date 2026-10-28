@@ -196,6 +196,12 @@
               },
               "evidence_verified": {
                 "const": false
+              },
+              "source": {
+                "const": "P05.Hardware"
+              },
+              "state": {
+                "const": "RUNNING"
               }
             }
           }
