@@ -10,9 +10,81 @@ const stamp=x=>{const m=/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/.exec(x);if(!m||+m
 const fmt=(v,sep=",")=>{const n=Math.max(0,Math.round(v)),s=Math.floor(n/1000);return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s/60)%60).padStart(2,"0")+":"+String(s%60).padStart(2,"0")+sep+String(n%1000).padStart(3,"0")};
 const cues=s=>txt(s).trim().replace(/^WEBVTT[^\n]*\n/i,"").split(/\n\s*\n/).filter(Boolean).map((b,i)=>{const a=ls(b),k=a.findIndex(x=>x.includes("-->"));if(k<0)throw Error("MISSING_TIMECODE");const m=/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}[,.]\d{3})/.exec(a[k]);if(!m)throw Error("INVALID_TIMECODE");const start=stamp(m[1]),end=stamp(m[2]);if(end<=start)throw Error("BAD_DURATION");return {n:i+1,start,end,text:a.slice(k+1).join("\n")}});
 const printCues=(a,vtt=false)=>(vtt?"WEBVTT\n\n":"")+a.map((c,i)=>(vtt?"":String(i+1)+"\n")+fmt(c.start,vtt?".":",")+" --> "+fmt(c.end,vtt?".":",")+"\n"+c.text).join("\n\n")+"\n";
-function csv(s){let rows=[],row=[],cell="",quote=false;const z=txt(s).replace(/\r\n?/g,"\n");for(let i=0;i<z.length;i++){const c=z[i];if(c==='"'){if(quote&&z[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(c===","&&!quote){row.push(cell);cell=""}else if(c==="\n"&&!quote){row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}if(quote)throw Error("BAD_CSV_QUOTE");if(cell||row.length){row.push(cell);rows.push(row)}if(!rows.length)return [];const h=rows.shift();if(h.some(x=>!x)||new Set(h).size!==h.length)throw Error("INVALID_CSV_HEADER");return rows.filter(r=>r.length!==1||r[0]!=="").map(r=>{if(r.length!==h.length)throw Error("CSV_WIDTH_MISMATCH");return Object.fromEntries(h.map((k,i)=>[k,r[i]]))})}
-function csvOut(a){if(!Array.isArray(a))throw Error("ARRAY_EXPECTED");if(!a.length)return "";const k=keys(a[0]),esc=v=>{const s=txt(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};return [k.map(esc).join(","),...a.map(r=>k.map(x=>esc(r[x])).join(","))].join("\n")}
-function flat(o,p="",out={},dep=0){if(dep>20)throw Error("JSON_DEPTH_LIMIT");if(o&&typeof o==="object")for(const [k,v] of Object.entries(o))flat(v,p?p+"."+k:k,out,dep+1);else if(!o||typeof o!=="object")out[p]=o;return out}
+function csv(s){
+  // Strict RFC4180-style local parsing: never silently reassign task columns.
+  const data=txt(s),rows=[];
+  let row=[],cell="",state="field",started=false,quotedRow=false;
+  function pushCell(){row.push(cell);cell="";state="field"}
+  function pushRow(){pushCell();rows.push({cells:row,quoted:quotedRow});row=[];quotedRow=false}
+  for(let i=0;i<data.length;i++){
+    const ch=data[i];started=true;
+    if(state==="quoted"){
+      if(ch==='"'&&data[i+1]==='"'){cell+='"';i++}
+      else if(ch==='"')state="closed";
+      else cell+=ch;
+    }else if(state==="closed"){
+      if(ch===",")pushCell();
+      else if(ch==="\n"||ch==="\r"){pushRow();if(ch==="\r"&&data[i+1]==="\n")i++}
+      else throw Error("BAD_CSV_QUOTE");
+    }else if(ch===",")pushCell();
+    else if(ch==="\n"||ch==="\r"){pushRow();if(ch==="\r"&&data[i+1]==="\n")i++}
+    else if(ch==='"'){
+      if(cell!=="")throw Error("BAD_CSV_QUOTE");
+      state="quoted";quotedRow=true;
+    }else cell+=ch;
+  }
+  if(state==="quoted")throw Error("BAD_CSV_QUOTE");
+  if(started&&(cell!==""||row.length||state==="closed"))pushRow();
+  if(!rows.length)return [];
+  const header=rows.shift().cells,normalized=new Set();
+  if(header.some(h=>{
+    const key=h.normalize("NFC").toLocaleLowerCase("en-US");
+    if(!h||normalized.has(key))return true;
+    normalized.add(key);return false;
+  }))throw Error("INVALID_CSV_HEADER");
+  return rows.filter(r=>r.quoted||r.cells.length!==1||r.cells[0]!=="").map(({cells:r})=>{
+    if(r.length!==header.length)throw Error("CSV_WIDTH_MISMATCH");
+    return Object.fromEntries(header.map((key,i)=>[key,r[i]]));
+  });
+}
+function csvOut(a){
+  if(!Array.isArray(a))throw Error("ARRAY_EXPECTED");
+  if(!a.length)return "";
+  const columns=[],seen=new Set(),normalized=new Map();
+  for(const row of a){
+    if(!row||typeof row!=="object"||Array.isArray(row))throw Error("CSV_RECORD_OBJECT_REQUIRED");
+    for(const key of keys(row)){
+      const canonical=key.normalize("NFC").toLocaleLowerCase("en-US");
+      if(!key||(normalized.has(canonical)&&normalized.get(canonical)!==key))throw Error("INVALID_CSV_HEADER");
+      normalized.set(canonical,key);
+      if(!seen.has(key)){columns.push(key);seen.add(key)}
+    }
+  }
+  if(!columns.length)throw Error("INVALID_CSV_HEADER");
+  const esc=value=>{
+    const s=value&&typeof value==="object"?JSON.stringify(value):txt(value);
+    return s===""||/[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  };
+  return [columns.map(esc).join(","),...a.map(row=>columns.map(key=>
+    Object.prototype.hasOwnProperty.call(row,key)?esc(row[key]):""
+  ).join(","))].join("\n");
+}
+function flat(o,p="",out={},dep=0){
+  // Reversible dotted paths: literal "a.b" must not collide with nested a.b.
+  if(dep>20)throw Error("JSON_DEPTH_LIMIT");
+  const record=value=>Object.defineProperty(out,p,{
+    value,enumerable:true,configurable:true,writable:true
+  });
+  if(o&&typeof o==="object"){
+    const entries=Object.entries(o);
+    if(entries.length===0){record(o);return out;}
+    for(const [key,value] of entries){
+      const safe=key===""?"\\e":String(key).replace(/\\/g,"\\\\").replace(/\./g,"\\.");
+      flat(value,p?p+"."+safe:safe,out,dep+1);
+    }
+  }else record(o);
+  return out;
+}
 const tasklist=s=>ls(s).filter(x=>x.trim()).map((x,i)=>{const m=/^\s*(?:[-*]\s*)?(?:\[(x|X| )\]\s*)?(.*)$/.exec(x),a=m[2].split("|").map(y=>y.trim()),o=Object.fromEntries(a.slice(1).map(y=>y.split("=",2).map(z=>z.trim())).filter(z=>z.length===2));return {id:i+1,title:a[0],done:!!m[1]&&m[1].toLowerCase()==="x",owner:o.owner||"unassigned",status:o.status||"todo",weight:bounded(o.weight,0,10000,1),minutes:bounded(o.minutes,0,100000,0)}});
 const base64=s=>{const b=new TextEncoder().encode(s);return btoa(Array.from(b,x=>String.fromCharCode(x)).join(""))};
 const unbase=s=>new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(atob(s.trim()),x=>x.charCodeAt(0)));
@@ -54,7 +126,17 @@ export const OPS=Object.freeze({
 "dev.json.validate":s=>{try{val(s);return {valid:true}}catch{return {valid:false,error:"INVALID_JSON"}}},
 "dev.url.inspect":s=>{const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
 "dev.url.query_encode":s=>{const o=val(s);if(!o||typeof o!=="object"||Array.isArray(o))throw Error("OBJECT_REQUIRED");return new URLSearchParams(Object.entries(o).map(([k,v])=>[k,txt(v)])).toString()},
-"dev.url.query_decode":s=>Object.fromEntries(new URLSearchParams(s.trim().replace(/^\?/,""))),
+"dev.url.query_decode":s=>{
+  const pairs=new URLSearchParams(s.trim().replace(/^\?/,"")),seen=new Set();
+  const result={};
+  for(const [key,value] of pairs){
+    const canonical=key.normalize("NFC").toLocaleLowerCase("en-US");
+    if(seen.has(canonical))throw Error("DUPLICATE_QUERY_KEY");
+    seen.add(canonical);
+    Object.defineProperty(result,key,{value,enumerable:true,configurable:true,writable:true});
+  }
+  return result;
+},
 "dev.base64.encode":s=>base64(s),
 "dev.base64.decode":s=>unbase(s),
 "dev.hex.encode":s=>hex(s),

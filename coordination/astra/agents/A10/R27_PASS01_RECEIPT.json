@@ -1,0 +1,63 @@
+{
+  "run_id": "ASTRA-R27-A10-01-20261029",
+  "agent": "/root/a10",
+  "approaches_completed": 1,
+  "approaches_planned": 10,
+  "source_parent": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "scope": "PACK02 no-loss parsing and serialization",
+  "task_ids": [
+    "A10-PACK02-CSV-COLUMN-UNION",
+    "A10-PACK02-CSV-QUOTED-EMPTY-CR",
+    "A10-PACK02-JSON-EMPTY-KEY-IDENTITY"
+  ],
+  "donor": "feature/nox-v16-pack02-50-source-hardening-r22-20261029",
+  "donor_ops_blob": "05e5209f9da0b6f1d5f2260cddbf2f9d85e9d15f",
+  "donor_policy": "Reused exact existing R22 CSV quotation/normalized-header, flatten key escape/prototype, URL duplicate guards; enhanced non-loss semantics, no new engine.",
+  "files": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_blob": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+      "post_blob": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6",
+      "pre_sha256": "2106c7964aafc34d79d7709b2d43b81287b15bf2eba0fb814a9515cd773eb28e",
+      "post_sha256": "c21923fbf3461d45d37d99825fa6b2633086e638e35509e19307820dc0417eb3"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/source_security_r22.test.mjs",
+      "pre_blob": null,
+      "post_blob": "6ba29c3d298215dd44ce4cc0e5b136ffab1206be",
+      "pre_sha256": null,
+      "post_sha256": "f7b272387c7bdcf764b69ef83b640cfd4b4405148e01599b363a8439a847b27f"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/no_loss_r27.test.mjs",
+      "pre_blob": null,
+      "post_blob": "54a37a0486fa39a3d2f892bffa6e396ebcf7422b",
+      "pre_sha256": null,
+      "post_sha256": "2dd3209399306ea2c413db59659fe02616870addd815a6eed2480acb9eeac416"
+    }
+  ],
+  "tests": {
+    "command": "node --test proposals/NOX-PACK02-50/golden.test.mjs proposals/NOX-PACK02-50/smoke.test.mjs proposals/NOX-PACK02-50/source_security_r22.test.mjs proposals/NOX-PACK02-50/no_loss_r27.test.mjs",
+    "baseline_new_and_donor": {
+      "total": 34,
+      "pass": 16,
+      "fail": 18
+    },
+    "final": {
+      "total": 151,
+      "pass": 151,
+      "fail": 0
+    },
+    "boundary": "actual Node 24 offline operations; Windows GUI NOT_RUN"
+  },
+  "invariants": [
+    "50 canonical route IDs unchanged",
+    "existing catalogue unchanged",
+    "no host privileges/network/model downloads",
+    "PR162/main unchanged"
+  ],
+  "lesson": "CSV preservation must include union of object keys, quoted empty rows and original line-ending payload; JSON flatten empty segments need a noncolliding escape.",
+  "build": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_ready_percent": null
+}
