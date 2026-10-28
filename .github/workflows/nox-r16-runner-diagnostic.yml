@@ -1,0 +1,29 @@
+name: NOX R16 runner diagnostic minimal
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/nox-r16-runner-diagnostic.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-runner:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Confirm Windows PowerShell and immutable owner receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $IsWindows) { throw 'NOT_WINDOWS' }
+          if (-not (Test-Path 'coordination/finish/R16_OWNER1_STAGE_PROVENANCE.json')) {
+            throw 'MISSING_OWNER_RECEIPT'
+          }
+          $r = Get-Content 'coordination/finish/R16_OWNER1_STAGE_PROVENANCE.json' -Raw | ConvertFrom-Json
+          if ($r.items.Count -ne 4 -or $r.r16_source_commit -cne '01aaeb9fff7699ef1f4e6c4f65a02373ca91d028') {
+            throw 'R16_PROVENANCE_MISMATCH'
+          }
+          Write-Host 'NOX_R16_NATIVE_RUNNER_AND_FOUR_OWNER_RECEIPTS_PASS'
