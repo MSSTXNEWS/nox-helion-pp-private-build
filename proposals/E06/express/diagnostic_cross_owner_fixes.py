@@ -121,6 +121,52 @@ change("R11/Packages/P03/worker-queue/ModelDownloadQueueStore.cs",
     lambda s: single(s,"new List<PersistedItem>(records.Count)",
         "new List<PersistedQueueItem>(records.Count)"))
 
+# Repair original R08 queue-window event contract without dropping live actions.
+def queue_window_fix(s):
+    replacements = (
+        ("_queueStore.Items.CollectionChanged += _queueItemsChanged;",
+         "((System.Collections.Specialized.INotifyCollectionChanged)_queueStore.Items).CollectionChanged += _queueItemsChanged;"),
+        ("_queueStore.Items.CollectionChanged -= _queueItemsChanged;",
+         "((System.Collections.Specialized.INotifyCollectionChanged)_queueStore.Items).CollectionChanged -= _queueItemsChanged;"),
+        ("item.HasBytesCompletedMeasurement",
+         "(item.BytesCompleted > 0 || item.BytesTotal > 0)"),
+        ("item.HasBytesTotalMeasurement",
+         "(item.BytesTotal > 0)"),
+        ("var percent = bytesTotal is > 0 && bytesCompleted is not null",
+         "double? percent = bytesTotal is > 0 && bytesCompleted is not null"),
+    )
+    for old, new in replacements:
+        s = single(s, old, new)
+    return s
+
+change("R11/Packages/P03/worker-window/ModelDownloaderWindow.xaml.cs",
+    "c2c7470d51ba3fc238517fd138666eee73a3d7c8a68cc8532d1585bd57c88166",
+    "59ba4616c66ee4108192261cc2e1f0e00a470b03758013434bc8a97410187122",
+    queue_window_fix)
+
+# C# long? must be typed, otherwise conditional long-or-null has no type.
+change("R11/Contracts/EventV3Bridge.cs",
+    "b4dc4b2352cc5e2f74b0eddc12db58147aea97316658b911aab8689675cfb8ca",
+    "7f97fa11302218603303096c5fd0d09b8d5e101da9d8f849cb01e0fda648f8cd",
+    lambda s: single(s,
+        "var completed = total.HasValue && sourceEvent.BytesCompleted is >= 0",
+        "long? completed = total.HasValue && sourceEvent.BytesCompleted is >= 0"))
+
+# An additive file-scoped global using only in temporary extracted build tree.
+# No original owner source is modified by this extra System.IO import.
+extra = ROOT / "R11/E06_DiagnosticGlobalUsings.cs"
+if extra.exists() or extra.is_symlink():
+    raise RuntimeError("E06_DIAGNOSTIC_GLOBAL_FILE_ALREADY_EXISTS")
+extra.write_text("global using System.IO;\n", encoding="utf-8")
+if sha(extra.read_bytes()) != "9eb56b713f4bd450c169f140e74ff7b6d5e456f3742a30188b947223d01628e4":
+    raise RuntimeError("E06_DIAGNOSTIC_GLOBAL_SHA_HOLD")
+receipts.append({
+    "path": "R11/E06_DiagnosticGlobalUsings.cs", "run_id": RUN,
+    "pre_sha256": None, "post_sha256": sha(extra.read_bytes()),
+    "diagnostic_only": True, "source_original_preserved": True,
+    "owner_approval": "HOLD"
+})
+
 out = Path("ci-evidence")
 out.mkdir(exist_ok=True)
 (out / "r08-cross-owner-compile-fixes.json").write_text(
