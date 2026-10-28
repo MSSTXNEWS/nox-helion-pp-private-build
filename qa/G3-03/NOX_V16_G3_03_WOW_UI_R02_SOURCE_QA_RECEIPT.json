@@ -93,9 +93,9 @@
       "path": "qa/G3-03/tests/nox-cinema-visibility.test.mjs",
       "owner": "G3-03 QA",
       "pre_sha256": "ABSENT",
-      "post_sha256": "5ee94bf1a1f39c4b82d05440c57153a61bd6a7b26dba239610dfaa2443972c20",
+      "post_sha256": "3ff0b1a3214a2f518b89e16b241e1847dd6bb3a88f0f62e1e9c3d40ddcd29992",
       "pre_git_blob_sha1": "ABSENT",
-      "diff_exact": "New Node test suite adapted from owner PR30; +3 race/reduced regressions; NOT_RUN on Node during this execution."
+      "diff_exact": "New self-contained Node test suite from approved PR30 plus 3 visibility/reduced regressions. Fixed QA regex literal quoting in same G3.03 R02 branch. Previously-created test SHA256=5ee94bf1a1f39c4b82d05440c57153a61bd6a7b26dba239610dfaa2443972c20; current SHA256=3ff0b1a3214a2f518b89e16b241e1847dd6bb3a88f0f62e1e9c3d40ddcd29992"
     }
   ],
   "ten_tasks": [
@@ -181,11 +181,13 @@
         "pass": true
       }
     ],
-    "node_new_suite": "CREATED_NOT_RUN",
+    "node_new_suite": "CREATED, NOT_RUN under real Node/Windows",
     "windows": "NOT_RUN",
     "real_event_bridge": "NOT_RUN",
     "approved_persona_media_runtime": "NOT_RUN",
-    "responsive_320_390_800x480_4K": "NOT_RUN"
+    "responsive_320_390_800x480_4K": "NOT_RUN",
+    "v8_executed_dom_tests": "9/9 PASS; simulated DOM; no Windows",
+    "css_assertions": "2/2 PASS in V8 regex"
   },
   "seven_indicators": [
     {
@@ -269,6 +271,10 @@
     {
       "root_cause": "CSS state running was unreachable by the approved states",
       "fix": "replace running CSS selectors with valid host-attested states"
+    },
+    {
+      "root_cause": "New regression test regex escaping was double encoded in initial QA file",
+      "fix": "Correct actual regex literal escaping, confirm both match current CSS before source commit"
     }
   ],
   "one_self_improvement": "Treat visibility as conjunction of independently authoritative vetoes; a later observer callback cannot undo an explicit host OFF.",
