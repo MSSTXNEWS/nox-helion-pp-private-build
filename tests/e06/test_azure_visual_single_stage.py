@@ -24,7 +24,13 @@ class VisualSingleStageContract(unittest.TestCase):
     def test_existing_onehost_builder_retains_exact_source_owned_stage(self):
         pipeline = PIPELINE.read_text(encoding="utf-8")
         builder = BUILDER.read_text(encoding="utf-8")
-        self.assertEqual(pipeline.count("& ./coordination/e06/build_onehost_installer.ps1"), 1)
+        direct = pipeline.count("& ./coordination/e06/build_onehost_installer.ps1")
+        disposable = pipeline.count("& $builderCopy -SourceRoot")
+        self.assertEqual(direct + disposable, 1, "exactly one effective ONEHOST invocation")
+        if disposable:
+            self.assertIn("Copy-Item -LiteralPath 'coordination/e06/build_onehost_installer.ps1'", pipeline)
+            self.assertIn("CREATIVE_PAYLOAD_MISSING_HOLD", pipeline)
+            self.assertIn("build_onehost_creative_disposable.ps1", pipeline)
         self.assertIn("-CreativeSourceRoot 'integrations/creative'", pipeline)
         self.assertIn("-WowSourceRoot 'integrations/wow200'", pipeline)
         self.assertEqual(builder.count("& $py.Source $creativeScript $source $creative"), 1)
