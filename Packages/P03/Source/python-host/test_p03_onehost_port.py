@@ -125,6 +125,16 @@ class P03HostPortTests(unittest.TestCase):
         self.assertEqual(result["status"],"HOLD_EXTERNAL_OWNER_EXECUTION")
         self.assertEqual(backend.calls,[("pull","principal")])
 
+    def test_07_without_native_approval_never_advertise_pull(self):
+        backend = Backend()
+        port = P03OneHostPort(self.client, owner3_backend=backend)
+        host = pack01.NoxPackHost(self.catalog)
+        bound = port.register(host,pack01.BoundPort,receipt="P03_NO_NATIVE_CONSENT_TEST")
+        self.assertNotIn("models.pull",bound)
+        self.assertIn("models.queue",bound)
+        self.assertFalse(host.advertise(self.session)["models.pull"]["enabled"])
+        self.assertEqual(backend.calls,[])
+
     def test_07_catalog_tampering_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             base=json.loads((HERE/"catalog30.discovery.json").read_text(encoding="utf-8"))
