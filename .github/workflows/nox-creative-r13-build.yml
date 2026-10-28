@@ -190,7 +190,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_STAGE_HOLD' }
           python -m unittest discover -s integrations/wow200/tests -v
           if ($LASTEXITCODE -ne 0) { throw 'WOW200_NOLOSS_TESTS_HOLD' }
+          node --check integrations/creative/web/entry.js
+          if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_CHAT_NAV_JS_SYNTAX_HOLD' }
+          node --check integrations/wow200/runtime/loader.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_ROUTE_UI_SYNTAX_HOLD' }
+          node --check integrations/wow200/runtime/home-scene.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'D02_NINE_SPHERE_SOURCE_SYNTAX_HOLD' }
+          node --test integrations/wow200/tests/test_home_scene.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_NOLOSS_TESTS_HOLD' }
           python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_STAGE_FAILED' }
+          python integrations/creative/fix_r13_chat_init.py work/e06/staged/R11
+          if ($LASTEXITCODE -ne 0) { throw 'R13_CHAT_TDZ_FIX_FAILED' }
+          if (!(Test-Path 'work/e06/staged/E06_CHAT_TDZ_RECEIPT.json')) { throw 'R13_CHAT_TDZ_RECEIPT_HOLD' }
+          python -c "from pathlib import Path; p=Path('work/e06/staged/R11/Assets/index.html').read_text(encoding='utf-8-sig'); assert p.index('const chatModel=document.getElementById') < p.index('chatLog.addEventListener'), 'CHAT_TDZ_NOT_FIXED'"
+          if ($LASTEXITCODE -ne 0) { throw 'R13_CHAT_TDZ_REGRESSION' }
           if ($LASTEXITCODE -ne 0) { throw 'WOW200_D02_OR_DONOR_HOLD' }
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_NOLOSS_WPF_STAGE_HOLD' }
           python integrations/creative/patch_installer.py coordination/e06/build_onehost_installer.ps1 work/creative/dist/NOX_CreativeWorker
@@ -265,11 +279,13 @@ jobs:
             work/e06/staged/E06_R10_SOURCE_RECEIPT.json
             work/e06/staged/d02-byte-exact-receipt.json
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+            work/e06/staged/E06_CHAT_TDZ_RECEIPT.json
             work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/onehost-candidate/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
             work/e06/onehost-candidate/payload/payload.sha256.json
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+            work/e06/staged/E06_CHAT_TDZ_RECEIPT.json
           if-no-files-found: warn
           retention-days: 14
       - name: Refuse release credit on NSIS compiler failure

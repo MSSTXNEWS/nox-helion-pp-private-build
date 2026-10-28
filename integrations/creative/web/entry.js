@@ -16,6 +16,16 @@
  frame.addEventListener('load',()=>{frame.dataset.loaded='yes';const t=window.__noxCreativePrefill;if(t){frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',...t},location.origin);window.__noxCreativePrefill=null}});
  window.addEventListener('message',event=>{
    if(event.origin!==location.origin || event.source!==frame.contentWindow || !event.data)return;
+   // The first 50 WOW route cards must lead to the REAL approved P01 route,
+   // not only show a decorative preview. Native owner still enforces permission.
+   if(event.data.type==='nox.creative.navigate.v1'){
+     const route=event.data.routeId;
+     if(typeof route!=='string'||!/^[-a-z0-9_.]{2,80}$/i.test(route))return;
+     if(typeof showScreen==='function')showScreen('functions');
+     const search=document.getElementById('nox-pack-search');
+     if(search){search.value=route;search.dispatchEvent(new Event('input',{bubbles:true}));search.focus();}
+     return;
+   }
    if(event.data.type==='nox.creative.projector.v1'){
      window.chrome?.webview?.postMessage?.({action:'creativeProjector'});return;
    }
