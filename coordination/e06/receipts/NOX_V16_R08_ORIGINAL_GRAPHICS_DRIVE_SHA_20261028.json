@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_V16_R08_ORIGINAL_GRAPHICS_SOURCE_READBACK_SHA_V1",
+  "runId": "NOX-V16-WOW-GRAPHICS-R08-20261028",
+  "scope": "Three independent Google Drive ZIPs NOX_HELION_GRAPHICS_REBUILD_PART_1/2/3_OF_3.zip; NOT original Git 3-part 729-source ZIP; NOT installed Windows E07",
+  "sourceParentFolderId": "1GDTVoC6_LP8PtWFaZGnYoZwKenSeb4CZ",
+  "parts": [
+    {
+      "part": 1,
+      "filename": "NOX_HELION_GRAPHICS_REBUILD_PART_1_OF_3.zip",
+      "bytes": 19239717,
+      "sha256": "ffc7df7c05a3b376d4fff9da6329041b8b4fdb2bad6b555baf95c8e6fbcb4304",
+      "crcOk": true
+    },
+    {
+      "part": 2,
+      "filename": "NOX_HELION_GRAPHICS_REBUILD_PART_2_OF_3.zip",
+      "bytes": 19826837,
+      "sha256": "fbf936d19d917ad26a3b7424864a340bfa435e1b2dc1908780eccae71671f7a1",
+      "crcOk": true
+    },
+    {
+      "part": 3,
+      "filename": "NOX_HELION_GRAPHICS_REBUILD_PART_3_OF_3.zip",
+      "bytes": 20809329,
+      "sha256": "b6207f215cb3c095b2b3c2d6b07f13ff9b9639e7c140d7ecb7ccf61cd0dcd338",
+      "crcOk": true
+    }
+  ],
+  "manifestUniqueFilesVerified": 62,
+  "manifestErrorCount": 0,
+  "canonicalD02ActualBytesShaVerified": {
+    "home.png": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+    "menu.png": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
+    "core01.png": "343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97",
+    "menu_sections.png": "7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4"
+  },
+  "approvedPersonaPhotoSourceIds": [
+    "KV",
+    "AM",
+    "LA",
+    "KW"
+  ],
+  "unapprovedPersonaPreservedOnly": [
+    "EV"
+  ],
+  "isOriginalGitSourceLock729": false,
+  "liveRuntime200EffectsAccepted": false,
+  "installedWindowsReleaseAccepted": false,
+  "sourceReadyAccepted": false
+}
