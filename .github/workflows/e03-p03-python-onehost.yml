@@ -1,0 +1,92 @@
+name: NOX E03 Python one-host P02/PACK01 contract (not release QA)
+on:
+  pull_request:
+    paths:
+      - 'Packages/P03/Source/python-host/**'
+      - '.github/workflows/e03-p03-python-onehost.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-owner-host:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned original owner2 Python runtime
+        uses: actions/checkout@v4
+        with:
+          ref: 71a32bf4e2d5ab7f1e17fc91de3502170a8885f7
+          path: _pinned_p02
+          sparse-checkout: |
+            Packages/P02/worker-python/
+      - name: Pinned existing PACK01 native host (never a second server)
+        uses: actions/checkout@v4
+        with:
+          ref: be1fe05d88443e41b0d196617840508d9dd39b7d
+          path: _pinned_pack01
+          sparse-checkout: |
+            proposals/NOX-PACK01-50/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Real original P02/PACK01 contract + P03 discovery and HOLD gates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:NOX_PINNED_P02_PATH = (Resolve-Path '_pinned_p02/Packages/P02/worker-python').Path
+          $env:NOX_PINNED_PACK01_PATH = (Resolve-Path '_pinned_pack01/proposals/NOX-PACK01-50').Path
+          python -m unittest discover -s Packages/P03/Source/python-host -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E03_PYTHON_NATIVE_HOST_CONTRACT_FAILED' }
+      - name: Pycompile owned port (no third-party install)
+        shell: pwsh
+        run: |
+          python -m py_compile Packages/P03/Source/python-host/p03_onehost_port.py
+          if ($LASTEXITCODE -ne 0) { throw 'E03_ONEHOST_SYNTAX_FAILED' }
+
+      - name: Pin exact ModelCatalog source and emit owner3 SHA receipts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $catalog = Get-Content -Raw 'Packages/P03/Source/python-host/catalog30.discovery.json' | ConvertFrom-Json
+          $observed = (git rev-parse HEAD:Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs).Trim()
+          if ($observed -ne $catalog.sourceGitBlobSha1) { throw 'E03_DISCOVERY_SOURCE_DRIFT_HOLD' }
+          $paths = @(
+            'Packages/P03/Source/python-host/catalog30.discovery.json',
+            'Packages/P03/Source/python-host/p03_onehost_port.py',
+            'Packages/P03/Source/python-host/test_p03_onehost_port.py',
+            'Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md',
+            '.github/workflows/e03-p03-python-onehost.yml'
+          )
+          $items = @()
+          foreach ($p in $paths) {
+            if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { throw "E03_SOURCE_MISSING: $p" }
+            $items += @{
+              path = $p
+              owner = 3
+              sha256 = (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()
+              sizeBytes = (Get-Item -LiteralPath $p).Length
+            }
+          }
+          $receipt = @{
+            schema = 'NOX_V16_E03_ONEHOST_RECEIPT_V1'
+            runId = 'NOX-V16-E03-ONEHOST-PY-20261028'
+            owner = 3
+            gitCheckout = (git rev-parse HEAD).Trim()
+            p02SourceCommit = '71a32bf4e2d5ab7f1e17fc91de3502170a8885f7'
+            pack01HostCommit = 'be1fe05d88443e41b0d196617840508d9dd39b7d'
+            modelCatalogGitBlob = $observed
+            componentSourceOnly = $true
+            originalHostMerged = $false
+            finalExeAccepted = $false
+            paths = $items
+          }
+          $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath 'E03_ONEHOST_SOURCE_RECEIPT.json' -Encoding utf8
+          Write-Output 'E03_ONEHOST_SOURCE_RECEIPT_SHA256'
+          (Get-FileHash -LiteralPath 'E03_ONEHOST_SOURCE_RECEIPT.json' -Algorithm SHA256).Hash.ToLowerInvariant()
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: E03-P03-onehost-source-receipt
+          path: E03_ONEHOST_SOURCE_RECEIPT.json
+          retention-days: 30
