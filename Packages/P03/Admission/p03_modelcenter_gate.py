@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, Any
 import re
+import json
 import ipaddress
 import ntpath
 import unicodedata
@@ -97,6 +98,43 @@ def _https_url(s: Any) -> bool:
 
 def _positive(value: Any) -> bool:
     return type(value) is int and 0 < value < (1 << 63)
+
+
+def _evidence_snapshot(*values: Mapping[str, Any]) -> str:
+    """Bound callback evidence including nested MappingProxyType records.
+
+    Native attestations must describe exactly the objects evaluated by policy;
+    mutating valid identifiers after an earlier check cannot inherit its PASS.
+    No user-defined scalar coercion, non-finite JSON or unbounded graphs.
+    """
+    nodes = 0
+
+    def plain(value, depth=0):
+        nonlocal nodes
+        nodes += 1
+        if depth > 32 or nodes > 4096:
+            raise ValueError("Evidence structure limit")
+        if isinstance(value, Mapping):
+            if len(value) > 4096 or any(type(k) is not str or len(k) > 65536 for k in value):
+                raise ValueError("Evidence object keys")
+            return {k: plain(v, depth + 1) for k, v in value.items()}
+        if type(value) is list:
+            if len(value) > 4096:
+                raise ValueError("Evidence array limit")
+            return [plain(v, depth + 1) for v in value]
+        if type(value) is str:
+            if len(value) > 65536:
+                raise ValueError("Evidence text limit")
+            return value
+        if value is None or type(value) in (bool, int, float):
+            return value
+        raise ValueError("Evidence JSON value required")
+
+    encoded = json.dumps([plain(v) for v in values], sort_keys=True,
+                         separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    if len(encoded.encode("utf-8")) > 262144:
+        raise ValueError("Evidence byte limit")
+    return encoded
 
 
 def _nonblank_license_id(value: Any) -> bool:
@@ -212,8 +250,11 @@ def admit_for_existing_downloader(
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
         try:
+            snapshot = _evidence_snapshot(evidence, context)
             if trusted_attestor(evidence, context) is not True:
                 reasons.append("OWNER_ATTESTATION_REJECTED")
+            if _evidence_snapshot(evidence, context) != snapshot:
+                reasons.append("OWNER_ATTESTATION_EVIDENCE_CHANGED")
         except Exception:
             reasons.append("OWNER_ATTESTATION_ERROR")
 
@@ -326,8 +367,11 @@ def _trusted_queue_receipt_errors(
     if not callable(trusted_queue_verifier):
         return ("NATIVE_QUEUE_VERIFIER_MISSING",)
     try:
+        snapshot = _evidence_snapshot(previous, update)
         if trusted_queue_verifier(previous, update) is not True:
             return ("NATIVE_QUEUE_RECEIPT_REJECTED",)
+        if _evidence_snapshot(previous, update) != snapshot:
+            return ("NATIVE_QUEUE_RECEIPT_CHANGED",)
     except Exception:
         return ("NATIVE_QUEUE_VERIFIER_ERROR",)
     return ()
@@ -467,3 +511,4 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
     if reasons:
         return Decision("HOLD", tuple(dict.fromkeys(reasons)))
     return Decision("PASS_FOR_EXISTING_QUEUE", ())
+
