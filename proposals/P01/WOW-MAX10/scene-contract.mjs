@@ -4,12 +4,13 @@
 import {validateScene} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MODES=new Set(["ECO","BALANCED","MAX","REDUCED"]);
+const validId=x=>typeof x==="string"&&ID.test(x);
 const inside=(root,node)=>!!node&&node.nodeType===1&&root.contains(node);
 function checkEntries(root,items,expected,kind){
   if(!Array.isArray(items)||items.length!==expected)throw Error(kind+"_COUNT");
   const ids=new Set(),routes=new Set(),elements=new Set();
   for(const x of items){
-    if(!ID.test(x?.id)||!ID.test(x?.routeId)||
+    if(!validId(x?.id)||!validId(x?.routeId)||
        !inside(root,x?.element)||ids.has(x.id)||routes.has(x.routeId)||
        elements.has(x.element))
       throw Error(kind+"_IDENTITY_OR_DOM");
@@ -49,12 +50,12 @@ export function shortcutRoute(e,{homeActive=false,searchRoute,fullscreenRoute,es
     /^(INPUT|TEXTAREA|SELECT)$/i.test(e.target?.tagName||"") ||
     e.target?.closest?.('[contenteditable="true"],[role="textbox"]'));
   if(mod&&key==="k"&&!homeActive&&!e.shiftKey&&!edit&&
-     !(e.ctrlKey===true&&e.metaKey===true)&&ID.test(searchRoute))
+     !(e.ctrlKey===true&&e.metaKey===true)&&validId(searchRoute))
     return searchRoute;
   // HOME keeps the approved native fullscreen/escape controls; only palette is hidden.
-  if(!mod&&!e.shiftKey&&key==="f11"&&ID.test(fullscreenRoute))
+  if(!mod&&!e.shiftKey&&key==="f11"&&validId(fullscreenRoute))
     return fullscreenRoute;
-  if(!mod&&!e.shiftKey&&!edit&&key==="escape"&&ID.test(escapeRoute))
+  if(!mod&&!e.shiftKey&&!edit&&key==="escape"&&validId(escapeRoute))
     return escapeRoute;
   return null;
 }
