@@ -133,6 +133,8 @@ function sendAction(action){const c=state.capabilities||{};const job=currentJob(
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
  if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
+ if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
+ if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
  if(state.pending.has(action))return;const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
  const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
