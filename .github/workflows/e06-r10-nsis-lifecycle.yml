@@ -104,8 +104,11 @@ jobs:
               $receipt | Add-Member -NotePropertyName official_webview2_installer_sha256 -NotePropertyValue ((Get-FileHash $w -Algorithm SHA256).Hash.ToLowerInvariant())
               $p=Start-Process -FilePath $w -ArgumentList @('/silent','/install') -Wait -PassThru
               if ($p.ExitCode -ne 0) { throw "MICROSOFT_WEBVIEW2_CI_INSTALL_FAILED:$($p.ExitCode)" }
-              Start-Sleep -Seconds 3
-              if (-not (WebView2Present)) { throw 'WEBVIEW2_RUNTIME_NOT_REGISTERED_AFTER_INSTALL' }
+              # Evergreen installer can complete registration asynchronously after process exit.
+              for ($i=0; $i -lt 12 -and -not (WebView2Present); $i++) {
+                Start-Sleep -Seconds 5
+              }
+              if (-not (WebView2Present)) { throw 'WEBVIEW2_RUNTIME_NOT_REGISTERED_AFTER_OFFICIAL_SIGNED_INSTALL' }
             }
             $receipt | Add-Member -NotePropertyName webview2_ready -NotePropertyValue $true
             Write-Host 'E06_OFFICIAL_WEBVIEW2_RUNTIME_CI_PREREQUISITE_PASS'
