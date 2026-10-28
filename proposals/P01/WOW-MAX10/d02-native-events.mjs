@@ -30,12 +30,13 @@ export function createD02NativeVisualBus(hostPort,fx,coreIds,options={}){
   };
   const onNative=(raw)=>{
     if(detached)return;
-    // The unified secondary scene independently validates this raw native v3 event.
-    for(const fn of [...observers]){try{fn(raw);}catch{/* one panel cannot break D02 */}}
-    const mapped=translateNativeEvent(raw,now());
+    // Admit the ONE genuine native event before notifying ANY visual surface.
+    // A decorative observer must never see forged/stale/replayed host messages.
+    let mapped;
+    try{mapped=translateNativeEvent(raw,now());}catch{return;}
     if(!mapped)return;
     const core=raw.core_id??"HELION";
-    if(!valid.has(core))return;
+    if(typeof core!=="string"||!valid.has(core))return;
     const prior=lastRunSequence.get(mapped.runId);
     if(prior!==undefined && mapped.sequence<=prior)return;
     const old=stateByCore.get(core);
@@ -45,6 +46,8 @@ export function createD02NativeVisualBus(hostPort,fx,coreIds,options={}){
     if(lastRunSequence.size>=64&&!lastRunSequence.has(mapped.runId))
       lastRunSequence.delete(lastRunSequence.keys().next().value);
     lastRunSequence.set(mapped.runId,mapped.sequence);
+    // One validated, monotonic event fans out to the existing secondary scene.
+    for(const fn of [...observers]){try{fn(raw);}catch{/* isolated panel failure */}}
     if(timers.has(core))cancel(timers.get(core));
     const stamp=Object.freeze({runId:mapped.runId,timeMs:mapped.timeMs,sequence:mapped.sequence});
     stateByCore.set(core,stamp);
