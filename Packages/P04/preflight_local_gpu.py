@@ -37,13 +37,26 @@ def inspect(profile: str, gpu_index: int) -> dict:
         "model_license_verified": False,
         "dataset_rights_verified": False,
     }
+    # The installer can call this function directly; argparse validation only
+    # protects the CLI. Reject bad persisted settings before vendor discovery.
+    if not isinstance(profile, str) or profile not in train_qlora.PROFILES:
+        report["errors"].append("GPU_PROFILE_INVALID")
+    if type(gpu_index) is not int or gpu_index < 0:
+        report["errors"].append("GPU_INDEX_INVALID")
+    if report["errors"]:
+        return report
     for package in PACKAGES:
         try:
             version = metadata.version(package)
+            if not isinstance(version, str) or not version.strip():
+                raise ValueError("PACKAGE_VERSION_METADATA_INVALID")
             report["packages"][package] = {"state": "INSTALLED", "version": version}
         except metadata.PackageNotFoundError:
             report["packages"][package] = {"state": "MISSING", "version": None}
             report["errors"].append("PACKAGE_NOT_INSTALLED:" + package)
+        except (ValueError, OSError):
+            report["packages"][package] = {"state": "INVALID", "version": None}
+            report["errors"].append("PACKAGE_METADATA_INVALID:" + package)
 
     if platform.system() != "Windows":
         report["errors"].append("WINDOWS_GPU_HOST_REQUIRED")
@@ -72,7 +85,7 @@ def inspect(profile: str, gpu_index: int) -> dict:
         report["errors"].append(str(exc))
         return report
 
-    if not any(x.startswith("PACKAGE_NOT_INSTALLED") for x in report["errors"]):
+    if not report["errors"]:
         # This proves local package installations, not CUDA runtime functionality.
         try:
             # Match training's single approved UUID before importing CUDA.

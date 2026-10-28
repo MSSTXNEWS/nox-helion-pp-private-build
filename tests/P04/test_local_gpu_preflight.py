@@ -16,6 +16,38 @@ spec.loader.exec_module(probe)
 
 
 class HardwarePreflightContracts(unittest.TestCase):
+    def test_invalid_host_arguments_hold_before_any_dependency_or_gpu_probe(self):
+        for profile, index, reason in ((None, 0, "GPU_PROFILE_INVALID"),
+                                      ([], 0, "GPU_PROFILE_INVALID"),
+                                      ("unknown", 0, "GPU_PROFILE_INVALID"),
+                                      ("ECO", True, "GPU_INDEX_INVALID"),
+                                      ("ECO", -1, "GPU_INDEX_INVALID"),
+                                      ("ECO", "0", "GPU_INDEX_INVALID")):
+            with self.subTest(profile=profile, index=index), patch.object(
+                probe.metadata, "version", side_effect=AssertionError("invalid settings must not probe packages")
+            ), patch.object(probe.train_qlora, "nvidia_smi", side_effect=AssertionError("no GPU process")):
+                result = probe.inspect(profile, index)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertIn(reason, result["errors"])
+
+    def test_broken_installed_metadata_is_reported_not_installed(self):
+        for invalid in (None, "", "  ", 12):
+            with self.subTest(invalid=invalid), patch.object(probe.platform, "system", return_value="Linux"), patch.object(
+                probe.metadata, "version", return_value=invalid
+            ):
+                result = probe.inspect("BALANCED", 0)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["packages"]["torch"]["state"], "INVALID")
+                self.assertIn("PACKAGE_METADATA_INVALID:torch", result["errors"])
+
+    def test_unreadable_metadata_returns_structured_hold(self):
+        with patch.object(probe.platform, "system", return_value="Linux"), patch.object(
+            probe.metadata, "version", side_effect=ValueError("malformed installation metadata")
+        ):
+            result = probe.inspect("BALANCED", 0)
+        self.assertEqual(result["packages"]["torch"]["state"], "INVALID")
+        self.assertIn("PACKAGE_METADATA_INVALID:torch", result["errors"])
+
     def test_non_windows_is_hold_without_running_gpu(self):
         with patch.object(probe.platform, "system", return_value="Linux"), patch.object(
             probe.train_qlora, "nvidia_smi", side_effect=AssertionError("must not launch vendor process")
