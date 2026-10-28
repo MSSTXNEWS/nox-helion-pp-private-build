@@ -29,6 +29,7 @@ class RouteTests(unittest.TestCase):
         self.ports=OwnerTwoPorts(store=self.store,
              native_authorize=lambda scope,route: route in self.permissions,
              rag_index=self.rag,voice_pipeline=self.voice,native_take_audio=take,
+             native_mic_consent=lambda scope, capture_id: True,
              native_store_output_audio=lambda scope,audio:'b'*32,
              native_call_history=lambda scope,n:self.rows[:n],
              owner_ready=lambda route:route in self.ready)

@@ -1,0 +1,31 @@
+{
+  "agent": "/root/a05",
+  "run_id": "ASTRA-R27-A05-20261029-02",
+  "approaches_completed": 2,
+  "planned_approaches": 10,
+  "source_parent": "5cbb41c6c3b1c5ba561cce3f02183278b225e5ff",
+  "task": "fix(p02): admit R17 trusted microphone consent donor against real owner module",
+  "test_result": "46/46 real imported Python unittest executions PASS; six R17 contract scenarios replayed; no hardware",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_sha256": "149fee24b762e6246507bcde68bfe8d78ae1e97f1690287628fd0635216b1236",
+      "post_sha256": "3244884ca68981b34ef55dc9109a9ae149348ba3aac5a93d0ae7ceeb86a922c6",
+      "git_blob": "ab90c355ae94075e3f1b7899be73787e38b23d8b"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "pre_sha256": "8e8c3efb72827339bfb8214c62890dc827af01f9afe7c0d0cbe941bca6b6b966",
+      "post_sha256": "13754524bdc7bdba9a136b885ae3c520b203b997417f49e82592252edbba45ef",
+      "git_blob": "94e268f9ecd820676c84e18b7c25c39a6bd45366"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_consent_r27.py",
+      "pre_sha256": null,
+      "post_sha256": "a7fc5d84b46c4412ced82997695588f5f36ec7d94301e9c6f6671d33fd1dfc35",
+      "git_blob": "2e521d296968e331abb39580ea82631ea74041de"
+    }
+  ],
+  "native_hardware": "NOT_RUN",
+  "no_final_integration": true
+}
