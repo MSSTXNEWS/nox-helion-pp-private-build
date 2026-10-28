@@ -15,12 +15,16 @@ def example():
     c = dict(sourceCommit=g.BASE_COMMIT, sourceTree=g.BASE_TREE, owner3DonorHead=g.DONOR_OWNER3_HEAD,
              sessionTrusted=True, hostQueueAvailable=True, explicitUserDownloadConsent=True,
              verifiedPrerequisites={"ollama": True},
-             nativeMeasuredHardware={"attested": True, "freeDiskBytes": 900000, "vramBytes": 900000})
+             nativeMeasuredHardware={"attested": True, "freeDiskBytes": 900000, "vramBytes": 900000},
+             nativeSourceLock={"attested": True, "verifiedRawPartCount": 3,
+                               "verifiedExtractedMemberCount": 729,
+                               "ownerReceiptSha256": "a"*64,
+                               "hostSourceReceiptSha256": "b"*64})
     return e, c
 
 
 class Admission(unittest.TestCase):
-    def assertHold(self, e, c, key, attestor=lambda _e: True):
+    def assertHold(self, e, c, key, attestor=lambda _e, _c: True):
         x = g.admit_for_existing_downloader(e, c, attestor)
         self.assertEqual(x.status, "HOLD")
         self.assertIn(key, x.reasons)
@@ -74,10 +78,10 @@ class Admission(unittest.TestCase):
         e,c=example(); e["ownerRightsReceiptSha256"]=None; self.assertHold(e,c,"OWNER_RIGHTS_RECEIPT_MISSING")
 
     def test_15_reject_verifier(self):
-        e,c=example(); self.assertHold(e,c,"OWNER_ATTESTATION_REJECTED",lambda _e: False)
+        e,c=example(); self.assertHold(e,c,"OWNER_ATTESTATION_REJECTED",lambda _e, _c: False)
 
     def test_16_verifier_exception(self):
-        e,c=example(); self.assertHold(e,c,"OWNER_ATTESTATION_ERROR",lambda _e: 1/0)
+        e,c=example(); self.assertHold(e,c,"OWNER_ATTESTATION_ERROR",lambda _e, _c: 1/0)
 
     def test_17_ui_vram_not_allowed(self):
         e,c=example(); c["nativeMeasuredHardware"]={"vramBytes":900000, "freeDiskBytes":900000}
@@ -99,7 +103,7 @@ class Admission(unittest.TestCase):
         e,c=example(); c["verifiedPrerequisites"]["ollama"]="installed"; self.assertHold(e,c,"PREREQUISITE_OLLAMA_UNVERIFIED")
 
     def test_23_pass_only_for_existing_queue_after_trusted_attestor(self):
-        e,c=example(); x=g.admit_for_existing_downloader(e,c,lambda _e: True)
+        e,c=example(); x=g.admit_for_existing_downloader(e,c,lambda _e, _c: True)
         self.assertEqual(x.status,"PASS_FOR_EXISTING_QUEUE")
         self.assertEqual(x.existing_route,"EnqueueVerifiedPullAsync")
 
@@ -168,7 +172,7 @@ class Admission(unittest.TestCase):
                                 localGgufPath="C:/model/verified.gguf",nativeGgufMagicVerified=True,
                                 nativeLocalFileSha256="a"*64)
         c["verifiedPrerequisites"]={"python":True,"git":True}
-        self.assertEqual(g.admit_for_existing_downloader(e,c,lambda _:True).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.admit_for_existing_downloader(e,c,lambda _e,_c:True).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_69_training_all_dependencies(self):
         self.assertEqual(g.prerequisite_gates(dict.fromkeys(
@@ -186,9 +190,10 @@ def queue_fixture():
     old = dict(attemptId="attempt-001", queueJobId="original-p03-job-001",
                queueJobReceiptSha256="a"*64, manifestSha256="b"*64,
                expectedArtifactSha256="d"*64, totalBytes=100,
-               completedBytes=60, state="RUNNING")
+               completedBytes=60, state="RUNNING", nativeHostId="owner6-host-01",
+               queueOwnerSessionId="native-session-001",eventSequence=10)
     new = dict(old)
-    new.update(completedBytes=80)
+    new.update(completedBytes=80,eventSequence=11)
     return old, new
 
 
@@ -348,7 +353,7 @@ def retry_fixture():
     old,new = queue_fixture()
     old.update(state="FAILED", nativeFailureAttested=True, failureReceiptSha256="f"*64)
     new.update(state="QUEUED", attemptId="attempt-002", queueJobId="original-p03-job-002",
-               queueJobReceiptSha256="c"*64, completedBytes=0)
+               queueJobReceiptSha256="c"*64, completedBytes=0,eventSequence=1)
     return old,new
 
 class TrustedNativeReceiptRegressions(unittest.TestCase):
@@ -397,6 +402,90 @@ class TrustedNativeReceiptRegressions(unittest.TestCase):
             return a["queueJobId"]==b["queueJobId"] and b["completedBytes"]==80
         self.assertEqual(g.progress_gate(old,new,native_stub).status,"PASS_FOR_EXISTING_QUEUE")
         self.assertEqual(observed,[("original-p03-job-001","original-p03-job-001",60,80)])
+
+class R05NativeBoundaryRegressions(unittest.TestCase):
+    # These are pure synthetic fixtures; they are not native host attestations.
+    def test_77_source_lock_parts_missing_hold(self):
+        e,c=example(); c["nativeSourceLock"]["verifiedRawPartCount"]=2
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED",got.reasons)
+
+    def test_78_source_lock_unattested_hold(self):
+        e,c=example(); c["nativeSourceLock"].pop("attested")
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED",got.reasons)
+
+    def test_79_source_lock_host_receipt_missing_hold(self):
+        e,c=example(); c["nativeSourceLock"]["hostSourceReceiptSha256"]=None
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED",got.reasons)
+
+    def test_80_attestor_rejects_context_mismatch(self):
+        e,c=example()
+        def native_boundary(ev,ctx):
+            return ctx["nativeMeasuredHardware"]["freeDiskBytes"] == 123
+        got=g.admit_for_existing_downloader(e,c,native_boundary)
+        self.assertIn("OWNER_ATTESTATION_REJECTED",got.reasons)
+
+    def test_81_legacy_attestor_cannot_skip_context(self):
+        e,c=example()
+        got=g.admit_for_existing_downloader(e,c,lambda ev:True)
+        self.assertIn("OWNER_ATTESTATION_ERROR",got.reasons)
+
+    def test_82_disallow_private_license_url(self):
+        e,c=example(); e["licenseEvidenceUrl"]="https://127.0.0.1/license"
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("LICENSE_EVIDENCE_MISSING",got.reasons)
+
+    def test_83_disallow_internal_hostname(self):
+        e,c=example(); e["licenseEvidenceUrl"]="https://test.local/license"
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("LICENSE_EVIDENCE_MISSING",got.reasons)
+
+    def test_84_gguf_relative_path_hold(self):
+        e,c=example(); e.update(kind="gguf",existingRoute="EnqueueVerifiedGgufAsync",
+           localGgufPath="../verified.gguf",nativeGgufMagicVerified=True,
+           nativeLocalFileSha256="a"*64)
+        c["verifiedPrerequisites"]={"python":True,"git":True}
+        got=g.admit_for_existing_downloader(e,c,lambda ev,ctx:True)
+        self.assertIn("LOCAL_GGUF_PATH_REQUIRED",got.reasons)
+
+    def test_85_replayed_native_progress_sequence_hold(self):
+        old,new=queue_fixture();new["eventSequence"]=old["eventSequence"]
+        got=g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
+        self.assertIn("NON_MONOTONIC_NATIVE_EVENT_SEQUENCE",got.reasons)
+
+    def test_86_foreign_native_session_progress_hold(self):
+        old,new=queue_fixture();new["queueOwnerSessionId"]="other-session"
+        got=g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
+        self.assertIn("QUEUE_NATIVE_HOST_OR_SESSION_DRIFT",got.reasons)
+
+    def test_87_retry_preserves_native_session(self):
+        old,new=retry_fixture();new["nativeHostId"]="foreign-host"
+        got=g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True,
+           trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
+        self.assertIn("RETRY_NATIVE_SESSION_MISMATCH",got.reasons)
+
+    def test_88_retry_sequence_starts_one(self):
+        old,new=retry_fixture();new["eventSequence"]=25
+        got=g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True,
+           trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
+        self.assertIn("RETRY_SEQUENCE_NOT_RESET",got.reasons)
+
+    def test_89_untrusted_control_char_queue_id_hold(self):
+        old,new=queue_fixture();new["queueJobId"]="original\njob"
+        got=g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
+        self.assertIn("QUEUE_JOB_ID_DRIFT_OR_MISSING",got.reasons)
+
+    def test_90_good_native_context_synthetic_pass_still_not_install(self):
+        e,c=example(); captured=[]
+        def local_fixture(ev,ctx):
+            captured.append((ev["modelTag"],ctx["nativeSourceLock"]["verifiedRawPartCount"]))
+            return True
+        got=g.admit_for_existing_downloader(e,c,local_fixture)
+        self.assertEqual(got.status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(captured,[("qwen3:0.6b",3)])
+        self.assertFalse(hasattr(got,"installed"))
 
 if __name__ == "__main__":
     unittest.main()

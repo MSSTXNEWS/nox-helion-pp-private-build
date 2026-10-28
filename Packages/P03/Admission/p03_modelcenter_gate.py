@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, Any
 import re
+import ipaddress
+import ntpath
 from urllib.parse import urlsplit
 
 BASE_COMMIT = "0b3a7d435be735148d64171deb9027093a89646e"
@@ -61,8 +63,18 @@ def _https_url(s: Any) -> bool:
         return False
     try:
         u = urlsplit(s)
-        return (u.scheme == "https" and bool(u.hostname) and not u.username
-                and not u.password and u.port in (None, 443) and not u.fragment)
+        hostname = u.hostname
+        if not (u.scheme == "https" and hostname and not u.username
+                and not u.password and u.port in (None, 443) and not u.fragment):
+            return False
+        # Do not forward local/network-internal evidence URLs into the native
+        # license review system. This is defense in depth; it does no fetching.
+        if hostname == "localhost" or hostname.endswith((".localhost", ".local", ".internal", ".")):
+            return False
+        try:
+            return ipaddress.ip_address(hostname).is_global
+        except ValueError:
+            return bool(re.fullmatch(r"[A-Za-z0-9.-]+", hostname))
     except ValueError:
         return False
 
@@ -95,12 +107,15 @@ def prerequisite_gates(facts: Mapping[str, Any], role: str) -> tuple[str, ...]:
 
 def admit_for_existing_downloader(
     evidence: Mapping[str, Any], context: Mapping[str, Any],
-    trusted_attestor: Callable[[Mapping[str, Any]], bool] | None,
+    trusted_attestor: Callable[[Mapping[str, Any], Mapping[str, Any]], bool] | None,
 ) -> Decision:
     """Return route admission only, never initiate download or model install.
 
-    Attestor MUST be E06's original owner-verified native bridge. Without one
-    supplied JSON fields are not considered license/hardware/source proof.
+    Attestor MUST be E06's original owner-verified native bridge, and MUST
+    independently bind both candidate artifact evidence AND measured context to
+    the SAME native session and immutable SourceLock. No one-argument attestor
+    compatibility fallback: it would silently skip context/source verification.
+    Supplied JSON by itself is NEVER license/hardware/source proof.
     """
     reasons: list[str] = []
     kind = evidence.get("kind")
@@ -110,6 +125,14 @@ def admit_for_existing_downloader(
         reasons.append("FROZEN_SOURCELOCK_MISMATCH")
     if context.get("owner3DonorHead") != DONOR_OWNER3_HEAD:
         reasons.append("OWNER3_DONOR_DRIFT")
+    lock = context.get("nativeSourceLock")
+    if (not isinstance(lock, Mapping)
+            or lock.get("attested") is not True
+            or lock.get("verifiedRawPartCount") != 3
+            or lock.get("verifiedExtractedMemberCount") != 729
+            or not _sha(lock.get("ownerReceiptSha256"))
+            or not _sha(lock.get("hostSourceReceiptSha256"))):
+        reasons.append("CANONICAL_ORIGINAL_SOURCELOCK_UNVERIFIED")
     if context.get("sessionTrusted") is not True:
         reasons.append("UNTRUSTED_NATIVE_SESSION")
     if context.get("hostQueueAvailable") is not True:
@@ -134,7 +157,7 @@ def admit_for_existing_downloader(
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
         try:
-            if trusted_attestor(evidence) is not True:
+            if trusted_attestor(evidence, context) is not True:
                 reasons.append("OWNER_ATTESTATION_REJECTED")
         except Exception:
             reasons.append("OWNER_ATTESTATION_ERROR")
@@ -166,7 +189,15 @@ def admit_for_existing_downloader(
     elif kind == "gguf":
         if evidence.get("existingRoute") != "EnqueueVerifiedGgufAsync":
             reasons.append("WRONG_OR_NEW_DOWNLOADER_ROUTE")
-        if not isinstance(evidence.get("localGgufPath"), str) or not evidence["localGgufPath"].lower().endswith(".gguf"):
+        local = evidence.get("localGgufPath")
+        # Windows-host absolute, local-disk path only. The native queue alone
+        # resolves it and checks ACL/reparse points + GGUF bytes; this is syntax
+        # screening, NOT a second filesystem importer or proof of file safety.
+        if not (isinstance(local, str) and local.lower().endswith(".gguf")
+                and ntpath.isabs(local) and not local.startswith(("\\\\", "//"))
+                and not any(ord(c) < 32 for c in local)
+                and ".." not in local.replace("/", "\\").split("\\")
+                and not local.startswith(("https:", "file:"))):
             reasons.append("LOCAL_GGUF_PATH_REQUIRED")
         if evidence.get("nativeGgufMagicVerified") is not True:
             reasons.append("GGUF_NATIVE_MAGIC_UNVERIFIED")
@@ -204,7 +235,8 @@ _QUEUE_TRANSITIONS = {
 
 
 def _nonempty_id(s: Any) -> bool:
-    return isinstance(s, str) and bool(s.strip()) and s == s.strip() and len(s) <= 200
+    return (isinstance(s, str) and bool(s.strip()) and s == s.strip()
+            and len(s) <= 200 and all(32 <= ord(c) < 127 for c in s))
 
 
 def _queue_identity_errors(previous: Mapping[str, Any], update: Mapping[str, Any]) -> list[str]:
@@ -219,6 +251,13 @@ def _queue_identity_errors(previous: Mapping[str, Any], update: Mapping[str, Any
         if not (_sha(previous.get(key)) and previous.get(key) == update.get(key)):
             reasons.append("QUEUE_JOB_PROVENANCE_DRIFT_OR_MISSING")
             break
+    for key in ("nativeHostId", "queueOwnerSessionId"):
+        if not (_nonempty_id(previous.get(key)) and previous.get(key) == update.get(key)):
+            reasons.append("QUEUE_NATIVE_HOST_OR_SESSION_DRIFT")
+            break
+    seq_before, seq_after = previous.get("eventSequence"), update.get("eventSequence")
+    if not (_positive(seq_before) and _positive(seq_after) and seq_after > seq_before):
+        reasons.append("NON_MONOTONIC_NATIVE_EVENT_SEQUENCE")
     return reasons
 
 
@@ -326,6 +365,12 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
         if not (_sha(previous.get(key)) and previous.get(key) == new_job.get(key)):
             reasons.append("RETRY_ARTIFACT_IDENTITY_DRIFT")
             break
+    for key in ("nativeHostId", "queueOwnerSessionId"):
+        if not (_nonempty_id(previous.get(key)) and previous.get(key) == new_job.get(key)):
+            reasons.append("RETRY_NATIVE_SESSION_MISMATCH")
+            break
+    if new_job.get("eventSequence") != 1 or not _positive(previous.get("eventSequence")):
+        reasons.append("RETRY_SEQUENCE_NOT_RESET")
     if not (_positive(previous.get("totalBytes"))
             and previous.get("totalBytes") == new_job.get("totalBytes")
             and type(new_job.get("completedBytes")) is int
