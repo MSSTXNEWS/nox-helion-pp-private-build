@@ -568,5 +568,153 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(published, [])
 
 
+    def test_47_owner2_missing_mandatory_route_rolls_back(self):
+        class PartialP02:
+            def register(_, host, *, receipt):
+                host.bind("helion.chat", BoundPort(
+                    lambda s, p: {}, lambda: True, receipt, 2))
+                return frozenset({"helion.chat"})
+        with self.assertRaises(G2Hold):
+            self.bind(p02=PartialP02())
+        self.assertEqual(self.host.ports, {})
+
+    def test_48_owner2_forged_receipt_rolls_back(self):
+        real = self.p02
+        class ForgedP02:
+            def register(_, host, *, receipt):
+                wired = real.register(host, receipt=receipt)
+                port = host.ports["helion.chat"]
+                host.ports["helion.chat"] = BoundPort(
+                    port.call, port.available, "f" * 64, 2)
+                return wired
+        with self.assertRaises(G2Hold):
+            self.bind(p02=ForgedP02())
+        self.assertEqual(self.host.ports, {})
+
+    def test_49_owner3_missing_mandatory_route_rolls_back(self):
+        class PartialP03:
+            def register(_, host, port_type, *, receipt):
+                host.bind("models.catalog", port_type(
+                    lambda s, p: {}, lambda: True, receipt, 3))
+                return frozenset({"models.catalog"})
+        with self.assertRaises(G2Hold):
+            self.bind(p03=PartialP03())
+        self.assertEqual(self.host.ports, {})
+
+    def test_50_owner3_forged_receipt_rolls_back(self):
+        real = self.p03
+        class ForgedP03:
+            def register(_, host, port_type, *, receipt):
+                wired = real.register(host, port_type, receipt=receipt)
+                port = host.ports["models.catalog"]
+                host.ports["models.catalog"] = BoundPort(
+                    port.call, port.available, "e" * 64, 3)
+                return wired
+        with self.assertRaises(G2Hold):
+            self.bind(p03=ForgedP03())
+        self.assertEqual(self.host.ports, {})
+
+    def test_51_unbound_claimed_owner_route_is_hold(self):
+        real = self.p02
+        class ExtraP02:
+            def register(_, host, *, receipt):
+                return real.register(host, receipt=receipt) | {"route.not.real"}
+        with self.assertRaises(G2Hold):
+            self.bind(p02=ExtraP02())
+        self.assertEqual(self.host.ports, {})
+
+    def test_52_orphan_vram_used_is_not_live(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.vram.used_bytes", "Value": 4096, "Status": "LIVE",
+            "Source": "OWNER5_GPU", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.vram.used_bytes"]["value"])
+        self.assertIsNone(got["gpu.vram.total_bytes"]["value"])
+
+    def test_53_orphan_vram_total_is_not_live(self):
+        self.e05_fake.sensors = [{
+            "Key": "gpu.vram.total_bytes", "Value": 8192, "Status": "LIVE",
+            "Source": "OWNER5_GPU", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.vram.used_bytes"]["value"])
+        self.assertIsNone(got["gpu.vram.total_bytes"]["value"])
+
+    def test_54_fractional_vram_bytes_are_not_live(self):
+        self.e05_fake.sensors = [
+            {"Key": "gpu.vram.used_bytes", "Value": 4.5, "Status": "LIVE",
+             "Source": "OWNER5_GPU", "ObservedAtUtc": utc()},
+            {"Key": "gpu.vram.total_bytes", "Value": 8192, "Status": "LIVE",
+             "Source": "OWNER5_GPU", "ObservedAtUtc": utc()}]
+        self.bind()
+        got = self.host.execute("system.telemetry", {}, self.session)["sensors"]
+        self.assertIsNone(got["gpu.vram.used_bytes"]["value"])
+        self.assertIsNone(got["gpu.vram.total_bytes"]["value"])
+
+    def test_55_nontext_event_message_is_denied(self):
+        event = verified_event()
+        event["message"] = {"price": 123}
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+    def test_56_unverified_event_source_revoked_before_publish(self):
+        state = iter([True, False])
+        outgoing = []
+        event = verified_event()
+        event["evidence_verified"] = False
+        with self.assertRaises(G2Hold):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: next(state),
+                existing_publish=lambda e: (outgoing.append(e) or True))
+        self.assertEqual(outgoing, [])
+
+    def test_57_sip_native_provider_revocation_prevents_readiness(self):
+        class Voice:
+            online = True
+            def available(self, route):
+                return True
+            def verified_sip(self):
+                return self.online
+            def dial_with_native_quote(self, session, payload):
+                raise AssertionError("No paid call in a component test")
+        voice = Voice()
+        self.host.native_approve = lambda *_args: True
+        binder = G2OneHostBinder(
+            self.host, BoundPort, existing_p02=self.p02,
+            existing_p03=self.p03, e05=self.e05, mobile=self.mobile,
+            existing_p02_voice=voice, source_lock_sha256=SOURCE,
+            owner_receipts_sha256=OWNER_SHA,
+            verify_original_preimages=lambda *_args: True,
+            existing_host_mutation_lock=self.registry_lock)
+        binder.bind()
+        self.assertIn("calls.dial", self.host.ports)
+        self.assertTrue(self.host.ports["calls.dial"].available())
+        voice.online = False
+        self.assertFalse(self.host.ports["calls.dial"].available())
+
+    def test_58_blank_feed_source_is_not_verified(self):
+        original = self.e05_fake.snapshot
+        def fake(session):
+            raw = original(session)
+            raw["Tiles"][0]["Source"] = "   "
+            return raw
+        self.e05_fake.snapshot = fake
+        self.bind()
+        got = self.host.execute("space.news", {}, self.session)
+        self.assertEqual(got["status"], "N_D")
+        self.assertIsNone(got["source"])
+
+    def test_59_unbounded_event_message_is_denied(self):
+        event = verified_event()
+        event["message"] = "X" * 481
+        with self.assertRaises(G2Denied):
+            relay_existing_events_v3(event, run_id=G2_RUN,
+                trusted_owner=lambda: True, trusted_evidence=lambda _: True,
+                existing_publish=lambda _: True)
+
+
 if __name__ == "__main__":
     unittest.main()
