@@ -24,6 +24,8 @@ if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_STAGE4_FAILED' }
 if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_STAGE3_FAILED' }
 if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_STAGE2_FAILED' }
 if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_PINNED_P05_FIX_FAILED' }
+python (Join-Path $PSScriptRoot 'restore_original_assets.py') $root
+if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_ORIGINAL_D02_ASSET_SHA_GATE_FAILED' }
 $project = Join-Path $root 'NOX.P01.Shell.csproj'
 dotnet restore $project --nologo
 if ($LASTEXITCODE -ne 0) { throw 'NOX_R08_DOTNET_RESTORE_FAILED' }
