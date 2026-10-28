@@ -107,6 +107,10 @@ class ExistingE05Projection:
         if not self.available(route):
             raise G2Hold("Existing owner5 telemetry/feed is not ready")
         raw = self.owner.snapshot(session)
+        # Owner5 approval may be revoked while collecting the snapshot.
+        # Never publish previously-LIVE feed/sensor data after that revoke.
+        if not self.available(route):
+            raise G2Hold("Existing owner5 source revoked during snapshot")
         now = self.clock()
         if (not isinstance(raw, dict) or raw.get("Schema") != "NOX-E05-READONLY-v1"
                 or raw.get("RunId") != self.run_id or raw.get("Access") != "READ_ONLY"
