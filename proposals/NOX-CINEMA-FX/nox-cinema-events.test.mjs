@@ -6,8 +6,10 @@ function ev(type,sequence=1,pkg="P04",action="training.start"){
   return {schema:"NOX-INSTALLER-EVENT-v3",run_id:"RUN-001",
     event_id:"EVENT-"+sequence,event_type:type,event_sequence:sequence,
     task_id:"NIP01-26",package_id:pkg,action_id:action,
-    state:"RUNNING",timestamp_utc:new Date(t0).toISOString(),
-    source:"P04.QLoRA",message:"",evidence_verified:false};
+    state:type==="task.completed"?"COMPLETED":type==="task.failed"?"FAILED":
+      type==="model.stopped"?"STOPPED":"RUNNING",
+    timestamp_utc:new Date(t0).toISOString(),
+    source:"P04.QLoRA",message:"",evidence_verified:true};
 }
 test("documented events map to truthful animation only",()=>{
   assert.equal(visualEvent(ev("training.step"),t0).state,"training");
@@ -53,4 +55,43 @@ test("visual updates do not mutate original model records",()=>{
   handle(original);detach();
   assert.equal(JSON.stringify(original),before);
   assert.deepEqual(changes,["training"]);
+});
+
+test("terminal native-state contradiction fails closed",()=>{
+  assert.equal(visualEvent({...ev("task.completed"),state:"FAILED"},t0),null);
+  assert.equal(visualEvent({...ev("task.failed"),state:"COMPLETED"},t0),null);
+  assert.equal(visualEvent({...ev("model.stopped"),state:"RUNNING"},t0),null);
+});
+test("unverified native terminal cannot assert success or failure",()=>{
+  assert.equal(visualEvent({...ev("task.completed"),evidence_verified:false},t0),null);
+  assert.equal(visualEvent({...ev("task.failed"),evidence_verified:false},t0),null);
+});
+test("running-only events cannot resurrect a failed/completed run",()=>{
+  assert.equal(visualEvent({...ev("task.progress"),state:"FAILED"},t0),null);
+  assert.equal(visualEvent({...ev("training.step"),state:"COMPLETED"},t0),null);
+});
+test("verified coherent success/error remain visible",()=>{
+  assert.equal(visualEvent(ev("task.completed"),t0)?.state,"success");
+  assert.equal(visualEvent(ev("task.failed"),t0)?.state,"error");
+});
+test("higher sequence late progress never overrides completion",()=>{
+  let send;const states=[];
+  const detach=attachCinemaToNativeEvents({setState:state=>states.push(state)},
+    fn=>{send=fn;return()=>{};},{now:()=>t0});
+  send(ev("task.completed",2));send(ev("task.progress",3));detach();
+  assert.deepEqual(states,["success"]);
+});
+test("verified failure locks out later contradictory success",()=>{
+  let send;const states=[];
+  const detach=attachCinemaToNativeEvents({setState:state=>states.push(state)},
+    fn=>{send=fn;return()=>{};},{now:()=>t0});
+  send(ev("task.failed",2));send(ev("task.completed",3));detach();
+  assert.deepEqual(states,["error"]);
+});
+test("terminal cache is isolated by RunID",()=>{
+  let send;const states=[];
+  const detach=attachCinemaToNativeEvents({setState:(state,run)=>states.push([state,run])},
+    fn=>{send=fn;return()=>{};},{now:()=>t0});
+  send(ev("task.completed",2));send({...ev("task.progress",3),run_id:"RUN-002"});detach();
+  assert.deepEqual(states,[["success","RUN-001"],["training","RUN-002"]]);
 });

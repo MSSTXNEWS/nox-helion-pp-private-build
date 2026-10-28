@@ -22,30 +22,44 @@ export function visualEvent(raw,now=Date.now()){
   const when=Date.parse(raw.timestamp_utc);
   // Ignore stale/replayed and future events, but never infer a success from timeout.
   if(!Number.isFinite(when)||when>now+5000||now-when>30000)return null;
+  // R11: native terminal event_type cannot contradict state or evidence.
+  const nativeState=raw.state.toUpperCase();
+  const active=new Set(["RUNNING","STARTED","IN_PROGRESS","PROGRESS"]);
+  const success=new Set(["COMPLETED","SUCCESS","SUCCEEDED"]);
+  const failed=new Set(["FAILED","ERROR"]);
+  const stopped=new Set(["STOPPED","CANCELLED","CANCELED"]);
+  const terminal=raw.event_type==="task.completed"||
+    raw.event_type==="task.failed"||raw.event_type==="model.stopped";
+  if(terminal&&raw.evidence_verified!==true)return null;
   let visual=null;
   switch(raw.event_type){
     case "training.step":
     case "checkpoint.saved":
-      if(raw.package_id==="P04") visual="training";
+      if(raw.package_id==="P04"&&active.has(nativeState)) visual="training";
       break;
     case "model.stopped":
-      if(raw.package_id==="P04") visual="stopped";
+      if(raw.package_id==="P04"&&stopped.has(nativeState)) visual="stopped";
       break;
     case "task.started":
     case "task.progress":
+      if(!active.has(nativeState))break;
       if(raw.package_id==="P03"&&/^(pull|download|model\.)/.test(raw.action_id))
         visual="loading";
       if(raw.package_id==="P04"&&/^(training|qlora|lora)/.test(raw.action_id))
         visual="training";
       break;
-    case "task.completed":visual="success";break;
-    case "task.failed":visual="error";break;
-    // gpu.sample is a sensor measurement, NEVER a statement that a model trains.
+    case "task.completed":
+      if(success.has(nativeState))visual="success";
+      break;
+    case "task.failed":
+      if(failed.has(nativeState))visual="error";
+      break;
+    // GPU sensor samples never imply learning.
     default:break;
   }
   if(!visual)return null;
   return Object.freeze({state:visual,runId:raw.run_id,
-    sequence:raw.event_sequence,timeMs:when,coreId:null});
+    sequence:raw.event_sequence,timeMs:when,coreId:null,terminal});
 }
 export function attachCinemaToNativeEvents(scene,subscribeNative,{
   now=()=>Date.now()
@@ -58,12 +72,12 @@ export function attachCinemaToNativeEvents(scene,subscribeNative,{
     if(closed)return;
     const visual=visualEvent(raw,now());
     if(!visual)return;
-    const last=latestByRun.get(visual.runId)||0;
-    if(visual.sequence<=last)return;
+    const last=latestByRun.get(visual.runId);
+    if(last&&(visual.sequence<=last.sequence||last.terminal))return;
     // No unbounded historical run cache: only 40 active/recent entries retained.
     if(latestByRun.size>=40 && !latestByRun.has(visual.runId))
       latestByRun.delete(latestByRun.keys().next().value);
-    latestByRun.set(visual.runId,visual.sequence);
+    latestByRun.set(visual.runId,{sequence:visual.sequence,terminal:visual.terminal});
     scene.setState(visual.state,visual.runId);
   });
   if(typeof un!=="function")throw Error("NOX_CINEMA_NEEDS_HOST_UNSUBSCRIBE");
