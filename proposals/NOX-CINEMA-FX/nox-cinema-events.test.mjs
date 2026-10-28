@@ -37,7 +37,7 @@ test("stale, future, incorrect schema and incomplete v3 are rejected",()=>{
 });
 test("native bridge deduplicates events by run sequence and unsubscribes",()=>{
   let handler,closed=false;const changes=[];
-  const detach=attachCinemaToNativeEvents({setState:(state,run)=>changes.push([state,run])},
+  const detach=attachCinemaToNativeEvents({setState:(state,run)=>{changes.push([state,run]);return true;}},
     fn=>{handler=fn;return()=>{closed=true;};},{now:()=>t0});
   handler(ev("training.step",2));
   handler(ev("task.failed",1));
@@ -49,7 +49,7 @@ test("native bridge deduplicates events by run sequence and unsubscribes",()=>{
 });
 test("visual updates do not mutate original model records",()=>{
   let handle;const changes=[];
-  const detach=attachCinemaToNativeEvents({setState:s=>changes.push(s)},
+  const detach=attachCinemaToNativeEvents({setState:s=>{changes.push(s);return true;}},
     callback=>{handle=callback;return()=>{};},{now:()=>t0});
   const original=ev("training.step"),before=JSON.stringify(original);
   handle(original);detach();
@@ -76,21 +76,21 @@ test("verified coherent success/error remain visible",()=>{
 });
 test("higher sequence late progress never overrides completion",()=>{
   let send;const states=[];
-  const detach=attachCinemaToNativeEvents({setState:state=>states.push(state)},
+  const detach=attachCinemaToNativeEvents({setState:state=>{states.push(state);return true;}},
     fn=>{send=fn;return()=>{};},{now:()=>t0});
   send(ev("task.completed",2));send(ev("task.progress",3));detach();
   assert.deepEqual(states,["success"]);
 });
 test("verified failure locks out later contradictory success",()=>{
   let send;const states=[];
-  const detach=attachCinemaToNativeEvents({setState:state=>states.push(state)},
+  const detach=attachCinemaToNativeEvents({setState:state=>{states.push(state);return true;}},
     fn=>{send=fn;return()=>{};},{now:()=>t0});
   send(ev("task.failed",2));send(ev("task.completed",3));detach();
   assert.deepEqual(states,["error"]);
 });
 test("terminal cache is isolated by RunID",()=>{
   let send;const states=[];
-  const detach=attachCinemaToNativeEvents({setState:(state,run)=>states.push([state,run])},
+  const detach=attachCinemaToNativeEvents({setState:(state,run)=>{states.push([state,run]);return true;}},
     fn=>{send=fn;return()=>{};},{now:()=>t0});
   send(ev("task.completed",2));send({...ev("task.progress",3),run_id:"RUN-002"});detach();
   assert.deepEqual(states,[["success","RUN-001"],["training","RUN-002"]]);
@@ -138,4 +138,43 @@ test("R12-10 rejected 41st run does not evict old terminal result",()=>{
  ok=false;cb({...ev("task.progress",41,"P03","model.pull"),run_id:"RUN-41"});
  ok=true;cb({...ev("task.progress",42,"P03","model.pull"),run_id:"RUN-1"});
  off();assert.equal(out.length,40);
+});
+
+
+/* R13: strictly TRUE, synchronous owner acknowledgement is required before sequence commit. */
+for(const [label,ack] of [
+ ["01-undefined",undefined],["02-null",null],["03-zero",0],["04-false",false],
+ ["05-Promise",Promise.resolve(true)],["06-object",{accepted:true}]
+]){
+ test("R13-"+label+" ACK must not consume sequence",()=>{
+  let send,yes=false,visible=[];
+  const off=attachCinemaToNativeEvents({setState:state=>{
+   if(!yes)return ack;visible.push(state);return true;
+  }},fn=>{send=fn;return()=>{};},{now:()=>t0});
+  send(ev("task.progress",1,"P03","model.pull"));
+  yes=true;send(ev("task.progress",1,"P03","model.pull"));off();
+  assert.deepEqual(visible,["loading"]);
+ });
+}
+test("R13-07 explicit true ACK commits exactly once",()=>{
+ let send,visible=[];const off=attachCinemaToNativeEvents({setState:s=>{visible.push(s);return true;}},fn=>{send=fn;return()=>{};},{now:()=>t0});
+ send(ev("task.progress",1,"P03","model.pull"));send(ev("task.progress",1,"P03","model.pull"));off();
+ assert.deepEqual(visible,["loading"]);
+});
+test("R13-08 undefined terminal ACK cannot lock later progress",()=>{
+ let send,visible=[];const off=attachCinemaToNativeEvents({setState:s=>{if(s==="success")return undefined;visible.push(s);return true;}},fn=>{send=fn;return()=>{};},{now:()=>t0});
+ send(ev("task.completed",1));send(ev("task.progress",2,"P03","model.pull"));off();
+ assert.deepEqual(visible,["loading"]);
+});
+test("R13-09 render exception retains retry sequence",()=>{
+ let send,bad=true,visible=[];const off=attachCinemaToNativeEvents({setState:s=>{if(bad)throw Error("RENDER");visible.push(s);return true;}},fn=>{send=fn;return()=>{};},{now:()=>t0});
+ send(ev("task.completed",1));bad=false;send(ev("task.completed",1));off();
+ assert.deepEqual(visible,["success"]);
+});
+test("R13-10 unacknowledged 41st run cannot evict prior terminal",()=>{
+ let send,yes=true,visible=[];const off=attachCinemaToNativeEvents({setState:s=>{if(!yes)return undefined;visible.push(s);return true;}},fn=>{send=fn;return()=>{};},{now:()=>t0});
+ for(let i=1;i<=40;i++)send({...ev("task.completed",i),run_id:"RUN-"+i});
+ yes=false;send({...ev("task.progress",41,"P03","model.pull"),run_id:"RUN-41"});
+ yes=true;send({...ev("task.progress",42,"P03","model.pull"),run_id:"RUN-1"});
+ off();assert.equal(visible.length,40);
 });

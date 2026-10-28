@@ -78,7 +78,7 @@ export function attachCinemaToNativeEvents(scene,subscribeNative,{
     const last=latestByRun.get(visual.runId);
     if(last&&(visual.sequence<=last.sequence||last.terminal))return;
     // R12: an event is consumed only after the existing D02 renderer accepts it.
-    try{if(scene.setState(visual.state,visual.runId)===false)return;}
+    try{if(scene.setState(visual.state,visual.runId)!==true)return;}
     catch(_){return;}
     // No eviction on rejected/failed render; 40-entry bound is unchanged.
     if(latestByRun.size>=40&&!latestByRun.has(visual.runId))
