@@ -151,6 +151,27 @@ class IngressTests(unittest.TestCase):
             self.router.handle(payload)
         self.assertFalse(self.provider.seen)
 
+    def test_deep_json_rejected_even_when_host_parser_accepts_it(self):
+        # Some CPython JSON parsers accept 1300 nested arrays; do not rely
+        # on RecursionError or on the host's sys.getrecursionlimit().
+        deep = b"[" * 1300 + b"0" + b"]" * 1300
+        with self.assertRaisesRegex(ProtocolHold, "NATIVE_FRAME_INVALID_JSON"):
+            self.router.handle(deep)
+        self.assertEqual(self.provider.seen, [])
+
+    def test_brackets_inside_json_strings_are_not_nesting(self):
+        text = "{[[]]}" * 300
+        reply = json.loads(self.router.handle(packet(31, payload={"note": text})))
+        self.assertEqual(reply["status"], "OK")
+        self.assertEqual(len(self.provider.seen), 1)
+
+    def test_excessive_nesting_in_valid_envelope_is_invalid_json(self):
+        inner = b"[" * 515 + b"0" + b"]" * 515
+        raw = packet(32, payload={"list": []}).replace(b'"list":[]', b'"list":' + inner)
+        with self.assertRaisesRegex(ProtocolHold, "NATIVE_FRAME_INVALID_JSON"):
+            self.router.handle(raw)
+        self.assertEqual(self.provider.seen, [])
+
     def test_modelcenter_noncallable_port_cannot_pass_native_admission(self):
         self.provider.routes = {"models.catalog": {"owner": 3}}
         self.provider.ports = {"models.catalog": type("Port", (), {
