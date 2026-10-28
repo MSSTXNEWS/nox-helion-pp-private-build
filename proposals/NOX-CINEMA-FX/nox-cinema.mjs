@@ -47,9 +47,16 @@ export function profileFor(mode,reduced){
 export function gravitationalSample(p,timeMs){
   if(!p||!Number.isFinite(timeMs)||
      ["started","duration","surfaceRadius","reach","swirl","angle","brightness","rotation"].some(k=>!Number.isFinite(p[k]))||
-     p.duration<=0||p.surfaceRadius<0||p.reach<0||p.brightness<0)
+     p.duration<=0||p.surfaceRadius<0||p.surfaceRadius>200||
+     p.reach<0||p.reach>200||Math.abs(p.swirl)>200||
+     Math.abs(p.angle)>Math.PI*20000||
+     Math.abs(p.rotation)>360||p.brightness<0||p.brightness>1)
     throw new Error("NOX_FX_INVALID_PARTICLE");
-  const t=clamp((timeMs-p.started)/p.duration,0,1);
+  // R09: reject overflowing timestamps before DOM/SVG formatting.
+  const elapsed=timeMs-p.started;
+  if(!Number.isFinite(elapsed)||!Number.isFinite(elapsed/p.duration))
+    throw new Error("NOX_FX_INVALID_PARTICLE");
+  const t=clamp(elapsed/p.duration,0,1);
   const arc=Math.sin(Math.PI*t);
   const radius=p.surfaceRadius+arc*p.reach;
   const sideways=p.swirl*arc*Math.cos(Math.PI*t);
@@ -57,7 +64,10 @@ export function gravitationalSample(p,timeMs){
   const x=100+Math.cos(angle)*radius-Math.sin(angle)*sideways;
   const y=100+Math.sin(angle)*radius+Math.cos(angle)*sideways;
   const opacity=(t<=0||t>=1)?0:clamp(Math.pow(arc,.6)*p.brightness,0,1);
-  return {x,y,opacity,angle:t*320+p.rotation,done:t>=1,t,radius};
+  const visualAngle=t*320+p.rotation;
+  if(![x,y,radius,sideways,opacity,visualAngle].every(Number.isFinite))
+    throw new Error("NOX_FX_INVALID_PARTICLE");
+  return {x,y,opacity,angle:visualAngle,done:t>=1,t,radius};
 }
 function svgElement(doc,name,attributes={}){
   const el=doc.createElementNS(SVG_NS,name);
@@ -189,6 +199,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   function loop(now){
     raf=0;
+    // Browser clocks may be malformed; fail closed without emitting SVG NaN.
+    if(!Number.isFinite(now)||now<0){sleep();return;}
     if(disposed||!hostVisible||!intersectVisible||doc.hidden)return;
     const policy=profileFor(mode,preference);
     if(policy.fps===0){clearParticles();return;}
@@ -295,6 +307,17 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     setProfile(next){
       if(disposed)return false;
       if(!profileSet.has(next))return false;
+      // Budget applies to ALREADY LIVE ejecta, not just the next emission.
+      const newPolicy=profileFor(next,preference);
+      while(particles.length>newPolicy.maxParticles){
+        const p=particles.pop();p.node.remove();
+      }
+      particleCount=particles.length;
+      // A slower ECO policy must not inherit MAX's imminent burst.
+      if(PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
+        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
+          (lastFrame||initialNow)+newPolicy.minimumBurstMs);
+      }
       mode=next;root.dataset.noxFxMode=next.toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },
