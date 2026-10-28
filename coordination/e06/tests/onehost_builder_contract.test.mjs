@@ -112,3 +112,26 @@ test('late P01 manifest/payload re-verification is after staging and before make
   ]) assert.ok(script.indexOf(marker)>lastOwnerGate && script.indexOf(marker)<compiler, marker);
   assert.ok(!script.includes('Remove-Item -Recurse'));
 });
+
+test('immutable WPF/Python/P01/creative inputs reject reparse ancestors before staging',()=>{
+  const guard = script.indexOf('function Assert-E06InputPathNoReparse');
+  const source = script.indexOf('$source=(Resolve-Path');
+  const output = script.indexOf('New-Item -ItemType Directory -Path $OutputRoot');
+  const theater = script.indexOf('$creativeRoot=(Resolve-Path');
+  assert.ok(guard >= 0 && guard < source && source < output);
+  assert.ok(script.includes('$cursor = [IO.Path]::GetFullPath($Path)'));
+  assert.ok(script.includes('$parent = [IO.Path]::GetDirectoryName($cursor)'));
+  assert.ok(script.includes('E06_IMMUTABLE_INPUT_REPARSE_ANCESTOR_HOLD'));
+  assert.ok(script.includes('E06_IMMUTABLE_INPUT_MISSING_HOLD'));
+  for(const [call, limit] of [
+    ["Assert-E06InputPathNoReparse -Path $SourceRoot -Label 'SOURCE_ROOT'", source],
+    ["Assert-E06InputPathNoReparse -Path $PythonExe -Label 'PINNED_PYTHON_EXE'", source],
+    ["-Label 'P01_INSTALLER_ROOT'", output],
+    ["Assert-E06InputPathNoReparse -Path $ApprovedCreativeWebRoot -Label 'CREATIVE_WEB_ROOT'", theater]
+  ]) {
+    const at=script.indexOf(call);
+    assert.ok(at>guard && at<limit, 'pre-read guard missing: '+call);
+  }
+  assert.ok(script.includes('NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD'));
+  assert.ok(!script.includes('Remove-Item -Recurse'));
+});

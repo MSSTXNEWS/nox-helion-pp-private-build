@@ -13,6 +13,26 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if ($RunId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'E06_INVALID_RUN_ID_HOLD' }
 if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem) { throw 'E06_WINDOWS_X64_REQUIRED' }
+# E06 source-identity boundary: forbid junction/symlink ANYWHERE in each
+# immutable input ancestry; a pinned leaf hash cannot authenticate its parent.
+# Run before the first staging write. Keep output-ancestor guard separate.
+function Assert-E06InputPathNoReparse {
+  param([Parameter(Mandatory=$true)][string]$Path,
+        [Parameter(Mandatory=$true)][string]$Label)
+  $cursor = [IO.Path]::GetFullPath($Path)
+  while (![string]::IsNullOrWhiteSpace($cursor)) {
+    if (!(Test-Path -LiteralPath $cursor)) { throw "E06_IMMUTABLE_INPUT_MISSING_HOLD:$Label" }
+    $entry = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+    if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw "E06_IMMUTABLE_INPUT_REPARSE_ANCESTOR_HOLD:$Label"
+    }
+    $parent = [IO.Path]::GetDirectoryName($cursor)
+    if ([string]::IsNullOrWhiteSpace($parent) -or $parent -ieq $cursor) { break }
+    $cursor = $parent
+  }
+}
+Assert-E06InputPathNoReparse -Path $SourceRoot -Label 'SOURCE_ROOT'
+Assert-E06InputPathNoReparse -Path $PythonExe -Label 'PINNED_PYTHON_EXE'
 $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
@@ -28,6 +48,7 @@ $approvedRoot = if ([string]::IsNullOrWhiteSpace($ApprovedP01InstallerRoot)) {
 } else {
   (Resolve-Path -LiteralPath $ApprovedP01InstallerRoot -ErrorAction Stop).Path
 }
+Assert-E06InputPathNoReparse -Path $(if ([string]::IsNullOrWhiteSpace($ApprovedP01InstallerRoot)) { $installer } else { $ApprovedP01InstallerRoot }) -Label 'P01_INSTALLER_ROOT'
 # E06 NO-LOSS: P01 installer owner root is immutable input, never an output folder.
 $approvedCanon = [IO.Path]::GetFullPath($approvedRoot).TrimEnd('\')
 $outputCandidateCanon = [IO.Path]::GetFullPath($OutputRoot).TrimEnd('\')
@@ -86,6 +107,7 @@ if (!(Test-Path -LiteralPath $nsisScript -PathType Leaf)) { throw 'ORIGINAL_NSIS
 # https://nox.local/creative/theater.html onto the original Assets directory.
 # An absent/unpinned theater cannot be shipped as a working cinema route.
 if ([string]::IsNullOrWhiteSpace($ApprovedCreativeWebRoot)) { throw 'E06_APPROVED_THEATER_WEB_ROOT_REQUIRED_HOLD' }
+Assert-E06InputPathNoReparse -Path $ApprovedCreativeWebRoot -Label 'CREATIVE_WEB_ROOT'
 $creativeRoot=(Resolve-Path -LiteralPath $ApprovedCreativeWebRoot -ErrorAction Stop).Path
 $creativeInfo=Get-Item -LiteralPath $creativeRoot -Force
 if (!$creativeInfo.PSIsContainer -or ($creativeInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'E06_THEATER_SOURCE_DIRECTORY_HOLD' }
