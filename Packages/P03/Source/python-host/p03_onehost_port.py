@@ -215,7 +215,8 @@ class P03OneHostPort:
         ids = [route for route, _, _ in pending]
         if len(ids) != len(set(ids)) or any(
                 isinstance(host_routes.get(route), dict) is False
-                or host_routes[route].get("owner") != 3 or route in ports
+                or type(host_routes[route].get("owner")) is not int
+                or host_routes[route]["owner"] != 3 or route in ports
                 for route in ids):
             raise P03PortHold("P03 route ownership collision: register none")
         # Prebuild all native ports before mutating the shared dispatcher.
@@ -251,7 +252,10 @@ class P03OneHostPort:
 
     @staticmethod
     def _bind(dispatcher, port_type, route, call, available, receipt):
-        if not isinstance(getattr(dispatcher, "routes", None), dict) or (
-                dispatcher.routes.get(route, {}).get("owner") != 3):
+        routes = getattr(dispatcher, "routes", None)
+        if (not isinstance(routes, dict)
+                or not isinstance(routes.get(route), dict)
+                or type(routes[route].get("owner")) is not int
+                or routes[route]["owner"] != 3):
             raise P03PortHold("Owner-route map mismatch")
         dispatcher.bind(route, port_type(call, available, receipt, 3))

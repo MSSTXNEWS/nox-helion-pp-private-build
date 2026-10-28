@@ -109,5 +109,37 @@ class NativeOwnerRouteMapR11Tests(unittest.TestCase):
         self.assertEqual(registered, frozenset(host.routes))
         self.assertEqual(set(host.ports), set(host.routes))
 
+
+    def test_r12_01_exact_integer_owner_prevents_numeric_alias(self):
+        # Python numeric equality makes 3.0 and 3+0j equal to 3.
+        # P02 ingress requires type(owner) is int; P03 must agree.
+        for fake_owner in (3.0, 3 + 0j):
+            with self.subTest(owner=repr(fake_owner)):
+                host = self.host()
+                host.routes["models.installed"] = {"owner": fake_owner}
+                with self.assertRaises(P03PortHold):
+                    self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+                self.assertEqual(host.ports, {})
+
+    def test_r12_02_legacy_bind_same_exact_owner_gate(self):
+        for fake_owner in (3.0, 3 + 0j, None):
+            with self.subTest(owner=repr(fake_owner)):
+                host = self.host()
+                host.routes["models.catalog"] = {"owner": fake_owner}
+                with self.assertRaises(P03PortHold):
+                    self.port._bind(host, tuple, "models.catalog",
+                                    self.port.catalog, lambda: True, "fixture")
+                self.assertEqual(host.ports, {})
+
+    def test_r12_03_existing_valid_owner_int_still_binds(self):
+        host = self.host()
+        class NativeBound:
+            def __init__(self, callback, available, receipt, owner):
+                self.owner = owner
+        self.port._bind(host, NativeBound, "models.catalog",
+                        self.port.catalog, lambda: True, "fixture")
+        self.assertEqual(set(host.ports), {"models.catalog"})
+        self.assertEqual(host.ports["models.catalog"].owner, 3)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
