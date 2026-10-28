@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)][string]$Root,
-  [Parameter(Mandatory=$true)][string]$Manifest
+  [Parameter(Mandatory=$true)][string]$Manifest,
+  [switch]$AllowInstalledMetadata
 )
 $ErrorActionPreference = 'Stop'
 function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
@@ -60,15 +61,43 @@ foreach ($dir in $allDirs) {
   if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse directory $($dir.FullName)" }
   Assert-NoReparseAncestors $dir.FullName
 }
-# Include only regular files the packager approved; prevents hidden extras in the staging area.
+# Installed backups also contain the installer ownership marker and the
+# NSIS-generated uninstaller (not publisher payload). Allow ONLY these exact
+# entries for the explicit rollback verifier, not for fresh staging.
+$metadata = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+if ($AllowInstalledMetadata) {
+  $marker = Join-Path $rootFull 'nox-p01-owned.txt'
+  Assert-NoReparseAncestors $marker
+  $markerInfo = Get-Item -LiteralPath $marker -Force -ErrorAction Stop
+  if ($markerInfo.PSIsContainer -or
+      (($markerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+      $markerInfo.Length -ne 19 -or
+      [IO.File]::ReadAllText($marker,[Text.Encoding]::ASCII) -cne
+        ('NOXHELION.P01 V16'+[char]13+[char]10)) {
+    Fail 'invalid backup ownership marker'
+  }
+  [void]$metadata.Add('nox-p01-owned.txt')
+  $uninstaller = Join-Path $rootFull 'Uninstall.exe'
+  Assert-NoReparseAncestors $uninstaller
+  $uninstallerInfo = Get-Item -LiteralPath $uninstaller -Force -ErrorAction Stop
+  if ($uninstallerInfo.PSIsContainer -or
+      (($uninstallerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+      $uninstallerInfo.Length -lt 1024 -or $uninstallerInfo.Length -gt 104857600) {
+    Fail 'invalid generated NSIS metadata'
+  }
+  # This file is NOT SHA-attested by the payload manifest; rollback does not
+  # execute it, and E07 must verify the eventual installed uninstaller.
+  [void]$metadata.Add('Uninstall.exe')
+}
+# Include only regular files the packager approved; prevents hidden extras in staging.
 $actualFiles = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -File)
 foreach ($file in $actualFiles) {
   Assert-NoReparseAncestors $file.FullName
   if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse $($file.FullName)" }
   $rel = $file.FullName.Substring($rootFull.Length+1)
   if ($rel -eq 'payload.sha256.json') { continue }
-  if (-not $registered.Contains($rel)) { Fail "unexpected file $rel" }
+  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }
 }
-if ($actualFiles.Count -ne ($registered.Count + 1)) { Fail 'file count mismatch' }
+if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail 'file count mismatch' }
 if (-not (Test-Path -LiteralPath (Join-Path $rootFull 'NOX.P01.Shell.exe') -PathType Leaf)) { Fail 'entrypoint absent' }
 'P01_PAYLOAD_SHA256_PASS'
