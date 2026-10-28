@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import unicodedata
 from dataclasses import dataclass
 from typing import Callable, Mapping
@@ -49,6 +50,8 @@ class P02EventRelay:
         self._last_run = None
         self._started = False
         self._finished = False
+        # Concurrent native events must not pass admission before publish completes.
+        self._relay_gate = threading.Lock()
 
     def relay(self, event: dict) -> None:
         """Map a bounded P02 event into the existing verified publisher.
@@ -56,6 +59,14 @@ class P02EventRelay:
         This is synchronous and intentional: native host controls backpressure.
         A failed publish raises; we never imply delivery or emit synthetic ACKs.
         """
+        if not self._relay_gate.acquire(blocking=False):
+            raise P02Error('P02_CONCURRENT_OR_REENTRANT_EVENT_DENIED')
+        try:
+            return self._relay_exclusive(event)
+        finally:
+            self._relay_gate.release()
+
+    def _relay_exclusive(self, event: dict) -> None:
         if (not isinstance(event, dict) or not isinstance(event.get('type'), str)
                 or event['type'] not in P02_TYPES):
             raise P02Error('P02_EVENT_UNSUPPORTED')
