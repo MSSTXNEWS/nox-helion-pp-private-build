@@ -76,6 +76,16 @@ jobs:
       - name: Apply bounded E02 compiler compatibility overlay only inside isolated stage
         shell: pwsh
         run: python Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py
+      - name: Compile and smoke current P02 C# backend with original Windows SDK
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          dotnet restore Packages/P02/smoke/P02.Smoke.csproj --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_DOTNET_RESTORE_HOLD' }
+          dotnet run --project Packages/P02/smoke/P02.Smoke.csproj -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_DOTNET_SMOKE_HOLD' }
+          Write-Host 'P02_NET8_CHAT_SQLITE_OLLAMA_ATTACHMENT_COMPONENT=PASS'
+          Write-Host 'P02_HOST_BOUND=NO; ORIGINAL_WPF_R08_DIAGNOSTIC_ONLY=YES'
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
         run: |
