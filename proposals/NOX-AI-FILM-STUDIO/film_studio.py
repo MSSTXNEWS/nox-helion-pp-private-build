@@ -186,6 +186,21 @@ def storyboard(project: FilmProject) -> list[dict[str, Any]]:
         elapsed += s.seconds
     return result
 
+def voice_timeline(project: FilmProject) -> list[dict[str, Any]]:
+    """Prepare timed dialogue for existing NOX TTS. Does not fabricate audio."""
+    validate(project)
+    seconds=0
+    tracks=[]
+    for s in project.scenes:
+        text=(s.dialogue or s.narration).strip()
+        if text:
+            tracks.append({"sceneId":s.id,"startSecond":seconds,
+                           "durationSeconds":s.seconds,"text":text,
+                           "status":"VOICE_NOT_GENERATED",
+                           "requiredHostRoute":"voice.synthesize"})
+        seconds+=s.seconds
+    return tracks
+
 def submit_scene(project: FilmProject, scene_id: str, *, port: ComfyVideoPort,
                  workflow: dict, workflow_sha256: str, prompt_node: str,
                  preflight: NativeVideoPreflight, client_id: str,
