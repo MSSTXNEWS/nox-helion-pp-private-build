@@ -1,6 +1,6 @@
 """NOX E06 host50 focused offline smoke checks. No Windows native operations."""
 import unittest
-from admission import BASE_COMMIT, BASE_TREE, Hold, Denied, audit_registry, validate_origin
+from admission import BASE_COMMIT, BASE_TREE, APPROVED_ROUTE_POLICY, Hold, Denied, audit_registry, validate_origin
 
 class AdmissionSourceTests(unittest.TestCase):
     def test_exact_origin(self):
@@ -10,14 +10,15 @@ class AdmissionSourceTests(unittest.TestCase):
         with self.assertRaises(Denied):
             validate_origin("https://nox.invalid:4443")
     def test_duplicate_route_is_hold(self):
-        names = ["route%02d" % i for i in range(1, 51)]
-        owners = [2] * 50
+        names = [row[0] for row in APPROVED_ROUTE_POLICY]
         catalog = {"version": "NOX-INTEGRATION-PACK-01", "actions": [
-            {"taskId": "NIP01-%02d" % i, "routeId": names[i-1], "owner": owners[i-1], "risk": "safe", "settings": []}
-            for i in range(1, 51)]}
+            {"taskId": "NIP01-%02d" % i, "routeId": route, "owner": owner,
+             "risk": risk, "settings": []}
+            for i, (route,owner,risk) in enumerate(APPROVED_ROUTE_POLICY,1)]}
         bindings = {"sourceBaseCommit": BASE_COMMIT, "routes": [
-            {"taskId": "NIP01-%02d" % i, "routeId": names[i-1], "owner": owners[i-1], "sourceBinding": None}
-            for i in range(1, 51)]}
+            {"taskId": a["taskId"], "routeId": a["routeId"],
+             "owner": a["owner"], "sourceBinding": None}
+            for a in catalog["actions"]]}
         self.assertEqual(audit_registry(catalog,bindings)["unbound"],50)
         bindings["routes"][1]["routeId"] = names[0]
         with self.assertRaises(Hold):
@@ -31,11 +32,9 @@ class HostScopeAndReceiptTests(unittest.TestCase):
     def setUp(self):
         from admission import Host50Admission, Capability
         import secrets
-        names=[f'route{i:02}' for i in range(1,51)]
-        names[0]='helion.chat';names[5]='chat.attach';names[8]='chat.stop'
-        aa=[{'taskId':f'NIP01-{i:02}','routeId':r,'owner':2,'risk':'safe','settings':[]}
-            for i,r in enumerate(names,1)]
-        bb=[{'taskId':a['taskId'],'routeId':a['routeId'],'owner':2,
+        aa=[{'taskId':f'NIP01-{i:02}','routeId':r,'owner':owner,'risk':risk,'settings':[]}
+            for i,(r,owner,risk) in enumerate(APPROVED_ROUTE_POLICY,1)]
+        bb=[{'taskId':a['taskId'],'routeId':a['routeId'],'owner':a['owner'],
              'sourceBinding':f'owner2:{a["routeId"]}' if a['routeId'] in {'helion.chat','chat.stop','chat.attach'} else None}
             for a in aa]
         self.cat={'version':'NOX-INTEGRATION-PACK-01','actions':aa}
@@ -46,9 +45,41 @@ class HostScopeAndReceiptTests(unittest.TestCase):
         self.host=Host50Admission(self.cat,self.mapping,signing_key=secrets.token_bytes(32),
                 allowed_origins={'https://nox.invalid'},active_tree=BASE_TREE,capabilities=caps)
         self.s=self.host.issue_session(tenant='tenant',principal='person',chat='chat1',
-                origin='https://nox.invalid',scopes=('chat.stop','helion.chat','chat.attach'),sensitive=())
+                origin='https://nox.invalid',scopes=('chat.stop','helion.chat','chat.attach'),sensitive=('chat.attach',))
     def req(self,route,task):
         return {'intent':'nox.feature.request','routeId':route,'taskId':task,'settings':{}}
+    def test_immutable_policy_matches_all_50_approved_owner_risks(self):
+        self.assertEqual(len(APPROVED_ROUTE_POLICY),50)
+        self.assertEqual(len({r for r,_,_ in APPROVED_ROUTE_POLICY}),50)
+        self.assertEqual(len(audit_registry(self.cat,self.mapping)['routes']),50)
+
+    def test_catalog_cannot_downgrade_risk_even_when_binding_map_matches(self):
+        # Prior source would accept risk='safe' for a dangerous native route.
+        danger=self.cat['actions'][25]  # NIP01-26 training.start
+        self.assertEqual(danger['risk'],'dangerous')
+        danger['risk']='safe'
+        with self.assertRaisesRegex(Hold,'IMMUTABLE_ROUTE_OWNER_RISK'):
+            audit_registry(self.cat,self.mapping)
+
+    def test_catalog_cannot_forge_owner_even_when_binding_map_matches(self):
+        self.cat['actions'][33]['owner']=1  # calls.dial belongs to P02 owner 2
+        self.mapping['routes'][33]['owner']=1
+        with self.assertRaisesRegex(Hold,'IMMUTABLE_ROUTE_OWNER_RISK'):
+            audit_registry(self.cat,self.mapping)
+
+    def test_catalog_cannot_alias_dangerous_route_even_when_both_sources_match(self):
+        self.cat['actions'][48]['routeId']='pc.harmless'  # was system.pc_control
+        self.mapping['routes'][48]['routeId']='pc.harmless'
+        with self.assertRaisesRegex(Hold,'IMMUTABLE_ROUTE_OWNER_RISK'):
+            audit_registry(self.cat,self.mapping)
+
+    def test_all_sensitive_and_dangerous_routes_cannot_be_lowered(self):
+        for idx,(_,_,risk) in enumerate(APPROVED_ROUTE_POLICY):
+            if risk=='safe': continue
+            with self.subTest(task=f'NIP01-{idx+1:02}',risk=risk):
+                self.cat['actions'][idx]['risk']='safe'
+                with self.assertRaises(Hold):audit_registry(self.cat,self.mapping)
+                self.cat['actions'][idx]['risk']=risk
     def test_boolean_owner_cannot_fake_integer(self):
         self.cat['actions'][0]['owner']=True;self.mapping['routes'][0]['owner']=True
         with self.assertRaises(Hold):audit_registry(self.cat,self.mapping)

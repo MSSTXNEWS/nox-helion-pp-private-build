@@ -23,6 +23,61 @@ BASE_TREE = "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 ROUTE = re.compile(r"[a-z][a-z0-9]*(?:[._][a-z0-9]+)*\Z")
 TASKS = tuple(f"NIP01-{i:02}" for i in range(1, 51))
+# Immutable, SOURCE-only route/owner/risk floor from PR #27 exact HEAD
+# be1fe05d88443e41b0d196617840508d9dd39b7d (NOT native SourceLock acceptance).
+# Native host must separately attest installed handlers and full source tree.
+APPROVED_ROUTE_POLICY = (
+    ('helion.chat', 2, 'safe'),
+    ('core.chat', 2, 'safe'),
+    ('persona.chat', 2, 'safe'),
+    ('chat.model', 2, 'safe'),
+    ('chat.history', 2, 'sensitive'),
+    ('chat.attach', 2, 'sensitive'),
+    ('chat.rag', 2, 'safe'),
+    ('chat.voice', 2, 'sensitive'),
+    ('chat.stop', 2, 'safe'),
+    ('chat.commands', 2, 'safe'),
+    ('models.catalog', 3, 'safe'),
+    ('models.installed', 3, 'safe'),
+    ('models.pull', 3, 'sensitive'),
+    ('models.gguf.import', 3, 'sensitive'),
+    ('models.queue', 3, 'safe'),
+    ('models.cancel', 3, 'safe'),
+    ('models.retry', 3, 'sensitive'),
+    ('models.digest', 3, 'safe'),
+    ('models.preflight', 3, 'safe'),
+    ('models.licenses', 3, 'safe'),
+    ('rag.import', 4, 'sensitive'),
+    ('rag.search', 4, 'safe'),
+    ('memory.manage', 4, 'sensitive'),
+    ('datasets.review', 4, 'safe'),
+    ('gpu.preflight', 4, 'safe'),
+    ('training.start', 4, 'dangerous'),
+    ('training.pause', 4, 'safe'),
+    ('training.resume', 4, 'sensitive'),
+    ('training.checkpoints', 4, 'sensitive'),
+    ('training.evaluate', 4, 'safe'),
+    ('translate.ru_es', 2, 'sensitive'),
+    ('maestro.spanish', 2, 'safe'),
+    ('voice.settings', 2, 'safe'),
+    ('calls.dial', 2, 'dangerous'),
+    ('calls.history', 2, 'sensitive'),
+    ('media.player', 1, 'sensitive'),
+    ('media.subtitles', 1, 'safe'),
+    ('browser.open', 1, 'sensitive'),
+    ('browser.bookmarks', 1, 'safe'),
+    ('images.generate', 4, 'sensitive'),
+    ('space.news', 5, 'safe'),
+    ('space.weather', 5, 'safe'),
+    ('space.fx', 5, 'safe'),
+    ('space.bitcoin', 5, 'safe'),
+    ('space.brent', 5, 'safe'),
+    ('system.telemetry', 5, 'safe'),
+    ('system.update', 1, 'dangerous'),
+    ('system.backup', 1, 'dangerous'),
+    ('system.pc_control', 1, 'dangerous'),
+    ('mobile.connect', 6, 'sensitive'),
+)
 STOP_TARGETS = {"chat.stop": frozenset({"helion.chat", "core.chat", "persona.chat"}),
                 "models.cancel": frozenset({"models.pull"}),
                 "training.pause": frozenset({"training.start"})}
@@ -104,6 +159,12 @@ def audit_registry(catalog: dict, bindings: dict) -> dict:
     for task in TASKS:
         a, b = actions_by_task[task], rows_by_task[task]
         route = a.get("routeId")
+        expected_route, expected_owner, expected_risk = APPROVED_ROUTE_POLICY[int(task[-2:])-1]
+        # Never take the security classification or owner of an executable action
+        # solely from the mutable UI catalog and its matching mutable binding map.
+        if (route != expected_route or a.get("owner") != expected_owner or
+            type(a.get("owner")) is not int or a.get("risk") != expected_risk):
+            raise Hold("IMMUTABLE_ROUTE_OWNER_RISK_POLICY_MISMATCH")
         if (not isinstance(route, str) or not ROUTE.fullmatch(route) or route in route_set or
             b.get("routeId") != route or b.get("owner") != a.get("owner") or
             type(a.get("owner")) is not int or type(b.get("owner")) is not int or
