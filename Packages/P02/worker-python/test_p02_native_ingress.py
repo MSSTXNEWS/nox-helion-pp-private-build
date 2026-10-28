@@ -94,6 +94,9 @@ class IngressTests(unittest.TestCase):
             b'{"protocol":"NOX-P02-NATIVE-v1","runId":"' + R.encode() +
             b'","requestId":"' + b"4" * 32 +
             b'","route":"chat.model","payload":{"score":Infinity}}',
+            b'{"protocol":"NOX-P02-NATIVE-v1","runId":"' + R.encode() +
+            b'","requestId":"' + b"5" * 32 +
+            b'","route":"chat.model","payload":{"score":1e9999}}',
         )
         for raw in bad:
             with self.subTest(raw=raw[-40:]):
