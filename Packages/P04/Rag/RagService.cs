@@ -417,6 +417,40 @@ public sealed class RagService : IDisposable
         using var stream = new FileStream(_indexPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (stream.Length > MaximumIndexFileBytes)
             throw new InvalidDataException("RAG index exceeds the configured size limit.");
+        // The Python RAG owner rejects duplicate nested provenance keys.
+        // .NET 8's Web JSON deserializer otherwise silently accepts the last
+        // case-insensitive alias (OwnerSid/ownerSid included). Validate the
+        // existing on-disk index first; never rewrite a suspicious source.
+        using (var parsed = JsonDocument.Parse(stream, new JsonDocumentOptions
+        {
+            AllowTrailingCommas = false,
+            CommentHandling = JsonCommentHandling.Disallow,
+            MaxDepth = 64
+        }))
+        {
+            var pending = new Stack<JsonElement>();
+            pending.Push(parsed.RootElement);
+            while (pending.Count > 0)
+            {
+                var node = pending.Pop();
+                if (node.ValueKind == JsonValueKind.Object)
+                {
+                    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var property in node.EnumerateObject())
+                    {
+                        if (!seen.Add(property.Name))
+                            throw new InvalidDataException("RAG index has ambiguous duplicate JSON property.");
+                        pending.Push(property.Value);
+                    }
+                }
+                else if (node.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var element in node.EnumerateArray())
+                        pending.Push(element);
+                }
+            }
+        }
+        stream.Position = 0;
         var loaded = JsonSerializer.Deserialize<IndexDocument>(stream, JsonOptions)
             ?? throw new InvalidDataException("RAG index is empty or invalid.");
         if (!string.Equals(loaded.Schema, IndexSchema, StringComparison.Ordinal) || loaded.Sources is null ||
