@@ -179,20 +179,130 @@ def admit_for_existing_downloader(
     return Decision("PASS_FOR_EXISTING_QUEUE", (), evidence["existingRoute"])
 
 
+# An admission PASS does NOT mark a model installed. This separate guard
+# validates native queue receipts before rendering progress or terminal states.
+# The values below MUST originate from the single native queue, not from the UI.
+_QUEUE_STATES = frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING",
+                           "CANCELLED", "FAILED", "COMPLETED"})
+_QUEUE_TRANSITIONS = {
+    "QUEUED": frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING", "FAILED"}),
+    "RUNNING": frozenset({"RUNNING", "CANCEL_REQUESTED", "CANCELLING", "FAILED", "COMPLETED"}),
+    "CANCEL_REQUESTED": frozenset({"CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED"}),
+    "CANCELLING": frozenset({"CANCELLING", "CANCELLED", "FAILED"}),
+    "CANCELLED": frozenset(),
+    "FAILED": frozenset(),
+    "COMPLETED": frozenset(),
+}
+
+
+def _nonempty_id(s: Any) -> bool:
+    return isinstance(s, str) and bool(s.strip()) and s == s.strip() and len(s) <= 200
+
+
+def _queue_identity_errors(previous: Mapping[str, Any], update: Mapping[str, Any]) -> list[str]:
+    reasons = []
+    if not (_nonempty_id(previous.get("attemptId")) and _nonempty_id(update.get("attemptId"))
+            and previous.get("attemptId") == update.get("attemptId")):
+        reasons.append("RETRY_REQUIRES_NEW_QUEUE_JOB_RECEIPT")
+    if not (_nonempty_id(previous.get("queueJobId")) and _nonempty_id(update.get("queueJobId"))
+            and previous.get("queueJobId") == update.get("queueJobId")):
+        reasons.append("QUEUE_JOB_ID_DRIFT_OR_MISSING")
+    for key in ("queueJobReceiptSha256", "manifestSha256", "expectedArtifactSha256"):
+        if not (_sha(previous.get(key)) and previous.get(key) == update.get(key)):
+            reasons.append("QUEUE_JOB_PROVENANCE_DRIFT_OR_MISSING")
+            break
+    return reasons
+
+
 def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any]) -> Decision:
-    """Byte counters monotonic per attempt; STOP not server-confirmed cancellation."""
-    if previous.get("attemptId") != update.get("attemptId"):
-        return Decision("HOLD", ("RETRY_REQUIRES_NEW_QUEUE_JOB_RECEIPT",))
-    old_done, new_done, total = previous.get("completedBytes"), update.get("completedBytes"), update.get("totalBytes")
-    if not (type(old_done) is int and type(new_done) is int and _positive(total)):
-        return Decision("HOLD", ("BYTE_COUNTERS_UNVERIFIED",))
-    if not (0 <= old_done <= new_done <= total):
-        return Decision("HOLD", ("NON_MONOTONIC_OR_INVALID_PROGRESS",))
-    status = update.get("state")
-    if status in {"STOP", "CANCEL_REQUESTED", "CANCELLING"}:
-        return Decision("HOLD", ("STOP_REQUESTED_NOT_SERVER_CONFIRMED",))
-    if status == "COMPLETED" and not (_sha(update.get("completedReceiptSha256")) and new_done == total):
-        return Decision("HOLD", ("COMPLETION_RECEIPT_OR_BYTES_MISSING",))
-    if status not in {"QUEUED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"}:
-        return Decision("HOLD", ("UNKNOWN_QUEUE_STATE",))
+    """Fail-closed progress admission for SAME native attempt, queue job & artifact.
+
+    Exactly one existing queue owns both snapshots and all *ReceiptSha256 fields.
+    A number resembling a valid SHA is NOT cryptographic proof: E06's native host
+    must verify receipt content/signature and measured downloaded bytes itself.
+    This policy never calls a network, downloader, filesystem, or UI callback.
+    """
+    reasons = _queue_identity_errors(previous, update)
+    before, after = previous.get("state"), update.get("state")
+    if before not in _QUEUE_STATES:
+        reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
+    if after in {"STOP", "CANCEL", "PAUSE", "RETRY"}:
+        reasons.append("REQUEST_NOT_SERVER_CONFIRMED")
+        if after == "STOP":
+            reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
+    elif after not in _QUEUE_STATES:
+        reasons.append("UNKNOWN_QUEUE_STATE")
+    elif before in _QUEUE_TRANSITIONS and after not in _QUEUE_TRANSITIONS[before]:
+        reasons.append("INVALID_OR_TERMINAL_QUEUE_TRANSITION")
+
+    old_total, new_total = previous.get("totalBytes"), update.get("totalBytes")
+    old_done, new_done = previous.get("completedBytes"), update.get("completedBytes")
+    if not (_positive(old_total) and old_total == new_total):
+        reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
+    if not (type(old_done) is int and type(new_done) is int and _positive(old_total)
+            and 0 <= old_done <= new_done <= old_total):
+        reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+    if after in {"CANCEL_REQUESTED", "CANCELLING"}:
+        reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
+    elif after == "CANCELLED" and not (_sha(update.get("cancelAckReceiptSha256"))
+                                            and update.get("nativeCancelAttested") is True):
+        reasons.append("CANCELLATION_ACK_NOT_ATTESTED")
+    elif after == "FAILED" and not (_sha(update.get("failureReceiptSha256"))
+                                         and update.get("nativeFailureAttested") is True):
+        reasons.append("FAILURE_RECEIPT_NOT_ATTESTED")
+    elif after == "COMPLETED":
+        if not (_sha(update.get("completedReceiptSha256")) and new_done == new_total
+                and update.get("nativeCompletionAttested") is True):
+            reasons.append("COMPLETION_RECEIPT_OR_BYTES_MISSING")
+        if not (_sha(update.get("observedArtifactSha256"))
+                and update.get("observedArtifactSha256") == update.get("expectedArtifactSha256")):
+            reasons.append("DOWNLOADED_ARTIFACT_SHA_MISMATCH")
+    if reasons:
+        return Decision("HOLD", tuple(dict.fromkeys(reasons)))
+    # This means the transition is source-policy-admissible, NOT model installed.
+    return Decision("PASS_FOR_EXISTING_QUEUE", ())
+
+
+def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
+               *, user_retry_consent: bool, native_queue_attested: bool) -> Decision:
+    """Authorize QUEUED retry metadata only, never start/download/re-enqueue.
+
+    The existing P03 queue must create the NEW job/attempt and verify receipts.
+    A stopped task may retry only after confirmed terminal CANCELLED or FAILED.
+    """
+    reasons = []
+    if previous.get("state") not in {"FAILED", "CANCELLED"}:
+        reasons.append("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE")
+    elif previous.get("state") == "FAILED" and not (
+            _sha(previous.get("failureReceiptSha256")) and previous.get("nativeFailureAttested") is True):
+        reasons.append("RETRY_PREVIOUS_FAILURE_UNATTESTED")
+    elif previous.get("state") == "CANCELLED" and not (
+            _sha(previous.get("cancelAckReceiptSha256")) and previous.get("nativeCancelAttested") is True):
+        reasons.append("RETRY_PREVIOUS_CANCEL_UNATTESTED")
+    if new_job.get("state") != "QUEUED":
+        reasons.append("RETRY_MUST_START_QUEUED")
+    if not (_nonempty_id(previous.get("attemptId")) and _nonempty_id(new_job.get("attemptId"))
+            and previous.get("attemptId") != new_job.get("attemptId")):
+        reasons.append("RETRY_ATTEMPT_NOT_UNIQUE")
+    if not (_nonempty_id(previous.get("queueJobId")) and _nonempty_id(new_job.get("queueJobId"))
+            and previous.get("queueJobId") != new_job.get("queueJobId")):
+        reasons.append("RETRY_QUEUE_JOB_NOT_UNIQUE")
+    if not (_sha(new_job.get("queueJobReceiptSha256"))
+            and new_job.get("queueJobReceiptSha256") != previous.get("queueJobReceiptSha256")):
+        reasons.append("RETRY_NEW_QUEUE_RECEIPT_MISSING")
+    for key in ("manifestSha256", "expectedArtifactSha256"):
+        if not (_sha(previous.get(key)) and previous.get(key) == new_job.get(key)):
+            reasons.append("RETRY_ARTIFACT_IDENTITY_DRIFT")
+            break
+    if not (_positive(previous.get("totalBytes"))
+            and previous.get("totalBytes") == new_job.get("totalBytes")
+            and type(new_job.get("completedBytes")) is int
+            and new_job.get("completedBytes") == 0):
+        reasons.append("RETRY_BYTES_INVALID")
+    if user_retry_consent is not True:
+        reasons.append("RETRY_USER_CONSENT_REQUIRED")
+    if native_queue_attested is not True:
+        reasons.append("RETRY_NATIVE_ATTESTATION_REQUIRED")
+    if reasons:
+        return Decision("HOLD", tuple(dict.fromkeys(reasons)))
     return Decision("PASS_FOR_EXISTING_QUEUE", ())
