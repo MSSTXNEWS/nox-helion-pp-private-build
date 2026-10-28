@@ -1,6 +1,7 @@
 """E06 offline tests; no original NOX archive or Windows acceptance is implied."""
 import hashlib
 import importlib.util
+import stat
 from pathlib import Path
 import tempfile
 import unittest
@@ -12,7 +13,7 @@ mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
 
 
-def fixture(root, files, symlink=False):
+def fixture(root, files, symlink=False, special_kind=None):
     archive = root / 'source.zip'
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
         for name, data in files:
@@ -20,6 +21,11 @@ def fixture(root, files, symlink=False):
                 entry = zipfile.ZipInfo('link')
                 entry.create_system = 3
                 entry.external_attr = (0o120777 << 16)
+                z.writestr(entry, data)
+            elif special_kind is not None and name == 'special':
+                entry = zipfile.ZipInfo(name)
+                entry.create_system = 3
+                entry.external_attr = (special_kind | 0o600) << 16
                 z.writestr(entry, data)
             else:
                 z.writestr(name, data)
@@ -34,10 +40,10 @@ def fixture(root, files, symlink=False):
 
 
 class Original729SourceLockTests(unittest.TestCase):
-    def check(self, files, *, symlink=False):
+    def check(self, files, *, symlink=False, special_kind=None):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            pins, sha = fixture(root, files, symlink)
+            pins, sha = fixture(root, files, symlink, special_kind)
             return mod.verify_original(root, part_pins=pins, archive_sha=sha,
                                        expected_files=len(files), run_id='NOX-R10-20261028')
 
@@ -89,6 +95,36 @@ class Original729SourceLockTests(unittest.TestCase):
     def test_win_case_collision_rejected(self):
         with self.assertRaisesRegex(mod.SourceHold, 'ZIP_DUPLICATE_WINDOWS_NAME'):
             self.check([('A/file.cs', b'a'), ('a/FILE.cs', b'b')])
+
+    def test_file_as_parent_then_child_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD'):
+            self.check([('a', b'file'), ('a/sub.txt', b'child')])
+
+    def test_child_then_parent_file_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD'):
+            self.check([('a/sub.txt', b'child'), ('a', b'file')])
+
+    def test_implicit_directory_casefold_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD'):
+            self.check([('A/sub.txt', b'child'), ('a', b'file')])
+
+    def test_deep_file_as_ancestor_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD'):
+            self.check([('a/b', b'file'), ('a/b/c.txt', b'child')])
+
+    def test_fifo_special_unix_member_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_SYMLINK_NOT_ALLOWED_OR_SPECIAL_UNIX'):
+            self.check([('special', b'fifo')], special_kind=stat.S_IFIFO)
+
+    def test_socket_and_device_nodes_rejected(self):
+        for kind in (stat.S_IFSOCK, stat.S_IFCHR, stat.S_IFBLK):
+            with self.subTest(kind=kind):
+                with self.assertRaisesRegex(mod.SourceHold, 'ZIP_SYMLINK_NOT_ALLOWED_OR_SPECIAL_UNIX'):
+                    self.check([('special', b'node')], special_kind=kind)
+
+    def test_contradictory_unix_dir_type_rejected(self):
+        with self.assertRaisesRegex(mod.SourceHold, 'ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD'):
+            self.check([('special', b'content')], special_kind=stat.S_IFDIR)
 
     def test_windows_reserved_filename_rejected(self):
         with self.assertRaisesRegex(mod.SourceHold, 'ZIP_WINDOWS_PATH_COLLISION_OR_TRAVERSAL'):
