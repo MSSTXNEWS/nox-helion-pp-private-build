@@ -1,0 +1,42 @@
+{
+  "schema": "NOX-E04-P04-SOURCE-RECEIPT-v1",
+  "run_id": "NOX-V16-E04-R12-20261028",
+  "owner": "E04/P04",
+  "source_commit": "4eee9e1a3e4a45c62437677de446b1bac8669fa2",
+  "unified_integration_commit": "c42cd9fbdff01aa8cef216b0d10dc956aba2fd43",
+  "source_base": "1fc7714b24e46b28e864f206a349e8d118c28ea8",
+  "paths": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "pre_git_blob_sha1": "c4f7961bc137179c01e9c8b33a503deab2048baf",
+      "post_git_blob_sha1": "c6691dec2627b8012e54313c0eb49fe0f3cb2c21",
+      "pre_sha256": "e8a225b586be4c00c8d82aeff89b884a4164133f9ec10f0061f284bbb72340ef",
+      "post_sha256": "85480347374d77ee916932788ceae99631754db4297e819054aff26a3a98f838"
+    },
+    {
+      "path": "tests/P04/test_training_gate_contract.py",
+      "pre_git_blob_sha1": "c18cb8e4fcaf47ebe41747d777165e6b0a200979",
+      "post_git_blob_sha1": "2d32ecf68f7cf568bdc95bcad6ba4ddf7fc211ff",
+      "pre_sha256": "e36f4a7df0495a57673380c9fb83641ff31ecbfc5b8ab59c33fb6dd03c180285",
+      "post_sha256": "4786531ca1af119864477cfa471730f262d0e2028f84502ba003a57a0f8cb69a"
+    }
+  ],
+  "checks": {
+    "source_readback": "PASS",
+    "local_classifier_mirror": "3/3 PASS; 10 example inputs",
+    "actual_module_unittest": "NOT_RUN",
+    "github_ci": "FAIL_BEFORE_RUNNER_0_STEPS",
+    "authorized_gpu": "NOT_AVAILABLE_ON_EXECUTOR",
+    "real_qlora_optimizer_steps": 0,
+    "checkpoint": "NOT_RUN",
+    "eval_merge": "NOT_RUN",
+    "final_windows_e07": "NOT_RUN"
+  },
+  "no_loss": {
+    "main_unchanged": true,
+    "original_d02_wow_personas_untouched": true,
+    "other_p04_methods_preserved": true
+  },
+  "release": "HOLD",
+  "owner6_handoff": "PR185 and PR162; verify exact source SHA and native E2E"
+}
