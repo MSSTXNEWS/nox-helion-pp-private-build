@@ -187,5 +187,46 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(len(bridge.NoxPackHost(original).routes), 50)
 
 
+    def test_forged_foreign_session_cannot_override_validation(self):
+        class FakeSession:
+            allowed = frozenset({"media.subtitles"})
+            private_approved = frozenset()
+            tenant = "tenant"
+            principal = "principal"
+            chat_id = "chat"
+            def validate(self):
+                return None
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.execute("media.subtitles", {"text": "no"}, FakeSession())
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.advertise(FakeSession())
+        self.assertEqual(self.seen, [])
+
+    def test_subclass_native_session_is_not_a_signed_host_identity(self):
+        class ForgedSession(bridge.NativeSession):
+            def validate(self):
+                return None
+        forged = ForgedSession("tenant", "principal", "chat",
+            allowed=frozenset({"media.subtitles"}))
+        with self.assertRaisesRegex(bridge.HostDenied, "native session type"):
+            self.dispatch.execute("media.subtitles", {}, forged)
+        self.assertEqual(self.seen, [])
+
+    def test_catalog_reordered_task_ids_must_not_bind_route_owners(self):
+        catalog = json.loads(CATALOG.read_text("utf-8"))
+        catalog["actions"][0]["taskId"], catalog["actions"][1]["taskId"] = (
+            catalog["actions"][1]["taskId"], catalog["actions"][0]["taskId"])
+        with self.assertRaisesRegex(ValueError, "TaskID"):
+            bridge.NoxPackHost(catalog)
+        self.assertEqual(self.seen, [])
+
+    def test_unhashable_native_route_is_denied_before_backend(self):
+        for route in ([], {}, None, 1):
+            with self.subTest(route=repr(route)):
+                with self.assertRaises(bridge.HostDenied):
+                    self.dispatch.execute(route, {}, self.session)
+        self.assertEqual(self.seen, [])
+
+
 if __name__ == "__main__":
     unittest.main()
