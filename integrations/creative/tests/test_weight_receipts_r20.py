@@ -184,6 +184,12 @@ class ModelReceiptTests(unittest.TestCase):
                 self.studio.download(MODEL,["weights.gguf"],REV,True)
         self.assertFalse((self.folder/"RECEIPT.json").exists())
 
+    def test_conflicting_upstream_sha_receipt_does_not_advertise_installed(self):
+        receipt=self.receipt()
+        receipt["files"][0]["upstream_sha256"]=hashlib.sha256(b"different").hexdigest()
+        (self.folder/"RECEIPT.json").write_text(json.dumps(receipt),encoding="utf-8")
+        self.assertFalse(self.installed()["installed"])
+
     def test_redirected_model_folder_cannot_receive_download(self):
         outside=Path(self.temp.name)/"outside"
         outside.mkdir()
