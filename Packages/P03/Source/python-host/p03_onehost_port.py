@@ -108,8 +108,17 @@ class P03OneHostPort:
             if (not isinstance(approved, (set, frozenset))
                     or any(not isinstance(value, str) for value in approved)
                     or route not in approved
-                    or not callable(self.native_approve)
-                    or self.native_approve(session, route, args) is not True):
+                    or not callable(self.native_approve)):
+                raise P03PortDenied("Fresh out-of-band native approval required")
+            # A failing native callback must HOLD before any queue operation.
+            # Suppress private callback diagnostics; never infer permission.
+            try:
+                consent = self.native_approve(session, route, args)
+            except (P03PortDenied, P03PortHold):
+                raise
+            except Exception:
+                raise P03PortHold("Native consent provider unavailable") from None
+            if consent is not True:
                 raise P03PortDenied("Fresh out-of-band native approval required")
 
     def catalog(self, session: object, args: dict) -> dict:

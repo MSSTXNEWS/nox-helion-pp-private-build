@@ -61,6 +61,42 @@ class NativeScopeShapeTests(unittest.TestCase):
 
 
 
+    def test_r14_01_pull_callback_exception_holds(self):
+        def broken(*_args):
+            raise RuntimeError("private native callback diagnostic")
+        self.port.native_approve = broken
+        with self.assertRaises(P03PortHold) as caught:
+            self.port._ensure_native_scope(
+                self.session(frozenset({"models.pull"}), frozenset({"models.pull"})),
+                "models.pull", {})
+        self.assertEqual(str(caught.exception), "Native consent provider unavailable")
+
+    def test_r14_02_cancel_callback_exception_holds(self):
+        def broken(*_args):
+            raise ValueError("private device failure")
+        self.port.native_approve = broken
+        with self.assertRaises(P03PortHold):
+            self.port._ensure_native_scope(
+                self.session(frozenset({"models.cancel"}), frozenset({"models.cancel"})),
+                "models.cancel", {})
+
+    def test_r14_03_explicit_native_denial_remains_denied(self):
+        def explicit_denial(*_args):
+            raise P03PortDenied("Fresh permission denied")
+        self.port.native_approve = explicit_denial
+        with self.assertRaises(P03PortDenied):
+            self.port._ensure_native_scope(
+                self.session(frozenset({"models.pull"}), frozenset({"models.pull"})),
+                "models.pull", {})
+
+    def test_r14_04_truthy_nonboolean_does_not_approve(self):
+        self.port.native_approve = lambda *_args: 1
+        with self.assertRaises(P03PortDenied):
+            self.port._ensure_native_scope(
+                self.session(frozenset({"models.pull"}), frozenset({"models.pull"})),
+                "models.pull", {})
+
+
 class NativeOwnerRouteMapR11Tests(unittest.TestCase):
     """P03 must HOLD malformed one-host owner-map rows before any bind."""
     def setUp(self):
