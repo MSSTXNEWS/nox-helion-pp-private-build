@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 function Require-Exit([string]$name) {
-    if ($LASTEXITCODE -ne 0) { throw "GITLAB_EXEC_FAILED:$name:$LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "GITLAB_EXEC_FAILED:${name}:$LASTEXITCODE" }
 }
 function Find-Python31210 {
     $commands = @()
@@ -61,6 +61,26 @@ $state='HOLD'
 $reason='UNVERIFIED'
 $blocksCompleted=0
 try {
+    # GitLab source admission before optional network installs or costly Windows builds.
+    # A release BuildID must not be derived from a malformed/repeated E07 script.
+    $handoff=Join-Path $repo 'coordination/e06/Emit-E07ImmutableHandoff.ps1'
+    if (-not (Test-Path -LiteralPath $handoff -PathType Leaf)) {
+        throw 'GITLAB_E07_HANDOFF_SOURCE_MISSING'
+    }
+    $parseTokens=$null
+    $parseErrors=$null
+    [System.Management.Automation.Language.Parser]::ParseFile(
+        $handoff,[ref]$parseTokens,[ref]$parseErrors) | Out-Null
+    if ($parseErrors.Count -ne 0) { throw 'GITLAB_E07_HANDOFF_POWERSHELL_SYNTAX_HOLD' }
+    $handoffText=Get-Content -LiteralPath $handoff -Raw -Encoding UTF8
+    if ([regex]::Matches($handoffText,'Write-Host "E07_BUILDID_SEALED').Count -ne 1 -or
+        [regex]::Matches($handoffText,'foreach \(\$expected in @\(\$source.parts\)\)').Count -ne 1 -or
+        -not $handoffText.Contains('([string]$matching[0].sha256).ToLowerInvariant() -cne ([string]$expected.sha256).ToLowerInvariant()') -or
+        -not $handoffText.Contains('([string]$matching[0].gitBlobSha1).ToLowerInvariant() -cne ([string]$expected.git_blob_sha1).ToLowerInvariant()') -or
+        -not $handoffText.Contains('release_accepted=$false')) {
+        throw 'GITLAB_E07_SINGLE_SEAL_PART_PARITY_HOLD'
+    }
+    Write-Host 'GITLAB_E07_SOURCE_PREFLIGHT_PASS_NOT_NATIVE_ACCEPTANCE'
     # The GitLab hosted runner has Chocolatey; own runners may install prerequisites
     # themselves. No network credential or token is printed or persisted.
     $python=Find-Python31210
@@ -76,6 +96,8 @@ try {
     $env:PATH=(Split-Path -Parent $python) + ';' + $env:PATH
     & python -c 'import sys; assert sys.version_info[:3] == (3,12,10)'
     Require-Exit 'PYTHON_VERSION_RECHECK'
+    & python -m unittest discover -s tests/e06 -p 'test_gitlab_free_source_gate.py' -v
+    Require-Exit 'GITLAB_MIGRATION_SOURCE_GATE'
 
     $sdk=@()
     if (Get-Command dotnet -ErrorAction SilentlyContinue) {
