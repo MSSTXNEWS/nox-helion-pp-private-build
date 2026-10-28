@@ -1,0 +1,57 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source = fs.readFileSync(new URL('../web/theater.js', import.meta.url), 'utf8');
+function harness() {
+  const objects = new Map();
+  function el(id) {
+    const value = { id, style:{}, textContent:'', src:'', files:[], textTracks:[], events:{},
+      play(){value.played=true;return Promise.resolve()},pause(){value.paused=true},
+      addEventListener(name,fn){value.events[name]=fn},
+      appendChild(child){value.child=child;value.textTracks.push({mode:'disabled'});},
+      remove(){value.removed=true}, requestFullscreen(){return Promise.resolve()}};
+    objects.set(id,value);return value;
+  }
+  for(const id of ['video','poster','media-status','stage','title','space','file','subtitle-file','play','pause','full','screens'])el(id);
+  let next=0;const created=[],revoked=[];
+  const sandbox = { document:{getElementById:id=>objects.get(id),createElement:()=>({remove(){this.removed=true}})},
+    window:{addEventListener(){},getScreenDetails:null}, location:{search:'?project=demo_1'},
+    URL:{createObjectURL:obj=>{created.push(obj);return 'blob:media'+(++next)},revokeObjectURL:url=>revoked.push(url)},
+    URLSearchParams, Blob, Promise, String, RegExp, Error};
+  vm.runInNewContext(source,sandbox,{filename:'theater.js'});
+  return {objects,created,revoked};
+}
+test('real local video route, never guessed /api/media',()=>{
+  const {objects}=harness(), video=objects.get('video'), input=objects.get('file');
+  assert.match(objects.get('media-status').textContent,/выберите готовый видеофайл/);
+  assert.equal(video.src,'');
+  input.onchange({target:{files:[{name:'clip.mp4',size:120}]}});
+  assert.equal(video.src,'blob:media1');
+  objects.get('play').onclick();assert.equal(video.played,true);
+});
+test('SRT converts to VTT and attaches a native track',async()=>{
+  const {objects,created}=harness();
+  objects.get('file').onchange({target:{files:[{name:'movie.mp4',size:512}]}});
+  await objects.get('subtitle-file').onchange({target:{files:[{name:'sub.srt',size:70,text:async()=>"1\n00:00:01,250 --> 00:00:04,500\nПривет!\n"}]}});
+  const track=objects.get('video').child;
+  assert.equal(track.kind,'subtitles');assert.equal(track.src,'blob:media2');
+  assert.equal(objects.get('video').textTracks[0].mode,'showing');
+  const text=await created[1].text();assert.match(text,/^WEBVTT/);assert.match(text,/00:00:01\.250 --> 00:00:04\.500/);
+});
+test('invalid subtitles do not replace a working track',async()=>{
+  const {objects,revoked}=harness();
+  objects.get('file').onchange({target:{files:[{name:'movie.webm',size:100}]}});
+  await objects.get('subtitle-file').onchange({target:{files:[{name:'good.vtt',size:70,text:async()=>"WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nOK"}]}});
+  const track=objects.get('video').child;
+  await objects.get('subtitle-file').onchange({target:{files:[{name:'bad.srt',size:70,text:async()=>"not an SRT"}]}});
+  assert.equal(objects.get('video').child,track);assert.deepEqual(revoked,[]);
+  assert.match(objects.get('media-status').textContent,/HOLD/);
+});
+test('reject empty/invalid video and unsafe subtitle types',async()=>{
+  const {objects}=harness();
+  objects.get('file').onchange({target:{files:[{name:'bad.exe',size:30}]}});
+  assert.equal(objects.get('video').src,'');
+  assert.match(objects.get('media-status').textContent,/HOLD/);
+});

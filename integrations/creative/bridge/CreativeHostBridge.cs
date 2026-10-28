@@ -33,6 +33,7 @@ public partial class MainWindow
         }
         var action=GetString(payload,"action");
         if (action=="native_import") { ImportCreativeAsset(requestId!,payload); return; }
+        if (action=="open_browser") { OpenCreativeBrowser(requestId!,payload); return; }
         if (action=="stop")
         {
             StopCreativeWorker();
@@ -130,6 +131,34 @@ public partial class MainWindow
             return process;
         }
         finally{_creativeStartGate.Release();}
+    }
+
+    private void OpenCreativeBrowser(string requestId, JsonElement payload)
+    {
+        // Existing system browser, not a second WebView2 host. Only approved public model-card origins.
+        var target = GetString(payload, "url");
+        var valid = target is not null && target.Length <= 2048 &&
+            Uri.TryCreate(target, UriKind.Absolute, out var parsed) &&
+            parsed.Scheme == Uri.UriSchemeHttps && parsed.IsDefaultPort &&
+            string.IsNullOrEmpty(parsed.UserInfo) &&
+            (parsed.IdnHost.Equals("huggingface.co", StringComparison.OrdinalIgnoreCase) ||
+             parsed.IdnHost.Equals("github.com", StringComparison.OrdinalIgnoreCase));
+        if (!valid)
+        {
+            PostMessage(new {kind="creativeResult",requestId,ok=false,error="HTTPS model-card origin not approved"});
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo(target!) { UseShellExecute = true });
+            PostMessage(new {kind="creativeResult",requestId,ok=true,
+                data=new {status="SYSTEM_BROWSER_DISPATCHED",navigationAccepted=false}});
+        }
+        catch (Exception ex)
+        {
+            WriteLog("CREATIVE_BROWSER " + ex.GetType().Name);
+            PostMessage(new {kind="creativeResult",requestId,ok=false,error="System browser could not be launched"});
+        }
     }
 
     private void ImportCreativeAsset(string requestId, JsonElement payload)
