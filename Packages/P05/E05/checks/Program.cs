@@ -145,6 +145,10 @@ Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
 Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
     ActionId = "training_step" }), "T10-01b: P05 telemetry cannot spoof a worker action");
 Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    Source = "P05.Unknown" }), "T10-01b: invalid P05 telemetry provenance rejected");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    State = "COMPLETED" }), "T10-01b: sensor measurement cannot become task completion");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
     EventType = "model.tokens" }), "T10-01b: unregistered event type rejected");
 Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
     EventType = "acceptance.updated" }), "T10-01b: unregistered acceptance event rejected");
@@ -152,7 +156,8 @@ Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
     EventType = "training.step", EvidenceVerified = true }),
     "T10-01b: only P04 may emit training step");
 Check(E05CanonicalEventFactory.IsCanonical(evt! with {
-    PackageId = "P04", ActionId = "gpu_worker_sample", EvidenceVerified = true }),
+    PackageId = "P04", Source = "P04.Worker",
+    ActionId = "gpu_worker_sample", EvidenceVerified = true }),
     "T10-01b: existing original P04 producer remains allowed");
 Check(E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu with {
     ObservedAtUtc = nowV3.AddMinutes(-2) }, nowV3) is null,
