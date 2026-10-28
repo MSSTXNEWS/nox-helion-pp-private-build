@@ -4,11 +4,17 @@ on:
     branches:
       - codex/v16-executor2-ollama-contract-20261027
       - e06/v16-r08-binary-diagnostic-20261028
+      - e06/v16-express-onehost-20261028
     paths:
       - '.github/workflows/nox-p02-r08-wpf-build.yml'
+      - 'coordination/e06/OriginalPythonDiagnosticBridge.cs'
+      - 'coordination/e06/stage_onehost.py'
+      - 'coordination/e06/build_onehost_installer.ps1'
+      - 'coordination/e06/fix_webview2_guid.py'
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   current-wpf-diagnostic:
     runs-on: windows-2025
@@ -121,6 +127,37 @@ jobs:
       - name: Apply bounded E02 compiler compatibility overlay only inside isolated stage
         shell: pwsh
         run: python Packages/P02/diagnostics/r08_apply_minimal_compile_fixes.py
+      - name: Recover immutable original Python EXE and stage one WPF native diagnostic bridge
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference='Stop'
+          $id=12781339660
+          $meta=gh api "repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/$id" | ConvertFrom-Json
+          if ($meta.id -ne $id -or $meta.expired -eq $true -or
+              $meta.workflow_run.id -ne 40609239316 -or
+              $meta.workflow_run.head_sha -cne 'ff28eef5c7cc0e01473fb8ba65656b08b1e348ef') {
+            throw 'ORIGINAL_PYTHON_ARTIFACT_PROVENANCE_HOLD'
+          }
+          $target='work/e06/pinned-original-python'
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          gh run download 40609239316 --repo MSSTXNEWS/nox-helion-pp-private-build --name nox-e06-original-diagnostic-40609239316 --dir $target
+          if ($LASTEXITCODE -ne 0) { throw 'PINNED_ORIGINAL_EXE_DOWNLOAD_HOLD' }
+          $py=Join-Path $target 'work/candidate/dist/NOX_HELION_PRIVATE_CANDIDATE.exe'
+          if (!(Test-Path -LiteralPath $py -PathType Leaf)) { throw 'ORIGINAL_BINARY_PATH_MISSING' }
+          if ((Get-FileHash -LiteralPath $py -Algorithm SHA256).Hash.ToLowerInvariant() -cne '4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3') {
+            throw 'ORIGINAL_PYTHON_BINARY_SHA_HOLD'
+          }
+          python coordination/e06/stage_onehost.py 'work/e06/staged/R11' 'coordination/e06/OriginalPythonDiagnosticBridge.cs' $py
+          if ($LASTEXITCODE -ne 0) { throw 'E06_OWNER_SCOPE_SHA_CONFLICT' }
+          "NOX_ORIGINAL_PYTHON_PATH=$((Resolve-Path $py).Path)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host 'E06_PINNED_WPF_PYTHON_NATIVE_BRIDGE_STAGED_PASS'
+      - name: Repair pinned WebView2 GUID in owner1 preflight (staging only)
+        shell: pwsh
+        run: |
+          python coordination/e06/fix_webview2_guid.py 'work/e06/staged/R11'
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER1_WEBVIEW2_GUID_CORRECTION_HOLD' }
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
         run: |
@@ -156,6 +193,35 @@ jobs:
             E07Accepted=$false
           } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath 'work/e06/staged/diagnostic-receipt.json'
           Write-Host 'WPF_DIAGNOSTIC_EXE_BUILT_NOT_FINAL_RELEASE'
+      - name: Build single-host self-contained Windows and existing P01 NSIS installer candidate
+        id: e06installer
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          & .\coordination\e06\build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $env:NOX_ORIGINAL_PYTHON_PATH -OutputRoot 'work/e06/onehost-candidate' -RunId $env:GITHUB_RUN_ID
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve unified program, NSIS candidate, pre/post SHA and error evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-onehost-installer-${{ github.run_id }}
+          path: |
+            work/e06/staged/E06_R10_SOURCE_RECEIPT.json
+            work/e06/staged/E06_R11_OWNER1_WEBVIEW2_ROLLBACK/**
+            work/e06/staged/d02-byte-exact-receipt.json
+            work/e06/onehost-candidate/ONEHOST_DIAGNOSTIC_RECEIPT.json
+            work/e06/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
+            work/e06/onehost-candidate/payload/payload.sha256.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Refuse release credit on NSIS compiler failure
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.e06installer.outcome }}' -ne 'success') {
+            throw 'E06_ONEHOST_INSTALLER_BUILD_HOLD'
+          }
+          Write-Host 'E06_ONEHOST_INSTALLER_DIAGNOSTIC_PASS_NOT_E07_ACCEPTED'
       - name: Preserve diagnostic evidence even if compile fails
         if: always()
         uses: actions/upload-artifact@v4
