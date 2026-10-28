@@ -2,6 +2,9 @@ name: NOX E06 R14 real onehost repack with pinned owner P01 NSIS (not final)
 on:
   push:
     branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Repack-FrozenOneHost-OwnerP01.ps1'
+      - '.github/workflows/e06-r14-repack-nsis.yml'
   workflow_dispatch:
 permissions:
   contents: read

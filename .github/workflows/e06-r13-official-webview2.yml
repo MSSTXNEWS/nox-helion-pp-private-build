@@ -2,6 +2,9 @@ name: NOX E06 R13 official WebView2 standalone prerequisite gate (not release)
 on:
   push:
     branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Test-OfficialWebView2Prereq.ps1'
+      - '.github/workflows/e06-r13-official-webview2.yml'
   workflow_dispatch:
 permissions:
   contents: read

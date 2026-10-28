@@ -2,6 +2,9 @@ name: NOX E06 R13 native frozen combined NSIS installation on Windows (not final
 on:
   push:
     branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Test-CombinedOneHostInstall.ps1'
+      - '.github/workflows/e06-r13-combined-native-install.yml'
   workflow_dispatch:
 permissions:
   contents: read

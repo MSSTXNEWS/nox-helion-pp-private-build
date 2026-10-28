@@ -2,6 +2,9 @@ name: NOX E06 R14 exact repack NSIS nsExec forensic (no payload modifications)
 on:
   push:
     branches: [e06/v16-r13-offline-webview2-gate-20261028]
+    paths:
+      - 'coordination/e06/Diagnose-ExactRepack-NSIS.ps1'
+      - '.github/workflows/e06-r14-nsexec-forensic.yml'
   workflow_dispatch:
 permissions:
   contents: read
