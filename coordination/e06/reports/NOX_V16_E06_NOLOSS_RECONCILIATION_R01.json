@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_V16_E06_NOLOSS_RECONCILIATION_SOURCE_ONLY_V1",
+  "run_id": "NOX-V16-E06-NOLOSS-RECOVERY-20261028",
+  "owner": 6,
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "main_baseline_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "initial_unified_head": "511131e3f2a7c9e9ab4140c736d876a5b77f9160",
+  "reconciled_exact_parent_sha1": "59e79af9d21ed1c9edd83891c2204413092d44ac",
+  "current_unified_head_observed": "833a37bca2930e0cb9b272ae07f5d6545e3d5096",
+  "new_upstream_since_parent": {
+    "commits": 6,
+    "changed_paths": 5,
+    "deleted_paths": [],
+    "status": "ahead"
+  },
+  "historical_source_methods_reported": {
+    "bound": 36,
+    "total": 50,
+    "percent": 72,
+    "weighted_historical": 68.18,
+    "comparability_note": "Earlier reported source-method/integration-ledger figures, not native acceptance"
+  },
+  "github_source_ledger_observed": {
+    "blob_sha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "source_bound": 37,
+    "source_hold": 13,
+    "total": 50,
+    "source_bound_percent": 74,
+    "integrated": 0,
+    "windows_accepted": 0
+  },
+  "retained_installer_evidence": {
+    "historical_WPF_native_setup_sha256": "03e026141854a7dada0c94db9066f31d7f9345ca7e35a37f7a73efa9e1657310",
+    "WPF_CI_run_id": 40611423342,
+    "WPF_CI_status": "success",
+    "historical_onehost_diagnostic_setup_sha256": "44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3",
+    "onehost_CI_run_id": 40614012171,
+    "onehost_CI_status": "success",
+    "onehost_result": "DIAGNOSTIC_BUILD_ONLY_NATIVE_INSTALL_HOLD",
+    "artifacts_physically_present_in_current_workspace": true
+  },
+  "stale_express_pr": 171,
+  "reconciled_express_pr": 173,
+  "reconciled_base_sha1": "59e79af9d21ed1c9edd83891c2204413092d44ac",
+  "reconciled_delta": {
+    "modified": "coordination/e06/build_onehost_installer.ps1",
+    "pre_blob": "1d9ac9efa29c25fc4b9277ad854e31a5e729e18d",
+    "post_blob": "c0537c87898663fb589a315be7417312b8b81f9c",
+    "added": [
+      "coordination/e06/express_per_run_report.py",
+      ".github/workflows/nox-e06-express-oneblock.yml"
+    ],
+    "deleted_files": 0,
+    "total_touched": 3,
+    "original_e01_to_e05_files_modified": 0
+  },
+  "limits": {
+    "upstream_moving": true,
+    "upstream_head_after_branch_cut": true,
+    "needs_rebase_or_new_ancestry_check_before_merge": true,
+    "full729_source_sha_verified": false,
+    "final_combined_exe_accepted": false,
+    "real_GPU_training": false,
+    "E07_pass": 0,
+    "E07_total": 10,
+    "release_allowed": false,
+    "note": "No release acceptance or latest HEAD replacement claimed; all physical source changes need same-BuildID QA after runner recovery."
+  }
+}
