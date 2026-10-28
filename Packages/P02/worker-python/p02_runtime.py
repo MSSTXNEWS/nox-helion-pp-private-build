@@ -681,10 +681,18 @@ class P02Store:
 
 def authorized_app_message(source_uri: str, operation: str, main_frame: bool, user_confirmed: bool) -> bool:
     """Policy only: #6 must use browser-reported source and enforce in native WebView2 events."""
+    # Native proof flags must be booleans, not truthy page strings/numbers.
+    # urlsplit strips some controls before parsing; reject them in the raw URI.
+    if (type(main_frame) is not bool or type(user_confirmed) is not bool
+            or not isinstance(source_uri, str) or not isinstance(operation, str)
+            or source_uri != source_uri.strip()
+            or any(ord(c) < 32 or ord(c) == 127 for c in source_uri)):
+        return False
     try:
         origin = urllib.parse.urlsplit(source_uri)
         if (origin.scheme != "https" or origin.hostname != "nox.invalid" or
-                origin.port is not None or origin.username or origin.password or not main_frame):
+                origin.port is not None or origin.username is not None
+                or origin.password is not None or not main_frame):
             return False
     except ValueError:
         return False

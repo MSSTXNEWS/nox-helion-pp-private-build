@@ -105,6 +105,23 @@ class ChatBridgeTests(unittest.TestCase):
 
 class P02ExtendedTests(unittest.TestCase):
 
+    def test_native_webview_flags_require_exact_booleans(self):
+        for value in ("false", "true", 1, [], object()):
+            with self.subTest(flag=type(value).__name__):
+                self.assertIs(authorized_app_message(
+                    'https://nox.invalid/app', 'chat.send', value, False), False)
+                self.assertIs(authorized_app_message(
+                    'https://nox.invalid/app', 'history.delete', True, value), False)
+        self.assertIs(authorized_app_message(
+            'https://nox.invalid/app', 'history.delete', True, True), True)
+
+    def test_native_webview_origin_rejects_parser_normalization_and_userinfo(self):
+        for uri in ('https://@nox.invalid/app', 'https://:@nox.invalid/app',
+                    ' https://nox.invalid/app', '\nhttps://nox.invalid/app',
+                    'https://nox.\ninvalid/app', None, b'https://nox.invalid/app'):
+            with self.subTest(uri=uri):
+                self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+
     def test_buffered_response_keeps_chat_lease_until_consumer_drains(self):
         """A finished producer must not allow a second chat while reply is unread."""
         import time
