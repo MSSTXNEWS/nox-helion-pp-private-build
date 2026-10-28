@@ -168,9 +168,38 @@ def write_training_receipt(output: Path, receipt: dict[str, Any]) -> tuple[str, 
 
 
 def read_object(path: Path) -> dict[str, Any]:
+    """Parse authorization and resume JSON with unambiguous, finite semantics.
+
+    These bytes are also interpreted by rights verifiers or future recovery
+    tooling; duplicate keys and NaN/Infinity must not produce split decisions.
+    """
     if path.is_symlink() or not path.is_file():
         raise ValueError("INPUT_NOT_REGULAR_FILE")
-    value = json.loads(path.read_text(encoding="utf-8"))
+
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        obj: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("INPUT_JSON_DUPLICATE_KEY")
+            obj[key] = value
+        return obj
+
+    def reject_constant(_token: str) -> None:
+        raise ValueError("INPUT_JSON_NONFINITE")
+
+    def finite_float(token: str) -> float:
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("INPUT_JSON_NONFINITE")
+        return value
+
+    try:
+        value = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=unique_pairs,
+            parse_constant=reject_constant, parse_float=finite_float,
+        )
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("INPUT_INVALID_JSON") from exc
     if not isinstance(value, dict):
         raise ValueError("EXPECTED_JSON_OBJECT")
     return value
