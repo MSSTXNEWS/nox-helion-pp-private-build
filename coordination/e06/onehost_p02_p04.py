@@ -42,9 +42,10 @@ def _owner_wire_snapshot(payload: Mapping, *, kind: str, max_bytes: int = 262144
     try:
         raw = json.dumps(dict(payload), ensure_ascii=False, allow_nan=False,
                          sort_keys=True, separators=(",", ":"))
-    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        wire_bytes = raw.encode("utf-8")  # Reject lone surrogates before UI/IPC.
+    except (TypeError, ValueError, OverflowError, RecursionError, UnicodeError) as exc:
         raise OneHostHold(f"{kind}_OWNER_JSON_VALUE_INVALID") from exc
-    if len(raw.encode("utf-8")) > max_bytes:
+    if len(wire_bytes) > max_bytes:
         raise OneHostHold(f"{kind}_OWNER_JSON_OVER_LIMIT")
     return json.loads(raw)
 
@@ -187,7 +188,8 @@ class P02P04OneHost:
                     # The bounded copy is a wire value, not a second chat.
                     wire = _owner_wire_snapshot(frame, kind="P02_CHAT_FRAME",
                                                 max_bytes=1048576)
-                    if wire.get("type") not in _P02_CHAT_FRAMES:
+                    if (type(wire.get("type")) is not str
+                            or wire["type"] not in _P02_CHAT_FRAMES):
                         raise OneHostHold("EXISTING_P02_CHAT_FRAME_TYPE_REQUIRED")
                     # A blocking owner generator may complete a RAG/LLM await
                     # after native permission was revoked. Pre-next admission
@@ -208,8 +210,9 @@ class P02P04OneHost:
 
     def gpu_command(self, scope: NativeScope, command: str, worker_id: str) -> dict:
         """Call ONLY the already-running P04 managed worker's native control port."""
-        if command not in _GPU_COMMANDS or not isinstance(worker_id, str) or not re.fullmatch(
-                r"[A-Za-z0-9_.:-]{1,128}", worker_id):
+        if (type(command) is not str or command not in _GPU_COMMANDS
+                or not isinstance(worker_id, str) or not re.fullmatch(
+                r"[A-Za-z0-9_.:-]{1,128}", worker_id)):
             raise OneHostHold("GPU_OWNER_COMMAND_OR_WORKER_INVALID")
         self._admit(scope, command)
         if not callable(self._gpu) or not callable(self._verify_ack):
@@ -235,7 +238,8 @@ class P02P04OneHost:
         snapshot = _owner_wire_snapshot(event, kind="P05_EVENT")
         if (snapshot.get("schema") != "NOX-INSTALLER-EVENT-v3"
                 or snapshot.get("package_id") != "P04"
-                or snapshot.get("event_type") not in _GPU_EVENTS
+                or type(snapshot.get("event_type")) is not str
+                or snapshot["event_type"] not in _GPU_EVENTS
                 or snapshot.get("evidence_verified") is not True
                 or not callable(self._verify_v3)
                 or not callable(self._publish_v3)
