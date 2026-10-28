@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed, read-only SHA-256 audit of the original three NOX ZIP parts."""
 from __future__ import annotations
-import argparse, hashlib, json, pathlib, re, stat, sys, tempfile, zipfile
+import argparse, hashlib, json, os, pathlib, re, stat, sys, tempfile, zipfile
 
 PARTS = ("source_00.part", "source_01.part", "source_02.part")
 EXPECTED_SIZE = 60364346
@@ -69,6 +69,48 @@ def audit(directory: pathlib.Path, expected_files: int):
             "parts": [{"name": name, "bytes": length} for name, length in zip(PARTS, sizes)],
             "file_count": len(entries), "files": entries}
 
+
+def publish_manifest_exclusive(output: pathlib.Path, data: dict) -> None:
+    """Publish an audited receipt atomically, never replacing or following an output.
+
+    The private temp leaf is only linked into place after fsync. A hard-link
+    create is atomic and fails if even a dangling destination symlink exists.
+    This preserves previous SourceLock/owner receipts during concurrent jobs.
+    """
+    def require_trusted_parents() -> None:
+        for ancestor in (output.parent, *output.parent.parents):
+            try:
+                info = ancestor.lstat()
+            except FileNotFoundError:
+                continue
+            if (stat.S_ISLNK(info.st_mode) or
+                    getattr(info, "st_file_attributes", 0) &
+                    getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+                raise ValueError("OUTPUT_PARENT_REPARSE_HOLD")
+
+    require_trusted_parents()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    require_trusted_parents()
+    payload = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="\n",
+                                         prefix=".nox-source-audit-", suffix=".tmp",
+                                         dir=output.parent, delete=False) as handle:
+            temporary = pathlib.Path(handle.name)
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        # Never os.replace/rename: both can overwrite a concurrent valid receipt.
+        # NTFS and POSIX hard-link creation both reject an existing output leaf.
+        try:
+            os.link(temporary, output)
+        except FileExistsError as exc:
+            raise ValueError("OUTPUT_EXISTS_NO_OVERWRITE") from exc
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--parts-dir", type=pathlib.Path, default=pathlib.Path("."))
@@ -77,10 +119,7 @@ def main():
     args = ap.parse_args()
     try:
         data = audit(args.parts_dir, args.expected_files)
-        if args.output.exists():
-            raise ValueError("Refusing to overwrite existing SHA manifest")
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        publish_manifest_exclusive(args.output, data)
         print(json.dumps({k: v for k, v in data.items() if k != "files"}))
         return 0
     except (ValueError, OSError, zipfile.BadZipFile) as exc:
