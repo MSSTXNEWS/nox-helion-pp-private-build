@@ -55,3 +55,27 @@ test('reject empty/invalid video and unsafe subtitle types',async()=>{
   assert.equal(objects.get('video').src,'');
   assert.match(objects.get('media-status').textContent,/HOLD/);
 });
+
+test('late subtitle read cannot attach to a different movie',async()=>{
+  const {objects}=harness(),input=objects.get('file'),sub=objects.get('subtitle-file'),video=objects.get('video');
+  input.onchange({target:{files:[{name:'first.mp4',size:500}]}});
+  let finish;
+  const pending=sub.onchange({target:{files:[{name:'first.es.srt',size:90,text:()=>new Promise(resolve=>{finish=resolve})}]}});
+  input.onchange({target:{files:[{name:'second.mp4',size:900}]}});
+  finish('1\n00:00:01,000 --> 00:00:02,000\nHola');
+  await pending;
+  assert.equal(video.child,undefined);
+  assert.match(objects.get('media-status').textContent,/second.mp4/);
+});
+test('last subtitle selection wins and Spanish track language is correct',async()=>{
+  const {objects}=harness(),input=objects.get('file'),sub=objects.get('subtitle-file'),video=objects.get('video');
+  input.onchange({target:{files:[{name:'film.mp4',size:1000}]}});
+  let finish;
+  const pending=sub.onchange({target:{files:[{name:'old.ru.vtt',size:60,text:()=>new Promise(resolve=>{finish=resolve})}]}});
+  await sub.onchange({target:{files:[{name:'new.es.vtt',size:80,text:async()=> 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHola'}]}});
+  const track=video.child;
+  assert.equal(track.srclang,'es');
+  finish('WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nOld');
+  await pending;
+  assert.equal(video.child,track);
+});
