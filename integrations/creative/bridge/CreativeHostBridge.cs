@@ -20,6 +20,8 @@ public partial class MainWindow
     private readonly SemaphoreSlim _creativeWriteGate = new(1,1);
     private Process? _creativeWorker;
     private readonly ConcurrentDictionary<string,byte> _creativePending = new(StringComparer.Ordinal);
+    // Fail closed after stdout EOF; start/stop gate protects process lifetime.
+    private volatile bool _creativeResponseReaderClosed;
     private Window? _creativeProjector;
     private string? _creativeProjectorProjectId;
 
@@ -68,19 +70,20 @@ public partial class MainWindow
         }
         try
         {
-            // Only the first in-flight request may own this GUID. Never send a
-            // duplicate to the original worker or remove the first receipt.
+            // Pin admission only after the worker was selected. This prevents an
+            // old worker's EOF cleanup from stealing a newly admitted request.
+            var worker=await EnsureCreativeWorkerAsync();
             if (!_creativePending.TryAdd(requestId!,0))
             {
                 WriteLog("CREATIVE_DUPLICATE_REQUEST_ID");
                 return;
             }
-            var worker=await EnsureCreativeWorkerAsync();
             var line=JsonSerializer.Serialize(new {request_id=requestId,payload});
             await _creativeWriteGate.WaitAsync();
             try
             {
-                if (worker.HasExited) throw new InvalidOperationException("Creative worker exited");
+                if (worker.HasExited || _creativeResponseReaderClosed)
+                    throw new InvalidOperationException("Creative worker response channel unavailable");
                 await worker.StandardInput.WriteLineAsync(line);
                 await worker.StandardInput.FlushAsync();
             }
@@ -223,12 +226,37 @@ public partial class MainWindow
         }
     }
 
+    // Called under _creativeStartGate. Atomic TryRemove prevents duplicate
+    // delivery when STOP and the stdout reader race to complete requests.
+    private void FailOrphanedCreativeRequests(string error)
+    {
+        foreach (var pending in _creativePending.Keys)
+        {
+            if (!_creativePending.TryRemove(pending,out _)) continue;
+            try
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                    PostMessage(new {kind="creativeResult", requestId=pending, ok=false, error})));
+            }
+            catch (Exception ex) { WriteLog("CREATIVE_RESULT_DELIVERY "+ex.GetType().Name); }
+        }
+    }
+
     private async Task<Process> EnsureCreativeWorkerAsync()
     {
         await _creativeStartGate.WaitAsync();
         try
         {
-            if (_creativeWorker is {HasExited:false} existing)return existing;
+            if (_creativeWorker is {HasExited:false} existing)
+            {
+                if (_creativeResponseReaderClosed)
+                    throw new IOException("CREATIVE_WORKER_STDOUT_CLOSED");
+                return existing;
+            }
+            // A crashed worker may have exited before its stdout task's
+            // finally ran. Fail old requests before admitting the next batch.
+            if (_creativeWorker is {HasExited:true})
+                FailOrphanedCreativeRequests("CREATIVE_WORKER_EXITED");
             var path=Path.Combine(AppContext.BaseDirectory,"Backend","Creative","NOX_CreativeWorker.exe");
             using var verifiedWorker = HoldApprovedCreativeWorker(path);
             var start=new ProcessStartInfo(path)
@@ -241,6 +269,7 @@ public partial class MainWindow
             start.ArgumentList.Add(Path.Combine(_data,"creative"));
             var process=Process.Start(start) ?? throw new InvalidOperationException("Worker startup failed");
             _creativeWorker=process;
+            _creativeResponseReaderClosed=false;
             _=Task.Run(async () =>
             {
                 try
@@ -284,6 +313,21 @@ public partial class MainWindow
                     }
                 }
                 catch(Exception ex){WriteLog("CREATIVE_WORKER_READ "+ex.GetType().Name);}
+                finally
+                {
+                    await _creativeStartGate.WaitAsync();
+                    try
+                    {
+                        // A worker that closes stdout can never produce another
+                        // response. Do not strand its in-flight request IDs.
+                        if (ReferenceEquals(_creativeWorker, process))
+                        {
+                            _creativeResponseReaderClosed=true;
+                            FailOrphanedCreativeRequests("CREATIVE_WORKER_RESPONSE_CHANNEL_CLOSED");
+                        }
+                    }
+                    finally { _creativeStartGate.Release(); }
+                }
             });
             _=Task.Run(async () =>
             {
@@ -462,7 +506,10 @@ public partial class MainWindow
                         return false;
                     }
                     if (ReferenceEquals(_creativeWorker,worker))
+                    {
                         _creativeWorker=null;
+                        _creativeResponseReaderClosed=false;
+                    }
                 }
                 // Only a verified stop (or no running worker) is allowed to
                 // dismiss existing owner request IDs as STOPPED_BY_USER.
