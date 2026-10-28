@@ -21,7 +21,8 @@ export function visualPreset(action,index){
 
 export function validateLiveVisualEvent(event,knownRoutes){
   if(!event||event.source!==NATIVE_SOURCE||event.evidenceVerified!==true||
-     !RE.test(event.eventId||"")||!RE.test(event.runId||"")||
+     typeof event.eventId!=="string"||typeof event.runId!=="string"||
+     !RE.test(event.eventId)||!RE.test(event.runId)||
      !knownRoutes.has(event.routeId)||!STATES.includes(event.state))
     return false;
   if(event.progress!==undefined){
