@@ -173,16 +173,25 @@ class PrivateMobileContract:
     """
 
     def __init__(self, existing_p02_policy: Callable, trusted_peer: Callable,
-                 existing_host: object, clock: Callable[[], float]):
+                 existing_host: object, clock: Callable[[], float],
+                 gateway_ready: Callable[[], bool] | None = None):
         if not all(callable(x) for x in (existing_p02_policy, trusted_peer, clock)):
             raise G2Hold("Existing P02 mobile auth + native peer verifier required")
         self.policy, self.peer, self.host, self.clock = (
             existing_p02_policy, trusted_peer, existing_host, clock)
+        self.gateway_ready = gateway_ready
 
     def available(self) -> bool:
-        return True  # Pure admission handler; not a claim that remote HTTPS is live.
+        # A native host probe must attest private HTTPS gateway/Tailscale is
+        # actually configured; the mere presence of this file is not proof.
+        try:
+            return callable(self.gateway_ready) and self.gateway_ready() is True
+        except Exception:
+            return False
 
     def connect(self, session: object, payload: dict) -> dict:
+        if not self.available():
+            raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_NOT_READY")
         if (not isinstance(payload, dict) or set(payload) != {"want"}
                 or not isinstance(payload["want"], list)
                 or len(payload["want"]) > 18
@@ -212,7 +221,7 @@ class PrivateMobileContract:
             raise G2Denied("Private peer/CSRF/user consent denied")
         # Native session-scoped capabilities, never a public URL or a token.
         advertised = self.host.advertise(session)
-        return {"mode": "PRIVATE_CONTRACT_ONLY", "gatewayListening": False,
+        return {"mode": "PRIVATE_NATIVE_ATTESTED", "gatewayListening": True,
                 "allowed": [r for r in payload["want"]
                             if advertised.get(r, {}).get("enabled") is True]}
 
@@ -308,7 +317,8 @@ class G2OneHostBinder:
                 if callable(sip) and sip() is True and callable(dial) and (
                         callable(getattr(self.host, "native_approve", None))):
                     voice_routes["calls.dial"] = dial
-            mobile_routes = {"mobile.connect"} if self.mobile is not None else set()
+            mobile_routes = {"mobile.connect"} if (self.mobile is not None and
+                    self.mobile.available()) else set()
             intended = set(e05_routes) | set(voice_routes) | mobile_routes
             for route in intended:
                 owner = 5 if route in e05_routes else 6 if route in mobile_routes else 2
