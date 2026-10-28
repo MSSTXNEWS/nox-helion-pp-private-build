@@ -16,6 +16,7 @@ import os
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,25 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def reject_reparse_ancestors(path: Path) -> None:
+    """Fail closed on inherited symbolic links / Windows junctions.
+
+    A native host still owns the trusted data root and must protect against
+    filesystem replacement races; this is a preflight, not a handle sandbox.
+    """
+    for candidate in (path, *path.parents):
+        try:
+            info = candidate.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ValueError("P04_PATH_ANCESTOR_UNREADABLE") from exc
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
+            raise ValueError("P04_PATH_REPARSE_ANCESTOR")
 
 
 def finite_metric(value: Any) -> float | None:
@@ -409,7 +429,9 @@ class EventWriter:
         self.path, self.run_id, self.task_id = path, run_id, task_id
         if self.path.parent.is_symlink():
             raise ValueError("EVENT_LOG_PARENT_SYMLINK")
+        reject_reparse_ancestors(self.path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        reject_reparse_ancestors(self.path)
         self.lock = threading.Lock()
         self.sequence = 0
         if self.path.is_symlink():
@@ -457,6 +479,7 @@ class EventWriter:
         with self.lock:
             if self.path.is_symlink() or self.path.parent.is_symlink():
                 raise ValueError("EVENT_LOG_SYMLINK")
+            reject_reparse_ancestors(self.path)
             next_sequence = self.sequence + 1
             event = {
                 "schema": EVENT_SCHEMA, "run_id": self.run_id, "event_id": uuid.uuid4().hex,
@@ -507,7 +530,9 @@ def validated_checkpoint(checkpoint_dir: Path, selected: Path) -> tuple[int, str
 
 
 def acquire_gpu_lock(lock_path: Path) -> int:
+    reject_reparse_ancestors(lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
+    reject_reparse_ancestors(lock_path)
     try:
         return os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except FileExistsError as exc:
