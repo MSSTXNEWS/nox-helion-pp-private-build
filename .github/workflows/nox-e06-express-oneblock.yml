@@ -15,6 +15,7 @@ on:
       - 'coordination/e06/stage_onehost.py'
       - 'coordination/e06/build_onehost_installer.ps1'
       - 'coordination/e06/express_per_run_report.py'
+      - 'coordination/e06/stage_chatlog_order_compat.py'
       - '.github/workflows/nox-e06-express-oneblock.yml'
   workflow_dispatch:
 permissions:
@@ -192,6 +193,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E06_OWNER_SCOPE_SHA_CONFLICT' }
           "NOX_ORIGINAL_PYTHON_PATH=$((Resolve-Path $py).Path)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host 'E06_PINNED_WPF_PYTHON_NATIVE_BRIDGE_STAGED_PASS'
+      - name: Repair exact original R11 chatLog initialization only in isolated UI stage
+        shell: pwsh
+        run: |
+          python coordination/e06/stage_chatlog_order_compat.py --stage 'work/e06/staged/R11' --receipt 'work/e06/staged/E06_R11_CHATLOG_COMPAT_RECEIPT.json'
+          if ($LASTEXITCODE -ne 0) { throw 'E06_CHATLOG_APPROVED_R11_SHA_HOLD' }
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
         run: |
@@ -273,6 +279,9 @@ jobs:
           path: |
             work/e06/staged/E06_R10_SOURCE_RECEIPT.json
             work/e06/staged/d02-byte-exact-receipt.json
+            work/e06/staged/E06_R11_CHATLOG_COMPAT_RECEIPT.json
+            work/e06/staged/R11-approved-index.html.original
+            work/e06/staged/E06_R11_CHATLOG_COMPAT_RECEIPT.patch
             work/e06/onehost-candidate/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
             work/e06/onehost-candidate/payload/payload.sha256.json
