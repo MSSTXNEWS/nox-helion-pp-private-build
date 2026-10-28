@@ -32,6 +32,30 @@ class VideoModelTests(unittest.TestCase):
                          client_id="NOX-VIDEO-123", preflight=self.permit,
                          user_rights_confirmed=True)
 
+    def test_demo_catalog_without_license_clearance_or_weights(self):
+        previews = self.port.demo_catalog()
+        self.assertEqual(len(previews), 12)
+        self.assertTrue(all(x["status"] == "PREVIEW_ONLY_NO_INFERENCE" for x in previews))
+        self.assertTrue(all(x["networkRequest"] is False for x in previews))
+        self.assertTrue(all(x["weightsDownloaded"] is False for x in previews))
+        self.assertEqual(len(self.transport.requests), 0)
+        # The license-review candidate is visible in the visual catalog, not executable.
+        candidate = self.port.demo_model("cogvideox-5b", "t2v")
+        self.assertEqual(candidate["mode"], "DEMO_CATALOG_ONLY")
+        self.assertTrue(candidate["licenseReviewBeforeExecution"])
+
+    def test_demo_cannot_claim_real_generation_or_invalid_operations(self):
+        item = self.port.demo_model("wan21-t2v-1.3b")
+        self.assertFalse(item["modelInstalled"])
+        self.assertFalse(item["gpuUsed"])
+        with self.assertRaises(Denied):
+            self.port.demo_model("unknown-model")
+        with self.assertRaises(Denied):
+            self.port.demo_model("wan21-t2v-1.3b", "voiceclone")
+        # The actual generation path still rejects unverified checkpoints.
+        with self.assertRaises(Hold):
+            self.port.prepare_video(**{**self.args, "preflight": None})
+
     def test_exact_12_model_catalog_is_hold_until_installed(self):
         models = self.port.visible_models()
         self.assertEqual(len(models), 12)
