@@ -103,10 +103,11 @@ class BridgeTest(unittest.TestCase):
             self.dispatch.execute("chat.history",{},wrong)
     def test_stop_invokes_actual_owner_stop(self):
         self.assertTrue(self.dispatch.execute("chat.stop",{},self.session)["stopRequested"])
-    @unittest.expectedFailure
-    def test_known_owner_p02_same_second_order_is_still_blocked(self):
-        # Reproduction of owner #2 issue: integer-second clock + random UUID DESC.
-        # Expected failure remains a visible blocker until P02 owner fixes it.
+    def test_owner_p02_same_second_history_order_is_stable(self):
+        # P02 owner fixed the same-second ordering bug with SQLite insertion
+        # order (rowid for V1, stable_seq for approved V2). Never keep this
+        # decorated expectedFailure: a correct owner result becomes an
+        # unexpectedSuccess and falsely fails the whole native bridge suite.
         with patch("p02_runtime.time.time",return_value=1730000000), \
              patch("p02_runtime.uuid.uuid4",side_effect=[
                  SimpleNamespace(hex="f"*32),SimpleNamespace(hex="0"*32)]):
