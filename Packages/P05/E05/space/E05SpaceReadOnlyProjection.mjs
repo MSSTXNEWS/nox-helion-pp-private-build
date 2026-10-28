@@ -120,6 +120,23 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
     used.value=total.value=null; used.stage=total.stage='INCONSISTENT_VRAM';
     used.observedUtc=total.observedUtc=null;used.deviceId=total.deviceId=null;
   }
+  // This view has ONE GPU tile, not an array of independently labelled
+  // adapters. A source string (NVML, WMI) is NOT a physical device ID.
+  // Partial GPU values with no device ID cannot be called LIVE. If a GPU
+  // reading belongs to a different adapter, quarantine the entire tile.
+  const gpuKeys=['gpu.percent','gpu.temperature.c','gpu.vram.used_bytes','gpu.vram.total_bytes'];
+  for (const key of gpuKeys) {
+    const r=result[key];
+    if (r.value!==null && !r.deviceId) {
+      r.value=null; r.stage='N_D'; r.observedUtc=null;
+    }
+  }
+  const liveGpu=gpuKeys.map(k=>result[k]).filter(r=>r.value!==null);
+  if (new Set(liveGpu.map(r=>r.deviceId)).size>1) {
+    for (const r of liveGpu) {
+      r.value=null; r.stage='HOLD_GPU_DEVICE_CONFLICT'; r.observedUtc=null;
+    }
+  }
   return result;
 }
 
@@ -232,6 +249,10 @@ export function projectCanonicalEvents(events, runId, nowMs) {
         !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
         !ago(e.timestamp_utc,nowMs,30000)) continue;
+    // A schema-valid terminal with evidence_verified:false is only a report,
+    // NOT proof that STOP completed or that the failure was authenticated.
+    // It must not overwrite an actually verified error or STOP in this tile.
+    if (e.evidence_verified!==true) return {state:'HOLD_UNVERIFIED_TERMINAL',errors:null};
     // Same event_id + DIFFERENT canonical terminal contents is a broken or
     // replayed native receipt, not an instruction to choose arrival order.
     const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,

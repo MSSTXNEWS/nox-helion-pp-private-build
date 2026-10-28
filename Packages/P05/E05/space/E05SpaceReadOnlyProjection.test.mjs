@@ -12,7 +12,7 @@ const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:
     {executor:6,stage:'HOLD',percent:null},{executor:7,stage:'NOT_RUN',percent:null}]),overall:28};
 const terminalEvent=(type,state)=>({schema:EVENT_SCHEMA,run_id:RUN,event_id:'evt-001',
   event_type:type,task_id:'G1-05-09',package_id:'P05',action_id:'stop',
-  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',evidence_verified:false});
+  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',evidence_verified:true});
 const feed={id:'weather',provider:'approved',license_status:'APPROVED',license_receipt_sha256:H,
   status:'LIVE',source_at_utc:'2026-10-28T03:44:00Z',fetched_at_utc:'2026-10-28T03:44:50Z',
   ttl_ms:60000,parsed_by_owner:true,value:14};
@@ -352,3 +352,66 @@ test('Drive receipt tied to a different installed BuildID is HOLD',()=>{
   assert.equal(projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:d},NOW).driveReadback,'HOLD');
 });
 console.log('R06 ambiguity-quarantine guards PASS (synthetic only); native WebView2/Windows/feeds/Drive readback NOT_RUN.');
+
+
+// R07: terminal evidence truth, and one physical GPU identity across metrics.
+// 12 red/green fixture checks. No claim of Windows/host/provider acceptance.
+test('R07 unverified STOP cannot become an accepted terminal state',()=>{
+  const e={...terminalEvent('model.stopped','STOPPED'),evidence_verified:false};
+  assert.deepEqual(projectCanonicalEvents([e],RUN,NOW),{state:'HOLD_UNVERIFIED_TERMINAL',errors:null});
+});
+test('R07 unverified ERROR cannot be counted as verified evidence',()=>{
+  const e={...terminalEvent('task.failed','ERROR'),evidence_verified:false};
+  assert.deepEqual(projectCanonicalEvents([e],RUN,NOW),{state:'HOLD_UNVERIFIED_TERMINAL',errors:null});
+});
+test('R07 conflicting verified STOP and unverified ERROR require HOLD',()=>{
+  const e={...terminalEvent('task.failed','ERROR'),event_id:'later',evidence_verified:false};
+  assert.equal(projectCanonicalEvents([terminalEvent('model.stopped','STOPPED'),e],RUN,NOW).state,'HOLD_UNVERIFIED_TERMINAL');
+});
+test('R07 verified STOP still accepted without introducing progress',()=>{
+  assert.deepEqual(projectCanonicalEvents([terminalEvent('model.stopped','STOPPED')],RUN,NOW),
+    {state:'STOPPED',errors:0});
+});
+test('R07 verified ERROR remains visible and counted exactly once',()=>{
+  const e=terminalEvent('task.failed','ERROR');
+  assert.deepEqual(projectCanonicalEvents([e,e],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('R07 string evidence_verified never masquerades as native boolean',()=>{
+  const e={...terminalEvent('model.stopped','STOPPED'),evidence_verified:'true'};
+  assert.equal(projectCanonicalEvents([e],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
+});
+test('R07 foreign-run unverified STOP never holds current run',()=>{
+  const e={...terminalEvent('model.stopped','STOPPED'),run_id:'OTHER',evidence_verified:false};
+  assert.deepEqual(projectCanonicalEvents([e],RUN,NOW),{state:'N_D',errors:0});
+});
+const gpu=(key,value,deviceId,unit)=>({key,value,device_id:deviceId,unit,
+  source:'NVML',status:'LIVE',observed_at_utc:'2026-10-28T03:44:58Z'});
+test('R07 GPU percent without physical device ID stays N/D',()=>{
+  const h=projectHardware([gpu('gpu.percent',41,undefined,'%')],NOW);
+  assert.equal(h['gpu.percent'].value,null);assert.equal(h['gpu.percent'].stage,'N_D');
+});
+test('R07 GPU temperature without physical device ID stays N/D',()=>{
+  const h=projectHardware([gpu('gpu.temperature.c',64,undefined,'°C')],NOW);
+  assert.equal(h['gpu.temperature.c'].value,null);assert.equal(h['gpu.temperature.c'].stage,'N_D');
+});
+test('R07 GPU percent and VRAM from different devices cannot become one GPU',()=>{
+  const h=projectHardware([gpu('gpu.percent',41,'GPU-1','%'),
+    gpu('gpu.vram.used_bytes',1024,'GPU-0','bytes'),
+    gpu('gpu.vram.total_bytes',2048,'GPU-0','bytes')],NOW);
+  assert.equal(h['gpu.percent'].value,null);assert.equal(h['gpu.vram.used_bytes'].value,null);
+  assert.equal(h['gpu.percent'].stage,'HOLD_GPU_DEVICE_CONFLICT');
+});
+test('R07 GPU temperature and GPU utilization cannot mix device identities',()=>{
+  const h=projectHardware([gpu('gpu.percent',22,'GPU-0','%'),
+    gpu('gpu.temperature.c',58,'GPU-1','°C')],NOW);
+  assert.equal(h['gpu.percent'].value,null);assert.equal(h['gpu.temperature.c'].value,null);
+});
+test('R07 same-device percent temperature VRAM remain LIVE and correctly sourced',()=>{
+  const h=projectHardware([gpu('gpu.percent',22,'GPU-0','%'),
+    gpu('gpu.temperature.c',58,'GPU-0','°C'),
+    gpu('gpu.vram.used_bytes',1024,'GPU-0','bytes'),
+    gpu('gpu.vram.total_bytes',2048,'GPU-0','bytes')],NOW);
+  assert.equal(h['gpu.percent'].value,22);assert.equal(h['gpu.temperature.c'].value,58);
+  assert.equal(h['gpu.vram.used_bytes'].value,1024);assert.equal(h['gpu.vram.total_bytes'].value,2048);
+});
+console.log('R07 SOURCE-ONLY truth envelope tests; physical Windows GPU/WebView2/Drive still NOT_RUN.');
