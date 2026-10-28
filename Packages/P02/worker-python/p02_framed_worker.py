@@ -17,7 +17,7 @@ import struct
 import threading
 from typing import BinaryIO
 
-from p02_native_ingress import MAX_INPUT, MAX_OUTPUT, NativeIngress, ProtocolHold
+from p02_native_ingress import MAX_INPUT, MAX_OUTPUT, NativeIngress, ProtocolHold, _enforce_json_depth
 
 _NONCE = re.compile(r"[0-9a-f]{32}\Z")
 _HEADER = struct.Struct(">I")
@@ -114,13 +114,20 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
             nonce = None
             route = None
             try:
-                request = json.loads(data.decode("utf-8"))
+                decoded = data.decode("utf-8")
+                # Reuse the existing NativeIngress depth limit at the OUTER
+                # parser, before Python's platform-dependent json recursion.
+                _enforce_json_depth(decoded)
+                request = json.loads(decoded)
                 if isinstance(request, dict):
                     candidate = request.get("requestId")
                     nonce = candidate if isinstance(candidate, str) and _NONCE.fullmatch(candidate) else None
                     route = request.get("route")
-            except (ValueError, UnicodeError):
-                pass
+            except (ValueError, UnicodeError, RecursionError):
+                # Invalid frames must not kill the native pipe, occupy the
+                # one non-STOP worker, or hide the following valid request.
+                send(_encode_status(ingress, nonce, "NATIVE_FRAME_INVALID_JSON"))
+                continue
             # Let NativeIngress validate even malformed STOP envelopes; it
             # independently verifies run ID, nonce, capabilities and session.
             if route == "chat.stop":
