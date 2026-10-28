@@ -145,7 +145,7 @@ public sealed class ModelDownloadQueueWorker(
                 return await store.RequestCancelAsync(id, ct);
             return false;
         }
-        return await store.CancelQueuedAsync(id, ct);
+        return await store.RequestCancelAsync(id, ct);
     }
 
     public Task<ModelJob?> RetryAsync(Guid id, CancellationToken ct = default) => store.RetryAsync(id, ct);
