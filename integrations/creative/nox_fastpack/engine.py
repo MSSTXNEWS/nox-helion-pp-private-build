@@ -109,9 +109,10 @@ class Studio(CreativeExtensions):
         # snapshot_download treats allow_patterns as GLOBS, not exact filenames.
         # Reject metacharacters and any upstream traversal/reparse path BEFORE
         # creating a model directory or issuing a network download.
-        if (len(set(filenames)) != len(filenames) or
-            any(not isinstance(x,str) or x not in valid or
-                not re.search(r"\\.(?:safetensors|gguf|ckpt|bin|pth)$",x,re.I) or
+        if (any(type(x) is not str for x in filenames) or
+            len(set(filenames)) != len(filenames) or
+            any(x not in valid or
+                not re.search(r"\.(?:safetensors|gguf|ckpt|bin|pth)$",x,re.I) or
                 x.startswith("/") or "\\" in x or
                 any(c in x for c in "*?[]") or
                 ".." in PurePosixPath(x).parts or
