@@ -612,14 +612,21 @@ def _strict_json_object_pairs(pairs: list[tuple[str, object]]) -> dict:
     return out
 
 
+def _reject_nonfinite_source_number(token: str) -> object:
+    """Python json.loads accepts NaN/Infinity by default; source JSON must not."""
+    raise Hold("AUDIT_NONFINITE_JSON_CONSTANT")
+
+
 def run_read_only_audit(catalog_path: str, bindings_path: str) -> dict:
     src1, src2 = Path(catalog_path), Path(bindings_path)
     # Exactly one byte sequence is parsed AND hashed for each provenance entry.
     catalog_bytes = _snapshot_source_bytes(src1)
     binding_bytes = _snapshot_source_bytes(src2)
     try:
-        a = json.loads(catalog_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
-        b = json.loads(binding_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
+        a = json.loads(catalog_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs,
+                       parse_constant=_reject_nonfinite_source_number)
+        b = json.loads(binding_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs,
+                       parse_constant=_reject_nonfinite_source_number)
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise Hold("AUDIT_INVALID_UTF8_JSON") from exc
     if not isinstance(a, dict) or not isinstance(b, dict):
