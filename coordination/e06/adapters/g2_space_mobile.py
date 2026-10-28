@@ -260,16 +260,26 @@ class PrivateMobileContract:
                 raise G2Denied("Private origin/CSRF verification failed") from exc
             if ok is not True:
                 raise G2Denied("Private peer/CSRF/user consent denied")
-            return (proof["identity"], proof["expected_csrf"],
-                    proof["observed_origin"])
+            # Pin the complete native authorization epoch, not just identity/CSRF.
+            return (proof["identity"], proof["verified_private_peer"],
+                    proof["trusted_origin"], proof["observed_origin"],
+                    proof["expected_csrf"], proof["received_csrf"],
+                    proof["native_session_approved"], expiry)
 
         identity = attest()
-        advertised = self.host.advertise(session)
+        try:
+            advertised = self.host.advertise(session)
+        except Exception as exc:
+            # Never expose private native gateway diagnostics to a remote client.
+            raise G2Hold("Existing native host advertisement failed") from exc
         if not self.available():
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED")
         if attest() != identity:
             raise G2Denied("Private identity, origin or CSRF epoch changed during advertisement")
-        if not isinstance(advertised, dict):
+        # The second peer/policy callback itself may revoke the private gateway.
+        if not self.available():
+            raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED_AFTER_ATTESTATION")
+        if type(advertised) is not dict:
             raise G2Hold("Existing native host advertisement unavailable")
         # Session-scoped capabilities, never a public URL or bearer token.
         return {"mode": "PRIVATE_NATIVE_ATTESTED", "gatewayListening": True,
