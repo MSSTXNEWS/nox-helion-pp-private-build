@@ -67,9 +67,11 @@
     output.setAttribute('aria-live','polite');
     surface.append(head,controls,callSection,phrase,buttons,output);target.append(surface);
     let mode='translate',providerReady=false,callPrice=null,voices=[],recorder=null,stream=null,timer=0,parts=[],disposed=false;
-    let activeOperation=null;
+    let activeOperation=null,captureEpoch=0,capturePending=false,captureOutcome='discard',audioSelection=null;
     function setStatus(msg){status.textContent=msg;}
     function updateMode(){
+      // Switching voice mode cancels the old microphone capture, not a hidden send.
+      if(mode!==modes.value&&(recorder||capturePending))stopCapture(false);
       mode=modes.value;callSection.hidden=mode!=='call';
       levelField.hidden=mode!=='maestro';
       directionField.hidden=mode==='call';
@@ -80,44 +82,86 @@
     function stopStream(){
       if(timer){clearTimeout(timer);timer=0;}
       if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
-      recorder=null;record.disabled=false;stop.disabled=true;
+      recorder=null;record.disabled=false;record.textContent='Записать 30 секунд';
+      stop.disabled=!activeOperation;
     }
-    function stopCapture(){
-      if(!recorder){stopStream();return false;}
-      if(recorder.state!=='inactive')recorder.stop();else stopStream();
-      setStatus('Остановка записи');return true;
+    function stopCapture(submit=false){
+      // STOP is a privacy cancellation. Only the explicit Record->Send action
+      // or 30-second maximum may submit; MediaRecorder.stop() still emits data.
+      if(!recorder){
+        if(!submit){captureEpoch++;capturePending=false;captureOutcome='discard';parts=[];stopStream();}
+        return false;
+      }
+      captureOutcome=submit?'submit':'discard';
+      if(submit){
+        audioSelection={mode,direction:direction.value,level:level.value,
+          voiceId:voice.value||null};
+        record.disabled=true;stop.disabled=true;
+      }else{
+        captureEpoch++;parts=[];audioSelection=null;
+      }
+      const current=recorder;
+      if(current.state!=='inactive')current.stop();
+      if(!submit)stopStream(); // revoke microphone tracks immediately on STOP
+      setStatus(submit?'Завершение записи для отправки':'Запись отменена: звук не передан');
+      return true;
     }
     async function startCapture(){
-      if(disposed||stream||recorder||!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
+      if(disposed||capturePending||stream||recorder||!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
         setStatus('Запись недоступна: требуется HTTPS/разрешение и MediaRecorder');return;
       }
-      record.disabled=true;parts=[];
+      record.disabled=true;stop.disabled=false;parts=[];
+      const epoch=++captureEpoch;
+      capturePending=true;captureOutcome='recording';audioSelection=null;
       try{
-        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
-        if(disposed){stopStream();return;}
+        const acquired=await navigator.mediaDevices.getUserMedia({
+          audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        // STOP, navigation, hidden tab and destroy may occur before permission
+        // resolves; never reuse a late stream or clobber a newer capture.
+        if(disposed||document.hidden||epoch!==captureEpoch){
+          acquired.getTracks().forEach(t=>t.stop());
+          if(epoch===captureEpoch){capturePending=false;stopStream();}
+          return;
+        }
+        stream=acquired;capturePending=false;
         const types=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm'];
         const supported=types.find(x=>MediaRecorder.isTypeSupported(x));
-        recorder=supported?new MediaRecorder(stream,{mimeType:supported}):new MediaRecorder(stream);
-        let size=0;
-        recorder.ondataavailable=e=>{
-          if(disposed||!e.data||!e.data.size)return;
+        const current=supported?new MediaRecorder(stream,{mimeType:supported}):new MediaRecorder(stream);
+        recorder=current;let size=0;
+        current.ondataavailable=e=>{
+          if(disposed||epoch!==captureEpoch||captureOutcome==='discard'||!e.data||!e.data.size)return;
           size+=e.data.size;
-          if(size>MAX_AUDIO_BYTES){parts=[];setStatus('Лимит аудио превышен');stopCapture();return;}
+          if(size>MAX_AUDIO_BYTES){
+            stopCapture(false);setStatus('Лимит аудио превышен: запись отменена');return;
+          }
           parts.push(e.data);
         };
-        recorder.onstop=()=>{
-          const blob=new Blob(parts,{type:recorder?.mimeType||'audio/webm'});
-          const audioMode=mode;parts=[];stopStream();
-          if(!disposed&&blob.size>0&&blob.size<=MAX_AUDIO_BYTES){
-            Promise.resolve(bridge.onAudio({audio:blob,mode:audioMode,direction:direction.value,
-              level:level.value,voiceId:voice.value||null})).catch(()=>setStatus('Ошибка локальной обработки аудио'));
-            setStatus('Аудио передано локальному обработчику NOX');
+        current.onstop=()=>{
+          const shouldSend=!disposed&&!document.hidden&&epoch===captureEpoch&&
+            captureOutcome==='submit'&&!!audioSelection;
+          const selection=shouldSend?{...audioSelection}:null;
+          const blob=shouldSend?new Blob(parts,{type:current.mimeType||'audio/webm'}):null;
+          if(recorder===current){parts=[];audioSelection=null;stopStream();}
+          if(selection&&blob.size>0&&blob.size<=MAX_AUDIO_BYTES){
+            try{
+              Promise.resolve(bridge.onAudio({audio:blob,...selection}))
+                .catch(()=>{if(!disposed)setStatus('Ошибка локальной обработки аудио');});
+              if(!disposed)setStatus('Аудио передано локальному обработчику NOX');
+            }catch{if(!disposed)setStatus('Локальный обработчик отклонил аудио');}
           }
         };
-        recorder.onerror=()=>{setStatus('Ошибка микрофона');stopStream();};
-        recorder.start(250);stop.disabled=false;timer=setTimeout(stopCapture,MAX_AUDIO_MS);
-        setStatus('Запись микрофона · максимум 30 секунд');
-      }catch{stopStream();setStatus('Микрофон недоступен или доступ запрещён');}
+        current.onerror=()=>{
+          if(epoch===captureEpoch){stopCapture(false);setStatus('Ошибка микрофона: звук не передан');}
+        };
+        current.start(250);
+        record.disabled=false;record.textContent='Отправить аудио';
+        stop.disabled=false;
+        timer=setTimeout(()=>{if(epoch===captureEpoch&&recorder===current)stopCapture(true);},MAX_AUDIO_MS);
+        setStatus('Запись микрофона · STOP отменяет, «Отправить аудио» отправляет');
+      }catch{
+        if(epoch===captureEpoch){capturePending=false;stopStream();
+          if(!disposed)setStatus('Микрофон недоступен или доступ запрещён');}
+      }
     }
     async function dispatch(type,payload){
       try{setStatus('Команда передана локальному NOX');
@@ -125,8 +169,9 @@
         if(!disposed&&response?.error)setStatus('NOX: '+String(response.error).slice(0,100));
       }catch{if(!disposed)setStatus('Команда отклонена локальным NOX');}
     }
-    record.onclick=startCapture;
-    stop.onclick=()=>{if(recorder)stopCapture();else if(activeOperation)dispatch('nox.voice.stop',{operationId:activeOperation});};
+    record.onclick=()=>{if(recorder)stopCapture(true);else startCapture();};
+    stop.onclick=()=>{if(recorder||capturePending)stopCapture(false);
+      else if(activeOperation)dispatch('nox.voice.stop',{operationId:activeOperation});};
     send.onclick=()=>{
       if(mode==='call'){
         if(!providerReady){setStatus('SIP/телефонный провайдер не подключён');return;}
@@ -148,7 +193,7 @@
       if(text&&voice.value)dispatch('nox.voice.speak',{text,voiceId:voice.value});
     };
     modes.onchange=updateMode;updateMode();
-    const visibility=()=>{if(document.hidden&&recorder)stopCapture();};
+    const visibility=()=>{if(document.hidden&&(recorder||capturePending))stopCapture(false);};
     document.addEventListener('visibilitychange',visibility);
     return Object.freeze({
       setVoices(items){
@@ -167,11 +212,11 @@
         if(typeof e.status==='string')setStatus(e.status.slice(0,120));
         activeOperation=typeof e.operationId==='string'?e.operationId:null;
         if(activeOperation)stop.disabled=false;
-        else if(!recorder)stop.disabled=true;
+        else if(!recorder&&!capturePending)stop.disabled=true;
       },
       destroy(){
         disposed=true;document.removeEventListener('visibilitychange',visibility);
-        if(recorder)stopCapture();stopStream();surface.remove();
+        stopCapture(false);stopStream();surface.remove();
       }
     });
   }
