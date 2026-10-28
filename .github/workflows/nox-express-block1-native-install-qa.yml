@@ -1,0 +1,107 @@
+name: NOX EXPRESS Block1 installed-payload no-loss Windows QA
+on:
+  push:
+    branches: [e06/express-finish-wpf-diagnostic-20261028]
+    paths:
+      - ".github/workflows/nox-express-block1-native-install-qa.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  installed-diagnostic:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - name: Fetch immutable combined NSIS package
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-express-block1-combined-diagnostic
+          run-id: 40611023212
+          github-token: ${{ github.token }}
+          path: input/combined
+      - name: Verify exact setup SHA and disposable runner
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ($env:CI -cne 'true' -or $env:OS -cne 'Windows_NT' -or -not [Environment]::Is64BitOperatingSystem) {throw 'NOX_DISPOSABLE_WINDOWS_REQUIRED'}
+          $root=Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION'
+          if(Test-Path -LiteralPath $root){throw 'NOX_INSTALL_TARGET_NOT_EMPTY'}
+          $setup='input/combined/NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe'
+          $receipt='input/combined/NOX_EXPRESS_BLOCK1_COMBINED_RECEIPT.json'
+          $expected='eb7ce00bbaf348d05e7216a1d4672d0863eede76f6328d18d8471c7ea5ee9938'
+          if(!(Test-Path -LiteralPath $setup -PathType Leaf) -or !(Test-Path -LiteralPath $receipt -PathType Leaf)){throw 'DIAGNOSTIC_SETUP_ARTIFACT_MISSING'}
+          if((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expected){throw 'DIAGNOSTIC_SETUP_SHA_MISMATCH'}
+          $info=Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+          if($info.schema -cne 'NOX_EXPRESS_BLOCK1_COMBINED_DIAGNOSTIC_V1' -or $info.installerSetupSha256 -cne $expected -or $info.productComplete -ne $false -or $info.legacyPythonAutoRun -ne $false){throw 'DIAGNOSTIC_RECEIPT_MISMATCH'}
+          Write-Host 'NOX_EXPRESS_SETUP_SHA_PASS'
+      - name: Real Windows install and conservative uninstall of approved diagnostic payload
+        shell: pwsh
+        env:
+          CI: 'true'
+        run: |
+          $ErrorActionPreference='Stop'
+          $setup=(Resolve-Path -LiteralPath 'input/combined/NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe').Path
+          $root=Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION'
+          $evidence=Join-Path $env:GITHUB_WORKSPACE 'ci-evidence'
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          $sentinelRoot=Join-Path $env:LOCALAPPDATA 'NOX_HELION\P01'
+          New-Item -ItemType Directory -Path $sentinelRoot -Force | Out-Null
+          $sentinel=Join-Path $sentinelRoot 'EXPRESS_QA_KEEP.txt'
+          [IO.File]::WriteAllText($sentinel,'NOX EXPRESS user data must survive')
+          $sentinelSha=(Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash.ToLowerInvariant()
+          $report=[ordered]@{
+            schema='NOX_EXPRESS_BLOCK1_INSTALLED_DIAGNOSTIC_QA_V1'
+            github_run_id=$env:GITHUB_RUN_ID
+            source_installer_run_id='40611023212'
+            setup_sha256='eb7ce00bbaf348d05e7216a1d4672d0863eede76f6328d18d8471c7ea5ee9938'
+            install='NOT_RUN';payload_bytes_sha='NOT_RUN';d02='NOT_RUN'
+            python_retained='NOT_RUN';uninstall='NOT_RUN';user_data_preserved='NOT_RUN'
+            real_python_bridge_verified=$false;release_accepted=$false;e07_accepted=$false
+          }
+          try {
+            $install=Start-Process -FilePath $setup -ArgumentList '/S' -Wait -PassThru
+            if($install.ExitCode -ne 0){throw "NSIS_REAL_DIAG_INSTALL_EXIT_$($install.ExitCode)"}
+            $marker=Join-Path $root 'nox-p01-owned.txt'
+            if(!(Test-Path -LiteralPath $marker -PathType Leaf)){throw 'NSIS_OWNER_MARKER_NOT_FOUND'}
+            $report.install='PASS'
+            $checks=[ordered]@{
+              'NOX.P01.Shell.exe'='f7609e8e5060ca8e21112b06cce5221a58399910abdbc0e663513d0cfc9706b9'
+              'LegacyCore/NOX_HELION_PRIVATE_CANDIDATE.exe'='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+              'LegacyCore/NOX_HELION_BACKGROUND_CANDIDATE.exe'='42bb9f3bac340826631554ed6f5c1af5932cdc8ad356d2ed633237b9f14b3406'
+              'Assets/home.png'='382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'
+              'Assets/menu.png'='4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9'
+              'Assets/menu_sections.png'='7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'
+              'Assets/core01.png'='343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97'
+            }
+            foreach($entry in $checks.GetEnumerator()){
+              $path=Join-Path $root $entry.Key
+              if(!(Test-Path -LiteralPath $path -PathType Leaf)){throw "MISSING_INSTALLED_COMPONENT:$($entry.Key)"}
+              if((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $entry.Value){throw "INSTALLED_COMPONENT_DRIFT:$($entry.Key)"}
+            }
+            $report.payload_bytes_sha='PASS';$report.d02='PASS';$report.python_retained='PASS'
+            if(!(Test-Path -LiteralPath (Join-Path $root 'LegacyCore\NOT_CONNECTED_NOTICE.txt'))){throw 'LEGACY_WORKER_LIVE_BRIDGE_NOT_DECLARED'}
+            $uninstaller=Join-Path $root 'Uninstall.exe'
+            if(!(Test-Path -LiteralPath $uninstaller -PathType Leaf)){throw 'INSTALLER_UNINSTALL_MISSING'}
+            $un=Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
+            if($un.ExitCode -ne 0){throw "NSIS_REAL_DIAG_UNINSTALL_EXIT_$($un.ExitCode)"}
+            if(Test-Path -LiteralPath $marker){throw 'CONSERVATIVE_UNINSTALL_FAILED_MARKER_REMAINS'}
+            $report.uninstall='PASS'
+            if(!(Test-Path -LiteralPath $sentinel -PathType Leaf) -or (Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash.ToLowerInvariant() -cne $sentinelSha){throw 'USER_DATA_LOSS'}
+            $report.user_data_preserved='PASS'
+            Write-Host 'NOX_EXPRESS_REAL_PAYLOAD_INSTALL_UNINSTALL_SHA_D02_USERDATA_PASS'
+          } catch {
+            $report.error=$_.ToString()
+            throw
+          } finally {
+            $report.checked_at_utc=[DateTime]::UtcNow.ToString('o')
+            $report|ConvertTo-Json -Depth 6|Set-Content -LiteralPath (Join-Path $evidence 'NOX_BLOCK1_INSTALLED_QA.json') -Encoding utf8
+          }
+      - name: Preserve precise QA receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-express-block1-real-payload-qa
+          path: ci-evidence/NOX_BLOCK1_INSTALLED_QA.json
+          if-no-files-found: warn
+          retention-days: 30
