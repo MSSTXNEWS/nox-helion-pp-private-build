@@ -58,7 +58,15 @@ export function mountApprovedHome(doc=document){
     sync();
     mounted=Object.freeze({
       snapshot:()=>({...scene.snapshot(),kind:'decorative-d02',backendAccepted:false,source:'PR30'}),
-      setProfile:mode=>{requestedProfile=mode;return scene.setProfile(chosenMode());},
+      setProfile:mode=>{
+        // An invalid public request must not poison the remembered profile.
+        // Keep OS Reduced Motion dominant, even when callers request MAX.
+        if(typeof mode!=='string'||
+           !['ECO','BALANCED','MAX','REDUCED'].includes(mode))return false;
+        const accepted=scene.setProfile(reducedMotion?.matches?'REDUCED':mode);
+        if(accepted===true)requestedProfile=mode;
+        return accepted;
+      },
       destroy(){detachMotion();observer?.disconnect();bodyObserver?.disconnect();observer=null;bodyObserver=null;
         for(const element of [central,...items])delete element.dataset.noxVerifiedFx;
         scene.destroy();mounted=null;}
