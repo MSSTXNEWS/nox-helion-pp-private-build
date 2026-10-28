@@ -44,6 +44,8 @@ def main():
     WORK.mkdir(parents=True,exist_ok=True)
     if WORK.is_symlink() or R11.is_symlink():
         raise SystemExit("E06_STAGE_REPARSE_ROOT_HOLD")
+    if (WORK/"source_lock.json").exists() or (WORK/"source_lock.json").is_symlink():
+        raise SystemExit("E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE")
     temp=WORK/"source-donor-immutable.zip"
     if temp.exists() or temp.is_symlink():
         raise SystemExit("E06_ORIGINAL_DONOR_TEMP_ALREADY_EXISTS")
