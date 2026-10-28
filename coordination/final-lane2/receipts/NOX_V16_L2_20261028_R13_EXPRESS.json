@@ -1,0 +1,96 @@
+{
+  "schema": "NOX-V16-FINAL-CODE-FIXER-EXPRESS-v1",
+  "task_id": "V16.26.4+V16.26.5+V16.26.6",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R13-EXPRESS",
+  "source_base_head": "d3d670de0f1eee7bd7ab9e0e05b618f1f874a675",
+  "owner_branch": "fix/lane2-v16-express-p02-p03-p04-20261028-r13",
+  "write_rule": "Isolated branch. Shared PR162/main untouched. Integrator #1 must check live preimage before serial admission.",
+  "product_changes": [
+    {
+      "package": "P02",
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_sha256": "9f967d7fb260aff16e8013a2996d96464039e6ed6297f09a7e38785644fa19db",
+      "post_sha256": "de481593172733c230ca58d32cb1248c359b8c180b434e6de50cec1df6c17b32",
+      "pre_git_blob": "d9b8b8c433833a5bc5c4f2bdc91e6a49cb2924ea",
+      "post_git_blob": "cc05e7d2897e7c1183255836c413846ceb5ff520",
+      "changes": [
+        "reject duplicate JSON keys including nested objects",
+        "reject NaN/Infinity JSON values",
+        "catch excessive JSON recursion as ProtocolHold",
+        "retain existing replay/nonce/STOP behavior"
+      ]
+    },
+    {
+      "package": "P03-through-P02-native",
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_sha256": "9f967d7fb260aff16e8013a2996d96464039e6ed6297f09a7e38785644fa19db",
+      "post_sha256": "de481593172733c230ca58d32cb1248c359b8c180b434e6de50cec1df6c17b32",
+      "changes": [
+        "explicit host-created allow_modelcenter_reads opt-in default false",
+        "allow only models.catalog/installed/digest",
+        "require exact existing PACK01 owner 3 route and receipt-bound executable port",
+        "models.pull/gguf.import/cancel/retry remain denied via this ingress"
+      ]
+    },
+    {
+      "package": "P04",
+      "path": "Packages/P04/train_qlora.py",
+      "pre_sha256": "85480347374d77ee916932788ceae99631754db4297e819054aff26a3a98f838",
+      "post_sha256": "bb143c1b7aaadba2575a588654b4db186f812f7644c1ea6d511b83f579b7ae30",
+      "pre_git_blob": "c6691dec2627b8012e54313c0eb49fe0f3cb2c21",
+      "post_git_blob": "bc319e3a65273f20d8498c9de4df1e0ba15a8407",
+      "changes": [
+        "NO_NVIDIA_GPU_FOUND classified HOLD instead of ERROR",
+        "reuses original QLoRA and events.v3 worker, no other logic touched"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "pre_sha256": "18d6ac4511ae8cf3cd8d06a54d7c77b1fa284d8f3ccb538e6c673c915e1d406c",
+      "post_sha256": "843a2842dad5441507b8466abd4d245c69d05ed3bd4ad44f5cfce5d9f379e09a",
+      "pre_git_blob": "f936cac0656e049f11c2c0e25bec5303cc4811b7",
+      "post_git_blob": "d6500c1399acb5e59c89e208eacad54a4df9fd7e",
+      "scope": "Added negative tests for ambiguous input, deep JSON, unbound/noncallable P03 owner port, read-only allowlist",
+      "execution": "NOT_RUN in native module or runner; GitHub file readback passed"
+    },
+    {
+      "path": "tests/P04/test_training_failure_status.py",
+      "pre_sha256": null,
+      "post_sha256": "0328c1406d4858b024db290e15f929545b1af3f66b95371eaec3df0f220cb5bd",
+      "pre_git_blob": null,
+      "post_git_blob": "1bf24598047c01fd6d2ffa807ff9cf8d8ca58b2c",
+      "scope": "Known GPU prerequisite HOLD and unrecognized ERROR negative tests",
+      "execution": "NOT_RUN in current express runner; earlier extracted classifier semantics smoke was source-only"
+    }
+  ],
+  "verified": {
+    "github_readback": "PASS for modified source paths and test files",
+    "git_compare": "6 commits, four paths; 0 deletions before receipt",
+    "sha256": "Computed from exact UTF-8 GitHub file readback; known-answer-test abc PASS",
+    "local_python_unittest": "NOT_RUN for this R13 branch",
+    "real_ollama": "NOT_RUN",
+    "real_nvidia_train": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "same_sha_e07": "0/10 NOT_RUN"
+  },
+  "unchanged_packs": {
+    "P01": "Existing D02/WOW corrections in shared PR162 reviewed; no new P01 mutation because NO-LOSS & owner1 source recent",
+    "P05": "Existing events.v3 telemetry/progress source retained; no change lacking demonstrated failing preimage",
+    "P02": "No new SQLite or LLM",
+    "P03": "No new downloader or queue",
+    "P04": "No alternate trainer"
+  },
+  "remaining_blockers": [
+    "Owner1 must admit exact four files by CAS under live PR162 HEAD",
+    "original source_00/01/02 joined SHA256 + 729 files SourceLock NOT independently verified",
+    "current Windows runner 0-step failure: true cause not established",
+    "diagnostic-only WPF/Python onehost must integrate live installed host",
+    "GPU training requires authorized local model/dataset/NVIDIA and real checkpoint+evaluation",
+    "E07 same installed BuildID/Setup/EXE SHA 10 native cases NOT_RUN"
+  ],
+  "single_improvement": "REFUSE_DUPLICATE_OWNER_FIX: dynamic HEAD comparison skipped already-patched three GPU prerequisite statuses, reused earlier R12 owner patch and added only missing error state plus strict native ingress; source and acceptance tracked separately.",
+  "release_status": "HOLD",
+  "accepted_product_progress": "N/D"
+}
