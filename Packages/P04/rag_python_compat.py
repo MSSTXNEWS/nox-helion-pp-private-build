@@ -124,6 +124,9 @@ class LocalRag:
     @contextmanager
     def _locked(self):
         with self._mutex:
+            # Preserve legacy error codes for direct index/parent symlinks.
+            if self.path.parent.is_symlink() or self.path.is_symlink():
+                raise RagHold("RAG_INDEX_SYMLINK")
             _reject_reparse_ancestors(self.path)
             self.path.parent.mkdir(parents=True, exist_ok=True)
             _reject_reparse_ancestors(self.path)
@@ -231,6 +234,9 @@ class LocalRag:
         if not path.is_absolute() or str(path).startswith(("//", "\\\\")):
             raise RagHold("RAG_LOCAL_FILE_PATH_REQUIRED")
         _safe_name(path.name)
+        # Existing callers depend on the original direct-file error code.
+        if path.is_symlink():
+            raise RagHold("RAG_FILE_SYMLINK_BLOCKED")
         _reject_reparse_ancestors(path)
         fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
