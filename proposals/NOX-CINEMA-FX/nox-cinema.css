@@ -52,7 +52,7 @@
   background-size:260% 100%;
   animation:nox-cinema-sweep 13s linear infinite;
 }
-.nox-cinema-control[data-nox-float="true"] {
+.nox-cinema-control[data-nox-float="true"]::before {
   animation:nox-cinema-float 6s ease-in-out infinite;
   animation-delay:var(--nox-delay, 0s);
 }
@@ -63,13 +63,13 @@
 .nox-cinema-control:active:not(:disabled) { filter:brightness(1.3); }
 .nox-cinema-control:focus-visible { outline:2px solid #c4ffff;outline-offset:3px; }
 .nox-cinema-control:disabled { opacity:.45;cursor:not-allowed;animation:none; }
-.nox-cinema-scope[data-nox-state="running"] .nox-cinema-panel {
+.nox-cinema-scope[data-nox-fx-state="streaming"] .nox-cinema-panel {
   border-color:rgba(113,212,221,.5);
 }
-.nox-cinema-scope[data-nox-state="error"] .nox-cinema-panel {
+.nox-cinema-scope[data-nox-fx-state="error"] .nox-cinema-panel {
   border-color:rgba(241,138,129,.65);
 }
-.nox-cinema-scope[data-nox-state="paused"] .nox-cinema-panel {
+.nox-cinema-scope[data-nox-fx-state="paused"] .nox-cinema-panel {
   border-color:rgba(228,166,92,.6);
 }
 /* Each orb preserves the original approved asset under/behind translucent layers. */
@@ -108,9 +108,9 @@
     inset 0 0 18px rgba(221,124,55,.14);
   opacity:.66;animation:nox-cinema-corona 6.5s ease-in-out infinite alternate;
 }
-.nox-cinema-orb[data-nox-state="running"] {--nox-orb-heat:.8;}
-.nox-cinema-orb[data-nox-state="offline"] .nox-cinema-orb__lava { opacity:.12; }
-.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__corona {border-color:#e99b91;box-shadow:0 0 20px #c55c4999;}
+.nox-cinema-orb[data-nox-fx-state="running"] {--nox-orb-heat:.8;}
+.nox-cinema-orb[data-nox-fx-state="offline"] .nox-cinema-orb__lava { opacity:.12; }
+.nox-cinema-orb[data-nox-fx-state="error"] .nox-cinema-orb__corona {border-color:#e99b91;box-shadow:0 0 20px #c55c4999;}
 .nox-cinema-orb__ejecta {
   position:absolute;inset:0;width:100%;height:100%;z-index:3;
   pointer-events:none;mix-blend-mode:screen;
@@ -129,14 +129,14 @@
   0%{transform:scale(.99);opacity:.43}
   100%{transform:scale(1.026);opacity:.83}
 }
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-panel {backdrop-filter:none;-webkit-backdrop-filter:none;}
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__lava {filter:none;}
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-control::before,
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-panel::before {animation-duration:25s;}
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-control[data-nox-float="true"] {animation-duration:10s;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-panel {backdrop-filter:none;-webkit-backdrop-filter:none;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__lava {filter:none;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-panel::before {animation-duration:25s;}
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control[data-nox-float="true"]::before {animation-duration:10s;}
 @media(prefers-reduced-motion:reduce) {
-  .nox-cinema-scope *, .nox-cinema-scope *::before, .nox-cinema-scope *::after,
-  .nox-cinema-orb *, .nox-cinema-orb *::before, .nox-cinema-orb *::after {
+  .nox-cinema-orb__layers, .nox-cinema-orb__layers *,
+  .nox-cinema-control::before, .nox-cinema-panel::before {
     animation:none!important;transition:none!important;
   }
 }
@@ -174,52 +174,52 @@
 .nox-cinema-orb__ejecta path {
   filter:drop-shadow(0 0 1.6px rgba(236,114,56,.55));
 }
-.nox-cinema-orb[data-nox-state="training"] .nox-cinema-orb__filaments,
-.nox-cinema-orb[data-nox-state="streaming"] .nox-cinema-orb__filaments {
+.nox-cinema-orb[data-nox-fx-state="training"] .nox-cinema-orb__filaments,
+.nox-cinema-orb[data-nox-fx-state="streaming"] .nox-cinema-orb__filaments {
   opacity:.95;
 }
-.nox-cinema-orb[data-nox-state="paused"] .nox-cinema-orb__corona {
+.nox-cinema-orb[data-nox-fx-state="paused"] .nox-cinema-orb__corona {
   border-color:rgba(233,189,119,.37);
   box-shadow:0 0 16px rgba(243,165,80,.26);
 }
-.nox-cinema-orb[data-nox-state="speaking"] .nox-cinema-orb__rim {
+.nox-cinema-orb[data-nox-fx-state="speaking"] .nox-cinema-orb__rim {
   border-color:rgba(151,238,240,.48);
   box-shadow:0 0 22px rgba(116,206,217,.17);
 }
-.nox-cinema-orb[data-nox-state="offline"] .nox-cinema-orb__filaments {opacity:.14;}
-.nox-cinema-orb[data-nox-state="error"] .nox-cinema-orb__filaments {filter:hue-rotate(-20deg);}
-.nox-cinema-scope[data-nox-mode="max"] .nox-cinema-orb__corona {
+.nox-cinema-orb[data-nox-fx-state="offline"] .nox-cinema-orb__filaments {opacity:.14;}
+.nox-cinema-orb[data-nox-fx-state="error"] .nox-cinema-orb__filaments {filter:hue-rotate(-20deg);}
+.nox-cinema-scope[data-nox-fx-mode="max"] .nox-cinema-orb__corona {
   box-shadow:0 0 14px rgba(243,142,64,.28),0 0 36px rgba(192,66,35,.22),
     inset 0 0 20px rgba(233,147,83,.12);
 }
 /* Active secondary-screen controls only; decorative layer never receives clicks.
    Keep original button handlers, keyboard focus and readable foreground intact. */
 .nox-cinema-scope .nox-cinema-control {will-change:auto;}
-.nox-cinema-scope .nox-cinema-control[data-nox-float="true"] {
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::before {
   animation:nox-cinema-float 7.4s ease-in-out infinite;
 }
-.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+2) {
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+2)::before {
   animation-duration:8.9s;animation-delay:-2.7s;
 }
-.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+3) {
+.nox-cinema-scope .nox-cinema-control[data-nox-float="true"]:nth-child(4n+3)::before {
   animation-duration:10.6s;animation-delay:-4.1s;
 }
 .nox-cinema-scope .nox-cinema-panel {
   background-image:linear-gradient(130deg,rgba(107,161,175,.08),transparent 39%),
     linear-gradient(145deg,rgba(83,110,123,.16),var(--nox-panel) 58%,rgba(3,8,13,.75));
 }
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__filaments,
-.nox-cinema-scope[data-nox-mode="eco"] .nox-cinema-orb__rim,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__filaments,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__rim {
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-orb__rim,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__filaments,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__rim {
   animation:none;filter:none;
 }
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-control,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-control::before,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-panel::before,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__lava,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__crust,
-.nox-cinema-scope[data-nox-mode="reduced"] .nox-cinema-orb__corona {
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-control::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-panel::before,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__lava,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__crust,
+.nox-cinema-scope[data-nox-fx-mode="reduced"] .nox-cinema-orb__corona {
   animation:none!important;
 }
 @keyframes nox-cinema-filament-flow {
@@ -236,7 +236,7 @@
 }
 @media(prefers-reduced-motion:reduce) {
   .nox-cinema-orb__filaments,.nox-cinema-orb__rim,
-  .nox-cinema-scope .nox-cinema-control[data-nox-float="true"] {
+  .nox-cinema-scope .nox-cinema-control[data-nox-float="true"]::before {
     animation:none!important;
   }
 }
@@ -248,7 +248,7 @@
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__crust,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__corona,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-orb__rim,
-.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control,
+.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control::before,
 .nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-panel::before {
   animation-play-state:paused!important;
