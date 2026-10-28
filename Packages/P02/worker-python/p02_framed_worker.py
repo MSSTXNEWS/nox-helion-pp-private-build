@@ -57,7 +57,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
     if not (hasattr(reader, "read") and hasattr(writer, "write") and
             hasattr(writer, "flush")):
         raise TypeError("Existing binary host pipe handles required")
-    if not isinstance(drain_timeout, (int, float)) or not 0 < drain_timeout <= 30:
+    if type(drain_timeout) not in (int, float) or not 0 < drain_timeout <= 30:
         raise ValueError("Invalid transport shutdown budget")
 
     write_lock = threading.Lock()
@@ -71,8 +71,15 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
         if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
             raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
         with write_lock:
-            writer.write(_HEADER.pack(len(payload)))
-            writer.write(payload)
+            # Raw host pipes may accept only part of a write. Keep the entire
+            # frame under one lock and require progress before acknowledging it.
+            for part in (_HEADER.pack(len(payload)), payload):
+                view = memoryview(part)
+                while view:
+                    written = writer.write(view)
+                    if type(written) is not int or not 0 < written <= len(view):
+                        raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED")
+                    view = view[written:]
             writer.flush()
 
     def dispatch(data: bytes, nonce: str | None) -> None:

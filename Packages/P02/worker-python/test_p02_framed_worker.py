@@ -111,4 +111,39 @@ serve_native_frames(ingress,sys.stdin.buffer,sys.stdout.buffer)
         self.assertEqual(n,1)
         self.assertEqual(rows[0]["status"],"OK")
 
+
+class PartialWriteTests(unittest.TestCase):
+    def setUp(self):
+        self.ingress=NativeIngress(Dispatch(),lambda:'native-only',expected_run_id=R)
+
+    def test_short_writes_preserve_complete_reply_frame(self):
+        class ShortWriter(io.BytesIO):
+            def write(self, data):return super().write(data[:3])
+        output=ShortWriter()
+        count=serve_native_frames(self.ingress,io.BytesIO(frames(request(21))),output)
+        self.assertEqual(count,1)
+        replies=read_frames(output.getvalue())
+        self.assertEqual(replies[0]['requestId'],f'{21:032x}')
+        self.assertEqual(replies[0]['status'],'OK')
+
+    def test_no_progress_or_invalid_write_count_is_transport_hold(self):
+        for returned in (None,0,-1,True,999999):
+            class BrokenWriter(io.BytesIO):
+                def write(self, data):return returned
+            with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                serve_native_frames(self.ingress,io.BytesIO(frames(request(22))),BrokenWriter())
+
+    def test_stop_reply_also_uses_complete_writes(self):
+        class ShortWriter(io.BytesIO):
+            def write(self,data):return super().write(data[:1])
+        output=ShortWriter()
+        serve_native_frames(self.ingress,io.BytesIO(frames(request(23,'chat.stop'))),output)
+        replies=read_frames(output.getvalue())
+        self.assertEqual(replies[0]['status'],'OK')
+        self.assertEqual(replies[0]['result']['r'],'chat.stop')
+
+    def test_boolean_is_not_a_shutdown_budget(self):
+        with self.assertRaises(ValueError):
+            serve_native_frames(self.ingress,io.BytesIO(),io.BytesIO(),drain_timeout=True)
+
 if __name__=="__main__": unittest.main()

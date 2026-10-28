@@ -1,0 +1,17 @@
+test_boolean_is_not_a_shutdown_budget (test_p02_framed_worker.PartialWriteTests.test_boolean_is_not_a_shutdown_budget) ... ok
+test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) ... ok
+test_short_writes_preserve_complete_reply_frame (test_p02_framed_worker.PartialWriteTests.test_short_writes_preserve_complete_reply_frame) ... ok
+test_stop_reply_also_uses_complete_writes (test_p02_framed_worker.PartialWriteTests.test_stop_reply_also_uses_complete_writes) ... ok
+test_actual_os_subprocess_stdin_stdout_frames (test_p02_framed_worker.Tests.test_actual_os_subprocess_stdin_stdout_frames) ... ok
+test_duplicate_nonce_denied_without_second_dispatch (test_p02_framed_worker.Tests.test_duplicate_nonce_denied_without_second_dispatch) ... ok
+test_foreign_run_stays_denied (test_p02_framed_worker.Tests.test_foreign_run_stays_denied) ... ok
+test_frame_size_includes_utf8_bytes_not_codepoints (test_p02_framed_worker.Tests.test_frame_size_includes_utf8_bytes_not_codepoints) ... ok
+test_invalid_native_session_is_hold_not_success (test_p02_framed_worker.Tests.test_invalid_native_session_is_hold_not_success) ... ok
+test_oversize_and_truncated_frames_fail_closed (test_p02_framed_worker.Tests.test_oversize_and_truncated_frames_fail_closed) ... ok
+test_stop_overtakes_chat_and_reply_frames_keep_ids (test_p02_framed_worker.Tests.test_stop_overtakes_chat_and_reply_frames_keep_ids) ... ok
+test_webview_authority_payload_denied (test_p02_framed_worker.Tests.test_webview_authority_payload_denied) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.036s
+
+OK

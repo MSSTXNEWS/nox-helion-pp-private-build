@@ -1,0 +1,100 @@
+test_boolean_is_not_a_shutdown_budget (test_p02_framed_worker.PartialWriteTests.test_boolean_is_not_a_shutdown_budget) ... FAIL
+test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) ... 
+  test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=None) ... FAIL
+  test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=0) ... FAIL
+  test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=-1) ... FAIL
+  test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=True) ... FAIL
+  test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=999999) ... FAIL
+test_short_writes_preserve_complete_reply_frame (test_p02_framed_worker.PartialWriteTests.test_short_writes_preserve_complete_reply_frame) ... FAIL
+test_stop_reply_also_uses_complete_writes (test_p02_framed_worker.PartialWriteTests.test_stop_reply_also_uses_complete_writes) ... ERROR
+test_actual_os_subprocess_stdin_stdout_frames (test_p02_framed_worker.Tests.test_actual_os_subprocess_stdin_stdout_frames) ... ok
+test_duplicate_nonce_denied_without_second_dispatch (test_p02_framed_worker.Tests.test_duplicate_nonce_denied_without_second_dispatch) ... ok
+test_foreign_run_stays_denied (test_p02_framed_worker.Tests.test_foreign_run_stays_denied) ... ok
+test_frame_size_includes_utf8_bytes_not_codepoints (test_p02_framed_worker.Tests.test_frame_size_includes_utf8_bytes_not_codepoints) ... ok
+test_invalid_native_session_is_hold_not_success (test_p02_framed_worker.Tests.test_invalid_native_session_is_hold_not_success) ... ok
+test_oversize_and_truncated_frames_fail_closed (test_p02_framed_worker.Tests.test_oversize_and_truncated_frames_fail_closed) ... ok
+test_stop_overtakes_chat_and_reply_frames_keep_ids (test_p02_framed_worker.Tests.test_stop_overtakes_chat_and_reply_frames_keep_ids) ... ok
+test_webview_authority_payload_denied (test_p02_framed_worker.Tests.test_webview_authority_payload_denied) ... ok
+
+======================================================================
+ERROR: test_stop_reply_also_uses_complete_writes (test_p02_framed_worker.PartialWriteTests.test_stop_reply_also_uses_complete_writes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 142, in test_stop_reply_also_uses_complete_writes
+    replies=read_frames(output.getvalue())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 28, in read_frames
+    self_size=struct.unpack(">I",header)[0]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+struct.error: unpack requires a buffer of 4 bytes
+
+======================================================================
+FAIL: test_boolean_is_not_a_shutdown_budget (test_p02_framed_worker.PartialWriteTests.test_boolean_is_not_a_shutdown_budget)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 147, in test_boolean_is_not_a_shutdown_budget
+    with self.assertRaises(ValueError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 134, in test_no_progress_or_invalid_write_count_is_transport_hold
+    with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ProtocolHold not raised
+
+======================================================================
+FAIL: test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=0)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 134, in test_no_progress_or_invalid_write_count_is_transport_hold
+    with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ProtocolHold not raised
+
+======================================================================
+FAIL: test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=-1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 134, in test_no_progress_or_invalid_write_count_is_transport_hold
+    with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ProtocolHold not raised
+
+======================================================================
+FAIL: test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 134, in test_no_progress_or_invalid_write_count_is_transport_hold
+    with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ProtocolHold not raised
+
+======================================================================
+FAIL: test_no_progress_or_invalid_write_count_is_transport_hold (test_p02_framed_worker.PartialWriteTests.test_no_progress_or_invalid_write_count_is_transport_hold) (returned=999999)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 134, in test_no_progress_or_invalid_write_count_is_transport_hold
+    with self.subTest(returned=returned),self.assertRaisesRegex(ProtocolHold,'NATIVE_OUTPUT_TRANSPORT_FAILED'):
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ProtocolHold not raised
+
+======================================================================
+FAIL: test_short_writes_preserve_complete_reply_frame (test_p02_framed_worker.PartialWriteTests.test_short_writes_preserve_complete_reply_frame)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 126, in test_short_writes_preserve_complete_reply_frame
+    replies=read_frames(output.getvalue())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_framed_worker.py", line 30, in read_frames
+    assert len(body)==self_size
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.036s
+
+FAILED (failures=7, errors=1)

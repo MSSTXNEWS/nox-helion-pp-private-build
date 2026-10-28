@@ -1,0 +1,37 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS01",
+  "agent_id": "/root/a02",
+  "parent_commit": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 1,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-LOADER-NATIVE-PARTIAL-WRITE"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "pre_git_blob": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post_git_blob": "f043f041db2634a40242d10a462e816330062118",
+      "pre_sha256": "4cb7c92cd405bfcdd7639148b7cd2da23b7d6e9954948926a8e9b34a5f51cada",
+      "post_sha256": "a094328d7b3f26d7c0bec88b1fe9f4d057fb6bb5a698aaa36e294f70c1dc0824"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_framed_worker.py",
+      "pre_git_blob": "7011fb3b5c59a4b9f5dd75e61b65a24ee8f794e3",
+      "post_git_blob": "92ee0e3c1163bbf4a8c33770dbbeb8405acdc6c4",
+      "pre_sha256": "3fcf4b399ae4e07ff21c0fce5a2f70cc86604a2e498026d9ea0d59b54763dfbb",
+      "post_sha256": "2d20d0f51405e5d4b81d25cfac873f4077e54e6baadf2cf56fb79ea022ca773d"
+    }
+  ],
+  "lesson": "Treat private binary pipes as short-write transports: complete every length header and body under one lock, reject nonprogress, and test STOP replies on the same path.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}
