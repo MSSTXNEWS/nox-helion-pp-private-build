@@ -177,5 +177,72 @@ class NativeOwnerRouteMapR11Tests(unittest.TestCase):
         self.assertEqual(set(host.ports), {"models.catalog"})
         self.assertEqual(host.ports["models.catalog"].owner, 3)
 
+
+class OwnerBackendExceptionR15Tests(unittest.TestCase):
+    """Actual source module; owner callback failure must HOLD, not ACK."""
+    def setUp(self):
+        self.port = object.__new__(P03OneHostPort)
+        self.port.native_approve = lambda *_: True
+    @staticmethod
+    def session(route):
+        return SimpleNamespace(tenant="tenant", principal="user", chat_id="chat",
+                               allowed=frozenset({route}), private_approved=frozenset({route}))
+    def run_route(self, route, cb, available=lambda: True):
+        names = {"models.cancel": "cancel", "models.retry": "retry",
+                 "models.pull": "pull", "models.gguf.import": "import_gguf"}
+        owner = SimpleNamespace(available=available)
+        setattr(owner, names[route], cb)
+        self.port.backend = owner
+        return self.port.execute_backend(self.session(route), route, {})
+    def test_r15_cancel_exception_holds(self):
+        def broken(*_): raise RuntimeError("private STOP diagnostic")
+        with self.assertRaisesRegex(P03PortHold, "Owner3 backend operation unavailable"):
+            self.run_route("models.cancel", broken)
+    def test_r15_retry_exception_holds(self):
+        def broken(*_): raise TypeError("private retry diagnostic")
+        with self.assertRaises(P03PortHold):
+            self.run_route("models.retry", broken)
+    def test_r15_pull_exception_holds(self):
+        def broken(*_): raise ValueError("private pull diagnostic")
+        with self.assertRaises(P03PortHold):
+            self.run_route("models.pull", broken)
+    def test_r15_gguf_exception_holds(self):
+        def broken(*_): raise OSError("private GGUF diagnostic")
+        with self.assertRaises(P03PortHold):
+            self.run_route("models.gguf.import", broken)
+    def test_r15_owner_attribute_exception_holds(self):
+        class BadOwner:
+            def __getattribute__(self, name):
+                if name == "available": raise RuntimeError("private owner diagnostic")
+                return object.__getattribute__(self, name)
+            def cancel(self, *_): return True
+        self.port.backend = BadOwner()
+        with self.assertRaisesRegex(P03PortHold, "Owner3 backend contract unavailable"):
+            self.port.execute_backend(self.session("models.cancel"), "models.cancel", {})
+    def test_r15_explicit_deny_preserved(self):
+        def denied(*_): raise P03PortDenied("DENIED")
+        with self.assertRaises(P03PortDenied):
+            self.run_route("models.retry", denied)
+    def test_r15_explicit_hold_preserved(self):
+        def hold(*_): raise P03PortHold("NATIVE_HOLD")
+        with self.assertRaisesRegex(P03PortHold, "NATIVE_HOLD"):
+            self.run_route("models.cancel", hold)
+    def test_r15_owner_success_still_passes(self):
+        self.assertEqual(self.run_route("models.cancel", lambda *_: {"ok": True}),
+                         {"ok": True})
+    def test_r15_health_refusal_never_invokes_worker(self):
+        called = []
+        with self.assertRaises(P03PortHold):
+            self.run_route("models.pull", lambda *_: called.append(True), available=lambda: False)
+        self.assertEqual(called, [])
+    def test_r15_previous_r14_native_callback_lesson_applies(self):
+        called = []
+        self.port.backend = SimpleNamespace(available=lambda: True, cancel=lambda *_: called.append(True))
+        def broken(*_): raise RuntimeError("private consent diagnostic")
+        self.port.native_approve = broken
+        with self.assertRaisesRegex(P03PortHold, "Native consent provider unavailable"):
+            self.port.execute_backend(self.session("models.cancel"), "models.cancel", {})
+        self.assertEqual(called, [])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

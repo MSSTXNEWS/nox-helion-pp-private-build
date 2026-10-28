@@ -201,8 +201,11 @@ class P03OneHostPort:
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
         backend = self.backend
-        func = getattr(backend, method_name, None)
-        probe = getattr(backend, "available", None)
+        try:
+            func = getattr(backend, method_name, None)
+            probe = getattr(backend, "available", None)
+        except Exception:
+            raise P03PortHold("Owner3 backend contract unavailable") from None
         if not callable(func) or not callable(probe):
             raise P03PortHold("Actual owner3 backend and health proof required")
         try:
@@ -213,7 +216,13 @@ class P03OneHostPort:
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
         # The original backend, not this port, owns files, digests, receipts and queue.
-        return func(session, args)
+        # No raw worker exception may escape as a false native success ACK.
+        try:
+            return func(session, args)
+        except (P03PortDenied, P03PortHold):
+            raise
+        except Exception:
+            raise P03PortHold("Owner3 backend operation unavailable") from None
 
     def register(self, dispatcher: object, bound_port_type: type, *, receipt: str) -> frozenset[str]:
         if not isinstance(receipt, str) or not receipt.strip():
