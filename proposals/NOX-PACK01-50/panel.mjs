@@ -29,7 +29,13 @@ export function mountPack(target,{catalog,bridge}={}){
   const feedback=el("output","nox-pack01__feedback","Реальные функции активируются только после подключения к NOX");
   feedback.setAttribute("aria-live","polite");
   root.append(header,tabs,grid,settings,feedback);target.append(root);
-  const cinematic=mountCinematic(root,catalog);
+  // The only permitted live event source is the native Windows host's
+  // authenticated event port. No browser-generated evidenceVerified=true shortcut.
+  const cinematic=mountCinematic(root,catalog,{
+    subscribeVerifiedNative:typeof bridge.subscribeVerifiedVisualEvents==="function"
+      ? listener=>bridge.subscribeVerifiedVisualEvents(listener)
+      :null
+  });
   function setFeedback(text){feedback.textContent=String(text).slice(0,240);}
   function drawTabs(){
     tabs.replaceChildren();
@@ -124,7 +130,8 @@ export function mountPack(target,{catalog,bridge}={}){
     setHostChoices(raw){if(destroyed)return;choices=raw&&typeof raw==="object"?raw:{};drawDetail();},
     search(text){if(destroyed)return;query=String(text||"").slice(0,96);search.value=query;draw();},
     setCinemaMode(mode){if(destroyed)return false;return cinematic.setMode(mode);},
-    applyNativeVisualEvent(event){if(destroyed)return false;return cinematic.applyNativeEvent(event);},
+    // Retained only for API compatibility. A web page cannot inject live states.
+    applyNativeVisualEvent(_event){return false;},
     getStats(){return {total:50,advertised:Object.values(capabilities).filter(x=>x.enabled).length,
       notConnected:Object.values(capabilities).filter(x=>!x.enabled).length};},
     destroy(){if(destroyed)return;destroyed=true;document.removeEventListener("keydown",onKey);cinematic.destroy();root.remove();}
