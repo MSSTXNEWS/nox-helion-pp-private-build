@@ -76,7 +76,7 @@ jobs:
           if (!(Test-Path -LiteralPath $targetRoot -PathType Container)) { throw 'NOX_R08_ASSETS_FOLDER_MISSING' }
           $tmp=Join-Path $env:RUNNER_TEMP 'NOX_E06_APPROVED_D02_ORIGINAL.zip'
           if (Test-Path $tmp) { throw 'NOX_D02_TEMP_ARCHIVE_ALREADY_EXISTS' }
-          $writer=[IO.File]::CreateNew($tmp)
+          $writer=[IO.FileStream]::new($tmp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
           try {
             foreach ($name in @('source_00.part','source_01.part','source_02.part')) {
               if (!(Test-Path -LiteralPath $name -PathType Leaf)) { throw "NOX_ORIGINAL_SOURCE_PART_MISSING:$name" }
@@ -102,7 +102,7 @@ jobs:
               $dest=Join-Path $targetRoot $asset.to
               if (!(Test-Path -LiteralPath $dest -PathType Leaf)) {
                 $input=$entry.Open()
-                $output=[IO.File]::CreateNew([IO.Path]::GetFullPath($dest))
+                $output=[IO.FileStream]::new([IO.Path]::GetFullPath($dest),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
                 try { $input.CopyTo($output) } finally { $output.Dispose(); $input.Dispose() }
               }
               $observed=(Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash.ToLowerInvariant()
