@@ -13,6 +13,12 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 17
     steps:
+      - name: Pinned owner P01 preflight source for read-only diagnosis
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 8e42bb15aecbee8412c342b0e9049b6cce044297
+          persist-credentials: false
+          path: p01-source
       - name: Get exact validated installer from PR41 native Windows run
         uses: actions/download-artifact@v4
         with:
@@ -44,7 +50,36 @@ jobs:
           $proc=$null
           try {
             $p=Start-Process -FilePath (Resolve-Path $setup).Path -ArgumentList '/S' -Wait -PassThru
-            if ($p.ExitCode -ne 0){throw "NOX_INSTALL_EXIT_$($p.ExitCode)"}
+            if ($p.ExitCode -ne 0){
+              $receipt.installerExitCode=$p.ExitCode
+              $preflight='p01-source/stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1'
+              $previousPref=$ErrorActionPreference
+              $ErrorActionPreference='Continue'
+              try {
+                $preOutput=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $preflight -InstallRoot $root 2>&1
+                $receipt.preflightExitCode=$LASTEXITCODE
+                $receipt.preflightOutput=($preOutput|Out-String).Substring(0,[Math]::Min(3000,($preOutput|Out-String).Length))
+              } finally { $ErrorActionPreference=$previousPref }
+              $stage="$root.__p01_stage"
+              $receipt.stageExists=Test-Path -LiteralPath $stage -PathType Container
+              $receipt.rootExists=Test-Path -LiteralPath $root -PathType Container
+              if($receipt.stageExists){
+                $receipt.stageFileCount=@(Get-ChildItem -LiteralPath $stage -File -Recurse -ErrorAction SilentlyContinue).Count
+                $receipt.markerExists=Test-Path -LiteralPath (Join-Path $stage 'nox-p01-owned.txt')
+                $mf=Join-Path $stage 'payload.sha256.json'
+                if(Test-Path -LiteralPath $mf -PathType Leaf){
+                  $verify='p01-source/stage/proposals/P01/C09/Installer/Verify-Payload.ps1'
+                  $previousPref=$ErrorActionPreference
+                  $ErrorActionPreference='Continue'
+                  try {
+                    $verOut=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verify -Root $stage -Manifest $mf 2>&1
+                    $receipt.stageVerifyExitCode=$LASTEXITCODE
+                    $receipt.stageVerifyOutput=($verOut|Out-String).Substring(0,[Math]::Min(1800,($verOut|Out-String).Length))
+                  } finally { $ErrorActionPreference=$previousPref }
+                }
+              }
+              throw "NOX_INSTALL_EXIT_$($p.ExitCode)"
+            }
             $receipt.install='PASS'
             $exe=Join-Path $root 'NOX.P01.Shell.exe'
             $manifestPath=Join-Path $root 'payload.sha256.json'
