@@ -21,13 +21,15 @@ jobs:
           node --check proposals/NOX-PACK01-50/registry.mjs
           node --check proposals/NOX-PACK01-50/panel.mjs
           node --check proposals/NOX-PACK01-50/cinema50.mjs
+          node --check proposals/NOX-PACK01-50/cinema50-events.mjs
+          node --check proposals/NOX-PACK01-50/cinema50-events.test.mjs
           node --check proposals/NOX-PACK01-50/smoke.test.mjs
           node --check proposals/NOX-PACK01-50/binding_map.test.mjs
           node --check proposals/NOX-PACK01-50/measure_progress.mjs
       - name: Run 50 per-route contract checks and fail-closed gates
         shell: pwsh
         run: |
-          node --test proposals/NOX-PACK01-50/smoke.test.mjs proposals/NOX-PACK01-50/binding_map.test.mjs
+          node --test proposals/NOX-PACK01-50/smoke.test.mjs proposals/NOX-PACK01-50/binding_map.test.mjs proposals/NOX-PACK01-50/cinema50-events.test.mjs
           if ($LASTEXITCODE -ne 0) {throw 'CONTRACT_TEST_FAILED'}
           node proposals/NOX-PACK01-50/measure_progress.mjs
           if ($LASTEXITCODE -ne 0) {throw 'PROGRESS_LEDGER_INVALID'}

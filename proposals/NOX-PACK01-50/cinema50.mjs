@@ -2,10 +2,8 @@
  * Owns no actual AI/GPU/network functionality, never fabricates sensor progress.
  * Does not touch original D02 HOME, approved art, Persona or native bridge.
  */
+import {admitNativeVisualEvent} from "./cinema50-events.mjs";
 const MODES=Object.freeze(["eco","balanced","max","reduced"]);
-const STATES=Object.freeze(["running","streaming","training","downloading","completed","paused","error","offline"]);
-const NATIVE_SOURCE="NOX_EVENT_V3_VERIFIED";
-const RE=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export function visualPreset(action,index){
   if(!action||!["chat","models","learning","voice","space"].includes(action.category)||
@@ -19,31 +17,25 @@ export function visualPreset(action,index){
   });
 }
 
-export function validateLiveVisualEvent(event,knownRoutes){
-  if(!event||event.source!==NATIVE_SOURCE||event.evidenceVerified!==true||
-     typeof event.eventId!=="string"||typeof event.runId!=="string"||
-     !RE.test(event.eventId)||!RE.test(event.runId)||
-     !knownRoutes.has(event.routeId)||!STATES.includes(event.state))
-    return false;
-  if(event.progress!==undefined){
-    const p=event.progress;
-    if(!p||!Number.isInteger(p.numerator)||!Number.isInteger(p.denominator)||
-       p.denominator<1||p.numerator<0||p.numerator>p.denominator)return false;
-  }
-  return true;
-}
+// Backward-compatible legacy validator: the original source/evidence boolean
+// was writable by any in-page script and must NOT be treated as native proof.
+export function validateLiveVisualEvent(_legacyEvent,_knownRoutes){return false;}
 
-export function mountCinematic(root,catalog){
+export function mountCinematic(root,catalog,{subscribeVerifiedNative=null,now=()=>Date.now()}={}){
   if(typeof document==="undefined"||!root||root.nodeType!==1||
      !root.classList.contains("nox-pack01")||root.closest('[data-nox-page="home"]')||
      root.dataset.noxPage==="home")throw Error("NOX_CINEMA_SECONDARY_ONLY");
   if(!Array.isArray(catalog?.actions)||catalog.actions.length!==50)throw Error("NOX_CINEMA_50_REQUIRED");
+  if(subscribeVerifiedNative!==null&&typeof subscribeVerifiedNative!=="function")
+    throw Error("NOX_NATIVE_SUBSCRIPTION_MUST_BE_HOST_BOUND");
+  if(typeof now!=="function")throw Error("NOX_CLOCK_REQUIRED");
   const actions=catalog.actions,known=new Set(actions.map(x=>x.routeId));
   if(known.size!==50)throw Error("NOX_CINEMA_DUPLICATE_ROUTES");
   const map=new Map(actions.map((a,i)=>[a.routeId,visualPreset(a,i)]));
   const live=new Map();
   const lastIds=new Map();
-  let mode="balanced",destroyed=false,paused=false,visible=true;
+  let mode="balanced",destroyed=false,paused=false,visible=true,unsubscribe=null,expiryTimer=null;
+  const lastSequenceByRun=new Map();
   const motion=typeof window!=="undefined"&&window.matchMedia?.("(prefers-reduced-motion: reduce)");
   const onReduced=()=>{root.dataset.cinemaMode=motion?.matches?"reduced":mode;};
   const onVisibility=()=>{visible=!document.hidden;root.dataset.cinemaPaused=String(!visible||paused)};
@@ -56,8 +48,21 @@ export function mountCinematic(root,catalog){
   root.dataset.cinemaReady="true";
   onReduced();onVisibility();
 
+  function expireVisuals(){
+    const time=now();
+    for(const [route,value] of live)if(value.expires<=time)live.delete(route);
+  }
+  function scheduleExpiry(){
+    if(expiryTimer!==null){clearTimeout(expiryTimer);expiryTimer=null;}
+    if(destroyed||live.size===0)return;
+    const next=Math.min(...[...live.values()].map(x=>x.expires));
+    expiryTimer=setTimeout(()=>{
+      expiryTimer=null;expireVisuals();decorate();scheduleExpiry();
+    },Math.max(1,Math.min(30001,next-now()+1)));
+  }
   function decorate(){
     if(destroyed)return;
+    expireVisuals();
     for(const card of root.querySelectorAll(".nox-pack01__tile")){
       const preset=map.get(card.dataset.routeId);
       if(!preset)continue;
@@ -75,14 +80,37 @@ export function mountCinematic(root,catalog){
     }
   }
 
-  function applyNativeEvent(event){
-    if(destroyed||!validateLiveVisualEvent(event,known))return false;
-    const last=lastIds.get(event.routeId);
-    if(last===event.eventId)return false;
+  // In-page calls cannot confer native authentication; use only a host-owned
+  // subscription that validated the producer, session, receipt and route ownership.
+  function applyNativeEvent(_untrustedEvent){return false;}
+  function receiveVerifiedNativePacket(packet){
+    if(destroyed)return false;
+    const event=admitNativeVisualEvent(packet,catalog,{now:now()});
+    if(!event||!known.has(event.routeId))return false;
+    const last=lastSequenceByRun.get(event.runId);
+    if(last!==undefined&&event.sequence<=last)return false;
+    if(lastSequenceByRun.size>=64&&!lastSequenceByRun.has(event.runId))
+      lastSequenceByRun.delete(lastSequenceByRun.keys().next().value);
+    lastSequenceByRun.set(event.runId,event.sequence);
     lastIds.set(event.routeId,event.eventId);
-    live.set(event.routeId,{state:event.state,runId:event.runId,progress:event.progress||null});
-    decorate();
-    return true;
+    live.set(event.routeId,event);
+    decorate();scheduleExpiry();return true;
+  }
+  if(subscribeVerifiedNative!==null){
+    try{
+      unsubscribe=subscribeVerifiedNative(receiveVerifiedNativePacket);
+      if(typeof unsubscribe!=="function")throw Error("NOX_NATIVE_UNSUBSCRIBE_REQUIRED");
+    }catch(err){if(typeof unsubscribe==="function")unsubscribe();
+      document.removeEventListener("visibilitychange",onVisibility);
+      if(motion?.removeEventListener)motion.removeEventListener("change",onReduced);
+      if(viewport)viewport.disconnect();
+      if(expiryTimer!==null){clearTimeout(expiryTimer);expiryTimer=null;}
+      live.clear();lastIds.clear();lastSequenceByRun.clear();
+      root.removeAttribute("data-cinema-ready");
+      root.removeAttribute("data-cinema-mode");
+      root.removeAttribute("data-cinema-paused");
+      throw err;
+    }
   }
 
   function setMode(value){
@@ -111,7 +139,10 @@ export function mountCinematic(root,catalog){
     root.removeAttribute("data-cinema-ready");
     root.removeAttribute("data-cinema-mode");
     root.removeAttribute("data-cinema-paused");
-    live.clear();lastIds.clear();
+    if(expiryTimer!==null){clearTimeout(expiryTimer);expiryTimer=null;}
+    if(unsubscribe){unsubscribe();unsubscribe=null;}
+    live.clear();lastIds.clear();lastSequenceByRun.clear();
   }
-  return Object.freeze({decorate,applyNativeEvent,setMode,snapshot,destroy});
+  return Object.freeze({decorate,applyNativeEvent,setMode,snapshot,destroy,
+    nativeSubscriptionActive:()=>unsubscribe!==null});
 }
