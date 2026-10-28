@@ -97,6 +97,32 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path 'work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json')) {
             throw 'COMBINED_INSTALLER_BUILD_HOLD'
           }
+          $out='work/e06/onehost-wow-diagnostic'
+          $proof=Join-Path $out 'D02_VISUAL_PUBLISH_RECEIPT.json'
+          if (!(Test-Path -LiteralPath $proof -PathType Leaf)) { throw 'PUBLISHED_D02_RECEIPT_MISSING_HOLD' }
+          $report=Get-Content -LiteralPath $proof -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ($report.schema -cne 'NOX-E06-D02-VISUAL-PAYLOAD-V1' -or
+              $report.owner1_active_only -ne $true -or
+              $report.previous_pr30_archived -ne $true -or
+              $report.release_accepted -ne $false -or
+              $report.file_count -lt 60) { throw 'PUBLISHED_D02_RECEIPT_REJECTED_HOLD' }
+          $manifest=Get-Content -LiteralPath (Join-Path $out 'payload/payload.sha256.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+          foreach ($name in @('index.html','creative/wow200/runtime/home-scene.mjs',
+              'creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs',
+              'creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css',
+              'creative/wow200/legacy/d02-pr30/nox-cinema.mjs',
+              'creative/wow200/legacy/d02-pr30/nox-cinema.css')) {
+            $rel='Assets/'+$name
+            $entry=@($manifest.files | Where-Object { $_.path -ceq $rel })
+            if ($entry.Count -ne 1) { throw "D02_NSIS_MANIFEST_ENTRY_MISSING:$rel" }
+            $published=Join-Path $out ('payload/Assets/'+$name)
+            if (!(Test-Path -LiteralPath $published -PathType Leaf) -or
+                (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+                ([string]$entry[0].sha256).ToLowerInvariant()) {
+              throw "D02_NSIS_MANIFEST_SHA_MISMATCH:$rel"
+            }
+          }
+          Write-Host 'D02_PUBLISHED_ASSETS_PIN_PASS / E07_NOT_RUN'
       - name: Preserve full build receipt; do not claim E07 release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -107,6 +133,8 @@ jobs:
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
             work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
+            work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
+            work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
             work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
           if-no-files-found: warn
           retention-days: 14
