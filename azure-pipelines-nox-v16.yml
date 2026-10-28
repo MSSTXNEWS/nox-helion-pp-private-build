@@ -33,6 +33,8 @@ jobs:
       $head=(& git rev-parse HEAD).Trim().ToLowerInvariant()
       if ($head -cne '$(Build.SourceVersion)'.ToLowerInvariant()) { throw 'AZURE_PINNED_SOURCE_HEAD_MISMATCH' }
       Write-Host "SOURCE_COMMIT_SHA=$head"
+      python -m unittest discover -s tests/e06 -p 'test_azure_exact_python_pin.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_PYTHON_PIN_REGRESSION_HOLD' }
       python -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NAMESPACE_TEST_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_onehost_manifest_contract.py' -v
