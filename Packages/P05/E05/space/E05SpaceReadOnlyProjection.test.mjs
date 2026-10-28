@@ -463,3 +463,72 @@ test('R08 direct hardware projection stays independent of native frame-status ad
   assert.equal(projectHardware([r08Sensor('cpu.system.percent',73,'%')],NOW)['cpu.system.percent'].value,73);
 });
 console.log('R08: native UNAVAILABLE frame cannot report hardware LIVE; E07/Windows NOT_RUN.');
+
+// R09: one-GPU-tile provenance: do not conflate different providers or samples.
+const r09Gpu=(key,value,{source='NVML',sample_id,at='2026-10-28T03:44:58Z',device_id='GPU-0'}={})=>({
+  key,value,source,device_id,...(sample_id===undefined?{}:{sample_id}),
+  status:'LIVE',unit:key.includes('vram')?'bytes':key.includes('temperature')?'°C':'%',
+  observed_at_utc:at});
+const r09Tile=(rows)=>projectHardware(rows,NOW);
+const r09NoLive=(h,...keys)=>keys.forEach(k=>{
+  assert.equal(h[k].value,null,`${k} must not remain LIVE`);
+  assert.equal(h[k].stage,'HOLD_GPU_SAMPLE_CONFLICT');
+});
+test('R09 conflicting NVML and WMI GPU percentage and temperature are quarantined',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',40),r09Gpu('gpu.temperature.c',60,{source:'WMI'})]);
+  r09NoLive(h,'gpu.percent','gpu.temperature.c');
+});
+test('R09 mixed GPU percent provider and VRAM provider are quarantined',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{source:'NVML'}),
+    r09Gpu('gpu.vram.used_bytes',1024,{source:'DXGI'}),
+    r09Gpu('gpu.vram.total_bytes',2048,{source:'DXGI'})]);
+  r09NoLive(h,'gpu.percent','gpu.vram.used_bytes','gpu.vram.total_bytes');
+});
+test('R09 one provider but timestamps 10 seconds apart are not one GPU sample',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{at:'2026-10-28T03:44:48Z'}),
+    r09Gpu('gpu.temperature.c',60,{at:'2026-10-28T03:44:58Z'})]);
+  r09NoLive(h,'gpu.percent','gpu.temperature.c');
+});
+test('R09 same GPU provider and identical timestamp remains LIVE',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45),r09Gpu('gpu.temperature.c',60)]);
+  assert.equal(h['gpu.percent'].value,45);assert.equal(h['gpu.temperature.c'].value,60);
+});
+test('R09 same GPU provider and five-second timestamp span stays LIVE',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{at:'2026-10-28T03:44:53Z'}),r09Gpu('gpu.temperature.c',60)]);
+  assert.equal(h['gpu.percent'].value,45);assert.equal(h['gpu.temperature.c'].value,60);
+});
+test('R09 different native sample IDs on one GPU are quarantined',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{sample_id:'poll-12'}),
+    r09Gpu('gpu.temperature.c',60,{sample_id:'poll-13'})]);
+  r09NoLive(h,'gpu.percent','gpu.temperature.c');
+});
+test('R09 partial native sample IDs on one GPU are quarantined',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{sample_id:'poll-12'}),
+    r09Gpu('gpu.temperature.c',60)]);
+  r09NoLive(h,'gpu.percent','gpu.temperature.c');
+});
+test('R09 matching native sample IDs on one GPU remain LIVE',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{sample_id:'poll-12'}),
+    r09Gpu('gpu.temperature.c',60,{sample_id:'poll-12'})]);
+  assert.equal(h['gpu.percent'].value,45);assert.equal(h['gpu.temperature.c'].value,60);
+});
+test('R09 source mismatch within same device and identical sample ID is still blocked',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45,{sample_id:'poll-12'}),
+    r09Gpu('gpu.temperature.c',60,{sample_id:'poll-12',source:'WMI'})]);
+  r09NoLive(h,'gpu.percent','gpu.temperature.c');
+});
+test('R09 mixed provider CPU temperature does not contaminate sole GPU reading',()=>{
+  const h=r09Tile([r09Gpu('gpu.percent',45),{key:'cpu.temperature.c',value:64,
+    source:'WMI',unit:'°C',status:'LIVE',observed_at_utc:'2026-10-28T03:44:58Z'}]);
+  assert.equal(h['gpu.percent'].value,45);assert.equal(h['cpu.temperature.c'].value,64);
+});
+test('R09 two VRAM counters within five seconds same source still LIVE',()=>{
+  const h=r09Tile([r09Gpu('gpu.vram.used_bytes',1024,{at:'2026-10-28T03:44:54Z'}),
+    r09Gpu('gpu.vram.total_bytes',2048,{at:'2026-10-28T03:44:58Z'})]);
+  assert.equal(h['gpu.vram.used_bytes'].value,1024);assert.equal(h['gpu.vram.total_bytes'].value,2048);
+});
+test('R09 missing any real GPU samples stays N/D without inferred zeros',()=>{
+  const h=r09Tile([]);assert.equal(h['gpu.percent'].value,null);
+  assert.equal(h['gpu.temperature.c'].value,null);
+});
+console.log('R09 GPU tile strict provider/time/sample guards; native Windows NOT_RUN.');

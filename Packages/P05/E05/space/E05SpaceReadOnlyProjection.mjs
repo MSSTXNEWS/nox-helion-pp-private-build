@@ -97,14 +97,18 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
     'gpu.vram.total_bytes':['bytes',Number.MAX_SAFE_INTEGER],
     'gpu.temperature.c':['°C',150], 'cpu.temperature.c':['°C',150]};
   const result = {};
+  const nativeGpuSample = new Map(); // ephemeral: do not add fields to public DTO
   for (const [key,[unit,max]] of Object.entries(expected)) {
     const found = Array.isArray(sensors) ? sensors.filter(s=>s?.key===key) : [];
     const s=found.length===1?found[0]:null;
     const valid=s?.status==='LIVE' && s.unit===unit && typeof s.source==='string' && s.source.trim() &&
       typeof s.value==='number' && Number.isFinite(s.value) && s.value>=0 && s.value<=max &&
       ago(s.observed_at_utc,nowMs,30000) &&
+      // Optional native sample ID must be bounded and unambiguous if supplied.
+      (!key.startsWith('gpu.') || s.sample_id===undefined || validRunId(s.sample_id)) &&
       // A sensor cannot be observed AFTER the enclosing native polling frame.
       (polledUtc===null || (isoUtc(polledUtc) && Date.parse(s.observed_at_utc)<=Date.parse(polledUtc)));
+    if (key.startsWith('gpu.')) nativeGpuSample.set(key,valid?(s.sample_id ?? null):null);
     result[key]={value: valid?s.value:null, source:valid?s.source:null, stage:valid?'LIVE':'N_D',
       observedUtc:valid?s.observed_at_utc:null,
       deviceId:valid && typeof s.device_id==='string' && /^[A-Za-z0-9:._\/-]{1,120}$/.test(s.device_id)
@@ -135,6 +139,27 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
   if (new Set(liveGpu.map(r=>r.deviceId)).size>1) {
     for (const r of liveGpu) {
       r.value=null; r.stage='HOLD_GPU_DEVICE_CONFLICT'; r.observedUtc=null;
+    }
+  }
+  // One GPU tile must not merge unlike providers, distant timestamps, or
+  // contradictory native sample IDs just because DeviceId happens to match.
+  // An absent sample_id is allowed for legacy native producers, but if ANY
+  // metric has one, EVERY shown metric must carry that same identifier.
+  const gpuLiveKeys=gpuKeys.filter(k=>result[k].value!==null);
+  if (gpuLiveKeys.length>1) {
+    const observations=gpuLiveKeys.map(k=>Date.parse(result[k].observedUtc));
+    const sampleIds=gpuLiveKeys.map(k=>nativeGpuSample.get(k));
+    const someSampleId=sampleIds.some(id=>id!==null);
+    const sameSource=new Set(gpuLiveKeys.map(k=>result[k].source)).size===1;
+    const coherentWindow=Math.max(...observations)-Math.min(...observations)<=5000;
+    const coherentSample=!someSampleId ||
+      sampleIds.every(id=>id!==null && id===sampleIds[0]);
+    if (!sameSource || !coherentWindow || !coherentSample) {
+      for (const key of gpuLiveKeys) {
+        const r=result[key];
+        r.value=null; r.stage='HOLD_GPU_SAMPLE_CONFLICT';
+        r.observedUtc=null; r.deviceId=null;
+      }
     }
   }
   return result;
