@@ -6,6 +6,7 @@ import {installNoxCinemaFX} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 import {mountUnifiedCinema,reviewWowScopes} from "../../NOX-WOW-UNIFIED-1-150/gate.mjs";
 import {createP01RouteDispatcher} from "./route-dispatch.mjs";
 import {installP01Adaptive} from "./p01-responsive.mjs";
+import {nativeVisualApproval} from "./p01-visual-approval.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
 const mounted=new WeakSet();
 export function mountP01Owner(spec){
@@ -43,8 +44,8 @@ export function mountP01Owner(spec){
           if(typeof detach!=="function")throw Error("NATIVE_UNSUBSCRIBE_REQUIRED");
           return detach;
         }},
-        nativeAuthorizeShot:item=>hostPort.isAvailable("wow.shot."+item.id)===true,
-        nativeAuthorizeComposition:item=>hostPort.isAvailable("wow.composition."+item.id)===true
+        nativeAuthorizeShot:item=>nativeVisualApproval(hostPort,"shot",item),
+        nativeAuthorizeComposition:item=>nativeVisualApproval(hostPort,"composition",item)
       });
     }
     for(const [items,kind] of [[menu,"MENU"],[buttons,"BUTTON"]]){
