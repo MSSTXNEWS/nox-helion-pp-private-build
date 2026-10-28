@@ -1,0 +1,69 @@
+name: NOX V16 EXPRESS WOW E01 source and no-loss gate
+on:
+  push:
+    branches:
+      - integration/nox-v16-express-wow-rebased-r11-20261028
+    paths:
+      - 'integrations/wow200/**'
+      - 'integrations/express-wow/**'
+      - '.github/workflows/nox-express-wow-e01-gate.yml'
+  pull_request:
+    paths:
+      - 'integrations/wow200/**'
+      - 'integrations/express-wow/**'
+      - '.github/workflows/nox-express-wow-e01-gate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wow-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exact active E01 source blobs, preserve legacy donor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object integrations/wow200/canonical/nox-cinema.mjs)" = "a0bc34add0990b3f70bdbfd94fe52615193a4c08"
+          test "$(git hash-object integrations/wow200/canonical/nox-cinema.css)" = "77417160147607f2d7350209b865d86bfe49abd0"
+          test -f integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs
+          test -f integrations/wow200/DONOR_BLOBS.json
+          test -f integrations/creative/web/studio.html
+          test -f integrations/creative/web/entry.js
+          test -f integrations/express-wow/apply_express.py
+          grep -Fq "from '../canonical/nox-cinema.mjs'" integrations/wow200/runtime/home-scene.mjs
+          grep -Fq "DONOR_FILE_COUNT = 56" integrations/wow200/stage_wow200.py
+      - name: Canonical 9-orb HOME tests (no GPU or native acceptance claim)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check integrations/wow200/runtime/home-scene.mjs
+          node --check integrations/wow200/runtime/loader.mjs
+          node --check integrations/creative/web/entry.js
+          node --test integrations/wow200/tests/test_home_scene.mjs
+      - name: Atomic WOW stage and original 56-donor guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s integrations/wow200/tests -p 'test_canonical_owner.py' -v
+          python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+          python -m py_compile integrations/express-wow/apply_express.py integrations/wow200/stage_wow200.py
+      - name: Receipt: source gate does not accept EXE
+        if: success()
+        shell: bash
+        run: |
+          mkdir -p receipt
+          printf 'schema=NOX_EXPRESS_WOW_COMPONENT_ONLY_V1\ncommit=%s\ncanonical_E01=true\noriginal_D02_untouched_in_checkout=true\nwindows_exe_accepted=false\ngpu_accepted=false\ne07_accepted=false\n' "$GITHUB_SHA" > receipt/SOURCE_GATE.txt
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: nox-express-wow-source-only-${{ github.run_id }}
+          path: receipt/SOURCE_GATE.txt
+          retention-days: 14
