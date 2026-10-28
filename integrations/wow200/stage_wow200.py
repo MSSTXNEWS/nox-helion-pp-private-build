@@ -40,6 +40,7 @@ REQUIRED_DONORS = frozenset({
     "proposals/NOX-WOW151-200/finale.mjs",
     "proposals/NOX-WOW-UNIFIED-1-150/gate.mjs",
     "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "proposals/NOX-CINEMA-FX/nox-cinema.css",
     "proposals/NOX-PACK01-50/cinema50.mjs",
     "proposals/NOX-SUPER-CINEMA-3D/src/scene3d.mjs",
     "proposals/NOX-SUPER-CINEMA-3D/comfy_video_bridge.py",
