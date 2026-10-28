@@ -1,0 +1,155 @@
+{
+  "schema": "NOX_V16_E06_R08_OWNER_ADMISSION_RAW_BINARY_HOLD_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028-R08",
+  "owner": "E06",
+  "state": "COORDINATION_RECEIPT_ONLY_NO_NEW_SOURCELOCK",
+  "baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "git_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "git_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "live_main_equal": true,
+    "inventory_pr": 66,
+    "inventory_status": "INVENTORY_ONLY_NOT_PHYSICAL_ACCEPTANCE"
+  },
+  "historical_original": {
+    "sourcelock_r03_sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "git_commit_sha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "git_tree_sha1": "bedea674b77d14d94028ba86251d8f4d690353c1",
+    "git_tree_not_equal_current": true,
+    "original_archive_bytes": 60364346,
+    "original_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "entries": 729,
+    "entries_unique": 729,
+    "declared_uncompressed_bytes": 67102932,
+    "manifest_entries_checked": true,
+    "physical_files_verified": 0
+  },
+  "raw_parts": [
+    {
+      "path": "source_00.part",
+      "expected_bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "sha256": null
+    },
+    {
+      "path": "source_01.part",
+      "expected_bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "sha256": null
+    },
+    {
+      "path": "source_02.part",
+      "expected_bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "sha256": null
+    }
+  ],
+  "raw_parts_status": "METADATA_ONLY_RAW_BYTES_NOT_FETCHED_SHA256_ND",
+  "approved_assets": {
+    "D02": "HISTORICAL_MANIFEST_ENTRY_HASHES_MATCH_INNER_MANIFEST_NOT_RAW_FILE_BYTES",
+    "personas": "HISTORICAL_MANIFEST_ENTRY_HASHES_MATCH_INNER_MANIFEST_NOT_RAW_FILE_BYTES",
+    "assets": "HISTORICAL_MANIFEST_ENTRY_HASHES_MATCH_INNER_MANIFEST_NOT_RAW_FILE_BYTES",
+    "model_weight_contract": "HISTORICAL_MANIFEST_ONLY",
+    "seven_safetensors": "HISTORICAL_MANIFEST_ONLY_18KB_EACH_NOT_INSTALLED_LLM_WEIGHTS",
+    "installed_ollama_asr_tts_video_image_models": "N/D"
+  },
+  "owner_map": [
+    {
+      "owner": "E01",
+      "task_id": "V16.26.3",
+      "package": "P01",
+      "weight": 20,
+      "pr": 133,
+      "head_sha1": "508bf0d129d20011f040910e1c54c004fb836a9f",
+      "status": "SOURCE_LOCAL_FIXTURE_ONLY",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E02",
+      "task_id": "V16.26.4",
+      "package": "P02",
+      "weight": 25,
+      "pr": 135,
+      "head_sha1": "a52ac733ab37a0d2b77431ab99c79ae142e2903a",
+      "status": "SOURCE_LOCAL_MOCK_ONLY",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E03",
+      "task_id": "V16.26.5",
+      "package": "P03",
+      "weight": 20,
+      "pr": 132,
+      "head_sha1": "48ca53f3040cefa55f220df1b473293e8d006752",
+      "status": "SOURCE_LOCAL_OFFLINE_ONLY",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E04",
+      "task_id": "V16.26.6",
+      "package": "P04",
+      "weight": 25,
+      "pr": 134,
+      "head_sha1": "8a042ff35849a5d67fb3cf6fc5e19da18ce98bac",
+      "status": "SOURCE_TESTS_DEFINED_NO_GPU",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E05",
+      "task_id": "V16.26.7",
+      "package": "P05",
+      "weight": 10,
+      "pr": 131,
+      "head_sha1": "5e45cfd43b3621537bdd089efc33547ea57a5f32",
+      "status": "SOURCE_LOCAL_OFFLINE_ONLY",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E06",
+      "task_id": "V16.26.8",
+      "package": "STAGE_GATE",
+      "weight": null,
+      "pr": 124,
+      "parent_head_sha1": "6d53f3825df1481f42760a26dba418266e4a1c26",
+      "status": "ORIGINAL_MANIFEST_METADATA_VERIFIED_RAW_HOLD",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    },
+    {
+      "owner": "E07",
+      "task_id": "QA01-QA10",
+      "package": "INDEPENDENT_QA_GATE",
+      "weight": null,
+      "pr": 46,
+      "head_sha1": null,
+      "status": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN"
+    }
+  ],
+  "current_owner_pr_paths_disjoint_for_E01_E05": true,
+  "current_owner_pr_base_mixed_main_and_stacked": true,
+  "merge_allowed": false,
+  "component_verified_all": false,
+  "weighted_progress": "N/D",
+  "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+  "ui_section_36_override": "VISIBLE_MENU_BUTTON_COUNT_FLEXIBLE_FUNCTION_ROUTE_SET_MUST_NOT_SHRINK",
+  "source_code_ui_or_host_changed": false,
+  "source_archive_parts_rewritten": false,
+  "immutable_sourcelock_promoted": false,
+  "final_exe_claimed": false,
+  "one_practical_improvement": "MODEL_WEIGHT_PRESENCE_SEPARATION_GATE: File hash listed in historic archive manifest is never proof of installed Ollama/ASR/TTS/image/video/GPU model. Require raw file SHA256, license, runtime load and native receipt before model-installed status.",
+  "hold": [
+    "RAW_PARTS_SHA256_MISSING",
+    "ALL_729_RAW_FILES_NOT_CHECKED",
+    "HISTORICAL_VS_CURRENT_TREE_DIFFER",
+    "OWNER_STACKED_PR_CONTRACTS_NOT_ACCEPTED",
+    "E07_SAME_EXE_NOT_RUN"
+  ],
+  "authorization": "COORDINATION_ONLY_NO_MERGE_NO_SOURCELOCK_REPLACEMENT"
+}
