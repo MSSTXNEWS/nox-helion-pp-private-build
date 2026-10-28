@@ -364,5 +364,39 @@ class G2ComponentTests(unittest.TestCase):
             self.e05.read(self.session, "system.telemetry", {})
 
 
+    def test_30_native_gateway_revoked_after_binding_denies_mobile(self):
+        self.bind()
+        self.remote_gateway = False
+        self.assertFalse(self.host.advertise(self.session)["mobile.connect"]["enabled"])
+        with self.assertRaises(G2Hold):
+            self.mobile.connect(self.session, {"want": ["space.news"]})
+
+    def test_31_owner_receipts_are_snapshotted_before_preimage_seal(self):
+        receipts = dict(OWNER_SHA)
+        binder = G2OneHostBinder(
+            self.host, BoundPort,
+            existing_p02=self.p02, existing_p03=self.p03,
+            e05=self.e05, mobile=self.mobile,
+            existing_p02_voice=None, source_lock_sha256=SOURCE,
+            owner_receipts_sha256=receipts,
+            verify_original_preimages=lambda s, r: r == OWNER_SHA,
+            existing_host_mutation_lock=self.registry_lock)
+        receipts["P02"] = "0" * 64
+        got = binder.bind()
+        self.assertIn("models.catalog", got)
+        self.assertEqual(self.host.ports["models.catalog"].receipt, OWNER_SHA["P03"])
+
+    def test_32_reject_nonmapping_owner_receipt_contract(self):
+        with self.assertRaises(G2Hold):
+            G2OneHostBinder(
+                self.host, BoundPort,
+                existing_p02=self.p02, existing_p03=self.p03,
+                e05=self.e05, mobile=self.mobile,
+                existing_p02_voice=None, source_lock_sha256=SOURCE,
+                owner_receipts_sha256=None,
+                verify_original_preimages=lambda s, r: True,
+                existing_host_mutation_lock=self.registry_lock)
+
+
 if __name__ == "__main__":
     unittest.main()
