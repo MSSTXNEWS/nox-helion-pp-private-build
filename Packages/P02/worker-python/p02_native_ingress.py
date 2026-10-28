@@ -11,6 +11,7 @@ import json
 import math
 import re
 import threading
+from collections.abc import Mapping
 from typing import Callable, Any
 
 MAX_INPUT = 64 * 1024
@@ -143,9 +144,9 @@ class NativeIngress:
                 raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
             routes = getattr(self._dispatch, "routes", None)
             ports = getattr(self._dispatch, "ports", None)
-            route_info = routes.get(route) if isinstance(routes, dict) else None
+            route_info = routes.get(route) if isinstance(routes, Mapping) else None
             port = ports.get(route) if isinstance(ports, dict) else None
-            if (not isinstance(route_info, dict)
+            if (not isinstance(route_info, Mapping)
                     or type(route_info.get("owner")) is not int
                     or route_info["owner"] != 3
                     or getattr(port, "owner", None) != 3
