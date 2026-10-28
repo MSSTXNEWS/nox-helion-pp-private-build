@@ -143,6 +143,12 @@ jobs:
           $ui = Get-Content "$live/P03.ModelCenter.Wow/ui.js" -Raw
           $html = Get-Content "$live/P03.ModelCenter.Wow/index.html" -Raw
           if (!$ui.Contains("function renderQuick20") -or !$ui.Contains("sendAction('pull')") -or !$html.Contains('id="quickInstallGrid"')) { throw 'P03_QUICK20_BUTTON_WIRING_MISSING' }
+      - name: E03 native ModelCenter scope-shape regression (no downloads)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m unittest discover -s Packages/P03/Source/python-host -p test_p03_scope_shape_r10.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_SCOPE_SHAPE_R10_FAILED' }
       - name: Package verified consolidated component source for integrator 6
         if: success()
         shell: pwsh

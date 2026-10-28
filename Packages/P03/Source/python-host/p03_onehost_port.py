@@ -71,14 +71,23 @@ class P03OneHostPort:
         return tuple(result)
 
     def _ensure_native_scope(self, session: object, route: str, args: dict):
-        if (not isinstance(args, dict) or route not in ROUTES
+        # Strings and mappings are NOT native route sets: membership would
+        # authorize substrings/keys; None and integers would raise TypeError.
+        allowed = getattr(session, "allowed", None)
+        if (not isinstance(args, dict) or not isinstance(route, str)
+                or route not in ROUTES
                 or not all(isinstance(getattr(session, k, None), str)
                            and 0 < len(getattr(session, k)) <= 128
                            for k in ("tenant", "principal", "chat_id"))
-                or route not in getattr(session, "allowed", ())):
+                or not isinstance(allowed, (set, frozenset))
+                or any(not isinstance(value, str) for value in allowed)
+                or route not in allowed):
             raise P03PortDenied("Authenticated native owner3 route scope required")
         if route in SENSITIVE:
-            if (route not in getattr(session, "private_approved", ())
+            approved = getattr(session, "private_approved", None)
+            if (not isinstance(approved, (set, frozenset))
+                    or any(not isinstance(value, str) for value in approved)
+                    or route not in approved
                     or not callable(self.native_approve)
                     or self.native_approve(session, route, args) is not True):
                 raise P03PortDenied("Fresh out-of-band native approval required")
