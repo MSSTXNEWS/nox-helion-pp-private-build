@@ -50,6 +50,28 @@ def patch_bytes(data: bytes) -> tuple[bytes, bytes]:
     return changed.encode("utf-8"), diff
 
 
+
+def assert_new_output_paths(original: pathlib.Path, outputs: tuple[pathlib.Path, ...]) -> None:
+    """Refuse aliases, existing files, dangling symlinks and junction ancestors."""
+    identities: set[str] = set()
+    source = original.resolve(strict=True)
+    for target in outputs:
+        if target.exists() or target.is_symlink():
+            raise SystemExit("NO_LOSS_OUTPUT_ALREADY_EXISTS")
+        resolved = target.resolve(strict=False)
+        identity = str(resolved).casefold()  # Windows paths are case-insensitive.
+        if resolved == source:
+            raise SystemExit("NEVER_OVERWRITE_ORIGINAL")
+        if identity in identities:
+            raise SystemExit("NO_LOSS_OUTPUT_PATH_COLLISION")
+        identities.add(identity)
+        for parent in target.parents:
+            is_junction = getattr(parent, "is_junction", None)
+            if parent.is_symlink() or (is_junction is not None and is_junction()):
+                raise SystemExit("NO_LOSS_OUTPUT_LINKED_PARENT")
+
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--owner-nsi", required=True)
@@ -62,8 +84,6 @@ def main() -> None:
     candidate = pathlib.Path(args.candidate_nsi)
     receipt = pathlib.Path(args.receipt)
     diff_path = pathlib.Path(args.patch)
-    if any(p.exists() for p in (candidate, receipt, diff_path)):
-        raise SystemExit("NO_LOSS_OUTPUT_ALREADY_EXISTS")
     if not original.is_file() or original.is_symlink():
         raise SystemExit("OWNER1_EXACT_NSI_UNAVAILABLE")
     blob = subprocess.run(
@@ -76,12 +96,16 @@ def main() -> None:
     changed, diff = patch_bytes(raw)
     if not diff:
         raise SystemExit("NO_PATCH_HOLD")
-    if candidate.resolve() == original.resolve():
-        raise SystemExit("NEVER_OVERWRITE_ORIGINAL")
-    for path in (candidate, receipt, diff_path):
+    outputs = (candidate, receipt, diff_path)
+    assert_new_output_paths(original, outputs)
+    for path in outputs:
         path.parent.mkdir(parents=True, exist_ok=True)
-    candidate.write_bytes(changed)
-    diff_path.write_bytes(diff)
+    assert_new_output_paths(original, outputs)
+    # Exclusive creation fails safely on a race or newly injected symlink.
+    with candidate.open("xb") as handle:
+        handle.write(changed)
+    with diff_path.open("xb") as handle:
+        handle.write(diff)
     record = {
         "schema": "NOX_E06_R18_NSIS_X64_DIAGNOSTIC_RECEIPT_V1",
         "runId": args.run_id,
@@ -99,7 +123,8 @@ def main() -> None:
         "releaseAllowed": False,
         "rollback": "Discard E06 staging candidate; original owner file unchanged.",
     }
-    receipt.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    with receipt.open("xb") as handle:
+        handle.write((json.dumps(record, indent=2) + "\n").encode("utf-8"))
     print("E06_R18_OWNER1_NSI_ADAPTER_SOURCE_SHA_PASS")
 
 
