@@ -1,4 +1,10 @@
+import pathlib
+import sys
 import unittest
+
+HERE = pathlib.Path(__file__).resolve()
+ADAPTER_DIR = HERE.parents[3] / "coordination" / "e06" / "adapters"
+sys.path.insert(0, str(ADAPTER_DIR if ADAPTER_DIR.is_dir() else HERE.parent))
 from g2_gpu_provenance import valid_source, valid_device, reconcile_gpu_tile
 
 
