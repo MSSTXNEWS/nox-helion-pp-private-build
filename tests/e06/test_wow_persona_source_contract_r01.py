@@ -47,6 +47,15 @@ class VisualNoLoss(unittest.TestCase):
   self.assertIn("persona_media_staged=$wantsPersona",code)
   self.assertIn("persona_windows_media_accepted=$false",code)
 
+ def test_backend_status_is_rendered_as_text_not_markup(self):
+  studio=(CR/"web/studio.js").read_text()
+  self.assertNotIn(".innerHTML",studio)
+  self.assertIn("title.textContent=name",studio)
+  self.assertIn("full.textContent=JSON.stringify(report,null,2)",studio)
+  self.assertIn("quick.replaceChildren(rows.cloneNode(true))",studio)
+  self.assertIn("detail.replaceChildren(rows,full)",studio)
+  self.assertIn("typeof ready!=='boolean'",studio)
+
  def test_no_false_wow_200_or_release_claim(self):
   stage=(WOW/"stage_wow200.py").read_text()
   self.assertIn('"complete_200_runtime_verified":False',stage)
