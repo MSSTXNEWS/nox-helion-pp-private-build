@@ -93,9 +93,16 @@ public sealed class ModelDownloadQueueWorker(
             // cancellation must not be overwritten by a delayed Cancelling write.
             var record = await store.UpdateAsync(id, j => j.State == ModelJobState.Running
                 ? j with { State = ModelJobState.Cancelling, Status = "Cancelling" } : j, ct);
-            if (record?.State != ModelJobState.Cancelling) return false;
-            running.Cancel();
-            return true;
+            if (record?.State == ModelJobState.Cancelling)
+            {
+                running.Cancel();
+                return true;
+            }
+            // STOP can arrive after token registration but before the atomic
+            // Queued->Running claim. Persist the cancellation at that boundary.
+            if (record?.State == ModelJobState.Queued)
+                return await store.CancelQueuedAsync(id, ct);
+            return false;
         }
         return await store.CancelQueuedAsync(id, ct);
     }
