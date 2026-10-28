@@ -45,13 +45,20 @@ function create(){
   card.append(head,expl,controls,preview,report,title,routes);parent.append(card);
   try{
     reviewWowScopes();
-    scene=mountUnifiedCinema(root,{mode:mod.value,reducedMotion:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||false});
-    btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
-      scene.setMode(mod.value);const cue=scene.preview(id);
-      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+mod.value+' · не подтверждение работы GPU');};
-    mod.onchange=()=>scene?.setMode(mod.value);
     const mr=window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    mr?.addEventListener?.('change',e=>{if(e.matches)scene?.setMode('REDUCED');else scene?.setMode(mod.value)});
+    const effectiveMode=()=>mr?.matches?'REDUCED':mod.value;
+    const applyMode=()=>{
+      const actual=effectiveMode();
+      scene?.setMode(actual);
+      pack?.setMode(actual.toLowerCase());
+      return actual;
+    };
+    scene=mountUnifiedCinema(root,{mode:effectiveMode(),reducedMotion:!!mr?.matches});
+    btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
+      const actual=applyMode();const cue=scene.preview(id);
+      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+actual+' · не подтверждение работы GPU');};
+    mod.onchange=applyMode;
+    mr?.addEventListener?.('change',applyMode);
   }catch(e){note('HOLD визуального движка: '+e.message)}
   // First 50 actual route presets are read from the original single P01 catalog.
   // We do not dispatch privileged routes on a visual preview click.
@@ -70,7 +77,8 @@ function create(){
 
       };
       routes.append(button)}
-    pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(mod.value.toLowerCase());
+    pack=mountCinematic(routes,catalog);pack.decorate();
+    pack.setMode((window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'REDUCED':mod.value).toLowerCase());
   }).catch(e=>{routes.textContent='WOW 001–050: исходный маршрутный каталог недоступен · HOLD · '+e.message});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',create,{once:true});else create();
