@@ -13,6 +13,7 @@ import os
 import importlib.util
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import tempfile
 import unicodedata
 import zipfile
@@ -189,6 +190,20 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
     }
 
 
+def _trusted_output_parent(output: Path) -> None:
+    """Reject redirected receipt ancestors before any write to owner output."""
+    parent = output.absolute().parent
+    for node in (parent, *parent.parents):
+        try:
+            attrs = node.lstat()
+        except OSError as exc:
+            raise SourceHold("OUTPUT_PARENT_UNAVAILABLE") from exc
+        if (not stat.S_ISDIR(attrs.st_mode) or stat.S_ISLNK(attrs.st_mode)
+                or (getattr(attrs, "st_file_attributes", 0) &
+                    getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
+            raise SourceHold("OUTPUT_PARENT_REPARSE_OR_UNSAFE")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fail-closed original source ZIP+729 SHA gate")
     parser.add_argument("--parts-dir", type=Path, required=True)
@@ -198,9 +213,11 @@ def main() -> int:
     try:
         if args.out.is_symlink() or args.out.exists() or not args.out.parent.is_dir():
             raise SourceHold("OUTPUT_ALREADY_EXISTS_OR_UNSAFE")
+        _trusted_output_parent(args.out)
         receipt = verify_original(args.parts_dir, run_id=args.run_id)
         encoded = (json.dumps(receipt, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
         # Exclusive create: never overwrite an existing receipt or owner file.
+        _trusted_output_parent(args.out)
         with args.out.open("xb") as target:
             target.write(encoded)
             target.flush()
