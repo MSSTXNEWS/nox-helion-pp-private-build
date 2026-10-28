@@ -56,6 +56,7 @@ $approvedHashes = [ordered]@{
   'Remove-InstalledPayload.ps1' = @('dc4c7d537e18b8a107b27ab199ab9df4116fcf7a33f06b8058ce0b6edb8acc0e','5de22d37c8c21a6cc9527e97008a0ad4e57128bc90f273a12bef440903f266f7')
   'NOX-HELION-Setup.nsi' = @('3b21accfd088050fc57629aa60ac61024a10307c12731a4c0f0ef41edf1fd1bc','03d679804412a7113d08b90e9321879ad4d282cc497dca620cbe8c9c6b52d9db')
 }
+$approvedPreflightHashes = [ordered]@{}
 foreach ($name in $approvedHashes.Keys) {
   $candidate = Join-Path $approvedRoot $name
   if (!(Test-Path -LiteralPath $candidate -PathType Leaf)) { throw "P01_APPROVED_SCRIPT_MISSING:$name" }
@@ -63,6 +64,7 @@ foreach ($name in $approvedHashes.Keys) {
   if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "P01_SCRIPT_REPARSE_HOLD:$name" }
   $digest = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
   if (@($approvedHashes[$name]) -cnotcontains $digest) { throw "P01_OWNER_PREIMAGE_SHA_HOLD:$name" }
+  $approvedPreflightHashes[$name] = $digest
 }
 $verifyScript = Join-Path $approvedRoot 'Verify-Payload.ps1'
 $preflightScript = Join-Path $approvedRoot 'Preflight-InstallPath.ps1'
@@ -182,6 +184,16 @@ if (-not $makensis) {
 }
 $makensisPath = if ($makensis -is [System.IO.FileInfo]) { $makensis.FullName } else { $makensis.Source }
 if ([string]::IsNullOrWhiteSpace($makensisPath) -or !(Test-Path -LiteralPath $makensisPath -PathType Leaf)) { throw 'NSIS_BINARY_PATH_HOLD' }
+# E06 R06: preserve exact approved P01 script bytes across staging and compilation.
+# Both CRLF/LF variants are permitted at admission, but never a mid-build swap.
+foreach ($name in $approvedHashes.Keys) {
+  $candidate = Join-Path $approvedRoot $name
+  if (!(Test-Path -LiteralPath $candidate -PathType Leaf)) { throw "P01_OWNER_SOURCE_DISAPPEARED_BEFORE_NSIS_HOLD:$name" }
+  $item = Get-Item -LiteralPath $candidate -Force
+  if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "P01_OWNER_SOURCE_REPARSE_BEFORE_NSIS_HOLD:$name" }
+  $digest = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($digest -cne $approvedPreflightHashes[$name]) { throw "P01_OWNER_SOURCE_MUTATED_DURING_BUILD_HOLD:$name" }
+}
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
 & $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$verifyScript" "/DPREFLIGHT_SCRIPT=$preflightScript" "/DREMOVE_SCRIPT=$removeScript" "/DOUTPUT_SETUP=$setup" "/DAPP_VERSION=$appVersion" $nsisScript
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }

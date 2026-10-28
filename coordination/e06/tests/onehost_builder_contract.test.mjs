@@ -72,3 +72,22 @@ test('approved P01 owner tree and reparse-point output ancestry are protected be
   assert.equal((script.match(/NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP/g)||[]).length,1);
   assert.equal((script.match(/NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD/g)||[]).length,1);
 });
+
+test('P01 approved NSIS owner scripts keep identical pinned bytes from preflight to compiler',()=>{
+  const preflight=script.indexOf('$approvedPreflightHashes = [ordered]@{}');
+  const firstHash=script.indexOf('$approvedPreflightHashes[$name] = $digest');
+  const firstWrite=script.indexOf('New-Item -ItemType Directory -Path $OutputRoot');
+  const finalLoop=script.lastIndexOf('foreach ($name in $approvedHashes.Keys)');
+  const compiler=script.indexOf('& $makensisPath /V2');
+  assert.ok(preflight >= 0 && preflight < firstHash && firstHash < firstWrite);
+  assert.ok(firstWrite < finalLoop && finalLoop < compiler);
+  assert.equal((script.match(/foreach \(\$name in \$approvedHashes\.Keys\)/g)||[]).length,2);
+  for(const marker of [
+    'P01_OWNER_SOURCE_DISAPPEARED_BEFORE_NSIS_HOLD',
+    'P01_OWNER_SOURCE_REPARSE_BEFORE_NSIS_HOLD',
+    'P01_OWNER_SOURCE_MUTATED_DURING_BUILD_HOLD',
+    '$digest -cne $approvedPreflightHashes[$name]'
+  ]) assert.ok(script.indexOf(marker) > finalLoop && script.indexOf(marker) < compiler, marker);
+  assert.ok(script.includes('NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP'));
+  assert.ok(script.includes('NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD'));
+});
