@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_V16_E04_R03_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-E04-G1-20261028T0750MSK-R03",
+  "date": "2026-10-28",
+  "owner": "E04",
+  "state": "SOURCE_CANDIDATE_GPU_AND_INTEGRATION_HOLD",
+  "frozen_common_baseline": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "inventory_pr": 66,
+    "original_729_files": "UNSEALED",
+    "main_mutated": false
+  },
+  "donor": {
+    "pr": 83,
+    "immutable_commit": "edc224b58c1626774864f53ca53e80e436dcde6a",
+    "parent_pr": 65,
+    "parent_commit": "b9f2a7a850b939e938fdf634be608a3465c9a012",
+    "independent_branch": "e04/v16-g1-04-strict-jsonl-20261028-r03",
+    "github_diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/83/files"
+  },
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04",
+      "origin_commit": "edc224b58c1626774864f53ca53e80e436dcde6a",
+      "pre_sha256": "9b6bb0d386217d5c3550bb5aed763c024d620b30fa8494159125904308130506",
+      "post_sha256": "a9393db6fa61619b618ca28395b8c19eb2899559f6f50409f48ea3cfa36e61f7",
+      "pre_git_blob_sha1": "0f7fa0bbfea314189b68ae3cec1ab155fe138d42",
+      "post_git_blob_sha1": "eecd7f031b937abbe6e4d232cc83cac94e94247f",
+      "diff": "Strict parser reused in validate_jsonl and holdout scanner; root/nested duplicate keys and NaN/Infinity/overflow floats rejected",
+      "receipt": "GitHub readback verified; https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/83/files",
+      "tests": "11 real-module tests authored; CI execution NOT_VERIFIED"
+    },
+    {
+      "path": "tests/P04/test_e04_holdout_duplicate_gate.py",
+      "owner": "E04",
+      "origin_commit": "edc224b58c1626774864f53ca53e80e436dcde6a",
+      "pre_sha256": "ef6325b45b3589ade9c18f3f388ce0ab1ea5ff40c4bb0399c4ab9fdb12621d27",
+      "post_sha256": "9fdbf4778fd1f363a030b8a9145ac46ff57f7bad72c736fcf77a422304c0f8d5",
+      "pre_git_blob_sha1": "a8fe37719f0e015170a733a550b16e2d7fbb7936",
+      "post_git_blob_sha1": "3ff88b6506e879626053918bfa3709e1660cc8bf",
+      "diff": "5 new regression methods; original 6 preserved; fixture newline escapes corrected before receipt",
+      "receipt": "GitHub readback verified; https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/83/files",
+      "tests": "11 real-module tests authored; CI execution NOT_VERIFIED"
+    }
+  ],
+  "target_tests": {
+    "new_methods": 5,
+    "old_methods_retained": 6,
+    "actual_module_windows_linux": "NOT_VERIFIED",
+    "github_git_blob_readback": "2/2 PASS",
+    "local_nvidia": {
+      "nvidia_smi": "NOT_INSTALLED",
+      "torch": "2.10.0+cpu",
+      "cuda": false,
+      "gpu_count": 0
+    },
+    "rights_weights": "NOT_VERIFIED",
+    "synthetic_test_data": "FIXTURE_ONLY"
+  },
+  "task_ledger": [
+    {
+      "id": "E04-01",
+      "state": "SOURCE",
+      "proof": "Pinned preimages/owner checked"
+    },
+    {
+      "id": "E04-02",
+      "state": "SOURCE",
+      "proof": "One original LocalRag preserved"
+    },
+    {
+      "id": "E04-03",
+      "state": "SOURCE",
+      "proof": "Original ingest/reindex unchanged"
+    },
+    {
+      "id": "E04-04",
+      "state": "HOLD",
+      "proof": "P02↔P04 trusted one-host E2E not accepted"
+    },
+    {
+      "id": "E04-05",
+      "state": "SOURCE",
+      "proof": "Strict rights-bound JSONL pre-GPU patch"
+    },
+    {
+      "id": "E04-06",
+      "state": "HOLD",
+      "proof": "NVIDIA GPU + approved rights/weights not verified"
+    },
+    {
+      "id": "E04-07",
+      "state": "HOLD",
+      "proof": "Real PEFT START/STOP/PAUSE/RESUME NOT_RUN"
+    },
+    {
+      "id": "E04-08",
+      "state": "HOLD",
+      "proof": "Full optimizer/scheduler/RNG checkpoint actual resume NOT_RUN"
+    },
+    {
+      "id": "E04-09",
+      "state": "HOLD",
+      "proof": "Real eval/merge not run"
+    },
+    {
+      "id": "E04-10",
+      "state": "HOLD",
+      "proof": "Native Guardian thermal/VRAM not run"
+    }
+  ],
+  "seven_indicators": {
+    "E01": "SOURCE PR77/82; COMPONENT isolated; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E02": "SOURCE PR76; COMPONENT isolated; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E03": "SOURCE PR78; COMPONENT isolated; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E04": "SOURCE PR74/83; COMPONENT 11 authored tests NOT_VERIFIED; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E05": "SOURCE PR75; COMPONENT isolated; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E06": "SOURCE PR66/79/80 inventory/draft; COMPONENT historical only; INTEGRATED HOLD; WINDOWS ACCEPTED NOT_RUN; N/D",
+    "E07": "SOURCE PR46 diagnostic; COMPONENT historical diagnostic; INTEGRATED HOLD; FINAL WINDOWS ACCEPTED NOT_RUN; N/D"
+  },
+  "overall_weighted_progress": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05 = N/D; denominators/receipts unsealed",
+  "errors": {
+    "observed": "initial R03 test fixture escaped newline twice; corrected in commit 1882b34d7ae103930ab4d07888292dcecc7c2d6d",
+    "cause": "tool-to-Python multi-layer string escaping",
+    "fix": "literal validation via GitHub fetch_file readback before receipt",
+    "new_product_runtime_errors": "NOT_RUN, none observed"
+  },
+  "lesson": "Apply a single exact-code fixture-literal round-trip check (GitHub source readback) before accepting a cross-language generated regression; do not treat authored tests or pre-step CI as PASS.",
+  "handoff": "E06 #6 reconcile immutable original SourceLock and exact E04 PR83 on stable source; approved rights/weights and real CUDA training required; E07 final same-EXE SHA Windows QA",
+  "release": "BLOCKED"
+}
