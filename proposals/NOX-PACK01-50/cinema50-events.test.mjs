@@ -10,7 +10,8 @@ function packet(route=action,overrides={}){
  return {routeId:route.routeId,raw:{
    schema:"NOX-INSTALLER-EVENT-v3",evidence_verified:true,
    event_type:"task.started",run_id:"run-32",event_id:"evt-77",
-   task_id:route.taskId,action_id:"chat.start",package_id:"P0"+route.owner,
+   task_id:route.taskId,action_id:"chat.start",
+   package_id:route.owner===6?"E06":"P0"+route.owner,
    event_sequence:1,receipt_sha256:"a".repeat(64),
    timestamp_utc:new Date(stamp).toISOString(),...overrides
  }};
