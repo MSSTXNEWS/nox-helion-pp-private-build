@@ -45,8 +45,10 @@ export function profileFor(mode,reduced){
 // Burst outward, slow near the apex, and return to the point of emergence.
 // It is a designed visual cue, not a claim of astronomical simulation.
 export function gravitationalSample(p,timeMs){
-  if(!p||!Number.isFinite(timeMs)||!Number.isFinite(p.started)||!Number.isFinite(p.duration)||
-     p.duration<=0)throw new Error("NOX_FX_INVALID_PARTICLE");
+  if(!p||!Number.isFinite(timeMs)||
+     ["started","duration","surfaceRadius","reach","swirl","angle","brightness","rotation"].some(k=>!Number.isFinite(p[k]))||
+     p.duration<=0||p.surfaceRadius<0||p.reach<0||p.brightness<0)
+    throw new Error("NOX_FX_INVALID_PARTICLE");
   const t=clamp((timeMs-p.started)/p.duration,0,1);
   const arc=Math.sin(Math.PI*t);
   const radius=p.surfaceRadius+arc*p.reach;
@@ -71,6 +73,10 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   validateScene(orbs);
   if(!root||root.nodeType!==1)throw new Error("NOX_FX_TRUSTED_ROOT_REQUIRED");
   if(mounted.has(root))throw new Error("NOX_FX_ALREADY_MOUNTED");
+  if(root.classList.contains("nox-cinema-scope")||
+     ["noxFxMode","noxFxState","noxFxVisible"].some(k=>Object.prototype.hasOwnProperty.call(root.dataset,k))||
+     orbs.some(x=>Object.prototype.hasOwnProperty.call(x.element.dataset,"noxFxState")))
+    throw new Error("NOX_FX_OWNERSHIP_COLLISION");
   if(!profileSet.has(profile)||typeof random!=="function")
     throw new Error("NOX_FX_INVALID_OPTIONS");
   const doc=root.ownerDocument;
@@ -94,6 +100,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   let ownerRoot=false;
   const decorated=[];
   const particles=[];
+  function unitRandom(){let v;try{v=random();}catch(_){return .5;}
+    return typeof v==="number"&&Number.isFinite(v)&&v>=0&&v<1?v:.5;}
   const each=orbs.map((entry,index)=>{
     const element=entry.element;
     if(!root.contains(element)||element.querySelector(".nox-cinema-orb__layers"))
@@ -106,12 +114,13 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       "aria-hidden":"true",focusable:"false"
     });
     layers.appendChild(svg);
-    element.classList.add("nox-cinema-orb");
+    const added=!element.classList.contains("nox-cinema-orb");
+    if(added)element.classList.add("nox-cinema-orb");
     element.dataset.noxFxState="idle";
     element.appendChild(layers);
-    decorated.push({element,cls:"nox-cinema-orb"});
+    decorated.push({element,cls:"nox-cinema-orb",added});
     const shape={id:entry.id,element,layers,svg,index,
-      nextBurst:time()+4500+random()*18000};
+      nextBurst:time()+4500+unitRandom()*18000};
     return shape;
   });
   function decorate(items,cls){
@@ -119,7 +128,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     for(const e of items){
       if(!e||e.nodeType!==1||!root.contains(e))continue;
       // Buttons and panels remain original controls. Only cosmetic classes added.
-      e.classList.add(cls);decorated.push({element:e,cls});
+      const added=!e.classList.contains(cls);
+      if(added)e.classList.add(cls);
+      decorated.push({element:e,cls,added});
     }
   }
   decorate(controls,"nox-cinema-control");
@@ -133,19 +144,19 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     particles.length=0;particleCount=0;
   }
   function nextDelay(policy){return policy.minimumBurstMs+
-    random()*(policy.maximumBurstMs-policy.minimumBurstMs);}
+    unitRandom()*(policy.maximumBurstMs-policy.minimumBurstMs);}
   function makeParticle(orb,now){
-    const angle=2*Math.PI*random();
-    const size=clamp(.65+random()*1.85,.6,2.5);
+    const angle=2*Math.PI*unitRandom();
+    const size=clamp(.65+unitRandom()*1.85,.6,2.5);
     const node=svgElement(doc,"path",{d:"M "+(-size)+" 0 L 0 "+(-size*.42)+
       " L "+size+" 0 L 0 "+(size*.42)+" Z",
-      fill:random()<.23?"#323032":"#c57244",
+      fill:unitRandom()<.23?"#323032":"#c57244",
       opacity:"0"});
     orb.svg.appendChild(node);
-    const p={node,started:now,duration:2200+random()*1900,
-      surfaceRadius:86+random()*6,reach:(orb.index===0?16:8)+random()*(orb.index===0?29:20),
-      angle,swirl:(random()-.5)*17,brightness:.48+random()*.42,
-      rotation:random()*360};
+    const p={node,started:now,duration:2200+unitRandom()*1900,
+      surfaceRadius:86+unitRandom()*6,reach:(orb.index===0?16:8)+unitRandom()*(orb.index===0?29:20),
+      angle,swirl:(unitRandom()-.5)*17,brightness:.48+unitRandom()*.42,
+      rotation:unitRandom()*360};
     particles.push(p);particleCount++;emissions++;
   }
   function loop(now){
@@ -167,13 +178,13 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       if(now<orb.nextBurst)continue;
       orb.nextBurst=now+nextDelay(policy)*(orb.index===0?1:2.1);
       if(particleCount>=policy.maxParticles)continue;
-      if(orb.index!==0 && random()>.38)continue;
+      if(orb.index!==0 && unitRandom()>.38)continue;
       const count=orb.index===0?2:1;
       for(let i=0;i<count&&particleCount<policy.maxParticles;i++)makeParticle(orb,now);
     }
   }
   function wake(){
-    if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&!raf){
+    if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&mode!=="REDUCED"&&!raf){
       lastFrame=0;raf=win.requestAnimationFrame(loop);
     }
   }
@@ -199,7 +210,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   if(observer)observer.observe(root);
   function applyState(next,runId=null,coreId=null){
     if(disposed)return false;
-    if(!stateSet.has(next)||(runId!==null && (!pattern.test(runId))))
+    if(!stateSet.has(next)||
+       (runId!==null&&(typeof runId!=="string"||!pattern.test(runId)))||
+       (coreId!==null&&(typeof coreId!=="string"||!pattern.test(coreId))))
       return false;
     if(coreId!==null){
       const orb=each.find(x=>x.id===coreId);
@@ -215,7 +228,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   // Roll back only FX-owned nodes on malformed native subscription.
   function rollbackFailedMount(){
     for(const orb of each){orb.layers.remove();delete orb.element.dataset.noxFxState;}
-    for(const item of decorated)item.element.classList.remove(item.cls);
+    for(const item of decorated)if(item.added)item.element.classList.remove(item.cls);
     root.classList.remove("nox-cinema-scope");
     delete root.dataset.noxFxMode;delete root.dataset.noxFxState;
     delete root.dataset.noxFxVisible;
@@ -233,7 +246,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       if(!event||typeof event!=="object"||event.trusted!==true ||
          typeof event.state!=="string")return;
       // No fabricated training progress: CSS data-state is just a host-attested state.
-      applyState(event.state,event.runId||null,event.coreId||null);
+      applyState(event.state,event.runId===undefined?null:event.runId,
+        event.coreId===undefined?null:event.coreId);
     });}catch(error){rollbackFailedMount();throw error;}
     if(typeof un!=="function"){rollbackFailedMount();
       throw new Error("NOX_FX_SUBSCRIBE_REQUIRES_CLEANUP");}
@@ -250,7 +264,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     setState:applyState,
     setVisible(value){if(disposed)return false;hostVisible=value===true;
       root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";
-      if(hostVisible)wake();else sleep();},
+      if(hostVisible)wake();else sleep();return true;},
     snapshot(){return Object.freeze({profile:preference?"REDUCED":mode,
       active:!doc.hidden&&hostVisible&&intersectVisible&&!disposed,coreCount:CORE_COUNT,
       particles:particleCount,emitted:emissions,frames:frameCount,
@@ -266,7 +280,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       if(observer)observer.disconnect();
       try{if(unsubscribe)unsubscribe();}catch(_){/* host failure cannot skip FX cleanup */}
       for(const orb of each){orb.layers.remove();delete orb.element.dataset.noxFxState;}
-      for(const item of decorated)item.element.classList.remove(item.cls);
+      for(const item of decorated)if(item.added)item.element.classList.remove(item.cls);
       if(ownerRoot){root.classList.remove("nox-cinema-scope");
         delete root.dataset.noxFxMode;delete root.dataset.noxFxState;
         delete root.dataset.noxFxVisible;}
