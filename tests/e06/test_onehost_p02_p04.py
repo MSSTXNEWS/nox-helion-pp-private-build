@@ -223,6 +223,37 @@ class OneHostOwnerContract(unittest.TestCase):
             "tenant", "principal", "existing-chat")], ["user"])
 
 
+    def test_21_revoke_during_owner_next_blocks_frame_after_await(self):
+        def delayed_owner(*args, **kwargs):
+            self.allowed.discard("chat.send")
+            yield {"type": "chat.delta", "delta": "DENIED_AFTER_AWAIT"}
+        self.chat.send = delayed_owner
+        frames = self.seam.stream_chat(self.scope, "offline-test-model", "hi")
+        with self.assertRaisesRegex(PermissionError, "NATIVE_OWNER_ROUTE_DENIED"):
+            next(frames)
+
+    def test_22_gpu_callback_revocation_blocks_verified_ack(self):
+        def owner_gpu(scope, command, worker):
+            self.allowed.discard(command)
+            return {"worker_id": worker, "command": command, "status": "ACK_ONLY"}
+        self.seam._gpu = owner_gpu
+        self.seam._verify_ack = lambda ack: True
+        with self.assertRaisesRegex(PermissionError, "NATIVE_OWNER_ROUTE_DENIED"):
+            self.seam.gpu_command(self.scope, "gpu.pause", "worker-1")
+
+    def test_23_event_verify_revocation_blocks_p05_publication(self):
+        def verify(event):
+            self.allowed.discard("gpu.observe")
+            return True
+        self.seam._verify_v3 = verify
+        self.seam._publish_v3 = self.published.append
+        event = dict(schema="NOX-INSTALLER-EVENT-v3", package_id="P04",
+                     event_type="checkpoint.saved", evidence_verified=True)
+        with self.assertRaisesRegex(PermissionError, "NATIVE_OWNER_ROUTE_DENIED"):
+            self.seam.publish_owner_gpu_event(self.scope, event)
+        self.assertEqual(self.published, [])
+
+
 
 if __name__ == "__main__":
     unittest.main()
