@@ -65,7 +65,7 @@ class NativeIngress:
         nonce, route, payload = request["requestId"], request["route"], request["payload"]
         if not isinstance(nonce, str) or not NONCE.fullmatch(nonce):
             raise ProtocolHold("NATIVE_NONCE_INVALID")
-        if route not in P02_ROUTES or not isinstance(payload, dict):
+        if not isinstance(route, str) or route not in P02_ROUTES or not isinstance(payload, dict):
             raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
         # This intentionally bans any identity or permission claim in page data.
         if any(key in payload for key in (

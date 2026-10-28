@@ -1,0 +1,40 @@
+{
+  "schema": "NOX-V16-FINAL-LANE2-OWNER-RECEIPT-v1",
+  "task_id": "V16.26.4/P02-NATIVE-ROUTE-TYPE-GATE",
+  "run_id": "NOX-V16-FINAL-L2-20261028T1555MSK-R11",
+  "owner": "FINAL RELEASE LANE #2 (P02 blocker fixer)",
+  "reason": "Untrusted WebView JSON route list/object reaches frozenset membership and raises unmanaged TypeError instead of ProtocolHold.",
+  "immutable_parent_commit": "e5091c994c2ef95d9f1560ae34a3a3e7ec5e16d0",
+  "immutable_parent_tree": "578d79a717ddda3a3c87871c7a64567939773d07",
+  "immutable_owner_source": {
+    "path": "Packages/P02/worker-python/p02_native_ingress.py",
+    "git_blob_sha1_before": "f3c74f2c46d0f9f7c4281efeeeb4d6fb87900e65",
+    "sha256_before": "6191a811ca5ab9e7809dcec486f2793a6295a9f1edc3fa06ebf4c03a41996191",
+    "git_blob_sha1_after": "d9b8b8c433833a5bc5c4f2bdc91e6a49cb2924ea",
+    "sha256_after": "9f967d7fb260aff16e8013a2996d96464039e6ed6297f09a7e38785644fa19db"
+  },
+  "diff": [
+    "-        if route not in P02_ROUTES or not isinstance(payload, dict):",
+    "+        if not isinstance(route, str) or route not in P02_ROUTES or not isinstance(payload, dict):"
+  ],
+  "negative_regression_reused": {
+    "path": "tests/e06/test_p02_native_route_shape_r11.py",
+    "git_blob_sha1": "39f3012afa37da5d378be8211f7902b06ffdd07b",
+    "sha256": "79a483c9a92e84cc1c954ca4fc4948731e89bc21e30f2221d4d443653b307b7d",
+    "unmodified": true,
+    "pre_fix": "5/7 expected behavior; 2 ERROR TypeError (list, dict)",
+    "post_fix": "7/7 PASS, zero dispatcher side-effects for invalid routes",
+    "method": "Python unittest on byte-verified production source in isolated local copy",
+    "py_compile": "PASS"
+  },
+  "restrictions": {
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "no_new_db_llm_download_event_bus": true,
+    "full_CI": "NOT_RUN (zero-step CI failures)",
+    "windows_exe": "HOLD",
+    "owner_admission": "PENDING_FINAL_BUILDER_1",
+    "preimage_recheck_required": true
+  },
+  "lesson": "Type-check untrusted route before set membership to turn malformed JSON into managed ProtocolHold without side effects."
+}
