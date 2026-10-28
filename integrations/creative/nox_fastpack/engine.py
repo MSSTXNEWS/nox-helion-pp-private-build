@@ -30,6 +30,7 @@ MODEL_CATALOG = [
     ("musicgen-small", "MusicGen Small", "sound", "facebook/musicgen-small", "varies"),
     ("kokoro-82m", "Kokoro 82M TTS", "voice", "hexgrad/Kokoro-82M", "varies"),
 ]
+MAX_COMFY_MEDIA_BYTES = 4 * 1024 * 1024 * 1024  # bounded 4 GiB cinema asset; no giant in-memory buffer
 KINDS = ("movie", "cartoon2d", "cartoon3d", "anime", "adult18", "video", "photo", "3d", "voice", "sound", "slides", "site", "code", "memory", "learning")
 TERMS = {"фильм":"movie", "кино":"movie", "мультик":"cartoon2d", "мультфильм":"cartoon2d", "аниме":"anime", "хентай":"adult18", "18+":"adult18", "видео":"video", "ролик":"video", "фото":"photo", "изображен":"photo", "картинк":"photo", "3д":"3d", "3d":"3d", "озвуч":"voice", "музык":"sound", "презентац":"slides", "сайт":"site", "код":"code", "программ":"code", "памят":"memory", "обучен":"learning"}
 
@@ -58,7 +59,15 @@ class Studio(CreativeExtensions):
 
     def _project(self, project_id: str):
         if not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I): raise StudioError("Invalid project ID")
-        p=self.projects/project_id; p.mkdir(parents=True,exist_ok=True); return p
+        if self._is_untrusted_link(self.projects) or not self.projects.resolve().is_relative_to(self.root):
+            raise StudioError("Untrusted NOX projects root")
+        p=self.projects/project_id
+        if self._is_untrusted_link(p):
+            raise StudioError("Untrusted NOX project directory")
+        p.mkdir(parents=True,exist_ok=True)
+        if not p.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("Project outside approved NOX data root")
+        return p
 
     @staticmethod
     def _within(root:Path, path:Path):
@@ -314,11 +323,32 @@ class Studio(CreativeExtensions):
             raise StudioError("Only completed, reported ComfyUI assets may be imported")
         name=asset["filename"]
         if not re.fullmatch(r"[^/\\]{1,220}",name):raise StudioError("Bad output filename")
-        folder=self._project(project_id)/"assets";folder.mkdir(parents=True,exist_ok=True)
+        folder=self._project(project_id)/"assets"
+        if self._is_untrusted_link(folder):
+            raise StudioError("Untrusted project assets folder")
+        folder.mkdir(parents=True,exist_ok=True)
+        if not folder.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("Assets destination outside NOX data root")
         output=folder/(uuid.uuid4().hex[:8]+"_"+name)
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
-        with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("wb") as out:shutil.copyfileobj(inp,out)
-        return {"status":"IMPORTED","file":str(output),"bytes":output.stat().st_size}
+        total=0
+        try:
+            # Prevent a local ComfyUI adapter error/oversized response from
+            # consuming unbounded disk. Keep large video files streaming.
+            with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("xb") as out:
+                while True:
+                    chunk=inp.read(1024*1024)
+                    if not chunk:break
+                    total+=len(chunk)
+                    if total>MAX_COMFY_MEDIA_BYTES:
+                        raise StudioError("ComfyUI asset exceeds approved cinema media limit")
+                    out.write(chunk)
+            if total==0:
+                raise StudioError("ComfyUI returned empty media")
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
+        return {"status":"IMPORTED","file":str(output),"bytes":total}
 
     def assemble(self,project_id,clips,soundtrack="",subtitle_file=""):
         with self._assemble_lock:
