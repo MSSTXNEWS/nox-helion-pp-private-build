@@ -17,11 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Checkout immutable E06 R13 signed Microsoft prerequisite (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: b5233bbb58a059783d1d143b2523e32cae3724d3
+          path: .r13-prerequisite
+          persist-credentials: false
       - name: Signed Microsoft WebView2 runtime on disposable Windows
         shell: pwsh
         run: |
           $env:CI='true'
-          ./coordination/e06/Test-OfficialWebView2Prereq.ps1
+          ./.r13-prerequisite/coordination/e06/Test-OfficialWebView2Prereq.ps1
       - name: Install official NSIS 3.11 for isolated forensic executable
         shell: pwsh
         run: |
