@@ -101,9 +101,10 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   $('actionHint').textContent=state.hostReady?'Действия выполняются только после подтверждения Windows host.':'Без host доступен просмотр каталога; операции отключены.';
 }
 function renderDna(){const m=current();const dl=$('dnaList');dl.replaceChildren();if(!m)return;
-  const fields=[['Источник',isOfficial(m.officialUrl)?'Ollama (официальный)':'Неизвестно'],['Тег',safeText(m.exactTag)],
-    ['Revision',safeText(m.immutableRevision)],['Лицензия',safeText(m.license)],['Размер',bytes(m.artifactBytes)],
-    ['SHA-256 файла',isDigest(m.sha256)?m.sha256:'REVIEW_REQUIRED'],['SHA-256 манифеста',isDigest(m.manifestSha256)?m.manifestSha256:'REVIEW_REQUIRED'],['VRAM',fmtRam(m.requiredVramGiB)]];
+  const verified=hasEvidence(m);
+  const fields=[['Источник',isOfficial(m.officialUrl)?'Ollama (официальный)':'Неизвестно'],['Тег',verified?safeText(m.exactTag):'REVIEW_REQUIRED'],
+    ['Revision',verified?safeText(m.immutableRevision):'REVIEW_REQUIRED'],['Лицензия',verified?safeText(m.license):'REVIEW_REQUIRED'],['Размер',verified?bytes(m.artifactBytes):unknown],
+    ['SHA-256 файла',verified&&isDigest(m.sha256)?m.sha256:'REVIEW_REQUIRED'],['SHA-256 манифеста',verified&&isDigest(m.manifestSha256)?m.manifestSha256:'REVIEW_REQUIRED'],['VRAM',verified?fmtRam(m.requiredVramGiB):unknown]];
   for(const [a,b] of fields)dl.append(...lineItem(a,b));const link=$('sourceLink');if(isOfficial(m.officialUrl)){link.href=m.officialUrl;link.removeAttribute('aria-disabled');}else{link.removeAttribute('href');link.setAttribute('aria-disabled','true');}
 }
 function checkState(label,passed){const item=el('div','check '+(passed===true?'pass':passed===false?'fail':''));item.append(el('strong','',passed===true?'✓':passed===false?'×':'?'),el('span','',label));return item;}
