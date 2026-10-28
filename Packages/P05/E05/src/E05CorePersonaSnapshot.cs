@@ -28,7 +28,7 @@ public static class E05CorePersonaProjection
             sourcePersonas.All(p => p is not null) &&
             approvedPersonaIds.ToHashSet(StringComparer.Ordinal).SetEquals(
                 sourcePersonas.Select(p => p.PersonaId));
-        var safeCores = exactCores ? sourceCores.Select(c => c is not null && c.MeasuredAt is not null &&
+        var safeCores = exactCores ? sourceCores.Select(c => c.MeasuredAt is not null &&
             c.MeasuredAt <= now && now - c.MeasuredAt <= TimeSpan.FromMinutes(5)
                 ? c : c with { Percent = null, Status = "N_D", ReceiptId = null }).ToArray()
             : Array.Empty<CoreProof>();
