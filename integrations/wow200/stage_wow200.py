@@ -18,6 +18,13 @@ D02 = {
 # This prevents a fabricated 50-entry placeholder list passing as "WOW 1-200".
 DONOR_MANIFEST_BLOB = "de7c6305c02023bd61c5acba3ffea5f62953a0d1"
 DONOR_FILE_COUNT = 56
+# Active E01 original D02 renderer. These are the exact original *owner* Git blobs
+# from unified PR162; archived PR44/PR30 sources remain unchanged as provenance.
+# Git SHA-1 is distinct from file SHA-256 and cannot be used as that digest.
+ACTIVE_OWNER_BLOBS = {
+    "nox-cinema.mjs": "a0bc34add0990b3f70bdbfd94fe52615193a4c08",
+    "nox-cinema.css": "77417160147607f2d7350209b865d86bfe49abd0",
+}
 REQUIRED_DONORS = frozenset({
     "proposals/NOX-WOW51-100/catalog.mjs",
     "proposals/NOX-WOW51-100/wow51-100.mjs",
@@ -65,11 +72,23 @@ def stage(root:Path, source:Path)->dict:
         if not origin.is_file() or origin.is_symlink() or gitsha(origin.read_bytes())!=expected:
             raise ValueError("WOW_DONOR_BLOB_IDENTITY_HOLD:"+rel)
         plans.append((origin,dest/rel))
+    # The original owner E01 source is authoritative for HOME. Do not load
+    # the archived PR44 copy, which uses incompatible data-nox-state namespace.
+    # Both sources remain byte-exact in the final ZIP; only ONE is runtime-active.
+    canonical = source / "canonical"
+    for name,expected_blob in ACTIVE_OWNER_BLOBS.items():
+        owner = canonical / name
+        if not owner.is_file() or owner.is_symlink() or gitsha(owner.read_bytes()) != expected_blob:
+            raise ValueError("ACTIVE_E01_OWNER_SHA_HOLD:"+name)
+        plans.append((owner, dest / "canonical" / name))
     # Do not modify approved art or any existing source file until all inputs pass.
     for rel in ["runtime/loader.mjs","runtime/stage.css","runtime/home-scene.mjs","runtime/home-guard.css"]:
         origin=source/rel
         if not origin.is_file() or origin.is_symlink():raise ValueError("WOW_RUNTIME_SOURCE_HOLD")
         plans.append((origin,dest/rel))
+    home_entry=source/"runtime/home-scene.mjs"
+    if "from '../canonical/nox-cinema.mjs'" not in home_entry.read_text(encoding="utf-8"):
+        raise ValueError("CANONICAL_RUNTIME_IMPORT_CLOSURE_HOLD")
     old=html.read_text(encoding="utf-8-sig")
     old_home=home_html.read_text(encoding="utf-8-sig")
     if old.count("</head>")!=1 or old.count("</body>")!=1 or "wow200/runtime/loader.mjs" in old:
@@ -92,7 +111,7 @@ def stage(root:Path, source:Path)->dict:
     new=old.replace('</head>', ''.join(f'<link rel="stylesheet" href="{rel}">' for rel in css_assets)+'</head>')
     new=new.replace("</body>",'<script type="module" src="wow200/runtime/loader.mjs"></script></body>')
     new_home=old_home.replace('</head>',
-        '<link rel="stylesheet" href="creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css">'
+        '<link rel="stylesheet" href="creative/wow200/canonical/nox-cinema.css">'
         '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css"></head>')
     new_home=new_home.replace('</body>',
         '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script></body>')
@@ -115,7 +134,12 @@ def stage(root:Path, source:Path)->dict:
         receipt={"schema":"NOX_V16_WOW200_ADDITIVE_R13_STAGE", "source":"PR44/PR38/PR14/PR15 immutable Git blobs", "files":copied,
           "count":len(copied),"D02_original_SHA256":D02,"same_EXE_QA":"NOT_RUN","GPU":"NOT_RUN",
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
-          "home_pr30_renderer_staged":True,"complete_200_runtime_verified":False}
+          "home_pr30_renderer_staged":False,
+          "home_E01_owner_renderer_staged":True,
+          "active_owner_git_blobs": ACTIVE_OWNER_BLOBS,
+          "active_home_module": "Assets/creative/wow200/canonical/nox-cinema.mjs",
+          "archived_pr30_never_imported_in_home":True,
+          "complete_200_runtime_verified":False}
         out.write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
         return receipt
     except BaseException:
