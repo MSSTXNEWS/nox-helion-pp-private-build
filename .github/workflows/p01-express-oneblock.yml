@@ -1,0 +1,61 @@
+name: NOX V16 E01 EXPRESS one-block no-loss and host authorization
+on:
+  push:
+    branches: [e01-express-oneblock-wow-noloss-20261028]
+  pull_request:
+    paths:
+      - 'proposals/P01/WOW-MAX10/**'
+      - '.github/workflows/p01-express-oneblock.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-scope-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check actual existing owner modules, not mocked copies
+        run: |
+          set -euo pipefail
+          node --check proposals/P01/WOW-MAX10/route-dispatch.mjs
+          node --check proposals/P01/WOW-MAX10/mount-p01.mjs
+          node --check proposals/P01/WOW-MAX10/express-security.test.mjs
+          node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs \
+                      proposals/P01/WOW-MAX10/express-security.test.mjs \
+                      proposals/P01/WOW-MAX10/c4-visual-approval.test.mjs
+      - name: Guard exact PR162 preimage, no loss, single-owner paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=c7fa13b923fed63af9ef0056c1a51c2e5b9c6d66
+          git cat-file -e "$base^{commit}"
+          git diff --name-only --diff-filter=D "$base" HEAD > /tmp/nox-deleted.txt
+          test ! -s /tmp/nox-deleted.txt
+          git diff --name-only "$base" HEAD > /tmp/nox-changed.txt
+          while IFS= read -r file; do
+            case "$file" in
+              proposals/P01/WOW-MAX10/*|.github/workflows/p01-express-oneblock.yml) ;;
+              *) echo "OUT_OF_OWNER_SCOPE:$file"; exit 2 ;;
+            esac
+          done < /tmp/nox-changed.txt
+          test "$(wc -l < /tmp/nox-changed.txt)" -ge 4
+      - name: Source-only SHA256 receipt for exact branch
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence
+          git diff --name-only c7fa13b923fed63af9ef0056c1a51c2e5b9c6d66 HEAD |
+            while read -r file; do sha256sum "$file"; done > ci-evidence/E01_EXPRESS_POST_SHA256.txt
+          git rev-parse HEAD > ci-evidence/E01_EXPRESS_HEAD.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nox-e01-express-source-receipts
+          path: ci-evidence/
+          if-no-files-found: error
+          retention-days: 30

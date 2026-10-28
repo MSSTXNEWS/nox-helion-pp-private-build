@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_E01_EXPRESS_NOLOSS_RECEIPT_V1",
+  "runId": "NOX-V16-E01-EXPRESS-20261028",
+  "owner": "E01",
+  "base_commit": "c7fa13b923fed63af9ef0056c1a51c2e5b9c6d66",
+  "source_commit": "7ac112f2980b54def5b04e10c529fe1b3663fed8",
+  "branch": "e01-express-oneblock-wow-noloss-20261028",
+  "source_pr": 167,
+  "integrator_pr": 162,
+  "sha_kind": "full UTF-8 SHA256 for pre/post; SHA256 of returned GitHub unified hunk per file; Git blob SHA1 separate",
+  "deleted_files": 0,
+  "scope": "P01+one isolated CI workflow",
+  "regression": {
+    "new_local_node_tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "github_actions_windows": "NOT_RUN",
+    "github_actions_linux": "FAILED_BEFORE_STEPS",
+    "native_onehost": "HOLD",
+    "e07_same_exe": "NOT_RUN",
+    "full_source_lock729": "HOLD"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/p01-express-oneblock.yml",
+      "owner": "E01",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "4ee257d604b7d731351adeb97d0a8a386446f8cfe2c839031dc8bd6eb3f7330e",
+      "patch_sha256": "3fe71c5651d9a6204eeaa6d6d7b753d11552fdb033763a228b0bd43f244489e8",
+      "post_blob_sha1": "3343a5f2c14e298d1cb184cebab1879363a05769"
+    },
+    {
+      "path": "proposals/P01/WOW-MAX10/express-security.test.mjs",
+      "owner": "E01",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "2834f1710fb3fb8f96a8dfc7550bdd3eef2a47dd2ac0caf8db66fa7d123fed90",
+      "patch_sha256": "b81349607da0b5dbec59eab0a50dca274419fc31f120974987dbdef38a701ae0",
+      "post_blob_sha1": "67e8452ce1634e443ab6adc52c937e0da518e23e"
+    },
+    {
+      "path": "proposals/P01/WOW-MAX10/mount-p01.mjs",
+      "owner": "E01",
+      "pre_sha256": "218b0a3d9a6abafde62b9fa4dde94d446d5d38e1f251a737785cba88b3936db3",
+      "post_sha256": "9299cda06bd82b97bd8beea491a09f5f1927680bbf897e698bcf69321956b1f1",
+      "patch_sha256": "66cf2b454db6a073a4e9f9ae6e9bb38ddd2b16c4c0ee76a2b6bb78d37015c298",
+      "post_blob_sha1": "be736a5ff2251affd19296586756bff90239c60f"
+    },
+    {
+      "path": "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+      "owner": "E01",
+      "pre_sha256": "78f5a2be79e27e7bc9a7c08eebcec0c5fab5807065c4001b5a530fe8b1e70149",
+      "post_sha256": "8b155a1a4b5c41c4bf3fb42bb961e115c86e62356d108622b13e066232944bee",
+      "patch_sha256": "0af86ab00da4c91ecfe9ade65d71c4f6fe8a429ac814c7d2177870e22531ebda",
+      "post_blob_sha1": "5b7717d1db46485bf763462d1eccd8eec2f4dbc0"
+    },
+    {
+      "path": "proposals/P01/WOW-MAX10/route-dispatch.test.mjs",
+      "owner": "E01",
+      "pre_sha256": "ccec437d5ddaf9c805cf25b2e1ceb4ff80e925fe7335935cc4d7ae00388ad629",
+      "post_sha256": "c0ea6e4725f643b485c1fc1b5e88fa8143664cd30b46b8a886058b0c50139734",
+      "patch_sha256": "bbfba4db2026a6f0ddde4cc35a6c7d47b6525059eb88b41f5895070b6bd5ce66",
+      "post_blob_sha1": "d6cf2df02da12b5c522a0603876d9a3aeff95df4"
+    }
+  ],
+  "product_release_allowed": false
+}
