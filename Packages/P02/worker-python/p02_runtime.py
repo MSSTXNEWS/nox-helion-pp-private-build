@@ -331,7 +331,7 @@ class P02Store:
         no implicit commit of host transactions, no schema deletion/downgrade.
         """
         reserved = {'p02_chats','p02_messages','p02_attachments',
-                    'p02_gc','p02_meta','p02_messages_by_chat'}
+                    'p02_gc','p02_meta','p02_messages_by_chat','p02_messages_stable_seq'}
         native_chat_names = {'chat','chats','messages','chat_messages',
                              'conversations','conversation_messages','chat_history',
                              'chat_sessions','message_history'}
@@ -348,7 +348,7 @@ class P02Store:
                 if 'p02_meta' not in existing:
                     raise P02Error('INCOMPLETE_P02_SCHEMA; refusing implicit repair')
                 version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
-                if version != ('1',):
+                if version not in (('1',), ('2',)):
                     raise P02Error('Incompatible existing P02 schema; refusing downgrade')
                 # Existing user data is immutable until every required table and
                 # its primary-key/foreign-key fields are confirmed. A partial
@@ -366,6 +366,8 @@ class P02Store:
                 for table, expected_columns in required.items():
                     # Static table names only; never interpolate web/user input.
                     cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
+                    if table == 'p02_messages' and version == ('2',):
+                        expected_columns = expected_columns | {'stable_seq'}
                     if cols != expected_columns:
                         raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
                     key_columns = {'p02_chats': 'id', 'p02_messages': 'id',
@@ -395,6 +397,28 @@ class P02Store:
                     self.db.execute('SELECT rowid FROM p02_messages LIMIT 0')
                 except sqlite3.OperationalError as exc:
                     raise P02Error('P02_MESSAGE_ROWID_REQUIRED; restore verified backup') from exc
+                if version == ('2',):
+                    indexed = False
+                    for ix in self.db.execute('PRAGMA index_list(p02_messages)'):
+                        if ix[2] != 1:
+                            continue
+                        ix_name = str(ix[1]).replace('"', '""')
+                        fields = [entry[2] for entry in self.db.execute(
+                            f'PRAGMA index_info("{ix_name}")')]
+                        indexed = indexed or fields == ['stable_seq']
+                    if not indexed:
+                        raise P02Error('P02_STABLE_HISTORY_UNIQUE_INDEX_REQUIRED')
+                    trigger = self.db.execute("SELECT sql FROM sqlite_master WHERE type='trigger' "
+                        "AND name='p02_messages_stable_insert' AND tbl_name='p02_messages'").fetchone()
+                    if not trigger or not isinstance(trigger[0], str):
+                        raise P02Error('P02_STABLE_HISTORY_INSERT_TRIGGER_REQUIRED')
+                    normalized = ' '.join(trigger[0].lower().split())
+                    if ('after insert on p02_messages' not in normalized
+                            or 'when new.stable_seq is null' not in normalized
+                            or 'max(stable_seq)' not in normalized):
+                        raise P02Error('P02_STABLE_HISTORY_TRIGGER_DRIFT')
+                    if self.db.execute('SELECT 1 FROM p02_messages WHERE stable_seq IS NULL LIMIT 1').fetchone():
+                        raise P02Error('P02_STABLE_HISTORY_MISSING_SEQUENCE')
                 for table in ('p02_messages', 'p02_attachments'):
                     rows = list(self.db.execute(f'PRAGMA foreign_key_list({table})'))
                     if not any(row[2] == 'p02_chats' and row[3] == 'chat_id'
@@ -426,7 +450,7 @@ class P02Store:
                 if statement.strip():
                     self.db.execute(statement)
             version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
-            if version != ('1',):
+            if version not in (('1',), ('2',)):
                 raise P02Error('Incompatible existing P02 schema; refuse automatic downgrade')
 
     def _owned(self, tenant: str, user: str, chat: str):
@@ -447,7 +471,7 @@ class P02Store:
         with self._write_transaction():
             self._owned(tenant, user, chat)
             message_id = uuid.uuid4().hex
-            self.db.execute("INSERT INTO p02_messages VALUES(?,?,?,?,?)",
+            self.db.execute("INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",
                             (message_id, chat, role, content, int(time.time())))
             return message_id
 
@@ -457,12 +481,18 @@ class P02Store:
             raise ValueError("Invalid limit")
         with self._lock:
             self._owned(tenant, user, chat)
-            # UUID message IDs are random: sorting by ID after same-second
-            # timestamps reorders user/assistant messages.  Existing P02
-            # message tables use SQLite rowid, the insertion-order tie breaker.
-            # Do not alter schema, timestamps, IDs or any persisted message.
-            rows = self.db.execute("""SELECT role,content FROM p02_messages WHERE chat_id=?
-                       ORDER BY created_at DESC,rowid DESC LIMIT ?""", (chat, limit)).fetchall()
+            # V1 rowid may be renumbered by VACUUM; only explicit host-approved
+            # backed-up V2 adds durable stable_seq in the SAME existing DB.
+            version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
+            if version == ('2',):
+                query = """SELECT role,content FROM p02_messages WHERE chat_id=?
+                           ORDER BY stable_seq DESC LIMIT ?"""
+            elif version == ('1',):
+                query = """SELECT role,content FROM p02_messages WHERE chat_id=?
+                           ORDER BY created_at DESC,rowid DESC LIMIT ?"""
+            else:
+                raise P02Error('P02_HISTORY_SCHEMA_NOT_ADMITTED')
+            rows = self.db.execute(query, (chat, limit)).fetchall()
         return [{"role": role, "content": content} for role, content in reversed(rows)]
 
     def prune(self, tenant: str, user: str, chat: str, before_epoch: int) -> int:
