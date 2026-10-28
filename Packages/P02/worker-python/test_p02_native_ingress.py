@@ -111,7 +111,9 @@ class IngressTests(unittest.TestCase):
             ingress.handle(packet(13, "models.catalog"))
         self.provider.routes = {"models.catalog": {"owner": 3}}
         self.provider.ports = {"models.catalog": type("Port", (), {
-            "owner": 3, "evidence_id": "PINNED_OWNER3_SOURCE"})()}
+            "owner": 3, "evidence_id": "PINNED_OWNER3_SOURCE",
+            "call": staticmethod(lambda scope, args: {"native": True}),
+            "available": staticmethod(lambda: True)})()}
         response = json.loads(ingress.handle(packet(14, "models.catalog")))
         self.assertEqual(response["result"]["route"], "models.catalog")
         with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
@@ -128,6 +130,22 @@ class IngressTests(unittest.TestCase):
                                 expected_run_id=R, allow_modelcenter_reads=True)
         with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
             ingress.handle(packet(17, "models.installed"))
+        self.assertFalse(self.provider.seen)
+
+    def test_overdeep_nested_json_is_protocol_hold(self):
+        payload = b"[" * 1300 + b"0" + b"]" * 1300
+        with self.assertRaisesRegex(ProtocolHold, "INVALID_JSON"):
+            self.router.handle(payload)
+        self.assertFalse(self.provider.seen)
+
+    def test_modelcenter_noncallable_port_cannot_pass_native_admission(self):
+        self.provider.routes = {"models.catalog": {"owner": 3}}
+        self.provider.ports = {"models.catalog": type("Port", (), {
+            "owner": 3, "evidence_id": "FORGED_PORT_METADATA"})()}
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+            ingress.handle(packet(30, "models.catalog"))
         self.assertFalse(self.provider.seen)
 
     def test_missing_session_fails_closed(self):
