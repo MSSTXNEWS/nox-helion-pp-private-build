@@ -20,6 +20,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - name: E07-SOURCE-03 malicious ZIP namespace and special-file regressions
+        shell: bash
+        run: python3 -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
       - name: Run exact source ZIP, entry and SHA256 validation (no extraction)
         shell: bash
         run: |

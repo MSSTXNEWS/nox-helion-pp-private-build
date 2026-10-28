@@ -17,6 +17,41 @@ def safe_name(name: str) -> bool:
                                and not p.endswith((" ", "."))
                                and not RESERVED.match(p) for p in parts)
 
+def validate_members(infos) -> None:
+    """One canonical ZIP namespace/type gate, before any member bytes are read.
+
+    Reject explicit file ancestors, implicit-directory -> file conflicts and
+    case-insensitive Windows collisions, regardless of ZIP entry ordering.
+    """
+    explicit = {}
+    required_directories = set()
+    for info in infos:
+        name = info.filename
+        if not safe_name(name):
+            raise ValueError(f"Unsafe path: {name!r}")
+        canonical = name.rstrip("/")
+        folded = canonical.casefold()
+        is_directory = info.is_dir()
+        mode_type = stat.S_IFMT(info.external_attr >> 16) if info.create_system == 3 else 0
+        if mode_type not in (0, stat.S_IFREG, stat.S_IFDIR):
+            raise ValueError(f"Symlink/special file: {name!r}")
+        if (mode_type == stat.S_IFDIR and not is_directory or
+                mode_type == stat.S_IFREG and is_directory):
+            raise ValueError(f"ZIP entry kind/type mismatch: {name!r}")
+        if folded in explicit:
+            raise ValueError(f"Duplicate/case collision: {name!r}")
+        segments = canonical.split("/")
+        ancestors = ["/".join(segments[:i]).casefold()
+                     for i in range(1, len(segments))]
+        for parent in ancestors:
+            if explicit.get(parent) is False:
+                raise ValueError(f"File used as parent path: {name!r}")
+        if not is_directory and folded in required_directories:
+            raise ValueError(f"File conflicts with directory path: {name!r}")
+        explicit[folded] = is_directory
+        required_directories.update(ancestors)
+
+
 def audit(directory: pathlib.Path, expected_files: int):
     paths = [directory / p for p in PARTS]
     if any(not p.is_file() or p.is_symlink() for p in paths):
@@ -36,19 +71,13 @@ def audit(directory: pathlib.Path, expected_files: int):
         actual = sha.hexdigest()
         if actual != EXPECTED_SHA256:
             raise ValueError(f"ZIP SHA256 mismatch: {actual}")
-        entries, seen, total = [], set(), 0
+        entries, total = [], 0
         with zipfile.ZipFile(out) as z:
+            # Validate the ENTIRE namespace before hashing any member data:
+            # children can precede their parent in a hostile ZIP.
+            validate_members(z.infolist())
             for info in z.infolist():
                 name = info.filename
-                if not safe_name(name):
-                    raise ValueError(f"Unsafe path: {name!r}")
-                folded = name.rstrip("/").casefold()
-                if folded in seen:
-                    raise ValueError(f"Duplicate/case collision: {name!r}")
-                seen.add(folded)
-                mode = info.external_attr >> 16
-                if info.create_system == 3 and stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
-                    raise ValueError(f"Symlink/special file: {name!r}")
                 if info.is_dir():
                     continue
                 total += info.file_size
