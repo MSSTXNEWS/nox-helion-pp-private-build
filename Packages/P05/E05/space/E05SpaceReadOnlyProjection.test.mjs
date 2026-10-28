@@ -532,3 +532,36 @@ test('R09 missing any real GPU samples stays N/D without inferred zeros',()=>{
   assert.equal(h['gpu.temperature.c'].value,null);
 });
 console.log('R09 GPU tile strict provider/time/sample guards; native Windows NOT_RUN.');
+
+test('R10 component verified alone cannot count as accepted readiness',()=>{
+  const r=structuredClone(readiness);
+  for(const lane of r.bars.slice(0,5)) for(const x of lane.task_ledger)
+    if(x.status==='ACCEPTED') x.status='COMPONENT_VERIFIED';
+  for(const lane of r.bars.slice(0,5)) lane.percent=0;
+  r.overall=0;
+  const result=projectReadiness(r,RUN,NOW);
+  assert.equal(result.overall,0);
+  assert.equal(result.bars[0].stage,'ACCEPTED');
+  assert.ok(result.bars.slice(0,5).every(x=>x.percent===0));
+});
+test('R10 a component-only fixture cannot present historical 28 percent',()=>{
+  const r=structuredClone(readiness);
+  for(const lane of r.bars.slice(0,5)) for(const x of lane.task_ledger)
+    if(x.status==='ACCEPTED') x.status='COMPONENT_VERIFIED';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 a mixed accepted/component ledger counts only accepted weight',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[0].status='COMPONENT_VERIFIED';
+  r.bars[0].percent=0; r.overall=26;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,26);
+});
+test('R10 legacy CRITERIA_VERIFIED cannot claim accepted readiness',()=>{
+  const r=structuredClone(readiness);r.bars[0].stage='CRITERIA_VERIFIED';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 a component receipt cannot appear on pending HOLD tasks',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[2].receipt_sha256=H;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
