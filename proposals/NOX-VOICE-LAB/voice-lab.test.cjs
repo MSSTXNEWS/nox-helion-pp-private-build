@@ -32,11 +32,12 @@ function stage({ pendingPermission = false } = {}) {
   };
   const feeds = [];
   let resolvePermission;
-  global.navigator = {
+  // Node 22+ exposes a getter-only global navigator; define it explicitly.
+  Object.defineProperty(global, 'navigator', { configurable: true, value: {
     mediaDevices: { getUserMedia: () => pendingPermission
       ? new Promise(resolve => { resolvePermission = resolve; })
       : Promise.resolve(stream()) }
-  };
+  }});
   class Recorder {
     static instances = [];
     static isTypeSupported() { return true; }
