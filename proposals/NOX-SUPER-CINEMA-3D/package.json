@@ -6,8 +6,8 @@
   "description": "Optional local 3D visual renderer and shared AI generation asset contract for NOX",
   "scripts": {
     "build": "esbuild src/scene3d.mjs --bundle --format=iife --global-name=NOXSuperCinema3D --minify --outfile=dist/nox-cinema3d.js",
-    "test": "node --test tests/generation.test.mjs tests/scene3d.test.mjs",
-    "check": "node --check src/generation.mjs && node --check src/scene3d.mjs"
+    "test": "node --test tests/generation.test.mjs tests/scene3d.test.mjs tests/glb.test.mjs",
+    "check": "node --check src/generation.mjs && node --check src/scene3d.mjs && node --check src/glb.mjs"
   },
   "dependencies": {
     "three": "0.186.1"
