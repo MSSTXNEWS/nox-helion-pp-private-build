@@ -406,19 +406,36 @@ class Host50Admission:
                 raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
         if row["risk"] != "safe" and route not in session.sensitive:
             raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
-        if row["risk"] == "dangerous" and (
-            not callable(native_consent) or native_consent(session,route,request) is not True):
-            raise Denied("FRESH_NATIVE_CONSENT_REQUIRED")
-        if route in MIC_ROUTES and (
-            not callable(native_device_permission) or
-            native_device_permission(session,route) is not True):
-            raise Denied("NATIVE_MIC_OR_SIP_PERMISSION_REQUIRED")
+        # Native dialogs and Windows device APIs may throw. Never propagate raw
+        # callback exceptions (or their private diagnostics) across WebView2.
+        # No failed gate may reserve a pending native action.
+        if row["risk"] == "dangerous":
+            if not callable(native_consent):
+                raise Denied("FRESH_NATIVE_CONSENT_REQUIRED")
+            try:
+                consent_granted = native_consent(session, route, request)
+            except Exception as exc:
+                raise Hold("NATIVE_CONSENT_CALLBACK_FAILED") from exc
+            if consent_granted is not True:
+                raise Denied("FRESH_NATIVE_CONSENT_REQUIRED")
+        if route in MIC_ROUTES:
+            if not callable(native_device_permission):
+                raise Denied("NATIVE_MIC_OR_SIP_PERMISSION_REQUIRED")
+            try:
+                device_granted = native_device_permission(session, route)
+            except Exception as exc:
+                raise Hold("NATIVE_DEVICE_PERMISSION_CALLBACK_FAILED") from exc
+            if device_granted is not True:
+                raise Denied("NATIVE_MIC_OR_SIP_PERMISSION_REQUIRED")
         file_info = None
         file_ticket_bytes = None
         if route in PICKER_ROUTES:
             if not callable(native_file_picker):
                 raise Hold("NATIVE_FILE_PICKER_MISSING")
-            file_info = native_file_picker(session,route)
+            try:
+                file_info = native_file_picker(session, route)
+            except Exception as exc:
+                raise Hold("NATIVE_FILE_PICKER_CALLBACK_FAILED") from exc
             if (not isinstance(file_info,NativeFileSelection) or
                 file_info.tenant != session.tenant or file_info.principal != session.principal or
                 file_info.chat != session.chat or

@@ -1,0 +1,68 @@
+{
+  "runId": "NOX-V16-W1-02-HOST50-20261028T223713MSK-R14",
+  "owner": "E06/W1-02",
+  "timestamp": "2026-10-28",
+  "stagingPR162FrozenHead": "41c7cb027e409dc917b16c1a606351ae39e688d0",
+  "ownerBranch": "e06/v16-host50-r13-strict-source-json-20261028-2135",
+  "ownerParentCommit": "21eb13c6cabeece1d34236ff57abe06ab3c5809d",
+  "ownerParentTree": "87e59caf4ce4713ba5656c495252a35c3b3e43dc",
+  "scope": "SOURCE ONLY; no native execution or installed EXE acceptance",
+  "files": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "preSha256": "eccb4b618e6da7b71df406bef229adb8797d2da3958a5b265380f27e9588bb86",
+      "postSha256": "8c4197c4a26c686845511147ed4086cabc1fcee47f80732ab1fe91faf4c14bb8",
+      "preGitBlob": "bc873f19631afd7746f4868a59961b8b02807c17",
+      "postGitBlob": "f8d9f05bf8547e9e5f2a049753ad893123a92fda"
+    },
+    {
+      "path": "coordination/e06_host50/test_native_callback_failclosed_r14.py",
+      "preSha256": "ABSENT",
+      "postSha256": "77fb45cfc63dfa31ba111891224c26325d9221ada39d193d67390a2b4cd8b28c",
+      "preGitBlob": "ABSENT",
+      "postGitBlob": "5c921ee948cbcfcc5c17a962b8912d27957ac97e"
+    }
+  ],
+  "changes": "Native consent, device-permission and file-picker callback exceptions now yield fail-closed HOLD; no pending action, no raw callback diagnostics. True/false semantics unchanged.",
+  "negativeTests": "3 independent callback cases raise RuntimeError on exact old source, now each raises Hold. RED 3 callback errors -> GREEN 3 callback Holds.",
+  "testEvidence": {
+    "test_admission": 41,
+    "registry_shapes": 6,
+    "native_picker_wire": 4,
+    "source_snapshot": 7,
+    "nonfinite_json": 4,
+    "native_callback": 2,
+    "isolatedTotal": 64,
+    "oneCombinedDiscover": "FAIL due historical import/module-name collision (NOT a consolidated PASS)",
+    "compileall": "PASS",
+    "Windows": "NOT_RUN"
+  },
+  "routeEvidence": {
+    "policyTaskIds": 50,
+    "sourceCandidatesLastConfirmed": 36,
+    "unboundLastConfirmed": 14,
+    "nativeCapabilities": 0,
+    "integratedRoutes": 0,
+    "installedWindows": 0
+  },
+  "taskLedger": {
+    "newProductTaskIdsDONE": [],
+    "newSourcePatch": [
+      "E06-R14-NATIVE-CALLBACK-FAILCLOSED"
+    ],
+    "historicalDONE": "unchanged"
+  },
+  "safety": {
+    "noSecondHost": true,
+    "noSecondDB": true,
+    "noSecondLLM": true,
+    "noDirectWebWindows": true,
+    "noLoss": true
+  },
+  "block": [
+    "729 physical SourceLock not verified",
+    "live owner handler receipts absent",
+    "real Windows CI/BuildID+Setup+EXE SHA absent",
+    "E07 native E2E 0/10"
+  ]
+}
