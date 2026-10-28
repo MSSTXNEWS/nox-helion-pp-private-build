@@ -17,10 +17,11 @@ jobs:
     fetchDepth: 0
     persistCredentials: false
   - task: UsePythonVersion@0
-    displayName: 'Python 3.12 x64'
+    displayName: 'Exact Python 3.12.10 x64 (original source pinned)'
     inputs:
-      versionSpec: '3.12'
+      versionSpec: '3.12.10'
       architecture: 'x64'
+      addToPath: true
   - task: UseDotNet@2
     displayName: '.NET 8 SDK'
     inputs:
@@ -74,6 +75,19 @@ jobs:
       python -m unittest discover -s tests/e06 -p 'test_onehost_wire_type_r08.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_JSON_WIRE_REGRESSION_HOLD' }
       Write-Host 'E06_MOCK_CONTRACT_GATE_ONLY_NOT_E07_NATIVE_ACCEPTANCE'
+      # private_build.ps1 is byte-preserved. Its py -3.12 launcher must resolve
+      # to THIS tool-cache Python, never an unrelated preinstalled patch version.
+      & python -c 'import sys,struct; assert sys.version_info[:3] == (3,12,10); assert struct.calcsize("P") == 8'
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_EXACT_PYTHON_3_12_10_OR_X64_HOLD' }
+      function py {
+        $arguments=@($args)
+        if ($arguments.Count -lt 1 -or $arguments[0] -cne '-3.12') {
+          throw 'AZURE_UNEXPECTED_PY_LAUNCHER_SELECTOR'
+        }
+        $pythonArgs=@($arguments | Select-Object -Skip 1)
+        & python @pythonArgs
+        if ($LASTEXITCODE -ne 0) { throw 'AZURE_PINNED_PY_LAUNCH_FAILED' }
+      }
       & ./private_build.ps1
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_azure_visual_single_stage.py' -v
