@@ -7,6 +7,8 @@ on:
       - 'coordination/source-lock/**'
       - 'coordination/e06/verify_original_729_source.py'
       - 'tests/e06/test_original_729_source.py'
+      - 'coordination/e06/stage_p01.py'
+      - 'tests/e06/test_stage_p01_shared_zip_guard.py'
       - 'source_0*.part'
       - '.github/workflows/nox-v16-original-source-audit.yml'
   pull_request:
@@ -14,6 +16,8 @@ on:
       - 'coordination/source-lock/**'
       - 'coordination/e06/verify_original_729_source.py'
       - 'tests/e06/test_original_729_source.py'
+      - 'coordination/e06/stage_p01.py'
+      - 'tests/e06/test_stage_p01_shared_zip_guard.py'
       - 'source_0*.part'
       - '.github/workflows/nox-v16-original-source-audit.yml'
 permissions:
@@ -30,6 +34,9 @@ jobs:
       - name: E06 original part PIN tests (synthetic only)
         shell: bash
         run: python3 -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
+      - name: E06 original 28-part R11 staged archive security and no-loss regressions
+        shell: bash
+        run: python3 -m unittest discover -s tests/e06 -p 'test_stage_p01_shared_zip_guard.py' -v
       - name: Verify ORIGINAL three fixed part boundaries, Git blob IDs and 729 SHA256 (no extraction)
         shell: bash
         run: |
