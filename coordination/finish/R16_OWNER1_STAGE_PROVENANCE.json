@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_R16_OWNER1_STAGE_PROVENANCE_V1",
+  "run_id": "NOX-V16-FINISH-R16-FALLBACK-20261028",
+  "origin_archive": "R08 code-only source",
+  "origin_sha256": "fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9",
+  "owner": 1,
+  "integrator": 6,
+  "approved_git_commit": "8e42bb15aecbee8412c342b0e9049b6cce044297",
+  "r16_source_commit": "01aaeb9fff7699ef1f4e6c4f65a02373ca91d028",
+  "items": [
+    {
+      "path": "R11/Installer/Preflight-InstallPath.ps1",
+      "old_sha256_verified_against_immutable_r08": "8413580656bace887478c9f82e72433987ad8e4a552af6e67c3531b09d545239",
+      "new_git_blob_sha1_verified": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "new_sha256_of_owner_source": "1c84e8def6d8a9ce6dbe3aa4dc7a4013f54836065f541925334bbf46bf502008"
+    },
+    {
+      "path": "R11/Installer/Verify-Payload.ps1",
+      "old_sha256_verified_against_immutable_r08": "e741c131ddc1af45391ed64b4cdce686895aa78bd67e6bd4795fa97f548d455b",
+      "new_git_blob_sha1_verified": "5023e556b2370b65513dd5f0093b290ceb4346ea",
+      "new_sha256_of_owner_source": "5f54ba06e9f5e2e156e571b8ab2d3338d507bad880867dcbcc9cad769738d736"
+    },
+    {
+      "path": "R11/Installer/Remove-InstalledPayload.ps1",
+      "old_sha256_verified_against_immutable_r08": "6853f3d4a32eb5946c3c68d22b0d61e3a402b729ebda225cd3f6b8b154b1ec55",
+      "new_git_blob_sha1_verified": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "new_sha256_of_owner_source": "dc4c7d537e18b8a107b27ab199ab9df4116fcf7a33f06b8058ce0b6edb8acc0e"
+    },
+    {
+      "path": "R11/Installer/NOX-HELION-Setup.nsi",
+      "old_sha256_verified_against_immutable_r08": "2158b71759e72b3b93cafcf27196386c1885b39fb99f80b4bd1872273a0b2248",
+      "new_git_blob_sha1_verified": "75ce8a88bfbcf5d79dccab677bc2fbe6c82bb042",
+      "new_sha256_of_owner_source": "3b21accfd088050fc57629aa60ac61024a10307c12731a4c0f0ef41edf1fd1bc"
+    }
+  ],
+  "windows_run": {
+    "original_failed_no_steps": 40615941289,
+    "retry_failed_no_steps": true,
+    "fallback_failed_no_steps": 40618677417,
+    "installer_integrated": false,
+    "e07_accepted": false
+  },
+  "release_status": "HOLD_WINDOWS_RUNNER_AND_REAL_ONEHOST_INSTALL",
+  "preservation": "Original R08, 729-member Python, D02, models, data, trainer, PRs and main untouched"
+}
