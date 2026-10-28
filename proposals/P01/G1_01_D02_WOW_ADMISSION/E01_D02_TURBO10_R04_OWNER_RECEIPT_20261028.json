@@ -1,0 +1,198 @@
+{
+  "schema": "NOX_V16_E01_D02_R04_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-01-E01-D02-20261028T0845MSK-R04",
+  "owner": "E01 / P01 / new source-admission QA gate",
+  "level": "SOURCE_CANDIDATE_LOCAL_COMPONENT_TESTS_ONLY",
+  "immutable_baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "verified_live_main": "MATCH 2026-10-28",
+    "pr66": "INVENTORY_ONLY",
+    "extracted_source_729": "NOT_VERIFIED",
+    "source_parts_00_01_02_sha256": "NOT_VERIFIED",
+    "owner6_new_sourcelock": "HOLD"
+  },
+  "immutable_parent": {
+    "owner_pr": 85,
+    "branch_parent_commit_sha1": "e62b0d46c12b9e9544b8477aeb6c0c796afb2871",
+    "branch": "e01/v16-g1-d02-owner-fx-admission-r04-20261028"
+  },
+  "change_policy": "ADD_ONLY two E01 QA source files plus this new receipt; no approved original HOME/MENU/CORE/WOW/Persona/backend/host/archives/EXE/weights edited, no main merge",
+  "files": [
+    {
+      "path": "proposals/P01/G1_01_D02_WOW_ADMISSION/d02_fx_owner_gate.py",
+      "owner": "E01",
+      "run_id": "NOX-V16-G1-01-E01-D02-20261028T0845MSK-R04",
+      "original_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "immutable_parent_sha1": "e62b0d46c12b9e9544b8477aeb6c0c796afb2871",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "7bf088b570fb172653c5061135cf7ee8a5ebea764bfa57d538ad1a2e9bf93efc",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "4b656f4c34e045a947e3e8f262e50c7cb40cef22",
+      "diff": "ADD_ONLY 3735 B read-only fail-closed 10-condition owner-isolation/source gate; cannot mount anything",
+      "test": "12 Python unittest methods on exact files with synthetic fixture PASS; actual PR87 source text 9/9 independent JS token crosscheck PASS; original D02 and Windows NOT_RUN"
+    },
+    {
+      "path": "proposals/P01/G1_01_D02_WOW_ADMISSION/test_d02_fx_owner_gate.py",
+      "owner": "E01",
+      "run_id": "NOX-V16-G1-01-E01-D02-20261028T0845MSK-R04",
+      "original_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "immutable_parent_sha1": "e62b0d46c12b9e9544b8477aeb6c0c796afb2871",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "d4895fd9148c0928d21441e691070bd4faa8b313e2e83524c1dca6c319915fef",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "974777a64416db95ee7aca289ea3d82c1ac8d4f2",
+      "diff": "ADD_ONLY 3763 B 12 negative fixture tests for source gate",
+      "test": "python -m unittest -v test_d02_fx_owner_gate.py: Ran 12 tests in 0.003s OK (Linux/container Python 3.13.5)"
+    },
+    {
+      "path": "proposals/P01/G1_01_D02_WOW_ADMISSION/E01_D02_TURBO10_R04_OWNER_RECEIPT_20261028.json",
+      "owner": "E01",
+      "run_id": "NOX-V16-G1-01-E01-D02-20261028T0845MSK-R04",
+      "original_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "immutable_parent_sha1": "e62b0d46c12b9e9544b8477aeb6c0c796afb2871",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "SEE_INDEPENDENT_DRIVE_REPORT_AFTER_GITHUB_READBACK",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "SEE_GITHUB_FETCH_FILE_READBACK",
+      "diff": "ADD_ONLY single owner receipt; self-SHA recorded externally to avoid circular hash",
+      "test": "GitHub readback and external SHA-256 required"
+    }
+  ],
+  "task_ledger": [
+    {
+      "task_id": "E01-R04-01",
+      "scope": "immutable baseline commit/tree",
+      "result": "SOURCE VERIFIED (main=0b3a..., tree=f108...); extracted 729 HOLD"
+    },
+    {
+      "task_id": "E01-R04-02",
+      "scope": "approved FX entrypoint/validateScene",
+      "result": "SOURCE CHECK PASS synthetic & PR87 JS textual; original D02 HOLD"
+    },
+    {
+      "task_id": "E01-R04-03",
+      "scope": "HELION + 8 CoreID unique DOM targets",
+      "result": "SOURCE CHECK PASS synthetic & PR87 textual; live CoreID/asset mapping HOLD"
+    },
+    {
+      "task_id": "E01-R04-04",
+      "scope": "no writes to host-owned data-nox-state",
+      "result": "SOURCE CHECK PASS 5 negative variants + PR87 textual; WebView2 HOLD"
+    },
+    {
+      "task_id": "E01-R04-05",
+      "scope": "trusted events + 16-event bounded buffer",
+      "result": "SOURCE CHECK PASS synthetic & PR87 textual; events.v3 native HOLD"
+    },
+    {
+      "task_id": "E01-R04-06",
+      "scope": "unsubscribe rollback and namespaced FX cleanup",
+      "result": "SOURCE CHECK PASS synthetic & PR87 textual; native E2E HOLD"
+    },
+    {
+      "task_id": "E01-R04-07",
+      "scope": "three-way host/document/intersection visibility veto",
+      "result": "SOURCE CHECK PASS synthetic & PR87 textual; real windows HOLD"
+    },
+    {
+      "task_id": "E01-R04-08",
+      "scope": "Reduced Motion and max-particle bound",
+      "result": "SOURCE CHECK PASS synthetic & PR87 textual; frame/FPS QA HOLD"
+    },
+    {
+      "task_id": "E01-R04-09",
+      "scope": "sinusoidal gravity return + particle retirement",
+      "result": "SOURCE CHECK PASS textual; actual rendered trajectories HOLD"
+    },
+    {
+      "task_id": "E01-R04-10",
+      "scope": "owned new P01 files only, no backend/host/EXE/asset changes",
+      "result": "SOURCE VERIFIED; standalone candidate integration HOLD"
+    }
+  ],
+  "test_summary": {
+    "local": "12/12 Python unittest PASS on exact newly added source and tests; fixture is synthetic",
+    "peer": "PR87 9/9 independent static JS checks PASS on exact qa candidate blob 84dde574e0cdcddc65d8ea77b567166e28845e7a",
+    "production": "ORIGINAL D02/729 ASSETS/HOST/Windows EXE/QA NOT_RUN",
+    "cross_ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/87"
+  },
+  "seven_indicators": [
+    {
+      "owner": "E01",
+      "task": "V16.26.3 / E01-R04-01..10",
+      "source": "PR85 R03 + R04 add-only",
+      "component": "12 isolated synthetic tests PASS; original component HOLD",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E02",
+      "task": "V16.26.4 / P02",
+      "source": "PR84",
+      "component": "previous isolated",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E03",
+      "task": "V16.26.5 / P03",
+      "source": "PR78",
+      "component": "offline only",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E04",
+      "task": "V16.26.6 / P04",
+      "source": "PR83",
+      "component": "GPU NOT_RUN",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E05",
+      "task": "V16.26.7 / P05",
+      "source": "PR75",
+      "component": "native sensors NOT_RUN",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E06",
+      "task": "V16.26.8",
+      "source": "PR66/86",
+      "component": "whole SourceLock HOLD",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E07",
+      "task": "QA01-10",
+      "source": "PR46 historical",
+      "component": "one BuildID/EXE SHA not available",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "progress": "N/D"
+    }
+  ],
+  "weights": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10
+  },
+  "weighted_progress": "0.20*P01 + 0.25*P02 + 0.20*P03 + 0.25*P04 + 0.10*P05 = N/D",
+  "release": "HOLD",
+  "new_errors": "новых ошибок нет (installed Windows EXE NOT_RUN); historical data-nox-state collision from peer PR87 remains an admission risk",
+  "one_lesson": "Make host-owned data-nox-state immutability + nine unique FX DOM targets a mandatory negative-test source gate before considering any D02 overlay for E06 integration.",
+  "handoff": "E06 seal raw 3 archives+729 members, agree owner preimages and select one PR63/67 scene; E07 one installed Windows BuildID/EXE SHA acceptance. Do not merge or overwrite."
+}
