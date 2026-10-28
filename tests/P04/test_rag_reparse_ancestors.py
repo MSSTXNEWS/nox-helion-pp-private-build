@@ -60,7 +60,7 @@ class RagReparseAncestorTests(unittest.TestCase):
             link.symlink_to(outside)
         except (OSError, NotImplementedError):
             self.skipTest("native symlinks not available")
-        with self.assertRaisesRegex(rag.RagHold, "RAG_ANCESTOR_REPARSE_BLOCKED"):
+        with self.assertRaisesRegex(rag.RagHold, "RAG_INDEX_SYMLINK"):
             with self.index(link)._locked():
                 pass
         self.assertEqual(outside.read_text(encoding="utf-8"), "untouched")
