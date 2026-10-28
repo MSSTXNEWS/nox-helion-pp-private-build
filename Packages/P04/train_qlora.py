@@ -506,17 +506,32 @@ def nvidia_smi() -> str | None:
 
 
 def gpu_inventory(exe: str) -> list[dict[str, str]]:
-    result = subprocess.run(
-        [exe, "--query-gpu=index,name,uuid,memory.total", "--format=csv,noheader,nounits"],
-        capture_output=True, text=True, timeout=10, shell=False, check=False,
-    )
+    """Require complete, uniquely identified NVIDIA inventory before CUDA selection."""
+    try:
+        result = subprocess.run(
+            [exe, "--query-gpu=index,name,uuid,memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=10, shell=False, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError("NVIDIA_GPU_INVENTORY_FAILED") from exc
     if result.returncode:
         raise RuntimeError("NVIDIA_GPU_INVENTORY_FAILED")
+    if not isinstance(result.stdout, str):
+        raise RuntimeError("NVIDIA_GPU_INVENTORY_INVALID")
     rows = []
+    seen_indices, seen_uuids = set(), set()
     for line in result.stdout.splitlines():
         fields = [part.strip() for part in line.split(",", 3)]
-        if len(fields) == 4 and fields[0].isdigit() and fields[2].startswith("GPU-"):
-            rows.append({"index": fields[0], "name": fields[1], "uuid": fields[2], "memory_total_mib": fields[3]})
+        if (len(fields) != 4 or not re.fullmatch(r"(?:0|[1-9][0-9]{0,2})", fields[0])
+                or not fields[1] or not re.fullmatch(r"GPU-[A-Za-z0-9-]{4,128}", fields[2])
+                or not re.fullmatch(r"[0-9]{1,9}", fields[3])
+                or not 1 <= int(fields[3]) <= 1024 * 1024):
+            raise RuntimeError("NVIDIA_GPU_INVENTORY_INVALID")
+        if fields[0] in seen_indices or fields[2].casefold() in seen_uuids:
+            raise RuntimeError("NVIDIA_GPU_INVENTORY_DUPLICATE")
+        seen_indices.add(fields[0])
+        seen_uuids.add(fields[2].casefold())
+        rows.append({"index": fields[0], "name": fields[1], "uuid": fields[2], "memory_total_mib": fields[3]})
     if not rows:
         raise RuntimeError("NO_NVIDIA_GPU_FOUND")
     return rows
@@ -703,6 +718,8 @@ def classify_training_failure(error: BaseException) -> str:
         "SELECTED_NVIDIA_GPU_NOT_VISIBLE_TO_CUDA",
         "NO_NVIDIA_GPU_FOUND",
         "NVIDIA_GPU_INVENTORY_FAILED",
+        "NVIDIA_GPU_INVENTORY_INVALID",
+        "NVIDIA_GPU_INVENTORY_DUPLICATE",
     })
     reason = str(error)
     return ("HOLD" if reason in missing_gpu_prerequisites
