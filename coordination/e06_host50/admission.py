@@ -333,12 +333,22 @@ class Host50Admission:
         return Session(**body, seal=self._seal(body))
 
     def _verify_session(self, s: Session, actual_origin: str) -> None:
-        if not isinstance(s, Session) or actual_origin not in self.origins or s.origin != actual_origin:
+        # Native frame validation is fail-closed before hash lookup/signature work.
+        # A malformed WebView2 origin, Unicode seal or session claim must never
+        # escape as a raw TypeError/UnicodeEncodeError across the native boundary.
+        if (not isinstance(s, Session) or type(actual_origin) is not str or
+            actual_origin not in self.origins or s.origin != actual_origin):
             raise Denied("ORIGIN_OR_SESSION_DENIED")
+        if (type(s.expires_unix) is not int or s.expires_unix < time.time() or
+            type(s.seal) is not str or not SHA256.fullmatch(s.seal)):
+            raise Denied("AUTH_INVALID_OR_EXPIRED")
         body = {k:getattr(s,k) for k in ("tenant","principal","chat","origin",
             "scopes","sensitive","expires_unix","nonce")}
-        if (type(s.expires_unix) is not int or s.expires_unix < time.time() or
-            not isinstance(s.seal,str) or not hmac.compare_digest(s.seal,self._seal(body))):
+        try:
+            expected_seal = self._seal(body)
+        except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+            raise Denied("AUTH_INVALID_OR_EXPIRED") from exc
+        if not hmac.compare_digest(s.seal, expected_seal):
             raise Denied("AUTH_INVALID_OR_EXPIRED")
 
     def _cap(self, row: dict) -> Capability:

@@ -1,0 +1,80 @@
+{
+  "schema": "NOX_V16_E06_HOST50_R17_AUTH_FRAME_RECEIPT",
+  "runId": "NOX-V16-W1-02-HOST50-20261029T013005MSK-R17",
+  "startedAt": "2026-10-29T01:30:05+03:00",
+  "owner": "E06/W1-02",
+  "sourceOnly": true,
+  "priorLessonId": "E06_JSON_NFC_CASEFOLD_PROPERTY_IDENTITY_BEFORE_NATIVE_ADMISSION",
+  "priorLessonApplied": "YES: targeted R16 source key identity 7/7 PASS; preserved stricter policy parser",
+  "ownerBranch": "e06/v16-host50-r13-strict-source-json-20261028-2135",
+  "ownerParentCommit": "57a4b7877940ccf2abd8bd8869e1416763dde840",
+  "ownerParentTree": "2d197b2c1776d9dc949888002e3f79f9f98df88a",
+  "pr162ObservedHead": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "pr162Changed": false,
+  "ownerImmutableBaseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "files": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "preSha256": "7cbe9c5e9303720f9a2a6867008ace321e1c92bbd74c7572fb5a305fafcc8711",
+      "postSha256": "cdaa3b0b61bf2f2ce3c32d310a18a7bf3398e75f8261e168bd1417e9a7993722",
+      "preGitBlobSha1": "56e5b0cb189720ec11e800efbcd00e5ed73bc684",
+      "postGitBlobSha1": "3e62621d2d2ce454f3c7d12de9ed748700060894"
+    },
+    {
+      "path": "coordination/e06_host50/test_auth_frame_r17.py",
+      "owner": "E06",
+      "preSha256": "ABSENT",
+      "postSha256": "f90eab4010fe8c34aea727fd101932a0b0771f77bf55d0831c23824c5bd05eb2",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "b3cb8a6ebc38c476eb0cc4fc129b71732da3388e"
+    }
+  ],
+  "test": {
+    "command": "python -m unittest -v test_auth_frame_r17",
+    "preimage": "RED 3 errors / 3 cases",
+    "post": "PASS 3/3",
+    "priorLessonCommand": "python -m unittest -v test_source_key_identity_r16",
+    "priorLesson": "PASS 7/7",
+    "environment": "Linux Python SOURCE_ONLY; synthetic native capabilities; no live host or hardware"
+  },
+  "liveCatalog": {
+    "catalogGitBlob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "ownerMapGitBlob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+    "canonicalTaskIds": 50,
+    "sourceBindingCandidates": 36,
+    "unboundTaskIds": [
+      "NIP01-07",
+      "NIP01-08",
+      "NIP01-26",
+      "NIP01-30",
+      "NIP01-35",
+      "NIP01-36",
+      "NIP01-37",
+      "NIP01-38",
+      "NIP01-39",
+      "NIP01-40",
+      "NIP01-47",
+      "NIP01-48",
+      "NIP01-49",
+      "NIP01-50"
+    ],
+    "nativeCapabilitiesProved": 0,
+    "installedRoutesProved": 0,
+    "ownerMapBaselineDrift": true
+  },
+  "newProductTaskIdsDone": 0,
+  "sourceSecurityFixDone": 1,
+  "sourceReady": "HOLD: actual owner map sourceBaseCommit eb46b49 differs historical E06 BASE_COMMIT 0b3a7d4; 729 physical SHA/source freeze and native owner receipts missing",
+  "buildGate": "PROHIBITED_R20_NO_BINARY_BUILD",
+  "release": "HOLD_NOT_E07",
+  "lesson": {
+    "id": "E06_R17_AUTH_FRAME_TYPE_AND_SIGNATURE_SHAPE_BEFORE_HMAC",
+    "error": "Malformed signed Session claim/seal or nonstring actual_origin leaked TypeError/UnicodeEncodeError at native admission boundary",
+    "rootCause": "origin set membership and compare_digest/_seal ran before strict wire-type and hex digest checks",
+    "fix": "type(actual_origin)==str before origin lookup; require lowercase 64-hex seal; catch malformed signed-claim encoding before HMAC compare",
+    "test": "Same preimage R16: 3/3 new tests RED; patched source: 3/3 GREEN; previous R16 JSON key identity 7/7 PASS",
+    "prevention": "Keep authenticated native frame type+encoding gate before hash/HMAC, and include malformed-input negative tests in owner source regression"
+  },
+  "handoff": "Manual #1: apply isolated E06 patch only after exact owner preimage CAS. No other owner files/PR162/main modified."
+}
