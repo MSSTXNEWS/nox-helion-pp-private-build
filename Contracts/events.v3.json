@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nox.local/contracts/events.v3.json",
+  "title": "NOX Installer Event v3",
+  "description": "Append-only runtime event envelope. Events report observed worker state; they do not establish product acceptance.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "run_id",
+    "event_id",
+    "event_type",
+    "task_id",
+    "package_id",
+    "action_id",
+    "timestamp_utc",
+    "state",
+    "source",
+    "message",
+    "numerator",
+    "denominator",
+    "evidence_verified"
+  ],
+  "properties": {
+    "schema": { "const": "NOX-INSTALLER-EVENT-v3" },
+    "run_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "event_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "event_sequence": { "type": "integer", "minimum": 1 },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "task.started",
+        "task.progress",
+        "training.step",
+        "checkpoint.saved",
+        "task.completed",
+        "task.failed",
+        "model.stopped",
+        "gpu.sample"
+      ]
+    },
+    "task_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "package_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "action_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "timestamp_utc": { "type": "string", "format": "date-time" },
+    "state": { "type": "string", "minLength": 1, "maxLength": 32 },
+    "source": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "message": { "type": "string", "maxLength": 4096 },
+    "numerator": { "type": ["integer", "null"], "minimum": 0 },
+    "denominator": { "type": ["integer", "null"], "minimum": 0 },
+    "metric_name": { "type": ["string", "null"], "maxLength": 64 },
+    "metric_value": { "type": ["number", "null"] },
+    "evidence_verified": { "type": "boolean", "default": false },
+    "temperature_c": { "type": ["number", "null"], "minimum": 0, "maximum": 150 },
+    "gpu_utilization_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+    "memory_used_mib": { "type": ["integer", "null"], "minimum": 0 },
+    "memory_total_mib": { "type": ["integer", "null"], "minimum": 0 },
+    "gpu_index": { "type": ["integer", "null"], "minimum": 0 },
+    "gpu_name": { "type": ["string", "null"], "maxLength": 256 },
+    "error_code": { "type": ["string", "null"], "maxLength": 128 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "event_type": { "const": "gpu.sample" } } },
+      "then": { "properties": { "package_id": { "const": "P04" } } }
+    },
+    {
+      "if": { "properties": { "event_type": { "enum": ["training.step", "checkpoint.saved", "model.stopped"] } } },
+      "then": { "properties": { "package_id": { "const": "P04" } } }
+    }
+  ]
+}
