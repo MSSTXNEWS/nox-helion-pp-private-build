@@ -103,5 +103,42 @@ class HoldoutIntegrityTests(unittest.TestCase):
         ), (1, 1))
 
 
+    def test_text_and_messages_cannot_shadow_each_other(self):
+        dialogue = [{"role": "user", "content": "Question"},
+                    {"role": "assistant", "content": "Approved answer"}]
+        for text in ("approved text", ""):
+            with self.subTest(text=text):
+                self.training.write_text(
+                    json.dumps({"text": text, "messages": dialogue}) + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "TRAIN_AMBIGUOUS_TRAINING_COLUMNS_1"):
+                    train.validate_jsonl(self.training, "TRAIN")
+
+    def test_prompt_completion_columns_cannot_shadow_text(self):
+        for extra in ({"prompt": "hidden"}, {"completion": "hidden"}, {"prompt": "q", "completion": "a"}):
+            with self.subTest(extra=extra):
+                self.training.write_text(
+                    json.dumps({"text": "audited", **extra}) + "\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "TRAIN_AMBIGUOUS_TRAINING_COLUMNS_1"):
+                    train.validate_jsonl(self.training, "TRAIN")
+
+    def test_direct_leakage_scanner_rejects_ambiguous_training_record(self):
+        self.training.write_text(
+            json.dumps({"text": "safe", "messages": [
+                {"role": "assistant", "content": "different actual target"}]}) + "\n",
+            encoding="utf-8",
+        )
+        self.holdout.write_text('{"text":"holdout"}\n', encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "TRAIN_AMBIGUOUS_TRAINING_COLUMNS_1"):
+            train.validate_holdout_separation(self.training, self.holdout)
+
+    def test_single_training_representation_remains_supported(self):
+        self.assertEqual(self.rows(
+            [{"text": "text-only"}],
+            [{"messages": [{"role": "user", "content": "Q"},
+                           {"role": "assistant", "content": "A"}]}],
+        ), (1, 1))
+
+
+
 if __name__ == "__main__":
     unittest.main()
