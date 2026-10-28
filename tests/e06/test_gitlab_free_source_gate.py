@@ -20,6 +20,10 @@ class GitLabFreeSourceGateTests(unittest.TestCase):
 
     def test_explicit_manual_consent_only(self):
         self.assertIn('CI_PIPELINE_SOURCE == "web"', self.pipeline)
+        self.assertIn('CI_PIPELINE_SOURCE == "api"', self.pipeline)
+        self.assertIn("CI_PIPELINE_SOURCE -notin @('web','api')", self.adapter)
+        self.assertNotIn('CI_PIPELINE_SOURCE == "push"', self.pipeline)
+        self.assertNotIn('CI_PIPELINE_SOURCE == "schedule"', self.pipeline)
         self.assertIn('NOX_APPROVE_WINDOWS_BUILD == "YES"', self.pipeline)
         self.assertIn("when: never", self.pipeline)
         self.assertIn('retry: 0', self.pipeline)
