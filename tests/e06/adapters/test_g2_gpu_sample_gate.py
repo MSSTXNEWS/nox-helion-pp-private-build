@@ -68,4 +68,3 @@ class SampleCoherence(unittest.TestCase):
         self.assertTrue(all(x["status"] == "N_D" for x in a.values()))
 
 if __name__ == "__main__": unittest.main()
-
