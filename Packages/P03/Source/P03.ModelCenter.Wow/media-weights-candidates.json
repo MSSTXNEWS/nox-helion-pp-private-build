@@ -1,13 +1,87 @@
 {
-  "schema": "NOX-P03-MEDIA-WEIGHTS-V2",
-  "runId": "NOX-P03-MEDIA-WEIGHTS-20261028",
-  "note": "23 independent candidate download buttons with separate weight variants, SHA/revision+complete file manifests supplied by trusted P03 native host only; sources are discovery pages, not approval or guaranteed direct artifacts.",
+  "schema": "NOX-P03-MEDIA-WEIGHTS-SUPER-V3",
+  "runId": "NOX-P03-SUPER-WEIGHTS-20261028",
   "categories": [
-    "3d",
-    "video",
-    "photo"
+    {
+      "id": "3d",
+      "title": "3D / Миры"
+    },
+    {
+      "id": "video",
+      "title": "Видео / Кино"
+    },
+    {
+      "id": "photo",
+      "title": "Фото / Изображения"
+    },
+    {
+      "id": "persona",
+      "title": "Личность ИИ"
+    },
+    {
+      "id": "emotions",
+      "title": "Эмоции"
+    },
+    {
+      "id": "memory",
+      "title": "Память / RAG"
+    },
+    {
+      "id": "thread",
+      "title": "Нить разговора"
+    },
+    {
+      "id": "voice",
+      "title": "Голос / Речь"
+    },
+    {
+      "id": "vision",
+      "title": "Зрение"
+    },
+    {
+      "id": "slides",
+      "title": "Презентации"
+    },
+    {
+      "id": "websites",
+      "title": "Создание сайтов"
+    },
+    {
+      "id": "coding",
+      "title": "Программирование"
+    },
+    {
+      "id": "agents",
+      "title": "Агенты"
+    },
+    {
+      "id": "learning",
+      "title": "Саморазвитие"
+    },
+    {
+      "id": "translate",
+      "title": "Перевод"
+    },
+    {
+      "id": "research",
+      "title": "Исследования"
+    },
+    {
+      "id": "tools",
+      "title": "Документы / Инструменты"
+    }
   ],
-  "models": [
+  "principle": "Any public source link identifies candidate model weights, not an approved immutable per-file artifact. Only native host-reviewed exact revision, byte sizes and SHA256 enable the real Download button. Personality and episodic memory are runtime systems, NOT weights alone.",
+  "uiPolicy": {
+    "independentVariantButtons": true,
+    "categoryTabs": true,
+    "sharedModelCenter": true,
+    "supportUserJobCancellation": true,
+    "displayAllCatalogCandidates": true,
+    "downloadOnlyAfterHostApproval": true,
+    "licenseReviewBeforeActualUse": true
+  },
+  "choices": [
     {
       "category": "3d",
       "modelId": "hunyuan3d-mini",
@@ -390,6 +464,1355 @@
       "variant": "Medium",
       "source": "https://huggingface.co/stabilityai/stable-diffusion-3.5-medium",
       "huggingFaceRepo": "stabilityai/stable-diffusion-3.5-medium",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-06b",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "0.6B · лёгкая",
+      "source": "https://huggingface.co/Qwen/Qwen3-0.6B",
+      "huggingFaceRepo": "Qwen/Qwen3-0.6B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-17b",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "1.7B · лёгкая",
+      "source": "https://huggingface.co/Qwen/Qwen3-1.7B",
+      "huggingFaceRepo": "Qwen/Qwen3-1.7B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-4b",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "4B · баланс",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B",
+      "huggingFaceRepo": "Qwen/Qwen3-4B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-8b",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "8B · глубокие диалоги",
+      "source": "https://huggingface.co/Qwen/Qwen3-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-4b-instruct",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "4B Instruct 2507",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-4b-gguf",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "4B GGUF",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-GGUF",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-GGUF",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "qwen3-persona",
+      "variantId": "qwen3-persona-8b-gguf",
+      "name": "Qwen3 · Характер и диалог",
+      "variant": "8B GGUF",
+      "source": "https://huggingface.co/Qwen/Qwen3-8B-GGUF",
+      "huggingFaceRepo": "Qwen/Qwen3-8B-GGUF",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "gemma-persona",
+      "variantId": "gemma-persona-4b-it",
+      "name": "Gemma 3 · Персона",
+      "variant": "4B It",
+      "source": "https://huggingface.co/google/gemma-3-4b-it",
+      "huggingFaceRepo": "google/gemma-3-4b-it",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "persona",
+      "modelId": "gemma-persona",
+      "variantId": "gemma-persona-12b-it",
+      "name": "Gemma 3 · Персона",
+      "variant": "12B It",
+      "source": "https://huggingface.co/google/gemma-3-12b-it",
+      "huggingFaceRepo": "google/gemma-3-12b-it",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion",
+      "variantId": "emotion-distilroberta",
+      "name": "Emotion Recognition · эмоции",
+      "variant": "7 эмоций · DistilRoBERTa",
+      "source": "https://huggingface.co/j-hartmann/emotion-english-distilroberta-base",
+      "huggingFaceRepo": "j-hartmann/emotion-english-distilroberta-base",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion",
+      "variantId": "emotion-go-emotions",
+      "name": "Emotion Recognition · эмоции",
+      "variant": "GoEmotions · многометочный",
+      "source": "https://huggingface.co/SamLowe/roberta-base-go_emotions",
+      "huggingFaceRepo": "SamLowe/roberta-base-go_emotions",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion",
+      "variantId": "emotion-tweet-multilabel",
+      "name": "Emotion Recognition · эмоции",
+      "variant": "Эмоции текста · multilabel",
+      "source": "https://huggingface.co/cardiffnlp/twitter-roberta-base-emotion-multilabel-latest",
+      "huggingFaceRepo": "cardiffnlp/twitter-roberta-base-emotion-multilabel-latest",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion",
+      "variantId": "emotion-xlm-sentiment",
+      "name": "Emotion Recognition · эмоции",
+      "variant": "Мультиязычная тональность",
+      "source": "https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment",
+      "huggingFaceRepo": "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "emotions",
+      "modelId": "emotion",
+      "variantId": "emotion-roberta-sentiment",
+      "name": "Emotion Recognition · эмоции",
+      "variant": "Тональность текста EN",
+      "source": "https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "huggingFaceRepo": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "qwen3-emb",
+      "variantId": "qwen3-emb-06b",
+      "name": "Qwen3 Embedding · память",
+      "variant": "0.6B · 32K",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "huggingFaceRepo": "Qwen/Qwen3-Embedding-0.6B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "qwen3-emb",
+      "variantId": "qwen3-emb-4b",
+      "name": "Qwen3 Embedding · память",
+      "variant": "4B · 32K",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-4B",
+      "huggingFaceRepo": "Qwen/Qwen3-Embedding-4B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "qwen3-emb",
+      "variantId": "qwen3-emb-8b",
+      "name": "Qwen3 Embedding · память",
+      "variant": "8B · 32K",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-Embedding-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "bge",
+      "variantId": "bge-m3",
+      "name": "BGE · мультиязычная память",
+      "variant": "BGE-M3 · 100+ языков",
+      "source": "https://huggingface.co/BAAI/bge-m3",
+      "huggingFaceRepo": "BAAI/bge-m3",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "bge",
+      "variantId": "bge-reranker-v2-m3",
+      "name": "BGE · мультиязычная память",
+      "variant": "Reranker V2 M3",
+      "source": "https://huggingface.co/BAAI/bge-reranker-v2-m3",
+      "huggingFaceRepo": "BAAI/bge-reranker-v2-m3",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "e5",
+      "variantId": "e5-small",
+      "name": "Multilingual E5",
+      "variant": "Small · быстрый индекс",
+      "source": "https://huggingface.co/intfloat/multilingual-e5-small",
+      "huggingFaceRepo": "intfloat/multilingual-e5-small",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "e5",
+      "variantId": "e5-base",
+      "name": "Multilingual E5",
+      "variant": "Base · баланс",
+      "source": "https://huggingface.co/intfloat/multilingual-e5-base",
+      "huggingFaceRepo": "intfloat/multilingual-e5-base",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "e5",
+      "variantId": "e5-large",
+      "name": "Multilingual E5",
+      "variant": "Large · качество",
+      "source": "https://huggingface.co/intfloat/multilingual-e5-large",
+      "huggingFaceRepo": "intfloat/multilingual-e5-large",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "memory",
+      "modelId": "minilm",
+      "variantId": "minilm-multilingual-l12",
+      "name": "MiniLM · лёгкая память",
+      "variant": "Multilingual MiniLM L12",
+      "source": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "huggingFaceRepo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "qwen-rerank",
+      "variantId": "qwen-rerank-06b",
+      "name": "Qwen3 · восстановление контекста",
+      "variant": "Reranker 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "huggingFaceRepo": "Qwen/Qwen3-Reranker-0.6B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "qwen-rerank",
+      "variantId": "qwen-rerank-4b",
+      "name": "Qwen3 · восстановление контекста",
+      "variant": "Reranker 4B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-4B",
+      "huggingFaceRepo": "Qwen/Qwen3-Reranker-4B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "qwen-rerank",
+      "variantId": "qwen-rerank-8b",
+      "name": "Qwen3 · восстановление контекста",
+      "variant": "Reranker 8B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-Reranker-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "thread-llm",
+      "variantId": "thread-llm-4b",
+      "name": "Длинный диалог · Qwen3",
+      "variant": "4B · контекст",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "thread-llm",
+      "variantId": "thread-llm-8b",
+      "name": "Длинный диалог · Qwen3",
+      "variant": "8B · контекст",
+      "source": "https://huggingface.co/Qwen/Qwen3-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "thread",
+      "modelId": "thread-llm",
+      "variantId": "thread-llm-30b-moe",
+      "name": "Длинный диалог · Qwen3",
+      "variant": "30B-A3B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "qwen-tts",
+      "variantId": "qwen-tts-06b-base",
+      "name": "Qwen3 TTS · голоса",
+      "variant": "0.6B Base",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+      "huggingFaceRepo": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "qwen-tts",
+      "variantId": "qwen-tts-06b-custom",
+      "name": "Qwen3 TTS · голоса",
+      "variant": "0.6B CustomVoice",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "huggingFaceRepo": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "qwen-tts",
+      "variantId": "qwen-tts-17b-custom",
+      "name": "Qwen3 TTS · голоса",
+      "variant": "1.7B CustomVoice",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "huggingFaceRepo": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "qwen-tts",
+      "variantId": "qwen-tts-17b-design",
+      "name": "Qwen3 TTS · голоса",
+      "variant": "1.7B VoiceDesign",
+      "source": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "huggingFaceRepo": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "whisper",
+      "variantId": "whisper-tiny",
+      "name": "Whisper · распознавание речи",
+      "variant": "Tiny",
+      "source": "https://huggingface.co/openai/whisper-tiny",
+      "huggingFaceRepo": "openai/whisper-tiny",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "whisper",
+      "variantId": "whisper-base",
+      "name": "Whisper · распознавание речи",
+      "variant": "Base",
+      "source": "https://huggingface.co/openai/whisper-base",
+      "huggingFaceRepo": "openai/whisper-base",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "whisper",
+      "variantId": "whisper-small",
+      "name": "Whisper · распознавание речи",
+      "variant": "Small",
+      "source": "https://huggingface.co/openai/whisper-small",
+      "huggingFaceRepo": "openai/whisper-small",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "whisper",
+      "variantId": "whisper-medium",
+      "name": "Whisper · распознавание речи",
+      "variant": "Medium",
+      "source": "https://huggingface.co/openai/whisper-medium",
+      "huggingFaceRepo": "openai/whisper-medium",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "voice",
+      "modelId": "diarization",
+      "variantId": "diarization-community1",
+      "name": "Разделение говорящих",
+      "variant": "Community 1 · требуется принятие условий",
+      "source": "https://huggingface.co/pyannote/speaker-diarization-community-1",
+      "huggingFaceRepo": "pyannote/speaker-diarization-community-1",
+      "format": "HF_ACCESS_GATED",
+      "notes": "Читать условия модели до скачивания",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "vision",
+      "modelId": "qwen-vl",
+      "variantId": "qwen-vl-3b",
+      "name": "Qwen2.5-VL · зрение",
+      "variant": "3B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "vision",
+      "modelId": "qwen-vl",
+      "variantId": "qwen-vl-7b",
+      "name": "Qwen2.5-VL · зрение",
+      "variant": "7B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-VL-7B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "vision",
+      "modelId": "qwen3-vl",
+      "variantId": "qwen3-vl-4b",
+      "name": "Qwen3-VL · зрение",
+      "variant": "4B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen3-VL-4B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "vision",
+      "modelId": "qwen3-vl",
+      "variantId": "qwen3-vl-8b",
+      "name": "Qwen3-VL · зрение",
+      "variant": "8B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen3-VL-8B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "slides",
+      "modelId": "slides-llm",
+      "variantId": "slides-llm-qwen4b",
+      "name": "Презентации · структура и тексты",
+      "variant": "Qwen3 4B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "slides",
+      "modelId": "slides-llm",
+      "variantId": "slides-llm-qwen8b",
+      "name": "Презентации · структура и тексты",
+      "variant": "Qwen3 8B",
+      "source": "https://huggingface.co/Qwen/Qwen3-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "slides",
+      "modelId": "layout",
+      "variantId": "layout-layoutlmv3",
+      "name": "Презентации · визуальная разметка",
+      "variant": "LayoutLMv3 base · NC-лицензия",
+      "source": "https://huggingface.co/microsoft/layoutlmv3-base",
+      "huggingFaceRepo": "microsoft/layoutlmv3-base",
+      "format": "HF_REPOSITORY",
+      "notes": "Для чтения документов; не готовый генератор PPTX",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "slides",
+      "modelId": "layout",
+      "variantId": "layout-qwen-vl-3b",
+      "name": "Презентации · визуальная разметка",
+      "variant": "Qwen2.5-VL 3B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "websites",
+      "modelId": "web-coder",
+      "variantId": "web-coder-qwen15b",
+      "name": "Сайты · программирование",
+      "variant": "Qwen2.5 Coder 1.5B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "websites",
+      "modelId": "web-coder",
+      "variantId": "web-coder-qwen7b",
+      "name": "Сайты · программирование",
+      "variant": "Qwen2.5 Coder 7B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "websites",
+      "modelId": "web-coder",
+      "variantId": "web-coder-qwen14b",
+      "name": "Сайты · программирование",
+      "variant": "Qwen2.5 Coder 14B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-14B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-Coder-14B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "websites",
+      "modelId": "web-coder",
+      "variantId": "web-coder-qwen30moe",
+      "name": "Сайты · программирование",
+      "variant": "Qwen3 Coder 30B-A3B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "qwen-coder",
+      "variantId": "qwen-coder-qwen25-7b",
+      "name": "Код / самоулучшение NOX",
+      "variant": "Qwen2.5 Coder 7B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "qwen-coder",
+      "variantId": "qwen-coder-qwen25-32b",
+      "name": "Код / самоулучшение NOX",
+      "variant": "Qwen2.5 Coder 32B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-Coder-32B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "qwen-coder",
+      "variantId": "qwen-coder-qwen3-30b",
+      "name": "Код / самоулучшение NOX",
+      "variant": "Qwen3 Coder 30B-A3B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "qwen-coder",
+      "variantId": "qwen-coder-qwen3-next",
+      "name": "Код / самоулучшение NOX",
+      "variant": "Qwen3 Coder Next",
+      "source": "https://huggingface.co/Qwen/Qwen3-Coder-Next",
+      "huggingFaceRepo": "Qwen/Qwen3-Coder-Next",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "deepseek-code",
+      "variantId": "deepseek-code-lite",
+      "name": "DeepSeek · код",
+      "variant": "Coder V2 Lite",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+      "huggingFaceRepo": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "coding",
+      "modelId": "deepseek-code",
+      "variantId": "deepseek-code-r1-7b",
+      "name": "DeepSeek · код",
+      "variant": "R1 Distill Qwen 7B",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "huggingFaceRepo": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "agents",
+      "modelId": "agent-llm",
+      "variantId": "agent-llm-qwen4b",
+      "name": "Агенты · планирование и инструменты",
+      "variant": "Qwen3 4B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "agents",
+      "modelId": "agent-llm",
+      "variantId": "agent-llm-qwen30a3b",
+      "name": "Агенты · планирование и инструменты",
+      "variant": "Qwen3 30B-A3B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "agents",
+      "modelId": "agent-llm",
+      "variantId": "agent-llm-gemma4b",
+      "name": "Агенты · планирование и инструменты",
+      "variant": "Gemma 3 4B It",
+      "source": "https://huggingface.co/google/gemma-3-4b-it",
+      "huggingFaceRepo": "google/gemma-3-4b-it",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "learning",
+      "modelId": "teacher",
+      "variantId": "teacher-qwen4b",
+      "name": "Локальное обучение · наставник",
+      "variant": "Qwen3 4B Instruct",
+      "source": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507",
+      "huggingFaceRepo": "Qwen/Qwen3-4B-Instruct-2507",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "learning",
+      "modelId": "teacher",
+      "variantId": "teacher-qwen8b",
+      "name": "Локальное обучение · наставник",
+      "variant": "Qwen3 8B",
+      "source": "https://huggingface.co/Qwen/Qwen3-8B",
+      "huggingFaceRepo": "Qwen/Qwen3-8B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "learning",
+      "modelId": "teacher",
+      "variantId": "teacher-deepseek7b",
+      "name": "Локальное обучение · наставник",
+      "variant": "DeepSeek-R1 Distill Qwen 7B",
+      "source": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "huggingFaceRepo": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "translate",
+      "modelId": "nllb",
+      "variantId": "nllb-600m",
+      "name": "Перевод · NLLB",
+      "variant": "NLLB 200 · 600M",
+      "source": "https://huggingface.co/facebook/nllb-200-distilled-600M",
+      "huggingFaceRepo": "facebook/nllb-200-distilled-600M",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "translate",
+      "modelId": "nllb",
+      "variantId": "nllb-13b",
+      "name": "Перевод · NLLB",
+      "variant": "NLLB 200 · 1.3B",
+      "source": "https://huggingface.co/facebook/nllb-200-distilled-1.3B",
+      "huggingFaceRepo": "facebook/nllb-200-distilled-1.3B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "translate",
+      "modelId": "whisper-translate",
+      "variantId": "whisper-translate-small",
+      "name": "Речь → текст/перевод",
+      "variant": "Whisper Small",
+      "source": "https://huggingface.co/openai/whisper-small",
+      "huggingFaceRepo": "openai/whisper-small",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "translate",
+      "modelId": "whisper-translate",
+      "variantId": "whisper-translate-medium",
+      "name": "Речь → текст/перевод",
+      "variant": "Whisper Medium",
+      "source": "https://huggingface.co/openai/whisper-medium",
+      "huggingFaceRepo": "openai/whisper-medium",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "research",
+      "modelId": "research-rag",
+      "variantId": "research-rag-bge-m3",
+      "name": "Исследования · RAG",
+      "variant": "BGE M3",
+      "source": "https://huggingface.co/BAAI/bge-m3",
+      "huggingFaceRepo": "BAAI/bge-m3",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "research",
+      "modelId": "research-rag",
+      "variantId": "research-rag-qwen-embed",
+      "name": "Исследования · RAG",
+      "variant": "Qwen3 Embedding 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B",
+      "huggingFaceRepo": "Qwen/Qwen3-Embedding-0.6B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "research",
+      "modelId": "research-rag",
+      "variantId": "research-rag-rerank",
+      "name": "Исследования · RAG",
+      "variant": "Qwen3 Reranker 0.6B",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B",
+      "huggingFaceRepo": "Qwen/Qwen3-Reranker-0.6B",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "tools",
+      "modelId": "utility",
+      "variantId": "utility-layout",
+      "name": "Инструменты ИИ · анализ документов",
+      "variant": "LayoutLMv3 Base",
+      "source": "https://huggingface.co/microsoft/layoutlmv3-base",
+      "huggingFaceRepo": "microsoft/layoutlmv3-base",
+      "format": "HF_REPOSITORY",
+      "notes": "",
+      "downloadable": false,
+      "installed": false,
+      "artifact": {
+        "immutableRevision": null,
+        "files": [],
+        "totalBytes": null
+      },
+      "status": "SOURCE_CANDIDATE_NOT_VERIFIED"
+    },
+    {
+      "category": "tools",
+      "modelId": "utility",
+      "variantId": "utility-vl3b",
+      "name": "Инструменты ИИ · анализ документов",
+      "variant": "Qwen 2.5 VL 3B",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct",
+      "huggingFaceRepo": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "format": "HF_REPOSITORY",
+      "notes": "",
       "downloadable": false,
       "installed": false,
       "artifact": {
