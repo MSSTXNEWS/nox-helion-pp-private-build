@@ -77,6 +77,12 @@ class Studio(CreativeExtensions):
         try: import trimesh; return True
         except ImportError: return False
 
+    @staticmethod
+    def _is_untrusted_link(path):
+        # Windows junctions are reparse points, but not always symlinks.
+        # Python 3.12+ exposes Path.is_junction; keep older builds compatible.
+        return self._is_untrusted_link(path) or getattr(path, "is_junction", lambda: False)()
+
     def _installed_weights(self, model_id, repository):
         """Receipt means files physically exist, not that inference is ready.
 
@@ -87,7 +93,7 @@ class Studio(CreativeExtensions):
         target=self.models/model_id
         receipt=target/"RECEIPT.json"
         try:
-            if self.models.is_symlink() or target.is_symlink() or receipt.is_symlink():
+            if self._is_untrusted_link(self.models) or self._is_untrusted_link(target) or self._is_untrusted_link(receipt):
                 return False
             if not receipt.is_file() or receipt.stat().st_size > 131_072:
                 return False
@@ -114,7 +120,7 @@ class Studio(CreativeExtensions):
                 path=target
                 for part in PurePosixPath(name).parts:
                     path=path/part
-                    if path.is_symlink():
+                    if self._is_untrusted_link(path):
                         return False
                 if (not path.resolve().is_relative_to(target.resolve()) or
                     not path.is_file() or path.stat().st_size!=size):
@@ -164,11 +170,11 @@ class Studio(CreativeExtensions):
                 ".." in PurePosixPath(x).parts or
                 PurePosixPath(x).as_posix()!=x for x in filenames)):
             raise StudioError("Unapproved literal weight filename")
-        if self.models.is_symlink() or (self.models.exists() and not self.models.is_dir()):
+        if self._is_untrusted_link(self.models) or (self.models.exists() and not self.models.is_dir()):
             raise StudioError("Untrusted model root")
         self.models.mkdir(parents=True,exist_ok=True)
         target=self.models/model_id
-        if target.is_symlink() or (target.exists() and not target.is_dir()):
+        if self._is_untrusted_link(target) or (target.exists() and not target.is_dir()):
             raise StudioError("Untrusted model destination")
         target.mkdir(parents=True,exist_ok=True)
         if not target.resolve().is_relative_to(self.root):
@@ -177,7 +183,7 @@ class Studio(CreativeExtensions):
             p=target
             for part in PurePosixPath(name).parts:
                 p=p/part
-                if p.is_symlink():
+                if self._is_untrusted_link(p):
                     raise StudioError("Weight file or directory is a reparse link")
             if not p.resolve().is_relative_to(target.resolve()):
                 raise StudioError("Weight path outside approved model directory")
@@ -185,6 +191,9 @@ class Studio(CreativeExtensions):
         for f in filenames:
             checked_weight(f)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
+        if (self._is_untrusted_link(self.models) or self._is_untrusted_link(target) or
+            not target.resolve().is_relative_to(self.root)):
+            raise StudioError("Model destination changed during download")
         files=[]
         for f in filenames:
             p=checked_weight(f)
