@@ -83,6 +83,27 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         make_weights(self.root / "model-00001-of-00001.safetensors")
         self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
 
+    def test_malformed_shard_mapping_returns_hold_instead_of_crashing_installer(self):
+        for value in ([], {}, None, 12, ["model.safetensors"]):
+            with self.subTest(value=value):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {"a": "model.safetensors", "b": value}}),
+                    encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_invalid_tensor_names_are_not_accepted_as_installed_snapshot(self):
+        for name in ("", "  ", "\ud800"):
+            with self.subTest(name=name):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {name: "model.safetensors"}}), encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_INVALID")
+
 
 if __name__ == "__main__":
     unittest.main()
+

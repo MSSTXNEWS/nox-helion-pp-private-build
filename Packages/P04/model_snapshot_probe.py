@@ -117,6 +117,17 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             weights = metadata.get("weight_map")
             if not isinstance(weights, dict) or not weights:
                 raise ValueError("MODEL_SHARD_INDEX_INVALID")
+            # Validate decoded metadata before hashing/sorting: malformed shard
+            # values must produce an installer HOLD report, not a TypeError.
+            for tensor, shard in weights.items():
+                if not isinstance(tensor, str) or not tensor.strip():
+                    raise ValueError("MODEL_SHARD_INDEX_INVALID")
+                try:
+                    tensor.encode("utf-8", errors="strict")
+                except UnicodeError as exc:
+                    raise ValueError("MODEL_SHARD_INDEX_INVALID") from exc
+                if not isinstance(shard, str):
+                    raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             names = sorted(set(weights.values()))
         else:
             names = ["model.safetensors"]
@@ -154,3 +165,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
