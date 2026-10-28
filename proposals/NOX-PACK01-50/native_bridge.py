@@ -79,8 +79,9 @@ class NoxPackHost:
         if set(ids) != ALLOWED_ROUTES or len(set(ids)) != 50:
             raise ValueError("Route set mismatch or duplicate")
         task_ids = [item.get("taskId") for item in actions]
-        if len(set(task_ids)) != 50 or any(not isinstance(t,str) or not TASK.fullmatch(t) for t in task_ids):
-            raise ValueError("Invalid TaskID")
+        if (len(set(task_ids)) != 50 or
+                task_ids != [f"NIP01-{i:02d}" for i in range(1, 51)]):
+            raise ValueError("Invalid or reordered canonical TaskID")
         if any(type(row.get("owner")) is not int or not 1 <= row["owner"] <= 6 or
                row.get("risk") not in ("safe", "sensitive", "dangerous") for row in actions):
             raise ValueError("Invalid approved native owner/risk policy")
@@ -100,6 +101,8 @@ class NoxPackHost:
         self.ports[route] = port
 
     def advertise(self, session:NativeSession) -> dict:
+        if type(session) is not NativeSession:
+            raise HostDenied("Existing native session type required")
         session.validate()
         out = {}
         for route, item in self.routes.items():
@@ -117,8 +120,10 @@ class NoxPackHost:
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
+        if type(session) is not NativeSession:
+            raise HostDenied("Existing native session type required")
         session.validate()
-        if route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
+        if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
         if not isinstance(payload, dict):
             raise HostDenied("Missing/oversize request")
