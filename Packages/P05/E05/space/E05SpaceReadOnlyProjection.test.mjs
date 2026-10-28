@@ -68,13 +68,13 @@ test('Drive readback never claimed without same-run proof',()=>{
 });
 test('STOP requires full canonical event schema (not a UI hint)',()=>{
   const bad={schema:EVENT_SCHEMA,run_id:RUN,event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
-  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'N_D');
+  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
 });
 test('STOP with wrong canonical state is rejected',()=>{
-  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'N_D');
+  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
 });
 test('failed task with wrong state is rejected',()=>{
-  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,0);
+  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,null);
 });
 test('duplicate event_id does not double-count failures',()=>{
   const e=terminalEvent('task.failed','ERROR');
@@ -289,3 +289,66 @@ test('HELION aggregate honors an explicit uneven approved weighting',()=>{
   assert.equal(projectCorePersona(c,NOW).helion,null);
 });
 console.log('R05 added 12 ledger, weighted CoreID and native CPU-temperature regression gates; Windows NOT_RUN.');
+
+// R06: one ambiguity-quarantine method for terminal origin, GPU identity,
+// duplicated priced feeds and app-side readback provenance. All synthetic.
+test('malformed same-run failure cannot be hidden behind a clean STOP',()=>{
+  const broken={...terminalEvent('task.failed','ERROR'),event_id:'broken',message:42};
+  assert.deepEqual(projectCanonicalEvents([terminalEvent('model.stopped','STOPPED'),broken],RUN,NOW),
+    {state:'HOLD_MALFORMED_TERMINAL',errors:null});
+});
+test('same-run terminal without a bounded source is quarantined',()=>{
+  const broken={...terminalEvent('model.stopped','STOPPED'),source:'\n'};
+  assert.equal(projectCanonicalEvents([broken],RUN,NOW).state,'HOLD_MALFORMED_TERMINAL');
+});
+test('malformed terminal of another RunID cannot stop current run',()=>{
+  const foreign={...terminalEvent('task.failed','ERROR'),run_id:'OTHER',message:42};
+  assert.equal(projectCanonicalEvents([foreign],RUN,NOW).state,'N_D');
+});
+const vram=(key,value,deviceId)=>({key,value,unit:'bytes',source:'NVML',status:'LIVE',
+  observed_at_utc:'2026-10-28T03:44:58Z',...(deviceId===null?{}:{device_id:deviceId})});
+test('two VRAM counters without hardware identity cannot be combined',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,null),vram('gpu.vram.total_bytes',8192,null)],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].stage,'INCONSISTENT_VRAM');
+  assert.equal(x['gpu.vram.total_bytes'].value,null);
+});
+test('different GPU identifiers cannot be mixed into one VRAM pair',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,'GPU-0'),vram('gpu.vram.total_bytes',8192,'GPU-1')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].value,null);
+});
+test('matching GPU device identifier and native observation permits truthful VRAM',()=>{
+  const x=projectHardware([vram('gpu.vram.used_bytes',2048,'GPU-0'),vram('gpu.vram.total_bytes',8192,'GPU-0')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].value,2048);
+  assert.equal(x['gpu.vram.total_bytes'].deviceId,'GPU-0');
+});
+test('two bitcoin prices are quarantined even when each is licensed',()=>{
+  const x=projectFeeds([{...feed,id:'bitcoin',value:70000},{...feed,id:'bitcoin',value:80000}],NOW);
+  assert.deepEqual(x,[{id:'bitcoin',stage:'HOLD_DUPLICATE_FEED',sourceUtc:null,value:null,observedKind:'N_D'}]);
+});
+test('hidden seventeenth market quote still blocks first price',()=>{
+  const x=projectFeeds([{...feed,id:'brent',value:78},...Array(15).fill(null),{...feed,id:'brent',value:108}],NOW);
+  assert.equal(x[0].stage,'HOLD_DUPLICATE_FEED');assert.equal(x[0].value,null);
+});
+test('two news articles are not treated as conflicting market ticks',()=>{
+  const x=projectFeeds([{...feed,id:'nox-news',value:null},{...feed,id:'nox-news',value:null}],NOW);
+  assert.equal(x.length,2);assert.equal(x[0].stage,'SOURCE_DATED');
+});
+test('Drive controller flag without WebView2 proof cannot claim app readback',()=>{
+  const x=projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:{run_id:RUN,build_id:'BUILD-1',
+    status:'READBACK_PASS',receipt_sha256:H}},NOW);
+  assert.equal(x.driveReadback,'HOLD');
+});
+test('fresh app-side Drive receipt stays reported, not independently verified',()=>{
+  const d={run_id:RUN,build_id:'BUILD-1',origin:'WEBVIEW2_APP',status:'READBACK_PASS',
+    readback_at_utc:'2026-10-28T03:44:58Z',receipt_sha256:H};
+  const x=projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:d},NOW);
+  assert.equal(x.driveReadback,'APP_REPORTED_READBACK');
+  assert.equal(projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:{...d,
+    readback_at_utc:'2026-10-28T03:00:00Z'}},NOW).driveReadback,'HOLD');
+});
+test('Drive receipt tied to a different installed BuildID is HOLD',()=>{
+  const d={run_id:RUN,build_id:'WRONG-EXE',origin:'WEBVIEW2_APP',status:'READBACK_PASS',
+    readback_at_utc:'2026-10-28T03:44:58Z',receipt_sha256:H};
+  assert.equal(projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:d},NOW).driveReadback,'HOLD');
+});
+console.log('R06 ambiguity-quarantine guards PASS (synthetic only); native WebView2/Windows/feeds/Drive readback NOT_RUN.');

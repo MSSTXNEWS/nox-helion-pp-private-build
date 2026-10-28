@@ -4,6 +4,7 @@ export const EVENT_SCHEMA = 'NOX-INSTALLER-EVENT-v3';
 export const LOCKED_BASELINE = '0b3a7d435be735148d64171deb9027093a89646e';
 const weights = [0.20, 0.25, 0.20, 0.25, 0.10];
 const sourceIds = new Set(['weather','nox-news','msstx-news','eur-usd','usd-eur','eur-rub','bitcoin','brent','finance-news']);
+const singletonMarketIds = new Set(['eur-usd','usd-eur','eur-rub','bitcoin','brent']);
 const maximumAges = Object.freeze({weather:2700000,'nox-news':172800000,'msstx-news':172800000,'eur-usd':864000000,'usd-eur':864000000,'eur-rub':864000000,bitcoin:300000,brent:86400000,'finance-news':172800000});
 const sha = v => typeof v === 'string' && /^[a-f0-9]{64}$/i.test(v);
 const pct = v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
@@ -105,14 +106,19 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
       // A sensor cannot be observed AFTER the enclosing native polling frame.
       (polledUtc===null || (isoUtc(polledUtc) && Date.parse(s.observed_at_utc)<=Date.parse(polledUtc)));
     result[key]={value: valid?s.value:null, source:valid?s.source:null, stage:valid?'LIVE':'N_D',
-      observedUtc:valid?s.observed_at_utc:null};
+      observedUtc:valid?s.observed_at_utc:null,
+      deviceId:valid && typeof s.device_id==='string' && /^[A-Za-z0-9:._\/-]{1,120}$/.test(s.device_id)
+        ?s.device_id:null};
   }
   const used=result['gpu.vram.used_bytes'],total=result['gpu.vram.total_bytes'];
   if (used.value!==null && total.value!==null &&
       (total.value===0 || used.value>total.value || used.source!==total.source ||
+       // One NVML provider can report several physical GPUs. Never pair a
+       // GPU-0 used counter with GPU-1 total or with unidentified hardware.
+       !used.deviceId || used.deviceId!==total.deviceId ||
        Math.abs(Date.parse(used.observedUtc)-Date.parse(total.observedUtc))>5000)) {
     used.value=total.value=null; used.stage=total.stage='INCONSISTENT_VRAM';
-    used.observedUtc=total.observedUtc=null;
+    used.observedUtc=total.observedUtc=null;used.deviceId=total.deviceId=null;
   }
   return result;
 }
@@ -157,8 +163,21 @@ export function projectCorePersona(core, nowMs) {
 }
 
 export function projectFeeds(feeds, nowMs) {
-  if (!Array.isArray(feeds)) return [];
-  return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).map(f=>{
+  if (!Array.isArray(feeds) || feeds.length>4096) return [];
+  // Single current quotes for financial instruments only. News may contain
+  // multiple articles; market duplicates must never show conflicting prices.
+  // Scan the entire bounded batch, not only the first 16 display records.
+  const marketCounts=new Map();
+  for (const f of feeds) if (f && singletonMarketIds.has(f.id))
+    marketCounts.set(f.id,(marketCounts.get(f.id)||0)+1);
+  const emittedMarkets=new Set();
+  return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).flatMap(f=>{
+    if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
+      if (emittedMarkets.has(f.id)) return [];
+      emittedMarkets.add(f.id);
+      return [{id:f.id,stage:'HOLD_DUPLICATE_FEED',sourceUtc:null,value:null,
+        observedKind:'N_D'}];
+    }
     const fxDate=f.id==='eur-usd'||f.id==='usd-eur';
     const observationSupplied=fxDate && f.observation_date!==undefined;
     const dateOnly=observationSupplied && observationUtc(f.observation_date);
@@ -177,9 +196,9 @@ export function projectFeeds(feeds, nowMs) {
     const stale=['OFFLINE_CACHE','STALE_CACHE','STALE_SOURCE','OFFLINE'].includes(f.status);
     const stage=!approved?'DISABLED':stale?'STALE_CACHE':
       temporalOrder && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
-    return {id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
+    return [{id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
       value:stage==='SOURCE_DATED' && f.parsed_by_owner===true && numericValid?f.value:null,
-      observedKind:dateOnly?'ECB_OBSERVATION_DATE':'SOURCE_TIMESTAMP'};
+      observedKind:dateOnly?'ECB_OBSERVATION_DATE':'SOURCE_TIMESTAMP'}];
   });
 }
 
@@ -206,6 +225,11 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   const terminal=[];
   const seen=new Map();
   for (const e of events) {
+    // A same-run task.failed/model.stopped with a broken envelope is NOT a
+    // harmless nonterminal. Quarantine it, or a malformed error can disappear
+    // behind a later clean STOP. Foreign runs and nonterminals stay ignored.
+    if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
+        !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
         !ago(e.timestamp_utc,nowMs,30000)) continue;
     // Same event_id + DIFFERENT canonical terminal contents is a broken or
@@ -246,7 +270,12 @@ export function projectSpaceView(host, nowMs=Date.now()) {
     core:projectCorePersona(sameRunCore,nowMs),
     feeds:projectFeeds(sameRunFeeds,nowMs),
     events:projectCanonicalEvents(host.events,host.run_id,nowMs),
+    // An administrative Drive connector receipt is not app-side OAuth.
+    // This remains APP_REPORTED, NEVER externally VERIFIED. E06 must bind
+    // signed native app evidence and the actual Drive response for acceptance.
     driveReadback:host.drive?.run_id===host.run_id &&
-      host.drive?.status==='READBACK_PASS' && sha(host.drive?.receipt_sha256)
-        ?'APP_REPORTED_READBACK':'HOLD'}); // E06 must independently attest actual Drive response.
+      validRunId(host.build_id) && host.drive?.build_id===host.build_id &&
+      host.drive?.origin==='WEBVIEW2_APP' && host.drive?.status==='READBACK_PASS' &&
+      ago(host.drive?.readback_at_utc,nowMs,300000) && sha(host.drive?.receipt_sha256)
+        ?'APP_REPORTED_READBACK':'HOLD'}); // No OAuth/network performed here.
 }
