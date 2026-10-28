@@ -102,7 +102,7 @@ class Turbo10IntegrityTests(unittest.TestCase):
         for steps, epochs, save, ev in ((profile["max_steps"] + 1, 1.0, 1, 1),
                                         (1, float("nan"), 1, 1),
                                         (1, float("inf"), 1, 1),
-                                        (1, 1.0, 2, 1)):
+                                        (1, 1.0, 0, 1)):
             with self.subTest(steps=steps, epochs=epochs, save=save):
                 with self.assertRaises(ValueError):
                     train.validate_training_limits(profile, steps, epochs, save, ev)
