@@ -64,7 +64,7 @@ export function projectReadiness(readiness, runId, nowMs) {
     reason: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? 'E06_OWNER_PROJECTED':'WEIGHTED_MISMATCH'};
 }
 
-export function projectHardware(sensors, nowMs) {
+export function projectHardware(sensors, nowMs, polledUtc=null) {
   const expected = {'cpu.system.percent':['%',100], 'gpu.percent':['%',100],
     'gpu.vram.used_bytes':['bytes',Number.MAX_SAFE_INTEGER],
     'gpu.vram.total_bytes':['bytes',Number.MAX_SAFE_INTEGER],
@@ -75,13 +75,18 @@ export function projectHardware(sensors, nowMs) {
     const s=found.length===1?found[0]:null;
     const valid=s?.status==='LIVE' && s.unit===unit && typeof s.source==='string' && s.source.trim() &&
       typeof s.value==='number' && Number.isFinite(s.value) && s.value>=0 && s.value<=max &&
-      ago(s.observed_at_utc,nowMs,30000);
-    result[key]={value: valid?s.value:null, source:valid?s.source:null, stage:valid?'LIVE':'N_D'};
+      ago(s.observed_at_utc,nowMs,30000) &&
+      // A sensor cannot be observed AFTER the enclosing native polling frame.
+      (polledUtc===null || (isoUtc(polledUtc) && Date.parse(s.observed_at_utc)<=Date.parse(polledUtc)));
+    result[key]={value: valid?s.value:null, source:valid?s.source:null, stage:valid?'LIVE':'N_D',
+      observedUtc:valid?s.observed_at_utc:null};
   }
   const used=result['gpu.vram.used_bytes'],total=result['gpu.vram.total_bytes'];
   if (used.value!==null && total.value!==null &&
-      (total.value===0 || used.value>total.value || used.source!==total.source)) {
+      (total.value===0 || used.value>total.value || used.source!==total.source ||
+       Math.abs(Date.parse(used.observedUtc)-Date.parse(total.observedUtc))>5000)) {
     used.value=total.value=null; used.stage=total.stage='INCONSISTENT_VRAM';
+    used.observedUtc=total.observedUtc=null;
   }
   return result;
 }
@@ -123,14 +128,18 @@ export function projectFeeds(feeds, nowMs) {
     const ttl=Number.isInteger(f.ttl_ms)&&f.ttl_ms>0&&f.ttl_ms<=86400000?f.ttl_ms:0;
     const fetched=ttl>0 && ago(f.fetched_at_utc,nowMs,ttl);
     const dated=ago(sourceTime,nowMs,maximumAges[f.id]);
+    // No fetched snapshot can truthfully contain a future source observation.
+    const temporalOrder=fetched && dated && Date.parse(sourceTime)<=Date.parse(f.fetched_at_utc);
+    const strictlyPositive=new Set(['eur-usd','usd-eur','eur-rub','bitcoin','brent']).has(f.id);
+    const numericValid=typeof f.value==='number' && Number.isFinite(f.value) &&
+      (!strictlyPositive || f.value>0);
     const approved=f.license_status==='APPROVED' && sha(f.license_receipt_sha256) &&
       typeof f.provider==='string' && f.provider.length>0;
     const stale=['OFFLINE_CACHE','STALE_CACHE','STALE_SOURCE','OFFLINE'].includes(f.status);
     const stage=!approved?'DISABLED':stale?'STALE_CACHE':
-      dated && fetched && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
+      temporalOrder && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
     return {id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
-      value:stage==='SOURCE_DATED' && f.parsed_by_owner===true &&
-        typeof f.value==='number' && Number.isFinite(f.value)?f.value:null,
+      value:stage==='SOURCE_DATED' && f.parsed_by_owner===true && numericValid?f.value:null,
       observedKind:dateOnly?'ECB_OBSERVATION_DATE':'SOURCE_TIMESTAMP'};
   });
 }
@@ -152,14 +161,25 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
 export function projectCanonicalEvents(events, runId, nowMs) {
   if (!Array.isArray(events) || !validRunId(runId) || !Number.isFinite(nowMs))
     return {state:'N_D',errors:0};
-  // Canonical event journal order is not guaranteed by asynchronous UI delivery.
-  // Sorting by trusted event timestamp makes the last terminal state deterministic.
+  // Bounded fail-closed projection: never let a raw >64-event tail hide an
+  // earlier terminal ERROR or an event_id collision. E06 owns the event log.
+  if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
   const terminal=[];
-  const seen=new Set();
-  for (const e of events.slice(-64)) {
+  const seen=new Map();
+  for (const e of events) {
     if (!canonicalTerminal(e) || e.run_id!==runId ||
-        !ago(e.timestamp_utc,nowMs,30000) || seen.has(e.event_id)) continue;
-    seen.add(e.event_id);
+        !ago(e.timestamp_utc,nowMs,30000)) continue;
+    // Same event_id + DIFFERENT canonical terminal contents is a broken or
+    // replayed native receipt, not an instruction to choose arrival order.
+    const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,
+      e.task_id,e.package_id,e.action_id,e.timestamp_utc,e.state,
+      e.source,e.message,e.evidence_verified]);
+    const previous=seen.get(e.event_id);
+    if (previous!==undefined) {
+      if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
+      continue; // Identical replay, counted once.
+    }
+    seen.set(e.event_id,fingerprint);
     terminal.push(e);
   }
   terminal.sort((a,b)=>Date.parse(a.timestamp_utc)-Date.parse(b.timestamp_utc) ||
@@ -182,7 +202,8 @@ export function projectSpaceView(host, nowMs=Date.now()) {
     host.feeds.filter(f=>f?.run_id===host.run_id) : [];
   return Object.freeze({schema:'NOX-E05-SPACE-READONLY-v1',runId:host.run_id,
     readiness:projectReadiness(host.readiness,host.run_id,nowMs),
-    hardware:projectHardware(sameRunFrame?hardwareFrame.sensors:[],nowMs),
+    hardware:projectHardware(sameRunFrame?hardwareFrame.sensors:[],nowMs,
+      sameRunFrame?hardwareFrame.polled_utc:null),
     core:projectCorePersona(sameRunCore,nowMs),
     feeds:projectFeeds(sameRunFeeds,nowMs),
     events:projectCanonicalEvents(host.events,host.run_id,nowMs),
