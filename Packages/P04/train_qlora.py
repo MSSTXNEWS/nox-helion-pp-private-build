@@ -134,10 +134,16 @@ def write_training_receipt(output: Path, receipt: dict[str, Any]) -> tuple[str, 
                           separators=(",", ":")) + "\n").encode("utf-8")
     digest = hashlib.sha256(payload).hexdigest()
     archive_dir = output / "receipts"
+    latest = output / "training-receipt.json"
+    # Fail before any receipt write if an NTFS junction or symbolic link
+    # redirects the archive or latest path outside the approved run directory.
+    reject_reparse_ancestors(archive_dir.absolute())
+    reject_reparse_ancestors(latest.absolute())
     if archive_dir.is_symlink():
         raise ValueError("TRAIN_RECEIPT_ARCHIVE_SYMLINK")
     archive_dir.mkdir(exist_ok=True)
     archive = archive_dir / (digest + ".json")
+    reject_reparse_ancestors(archive.absolute())
     if archive.is_symlink():
         raise ValueError("TRAIN_RECEIPT_ARCHIVE_SYMLINK")
     if archive.exists():
@@ -152,7 +158,6 @@ def write_training_receipt(output: Path, receipt: dict[str, Any]) -> tuple[str, 
         except FileExistsError:
             if not archive.is_file() or archive.is_symlink() or sha256_file(archive) != digest:
                 raise ValueError("TRAIN_RECEIPT_ARCHIVE_COLLISION")
-    latest = output / "training-receipt.json"
     if latest.is_symlink():
         raise ValueError("TRAIN_RECEIPT_LATEST_SYMLINK")
     fd, temporary = tempfile.mkstemp(prefix=".training-receipt-", suffix=".tmp", dir=output)
