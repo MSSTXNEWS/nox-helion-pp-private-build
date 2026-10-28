@@ -336,7 +336,11 @@ class LocalRag:
             raise RagHold("RAG_SOURCE_SHA_INVALID")
         with self._locked():
             current = self._read()
+            prior_source = None
             for item in current["sources"]:
+                if ((item.get("ownerSid"), item.get("conversationId"), item.get("sourceId"))
+                        == (owner_sid, conversation_id, source_id)):
+                    prior_source = item
                 if ((item.get("ownerSid"), item.get("conversationId"), item.get("sourceId"))
                         == (owner_sid, conversation_id, source_id)
                         and item.get("sourceIdentitySha256") == identity
@@ -364,6 +368,14 @@ class LocalRag:
                               "text": c, "vector": vectors[i]} for i, c in enumerate(chunks)]}
         with self._locked():
             data = self._read()
+            live_source = next((item for item in data["sources"]
+                                if (item.get("ownerSid"), item.get("conversationId"), item.get("sourceId"))
+                                == (owner_sid, conversation_id, source_id)), None)
+            # Embedding is a blocking operation outside the index lock. Never
+            # resurrect a deleted source or overwrite a newer concurrent edit.
+            # Compare only this owner/source, preserving unrelated writers.
+            if live_source != prior_source:
+                raise RagHold("RAG_SOURCE_CHANGED_DURING_EMBEDDING")
             if data["sources"] and (data["model"] != self.model
                                     or data["vectorDimensions"] != len(vectors[0])):
                 raise RagHold("RAG_INDEX_REINDEX_REQUIRED")
@@ -390,6 +402,14 @@ class LocalRag:
         if not scoped:
             return []
         vector = self._embeddings([query])[0]
+        # A source can be updated or revoked while Ollama embeds the query.
+        # Admit citations from a fresh index snapshot after that delay.
+        with self._locked():
+            data = self._read()
+            scoped = [s for s in data["sources"]
+                      if s.get("ownerSid") == owner_sid and s.get("conversationId") == conversation_id]
+        if not scoped:
+            return []
         if data["vectorDimensions"] != len(vector):
             raise RagHold("RAG_INDEX_MODEL_DIMENSIONS_CHANGED")
         hits = []
@@ -480,5 +500,9 @@ def p02_callback(index: LocalRag, resolve_owner_sid: Callable[[str, str], str]):
     def get_context(tenant: str, principal: str, chat_id: str, prompt: str) -> dict:
         # P02 validates history/ACL before calling us; #6 maps identities to SID.
         sid = resolve_owner_sid(tenant, principal)
-        return index.context(sid, chat_id, prompt)
+        result = index.context(sid, chat_id, prompt)
+        # Revalidate mutable host identity after any blocking embedding call.
+        if resolve_owner_sid(tenant, principal) != sid:
+            raise RagHold("RAG_OWNER_CHANGED_DURING_CONTEXT")
+        return result
     return get_context

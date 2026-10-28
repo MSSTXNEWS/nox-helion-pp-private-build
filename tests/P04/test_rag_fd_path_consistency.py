@@ -32,6 +32,7 @@ class RagImportConsistencyTests(unittest.TestCase):
         self.index_path = self.root / "rag-index.json"
         self.index = rag.LocalRag("http://127.0.0.1:11434/", "fixture-embed",
                                   self.index_path)
+        self.import_opened = False
 
     def _metadata_switch(self, **updates):
         """Return a stat hook that changes only the post-open pathname snapshot."""
@@ -41,6 +42,7 @@ class RagImportConsistencyTests(unittest.TestCase):
             original = real_stat(path, *args, **kwargs)
             if (isinstance(path, (str, os.PathLike))
                     and Path(path) == self.source
+                    and self.import_opened
                     and kwargs.get("follow_symlinks") is False):
                 keys = ("st_mode", "st_size", "st_mtime_ns", "st_dev", "st_ino")
                 fields = {key: getattr(original, key) for key in keys}
@@ -51,7 +53,18 @@ class RagImportConsistencyTests(unittest.TestCase):
         return changed
 
     def _assert_import_denied_without_embedding(self, changed):
-        with mock.patch.object(rag.os, "stat", side_effect=changed):
+        real_open = os.open
+
+        def opened(path, *args, **kwargs):
+            fd = real_open(path, *args, **kwargs)
+            if Path(path) == self.source:
+                self.import_opened = True
+            return fd
+
+        # Path.is_symlink/lstat also call os.stat(follow_symlinks=False).
+        # Switch metadata only after the actual authorized file is opened.
+        with mock.patch.object(rag.os, "stat", side_effect=changed), \
+                mock.patch.object(rag.os, "open", side_effect=opened):
             with mock.patch.object(self.index, "_embeddings",
                                    side_effect=AssertionError("must not embed")):
                 with self.assertRaisesRegex(rag.RagHold,
