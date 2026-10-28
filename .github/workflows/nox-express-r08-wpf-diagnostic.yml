@@ -54,6 +54,15 @@ jobs:
           if ($checked -lt 90) { throw "R08_DIAG_INCOMPLETE_SOURCE:$checked" }
           'NOX_R08_DIAG_SOURCE_SHA_PASS '+$checked | Tee-Object -FilePath (Join-Path $root 'SOURCE_SEAL.txt')
           "NOX_R08_DIAG_ROOT=$root" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Official Python for source-only diagnostic owner fix
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply SHA-pinned P05 C# diagnostic correction (source owner HOLD)
+        shell: pwsh
+        run: |
+          python 'proposals/E06/express/diagnostic_p05_rawstring_fix.py' $env:NOX_R08_DIAG_ROOT
+          if ($LASTEXITCODE -ne 0) { throw 'P05_DIAGNOSTIC_REPAIR_SHA_HOLD' }
       - name: Restore official WebView2 NuGet dependency
         shell: pwsh
         run: |
@@ -69,6 +78,8 @@ jobs:
           $log=Join-Path $env:NOX_R08_DIAG_ROOT 'wpf-build.log'
           dotnet build $proj --configuration Release --runtime win-x64 --no-restore --verbosity normal *> $log
           $code=$LASTEXITCODE
+          New-Item -ItemType Directory -Path 'ci-evidence' -Force | Out-Null
+          Copy-Item -LiteralPath $log -Destination 'ci-evidence/r08-wpf-build.log' -Force
           Get-Content -LiteralPath $log -Tail 110
           if ($code -ne 0) { throw 'R08_WPF_BUILD_FAILED' }
           Write-Host 'R08_WPF_DIAGNOSTIC_COMPILE_PASS_NOT_PRODUCT_RELEASE'
@@ -105,7 +116,7 @@ jobs:
         with:
           name: nox-r08-wpf-diagnostic-evidence
           path: |
-            ci-evidence/nox-r08-wpf-diagnostic.json
+            ci-evidence/*
             !ci-evidence/**/secrets*
           if-no-files-found: warn
           retention-days: 30
