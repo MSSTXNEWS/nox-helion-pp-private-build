@@ -9,3 +9,10 @@
 .quick-button{border:1px solid #635033;background:#2e251b;color:#ebc18a;border-radius:7px;padding:7px 5px;font-size:10px}
 @media(max-width:1100px){.quick-install-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.quick-install-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.external-leads-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}
+.lead-card{min-width:0;padding:10px;background:rgba(11,15,21,.8);border:1px solid var(--line);border-radius:9px;display:flex;flex-direction:column;gap:5px}
+.lead-card strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-card small{color:var(--gold);font-size:9px}.lead-hold{font-size:9px;color:var(--dim)}
+@media(max-width:1100px){.external-leads-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.external-leads-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}

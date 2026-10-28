@@ -35,19 +35,31 @@ function lineItem(k,v){const dt=el('dt','',k),dd=el('dd','',v);return [dt,dd];}
    No downloads are made by the WebView. Family cards stay disabled until
    host supplies approved immutable metadata and download capability. */
 const quick20Ids = ["qwen3","qwen3-coder","qwen2.5","qwen2.5-coder","llama3.1","llama3.2","deepseek-r1","gemma3","mistral","phi4","tinyllama","gpt-oss","qwen3-vl","llava","nomic-embed-text","mxbai-embed-large","devstral","granite3.1-dense","mistral-nemo","phi3"];
+
+function renderWeightLeads(){
+ const root=$('externalLeadsGrid');if(!root)return;root.replaceChildren();
+ const leads=Array.isArray(state.externalLeads)?state.externalLeads:[];
+ for(const lead of leads.filter(x=>x&&typeof x.id==='string'&&typeof x.displayName==='string'&&
+    ['ASR','TTS','IMAGE','VIDEO','TRAINING','ALIGNER'].includes(x.role)).slice(0,40)){
+   const item=el('div','lead-card');item.append(el('strong','',lead.displayName),el('small','',lead.role+' · REVIEW_REQUIRED'));
+   item.append(el('span','lead-hold','Ожидает SHA / лицензии / адаптера общего host'));
+   root.append(item);
+ }
+ $('externalLeadsStatus').textContent=leads.length?leads.length+' источников · установка недоступна без проверки':'Ожидание проверенного списка от host';
+}
+
 function renderQuick20(){
  const grid=$('quickInstallGrid');if(!grid)return;grid.replaceChildren();
  for(const id of quick20Ids){
    const m=state.models.find(x=>x.id===id);if(!m)continue;
-   const can=state.hostReady&&state.capabilities?.pull===true&&hasEvidence(m)&&$('licenseAck').checked&&!state.pending.has('pull');
+   const can=state.hostReady&&state.capabilities?.pull===true&&hasEvidence(m)&&m.id===state.activeId&&$('licenseAck').checked&&!state.pending.has('pull');
    const wrapper=el('div','quick-card');
    const meta=el('span','quick-name',m.name);
    const detail=el('small','quick-sub',can?'Готово к запросу в host':'REVIEW_REQUIRED');
-   const btn=el('button','quick-button',can?'↓ Скачать в NOX':'↓ Нужна проверка');
-   btn.type='button';btn.disabled=!can;btn.setAttribute('aria-label','Скачать '+m.name+' внутри NOX');
+   const btn=el('button','quick-button',can?'↓ Скачать в NOX':m.id===state.activeId?'Нужна проверка':'Выбрать модель');
+   btn.type='button';btn.disabled=m.id===state.activeId&&!can;btn.setAttribute('aria-label',can?'Скачать '+m.name+' внутри NOX':'Выбрать '+m.name+' для проверки');
    btn.addEventListener('click',()=>{
-     if(!can)return;
-     state.activeId=m.id;
+     if(!can){state.activeId=m.id;$('licenseAck').checked=false;render();return;}
      sendAction('pull');render();
    });
    wrapper.append(meta,detail,btn);grid.append(wrapper);
@@ -116,7 +128,7 @@ function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(stat
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||Date.now());const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
 }
-function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();}
+function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
 function sendAction(action){const c=state.capabilities||{};const job=currentJob();if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
@@ -138,6 +150,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
   state.diagnostics=Array.isArray(data.diagnostics)?data.diagnostics.slice(0,30):[];
+  state.externalLeads=Array.isArray(data.externalLeads)?data.externalLeads.filter(x=>x.downloadAllowed===false&&x.status==='REVIEW_REQUIRED').slice(0,40):[];
   $('hostStatus').textContent='Синхронизировано с Windows host';$('hostLight').classList.add('online');$('eventSignal').textContent='● LIVE';$('eventSignal').classList.add('live');render();
  }else if(data.type==='p03.event.v1'){
   const evt=data.event;if(!evt||typeof evt!=='object')return;state.events.unshift(evt);state.events.length=Math.min(state.events.length,40);
