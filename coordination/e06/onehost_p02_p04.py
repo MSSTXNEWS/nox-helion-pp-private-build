@@ -120,8 +120,32 @@ class P02P04OneHost:
         self._admit(scope, "chat.send")
         if stop is not None and not isinstance(stop, threading.Event):
             raise TypeError("NATIVE_STOP_EVENT_REQUIRED")
-        return self.chat.send(scope.tenant, scope.principal,
-                              scope.conversation_id, model, prompt, stop)
+        # The owner ChatBridge is a lazy generator: its SQLite write and
+        # streaming work happen at next(), NOT when send() is called. Recheck
+        # the native session immediately before every owner advancement so a
+        # revoked SID/route/context cannot keep receiving deltas or completion.
+        # This adds no LLM, host, database, RAG index or GPU worker.
+        native_stop = stop if stop is not None else threading.Event()
+        owner_frames = self.chat.send(scope.tenant, scope.principal,
+                                      scope.conversation_id, model, prompt,
+                                      native_stop)
+
+        def guarded_stream():
+            try:
+                while True:
+                    self._admit(scope, "chat.send")
+                    try:
+                        frame = next(owner_frames)
+                    except StopIteration:
+                        return
+                    yield frame
+            finally:
+                # Releasing a partially consumed stream must cancel the native
+                # owner request, never leave an orphan Ollama stream running.
+                native_stop.set()
+                owner_frames.close()
+
+        return guarded_stream()
 
     def gpu_command(self, scope: NativeScope, command: str, worker_id: str) -> dict:
         """Call ONLY the already-running P04 managed worker's native control port."""

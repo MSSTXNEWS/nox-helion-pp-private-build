@@ -196,5 +196,33 @@ class OneHostOwnerContract(unittest.TestCase):
         self.assertEqual(result[-1]["type"], "chat.complete")
 
 
+    def test_18_revoked_after_call_before_lazy_first_next(self):
+        frames = self.seam.stream_chat(self.scope, "offline-test-model", "Hi")
+        self.seam._authorize = lambda scope, action: False
+        with self.assertRaisesRegex(PermissionError, "NATIVE_OWNER_ROUTE_DENIED"):
+            next(frames)
+        self.assertEqual(self.store.history(
+            "tenant", "principal", "existing-chat"), [])
+
+    def test_19_revoke_during_stream_stops_before_next_delta(self):
+        frames = self.seam.stream_chat(self.scope, "offline-test-model", "Hi")
+        self.assertEqual(next(frames)["type"], "chat.start")
+        self.seam._authorize = lambda scope, action: False
+        with self.assertRaisesRegex(PermissionError, "NATIVE_OWNER_ROUTE_DENIED"):
+            next(frames)
+        self.assertEqual([r["role"] for r in self.store.history(
+            "tenant", "principal", "existing-chat")], ["user"])
+
+    def test_20_rebind_native_chat_midstream_is_denied(self):
+        frames = self.seam.stream_chat(self.scope, "offline-test-model", "Hi")
+        self.assertEqual(next(frames)["type"], "chat.start")
+        self.seam._native_context_chat = lambda token, scope: "unrelated-chat"
+        with self.assertRaisesRegex(PermissionError, "NATIVE_CONTEXT_NOT_BOUND"):
+            next(frames)
+        self.assertEqual([r["role"] for r in self.store.history(
+            "tenant", "principal", "existing-chat")], ["user"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
