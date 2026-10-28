@@ -222,7 +222,29 @@ def _queue_identity_errors(previous: Mapping[str, Any], update: Mapping[str, Any
     return reasons
 
 
-def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any]) -> Decision:
+def _trusted_queue_receipt_errors(
+    previous: Mapping[str, Any], update: Mapping[str, Any],
+    trusted_queue_verifier: Callable[[Mapping[str, Any], Mapping[str, Any]], bool] | None,
+) -> tuple[str, ...]:
+    """Invoke E06 native queue verifier, never trust UI-provided attested flags.
+
+    The callback must resolve BOTH snapshots from the same installed P03 queue,
+    check their signed/content-addressed receipts, job/session ownership,
+    verified bytes and immutable artifact identity. A caller-provided lambda is
+    only a TEST fixture, not proof of integration. No network or disk I/O here.
+    """
+    if not callable(trusted_queue_verifier):
+        return ("NATIVE_QUEUE_VERIFIER_MISSING",)
+    try:
+        if trusted_queue_verifier(previous, update) is not True:
+            return ("NATIVE_QUEUE_RECEIPT_REJECTED",)
+    except Exception:
+        return ("NATIVE_QUEUE_VERIFIER_ERROR",)
+    return ()
+
+
+def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
+                  trusted_queue_verifier: Callable[[Mapping[str, Any], Mapping[str, Any]], bool] | None = None) -> Decision:
     """Fail-closed progress admission for SAME native attempt, queue job & artifact.
 
     Exactly one existing queue owns both snapshots and all *ReceiptSha256 fields.
@@ -231,6 +253,7 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any]) -> Dec
     This policy never calls a network, downloader, filesystem, or UI callback.
     """
     reasons = _queue_identity_errors(previous, update)
+    reasons.extend(_trusted_queue_receipt_errors(previous, update, trusted_queue_verifier))
     before, after = previous.get("state"), update.get("state")
     if before not in _QUEUE_STATES:
         reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
@@ -272,13 +295,14 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any]) -> Dec
 
 
 def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
-               *, user_retry_consent: bool, native_queue_attested: bool) -> Decision:
+               *, user_retry_consent: bool, native_queue_attested: bool,
+               trusted_queue_verifier: Callable[[Mapping[str, Any], Mapping[str, Any]], bool] | None = None) -> Decision:
     """Authorize QUEUED retry metadata only, never start/download/re-enqueue.
 
     The existing P03 queue must create the NEW job/attempt and verify receipts.
     A stopped task may retry only after confirmed terminal CANCELLED or FAILED.
     """
-    reasons = []
+    reasons = list(_trusted_queue_receipt_errors(previous, new_job, trusted_queue_verifier))
     if previous.get("state") not in {"FAILED", "CANCELLED"}:
         reasons.append("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE")
     elif previous.get("state") == "FAILED" and not (
