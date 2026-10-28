@@ -1,0 +1,64 @@
+{
+  "schema": "NOX_V16_E06_R20_SOURCE_ONLY_RECEIPT_V1",
+  "run_id": "NOX-V16-W4-03-20261029T0205MSK-R18-EXPIRY-CLOCK-CSRF",
+  "owner": "E06/W4-03",
+  "branch": "owner/e06/w4-03-r17-private-proof-source-only-20261029",
+  "immutable_owner_parent": "a22499d25f3ee0a13541dab4f06b45aa433b37fa",
+  "staging_pr_162_head_observed": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "historic_main": "0b3a7d435be735148d64171deb9027093a89646e",
+  "owner_after_product_commit": "dbcac86dd393b27030dc94f9b0e1fd70ac8cd64c",
+  "owner_after_tests_commit": "426eef9c35a330092995731def96b1e37d8819de",
+  "task_ids": [
+    {
+      "id": "V16.W4.03.R18.PRIVATE_SESSION_EXPIRY_AT_FINAL_CALLBACK",
+      "status": "SOURCE_PATCH_SAVED; SOURCE_DERIVED_PASS; REAL_MODULE_NOT_RUN"
+    },
+    {
+      "id": "V16.W4.03.R18.PRIVATE_HOST_CLOCK_TYPE_FAIL_CLOSED",
+      "status": "SOURCE_PATCH_SAVED; SOURCE_DERIVED_PASS; REAL_MODULE_NOT_RUN"
+    },
+    {
+      "id": "V16.W4.03.R18.CSRF_PRESENTED_LENGTH_BEFORE_COMPARE",
+      "status": "SOURCE_PATCH_SAVED; SOURCE_DERIVED_PASS; REAL_MODULE_NOT_RUN"
+    }
+  ],
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "2f0464e247c736961c2595f8e4433a64bc03443c61dad21d442e694e55e7f8ff",
+      "post_sha256": "35d932e3739db7fe911c17520069d660a66e1fdf4934e8ec6b716a79f45dca3a",
+      "pre_git_blob_sha1": "394f9838b068ef563d5ea2dc001b879b4e396c66",
+      "post_git_blob_sha1": "5a76d02354ea9826a272053d171b2e3d30dff89a"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_mobile_expiry_clock_csrf_r18.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "5324f61d195472f99d6852e378074565155369f3b3b24a1edf249fa67ff7106e",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "cc5fceb2c0fbc65ae005b91690e0b8a61b099afd"
+    }
+  ],
+  "diff": {
+    "expiry": "Recheck trusted session expiry after second existing-host advertise before capability response; expired => G2Denied",
+    "clock": "Require strict finite int/float host clock and sanitize clock failures before invoking P02 policy and after native advertisement",
+    "csrf": "Require presented CSRF exact same bounded length as expected before hmac.compare_digest; no unbounded compare"
+  },
+  "red": "7 source-derived tests: 3 FAIL / 4 PASS on R17 reproduced admission code",
+  "green": "7/7 PASS on source-derived class, python compile PASS",
+  "real_github_module_tests": "7 saved, NOT_RUN",
+  "windows_exe": "PROHIBITED_R20",
+  "previous_lesson": "FREEZE_REQUEST_AND_VALIDATE_PROOF_BEFORE_NATIVE_POLICY",
+  "previous_lesson_applied": "YES: immutable requested tuple + upfront private proof retained; focused R17 regression PASS",
+  "one_new_lesson": "RECHECK_NATIVE_SESSION_EXPIRY_AFTER_FINAL_OWNER_CALLBACK",
+  "new_accepted_product_done": 0,
+  "remaining_P0_P1": "real existing-host gateway/ACL/STOP/runtime verification; full TaskID denominator N/D; original physical source 729 SHA hold",
+  "gates": {
+    "FEATURE_CODE_COMPLETE": "HOLD",
+    "SOURCE_FREEZE": "HOLD",
+    "INTEGRATION": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD"
+  }
+}
