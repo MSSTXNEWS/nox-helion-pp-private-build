@@ -58,3 +58,34 @@ test("T10 one WOW 51-200 source registry, not EXE acceptance",()=>{
  assert.equal(s.groups.aggregate,150);
  assert.equal(s.notEquivalentToAcceptedExe,true);
 });
+
+test("T01 duplicate MENU route IDs are blocked even when labels differ",()=>{
+ const x=fixture();x.menu[1].routeId=x.menu[0].routeId;
+ assert.throws(()=>validateOwnerP01(x),/EIGHT_MENU_IDENTITY_OR_DOM/);
+});
+test("T02 a privileged button must not shadow a MENU action",()=>{
+ const x=fixture();x.buttons[0].routeId=x.menu[0].routeId;
+ assert.throws(()=>validateOwnerP01(x),/MENU_BUTTON_ROUTE_COLLIDE/);
+});
+test("T03 synthetic keyboard events cannot invoke native routes",()=>{
+ const config={searchRoute:"ui.search",fullscreenRoute:"ui.fullscreen"};
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true,isTrusted:false},config),null);
+ assert.equal(shortcutRoute({key:"F11",isTrusted:false},config),null);
+});
+test("T04 HOME blocks palette but retains native fullscreen and escape",()=>{
+ const config={homeActive:true,searchRoute:"ui.search",
+   fullscreenRoute:"ui.fullscreen",escapeRoute:"ui.close"};
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true},config),null);
+ assert.equal(shortcutRoute({key:"F11"},config),"ui.fullscreen");
+ assert.equal(shortcutRoute({key:"Escape"},config),"ui.close");
+});
+test("T05 editable controls and modified/repeated keys never hijack text input",()=>{
+ const config={searchRoute:"ui.search",escapeRoute:"ui.close",
+   fullscreenRoute:"ui.fullscreen"};
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true,target:{tagName:"INPUT"}},config),null);
+ assert.equal(shortcutRoute({key:"Escape",target:{isContentEditable:true}},config),null);
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true,shiftKey:true},config),null);
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true,metaKey:true},config),null);
+ assert.equal(shortcutRoute({key:"F11",repeat:true},config),null);
+ assert.equal(shortcutRoute({key:"F11",target:{tagName:"INPUT"}},config),"ui.fullscreen");
+});
