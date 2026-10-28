@@ -117,7 +117,7 @@ class P03HostPortTests(unittest.TestCase):
         self.assertEqual(bound, frozenset(("models.catalog","models.installed","models.pull","models.queue")))
         session = pack01.NativeSession("tenant","principal","chat",
             allowed=frozenset(ROUTES),private_approved=frozenset({"models.pull"}))
-        with self.assertRaises(pack01.HostDenied):
+        with self.assertRaises(P03PortDenied):
             host.execute("models.pull",{"userApproval":True},session)
         self.assertEqual(backend.calls,[])
         state["approved"]=True  # native out-of-band test fixture, not JS
