@@ -137,6 +137,23 @@ var evt = E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu, nowV3
 Check(evt is not null && evt.EventType == "gpu.sample" && evt.Numerator == 5265 &&
     evt.Denominator == 10000 && !evt.EvidenceVerified &&
     E05CanonicalEventFactory.IsCanonical(evt), "T10-01: legacy events.v3 GPU payload only");
+Check(evt is not null && evt.PackageId == "P05" &&
+    evt.ActionId == "gpu_utilization" && !evt.EvidenceVerified,
+    "T10-01b: P05 live GPU sensor is unverified P05 telemetry, not P04 trainer");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    EvidenceVerified = true }), "T10-01b: P05 sensor cannot claim verified P04 GPU");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    ActionId = "training_step" }), "T10-01b: P05 telemetry cannot spoof a worker action");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    EventType = "model.tokens" }), "T10-01b: unregistered event type rejected");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    EventType = "acceptance.updated" }), "T10-01b: unregistered acceptance event rejected");
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with {
+    EventType = "training.step", EvidenceVerified = true }),
+    "T10-01b: only P04 may emit training step");
+Check(E05CanonicalEventFactory.IsCanonical(evt! with {
+    PackageId = "P04", ActionId = "gpu_worker_sample", EvidenceVerified = true }),
+    "T10-01b: existing original P04 producer remains allowed");
 Check(E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu with {
     ObservedAtUtc = nowV3.AddMinutes(-2) }, nowV3) is null,
     "T10-01: old telemetry never emitted");
