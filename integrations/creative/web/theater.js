@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const video=$('video'),poster=$('poster'),stage=$('stage'),status=$('status');
 const bc=typeof BroadcastChannel==='function'?new BroadcastChannel('nox-helion-theater'):null;
-let videoUrl=null,subtitleUrl=null,track=null;
+let videoUrl=null,subtitleUrl=null,track=null,subtitleGeneration=0;
 const note=t=>{status.textContent=t};
 const query=new URLSearchParams(window.location.search);
 const project=query.get('project');
@@ -21,6 +21,8 @@ function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null
 function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
 function chooseVideo(file){
  if(!file)return;
+ // A new film invalidates the previous film's captions and pending file reads.
+ subtitleGeneration++;releaseSubtitle();
  releaseVideo();videoUrl=URL.createObjectURL(file);video.src=videoUrl;
  video.style.display='block';poster.style.display='none';video.load();
  note('Видео выбрано: '+file.name+' — нажмите ▶');
@@ -33,14 +35,19 @@ function toWebVtt(text,name){
 }
 async function chooseSubtitle(file){
  if(!file)return;
+ // Last selected subtitle wins even when file.text() resolves out of order.
+ const selectedGeneration=++subtitleGeneration;
  if(file.size>2*1024*1024){note('Субтитры больше 2 МиБ — HOLD');return}
  try{
-  const source=await file.text();const vtt=toWebVtt(source,file.name);
+  const source=await file.text();
+  if(selectedGeneration!==subtitleGeneration)return;
+  const vtt=toWebVtt(source,file.name);
   releaseSubtitle();subtitleUrl=URL.createObjectURL(new Blob([vtt],{type:'text/vtt'}));
   track=document.createElement('track');track.kind='subtitles';track.label=file.name;track.srclang='ru';track.default=true;track.src=subtitleUrl;video.appendChild(track);
-  track.addEventListener('load',()=>{if(track&&track.track)track.track.mode='showing'});
+  const loadedTrack=track;
+  loadedTrack.addEventListener('load',()=>{if(track===loadedTrack&&loadedTrack.track)loadedTrack.track.mode='showing'});
   note('Субтитры загружены: '+file.name);
- }catch(error){note('Субтитры не подключены: '+String(error.message||error))}
+ }catch(error){if(selectedGeneration===subtitleGeneration)note('Субтитры не подключены: '+String(error.message||error))}
 }
 async function toggleFullscreen(){
  try{if(document.fullscreenElement){await document.exitFullscreen();note('Обычный режим')}
@@ -74,4 +81,4 @@ window.addEventListener('keydown',event=>{
  if(event.key==='F11'&&!event.repeat){event.preventDefault();void toggleFullscreen()}
  if(event.key==='Escape'&&document.fullscreenElement){event.preventDefault();void document.exitFullscreen().catch(()=>{})}
 });
-window.addEventListener('beforeunload',()=>{releaseSubtitle();releaseVideo();bc?.close()});
+window.addEventListener('beforeunload',()=>{subtitleGeneration++;releaseSubtitle();releaseVideo();bc?.close()});
