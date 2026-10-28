@@ -99,3 +99,11 @@ test("T10: destroying the scene cancels expiry and detaches native input",()=>{
   f.flush();assert.equal(f.calls.length,1);
   assert.throws(()=>f.bus.subscribe(()=>{}),/SUBSCRIBER_REQUIRED/);
 });
+
+test("T06: undefined/numeric CoreID cannot pass regex string coercion",()=>{
+ for(const bad of [undefined,123]){
+   const ids=CORES.slice();ids[7]=bad;
+   assert.throws(()=>createD02NativeVisualBus(
+     {subscribeNative:()=>()=>{}},{setState:()=>true},ids),/EIGHT_CORES/);
+ }
+});
