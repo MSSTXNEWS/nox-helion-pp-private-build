@@ -7,7 +7,9 @@ from stage_wow200 import stage, D02, gitsha, digest
 class WowStageTests(unittest.TestCase):
  def setUp(self):
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
-  self.stage=self.root/'stage/R11'; self.src=self.root/'src'
+  # Mirror the real repository layout: <root>/integrations/wow200.
+  # stage() uses source.parents[1] to resolve immutable E01 owner files.
+  self.stage=self.root/'stage/R11'; self.src=self.root/'integrations/wow200'
   (self.stage/'Assets/creative').mkdir(parents=True)
   (self.stage/'NOX.P01.Shell.csproj').write_text('<Project/>')
   (self.stage/'Assets/creative/studio.html').write_text('<html><head></head><body><section id="screen-immersive"></section></body></html>')
@@ -67,6 +69,16 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
+ def test_owner1_d02_css_sha_drift_fail_closed(self):
+  file=self.root/'proposals/NOX-CINEMA-FX/nox-cinema.css'
+  file.write_bytes(b'unapproved css replacement')
+  with self.assertRaisesRegex(ValueError,'OWNER1_D02_ENGINE_SHA_HOLD'):stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
+ def test_pr30_legacy_css_sha_drift_fail_closed(self):
+  file=self.src/'proposals/NOX-CINEMA-FX/nox-cinema.css'
+  file.write_bytes(b'unapproved legacy css')
+  with self.assertRaisesRegex(ValueError,'D02_LEGACY_ENGINE_SHA_HOLD'):stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_owner1_d02_engine_sha_drift_fail_closed(self):
   file=self.root/'proposals/NOX-CINEMA-FX/nox-cinema.mjs'
   file.write_bytes(b'unapproved replacement')
