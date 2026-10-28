@@ -55,7 +55,8 @@ try {
      if($sevenZip){
        $destination=Join-Path $env:RUNNER_TEMP 'E06-R13-Frozen-Setup-ReadOnly'
        New-Item -ItemType Directory -Path $destination -Force | Out-Null
-       & $sevenZip.Source x $setup "-o$destination" -y | Out-Null
+       $sevenZipPath=if($sevenZip -is [System.IO.FileInfo]){$sevenZip.FullName}else{$sevenZip.Source}
+       & $sevenZipPath x $setup "-o$destination" -y | Out-Null
        if($LASTEXITCODE -eq 0){
          $original=Get-ChildItem -LiteralPath $destination -File -Recurse -Filter 'Preflight-InstallPath.ps1' |
                    Select-Object -First 1
