@@ -143,6 +143,40 @@ class OneRagOneChatWindowsTests(unittest.TestCase):
             self.routes.rag_context(self.scope, {"query": "alpha"})
         self.assertEqual(self.store.history("tenant", "alice", "chat"), [])
 
+    def test_exact_pack01_native_dispatcher_uses_existing_rag_owner_port(self):
+        """The real unchanged 50-route PACK01 dispatcher executes our P04 owner port."""
+        pack_root = os.environ.get("NOX_PACK01_CHECKOUT")
+        if not pack_root:
+            self.skipTest("Immutable PACK01 dispatcher checkout required")
+        src = Path(pack_root).resolve(strict=True)
+        spec = importlib.util.spec_from_file_location("nox_pinned_pack01", src / "native_bridge.py")
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Pinned native PACK01 dispatcher missing")
+        module = importlib.util.module_from_spec(spec)
+        import sys
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        from p02_owner_route_ports import register_with_existing_pack01
+        dispatcher = module.NoxPackHost(json.loads((src / "catalog.json").read_text("utf-8")))
+        session = module.NativeSession(
+            "tenant", "alice", "chat", allowed=frozenset({"chat.rag"}))
+        def native_scope(s):
+            if (s.tenant, s.principal, s.chat_id) != ("tenant", "alice", "chat"):
+                raise PermissionError("Foreign native session")
+            return self.scope
+        bound = register_with_existing_pack01(
+            dispatcher, module.BoundPort, native_scope, self.routes,
+            receipt="E02-P04-CROSSOWNER-PINNED")
+        self.assertEqual(bound, frozenset({"chat.rag", "chat.voice", "calls.history"}))
+        answer = dispatcher.execute("chat.rag", {"query": "alpha"}, session)
+        self.assertEqual([x["source_id"] for x in answer["sources"]], ["src-alpha"])
+        self.assertIn("alpha fact document", answer["context"])
+        with self.assertRaises(PermissionError):
+            dispatcher.execute("chat.rag", {"query": "alpha"},
+                module.NativeSession("other", "unknown", "chat", allowed=frozenset({"chat.rag"})))
+        self.assertEqual(dispatcher.advertise(session)["chat.voice"]["state"], "HOLD")
+        self.assertEqual(dispatcher.advertise(session)["calls.history"]["state"], "HOLD")
+
     def test_p04_index_deletion_uses_same_p02_authorized_scope(self):
         self.assertTrue(self.rag.delete_source(SID_A, "chat", "src-alpha"))
         self.assertEqual(self.routes.rag_context(self.scope, {"query": "alpha"})["sources"], [])
