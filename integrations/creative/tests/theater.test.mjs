@@ -16,12 +16,13 @@ function harness() {
   }
   for(const id of ['video','poster','media-status','stage','title','space','file','subtitle-file','play','pause','full','screens'])el(id);
   let next=0;const created=[],revoked=[];
-  const sandbox = { document:{getElementById:id=>objects.get(id),createElement:()=>({remove(){this.removed=true}})},
-    window:{addEventListener(){},getScreenDetails:null}, location:{search:'?project=demo_1'},
+  const events={}; const document={getElementById:id=>objects.get(id),createElement:()=>({remove(){this.removed=true}}),fullscreenElement:null,exitFullscreen(){document.fullscreenElement=null;document.exited=true;return Promise.resolve()}};
+  const sandbox = { document,
+    window:{addEventListener(name,fn){events[name]=fn},getScreenDetails:null}, location:{search:'?project=demo_1'},
     URL:{createObjectURL:obj=>{created.push(obj);return 'blob:media'+(++next)},revokeObjectURL:url=>revoked.push(url)},
     URLSearchParams, Blob, Promise, String, RegExp, Error};
   vm.runInNewContext(source,sandbox,{filename:'theater.js'});
-  return {objects,created,revoked};
+  return {objects,created,revoked,events,document};
 }
 test('real local video route, never guessed /api/media',()=>{
   const {objects}=harness(), video=objects.get('video'), input=objects.get('file');
@@ -78,4 +79,27 @@ test('last subtitle selection wins and Spanish track language is correct',async(
   finish('WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nOld');
   await pending;
   assert.equal(video.child,track);
+});
+
+test('F11 requests fullscreen, Escape exits only an active player fullscreen',async()=>{
+  const {objects,events,document}=harness();
+  let f11=false,esc=false;
+  events.keydown({key:'F11',preventDefault(){f11=true}});
+  await Promise.resolve();
+  assert.equal(f11,true);assert.ok(objects.get('stage'));
+  document.fullscreenElement=objects.get('stage');
+  events.keydown({key:'Escape',preventDefault(){esc=true}});
+  await Promise.resolve();
+  assert.equal(esc,true);assert.equal(document.exited,true);
+});
+test('unsupported fullscreen button emits accessible status, never silent fake success',()=>{
+  const {objects}=harness();
+  objects.get('stage').requestFullscreen=undefined;
+  objects.get('full').onclick();
+  assert.match(objects.get('media-status').textContent,/недоступен/);
+});
+test('non-fullscreen Escape is not hijacked',()=>{
+  const {events}=harness();let prevented=false;
+  events.keydown({key:'Escape',preventDefault(){prevented=true}});
+  assert.equal(prevented,false);
 });
