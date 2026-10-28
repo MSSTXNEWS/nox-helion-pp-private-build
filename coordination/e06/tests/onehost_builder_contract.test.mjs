@@ -91,3 +91,24 @@ test('P01 approved NSIS owner scripts keep identical pinned bytes from preflight
   assert.ok(script.includes('NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP'));
   assert.ok(script.includes('NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD'));
 });
+
+test('late P01 manifest/payload re-verification is after staging and before makensis',()=>{
+  const firstVerify=script.indexOf("ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD");
+  const admitted=script.indexOf('$manifestAdmissionSha256=');
+  const lastOwnerGate=script.indexOf('P01_OWNER_SOURCE_MUTATED_DURING_BUILD_HOLD');
+  const lastManifest=script.indexOf('E06_PAYLOAD_MANIFEST_CHANGED_BEFORE_NSIS_HOLD');
+  const lastVerify=script.indexOf('E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD');
+  const compiler=script.indexOf('& $makensisPath /V2');
+  assert.ok(firstVerify>0 && firstVerify<admitted && admitted<lastOwnerGate);
+  assert.ok(lastOwnerGate<lastManifest && lastManifest<lastVerify && lastVerify<compiler);
+  assert.equal((script.match(/-File \\$verifyScript -Root \\$payload -Manifest \\$manifestPath/g)||[]).length,2);
+  for (const marker of [
+    'E06_PAYLOAD_ROOT_REPARSE_BEFORE_NSIS_HOLD',
+    'E06_PAYLOAD_DIRECTORY_REPARSE_BEFORE_NSIS_HOLD',
+    'E06_PAYLOAD_MANIFEST_MISSING_BEFORE_NSIS_HOLD',
+    'E06_PAYLOAD_MANIFEST_REPARSE_BEFORE_NSIS_HOLD',
+    'E06_PAYLOAD_MANIFEST_CHANGED_BEFORE_NSIS_HOLD',
+    'E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD'
+  ]) assert.ok(script.indexOf(marker)>lastOwnerGate && script.indexOf(marker)<compiler, marker);
+  assert.ok(!script.includes('Remove-Item -Recurse'));
+});

@@ -172,6 +172,8 @@ $manifestPath=Join-Path $payload 'payload.sha256.json'
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 7),(New-Object System.Text.UTF8Encoding($false)))
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verifyScript -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
+# Save exact manifest bytes only AFTER the original P01 verifier accepts them.
+$manifestAdmissionSha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $makensis=Get-Command 'makensis.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $makensis) {
   if (-not (Get-Command choco -ErrorAction SilentlyContinue)) { throw 'NSIS_NOT_INSTALLED_AND_NO_TRUSTED_PACKAGE_MANAGER' }
@@ -194,6 +196,27 @@ foreach ($name in $approvedHashes.Keys) {
   $digest = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($digest -cne $approvedPreflightHashes[$name]) { throw "P01_OWNER_SOURCE_MUTATED_DURING_BUILD_HOLD:$name" }
 }
+# E06 R07 final payload gate: no unmanifested reparse directories, no swapped
+# manifest and no changed staged file between original admission and makensis.
+# Preserve P01 verifier and fail closed; no second installer/host is introduced.
+if (!(Test-Path -LiteralPath $payload -PathType Container)) { throw 'E06_PAYLOAD_ROOT_MISSING_BEFORE_NSIS_HOLD' }
+if (((Get-Item -LiteralPath $payload -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'E06_PAYLOAD_ROOT_REPARSE_BEFORE_NSIS_HOLD'
+}
+foreach ($directory in @(Get-ChildItem -LiteralPath $payload -Directory -Recurse -Force -ErrorAction Stop)) {
+  if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'E06_PAYLOAD_DIRECTORY_REPARSE_BEFORE_NSIS_HOLD'
+  }
+}
+if (!(Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'E06_PAYLOAD_MANIFEST_MISSING_BEFORE_NSIS_HOLD' }
+if (((Get-Item -LiteralPath $manifestPath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'E06_PAYLOAD_MANIFEST_REPARSE_BEFORE_NSIS_HOLD'
+}
+if ((Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $manifestAdmissionSha256) {
+  throw 'E06_PAYLOAD_MANIFEST_CHANGED_BEFORE_NSIS_HOLD'
+}
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verifyScript -Root $payload -Manifest $manifestPath
+if ($LASTEXITCODE -ne 0) { throw 'E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD' }
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
 & $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$verifyScript" "/DPREFLIGHT_SCRIPT=$preflightScript" "/DREMOVE_SCRIPT=$removeScript" "/DOUTPUT_SETUP=$setup" "/DAPP_VERSION=$appVersion" $nsisScript
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }
