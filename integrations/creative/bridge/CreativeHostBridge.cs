@@ -27,7 +27,7 @@ public partial class MainWindow
         var requestId=GetString(message,"requestId");
         if (!Guid.TryParseExact(requestId, "D", out _) ||
             !message.TryGetProperty("payload",out var payload) ||
-            payload.ValueKind!=JsonValueKind.Object || payload.GetRawText().Length>262144)
+            payload.ValueKind!=JsonValueKind.Object || Encoding.UTF8.GetByteCount(payload.GetRawText())>262144)
         {
             PostMessage(new {kind="creativeResult",requestId,ok=false,error="Invalid trusted creative request"});
             return;
