@@ -426,14 +426,20 @@ class P02Store:
                                    'p02_attachments': 'id', 'p02_gc': 'storage',
                                    'p02_meta': 'key'}
                     info = list(self.db.execute(f'PRAGMA table_info({table})'))
-                    if not any(row[1] == key_columns[table] and row[5] == 1 for row in info):
+                    # pk is an ordinal, not a boolean. A composite key whose
+                    # first field is id does not make id globally unique.
+                    primary_key = [row[1] for row in sorted(info, key=lambda r: r[5])
+                                   if row[5] > 0]
+                    if primary_key != [key_columns[table]]:
                         raise P02Error('P02_SCHEMA_PRIMARY_KEY_DRIFT; restore verified backup')
                 # A forged attachment table with matching column names but no
                 # storage uniqueness could bind one physical blob to several chats.
                 indices = list(self.db.execute('PRAGMA index_list(p02_attachments)'))
                 found_storage_unique = False
                 for index_row in indices:
-                    if index_row[2] != 1:  # unique = 1
+                    # Partial UNIQUE indices protect only matching rows; blob
+                    # ownership requires storage uniqueness across every chat.
+                    if index_row[2] != 1 or index_row[4] != 0:
                         continue
                     index_name = str(index_row[1]).replace('"', '""')
                     keys = [row[2] for row in self.db.execute(
