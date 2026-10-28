@@ -81,7 +81,7 @@ class Studio(CreativeExtensions):
     def _is_untrusted_link(path):
         # Windows junctions are reparse points, but not always symlinks.
         # Python 3.12+ exposes Path.is_junction; keep older builds compatible.
-        return self._is_untrusted_link(path) or getattr(path, "is_junction", lambda: False)()
+        return path.is_symlink() or getattr(path, "is_junction", lambda: False)()
 
     def _installed_weights(self, model_id, repository):
         """Receipt means files physically exist, not that inference is ready.
