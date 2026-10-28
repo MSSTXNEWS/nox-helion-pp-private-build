@@ -5,6 +5,7 @@
 import {installNoxCinemaFX} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 import {mountUnifiedCinema,reviewWowScopes} from "../../NOX-WOW-UNIFIED-1-150/gate.mjs";
 import {createP01RouteDispatcher} from "./route-dispatch.mjs";
+import {installP01Adaptive} from "./p01-responsive.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
 const mounted=new WeakSet();
 export function mountP01Owner(spec){
@@ -17,7 +18,7 @@ export function mountP01Owner(spec){
      [...controls,...panels].some(el=>!root.contains(el)))
     throw Error("P01_DUPLICATE_MOUNT_OR_UNTRUSTED_DECORATION");
   const dispatcher=createP01RouteDispatcher(hostPort);
-  const cleanups=[];let fx=null,wow=null,disposed=false;
+  const cleanups=[];let fx=null,wow=null,adaptive=null,disposed=false;
   const saved=new Map([...menu,...buttons].map(x=>[x.element,{
     ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
     hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
@@ -32,6 +33,7 @@ export function mountP01Owner(spec){
   };
   try {
     // Existing approved renderer and original DOM; NO replacement assets.
+    adaptive=installP01Adaptive(root);
     fx=installNoxCinemaFX({root,orbs,controls,panels,profile:mode});
     if(secondary){
       reviewWowScopes();
@@ -91,14 +93,14 @@ export function mountP01Owner(spec){
         if(disposed)return;disposed=true;dispatcher.close();
         while(cleanups.length)cleanups.pop()();
         restore();
-        try{wow?.destroy();}finally{fx?.destroy();mounted.delete(root);}
+        try{wow?.destroy();}finally{try{fx?.destroy();}finally{adaptive?.destroy();mounted.delete(root);}}
       }
     });
   }catch(err){
     dispatcher.close();
     while(cleanups.length)cleanups.pop()();
     restore();
-    try{wow?.destroy();}finally{fx?.destroy();}
+    try{wow?.destroy();}finally{try{fx?.destroy();}finally{adaptive?.destroy();}}
     throw err;
   }
 }
