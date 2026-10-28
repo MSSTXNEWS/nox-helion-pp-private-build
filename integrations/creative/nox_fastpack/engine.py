@@ -130,6 +130,11 @@ class Studio(CreativeExtensions):
                 if not legacy and (not isinstance(item.get("sha256"),str)
                         or not re.fullmatch(r"[a-f0-9]{64}",item["sha256"])):
                     return False
+                upstream=item.get("upstream_sha256")
+                if not legacy and upstream is not None and (
+                        not isinstance(upstream,str) or
+                        upstream.lower()!=item["sha256"]):
+                    return False
                 file=root/relative
                 if file.is_symlink() or any(parent.is_symlink()
                     for parent in list(file.parents) if parent!=root and root in parent.parents):
