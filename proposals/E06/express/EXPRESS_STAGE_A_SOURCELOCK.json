@@ -172,5 +172,42 @@
     "real_ASR_TTS_SIP_provider",
     "real_full_D02_WOW_10_10_10_Windows",
     "E07_final_same_sha_qa"
-  ]
+  ],
+  "preferred_diagnostic_source": {
+    "reason": "Independent E06 PR41 successfully compiled real self-contained WPF payload and executed native install/update/rollback/uninstall with user-data preservation; no bridge/final acceptance claimed",
+    "pr": 41,
+    "head_sha1": "87faa41b1602a94d8f981c2a872d36c568a95039",
+    "github_run_id": 40611423342,
+    "run_conclusion": "success",
+    "installer_sha256": "03e026141854a7dada0c94db9066f31d7f9345ca7e35a37f7a73efa9e1657310",
+    "installer_bytes": 60497956,
+    "native_transaction_receipt": {
+      "install": "PASS",
+      "update": "PASS",
+      "rollback": "PASS",
+      "uninstall": "PASS",
+      "userDataRetained": "PASS",
+      "releaseAllowed": false
+    },
+    "evidence_artifact_id": 12782319970,
+    "evidence_zip_sha256": "a31fbb98d4b8786bba10ab084ab672a7c0b45aa3dd8cb9f340cd0482de66c4d2",
+    "drive_file_id": "1Ld0GuZ7F_EiL4ZcQ79Nek-SKUqZ2ia00",
+    "diagnostics_only": true,
+    "full_p01_p05_integrated": false,
+    "real_python_bridge_verified": false,
+    "E07_same_sha_accepted": false
+  },
+  "parallel_diagnostic_preserved": {
+    "pr": 35,
+    "combined_run_id": 40611023212,
+    "installer_sha256": "eb7ce00bbaf348d05e7216a1d4672d0863eede76f6328d18d8471c7ea5ee9938",
+    "drive_file_id": "11I5Eq8HWA66CgNsAeGWQfXG2tp1beVvW",
+    "status": "PRESERVED_ON_HOLD",
+    "native_install_failure_evidence_runs": [
+      40611412413,
+      40611546186,
+      40611769154
+    ],
+    "failure": "NSIS EXIT 2 before marker creation; 30 stage file hashes PASS; native manual marker write and rename PASS; owner P01 diagnostic requested; do not use as final release"
+  }
 }
