@@ -37,9 +37,17 @@ public partial class MainWindow
         if (action=="native_import") { ImportCreativeAsset(requestId!,payload); return; }
         if (action=="stop")
         {
-            StopCreativeWorker();
-            PostMessage(new {kind="creativeResult",requestId,ok=true,
-                data=new {status="STOPPED",source="NATIVE_PROCESS_TREE_TERMINATION_REQUESTED"}});
+            // STOP is not a successful action until the actual worker exits.
+            // A kill *request* is not proof of termination.
+            var stopState=await StopCreativeWorkerAsync();
+            if (stopState=="STOP_UNCONFIRMED")
+                PostMessage(new {kind="creativeResult",requestId,ok=false,
+                    error="CREATIVE_WORKER_EXIT_NOT_CONFIRMED"});
+            else
+                PostMessage(new {kind="creativeResult",requestId,ok=true,
+                    data=new {status=stopState,
+                        source=stopState=="STOPPED"
+                            ? "NATIVE_WORKER_EXIT_CONFIRMED" : "NATIVE_NO_ACTIVE_WORKER"}});
             return;
         }
         if (action=="download")
@@ -421,14 +429,51 @@ public partial class MainWindow
         catch(Exception ex){WriteLog("CREATIVE_PROJECTOR "+ex.GetType().Name);}
     }
 
-    private void StopCreativeWorker()
+    private async Task<string> StopCreativeWorkerAsync()
     {
-        try { if(_creativeWorker is {HasExited:false} p)p.Kill(entireProcessTree:true); }
-        catch(Exception ex) { WriteLog("CREATIVE_WORKER_STOP "+ex.GetType().Name); }
-        foreach(var pending in _creativePending.Keys)
+        // Share the *existing* gates with startup and stdin writes. A new
+        // creative request cannot restart the worker halfway through STOP.
+        await _creativeStartGate.WaitAsync();
+        try
         {
-            if(_creativePending.TryRemove(pending,out _))
-                PostMessage(new {kind="creativeResult",requestId=pending,ok=false,error="STOPPED_BY_USER"});
+            await _creativeWriteGate.WaitAsync();
+            try
+            {
+                var process=_creativeWorker;
+                if (process is null)
+                    return _creativePending.IsEmpty ? "NO_ACTIVE_WORKER" : "STOP_UNCONFIRMED";
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill(entireProcessTree:true);
+                        using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        await process.WaitForExitAsync(deadline.Token);
+                    }
+                    // WaitForExitAsync checks the worker itself; do not claim
+                    // that detached descendants or the complete tree were verified.
+                    if (!process.HasExited)
+                        return "STOP_UNCONFIRMED";
+                }
+                catch(Exception ex)
+                {
+                    WriteLog("CREATIVE_WORKER_STOP_UNCONFIRMED "+ex.GetType().Name);
+                    return "STOP_UNCONFIRMED";
+                }
+                if (ReferenceEquals(_creativeWorker,process))
+                    _creativeWorker=null;
+                // Only after VERIFIED exit may pending worker requests be
+                // acknowledged as stopped. A failed kill leaves them pending.
+                foreach(var pending in _creativePending.Keys)
+                {
+                    if (_creativePending.TryRemove(pending,out _))
+                        PostMessage(new {kind="creativeResult",requestId=pending,
+                            ok=false,error="STOPPED_BY_USER"});
+                }
+                return "STOPPED";
+            }
+            finally { _creativeWriteGate.Release(); }
         }
+        finally { _creativeStartGate.Release(); }
     }
 }
