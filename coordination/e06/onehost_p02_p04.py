@@ -219,6 +219,24 @@ class P02P04OneHost:
             raise OneHostHold("EXISTING_P02_ABORTABLE_OWNER_STREAM_REQUIRED")
 
         def guarded_stream():
+            # A terminal WebView2 frame closes the owner BEFORE delivery.
+            # The outer generator may later be closed by the UI, so invoke
+            # the owner close hook at most once even for non-idempotent owner
+            # leases. Any failed native cleanup must HOLD, not leak an owner
+            # exception or report a successful chat completion.
+            owner_close_attempted = False
+
+            def close_owner_once():
+                nonlocal owner_close_attempted
+                if owner_close_attempted:
+                    return
+                owner_close_attempted = True
+                try:
+                    close_owner()
+                except Exception as exc:
+                    native_stop.set()
+                    raise OneHostHold("EXISTING_P02_OWNER_STREAM_CLOSE_FAILED") from exc
+
             try:
                 while True:
                     # A STOP delivered between yields must not advance the
@@ -264,7 +282,7 @@ class P02P04OneHost:
                     # if the outer UI iterator is never advanced/closed again.
                     # No extra process, stream, RAG callback or STOP frame.
                     if wire["type"] in ("chat.complete", "chat.error"):
-                        owner_frames.close()
+                        close_owner_once()
                         # A close/finalizer can observe a concurrent native STOP.
                         # Do not emit even a terminal frame after cancellation.
                         if native_stop.is_set():
@@ -274,7 +292,7 @@ class P02P04OneHost:
                 # Releasing a partially consumed stream must cancel the native
                 # owner request, never leave an orphan Ollama stream running.
                 native_stop.set()
-                owner_frames.close()
+                close_owner_once()
 
         return guarded_stream()
 
