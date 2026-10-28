@@ -1,0 +1,150 @@
+name: NOX EXPRESS combined diagnostic Windows installer
+on:
+  push:
+    branches: [e06/express-finish-wpf-diagnostic-20261028]
+    paths:
+      - ".github/workflows/nox-express-combined-diagnostic.yml"
+      - "proposals/E06/express/EXPRESS_STAGE_A_SOURCELOCK.json"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: nox-express-combined-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  combine-and-package:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - name: Source lock checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          path: express
+      - name: Exact original owner P01 installer checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 8e42bb15aecbee8412c342b0e9049b6cce044297
+          persist-credentials: false
+          path: p01
+      - name: Existing WPF D02 diagnostic artifact, immutable Windows run
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-e06-r08-diagnostic-binary-40609548405
+          run-id: 40609548405
+          github-token: ${{ github.token }}
+          path: input/wpf
+      - name: Existing original Python EXE candidates, immutable Windows run
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-e06-original-diagnostic-40609239316
+          run-id: 40609239316
+          github-token: ${{ github.token }}
+          path: input/python
+      - name: Install official NSIS tooling
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          choco install nsis --yes --no-progress --limit-output
+          if ($LASTEXITCODE -ne 0) { throw 'NSIS_INSTALL_FAILED' }
+      - name: Immutable byte/source lock and stage single visible WPF host
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $lock=Get-Content 'express/proposals/E06/express/EXPRESS_STAGE_A_SOURCELOCK.json' -Raw | ConvertFrom-Json
+          if ($lock.schema -cne 'NOX_V16_EXPRESS_STAGE_A_SOURCELOCK_V1' -or $lock.constraints.release_accepted -ne $false -or $lock.canonical_visible_host -cne 'R11_WPF_WEBVIEW2') { throw 'SOURCELOCK_INVALID' }
+          $p01Sha=(& git -C p01 rev-parse HEAD).Trim()
+          if ($p01Sha -cne $lock.installer_owner.sha) { throw 'P01_OWNER_REF_CHANGED' }
+          $wpf='input/wpf/diagnostic-payload'
+          $python='input/python/work/candidate/dist'
+          $sourceWpf=Join-Path $wpf 'NOX.P01.Shell.exe'
+          $sourcePython=Join-Path $python 'NOX_HELION_PRIVATE_CANDIDATE.exe'
+          $sourceBackground=Join-Path $python 'NOX_HELION_BACKGROUND_CANDIDATE.exe'
+          foreach($item in @(@($sourceWpf,$lock.diagnostic_wpf_artifact.exe_sha256),@($sourcePython,$lock.diagnostic_python_artifact.exe_sha256),@($sourceBackground,$lock.diagnostic_python_artifact.background_exe_sha256))) {
+            if (!(Test-Path -LiteralPath $item[0] -PathType Leaf)) { throw "PINNED_EXE_MISSING:$($item[0])" }
+            if ((Get-FileHash -LiteralPath $item[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $item[1]) { throw "PINNED_EXE_MISMATCH:$($item[0])" }
+          }
+          $checks=[ordered]@{
+            'Assets/home.png'='382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'
+            'Assets/menu.png'='4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9'
+            'Assets/menu_sections.png'='7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'
+            'Assets/core01.png'='343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97'
+          }
+          foreach($pair in $checks.GetEnumerator()){
+            $asset=Join-Path $wpf $pair.Key
+            if (!(Test-Path -LiteralPath $asset -PathType Leaf) -or (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant() -cne $pair.Value) { throw "ORIGINAL_D02_ASSET_DRIFT:$($pair.Key)" }
+          }
+          $nsisPath='p01/stage/proposals/P01/C09/Installer'
+          $installSrc=Join-Path $nsisPath 'NOX-HELION-Setup.nsi'
+          if (!(Test-Path -LiteralPath $installSrc -PathType Leaf)) { throw 'OWNER_P01_NSI_MISSING' }
+          $stage=Join-Path $env:RUNNER_TEMP 'NOX_EXPRESS_DIA_PAYLOAD'
+          if (Test-Path -LiteralPath $stage) { throw 'STAGE_ALREADY_EXISTS' }
+          New-Item -Path $stage -ItemType Directory -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $wpf '*') -Destination $stage -Recurse -Force
+          $legacy=Join-Path $stage 'LegacyCore'
+          New-Item -Path $legacy -ItemType Directory | Out-Null
+          Copy-Item -LiteralPath $sourcePython -Destination (Join-Path $legacy 'NOX_HELION_PRIVATE_CANDIDATE.exe')
+          Copy-Item -LiteralPath $sourceBackground -Destination (Join-Path $legacy 'NOX_HELION_BACKGROUND_CANDIDATE.exe')
+          # The legacy Python binaries are preserved, not launched, until a
+          # single-host authenticated bridge is fully implemented and accepted.
+          [IO.File]::WriteAllText((Join-Path $legacy 'NOT_CONNECTED_NOTICE.txt'),
+            'Diagnostic inventory ONLY: Python EXEs are not wired to WPF host. No auto-run. Release gate blocked.', (New-Object System.Text.UTF8Encoding($false)))
+          if (!(Test-Path -LiteralPath (Join-Path $stage 'NOX.P01.Shell.exe') -PathType Leaf)) { throw 'WPF_VISIBLE_HOST_MISSING' }
+          $files=@(Get-ChildItem -LiteralPath $stage -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
+            $r=$_.FullName.Substring($stage.Length).TrimStart('\').Replace('\','/')
+            if ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "REPARSE_PAYLOAD_FORBIDDEN:$r" }
+            [ordered]@{path=$r;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
+          })
+          $manifest=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';taskId='E06-EXPRESS-DIAGNOSTIC';runId='NOX-EXPRESS-COMBINED-DIA-40609548405-40609239316';version='0.1.0';files=$files}
+          $manifest|ConvertTo-Json -Depth 7|Set-Content -LiteralPath (Join-Path $stage 'payload.sha256.json') -Encoding utf8
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $nsisPath 'Verify-Payload.ps1') -Root $stage -Manifest (Join-Path $stage 'payload.sha256.json')
+          if($LASTEXITCODE -ne 0){throw 'ORIGINAL_OWNER_P01_PAYLOAD_VERIFY_FAIL'}
+          "NOX_EXPRESS_STAGE=$stage" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
+          "NOX_EXPRESS_NSIS=$nsisPath" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "NOX_EXPRESS_PINNED_SOURCELOCK_AND_ASSETS_PASS: files=$($files.Count) Main UI WPF; Python components inert"
+      - name: Compile combined diagnostic NSIS setup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $makensis='C:\Program Files (x86)\NSIS\makensis.exe'
+          if(!(Test-Path -LiteralPath $makensis -PathType Leaf)){throw 'NSIS_COMPILER_MISSING'}
+          $out=Join-Path $env:RUNNER_TEMP 'NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe'
+          & $makensis '/V2' ("/DPAYLOAD_DIR="+$env:NOX_EXPRESS_STAGE) ("/DVERIFY_SCRIPT="+(Join-Path $env:NOX_EXPRESS_NSIS 'Verify-Payload.ps1')) ("/DPREFLIGHT_SCRIPT="+(Join-Path $env:NOX_EXPRESS_NSIS 'Preflight-InstallPath.ps1')) ("/DREMOVE_SCRIPT="+(Join-Path $env:NOX_EXPRESS_NSIS 'Remove-InstalledPayload.ps1')) ("/DOUTPUT_SETUP="+$out) '/DAPP_VERSION=0.1.0' (Join-Path $env:NOX_EXPRESS_NSIS 'NOX-HELION-Setup.nsi')
+          if($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $out -PathType Leaf)){throw 'DIAGNOSTIC_NSIS_BUILD_FAILED'}
+          $files=(Get-ChildItem -LiteralPath $env:NOX_EXPRESS_STAGE -File -Recurse).Count
+          New-Item -Path 'ci-evidence' -ItemType Directory -Force | Out-Null
+          [ordered]@{
+            schema='NOX_EXPRESS_BLOCK1_COMBINED_DIAGNOSTIC_V1'
+            buildRunId=$env:GITHUB_RUN_ID
+            gitCommit=$env:GITHUB_SHA
+            originalPythonSourceSha256='ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a'
+            originalR08SourceSha256='67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689'
+            sourceWpfRunId=40609548405
+            sourcePythonRunId=40609239316
+            installerSourceCommit='8e42bb15aecbee8412c342b0e9049b6cce044297'
+            installerSetupSha256=(Get-FileHash -LiteralPath $out -Algorithm SHA256).Hash.ToLowerInvariant()
+            installerSetupBytes=(Get-Item -LiteralPath $out).Length
+            stagedFiles=$files
+            canonicalVisibleHost='WPF/WebView2'
+            originalApprovedD02ImagesVerified=$true
+            legacyPythonBinariesRetained=$true
+            legacyPythonAutoRun=$false
+            oneHostBridgeVerified=$false
+            packagedInstallerIsDiagnostic=$true
+            productComplete=$false
+            userGpuWeightsVoiceLiveTests=$false
+            e07IndependentFinalAccepted=$false
+          } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath 'ci-evidence/NOX_EXPRESS_BLOCK1_COMBINED_RECEIPT.json' -Encoding utf8
+          Copy-Item -LiteralPath $out -Destination 'ci-evidence/NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe'
+          Write-Host 'NOX_EXPRESS_COMBINED_DIAGNOSTIC_SETUP_BUILT_NOT_FINAL_RELEASE'
+      - name: Preserve installer and exact SHA receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-express-block1-combined-diagnostic
+          path: |
+            ci-evidence/NOX_EXPRESS_BLOCK1_COMBINED_RECEIPT.json
+            ci-evidence/NOX_HELION_EXPRESS_DIAGNOSTIC_SETUP.exe
+          if-no-files-found: warn
+          retention-days: 30
