@@ -163,6 +163,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   function isActive(){return !disposed&&!doc.hidden&&hostVisible&&intersectVisible&&
     !preference&&mode!=="REDUCED";}
   function syncVisible(){
+    if(disposed)return;
     root.dataset.noxFxVisible=isActive()?"true":"false";
     if(isActive())wake();else sleep();
   }
