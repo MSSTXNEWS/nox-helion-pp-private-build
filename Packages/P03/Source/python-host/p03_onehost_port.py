@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,99}$")
-TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$")
+TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}(?::[A-Za-z0-9][A-Za-z0-9._-]{0,127})?$")
 READ_ROUTES = ("models.catalog", "models.installed")
 OWNER_ROUTES = {
     "models.pull": "pull",
