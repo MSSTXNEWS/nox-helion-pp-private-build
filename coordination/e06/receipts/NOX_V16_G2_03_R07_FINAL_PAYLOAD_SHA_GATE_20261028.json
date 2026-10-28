@@ -32,10 +32,10 @@
       "owner": "E06",
       "pre_commit": "b5e72d02f7a489407a77486fd378a756ad701b6d",
       "pre_sha256": "f9eb07f4d0e4e45ca8a5e245ede1c0f74a087082bb8382c89a466ef4a694e963",
-      "post_sha256": "8ceca62812829aa5d14793d875fa4c859179a02933d7f15c210e654e93b7ded3",
+      "post_sha256": "EXTERNAL_READBACK_REQUIRED",
       "pre_git_blob_sha1": "7f6c750a623b10412be5481ebe4670c49e6ab2fe",
-      "post_git_blob_sha1": "6f3bee04c0880d56119f12b30301de7ca28b0096",
-      "diff": "Append one negative/order regression for late payload/manifest gate; retain all 9 previous tests."
+      "post_git_blob_sha1": "2f7c3c0e820fb1c5ca7ce8c4d780bd281a245e66",
+      "diff": "Fixed matcher to assert precisely two original Verify-Payload invocations; no changes to original host/NSIS/creative assets."
     },
     {
       "path": "coordination/e06/receipts/NOX_V16_G2_03_R07_FINAL_PAYLOAD_SHA_GATE_20261028.json",
@@ -52,7 +52,9 @@
     "PowerShell": "NOT_RUN_LINUX",
     "Windows_NSIS": "NOT_RUN_LINUX",
     "native_install_update_rollback": "HOLD",
-    "E07_one_BuildID": "HOLD"
+    "E07_one_BuildID": "HOLD",
+    "adapted_V8": "9/9 PASS; theater SHA crypto test NOT_RUN in V8",
+    "original_Node": "NOT_RUN_LINUX_NODE_AVAILABLE_BUT_REPO_PRIVATE_FILES_NOT_MATERIALIZED"
   },
   "taskIDs": [
     "E06-R07-01 PRE_READ_V16_MASTER_E06_LESSONS",
@@ -70,5 +72,6 @@
   "weighted_progress": "N/D",
   "source_loss": 0,
   "foreign_owner_code_edits": 0,
-  "one_practical_lesson": "REVERIFY_THE_STAGED_BYTESET_AT_LAST_MILE: admitted P01 manifest and payload must be checked again after tool installation and before compiler; matching owner NSIS script SHA alone is not enough."
+  "one_practical_lesson": "REVERIFY_THE_STAGED_BYTESET_AT_LAST_MILE: admitted P01 manifest and payload must be checked again after tool installation and before compiler; matching owner NSIS script SHA alone is not enough.",
+  "receipt_previous_git_blob_sha1": "cf2bf78fabf1cc8cf2ed3f00a20606164533cacf"
 }

@@ -101,7 +101,7 @@ test('late P01 manifest/payload re-verification is after staging and before make
   const compiler=script.indexOf('& $makensisPath /V2');
   assert.ok(firstVerify>0 && firstVerify<admitted && admitted<lastOwnerGate);
   assert.ok(lastOwnerGate<lastManifest && lastManifest<lastVerify && lastVerify<compiler);
-  assert.equal((script.match(/-File \\$verifyScript -Root \\$payload -Manifest \\$manifestPath/g)||[]).length,2);
+  assert.equal(script.split('-File $verifyScript -Root $payload -Manifest $manifestPath').length-1,2);
   for (const marker of [
     'E06_PAYLOAD_ROOT_REPARSE_BEFORE_NSIS_HOLD',
     'E06_PAYLOAD_DIRECTORY_REPARSE_BEFORE_NSIS_HOLD',
