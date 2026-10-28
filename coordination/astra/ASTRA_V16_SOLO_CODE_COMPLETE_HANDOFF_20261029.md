@@ -120,7 +120,7 @@ When needed, implement a correct updated source fix in your **Astra owner source
 
 ### 4. Your immediate operating algorithm (not another report)
 
-0. Confirm GitHub access and checkout this exact ASTRA branch; confirm the parent SHA. Do not modify the original shared PR162 while agents are paused. Check that old runs have stopped and record ASTRA HEAD.
+0. Confirm GitHub access and exact ASTRA branch HEAD. Do not modify original shared PR162/main. The fifteen scheduled automations were confirmed disabled; independent verification of other manual chat shutdown is unavailable and MUST NOT block isolated ASTRA source commits. Check per-file blob SHA immediately before modifying. Begin fixing source in this run.
 1. Read original V15, actual V16 requirements, the existing P01–P05 owner ledger/last receipts, and verify the current source for already-closed requirements. Use delta not rereading giant unchanged docs every loop.
 2. Create **one canonical full TaskID coverage ledger** (e.g. `coordination/astra/ASTRA_V16_TASKID_COVERAGE.json`) with *every* V15→V16 requirement mapped to existing owner path, precise gap, current status, evidence/test, SHA. Preserve historical DONE. Do not guess denominator or mark 100% by file count.
 3. Choose a **shared technical root cause** affecting multiple incomplete TaskIDs, not a decorative improvement. Implement substantial actual product code in P01–P05 owner files and narrow tests. Make logical commits in Astra branch, never rewrite completed functions.
