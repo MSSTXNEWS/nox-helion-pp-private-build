@@ -44,6 +44,14 @@ def file_evidence(root: Path, manifest: dict[str, dict[str, str]]) -> bool:
     return True
 
 
+def _moves_click_target(block: str) -> bool:
+    """animation:none is safe; a duration/name on the clickable node is not."""
+    for prop, value in re.findall(r"\b(animation(?:-[a-z-]+)?)\s*:\s*([^;}]+)", block, re.I):
+        if prop.lower() != "animation" or not re.match(r"\s*none\b", value, re.I):
+            return True
+    return False
+
+
 def check(spec: dict[str, Any]) -> dict[str, str]:
     """Ten strict source admission conditions; no claim of WINDOWS ACCEPTED."""
     result: dict[str, str] = {}
@@ -67,7 +75,7 @@ def check(spec: dict[str, Any]) -> dict[str, str]:
     # Catch PR30's movable clickable button; the cosmetic layer may move instead.
     button_rules = re.findall(r'\.nox-cinema-control\[data-nox-float="true"\]\s*\{([^}]*)\}', css) if isinstance(css, str) else []
     gate(6, isinstance(css, str) and bool(button_rules)
-         and all("animation" not in block for block in button_rules)
+         and all(not _moves_click_target(block) for block in button_rules)
          and "pointer-events:none" in css)
     js = spec.get("cinema_js", "")
     gate(7, isinstance(js, str) and "(!doc.hidden&&active)" in js
