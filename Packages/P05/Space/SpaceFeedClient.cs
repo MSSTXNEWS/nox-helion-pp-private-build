@@ -66,6 +66,9 @@ public sealed class SpaceFeedClient
             endpoint.Scheme != Uri.UriSchemeHttps ||
             !string.IsNullOrWhiteSpace(endpoint.UserInfo))
             throw new ArgumentException("Provider must use an authenticated, approved HTTPS endpoint.");
+        // STOP and source provenance rules also apply when a TTL cache entry exists.
+        stop.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(extractSourceTime);
         var key = new CacheIdentity(id, provider, endpoint.AbsoluteUri);
         var now = DateTimeOffset.UtcNow;
         // Never reuse an earlier provider's bytes, even during its TTL or
