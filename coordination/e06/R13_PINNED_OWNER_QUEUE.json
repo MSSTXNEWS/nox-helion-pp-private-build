@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_V16_E06_R13_IMMUTABLE_INTAKE_QUEUE_V1",
+  "runId": "NOX-V16-E06-EXPRESS-R13-20261028",
+  "verificationType": "GITHUB_PR_HEAD_SNAPSHOT_NOT_ACCEPTED_SOURCELOCK",
+  "main": {
+    "gitCommitSha1": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "gitTreeSha1": "bedea674b77d14d94028ba86251d8f4d690353c1",
+    "modified": false
+  },
+  "originalPython": {
+    "archiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "diagnosticExeSha256": "4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3",
+    "acceptedCompleteSourceLock": false
+  },
+  "wpf": {
+    "r08OriginalArchiveSha256": "67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689",
+    "hostCountTarget": 1,
+    "acceptedRuntime": false
+  },
+  "owners": [
+    {
+      "owner": 1,
+      "pr": 28,
+      "gitHeadSha1": "8e42bb15aecbee8412c342b0e9049b6cce044297",
+      "status": "HOLD_OWNER_P01_RECEIPT_AND_NSIS"
+    },
+    {
+      "owner": 2,
+      "pr": 13,
+      "gitHeadSha1": "d543bbe2d205b934c2219a0b22ada1a2f9c3edff",
+      "status": "HOLD_P02_HOST_BINDINGS"
+    },
+    {
+      "owner": 3,
+      "pr": 17,
+      "gitHeadSha1": "7c8950eccd8c6f26134d44608ca4f7ff694bf122",
+      "status": "HOLD_P03_OWNER_MODEL_RUNTIME"
+    },
+    {
+      "owner": 4,
+      "pr": 12,
+      "gitHeadSha1": "a9f93427fc315d0dbc883240177d6b7411694015",
+      "status": "HOLD_P04_GPU_OWNER_CONFLICT"
+    },
+    {
+      "owner": 5,
+      "pr": 9,
+      "gitHeadSha1": "0c595bb433238eb22b76f08928a8ddde8c40eda7",
+      "status": "HOLD_P05_EVENTS_NATIVE"
+    }
+  ],
+  "cinema": [
+    {
+      "pr": 30,
+      "gitHeadSha1": "09751ef996074ea4d1dbe12d565dc87cf155e90e"
+    },
+    {
+      "pr": 34,
+      "gitHeadSha1": "4fb41e3af0c97aa06ea2ce997a52a3b6732fd040"
+    },
+    {
+      "pr": 44,
+      "gitHeadSha1": "ef10bbba7370f67c734d69dbab8b509d3c2c457e"
+    }
+  ],
+  "componentSourceCodeMerged": false,
+  "releaseGate": {
+    "source": "HOLD",
+    "components": "CANDIDATES_NOT_SERIAL_MERGED",
+    "integrated": "HOLD",
+    "windowsAccepted": "DIAGNOSTIC_ONLY",
+    "E07Accepted": false,
+    "release": "BLOCKED"
+  },
+  "r13Evidence": [
+    {
+      "run": 40614192835,
+      "sha1": "a4e0025370ca0a5abfd00e547a21028b81fc18b0",
+      "verified": "OFFICIAL_SIGNED_WEBVIEW2_STANDALONE_PLUS_EXACT_P01_PREFLIGHT_PASS"
+    },
+    {
+      "run": 40614382961,
+      "sha1": "f3117017a0e302b14f8f770b2808a954893e476f",
+      "verified": "SIGNED_WEBVIEW2_PASS_COMBINED_NSIS_SETUP_EXIT_2_HOLD"
+    }
+  ],
+  "percent": {
+    "owner1to5": null,
+    "weighted": null
+  },
+  "warnings": [
+    "PR heads are time-specific and may advance; relock before merging",
+    "Full canonical 729-file original plus WPF donor SourceLock is not a single accepted tree",
+    "Do not merge stacked PRs by raw diff; exact preimage and owner receipts required",
+    "No code or UI claims of real Ollama/QLoRA/voice/SIP runtime from diagnostics",
+    "Legacy master journal integrity unverified, append only"
+  ]
+}
