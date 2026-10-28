@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const video=$('video'),poster=$('poster'),stage=$('stage'),status=$('status');
 const bc=typeof BroadcastChannel==='function'?new BroadcastChannel('nox-helion-theater'):null;
-let videoUrl=null,subtitleUrl=null,track=null,subtitleGeneration=0;
+let videoUrl=null,subtitleUrl=null,track=null,subtitleGeneration=0,nativeErrorHandler=null;
 const note=t=>{status.textContent=t};
 const query=new URLSearchParams(window.location.search);
 const project=query.get('project');
@@ -13,7 +13,8 @@ if(nativeMedia && project && /^[a-z0-9_-]{1,48}$/i.test(project)){
  video.src='https://nox-projects.invalid/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';
  video.style.display='block';poster.style.display='none';
  note('NOX · локальный фильм '+project+' · нажмите ▶');
- video.addEventListener('error',()=>{video.removeAttribute('src');video.load();video.style.display='none';poster.style.display='block';note('Фильм ещё не готов — выберите локальный MP4');},{once:true});
+ nativeErrorHandler=()=>{nativeErrorHandler=null;video.removeAttribute('src');video.load();video.style.display='none';poster.style.display='block';note('Фильм ещё не готов — выберите локальный MP4');};
+ video.addEventListener('error',nativeErrorHandler,{once:true});
 }else if(project&&/^[a-z0-9_-]{1,48}$/i.test(project)){
  note('Проект '+project+': выберите MP4/WebM через кнопку файла');
 }
@@ -21,12 +22,22 @@ function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null
 function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
 function chooseVideo(file){
  if(!file)return;
+ // Switching to a user-selected file must disarm the old project's error listener.
+ if(nativeErrorHandler){video.removeEventListener('error',nativeErrorHandler);nativeErrorHandler=null;}
  // A new film invalidates the previous film's captions and pending file reads.
  subtitleGeneration++;releaseSubtitle();
  releaseVideo();videoUrl=URL.createObjectURL(file);video.src=videoUrl;
  video.style.display='block';poster.style.display='none';video.load();
  note('Видео выбрано: '+file.name+' — нажмите ▶');
 }
+// A selected local movie may fail *after* the file picker succeeds. Restore a usable poster.
+video.addEventListener('error',()=>{
+ if(!videoUrl)return;
+ subtitleGeneration++;releaseSubtitle();releaseVideo();
+ video.removeAttribute('src');video.load();
+ video.style.display='none';poster.style.display='block';
+ note('Локальное видео повреждено или формат не поддерживается — выберите MP4/WebM');
+});
 function toWebVtt(text,name){
  const body=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
  if(/\.vtt$/i.test(name)){if(!/^WEBVTT(?:\s|$)/.test(body))throw Error('Неверный заголовок VTT');return body+'\n'}
