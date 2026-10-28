@@ -17,7 +17,7 @@ jobs:
       - name: Execute exact SHA-pinned original Python CLI with read-only diagnostic
         shell: pwsh
         env:
-          GH_${{ github.token }}: TOKEN
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
           $meta=gh api repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/12781339660 | ConvertFrom-Json
