@@ -33,6 +33,8 @@ public sealed class ModelDownloadQueueWorker(
                 lock (_running) _running.Remove(job.Id);
                 return;
             }
+            using var monitorStop = new CancellationTokenSource();
+            var monitorTask = WatchSharedCancelAsync(job.Id, linked, monitorStop.Token);
             await SafePublishAsync(job, "started", "Starting", null, null, null, null, ct);
             try
             {
