@@ -62,7 +62,13 @@ public partial class MainWindow
         }
         try
         {
-            _creativePending.TryAdd(requestId!,0);
+            // Only the first in-flight request may own this GUID. Never send a
+            // duplicate to the original worker or remove the first receipt.
+            if (!_creativePending.TryAdd(requestId!,0))
+            {
+                WriteLog("CREATIVE_DUPLICATE_REQUEST_ID");
+                return;
+            }
             var worker=await EnsureCreativeWorkerAsync();
             var line=JsonSerializer.Serialize(new {request_id=requestId,payload});
             await _creativeWriteGate.WaitAsync();
