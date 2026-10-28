@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import {projectSpaceView,projectReadiness,projectFeeds,projectHardware,projectCorePersona,
   projectCanonicalEvents,LOCKED_BASELINE,EVENT_SCHEMA} from './E05SpaceReadOnlyProjection.mjs';
 const NOW=Date.parse('2026-10-28T03:45:00Z');
-const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R02';
+const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R03';
 const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,manifest_sha256:H,receipt_sha256:H});
 const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:44:58Z',
   native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
     {executor:6,stage:'HOLD',percent:null},{executor:7,stage:'NOT_RUN',percent:null}]),overall:28};
+const terminalEvent=(type,state)=>({schema:EVENT_SCHEMA,run_id:RUN,event_id:'evt-001',
+  event_type:type,task_id:'G1-05-09',package_id:'P05',action_id:'stop',
+  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',evidence_verified:false});
 const feed={id:'weather',provider:'approved',license_status:'APPROVED',license_receipt_sha256:H,
   status:'LIVE',source_at_utc:'2026-10-28T03:44:00Z',fetched_at_utc:'2026-10-28T03:44:50Z',
   ttl_ms:60000,parsed_by_owner:true,value:14};
@@ -47,15 +50,111 @@ test('ECB date is labeled historical observation, not market tick',()=>{
   const f=projectFeeds([{...feed,id:'eur-usd',observation_date:'2026-10-27'}],NOW)[0];assert.equal(f.observedKind,'ECB_OBSERVATION_DATE');
 });
 test('same-run STOP event is recognized without progress',()=>{
-  const e={schema:EVENT_SCHEMA,run_id:RUN,event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
+  const e=terminalEvent('model.stopped','STOPPED');
   assert.deepEqual(projectCanonicalEvents([e],RUN,NOW),{state:'STOPPED',errors:0});
 });
 test('foreign STOP cannot stop another RunID',()=>{
-  const e={schema:EVENT_SCHEMA,run_id:'OTHER',event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
+  const e={...terminalEvent('model.stopped','STOPPED'),run_id:'OTHER'};
   assert.equal(projectCanonicalEvents([e],RUN,NOW).state,'N_D');
 });
 test('Drive readback never claimed without same-run proof',()=>{
   const v=projectSpaceView({run_id:RUN,drive:{run_id:'OTHER',status:'READBACK_PASS',receipt_sha256:H}},NOW);
   assert.equal(v.driveReadback,'HOLD');assert.equal(v.readiness.overall,null);
 });
-console.log('PASSED '+n+'/18 source-level Node assertions; Windows native/EXE NOT_RUN');
+test('STOP requires full canonical event schema (not a UI hint)',()=>{
+  const bad={schema:EVENT_SCHEMA,run_id:RUN,event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
+  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'N_D');
+});
+test('STOP with wrong canonical state is rejected',()=>{
+  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'N_D');
+});
+test('failed task with wrong state is rejected',()=>{
+  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,0);
+});
+test('duplicate event_id does not double-count failures',()=>{
+  const e=terminalEvent('task.failed','ERROR');
+  assert.deepEqual(projectCanonicalEvents([e,e],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('out of order event arrival cannot overwrite newer ERROR with older STOP',()=>{
+  const old=terminalEvent('model.stopped','STOPPED');
+  const newer={...terminalEvent('task.failed','ERROR'),event_id:'new-error',timestamp_utc:'2026-10-28T03:44:59Z'};
+  assert.deepEqual(projectCanonicalEvents([newer,old],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('later legitimate STOP preserves count of earlier errors',()=>{
+  const old=terminalEvent('task.failed','ERROR');
+  const newer={...terminalEvent('model.stopped','STOPPED'),event_id:'new-stop',timestamp_utc:'2026-10-28T03:44:59Z'};
+  assert.deepEqual(projectCanonicalEvents([newer,old],RUN,NOW),{state:'STOPPED',errors:1});
+});
+test('future dated terminal event cannot control current state',()=>{
+  assert.equal(projectCanonicalEvents([{...terminalEvent('task.failed','ERROR'),timestamp_utc:'2026-10-28T03:45:01Z'}],RUN,NOW).state,'N_D');
+});
+test('impossible observation date fails source-time admission',()=>{
+  const f=projectFeeds([{...feed,id:'eur-usd',observation_date:'2026-02-30'}],NOW)[0];
+  assert.equal(f.observedKind,'SOURCE_TIMESTAMP');assert.equal(f.stage,'N_D');
+});
+test('impossible source timestamp invalidates the feed',()=>{
+  const f=projectFeeds([{...feed,source_at_utc:'2026-02-30T03:44:00Z'}],NOW)[0];
+  assert.equal(f.stage,'N_D');
+});
+const trustedSensor={key:'cpu.system.percent',value:39,source:'windows-perfcounter',unit:'%',status:'LIVE',
+  observed_at_utc:'2026-10-28T03:44:58Z'};
+const trustedFrame={run_id:RUN,polled_utc:'2026-10-28T03:44:59Z',state:'PARTIAL_OR_LIVE',sensors:[trustedSensor]};
+test('foreign host frame never borrows current-run sensor values',()=>{
+  assert.equal(projectSpaceView({run_id:RUN,hardware:{...trustedFrame,run_id:'OTHER'}},NOW).hardware['cpu.system.percent'].value,null);
+});
+test('fresh same-run native sensor frame may display value',()=>{
+  assert.equal(projectSpaceView({run_id:RUN,hardware:trustedFrame},NOW).hardware['cpu.system.percent'].value,39);
+});
+test('stale host polled timestamp invalidates even fresh individual sensor',()=>{
+  const old={...trustedFrame,polled_utc:'2026-10-28T03:40:00Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:old},NOW).hardware['cpu.system.percent'].value,null);
+});
+test('foreign run market/feed snapshot is never displayed',()=>{
+  const f=projectSpaceView({run_id:RUN,feeds:[{...feed,run_id:'OTHER'}]},NOW);
+  assert.equal(f.feeds.length,0);
+});
+test('same-run approved market/feed snapshot is displayed only as source-dated',()=>{
+  const f=projectSpaceView({run_id:RUN,feeds:[{...feed,run_id:RUN}]},NOW);
+  assert.equal(f.feeds[0].stage,'SOURCE_DATED');
+});
+test('foreign run CoreID snapshot fails closed',()=>{
+  const c={run_id:'OTHER',owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'c'+i),
+    approved_persona_ids:Array.from({length:5},(_,i)=>'p'+i),core_ids:[],personas:[]};
+  assert.equal(projectSpaceView({run_id:RUN,core:c},NOW).core.stage,'N_D');
+});
+test('E06 integration bar requires a real receipt and exact immutable source tree',()=>{
+  const forged={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,stage:'INTEGRATED'}:x)};
+  assert.equal(projectReadiness(forged,RUN,NOW).bars[5].stage,'HOLD');
+});
+test('E06 native integration seal is separate from numeric weighting',()=>{
+  const r={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:x)};
+  const o=projectReadiness(r,RUN,NOW);
+  assert.equal(o.bars[5].stage,'INTEGRATED'); assert.equal(o.overall,28);
+});
+test('E07 Windows ACCEPTED is impossible without a same-EXE SHA and build_id',()=>{
+  const a={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:
+    x.executor===7?{...x,stage:'WINDOWS_ACCEPTED'}:x)};
+  assert.equal(projectReadiness(a,RUN,NOW).bars[6].stage,'NOT_RUN');
+});
+test('E07 Windows accepted metadata must match E06 frozen one binary',()=>{
+  const a={...readiness,build_id:'EXE-1',exe_sha256:H,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:
+    x.executor===7?{...x,stage:'WINDOWS_ACCEPTED',receipt_sha256:H,build_id:'EXE-1',exe_sha256:H}:x)};
+  assert.equal(projectReadiness(a,RUN,NOW).bars[6].stage,'WINDOWS_ACCEPTED');
+  assert.equal(projectReadiness({...a,exe_sha256:'b'.repeat(64)},RUN,NOW).bars[6].stage,'NOT_RUN');
+});
+test('untrusted TTL strings never unlock numeric feed values',()=>{
+  assert.equal(projectFeeds([{...feed,ttl_ms:'60000'}],NOW)[0].stage,'N_D');
+});
+test('approved USD/EUR inverse source is recognized but not invented',()=>{
+  const f=projectFeeds([{...feed,id:'usd-eur',observation_date:'2026-10-27',value:0.87}],NOW)[0];
+  assert.equal(f.observedKind,'ECB_OBSERVATION_DATE');assert.equal(f.value,0.87);
+});
+test('same-second ERROR wins over STOP so errors cannot be hidden by arrival order',()=>{
+  const stop=terminalEvent('model.stopped','STOPPED');
+  const fail={...terminalEvent('task.failed','ERROR'),event_id:'same-time-error'};
+  assert.equal(projectCanonicalEvents([fail,stop],RUN,NOW).state,'ERROR');
+});
+console.log('PASSED '+n+' source-level Node assertions; Windows native/EXE NOT_RUN');
