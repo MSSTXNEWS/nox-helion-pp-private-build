@@ -31,6 +31,36 @@ jobs:
         run: |
           node --test proposals/NOX-WOW51-100/sha256.test.mjs
           if ($LASTEXITCODE -ne 0) {throw 'WOW51_SOURCE_RECEIPT_DRIFT'}
+      - name: Checkout exact first fifty UI and routes (PACK01)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: f06432bb747d10f42c64ebb9c3d2cadd7b61d071
+          path: owner-pack01
+      - name: Checkout exact second fifty offline tools (PACK02)
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: 002e387621b3058f42d96739b270e5fac7afd6be
+          path: owner-pack02
+      - name: Cross-check all 100 function routes and all 150 WOW source IDs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $p1=Get-Content owner-pack01/proposals/NOX-PACK01-50/catalog.json -Raw | ConvertFrom-Json
+          $p2=Get-Content owner-pack02/proposals/NOX-PACK02-50/catalog.json -Raw | ConvertFrom-Json
+          $ledger=Get-Content owner-pack01/proposals/NOX-PACK01-50/owner-binding-map.json -Raw | ConvertFrom-Json
+          if($p1.actions.Count -ne 50 -or $p2.actions.Count -ne 50){throw 'FUNCTION_COUNT_DRIFT'}
+          $ids=@($p1.actions | ForEach-Object { $_.routeId }) + @($p2.actions | ForEach-Object { $_.routeId })
+          if(@($ids | Sort-Object -Unique).Count -ne 100){throw 'CROSS_PACK_ROUTE_COLLISION'}
+          $tasks=@($p1.actions | ForEach-Object { $_.taskId }) + @($p2.actions | ForEach-Object { $_.taskId })
+          if(@($tasks | Sort-Object -Unique).Count -ne 100){throw 'CROSS_PACK_TASK_COLLISION'}
+          if($ledger.counts.sourceOwnerMethodBound -ne 37 -or $ledger.counts.releaseAccepted -ne 0){throw 'OWNER_LEDGER_DRIFT'}
+          node --test owner-pack01/proposals/NOX-PACK01-50/smoke.test.mjs owner-pack01/proposals/NOX-PACK01-50/binding_map.test.mjs
+          if($LASTEXITCODE -ne 0){throw 'PACK01_ORIGINAL_TESTS_FAILED'}
+          node --test owner-pack02/proposals/NOX-PACK02-50/smoke.test.mjs owner-pack02/proposals/NOX-PACK02-50/golden.test.mjs owner-pack02/proposals/NOX-PACK02-50/receipt.test.mjs
+          if($LASTEXITCODE -ne 0){throw 'PACK02_ORIGINAL_TESTS_FAILED'}
+          Write-Host 'NOX_CROSS_PACK_SOURCE_PASS: 100 unique function routes + 150 cinematic source IDs; EXE not accepted'
       - name: Create SHA256 receipts for new additive files
         shell: pwsh
         run: |
