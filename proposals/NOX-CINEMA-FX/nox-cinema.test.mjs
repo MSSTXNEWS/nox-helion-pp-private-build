@@ -41,7 +41,7 @@ function fakeScene(){
   const handlers=new Map();
   const frames=new Map();
   let nextFrame=0,now=0,hidden=false;
-  const mediaHandlers=[];
+  const mediaHandlers=[],observers=[];
   const media={matches:false,addEventListener(n,fn){mediaHandlers.push(fn);},
     removeEventListener(n,fn){let i=mediaHandlers.indexOf(fn);if(i>=0)mediaHandlers.splice(i,1);}};
   const win={performance:{now:()=>now},
@@ -49,6 +49,7 @@ function fakeScene(){
     cancelAnimationFrame(id){frames.delete(id);},
     matchMedia(){return media;}
   };
+  win.IntersectionObserver=class {constructor(cb){this.cb=cb;observers.push(this);} observe(){} disconnect(){}};
   const doc={defaultView:win,hidden,
     createElement(tag){return new FakeElement(doc,tag);},
     createElementNS(ns,tag){return new FakeElement(doc,tag);},
@@ -73,6 +74,7 @@ function fakeScene(){
       handlers.get("visibilitychange")?.();
     },
     reduced(value){media.matches=value;for(const fn of [...mediaHandlers])fn({matches:value});},
+    intersect(value){for(const ob of observers)ob.cb([{isIntersecting:value}]);},
     get pending(){return frames.size;}};
 }
 
@@ -133,7 +135,7 @@ test("fail closed on duplicate mount, untrusted data, unknown CoreID",()=>{
   const x=installNoxCinemaFX({root:o.root,orbs:o.orbs});
   assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs}),/ALREADY_MOUNTED/);
   assert.equal(x.setState("training","RUN-123","CORE_2"),true);
-  assert.equal(o.orbs[2].element.dataset.noxState,"training");
+  assert.equal(o.orbs[2].element.dataset.noxFxState,"training");
   assert.equal(x.setState("training","bad/../run"),false);
   assert.equal(x.setState("learning"),false);
   assert.equal(x.setState("training","RUN-123","unknown"),false);
@@ -152,7 +154,7 @@ test("hidden tab, ECO, reduced motion stop animation and release particles",()=>
   assert.equal(o.root.dataset.noxFxVisible,"true");
   assert.ok(o.pending>0);
   assert.equal(scene.setProfile("ECO"),true);
-  assert.equal(o.root.dataset.noxMode,"eco");
+  assert.equal(o.root.dataset.noxFxMode,"eco");
   assert.equal(scene.setProfile("REDUCED"),true);
   assert.equal(o.pending,0);
   assert.equal(scene.snapshot().profile,"REDUCED");
@@ -168,12 +170,12 @@ test("host state applies only from explicitly approved subscription and unsubscr
   const events={subscribe(fn){handler=fn;return()=>{unsubscribed=true;}}};
   const scene=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:events});
   handler({trusted:false,state:"training",runId:"fake"});
-  assert.equal(o.root.dataset.noxState,"idle");
+  assert.equal(o.root.dataset.noxFxState,"idle");
   handler({trusted:true,state:"training",runId:"RUN-2",coreId:"CORE_1"});
-  assert.equal(o.orbs[1].element.dataset.noxState,"training");
-  assert.equal(o.root.dataset.noxState,"idle");
+  assert.equal(o.orbs[1].element.dataset.noxFxState,"training");
+  assert.equal(o.root.dataset.noxFxState,"idle");
   handler({trusted:true,state:"streaming",runId:"RUN-2"});
-  assert.equal(o.root.dataset.noxState,"streaming");
+  assert.equal(o.root.dataset.noxFxState,"streaming");
   assert.equal(scene.snapshot().stateRunId,"RUN-2");
   scene.destroy();
   assert.equal(unsubscribed,true);
@@ -185,4 +187,32 @@ test("no additional GPU/API engines or dangerous process hooks in FX code",async
   assert.equal(js.includes("innerHTML"),false);
   assert.equal(js.includes("child_process"),false);
   assert.equal(js.includes("setInterval"),false);
+});
+
+test("host mode and state survive profile, events and teardown",()=>{
+ const o=fakeScene();o.root.dataset.noxMode="HOST_BALANCED";o.root.dataset.noxState="HOST_RUNNING";o.orbs[0].element.dataset.noxState="OWNER_LLM";
+ const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs});assert.equal(fx.setProfile("ECO"),true);assert.equal(fx.setState("training","R-1"),true);
+ assert.equal(o.root.dataset.noxFxMode,"eco");assert.equal(o.root.dataset.noxMode,"HOST_BALANCED");assert.equal(o.root.dataset.noxState,"HOST_RUNNING");assert.equal(o.orbs[0].element.dataset.noxState,"OWNER_LLM");
+ fx.destroy();assert.equal(o.root.dataset.noxMode,"HOST_BALANCED");assert.equal(o.root.dataset.noxState,"HOST_RUNNING");assert.equal(o.root.dataset.noxFxMode,undefined);
+});
+test("late observer and visibility cannot revive disposed renderer",()=>{
+ const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs});o.intersect(false);assert.equal(o.root.dataset.noxFxVisible,"false");
+ fx.destroy();o.intersect(true);o.visibility(false);o.visibility(true);assert.equal(o.root.dataset.noxFxVisible,undefined);assert.equal(o.pending,0);
+ assert.equal(fx.setState("training","R-2"),false);assert.equal(fx.setProfile("MAX"),false);assert.equal(fx.setVisible(true),false);
+});
+test("late native event after unsubscribe cannot mutate disposed FX",()=>{
+ const o=fakeScene();let notify;const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:{subscribe(fn){notify=fn;return()=>{};}}});
+ fx.destroy();notify({trusted:true,state:"training",runId:"R-3"});assert.equal(o.root.dataset.noxFxState,undefined);
+});
+test("failed subscribe rolls back FX but preserves owner fields",()=>{
+ const o=fakeScene();o.root.dataset.noxMode="OWNER";o.root.dataset.noxState="RUNNING";
+ assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:{subscribe(){throw new Error("SUBSCRIBE_FAILED");}}}),/SUBSCRIBE_FAILED/);
+ assert.equal(o.root.dataset.noxMode,"OWNER");assert.equal(o.root.dataset.noxState,"RUNNING");assert.equal(o.root.classList.contains("nox-cinema-scope"),false);
+});
+test("saved CSS matches FX namespace, scoped motion and stable click targets",async()=>{
+ const fs=await import("node:fs");const s=fs.readFileSync(new URL("./nox-cinema.css",import.meta.url),"utf8");
+ assert.equal(s.includes("[data-nox-mode="),false);assert.equal(s.includes("[data-nox-state="),false);
+ assert.equal(s.includes(".nox-cinema-scope *,"),false);
+ assert.equal(s.includes('.nox-cinema-control[data-nox-float="true"]::before'),true);
+ assert.equal(s.includes('[data-nox-fx-mode="eco"]'),true);
 });
