@@ -133,6 +133,18 @@ SectionEnd
 
 Function RestorePrevious
   SetOutPath "$TEMP"
+  ; Reuse install path/ownership checks, including parents above the backup root.
+  ; Recovery must not require an available WebView2 runtime.
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\Preflight-InstallPath.ps1" "${PREFLIGHT_SCRIPT}"
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Preflight-InstallPath.ps1" -InstallRoot "$INSTDIR" -PathOnly'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    SetErrorLevel 2
+    Abort "Rollback path or ownership preflight failed. No application directories moved."
+  ${EndIf}
   IfFileExists "$BackupDir\nox-p01-owned.txt" 0 NoPrevious
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 NoCurrent
   IfFileExists "$StageDir" 0 +2

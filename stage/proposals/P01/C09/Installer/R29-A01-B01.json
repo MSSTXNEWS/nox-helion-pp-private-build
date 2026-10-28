@@ -1,0 +1,28 @@
+{
+  "run_id": "ASTRA-R29-A01-B01-20261029",
+  "owner": "A01/P01",
+  "parent": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "task": "P01 install/update/rollback/uninstall safety",
+  "block": "Rollback validates install ancestors and current ownership before renames; skips only runtime prerequisite.",
+  "preimages": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "sha": "87d901c3846359a91be3e8288f24302cc7060257"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "sha": "eb45add5a929eee99bc09ef87f2db3735556b78b"
+    }
+  ],
+  "tests": {
+    "source_contract": "RED 2 failures; GREEN 2 passed",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/Installer -p test_rollback_preflight_contract.py -v",
+    "native_windows": "NOT_RUN: no PowerShell/pwsh/dotnet in environment; Test-RollbackPreflight.ps1 saved",
+    "nsis_build": "NOT_RUN, prohibited"
+  },
+  "completed_megablocks": 1,
+  "approaches_complete": [],
+  "product_done": false,
+  "lesson": "Rollback shares path and ownership validation with installation, while prerequisite availability must not block recovery.",
+  "remaining": "Native Windows function regression; full P01 task closure remains unproved."
+}

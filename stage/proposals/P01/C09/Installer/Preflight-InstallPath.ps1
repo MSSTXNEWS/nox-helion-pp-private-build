@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$InstallRoot)
+param(
+  [Parameter(Mandatory=$true)][string]$InstallRoot,
+  [switch]$PathOnly
+)
 $ErrorActionPreference = 'Stop'
 $expected = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION'))
 $root = [IO.Path]::GetFullPath($InstallRoot)
@@ -30,6 +33,11 @@ if (Test-Path -LiteralPath $root -PathType Container) {
   $markerItem=Get-Item -LiteralPath $marker -Force -ErrorAction Stop
   if (($markerItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_INSTALL_MARKER_REPARSE' }
   if ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -cne 'NOXHELION.P01 V16') { throw 'P01_INSTALL_MARKER_INVALID' }
+}
+# Rollback needs identical path/ownership guards even when the runtime is unavailable.
+if ($PathOnly) {
+  'P01_PATH_PREFLIGHT_PASS'
+  return
 }
 # Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence.
 $regPaths = @(
