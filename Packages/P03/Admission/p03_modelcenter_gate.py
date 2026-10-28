@@ -246,6 +246,8 @@ def admit_for_existing_downloader(
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")
+    if type(evidence.get("requiresGPU")) is not bool:
+        reasons.append("GPU_REQUIREMENT_FLAG_UNVERIFIED")
     if not callable(trusted_attestor):
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
@@ -393,6 +395,9 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
     before, after = previous.get("state"), update.get("state")
     if not isinstance(before, str) or before not in _QUEUE_STATES:
         reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
+        # Preserve all other diagnostics while preventing an IPC array/object
+        # from reaching hash-table membership below and raising TypeError.
+        before = None
     if isinstance(after, str) and after in {"STOP", "CANCEL", "PAUSE", "RETRY"}:
         reasons.append("REQUEST_NOT_SERVER_CONFIRMED")
         if after == "STOP":
@@ -490,7 +495,9 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
         if not (_nonempty_id(previous.get(key)) and previous.get(key) == new_job.get(key)):
             reasons.append("RETRY_NATIVE_SESSION_MISMATCH")
             break
-    if new_job.get("eventSequence") != 1 or not _positive(previous.get("eventSequence")):
+    if (type(new_job.get("eventSequence")) is not int
+            or new_job.get("eventSequence") != 1
+            or not _positive(previous.get("eventSequence"))):
         reasons.append("RETRY_SEQUENCE_NOT_RESET")
     # Original P03 RetryAsync intentionally clears TotalBytes and
     # CompletedBytes to null. A queued retry has no verified bytes yet.
