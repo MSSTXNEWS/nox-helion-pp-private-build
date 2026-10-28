@@ -6,6 +6,7 @@ proposal: it cannot activate until the original whole-app SourceLock is sealed.
 """
 from __future__ import annotations
 
+import json
 import math
 import re
 from datetime import datetime, timezone
@@ -259,6 +260,22 @@ class PrivateMobileContract:
                             and advertised[r].get("enabled") is True]}
 
 
+def _frozen_event_wire(event: dict) -> tuple[str, dict]:
+    """Bounded JSON-only snapshot shared across attestation and publication."""
+    try:
+        wire = json.dumps(event, ensure_ascii=False, allow_nan=False,
+                          sort_keys=True, separators=(",", ":"))
+        if len(wire.encode("utf-8")) > 8192:
+            raise G2Denied("Unbounded events.v3 envelope")
+        canonical = json.loads(wire)
+        if canonical != event:
+            raise G2Denied("Noncanonical JSON events.v3 payload")
+    except (TypeError, ValueError, OverflowError, RecursionError,
+            UnicodeError) as exc:
+        raise G2Denied("Non-JSON or invalid events.v3 payload") from exc
+    return wire, canonical
+
+
 def relay_existing_events_v3(event: dict, *, run_id: str,
                              trusted_owner: Callable[[], bool],
                              existing_publish: Callable[[dict], bool],
@@ -266,34 +283,35 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
     """One existing host events.v3 publisher. No bus, queue or invented event."""
     if not callable(trusted_owner) or trusted_owner() is not True:
         raise G2Hold("Existing events.v3 SourceLock not admitted")
-    if not callable(existing_publish) or not isinstance(event, dict):
+    if not callable(existing_publish) or type(event) is not dict:
         raise G2Hold("Canonical existing publisher required")
+    wire, frozen = _frozen_event_wire(event)
     required = ("schema", "run_id", "event_id", "event_type", "task_id",
                 "package_id", "action_id", "timestamp_utc", "state",
                 "source", "message", "evidence_verified")
-    if (not all(k in event for k in required) or event.get("schema") !=
-            "NOX-INSTALLER-EVENT-v3" or event.get("run_id") != run_id
-            or event.get("event_type") not in EVENT_TYPES
-            or event.get("state") not in EVENT_STATES
-            or type(event.get("evidence_verified")) is not bool
-            or not isinstance(event.get("message"), str)
-            or len(event["message"]) > 480
-            or not _stamp(event.get("timestamp_utc"))
-            or any(not isinstance(event.get(k), str) or
-                   not 0 < len(event[k]) <= 240
+    if (not all(k in event for k in required) or frozen.get("schema") !=
+            "NOX-INSTALLER-EVENT-v3" or frozen.get("run_id") != run_id
+            or frozen.get("event_type") not in EVENT_TYPES
+            or frozen.get("state") not in EVENT_STATES
+            or type(frozen.get("evidence_verified")) is not bool
+            or not isinstance(frozen.get("message"), str)
+            or len(frozen["message"]) > 480
+            or not _stamp(frozen.get("timestamp_utc"))
+            or any(not isinstance(frozen.get(k), str) or
+                   not 0 < len(frozen[k]) <= 240
                    for k in ("event_id", "task_id", "package_id",
                              "action_id", "source"))):
         raise G2Denied("Invalid canonical events.v3 envelope")
-    if event["event_type"] in ("cpu.sample", "telemetry.snapshot"):
+    if frozen["event_type"] in ("cpu.sample", "telemetry.snapshot"):
         raise G2Denied("No unapproved events.v3 sensor type")
-    if event.get("numerator") is not None or event.get("denominator") is not None:
-        n, d = event.get("numerator"), event.get("denominator")
+    if frozen.get("numerator") is not None or frozen.get("denominator") is not None:
+        n, d = frozen.get("numerator"), frozen.get("denominator")
         if type(n) is not int or type(d) is not int or not 0 <= n <= d or d <= 0:
             raise G2Denied("Evidence numerator/denominator must be bounded integers")
     # Untrusted event.evidence_verified flag is never a native receipt.
-    if event["evidence_verified"] is True:
+    if frozen["evidence_verified"] is True:
         try:
-            attested = callable(trusted_evidence) and trusted_evidence(dict(event)) is True
+            attested = callable(trusted_evidence) and trusted_evidence(json.loads(wire)) is True
             still_sealed = trusted_owner() is True
         except Exception as exc:
             raise G2Hold("Native event evidence verification failed") from exc
@@ -306,7 +324,13 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
         raise G2Hold("SourceLock check failed immediately before publish") from exc
     if not still_sealed:
         raise G2Hold("SourceLock revoked before existing events.v3 publish")
-    return existing_publish(dict(event)) is True
+    # No foreign/native callback may change the checked bytes before publish.
+    try:
+        if _frozen_event_wire(event)[0] != wire:
+            raise G2Hold("events.v3 changed during native attestation")
+    except G2Denied as exc:
+        raise G2Hold("events.v3 became invalid during native attestation") from exc
+    return existing_publish(json.loads(wire)) is True
 
 
 class G2OneHostBinder:
