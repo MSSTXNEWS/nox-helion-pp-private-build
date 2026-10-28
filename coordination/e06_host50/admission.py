@@ -414,6 +414,7 @@ class Host50Admission:
             native_device_permission(session,route) is not True):
             raise Denied("NATIVE_MIC_OR_SIP_PERMISSION_REQUIRED")
         file_info = None
+        file_ticket_bytes = None
         if route in PICKER_ROUTES:
             if not callable(native_file_picker):
                 raise Hold("NATIVE_FILE_PICKER_MISSING")
@@ -421,10 +422,16 @@ class Host50Admission:
             if (not isinstance(file_info,NativeFileSelection) or
                 file_info.tenant != session.tenant or file_info.principal != session.principal or
                 file_info.chat != session.chat or
-                not isinstance(file_info.ticket,str) or not 16<=len(file_info.ticket)<=256 or
-                not SHA256.fullmatch(file_info.sha256) or
+                type(file_info.ticket) is not str or not 16<=len(file_info.ticket)<=256 or
+                type(file_info.sha256) is not str or not SHA256.fullmatch(file_info.sha256) or
                 type(file_info.size_bytes) is not int or not 0<file_info.size_bytes<=20000000000):
                 raise Denied("UNTRUSTED_NATIVE_FILE_SELECTION")
+            # A native picker is a trust boundary too. Never let malformed wire
+            # text escape as a raw UnicodeEncodeError or create a pending action.
+            try:
+                file_ticket_bytes = file_info.ticket.encode("utf-8")
+            except UnicodeError as exc:
+                raise Denied("UNTRUSTED_NATIVE_FILE_SELECTION") from exc
         if route in STOP_ROUTES:
             run_id = request.get("runId")
             if not isinstance(run_id,str):
@@ -465,7 +472,7 @@ class Host50Admission:
                   "targetRunId":request.get("runId") if route in STOP_ROUTES else None,
                   "fileSha256":file_info.sha256 if file_info else None,
                   # Native opaque ticket is NOT returned to the WebView2 page.
-                  "fileTicketSha256":hashlib.sha256(file_info.ticket.encode("utf-8")).hexdigest()
+                  "fileTicketSha256":hashlib.sha256(file_ticket_bytes).hexdigest()
                       if file_info else None,
                   "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
         with self._pending_lock:
