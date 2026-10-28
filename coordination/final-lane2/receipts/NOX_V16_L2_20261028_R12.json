@@ -1,0 +1,41 @@
+{
+  "schema": "NOX-V16-FINAL-L2-OWNER-RECEIPT-v1",
+  "task_id": "V16.26.6/P04-NO-NVIDIA-GPU-HOLD",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R12",
+  "date": "2026-10-28",
+  "branch": "fix/lane2-p04-gpu-prereq-hold-20261028-r12",
+  "base_head": "c42cd9fbdff01aa8cef216b0d10dc956aba2fd43",
+  "product_mutation_scope": "one existing P04 worker and one new P04 test, no shared PR #162 writes",
+  "source": {
+    "path": "Packages/P04/train_qlora.py",
+    "pre_blob_sha1": "c6691dec2627b8012e54313c0eb49fe0f3cb2c21",
+    "post_blob_sha1": "bc319e3a65273f20d8498c9de4df1e0ba15a8407",
+    "pre_sha256": "85480347374d77ee916932788ceae99631754db4297e819054aff26a3a98f838",
+    "post_sha256": "bb143c1b7aaadba2575a588654b4db186f812f7644c1ea6d511b83f579b7ae30",
+    "commit": "09abe71028316db864a740669748ff1c02cb4f56",
+    "change": "Add NO_NVIDIA_GPU_FOUND to existing fail-closed HOLD classification only."
+  },
+  "regression": {
+    "path": "tests/P04/test_training_failure_status.py",
+    "pre_sha256": null,
+    "post_sha256": "0328c1406d4858b024db290e15f929545b1af3f66b95371eaec3df0f220cb5bd",
+    "post_blob_sha1": "1bf24598047c01fd6d2ffa807ff9cf8d8ca58b2c",
+    "commit": "dc9547912632383f288f7437bcef4fcf7d7105ef",
+    "tests": "Python test file created in owner branch, whole production module test NOT_RUN due to no checkout/runner."
+  },
+  "local_evidence": {
+    "kind": "exact-function excerpt copied from live GitHub readback",
+    "python_unittest": "2 tests PASS; 11 positive/negative subcases",
+    "python_compile": "PASS",
+    "gpu_training": "NOT_RUN",
+    "real_windows": "NOT_RUN",
+    "integration_ci": "NOT_RUN"
+  },
+  "other_gates": {
+    "source_lock_729": "HOLD",
+    "onehost_exe": "HOLD",
+    "e07_windows": "0/10 NOT_RUN"
+  },
+  "single_improvement": "LIVE_OWNER_BLOB_RECHECK_BEFORE_PATCH: original three reported classifications were fixed concurrently; discovered and patched only the remaining NO_NVIDIA_GPU_FOUND case.",
+  "handoff": "manual #1 must confirm latest PR162 owner blob preimage and only then serially admit two files into PR162; Windows acceptance separate."
+}
