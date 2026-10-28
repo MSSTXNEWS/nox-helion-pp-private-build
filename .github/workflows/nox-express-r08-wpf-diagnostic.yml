@@ -1,0 +1,111 @@
+name: NOX EXPRESS R08 Windows WPF diagnostic
+on:
+  push:
+    branches:
+      - e06/express-finish-wpf-diagnostic-20261028
+    paths:
+      - .github/workflows/nox-express-r08-wpf-diagnostic.yml
+      - proposals/E06/express/**
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nox-express-r08-wpf-\${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    steps:
+      - name: Checkout immutable GitHub source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Official .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate R08 original snapshot and extract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip='proposals/E06/express/NOX_R08_WPF_DIAG_CODE_ONLY.zip'
+          $expected='fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9'
+          if (!(Test-Path -LiteralPath $zip -PathType Leaf)) { throw 'R08_PINNED_SOURCE_MISSING' }
+          $observed=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($observed -cne $expected) { throw 'R08_PINNED_SOURCE_SHA256_MISMATCH' }
+          $root=Join-Path $env:RUNNER_TEMP 'NOX_R08_WPF_DIAGNOSTIC'
+          if (Test-Path -LiteralPath $root) { throw 'R08_DIAG_TEMP_ALREADY_EXISTS' }
+          New-Item -ItemType Directory -Path $root | Out-Null
+          Expand-Archive -LiteralPath $zip -DestinationPath $root
+          $manifest=Get-Content -LiteralPath (Join-Path $root 'EXPRESS_SOURCE_MANIFEST.json') -Raw | ConvertFrom-Json
+          if ($manifest.schema -cne 'NOX_EXPRESS_R08_ORIGINAL_SOURCE_INVENTORY_V1' -or $manifest.original_full_zip_sha256 -cne '67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689' -or $manifest.omitted_bytes_still_preserved_in_original -ne $true) { throw 'R08_DIAG_MANIFEST_INVALID' }
+          $checked=0
+          foreach ($f in $manifest.files) {
+            if ($f.in_compile_subset -ne $true) { continue }
+            $path=[string]$f.path
+            if ($path -notmatch '^R11/[A-Za-z0-9._/\-]+$' -or $path.Contains('..')) { throw 'R08_DIAG_BAD_PATH' }
+            $target=Join-Path $root ($path.Replace('/','\'))
+            if (!(Test-Path -LiteralPath $target -PathType Leaf)) { throw "R08_DIAG_MISSING_FILE:$path" }
+            if ((Get-Item -LiteralPath $target).Length -ne [int64]$f.bytes) { throw "R08_DIAG_SIZE_MISMATCH:$path" }
+            if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$f.sha256) { throw "R08_DIAG_FILE_SHA_MISMATCH:$path" }
+            $checked++
+          }
+          if ($checked -lt 90) { throw "R08_DIAG_INCOMPLETE_SOURCE:$checked" }
+          'NOX_R08_DIAG_SOURCE_SHA_PASS '+$checked | Tee-Object -FilePath (Join-Path $root 'SOURCE_SEAL.txt')
+          "NOX_R08_DIAG_ROOT=$root" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Restore official WebView2 NuGet dependency
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $proj=Join-Path $env:NOX_R08_DIAG_ROOT 'R11/NOX.P01.Shell.csproj'
+          dotnet restore $proj --runtime win-x64 --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'R08_DOTNET_RESTORE_FAILED' }
+      - name: Build existing WPF/WebView2 host
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $proj=Join-Path $env:NOX_R08_DIAG_ROOT 'R11/NOX.P01.Shell.csproj'
+          $log=Join-Path $env:NOX_R08_DIAG_ROOT 'wpf-build.log'
+          dotnet build $proj --configuration Release --runtime win-x64 --no-restore --verbosity normal *> $log
+          $code=$LASTEXITCODE
+          Get-Content -LiteralPath $log -Tail 110
+          if ($code -ne 0) { throw 'R08_WPF_BUILD_FAILED' }
+          Write-Host 'R08_WPF_DIAGNOSTIC_COMPILE_PASS_NOT_PRODUCT_RELEASE'
+      - name: Publish diagnostic WPF candidate and exact evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $proj=Join-Path $env:NOX_R08_DIAG_ROOT 'R11/NOX.P01.Shell.csproj'
+          $published=Join-Path $env:RUNNER_TEMP 'NOX_R08_WPF_DIAG_PUBLISH'
+          dotnet publish $proj -c Release -r win-x64 --self-contained false --no-restore -p:PublishSingleFile=false -p:PublishTrimmed=false -o $published --verbosity minimal
+          if ($LASTEXITCODE -ne 0) { throw 'R08_WPF_DIAGNOSTIC_PUBLISH_FAILED' }
+          $exe=Join-Path $published 'NOX.P01.Shell.exe'
+          if (!(Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'R08_PUBLISHED_ENTRYPOINT_MISSING' }
+          New-Item -ItemType Directory -Path 'ci-evidence' -Force | Out-Null
+          [ordered]@{
+            schema='NOX_V16_E06_R08_WPF_DIAGNOSTIC_V1'
+            git_commit=$env:GITHUB_SHA
+            run_id=$env:GITHUB_RUN_ID
+            source_zip_sha256='fbeab580b90930e93f80ea83bea610a034f3411f00f3433b2e688d5ae0d921a9'
+            original_full_archive_sha256='67ba6deae9b315fbdfcd6f1cc076be68f6e33e1920a8bd829794d12f14573689'
+            exe_sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+            exe_size_bytes=(Get-Item -LiteralPath $exe).Length
+            source='R08 WPF subset, no original D02 images or complete archives in compiled subset'
+            ready_for_integration_review=$true
+            product_complete=$false
+            independent_e07_accepted=$false
+            approved_source_lock=$false
+            real_ai_gpu_sip_tested=$false
+          } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'ci-evidence/nox-r08-wpf-diagnostic.json' -Encoding utf8
+          Write-Host 'R08_DIAGNOSTIC_EXE_SHA256_RECORDED_NOT_FINAL'
+      - name: Preserve diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-r08-wpf-diagnostic-evidence
+          path: |
+            ci-evidence/nox-r08-wpf-diagnostic.json
+            !ci-evidence/**/secrets*
+          if-no-files-found: warn
+          retention-days: 30
