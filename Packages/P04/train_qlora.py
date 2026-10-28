@@ -632,27 +632,53 @@ class EventWriter:
             if not self.path.is_file():
                 raise ValueError("EVENT_LOG_NOT_REGULAR_FILE")
             size = self.path.stat().st_size
+            # Existing event logs use bounded ≤4 KiB NDJSON rows. A normal
+            # source-only run has at most 80 optimizer steps; an unexpectedly
+            # huge resume log requires owner inspection instead of tail trust.
+            if size > 64 * 1024 * 1024:
+                raise ValueError("EVENT_LOG_REVIEW_SIZE_LIMIT")
             if size:
+                seen_event_ids = set()
+                expected_sequence = 1
+                def unique_keys(pairs):
+                    obj = {}
+                    folded = set()
+                    for key, value in pairs:
+                        normalized = unicodedata.normalize("NFC", key).casefold()
+                        if normalized in folded:
+                            raise ValueError("EVENT_LOG_AMBIGUOUS_JSON_KEYS")
+                        folded.add(normalized)
+                        obj[key] = value
+                    return obj
+                # Every historical event must match this exact native run.
+                # One valid tail is not a valid append-only provenance ledger.
                 with self.path.open("rb") as stream:
-                    stream.seek(max(size - 8192, 0))
-                    tail = stream.read(8192)
-                if not tail.endswith(b"\n"):
-                    raise ValueError("EVENT_LOG_INCOMPLETE_TAIL")
-                last = tail.rstrip(b"\n").rsplit(b"\n", 1)[-1]
-                if len(last) > 4096:
-                    raise ValueError("EVENT_LOG_LAST_LINE_TOO_LONG")
-                try:
-                    previous = json.loads(last)
-                except (ValueError, UnicodeDecodeError) as exc:
-                    raise ValueError("EVENT_LOG_LAST_EVENT_INVALID") from exc
-                if (not isinstance(previous, dict)
-                        or previous.get("schema") != EVENT_SCHEMA
-                        or previous.get("run_id") != run_id
-                        or previous.get("task_id") != task_id
-                        or type(previous.get("event_sequence")) is not int
-                        or previous["event_sequence"] < 1):
-                    raise ValueError("EVENT_LOG_RUN_IDENTITY_MISMATCH")
-                self.sequence = previous["event_sequence"]
+                    for line in stream:
+                        if (not line.endswith(b"\\n") or len(line) > 4096
+                                or len(line) <= 1):
+                            raise ValueError("EVENT_LOG_INCOMPLETE_OR_LONG_RECORD")
+                        try:
+                            previous = json.loads(
+                                line, object_pairs_hook=unique_keys,
+                                parse_constant=lambda _: (_ for _ in ()).throw(
+                                    ValueError("EVENT_LOG_NONFINITE_JSON")))
+                        except (ValueError, UnicodeDecodeError, RecursionError) as exc:
+                            raise ValueError("EVENT_LOG_FULL_HISTORY_INVALID") from exc
+                        if (not isinstance(previous, dict)
+                                or previous.get("schema") != EVENT_SCHEMA
+                                or previous.get("run_id") != run_id
+                                or previous.get("task_id") != task_id
+                                or type(previous.get("event_sequence")) is not int
+                                or previous["event_sequence"] != expected_sequence
+                                or not isinstance(previous.get("event_id"), str)
+                                or not re.fullmatch(r"[0-9a-f]{32}", previous["event_id"])
+                                or previous["event_id"] in seen_event_ids):
+                            raise ValueError("EVENT_LOG_FULL_HISTORY_PROVENANCE_HOLD")
+                        seen_event_ids.add(previous["event_id"])
+                        expected_sequence += 1
+                        if expected_sequence > 100001:
+                            raise ValueError("EVENT_LOG_EVENT_COUNT_LIMIT")
+                self.sequence = expected_sequence - 1
 
     @staticmethod
     def clean(message: str) -> str:
