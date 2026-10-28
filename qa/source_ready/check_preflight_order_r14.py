@@ -18,6 +18,56 @@ HANDOFF = "coordination/e06/Emit-E07ImmutableHandoff.ps1"
 APPROVED_HELPER_SHA = "34476faf6b3dbfc6ba1c08009ffe298dd61e799003e26668a07ee91c0256bf41"
 
 
+def _top_level_command_only(source: str, offset: int) -> None:
+    """Conservative source-only check; real PowerShell AST still required on Windows.
+
+    String/comment boundaries are not safely inferable from a line regex alone.
+    Reject here-strings, unfinished quoted text and nested blocks rather than
+    incorrectly treating a literal or unreachable Python command as executed.
+    """
+    prefix = source[:offset]
+    if any(marker in prefix for marker in ("@'", '@"', "'@", '"@')):
+        raise ValueError("E07_PREFLIGHT_HERESTRING_NOT_PROVEN_EXECUTABLE")
+    if '<#' in prefix or '#>' in prefix:
+        raise ValueError("E07_PREFLIGHT_BLOCK_COMMENT_UNVERIFIABLE")
+
+    depth, quote, line_comment = 0, None, False
+    i = 0
+    while i < len(prefix):
+        ch = prefix[i]
+        if line_comment:
+            if ch == '\n':
+                line_comment = False
+            i += 1
+            continue
+        if quote is not None:
+            if ch == '`' and i + 1 < len(prefix):
+                i += 2
+                continue
+            if quote == "'" and ch == "'" and i + 1 < len(prefix) and prefix[i + 1] == "'":
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            elif ch == '\n':
+                raise ValueError("E07_PREFLIGHT_MULTILINE_LITERAL_UNVERIFIABLE")
+            i += 1
+            continue
+        if ch == '#':
+            line_comment = True
+        elif ch in ("'", '"'):
+            quote = ch
+        elif ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth < 0:
+                raise ValueError("E07_PREFLIGHT_BRACES_UNBALANCED")
+        i += 1
+    if quote is not None or depth != 0:
+        raise ValueError("E07_PREFLIGHT_NOT_PROVEN_TOP_LEVEL")
+
+
 def check(root: Path, *, expected_helper_sha: str = APPROVED_HELPER_SHA) -> dict:
     root = root.resolve(strict=True)
     path = root / HANDOFF
@@ -47,10 +97,11 @@ def check(root: Path, *, expected_helper_sha: str = APPROVED_HELPER_SHA) -> dict
         r"--onehost\s+\$OneHostReceipt\s*$", before)
     if invoke is None:
         raise ValueError("E07_APPROVED_RAW_JSON_CALL_NOT_BEFORE_FIRST_PARSE")
+    _top_level_command_only(executable, invoke.start())
     remainder = before[invoke.end():]
     guard = re.match(
         r"(?is)^\s*if\s*\(\s*\$LASTEXITCODE\s+-ne\s+0\s*\)\s*"
-        r"\{[^{}]{0,400}\bthrow\b[^{}]*\}", remainder)
+        r"\{\s*throw(?:\s+[^{}]{0,360})?\s*\}", remainder)
     if guard is None:
         raise ValueError("E07_PREVALIDATION_EXIT_NOT_IMMEDIATELY_GUARDED")
     return {"status": "PASS_SOURCE_ORDER_ONLY", "handoff_sha256": hashlib.sha256(script_bytes).hexdigest(),
