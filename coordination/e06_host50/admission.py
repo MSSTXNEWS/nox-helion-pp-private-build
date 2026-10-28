@@ -361,7 +361,7 @@ class Host50Admission:
             raise Denied("INVALID_REQUEST")
         try:
             raw = canonical(request)
-        except (TypeError, ValueError, OverflowError) as exc:
+        except (TypeError, ValueError, OverflowError, RecursionError) as exc:
             raise Denied("INVALID_JSON") from exc
         if len(raw) > 131072 or set(request)-{"routeId", "taskId", "intent", "settings", "runId"}:
             raise Denied("REQUEST_TOO_LARGE_OR_EXTRA_KEYS")
@@ -496,7 +496,7 @@ class Host50Admission:
             self._verify_session(session, actual_origin)
             try:
                 still_raw = canonical(request)
-            except (TypeError, ValueError, OverflowError) as exc:
+            except (TypeError, ValueError, OverflowError, RecursionError) as exc:
                 raise Denied("REQUEST_MUTATED_DURING_NATIVE_CHECKS") from exc
             if still_raw != raw:
                 raise Denied("REQUEST_MUTATED_DURING_NATIVE_CHECKS")
@@ -546,7 +546,7 @@ class Host50Admission:
         body={k:v for k,v in native_ack.items() if k!="seal"}
         try:
             authenticated = isinstance(sign,str) and hmac.compare_digest(sign,self._seal(body))
-        except (TypeError, ValueError, OverflowError):
+        except (TypeError, ValueError, OverflowError, RecursionError):
             authenticated = False
         if (not authenticated or
             body.get("runId")!=run_id or body.get("taskId")!=ticket["taskId"] or
@@ -634,7 +634,7 @@ def run_read_only_audit(catalog_path: str, bindings_path: str) -> dict:
     try:
         a = json.loads(catalog_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
         b = json.loads(binding_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
-    except (UnicodeError, json.JSONDecodeError) as exc:
+    except (UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         raise Hold("AUDIT_INVALID_UTF8_JSON") from exc
     if not isinstance(a, dict) or not isinstance(b, dict):
         raise Hold("AUDIT_REQUIRES_JSON_OBJECTS")
