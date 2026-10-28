@@ -7,11 +7,14 @@ on:
       - e06/v16-express-onehost-20261028
       - e06/v16-r13-correct-p01-webview2-combined-20261028
       - e06/v16-r16-owner1-entire-nsis-admission-20261028
+      - e06/v16-r17-nsexec-proof-20261028
     paths:
       - '.github/workflows/nox-p02-r08-wpf-build.yml'
       - 'coordination/e06/OriginalPythonDiagnosticBridge.cs'
       - 'coordination/e06/stage_onehost.py'
       - 'coordination/e06/build_onehost_installer.ps1'
+      - 'coordination/e06/r18_nsexec_x64_adapter.py'
+      - 'coordination/e06/test_r18_nsexec_x64_adapter.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +57,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: R18 offline fail-closed x64 NSIS adapter tests
+        shell: pwsh
+        run: |
+          python -m unittest -v coordination/e06/test_r18_nsexec_x64_adapter.py
+          if ($LASTEXITCODE -ne 0) { throw 'R18_NSIS_NO_LOSS_UNITTEST_HOLD' }
       - name: Validate R08 original source and isolate diagnostic stage
         shell: pwsh
         run: |
@@ -153,6 +161,22 @@ jobs:
           }
           [ordered]@{schema='E06_R16_OWNER1_COMPLETE_NSIS_SOURCE_ADMISSION';runId=$env:GITHUB_RUN_ID;owner=1;integrator=6;approvedCommit='8e42bb15aecbee8412c342b0e9049b6cce044297';stagedOnly=$true;sourceOriginalUnchanged=$true;releaseAccepted=$false;files=$rows} | ConvertTo-Json -Depth 6 | Set-Content 'work/e06/staged/R16-P01-owner-verified-installer.json'
           Write-Host 'E06_R16_ALL_4_OWNER1_INSTALLER_FILES_STAGED_SHA_PASS'
+      - name: R18 stage current owner1 NSIS with x64 powershell launch (staging only)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $owner='work/e06/staged/R11/Installer/NOX-HELION-Setup.nsi'
+          $candidate='work/e06/r18-x64/NOX-HELION-Setup.nsi'
+          $receipt='work/e06/staged/R18-OWNER1-NSIS-X64-RECEIPT.json'
+          python coordination/e06/r18_nsexec_x64_adapter.py --owner-nsi $owner --candidate-nsi $candidate --receipt $receipt --patch 'work/e06/staged/R18-NSIS-X64.diff' --run-id $env:GITHUB_RUN_ID
+          if ($LASTEXITCODE -ne 0) { throw 'R18_APPROVED_OWNER_NSI_PREIMAGE_HOLD' }
+          $x=Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
+          if ($x.releaseAllowed -ne $false -or $x.nativeInstallAccepted -ne $false -or $x.changedNSExecCalls -ne 3) {throw 'R18_DIAGNOSTIC_RECEIPT_INVALID'}
+          if ((Get-FileHash -LiteralPath $owner -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$x.ownerPreSha256) {throw 'R18_P01_PRE_SHA_HOLD'}
+          if ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$x.candidatePostSha256) {throw 'R18_P01_POST_SHA_HOLD'}
+          Copy-Item -LiteralPath $candidate -Destination $owner -Force
+          if ((Get-FileHash -LiteralPath $owner -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$x.candidatePostSha256) {throw 'R18_STAGED_NSI_COPY_HOLD'}
+          Write-Host 'R18_PINNED_OWNER1_NSI_X64_STAGED_NOT_RELEASED'
       - name: Apply E06's original exact-SHA P05 HTML compatibility fix to staged bytes only
         shell: pwsh
         run: python coordination/e06/patch_legacy_p05_html.py
@@ -258,6 +282,8 @@ jobs:
           name: nox-e02-r08-pinned-diagnostic-evidence
           path: |
             work/e06/staged/R16-P01-owner-verified-installer.json
+            work/e06/staged/R18-OWNER1-NSIS-X64-RECEIPT.json
+            work/e06/staged/R18-NSIS-X64.diff
             work/e06/staged/R08-source-seal.txt
             work/e06/staged/P05-diagnostic-repair-receipt.json
             work/e06/staged/legacy-compiler-repair-receipts.json
