@@ -105,6 +105,7 @@ class Studio(CreativeExtensions):
                     return False
                 name,size=row.get("filename"),row.get("bytes")
                 if (type(name) is not str or type(size) is not int or size<=0 or
+                    not re.search(r"\.(?:safetensors|gguf|ckpt|bin|pth)$",name,re.I) or
                     name.startswith("/") or "\\" in name or
                     any(c in name for c in "*?[]") or
                     ".." in PurePosixPath(name).parts or
