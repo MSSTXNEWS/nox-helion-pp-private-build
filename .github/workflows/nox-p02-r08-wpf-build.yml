@@ -5,6 +5,7 @@ on:
       - codex/v16-executor2-ollama-contract-20261027
       - e06/v16-r08-binary-diagnostic-20261028
       - e06/v16-express-onehost-20261028
+      - e06/v16-r13-correct-p01-webview2-combined-20261028
     paths:
       - '.github/workflows/nox-p02-r08-wpf-build.yml'
       - 'coordination/e06/OriginalPythonDiagnosticBridge.cs'
