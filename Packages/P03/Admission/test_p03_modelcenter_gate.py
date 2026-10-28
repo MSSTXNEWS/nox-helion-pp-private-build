@@ -2,6 +2,9 @@
 import unittest
 import p03_modelcenter_gate as g
 
+# Synthetic unit-test verifier: NEVER a production/native authorization receipt.
+TEST_ONLY_NATIVE_RECEIPT_VERIFIER = lambda previous, update: True
+
 
 def example():
     e = dict(kind="ollama", modelTag="qwen3:0.6b", existingRoute="EnqueueVerifiedPullAsync",
@@ -119,29 +122,29 @@ class Admission(unittest.TestCase):
     def test_27_retry_receipt(self):
         old=dict(attemptId="a",completedBytes=10)
         new=dict(attemptId="b",completedBytes=1,totalBytes=100,state="RUNNING")
-        self.assertIn("RETRY_REQUIRES_NEW_QUEUE_JOB_RECEIPT",g.progress_gate(old,new).reasons)
+        self.assertIn("RETRY_REQUIRES_NEW_QUEUE_JOB_RECEIPT",g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
 
     def test_28_progress_monotonic(self):
         old=dict(attemptId="a",completedBytes=80)
         new=dict(attemptId="a",completedBytes=20,totalBytes=100,state="RUNNING")
-        self.assertIn("NON_MONOTONIC_OR_INVALID_PROGRESS",g.progress_gate(old,new).reasons)
+        self.assertIn("NON_MONOTONIC_OR_INVALID_PROGRESS",g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
 
     def test_29_stop_is_request(self):
         old=dict(attemptId="a",completedBytes=50)
         new=dict(attemptId="a",completedBytes=50,totalBytes=100,state="STOP")
-        self.assertIn("STOP_REQUESTED_NOT_SERVER_CONFIRMED",g.progress_gate(old,new).reasons)
+        self.assertIn("STOP_REQUESTED_NOT_SERVER_CONFIRMED",g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
 
     def test_30_completed_requires_receipt(self):
         old=dict(attemptId="a",completedBytes=60)
         new=dict(attemptId="a",completedBytes=100,totalBytes=100,state="COMPLETED")
-        self.assertIn("COMPLETION_RECEIPT_OR_BYTES_MISSING",g.progress_gate(old,new).reasons)
+        self.assertIn("COMPLETION_RECEIPT_OR_BYTES_MISSING",g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).reasons)
 
     def test_31_real_completed_receipt(self):
         old, new = queue_fixture()
         new.update(state="COMPLETED",completedBytes=100,
                    completedReceiptSha256="e"*64, observedArtifactSha256="d"*64,
                    nativeCompletionAttested=True)
-        self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_65_empty_license_id_hold(self):
         e,c=example();e["licenseId"]="  "
@@ -191,13 +194,13 @@ def queue_fixture():
 
 class QueueStateRegression(unittest.TestCase):
     def expect(self, old, new, reason):
-        got = g.progress_gate(old,new)
+        got = g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER)
         self.assertEqual(got.status,"HOLD")
         self.assertIn(reason,got.reasons)
 
     def test_33_same_job_monotonic(self):
         old, new = queue_fixture()
-        self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_34_missing_job_identity(self):
         old, new = queue_fixture(); old.pop("queueJobId")
@@ -269,7 +272,7 @@ class QueueStateRegression(unittest.TestCase):
     def test_50_cancelled_with_native_ack(self):
         old, new = queue_fixture(); old["state"]="CANCELLING";new.update(state="CANCELLED",
                 nativeCancelAttested=True,cancelAckReceiptSha256="f"*64)
-        self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_51_failed_requires_native_receipt(self):
         old, new = queue_fixture(); new["state"]="FAILED"
@@ -278,66 +281,66 @@ class QueueStateRegression(unittest.TestCase):
     def test_52_failed_with_native_receipt(self):
         old, new = queue_fixture(); new.update(state="FAILED",nativeFailureAttested=True,
                                                 failureReceiptSha256="f"*64)
-        self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_53_retry_not_before_terminal(self):
         old, new = retry_fixture(); old["state"]="RUNNING"
         self.assertIn("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_54_retry_unique_attempt(self):
         old, new = retry_fixture(); new["attemptId"] = old["attemptId"]
         self.assertIn("RETRY_ATTEMPT_NOT_UNIQUE",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_55_retry_new_queue_job(self):
         old, new = retry_fixture(); new["queueJobId"] = old["queueJobId"]
         self.assertIn("RETRY_QUEUE_JOB_NOT_UNIQUE",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_56_retry_needs_new_queue_receipt(self):
         old, new = retry_fixture(); new["queueJobReceiptSha256"] = old["queueJobReceiptSha256"]
         self.assertIn("RETRY_NEW_QUEUE_RECEIPT_MISSING",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_57_retry_no_manifest_swap(self):
         old, new = retry_fixture(); new["manifestSha256"] = "f"*64
         self.assertIn("RETRY_ARTIFACT_IDENTITY_DRIFT",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_58_retry_resets_bytes(self):
         old, new = retry_fixture(); new["completedBytes"] = 1
         self.assertIn("RETRY_BYTES_INVALID",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_59_retry_explicit_consent(self):
         old, new = retry_fixture()
         self.assertIn("RETRY_USER_CONSENT_REQUIRED",
-                      g.retry_gate(old,new,user_retry_consent=False,native_queue_attested=True).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=False,native_queue_attested=True).reasons)
 
     def test_60_retry_native_ack(self):
         old, new = retry_fixture()
         self.assertIn("RETRY_NATIVE_ATTESTATION_REQUIRED",
-                      g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=False).reasons)
+                      g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=False).reasons)
 
     def test_61_retry_new_job_after_terminal(self):
         old, new = retry_fixture()
-        self.assertEqual(g.retry_gate(old,new,user_retry_consent=True,
+        self.assertEqual(g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,
                                       native_queue_attested=True).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_63_retry_unattested_failure_forbidden(self):
         old,new=retry_fixture();old.pop("nativeFailureAttested")
         self.assertIn("RETRY_PREVIOUS_FAILURE_UNATTESTED",
-            g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+            g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_64_retry_unattested_cancel_forbidden(self):
         old,new=retry_fixture();old.pop("failureReceiptSha256");old["state"]="CANCELLED"
         self.assertIn("RETRY_PREVIOUS_CANCEL_UNATTESTED",
-            g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True).reasons)
+            g.retry_gate(old,new,trusted_queue_verifier=TEST_ONLY_NATIVE_RECEIPT_VERIFIER,user_retry_consent=True,native_queue_attested=True).reasons)
 
     def test_62_queued_does_not_equal_downloading(self):
         old, new = queue_fixture(); old.update(state="QUEUED",completedBytes=0);new.update(state="QUEUED",completedBytes=0)
-        self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(g.progress_gate(old,new,TEST_ONLY_NATIVE_RECEIPT_VERIFIER).status,"PASS_FOR_EXISTING_QUEUE")
         self.assertNotEqual(new["state"],"COMPLETED")
 
 
@@ -347,6 +350,53 @@ def retry_fixture():
     new.update(state="QUEUED", attemptId="attempt-002", queueJobId="original-p03-job-002",
                queueJobReceiptSha256="c"*64, completedBytes=0)
     return old,new
+
+class TrustedNativeReceiptRegressions(unittest.TestCase):
+    def test_70_progress_missing_verifier_is_hold(self):
+        old, new = queue_fixture()
+        result = g.progress_gate(old, new)
+        self.assertEqual(result.status, "HOLD")
+        self.assertIn("NATIVE_QUEUE_VERIFIER_MISSING", result.reasons)
+
+    def test_71_progress_verifier_rejection_is_hold(self):
+        old, new = queue_fixture()
+        result = g.progress_gate(old, new, lambda _old, _new: False)
+        self.assertIn("NATIVE_QUEUE_RECEIPT_REJECTED", result.reasons)
+
+    def test_72_progress_verifier_error_is_hold(self):
+        old, new = queue_fixture()
+        def broken(_old, _new):
+            raise OSError("native queue connection lost")
+        result = g.progress_gate(old, new, broken)
+        self.assertIn("NATIVE_QUEUE_VERIFIER_ERROR", result.reasons)
+
+    def test_73_completion_without_queue_verifier_is_hold(self):
+        old, new = queue_fixture()
+        new.update(state="COMPLETED", completedBytes=100,
+                   completedReceiptSha256="e"*64, observedArtifactSha256="d"*64,
+                   nativeCompletionAttested=True)
+        self.assertIn("NATIVE_QUEUE_VERIFIER_MISSING", g.progress_gate(old, new).reasons)
+
+    def test_74_retry_boolean_only_without_verifier_is_hold(self):
+        old, new = retry_fixture()
+        result = g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True)
+        self.assertEqual(result.status, "HOLD")
+        self.assertIn("NATIVE_QUEUE_VERIFIER_MISSING", result.reasons)
+
+    def test_75_retry_verifier_rejected_is_hold(self):
+        old, new = retry_fixture()
+        result = g.retry_gate(old,new,user_retry_consent=True,native_queue_attested=True,
+                              trusted_queue_verifier=lambda _old, _new: "True")
+        self.assertIn("NATIVE_QUEUE_RECEIPT_REJECTED", result.reasons)
+
+    def test_76_verifier_sees_native_identity_and_bytes(self):
+        old, new = queue_fixture()
+        observed=[]
+        def native_stub(a,b):
+            observed.append((a["queueJobId"], b["queueJobId"],a["completedBytes"],b["completedBytes"]))
+            return a["queueJobId"]==b["queueJobId"] and b["completedBytes"]==80
+        self.assertEqual(g.progress_gate(old,new,native_stub).status,"PASS_FOR_EXISTING_QUEUE")
+        self.assertEqual(observed,[("original-p03-job-001","original-p03-job-001",60,80)])
 
 if __name__ == "__main__":
     unittest.main()
