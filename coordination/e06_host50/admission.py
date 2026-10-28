@@ -96,6 +96,7 @@ def audit_registry(catalog: dict, bindings: dict) -> dict:
         route = a.get("routeId")
         if (not isinstance(route, str) or not ROUTE.fullmatch(route) or route in route_set or
             b.get("routeId") != route or b.get("owner") != a.get("owner") or
+            type(a.get("owner")) is not int or type(b.get("owner")) is not int or
             a.get("owner") not in range(1, 7) or a.get("risk") not in
             ("safe", "sensitive", "dangerous")):
             raise Hold("ROUTE_OWNER_RISK_COLLISION")
@@ -275,9 +276,9 @@ class Host50Admission:
             if not isinstance(run_id,str) or not re.fullmatch(r"[0-9a-f-]{36}",run_id):
                 raise Denied("STOP_NEEDS_EXACT_RUNID")
             active = (active_runs or {}).get(run_id)
-            if (not isinstance(active,tuple) or len(active)!=3 or
-                active[:2] != (session.tenant,session.principal) or
-                active[2] not in STOP_TARGETS[route]):
+            if (not isinstance(active,tuple) or len(active)!=4 or
+                active[:3] != (session.tenant,session.principal,session.chat) or
+                active[3] not in STOP_TARGETS[route]):
                 raise Denied("STOP_SCOPE_OR_OWNER_MISMATCH")
         else:
             if "runId" in request:
@@ -287,6 +288,9 @@ class Host50Admission:
                   "owner":row["owner"],"sourceLockTree":BASE_TREE,
                   "ownerReceiptSha256":cap.owner_receipt_sha256,
                   "payloadSha256":hashlib.sha256(raw).hexdigest(),
+                  "sessionScopeSha256":digest({"tenant":session.tenant,
+                    "principal":session.principal,"chat":session.chat,"origin":session.origin}),
+                  "targetRunId":request.get("runId") if route in STOP_ROUTES else None,
                   "fileSha256":file_info.sha256 if file_info else None,
                   "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
         self.pending[run_id] = ticket
@@ -305,6 +309,10 @@ class Host50Admission:
             body.get("runId")!=run_id or body.get("taskId")!=ticket["taskId"] or
             body.get("routeId")!=ticket["routeId"] or body.get("owner")!=ticket["owner"] or
             body.get("ownerReceiptSha256")!=ticket["ownerReceiptSha256"] or
+            body.get("payloadSha256")!=ticket["payloadSha256"] or
+            body.get("sourceLockTree")!=ticket["sourceLockTree"] or
+            body.get("sessionScopeSha256")!=ticket["sessionScopeSha256"] or
+            body.get("targetRunId","MISSING")!=ticket["targetRunId"] or
             body.get("event") not in ("DONE","STOP_REQUESTED","HOLD","FAILED") or
             not isinstance(body.get("proofSha256"),str) or not SHA256.fullmatch(body["proofSha256"])):
             raise Denied("NATIVE_ACK_INVALID")
