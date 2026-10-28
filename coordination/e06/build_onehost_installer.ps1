@@ -25,6 +25,7 @@ $wantsCreative= -not [string]::IsNullOrWhiteSpace($CreativeSourceRoot)
 $wantsWow= -not [string]::IsNullOrWhiteSpace($WowSourceRoot)
 if ($wantsCreative -ne $wantsWow) { throw 'D02_VISUAL_STAGE_PAIR_REQUIRED' }
 $visualStage='NOT_REQUESTED'
+$wowReceiptPath=$null
 if ($wantsCreative) {
   # Mutating visual stages operate only on stage_p01.py's disposable source,
   # never on historical archives, pristine HOME or the Git checkout source.
@@ -82,7 +83,8 @@ if ($wantsCreative) {
     }
   }
   $homeHtml=Get-Content -LiteralPath (Join-Path $source 'Assets/index.html') -Raw -Encoding UTF8
-  if ($homeHtml.Split('creative/wow200/runtime/home-scene.mjs').Count -ne 2) {
+  $homeScriptCount=([regex]::Matches($homeHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count
+  if ($homeScriptCount -ne 1) {
     throw 'D02_HOME_LOADER_DUPLICATE_OR_ABSENT'
   }
   $visualStage='D02_OWNER1_CANONICAL_STAGE_SHA_VERIFIED_SOURCE_ONLY'
@@ -146,6 +148,7 @@ $receipt=[ordered]@{
  payload_manifest_sha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant();
  original_D02_sha256=$assets;
  d02_visual_stage=$visualStage;
+ d02_stage_receipt_sha256=if ($wantsCreative) {(Get-FileHash -LiteralPath $wowReceiptPath -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
  one_visible_host=$true;native_bridge_scope='ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE';
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
