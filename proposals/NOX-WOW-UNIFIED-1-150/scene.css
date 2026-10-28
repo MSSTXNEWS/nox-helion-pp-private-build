@@ -1,0 +1,34 @@
+/* Existing one-scene CSS and WAAPI pipelines remain untouched.
+   Only one existing layer can be active. All other visual work is inert. */
+[data-nox-wow-slot="secondary"].nox-unified-wow {
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+}
+.nox-unified-wow[data-unified-wow="cue"] > .nox-d101-stage,
+.nox-unified-wow[data-unified-wow="cue"] > .nox-d101-label,
+.nox-unified-wow[data-unified-wow="director"] > .nox-w51-stage,
+.nox-unified-wow[data-unified-wow="director"] > .nox-w51-label,
+.nox-unified-wow[data-unified-wow="none"] > .nox-w51-stage,
+.nox-unified-wow[data-unified-wow="none"] > .nox-d101-stage {
+ display:none!important;
+}
+.nox-unified-wow[data-unified-wow="director"] .nox-w51-stage *,
+.nox-unified-wow[data-unified-wow="none"] .nox-w51-stage * {
+ animation:none!important;
+ will-change:auto!important;
+}
+.nox-unified-wow[data-unified-wow="cue"] .nox-d101-stage *,
+.nox-unified-wow[data-unified-wow="none"] .nox-d101-stage * {
+ animation:none!important;
+ will-change:auto!important;
+}
+@media(prefers-reduced-motion:reduce){
+ .nox-unified-wow .nox-w51-stage *,
+ .nox-unified-wow .nox-d101-stage * {
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+  will-change:auto!important;
+ }
+}
