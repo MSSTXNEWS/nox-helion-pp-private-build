@@ -214,7 +214,8 @@ class P03OneHostPort:
             raise P03PortHold("Existing PACK01 host ports/owner map required")
         ids = [route for route, _, _ in pending]
         if len(ids) != len(set(ids)) or any(
-                host_routes.get(route, {}).get("owner") != 3 or route in ports
+                isinstance(host_routes.get(route), dict) is False
+                or host_routes[route].get("owner") != 3 or route in ports
                 for route in ids):
             raise P03PortHold("P03 route ownership collision: register none")
         # Prebuild all native ports before mutating the shared dispatcher.
