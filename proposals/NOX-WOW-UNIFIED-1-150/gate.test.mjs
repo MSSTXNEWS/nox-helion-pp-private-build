@@ -191,3 +191,24 @@ test("never start two compositors on one secondary stage",()=>{
  legacy.destroy();
  assert.doesNotThrow(()=>mountUnifiedCinema(root).destroy());
 });
+
+test("verified training visual expires and frees the scene, never loops as fake training",()=>{
+ const {root}=fixture();
+ let callback;
+ let clock=Date.now();
+ const scene=mountUnifiedCinema(root,{now:()=>clock,
+  trustedEventPort:{subscribe(fn){callback=fn;return ()=>{}}}
+ });
+ const raw={...base,run_id:"training-proof-1",event_id:"proof-1",
+  timestamp_utc:new Date(clock).toISOString()};
+ assert.equal(callback(raw),true);
+ assert.equal(scene.current().active,"cue");
+ assert.equal(scene.current().visualEvidence,"trusted-native-v3");
+ clock+=31000;
+ assert.equal(scene.current().active,"none");
+ assert.equal(scene.current().visualEvidence,"stale");
+ assert.equal(scene.current().selected,null);
+ scene.preview(155);
+ assert.equal(scene.current().visualEvidence,"demo");
+ scene.destroy();
+});
