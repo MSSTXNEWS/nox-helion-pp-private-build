@@ -32,4 +32,20 @@ post({type:'p03.event.v1',event:{jobId:uuid,modelTag:'qwen3:0.6b',phase:'cancell
 ok(evalCode('state.activeJob.state')==='Cancelled','terminal cancellation persists');
 post({type:'p03.event.v1',event:{jobId:uuid,modelTag:'qwen3:0.6b',phase:'progress',status:'late',completedBytes:100,totalBytes:100}});
 ok(evalCode('state.activeJob.state')==='Cancelled','terminal state never revives');
-console.log('E03_EXPRESS_R03_RUNTIME_PASS '+total+' scenarios, no real weights or Windows EXE');
+// E03 R05: terminal jobs cannot be revived by older host snapshots.
+post({...snap(),activeJob:{...job,state:'Running',completedBytes:0,totalBytes:100}});
+ok(evalCode('state.activeJob.state')==='Cancelled','stale snapshot cannot resurrect terminal job');
+ok(evalCode('state.activeJob.completedBytes')===20,'stale snapshot cannot erase observed bytes');
+const childId='abcdef12-abcd-abcd-abcd-abcdef123456';
+post({...snap(),activeJob:{...job,jobId:childId,state:'Queued',completedBytes:null,totalBytes:null}});
+ok(evalCode('state.activeJob.jobId')===childId,'retry uses new real job ID');
+post({...snap(),activeJob:{...job,jobId:childId,state:'Running',completedBytes:50,totalBytes:100}});
+post({...snap(),activeJob:{...job,jobId:childId,state:'Queued',completedBytes:10,totalBytes:100}});
+ok(evalCode('state.activeJob.state')==='Running','old queued snapshot cannot revert Running');
+ok(evalCode('state.activeJob.completedBytes')===50,'snapshot counters cannot regress');
+post(snap({...model,artifactVerified:false,exactTag:'unreviewed:tag',license:'unverified-license'}));
+evalCode('state.activeId="qwen3";render()');
+const dna=els.get('dnaList').children.map(x=>x.textContent);
+ok(!dna.includes('unverified-license')&&!dna.includes('unreviewed:tag'),'DNA hides unreviewed values');
+ok(dna.includes('REVIEW_REQUIRED'),'DNA keeps honest review indicator');
+console.log('E03_EXPRESS_R05_RUNTIME_PASS '+total+' scenarios, no real weights or Windows EXE');
