@@ -1,6 +1,7 @@
 """E06 R18 isolated adapter tests. No Windows, model downloads or owner file writes."""
 import importlib.util
 import pathlib
+import tempfile
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -40,6 +41,51 @@ class R18StaticNoLossTests(unittest.TestCase):
         after, _ = mod.patch_bytes(before)
         self.assertIn(b"Abort P01_SECURITY_GATE", after)
         self.assertEqual(after.replace(mod.NEW.encode(), mod.OLD.encode()), before)
+
+
+    def test_reject_output_alias(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = pathlib.Path(temp) / "original.nsi"
+            source.write_bytes(self.original)
+            target = pathlib.Path(temp) / "candidate.nsi"
+            with self.assertRaisesRegex(SystemExit, "COLLISION"):
+                mod.assert_new_output_paths(source, (target, target))
+
+    def test_reject_existing_output_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = pathlib.Path(temp) / "original.nsi"
+            source.write_bytes(self.original)
+            target = pathlib.Path(temp) / "valuable.nsi"
+            target.write_text("PRESERVE_ME", encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "ALREADY_EXISTS"):
+                mod.assert_new_output_paths(source, (target,))
+            self.assertEqual(target.read_text(encoding="utf-8"), "PRESERVE_ME")
+
+    def test_reject_symlink_output_even_if_target_missing(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = pathlib.Path(temp) / "original.nsi"
+            source.write_bytes(self.original)
+            link = pathlib.Path(temp) / "dangling.nsi"
+            try:
+                link.symlink_to(pathlib.Path(temp) / "not-present")
+            except (OSError, NotImplementedError):
+                self.skipTest("Symlink creation unavailable on this Windows runner")
+            with self.assertRaisesRegex(SystemExit, "ALREADY_EXISTS"):
+                mod.assert_new_output_paths(source, (link,))
+
+    def test_reject_symlinked_parent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = pathlib.Path(temp) / "original.nsi"
+            source.write_bytes(self.original)
+            external = pathlib.Path(temp) / "outside"
+            external.mkdir()
+            linked = pathlib.Path(temp) / "linked"
+            try:
+                linked.symlink_to(external, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("Directory symlinks unavailable on this Windows runner")
+            with self.assertRaisesRegex(SystemExit, "LINKED_PARENT"):
+                mod.assert_new_output_paths(source, (linked / "candidate.nsi",))
 
 
 if __name__ == "__main__":
