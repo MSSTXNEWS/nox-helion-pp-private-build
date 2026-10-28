@@ -75,6 +75,13 @@ jobs:
           ref: 5f8f992582e55039a4ba6bf3c8d1c89fa62de144
           path: .e06-approved-builder
           persist-credentials: false
+      - name: Checkout pinned signed Microsoft WebView2 prerequisite verifier
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: b5233bbb58a059783d1d143b2523e32cae3724d3
+          path: .e06-webview2
+          persist-credentials: false
       - name: Official .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
@@ -269,6 +276,12 @@ jobs:
           & ./.e06-approved-builder/coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $env:NOX_ORIGINAL_PYTHON_PATH -OutputRoot 'work/e06/onehost-upgrade' -RunId "$env:GITHUB_RUN_ID-upgrade" -AppVersion '16.0.1'
           if($LASTEXITCODE -ne 0) {throw 'E06_NUMERIC_UPGRADE_BUILD_HOLD'}
           if(!(Test-Path 'work/e06/onehost-upgrade/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe' -PathType Leaf)){throw 'E06_UPGRADE_EXE_MISSING'}
+      - name: Validate official signed Microsoft Evergreen WebView2 before NSIS
+        shell: pwsh
+        run: |
+          $env:CI='true'
+          & ./.e06-webview2/coordination/e06/Test-OfficialWebView2Prereq.ps1
+          if($LASTEXITCODE -ne 0){ throw 'E06_VERIFIED_WEBVIEW2_REQUIRED' }
       - name: Native original P01 full install update rollback uninstall data retention
         if: steps.e06installer.outcome == 'success' && steps.upgrade.outcome == 'success'
         id: native
