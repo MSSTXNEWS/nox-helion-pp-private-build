@@ -1,0 +1,222 @@
+import assert from 'node:assert/strict';
+import {projectSpaceView,projectReadiness,projectFeeds,projectHardware,projectCorePersona,
+  projectCanonicalEvents,LOCKED_BASELINE,EVENT_SCHEMA} from './E05SpaceReadOnlyProjection.mjs';
+const NOW=Date.parse('2026-10-28T03:45:00Z');
+const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R03';
+const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,manifest_sha256:H,receipt_sha256:H});
+const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:44:58Z',
+  native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
+    {executor:6,stage:'HOLD',percent:null},{executor:7,stage:'NOT_RUN',percent:null}]),overall:28};
+const terminalEvent=(type,state)=>({schema:EVENT_SCHEMA,run_id:RUN,event_id:'evt-001',
+  event_type:type,task_id:'G1-05-09',package_id:'P05',action_id:'stop',
+  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',evidence_verified:false});
+const feed={id:'weather',provider:'approved',license_status:'APPROVED',license_receipt_sha256:H,
+  status:'LIVE',source_at_utc:'2026-10-28T03:44:00Z',fetched_at_utc:'2026-10-28T03:44:50Z',
+  ttl_ms:60000,parsed_by_owner:true,value:14};
+let n=0;const test=(description,fn)=>{fn();n++;console.log('PASS',n,description)};
+test('five sealed lanes use 20/25/20/25/10, not simple mean',()=>{
+  const r=projectReadiness(readiness,RUN,NOW); assert.equal(r.overall,28);assert.equal(r.bars.length,7);
+});
+test('E06 and E07 remain independent non-numeric gates',()=>{
+  const r=projectReadiness(readiness,RUN,NOW);assert.equal(r.bars[5].percent,null);assert.equal(r.bars[6].percent,null);
+});
+test('unverified raw percent fails closed',()=>assert.equal(projectReadiness({overall:100},RUN,NOW).overall,null));
+test('foreign run is rejected',()=>assert.equal(projectReadiness(readiness,'DIFFERENT',NOW).overall,null));
+test('old source lock cannot promote progress',()=>assert.equal(projectReadiness({...readiness,source_commit:'f'.repeat(40)},RUN,NOW).overall,null));
+test('tampered weighted total yields N/D',()=>assert.equal(projectReadiness({...readiness,overall:100},RUN,NOW).overall,null));
+test('stale attestation yields N/D',()=>assert.equal(projectReadiness({...readiness,at_utc:'2026-10-28T03:40:00Z'},RUN,NOW).overall,null));
+test('GPU missing provider returns N/D, never zero',()=>assert.equal(projectHardware([],NOW)['gpu.percent'].value,null));
+test('VRAM contradictory pairs are invalid',()=>{
+  const at='2026-10-28T03:44:58Z';const s=(key,value,source='nvml')=>({key,value,source,unit:'bytes',status:'LIVE',observed_at_utc:at});
+  const h=projectHardware([s('gpu.vram.used_bytes',2048),s('gpu.vram.total_bytes',1024)],NOW);
+  assert.equal(h['gpu.vram.total_bytes'].value,null);assert.equal(h['gpu.vram.used_bytes'].stage,'INCONSISTENT_VRAM');
+});
+test('eight approved CoreIDs and five Persona IDs only',()=>{
+  const c={owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'core-'+i),
+    approved_persona_ids:Array.from({length:5},(_,i)=>'person-'+i),
+    core_ids:Array.from({length:8},(_,i)=>({id:'core-'+i,percent:20,status:'VERIFIED',receipt_sha256:H,measured_at_utc:'2026-10-28T03:44:00Z'})),
+    personas:Array.from({length:5},(_,i)=>({id:'person-'+i,status:'AVAILABLE',observed_at_utc:'2026-10-28T03:44:00Z'}))};
+  assert.equal(projectCorePersona(c,NOW).helion,20);assert.equal(projectCorePersona({...c,core_ids:[...c.core_ids.slice(0,7),c.core_ids[0]]},NOW).helion,null);
+});
+test('approved dated weather values may display',()=>assert.equal(projectFeeds([feed],NOW)[0].value,14));
+test('offline cache is never marked LIVE',()=>{
+  const f=projectFeeds([{...feed,status:'OFFLINE_CACHE'}],NOW)[0];assert.equal(f.stage,'STALE_CACHE');assert.equal(f.value,null);
+});
+test('unlicensed financial feeds cannot display',()=>{
+  const f=projectFeeds([{...feed,id:'bitcoin',license_status:'UNKNOWN'}],NOW)[0];assert.equal(f.stage,'DISABLED');assert.equal(f.value,null);
+});
+test('future source time is N/D',()=>assert.equal(projectFeeds([{...feed,source_at_utc:'2026-10-29T03:44:00Z'}],NOW)[0].stage,'N_D'));
+test('ECB date is labeled historical observation, not market tick',()=>{
+  const f=projectFeeds([{...feed,id:'eur-usd',observation_date:'2026-10-27'}],NOW)[0];assert.equal(f.observedKind,'ECB_OBSERVATION_DATE');
+});
+test('same-run STOP event is recognized without progress',()=>{
+  const e=terminalEvent('model.stopped','STOPPED');
+  assert.deepEqual(projectCanonicalEvents([e],RUN,NOW),{state:'STOPPED',errors:0});
+});
+test('foreign STOP cannot stop another RunID',()=>{
+  const e={...terminalEvent('model.stopped','STOPPED'),run_id:'OTHER'};
+  assert.equal(projectCanonicalEvents([e],RUN,NOW).state,'N_D');
+});
+test('Drive readback never claimed without same-run proof',()=>{
+  const v=projectSpaceView({run_id:RUN,drive:{run_id:'OTHER',status:'READBACK_PASS',receipt_sha256:H}},NOW);
+  assert.equal(v.driveReadback,'HOLD');assert.equal(v.readiness.overall,null);
+});
+test('STOP requires full canonical event schema (not a UI hint)',()=>{
+  const bad={schema:EVENT_SCHEMA,run_id:RUN,event_type:'model.stopped',timestamp_utc:'2026-10-28T03:44:58Z'};
+  assert.equal(projectCanonicalEvents([bad],RUN,NOW).state,'N_D');
+});
+test('STOP with wrong canonical state is rejected',()=>{
+  assert.equal(projectCanonicalEvents([{...terminalEvent('model.stopped','STOPPED'),state:'RUNNING'}],RUN,NOW).state,'N_D');
+});
+test('failed task with wrong state is rejected',()=>{
+  assert.equal(projectCanonicalEvents([terminalEvent('task.failed','COMPLETED')],RUN,NOW).errors,0);
+});
+test('duplicate event_id does not double-count failures',()=>{
+  const e=terminalEvent('task.failed','ERROR');
+  assert.deepEqual(projectCanonicalEvents([e,e],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('out of order event arrival cannot overwrite newer ERROR with older STOP',()=>{
+  const old=terminalEvent('model.stopped','STOPPED');
+  const newer={...terminalEvent('task.failed','ERROR'),event_id:'new-error',timestamp_utc:'2026-10-28T03:44:59Z'};
+  assert.deepEqual(projectCanonicalEvents([newer,old],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('later legitimate STOP preserves count of earlier errors',()=>{
+  const old=terminalEvent('task.failed','ERROR');
+  const newer={...terminalEvent('model.stopped','STOPPED'),event_id:'new-stop',timestamp_utc:'2026-10-28T03:44:59Z'};
+  assert.deepEqual(projectCanonicalEvents([newer,old],RUN,NOW),{state:'STOPPED',errors:1});
+});
+test('future dated terminal event cannot control current state',()=>{
+  assert.equal(projectCanonicalEvents([{...terminalEvent('task.failed','ERROR'),timestamp_utc:'2026-10-28T03:45:01Z'}],RUN,NOW).state,'N_D');
+});
+test('impossible observation date fails source-time admission',()=>{
+  const f=projectFeeds([{...feed,id:'eur-usd',observation_date:'2026-02-30'}],NOW)[0];
+  assert.equal(f.observedKind,'SOURCE_TIMESTAMP');assert.equal(f.stage,'N_D');
+});
+test('impossible source timestamp invalidates the feed',()=>{
+  const f=projectFeeds([{...feed,source_at_utc:'2026-02-30T03:44:00Z'}],NOW)[0];
+  assert.equal(f.stage,'N_D');
+});
+const trustedSensor={key:'cpu.system.percent',value:39,source:'windows-perfcounter',unit:'%',status:'LIVE',
+  observed_at_utc:'2026-10-28T03:44:58Z'};
+const trustedFrame={run_id:RUN,polled_utc:'2026-10-28T03:44:59Z',state:'PARTIAL_OR_LIVE',sensors:[trustedSensor]};
+test('foreign host frame never borrows current-run sensor values',()=>{
+  assert.equal(projectSpaceView({run_id:RUN,hardware:{...trustedFrame,run_id:'OTHER'}},NOW).hardware['cpu.system.percent'].value,null);
+});
+test('fresh same-run native sensor frame may display value',()=>{
+  assert.equal(projectSpaceView({run_id:RUN,hardware:trustedFrame},NOW).hardware['cpu.system.percent'].value,39);
+});
+test('stale host polled timestamp invalidates even fresh individual sensor',()=>{
+  const old={...trustedFrame,polled_utc:'2026-10-28T03:40:00Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:old},NOW).hardware['cpu.system.percent'].value,null);
+});
+test('foreign run market/feed snapshot is never displayed',()=>{
+  const f=projectSpaceView({run_id:RUN,feeds:[{...feed,run_id:'OTHER'}]},NOW);
+  assert.equal(f.feeds.length,0);
+});
+test('same-run approved market/feed snapshot is displayed only as source-dated',()=>{
+  const f=projectSpaceView({run_id:RUN,feeds:[{...feed,run_id:RUN}]},NOW);
+  assert.equal(f.feeds[0].stage,'SOURCE_DATED');
+});
+test('foreign run CoreID snapshot fails closed',()=>{
+  const c={run_id:'OTHER',owner_manifest_sha256:H,approved_core_ids:Array.from({length:8},(_,i)=>'c'+i),
+    approved_persona_ids:Array.from({length:5},(_,i)=>'p'+i),core_ids:[],personas:[]};
+  assert.equal(projectSpaceView({run_id:RUN,core:c},NOW).core.stage,'N_D');
+});
+test('E06 integration bar requires a real receipt and exact immutable source tree',()=>{
+  const forged={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,stage:'INTEGRATED'}:x)};
+  assert.equal(projectReadiness(forged,RUN,NOW).bars[5].stage,'HOLD');
+});
+test('E06 native integration seal is separate from numeric weighting',()=>{
+  const r={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:x)};
+  const o=projectReadiness(r,RUN,NOW);
+  assert.equal(o.bars[5].stage,'INTEGRATED'); assert.equal(o.overall,28);
+});
+test('E07 Windows ACCEPTED is impossible without a same-EXE SHA and build_id',()=>{
+  const a={...readiness,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:
+    x.executor===7?{...x,stage:'WINDOWS_ACCEPTED'}:x)};
+  assert.equal(projectReadiness(a,RUN,NOW).bars[6].stage,'NOT_RUN');
+});
+test('E07 Windows accepted metadata must match E06 frozen one binary',()=>{
+  const a={...readiness,build_id:'EXE-1',exe_sha256:H,bars:readiness.bars.map(x=>x.executor===6?{...x,
+    stage:'INTEGRATED',receipt_sha256:H,source_tree_sha1:'f108d604c444f718b32aaecfd07b90b8f91b9a6f'}:
+    x.executor===7?{...x,stage:'WINDOWS_ACCEPTED',receipt_sha256:H,build_id:'EXE-1',exe_sha256:H}:x)};
+  assert.equal(projectReadiness(a,RUN,NOW).bars[6].stage,'WINDOWS_ACCEPTED');
+  assert.equal(projectReadiness({...a,exe_sha256:'b'.repeat(64)},RUN,NOW).bars[6].stage,'NOT_RUN');
+});
+test('untrusted TTL strings never unlock numeric feed values',()=>{
+  assert.equal(projectFeeds([{...feed,ttl_ms:'60000'}],NOW)[0].stage,'N_D');
+});
+test('approved USD/EUR inverse source is recognized but not invented',()=>{
+  const f=projectFeeds([{...feed,id:'usd-eur',observation_date:'2026-10-27',value:0.87}],NOW)[0];
+  assert.equal(f.observedKind,'ECB_OBSERVATION_DATE');assert.equal(f.value,0.87);
+});
+test('same-second ERROR wins over STOP so errors cannot be hidden by arrival order',()=>{
+  const stop=terminalEvent('model.stopped','STOPPED');
+  const fail={...terminalEvent('task.failed','ERROR'),event_id:'same-time-error'};
+  assert.equal(projectCanonicalEvents([fail,stop],RUN,NOW).state,'ERROR');
+});
+console.log('PASSED '+n+' source-level Node assertions; Windows native/EXE NOT_RUN');
+
+// R04: new owner-only negative regressions; NONE constitutes native telemetry.
+test('one event_id with conflicting STOP vs ERROR is quarantined',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  const b=terminalEvent('task.failed','ERROR');
+  assert.deepEqual(projectCanonicalEvents([a,b],RUN,NOW),{state:'HOLD_EVENT_ID_COLLISION',errors:null});
+});
+test('one event_id with conflicting timestamp is quarantined',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  assert.equal(projectCanonicalEvents([a,{...a,timestamp_utc:'2026-10-28T03:44:59Z'}],RUN,NOW).state,'HOLD_EVENT_ID_COLLISION');
+});
+test('same event_id with conflicting task_id is quarantined',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  assert.equal(projectCanonicalEvents([a,{...a,task_id:'G1-05-OTHER'}],RUN,NOW).errors,null);
+});
+test('two identical canonical events with different property order count once',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  const b=Object.fromEntries(Object.entries(a).reverse());
+  assert.deepEqual(projectCanonicalEvents([a,b],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('a same-run ERROR is not hidden by 65 distinct later non-terminal events',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  const nonterminal=Array.from({length:65},(_,i)=>({...a,
+    event_id:'evt-noise-'+i,event_type:'task.progress',state:'RUNNING'}));
+  assert.deepEqual(projectCanonicalEvents([a,...nonterminal],RUN,NOW),{state:'ERROR',errors:1});
+});
+test('large unbounded event log is HOLD not misleading STOP',()=>{
+  const a=terminalEvent('model.stopped','STOPPED');
+  assert.deepEqual(projectCanonicalEvents(Array(4097).fill(a),RUN,NOW),
+    {state:'HOLD_JOURNAL_OVERFLOW',errors:null});
+});
+test('normal bounded 4096 window still accepts unique error',()=>{
+  const a=terminalEvent('task.failed','ERROR');
+  assert.equal(projectCanonicalEvents([a,...Array(4095).fill(null)],RUN,NOW).state,'ERROR');
+});
+test('hardware sensor later than native polled time is never LIVE',()=>{
+  const f={...trustedFrame,polled_utc:'2026-10-28T03:44:57Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:f},NOW).hardware['cpu.system.percent'].stage,'N_D');
+});
+test('hardware sensor at native polled time may remain LIVE',()=>{
+  const f={...trustedFrame,polled_utc:'2026-10-28T03:44:58Z'};
+  assert.equal(projectSpaceView({run_id:RUN,hardware:f},NOW).hardware['cpu.system.percent'].value,39);
+});
+test('VRAM pair from same source but incoherent sample times is HOLD',()=>{
+  const s=(key,value,at)=>({key,value,unit:'bytes',source:'NVML',status:'LIVE',observed_at_utc:at});
+  const x=projectHardware([s('gpu.vram.used_bytes',1024,'2026-10-28T03:44:50Z'),
+    s('gpu.vram.total_bytes',2048,'2026-10-28T03:44:58Z')],NOW);
+  assert.equal(x['gpu.vram.used_bytes'].stage,'INCONSISTENT_VRAM');
+});
+test('feed source observation newer than actual fetch is N/D',()=>{
+  const f={...feed,source_at_utc:'2026-10-28T03:44:59Z',fetched_at_utc:'2026-10-28T03:44:50Z'};
+  assert.equal(projectFeeds([f],NOW)[0].stage,'N_D');
+});
+test('negative Brent price cannot be surfaced as actual price',()=>{
+  const f={...feed,id:'brent',value:-5};
+  assert.equal(projectFeeds([f],NOW)[0].value,null);
+});
+test('negative weather temperature is not discarded as impossible rate',()=>{
+  const f={...feed,value:-5};
+  assert.equal(projectFeeds([f],NOW)[0].value,-5);
+});
+console.log('R04 tests are synthetic JavaScript component gates only, not installed EXE or live devices.');
