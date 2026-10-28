@@ -56,7 +56,7 @@
   update();
  });
  // Existing Studio nav doesn't own this late-added page: listen for other tab clicks.
- nav.addEventListener('click',e=>{if(e.target!==button)queueMicrotask(update)});
+ nav.addEventListener('click',e=>{if(e.target!==button){section.classList.remove('active');queueMicrotask(update)}});
  document.addEventListener('visibilitychange',update);
  media?.addEventListener?.('change',update);
  window.addEventListener('pagehide',()=>{for(const v of section.querySelectorAll('video'))v.pause();});
