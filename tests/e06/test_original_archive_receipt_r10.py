@@ -11,6 +11,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "coordination" / "source-lock"))
 import verify_original_archive as archive
 
 
