@@ -105,13 +105,17 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   let unsubscribe=null,eventsReady=false;
   const pendingHostEvents=[];
   function applyHostEvent(event){
-    if(disposed||!event||typeof event!=="object"||event.trusted!==true||
-       typeof event.state!=="string")return;
+    if(disposed||!event||typeof event!=="object"||event.trusted!==true)return;
+    // Capture validated immutable native scalars before deferred replay.
+    const next=event.state,runId=event.runId??null,coreId=event.coreId??null;
+    if(!stateSet.has(next)||
+       (runId!==null&&(typeof runId!=="string"||!pattern.test(runId)))||
+       (coreId!==null&&(typeof coreId!=="string"||!orbs.some(x=>x.id===coreId))))return;
     if(!eventsReady){
-      if(pendingHostEvents.length<16)pendingHostEvents.push(event);
+      if(pendingHostEvents.length<16)pendingHostEvents.push(Object.freeze({next,runId,coreId}));
       return;
     }
-    applyState(event.state,event.runId||null,event.coreId||null);
+    applyState(next,runId,coreId);
   }
   if(hostEvents){
     const un=hostEvents.subscribe(applyHostEvent);
@@ -232,7 +236,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   if(observer)observer.observe(root);
   function applyState(next,runId=null,coreId=null){
     if(disposed)return false;
-    if(!stateSet.has(next)||(runId!==null && (!pattern.test(runId))))
+    if(!stateSet.has(next)||(runId!==null && (typeof runId!=="string"||!pattern.test(runId))))
       return false;
     if(coreId!==null){
       const orb=each.find(x=>x.id===coreId);
@@ -248,7 +252,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   // The trusted host may synchronously emit during subscribe; apply only after mount.
   mounted.set(root,true);
   eventsReady=true;
-  for(const event of pendingHostEvents)applyHostEvent(event);
+  for(const event of pendingHostEvents)applyState(event.next,event.runId,event.coreId);
   pendingHostEvents.length=0;
   syncVisible();
   return Object.freeze({

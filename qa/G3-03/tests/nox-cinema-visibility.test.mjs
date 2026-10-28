@@ -278,3 +278,35 @@ test("R05 CSS only touches FX motion and uses the isolated FX profile",async()=>
   assert.equal(css.includes(".nox-cinema-scope *,"),false);
   assert.match(css,/prefers-reduced-motion:reduce/);
 });
+
+// R07 QA-only regressions, no native owner source replacement.
+test("R07 immutable buffered host event cannot fabricate training or swap CoreID",()=>{
+  const o=fakeScene(),event={trusted:true,state:"idle",runId:"RUN-OK",coreId:"CORE_1"};
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:{subscribe(fn){
+    fn(event); event.state="training"; event.runId="RUN-FAKE"; event.coreId="CORE_2";
+    return()=>{};
+  }}});
+  assert.equal(o.orbs[1].element.dataset.noxFxState,"idle");
+  assert.equal(o.orbs[2].element.dataset.noxFxState,"idle");
+  fx.destroy();
+});
+test("R07 typed runId and CoreID are fail-closed without coercion",()=>{
+  const o=fakeScene();o.root.dataset.noxState="speaking";let emit;
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:{subscribe(fn){emit=fn;return()=>{};}}});
+  assert.equal(fx.setState("training",{toString(){return "RUN-FAKE";}}),false);
+  emit({trusted:true,state:"training",runId:17,coreId:"CORE_1"});
+  emit({trusted:true,state:"training",runId:"RUN-7",coreId:{toString(){return "CORE_1";}}});
+  assert.equal(o.root.dataset.noxState,"speaking");
+  assert.equal(o.root.dataset.noxFxState,"idle");
+  assert.equal(o.orbs[1].element.dataset.noxFxState,"idle");
+  fx.destroy();
+});
+test("R07 event snapshots preserve the initial trusted state during synchronous subscribe",()=>{
+  const o=fakeScene(),evt={trusted:true,state:"streaming",runId:"RUN-X",coreId:"CORE_3"};
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:{subscribe(fn){
+    fn(evt);evt.trusted=false;evt.state="success";delete evt.runId;return()=>{};
+  }}});
+  assert.equal(o.orbs[3].element.dataset.noxFxState,"streaming");
+  assert.equal(o.root.dataset.noxFxState,"idle");
+  fx.destroy();
+});
