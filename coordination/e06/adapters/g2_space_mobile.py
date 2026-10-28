@@ -271,7 +271,9 @@ class G2OneHostBinder:
         self.host, self.port_type = host, bound_port_type
         self.p02, self.p03, self.e05, self.mobile, self.voice = (
             existing_p02, existing_p03, e05, mobile, existing_p02_voice)
-        self.source_lock, self.receipts = source_lock_sha256, owner_receipts_sha256
+        if not isinstance(owner_receipts_sha256, dict):
+            raise G2Hold("Owner receipts must be an immutable binding snapshot")
+        self.source_lock, self.receipts = source_lock_sha256, dict(owner_receipts_sha256)
         self.verify_preimages, self.lock = (
             verify_original_preimages, existing_host_mutation_lock)
 
@@ -337,7 +339,7 @@ class G2OneHostBinder:
                     self.host.bind(route, self.port_type(
                         handler, lambda r=route: self.voice.available(r),
                         self._receipt("P02"), 2))
-                if self.mobile is not None:
+                if "mobile.connect" in mobile_routes:
                     self.host.bind("mobile.connect", self.port_type(
                         self.mobile.connect, self.mobile.available,
                         self._receipt("P02"), 6))
