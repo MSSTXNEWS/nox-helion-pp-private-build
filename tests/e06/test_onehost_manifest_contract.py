@@ -1,5 +1,6 @@
 """NOX E06 regression: the existing P01 verifier and builder must agree."""
 from pathlib import Path
+import hashlib
 import re
 import unittest
 
@@ -33,6 +34,52 @@ class OneHostManifestContract(unittest.TestCase):
         self.assertIn("release_accepted=$false", self.source)
         self.assertIn("installer_lifecycle_tested=$false", self.source)
 
+
+    def test_live_d02_two_level_owner_hash_graph(self):
+        root = Path(__file__).resolve().parents[2]
+        stage_path = root / "integrations/wow200/stage_wow200.py"
+        stage = stage_path.read_text(encoding="utf-8")
+
+        def git_blob(path):
+            data = path.read_bytes()
+            return hashlib.sha1(
+                ("blob " + str(len(data))).encode("ascii") + bytes([0]) + data
+            ).hexdigest()
+
+        for name in ("nox-cinema.mjs", "nox-cinema.css"):
+            active = git_blob(root / "proposals/NOX-CINEMA-FX" / name)
+            legacy = git_blob(root / "integrations/wow200/proposals/NOX-CINEMA-FX" / name)
+            self.assertIn(f'"active_blob": "{active}"', stage)
+            self.assertIn(f'"legacy_blob": "{legacy}"', stage)
+            self.assertNotEqual(active, legacy)
+        self.assertIn(
+            "$wowScriptBlob -cne '" + git_blob(stage_path) + "'",
+            self.source,
+        )
+        self.assertIn("OWNER1_D02_ENGINE_SHA_HOLD", stage)
+        self.assertIn("D02_PINNED_STAGE_SCRIPT_SHA_HOLD", self.source)
+
+    def test_original_wow_manifest_and_creative_stage_pin(self):
+        root = Path(__file__).resolve().parents[2]
+        stage = (root / "integrations/wow200/stage_wow200.py").read_text("utf-8")
+
+        def blob(path):
+            data = path.read_bytes()
+            return hashlib.sha1(
+                ("blob " + str(len(data)) + "\0").encode("ascii") + data
+            ).hexdigest()
+
+        expected = (
+            ('DONOR_MANIFEST_BLOB = "', root / "integrations/wow200/DONOR_BLOBS.json"),
+            ('PACK01_CATALOG_BLOB = "', root / "proposals/NOX-PACK01-50/catalog.json"),
+        )
+        for prefix, path in expected:
+            self.assertIn(prefix + blob(path) + '"', stage)
+        self.assertIn(
+            "$creativeScriptBlob -cne '" +
+            blob(root / "integrations/creative/stage_creative.py") + "'",
+            self.source,
+        )
 
     def test_azure_e07_owner_receipt_contract(self):
         root = Path(__file__).resolve().parents[2]
