@@ -1,0 +1,22 @@
+{
+  "run_id": "ASTRA-R29-A01-B02-20261029",
+  "owner": "A01/P01",
+  "parent": "1ed464e49789b4f6da05535c998ad451536d69ea",
+  "task": "P01 conservative uninstall",
+  "block": "Reject partial manifest without registered NOX entrypoint before any file deletion.",
+  "preimage": {
+    "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+    "sha": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+  },
+  "tests": {
+    "source_contract": "RED 1 failure; GREEN 1 passed",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/Installer -p test_uninstall_manifest_contract.py -v",
+    "native_windows": "NOT_RUN: no PowerShell/pwsh/dotnet; Test-UninstallManifest.ps1 saved",
+    "nsis_build": "NOT_RUN, prohibited"
+  },
+  "completed_megablocks": 2,
+  "approaches_complete": [],
+  "product_done": false,
+  "lesson": "A valid row list is insufficient uninstall authority: require the application entrypoint in the validated set before NSIS can remove ownership metadata.",
+  "remaining": "Windows execution of both source regression fixtures; installer task closure unproved. No arbitrary expansion to fill 10."
+}

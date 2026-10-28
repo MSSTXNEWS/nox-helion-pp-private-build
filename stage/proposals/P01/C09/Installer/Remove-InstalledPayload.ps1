@@ -86,6 +86,8 @@ foreach ($f in @($m.files)) {
   }
 }
 if ($checked.Count -ne $registered.Count -or $checked.Count -lt 1) { throw 'P01_UNINSTALL_REFUSED_MODIFIED_FILES:incomplete-validation' }
+# A partial manifest must never authorize metadata cleanup while leaving the app orphaned.
+if (-not $registered.Contains('NOX.P01.Shell.exe')) { throw 'P01_UNINSTALL_ENTRYPOINT_UNREGISTERED' }
 # PHASE 2 — full-list drift check BEFORE the first delete, for C08 no-loss parity.
 foreach ($entry in $checked) {
   try { Assert-VerifiedEntry $entry } catch { throw "P01_UNINSTALL_FILE_CHANGED_DURING_COMMIT:$($entry.Relative)" }
