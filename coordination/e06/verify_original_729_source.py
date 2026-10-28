@@ -52,7 +52,14 @@ def verify_zip_namespace(infos) -> None:
     try:
         mod.validate_members(infos)
     except ValueError as exc:
-        raise SourceHold("ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD: " + str(exc)) from exc
+        # Preserve earlier public error codes for existing E06 consumers while
+        # rejecting new dangerous ancestor and nonregular UNIX ZIP members.
+        reason = str(exc)
+        if reason.startswith("Duplicate/case collision:"):
+            raise SourceHold("ZIP_DUPLICATE_WINDOWS_NAME: " + reason) from exc
+        if reason.startswith("Symlink/special file:"):
+            raise SourceHold("ZIP_SYMLINK_NOT_ALLOWED_OR_SPECIAL_UNIX: " + reason) from exc
+        raise SourceHold("ZIP_NAMESPACE_OR_SPECIAL_FILE_HOLD: " + reason) from exc
 
 
 def safe_member(name: str, directory: bool) -> str:
