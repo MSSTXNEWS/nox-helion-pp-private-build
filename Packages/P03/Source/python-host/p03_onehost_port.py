@@ -139,6 +139,9 @@ class P03OneHostPort:
             bound.add(route)
         if self.backend is not None:
             for route, method in OWNER_ROUTES.items():
+                # Never advertise a write button when host-native approval cannot run.
+                if route in SENSITIVE and not callable(self.native_approve):
+                    continue
                 if not callable(getattr(self.backend, method, None)):
                     continue
                 self._bind(dispatcher, bound_port_type, route,
