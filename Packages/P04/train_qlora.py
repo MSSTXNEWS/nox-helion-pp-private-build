@@ -112,8 +112,12 @@ def sha256_tree(root: Path) -> str:
         if (getattr(info, "st_file_attributes", 0) &
                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)):
             raise ValueError("REPARSE_POINT_IN_PINNED_TREE")
-        if not path.is_file():
+        # Directory entries have no file bytes; all other filesystem node
+        # types must fail closed, never disappear from the pinned SHA tree.
+        if stat.S_ISDIR(info.st_mode):
             continue
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("SPECIAL_FILE_IN_PINNED_TREE")
         rel = path.relative_to(root).as_posix().encode("utf-8")
         digest.update(len(rel).to_bytes(4, "big"))
         digest.update(rel)
