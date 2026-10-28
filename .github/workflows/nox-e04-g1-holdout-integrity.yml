@@ -1,7 +1,7 @@
 name: NOX E04 G1 real-module dataset duplicate integrity
 on:
   push:
-    branches: [e04/v16-g1-04-holdout-integrity-20261028-r02, e04/v16-g1-04-dataset-format-gate-20261028-r04]
+    branches: [e04/v16-g1-04-holdout-integrity-20261028-r02, e04/v16-g1-04-dataset-format-gate-20261028-r04, e04/v16-g1-04-message-metadata-leakage-20261028-r05]
     paths:
       - 'Packages/P04/train_qlora.py'
       - 'tests/P04/test_e04_holdout_duplicate_gate.py'
