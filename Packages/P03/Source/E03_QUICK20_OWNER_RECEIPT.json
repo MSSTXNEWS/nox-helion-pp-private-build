@@ -1,0 +1,159 @@
+{
+  "schema": "NOX_OWNER3_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-E03-TURBO10-QUICK20-20261028",
+  "owner": 3,
+  "worker_id": "E03",
+  "status": "SOURCE_CANDIDATE",
+  "integration": "HOLD_OWNER6",
+  "release": "BLOCKED",
+  "base_source_commit_sha1": "68aad16b95230b1aa6dd6ae24cb1523825705284",
+  "source_commits_sha1": [
+    "08bdb98c1093e1d74d750f0fbd845fc7fbf6385c",
+    "8268bfa5236e85787a3298108a232814e3a3940f"
+  ],
+  "source_final_commit_sha1": "8268bfa5236e85787a3298108a232814e3a3940f",
+  "source_tree_sha1": null,
+  "file_hash_algorithm": "SHA-256 UTF-8 LF normalized GitHub fetch (NOT ZIP/whole-tree lock)",
+  "paths": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
+      "preimage_sha256_utf8_lf": null,
+      "postimage_sha256_utf8_lf": "f9f6efe1f1d365bd520af5650326461db041b89412644335f15a63fd2adcba99",
+      "postimage_git_blob_sha1": "69509258d0946d94de2b71b2a6a1a48e18194c81"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/P03.ModelCenter.QuickSmoke.csproj",
+      "preimage_sha256_utf8_lf": null,
+      "postimage_sha256_utf8_lf": "8b9d568c407edf18928eed949fb90d44d4795bd1193d745578999c97cc4d443e",
+      "postimage_git_blob_sha1": "a29557cbb04809c10121365c1e9240239210d066"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/Program.cs",
+      "preimage_sha256_utf8_lf": null,
+      "postimage_sha256_utf8_lf": "8040d9f97c54a60d7ac490a22fdb45364160e542479e26e5646a1f26264dabb2",
+      "postimage_git_blob_sha1": "74201fc2fc41e132070d8bde0434d745ad5259c8"
+    },
+    {
+      "path": "Packages/P03/Source/MODEL_QUICK20_OWNER6_HANDOFF.md",
+      "preimage_sha256_utf8_lf": null,
+      "postimage_sha256_utf8_lf": "3116d53ff65be0307c0e455dcf9d797a54e4279de13a5fc9b739cfa68b2bc5e1",
+      "postimage_git_blob_sha1": "9335e13f202d8bdd3dc0eaa23f111697cc56849e"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "preimage_sha256_utf8_lf": "cdd3942706c7837cd29f9d070424e6d307cb553d22147891db428e6a60e0f19a",
+      "postimage_sha256_utf8_lf": "4dd711c99416a712c921f2b5face4d1152c529a069f37dfda6928c7326b3bd9a",
+      "postimage_git_blob_sha1": "7c756579afdbdbbdc775ef2afd3cc1b925b5ecdb"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/index.html",
+      "preimage_sha256_utf8_lf": "e06d30057454adac6d577511d407a5d61bb6e811799c222362e771bf8612539b",
+      "postimage_sha256_utf8_lf": "300c962425eaa6424d5c8f0f6c272b99e3c51f64439f919353abf4a0e606ad1e",
+      "postimage_git_blob_sha1": "e44efa7b5e2ffdfda6481c734f92c064fe1f458b"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.css",
+      "preimage_sha256_utf8_lf": "55e829e21ab74bf430cbe38908a0e8fc68b9d1a7f6e256f3e41e0537811d11ba",
+      "postimage_sha256_utf8_lf": "5328397a95bec6fecdec1544cfd603601fb910ec9fb8694ac5c747184ae75319",
+      "postimage_git_blob_sha1": "52757928eab65e474b9f500ab95b49adf3abe340"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs",
+      "preimage_sha256_utf8_lf": "78517f02bfc9054d77cd1eeafa0fbe6bdbd7ac041bacea04907658f1f8e1ad6f",
+      "postimage_sha256_utf8_lf": "4522fa04f12376086656f52891f6354aec561ab89069106e13d70c470b8d726c",
+      "postimage_git_blob_sha1": "916e325626b127ce8ff70257bc9c8226daa43a83"
+    },
+    {
+      "path": ".github/workflows/p03-c40-component.yml",
+      "preimage_sha256_utf8_lf": "f027cbff051486fa5c8469fb729ed150d82f99d9f558529566aaa027b9ade594",
+      "postimage_sha256_utf8_lf": "4ac33b1b9e07c85416fcf098fbb9ca110b502fb4b8810e0d5b2632b2cc58c45b",
+      "postimage_git_blob_sha1": "1f6df801822c5159aa65079a80aa06c26839e89e"
+    }
+  ],
+  "evidence": {
+    "quick_buttons": 20,
+    "reviewed_immutable_artifacts": 0,
+    "real_models_downloaded_this_run": 0,
+    "external_weight_leads_review_required": 17,
+    "existing_engine_reused": [
+      "ModelDownloadQueueStore",
+      "ModelDownloadQueueWorker",
+      "OllamaModelAdapter",
+      "ModelWowBridgeContract"
+    ],
+    "tests_pass": [
+      "JS parsed by V8 new Function",
+      "20 C# model slots and 17 non-downloadable leads count via source inspection",
+      "model quick-button HTML grid and bridge readback",
+      "receipt path SHA of code"
+    ],
+    "tests_hold": [
+      "new .NET QuickSmoke Windows runner: GitHub Actions pre-step failure with no job logs",
+      "real native Ollama downloads",
+      "real GGUF imports",
+      "original host SourceLock",
+      "E07 Windows QA"
+    ],
+    "ci_runs_failed_presteps": [
+      40622837536,
+      40622837540
+    ],
+    "ci_rerun_result": "GitHub rerun accepted; again completed failure without steps/logs, not source pass"
+  },
+  "no_loss": "Existing C40/TURBO sources untouched, 0 deletions in this source work. No main merge or common host mutation.",
+  "task_mapping": [
+    {
+      "id": "E03-Q01",
+      "state": "READ_VERIFIED",
+      "note": "P03 C40/TURBO scope and preimage read"
+    },
+    {
+      "id": "E03-Q02",
+      "state": "SOURCE_PRESENT",
+      "note": "Existing 30-family catalog retained and 20 quick slots selected"
+    },
+    {
+      "id": "E03-Q03",
+      "state": "REVIEW_REQUIRED",
+      "note": "20 no synthetic artifact digests promoted"
+    },
+    {
+      "id": "E03-Q04",
+      "state": "SOURCE_PRESENT",
+      "note": "20 host-routed source buttons with per-model license acknowledgment"
+    },
+    {
+      "id": "E03-Q05",
+      "state": "RETAINED",
+      "note": "existing Ollama Pull real progress/digest transport unchanged"
+    },
+    {
+      "id": "E03-Q06",
+      "state": "RETAINED",
+      "note": "existing GGUF verified import unchanged"
+    },
+    {
+      "id": "E03-Q07",
+      "state": "RETAINED",
+      "note": "existing STOP/Retry/recovery untouched"
+    },
+    {
+      "id": "E03-Q08",
+      "state": "RETAINED",
+      "note": "existing Windows diagnostics and rollback untouched"
+    },
+    {
+      "id": "E03-Q09",
+      "state": "SOURCE_ONLY_REVIEW_REQUIRED",
+      "note": "17 ASR TTS image video training & aligner leads; non-Ollama weights backend not approved"
+    },
+    {
+      "id": "E03-Q10",
+      "state": "HOLD_CI",
+      "note": "new QuickSmoke added to existing component CI; runner pre-step failures"
+    }
+  ],
+  "product_acceptance_percent": null,
+  "overall_weighted_percent": null,
+  "handoff_owner6": "Do not merge PR17 before whole-tree SourceLock, approved model artifact evidence, native one-host capability/ACL and E07 same-SHA QA"
+}
