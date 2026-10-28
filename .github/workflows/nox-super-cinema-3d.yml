@@ -19,10 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: proposals/NOX-SUPER-CINEMA-3D/package-lock.json
       - name: Install pinned Three.js and esbuild
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
       - name: Test all AI generation profiles, every cinema composition and D02 gates
         run: npm test
       - name: Build real local Three.js WebGL bundle
