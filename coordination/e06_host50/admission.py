@@ -27,6 +27,9 @@ STOP_TARGETS = {"chat.stop": frozenset({"helion.chat", "core.chat", "persona.cha
                 "models.cancel": frozenset({"models.pull"}),
                 "training.pause": frozenset({"training.start"})}
 STOP_ROUTES = frozenset(STOP_TARGETS)
+# These are catalogue selectors, NOT executable host routes or page-provided paths.
+NATIVE_OPTION_SOURCES = frozenset({"host.models.installed", "host.voices.installed",
+                                    "host.personas", "host.cores"})
 MAX_PENDING = 256
 ACK_LEASE_SECONDS = 180
 ACK_FIELDS = frozenset({
@@ -120,8 +123,27 @@ def audit_registry(catalog: dict, bindings: dict) -> dict:
                 not ROUTE.fullmatch(x["key"]) for x in settings) or
             len({x["key"] for x in settings}) != len(settings)):
             raise Hold("INVALID_SETTINGS_SCHEMA")
+        policy = {}
+        for x in settings:
+            # An untrusted catalogue may not turn a select into executable input.
+            if x.get("kind") != "select" or (("source" in x) == ("options" in x)):
+                raise Hold("INVALID_SELECT_POLICY")
+            if "source" in x:
+                if x["source"] not in NATIVE_OPTION_SOURCES:
+                    raise Hold("UNTRUSTED_NATIVE_OPTION_SOURCE")
+                policy[x["key"]] = {"source": x["source"]}
+            else:
+                options = x["options"]
+                if (not isinstance(options, list) or not 1 <= len(options) <= 128 or
+                    any(not isinstance(option, list) or len(option) != 2 or
+                        any(not isinstance(value,str) or not 0 < len(value) <= 128
+                            for value in option) for option in options) or
+                    len({option[0] for option in options}) != len(options)):
+                    raise Hold("INVALID_STATIC_SELECT_OPTIONS")
+                policy[x["key"]] = {"options": tuple(option[0] for option in options)}
         out.append({"taskId": task, "routeId": route, "owner": a["owner"],
                     "allowedSettings": [x["key"] for x in settings],
+                    "settingPolicy": policy,
                     "risk": a["risk"], "sourceBinding": binding,
                     "sourceState": "SOURCE" if binding else "HOLD",
                     "componentEvidence": b.get("componentCI", "N/D"),
@@ -241,7 +263,8 @@ class Host50Admission:
 
     def admit(self, *, session: Session, actual_origin: str, request: dict,
               native_consent=None, native_file_picker=None,
-              native_device_permission=None, active_runs: dict | None = None) -> dict:
+              native_device_permission=None, active_runs: dict | None = None,
+              native_option_verifier=None) -> dict:
         self._verify_session(session, actual_origin)
         if not isinstance(request, dict):
             raise Denied("INVALID_REQUEST")
@@ -266,6 +289,25 @@ class Host50Admission:
         if any(not isinstance(k,str) or not ROUTE.fullmatch(k) or isinstance(v,(dict,list))
                or type(v) not in (str,int,bool) or len(str(v))>256 for k,v in opts.items()):
             raise Denied("UNSAFE_SETTING")
+        for key, value in opts.items():
+            selected = row["settingPolicy"].get(key)
+            if not selected or type(value) is not str:
+                raise Denied("SETTING_REQUIRES_APPROVED_SELECT_VALUE")
+            if "options" in selected:
+                if value not in selected["options"]:
+                    raise Denied("STATIC_SELECT_OPTION_DENIED")
+            else:
+                # Only the already-authenticated native host can check installed
+                # models/voices/personas/cores. No page-provided option inventory.
+                if not callable(native_option_verifier):
+                    raise Hold("NATIVE_SELECT_VERIFIER_MISSING")
+                try:
+                    verified = native_option_verifier(session,route,key,
+                                                      selected["source"],value)
+                except Exception as exc:
+                    raise Hold("NATIVE_SELECT_VERIFIER_FAILED") from exc
+                if verified is not True:
+                    raise Denied("UNVERIFIED_NATIVE_SELECT_VALUE")
         cap = self._cap(row)
         now = time.monotonic()
         self._reap_pending(now)
