@@ -14,6 +14,12 @@ class WowStageTests(unittest.TestCase):
   (self.stage/'Assets/creative/studio.js').write_text('// original')
   (self.stage/'Assets/index.html').write_text('<html><head></head><body>nox-orbit-stage nox-eclipse nox-orbit-core CONSCIOUSNESS FORGE</body></html>')
   self.preimages=dict(D02)
+  self.old_engine_pins={k:dict(v) for k,v in eng.OWNER1_D02_ENGINE.items()}
+  # Simulate exact owner1-vs-legacy Git blobs with distinct fixture bytes.
+  for rel in eng.OWNER1_D02_ENGINE:
+   active=self.root/rel;active.parent.mkdir(parents=True,exist_ok=True)
+   active.write_bytes(("owner1 canonical "+rel).encode())
+   eng.OWNER1_D02_ENGINE[rel]["active_blob"]=gitsha(active.read_bytes())
   for n in D02:
    sample=("approved D02 fixture: "+n).encode()
    (self.stage/'Assets'/n).write_bytes(sample)
@@ -31,17 +37,28 @@ class WowStageTests(unittest.TestCase):
    p=self.src/rel;p.unlink();manifest.pop(rel)
   for rel in ['runtime/loader.mjs','runtime/stage.css','runtime/home-scene.mjs','runtime/home-guard.css']:
    p=self.src/rel;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('// sample')
+  for rel in eng.OWNER1_D02_ENGINE:
+   eng.OWNER1_D02_ENGINE[rel]["legacy_blob"]=manifest[rel]
   (self.src/'DONOR_BLOBS.json').write_text(json.dumps({'schema':'NOX_WOW200_OWNER_BLOB_PIN_V1','count':56,'files':manifest}))
   self.old_manifest_blob=eng.DONOR_MANIFEST_BLOB
   eng.DONOR_MANIFEST_BLOB=gitsha((self.src/'DONOR_BLOBS.json').read_bytes())
  def tearDown(self):
   D02.clear();D02.update(self.preimages)
   eng.DONOR_MANIFEST_BLOB=self.old_manifest_blob
+  eng.OWNER1_D02_ENGINE.clear();eng.OWNER1_D02_ENGINE.update(self.old_engine_pins)
   self.tmp.cleanup()
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
-  self.assertEqual(len(receipt['files']),62)
+  self.assertEqual(len(receipt['files']),64)
+  for rel in eng.OWNER1_D02_ENGINE:
+   active=self.stage/'Assets/creative/wow200'/rel
+   archive=self.stage/'Assets/creative/wow200/legacy/d02-pr30'/Path(rel).name
+   self.assertEqual(active.read_bytes(),(self.root/rel).read_bytes())
+   self.assertEqual(archive.read_bytes(),(self.src/rel).read_bytes())
+   self.assertNotEqual(active.read_bytes(),archive.read_bytes())
+  self.assertEqual(receipt['active_d02_engine'],'OWNER1_PR144_PINNED')
+  self.assertFalse(receipt['legacy_d02_runtime_imported'])
   self.assertEqual({n:digest(self.stage/'Assets'/n) for n in D02},original)
   html=(self.stage/'Assets/creative/studio.html').read_text()
   self.assertIn('wow200/runtime/loader.mjs',html)
@@ -50,6 +67,11 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
+ def test_owner1_d02_engine_sha_drift_fail_closed(self):
+  file=self.root/'proposals/NOX-CINEMA-FX/nox-cinema.mjs'
+  file.write_bytes(b'unapproved replacement')
+  with self.assertRaisesRegex(ValueError,'OWNER1_D02_ENGINE_SHA_HOLD'):stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_d02_corruption_fail_closed(self):
   (self.stage/'Assets/home.png').write_bytes(b'broken')
   with self.assertRaisesRegex(ValueError,'CANONICAL_D02_SHA_HOLD'):stage(self.stage,self.src)
