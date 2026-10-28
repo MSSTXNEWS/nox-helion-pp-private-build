@@ -1,0 +1,50 @@
+{
+  "schema": "NOX-V16-L2-CREATIVE-WORKER-SOURCE-RECEIPT-v1",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R18-14GATES",
+  "task_id": "V16.E06/CREATIVE-WORKER-PRELAUNCH-SHA",
+  "date": "2026-10-28",
+  "owner": "Manual #2 CODE FIXER; E06/Manual #1 retains sole PR162 write ownership",
+  "base_head": "ac8d4f749f9c7941a6857ccb6df126434332a74a",
+  "donor_branch": "fix/lane2-creative-worker-payload-integrity-20261028-r18",
+  "issue": "Original existing CreativeHostBridge.cs EnsureCreativeWorkerAsync checked only File.Exists(path) before Process.Start, unlike already verified original Python diagnostic. Executable replacement on a writable install may lead to untrusted code execution; exploitable conditions NOT verified.",
+  "change": "Existing WPF native worker launch now checks fixed install-root path, symlink/junction directory/file attributes, bounded installed P01 payload.sha256.json original schema, exactly one canonical worker record, positive bytes count, valid SHA256 and SHA256.HashData open read-only handle across Process.Start. No additional worker, downloader, DB, LLM or event bus.",
+  "files": [
+    {
+      "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+      "pre_blob_sha1": "a81fc67068a42add05618e3ed71cc03bd9e93ab5",
+      "post_blob_sha1": "ae343b8b9ae010943d22b31237998d10355a2aa8",
+      "pre_sha256": "3a203fcf14fc24703b29862b7e3a01a4b47dd99d1e32220173a655718ef50b01",
+      "post_sha256": "5d94fccfa2aadc9cfbb6edfffd8d9e5fbc245e2e89f225f82ef592252021aeb9",
+      "commit": "60fc72e5939d6974e63fe3aa9b457d12c6c9f026"
+    },
+    {
+      "path": "tests/e06/test_creative_worker_payload_integrity_r18.py",
+      "pre_blob_sha1": null,
+      "post_blob_sha1": "cd979228469879a089e0041c3d6f0f295565e141",
+      "pre_sha256": null,
+      "post_sha256": "a8d1c03e6036c958de33b10e9f4f3522fa61022954b558d8ad37cf10ee13d551",
+      "commit": "a1318d3fb03b78701aab988b0d5c4dff33b7a0bb"
+    }
+  ],
+  "evidence": {
+    "github_postwrite_readback": "PASS",
+    "compare_from_exact_base": "2 commits, 2 paths, 0 deletions; one product source plus one new QA file",
+    "SHA256_known_answer": "abc PASS",
+    "static_contract_checks": "14/14 PASS, exact fetched GitHub source; includes P01 manifest schema, SHA, bounds, prelaunch ordering, original STOP",
+    "python_unittest": "NOT_RUN (new Python source test committed but runner unavailable)",
+    "dotnet_build": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "original_729_zip_sha": "NOT_VERIFIED",
+    "e07_release": "0/10 NOT_RUN"
+  },
+  "limits": [
+    "Existing payload manifest is user-writable alongside installed app; manifest SHA verification is a source-integrity consistency gate, NOT a separate immutable signature or defense against same-user tampering with both manifest and worker.",
+    "NTFS open file without FileShare.Delete narrows prelaunch replacement race but cannot substitute installer directory ACL and native handle-based Windows E2E proof.",
+    "If CreativeWorker.exe is missing from the verified payload manifest, launch is intentionally HOLD, not a working-feature success.",
+    "Do not infer release completion from static source gates."
+  ],
+  "handoff": "Manual #1 must verify current PR162 HEAD and CreativeHostBridge.cs pre Git blob SHA1; reconcile with E06/QA security owner and source/installer manifest, CAS two paths only, run 14 Python regressions and .NET Windows compile, test worker launch and rejection in isolated E07 VM, then re-attest final EXE/Setup.",
+  "no_loss": "No shared PR162 or main edits; original D02/WOW001-200/8 CoreID/5 Persona/SQLite, model files and user state retained. No files deleted.",
+  "release_status": "HOLD",
+  "one_self_improvement": "PROVE_NATIVE_CHILD_BEFORE_PROCESS_START — refuse unverified child executable using existing P01 installer receipts and keep the file handle open until process creation; preserve prior functionality, distinguish static evidence from Windows proof."
+}
