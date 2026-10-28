@@ -173,5 +173,16 @@ class NativeOwnerBatchTests(unittest.TestCase):
         self.assertEqual(set(self.host.ports),{"chat.history"})
         self.assertIs(self.host.ports["chat.history"],external)
 
+
+    def test_read_only_mappingproxy_from_latest_native_owner_is_supported(self):
+        from types import MappingProxyType
+        self.host.routes=MappingProxyType({
+            key:MappingProxyType(dict(value))
+            for key,value in self.host.routes.items()})
+        self.assertEqual(self.register(),frozenset(ROUTES))
+        self.assertEqual(len(self.host.ports),7)
+        with self.assertRaises(TypeError):
+            self.host.routes["media.player"]["owner"]=2
+
 if __name__=="__main__":
     unittest.main()
