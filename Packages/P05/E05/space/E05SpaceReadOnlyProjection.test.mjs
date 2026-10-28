@@ -3,9 +3,9 @@ import {projectSpaceView,projectReadiness,projectFeeds,projectHardware,projectCo
   projectCanonicalEvents,LOCKED_BASELINE,EVENT_SCHEMA} from './E05SpaceReadOnlyProjection.mjs';
 const NOW=Date.parse('2026-10-28T03:45:00Z');
 const H='a'.repeat(64),RUN='NOX-E05-TURBO10-R03';
-const bar=i=>({executor:i,stage:'CRITERIA_VERIFIED',percent:i*10,total_tasks:10,
+const bar=i=>({executor:i,stage:'CRITERIA_ACCEPTED',percent:i*10,total_tasks:10,
   task_ledger:Array.from({length:10},(_,j)=>({task_id:`E0${i}-TASK-${j+1}`,weight:10,
-    status:j<i?'COMPONENT_VERIFIED':'HOLD',...(j<i?{receipt_sha256:H}:{})})),
+    status:j<i?'ACCEPTED':'HOLD',...(j<i?{receipt_sha256:H}:{})})),
   manifest_sha256:H,receipt_sha256:H});
 const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:44:58Z',
   native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
