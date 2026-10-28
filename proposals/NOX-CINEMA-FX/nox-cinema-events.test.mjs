@@ -95,3 +95,47 @@ test("terminal cache is isolated by RunID",()=>{
   send(ev("task.completed",2));send({...ev("task.progress",3),run_id:"RUN-002"});detach();
   assert.deepEqual(states,[["success","RUN-001"],["training","RUN-002"]]);
 });
+
+test("R12-01 rejected render retains sequence for retry",()=>{
+ let cb,ok=false,out=[];const off=attachCinemaToNativeEvents({setState:s=>{if(!ok)return false;out.push(s);return true;}},f=>{cb=f;return()=>{};},{now:()=>t0});
+ cb(ev("task.progress",1,"P03","model.pull"));ok=true;cb(ev("task.progress",1,"P03","model.pull"));off();assert.deepEqual(out,["loading"]);
+});
+test("R12-02 render exception is isolated and retry succeeds",()=>{
+ let cb,fail=true,out=[];const off=attachCinemaToNativeEvents({setState:s=>{if(fail)throw Error("GONE");out.push(s);return true;}},f=>{cb=f;return()=>{};},{now:()=>t0});
+ assert.doesNotThrow(()=>cb(ev("task.completed",2)));fail=false;cb(ev("task.completed",2));off();assert.deepEqual(out,["success"]);
+});
+test("R12-03 rejected terminal does not latch a false result",()=>{
+ let cb,ok=false,out=[];const off=attachCinemaToNativeEvents({setState:s=>{if(!ok)return false;out.push(s);return true;}},f=>{cb=f;return()=>{};},{now:()=>t0});
+ cb(ev("task.failed",1));ok=true;cb(ev("task.progress",2,"P03","model.pull"));off();assert.deepEqual(out,["loading"]);
+});
+test("R12-04 throwing native object getter does not escape host callback",()=>{
+ let cb,out=[];const off=attachCinemaToNativeEvents({setState:s=>out.push(s)},f=>{cb=f;return()=>{};},{now:()=>t0});
+ const bad=new Proxy(ev("task.completed"),{get:(o,k)=>{if(k==="schema")throw Error("MALFORMED");return Reflect.get(o,k);}});
+ assert.doesNotThrow(()=>cb(bad));off();assert.deepEqual(out,[]);
+});
+test("R12-05 failing native clock cannot crash event bus",()=>{
+ let cb,out=[];const off=attachCinemaToNativeEvents({setState:s=>out.push(s)},f=>{cb=f;return()=>{};},{now:()=>{throw Error("CLOCK");}});
+ assert.doesNotThrow(()=>cb(ev("task.completed")));off();assert.deepEqual(out,[]);
+});
+test("R12-06 nonfinite native clock cannot bypass event freshness",()=>{
+ assert.equal(visualEvent(ev("task.completed"),NaN),null);assert.equal(visualEvent(ev("task.completed"),Infinity),null);
+});
+test("R12-07 invalid host unsubscribe quarantines registered callback",()=>{
+ let cb,out=[];assert.throws(()=>attachCinemaToNativeEvents({setState:s=>out.push(s)},f=>{cb=f;return null;},{now:()=>t0}),/UNSUBSCRIBE/);
+ cb(ev("task.completed"));assert.deepEqual(out,[]);
+});
+test("R12-08 subscribe throw quarantines callback already given to host",()=>{
+ let cb,out=[];assert.throws(()=>attachCinemaToNativeEvents({setState:s=>out.push(s)},f=>{cb=f;throw Error("HOST_FAILED");},{now:()=>t0}),/HOST_FAILED/);
+ cb(ev("task.completed"));assert.deepEqual(out,[]);
+});
+test("R12-09 verified success still latches against later progress",()=>{
+ let cb,out=[];const off=attachCinemaToNativeEvents({setState:s=>{out.push(s);return true;}},f=>{cb=f;return()=>{};},{now:()=>t0});
+ cb(ev("task.completed",2));cb(ev("task.progress",3,"P03","model.pull"));off();assert.deepEqual(out,["success"]);
+});
+test("R12-10 rejected 41st run does not evict old terminal result",()=>{
+ let cb,ok=true,out=[];const off=attachCinemaToNativeEvents({setState:s=>{if(!ok)return false;out.push(s);return true;}},f=>{cb=f;return()=>{};},{now:()=>t0});
+ for(let i=1;i<=40;i++)cb({...ev("task.completed",i),run_id:"RUN-"+i});
+ ok=false;cb({...ev("task.progress",41,"P03","model.pull"),run_id:"RUN-41"});
+ ok=true;cb({...ev("task.progress",42,"P03","model.pull"),run_id:"RUN-1"});
+ off();assert.equal(out.length,40);
+});

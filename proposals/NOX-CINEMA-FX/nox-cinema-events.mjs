@@ -19,6 +19,7 @@ export function visualEvent(raw,now=Date.now()){
     typeof raw.action_id!=="string" ||
     typeof raw.state!=="string" ||
     typeof raw.timestamp_utc!=="string")return null;
+  if(!Number.isFinite(now))return null;
   const when=Date.parse(raw.timestamp_utc);
   // Ignore stale/replayed and future events, but never infer a success from timeout.
   if(!Number.isFinite(when)||when>now+5000||now-when>30000)return null;
@@ -68,18 +69,29 @@ export function attachCinemaToNativeEvents(scene,subscribeNative,{
     typeof subscribeNative!=="function"||
     typeof now!=="function")throw Error("NOX_CINEMA_NATIVE_HOST_REQUIRED");
   let closed=false;const latestByRun=new Map();
-  const un=subscribeNative(raw=>{
+  const onNative=raw=>{
     if(closed)return;
-    const visual=visualEvent(raw,now());
+    let visual;
+    // R12: malformed host envelope/clock never crashes an existing native event bus.
+    try{visual=visualEvent(raw,now());}catch(_){return;}
     if(!visual)return;
     const last=latestByRun.get(visual.runId);
     if(last&&(visual.sequence<=last.sequence||last.terminal))return;
-    // No unbounded historical run cache: only 40 active/recent entries retained.
-    if(latestByRun.size>=40 && !latestByRun.has(visual.runId))
+    // R12: an event is consumed only after the existing D02 renderer accepts it.
+    try{if(scene.setState(visual.state,visual.runId)===false)return;}
+    catch(_){return;}
+    // No eviction on rejected/failed render; 40-entry bound is unchanged.
+    if(latestByRun.size>=40&&!latestByRun.has(visual.runId))
       latestByRun.delete(latestByRun.keys().next().value);
     latestByRun.set(visual.runId,{sequence:visual.sequence,terminal:visual.terminal});
-    scene.setState(visual.state,visual.runId);
-  });
-  if(typeof un!=="function")throw Error("NOX_CINEMA_NEEDS_HOST_UNSUBSCRIBE");
+  };
+  let un;
+  try{un=subscribeNative(onNative);}
+  catch(error){closed=true;latestByRun.clear();throw error;}
+  if(typeof un!=="function"){
+    // A host that violates unsubscribe cannot keep a live orphaned FX callback.
+    closed=true;latestByRun.clear();
+    throw Error("NOX_CINEMA_NEEDS_HOST_UNSUBSCRIBE");
+  }
   return ()=>{if(closed)return;closed=true;latestByRun.clear();un();};
 }
