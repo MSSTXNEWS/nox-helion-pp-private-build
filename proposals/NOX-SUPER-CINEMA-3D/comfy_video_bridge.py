@@ -66,6 +66,35 @@ class ComfyVideoPort(ComfyImagePort):
                  "operations": tuple(r["operations"]), "status": "CATALOG_ONLY_HOLD"}
                 for r in self.models.values()]
 
+    def demo_model(self, model_id, operation=None):
+        """Show metadata in a demo UI without weights, network, GPU, or execution.
+
+        Displaying a public model name is not an endorsement of its license.
+        Real generation remains subject to the separate native preflight.
+        """
+        row = self.models.get(model_id)
+        if row is None:
+            raise Denied("UNKNOWN_DEMO_MODEL")
+        if operation is not None and operation not in row.get("operations", []):
+            raise Denied("UNSUPPORTED_DEMO_OPERATION")
+        return {
+            "id": row["id"], "name": row["name"],
+            "operations": tuple(row["operations"]),
+            "source": row["source"],
+            "mode": "DEMO_CATALOG_ONLY",
+            "status": "PREVIEW_ONLY_NO_INFERENCE",
+            "modelInstalled": False, "weightsDownloaded": False,
+            "gpuUsed": False, "networkRequest": False,
+            "licenseReviewBeforeExecution": True,
+            "checkpointReady": False,
+        }
+
+    def demo_catalog(self):
+        """All candidate options can be inspected in the prototype, regardless of
+        their *commercial* clearance state. Does not change execution gating.
+        """
+        return [self.demo_model(model_id) for model_id in self.models]
+
     def prepare_video(self, *, model_id, operation, workflow, workflow_digest,
                       prompt_node, prompt, client_id, preflight, user_rights_confirmed,
                       frames=81, width=832, height=480):
