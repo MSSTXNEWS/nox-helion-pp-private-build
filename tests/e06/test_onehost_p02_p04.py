@@ -77,6 +77,7 @@ class OneHostOwnerContract(unittest.TestCase):
             native_authorize=lambda scope, action: action in self.allowed,
             approved_core_ids=self.core_ids,
             approved_personas=self.personas,
+            native_verify_registry=lambda cores, personas: (cores == self.core_ids and personas == self.personas),
         )
         self.seam = P02P04OneHost(chat=self.chat, store=self.store,
                                   rag=self.rag, **self.native)
@@ -172,6 +173,20 @@ class OneHostOwnerContract(unittest.TestCase):
         self.seam._publish_v3 = self.published.append
         self.seam.publish_owner_gpu_event(self.scope, signed)
         self.assertEqual(self.published, [signed])
+
+    def test_16_missing_original_registry_receipt_hold(self):
+        options = dict(self.native)
+        options["native_verify_registry"] = lambda cores, personas: False
+        with self.assertRaisesRegex(OneHostHold, "ORIGINAL_P01_CORE_PERSONA_RECEIPT"):
+            P02P04OneHost(chat=ChatBridge(self.store, self.llm),
+                          store=self.store, rag=self.rag, **options)
+
+    def test_17_second_ollama_port_hold(self):
+        other = OfflineOllamaWire()
+        other.base = "http://127.0.0.1:11435"
+        with self.assertRaisesRegex(OneHostHold, "ONE_OLLAMA_ENDPOINT_PORT"):
+            P02P04OneHost(chat=ChatBridge(self.store, other),
+                          store=self.store, rag=self.rag, **self.native)
 
     def test_15_helion_target_uses_same_engine(self):
         ident = Identity("tenant", "principal", "HELION", "PERSONA-1", "session1")
