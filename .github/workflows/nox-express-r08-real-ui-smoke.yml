@@ -78,6 +78,43 @@ jobs:
                   } finally { $ErrorActionPreference=$previousPref }
                 }
               }
+              # Real WPF GUI boot is independently testable from SHA-verified
+              # staging files. This does not waive installer activation failure.
+              if ($receipt.stageVerifyExitCode -eq 0) {
+                $stagedExe=Join-Path $stage 'NOX.P01.Shell.exe'
+                $expectedStageExeSha='3b26a3c00fa24a82e084ed22432664d96ae6c4fedc46a44520c2a290d8825fda'
+                if((Test-Path -LiteralPath $stagedExe -PathType Leaf) -and
+                    (Get-FileHash -LiteralPath $stagedExe -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $expectedStageExeSha){
+                  $receipt.stageWpfExeSha256=$expectedStageExeSha
+                  $stageProc=$null
+                  try {
+                    $stageProc=Start-Process -FilePath $stagedExe -PassThru
+                    $until=[DateTime]::UtcNow.AddSeconds(24)
+                    $bootLog=Join-Path $env:LOCALAPPDATA 'NOX_HELION\P01\logs\shell.log'
+                    $window=$false
+                    $nav=$false
+                    while([DateTime]::UtcNow -lt $until){
+                      Start-Sleep -Milliseconds 850
+                      $stageProc.Refresh()
+                      if($stageProc.HasExited){$receipt.stagedWpfExitCode=$stageProc.ExitCode; break}
+                      if($stageProc.MainWindowHandle -ne [IntPtr]::Zero){$window=$true}
+                      if(Test-Path -LiteralPath $bootLog -PathType Leaf){
+                        $tail=@(Get-Content -LiteralPath $bootLog -Tail 100 -ErrorAction SilentlyContinue)
+                        if(@($tail | Where-Object {$_ -match 'NAV_OK'}).Count -gt 0){$nav=$true; break}
+                        if(@($tail | Where-Object {$_ -match 'INIT_ERROR|NAV_FAIL|WEBVIEW_PROCESS_FAILED'}).Count -gt 0){$receipt.stageWpfFailureLog=($tail|Out-String).Substring(0,[Math]::Min(1200,($tail|Out-String).Length));break}
+                      }
+                    }
+                    $receipt.stageGuiWindow=if($window){'PASS'}else{'HOLD_NO_WINDOW'}
+                    $receipt.stageWebView2Navigation=if($nav){'PASS'}else{'HOLD_NAVIGATION_NOT_OBSERVED'}
+                  } catch { $receipt.stageGuiError=$_.Exception.Message }
+                  finally {
+                    if($stageProc -and -not $stageProc.HasExited){
+                      $null=$stageProc.CloseMainWindow()
+                      if(-not $stageProc.WaitForExit(2500)){$stageProc.Kill($true)}
+                    }
+                  }
+                } else { $receipt.stageGuiError='WPF_BINARY_SHA_NOT_MATCHED' }
+              }
               throw "NOX_INSTALL_EXIT_$($p.ExitCode)"
             }
             $receipt.install='PASS'
