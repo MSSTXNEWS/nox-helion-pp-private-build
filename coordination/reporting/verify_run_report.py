@@ -134,6 +134,8 @@ def validate(report:dict) -> dict:
         require(isinstance(val,dict) and val.get("status") in ("PASS","HOLD","FAIL"),
                 "INVALID_"+g+"_STATE")
         text_field(val,"evidence")
+    require((len(tasks)==10 and done==10) or gates["G2"]["status"]!="PASS",
+            "TEN_REAL_TASKS_REQUIRED_FOR_G2_PASS")
     return {"schema":"NOX-V16-REPORT-GATE-VALIDATION-V1",
             "run_id":run_id,"owner":owner,"cycle_index":cycle_index,
             "cycle_count":cycle_count,"tasks_in_envelope":len(tasks),
