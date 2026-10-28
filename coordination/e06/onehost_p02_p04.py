@@ -92,6 +92,14 @@ class P02P04OneHost:
         ollama_uri, embed_uri = urlsplit(chat.ollama.base), urlsplit(rag.endpoint)
         if (not ollama_uri.port or ollama_uri.port != embed_uri.port):
             raise OneHostHold("ONE_OLLAMA_ENDPOINT_PORT_REQUIRED")
+        # A matching port is NOT a listener identity: IPv4, IPv6 and DNS
+        # localhost can resolve to different loopback processes on that port.
+        # Refuse an unproven single-host binding rather than silently using
+        # two Ollama listeners. Owners may explicitly configure the SAME
+        # normalized local scheme+host+port; E07 must still test the process.
+        if (ollama_uri.scheme != embed_uri.scheme
+                or ollama_uri.hostname != embed_uri.hostname):
+            raise OneHostHold("ONE_OLLAMA_LISTENER_IDENTITY_REQUIRED")
         if chat.rag_context is not None:
             raise OneHostHold("RAG_ALREADY_BOUND_DO_NOT_OVERRIDE")
         self.chat, self.store, self.rag = chat, store, rag
