@@ -7,6 +7,7 @@ param(
  [Parameter(Mandatory=$true)][string]$VerifiedR13StagedR11,
  [Parameter(Mandatory=$true)][string]$OriginalR13Builder,
  [Parameter(Mandatory=$true)][string]$OriginalPythonExe,
+ [Parameter(Mandatory=$true)][string]$Wow200SourceRoot,
  [Parameter(Mandatory=$true)][string]$OutputRoot
 )
 $ErrorActionPreference='Stop'
@@ -15,6 +16,7 @@ $patchRoot=(Resolve-Path -LiteralPath $PSScriptRoot).Path
 $old=(Resolve-Path -LiteralPath $VerifiedR13StagedR11).Path
 $builder=(Resolve-Path -LiteralPath $OriginalR13Builder).Path
 $original=(Resolve-Path -LiteralPath $OriginalPythonExe).Path
+$wow=(Resolve-Path -LiteralPath $Wow200SourceRoot).Path
 if (Test-Path -LiteralPath $OutputRoot){ throw 'NO_LOSS_HOLD: output exists; choose a new folder' }
 $expectedPython='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
 if((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $expectedPython){throw 'NO_LOSS_HOLD: source Python EXE does not match R13'}
@@ -50,6 +52,10 @@ if($LASTEXITCODE -ne 0){throw 'CREATIVE_PROTOCOL_TEST_HOLD'}
 if($LASTEXITCODE -ne 0){throw 'CREATIVE_WORKER_COMPILE_HOLD'}
 & $python (Join-Path $patchRoot 'stage_creative.py') $stage $patchRoot
 if($LASTEXITCODE -ne 0){throw 'CREATIVE_STAGE_HOLD'}
+& $python -m unittest discover -s (Join-Path $wow 'tests') -v
+if($LASTEXITCODE -ne 0){throw 'WOW200_SHA_GATES_TEST_HOLD'}
+& $python (Join-Path $wow 'stage_wow200.py') $stage $wow
+if($LASTEXITCODE -ne 0){throw 'WOW200_STAGE_HOLD'}
 $builderCopy=Join-Path $workspace 'build_onehost_installer.ps1'
 Copy-Item -LiteralPath $builder -Destination $builderCopy
 $workerDist=Join-Path $workerRoot 'dist/NOX_CreativeWorker'
@@ -61,6 +67,6 @@ if($LASTEXITCODE -ne 0){throw 'CREATIVE_INSTALLER_PATCH_HOLD'}
 if($LASTEXITCODE -ne 0){throw 'CREATIVE_WINDOWS_NSIS_HOLD'}
 $setup=Join-Path $workspace 'candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
 if(!(Test-Path $setup -PathType Leaf)){throw 'CREATIVE_NSIS_SETUP_MISSING'}
-$receipt=[ordered]@{status='WINDOWS_CANDIDATE_BUILT_NOT_E07_ACCEPTED';setup_sha256=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant();setup_bytes=(Get-Item $setup).Length;original_d02_sha256=$art;original_r13_python_sha256=$expectedPython;created_utc=(Get-Date).ToUniversalTime().ToString('o');e07_accepted=$false}
+$receipt=[ordered]@{status='WINDOWS_CANDIDATE_BUILT_NOT_E07_ACCEPTED';setup_sha256=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant();setup_bytes=(Get-Item $setup).Length;original_d02_sha256=$art;original_r13_python_sha256=$expectedPython;wow200_stage_receipt=(Join-Path $workspace 'WOW200_STAGE_RECEIPT.json');created_utc=(Get-Date).ToUniversalTime().ToString('o');e07_accepted=$false}
 $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $workspace 'CREATIVE_FINAL_BUILD_RECEIPT.json') -Encoding utf8
 Write-Host "WINDOWS_CANDIDATE_CREATED_NOT_E07_ACCEPTED $($receipt.setup_sha256)"

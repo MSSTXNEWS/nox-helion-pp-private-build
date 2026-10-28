@@ -2,9 +2,10 @@ name: NOX E06 R13 Creative Runtime Windows installer (diagnostic, not release)
 on:
   push:
     branches:
-      - feature/nox-r13-creative-runtime-20261028
+      - feature/nox-v16-wow200-merged-20261028
     paths:
       - 'integrations/creative/**'
+      - 'integrations/wow200/**'
       - '.github/workflows/nox-creative-r13-build.yml'
   workflow_dispatch:
 permissions:
@@ -186,6 +187,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WINDOWS_WORKER_BUILD_HOLD' }
           if (!(Test-Path 'work/creative/dist/NOX_CreativeWorker/NOX_CreativeWorker.exe' -PathType Leaf)) { throw 'CREATIVE_WINDOWS_WORKER_EXE_MISSING' }
           python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
+          if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_STAGE_HOLD' }
+          python -m unittest discover -s integrations/wow200/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_NOLOSS_TESTS_HOLD' }
+          python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+          if ($LASTEXITCODE -ne 0) { throw 'WOW200_D02_OR_DONOR_HOLD' }
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_NOLOSS_WPF_STAGE_HOLD' }
           python integrations/creative/patch_installer.py coordination/e06/build_onehost_installer.ps1 work/creative/dist/NOX_CreativeWorker
           if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_NSIS_PREMANIFEST_HOLD' }
@@ -206,6 +212,7 @@ jobs:
             if ($observed -cne $checks[$name]) {throw "D02_ART_DRIFT_HOLD:$name"}
           }
           if(!(Test-Path 'work/e06/staged/CREATIVE_STAGE_RECEIPT.json')){throw 'CREATIVE_RECEIPT_MISSING'}
+          if(!(Test-Path 'work/e06/staged/WOW200_STAGE_RECEIPT.json')){throw 'WOW200_STAGE_RECEIPT_MISSING'}
           Write-Host 'D02_FOUR_ASSETS_UNCHANGED_AFTER_CREATIVE_STAGE'
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
@@ -258,6 +265,7 @@ jobs:
             work/e06/staged/E06_R10_SOURCE_RECEIPT.json
             work/e06/staged/d02-byte-exact-receipt.json
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+            work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/onehost-candidate/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
             work/e06/onehost-candidate/payload/payload.sha256.json

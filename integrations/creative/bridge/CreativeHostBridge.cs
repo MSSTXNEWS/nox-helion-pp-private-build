@@ -2,6 +2,7 @@
 // NOX's original D02, 8 CoreID, chat, STOP and windows owner controls are unchanged.
 using System;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
 using System.Text;
@@ -17,6 +18,7 @@ public partial class MainWindow
     private readonly SemaphoreSlim _creativeStartGate = new(1,1);
     private readonly SemaphoreSlim _creativeWriteGate = new(1,1);
     private Process? _creativeWorker;
+    private readonly ConcurrentDictionary<string,byte> _creativePending = new(StringComparer.Ordinal);
     private Window? _creativeProjector;
 
     private async Task DispatchCreativeAsync(JsonElement message)
@@ -31,8 +33,34 @@ public partial class MainWindow
         }
         var action=GetString(payload,"action");
         if (action=="native_import") { ImportCreativeAsset(requestId!,payload); return; }
+        if (action=="stop")
+        {
+            StopCreativeWorker();
+            PostMessage(new {kind="creativeResult",requestId,ok=true,
+                data=new {status="STOPPED",source="NATIVE_PROCESS_TREE_TERMINATION_REQUESTED"}});
+            return;
+        }
+        if (action=="download")
+        {
+            // Reuse existing approved P03 ModelCenter instead of starting a second
+            // Hugging Face/Ollama downloader with competing queue and cancellation.
+            try
+            {
+                OpenModelCenter();
+                PostMessage(new {kind="creativeResult",requestId,ok=true,
+                    data=new {status="OWNER_WINDOW_OPEN_REQUESTED",owner="P03",
+                        message="Выбери нужные веса в едином NOX ModelCenter. Загрузка не запущена автоматически."}});
+            }
+            catch(Exception ex)
+            {
+                WriteLog("CREATIVE_P03_ROUTE " + ex.GetType().Name);
+                PostMessage(new {kind="creativeResult",requestId,ok=false,error="NOX ModelCenter unavailable"});
+            }
+            return;
+        }
         try
         {
+            _creativePending.TryAdd(requestId!,0);
             var worker=await EnsureCreativeWorkerAsync();
             var line=JsonSerializer.Serialize(new {request_id=requestId,payload});
             await _creativeWriteGate.WaitAsync();
@@ -46,6 +74,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _creativePending.TryRemove(requestId!,out _);
             WriteLog("CREATIVE_DISPATCH_FAILED "+ex.GetType().Name);
             PostMessage(new {kind="creativeResult",requestId,ok=false,error="Creative engine offline; check the installed worker and runtime"});
         }
@@ -79,6 +108,7 @@ public partial class MainWindow
                         using var doc=JsonDocument.Parse(line);
                         if (!doc.RootElement.TryGetProperty("request_id",out var id) || id.ValueKind!=JsonValueKind.String ||
                             !Guid.TryParseExact(id.GetString(),"D",out _))continue;
+                        if (!_creativePending.TryRemove(id.GetString()!,out _)) continue;
                         var ok=doc.RootElement.TryGetProperty("ok",out var good) && good.ValueKind==JsonValueKind.True;
                         object response=ok
                             ? new {kind="creativeResult",requestId=id.GetString(),ok=true,data=doc.RootElement.GetProperty("data").Clone()}
@@ -168,6 +198,12 @@ public partial class MainWindow
 
     private void StopCreativeWorker()
     {
-        try{if(_creativeWorker is {HasExited:false} p)p.Kill(entireProcessTree:true);}catch(Exception ex){WriteLog("CREATIVE_WORKER_CLOSE "+ex.GetType().Name);}
+        try { if(_creativeWorker is {HasExited:false} p)p.Kill(entireProcessTree:true); }
+        catch(Exception ex) { WriteLog("CREATIVE_WORKER_STOP "+ex.GetType().Name); }
+        foreach(var pending in _creativePending.Keys)
+        {
+            if(_creativePending.TryRemove(pending,out _))
+                PostMessage(new {kind="creativeResult",requestId=pending,ok=false,error="STOPPED_BY_USER"});
+        }
     }
 }
