@@ -6,6 +6,7 @@ on:
       - e06/v16-g2-05-space-mobile-20261028-c01
       - e06/v16-g2-05-provenance-20261028-r04
       - e06/v16-g2-05-runtime-no-loss-20261028-r05
+      - e06/v16-g2-05-atomic-event-20261028-r06
     paths:
       - "coordination/e06/adapters/**"
       - "tests/e06/adapters/**"
@@ -74,7 +75,7 @@ jobs:
                   print(name, path, "Git blob SHA-1", blob,
                         "SHA-256", hashlib.sha256(raw).hexdigest())
           '@ | python -
-      - name: Execute 59 defined in-process tests with genuine owner modules on Windows
+      - name: Execute 67 defined in-process tests with genuine owner modules on Windows
         shell: pwsh
         run: |
           $env:NOX_G2_OWNER_FIXTURE_ROOT = Join-Path $env:RUNNER_TEMP "nox-g2-owner"
