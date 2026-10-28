@@ -263,6 +263,40 @@ def verify_model_lock(lock_path: Path, model_path: Path, expected_revision: str)
 MAX_JSONL_LINE_CHARACTERS = 1_048_576
 
 
+def parse_dataset_record(line: str, label: str, number: int) -> dict[str, Any]:
+    """Fail closed on ambiguous JSONL keys and non-finite numeric literals.
+
+    Python's permissive json.loads accepts repeated keys and NaN/Infinity.
+    Other loaders may interpret those same bytes differently. Reject before
+    hashing split identities or handing any record to a GPU trainer.
+    """
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError(f"{label}_JSON_DUPLICATE_KEY_{number}")
+            obj[key] = value
+        return obj
+
+    def reject_constant(_value: str) -> None:
+        raise ValueError(f"{label}_JSON_NONFINITE_{number}")
+
+    def finite_float(token: str) -> float:
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError(f"{label}_JSON_NONFINITE_{number}")
+        return value
+
+    try:
+        row = json.loads(line, object_pairs_hook=unique_pairs,
+                         parse_constant=reject_constant, parse_float=finite_float)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{label}_INVALID_JSONL_{number}") from exc
+    if not isinstance(row, dict):
+        raise ValueError(f"{label}_ROW_NOT_OBJECT_{number}")
+    return row
+
+
 def validate_jsonl(path: Path, label: str) -> int:
     count = 0
     with path.open("r", encoding="utf-8") as stream:
@@ -271,12 +305,7 @@ def validate_jsonl(path: Path, label: str) -> int:
                 raise ValueError(f"{label}_LINE_TOO_LONG_{number}")
             if not line.strip():
                 continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"{label}_INVALID_JSONL_{number}") from exc
-            if not isinstance(row, dict):
-                raise ValueError(f"{label}_ROW_NOT_OBJECT_{number}")
+            row = parse_dataset_record(line, label, number)
             if isinstance(row.get("text"), str) and row["text"].strip():
                 count += 1
                 if count > MAX_DATASET_LEAKAGE_SCAN_ROWS:
@@ -324,7 +353,7 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
     def records(path: Path, label: str):
         count = 0
         with path.open("r", encoding="utf-8") as stream:
-            for line in stream:
+            for number, line in enumerate(stream, 1):
                 if not line.strip():
                     continue
                 count += 1
@@ -332,17 +361,28 @@ def validate_holdout_separation(train_path: Path, holdout_path: Path) -> tuple[i
                     raise ValueError(label + "_LEAKAGE_SCAN_LIMIT_EXCEEDED")
                 if len(line) > MAX_JSONL_LINE_CHARACTERS:
                     raise ValueError(label + "_LEAKAGE_SCAN_LINE_TOO_LONG")
-                yield payload_digest(json.loads(line))
+                yield payload_digest(parse_dataset_record(line, label, number))
         if count == 0:
             raise ValueError(label + "_EMPTY")
 
-    train_digests = set(records(train_path, "TRAIN"))
-    train_rows = len(train_digests)
+    # Count physical examples, not unique hashes; duplicate records inflate
+    # optimizer/evaluation statistics and can mask a corrupted holdout.
+    train_digests = set()
+    train_rows = 0
+    for digest in records(train_path, "TRAIN"):
+        train_rows += 1
+        if digest in train_digests:
+            raise ValueError("DATASET_TRAIN_DUPLICATE_EXAMPLE")
+        train_digests.add(digest)
+    holdout_digests = set()
     holdout_rows = 0
     for digest in records(holdout_path, "HOLDOUT"):
         holdout_rows += 1
         if digest in train_digests:
             raise ValueError("DATASET_TRAIN_HOLDOUT_EXAMPLE_OVERLAP")
+        if digest in holdout_digests:
+            raise ValueError("DATASET_HOLDOUT_DUPLICATE_EXAMPLE")
+        holdout_digests.add(digest)
     return train_rows, holdout_rows
 
 
