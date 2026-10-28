@@ -37,8 +37,8 @@ public static class E05CanonicalEventFactory
     public const string Schema = "NOX-INSTALLER-EVENT-v3";
     private static readonly HashSet<string> Allowed = new(StringComparer.Ordinal) {
         "task.started", "task.progress", "task.failed", "task.completed",
-        "model.tokens", "model.stopped", "gpu.sample", "training.step",
-        "checkpoint.saved", "acceptance.updated"
+        "model.stopped", "gpu.sample", "training.step",
+        "checkpoint.saved"
     };
     private static readonly HashSet<string> States = new(StringComparer.Ordinal) {
         "QUEUED", "RUNNING", "PAUSED", "COMPLETED", "ERROR",
@@ -55,6 +55,16 @@ public static class E05CanonicalEventFactory
             e.Source.Length > 120 || e.Message is null || e.Message.Length > 240 ||
             e.Message.Any(c => char.IsControl(c)) ||
             e.Source.Any(c => char.IsControl(c))) return false;
+        // The original events.v3 schema scopes neural worker events to P04.
+        // P05 may report observed hardware telemetry ONLY as an unverified
+        // gpu_utilization sample; it cannot impersonate a P04 optimizer step.
+        if (e.EventType is "training.step" or "checkpoint.saved" or "model.stopped")
+            if (e.PackageId != "P04") return false;
+        if (e.EventType == "gpu.sample" &&
+            !(e.PackageId == "P04" || (e.PackageId == "P05" &&
+              e.ActionId == "gpu_utilization" && e.Source == "P05.Hardware" &&
+              e.State == "RUNNING" && !e.EvidenceVerified)))
+            return false;
         if (e.Numerator.HasValue != e.Denominator.HasValue) return false;
         if (e.Denominator.HasValue && (e.Denominator <= 0 || e.Numerator < 0 || e.Numerator > e.Denominator)) return false;
         return true;
