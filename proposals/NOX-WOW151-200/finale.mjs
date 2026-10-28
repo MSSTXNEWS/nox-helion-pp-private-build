@@ -9,7 +9,8 @@ export function mountFinale(root,{mode="BALANCED",authorize=null,reducedMotion=f
  verifyCompositions();
  if(!root||root.nodeType!==1||root.dataset?.noxWowSlot!=="secondary"||
  (typeof root.closest==="function"&&root.closest('[data-nox-page="home"]')))throw Error("D02_HOME_LOCK");
- if(M.has(root))throw Error("FINALE_ALREADY_MOUNTED");
+ if(M.has(root) || root.classList?.contains?.("nox-unified-wow"))
+   throw Error("FINALE_ALREADY_MOUNTED_OR_UNIFIED_ACTIVE");
  if(!MODES.has(mode)||authorize!==null&&typeof authorize!=="function")throw Error("INVALID_FINALE_OPTIONS");
  const doc=root.ownerDocument;
  if(!doc||typeof doc.createElement!=="function")throw Error("APPROVED_DOCUMENT_REQUIRED");
