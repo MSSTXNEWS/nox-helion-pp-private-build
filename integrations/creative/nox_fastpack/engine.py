@@ -179,12 +179,24 @@ class Studio(CreativeExtensions):
                or not re.search(r"\.(safetensors|gguf|ckpt|bin|pth)$",x,re.I)
                for x in filenames):
             raise StudioError("Unapproved weight filename")
-        target=self.models/model_id;target.mkdir(parents=True,exist_ok=True)
+        # Never let an existing junction/symlink redirect HF snapshots outside
+        # the trusted NOX model root. No removal of existing user files.
+        if self.models.is_symlink() or (self.models.exists()
+                and not self.models.resolve().is_relative_to(self.root)):
+            raise StudioError("NOX model directory is redirected")
+        target=self.models/model_id
+        if target.is_symlink():
+            raise StudioError("Selected model directory is redirected")
+        target.mkdir(parents=True,exist_ok=True)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
         files=[]
         for f in filenames:
-            p=self._within(target,target/f)
-            if not p.is_file() or p.is_symlink() or p.stat().st_size<=0:
+            candidate=target/f
+            if (candidate.is_symlink() or any(parent.is_symlink()
+                    for parent in candidate.parents if parent!=target and target in parent.parents)):
+                raise StudioError("Downloaded weight file path is redirected: "+f)
+            p=self._within(target,candidate)
+            if not p.is_file() or p.stat().st_size<=0:
                 raise StudioError("Downloaded weight file missing or unsafe: "+f)
             expected=getattr(valid[f],"size",None)
             if expected is not None and p.stat().st_size!=expected:
