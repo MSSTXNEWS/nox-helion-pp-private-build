@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_V16_W1_01_E06_OWNER_PATCH_RECEIPT_R18",
+  "runId": "NOX-V16-W1-01-20261029T003810MSK-R18",
+  "taskId": "W1-01-R18-CANONICAL-ZIP-LIMITS-01",
+  "owner": "W1.01 E06 SourceLock candidate; manual #1 only merges PR162",
+  "pr162AuditCommit": "377e2eeff47e7619a2933599837701464ab57d80",
+  "pr162AuditTree": "fbb1abb4d5f12392681b705713779a7a7997c246",
+  "path": "coordination/source-lock/verify_original_archive.py",
+  "preSha256": "089200b6be61a375346fc1825a7ab96bd507d61d57ae79461650381933770307",
+  "preGitBlobSha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+  "candidateSha256": "0d78728dbdfc53945f02183620301e2f8a7a16e95c29ca8f860ff5e3d8967669",
+  "candidateGitBlobSha1": "0413550c63d2be3a2cf51df578c3165fb01619a8",
+  "fix": "Keep one canonical ZIP validator; align max path length <=500 and per-member compression ratio <=500 with existing E06 verifier",
+  "tests": "RED 5/7 original, GREEN 7/7 candidate; actual source-derived synthetic ZIP (no original binary)",
+  "previousLesson": "CANONICAL_ZIP_NFC_PARITY_BEFORE_729_ADMISSION applied YES; NFC negative preserved",
+  "partsMetadataGitTree": [
+    {
+      "name": "source_00.part",
+      "size": 20971520,
+      "gitBlobSha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "physicalSha256": null
+    },
+    {
+      "name": "source_01.part",
+      "size": 20971520,
+      "gitBlobSha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "physicalSha256": null
+    },
+    {
+      "name": "source_02.part",
+      "size": 18421306,
+      "gitBlobSha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "physicalSha256": null
+    }
+  ],
+  "zipExpectedBytesNotMeasured": 60364346,
+  "zipExpectedSha256NotMeasured": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "verifiedActualZipSha256": null,
+  "verifiedOriginalFileSha256Count": 0,
+  "expectedOriginalFileCount": 729,
+  "newProductTaskIdDONE": 0,
+  "isolatedPatchTaskIdDONE": 1,
+  "sourceReady": "HOLD",
+  "windowsBuild": "PROHIBITED_UNTIL_CODE_COMPLETE_AND_SOURCE_READY",
+  "release": "HOLD"
+}

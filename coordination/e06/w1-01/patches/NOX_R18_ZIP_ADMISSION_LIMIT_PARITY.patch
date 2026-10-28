@@ -1,0 +1,22 @@
+--- a/coordination/source-lock/verify_original_archive.py
++++ b/coordination/source-lock/verify_original_archive.py
+@@ -16,7 +16,8 @@
+ RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$', re.I)
+ 
+ def safe_name(name: str) -> bool:
+-    if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
++    # Match the already deployed E06 safe_member() 500-character boundary.
++    if (not name or len(name) > 500 or name.startswith("/") or "\\" in name or BAD.search(name)
+             or unicodedata.normalize("NFC", name) != name):
+         return False
+     parts = name.rstrip("/").split("/")
+@@ -101,6 +102,9 @@
+                 total += info.file_size
+                 if total > 4*1024**3 or info.flag_bits & 1:
+                     raise ValueError(f"Archive quota/encryption gate: {name!r}")
++                # Match the E06 preflight before inflating an unsafe ZIP member.
++                if info.file_size > max(1, info.compress_size) * 500:
++                    raise ValueError(f"Suspicious ZIP compression ratio: {name!r}")
+                 digest, count = hashlib.sha256(), 0
+                 with z.open(info) as stream:
+                     for chunk in iter(lambda: stream.read(1024*1024), b""):
