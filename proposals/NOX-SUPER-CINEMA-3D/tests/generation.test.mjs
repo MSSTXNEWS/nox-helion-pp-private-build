@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createVisualPlan,cinematicPrompt,requestViaExistingHost,verifyVisualPlan,verifyAsset} from "../src/generation.mjs";
-import {COMPOSITIONS} from "../../../NOX-WOW151-200/catalog.mjs";
+import {COMPOSITIONS} from "../../NOX-WOW151-200/catalog.mjs";
 const hash="a".repeat(64);
 const approved={id:"original-obsidian",sha256:hash,kind:"texture",license:"NOX_ORIGINAL",approved:true};
 const base={brief:"premium photorealistic night scene",output:"image",compositionId:151,assets:[approved]};
