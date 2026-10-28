@@ -322,3 +322,34 @@ test('matching GPU device identifier and native observation permits truthful VRA
   assert.equal(x['gpu.vram.used_bytes'].value,2048);
   assert.equal(x['gpu.vram.total_bytes'].deviceId,'GPU-0');
 });
+test('two bitcoin prices are quarantined even when each is licensed',()=>{
+  const x=projectFeeds([{...feed,id:'bitcoin',value:70000},{...feed,id:'bitcoin',value:80000}],NOW);
+  assert.deepEqual(x,[{id:'bitcoin',stage:'HOLD_DUPLICATE_FEED',sourceUtc:null,value:null,observedKind:'N_D'}]);
+});
+test('hidden seventeenth market quote still blocks first price',()=>{
+  const x=projectFeeds([{...feed,id:'brent',value:78},...Array(15).fill(null),{...feed,id:'brent',value:108}],NOW);
+  assert.equal(x[0].stage,'HOLD_DUPLICATE_FEED');assert.equal(x[0].value,null);
+});
+test('two news articles are not treated as conflicting market ticks',()=>{
+  const x=projectFeeds([{...feed,id:'nox-news',value:null},{...feed,id:'nox-news',value:null}],NOW);
+  assert.equal(x.length,2);assert.equal(x[0].stage,'SOURCE_DATED');
+});
+test('Drive controller flag without WebView2 proof cannot claim app readback',()=>{
+  const x=projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:{run_id:RUN,build_id:'BUILD-1',
+    status:'READBACK_PASS',receipt_sha256:H}},NOW);
+  assert.equal(x.driveReadback,'HOLD');
+});
+test('fresh app-side Drive receipt stays reported, not independently verified',()=>{
+  const d={run_id:RUN,build_id:'BUILD-1',origin:'WEBVIEW2_APP',status:'READBACK_PASS',
+    readback_at_utc:'2026-10-28T03:44:58Z',receipt_sha256:H};
+  const x=projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:d},NOW);
+  assert.equal(x.driveReadback,'APP_REPORTED_READBACK');
+  assert.equal(projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:{...d,
+    readback_at_utc:'2026-10-28T03:00:00Z'}},NOW).driveReadback,'HOLD');
+});
+test('Drive receipt tied to a different installed BuildID is HOLD',()=>{
+  const d={run_id:RUN,build_id:'WRONG-EXE',origin:'WEBVIEW2_APP',status:'READBACK_PASS',
+    readback_at_utc:'2026-10-28T03:44:58Z',receipt_sha256:H};
+  assert.equal(projectSpaceView({run_id:RUN,build_id:'BUILD-1',drive:d},NOW).driveReadback,'HOLD');
+});
+console.log('R06 ambiguity-quarantine guards PASS (synthetic only); native WebView2/Windows/feeds/Drive readback NOT_RUN.');
