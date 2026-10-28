@@ -1,0 +1,337 @@
+"""NOX V16 E06: admission contract for the SINGLE existing native host.
+
+NO ROUTER, SERVICE, WEB ENDPOINT, FILE SYSTEM CONTROL OR MODEL ENGINE IS CREATED.
+The already-owned host supplies a signed session, native capabilities, approval,
+file-picker and real handler ACK; this module refuses everything else.
+The 50-route registry remains the approved PACK01 catalog, never a new table.
+Source-only candidate until whole application SourceLock and E07 acceptance.
+"""
+from __future__ import annotations
+from dataclasses import dataclass
+import hashlib
+import hmac
+import json
+from pathlib import Path
+import re
+import secrets
+import time
+import uuid
+from urllib.parse import urlsplit
+
+BASE_COMMIT = "0b3a7d435be735148d64171deb9027093a89646e"
+BASE_TREE = "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
+SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+ROUTE = re.compile(r"[a-z][a-z0-9]*(?:[._][a-z0-9]+)*\Z")
+TASKS = tuple(f"NIP01-{i:02}" for i in range(1, 51))
+STOP_TARGETS = {"chat.stop": frozenset({"helion.chat", "core.chat", "persona.chat"}),
+                "models.cancel": frozenset({"models.pull"}),
+                "training.pause": frozenset({"training.start"})}
+STOP_ROUTES = frozenset(STOP_TARGETS)
+MIC_ROUTES = frozenset({"chat.voice", "translate.ru_es", "maestro.spanish", "calls.dial"})
+PICKER_ROUTES = frozenset({"chat.attach", "models.gguf.import", "rag.import",
+                           "datasets.review", "media.player", "media.subtitles",
+                           "system.backup", "system.update"})
+FORBIDDEN_PAGE_KEYS = frozenset({
+    "authorization", "password", "token", "nativeConsent", "nativeApproval",
+    "filePath", "localPath", "shell", "powershell", "exec", "command",
+    "program", "driveLetter", "rawFile", "nativeFileHandle", "session", "origin",
+})
+
+class Hold(RuntimeError):
+    """Missing proven native capability or source preimage (never a success)."""
+
+class Denied(PermissionError):
+    """Native authentication, origin, permission or consent refused."""
+
+
+def canonical(obj: object) -> bytes:
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False,
+                      separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def digest(obj: object) -> str:
+    return hashlib.sha256(canonical(obj)).hexdigest()
+
+
+def validate_origin(origin: str) -> str:
+    if not isinstance(origin, str):
+        raise Denied("ORIGIN_INVALID")
+    try:
+        p = urlsplit(origin)
+    except ValueError as exc:
+        raise Denied("ORIGIN_INVALID") from exc
+    try:
+        bad_port = p.port not in (None, 443)
+    except ValueError as exc:
+        raise Denied("ORIGIN_INVALID") from exc
+    if (p.scheme != "https" or not p.hostname or p.username or p.password or
+        bad_port or p.path not in ("", "/") or p.query or p.fragment or
+        origin.endswith(".")):
+        raise Denied("ORIGIN_INVALID")
+    clean = f"https://{p.hostname.lower()}"  # HTTPS virtual-host origin only
+    if origin != clean:
+        raise Denied("ORIGIN_NOT_CANONICAL")
+    return clean
+
+
+def audit_registry(catalog: dict, bindings: dict) -> dict:
+    """Read-only audit of exactly 50 TaskIDs, NOT installation/activation."""
+    if catalog.get("version") != "NOX-INTEGRATION-PACK-01":
+        raise Hold("CATALOG_VERSION")
+    actions, rows = catalog.get("actions"), bindings.get("routes")
+    if not isinstance(actions, list) or not isinstance(rows, list) or len(actions) != 50 or len(rows) != 50:
+        raise Hold("REQUIRE_50_TASKS")
+    actions_by_task, rows_by_task = {}, {}
+    for src, index in ((actions, actions_by_task), (rows, rows_by_task)):
+        for x in src:
+            if not isinstance(x, dict) or x.get("taskId") not in TASKS or x["taskId"] in index:
+                raise Hold("BAD_OR_DUPLICATE_TASKID")
+            index[x["taskId"]] = x
+        if set(index) != set(TASKS):
+            raise Hold("TASK_LEDGER_GAP")
+    out = []
+    route_set = set()
+    for task in TASKS:
+        a, b = actions_by_task[task], rows_by_task[task]
+        route = a.get("routeId")
+        if (not isinstance(route, str) or not ROUTE.fullmatch(route) or route in route_set or
+            b.get("routeId") != route or b.get("owner") != a.get("owner") or
+            a.get("owner") not in range(1, 7) or a.get("risk") not in
+            ("safe", "sensitive", "dangerous")):
+            raise Hold("ROUTE_OWNER_RISK_COLLISION")
+        route_set.add(route)
+        binding = b.get("sourceBinding")
+        if binding is not None and (not isinstance(binding, str) or ":" not in binding):
+            raise Hold("UNTRUSTED_BINDING_DESCRIPTOR")
+        if b.get("exeIntegrated") is True or b.get("releaseAccepted") is True:
+            # A proposal mapping is NOT an authoritative native host attestation.
+            raise Hold("UNSIGNED_INTEGRATION_CLAIM")
+        settings = a.get("settings", [])
+        if (not isinstance(settings, list) or
+            any(not isinstance(x, dict) or not isinstance(x.get("key"), str) or
+                not ROUTE.fullmatch(x["key"]) for x in settings) or
+            len({x["key"] for x in settings}) != len(settings)):
+            raise Hold("INVALID_SETTINGS_SCHEMA")
+        out.append({"taskId": task, "routeId": route, "owner": a["owner"],
+                    "allowedSettings": [x["key"] for x in settings],
+                    "risk": a["risk"], "sourceBinding": binding,
+                    "sourceState": "SOURCE" if binding else "HOLD",
+                    "componentEvidence": b.get("componentCI", "N/D"),
+                    "integrated": "HOLD", "windowsAccepted": "NOT_RUN",
+                    "blocker": b.get("blocker") or "NO_NATIVE_OWNER_RECEIPT"})
+    drift = bindings.get("sourceBaseCommit") != BASE_COMMIT
+    return {"schema": "E06_HOST50_SOURCE_AUDIT_V1", "baselineCommit": BASE_COMMIT,
+            "baselineTree": BASE_TREE, "ownerMapBaseCommit": bindings.get("sourceBaseCommit"),
+            "baselineDrift": drift, "sourceBound": sum(bool(r["sourceBinding"]) for r in out),
+            "unbound": sum(not r["sourceBinding"] for r in out),
+            "nativeIntegrated": 0, "windowsAccepted": 0,
+            "hostStatus": "HOLD_SOURCELOCK_DRIFT" if drift else "HOLD_NATIVE_RECEIPTS",
+            "weightedProductProgress": "N/D", "routes": out}
+
+
+@dataclass(frozen=True)
+class Session:
+    tenant: str
+    principal: str
+    chat: str
+    origin: str
+    scopes: tuple[str, ...]
+    sensitive: tuple[str, ...]
+    expires_unix: int
+    nonce: str
+    seal: str
+
+
+@dataclass(frozen=True)
+class Capability:
+    route: str
+    owner: int
+    handler: str
+    owner_receipt_sha256: str
+    frozen_tree: str
+    integrated: bool
+    ready: bool
+
+
+@dataclass(frozen=True)
+class NativeFileSelection:
+    """Only a native Windows picker supplies an opaque file ticket, NEVER page JSON."""
+    ticket: str
+    sha256: str
+    size_bytes: int
+    tenant: str
+    principal: str
+
+
+class Host50Admission:
+    """Non-dispatching guard for the already-existing canonical native host.
+
+    Native host MUST protect signing_key, issue_session, installed_capabilities,
+    native_consent and native_file_picker from WebView2 Javascript. It must call
+    its OWN existing handler AFTER admission, then pass back native ACK evidence.
+    """
+    def __init__(self, catalog: dict, binding_map: dict, *, signing_key: bytes,
+                 allowed_origins: set[str], active_tree: str, capabilities: dict[str, Capability]):
+        self.audit = audit_registry(catalog, binding_map)
+        if not isinstance(signing_key, bytes) or len(signing_key) < 32:
+            raise ValueError("NATIVE_SECRET_REQUIRED")
+        if not allowed_origins or any(validate_origin(x) != x for x in allowed_origins):
+            raise ValueError("EXACT_NATIVE_ORIGIN_SET_REQUIRED")
+        if active_tree != BASE_TREE or self.audit["baselineDrift"]:
+            raise Hold("WHOLE_TREE_SOURCELOCK_NOT_RECONCILED")
+        self.key = signing_key
+        self.origins = frozenset(allowed_origins)
+        self.by_route = {x["routeId"]: x for x in self.audit["routes"]}
+        self.capabilities = dict(capabilities)
+        self.pending = {}
+
+    def _seal(self, body: dict) -> str:
+        return hmac.new(self.key, canonical(body), hashlib.sha256).hexdigest()
+
+    def issue_session(self, *, tenant: str, principal: str, chat: str,
+                      origin: str, scopes: tuple[str,...], sensitive: tuple[str,...],
+                      duration_seconds: int = 120) -> Session:
+        """NATIVE-ONLY: never expose this constructor to an untrusted page."""
+        if (origin not in self.origins or not all(isinstance(x,str) and 0<len(x)<=128
+             for x in (tenant, principal, chat)) or type(duration_seconds) is not int or
+             not 1 <= duration_seconds <= 300 or not set(scopes).issubset(self.by_route) or
+             not set(sensitive).issubset(scopes) or not scopes):
+            raise Denied("NATIVE_SESSION_ISSUE_DENIED")
+        body = dict(tenant=tenant,principal=principal,chat=chat,origin=origin,
+                    scopes=tuple(sorted(set(scopes))),sensitive=tuple(sorted(set(sensitive))),
+                    expires_unix=int(time.time())+duration_seconds,
+                    nonce=secrets.token_hex(16))
+        return Session(**body, seal=self._seal(body))
+
+    def _verify_session(self, s: Session, actual_origin: str) -> None:
+        if not isinstance(s, Session) or actual_origin not in self.origins or s.origin != actual_origin:
+            raise Denied("ORIGIN_OR_SESSION_DENIED")
+        body = {k:getattr(s,k) for k in ("tenant","principal","chat","origin",
+            "scopes","sensitive","expires_unix","nonce")}
+        if (type(s.expires_unix) is not int or s.expires_unix < time.time() or
+            not isinstance(s.seal,str) or not hmac.compare_digest(s.seal,self._seal(body))):
+            raise Denied("AUTH_INVALID_OR_EXPIRED")
+
+    def _cap(self, row: dict) -> Capability:
+        c = self.capabilities.get(row["routeId"])
+        if (not isinstance(c, Capability) or not row["sourceBinding"] or
+            c.route != row["routeId"] or c.owner != row["owner"] or
+            c.handler != row["sourceBinding"] or c.frozen_tree != BASE_TREE or
+            not SHA256.fullmatch(c.owner_receipt_sha256) or
+            c.integrated is not True or c.ready is not True):
+            raise Hold("NATIVE_OWNER_CAPABILITY_UNVERIFIED")
+        return c
+
+    def admit(self, *, session: Session, actual_origin: str, request: dict,
+              native_consent=None, native_file_picker=None,
+              native_device_permission=None, active_runs: dict | None = None) -> dict:
+        self._verify_session(session, actual_origin)
+        if not isinstance(request, dict):
+            raise Denied("INVALID_REQUEST")
+        try:
+            raw = canonical(request)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise Denied("INVALID_JSON") from exc
+        if len(raw) > 131072 or set(request)-{"routeId", "taskId", "intent", "settings", "runId"}:
+            raise Denied("REQUEST_TOO_LARGE_OR_EXTRA_KEYS")
+        if request.get("intent") != "nox.feature.request":
+            raise Denied("UNAUTHORIZED_INTENT")
+        route = request.get("routeId")
+        row = self.by_route.get(route) if isinstance(route,str) else None
+        if not row or request.get("taskId") != row["taskId"]:
+            raise Denied("UNKNOWN_OR_MISMATCHED_ROUTE")
+        if route not in session.scopes:
+            raise Denied("SCOPE_DENIED")
+        opts = request.get("settings", {})
+        if (not isinstance(opts, dict) or any(k in FORBIDDEN_PAGE_KEYS for k in opts)
+            or set(opts)-set(row["allowedSettings"])):
+            raise Denied("WEB_TO_NATIVE_PRIVILEGED_ARGUMENT")
+        if any(not isinstance(k,str) or not ROUTE.fullmatch(k) or isinstance(v,(dict,list))
+               or type(v) not in (str,int,bool) or len(str(v))>256 for k,v in opts.items()):
+            raise Denied("UNSAFE_SETTING")
+        cap = self._cap(row)
+        if row["risk"] != "safe" and route not in session.sensitive:
+            raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
+        if row["risk"] == "dangerous" and (
+            not callable(native_consent) or native_consent(session,route,request) is not True):
+            raise Denied("FRESH_NATIVE_CONSENT_REQUIRED")
+        if route in MIC_ROUTES and (
+            not callable(native_device_permission) or
+            native_device_permission(session,route) is not True):
+            raise Denied("NATIVE_MIC_OR_SIP_PERMISSION_REQUIRED")
+        file_info = None
+        if route in PICKER_ROUTES:
+            if not callable(native_file_picker):
+                raise Hold("NATIVE_FILE_PICKER_MISSING")
+            file_info = native_file_picker(session,route)
+            if (not isinstance(file_info,NativeFileSelection) or
+                file_info.tenant != session.tenant or file_info.principal != session.principal or
+                not isinstance(file_info.ticket,str) or len(file_info.ticket)<16 or
+                not SHA256.fullmatch(file_info.sha256) or
+                type(file_info.size_bytes) is not int or not 0<file_info.size_bytes<=20000000000):
+                raise Denied("UNTRUSTED_NATIVE_FILE_SELECTION")
+        if route in STOP_ROUTES:
+            run_id = request.get("runId")
+            if not isinstance(run_id,str) or not re.fullmatch(r"[0-9a-f-]{36}",run_id):
+                raise Denied("STOP_NEEDS_EXACT_RUNID")
+            active = (active_runs or {}).get(run_id)
+            if (not isinstance(active,tuple) or len(active)!=3 or
+                active[:2] != (session.tenant,session.principal) or
+                active[2] not in STOP_TARGETS[route]):
+                raise Denied("STOP_SCOPE_OR_OWNER_MISMATCH")
+        else:
+            if "runId" in request:
+                raise Denied("WEB_SUPPLIED_RUNID_FORBIDDEN")
+        run_id = str(uuid.uuid4())
+        ticket = {"runId":run_id,"taskId":row["taskId"],"routeId":route,
+                  "owner":row["owner"],"sourceLockTree":BASE_TREE,
+                  "ownerReceiptSha256":cap.owner_receipt_sha256,
+                  "payloadSha256":hashlib.sha256(raw).hexdigest(),
+                  "fileSha256":file_info.sha256 if file_info else None,
+                  "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
+        self.pending[run_id] = ticket
+        return dict(ticket)
+
+    def finish(self, run_id: str, native_ack: dict) -> dict:
+        """ACK only after EXISTING owner handler performed a real action.
+        Not a new executor. No page-provided OK can produce completed status.
+        """
+        ticket=self.pending.get(run_id)
+        if not ticket:raise Denied("UNKNOWN_OR_REPLAYED_RUNID")
+        if not isinstance(native_ack,dict):raise Denied("NATIVE_ACK_REQUIRED")
+        sign=native_ack.get("seal")
+        body={k:v for k,v in native_ack.items() if k!="seal"}
+        if (not isinstance(sign,str) or not hmac.compare_digest(sign,self._seal(body)) or
+            body.get("runId")!=run_id or body.get("taskId")!=ticket["taskId"] or
+            body.get("routeId")!=ticket["routeId"] or body.get("owner")!=ticket["owner"] or
+            body.get("ownerReceiptSha256")!=ticket["ownerReceiptSha256"] or
+            body.get("event") not in ("DONE","STOP_REQUESTED","HOLD","FAILED") or
+            not isinstance(body.get("proofSha256"),str) or not SHA256.fullmatch(body["proofSha256"])):
+            raise Denied("NATIVE_ACK_INVALID")
+        result=dict(ticket)
+        result["state"]={"DONE":"NATIVE_ACK_EVIDENCED_NOT_E07_ACCEPTED",
+          "STOP_REQUESTED":"STOP_REQUESTED_NOT_CONFIRMED_STOPPED",
+          "HOLD":"HOLD","FAILED":"FAILED"}[body["event"]]
+        result["nativeAck"]="VERIFIED_HMAC"
+        result["nativeProofSha256"]=body["proofSha256"]
+        del self.pending[run_id]
+        return result
+
+
+def run_read_only_audit(catalog_path: str, bindings_path: str) -> dict:
+    src1,src2=Path(catalog_path),Path(bindings_path)
+    if any(p.is_symlink() or not p.is_file() for p in (src1,src2)):
+        raise Hold("INVALID_SOURCE_FILE")
+    a=json.loads(src1.read_text(encoding="utf-8"))
+    b=json.loads(src2.read_text(encoding="utf-8"))
+    result=audit_registry(a,b)
+    result["catalogSha256"]=hashlib.sha256(src1.read_bytes()).hexdigest()
+    result["bindingMapSha256"]=hashlib.sha256(src2.read_bytes()).hexdigest()
+    return result
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv)!=3:
+        raise SystemExit("Usage: admission.py <existing-PACK01-catalog.json> <existing-owner-binding-map.json>")
+    print(json.dumps(run_read_only_audit(sys.argv[1],sys.argv[2]),ensure_ascii=False,indent=2))
