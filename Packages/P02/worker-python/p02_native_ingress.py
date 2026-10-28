@@ -8,6 +8,7 @@ Page JSON is never accepted as user/session identity or authorization.
 from __future__ import annotations
 
 import json
+import math
 import re
 import threading
 from typing import Callable, Any
@@ -28,6 +29,15 @@ P03_NATIVE_READ_ROUTES = frozenset({
 
 def _reject_nonfinite(_value: str):
     raise ValueError("Non-finite JSON constant forbidden")
+
+
+def _finite_json_number(token: str) -> float:
+    # JSON accepts exponent notation, e.g. 1e9999, which Python can parse as
+    # +infinity even while literals NaN/Infinity are separately denied.
+    value = float(token)
+    if not math.isfinite(value):
+        raise ValueError("Non-finite JSON exponent forbidden")
+    return value
 
 
 def _reject_duplicate_fields(pairs):
@@ -78,6 +88,7 @@ class NativeIngress:
             request = json.loads(
                 encoded.decode("utf-8"),
                 parse_constant=_reject_nonfinite,
+                parse_float=_finite_json_number,
                 object_pairs_hook=_reject_duplicate_fields)
         except (ValueError, UnicodeError, RecursionError) as exc:
             raise ProtocolHold("NATIVE_FRAME_INVALID_JSON") from exc
