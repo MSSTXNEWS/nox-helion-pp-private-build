@@ -3,7 +3,7 @@
   "run_id": "NOX-V16-QA-20261028-R02-FAST_SOURCE",
   "role": "Independent Manual #2, QA-only; no product source or PR162 mutation",
   "original_pinned_source": "fd9b66b937d4d195e51b46852f4932501151b3f9",
-  "latest_live_source": "d2b451c6655faa9d06336105e329f15183932cfc",
+  "latest_live_source": "f243d911ea88e70a7b9ff093a0de47a54390862e",
   "qa_branch": "qa/v16-source-finish-fifo-cache-20261028-r02",
   "qa_test_sources": [
     {
@@ -23,8 +23,8 @@
     },
     {
       "path": "qa/source_ready/test_critical_source_contracts_r02.py",
-      "blob_sha1": "69eb14644259405530aa72dfe72c8a73ddb4d403",
-      "bytes": 5155
+      "blob_sha1": "e09745322e6ecee06ee94baf38cfee4b9e5d0f38",
+      "bytes": 5884
     }
   ],
   "evidence": {
@@ -156,6 +156,11 @@
       "id": "C20",
       "criterion": "Native same-SHA E07 ten tests",
       "status": "NOT_RUN_0_OF_10"
+    },
+    {
+      "id": "C21",
+      "criterion": "E06 original WPF/Python diagnostic-only bridge must be replaced by real single native host",
+      "status": "HOLD_SOURCE_DIAGNOSE_ONLY"
     }
   ],
   "priorities": [
@@ -164,6 +169,12 @@
       "id": "HOST50_RECONCILE_50",
       "owner": "#1",
       "note": "Historic 37 source-bound/13 HOLD is stale, require new 50 real owners/handlers/receipts"
+    },
+    {
+      "p": "P0",
+      "id": "E06_REAL_SINGLE_ONEHOST",
+      "owner": "#1",
+      "note": "Current original builder still marks ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE and Python bridge calls --diagnose; source ready requires real bound P02–P05 providers, scope/STOP"
     },
     {
       "p": "P0",
@@ -206,5 +217,6 @@
     "E07": "0/10 NOT_RUN"
   },
   "no_loss": "No owner code, PR162/main, user data, D02/WOW, original ZIP or previous DONE changed by QA",
-  "improvement": "NO_DUPLICATE_SOURCE_FIX: compare live Git blob to accepted donor before reporting a missing code fix; keep source PASS and E07 independent"
+  "improvement": "NO_DUPLICATE_SOURCE_FIX: compare live Git blob to accepted donor before reporting a missing code fix; keep source PASS and E07 independent",
+  "evidence_clarification": "10 saved source gate test methods; 3 intentionally RED by missing Host50 receipts, native PACK01 receipts, and diagnostic-only ONEHOST. Independent exact GitHub static source probes 7 PASS/2 HOLD before added E06 gate; neither is full repo unittest."
 }
