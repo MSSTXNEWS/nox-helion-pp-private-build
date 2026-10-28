@@ -26,8 +26,16 @@ def audit_source(source: str) -> dict[str, object]:
     if not invocation or not terminal or terminal.start() <= invocation.start():
         return {"status": "HOLD", "finding": "EXPECTED_ORIGINAL_RAG_PATH_MISSING"}
     post_await = code[invocation.end():terminal.start()]
-    recheck = re.search(r"_authorizeNativeSession\s*\(\s*nativeScope\s*\)", post_await)
-    if not recheck:
+    # A bare callback invocation does not revoke access: require fail-closed C#
+    # if-check with an immediate throw, then demand real native/runtime QA.
+    fail_closed = re.search(
+        r"\bif\s*\(\s*(?:!\s*_authorizeNativeSession\s*\(\s*nativeScope\s*\)"
+        r"|_authorizeNativeSession\s*\(\s*nativeScope\s*\)\s+is\s+not\s+true)"
+        r"\s*\)\s*(?:\{\s*)?throw\b",
+        post_await,
+        flags=re.S,
+    )
+    if not fail_closed:
         return {
             "status": "HOLD",
             "finding": "RAG_OWNER_SESSION_REVOCATION_NOT_RECHECKED_AFTER_AWAIT",
