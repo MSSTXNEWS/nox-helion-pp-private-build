@@ -15,6 +15,7 @@ from typing import Callable, Any
 
 MAX_INPUT = 64 * 1024
 MAX_OUTPUT = 1024 * 1024
+MAX_JSON_NESTING = 512  # Independent of the host Python recursion limit.
 NONCE = re.compile(r"[0-9a-f]{32}\Z")
 P02_ROUTES = frozenset({
     "helion.chat", "core.chat", "persona.chat", "chat.model", "chat.history",
@@ -47,6 +48,36 @@ def _reject_duplicate_fields(pairs):
             raise ValueError("Duplicated JSON key forbidden")
         obj[key] = value
     return obj
+
+
+def _enforce_json_depth(raw: str) -> None:
+    """Reject excessive nesting before json.loads, including on Windows Python.
+
+    Square/curly brackets inside JSON strings are not structural. The parser
+    handles other JSON syntax errors and escaped Unicode after this preflight.
+    """
+    depth = 0
+    quoted = False
+    escaped = False
+    for ch in raw:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                quoted = False
+        elif ch == '"':
+            quoted = True
+        elif ch in "[{":
+            depth += 1
+            if depth > MAX_JSON_NESTING:
+                raise ValueError("JSON nesting exceeds native frame limit")
+        elif ch in "]}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("Unbalanced native JSON delimiters")
+
 
 
 class ProtocolHold(Exception):
@@ -85,8 +116,10 @@ class NativeIngress:
         if not isinstance(encoded, bytes) or not 0 < len(encoded) <= MAX_INPUT:
             raise ProtocolHold("NATIVE_FRAME_TOO_LARGE_OR_EMPTY")
         try:
+            decoded = encoded.decode("utf-8")
+            _enforce_json_depth(decoded)
             request = json.loads(
-                encoded.decode("utf-8"),
+                decoded,
                 parse_constant=_reject_nonfinite,
                 parse_float=_finite_json_number,
                 object_pairs_hook=_reject_duplicate_fields)
