@@ -184,7 +184,10 @@ foreach ($name in $creativeHashes.Keys) {
 }
 
 # Include the existing program files in the conservative NSIS manifest.
-$entries=@(Get-ChildItem -LiteralPath $payload -File -Recurse | Sort-Object FullName | ForEach-Object {
+# Match original P01 Verify-Payload -Force walk: hidden/system files MUST be
+# included in the exact SHA manifest or the owner verifier rejects the build.
+# Do not silently omit hidden assets from the onehost installer candidate.
+$entries=@(Get-ChildItem -LiteralPath $payload -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
   if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'NO_REPARSE_PAYLOAD' }
   $relative=$_.FullName.Substring($payload.Length).TrimStart('\')
   [ordered]@{path=$relative.Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
