@@ -52,6 +52,7 @@ jobs:
         with:
           name: nox-v16-e06-d02-source-receipts-${{ github.run_id }}
           path: |
+            work/e06/original-729-manifest.json
             work/e06/staged/source_lock.json
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
             work/e06/staged/WOW200_STAGE_RECEIPT.json
@@ -80,6 +81,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_CANDIDATE_BUILD_HOLD' }
           python coordination/e06/stage_p01.py
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_R11_SOURCELOCK_HOLD' }
+          python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
+          if ($LASTEXITCODE -ne 0) { throw 'E07_ORIGINAL_729_SOURCELOCK_HOLD' }
       - name: Build one diagnostic WPF + Python + pinned owner1 D02 / Creative NSIS
         shell: pwsh
         run: |
@@ -123,16 +126,31 @@ jobs:
             }
           }
           Write-Host 'D02_PUBLISHED_ASSETS_PIN_PASS / E07_NOT_RUN'
+          $handoffArgs=@{
+            Original729Receipt='work/e06/original-729-manifest.json'
+            OneHostReceipt=(Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
+            SetupExe=(Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
+            PublishedExe=(Join-Path $out 'payload/NOX.P01.Shell.exe')
+            SourceCommitSha='${{ github.sha }}'
+            Output=(Join-Path $out 'E07_BUILT_HANDOFF.json')
+            Phase='BUILT'
+          }
+          & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 @handoffArgs
+          if (!(Test-Path -LiteralPath (Join-Path $out 'E07_BUILT_HANDOFF.json') -PathType Leaf)) {
+            throw 'E07_BUILDID_HANDOFF_NOT_EMITTED'
+          }
       - name: Preserve full build receipt; do not claim E07 release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: nox-v16-e06-onehost-diagnostic-${{ github.run_id }}
           path: |
+            work/e06/original-729-manifest.json
             work/e06/staged/source_lock.json
             work/e06/staged/CREATIVE_STAGE_RECEIPT.json
             work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
+            work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
             work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
             work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
