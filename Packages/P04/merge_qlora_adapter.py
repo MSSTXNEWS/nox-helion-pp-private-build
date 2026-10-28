@@ -8,12 +8,28 @@ import json
 import math
 import os
 import re
+import stat
 import shutil
 import sys
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
+
+
+def reject_reparse_ancestors(path: Path) -> None:
+    """Fail closed on inherited symlinks/Windows junctions before path resolve."""
+    for candidate in (path, *path.parents):
+        try:
+            info = candidate.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ValueError("MERGE_PATH_ANCESTOR_UNREADABLE") from exc
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
+            raise ValueError("MERGE_PATH_REPARSE_ANCESTOR")
 
 
 def read_object(path: Path) -> dict[str, Any]:
@@ -152,7 +168,9 @@ def main() -> int:
         for label, path in (("MODEL", args.model_dir), ("MODEL_LOCK", args.model_lock),
                             ("ADAPTER", args.adapter_dir), ("TRAINING_RECEIPT", args.training_receipt),
                             ("DATASET_MANIFEST", args.dataset_manifest),
-                            ("RIGHTS_VERIFIER", args.rights_verifier)):
+                            ("RIGHTS_VERIFIER", args.rights_verifier),
+                            ("OUTPUT", args.output_dir)):
+            reject_reparse_ancestors(path.absolute())
             if path.is_symlink():
                 raise ValueError(label + "_PATH_MUST_NOT_BE_SYMLINK")
         model_dir = args.model_dir.resolve(strict=True)

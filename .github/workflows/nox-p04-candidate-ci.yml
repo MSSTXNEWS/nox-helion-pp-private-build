@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - e04/v16-pr7-guard-tests-20261028
+      - e04/v16-turbo10-real-gpu-hardening-20261028
   pull_request:
     branches:
       - codex/p04-create-rag-training-gpu-20261027

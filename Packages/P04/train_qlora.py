@@ -68,6 +68,17 @@ def reject_reparse_ancestors(path: Path) -> None:
             raise ValueError("P04_PATH_REPARSE_ANCESTOR")
 
 
+def validate_training_limits(profile: dict[str, Any], max_steps: int,
+                             epochs: float, save_steps: int, eval_steps: int) -> None:
+    """Bound actual GPU work to the approved ECO/BALANCED/INTENSIVE budget."""
+    if ((max_steps != -1 and not 1 <= max_steps <= profile["max_steps"])
+            or not math.isfinite(epochs) or not 0 < epochs <= profile["max_epochs"]):
+        raise ValueError("P04_TRAINING_PROFILE_BUDGET_EXCEEDED")
+    if (save_steps < 1 or eval_steps < 1
+            or (max_steps != -1 and (save_steps > max_steps or eval_steps > max_steps))):
+        raise ValueError("P04_TRAINING_CHECKPOINT_EVAL_INTERVAL_INVALID")
+
+
 def finite_metric(value: Any) -> float | None:
     """Keep non-finite or missing metrics out of completion receipts."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -577,8 +588,10 @@ def main() -> int:
     max_seq = args.max_seq_length or profile["max_seq"]
     save_steps = args.save_steps or profile["save_steps"]
     eval_steps = args.eval_steps or profile["eval_steps"]
-    if (max_steps != -1 and max_steps < 1) or epochs <= 0 or epochs > profile["max_epochs"]:
-        parser.error("steps/epochs exceed profile")
+    try:
+        validate_training_limits(profile, max_steps, epochs, save_steps, eval_steps)
+    except ValueError as exc:
+        parser.error(str(exc))
     if batch_size < 1 or batch_size > profile["max_batch"]:
         parser.error("batch-size exceeds profile")
     if not (1e-6 <= args.learning_rate <= 1e-3 and 128 <= max_seq <= profile["max_seq"]):
@@ -588,6 +601,15 @@ def main() -> int:
     if not re.fullmatch(r"[0-9a-fA-F]{40}", args.model_revision):
         parser.error("model-revision must be an immutable 40-character revision")
 
+    # Check caller-supplied lexical ancestors BEFORE resolve(strict=True)
+    # can silently erase symlink/junction evidence. Native host still owns
+    # trusted-root authorization and replacement-race protections.
+    for candidate in (args.model, args.model_lock, args.dataset_manifest,
+                      args.rights_verifier, args.train_jsonl, args.holdout_jsonl,
+                      args.output_dir, args.events_jsonl, args.stop_marker,
+                      args.pause_marker, args.resume_from_checkpoint):
+        if candidate is not None:
+            reject_reparse_ancestors(candidate.absolute())
     events = EventWriter(args.events_jsonl, args.run_id, args.task_id)
     lock_path = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "NOX" / "P04" / "gpu-training.lock"
     lock_fd = None
