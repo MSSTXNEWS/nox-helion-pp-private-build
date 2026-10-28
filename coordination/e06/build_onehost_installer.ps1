@@ -7,7 +7,8 @@ param(
  [Parameter(Mandatory=$true)][string]$OutputRoot,
  [Parameter(Mandatory=$true)][string]$RunId,
  [string]$CreativeSourceRoot='',
- [string]$WowSourceRoot=''
+ [string]$WowSourceRoot='',
+ [string]$PersonaBundlePath=''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -24,8 +25,11 @@ if (!(Test-Path -LiteralPath (Join-Path $installer 'NOX-HELION-Setup.nsi') -Path
 $wantsCreative= -not [string]::IsNullOrWhiteSpace($CreativeSourceRoot)
 $wantsWow= -not [string]::IsNullOrWhiteSpace($WowSourceRoot)
 if ($wantsCreative -ne $wantsWow) { throw 'D02_VISUAL_STAGE_PAIR_REQUIRED' }
+$wantsPersona= -not [string]::IsNullOrWhiteSpace($PersonaBundlePath)
+if ($wantsPersona -and !$wantsCreative) { throw 'PERSONA_REQUIRES_ORIGINAL_VISUAL_STAGE' }
 $visualStage='NOT_REQUESTED'
 $wowReceiptPath=$null
+$personaReceiptPath=$null
 if ($wantsCreative) {
   # Mutating visual stages operate only on stage_p01.py's disposable source,
   # never on historical archives, pristine HOME or the Git checkout source.
@@ -48,7 +52,7 @@ if ($wantsCreative) {
   if (!$git -or !$py) { throw 'D02_PINNED_GIT_PYTHON_TOOLS_REQUIRED' }
   $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
   $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
-  if ($creativeScriptBlob -cne 'd89911ccf3260e0ad7fe82f954a1d4adf560372c' -or
+  if ($creativeScriptBlob -cne '9d6b22198bd57362477afa1a7132c982793c1a64' -or
       $wowScriptBlob -cne '393b47edf1c9b6f92716b6dea44a02f7797fb5b4') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
   }
@@ -87,6 +91,32 @@ if ($wantsCreative) {
   $homeScriptCount=([regex]::Matches($homeHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count
   if ($homeScriptCount -ne 1) {
     throw 'D02_HOME_LOADER_DUPLICATE_OR_ABSENT'
+  }
+  if ($wantsPersona) {
+    # Optional, exact SHA pinned local owner media. No network or synthetic faces.
+    $personaScript=Join-Path $creative 'stage_persona_media.py'
+    if (!(Test-Path -LiteralPath $personaScript -PathType Leaf)) { throw 'PERSONA_OWNER_STAGE_SCRIPT_MISSING' }
+    $personaBlob=(& $git.Source hash-object -- $personaScript).Trim().ToLowerInvariant()
+    if ($personaBlob -cne '5eed031e9f8dc5fb9c829e0dfa0668014b7eda36') { throw 'PERSONA_STAGE_SCRIPT_SHA_HOLD' }
+    $personaBundle=(Resolve-Path -LiteralPath $PersonaBundlePath -ErrorAction Stop).Path
+    $personaFile=Get-Item -LiteralPath $personaBundle -Force
+    if ($personaFile.PSIsContainer -or
+        ($personaFile.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'PERSONA_BUNDLE_NOT_REGULAR_HOLD' }
+    if ((Get-FileHash -LiteralPath $personaBundle -Algorithm SHA256).Hash.ToLowerInvariant() -cne
+        '9abc124ce1a543417afcd2a08097c5d72b5901a10830869cf495fa7045330ec7') {
+      throw 'PERSONA_APPROVED_BUNDLE_SHA_HOLD'
+    }
+    & $py.Source $personaScript $source $personaBundle
+    if ($LASTEXITCODE -ne 0) { throw 'PERSONA_OWNER_STAGE_HOLD' }
+    $personaReceiptPath=Join-Path (Split-Path -Parent $source) 'PERSONA_STAGE_RECEIPT.json'
+    if (!(Test-Path -LiteralPath $personaReceiptPath -PathType Leaf)) { throw 'PERSONA_STAGE_RECEIPT_MISSING' }
+    $personaProof=Get-Content -LiteralPath $personaReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($personaProof.schema -cne 'NOX_PERSONA_STAGED_R15' -or
+        $personaProof.active_count -ne 4 -or $personaProof.identity_candidate_hold -ne 1 -or
+        $personaProof.media_files -ne 8 -or $personaProof.native_windows_accepted -ne $false -or
+        $personaProof.source_bundle_sha256 -cne '9abc124ce1a543417afcd2a08097c5d72b5901a10830869cf495fa7045330ec7') {
+      throw 'PERSONA_APPROVED_STAGE_RECEIPT_HOLD'
+    }
   }
   $visualStage='D02_OWNER1_CANONICAL_STAGE_SHA_VERIFIED_SOURCE_ONLY'
 }
@@ -264,6 +294,9 @@ $receipt=[ordered]@{
  d02_stage_receipt_sha256=if ($wantsCreative) {(Get-FileHash -LiteralPath $wowReceiptPath -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
  d02_publish_receipt_sha256=if ($wantsCreative) {(Get-FileHash -LiteralPath $visualPayloadReceipt -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
  d02_publish_visual_file_count=$visualPayloadRecords.Count;
+ persona_media_staged=$wantsPersona;
+ persona_stage_receipt_sha256=if ($wantsPersona) {(Get-FileHash -LiteralPath $personaReceiptPath -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
+ persona_windows_media_accepted=$false;
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
  one_visible_host=$true;native_bridge_scope='ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE';
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
