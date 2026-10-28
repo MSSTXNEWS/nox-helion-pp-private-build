@@ -24,7 +24,7 @@ PACK01_CATALOG_BLOB = "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d"
 # Keep the old WOW200 donor *unchanged* as a separate legacy payload.
 OWNER1_D02_ENGINE = {
     "proposals/NOX-CINEMA-FX/nox-cinema.mjs": {
-        "active_blob": "a0bc34add0990b3f70bdbfd94fe52615193a4c08",
+        "active_blob": "7e4acf43c287b3578e38e0acab0266e0343132e3",
         "legacy_blob": "f7724e99b37ccbc84f1756dc797980267d58ec4e",
     },
     "proposals/NOX-CINEMA-FX/nox-cinema.css": {
