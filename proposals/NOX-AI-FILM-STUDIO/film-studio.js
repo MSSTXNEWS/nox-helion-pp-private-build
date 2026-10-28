@@ -77,6 +77,7 @@ function refresh(){
  }
  if(!count){elements.list.append(text("p","Нет сцен. Начните со сценария.", "scene-empty"));
   elements.headline.textContent="Storyboard";elements.detail.textContent="Добавьте первую сцену.";elements.timecode.textContent="00:00";}
+ $("aiScreenwriter").disabled=!(ui.hostReady&&ui.caps.script===true&&count===0&&!verifyAgreement());
  elements.save.disabled=!(ui.hostReady&&ui.caps.save===true&&count>0);
  elements.queue.disabled=!(ui.hostReady&&ui.caps.queue===true&&count>0&&!verifyAgreement());
  elements.export.disabled=!(ui.hostReady&&ui.caps.export===true&&count>0&&
@@ -110,7 +111,7 @@ function send(action){
  const err=verifyAgreement();if(err){elements.status.textContent=err;return}
  if((action==="queue"||action==="export")&&!ui.scenes.length){elements.status.textContent="Сначала создайте сцены.";return}
  const request={type:"nox.film.command.v1",action,commandId:"noxfilm-"+Date.now().toString(36),
-   project:asProject(),explicitUserAction:true};
+   project:asProject(),idea:action==="script"?$("filmIdea").value.trim():null,explicitUserAction:true};
  ui.pending.set(action,true);
  try{window.chrome.webview.postMessage(request);elements.status.textContent=
    "Команда отправлена host · это не подтверждение готового фильма.";}
@@ -128,7 +129,27 @@ function receive(msg){
       ["PLANNED","QUEUED","RUNNING","RENDERED","HOLD","FAILED"].includes(s.status)).map(s=>[s.id,s.status]));
    }
    refresh();
- } else if(msg.type==="nox.film.ack.v1"&&["save","queue","export","projector"].includes(msg.action)){
+ } else if(msg.type==="nox.film.screenplay.v1"&&ui.pending.has("script")){
+   if(!Array.isArray(msg.scenes)||msg.scenes.length<1||msg.scenes.length>24)return;
+   const next=[];let total=0;const ids=new Set();
+   for(const scene of msg.scenes){
+     if(!scene||typeof scene.id!=="string"||!/^s-[a-z0-9-]{2,60}$/.test(scene.id)||
+      ids.has(scene.id)||typeof scene.title!=="string"||!scene.title.trim()||
+      scene.title.length>120||typeof scene.prompt!=="string"||!scene.prompt.trim()||
+      scene.prompt.length>3000||!Number.isInteger(scene.seconds)||
+      scene.seconds<1||scene.seconds>20||scene.status!=="PLANNED")return;
+     total+=scene.seconds;if(total>1200)return;ids.add(scene.id);
+     next.push({id:scene.id,title:scene.title,prompt:scene.prompt,
+      seconds:scene.seconds,operation:"t2v",
+      providerId:"wan21-t2v-1.3b",characterIds:[],
+      referenceSha256:null,dialogue:typeof scene.dialogue==="string"?scene.dialogue.slice(0,3000):"",
+      narration:"",camera:typeof scene.camera==="string"?scene.camera.slice(0,100):"cinematic"});
+   }
+   ui.scenes=next;ui.selected=null;ui.nativeSceneStatuses.clear();
+   ui.pending.delete("script");
+   elements.status.textContent="ИИ-сценарий получен через Windows host. Видеокадры ещё не созданы.";
+   refresh();
+ } else if(msg.type==="nox.film.ack.v1"&&["script","save","queue","export","projector"].includes(msg.action)){
    ui.pending.delete(msg.action);
    elements.status.textContent=msg.accepted===true?
     "Host принял команду · результат ожидается в реальных событиях.":"Отказ host: "+String(msg.reason||"нет разрешения").slice(0,130);
@@ -141,6 +162,17 @@ elements.style.value="anime";elements.operation.addEventListener("change",update
 elements.style.addEventListener("change",refresh);
 for(const x of [elements.rights,elements.adult,elements.rating])x.addEventListener("change",refresh);
 $("addScene").addEventListener("click",draftScene);
+$("newFilm").addEventListener("click",()=>{
+ ui.scenes=[];ui.selected=null;ui.nativeProjectId=null;ui.nativeSceneStatuses.clear();
+ elements.status.textContent="Новая раскадровка. Несохранённые сцены предыдущего проекта очищены.";
+ refresh();
+});
+$("aiScreenwriter").addEventListener("click",()=>{
+ if(ui.scenes.length){elements.status.textContent="Для нового сценария создайте новую раскадровку.";return}
+ const idea=$("filmIdea").value.trim();
+ if(!idea||idea.length>2500){elements.status.textContent="Опишите идею фильма.";return}
+ send("script");
+});
 elements.save.addEventListener("click",()=>send("save"));
 elements.queue.addEventListener("click",()=>send("queue"));
 elements.export.addEventListener("click",()=>send("export"));
