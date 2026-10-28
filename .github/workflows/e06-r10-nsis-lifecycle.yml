@@ -77,6 +77,38 @@ jobs:
               $process=Start-Process -FilePath $program -ArgumentList $opts -Wait -PassThru
               if ($null -eq $process -or $process.ExitCode -ne 0) { throw "NSIS_EXECUTION_FAILURE:$opts" }
             }
+            # Disposable CI prerequisite only. Keep original NSIS WebView2 preflight intact.
+            $runtimeKeys=@(
+              'Registry::HKEY_CURRENT_USER\Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
+              'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}',
+              'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A7E4C5}'
+            )
+            function WebView2Present {
+              foreach($key in $runtimeKeys) {
+                try {
+                  $pv=(Get-ItemProperty -LiteralPath $key -ErrorAction Stop).pv
+                  if($pv -and $pv -ne '0.0.0.0') { return $true }
+                } catch {}
+              }
+              return $false
+            }
+            $receipt | Add-Member -NotePropertyName webview2_preexisting -NotePropertyValue ([bool](WebView2Present))
+            if (-not (WebView2Present)) {
+              $w=Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebView2RuntimeInstallerX64.exe'
+              Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/?linkid=2124701' -OutFile $w -MaximumRedirection 6
+              $sig=Get-AuthenticodeSignature -LiteralPath $w
+              if ($sig.Status -ne 'Valid' -or !$sig.SignerCertificate -or
+                  $sig.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+                throw 'MICROSOFT_WEBVIEW2_SIGNED_PREREQUISITE_HOLD'
+              }
+              $receipt | Add-Member -NotePropertyName official_webview2_installer_sha256 -NotePropertyValue ((Get-FileHash $w -Algorithm SHA256).Hash.ToLowerInvariant())
+              $p=Start-Process -FilePath $w -ArgumentList @('/silent','/install') -Wait -PassThru
+              if ($p.ExitCode -ne 0) { throw "MICROSOFT_WEBVIEW2_CI_INSTALL_FAILED:$($p.ExitCode)" }
+              Start-Sleep -Seconds 3
+              if (-not (WebView2Present)) { throw 'WEBVIEW2_RUNTIME_NOT_REGISTERED_AFTER_INSTALL' }
+            }
+            $receipt | Add-Member -NotePropertyName webview2_ready -NotePropertyValue $true
+            Write-Host 'E06_OFFICIAL_WEBVIEW2_RUNTIME_CI_PREREQUISITE_PASS'
             RunNsi $setup '/S'
             if (!(Test-Path -LiteralPath $exe -PathType Leaf) -or !(Test-Path -LiteralPath $backend -PathType Leaf) -or
                 !(Test-Path -LiteralPath (Join-Path $installRoot 'nox-p01-owned.txt') -PathType Leaf)) { throw 'INSTALL_EXE_OR_OWNER_MARKER_MISSING' }
