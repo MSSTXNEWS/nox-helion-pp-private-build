@@ -245,9 +245,20 @@ export function projectFeeds(feeds, nowMs) {
   const fallback=licensed.filter(f=>singletonMarketIds.has(f.id) && !currentMarket(f));
   // Scan ALL current, owner-parsed market observations before the cap.
   // Invalid/unparsed/stale market records cannot fabricate quote conflicts.
-  // Identical native feed replays are one observation; distinct prices HOLD.
-  // All source fields affect identity: license, timestamp, provider, quote.
-  const snapshotIdentity=f=>JSON.stringify(Object.keys(f).sort().map(k=>[k,f[k]]));
+  // A repeated POLL is not an independent market observation. Identity must
+  // follow the owner-dated quote, NOT transport fields (fetch time, TTL,
+  // LIVE/CACHE) or arbitrary provider metadata. This bounded tuple also avoids
+  // serializing untrusted nested records/cyclic objects in the WebView2 view.
+  // Different owner epoch, provider, receipt, price, instrument or unit MUST
+  // still be treated as independent evidence and trigger conflict HOLD.
+  const snapshotIdentity=f=>JSON.stringify([
+    f.id, f.run_id ?? null, f.provider, f.license_receipt_sha256,
+    (f.id==='eur-usd'||f.id==='usd-eur') && f.observation_date!==undefined
+      ? ['ECB_DATE',f.observation_date] : ['SOURCE_UTC',f.source_at_utc],
+    f.value,
+    ...['unit','currency','base_currency','quote_currency'].map(k=>
+      typeof f[k]==='string' ? f[k] : null)
+  ]);
   const uniqueLicensed=[];
   const distinctMarkets=new Map();
   for (const f of current) {

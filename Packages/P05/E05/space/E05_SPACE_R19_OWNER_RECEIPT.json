@@ -1,0 +1,41 @@
+{
+  "run_id": "NOX-V16-W4-02-20261029T0203MSK-R19",
+  "owner": "E05 P05 / W4·02",
+  "task_id": "issue#157/item5:V16.E05.P05.R19.SAME_SOURCE_REPOLL_DEDUP",
+  "status": "SOURCE_CANDIDATE; COMPONENT_VERIFIED_LOCAL; NOT_INTEGRATED; NOT_E07",
+  "policy": "R20 SOURCE_ONLY (no builds/CI/E07)",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "owner_branch": "owner/e05/w4-02-r18-market-trust-20261029",
+  "expected_parent_commit": "a3dff4fed02e67a7f6af6e6b41cdd42fd83abe0c",
+  "expected_parent_tree": "b8029e5c1a7356c2fbe003ba2143d47cc4b48c71",
+  "observed_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_lock_729": "NOT_VERIFIED",
+  "previous_lesson": {
+    "id": "QUOTE_CONFLICT_REQUIRES_CURRENT_TRUSTED_OBSERVATION",
+    "applied": "YES; R18 8/8 and R19 current-vs-stale 1/1"
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "e23f7653b5f9e857f1ec46e34f048c460f01e51707be0b50dfbc0d744312f8f1",
+      "post_sha256": "bf79098ab5bbf93468185989190226e0ded4c2cdd25dd8a88452a23d7ae2b814",
+      "pre_git_blob_sha1": "a83cfe6ef9ce2d351f808a3b89406bfe19b93121",
+      "post_git_blob_sha1": "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceRepollIdentityR19.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "bf677fe49eb1d9da7ff66d2a02f31e157ebaf9c293e8cf79072b2f4c195397a0",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "19b0f36445cef98fdec6c2271fd14fa807952c6f"
+    }
+  ],
+  "red": "on R18 owner module: 3 PASS / 4 FAIL (7 new focused tests)",
+  "green": "on R19 owner module: 7/7 focused PASS, R18 8/8 PASS, R17 7/7 PASS, node --check PASS",
+  "new_product_done": 0,
+  "source_defects_fixed": 1,
+  "lesson_id": "MARKET_OBSERVATION_KEY_NOT_TRANSPORT_ENVELOPE",
+  "remaining": "native feed licensing and production use NOT_RUN; hardware CPU/GPU/VRAM NOT_RUN; app-side Drive NOT_RUN; source freeze and 729 SHA HOLD",
+  "no_loss": "only owner module and new focused test + receipt; no D02/WOW/CoreIDs/Persona/events.v3/other owner/PR162/archives changes"
+}
