@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_V16_E06_URGENT_EXPRESS_FINAL_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-URGENT-20261028",
+  "owner": 6,
+  "github_pr": 181,
+  "base_unified_at_creation": "833a37bca2930e0cb9b272ae07f5d6545e3d5096",
+  "latest_unified_observed": "47c7bd45fe5c6c42d85db55379e96c67b158d94e",
+  "main_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "upstream_preserved": true,
+  "owner_modifications": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "pre_git_blob": "1d9ac9efa29c25fc4b9277ad854e31a5e729e18d",
+      "post_git_blob": "c0537c87898663fb589a315be7417312b8b81f9c",
+      "scope": "strict numeric P01/AppVersion; hidden manifest -Force inherited from current upstream"
+    },
+    {
+      "path": "coordination/e06/express_per_run_report.py",
+      "pre": "ABSENT",
+      "post_git_blob": "1c65fe9029bfd14e2a38bcac2028e61242f30e63",
+      "scope": "per executed CI run 7-lane and 5 release hard gates"
+    },
+    {
+      "path": "coordination/e06/stage_chatlog_order_compat.py",
+      "pre": "ABSENT",
+      "source_pre_sha256": "3a8e027ed98ba5fbcae6e047b2d559ba9ac8c5270fb1be36b1379ee226ad2a76",
+      "scope": "fail-closed legacy R11 UI chatLog TDZ staged-only compatibility; original HTML unchanged"
+    },
+    {
+      "path": ".github/workflows/nox-e06-express-oneblock.yml",
+      "pre": "ABSENT",
+      "scope": "reused original WPF+Python+P01 NSIS, distinct versioned update and original Test-NSIS-Windows.ps1, patched staged UI, gated native lifecycle, mandatory report"
+    }
+  ],
+  "archive_legacy_QA": {
+    "broad_tests_pass": 25,
+    "broad_tests_total": 27,
+    "failed_outdated_source_contracts": [
+      "P05 historical literal fixture expected removed wording",
+      "P01 historical hardcoded MainWindow.xaml.cs SHA different in later R11"
+    ],
+    "status": "HISTORICAL_R11_SOURCE_ONLY_NOT_CURRENT_OWNER_NATIVE",
+    "new_exact_stage_compat_tests_pass": 4,
+    "new_exact_stage_compat_tests_total": 4,
+    "chromium_red": "Uncaught ReferenceError Cannot access chatLog before initialization",
+    "chromium_green": "0 pageerrors with test-only sessionStorage/crypto mocks; 8 CoreID DOM, 8 MENU DOM",
+    "full_live_wpf_browser_test": "NOT_RUN"
+  },
+  "ci_runs": [
+    {
+      "id": 40688830140,
+      "status": "completed failure",
+      "runner_steps": null,
+      "artifacts": 0,
+      "source_sha": "578dec897dfb39de917c458f4e1bed171c737531"
+    },
+    {
+      "id": 40689382532,
+      "status": "completed failure",
+      "runner_steps": null,
+      "artifacts": 0,
+      "source_sha": "282f1c06a33351ea425dd4aeead4d9803ec44d96"
+    }
+  ],
+  "ci_root_cause": "UNKNOWN; no executable runner steps. Check GitHub Actions billing/budgets, workflow event policies, runner eligibility; provider/account state not available via connector.",
+  "original_py_archive_729_hash": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "full_original_729_sources_verified_current": "NOT_RUN",
+  "wpf_historical_native_setup_sha256": "03e026141854a7dada0c94db9066f31d7f9345ca7e35a37f7a73efa9e1657310",
+  "combined_historical_diagnostic_setup_sha256": "44c72980f8999772fbef27eb47ca34f4329f02b1be999c06a0a56cd633058aa3",
+  "current_integrated_native_install": "NOT_RUN",
+  "full_P01_to_P05_native_functional_E2E": "NOT_RUN",
+  "GPU_training": "NOT_RUN",
+  "E07_current_same_sha_QA": "0/10 NOT_RUN",
+  "source_routes": {
+    "bound": 37,
+    "total": 50,
+    "percent": 74,
+    "not_accepted_live": true
+  },
+  "release_hard_gates": {
+    "CI_EXECUTED": "HOLD",
+    "SOURCELOCK_729_ACCEPTED": "HOLD",
+    "COMBINED_NSIS_INSTALLED": "HOLD",
+    "ONE_HOST_FUNCTIONS_ACCEPTED": "HOLD",
+    "E07_SAME_SHA_ACCEPTED": "HOLD"
+  },
+  "release_accepted_gates": 0,
+  "release_total_gates": 5,
+  "weighted_product_percent": "N/D",
+  "final_release_accepted": false,
+  "main_merged": false,
+  "upstream_branch_source_merged": false,
+  "pr_draft": true,
+  "no_loss": {
+    "upstream_owner_paths_deleted": 0,
+    "owner_E01_to_E05_changed": 0,
+    "approved_D02_original_assets_untouched": true,
+    "old_EXE_preserved": true,
+    "rollback": "Discard the isolated PR181 stage; do not rewrite original owners."
+  }
+}
