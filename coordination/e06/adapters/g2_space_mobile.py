@@ -458,8 +458,10 @@ class G2OneHostBinder:
                         port = self.host.ports.get(route)
                         if (not isinstance(route, str) or route not in frozen_routes
                                 or port is None
-                                or getattr(port, "owner", None) != owner_no
-                                or getattr(port, "evidence_id", None) != self._receipt(name)):
+                                or type(getattr(port, "owner", None)) is not int
+                                or port.owner != owner_no
+                                or type(getattr(port, "evidence_id", None)) is not str
+                                or port.evidence_id != self._receipt(name)):
                             raise G2Hold("Unattested owner route registration: " + str(route))
                         claimed.add(route)
                 if set(p2) & set(p3) or claimed & intended:
