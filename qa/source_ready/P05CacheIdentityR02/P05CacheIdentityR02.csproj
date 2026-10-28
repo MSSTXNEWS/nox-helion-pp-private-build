@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- This links the ORIGINAL owner source. No substitute implementation. -->
+    <Compile Include="../../../Packages/P05/Space/SpaceFeedClient.cs" Link="SpaceFeedClient.Owner.cs" />
+  </ItemGroup>
+</Project>
