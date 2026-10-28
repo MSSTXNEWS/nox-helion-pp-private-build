@@ -13,6 +13,9 @@ test('bad RunID and non-Windows host are refused before any build output',()=>{
   assert.ok(at>0);
   assert.ok(script.indexOf('E06_INVALID_RUN_ID_HOLD')<at);
   assert.ok(script.indexOf('E06_WINDOWS_X64_REQUIRED')<at);
+  assert.equal((script.match(/^\$source=\(Resolve-Path -LiteralPath \$SourceRoot\)\.Path$/gm)||[]).length,1);
+  assert.equal((script.match(/^\$original=\(Resolve-Path -LiteralPath \$PythonExe\)\.Path$/gm)||[]).length,1);
+  assert.match(script,/^if \(\$RunId -cnotmatch '\^\[A-Za-z0-9\]\[A-Za-z0-9\._:-\]\{1,127\}\$'\) \{ throw 'E06_INVALID_RUN_ID_HOLD' \}$/m);
   assert.ok(script.includes('OUTPUT_ALREADY_EXISTS_NO_OVERWRITE'));
 });
 test('original P01 four-script SHA guard and numeric manifest version remain',()=>{
