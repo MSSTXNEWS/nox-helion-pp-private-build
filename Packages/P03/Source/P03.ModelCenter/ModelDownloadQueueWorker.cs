@@ -27,10 +27,8 @@ public sealed class ModelDownloadQueueWorker(
             lock (_running) _running[job.Id] = linked;
             // CancelQueuedAsync may win between snapshot and this transition.
             // A cancelled job must never be resurrected as Running.
-            var started = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Queued
-                ? j with { State = ModelJobState.Running, Attempts = checked(j.Attempts + 1), Status = "Starting" }
-                : j, ct);
-            if (started?.State != ModelJobState.Running)
+            var started = await store.TryStartQueuedAsync(job.Id, ct);
+            if (started is null)
             {
                 lock (_running) _running.Remove(job.Id);
                 return;
