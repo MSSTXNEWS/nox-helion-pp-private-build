@@ -136,7 +136,7 @@ test("fail closed on duplicate mount, untrusted data, unknown CoreID",()=>{
   const x=installNoxCinemaFX({root:o.root,orbs:o.orbs});
   assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs}),/ALREADY_MOUNTED/);
   assert.equal(x.setState("training","RUN-123","CORE_2"),true);
-  assert.equal(o.orbs[2].element.dataset.noxState,"training");
+  assert.equal(o.orbs[2].element.dataset.noxFxState,"training");
   assert.equal(x.setState("training","bad/../run"),false);
   assert.equal(x.setState("learning"),false);
   assert.equal(x.setState("training","RUN-123","unknown"),false);
@@ -171,12 +171,12 @@ test("host state applies only from explicitly approved subscription and unsubscr
   const events={subscribe(fn){handler=fn;return()=>{unsubscribed=true;}}};
   const scene=installNoxCinemaFX({root:o.root,orbs:o.orbs,hostEvents:events});
   handler({trusted:false,state:"training",runId:"fake"});
-  assert.equal(o.root.dataset.noxState,"idle");
+  assert.equal(o.root.dataset.noxFxState,"idle");
   handler({trusted:true,state:"training",runId:"RUN-2",coreId:"CORE_1"});
-  assert.equal(o.orbs[1].element.dataset.noxState,"training");
-  assert.equal(o.root.dataset.noxState,"idle");
+  assert.equal(o.orbs[1].element.dataset.noxFxState,"training");
+  assert.equal(o.root.dataset.noxFxState,"idle");
   handler({trusted:true,state:"streaming",runId:"RUN-2"});
-  assert.equal(o.root.dataset.noxState,"streaming");
+  assert.equal(o.root.dataset.noxFxState,"streaming");
   assert.equal(scene.snapshot().stateRunId,"RUN-2");
   scene.destroy();
   assert.equal(unsubscribed,true);
@@ -193,3 +193,53 @@ test("no additional GPU/API engines or dangerous process hooks in FX code",async
 test("host hide beats intersect-true callback",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX"});fx.setVisible(false);o.intersect(true);assert.equal(o.pending,0);assert.equal(fx.snapshot().active,false);assert.equal(o.root.dataset.noxFxVisible,"false");fx.destroy();});
 test("tab hidden + offscreen cannot start rAF",()=>{const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX"});o.intersect(false);fx.setVisible(true);assert.equal(o.pending,0);o.visibility(false);o.intersect(true);assert.equal(o.pending,0);assert.equal(o.root.dataset.noxFxVisible,"false");o.visibility(true);assert.equal(o.pending,1);fx.destroy();});
 test("reduced mode and offscreen pause includes floating pseudo-element",async()=>{const fs=await import("node:fs");const css=fs.readFileSync(new URL("../candidates/nox-cinema.css",import.meta.url),"utf8");assert.match(css,/data-nox-mode="reduced"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.match(css,/data-nox-fx-visible="false"\] \.nox-cinema-control\[data-nox-float="true"\]::after/);assert.equal(css.includes('data-nox-state="running"'),false);});
+
+
+test("the FX layer preserves preexisting native owner state on mount, updates and teardown",()=>{
+  const o=fakeScene();
+  o.root.dataset.noxState="training";
+  o.orbs[0].element.dataset.noxState="speaking";
+  o.orbs[1].element.dataset.noxState="loading";
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs});
+  assert.equal(o.root.dataset.noxState,"training");
+  assert.equal(o.orbs[0].element.dataset.noxState,"speaking");
+  assert.equal(o.orbs[1].element.dataset.noxState,"loading");
+  assert.equal(fx.setState("error","RUN-3",o.orbs[1].id),true);
+  assert.equal(o.orbs[1].element.dataset.noxFxState,"error");
+  assert.equal(o.orbs[1].element.dataset.noxState,"loading");
+  fx.destroy();
+  assert.equal(o.root.dataset.noxState,"training");
+  assert.equal(o.orbs[0].element.dataset.noxState,"speaking");
+  assert.equal(o.orbs[1].element.dataset.noxState,"loading");
+  assert.equal(o.root.dataset.noxFxState,undefined);
+});
+
+test("duplicate orb targets and bad control lists reject before DOM mutations",()=>{
+  const o=fakeScene();
+  const bad=o.orbs.map((v,i)=>i===4?{...v,element:o.orbs[1].element}:v);
+  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:bad}),/DUPLICATE_ORB_ELEMENTS/);
+  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs,controls:{}}),/DECORATION_LIST/);
+  assert.equal(o.root.classList.contains("nox-cinema-scope"),false);
+  assert.ok(o.orbs.every(v=>!v.element.querySelector(".nox-cinema-orb__layers")));
+});
+
+test("invalid host subscribe rejects before D02 mutation; synchronous valid event is buffered",()=>{
+  const o=fakeScene();
+  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs,
+    hostEvents:{subscribe(){return 7;}}}),/SUBSCRIBE_REQUIRES_CLEANUP/);
+  assert.ok(o.orbs.every(v=>!v.element.querySelector(".nox-cinema-orb__layers")));
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,
+    hostEvents:{subscribe(fn){fn({trusted:true,state:"training",runId:"RUN-4"});return()=>{};}}});
+  assert.equal(o.root.dataset.noxFxState,"training");
+  fx.destroy();
+});
+
+test("teardown preserves owner DOM even when native unsubscribe throws",()=>{
+  const o=fakeScene();
+  const fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,
+    hostEvents:{subscribe(){return()=>{throw Error("OWNER_UNSUBSCRIBE_FAILED");};}}});
+  assert.throws(()=>fx.destroy(),/OWNER_UNSUBSCRIBE_FAILED/);
+  assert.ok(o.orbs.every(v=>!v.element.querySelector(".nox-cinema-orb__layers")));
+  assert.equal(o.root.classList.contains("nox-cinema-scope"),false);
+  assert.equal(o.pending,0);
+});
