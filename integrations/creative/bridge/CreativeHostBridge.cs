@@ -2,6 +2,7 @@
 // NOX's original D02, 8 CoreID, chat, STOP and windows owner controls are unchanged.
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
@@ -80,6 +81,97 @@ public partial class MainWindow
         }
     }
 
+    // Runtime payload consistency check. This deliberately reuses the existing
+    // P01 SHA-256 installer manifest; no second installer or worker is introduced.
+    // NOTE: A writable manifest is not an immutable trust anchor. The E06 host
+    // still owns installer ACL/signature attestation and Windows E07 acceptance.
+    private static FileStream HoldApprovedCreativeWorker(string workerPath)
+    {
+        const string ownerRelative = "Backend/Creative/NOX_CreativeWorker.exe";
+        var root = Path.GetFullPath(AppContext.BaseDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar);
+        var approved = Path.Combine(root, "Backend", "Creative", "NOX_CreativeWorker.exe");
+        if (!string.Equals(Path.GetFullPath(workerPath), approved,
+                StringComparison.OrdinalIgnoreCase))
+            throw new IOException("CREATIVE_WORKER_PATH_NOT_APPROVED");
+
+        // Reject junctions/symlinks in every installed parent up to the
+        // application root. The installer already performs the same kind of
+        // check during staging; this rejects post-install link substitutions.
+        for (var dir = new DirectoryInfo(Path.GetDirectoryName(approved)!); ; dir = dir.Parent!)
+        {
+            if (!dir.Exists || (dir.Attributes & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("CREATIVE_WORKER_PARENT_REPARSE_HOLD");
+            if (string.Equals(dir.FullName.TrimEnd(Path.DirectorySeparatorChar),
+                    root, StringComparison.OrdinalIgnoreCase))
+                break;
+            if (dir.Parent is null)
+                throw new IOException("CREATIVE_WORKER_OUTSIDE_APPROVED_ROOT");
+        }
+        var item = new FileInfo(approved);
+        if (!item.Exists || (item.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("CREATIVE_WORKER_NOT_REGULAR");
+        var manifestPath = Path.Combine(root, "payload.sha256.json");
+        var manifestFile = new FileInfo(manifestPath);
+        if (!manifestFile.Exists || (manifestFile.Attributes & FileAttributes.ReparsePoint) != 0
+                || manifestFile.Length is <= 0 or > 16_777_216)
+            throw new IOException("CREATIVE_PAYLOAD_MANIFEST_HOLD");
+        long expectedLength = -1;
+        string? expectedHash = null;
+        using (var manifestStream = new FileStream(manifestPath, FileMode.Open,
+                   FileAccess.Read, FileShare.Read))
+        using (var manifest = JsonDocument.Parse(manifestStream))
+        {
+            var document = manifest.RootElement;
+            if (document.ValueKind != JsonValueKind.Object ||
+                !document.TryGetProperty("schema", out var schema) ||
+                schema.GetString() != "NOX_P01_PAYLOAD_SHA256_V1" ||
+                !document.TryGetProperty("files", out var list) ||
+                list.ValueKind != JsonValueKind.Array)
+                throw new IOException("CREATIVE_PAYLOAD_SCHEMA_HOLD");
+            int matches = 0;
+            foreach (var entry in list.EnumerateArray())
+            {
+                if (entry.ValueKind != JsonValueKind.Object ||
+                    !entry.TryGetProperty("path", out var pathValue) ||
+                    pathValue.ValueKind != JsonValueKind.String)
+                    throw new IOException("CREATIVE_PAYLOAD_ENTRY_HOLD");
+                if (pathValue.GetString()?.Replace('\\', '/') != ownerRelative)
+                    continue;
+                matches++;
+                if (matches != 1 ||
+                    !entry.TryGetProperty("bytes", out var byteCount) ||
+                    !byteCount.TryGetInt64(out expectedLength) || expectedLength <= 0 ||
+                    !entry.TryGetProperty("sha256", out var shaValue) ||
+                    shaValue.ValueKind != JsonValueKind.String)
+                    throw new IOException("CREATIVE_PAYLOAD_WORKER_RECORD_HOLD");
+                expectedHash = shaValue.GetString();
+                if (expectedHash is null || !Regex.IsMatch(expectedHash,
+                        @"\A[a-fA-F0-9]{64}\z"))
+                    throw new IOException("CREATIVE_PAYLOAD_SHA_FORMAT_HOLD");
+            }
+            if (matches != 1)
+                throw new IOException("CREATIVE_PAYLOAD_PIN_MISSING_OR_DUPLICATED");
+        }
+        // Keep an open read-only handle without FILE_SHARE_DELETE while
+        // creating the process, so path replacement cannot race the hash
+        // check on a normal Windows/NTFS installation.
+        var handle = new FileStream(approved, FileMode.Open, FileAccess.Read, FileShare.Read);
+        try
+        {
+            if (handle.Length != expectedLength ||
+                !string.Equals(Convert.ToHexString(SHA256.HashData(handle)),
+                    expectedHash, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("CREATIVE_WORKER_SHA256_MISMATCH");
+            return handle;
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
+    }
+
     private async Task<Process> EnsureCreativeWorkerAsync()
     {
         await _creativeStartGate.WaitAsync();
@@ -87,7 +179,7 @@ public partial class MainWindow
         {
             if (_creativeWorker is {HasExited:false} existing)return existing;
             var path=Path.Combine(AppContext.BaseDirectory,"Backend","Creative","NOX_CreativeWorker.exe");
-            if (!File.Exists(path)) throw new FileNotFoundException("The signed-payload creative worker is unavailable");
+            using var verifiedWorker = HoldApprovedCreativeWorker(path);
             var start=new ProcessStartInfo(path)
             {
                 UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,
