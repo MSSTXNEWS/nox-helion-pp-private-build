@@ -1,5 +1,6 @@
 # NOX V16 / Azure Pipelines Windows fallback
 # Manual/opt-in DIAGNOSTIC only. Does not replace PR162, owner sources or E07 release acceptance.
+# Builds fixed fork 9706a488... and publishes private DIAGNOSTIC setup for later independent QA.
 trigger: none
 pr: none
 name: NOX-V16-AZURE-$(Date:yyyyMMdd).$(Rev:r)
@@ -25,12 +26,30 @@ stages:
               $commit = (& git rev-parse HEAD).Trim()
               if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[a-f0-9]{40}$') { throw 'AZURE_GIT_COMMIT_IDENTITY_HOLD' }
               if ($commit -cne '$(Build.SourceVersion)') { throw 'AZURE_SOURCE_VERSION_DRIFT_HOLD' }
+              # This branch deliberately builds the exact original integration snapshot.
+              # Do NOT silently absorb an advancing PR162 or change product files.
+              $approvedFork='9706a488762725791be60db811a55d172631bac6'
+              & git cat-file -e ($approvedFork + '^{commit}')
+              if ($LASTEXITCODE -ne 0) { throw 'AZURE_APPROVED_FORK_COMMIT_MISSING' }
+              & git merge-base --is-ancestor $approvedFork HEAD
+              if ($LASTEXITCODE -ne 0) { throw 'AZURE_UNAPPROVED_GIT_ANCESTRY_HOLD' }
+              $allowed=@('azure-pipelines.yml','coordination/azure-ci/README_RU.md')
+              $changes=@(& git diff --name-only $approvedFork HEAD)
+              if ($LASTEXITCODE -ne 0 -or @($changes | Where-Object { $allowed -cnotcontains $_ }).Count -gt 0) {
+                throw 'AZURE_UNAPPROVED_PRODUCT_FILE_DRIFT_HOLD'
+              }
+              if (@($changes | Where-Object { $allowed -ccontains $_ }).Count -ne 2) {
+                throw 'AZURE_EXPECTED_CI_ONLY_DELTA_HOLD'
+              }
               $proof = [ordered]@{
                 schema = 'NOX_V16_AZURE_SOURCE_PIN_V1'
                 git_commit = $commit
                 source_branch = '$(Build.SourceBranch)'
                 azure_build_id = '$(Build.BuildId)'
                 source_status = 'PENDING_SOURCE_ONLY_NOT_E07_ACCEPTED'
+                approved_source_fork_sha = $approvedFork
+                source_changes = @($changes)
+                source_is_latest_pr162 = $false
               }
               $proof | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $out 'azure-source-identity.json') -Encoding UTF8
               & python --version
@@ -124,7 +143,17 @@ stages:
               New-Item -ItemType Directory -Path $stage -Force | Out-Null
               $proof | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stage 'azure-diagnostic-proof.json') -Encoding UTF8
               Copy-Item -LiteralPath $receipt -Destination (Join-Path $stage 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
-              Write-Host 'WINDOWS_DIAGNOSTIC_HASHED_BUT_NOT_INSTALLED_OR_E07_ACCEPTED'
+              # E07 must receive the SAME actual bytes, not only a textual SHA claim.
+              # Private Azure Pipeline artifact; never a public GitHub Release.
+              $setupArtifact = Join-Path $stage 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+              $wpfArtifact = Join-Path $stage 'NOX.P01.Shell.exe'
+              Copy-Item -LiteralPath $setup -Destination $setupArtifact -ErrorAction Stop
+              Copy-Item -LiteralPath $exe -Destination $wpfArtifact -ErrorAction Stop
+              if ((Get-FileHash -LiteralPath $setupArtifact -Algorithm SHA256).Hash.ToLowerInvariant() -cne $proof.setup_sha256 -or
+                  (Get-FileHash -LiteralPath $wpfArtifact -Algorithm SHA256).Hash.ToLowerInvariant() -cne $proof.wpf_exe_sha256) {
+                throw 'DIAGNOSTIC_ARTIFACT_COPY_SHA_MISMATCH_HOLD'
+              }
+              Write-Host 'WINDOWS_DIAGNOSTIC_BINARY_SHA_VERIFIED_NOT_INSTALLED_OR_E07_ACCEPTED'
             displayName: Reuse existing pinned build, D02 WOW WPF and NSIS
           - task: PublishPipelineArtifact@1
             condition: always()
