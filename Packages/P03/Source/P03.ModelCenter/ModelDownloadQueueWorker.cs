@@ -36,7 +36,7 @@ public sealed class ModelDownloadQueueWorker(
             await SafePublishAsync(job, "started", "Starting", null, null, null, null, ct);
             try
             {
-                var current = job with { State = ModelJobState.Running };
+                var current = started;
                 async ValueTask OnProgress(OllamaStreamUpdate u, CancellationToken token)
                 {
                     await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
