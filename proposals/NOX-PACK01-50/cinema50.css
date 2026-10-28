@@ -1,0 +1,188 @@
+/* NOX CINEMA 01/50 · one reusable lightweight system, secondary screens only.
+ * Original HOME D02 is NEVER touched; approved Persona/assets stay intact.
+ * Only opacity, translate, glow and restrained layered gradients. No external SDK.
+ */
+.nox-pack01[data-cinema-ready="true"] {
+  --cinema-ice: rgba(147,233,238,.62);
+  --cinema-amber: rgba(239,145,71,.54);
+  --cinema-obsidian: rgba(5,12,18,.94);
+  --cinema-motion-speed: 1;
+  position:relative;
+  background:
+    radial-gradient(ellipse 64% 38% at 12% -20%,rgba(82,152,173,.13),transparent 78%),
+    radial-gradient(ellipse 54% 42% at 96% 110%,rgba(169,74,44,.095),transparent 78%),
+    linear-gradient(134deg,rgba(48,68,78,.54),rgba(4,10,18,.88) 69%);
+  border-color:rgba(145,228,239,.40);
+  box-shadow:inset 0 1px rgba(226,254,255,.16),0 19px 50px rgba(0,0,0,.62);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__grid {
+  perspective:900px;
+  isolation:isolate;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile {
+  --cinema-hot:rgba(205,116,61,.21);
+  --cinema-cool:rgba(96,192,210,.12);
+  --cinema-delay:0s;
+  --cinema-cycle:9s;
+  isolation:isolate;
+  contain:layout style;
+  min-height:102px;
+  background:
+    radial-gradient(ellipse 80% 38% at 79% 90%,var(--cinema-hot),transparent 80%),
+    radial-gradient(ellipse 64% 60% at 7% 9%,var(--cinema-cool),transparent 81%),
+    linear-gradient(133deg,rgba(84,102,111,.24),rgba(5,13,21,.93) 75%);
+  border:1px solid rgba(150,223,232,.38);
+  box-shadow:
+    inset 0 1px rgba(215,249,255,.17),
+    inset 0 -1px rgba(205,117,76,.15),
+    0 7px 22px rgba(0,0,0,.45),
+    0 0 13px rgba(124,214,229,.07);
+  /* CSS translate is independent of the existing tile hover transform. */
+  animation:nox-pack01-orbital-drift var(--cinema-cycle) ease-in-out var(--cinema-delay) infinite;
+  transition:border-color .22s ease,box-shadow .24s ease,filter .22s ease,transform .24s ease;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile::before {
+  background:
+    linear-gradient(116deg,transparent 25%,rgba(198,249,255,.15) 48%,transparent 64%);
+  background-size:300% 100%;
+  animation:nox-pack01-spectral-pass 15s linear var(--cinema-delay) infinite;
+  mix-blend-mode:screen;
+  opacity:.62;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile::after {
+  content:"";
+  pointer-events:none;
+  position:absolute;inset:1px;
+  border-radius:inherit;
+  background:
+    radial-gradient(ellipse 48% 30% at 65% 101%,rgba(213,95,38,.14),transparent 79%),
+    conic-gradient(from 75deg at 100% 100%,transparent 0 52%,rgba(191,115,62,.08) 71%,transparent 90%);
+  opacity:.65;
+  animation:nox-pack01-ember-current 16s ease-in-out var(--cinema-delay) infinite alternate;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile > * {
+  z-index:1;
+  position:relative;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-domain="chat"] {
+  --cinema-cool:rgba(81,202,213,.21);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-domain="models"] {
+  --cinema-hot:rgba(229,142,73,.18);
+  --cinema-cool:rgba(141,191,212,.13);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-domain="learning"] {
+  --cinema-hot:rgba(220,94,43,.16);
+  --cinema-cool:rgba(96,177,199,.2);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-domain="voice"] {
+  --cinema-cool:rgba(141,170,214,.19);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-domain="space"] {
+  --cinema-hot:rgba(170,128,83,.13);
+  --cinema-cool:rgba(130,200,198,.13);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-state="HOLD"],
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-state="AVAILABLE"] {
+  --cinema-hot:rgba(129,93,69,.075);
+  --cinema-cool:rgba(82,114,122,.06);
+  border-color:rgba(132,146,153,.27);
+  filter:saturate(.67);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-state="VERIFIED"] {
+  border-color:rgba(162,238,221,.57);
+  box-shadow:inset 0 1px rgba(213,255,250,.22),0 8px 23px #0008,0 0 13px rgba(100,208,196,.14);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-live="running"],
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-live="streaming"],
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-live="training"] {
+  border-color:rgba(154,232,224,.83);
+  box-shadow:inset 0 1px rgba(236,255,253,.22),0 7px 24px #0009,0 0 20px rgba(100,220,212,.25);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile[data-cinema-live="error"] {
+  border-color:rgba(240,145,119,.72);
+  box-shadow:inset 0 0 16px rgba(203,72,48,.13),0 0 18px rgba(216,91,65,.15);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile:focus-visible,
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__tile:hover {
+  border-color:rgba(179,246,248,.92);
+  filter:brightness(1.12);
+  box-shadow:inset 0 1px rgba(242,255,255,.25),0 12px 30px rgba(0,0,0,.63),
+    0 0 23px rgba(112,223,232,.24);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__detail {
+  position:relative;
+  isolation:isolate;
+  border-color:rgba(156,221,233,.46);
+  box-shadow:inset 0 1px rgba(246,254,255,.13),0 11px 32px rgba(0,0,0,.5);
+  background:radial-gradient(ellipse at 83% 110%,rgba(183,90,45,.13),transparent 64%),
+    linear-gradient(120deg,rgba(45,68,79,.61),rgba(5,13,23,.94));
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__run:not(:disabled) {
+  border-color:rgba(171,240,235,.83);
+  box-shadow:0 0 13px rgba(104,210,211,.20),inset 0 1px rgba(231,251,255,.22);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__run:disabled {
+  opacity:.57;
+  cursor:not-allowed;
+}
+.nox-pack01[data-cinema-ready="true"] .nox-pack01__feedback {
+  background:rgba(6,18,27,.72);
+  border-color:rgba(148,211,219,.22);
+}
+.nox-pack01[data-cinema-ready="true"] .nox-cinema-receipt {
+  display:inline-block;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  font-variant-numeric:tabular-nums;
+  font-size:11px;
+  color:#a6d8df;
+}
+/* Existing approved D02 is never drawn in this component. */
+@keyframes nox-pack01-orbital-drift {
+  0%,100% { translate:0 0; }
+  50% { translate:0 -3px; }
+}
+@keyframes nox-pack01-spectral-pass {
+  from {background-position:145% 0}
+  to {background-position:-160% 0}
+}
+@keyframes nox-pack01-ember-current {
+  from {opacity:.35;filter:brightness(.9)}
+  to {opacity:.79;filter:brightness(1.15)}
+}
+@media(prefers-reduced-motion:reduce) {
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__tile,
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__tile::before,
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__tile::after {
+    animation:none!important;translate:none!important;
+  }
+}
+.nox-pack01[data-cinema-mode="reduced"] .nox-pack01__tile,
+.nox-pack01[data-cinema-mode="reduced"] .nox-pack01__tile::before,
+.nox-pack01[data-cinema-mode="reduced"] .nox-pack01__tile::after,
+.nox-pack01[data-cinema-mode="eco"] .nox-pack01__tile,
+.nox-pack01[data-cinema-mode="eco"] .nox-pack01__tile::before,
+.nox-pack01[data-cinema-mode="eco"] .nox-pack01__tile::after {
+  animation:none!important;translate:none!important;filter:none!important;
+}
+.nox-pack01[data-cinema-mode="eco"] {
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.nox-pack01[data-cinema-mode="balanced"] .nox-pack01__tile::after {animation:none;}
+.nox-pack01[data-cinema-mode="balanced"] .nox-pack01__tile::before {animation-duration:24s;}
+.nox-pack01[data-cinema-mode="balanced"] .nox-pack01__tile {animation-duration:13s;}
+.nox-pack01[data-cinema-paused="true"] .nox-pack01__tile,
+.nox-pack01[data-cinema-paused="true"] .nox-pack01__tile::before,
+.nox-pack01[data-cinema-paused="true"] .nox-pack01__tile::after {
+  animation-play-state:paused!important;
+}
+@media(max-width:560px) {
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__tile {min-height:100px;}
+}
+@media(forced-colors:active) {
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__tile,
+  .nox-pack01[data-cinema-ready="true"] .nox-pack01__detail {
+    background:Canvas;color:CanvasText;border:1px solid CanvasText;box-shadow:none;
+  }
+}
