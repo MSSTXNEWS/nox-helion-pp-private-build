@@ -6,6 +6,7 @@ without an explicit user action. The canonical HOME and its assets are untouched
 """
 from __future__ import annotations
 import json
+import hashlib
 import re
 import shutil
 import subprocess
@@ -77,10 +78,75 @@ class Studio(CreativeExtensions):
         try: import trimesh; return True
         except ImportError: return False
 
+    @staticmethod
+    def _digest_file(path):
+        digest=hashlib.sha256()
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(4*1024*1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _model_receipt_ok(self, model_id, repository, *, verify_hashes=False):
+        # A standalone RECEIPT.json is NOT evidence of installed weights.
+        # This only reads the existing Studio folder; it never downloads.
+        root=self.models/model_id
+        receipt=root/"RECEIPT.json"
+        try:
+            if root.is_symlink() or receipt.is_symlink() or not receipt.is_file():
+                return False
+            if receipt.stat().st_size > 65536:
+                return False
+            meta=json.loads(receipt.read_text(encoding="utf-8"))
+            if (not isinstance(meta,dict) or meta.get("schema")!="NOX-CREATIVE-WEIGHTS-SHA256-V1"
+                    or meta.get("model")!=model_id
+                    or meta.get("repository")!=repository
+                    or not isinstance(meta.get("revision"),str)
+                    or not re.fullmatch(r"[0-9a-f]{40}",meta["revision"])):
+                return False
+            files=meta.get("files")
+            if not isinstance(files,list) or not 1<=len(files)<=256:
+                return False
+            seen=set()
+            for item in files:
+                if not isinstance(item,dict):
+                    return False
+                name=item.get("filename")
+                if (not isinstance(name,str) or len(name)>240 or name in seen
+                        or "\\" in name or not re.search(r"\.(safetensors|gguf|ckpt|bin|pth)$",name,re.I)):
+                    return False
+                relative=Path(name)
+                if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+                    return False
+                seen.add(name)
+                if (type(item.get("bytes")) is not int or item["bytes"]<=0
+                        or not isinstance(item.get("sha256"),str)
+                        or not re.fullmatch(r"[a-f0-9]{64}",item["sha256"])):
+                    return False
+                file=root/relative
+                if file.is_symlink() or any(parent.is_symlink()
+                    for parent in list(file.parents) if parent!=root and root in parent.parents):
+                    return False
+                if not file.is_file() or file.stat().st_size!=item["bytes"]:
+                    return False
+                if verify_hashes and self._digest_file(file)!=item["sha256"]:
+                    return False
+            return True
+        except (OSError,ValueError,TypeError,UnicodeError):
+            return False
+
     def catalog(self):
         return {"models":[{"id":a,"name":b,"category":c,"repository":d,"vram":e,
-                          "url":"https://huggingface.co/"+d,"installed":(self.models/a/"RECEIPT.json").is_file()}
+                          "url":"https://huggingface.co/"+d,
+                          "installed":self._model_receipt_ok(a,d),
+                          "checksum":"ON_DEMAND" if self._model_receipt_ok(a,d) else "HOLD"}
                           for a,b,c,d,e in MODEL_CATALOG],"categories":KINDS}
+
+    def verify_model(self,model_id):
+        model=self._model(model_id)
+        if not self._model_receipt_ok(model_id,model[3],verify_hashes=True):
+            raise StudioError("Installed model weights or SHA-256 receipt do not match")
+        return {"status":"VERIFIED_LOCAL_SHA256","model":model_id,
+                "note":"Local weight bytes match the receipt, not a remote publisher signature"}
 
     def _model(self, model_id):
         selected=next((m for m in MODEL_CATALOG if m[0]==model_id),None)
@@ -98,25 +164,45 @@ class Studio(CreativeExtensions):
 
     def download(self, model_id, filenames, revision, license_confirmed=False):
         model=self._model(model_id)
-        if not license_confirmed:raise StudioError("Confirm license, size and storage before download")
+        if license_confirmed is not True:raise StudioError("Confirm license, size and storage before download")
         if not revision or not re.fullmatch(r"[0-9a-f]{40}",revision):raise StudioError("Pin a model revision from variants()")
-        if not isinstance(filenames,list) or not filenames:raise StudioError("Choose one or more exact weight files")
+        if not isinstance(filenames,list) or not 1<=len(filenames)<=256 or len(set(map(str,filenames)))!=len(filenames):
+            raise StudioError("Choose unique exact weight files")
         try: from huggingface_hub import HfApi,snapshot_download
         except ImportError as exc:raise StudioError("Install optional huggingface_hub") from exc
         info=HfApi().model_info(model[3],revision=revision,files_metadata=True)
-        valid={s.rfilename for s in info.siblings or []}
-        if any(not isinstance(x,str) or x not in valid or x.startswith("/") or ".." in Path(x).parts or "\\" in x for x in filenames):
+        valid={s.rfilename:s for s in info.siblings or []}
+        if info.sha!=revision:
+            raise StudioError("Pinned model repository revision changed")
+        if any(not isinstance(x,str) or x not in valid or len(x)>240 or x.startswith("/")
+               or ".." in Path(x).parts or "\\" in x
+               or not re.search(r"\.(safetensors|gguf|ckpt|bin|pth)$",x,re.I)
+               for x in filenames):
             raise StudioError("Unapproved weight filename")
         target=self.models/model_id;target.mkdir(parents=True,exist_ok=True)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
         files=[]
         for f in filenames:
             p=self._within(target,target/f)
-            if not p.is_file():raise StudioError("Download incomplete: "+f)
-            files.append({"filename":f,"bytes":p.stat().st_size})
-        receipt={"model":model_id,"revision":revision,"files":files,"source":"https://huggingface.co/"+model[3]}
-        (target/"RECEIPT.json").write_text(json.dumps(receipt,indent=2),encoding="utf-8")
-        return {"status":"DOWNLOADED","receipt":receipt,"note":"Weights downloaded, but inference backend may need setup"}
+            if not p.is_file() or p.is_symlink() or p.stat().st_size<=0:
+                raise StudioError("Downloaded weight file missing or unsafe: "+f)
+            expected=getattr(valid[f],"size",None)
+            if expected is not None and p.stat().st_size!=expected:
+                raise StudioError("Downloaded weight length mismatch: "+f)
+            files.append({"filename":f,"bytes":p.stat().st_size,"sha256":self._digest_file(p)})
+        receipt={"schema":"NOX-CREATIVE-WEIGHTS-SHA256-V1",
+                 "model":model_id,"repository":model[3],"revision":revision,
+                 "files":files,"source":"https://huggingface.co/"+model[3]}
+        # No success receipt is published until every selected local file was
+        # checked. Keep a previous approved receipt if the new write fails.
+        tmp=target/("RECEIPT."+uuid.uuid4().hex+".tmp")
+        try:
+            tmp.write_text(json.dumps(receipt,indent=2),encoding="utf-8")
+            tmp.replace(target/"RECEIPT.json")
+        finally:
+            if tmp.is_file():tmp.unlink()
+        return {"status":"DOWNLOADED","receipt":receipt,
+                "note":"Local weights SHA-256 recorded; model execution still requires an approved backend"}
 
     def _text(self, prompt, format_json=False):
         model=self.ollama_model
@@ -344,6 +430,7 @@ class Studio(CreativeExtensions):
         if action=="status":return self.status()
         if action=="stop":return self.stop(request.get("interrupt_comfy",False))
         if action=="catalog":return self.catalog()
+        if action=="verify_model":return self.verify_model(request.get("model_id",""))
         if action=="variants":return self.variants(request.get("model_id",""))
         if action=="download":return self.download(request.get("model_id",""),request.get("filenames",[]),request.get("revision",""),request.get("license_confirmed",False))
         if action=="route_chat":return self.chat_route(request.get("text",""))
