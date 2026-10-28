@@ -63,24 +63,28 @@ export function projectReadiness(readiness, runId, nowMs) {
       !Array.isArray(readiness.bars) || readiness.bars.length !== 7) {
     return {bars, overall:null, reason:'FROZEN_OWNER_EVIDENCE_REQUIRED'};
   }
-  const five = [];
+  const five = Array(5).fill(null);
   // TaskID identifies a single project criterion across P01–P05. Duplicate
   // IDs in different owner ledgers are not independent evidence or weight.
   const globalTaskIds = new Set();
   for (let i=0; i<5; i++) {
     const b = readiness.bars[i];
+    const derived=b?derivedLaneProgress(b):null;
     if (!b || b.executor !== i+1 || b.stage !== 'CRITERIA_VERIFIED' ||
         !sha(b.manifest_sha256) || !sha(b.receipt_sha256) ||
-        !pct(b.percent) || derivedLaneProgress(b) === null ||
-        Math.abs(b.percent - derivedLaneProgress(b)) > 0.005) {
-      return {bars, overall:null, reason:'LANE_OWNER_SEAL_MISSING'};
+        !pct(b.percent) || derived === null ||
+        Math.abs(b.percent - derived) > 0.005) {
+      continue; // Unknown lane does not erase independently sealed owner lanes.
     }
     if (b.task_ledger.some(t=>globalTaskIds.has(t.task_id)))
       return {bars,overall:null,reason:'CROSS_LANE_TASK_COLLISION'};
     for (const task of b.task_ledger) globalTaskIds.add(task.task_id);
-    five.push(b.percent);
+    five[i]=derived;
   }
-  for (let i=0; i<5; i++) bars[i] = {executor:i+1,percent:five[i],stage:'COMPONENT_VERIFIED'};
+  for (let i=0; i<5; i++) if (five[i]!==null)
+    bars[i] = {executor:i+1,percent:five[i],stage:'COMPONENT_VERIFIED'};
+  if (five.some(value=>value===null))
+    return {bars,overall:null,reason:'LANE_OWNER_SEAL_MISSING'};
   const stage6 = readiness.bars[5], stage7 = readiness.bars[6];
   const integrated=stage6?.executor===6 && stage6?.percent==null &&
     stage6?.stage==='INTEGRATED' && sha(stage6.receipt_sha256) &&
