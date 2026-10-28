@@ -1,0 +1,92 @@
+{
+  "schema": "NOX-V16-FINAL-L2-OWNER-HANDOFF-v2",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R17-CLOSURE",
+  "task_ids": [
+    "V16.26.4/P02-STRICT-JSON-EXPONENT",
+    "V16.26.5/P03-OWNER-READONLY-PRESERVED",
+    "V16.26.6/P04-NVIDIA-GPU-INVENTORY-HOLD",
+    "V16.26.7/P05-EVENTV3-SENSOR-PROVENANCE"
+  ],
+  "base_head": "635c741dee6b4c14ee0fb2fbb614ac7beb6aad0c",
+  "donor_branch": "fix/lane2-v16-final-p02-p04-p05-20261028-r16",
+  "owner": "manual #2 CODE FIXER",
+  "explicit_write_ownership": "DO NOT WRITE PR162. Builder manual #1 must single-writer CAS only after latest HEAD and file-blob comparison.",
+  "changed_files": [
+    {
+      "path": "Contracts/events.v3.json",
+      "pre_git_blob_sha1": "17bfaaa6051b3cbd07637d0ae897dcbdccfe91f3",
+      "post_git_blob_sha1": "7b482f515a11832fe98f6cdd50a9240881352f65",
+      "pre_sha256": "81306f0170f732bfe3a52370bf892633b936b93e8708d4656f6813c784b85aae",
+      "post_sha256": "9fd812b7f071fb8e09b1a11b26623196fc20a9893d2b81f6e062a618adce99f9"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_git_blob_sha1": "cc05e7d2897e7c1183255836c413846ceb5ff520",
+      "post_git_blob_sha1": "16c008366a00507a8f76286cc28cfa43a03d5257",
+      "pre_sha256": "de481593172733c230ca58d32cb1248c359b8c180b434e6de50cec1df6c17b32",
+      "post_sha256": "cf06894d5e112fb921494704ecf98bc811ddce8c0bc6e3d8b6fc923d04f9a037"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "pre_git_blob_sha1": "d6500c1399acb5e59c89e208eacad54a4df9fd7e",
+      "post_git_blob_sha1": "8b1a252b14cf45e92cde7a68d464e2a2f406f2db",
+      "pre_sha256": "843a2842dad5441507b8466abd4d245c69d05ed3bd4ad44f5cfce5d9f379e09a",
+      "post_sha256": "ff4f92bcac4a7a43a1bd1a35dace9813e7d31e1028e49a21a0698e05c0af60d7"
+    },
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "pre_git_blob_sha1": "aff12ba3cd51ed0e5a2cdddc557998716f83a7b6",
+      "post_git_blob_sha1": "94e4eb1ef83daa5dc63526070ecb9d2d1d72de2f",
+      "pre_sha256": "902ee5a33c5b78b0c9b3c33f2d83c08a7af853adac8a102dba4927d1df1281c3",
+      "post_sha256": "6f2011c528778fdd17f3bda918a65a4ae7e5ddbcb513add8a789e4a4b2689bf2"
+    },
+    {
+      "path": "Packages/P05/E05/checks/Program.cs",
+      "pre_git_blob_sha1": "cbf2c2ca78431e1057aeff3cd27b8ce2660980d4",
+      "post_git_blob_sha1": "6f646e67aa4b71c71597a95a038c3339e83b25d9",
+      "pre_sha256": "36e9febad1f9d4760ff96dff521201e6cee1b07bcd1a81516be7ce559f61472c",
+      "post_sha256": "380c70f6a46b01fa72b8a8a506268ed99c1c1f4f2d2568f2deea9c4551aeccaa"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "pre_git_blob_sha1": "3c5802bd173ae668c4eac291168170291a84d0f0",
+      "post_git_blob_sha1": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+      "pre_sha256": "b62f3e19130d03cd9387d68f95834d52cde592cf27b69c36cf78101865c53bcd",
+      "post_sha256": "e33233b9ded37a3642f2a6680eedba417a4e834ca1fb0df46f7d146d7d0174ba"
+    },
+    {
+      "path": "tests/P04/test_training_failure_status.py",
+      "pre_git_blob_sha1": "1bf24598047c01fd6d2ffa807ff9cf8d8ca58b2c",
+      "post_git_blob_sha1": "e218bba66d528af13f1e676d98252465fd76ee2f",
+      "pre_sha256": "0328c1406d4858b024db290e15f929545b1af3f66b95371eaec3df0f220cb5bd",
+      "post_sha256": "2a497a7823d9e226103c6d291d55ce081cb7f9d221d33943469718e25793f39e"
+    }
+  ],
+  "source_scope": "7 existing code/test paths, 0 deletions, original archival sources and user data untouched",
+  "changes": [
+    "P02 rejects infinite floats derived from valid JSON exponent syntax, preserving STOP/SQLite/tenant/session and opt-in P03 read-only route",
+    "P04 additional NVIDIA_GPU_INVENTORY_FAILED classified HOLD, never fabricates CUDA training",
+    "P05 canonical GPU sample event distinguishes P04 original worker receipt from P05 unverified observable GPU sample; C# and JSON event allowlists identical",
+    "P05 negative schema parity tests preserve original source/WOW/8 CoreID/5 Persona"
+  ],
+  "evidence": {
+    "github_readback": "PASS for 7 exact Git blobs",
+    "sha256": "computed exact raw UTF-8 from GitHub with SHA-256 KAT abc PASS",
+    "static_source_checks": "12/12 PASS, source-text/static contract assertions; NOT actual Python/.NET runtime tests",
+    "actual_repo_python_tests": "NOT_RUN",
+    "actual_repo_dotnet_tests": "NOT_RUN",
+    "windows_ci": "NOT_RUN; GitHub Actions historical 0-step runner/billing issue",
+    "real_ollama": "NOT_RUN",
+    "real_nvidia_cuda_training": "NOT_RUN",
+    "same_binary_e07": "0/10 NOT_RUN"
+  },
+  "external_release_blockers": [
+    "Original ZIP 3 source parts combined SHA256 and 729 physical member hash not independently verified",
+    "CI Windows runner blocked; Azure project/agent/service connection not connected to this executor",
+    "Current WPF/Python NSIS installer is diagnostic-only, not full live onehost release",
+    "No frozen BuildID, Setup SHA256, installed EXE SHA256",
+    "Independent E07 10 native Windows tests not run"
+  ],
+  "single_improvement": "SEVEN_FILE_PREIMAGE_PROOF: consolidate only remaining unmerged minimal delta into one reviewer branch and provide every file pre/post Git blob plus SHA256; no blanket merge or duplicated working features",
+  "status": "SOURCE FIX PREPARED / SOURCE STATIC CHECKS PASS / RELEASE HOLD"
+}
