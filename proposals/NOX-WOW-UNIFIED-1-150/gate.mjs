@@ -111,6 +111,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
     root.classList.add("nox-unified-wow");
     root.dataset.unifiedWow="none";
     root.dataset.noxWowEvidence="none";
+    root.dataset.noxMode=mode;
     function choose(group){
       root.dataset.unifiedWow=group;
       // Director has 3 WAAPI tracks; cancel when cue layer takes focus.
@@ -194,11 +195,13 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
         root.dataset.noxWowEvidence="native-composition";
         return item;
       },
-      receiveCanonicalEvent,
+      // This public method must NEVER admit page-supplied forged evidence.
+      // Only the trusted native subscribe closure receives real events.
+      receiveCanonicalEvent:()=>false,
       setMode(next){
         if(disposed)throw Error("NOX_UNIFIED_DISPOSED");
         if(!MODES.has(next))throw Error("INVALID_WOW_PROFILE");
-        cues.setMode(next);director.setMode(next);
+        cues.setMode(next);director.setMode(next);root.dataset.noxMode=next;
       },
       current:()=>Object.freeze({selected,active:root.dataset.unifiedWow,
         visualEvidence:root.dataset.noxWowEvidence,
@@ -211,6 +214,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
           delete root.dataset.unifiedWow;
           delete root.dataset.noxWowEvidence;
           delete root.dataset.noxWowComposition;
+          delete root.dataset.noxMode;
           lastByRun.clear();adopted.delete(root);
         }
       }
@@ -224,6 +228,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
       delete root.dataset.unifiedWow;
       delete root.dataset.noxWowEvidence;
       delete root.dataset.noxWowComposition;
+      delete root.dataset.noxMode;
     }
     throw err;
   }
