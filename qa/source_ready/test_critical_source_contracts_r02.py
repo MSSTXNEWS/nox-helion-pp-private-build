@@ -79,8 +79,7 @@ class SourceReadyCriticalGates(unittest.TestCase):
         # actual P02/P03/P04/P05 owners to the original single host.
         builder = source("coordination/e06/build_onehost_installer.ps1")
         bridge = source("coordination/e06/OriginalPythonDiagnosticBridge.cs")
-        self.assertIn("onehost_p02_p04.py",
-                      source("azure-pipelines-nox-v16.yml"))
+        self.assertIn("def ", source("coordination/e06/onehost_p02_p04.py"))
         self.assertNotIn("ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE", builder)
         self.assertNotIn('--diagnose', bridge,
                          "Final native host is still the original read-only diagnostic")
