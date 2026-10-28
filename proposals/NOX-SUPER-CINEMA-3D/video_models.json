@@ -304,5 +304,15 @@
       },
       "status": "CATALOG_ONLY_HOLD"
     }
-  ]
+  ],
+  "demoPolicy": {
+    "mode": "CATALOG_PREVIEW_ONLY",
+    "showAllCandidateModels": true,
+    "requireCommercialClearanceForCatalogPreview": false,
+    "allowInferenceWithoutCheckpointRights": false,
+    "allowModelDownloads": false,
+    "requireLicenseReviewBeforeRealInference": true,
+    "displayStatus": "DEMO_PREVIEW_NO_INFERENCE",
+    "note": "Prototyping model options without installing/running model weights. Licenses still apply to actual downloads and usage."
+  }
 }
