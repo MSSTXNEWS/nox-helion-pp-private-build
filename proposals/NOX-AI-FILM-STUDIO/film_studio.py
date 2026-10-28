@@ -153,7 +153,7 @@ VIDEO_PROVIDER_IDS = frozenset({
 })
 
 def new_project(project_id: str, title: str, *, style="anime", rating="GENERAL",
-                user_is_adult=False, source_rights_approved=True) -> FilmProject:
+                user_is_adult=False, source_rights_approved=False) -> FilmProject:
     p = FilmProject("NOX_FILM_PROJECT_V1", project_id, title, style, rating,
                     user_is_adult, source_rights_approved, (), ())
     validate(p)
