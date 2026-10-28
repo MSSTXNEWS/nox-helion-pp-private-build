@@ -156,10 +156,6 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const models=data.models;
   if(models.some(m=>!m||!modelId(m.id)||typeof m.name!=='string'||m.name.length>100)||
     new Set(models.map(m=>m.id)).size!==models.length)return;
-  const before=current(),after=models.find(m=>m.id===state.activeId);
-  if(!before||!after||['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
-  state.models=models.map(m=>({...m}));
-  if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
   // Preserve terminal and monotone state when an older host snapshot arrives.
   const incoming=data.activeJob,old=state.activeJob;
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -187,6 +183,12 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       }
     }
   }
+  // Admit the entire queue snapshot before mutating catalog/selection/consent.
+  // An invalid job must not leave new models paired with stale capabilities.
+  const before=current(),after=models.find(m=>m.id===state.activeId);
+  if(!before||!after||['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
+  state.models=models.map(m=>({...m}));
+  if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
   state.hostReady=true;state.activeJob=next;
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
@@ -202,10 +204,13 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
   const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
-  const job=currentJob();
+  // Queue ownership is independent of the card currently being inspected.
+  // Preserve background completion/STOP so returning to its card is truthful.
+  const job=state.activeJob;
   if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
      !['Completed','Failed','Cancelled'].includes(job.state)){
     if(typeof evt.status==='string')job.status=evt.status;
+    if(evt.phase==='started'&&job.state==='Queued')job.state='Running';
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
        (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
