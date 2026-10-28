@@ -89,3 +89,11 @@ test("T05 editable controls and modified/repeated keys never hijack text input",
  assert.equal(shortcutRoute({key:"F11",repeat:true},config),null);
  assert.equal(shortcutRoute({key:"F11",target:{tagName:"INPUT"}},config),"ui.fullscreen");
 });
+
+test("T01: missing/non-string menu IDs and route IDs must fail without coercion",()=>{
+ const x=fixture();delete x.menu[0].routeId;
+ assert.throws(()=>validateOwnerP01(x),/EIGHT_MENU_IDENTITY_OR_DOM/);
+ const y=fixture();y.buttons[0].id=123;
+ assert.throws(()=>validateOwnerP01(y),/FIVE_BUTTONS_IDENTITY_OR_DOM/);
+ assert.equal(shortcutRoute({key:"k",ctrlKey:true},{searchRoute:123}),null);
+});
