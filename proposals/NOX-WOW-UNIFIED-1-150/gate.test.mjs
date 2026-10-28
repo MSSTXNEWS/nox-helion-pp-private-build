@@ -4,6 +4,7 @@ import {CUES} from "../NOX-WOW51-100/catalog.mjs";
 import {SHOTS} from "../NOX-WOW101-150/catalog.mjs";
 import {reviewWowScopes,translateNativeEvent,mountUnifiedCinema} from "./gate.mjs";
 import {readFileSync} from "node:fs";
+import {mountFinale} from "../NOX-WOW151-200/finale.mjs";
 
 const now=Date.now();
 const base={schema:"NOX-INSTALLER-EVENT-v3",run_id:"test-1",event_id:"event-1",
@@ -52,7 +53,7 @@ test("exact documented canonical events map only to truthful WOW semantics",()=>
 });
 class ClassBag {
  constructor(){this.v=new Set()}
- add(x){this.v.add(x)}remove(x){this.v.delete(x)}
+ add(x){this.v.add(x)}remove(x){this.v.delete(x)}contains(x){return this.v.has(x)}
 }
 class MockElement {
  constructor(doc){
@@ -178,4 +179,15 @@ test("composition action denied without native authorized callback",()=>{
  assert.throws(()=>ui.activateApprovedComposition(151),/HOST_COMPOSITION_APPROVAL_REQUIRED/);
  assert.equal(ui.current().visualEvidence,"demo");
  ui.destroy();
+});
+
+test("never start two compositors on one secondary stage",()=>{
+ const {root}=fixture();
+ const primary=mountUnifiedCinema(root);
+ assert.throws(()=>mountFinale(root),/FINALE_ALREADY_MOUNTED_OR_UNIFIED_ACTIVE/);
+ primary.destroy();
+ const legacy=mountFinale(root);
+ assert.throws(()=>mountUnifiedCinema(root),/NOX_UNIFIED_DUPLICATE_MOUNT/);
+ legacy.destroy();
+ assert.doesNotThrow(()=>mountUnifiedCinema(root).destroy());
 });
