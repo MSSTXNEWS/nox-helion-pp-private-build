@@ -61,6 +61,8 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
       python tests/P04/test_e04_role_type_before_membership.py
       if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_worker_payload_integrity_r18.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_PRELAUNCH_SOURCE_GATE_HOLD' }
       # Existing E06 P02/P04 owner seam regressions: deterministic native stubs only.
       # Pass is NOT installed Windows/GPU/SQLite/Ollama acceptance.
       python -m unittest discover -s tests/e06 -p 'test_onehost_post_history_r10.py' -v
@@ -87,8 +89,33 @@ jobs:
       $pin='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
       $m=@(Get-ChildItem -LiteralPath 'work/candidate' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $pin })
       if ($m.Count -ne 1) { throw 'PINNED_ORIGINAL_EXE_MISSING' }
+      # Reuse original Creative owner worker and installer patch, on a disposable CI copy.
+      # The ONEHOST packager must include the real worker BEFORE payload.sha256.json.
+      $creativeRoot=(Resolve-Path -LiteralPath 'integrations/creative').Path
+      $workerRoot=Join-Path (Resolve-Path -LiteralPath '.').Path 'work/e06/azure-creative-worker'
+      if (Test-Path -LiteralPath $workerRoot) { throw 'AZURE_CREATIVE_WORKER_OUTPUT_EXISTS_HOLD' }
+      New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+      python -m venv (Join-Path $workerRoot '.venv')
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_VENV_HOLD' }
+      $workerPython=Join-Path $workerRoot '.venv/Scripts/python.exe'
+      # Fixed original owner dependency versions in isolated build venv (no global pip).
+      & $workerPython -m pip install --disable-pip-version-check --no-input 'pyinstaller==6.16.0' 'huggingface_hub==0.36.0' 'trimesh==4.8.2' 'numpy==2.3.4'
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_DEPS_HOLD' }
+      $env:PYTHONPATH=$creativeRoot
+      & $workerPython -m unittest discover -s (Join-Path $creativeRoot 'tests') -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_PROTOCOL_HOLD' }
+      & $workerPython -m PyInstaller --noconfirm --clean --onedir --console --name NOX_CreativeWorker --paths $creativeRoot --collect-all huggingface_hub --collect-all trimesh --distpath (Join-Path $workerRoot 'dist') --workpath (Join-Path $workerRoot 'build') (Join-Path $creativeRoot 'creative_worker.py')
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_WORKER_COMPILE_HOLD' }
+      $workerDist=Join-Path $workerRoot 'dist/NOX_CreativeWorker'
+      if (!(Test-Path -LiteralPath (Join-Path $workerDist 'NOX_CreativeWorker.exe') -PathType Leaf)) { throw 'AZURE_CREATIVE_WORKER_BINARY_MISSING_HOLD' }
+      $builderCopy=Join-Path $workerRoot 'build_onehost_creative_disposable.ps1'
+      Copy-Item -LiteralPath 'coordination/e06/build_onehost_installer.ps1' -Destination $builderCopy -ErrorAction Stop
+      & $workerPython (Join-Path $creativeRoot 'patch_installer.py') $builderCopy $workerDist
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_INSTALLER_STAGE_HOLD' }
+      $patchedBuilder=Get-Content -LiteralPath $builderCopy -Raw -Encoding UTF8
+      if ($patchedBuilder -notmatch 'CREATIVE_PAYLOAD_MISSING_HOLD' -or $patchedBuilder -notmatch 'NOX_CreativeWorker.exe') { throw 'AZURE_CREATIVE_BUILDER_COPY_NOT_PATCHED_HOLD' }
       $out='work/e06/azure-onehost-diagnostic'
-      & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $m[0].FullName -OutputRoot $out -RunId 'NOX-AZURE-$(Build.BuildId)' -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
+      & $builderCopy -SourceRoot 'work/e06/staged/R11' -PythonExe $m[0].FullName -OutputRoot $out -RunId 'NOX-AZURE-$(Build.BuildId)' -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
       if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_ONEHOST_NSIS_BUILD_HOLD' }
       $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
       $exe=Join-Path $out 'payload/NOX.P01.Shell.exe'
