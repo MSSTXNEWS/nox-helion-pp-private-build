@@ -48,12 +48,14 @@ async function chooseSubtitle(file){
  if(!file)return;
  // Last selected subtitle wins even when file.text() resolves out of order.
  const selectedGeneration=++subtitleGeneration;
+ // Never show stale captions while a new file is pending or rejected.
+ releaseSubtitle();
  if(file.size>2*1024*1024){note('Субтитры больше 2 МиБ — HOLD');return}
  try{
   const source=await file.text();
   if(selectedGeneration!==subtitleGeneration)return;
   const vtt=toWebVtt(source,file.name);
-  releaseSubtitle();subtitleUrl=URL.createObjectURL(new Blob([vtt],{type:'text/vtt'}));
+  subtitleUrl=URL.createObjectURL(new Blob([vtt],{type:'text/vtt'}));
   track=document.createElement('track');track.kind='subtitles';track.label=file.name;track.srclang='ru';track.default=true;track.src=subtitleUrl;video.appendChild(track);
   const loadedTrack=track;
   loadedTrack.addEventListener('load',()=>{if(track===loadedTrack&&loadedTrack.track)loadedTrack.track.mode='showing'});
@@ -76,8 +78,8 @@ function command(data){
  if(data.action==='fullscreen')void toggleFullscreen();
 }
 if(bc)bc.onmessage=e=>command(e.data);
-$('file').onchange=e=>chooseVideo(e.target.files?.[0]);
-$('subtitles').onchange=e=>void chooseSubtitle(e.target.files?.[0]);
+$('file').onchange=e=>{const input=e.target,file=input.files?.[0];input.value='';chooseVideo(file)};
+$('subtitles').onchange=e=>{const input=e.target,file=input.files?.[0];input.value='';void chooseSubtitle(file)};
 $('play').onclick=()=>void play();
 $('pause').onclick=pause;
 $('full').onclick=()=>void toggleFullscreen();
