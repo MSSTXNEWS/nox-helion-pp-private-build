@@ -239,7 +239,7 @@ test('readiness refuses 100 percent when accepted receipts cover 10 percent',()=
   const r=structuredClone(readiness);r.bars[0].percent=100;
   assert.equal(projectReadiness(r,RUN,NOW).overall,null);
 });
-test('readiness refuses missing owner receipt for a COMPONENT_VERIFIED task',()=>{
+test('readiness refuses missing accepted owner receipt',()=>{
   const r=structuredClone(readiness);delete r.bars[0].task_ledger[0].receipt_sha256;
   assert.equal(projectReadiness(r,RUN,NOW).overall,null);
 });
