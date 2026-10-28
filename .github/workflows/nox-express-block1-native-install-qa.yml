@@ -20,6 +20,12 @@ jobs:
           run-id: 40611023212
           github-token: ${{ github.token }}
           path: input/combined
+      - name: Checkout exact original P01 diagnostic owner scripts
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 8e42bb15aecbee8412c342b0e9049b6cce044297
+          persist-credentials: false
+          path: p01
       - name: Verify exact setup SHA and disposable runner
         shell: pwsh
         run: |
@@ -92,6 +98,27 @@ jobs:
             Write-Host 'NOX_EXPRESS_REAL_PAYLOAD_INSTALL_UNINSTALL_SHA_D02_USERDATA_PASS'
           } catch {
             $report.error=$_.ToString()
+            # Diagnostic-only readbacks after a failed install; never auto-clean
+            # or force recursive removal of unknown payload/user data.
+            $owner='p01/stage/proposals/P01/C09/Installer'
+            $preflight=Join-Path $owner 'Preflight-InstallPath.ps1'
+            $preflightOutput=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $preflight -InstallRoot $root 2>&1
+            $report.preflight_after_failure=($preflightOutput|Out-String).Substring(0,[Math]::Min(2500,($preflightOutput|Out-String).Length))
+            $report.preflight_code=$LASTEXITCODE
+            $stage="$root.__p01_stage"
+            $report.stage_present=(Test-Path -LiteralPath $stage -PathType Container)
+            $report.install_root_present=(Test-Path -LiteralPath $root -PathType Container)
+            if($report.stage_present){
+              $report.stage_file_count=@(Get-ChildItem -LiteralPath $stage -Recurse -File -ErrorAction SilentlyContinue).Count
+              $mf=Join-Path $stage 'payload.sha256.json'
+              $report.stage_manifest_present=(Test-Path -LiteralPath $mf -PathType Leaf)
+              if($report.stage_manifest_present){
+                $verify=Join-Path $owner 'Verify-Payload.ps1'
+                $verifyOutput=& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verify -Root $stage -Manifest $mf 2>&1
+                $report.stage_verify_code=$LASTEXITCODE
+                $report.stage_verify=($verifyOutput|Out-String).Substring(0,[Math]::Min(2500,($verifyOutput|Out-String).Length))
+              }
+            }
             throw
           } finally {
             $report.checked_at_utc=[DateTime]::UtcNow.ToString('o')
