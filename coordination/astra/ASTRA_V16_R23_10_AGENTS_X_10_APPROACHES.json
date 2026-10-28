@@ -1233,5 +1233,26 @@
     "C34 historical log read always; if permitted and needed append RunID pointer with readback; avoid needless rewrite"
   ],
   "journal_failure_policy": "REPORT_GATE=HOLD, commit write payload as immutable GitHub fallback, never falsely claim Drive saved; do not overwrite earlier text; single supervisor writer CAS revision",
-  "default_agent_spawn": "NOT_STARTED_NO_ACTUAL_SPAWN_RECEIPTS"
+  "default_agent_spawn": "NOT_STARTED_NO_ACTUAL_SPAWN_RECEIPTS",
+  "primary_windows_ci": {
+    "chosen_provider": "GitLab Free",
+    "gitlab_project": "s-grouptwet/nox-helion-pp-private-build",
+    "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "historical_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+    "historical_pipeline_id": 3000422727,
+    "historical_windows_job_id": 17549234693,
+    "runner_tag": "saas-windows-medium-amd64",
+    "last_confirmed_result": "FAILED_P02_SOURCE_TEST_NO_EXE",
+    "source_files_on_github_migration_branch": [
+      ".gitlab-ci.yml",
+      "coordination/e06/gitlab_windows_entrypoint.ps1",
+      "azure-pipelines-nox-v16.yml",
+      "private_build.ps1",
+      "coordination/e06/build_onehost_installer.ps1"
+    ],
+    "live_gitlab_head_verified_now": false,
+    "astra_permitted_actions": "SOURCE_CODE_ONLY; NO GITLAB CI OR FINAL INTEGRATION",
+    "source_handoff_document": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+    "git_branch_drift_manifest": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json"
+  }
 }
