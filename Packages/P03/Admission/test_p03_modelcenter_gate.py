@@ -112,7 +112,9 @@ class Admission(unittest.TestCase):
 
     def test_26_training_cuda_peft(self):
         self.assertEqual(g.prerequisite_gates({"python":True,"git":True},"TRAINING"),
-                         ("PREREQUISITE_CUDA_UNVERIFIED","PREREQUISITE_PEFT_UNVERIFIED"))
+                         ("PREREQUISITE_CUDA_UNVERIFIED","PREREQUISITE_TORCH_UNVERIFIED",
+                          "PREREQUISITE_PEFT_UNVERIFIED","PREREQUISITE_TRL_UNVERIFIED",
+                          "PREREQUISITE_ACCELERATE_UNVERIFIED"))
 
     def test_27_retry_receipt(self):
         old=dict(attemptId="a",completedBytes=10)
@@ -140,6 +142,34 @@ class Admission(unittest.TestCase):
                    completedReceiptSha256="e"*64, observedArtifactSha256="d"*64,
                    nativeCompletionAttested=True)
         self.assertEqual(g.progress_gate(old,new).status,"PASS_FOR_EXISTING_QUEUE")
+
+    def test_65_empty_license_id_hold(self):
+        e,c=example();e["licenseId"]="  "
+        self.assertHold(e,c,"LICENSE_EVIDENCE_MISSING")
+
+    def test_66_gguf_native_header_needed(self):
+        e,c=example(); e.update(kind="gguf",existingRoute="EnqueueVerifiedGgufAsync",
+                                localGgufPath="C:/model/verified.gguf",nativeLocalFileSha256="a"*64)
+        c["verifiedPrerequisites"]={"python":True,"git":True}
+        self.assertHold(e,c,"GGUF_NATIVE_MAGIC_UNVERIFIED")
+
+    def test_67_gguf_digest_must_match_local(self):
+        e,c=example(); e.update(kind="gguf",existingRoute="EnqueueVerifiedGgufAsync",
+                                localGgufPath="C:/model/verified.gguf",nativeGgufMagicVerified=True,
+                                nativeLocalFileSha256="e"*64)
+        c["verifiedPrerequisites"]={"python":True,"git":True}
+        self.assertHold(e,c,"GGUF_LOCAL_FILE_SHA_NOT_MATCHED")
+
+    def test_68_gguf_native_header_digest_policy_pass(self):
+        e,c=example(); e.update(kind="gguf",existingRoute="EnqueueVerifiedGgufAsync",
+                                localGgufPath="C:/model/verified.gguf",nativeGgufMagicVerified=True,
+                                nativeLocalFileSha256="a"*64)
+        c["verifiedPrerequisites"]={"python":True,"git":True}
+        self.assertEqual(g.admit_for_existing_downloader(e,c,lambda _:True).status,"PASS_FOR_EXISTING_QUEUE")
+
+    def test_69_training_all_dependencies(self):
+        self.assertEqual(g.prerequisite_gates(dict.fromkeys(
+            ("python","git","cuda","torch","peft","trl","accelerate"),True),"TRAINING"),())
 
     def test_32_no_implicit_download(self):
         self.assertNotIn("requests",g.__dict__)
