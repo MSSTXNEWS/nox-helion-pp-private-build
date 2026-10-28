@@ -154,6 +154,7 @@ class OwnerTwoPorts:
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
+        LocalVoicePipeline.validate_result(result, source=source, target=target, mode=mode)
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
         # Reuse R18's post-persistence STOP boundary, then revoke the exact

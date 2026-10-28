@@ -25,6 +25,16 @@ LEVELS = frozenset({'A1','A2','B1','B2','C1','C2'})
 E164 = re.compile(r'^\+[1-9][0-9]{7,14}$')
 
 
+def _voice_text(value: str, limit: int, error: str) -> None:
+    """Reject malformed provider text before another adapter or native storage."""
+    if type(value) is not str or not 0 < len(value) <= limit or not value.strip():
+        raise P02Error(error)
+    try:
+        value.encode('utf-8', 'strict')
+    except UnicodeEncodeError as exc:
+        raise P02Error(error) from exc
+
+
 @dataclass(frozen=True)
 class Identity:
     """Values established from native host authenticated user, never from page JSON."""
@@ -119,21 +129,30 @@ class LocalVoicePipeline:
         transcript = asr(scope, audio, source, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after ASR')
         retain_admission()
-        if not isinstance(transcript, str) or not 0 < len(transcript) <= 20000:
-            raise P02Error('ASR_INVALID_RESULT')
+        _voice_text(transcript, 20000, 'ASR_INVALID_RESULT')
         # No other provider; reuse one installed chat LLM supplied by #6.
         directive = ('RU_ES_TRANSLATE' if mode == 'translate' else 'MAESTRO_CEFR_'+level)
         response = chat(scope, transcript, source, target, directive, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after LLM')
         retain_admission()
-        if not isinstance(response, str) or not 0 < len(response) <= 30000:
-            raise P02Error('LLM_INVALID_RESULT')
+        _voice_text(response, 30000, 'LLM_INVALID_RESULT')
         output = tts(scope, response, target, voice, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after TTS')
         retain_admission()
         if not isinstance(output, bytes) or not 0 < len(output) <= 16 * 1024 * 1024:
             raise P02Error('TTS_INVALID_RESULT')
         return VoiceResult(transcript,response,output,source,target,mode)
+
+    @staticmethod
+    def validate_result(result: VoiceResult, *, source: str, target: str, mode: str) -> None:
+        """Native owner must not store audio from a mismatched/overridden adapter."""
+        if (type(result) is not VoiceResult or result.source_lang != source
+                or result.target_lang != target or result.mode != mode):
+            raise P02Error('VOICE_RESULT_REQUEST_MISMATCH')
+        _voice_text(result.transcript, 20000, 'ASR_INVALID_RESULT')
+        _voice_text(result.response, 30000, 'LLM_INVALID_RESULT')
+        if type(result.audio) is not bytes or not 0 < len(result.audio) <= 16 * 1024 * 1024:
+            raise P02Error('TTS_INVALID_RESULT')
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,31 @@
+{
+  "agent": "/root/a05",
+  "run_id": "ASTRA-R27-A05-20261029-05",
+  "approaches_completed": 5,
+  "planned_approaches": 10,
+  "source_parent": "c42743d11d793fa5de4aa7bcf85a5c399a0c8b88",
+  "task": "fix(p02): reject malformed voice provider results before downstream adapters and storage",
+  "test_result": "4 focused imported-module tests PASS covering whitespace/surrogate/oversize ASR and LLM text, result request mismatch, audio cap, Russian/Spanish/emoji",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_sha256": "ff69f278aa61aad4be7147083099361d8d07f9bd520a3ecc940ec77b99d576cc",
+      "post_sha256": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+      "git_blob": "d721cd9608d62052060ae2c7ff6db240b281802f"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_sha256": "65ec76b3e2558341910fe3eab31073fae98d6340ebd0020d4c399b3173c3a48a",
+      "post_sha256": "ba60c51ef50688c3c05d2933b1ca1205076e0bab0e89e56226f94b1067f8ab18",
+      "git_blob": "dcef668c010b9b215131e610eab960a3d864ec14"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_result_r27.py",
+      "pre_sha256": null,
+      "post_sha256": "55531529525219266755d5169ede2474aa11cfd8c31501307eb01ad426576245",
+      "git_blob": "0845b6955512006cccda1702ff9f288a720fcf8d"
+    }
+  ],
+  "native_hardware": "NOT_RUN",
+  "no_final_integration": true
+}
