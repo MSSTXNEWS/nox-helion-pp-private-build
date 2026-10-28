@@ -1,0 +1,62 @@
+{
+  "schema": "NOX-V16-CODE-FIXER-OWNER-RECEIPT-v1",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R20",
+  "task_id": "V16.P01/D02-INVALID-PROFILE-ATOMIC-RECOVERY",
+  "base_head": "eb38c599709cafeac9d64f374b43628df04a18be",
+  "branch": "fix/lane2-d02-atomic-profile-20261028-r20",
+  "owner": "Manual #2 SOURCE FIXER; manual #1 only shared PR162 merger",
+  "scope": "One original HOME FX source function + existing 12-test QA file extended to 14, no new renderer/host/LLM/DB/event bus, NO-LOSS 8 CoreID/HELION/Persona/WOW and prior reduced-motion handler.",
+  "defect": "mountApprovedHome().setProfile() persisted requestedProfile before validating; invalid string/object under OS reduced motion polluted recovery to previous ECO/MAX.",
+  "changed_files": [
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "pre_git_blob_sha1": "00bdef6e58c805b7aba4834aecb539a3bba00b60",
+      "post_git_blob_sha1": "e78d2c9e538c24cd8be9431ce9d8f460809f9225",
+      "pre_sha256": "44e257b9a884c0fb13ace4cd3576a5a918a61f266e6ec02666ecb1291395964a",
+      "post_sha256": "40c26943e4b7837e2b625251b38353cc5c0869b50221183a7d64ea09c2d9ec2b",
+      "commit": "1150b56eefc5c8bc68cc45aa3e4195115909cf9f"
+    },
+    {
+      "path": "qa/G3-03/tests/nox-d02-home-reduced-motion-r13.test.mjs",
+      "pre_git_blob_sha1": "78e9f669e7ee955bdfcfab5ba46991426b414a73",
+      "post_git_blob_sha1": "62a1cc9d5a0048e406506754c7cbb17d57304bda",
+      "pre_sha256": "fc69e7d013e3cd114fe62b3474db6a43efcaa258589ee52192ff414536e03164",
+      "post_sha256": "39f9ede6f59229c05fb336d1e10315845961c0e5b59c638afa9fb63167dc6a71",
+      "commit": "7c12c09e0ea8f26d60f3694cd0e2b7363071512c"
+    }
+  ],
+  "fix": "Validate typeof mode === string and exact four renderer-approved profiles before changing requestedProfile. Call existing scene.setProfile with effective REDUCED override first, then commit requestedProfile only on accepted true.",
+  "checks": {
+    "github_readback": "PASS exact source and QA file",
+    "sha256_known_answer": "PASS",
+    "static_source_gates": "14/14 PASS on actual GitHub R20 blobs",
+    "local_node_contract": "14/14 PASS on source-excerpt behavior using actual Node v22, NOT full imported repo home-scene",
+    "local_node_contract_script_sha256": "74c52c2b0d0684b21ff174e8c9e116ba0739e05a25ed84e80a9b677eb1183d71",
+    "local_node_contract_log_sha256": "875d24c9cd2d075732aa932502be1d928b868a39e3be9469d45763a4a5d1e2d5",
+    "qa_test_definitions": "14 existing-plus-two Node tests committed to repository, NOT_RUN on source checkout or Windows",
+    "real_webview2": "NOT_RUN",
+    "full_d02_renderer": "NOT_RUN",
+    "windows_installer": "NOT_RUN",
+    "e07_final": "0/10 NOT_RUN"
+  },
+  "review_critical_other_blocker": {
+    "path": "coordination/e06/Emit-E07ImmutableHandoff.ps1",
+    "shared_corrupt_blob": "80f2fb313b5804f89ba9d52e940f7e2268c4a1a7",
+    "shared_len": 21830,
+    "buildid_seal_occurrences": 5,
+    "identical_repair_donor_blob": "a9037777897d851db143d45a61939f2ba1d8eb39",
+    "donor_prs": [
+      197,
+      198
+    ],
+    "instruction": "Manual #1/E06 must select ONE verified E07 fix source/QA, not both, CAS into PR162 and run PowerShell AST parser + real Windows build. Do not silently copy/corrupt script again."
+  },
+  "no_loss": "Git compare base→branch 2 commits/2 modified paths, no path deletion, original D02/WOW/8 CoreID and 15 automations untouched; shared integration HEAD/main not changed by manual #2",
+  "remaining_release_requirements": [
+    "Authorised usable Windows runner or GitLab self-hosted/ Azure hosted agent needed; GitHub billing failure in recent runs",
+    "Physical 729 ZIP proof under same build source SHA and one live WPF/Python/NSIS BuildID, Setup+installed EXE SHA",
+    "Actual native Ollama/SQLite/GPU/voice/ModelCenter/SPACE and independent E07 same binary 10/10 NOT_RUN"
+  ],
+  "single_improvement": "ATOMIC_USER_MODE_ADMISSION: reject external visual state values before persisting; unit-test OS-level recovery after rejected request, never drop saved user profile.",
+  "release_status": "SOURCE FIX ISOLATED / RELEASE HOLD"
+}
