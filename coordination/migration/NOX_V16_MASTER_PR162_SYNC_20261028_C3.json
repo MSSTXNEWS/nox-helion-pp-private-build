@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_V16_GITLAB_MIGRATION_FROM_MASTER_NOLOSS_V1",
+  "run_id": "NOX-V16-FINAL-MANUAL1-C3-GITLAB-SAFE-MERGE",
+  "owner_master_ref": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_master_head": "8e0f22b407611cb3e3c80cfdbcf34b4041f129f3",
+  "migration_previous_head": "07e1a05752685c59b55b2ad49f4ef7701e81333e",
+  "part_blobs": [
+    {
+      "path": "source_00.part",
+      "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "bytes": 20971520
+    },
+    {
+      "path": "source_01.part",
+      "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "bytes": 20971520
+    },
+    {
+      "path": "source_02.part",
+      "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "bytes": 18421306
+    }
+  ],
+  "original_master_blobs": 855,
+  "migration_old_blobs": 874,
+  "master_overlay_count": 11,
+  "migration_only_preserved_count": 26,
+  "overlay": [
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "git_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "old_git_blob_sha1": "6f9fde1c732528804d768ab8b2b2e7049ccd673d"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "git_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "old_git_blob_sha1": "59fd9cfdc4243eac7f2c10aa5e58983d283b82a1"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_sqlite_stop_before_commit_r15.py",
+      "git_blob_sha1": "e59390b84f932d04ce3daad3b2af8bb2dbf1efd9",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "azure-pipelines-nox-v16.yml",
+      "git_blob_sha1": "fa4a5eda0da9482f20c472647736805f2ea5b2a9",
+      "old_git_blob_sha1": "98049ddd6fb555647a6fbe0b78498a68533d45af"
+    },
+    {
+      "path": "coordination/e06/Emit-E07ImmutableHandoff.ps1",
+      "git_blob_sha1": "5811fa58d0b64aadaf555cb37cfc548aa3bfe727",
+      "old_git_blob_sha1": "a9037777897d851db143d45a61939f2ba1d8eb39"
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_C2_20261028_E07_NO_CLOBBER.json",
+      "git_blob_sha1": "d74e069dfb73a0ea765a55192b5250ba15c7ae10",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_C2_P02_STOP_PRECOMMIT_20261028.json",
+      "git_blob_sha1": "ae9a281d241946185c72914b6b9a95961ab1fa19",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_C3_GITLAB_P02_JSON_DEPTH_20261028.json",
+      "git_blob_sha1": "df13adc2c1f2900d5123d5eaac330e4e61d4838d",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "coordination/release/NOX_V16_SOURCE_FIRST_MANUAL_3_TO_2_20261028.md",
+      "git_blob_sha1": "bceba57d5073caac3f484da1656c28ddba2b2539",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "tests/e06/Test-E07NoClobberConcurrent.ps1",
+      "git_blob_sha1": "6083a9b6c10e0dbfa2f250956b329c2fb5778d9e",
+      "old_git_blob_sha1": null
+    },
+    {
+      "path": "tests/e06/test_e07_no_clobber_source_r15.py",
+      "git_blob_sha1": "b5cecaf2858822a10bd175980d993d47a00b6f15",
+      "old_git_blob_sha1": null
+    }
+  ],
+  "branch_changed": "migration/nox-v16-gitlab-free-20261028-r01",
+  "repo_main_unchanged": true,
+  "gitlab_import_commit_verification": "NOT_VERIFIED",
+  "real_windows_pipeline_on_new_sha": "NOT_RUN",
+  "source_zip_729_latest_sha256": "NOT_VERIFIED",
+  "exe_setup_sha256": null,
+  "e07_same_installed_sha": "0/10",
+  "release_accepted": false,
+  "improvement": "TWO_PARENT_NOLOSS_MIGRATION_UNION_NO_REIMPORT_NO_FORCE"
+}

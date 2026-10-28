@@ -151,7 +151,12 @@ class ChatBridge:
         # A blocking model/RAG lookup may finish after STOP. No late user write.
         if stop.is_set():
             raise Cancelled("STOP during model/RAG preflight")
-        self.store.add_message(tenant, principal, chat_id, "user", prompt)
+        # Original P02Store gets STOP within its own SQLite transaction.
+        # Legacy fake adapters keep their original five-argument interface.
+        if isinstance(self.store, P02Store):
+            self.store.add_message(tenant, principal, chat_id, "user", prompt, stop=stop)
+        else:
+            self.store.add_message(tenant, principal, chat_id, "user", prompt)
         # A native STOP may arrive while the original SQLite writer blocks.
         # Do not tell WebView2 a cancelled run started after that boundary.
         # The write itself still requires the host's atomic STOP/DB gate.
@@ -206,7 +211,12 @@ class ChatBridge:
                         if stop.is_set():
                             raise Cancelled("STOP before assistant persistence")
                         text = "".join(parts)
-                        self.store.add_message(tenant, principal, chat_id, "assistant", text)
+                        if isinstance(self.store, P02Store):
+                            self.store.add_message(tenant, principal, chat_id,
+                                                   "assistant", text, stop=stop)
+                        else:
+                            self.store.add_message(tenant, principal, chat_id,
+                                                   "assistant", text)
                         # A concurrent STOP can arrive during a blocking SQLite
                         # commit. Never emit chat.complete for a cancelled turn.
                         # Persisted assistant text is NOT rolled back here;
