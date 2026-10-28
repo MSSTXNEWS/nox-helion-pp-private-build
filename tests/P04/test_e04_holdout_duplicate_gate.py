@@ -140,5 +140,31 @@ class HoldoutIntegrityTests(unittest.TestCase):
 
 
 
+    def test_messages_extra_provenance_cannot_hide_cross_split_leakage(self):
+        def dialogue(origin):
+            return [{"role": "user", "content": "Question", "source": origin},
+                    {"role": "assistant", "content": "Answer", "provenance": origin}]
+        with self.assertRaisesRegex(ValueError, "DATASET_TRAIN_HOLDOUT_EXAMPLE_OVERLAP"):
+            self.rows([{"messages": dialogue("train")}],
+                      [{"messages": dialogue("holdout")}])
+
+    def test_messages_extra_provenance_cannot_hide_train_duplicates(self):
+        def dialogue(origin):
+            return [{"role": "user", "content": "Question", "origin": origin},
+                    {"role": "assistant", "content": "Answer"}]
+        with self.assertRaisesRegex(ValueError, "DATASET_TRAIN_DUPLICATE_EXAMPLE"):
+            self.rows([{"messages": dialogue("one")}, {"messages": dialogue("two")}],
+                      [{"text": "unrelated holdout"}])
+
+    def test_messages_actual_content_difference_is_still_allowed(self):
+        def dialogue(answer, origin):
+            return [{"role": "user", "content": "Question", "origin": origin},
+                    {"role": "assistant", "content": answer}]
+        self.assertEqual(self.rows(
+            [{"messages": dialogue("A", "train")}],
+            [{"messages": dialogue("B", "holdout")}],
+        ), (1, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
