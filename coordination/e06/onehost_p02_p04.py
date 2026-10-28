@@ -23,6 +23,8 @@ _GPU_COMMANDS = frozenset({"gpu.stop", "gpu.pause", "gpu.resume", "gpu.checkpoin
 _GPU_EVENTS = frozenset({"task.started", "task.progress", "training.step",
                          "checkpoint.saved", "task.completed", "task.failed",
                          "model.stopped", "gpu.sample"})
+_P02_CHAT_FRAMES = frozenset({"chat.start", "chat.sources", "chat.delta",
+                              "chat.complete", "chat.error"})
 
 
 class OneHostHold(RuntimeError):
@@ -165,11 +167,20 @@ class P02P04OneHost:
                         frame = next(owner_frames)
                     except StopIteration:
                         return
+                    # Freeze the original P02 frame BEFORE the post-await
+                    # native authorization callback. Like GPU/event receipts,
+                    # this must not allow a callback or producer to mutate a
+                    # delta into completion or replace source citations.
+                    # The bounded copy is a wire value, not a second chat.
+                    wire = _owner_wire_snapshot(frame, kind="P02_CHAT_FRAME",
+                                                max_bytes=1048576)
+                    if wire.get("type") not in _P02_CHAT_FRAMES:
+                        raise OneHostHold("EXISTING_P02_CHAT_FRAME_TYPE_REQUIRED")
                     # A blocking owner generator may complete a RAG/LLM await
                     # after native permission was revoked. Pre-next admission
                     # alone cannot protect the newly produced frame.
                     self._admit(scope, "chat.send")
-                    yield frame
+                    yield wire
             finally:
                 # Releasing a partially consumed stream must cancel the native
                 # owner request, never leave an orphan Ollama stream running.
