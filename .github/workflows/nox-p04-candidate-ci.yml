@@ -43,7 +43,16 @@ jobs:
           git show "$P02_SHA:Packages/P02/worker-python/p02_runtime.py" > "$RUNNER_TEMP/p02-pinned/p02_runtime.py"
           git show "$P02_SHA:Packages/P02/worker-python/p02_chat_bridge.py" > "$RUNNER_TEMP/p02-pinned/p02_chat_bridge.py"
       - name: Verify actual pinned P02 ChatBridge against P04 Python RAG
-        run: NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02*.py' -v
+        run: |
+          NOX_P02_SOURCE_DIR="$RUNNER_TEMP/p02-pinned" python -m unittest discover -s tests/P04 -p 'test_p02*.py' -v > p04-crossowner-results.txt 2>&1
+          cat p04-crossowner-results.txt
+      - name: Preserve P04 cross-owner test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p04-crossowner-linux
+          path: p04-crossowner-results.txt
+          if-no-files-found: ignore
 
   p04-windows-python:
     runs-on: windows-2022
