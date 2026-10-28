@@ -369,9 +369,12 @@ def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
         # Undo ONLY writes owned by this batch. A broad clear/update would also
         # destroy another owner's independent registration if the native caller
         # accidentally failed to serialize an overlapping operation.
-        for route, port in planned:
-            if dispatcher.ports.get(route) is port:
-                dispatcher.ports.pop(route)
+        for route, _port in planned:
+            # The caller holds the EXISTING native host mutation lock.
+            # Any port at a planned route did not exist before this batch,
+            # including one injected by a failing bind callback: remove it.
+            if route not in before:
+                dispatcher.ports.pop(route, None)
         for route, old_port in before.items():
             if dispatcher.ports.get(route) is not old_port:
                 dispatcher.ports[route] = old_port
