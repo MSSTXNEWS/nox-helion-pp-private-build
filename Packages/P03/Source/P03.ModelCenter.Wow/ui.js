@@ -221,7 +221,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
   if(pending.timer!==null)clearTimeout(pending.timer);
   state.pending.delete(data.action);renderHero();renderQuick20();
-  const m=current(),samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null);
+  const m=current(),samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null);
   showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);
