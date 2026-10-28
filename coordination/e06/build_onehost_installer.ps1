@@ -5,7 +5,9 @@ param(
  [Parameter(Mandatory=$true)][string]$SourceRoot,
  [Parameter(Mandatory=$true)][string]$PythonExe,
  [Parameter(Mandatory=$true)][string]$OutputRoot,
- [Parameter(Mandatory=$true)][string]$RunId
+ [Parameter(Mandatory=$true)][string]$RunId,
+ [string]$CreativeSourceRoot='',
+ [string]$WowSourceRoot=''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -17,6 +19,76 @@ $project=Join-Path $source 'NOX.P01.Shell.csproj'
 $installer=Join-Path $source 'Installer'
 if (!(Test-Path -LiteralPath $project -PathType Leaf)) { throw 'EXISTING_WPF_SOURCE_MISSING' }
 if (!(Test-Path -LiteralPath (Join-Path $installer 'NOX-HELION-Setup.nsi') -PathType Leaf)) { throw 'ORIGINAL_NSIS_OWNER_SOURCE_MISSING' }
+# The original diagnostic builder keeps its existing behavior unless BOTH visual
+# sources are explicitly supplied. Never silently use an old D02 donor.
+$wantsCreative= -not [string]::IsNullOrWhiteSpace($CreativeSourceRoot)
+$wantsWow= -not [string]::IsNullOrWhiteSpace($WowSourceRoot)
+if ($wantsCreative -ne $wantsWow) { throw 'D02_VISUAL_STAGE_PAIR_REQUIRED' }
+$visualStage='NOT_REQUESTED'
+$wowReceiptPath=$null
+if ($wantsCreative) {
+  # Mutating visual stages operate only on stage_p01.py's disposable source,
+  # never on historical archives, pristine HOME or the Git checkout source.
+  $lockPath=Join-Path (Split-Path -Parent $source) 'source_lock.json'
+  if (!(Test-Path -LiteralPath $lockPath -PathType Leaf)) { throw 'D02_DISPOSABLE_SOURCELOCK_REQUIRED' }
+  $lock=Get-Content -LiteralPath $lockPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($lock.schema -cne 'NOX-E06-P01-WINDOWS-DIAGNOSTIC-SOURCE-v1' -or
+      $lock.source_unchanged -ne $true -or $lock.release_accepted -ne $false) {
+    throw 'D02_DISPOSABLE_SOURCELOCK_INVALID'
+  }
+  $creative=(Resolve-Path -LiteralPath $CreativeSourceRoot).Path
+  $wow=(Resolve-Path -LiteralPath $WowSourceRoot).Path
+  $creativeScript=Join-Path $creative 'stage_creative.py'
+  $wowScript=Join-Path $wow 'stage_wow200.py'
+  foreach ($file in @($creativeScript,$wowScript)) {
+    if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw 'D02_OWNER_STAGING_SCRIPT_MISSING' }
+  }
+  $git=Get-Command 'git.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+  $py=Get-Command 'python.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (!$git -or !$py) { throw 'D02_PINNED_GIT_PYTHON_TOOLS_REQUIRED' }
+  $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
+  $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
+  if ($creativeScriptBlob -cne 'd89911ccf3260e0ad7fe82f954a1d4adf560372c' -or
+      $wowScriptBlob -cne '80315240a7f5db99b5d8759a85329bc71ed5e18f') {
+    throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
+  }
+  if (Test-Path -LiteralPath (Join-Path $source 'Assets/creative')) {
+    throw 'D02_CREATIVE_STAGE_ALREADY_PRESENT'
+  }
+  & $py.Source $creativeScript $source $creative
+  if ($LASTEXITCODE -ne 0) { throw 'D02_CREATIVE_STAGE_FAILED' }
+  & $py.Source $wowScript $source $wow
+  if ($LASTEXITCODE -ne 0) { throw 'D02_WOW_STAGE_FAILED' }
+  $wowReceiptPath=Join-Path (Split-Path -Parent $source) 'WOW200_STAGE_RECEIPT.json'
+  if (!(Test-Path -LiteralPath $wowReceiptPath -PathType Leaf)) { throw 'D02_WOW_STAGE_RECEIPT_MISSING' }
+  $wowReceipt=Get-Content -LiteralPath $wowReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($wowReceipt.count -ne 64 -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+      $wowReceipt.legacy_d02_runtime_imported -ne $false -or
+      $wowReceipt.source_only -ne $true -or $wowReceipt.release_accepted -ne $false) {
+    throw 'D02_WOW_STAGE_RECEIPT_REJECTED'
+  }
+  # Exactly the bytes the HOME runtime actually imports; previous PR30 stays
+  # in a different, unimported legacy directory inside the disposable stage.
+  $ownerRepoRoot=Split-Path -Parent (Split-Path -Parent $wow)
+  foreach ($name in @('nox-cinema.mjs','nox-cinema.css')) {
+    $canonical=Join-Path $ownerRepoRoot ('proposals/NOX-CINEMA-FX/' + $name)
+    $active=Join-Path $source ('Assets/creative/wow200/proposals/NOX-CINEMA-FX/' + $name)
+    $legacy=Join-Path $source ('Assets/creative/wow200/legacy/d02-pr30/' + $name)
+    if (!(Test-Path -LiteralPath $active -PathType Leaf) -or
+        !(Test-Path -LiteralPath $canonical -PathType Leaf) -or
+        !(Test-Path -LiteralPath $legacy -PathType Leaf)) { throw 'D02_ACTIVE_OR_ARCHIVE_MISSING' }
+    if ((Get-FileHash -LiteralPath $active -Algorithm SHA256).Hash -cne
+        (Get-FileHash -LiteralPath $canonical -Algorithm SHA256).Hash) {
+      throw 'D02_ACTIVE_ENGINE_BYTES_MISMATCH'
+    }
+  }
+  $homeHtml=Get-Content -LiteralPath (Join-Path $source 'Assets/index.html') -Raw -Encoding UTF8
+  $homeScriptCount=([regex]::Matches($homeHtml,[regex]::Escape('creative/wow200/runtime/home-scene.mjs'))).Count
+  if ($homeScriptCount -ne 1) {
+    throw 'D02_HOME_LOADER_DUPLICATE_OR_ABSENT'
+  }
+  $visualStage='D02_OWNER1_CANONICAL_STAGE_SHA_VERIFIED_SOURCE_ONLY'
+}
 if (Test-Path -LiteralPath $OutputRoot) { throw 'OUTPUT_ALREADY_EXISTS_NO_OVERWRITE' }
 New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 $out=(Resolve-Path $OutputRoot).Path
@@ -75,6 +147,8 @@ $receipt=[ordered]@{
  python_backend_sha256=$exeDigest;installer_sha256=$sha;installer_bytes=(Get-Item $setup).Length;
  payload_manifest_sha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant();
  original_D02_sha256=$assets;
+ d02_visual_stage=$visualStage;
+ d02_stage_receipt_sha256=if ($wantsCreative) {(Get-FileHash -LiteralPath $wowReceiptPath -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
  one_visible_host=$true;native_bridge_scope='ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE';
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
