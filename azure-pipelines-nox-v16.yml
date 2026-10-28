@@ -39,6 +39,8 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NAMESPACE_TEST_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_onehost_manifest_contract.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_E07_CONTRACT_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_e07_source_part_identity_r14.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'E07_DUAL_PART_RECEIPT_PARITY_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'E06_PART_PIN_REGRESSION_HOLD' }
       $pinnedManifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-owner-pinned.json'
