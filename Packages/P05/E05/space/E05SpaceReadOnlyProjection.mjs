@@ -206,6 +206,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   const terminal=[];
   const seen=new Map();
   for (const e of events) {
+    if (e?.run_id===runId && (e.event_type==='task.failed' || e.event_type==='model.stopped') && !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId ||
         !ago(e.timestamp_utc,nowMs,30000)) continue;
     // Same event_id + DIFFERENT canonical terminal contents is a broken or
