@@ -205,6 +205,41 @@ def read_object(path: Path) -> dict[str, Any]:
     return value
 
 
+MAX_RIGHTS_VERIFIER_RESPONSE_CHARS = 65_536
+
+
+def parse_rights_verifier_response(text: str) -> dict[str, Any]:
+    """Fail closed on ambiguous or oversized external rights attestation JSON."""
+    if not isinstance(text, str) or len(text) > MAX_RIGHTS_VERIFIER_RESPONSE_CHARS:
+        raise ValueError("RIGHTS_VERIFIER_RESPONSE_TOO_LARGE")
+
+    def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("RIGHTS_VERIFIER_DUPLICATE_KEY")
+            value[key] = item
+        return value
+
+    def reject_constant(_token: str) -> None:
+        raise ValueError("RIGHTS_VERIFIER_NONFINITE")
+
+    def finite_float(token: str) -> float:
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("RIGHTS_VERIFIER_NONFINITE")
+        return value
+
+    try:
+        parsed = json.loads(text, object_pairs_hook=unique_pairs,
+                            parse_constant=reject_constant, parse_float=finite_float)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE")
+    return parsed
+
+
 def verify_manifest(manifest_path: Path, train_path: Path, holdout_path: Path,
                     verifier: Path) -> dict[str, Any]:
     manifest = read_object(manifest_path)
@@ -238,10 +273,7 @@ def verify_manifest(manifest_path: Path, train_path: Path, holdout_path: Path,
     )
     if result.returncode != 0:
         raise ValueError("RIGHTS_VERIFIER_REJECTED_MANIFEST")
-    try:
-        attestation = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE") from exc
+    attestation = parse_rights_verifier_response(result.stdout)
     # Bind the verifier's decision to every authorization-bearing manifest
     # field and both exact payload digests. A valid status for a dataset ID
     # alone is insufficient: it could otherwise be replayed across revisions,
