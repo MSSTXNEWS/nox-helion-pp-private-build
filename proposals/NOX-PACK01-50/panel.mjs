@@ -1,4 +1,5 @@
 import {CATEGORIES,verifyCatalog,normalizeCapabilities,filteredActions,optionsForField,makeRequest} from "./registry.mjs";
+import {mountCinematic} from "./cinema50.mjs";
 /* NOX 50-route secondary-screen card interface.
  * No direct Ollama/SIP/PC/network access. All operations require native-host attestation.
  */
@@ -28,6 +29,7 @@ export function mountPack(target,{catalog,bridge}={}){
   const feedback=el("output","nox-pack01__feedback","Реальные функции активируются только после подключения к NOX");
   feedback.setAttribute("aria-live","polite");
   root.append(header,tabs,grid,settings,feedback);target.append(root);
+  const cinematic=mountCinematic(root,catalog);
   function setFeedback(text){feedback.textContent=String(text).slice(0,240);}
   function drawTabs(){
     tabs.replaceChildren();
@@ -94,7 +96,7 @@ export function mountPack(target,{catalog,bridge}={}){
     for(const x of actions){
       const cap=capabilities[x.routeId];
       const button=el("button","nox-pack01__tile");
-      button.type="button";button.dataset.state=cap.state;button.dataset.risk=x.risk;
+      button.type="button";button.dataset.state=cap.state;button.dataset.risk=x.risk;button.dataset.routeId=x.routeId;
       button.setAttribute("aria-label",x.title+" · "+stateLabels[cap.state]);
       const name=el("span","nox-pack01__title",x.title);
       const status=el("span","nox-pack01__status",stateLabels[cap.state]);
@@ -105,11 +107,14 @@ export function mountPack(target,{catalog,bridge}={}){
       grid.append(button);
     }
     drawDetail();
+    cinematic.decorate();
   }
   search.oninput=()=>{query=search.value.slice(0,96);selected=null;draw();};
   const onKey=(e)=>{
     if(destroyed||e.key?.toLowerCase()!=="k"||!e.ctrlKey||e.altKey||e.metaKey)return;
-    if(document.querySelector('[data-nox-page="home"]')?.contains(root))return;
+    // Do not steal Ctrl+K from HOME, another route, or a hidden secondary page.
+    if(!root.isConnected || !root.getClientRects().length ||
+       document.querySelector('[data-nox-page="home"]')?.contains(root))return;
     e.preventDefault();search.focus();search.select();
   };
   document.addEventListener("keydown",onKey);
@@ -118,8 +123,10 @@ export function mountPack(target,{catalog,bridge}={}){
     setCapabilities(raw){if(destroyed)return;capabilities=normalizeCapabilities(catalog,raw);draw();},
     setHostChoices(raw){if(destroyed)return;choices=raw&&typeof raw==="object"?raw:{};drawDetail();},
     search(text){if(destroyed)return;query=String(text||"").slice(0,96);search.value=query;draw();},
+    setCinemaMode(mode){if(destroyed)return false;return cinematic.setMode(mode);},
+    applyNativeVisualEvent(event){if(destroyed)return false;return cinematic.applyNativeEvent(event);},
     getStats(){return {total:50,advertised:Object.values(capabilities).filter(x=>x.enabled).length,
       notConnected:Object.values(capabilities).filter(x=>!x.enabled).length};},
-    destroy(){if(destroyed)return;destroyed=true;document.removeEventListener("keydown",onKey);root.remove();}
+    destroy(){if(destroyed)return;destroyed=true;document.removeEventListener("keydown",onKey);cinematic.destroy();root.remove();}
   });
 }

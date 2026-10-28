@@ -20,6 +20,7 @@ jobs:
         run: |
           node --check proposals/NOX-PACK01-50/registry.mjs
           node --check proposals/NOX-PACK01-50/panel.mjs
+          node --check proposals/NOX-PACK01-50/cinema50.mjs
           node --check proposals/NOX-PACK01-50/smoke.test.mjs
           node --check proposals/NOX-PACK01-50/binding_map.test.mjs
           node --check proposals/NOX-PACK01-50/measure_progress.mjs

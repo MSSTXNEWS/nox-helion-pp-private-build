@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {CATEGORIES,verifyCatalog,normalizeCapabilities,filteredActions,optionsForField,makeRequest} from "./registry.mjs";
+import {visualPreset,validateLiveVisualEvent,mountCinematic} from "./cinema50.mjs";
 const catalog=JSON.parse(readFileSync(new URL("./catalog.json",import.meta.url),"utf8"));
 const choices={
  "host.models.installed":[{id:"qwen3:4b",label:"Qwen 3 4B",installed:true}],
@@ -79,3 +80,60 @@ for(const [i,x] of catalog.actions.entries()){
    assert.equal(Object.keys(request.settings).length,x.settings.length);
  });
 }
+
+
+test("50 cinematic cards have five original department materials",()=>{
+ const presets=catalog.actions.map((item,i)=>visualPreset(item,i));
+ assert.equal(presets.length,50);
+ assert.equal(new Set(presets.map(x=>x.domain)).size,5);
+ assert.equal(new Set(presets.map(x=>x.material)).size,5);
+ assert.ok(presets.every((x,i)=>x.domain===catalog.actions[i].category));
+});
+test("cinema responds only to evidenced NOX events, never invented progress",()=>{
+ const ids=new Set(catalog.actions.map(x=>x.routeId));
+ const event={source:"NOX_EVENT_V3_VERIFIED",evidenceVerified:true,
+   eventId:"evt-1",runId:"run-1",routeId:catalog.actions[0].routeId,
+   state:"streaming",progress:{numerator:1,denominator:4}};
+ assert.equal(validateLiveVisualEvent(event,ids),true);
+ assert.equal(validateLiveVisualEvent({...event,evidenceVerified:false},ids),false);
+ assert.equal(validateLiveVisualEvent({...event,routeId:"unregistered"},ids),false);
+ assert.equal(validateLiveVisualEvent({...event,progress:{numerator:7,denominator:4}},ids),false);
+});
+
+test("fifty visual cards preserve disabled state, real event and cleanup",()=>{
+ const oldDoc=globalThis.document,oldWindow=globalThis.window;
+ const handlers=new Map();
+ const style=()=>({setProperty(){},removeProperty(){}});
+ const cards=catalog.actions.map((x,i)=>({dataset:{routeId:x.routeId,state:i===0?"CONNECTED":"HOLD"},
+   style:style(),removeAttribute(k){delete this.dataset[k.slice(5).replace(/-([a-z])/g,(_,m)=>m.toUpperCase())]}}));
+ const root={nodeType:1,dataset:{},
+   classList:{contains:n=>n==="nox-pack01"},
+   closest(){return null},
+   querySelectorAll(){return cards},
+   removeAttribute(k){delete this.dataset[k.slice(5).replace(/-([a-z])/g,(_,m)=>m.toUpperCase())]}};
+ globalThis.document={hidden:false,
+   addEventListener:(n,h)=>handlers.set(n,h),
+   removeEventListener:n=>handlers.delete(n)};
+ globalThis.window={matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}})};
+ try{
+   const ui=mountCinematic(root,catalog);
+   ui.decorate();
+   assert.equal(cards[0].dataset.cinemaDomain,"chat");
+   assert.equal(cards[0].dataset.cinemaLive,undefined);
+   const verified={source:"NOX_EVENT_V3_VERIFIED",evidenceVerified:true,
+      eventId:"event-1",runId:"run-1",routeId:catalog.actions[0].routeId,state:"streaming"};
+   assert.equal(ui.applyNativeEvent(verified),true);
+   assert.equal(cards[0].dataset.cinemaLive,"streaming");
+   assert.equal(ui.applyNativeEvent(verified),false);
+   const held={...verified,eventId:"event-2",routeId:catalog.actions[1].routeId};
+   assert.equal(ui.applyNativeEvent(held),true);
+   assert.equal(cards[1].dataset.cinemaLive,undefined);
+   document.hidden=true;handlers.get("visibilitychange")();
+   assert.equal(root.dataset.cinemaPaused,"true");
+   assert.equal(ui.setMode("eco"),true);
+   assert.equal(root.dataset.cinemaMode,"eco");
+   ui.destroy();
+   assert.equal(root.dataset.cinemaReady,undefined);
+   assert.equal(handlers.size,0);
+ }finally{globalThis.document=oldDoc;globalThis.window=oldWindow}
+});
