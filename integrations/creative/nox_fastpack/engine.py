@@ -201,7 +201,17 @@ class Studio(CreativeExtensions):
             expected=getattr(valid[f],"size",None)
             if expected is not None and p.stat().st_size!=expected:
                 raise StudioError("Downloaded weight length mismatch: "+f)
-            files.append({"filename":f,"bytes":p.stat().st_size,"sha256":self._digest_file(p)})
+            local_digest=self._digest_file(p)
+            hub_lfs=getattr(valid[f],"lfs",None)
+            hub_digest=(hub_lfs.get("sha256") if isinstance(hub_lfs,dict)
+                        else getattr(hub_lfs,"sha256",None))
+            if hub_digest is not None and (
+                    not isinstance(hub_digest,str) or
+                    not re.fullmatch(r"[a-fA-F0-9]{64}",hub_digest) or
+                    local_digest!=hub_digest.lower()):
+                raise StudioError("Downloaded weight SHA-256 differs from Hub metadata: "+f)
+            files.append({"filename":f,"bytes":p.stat().st_size,
+                          "sha256":local_digest,"upstream_sha256":hub_digest})
         receipt={"schema":"NOX-CREATIVE-WEIGHTS-SHA256-V1",
                  "model":model_id,"repository":model[3],"revision":revision,
                  "files":files,"source":"https://huggingface.co/"+model[3]}
