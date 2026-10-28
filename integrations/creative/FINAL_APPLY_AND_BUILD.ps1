@@ -8,7 +8,8 @@ param(
  [Parameter(Mandatory=$true)][string]$OriginalR13Builder,
  [Parameter(Mandatory=$true)][string]$OriginalPythonExe,
  [Parameter(Mandatory=$true)][string]$Wow200SourceRoot,
- [Parameter(Mandatory=$true)][string]$OutputRoot
+ [Parameter(Mandatory=$true)][string]$OutputRoot,
+ [Parameter()][string]$PersonaBundlePath = ''
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -55,6 +56,15 @@ if($LASTEXITCODE -ne 0){throw 'CREATIVE_STAGE_HOLD'}
 & $python -m unittest discover -s (Join-Path $wow 'tests') -v
 if($LASTEXITCODE -ne 0){throw 'WOW200_SHA_GATES_TEST_HOLD'}
 & $python (Join-Path $wow 'stage_wow200.py') $stage $wow
+if($LASTEXITCODE -ne 0){throw 'WOW200_STAGE_HOLD'}
+if(-not [string]::IsNullOrWhiteSpace($PersonaBundlePath)){
+  $personaArchive=(Resolve-Path -LiteralPath $PersonaBundlePath -ErrorAction Stop).Path
+  $personaSha='9abc124ce1a543417afcd2a08097c5d72b5901a10830869cf495fa7045330ec7'
+  if((Get-FileHash -LiteralPath $personaArchive -Algorithm SHA256).Hash.ToLowerInvariant() -cne $personaSha){throw 'PERSONA_R15_SOURCE_SHA_HOLD'}
+  & $python (Join-Path $patchRoot 'stage_persona_media.py') $stage $personaArchive
+  if($LASTEXITCODE -ne 0){throw 'PERSONA_R15_STAGE_HOLD'}
+  if(!(Test-Path -LiteralPath (Join-Path $workspace 'PERSONA_STAGE_RECEIPT.json') -PathType Leaf)){throw 'PERSONA_R15_RECEIPT_HOLD'}
+}else{Write-Warning 'PERSONA_R15_NOT_BUNDLED: supply -PersonaBundlePath to include four owner-source loops; EV stays identity HOLD'}
 if($LASTEXITCODE -ne 0){throw 'WOW200_STAGE_HOLD'}
 $builderCopy=Join-Path $workspace 'build_onehost_installer.ps1'
 Copy-Item -LiteralPath $builder -Destination $builderCopy
