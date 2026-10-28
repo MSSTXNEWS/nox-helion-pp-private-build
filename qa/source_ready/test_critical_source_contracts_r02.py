@@ -93,7 +93,7 @@ class SourceReadyCriticalGates(unittest.TestCase):
         )
         all_ids = []
         for path, start, end in catalog_ranges:
-            ids = [int(x) for x in re.findall(r'"id"\\s*:\\s*(\\d+)', source(path))]
+            ids = [int(x) for x in re.findall(r'"id"\s*:\s*(\d+)', source(path))]
             self.assertEqual(ids, list(range(start, end + 1)), path)
             all_ids.extend(ids)
         self.assertEqual(len(all_ids), 150)
