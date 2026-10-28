@@ -55,7 +55,8 @@ export function mountApprovedHome(doc=document){
     try{scene.destroy();}finally{mounted=null;}
   }
   try{
-    const sync=()=>{scene.setVisible(home.classList.contains('active'));
+    const sync=()=>{if(disposed)return;
+      scene.setVisible(home.classList.contains('active'));
       scene.setProfile(chosenMode());};
     observer=new view.MutationObserver(sync);
     observer.observe(home,{attributes:true,attributeFilter:['class']});

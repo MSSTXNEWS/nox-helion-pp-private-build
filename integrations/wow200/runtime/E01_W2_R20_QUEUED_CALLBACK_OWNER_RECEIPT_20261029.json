@@ -1,0 +1,105 @@
+{
+  "schema": "NOX_V16_E01_W2_R20_SOURCE_ONLY_QUEUED_CALLBACK",
+  "runId": "NOX-V16-W2-01-E01-20261029T014650MSK-R20",
+  "date": "2026-10-29",
+  "owner": "E01 / W2-01 D02/HOME",
+  "policy": "R20_SOURCE_ONLY no EXE NSIS CI E07 or P01-P05 merge",
+  "pr162HeadAtStart": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "preTree": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "branch": "owner/w2-01/r20-d02-queued-callback-failclosed-20261029-0145",
+  "taskIDs": [
+    "E01-W2-R20-01",
+    "E01-W2-R20-02"
+  ],
+  "scope": "Queued native DOM/matchMedia notification after original D02 renderer lifecycle exit",
+  "defect": "The same sync closure survives already-queued MutationObserver and OS media callbacks after destroy or failed-mount rollback.",
+  "fix": "Early return if the R17 releaseFx() disposed flag is true before touching scene.setVisible/setProfile.",
+  "previousLesson": {
+    "id": "D02_FX_LIFECYCLE_RELEASE_ON_ALL_EXIT_PATHS",
+    "applied": true,
+    "proof": "failed-mount cleanup plus queued observer regression GREEN"
+  },
+  "files": [
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "preSHA256": "1f00f30ecb53e895b94605ce084889a8880f8ed9a5bc7026ee644a9c164f3957",
+      "postSHA256": "5e0df1e42410f1aea03368a87df6eb4558f99ae7c0c7aec3a89be32334b23a44",
+      "preBlob": "da4a4e26d913636649bf22901ef4a07d37fdb718",
+      "postBlob": "READBACK_COMPUTED"
+    },
+    {
+      "path": "integrations/wow200/runtime/home-scene.disposed-callback.r20.test.mjs",
+      "preSHA256": "ABSENT",
+      "postSHA256": "b720af18dd0eafa24db3b264f3949f291ac874fe517064f9363cc1d280e55cd1",
+      "preBlob": "ABSENT",
+      "postBlob": "READBACK_COMPUTED"
+    },
+    {
+      "path": "integrations/wow200/runtime/E01_W2_R20_QUEUED_CALLBACK_OWNER_RECEIPT_20261029.json",
+      "preSHA256": "ABSENT",
+      "postSHA256": "READBACK_COMPUTED",
+      "preBlob": "ABSENT",
+      "postBlob": "READBACK_COMPUTED"
+    }
+  ],
+  "redGreen": {
+    "runtime": "V8 same actual GitHub source with DOM/OS callback harness",
+    "red": [
+      {
+        "name": "post_destroy_mutation",
+        "status": "FAIL",
+        "error": "DEAD_RENDERER_CALLED"
+      },
+      {
+        "name": "post_destroy_motion",
+        "status": "FAIL",
+        "error": "DEAD_RENDERER_CALLED"
+      },
+      {
+        "name": "post_failed_mount_mutation",
+        "status": "FAIL",
+        "error": "DEAD_RENDERER_CALLED"
+      },
+      {
+        "name": "live_observer_and_motion",
+        "status": "PASS"
+      }
+    ],
+    "green": [
+      {
+        "name": "post_destroy_mutation",
+        "status": "PASS"
+      },
+      {
+        "name": "post_destroy_motion",
+        "status": "PASS"
+      },
+      {
+        "name": "post_failed_mount_mutation",
+        "status": "PASS"
+      },
+      {
+        "name": "live_observer_and_motion",
+        "status": "PASS"
+      }
+    ],
+    "nodeCli": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "diff": {
+    "before": "    const sync=()=>{scene.setVisible(home.classList.contains('active'));\n      scene.setProfile(chosenMode());};",
+    "after": "    const sync=()=>{if(disposed)return;\n      scene.setVisible(home.classList.contains('active'));\n      scene.setProfile(chosenMode());};"
+  },
+  "newProductAcceptedDONE": 0,
+  "ownerSourceFix": 1,
+  "acceptedTaskID": "HOLD until owner source QA",
+  "noLoss": "D02 nine original spheres, eight CoreID, five Persona, WOW001-200 and approved imagery untouched; host/installer/CI untouched.",
+  "gates": {
+    "CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "EXE": "PROHIBITED",
+    "E07": "NOT_RUN",
+    "WEIGHTED": "N/D"
+  },
+  "lesson": "D02_QUEUED_CALLBACK_DISPOSE_ADMISSION"
+}
