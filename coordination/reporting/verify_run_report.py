@@ -104,7 +104,7 @@ def validate(report:dict) -> dict:
     require(GIT_SHA1.fullmatch(text_field(evidence,"git_commit_sha1")) is not None,
             "GIT_SHA_INVALID")
     text_field(evidence,"component_result")
-    require(evidence.get("native_exe_accepted") in (True,False),
+    require(type(evidence.get("native_exe_accepted")) is bool,
             "NATIVE_EXE_ACCEPTANCE_UNKNOWN")
     if evidence["native_exe_accepted"]:
         require(HASH256.fullmatch(text_field(evidence,"exe_sha256")) is not None,
@@ -125,6 +125,8 @@ def validate(report:dict) -> dict:
     if master.get("status")=="MASTER_HOLD":
         text_field(master,"reason",6)
     else:
+        require(master.get("integrity_verified") is True,
+                "MASTER_APPEND_REQUIRES_VERIFIED_INTEGRITY")
         text_field(master,"readback_revision")
     gates=report.get("quality_gates")
     require(isinstance(gates,dict) and set(gates)==GATES,
@@ -136,11 +138,19 @@ def validate(report:dict) -> dict:
         text_field(val,"evidence")
     require((len(tasks)==10 and done==10) or gates["G2"]["status"]!="PASS",
             "TEN_REAL_TASKS_REQUIRED_FOR_G2_PASS")
+    if gates["G6"]["status"]=="PASS":
+        require(all(writes[k]["readback"] is True for k in DOCS),
+                "G6_UNVERIFIED_REMOTE_READBACK")
+    scores={"G1":15,"G2":20,"G3":20,"G4":10,"G5":20,"G6":10,"G7":5}
+    process_pct=sum(score for gate,score in scores.items()
+                    if gates[gate]["status"]=="PASS")
     return {"schema":"NOX-V16-REPORT-GATE-VALIDATION-V1",
             "run_id":run_id,"owner":owner,"cycle_index":cycle_index,
             "cycle_count":cycle_count,"tasks_in_envelope":len(tasks),
             "completed_unique_tasks":done,"blocked_tasks":hold,
             "failed_tasks":failed,
+            "process_gate_score_percent_schema_only":process_pct,
+            "all_process_gates_claim_pass":all(gates[g]["status"]=="PASS" for g in GATES),
             "result":"SCHEMA_PASS_REMOTE_DRIVE_READBACK_STILL_REQUIRED",
             "product_release_from_this_envelope":"NOT_ASSERTED"}
 
