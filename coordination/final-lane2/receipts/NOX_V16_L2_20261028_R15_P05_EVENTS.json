@@ -1,0 +1,69 @@
+{
+  "schema": "NOX-V16-FINAL-L2-OWNER-RECEIPT-v1",
+  "task_id": "V16.26.7/P05-EVENTSV3-PARITY",
+  "run_id": "NOX-V16-FINAL-L2-20261028-R15",
+  "date": "2026-10-28",
+  "base_head": "7693468a09aea9e11f44eeae14c0e3d6128b7fad",
+  "donor_branch": "fix/lane2-p05-event-v3-parity-20261028-r15",
+  "shared_pr": 162,
+  "shared_head_last_checked": "ec8a9de01bd553bf704984bd0e54ce1d8d727e16",
+  "goal": "Align observed P05 GPU utilization and P04 verified worker progress to existing single events.v3, preserving P01/P02/P03/P04/P05, D02, WOW, SQLite and data.",
+  "paths": [
+    {
+      "path": "Contracts/events.v3.json",
+      "pre_blob_sha1": "17bfaaa6051b3cbd07637d0ae897dcbdccfe91f3",
+      "post_blob_sha1": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+      "pre_sha256": "81306f0170f732bfe3a52370bf892633b936b93e8708d4656f6813c784b85aae",
+      "post_sha256": "2acf1b33137dbee4dc097485a1e262e493d58908f36854d32a107d1ac65c4116"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "pre_blob_sha1": "3c5802bd173ae668c4eac291168170291a84d0f0",
+      "post_blob_sha1": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+      "pre_sha256": "b62f3e19130d03cd9387d68f95834d52cde592cf27b69c36cf78101865c53bcd",
+      "post_sha256": "e33233b9ded37a3642f2a6680eedba417a4e834ca1fb0df46f7d146d7d0174ba"
+    },
+    {
+      "path": "Packages/P05/E05/checks/Program.cs",
+      "pre_blob_sha1": "cbf2c2ca78431e1057aeff3cd27b8ce2660980d4",
+      "post_blob_sha1": "6f646e67aa4b71c71597a95a038c3339e83b25d9",
+      "pre_sha256": "36e9febad1f9d4760ff96dff521201e6cee1b07bcd1a81516be7ce559f61472c",
+      "post_sha256": "380c70f6a46b01fa72b8a8a506268ed99c1c1f4f2d2568f2deea9c4551aeccaa"
+    }
+  ],
+  "semantic_changes": [
+    "gpu.sample P04 original validated route preserved",
+    "P05 observed hardware gpu.sample allowed only under existing contract if package_id P05, action_id gpu_utilization, source P05.Hardware, state RUNNING, evidence_verified false; prevents claiming actual QLoRA checkpoints",
+    "training.step, checkpoint.saved, model.stopped remain restricted to P04 owner",
+    "C# event type allowlist matches canonical JSON-Schema exactly (8 types); unsupported model.tokens and acceptance.updated not accepted into canonical P05 bus",
+    "test Program.cs now asserts P05 unverified, impossible source forged, unsupported event types denied, original P04 sample structural allowance",
+    "no new event bus, queue, DB or model; user telemetry remains visible"
+  ],
+  "evidence": {
+    "github_readback": "PASS for 3 edited paths",
+    "compare": "6 commits, 3 modified paths, 0 deletions in isolated donor",
+    "schema_contract_static_matrix": "9/9 PASS; uses live GitHub JSON object and matching C# allowlist. Not C# compiled, not real event bus",
+    "csharp_runtime_tests": "NOT_RUN: no dotnet installed in connected Linux execution",
+    "python_extracted_smoke": "4/4 PASS from previous R14 extracted contract fixture; not private repo module",
+    "windows_exe_e07": "0/10 NOT_RUN",
+    "real_gpu_training": "NOT_RUN",
+    "original_729_source_lock": "HOLD"
+  },
+  "handoff": {
+    "owner": "Manual #1 only integration writer; P05 owner must approve schema expansion",
+    "preimage_condition": "Shared PR162 HEAD changes concurrently. Re-read exact three Git blob preimages immediately before any single-owner CAS admission.",
+    "no_loss": "All original files, WOW, user data, and previous branch history preserved. No writes to PR162/main.",
+    "existing_other_donor": "R14 P02/P03 strict JSON and modelcenter-only read ingress remain isolated; shared P02 blob still d9b8b8c433833a5bc5c4f2bdc91e6a49cb2924ea.",
+    "p04_note": "Current shared P04 blob aff12ba3cd51ed0e5a2cdddc557998716f83a7b6 already has NO_NVIDIA_GPU_FOUND; R14 additional NVIDIA_GPU_INVENTORY_FAILED is still missing. Rebase exact one line only, never restore stale P04 file."
+  },
+  "release_hold": [
+    "Original 3-part archive and 729 file per-member SHA not independently verified",
+    "Windows Actions zero-step job/runner unassigned",
+    "Single installed WPF/WebView2/Python/NSIS real live onehost not evidenced",
+    "Actual licensed-model CUDA train/checkpoint/evaluation not evidenced",
+    "E07 same BuildID Setup/installed EXE SHA acceptance not run"
+  ],
+  "one_self_improvement": "CONTRACT_PARITY_WITH_PROVENANCE: preserve live P05 sensor events without allowing an unverified sensor to impersonate original P04 training or release acceptance.",
+  "overall_acceptance": "N/D",
+  "status": "SOURCE FIX PREPARED; RELEASE HOLD"
+}
