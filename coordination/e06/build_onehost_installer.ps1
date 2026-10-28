@@ -28,6 +28,28 @@ $approvedRoot = if ([string]::IsNullOrWhiteSpace($ApprovedP01InstallerRoot)) {
 } else {
   (Resolve-Path -LiteralPath $ApprovedP01InstallerRoot -ErrorAction Stop).Path
 }
+# E06 NO-LOSS: P01 installer owner root is immutable input, never an output folder.
+$approvedCanon = [IO.Path]::GetFullPath($approvedRoot).TrimEnd('\')
+$outputCandidateCanon = [IO.Path]::GetFullPath($OutputRoot).TrimEnd('\')
+if ($approvedCanon -ieq $outputCandidateCanon -or
+    $outputCandidateCanon.StartsWith($approvedCanon + '\',[StringComparison]::OrdinalIgnoreCase) -or
+    $approvedCanon.StartsWith($outputCandidateCanon + '\',[StringComparison]::OrdinalIgnoreCase)) {
+  throw 'NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP'
+}
+# Existing output-parent junctions may evade lexical path-prefix checks.
+$parentToCheck = [IO.Path]::GetDirectoryName($outputCandidateCanon)
+while (![string]::IsNullOrWhiteSpace($parentToCheck)) {
+  if (Test-Path -LiteralPath $parentToCheck) {
+    $parentInfo = Get-Item -LiteralPath $parentToCheck -Force
+    if (($parentInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw 'NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD'
+    }
+  }
+  $nextParent = [IO.Path]::GetDirectoryName($parentToCheck)
+  if ([string]::IsNullOrWhiteSpace($nextParent) -or $nextParent -ieq $parentToCheck) { break }
+  $parentToCheck = $nextParent
+}
+
 $approvedHashes = [ordered]@{
   'Preflight-InstallPath.ps1' = @('1c84e8def6d8a9ce6dbe3aa4dc7a4013f54836065f541925334bbf46bf502008','cd5c0fa3eb3218b2438d5f88c40010461e5e3f291b4f2a21e757fa863e14e91a')
   'Verify-Payload.ps1' = @('5f54ba06e9f5e2e156e571b8ab2d3338d507bad880867dcbcc9cad769738d736','91bcff06212f82c9b551ea4744142163e4e9b00c837034823356349f01dc3192')

@@ -52,3 +52,23 @@ test('source-to-payload theater SHA contract pins exact UTF-8 bytes',()=>{
     assert.ok(script.includes("'"+name+"'='"+digest+"'"), name+': SHA mismatch');
   }
 });
+
+test('approved P01 owner tree and reparse-point output ancestry are protected before writes',()=>{
+  const create=script.indexOf('New-Item -ItemType Directory -Path $OutputRoot');
+  assert.ok(create > 0);
+  for(const marker of [
+    'NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP',
+    'NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD',
+    "$approvedCanon = [IO.Path]::GetFullPath($approvedRoot)",
+    "$outputCandidateCanon = [IO.Path]::GetFullPath($OutputRoot)",
+    '$outputCandidateCanon.StartsWith($approvedCanon',
+    '$approvedCanon.StartsWith($outputCandidateCanon',
+    'Test-Path -LiteralPath $parentToCheck',
+    '[IO.FileAttributes]::ReparsePoint'
+  ]) {
+    const at = script.indexOf(marker);
+    assert.ok(at >= 0 && at < create, 'pre-write required: ' + marker);
+  }
+  assert.equal((script.match(/NO_LOSS_APPROVED_P01_OUTPUT_PATH_OVERLAP/g)||[]).length,1);
+  assert.equal((script.match(/NO_LOSS_OUTPUT_PARENT_REPARSE_HOLD/g)||[]).length,1);
+});
