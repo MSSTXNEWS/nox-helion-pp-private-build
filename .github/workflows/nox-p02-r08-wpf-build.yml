@@ -10,6 +10,7 @@ on:
       - 'coordination/e06/OriginalPythonDiagnosticBridge.cs'
       - 'coordination/e06/stage_onehost.py'
       - 'coordination/e06/build_onehost_installer.ps1'
+      - 'coordination/e06/fix_webview2_guid.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -152,6 +153,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E06_OWNER_SCOPE_SHA_CONFLICT' }
           "NOX_ORIGINAL_PYTHON_PATH=$((Resolve-Path $py).Path)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host 'E06_PINNED_WPF_PYTHON_NATIVE_BRIDGE_STAGED_PASS'
+      - name: Repair pinned WebView2 GUID in owner1 preflight (staging only)
+        shell: pwsh
+        run: |
+          python coordination/e06/fix_webview2_guid.py 'work/e06/staged/R11'
+          if ($LASTEXITCODE -ne 0) { throw 'OWNER1_WEBVIEW2_GUID_CORRECTION_HOLD' }
       - name: Compile R08 original WPF/WebView2 host using existing repaired stage
         shell: pwsh
         run: |
@@ -201,6 +207,7 @@ jobs:
           name: nox-e06-onehost-installer-${{ github.run_id }}
           path: |
             work/e06/staged/E06_R10_SOURCE_RECEIPT.json
+            work/e06/staged/E06_R11_OWNER1_WEBVIEW2_ROLLBACK/**
             work/e06/staged/d02-byte-exact-receipt.json
             work/e06/onehost-candidate/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-candidate/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
