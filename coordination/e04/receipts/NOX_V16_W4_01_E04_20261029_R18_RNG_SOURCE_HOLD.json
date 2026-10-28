@@ -1,0 +1,46 @@
+{
+  "schema": "NOX-V16-E04-SOURCE-HOLD-RECEIPT-v1",
+  "run_id": "NOX-V16-W4-01-E04-20261029T0105MSK-R18",
+  "task_id": "E04-P04-CHECKPOINT-RNG-IDENTITY-R18",
+  "owner": "E04/W4·01/P04",
+  "policy": "R20 source-only, no EXE/CI/E07/merge",
+  "parent_pr162_head": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "parent_pr162_tree": "0f891c70e237ee65a7a5941304023849bdf0f251",
+  "latest_pr162_head_at_readback": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "pre_sha256": "836afa2847aa39dfe15160b88d4a2c4b3e7653c431c4984e17b5927859cd9712",
+      "proposed_post_sha256": "d32e22b0432f25ea3b43657d413d5543177915d3f89b4570cdc94ac7ca626999",
+      "pre_git_blob_sha1": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "post_git_blob_sha1": "NOT_SAVED",
+      "source_written": false
+    },
+    {
+      "path": "tests/P04/test_e04_checkpoint_rng_identity_r18.py",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "COMPUTE_AT_READBACK",
+      "git_blob_sha1": "85ff89a7300fad67ffb3b8c3161289c000b23393"
+    },
+    {
+      "path": "coordination/e04/patches/NOX_V16_W4_R18_RNG_CHECKPOINT_SOURCE.patch",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "COMPUTE_AT_READBACK",
+      "git_blob_sha1": "bd8e43f5b141554ea179e864cc4ba4c46612416c"
+    }
+  ],
+  "error": "GitHub rejected write of complete 62k Python source with safety block; no product source overwrite; isolated patch contract saved instead",
+  "root_cause": "checkpoint validator accepts wildcard RNG filenames and ambiguous multiple RNG files",
+  "proposed_fix": "one canonical rng_state.pth or indexed rng_state_<numeric>.pth required",
+  "regression": "source-derived local tests old 3/5 PASS (2 RED), proposed patch 5/5 GREEN; real module six cases in GitHub NOT_RUN (still RED on original)",
+  "historical_done_preserved": true,
+  "product_done_new": 0,
+  "code_fixed": false,
+  "lesson_previous": "P04_JSON_NFC_CASEFOLD_PROPERTY_IDENTITY_BEFORE_AUTH_OR_TRAIN",
+  "lesson_previous_applied": "read_object() still invoked for trainer_state; new real-source regression asserts casefold duplicate key rejection; execution NOT_RUN",
+  "one_lesson": "P04_CANONICAL_UNIQUE_RNG_FILE_BEFORE_CHECKPOINT_RESUME",
+  "next_owner": "Manual #1 review exact preimage/contract; apply code only through authorized owner path, run focused actual-source Python test before SOURCE_READY; do not integrate/build under R20",
+  "rights_gpu": "LICENSED_WEIGHTS_DATASET_NVIDIA_UNVERIFIED; TRAINING_NOT_RUN",
+  "build_gate": "PROHIBITED_R20",
+  "status": "REPORT_HOLD_SOURCE_NOT_SAVED"
+}
