@@ -1,0 +1,31 @@
+name: NOX P03 super media weight buttons and verified download
+on:
+  push:
+    paths:
+      - 'Packages/P03/Source/P03.ModelCenter.Wow/**'
+      - 'Packages/P03/Source/P03.ModelCenter/MediaWeightDownload.cs'
+      - 'Packages/P03/Source/P03.ModelCenter.MediaWeightsChecks/**'
+      - '.github/workflows/p03-media-weight-download.yml'
+  pull_request:
+    paths:
+      - 'Packages/P03/Source/P03.ModelCenter.Wow/**'
+      - 'Packages/P03/Source/P03.ModelCenter/MediaWeightDownload.cs'
+      - 'Packages/P03/Source/P03.ModelCenter.MediaWeightsChecks/**'
+      - '.github/workflows/p03-media-weight-download.yml'
+jobs:
+  source:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: P03 UI 20 categories, 109 variant buttons and host intents
+        run: node --test Packages/P03/Source/P03.ModelCenter.Wow/media-weights.test.mjs
+      - name: JavaScript parser
+        run: node --check Packages/P03/Source/P03.ModelCenter.Wow/media-weights.js
+      - name: .NET8 P03 source compile and real offline byte stream
+        run: dotnet run --project Packages/P03/Source/P03.ModelCenter.MediaWeightsChecks/P03.ModelCenter.MediaWeightsChecks.csproj -c Release
