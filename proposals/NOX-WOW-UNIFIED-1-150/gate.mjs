@@ -176,7 +176,7 @@ export function mountUnifiedCinema(root,{mode="BALANCED",trustedEventPort=null,
     adopted.set(root,api);
     return api;
   }catch(err){
-    try{unsubscribe?.()}finally{
+    try{if(typeof unsubscribe==="function")unsubscribe()}finally{
       director?.destroy();cues?.destroy();
       root.classList.remove("nox-unified-wow");
       delete root.dataset.unifiedWow;
