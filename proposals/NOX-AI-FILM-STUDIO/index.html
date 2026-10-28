@@ -1,0 +1,34 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; font-src 'none'">
+<title>NOX HELION · AI FILM STUDIO</title><link rel="stylesheet" href="film-studio.css"></head><body>
+<main class="studio" data-nox-wow-slot="secondary">
+<header class="studio-head"><div><small>NOX HELION · CREATIVITY / CINEMA / STORYBOARD</small>
+<h1>AI FILM STUDIO <span>· Киностудия</span></h1>
+<p>Создавайте кино и мультфильмы из отдельных сцен. Визуальная работа доступна офлайн; генерация — только через разрешённый host.</p></div>
+<div id="studioStatus" class="studio-status" aria-live="polite">ИСТОЧНИК / НЕ ПОДКЛЮЧЁН</div></header>
+<section class="studio-setup"><div class="field"><label for="filmTitle">Название фильма</label><input id="filmTitle" value="Новый фильм NOX" maxlength="120"></div>
+<div class="field"><label for="filmStyle">Визуальный жанр</label><select id="filmStyle"></select></div>
+<div class="field"><label for="filmRating">Возрастная категория</label><select id="filmRating"><option value="GENERAL">Для всех</option><option value="TEEN">Для подростков</option><option value="ADULT_18">18+ (только взрослые)</option></select></div>
+<div class="field"><label for="filmResolution">Качество</label><select id="filmResolution"><option value="832x480">480p / ECO</option><option value="1280x720">720p / BALANCED</option><option value="1920x1080">1080p / MAX</option></select></div></section>
+<div class="studio-agreement"><label><input id="filmRights" type="checkbox"> Права на исходные изображения, персонажей и материалы подтверждены</label>
+<label><input id="adultConfirmed" type="checkbox"> Мне есть 18 лет (для аниме 18+)</label></div>
+<div class="studio-grid"><section class="stage">
+<div class="cinema-stage"><div class="cinema-sun" aria-hidden="true"></div><div class="cinema-label">NOX / FILM PRODUCTION</div>
+<h2 id="sceneHeadline">Storyboard</h2><p id="sceneDetail">Добавьте первую сцену.</p><div id="sceneTimecode">00:00</div></div>
+<section class="studio-action"><h2>Сценарий</h2>
+<div class="field"><label for="sceneTitle">Название сцены</label><input id="sceneTitle" maxlength="120" placeholder="Сцена на закате"></div>
+<div class="field"><label for="scenePrompt">Режиссёрское описание</label><textarea id="scenePrompt" rows="4" maxlength="3000" placeholder="Что происходит, кто присутствует, свет, камера, движение..."></textarea></div>
+<div class="field-row"><div class="field"><label for="sceneSeconds">Длительность</label><select id="sceneSeconds"><option>3</option><option>5</option><option selected>6</option><option>8</option><option>10</option><option>15</option><option>20</option></select></div>
+<div class="field"><label for="sceneProvider">Видеогенератор</label><select id="sceneProvider"></select></div>
+<div class="field"><label for="sceneMethod">Технология</label><select id="sceneMethod"><option value="t2v">Текст → видео</option><option value="i2v">Фото → видео</option><option value="v2v">Видео → видео</option></select></div></div>
+<div class="field"><label for="sceneDialog">Диалог / субтитры</label><textarea id="sceneDialog" rows="2" maxlength="3000" placeholder="Текст речи персонажей, если есть"></textarea></div>
+<div class="actions"><button id="addScene" type="button">+ Добавить сцену</button><button id="saveFilm" type="button" disabled>Сохранить проект</button><button id="queueFilm" type="button" disabled>Генерировать сцены</button></div>
+<div class="actions"><button id="exportFilm" type="button" disabled>Собрать фильм MP4</button><button id="openProjector" type="button" disabled>На проектор</button></div>
+<p id="actionStatus" role="status" aria-live="polite">Сцены планируются локально; генерация не подключена к Windows EXE.</p></section></section>
+<aside class="timeline"><div class="timeline-head"><h2>Монтажная шкала</h2><span id="sceneCount">0 сцен</span></div>
+<div id="scenes" class="scenes" aria-label="Сцены фильма"></div>
+<div class="timeline-summary"><span>Общая длительность</span><strong id="totalTime">0:00</strong></div>
+<div class="help"><h3>Что делает NOX</h3><p>Сценарий → раскадровка → видеокадры → монтаж MP4 → субтитры → просмотр на проекторе. Образы персонажей сохраняются через разрешённые референсы. Реальная генерация требует скачанных весов и GPU.</p>
+<p>Кино для взрослых 18+ требует совершеннолетних персонажей и подтверждённых прав. Детские и несовершеннолетние персонажи в сексуализированных материалах запрещены.</p></div></aside></div>
+<footer>Одна киностудия · одна очередь ComfyUI · FFmpeg · D02 не изменён · адаптивность 320/390/800×480 · без второго backend.</footer>
+</main><script src="film-studio.js" defer></script></body></html>
