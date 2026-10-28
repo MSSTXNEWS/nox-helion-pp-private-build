@@ -1,0 +1,126 @@
+{
+  "schema": "NOX_V16_E01_D02_TURBO10_R03_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-01-E01-D02-20261028T0752MSK-R03",
+  "owner": "E01",
+  "status": "SOURCE_CANDIDATE_COMPONENT_LOCAL_PASS_INTEGRATION_HOLD_WINDOWS_NOT_RUN",
+  "baseline": {
+    "commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "owner6_inventory_pr": 66,
+    "whole_extracted_source_lock": "HOLD: 3 raw archive part SHA256 + 729 per-member hashes not independently read"
+  },
+  "branch_parent_commit": "b73945852cf51acde8ebe4b6461014f3820c5297",
+  "branch": "e01/v16-g1-d02-admission-r03-20261028",
+  "head_after_two_code_updates": "f3adeb36a92e537743f5f43d746a03f4b61f2164",
+  "files": [
+    {
+      "path": "proposals/P01/G1_01_D02_WOW_ADMISSION/d02_admission.py",
+      "owner": "E01/P01 D02 source admission (not E06 host)",
+      "run_id": "NOX-V16-G1-01-E01-D02-20261028T0752MSK-R03",
+      "pre_sha256": "77d22a3128de4cc44d25e397ec1ba1ae1dd2eeb55db57f37c8aa59156dc916b5",
+      "post_sha256": "c96a927c99ebb9acce824c5ac22d5a4614469ff956add834b2bd7206d18357e9",
+      "pre_git_blob_sha1": "e1765379be891a7fd91f29389501e4ee948bc572",
+      "post_git_blob_sha1": "e2a1238933fbe691d6d246d2f80bc3cf8e37c819",
+      "immutable_preimage_commit": "b73945852cf51acde8ebe4b6461014f3820c5297",
+      "post_commit": "92fe1a592c18e54c430f2cf8022ad0f570021a44",
+      "diff_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/compare/b73945852cf51acde8ebe4b6461014f3820c5297...f3adeb36a92e537743f5f43d746a03f4b61f2164",
+      "tests": "15 Python unittest methods PASS on exact bytes, synthetic CSS/JS + local fixture media, not Windows-native",
+      "bytes": 8159
+    },
+    {
+      "path": "proposals/P01/G1_01_D02_WOW_ADMISSION/test_d02_admission.py",
+      "owner": "E01/P01 D02 source admission (not E06 host)",
+      "run_id": "NOX-V16-G1-01-E01-D02-20261028T0752MSK-R03",
+      "pre_sha256": "e0328714e096e0e6211ffe6d0ab50cced86018066edb9f04d2003e5cad8bd737",
+      "post_sha256": "b6ef8080f62f8ba05ef24be21a08a95c4a48e473fffaffa04dd1b71e139a676f",
+      "pre_git_blob_sha1": "40b3a30b6770a10a1372416faf4f638cc8503a81",
+      "post_git_blob_sha1": "424de7bb548288585937013bddcdf2fcfdc73e84",
+      "immutable_preimage_commit": "b73945852cf51acde8ebe4b6461014f3820c5297",
+      "post_commit": "f3adeb36a92e537743f5f43d746a03f4b61f2164",
+      "diff_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/compare/b73945852cf51acde8ebe4b6461014f3820c5297...f3adeb36a92e537743f5f43d746a03f4b61f2164",
+      "tests": "15 Python unittest methods PASS on exact bytes, synthetic CSS/JS + local fixture media, not Windows-native",
+      "bytes": 7231
+    }
+  ],
+  "task_ledger": [
+    {
+      "task_id": "E01-G1-R03-01",
+      "scope": "baseline commit/tree and E01 PR77 owner preimage",
+      "result": "SOURCE VERIFIED; source_00/01/02 raw HASH HOLD"
+    },
+    {
+      "task_id": "E01-G1-R03-02",
+      "scope": "owner6 extracted SourceLock admission",
+      "result": "HOLD owner6 full archive receipt absent"
+    },
+    {
+      "task_id": "E01-G1-R03-03",
+      "scope": "single PR63 vs PR67 renderer mounting",
+      "result": "HOLD conflict remains, no double mount"
+    },
+    {
+      "task_id": "E01-G1-R03-04",
+      "scope": "exact 8 CoreID names and order",
+      "result": "SOURCE TEST PASS; live E05 not run"
+    },
+    {
+      "task_id": "E01-G1-R03-05",
+      "scope": "HELION + exactly 8 orb IDs",
+      "result": "SOURCE TEST PASS; actual D02 not run"
+    },
+    {
+      "task_id": "E01-G1-R03-06",
+      "scope": "stable clickable hitbox and noninteractive pseudo overlay",
+      "result": "SOURCE TEST PASS; 3 negative selectors, 1 positive"
+    },
+    {
+      "task_id": "E01-G1-R03-07",
+      "scope": "host/viewport/document three-veto visibility",
+      "result": "SOURCE TEST PASS; stale R01 rejected, PR82 contract recognized"
+    },
+    {
+      "task_id": "E01-G1-R03-08",
+      "scope": "Reduced Motion CSS + JS sleep",
+      "result": "SOURCE TEST PASS; actual GPU/WebView2 HOLD"
+    },
+    {
+      "task_id": "E01-G1-R03-09",
+      "scope": "original asset SHA256 plus Git blob exact bytes",
+      "result": "SYNTHETIC PASS, original assets HOLD unsealed"
+    },
+    {
+      "task_id": "E01-G1-R03-10",
+      "scope": "owner P01 path + traversal/binary barriers",
+      "result": "SOURCE TEST PASS, no host/EXE modifications"
+    }
+  ],
+  "tests": {
+    "command": "python -m unittest -v test_d02_admission.py",
+    "methods_passed": 15,
+    "methods_failed": 0,
+    "platform": "local Linux/Python 3",
+    "real_source_assets_verified": false,
+    "real_webview2_tested": false,
+    "real_exe_tested": false
+  },
+  "preserved": [
+    "approved D02 HOME MENU CORE and 8 CoreID",
+    "5 original Persona",
+    "lava/crust/corona/ejecta and 10+10+10 WOW",
+    "all Git main/other branches",
+    "source_00/01/02.part",
+    "WPF/WebView2/backend/one host/SQLite/Ollama/GPU/EXE"
+  ],
+  "owner6_handoff": "HOLD until real extracted archive SourceLock and single approved PR63 or PR67 renderer selected; source admission independent candidate only",
+  "owner7_handoff": "WINDOWS ACCEPTED NOT_RUN; E07 must independently test exact same installed EXE BuildID/full SHA256",
+  "weighted_progress": {
+    "P01_weight": 20,
+    "P02_weight": 25,
+    "P03_weight": 20,
+    "P04_weight": 25,
+    "P05_weight": 10,
+    "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+    "value": "N/D"
+  },
+  "one_practical_lesson": "A source-admission gate must be updated against the latest immutable reviewed renderer AND independently rehash real asset bytes; never certify a stale visibility substring or a receipt-only fixture as integrated WOW."
+}
