@@ -3,10 +3,35 @@ on:
   push:
     branches:
       - e01/v16-wow-max10-one-scene-20261028
+      - e01/v16-d02-wow-turbo10-20261028
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  p01-fast-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source syntax, native CoreID, 8 MENU and owner smoke tests
+        run: |
+          for f in proposals/P01/WOW-MAX10/*.mjs; do node --check "$f"; done
+          node --test proposals/P01/WOW-MAX10/*.test.mjs
+      - name: No-loss owner scope relative to frozen PR56
+        run: |
+          git diff --name-only 4053ae8d28c7be5992503eadec7428d4c24ca112 HEAD > /tmp/paths
+          if grep -vE '^(proposals/P01/WOW-MAX10/|\.github/workflows/p01-wow-max10\.yml$)' /tmp/paths; then
+            echo 'E01_OWNER_SCOPE_FAILED'; exit 1
+          fi
+          if test -n "$(git diff --diff-filter=D --name-only 4053ae8d28c7be5992503eadec7428d4c24ca112 HEAD)"; then
+            echo 'E01_ORIGINAL_ASSET_DELETION'; exit 1
+          fi
   p01-component:
     runs-on: windows-latest
     timeout-minutes: 18
