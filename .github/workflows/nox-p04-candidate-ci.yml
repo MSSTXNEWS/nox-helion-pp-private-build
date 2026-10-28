@@ -36,7 +36,7 @@ jobs:
 
       - name: Stage exact P02 Python ChatBridge source without merging it
         env:
-          P02_SHA: 960cac1c53164687241d2443c97bd7f777ab5fb7
+          P02_SHA: c1b23eb597877200f246b1c3d3b635b9defd3433
         run: |
           git fetch --no-tags --depth=1 origin "$P02_SHA"
           mkdir -p "$RUNNER_TEMP/p02-pinned"
@@ -58,7 +58,7 @@ jobs:
       - name: Pin existing P02 Python ChatBridge commit on Windows
         shell: bash
         env:
-          P02_SHA: 960cac1c53164687241d2443c97bd7f777ab5fb7
+          P02_SHA: c1b23eb597877200f246b1c3d3b635b9defd3433
         run: |
           git fetch --no-tags --depth=1 origin "$P02_SHA"
           mkdir -p "$RUNNER_TEMP/p02-pinned"
