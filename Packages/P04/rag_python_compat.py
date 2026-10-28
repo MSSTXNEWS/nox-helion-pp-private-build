@@ -98,6 +98,27 @@ def _chunks(text: str):
         start = max(start + 1, end - OVERLAP)
 
 
+def _index_unique_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject ambiguous duplicate JSON keys, including inside other owners' data."""
+    values: dict[str, object] = {}
+    for key, value in pairs:
+        if key in values:
+            raise RagHold("RAG_INDEX_DUPLICATE_JSON_KEY")
+        values[key] = value
+    return values
+
+
+def _index_reject_nonfinite(_value: str) -> None:
+    raise RagHold("RAG_INDEX_NONFINITE_NUMBER")
+
+
+def _index_finite_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise RagHold("RAG_INDEX_NONFINITE_NUMBER")
+    return parsed
+
+
 class LocalRag:
     """One host-activated local RAG implementation, shared JSON index schema."""
 
@@ -159,8 +180,16 @@ class LocalRag:
         if len(body) > MAX_BYTES:
             raise RagHold("RAG_INDEX_TOO_LARGE")
         try:
-            data = json.loads(body)
-        except (UnicodeError, ValueError) as exc:
+            data = json.loads(
+                body,
+                object_pairs_hook=_index_unique_pairs,
+                parse_constant=_index_reject_nonfinite,
+                parse_float=_index_finite_float,
+            )
+        except RagHold:
+            # Preserve the precise immutable-index integrity violation.
+            raise
+        except (UnicodeError, ValueError, RecursionError) as exc:
             raise RagHold("RAG_INDEX_INVALID_JSON") from exc
         if (not isinstance(data, dict) or data.get("schema") != INDEX_SCHEMA
                 or not isinstance(data.get("sources"), list)
