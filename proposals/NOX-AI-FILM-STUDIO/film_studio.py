@@ -93,6 +93,8 @@ def validate(project: FilmProject, *, require_export_ready=False) -> None:
         raise Denied("ADULT_ANIMATION_AGE_GATE_REQUIRED")
     if project.rating == "ADULT_18" and project.user_is_adult is not True:
         raise Denied("ADULT_RATING_CONSENT_REQUIRED")
+    if project.style == "adult_anime_18" and not project.characters:
+        raise Denied("ADULT_CHARACTER_CAST_ATTESTATION_REQUIRED")
     if not project.source_rights_approved:
         raise Denied("FILM_SOURCE_RIGHTS_REQUIRED")
     if project.fps not in (12, 15, 24, 30) or project.width not in (512, 768, 832, 1024, 1280, 1920) or project.height not in (288, 432, 480, 576, 720, 1080):
