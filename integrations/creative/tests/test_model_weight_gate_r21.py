@@ -199,5 +199,22 @@ class ModelWeightBoundary(unittest.TestCase):
                               if x["id"]=="sdxl-base")["installed"])
 
 
+    def test_windows_junctions_rejected_even_when_not_symlinks(self):
+        class JunctionOnly:
+            def is_symlink(self):
+                return False
+            def is_junction(self):
+                return True
+        self.assertTrue(Studio._is_untrusted_link(JunctionOnly()))
+
+    def test_normal_regular_path_not_rejected_as_junction(self):
+        class NormalPath:
+            def is_symlink(self):
+                return False
+            def is_junction(self):
+                return False
+        self.assertFalse(Studio._is_untrusted_link(NormalPath()))
+
+
 if __name__=="__main__":
     unittest.main()
