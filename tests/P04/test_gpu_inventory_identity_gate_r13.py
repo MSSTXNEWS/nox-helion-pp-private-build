@@ -21,7 +21,7 @@ class GpuInventoryIdentityTests(unittest.TestCase):
             return result
 
     def test_valid_one_gpu(self):
-        rows = self.inventory(f"0, NVIDIA RTX 3060, {GPU}, 12288\\n")
+        rows = self.inventory(f"0, NVIDIA RTX 3060, {GPU}, 12288\n")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["uuid"], GPU)
         self.assertEqual(rows[0]["memory_total_mib"], "12288")
@@ -37,13 +37,13 @@ class GpuInventoryIdentityTests(unittest.TestCase):
                 worker.gpu_inventory("nvidia-smi")
 
     def test_invalid_or_partial_report_fails_closed(self):
-        for bad in (f"0, NVIDIA RTX, {GPU}, N/A\\n",
-                    f"0, NVIDIA RTX, {GPU}, 12288\\nnoise",
-                    f"00, NVIDIA RTX, {GPU}, 12288\\n",
-                    f"0, , {GPU}, 12288\\n",
-                    f"0, NVIDIA RTX, GPU-short, 12288\\n",
-                    f"0, NVIDIA RTX, {GPU}, 0\\n",
-                    f"0, NVIDIA RTX, {GPU}, 12288\\n1, NVIDIA RTX, {GPU}, 12288\\n"):
+        for bad in (f"0, NVIDIA RTX, {GPU}, N/A\n",
+                    f"0, NVIDIA RTX, {GPU}, 12288\nnoise",
+                    f"00, NVIDIA RTX, {GPU}, 12288\n",
+                    f"0, , {GPU}, 12288\n",
+                    f"0, NVIDIA RTX, GPU-?, 12288\n",
+                    f"0, NVIDIA RTX, {GPU}, 0\n",
+                    f"0, NVIDIA RTX, {GPU}, 12288\n1, NVIDIA RTX, {GPU}, 12288\n"):
             with self.subTest(output=bad), patch.object(
                     worker.subprocess, "run",
                     return_value=SimpleNamespace(returncode=0, stdout=bad)):
@@ -51,7 +51,7 @@ class GpuInventoryIdentityTests(unittest.TestCase):
                     worker.gpu_inventory("nvidia-smi")
 
     def test_repeated_index_is_rejected(self):
-        row = f"0, NVIDIA RTX, {GPU}, 12288\\n"
+        row = f"0, NVIDIA RTX, {GPU}, 12288\n"
         with patch.object(worker.subprocess, "run",
                           return_value=SimpleNamespace(returncode=0, stdout=row + row)):
             with self.assertRaisesRegex(RuntimeError, "NVIDIA_GPU_INVENTORY_DUPLICATE"):

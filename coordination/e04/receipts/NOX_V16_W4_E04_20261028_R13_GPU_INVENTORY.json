@@ -23,7 +23,7 @@
     {
       "path": "tests/P04/test_gpu_inventory_identity_gate_r13.py",
       "pre_sha256": "ABSENT",
-      "post_sha256": "e609a8a897dfca855fab486ae383a8ac77e5d3444764347571da71a5ca12ca22",
+      "post_sha256": "REVISED_ON_SECOND_COMMIT_SEE_GITHUB_READBACK",
       "pre_git_blob_sha1": "ABSENT",
       "post_git_blob_sha1": "VERIFY_AFTER_COMMIT",
       "diff": "six real-import negative regression unittest methods; NOT_RUN until runnable source/CI"
@@ -41,10 +41,15 @@
     "production_import": "NOT_RUN",
     "nvidia_cuda": "NOT_RUN",
     "windows_e07": "NOT_RUN",
-    "azure": "NOT_RUN"
+    "azure": "NOT_RUN",
+    "fixture_correction": "test_newline_semantics_and_invalid_GPU_UUID_adjusted"
   },
   "ownership": "P04 E04 only; no PR162 or main write",
   "integration": "HOLD: E06/manual builder #1 serial CAS admission; owner receipt does not prove EXE",
   "original_729_sourcelock": "HOLD",
-  "lesson": "GPU_INVENTORY_ATOMIC_IDENTITY_GATE: fail closed on malformed, duplicated, or unavailable NVIDIA inventory before UUID CUDA selection; status HOLD not proof of real GPU."
+  "lesson": "GPU_INVENTORY_ATOMIC_IDENTITY_GATE: fail closed on malformed, duplicated, or unavailable NVIDIA inventory before UUID CUDA selection; status HOLD not proof of real GPU.",
+  "owner_patch_chain": [
+    "88062d30fe264d7a98a35551840bbc2fdfadde77",
+    "THIS_COMMIT_AT_READBACK"
+  ]
 }
