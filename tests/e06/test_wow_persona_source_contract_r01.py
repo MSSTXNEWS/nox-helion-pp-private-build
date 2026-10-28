@@ -36,6 +36,17 @@ class VisualNoLoss(unittest.TestCase):
   self.assertNotIn("payload.GetRawText().Length>262144",cs)
   self.assertIn("MAX_REQUEST = 262_144",worker)
   self.assertIn("len(line.encode('utf-8')) > MAX_REQUEST",worker)
+ def test_persona_zip_is_optional_and_owner_sha_gated(self):
+  code=(ROOT/"coordination/e06/build_onehost_installer.ps1").read_text()
+  self.assertIn("[string]$PersonaBundlePath=''",code)
+  self.assertIn("PERSONA_REQUIRES_ORIGINAL_VISUAL_STAGE",code)
+  self.assertIn("5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",code)
+  self.assertIn("9abc124ce1a543417afcd2a08097c5d72b5901a10830869cf495fa7045330ec7",code)
+  self.assertLess(code.index("& $py.Source $wowScript $source $wow"),code.index("& $py.Source $personaScript $source $personaBundle"))
+  self.assertLess(code.index("& $py.Source $personaScript $source $personaBundle"),code.index("& dotnet publish $project"))
+  self.assertIn("persona_media_staged=$wantsPersona",code)
+  self.assertIn("persona_windows_media_accepted=$false",code)
+
  def test_no_false_wow_200_or_release_claim(self):
   stage=(WOW/"stage_wow200.py").read_text()
   self.assertIn('"complete_200_runtime_verified":False',stage)
