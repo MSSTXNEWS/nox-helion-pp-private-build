@@ -33,8 +33,9 @@ export function mountFinale(root,{mode="BALANCED",authorize=null,reducedMotion=f
   if(kind==="APPROVED_INTERACTION"&&(!authorize||authorize(item)!==true))throw Error("HOST_APPROVAL_REQUIRED");
   // Only offline purely artistic optics are used; IDs 81–90 are excluded.
   optic.preview(item.opticalId);
-  if(kind==="DEMO")director.preview(item.directorId);
-  else director.activate(item.directorId);
+  // The composition is already host-authorized above; use the existing director preview path
+  // to avoid a second, conflicting authorization callback for its internal 101–150 ID.
+  director.preview(item.directorId);
   panel.dataset.scene=String(item.id);
   panel.dataset.tone=item.tone;
   panel.dataset.depth=String(item.depth);
