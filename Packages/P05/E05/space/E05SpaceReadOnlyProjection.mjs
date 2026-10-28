@@ -3,11 +3,25 @@
 export const EVENT_SCHEMA = 'NOX-INSTALLER-EVENT-v3';
 export const LOCKED_BASELINE = '0b3a7d435be735148d64171deb9027093a89646e';
 const weights = [0.20, 0.25, 0.20, 0.25, 0.10];
-const sourceIds = new Set(['weather','nox-news','msstx-news','eur-usd','eur-rub','bitcoin','brent','finance-news']);
-const maximumAges = Object.freeze({weather:2700000,'nox-news':172800000,'msstx-news':172800000,'eur-usd':864000000,'eur-rub':864000000,bitcoin:300000,brent:86400000,'finance-news':172800000});
+const sourceIds = new Set(['weather','nox-news','msstx-news','eur-usd','usd-eur','eur-rub','bitcoin','brent','finance-news']);
+const maximumAges = Object.freeze({weather:2700000,'nox-news':172800000,'msstx-news':172800000,'eur-usd':864000000,'usd-eur':864000000,'eur-rub':864000000,bitcoin:300000,brent:86400000,'finance-news':172800000});
 const sha = v => typeof v === 'string' && /^[a-f0-9]{64}$/i.test(v);
 const pct = v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
-const isoUtc = v => typeof v === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(v) && Number.isFinite(Date.parse(v));
+// Date.parse silently normalizes impossible dates (e.g. February 30). Verify
+// calendar fields before a source timestamp may be displayed as authoritative.
+const isoUtc = v => {
+  if (typeof v !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(v)) return false;
+  const ms=Date.parse(v);
+  if (!Number.isFinite(ms)) return false;
+  const d=new Date(ms);
+  return d.getUTCFullYear()===Number(v.slice(0,4)) &&
+    d.getUTCMonth()+1===Number(v.slice(5,7)) &&
+    d.getUTCDate()===Number(v.slice(8,10)) &&
+    d.getUTCHours()===Number(v.slice(11,13)) &&
+    d.getUTCMinutes()===Number(v.slice(14,16)) &&
+    d.getUTCSeconds()===Number(v.slice(17,19));
+};
+const observationUtc = v => typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v) && isoUtc(v+'T00:00:00Z');
 const ago = (iso, now, max) => isoUtc(iso) && now - Date.parse(iso) >= 0 && now - Date.parse(iso) <= max;
 const validRunId = v => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,160}$/.test(v);
 const status = v => typeof v === 'string' && /^[A-Z_]{1,40}$/.test(v) ? v : 'N_D';
@@ -35,8 +49,16 @@ export function projectReadiness(readiness, runId, nowMs) {
   }
   for (let i=0; i<5; i++) bars[i] = {executor:i+1,percent:five[i],stage:'COMPONENT_VERIFIED'};
   const stage6 = readiness.bars[5], stage7 = readiness.bars[6];
-  bars[5].stage = stage6?.executor === 6 && stage6?.percent == null && stage6?.stage === 'INTEGRATED' ? 'INTEGRATED' : 'HOLD';
-  bars[6].stage = stage7?.executor === 7 && stage7?.percent == null && stage7?.stage === 'WINDOWS_ACCEPTED' ? 'WINDOWS_ACCEPTED' : 'NOT_RUN';
+  const integrated=stage6?.executor===6 && stage6?.percent==null &&
+    stage6?.stage==='INTEGRATED' && sha(stage6.receipt_sha256) &&
+    stage6.source_tree_sha1==='f108d604c444f718b32aaecfd07b90b8f91b9a6f';
+  bars[5].stage=integrated?'INTEGRATED':'HOLD';
+  const windowsAccepted=integrated && stage7?.executor===7 &&
+    stage7?.percent==null && stage7?.stage==='WINDOWS_ACCEPTED' &&
+    sha(stage7.receipt_sha256) && sha(stage7.exe_sha256) &&
+    validRunId(stage7.build_id) && stage7.build_id===readiness.build_id &&
+    stage7.exe_sha256===readiness.exe_sha256;
+  bars[6].stage=windowsAccepted?'WINDOWS_ACCEPTED':'NOT_RUN';
   const overall = Math.round(five.reduce((v,x,i)=>v+x*weights[i],0)*100)/100;
   return {bars, overall: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? overall:null,
     reason: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? 'E06_OWNER_PROJECTED':'WEIGHTED_MISMATCH'};
@@ -93,10 +115,13 @@ export function projectCorePersona(core, nowMs) {
 export function projectFeeds(feeds, nowMs) {
   if (!Array.isArray(feeds)) return [];
   return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).map(f=>{
-    const dateOnly=f.id==='eur-usd' && typeof f.observation_date==='string' &&
-      /^\d{4}-\d\d-\d\d$/.test(f.observation_date);
-    const sourceTime=dateOnly ? f.observation_date+'T00:00:00Z' : f.source_at_utc;
-    const fetched=ago(f.fetched_at_utc,nowMs,Math.min(Math.max(f.ttl_ms||0,0),86400000));
+    const fxDate=f.id==='eur-usd'||f.id==='usd-eur';
+    const observationSupplied=fxDate && f.observation_date!==undefined;
+    const dateOnly=observationSupplied && observationUtc(f.observation_date);
+    const sourceTime=observationSupplied ?
+      (dateOnly?f.observation_date+'T00:00:00Z':null) : f.source_at_utc;
+    const ttl=Number.isInteger(f.ttl_ms)&&f.ttl_ms>0&&f.ttl_ms<=86400000?f.ttl_ms:0;
+    const fetched=ttl>0 && ago(f.fetched_at_utc,nowMs,ttl);
     const dated=ago(sourceTime,nowMs,maximumAges[f.id]);
     const approved=f.license_status==='APPROVED' && sha(f.license_receipt_sha256) &&
       typeof f.provider==='string' && f.provider.length>0;
@@ -110,24 +135,56 @@ export function projectFeeds(feeds, nowMs) {
   });
 }
 
+// The original R11 events.v3 has a strict envelope, not just an event_type.
+// This view is deliberately not an event writer, journal or second bus.
+const eventPackages = new Set(['P01','P02','P03','P04','P05','E06','E07']);
+const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
+  validRunId(e.run_id) && validRunId(e.event_id) && validRunId(e.task_id) &&
+  validRunId(e.action_id) && eventPackages.has(e.package_id) &&
+  typeof e.source==='string' && e.source.length>0 && e.source.length<=120 &&
+  !/[\x00-\x1f\x7f]/.test(e.source) &&
+  typeof e.message==='string' && e.message.length<=240 &&
+  !/[\x00-\x1f\x7f]/.test(e.message) &&
+  typeof e.evidence_verified==='boolean' &&
+  ((e.event_type==='model.stopped' && e.state==='STOPPED') ||
+   (e.event_type==='task.failed' && e.state==='ERROR'));
+
 export function projectCanonicalEvents(events, runId, nowMs) {
-  if (!Array.isArray(events)||!validRunId(runId)) return {state:'N_D',errors:0};
-  let state='N_D',errors=0;
+  if (!Array.isArray(events) || !validRunId(runId) || !Number.isFinite(nowMs))
+    return {state:'N_D',errors:0};
+  // Canonical event journal order is not guaranteed by asynchronous UI delivery.
+  // Sorting by trusted event timestamp makes the last terminal state deterministic.
+  const terminal=[];
+  const seen=new Set();
   for (const e of events.slice(-64)) {
-    if (!e || e.schema!==EVENT_SCHEMA || e.run_id!==runId ||
-        !ago(e.timestamp_utc,nowMs,30000)) continue;
-    if (e.event_type==='model.stopped') state='STOPPED';
-    if (e.event_type==='task.failed') {errors++;state='ERROR';}
+    if (!canonicalTerminal(e) || e.run_id!==runId ||
+        !ago(e.timestamp_utc,nowMs,30000) || seen.has(e.event_id)) continue;
+    seen.add(e.event_id);
+    terminal.push(e);
   }
-  return {state,errors}; // Never derive product readiness or training progress from events.
+  terminal.sort((a,b)=>Date.parse(a.timestamp_utc)-Date.parse(b.timestamp_utc) ||
+    (a.state==='ERROR'?1:0)-(b.state==='ERROR'?1:0));
+  return {state:terminal.length===0?'N_D':terminal.at(-1).state,
+    errors:terminal.filter(e=>e.event_type==='task.failed').length};
 }
 
+// E06 must project the original native DTO into these same-run envelopes.
+// Without a signed E06 readback, this is only a display of owner-reported data.
 export function projectSpaceView(host, nowMs=Date.now()) {
   if (!host || !validRunId(host.run_id) || !Number.isFinite(nowMs)) return null;
+  const hardwareFrame=host.hardware;
+  const sameRunFrame=hardwareFrame?.run_id===host.run_id &&
+    ago(hardwareFrame.polled_utc,nowMs,30000) &&
+    ['LIVE','PARTIAL_OR_LIVE','UNAVAILABLE'].includes(hardwareFrame.state);
+  const sameRunCore=host.core?.run_id===host.run_id ? host.core : null;
+  // Feeds are host-owned approvals, never auto-fetched or shared across runs.
+  const sameRunFeeds=Array.isArray(host.feeds) ?
+    host.feeds.filter(f=>f?.run_id===host.run_id) : [];
   return Object.freeze({schema:'NOX-E05-SPACE-READONLY-v1',runId:host.run_id,
     readiness:projectReadiness(host.readiness,host.run_id,nowMs),
-    hardware:projectHardware(host.hardware?.sensors,nowMs),
-    core:projectCorePersona(host.core,nowMs),feeds:projectFeeds(host.feeds,nowMs),
+    hardware:projectHardware(sameRunFrame?hardwareFrame.sensors:[],nowMs),
+    core:projectCorePersona(sameRunCore,nowMs),
+    feeds:projectFeeds(sameRunFeeds,nowMs),
     events:projectCanonicalEvents(host.events,host.run_id,nowMs),
     driveReadback:host.drive?.run_id===host.run_id &&
       host.drive?.status==='READBACK_PASS' && sha(host.drive?.receipt_sha256)
