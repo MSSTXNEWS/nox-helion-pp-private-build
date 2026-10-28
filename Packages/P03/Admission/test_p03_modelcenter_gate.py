@@ -487,5 +487,70 @@ class R05NativeBoundaryRegressions(unittest.TestCase):
         self.assertEqual(captured,[("qwen3:0.6b",3)])
         self.assertFalse(hasattr(got,"installed"))
 
+
+class R06WindowsGgufPathRegressions(unittest.TestCase):
+    """Negative filesystem syntax tests: NEVER open or import a real file."""
+
+    def check_path(self, path, expected):
+        e, c = example()
+        e.update(kind="gguf", existingRoute="EnqueueVerifiedGgufAsync",
+                 localGgufPath=path, nativeGgufMagicVerified=True,
+                 nativeLocalFileSha256="a"*64)
+        c["verifiedPrerequisites"] = {"python": True, "git": True}
+        got = g.admit_for_existing_downloader(e, c, lambda _e, _c: True)
+        self.assertEqual(got.status, expected, f"{path!r}: {got.reasons}")
+        if expected == "HOLD":
+            self.assertIn("LOCAL_GGUF_PATH_REQUIRED", got.reasons)
+        else:
+            self.assertEqual(got.existing_route, "EnqueueVerifiedGgufAsync")
+
+    def test_91_ads_stream_suffix(self):
+        self.check_path("C:/models/file:stream.gguf", "HOLD")
+
+    def test_92_ntfs_pipe_in_filename(self):
+        self.check_path("C:/models/bad|file.gguf", "HOLD")
+
+    def test_93_reserved_con_device(self):
+        self.check_path("C:/models/CON.gguf", "HOLD")
+
+    def test_94_reserved_nul_directory(self):
+        self.check_path("C:/NUL/models/ok.gguf", "HOLD")
+
+    def test_95_directory_trailing_dot(self):
+        self.check_path("C:/models./file.gguf", "HOLD")
+
+    def test_96_directory_trailing_space(self):
+        self.check_path("C:/models /file.gguf", "HOLD")
+
+    def test_97_dot_component_ambiguous(self):
+        self.check_path("C:/models/./file.gguf", "HOLD")
+
+    def test_98_double_separator_ambiguous(self):
+        self.check_path("C:/models//file.gguf", "HOLD")
+
+    def test_99_question_mark_wildcard(self):
+        self.check_path("C:/models/file?.gguf", "HOLD")
+
+    def test_100_bidi_override_hiding_name(self):
+        self.check_path("C:/models/file\u202e.gguf", "HOLD")
+
+    def test_101_reserved_com1_device(self):
+        self.check_path("C:/COM1/file.gguf", "HOLD")
+
+    def test_102_reserved_superscript_device(self):
+        self.check_path("C:/COM¹/file.gguf", "HOLD")
+
+    def test_103_valid_drive_forward_separator(self):
+        self.check_path("C:/models/safe-file.gguf", "PASS_FOR_EXISTING_QUEUE")
+
+    def test_104_valid_drive_backslash_separator(self):
+        self.check_path("D:\\models\\safe-file.gguf", "PASS_FOR_EXISTING_QUEUE")
+
+    def test_105_valid_unicode_filename(self):
+        self.check_path("C:/модели/версия.gguf", "PASS_FOR_EXISTING_QUEUE")
+
+    def test_106_unc_share_not_local(self):
+        self.check_path(r"\\server\share\file.gguf", "HOLD")
+
 if __name__ == "__main__":
     unittest.main()

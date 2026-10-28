@@ -11,6 +11,7 @@ from typing import Callable, Mapping, Any
 import re
 import ipaddress
 import ntpath
+import unicodedata
 from urllib.parse import urlsplit
 
 BASE_COMMIT = "0b3a7d435be735148d64171deb9027093a89646e"
@@ -85,6 +86,29 @@ def _positive(value: Any) -> bool:
 
 def _nonblank_license_id(value: Any) -> bool:
     return isinstance(value, str) and 0 < len(value.strip()) <= 160
+
+
+# This is lexical screening only; the ORIGINAL P03 native GGUF queue must still
+# resolve real paths, ACLs, reparse points, file identity and SHA-256 itself.
+_WIN_DEVICE_STEM = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])$", re.I)
+_WIN_INVALID_CHARS = frozenset('<>:"|?*')
+
+
+def _windows_local_gguf_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value.lower().endswith(".gguf"):
+        return False
+    drive, tail = ntpath.splitdrive(value)
+    if not re.fullmatch(r"[A-Za-z]:", drive) or not tail.startswith(("/", "\\")):
+        return False  # no UNC, device, drive-relative or POSIX/root-relative paths
+    parts = re.split(r"[\\/]", tail[1:])
+    return bool(parts) and all(
+        part not in {"", ".", ".."}
+        and not part.endswith((" ", "."))
+        and not _WIN_DEVICE_STEM.fullmatch(part.split(".", 1)[0])
+        and all(ch not in _WIN_INVALID_CHARS
+                and unicodedata.category(ch) not in {"Cc", "Cf", "Cs"} for ch in part)
+        for part in parts
+    )
 
 
 def review_lead(tag_or_id: str) -> Decision:
@@ -193,11 +217,7 @@ def admit_for_existing_downloader(
         # Windows-host absolute, local-disk path only. The native queue alone
         # resolves it and checks ACL/reparse points + GGUF bytes; this is syntax
         # screening, NOT a second filesystem importer or proof of file safety.
-        if not (isinstance(local, str) and local.lower().endswith(".gguf")
-                and ntpath.isabs(local) and not local.startswith(("\\\\", "//"))
-                and not any(ord(c) < 32 for c in local)
-                and ".." not in local.replace("/", "\\").split("\\")
-                and not local.startswith(("https:", "file:"))):
+        if not _windows_local_gguf_path(local):
             reasons.append("LOCAL_GGUF_PATH_REQUIRED")
         if evidence.get("nativeGgufMagicVerified") is not True:
             reasons.append("GGUF_NATIVE_MAGIC_UNVERIFIED")
