@@ -161,5 +161,43 @@ class ModelWeightBoundary(unittest.TestCase):
         self.assertFalse((self.studio.models/"sdxl-base"/"RECEIPT.json").exists())
 
 
+    def test_catalog_installed_requires_completed_real_weights(self):
+        before=next(x for x in self.studio.catalog()["models"] if x["id"]=="sdxl-base")
+        self.assertFalse(before["installed"])
+        self.request()
+        after=next(x for x in self.studio.catalog()["models"] if x["id"]=="sdxl-base")
+        self.assertTrue(after["installed"])
+
+    def test_missing_weight_cannot_be_reported_installed(self):
+        self.request()
+        self.written[0].unlink()
+        result=next(x for x in self.studio.catalog()["models"] if x["id"]=="sdxl-base")
+        self.assertFalse(result["installed"])
+
+    def test_corrupt_or_mismatched_receipt_is_not_installed(self):
+        self.request()
+        receipt=self.studio.models/"sdxl-base"/"RECEIPT.json"
+        record=json.loads(receipt.read_text("utf-8"))
+        record["source"]="https://huggingface.co/foreign/unapproved"
+        receipt.write_text(json.dumps(record),encoding="utf-8")
+        self.assertFalse(next(x for x in self.studio.catalog()["models"]
+                              if x["id"]=="sdxl-base")["installed"])
+
+    def test_stale_receipt_size_cannot_claim_installed(self):
+        self.request()
+        self.written[0].write_bytes(b"FILE TRUNCATED")
+        self.assertFalse(next(x for x in self.studio.catalog()["models"]
+                              if x["id"]=="sdxl-base")["installed"])
+
+    def test_weight_replaced_by_symlink_cannot_claim_installed(self):
+        self.request()
+        outside=self.root/"foreign"
+        outside.write_bytes(b"WEIGHT")
+        self.written[0].unlink()
+        self.written[0].symlink_to(outside)
+        self.assertFalse(next(x for x in self.studio.catalog()["models"]
+                              if x["id"]=="sdxl-base")["installed"])
+
+
 if __name__=="__main__":
     unittest.main()
