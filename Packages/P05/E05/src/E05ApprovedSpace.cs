@@ -9,7 +9,57 @@ namespace NoxHelion.E05;
 // Nothing here opens an endpoint, creates UI elements, or writes events.
 public static class E05ApprovedSpace
 {
+    // Compatibility entry point: an unverified raw number is NOT an owner
+    // receipt. Preserve the old signature, but never echo it as product progress.
     public static E05ReadOnlySpace Project(string runId, DateTimeOffset now,
+        IReadOnlyList<FeedResult>? feeds,
+        IReadOnlyDictionary<string, ApprovedFeed>? approved,
+        E05HardwareFrame? verifiedHostFrame, decimal? unverifiedProductProgress)
+        => ProjectCore(runId, now, feeds, approved, verifiedHostFrame, null);
+
+    // Only the E06 frozen-ledger verifier can authorize a numerical SPACE bar.
+    // Re-check the five owner seals; a caller-created ReadinessSnapshot alone
+    // or a stale/foreign RunID must not become an authoritative percentage.
+    public static E05ReadOnlySpace ProjectVerified(string runId, DateTimeOffset now,
+        IReadOnlyList<FeedResult>? feeds,
+        IReadOnlyDictionary<string, ApprovedFeed>? approved,
+        E05HardwareFrame? verifiedHostFrame, ReadinessSnapshot? readiness,
+        IReadOnlyList<E05SealedLane>? frozenLanes, IE05ReceiptVerifier? verifier)
+    {
+        decimal? progress = null;
+        if (readiness is not null && frozenLanes is { Count: 5 } &&
+            verifier is not null && readiness.RunId == runId &&
+            readiness.At.Offset == TimeSpan.Zero && readiness.At <= now &&
+            now - readiness.At <= TimeSpan.FromSeconds(30) &&
+            readiness.Bars is { Count: 7 })
+        {
+            try
+            {
+                bool consistent = true;
+                for (int i = 0; i < 5; i++)
+                {
+                    var bar = readiness.Bars[i];
+                    var lane = frozenLanes[i];
+                    var independentlyVerified = E05SealedProgress.Evaluate(lane, verifier);
+                    if (bar is null || lane is null || lane.LaneId != i + 1 ||
+                        bar.Executor != i + 1 || bar.State != "CRITERIA_VERIFIED" ||
+                        bar.TaskManifest != lane.ManifestSha256 ||
+                        !independentlyVerified.HasValue ||
+                        bar.Percent != independentlyVerified) consistent = false;
+                }
+                var weighted = E05SealedProgress.Overall(frozenLanes, verifier);
+                if (consistent && weighted.HasValue && weighted == readiness.Overall &&
+                    weighted >= 0 && weighted <= 100 &&
+                    readiness.Bars[5] is { Executor: 6, Percent: null } &&
+                    readiness.Bars[6] is { Executor: 7, Percent: null })
+                    progress = weighted;
+            }
+            catch (Exception) { /* Corrupt or unsealed ledger remains N/D. */ }
+        }
+        return ProjectCore(runId, now, feeds, approved, verifiedHostFrame, progress);
+    }
+
+    private static E05ReadOnlySpace ProjectCore(string runId, DateTimeOffset now,
         IReadOnlyList<FeedResult>? feeds,
         IReadOnlyDictionary<string, ApprovedFeed>? approved,
         E05HardwareFrame? verifiedHostFrame, decimal? attestedProductProgress)

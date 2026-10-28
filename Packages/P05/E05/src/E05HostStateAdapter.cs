@@ -23,8 +23,8 @@ public static class E05HostStateAdapter
             providers ?? Array.Empty<ISensorProvider>(), now, stop);
         var readiness = E05VerifiedReadiness.Project(runId, now,
             lanes, verifier, e06Gate, e07Gate);
-        var space = E05ApprovedSpace.Project(runId, now, feeds,
-            approved, hardware, readiness.Overall);
+        var space = E05ApprovedSpace.ProjectVerified(runId, now, feeds,
+            approved, hardware, readiness, lanes, verifier);
         return new E05HostState(hardware, readiness, space);
     }
 }
