@@ -129,6 +129,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_HARDENING_FAILED' }
           node --check "$live/P03.ModelCenter.Wow/ui.js"
           if ($LASTEXITCODE -ne 0) { throw 'OWNER3_DIRECT_JS_INVALID' }
+      - name: P03 Quick20 admission gate and single-route static checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $live = 'Packages/P03/Source'
+          dotnet run --project "$live/P03.ModelCenter.QuickSmoke/P03.ModelCenter.QuickSmoke.csproj" --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'P03_QUICK20_SMOKE_FAILED' }
+          node --check "$live/P03.ModelCenter.Wow/ui.js"
+          if ($LASTEXITCODE -ne 0) { throw 'P03_QUICK20_JS_FAILED' }
+          $ui = Get-Content "$live/P03.ModelCenter.Wow/ui.js" -Raw
+          $html = Get-Content "$live/P03.ModelCenter.Wow/index.html" -Raw
+          if (!$ui.Contains("function renderQuick20") -or !$ui.Contains("sendAction('pull')") -or !$html.Contains('id="quickInstallGrid"')) { throw 'P03_QUICK20_BUTTON_WIRING_MISSING' }
       - name: Package verified consolidated component source for integrator 6
         if: success()
         shell: pwsh

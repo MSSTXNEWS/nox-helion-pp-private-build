@@ -30,6 +30,31 @@ const currentJob = () => state.activeJob && current() &&
   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
    state.activeJob.modelTag===current().id) ? state.activeJob : null;
 function lineItem(k,v){const dt=el('dt','',k),dd=el('dd','',v);return [dt,dd];}
+
+/* One real action path for all 20 cards: the existing host pull route.
+   No downloads are made by the WebView. Family cards stay disabled until
+   host supplies approved immutable metadata and download capability. */
+const quick20Ids = ["qwen3","qwen3-coder","qwen2.5","qwen2.5-coder","llama3.1","llama3.2","deepseek-r1","gemma3","mistral","phi4","tinyllama","gpt-oss","qwen3-vl","llava","nomic-embed-text","mxbai-embed-large","devstral","granite3.1-dense","mistral-nemo","phi3"];
+function renderQuick20(){
+ const grid=$('quickInstallGrid');if(!grid)return;grid.replaceChildren();
+ for(const id of quick20Ids){
+   const m=state.models.find(x=>x.id===id);if(!m)continue;
+   const can=state.hostReady&&state.capabilities?.pull===true&&hasEvidence(m)&&$('licenseAck').checked&&!state.pending.has('pull');
+   const wrapper=el('div','quick-card');
+   const meta=el('span','quick-name',m.name);
+   const detail=el('small','quick-sub',can?'Готово к запросу в host':'REVIEW_REQUIRED');
+   const btn=el('button','quick-button',can?'↓ Скачать в NOX':'↓ Нужна проверка');
+   btn.type='button';btn.disabled=!can;btn.setAttribute('aria-label','Скачать '+m.name+' внутри NOX');
+   btn.addEventListener('click',()=>{
+     if(!can)return;
+     state.activeId=m.id;
+     sendAction('pull');render();
+   });
+   wrapper.append(meta,detail,btn);grid.append(wrapper);
+ }
+ $('quick20Status').textContent=String(grid.children.length)+' моделей · скачивание только через единый host после проверки';
+}
+
 function renderCatalog(){const list=$('catalog');list.replaceChildren();const q=$('search').value.toLowerCase().trim();
   const filtered=state.models.filter(m=>(!q||`${m.name} ${m.id}`.toLowerCase().includes(q)) &&
     (state.filter==='all'||state.filter==='verified'&&hasEvidence(m)||state.filter==='compare'&&state.compare.includes(m.id)));
@@ -91,7 +116,7 @@ function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(stat
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||Date.now());const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
 }
-function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();}
+function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();}
 function sendAction(action){const c=state.capabilities||{};const job=currentJob();if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;

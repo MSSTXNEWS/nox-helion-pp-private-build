@@ -54,7 +54,9 @@ public static class ModelWowBridgeContract
                 totalBytes = job.TotalBytes
             },
             hardware,
-            capabilities = capabilities ?? new Capabilities()
+            capabilities = capabilities ?? new Capabilities(),
+            quickActions = ModelQuickActions.OllamaSlots.Select(s => new { s.Id, s.DisplayName, s.Role, approved = catalog.Any(m => m.Id == s.Id && m.CanOfferOneClickPull) }),
+            externalLeads = ModelQuickActions.ExternalLeads.Select(s=>new { s.Id, s.DisplayName, s.Role, officialUrl=s.ProjectPage.ToString(), s.Status, s.DownloadAllowed })
         }, JsonOptions);
     }
 

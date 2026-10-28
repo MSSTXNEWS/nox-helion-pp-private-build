@@ -1,0 +1,6 @@
+NOX V16 E03 MODEL QUICK ACTIONS | SOURCE ONLY
+RunID NOX-V16-E03-TURBO10-QUICK20-20261028
+20 Ollama quick-selection slots use the existing single P03 queue/worker and p03.command.v1 pull route. They are NOT 20 installed or independently verified weights. Clicking an eligible card sends only the existing host message; it never downloads from the browser. Owner #6 must validate WebView origin, ACL, SourceLock, license acknowledgment and the exact approved model before EnqueueVerifiedPullAsync; only then does the existing worker perform a real Ollama /api/pull. STOP/Retry reuse the existing queue.
+17 external project-page leads cover RU/ES ASR/TTS, image, video, aligner and GPU-training candidate. All remain REVIEW_REQUIRED and downloadAllowed=false. Do not attempt direct Hugging Face fetch from WebView or invent digests, sizes, licenses, VRAM or immutable revisions. A real non-Ollama artifact adapter is a separate approval/integration task within the single existing worker, not a second downloader.
+Windows component CI runs QuickSmoke with synthetic local fixture, checks JS and 20-button source wiring. It does not download weights, certify license rights, prove the original Python/WPF combined host, or accept a release.
+Handoff: owner #6 serial SourceLock/one-host integration; owner #7 independent exact BuildID/EXE SHA acceptance.
