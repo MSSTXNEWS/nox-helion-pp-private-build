@@ -1,0 +1,49 @@
+{
+  "schema": "NOX_E06_W1_02_OWNER_PATCH_RECEIPT_V1",
+  "runId": "NOX-V16-W1-02-HOST50-20261028T2339MSK-R15",
+  "owner": "E06/W1-02",
+  "scope": "SOURCE ONLY: existing E06 admission; no host/backend/DB/LLM/installer created",
+  "ownerBranch": "e06/v16-host50-r13-strict-source-json-20261028-2135",
+  "immutableOwnerParent": "5e971f9301ba1f88a4e815be06f34cca42eac0cd",
+  "immutableOwnerParentTree": "73cf21c43ec53ecd96452ab19bc6acd54ffe9717",
+  "stagingPR162HeadObserved": "2e1bba33c0e892a5104de00022815852eef1886c",
+  "stagingPR162NotModified": true,
+  "files": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "preSha256": "8c4197c4a26c686845511147ed4086cabc1fcee47f80732ab1fe91faf4c14bb8",
+      "postSha256": "b2df8ae992367b09ee8c84d33c1063f80c238e60bda329b25b2524181f3350ab",
+      "preGitBlob": "f8d9f05bf8547e9e5f2a049753ad893123a92fda",
+      "postGitBlob": "f88d0f2de5a90bb0fc0186c2586044fcb85a2abf",
+      "change": "Catch RecursionError when canonicalizing a page request, rechecking after native callback, verifying HMAC ACK, and auditing malformed source JSON. Fail closed."
+    },
+    {
+      "path": "coordination/e06_host50/test_untrusted_wire_recursion_r15.py",
+      "preSha256": "ABSENT",
+      "postSha256": "6e81ed6dbee6973f5739e8128cf0d640d90903ba53e147f51562edb2d5c41edc",
+      "preGitBlob": "ABSENT",
+      "postGitBlob": "4188b19164e6a6324ffd4f6326683e34905d69a5",
+      "change": "4 adversarial depth RED->GREEN source-only cases; inherits 2 existing callback regressions"
+    }
+  ],
+  "newProductTaskIdsDONE": [],
+  "sourcePatchTaskId": "E06-R15-NESTED-WIRE-RECURSION-FAILCLOSED",
+  "tests": {
+    "baselineRED": "4 independent RecursionError exceptions; original",
+    "patchedGREEN": "4/4 new targeted cases; 68 tests over seven independent Python groups; Python compilation PASS",
+    "windows": "NOT_RUN",
+    "nativeHandlers": "NOT_ATTESTED"
+  },
+  "routeLedger": {
+    "policyTaskIDs": 50,
+    "candidatesHistoricallyObserved": 36,
+    "unboundHistoricallyObserved": 14,
+    "nativeInstalled": 0,
+    "liveOwners": "NOT_ATTESTED",
+    "note": "Counts are previous ledger, not fresh owner receipt"
+  },
+  "noLoss": true,
+  "release": "HOLD",
+  "lesson": "NESTED_UNTRUSTED_WIRE_RECURSION_FAIL_CLOSED",
+  "manualOneAction": "Apply to PR162 only after exact current HEAD/owner preimage CAS and independent re-run; do not cherry-pick wholesale across divergent source."
+}
