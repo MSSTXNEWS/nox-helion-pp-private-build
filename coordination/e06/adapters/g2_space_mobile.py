@@ -9,6 +9,8 @@ from __future__ import annotations
 import copy
 import json
 import math
+import hmac
+from urllib.parse import urlsplit
 import re
 from g2_gpu_provenance import valid_source, valid_device, reconcile_gpu_tile
 from g2_gpu_sample_gate import valid_sample_id, enforce_gpu_tile_sample
@@ -267,11 +269,41 @@ class PrivateMobileContract:
                     proof["native_session_approved"], expiry)
 
         identity = attest()
+        # Native P02 policy remains authoritative, but it must not be the
+        # only barrier when a callback accidentally accepts invalid proof.
+        origin = identity[2]
+        try:
+            parsed = urlsplit(origin) if type(origin) is str else None
+            origin_ok = (parsed is not None and len(origin) <= 255
+                         and parsed.scheme == "https" and bool(parsed.hostname)
+                         and parsed.username is None and parsed.password is None
+                         and not parsed.path and not parsed.query and not parsed.fragment
+                         and origin == "https://" + parsed.netloc and parsed.port != 0)
+        except ValueError:
+            origin_ok = False
+        csrf, presented = identity[4], identity[5]
+        csrf_ok = (type(csrf) in (bytes, str) and type(presented) is type(csrf)
+                   and 16 <= len(csrf) <= 512
+                   and (type(csrf) is bytes or csrf.isascii())
+                   and hmac.compare_digest(csrf, presented))
+        if (type(identity[0]) is not str or not 0 < len(identity[0]) <= 160
+                or identity[1] is not True or identity[6] is not True
+                or not origin_ok or identity[3] != origin or not csrf_ok):
+            raise G2Denied("Native private peer/origin/CSRF invariants failed")
         try:
             advertised = self.host.advertise(session)
         except Exception as exc:
             # Never expose private native gateway diagnostics to a remote client.
             raise G2Hold("Existing native host advertisement failed") from exc
+        if type(advertised) is not dict:
+            raise G2Hold("Existing native host advertisement unavailable")
+        def approved(snapshot: dict) -> tuple[str, ...]:
+            return tuple(route for route in payload["want"]
+                         if type(snapshot.get(route)) is dict
+                         and snapshot[route].get("enabled") is True)
+        # Snapshot the FIRST owner capability state before a peer/policy
+        # callback can mutate the same native host registry.
+        first_caps = approved(advertised)
         if not self.available():
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED")
         if attest() != identity:
@@ -279,13 +311,21 @@ class PrivateMobileContract:
         # The second peer/policy callback itself may revoke the private gateway.
         if not self.available():
             raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED_AFTER_ATTESTATION")
-        if type(advertised) is not dict:
-            raise G2Hold("Existing native host advertisement unavailable")
+        # Final policy callback may revoke, enable or replace owner ACLs.
+        # Re-read the SAME host, never a second gateway or authority.
+        try:
+            final_advertised = self.host.advertise(session)
+        except Exception as exc:
+            raise G2Hold("Existing native host final advertisement failed") from exc
+        # Apply the previous lesson once more: the final owner callback itself
+        # can revoke the private transport while we are checking permissions.
+        if not self.available():
+            raise G2Hold("EXISTING_PRIVATE_HOST_GATEWAY_REVOKED_AFTER_FINAL_ADVERTISEMENT")
+        if type(final_advertised) is not dict or approved(final_advertised) != first_caps:
+            raise G2Hold("EXISTING_NATIVE_CAPABILITY_EPOCH_CHANGED_AFTER_ATTESTATION")
         # Session-scoped capabilities, never a public URL or bearer token.
         return {"mode": "PRIVATE_NATIVE_ATTESTED", "gatewayListening": True,
-                "allowed": [r for r in payload["want"]
-                            if isinstance(advertised.get(r), dict)
-                            and advertised[r].get("enabled") is True]}
+                "allowed": list(first_caps)}
 
 
 def _frozen_event_wire(event: dict) -> tuple[str, dict]:
