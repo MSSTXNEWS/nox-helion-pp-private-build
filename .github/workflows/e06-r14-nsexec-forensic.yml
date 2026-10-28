@@ -1,0 +1,34 @@
+name: NOX E06 R14 exact repack NSIS nsExec forensic (no payload modifications)
+on:
+  push:
+    branches: [e06/v16-r13-offline-webview2-gate-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  forensic:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Register official signed Microsoft WebView2 standalone
+        shell: pwsh
+        run: ./coordination/e06/Test-OfficialWebView2Prereq.ps1
+      - name: Compare exact setup embedded P01 preflight and isolated nsExec
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./coordination/e06/Diagnose-ExactRepack-NSIS.ps1
+      - name: Preserve forensic receipt even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e06-r14-forensic-${{ github.run_id }}
+          path: |
+            e06-r13-webview2-evidence.json
+            e06-r14-forensic-receipt.json
+          retention-days: 30
+          if-no-files-found: warn
