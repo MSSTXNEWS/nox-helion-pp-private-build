@@ -45,17 +45,39 @@ public static class E05SealedProgress
     public static decimal? Overall(IReadOnlyList<E05SealedLane> lanes,
         IE05ReceiptVerifier? verifier)
     {
-        if (lanes.Count != 5) return null;
+        if (lanes is null || lanes.Count != 5 || HasCrossLaneTaskCollision(lanes)) return null;
         decimal[] weights = { .20m, .25m, .20m, .25m, .10m };
         decimal result = 0;
         for (int i = 0; i < 5; i++)
         {
-            if (lanes[i].LaneId != i + 1) return null;
+            if (lanes[i] is null || lanes[i].LaneId != i + 1) return null;
             var percent = Evaluate(lanes[i], verifier);
             if (percent is null) return null;
             result += percent.Value * weights[i];
         }
         return Math.Round(result, 2);
+    }
+    // A frozen TaskID identifies one project criterion, not one criterion per
+    // owner. Local Evaluate guards duplicates within a lane; aggregate and UI
+    // admission must also reject the same identity appearing in two lanes.
+    // Missing rows remain unknown evidence, not invented duplicate identities.
+    internal static bool HasCrossLaneTaskCollision(IReadOnlyList<E05SealedLane>? lanes)
+    {
+        if (lanes is null) return false;
+        var owners = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < lanes.Count; i++)
+        {
+            var criteria = lanes[i]?.Criteria;
+            if (criteria is null) continue;
+            foreach (var criterion in criteria)
+            {
+                if (criterion is null || string.IsNullOrWhiteSpace(criterion.TaskId)) continue;
+                if (owners.TryGetValue(criterion.TaskId, out int previous) && previous != i)
+                    return true;
+                owners[criterion.TaskId] = i;
+            }
+        }
+        return false;
     }
     private static bool IsSha256(string? hash) => hash is { Length: 64 } &&
         hash.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||

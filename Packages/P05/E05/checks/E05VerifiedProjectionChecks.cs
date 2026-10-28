@@ -36,6 +36,45 @@ public static class E05VerifiedProjectionChecks
             new PositiveFixtureVerifier(), "HOLD", "NOT_RUN").Overall is null,
             "C14 forged or malformed proof cannot yield weighted progress");
 
+        // R29: native admission parity with the existing read-only JS view.
+        // Each owner verifier may accept its receipt independently, but one
+        // global TaskID cannot earn weight twice across the five lanes.
+        var collision = lanes.ToArray();
+        collision[4] = collision[4] with { Criteria = new[] { lanes[0].Criteria[0] } };
+        var fixtureVerifier = new PositiveFixtureVerifier();
+        Check(E05SealedProgress.Evaluate(collision[4], fixtureVerifier) == 100m &&
+            E05SealedProgress.Overall(collision, fixtureVerifier) is null,
+            "R29 locally valid duplicate TaskID cannot earn two owner weights");
+        var quarantined = E05VerifiedReadiness.Project("E05-TEST", now, collision,
+            fixtureVerifier, "HOLD", "NOT_RUN");
+        Check(quarantined.Overall is null && quarantined.Bars.Take(5).All(x =>
+            x.Percent is null && x.Blocker == "CROSS_LANE_TASK_COLLISION"),
+            "R29 duplicate TaskID quarantines native five bars and combined total");
+        Check(E05ApprovedSpace.ProjectVerified("E05-TEST", now,
+            Array.Empty<FeedResult>(), null, null, verified, collision,
+            fixtureVerifier).ProductProgress is null,
+            "R29 caller supplied readiness cannot bypass duplicate task admission");
+        var pendingCollision = collision.ToArray();
+        pendingCollision[4] = collision[4] with { Criteria = new[] {
+            lanes[0].Criteria[0] with { State = "HOLD", OwnerReceipt = null, EvidenceSha256 = null }
+        } };
+        Check(E05SealedProgress.Overall(pendingCollision, fixtureVerifier) is null,
+            "R29 pending duplicate remains a denominator identity collision");
+        var partial = lanes.ToArray();
+        partial[1] = partial[1] with { Criteria = null! };
+        var partialView = E05VerifiedReadiness.Project("E05-TEST", now, partial,
+            fixtureVerifier, "HOLD", "NOT_RUN");
+        Check(partialView.Overall is null && partialView.Bars[1].Percent is null &&
+            partialView.Bars.Take(5).Where(x => x.Executor != 2).All(x => x.Percent == 100m),
+            "R29 unknown denominator preserves four distinct owner bars");
+        var missingLane = lanes.ToArray();
+        missingLane[1] = null!;
+        Check(E05SealedProgress.Overall(missingLane, fixtureVerifier) is null &&
+            E05SealedProgress.Overall(null!, fixtureVerifier) is null,
+            "R29 missing native lane is N/D without null dereference");
+        Check(E05SealedProgress.Overall(lanes, fixtureVerifier) == 100m,
+            "R29 distinct frozen TaskIDs retain existing weighted total");
+
         var approvedSource = new ApprovedFeed("weather", "fixture",
             new Uri("https://example.org/weather"), "example.org", "license-verified",
             TimeSpan.FromHours(1), TimeSpan.FromSeconds(5), TimeSpan.FromHours(2));
