@@ -565,3 +565,37 @@ test('R10 a component receipt cannot appear on pending HOLD tasks',()=>{
   r.bars[0].task_ledger[2].receipt_sha256=H;
   assert.equal(projectReadiness(r,RUN,NOW).overall,null);
 });
+test('R10 component verified requires a valid source receipt even without acceptance',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[1].status='COMPONENT_VERIFIED';
+  delete r.bars[0].task_ledger[1].receipt_sha256;
+  r.bars[0].percent=10;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 accepted tasks cannot have receipts with SHA-shaped malformed bytes',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[0].receipt_sha256='receipt-only';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 duplicate accepted TaskIDs fail closed',()=>{
+  const r=structuredClone(readiness);
+  r.bars[0].task_ledger[1].task_id=r.bars[0].task_ledger[0].task_id;
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 numeric accepted progress requires exact owner-verified native attestation',()=>{
+  const r=structuredClone(readiness);r.native_attestation='COMPONENT_VERIFIED';
+  assert.equal(projectReadiness(r,RUN,NOW).overall,null);
+});
+test('R10 total accepted=100 demands all five accepted ledgers; E07 remains separate',()=>{
+  const r=structuredClone(readiness);
+  for(const lane of r.bars.slice(0,5)){
+    for(const row of lane.task_ledger){row.status='ACCEPTED';row.receipt_sha256=H;}
+    lane.percent=100;
+  }
+  r.overall=100;
+  const projected=projectReadiness(r,RUN,NOW);
+  assert.equal(projected.overall,100);
+  assert.equal(projected.bars[5].stage,'HOLD');
+  assert.equal(projected.bars[6].stage,'NOT_RUN');
+});
+console.log('R10: accepted criteria only; no false component-to-release promotion; Windows native NOT_RUN.');
