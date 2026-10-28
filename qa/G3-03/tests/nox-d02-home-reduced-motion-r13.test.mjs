@@ -171,3 +171,33 @@ test('GREEN: hidden HOME turns off visual visibility without changing real state
     t.toggleHome(true);assert.equal(t.visible,true);}
   finally{s.destroy();}
 });
+
+test('R14: rejected string profile preserves MAX through Reduced Motion restoration',()=>{
+  const t=probe({reducedAtStart:true,initialBodyMode:'ECO'}),s=t.mount();
+  try {
+    assert.equal(s.setProfile('MAX'),true);
+    assert.equal(t.profile,'REDUCED');
+    const before=t.profiles.length;
+    assert.equal(s.setProfile('NOT_APPROVED'),false);
+    assert.equal(t.profiles.length,before,'rejected mode must not reach visual renderer');
+    t.setReduced(false);
+    assert.equal(t.profile,'MAX','old approved selection must survive rejection');
+  }finally{s.destroy();}
+});
+
+test('R14: rejected nonstring mode preserves ECO and never mutates active renderer',()=>{
+  const t=probe({initialBodyMode:'MAX'}),s=t.mount();
+  try {
+    assert.equal(s.setProfile('ECO'),true);
+    assert.equal(t.profile,'ECO');
+    for(const invalid of [null,undefined,{},[],12,false,'eco','BALANCED!']){
+      const before=t.profiles.length;
+      assert.equal(s.setProfile(invalid),false);
+      assert.equal(t.profiles.length,before,'invalid input invoked renderer');
+    }
+    t.setReduced(true);
+    assert.equal(t.profile,'REDUCED');
+    t.setReduced(false);
+    assert.equal(t.profile,'ECO','valid ECO must be remembered after rejects');
+  }finally{s.destroy();}
+});
