@@ -131,5 +131,38 @@ class NativeWireGuard(unittest.TestCase):
         self.assertEqual(self.request({"text": "safe"}), {"status": "owner-executed"})
 
 
+    def test_reject_mutable_native_route_scopes(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed={"media.subtitles"}, private_approved=frozenset())
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_reject_string_scopes_not_typed_as_frozenset(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed=frozenset({"media.subtitles"}),
+            private_approved="media.subtitles")
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_reject_approval_outside_active_native_allowed_routes(self):
+        bad = bridge.NativeSession("tenant", "person", "chat",
+            allowed=frozenset({"media.subtitles"}),
+            private_approved=frozenset({"system.pc_control"}))
+        with self.assertRaises(bridge.HostDenied):
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, bad)
+        self.assertEqual(self.seen, [])
+
+    def test_immutable_native_scope_within_allowed_routes_remains_accepted(self):
+        allowed = frozenset({"media.subtitles"})
+        good = bridge.NativeSession("tenant", "person", "chat",
+            allowed=allowed, private_approved=allowed)
+        self.assertEqual(
+            self.dispatch.execute("media.subtitles", {"text": "safe"}, good),
+            {"status": "owner-executed"})
+        self.assertEqual(self.seen, [{"text": "safe"}])
+
+
 if __name__ == "__main__":
     unittest.main()
