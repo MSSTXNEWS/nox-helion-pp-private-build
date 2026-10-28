@@ -19,6 +19,21 @@ internal static class Program
         }
     }
 
+    private sealed class DelayedPauseControl : IGpuWorkerControl
+    {
+        public readonly TaskCompletionSource<bool> Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public readonly TaskCompletionSource<bool> Released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<bool> PauseAsync(CancellationToken token)
+        {
+            Entered.TrySetResult(true);
+            return await Released.Task.WaitAsync(token);
+        }
+
+        public Task<bool> ResumeAsync(CancellationToken token) => Task.FromResult(true);
+        public Task<bool> RequestStopAsync(CancellationToken token) => Task.FromResult(false);
+    }
+
     private static void Require(bool condition, string message)
     {
         if (!condition) throw new InvalidOperationException(message);
@@ -78,7 +93,41 @@ internal static class Program
                 throw new InvalidOperationException("DISPOSED_CONTROL_SHOULD_THROW");
             }
             catch (ObjectDisposedException) { }
-            Console.WriteLine("PASS: native process exit/ACK cannot impersonate QLoRA receipt; disposal idempotent.");
+            // In-flight PauseAsync previously could race with DisposeAsync
+            // disposing SemaphoreSlim before the pending Release().
+            var secondMarker = Path.Combine(root, "stop-concurrent.marker");
+            var delayed = new DelayedPauseControl();
+            var secondStart = new ProcessStartInfo(host)
+            {
+                WorkingDirectory = root,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            if (Path.GetFileNameWithoutExtension(host).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+                secondStart.ArgumentList.Add(Assembly.GetExecutingAssembly().Location);
+            secondStart.ArgumentList.Add("--child");
+            secondStart.ArgumentList.Add(secondMarker);
+            var second = GpuWorkerLauncher.Start(monitor, "P04-dispose-race", secondStart, delayed);
+            var pendingPause = second.PauseAsync();
+            try
+            {
+                await delayed.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                var disposal = second.DisposeAsync().AsTask();
+                Require(!disposal.IsCompleted, "DISPOSAL_MUST_WAIT_FOR_RUNNING_CONTROL");
+                File.WriteAllText(secondMarker, "stop\n");
+                delayed.Released.TrySetResult(true);
+                Require(await pendingPause, "PAUSE_ACK_EXPECTED_BEFORE_DISPOSAL_COMPLETES");
+                await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                delayed.Released.TrySetResult(true);
+                File.WriteAllText(secondMarker, "stop\n");
+                await second.DisposeAsync();
+            }
+            Require(!seen.Any(e => e.State is "PAUSED" or "RUNNING" or "STOPPED"),
+                    "CONCURRENT_ACK_MUST_NOT_CLAIM_TRAINING_STATE");
+            Console.WriteLine("PASS: receipt-gated worker STOP/PAUSE/RESUME, disposal and in-flight control race.");
             return 0;
         }
         finally
