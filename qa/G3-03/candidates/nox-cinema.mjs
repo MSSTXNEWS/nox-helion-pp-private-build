@@ -46,7 +46,9 @@ export function profileFor(mode,reduced){
 // It is a designed visual cue, not a claim of astronomical simulation.
 export function gravitationalSample(p,timeMs){
   if(!p||!Number.isFinite(timeMs)||!Number.isFinite(p.started)||!Number.isFinite(p.duration)||
-     p.duration<=0)throw new Error("NOX_FX_INVALID_PARTICLE");
+     p.duration<=0||["surfaceRadius","reach","angle","swirl","brightness","rotation"].some(k=>!Number.isFinite(p[k]))||
+     p.surfaceRadius<0||p.reach<0||p.brightness<0||p.brightness>1)
+    throw new Error("NOX_FX_INVALID_PARTICLE");
   const t=clamp((timeMs-p.started)/p.duration,0,1);
   const arc=Math.sin(Math.PI*t);
   const radius=p.surfaceRadius+arc*p.reach;
@@ -258,7 +260,12 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   return Object.freeze({
     setProfile(next){
       if(disposed||!profileSet.has(next))return false;
-      mode=next;root.dataset.noxFxMode=next.toLowerCase();
+      mode=next;
+      // Immediately release surplus MAX/BALANCED particles on budget downgrade.
+      const budget=profileFor(next,preference).maxParticles;
+      while(particles.length>budget){const p=particles.pop();p.node.remove();}
+      particleCount=particles.length;
+      root.dataset.noxFxMode=next.toLowerCase();
       syncVisible();return true;
     },
     setState:applyState,
