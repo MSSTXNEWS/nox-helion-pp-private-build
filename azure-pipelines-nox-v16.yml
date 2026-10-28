@@ -68,6 +68,8 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_creative_worker_payload_integrity_r18.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_PRELAUNCH_SOURCE_GATE_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_worker_stdout_admission_r14.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_STDOUT_SOURCE_GATE_HOLD' }
       # Existing E06 P02/P04 owner seam regressions: deterministic native stubs only.
       # Pass is NOT installed Windows/GPU/SQLite/Ollama acceptance.
       python -m unittest discover -s tests/e06 -p 'test_onehost_post_history_r10.py' -v
