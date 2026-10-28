@@ -43,6 +43,37 @@ public static class E05HostTelemetryChecks
             CancellationToken.None);
         Verify(missing.State == "UNAVAILABLE" && missing.Sensors.Count == 0,
             "FACADE C13 unbound run remains unavailable");
+        // TURBO10: real host-owned polling, no telemetry.snapshot or second bus.
+        var received = new List<E05HardwareFrame>();
+        var liveHost = new FixtureHost();
+        var session = new E05SamplingLoop(liveHost, providers, TimeSpan.FromSeconds(2),
+            frame => received.Add(frame));
+        var sessionAck = await session.PollVerifiedOnceAsync("NOX-E05-FIXTURE",
+            CancellationToken.None);
+        Verify(sessionAck.Status == "HOST_ACCEPTED" && liveHost.Count == 1 &&
+            liveHost.EventType == "gpu.sample" && received.Count == 1 &&
+            received[0].RunId == "NOX-E05-FIXTURE",
+            "TURBO10 host poll emits only canonical gpu.sample, frame is read only");
+        var noSensorHost = new FixtureHost();
+        var unavailableFrames = new List<E05HardwareFrame>();
+        var unavailableSession = new E05SamplingLoop(noSensorHost,
+            Array.Empty<ISensorProvider>(), TimeSpan.FromSeconds(2),
+            f => unavailableFrames.Add(f));
+        var unavailableAck = await unavailableSession.PollVerifiedOnceAsync(
+            "NOX-E05-FIXTURE", CancellationToken.None);
+        Verify(unavailableAck.Status == "HOLD_SENSOR_UNVERIFIED" &&
+            unavailableFrames.Count == 1 && noSensorHost.Count == 0,
+            "TURBO10 missing sensor never makes invented GPU events");
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        try {
+            await session.PollVerifiedOnceAsync("NOX-E05-FIXTURE", cancelled.Token);
+            throw new Exception("TURBO10 cancelled sampling was not stopped");
+        }
+        catch (OperationCanceledException) {
+            Verify(liveHost.Count == 1 && received.Count == 1,
+                "TURBO10 STOP cancels before sampling or event publication");
+        }
     }
     private sealed class FixtureSensor : ISensorProvider
     {
