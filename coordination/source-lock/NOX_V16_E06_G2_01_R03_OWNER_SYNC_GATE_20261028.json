@@ -1,0 +1,153 @@
+{
+  "schema": "NOX_E06_R03_READONLY_OWNER_SYNC_GATE_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028T0810MSK-R03",
+  "owner": "E06",
+  "decision": "HOLD_NOT_RELEASE",
+  "frozen_git_sha1": {
+    "main": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "pr66": "bfc318d6e002563995fd05a420c2022b39ef90d9",
+    "pr79": "46f2f17647c402e2bcbba8ba0f1d95a0467a2688"
+  },
+  "immutable_original_source_lock": {
+    "sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "bytes": 132648,
+    "member_count": 729,
+    "member_manifest_tree_sha256": "1986e1e26ef5d73ed430797e5fbf263c06fc63742c1f3ac28a0f048b50376ae8"
+  },
+  "source_parts": [
+    {
+      "path": "source_00.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "raw_sha256": "N/D"
+    },
+    {
+      "path": "source_01.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "raw_sha256": "N/D"
+    },
+    {
+      "path": "source_02.part",
+      "bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "raw_sha256": "N/D"
+    }
+  ],
+  "original_zip": {
+    "bytes": 60364346,
+    "sha256_historical_ci": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "rehash_this_run": false
+  },
+  "assets": {
+    "d02_persona": "ORIGINAL_LOCK_METADATA_PRESENT",
+    "installed_model_weights": "N/D",
+    "gpu_training": "NOT_RUN"
+  },
+  "owner_map": [
+    {
+      "owner": "E01",
+      "task_id": "V16.26.3",
+      "pr": "85",
+      "head_git_sha1": "e62b0d46c12b9e9544b8477aeb6c0c796afb2871",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E02",
+      "task_id": "V16.26.4",
+      "pr": "84",
+      "head_git_sha1": "d818702d1e9cbf0a993f783965f1a543f9c1f9ec",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E03",
+      "task_id": "V16.26.5",
+      "pr": "78",
+      "head_git_sha1": "4c70e9aa85a46f09e2521f3078c826fb7a492c81",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E04",
+      "task_id": "V16.26.6",
+      "pr": "83",
+      "head_git_sha1": "fa92f34cabf8247ca47127e6f30b8aeb0f118079",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E05",
+      "task_id": "V16.26.7",
+      "pr": "75",
+      "head_git_sha1": "c8437479bc3c9803579b25ad580c33139c67b506",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E06",
+      "task_id": "V16.26.8",
+      "pr": "79",
+      "head_git_sha1": "46f2f17647c402e2bcbba8ba0f1d95a0467a2688",
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    },
+    {
+      "owner": "E07",
+      "task_id": "QA01-QA10",
+      "pr": "46",
+      "head_git_sha1": null,
+      "source": "CANDIDATE",
+      "component_verified": "SOURCE_ONLY_OR_ND",
+      "integrated": "HOLD",
+      "windows_accepted": "NOT_RUN",
+      "progress": "N/D"
+    }
+  ],
+  "overlap_hold": {
+    "P01": "PR63/67/85 scene/source alternatives",
+    "P02": "PR58/64/76 original SQLite writer",
+    "P04": "PR65/74/83 trainer preimages",
+    "E06": "PR69/70/71/80 canonical host variants"
+  },
+  "tasks": [
+    "01 PRE-READ PASS",
+    "02 FROZEN HEAD PASS",
+    "03 PR66/79 HEAD PASS",
+    "04 PART RAW SHA HOLD",
+    "05 ORIGINAL LOCK MANIFEST PASS",
+    "06 WEIGHTS REAL HOLD",
+    "07 OWNER COLLISIONS HOLD",
+    "08 LOCAL GATE 12/12 PASS",
+    "09 COORDINATION ONLY PASS",
+    "10 DOCS READBACK PENDING"
+  ],
+  "weighted_progress": "N/D = 0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+  "no_loss": {
+    "original_sourcelock_modified": false,
+    "main_modified": false,
+    "ui_or_host_modified": false,
+    "archives_deleted": false
+  },
+  "exe": "NOT_CREATED"
+}

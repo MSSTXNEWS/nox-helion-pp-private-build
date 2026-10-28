@@ -1,0 +1,179 @@
+{
+  "schema": "NOX_V16_E06_G2_01_R05_COORDINATION_RECEIPT_V1",
+  "run_id": "NOX-V16-E06-G2-01-20261028T1014MSK-R05",
+  "owner": "E06_COORDINATION_SOURCELOCK_MANIFEST_ONLY",
+  "baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit_git_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_git_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_verified": "MATCH",
+    "pr66_inventory_head_git_sha1": "bfc318d6e002563995fd05a420c2022b39ef90d9",
+    "pr66_not_approved_canonical": true
+  },
+  "single_immutable_historical_source_lock": {
+    "file": "e06-original-baseline-sourcelock.json",
+    "sha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+    "bytes": 132648,
+    "manifest_rows": 729,
+    "listed_uncompressed_bytes": 67102932,
+    "status": "MANIFEST_ONLY_NO_RAW_729_FILE_ATTESTATION"
+  },
+  "archive": {
+    "historical_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "expected_bytes": 60364346,
+    "raw_concat_this_run": "N/D",
+    "individual_part_raw_sha256": "N/D"
+  },
+  "parts": [
+    {
+      "name": "source_00.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "sha256": "N/D"
+    },
+    {
+      "name": "source_01.part",
+      "bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "sha256": "N/D"
+    },
+    {
+      "name": "source_02.part",
+      "bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "sha256": "N/D"
+    }
+  ],
+  "approved_manifest_groups": {
+    "D02": "PRESENT_IN_MANIFEST_ONLY",
+    "Persona": "PRESENT_IN_MANIFEST_ONLY",
+    "assets": "PRESENT_IN_MANIFEST_ONLY",
+    "small_safetensors_manifest_entries": 7,
+    "installed_llm_asr_tts_video_image_gpu_weights": "N/D"
+  },
+  "saved_files": [
+    {
+      "path": "coordination/source-lock/verify_original_parts_r05.py",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "b5ad5918e8ae672b5765c33e87c46045a81fcde1431b153808c46d80030cae02",
+      "git_blob_sha1": "3018cc67b4a0ad98d6591feb57cae5eb4496c7bc",
+      "commit_git_sha1": "29df5002a2a4d57bc09e7c8d223555ff57d12496"
+    },
+    {
+      "path": "coordination/source-lock/test_verify_original_parts_r05.py",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "18f8be5324a57b81fe8f977427e64b82901a9eb35bcace9beadc2b5c56a1b5bf",
+      "git_blob_sha1": "403d1c3c67beac85ebfa091f855d272330282e15",
+      "commit_git_sha1": "f7caf19c1948cacb62f4a1c0c414459c4e99eaec"
+    }
+  ],
+  "tests": {
+    "name": "10 synthetic Python unittest",
+    "result": "10_PASS",
+    "pinned_raw_729_source_executed": false,
+    "original_zip_raw_available": false,
+    "windows_native": "NOT_RUN"
+  },
+  "owner_map": [
+    {
+      "executor": "E01",
+      "task_id": "V16.26.3",
+      "weight": 20,
+      "pr": 101,
+      "head_git_sha1": "25a8d734fb3bd77691ff78b7f652bef54b48ace1",
+      "source": "SOURCE",
+      "component": "HOLD_SAVED_CSS_JS_MISMATCH",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E02",
+      "task_id": "V16.26.4",
+      "weight": 25,
+      "pr": 100,
+      "head_git_sha1": "e899deb7e565e0beba2be6dcde7b363e708cd0e0",
+      "source": "SOURCE",
+      "component": "OFFLINE_TESTS_OWNER_REPORTED",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E03",
+      "task_id": "V16.26.5",
+      "weight": 20,
+      "pr": 102,
+      "head_git_sha1": "e135213038174b271ccd4cb442145a9f1b849d98",
+      "source": "SOURCE",
+      "component": "OFFLINE_TESTS_OWNER_REPORTED",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E04",
+      "task_id": "V16.26.6",
+      "weight": 25,
+      "pr": 99,
+      "head_git_sha1": "e2b1346087580171c7bd75edbcd8b9b1f9d2f63b",
+      "source": "SOURCE",
+      "component": "GPU_NOT_RUN",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E05",
+      "task_id": "V16.26.7",
+      "weight": 10,
+      "pr": 98,
+      "head_git_sha1": "52cd1c1cbca188cef0244dcb02fd9b5379591004",
+      "source": "SOURCE",
+      "component": "OFFLINE_TESTS_OWNER_REPORTED",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E06",
+      "task_id": "V16.26.8",
+      "weight": "INTEGRATION_GATE",
+      "pr": 79,
+      "head_git_sha1": "f7caf19c1948cacb62f4a1c0c414459c4e99eaec",
+      "source": "SOURCE",
+      "component": "10_LOCAL_TESTS_PASS",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    },
+    {
+      "executor": "E07",
+      "task_id": "QA01-QA10",
+      "weight": "INDEPENDENT_GATE",
+      "pr": 46,
+      "head_git_sha1": "266c3a520f6d1ee908c2dad0d0397d1c16f0a1cc",
+      "source": "HISTORICAL_DIAGNOSTIC",
+      "component": "0/10_FINAL_NATIVE_E2E",
+      "integrated": "HOLD",
+      "windows": "NOT_RUN",
+      "pct": "N/D"
+    }
+  ],
+  "weighted_progress": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05=N/D",
+  "hold": [
+    "RAW_PART_SHA256_UNAVAILABLE",
+    "729_RAW_ZIP_MEMBER_READBACK_NOT_RUN",
+    "PR101_OWNER_FX_SAVED_FILES_MISMATCH",
+    "P01_P03_P04_OVERLAPPING_PR_OWNER_ADMISSION",
+    "ONEHOST_INSTALLED_EXE_AND_E07_NOT_RUN"
+  ],
+  "no_loss": true,
+  "main_changed": false,
+  "old_archives_deleted": false,
+  "second_source_lock_created": false,
+  "final_exe_claimed": false,
+  "one_lesson": "PINNED RAW-BINARY ADMISSION: never promote historical manifest metadata to SourceLock VERIFIED without byte-hashed source_00/01/02, joined ZIP and all 729 members; use the saved fail-closed verifier with negative tests."
+}
