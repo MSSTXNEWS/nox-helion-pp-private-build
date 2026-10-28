@@ -1,0 +1,210 @@
+{
+  "schema": "NOX_V16_INDEPENDENT_SOURCE_QA_R02",
+  "run_id": "NOX-V16-QA-20261028-R02-FAST_SOURCE",
+  "role": "Independent Manual #2, QA-only; no product source or PR162 mutation",
+  "original_pinned_source": "fd9b66b937d4d195e51b46852f4932501151b3f9",
+  "latest_live_source": "d2b451c6655faa9d06336105e329f15183932cfc",
+  "qa_branch": "qa/v16-source-finish-fifo-cache-20261028-r02",
+  "qa_test_sources": [
+    {
+      "path": "qa/source_ready/test_p04_pinned_tree_special_r02.py",
+      "blob_sha1": "fd54558d75dee75c41e76ce1efe7bbf932af21fd",
+      "bytes": 4234
+    },
+    {
+      "path": "qa/source_ready/P05CacheIdentityR02/P05CacheIdentityR02.csproj",
+      "blob_sha1": "504d3e4e34dae3aaaeb7087fcac03aa10e403d2f",
+      "bytes": 516
+    },
+    {
+      "path": "qa/source_ready/P05CacheIdentityR02/Program.cs",
+      "blob_sha1": "71d69716f6821a01d4b1e3b0887a392dadb16161",
+      "bytes": 2940
+    },
+    {
+      "path": "qa/source_ready/test_critical_source_contracts_r02.py",
+      "blob_sha1": "69eb14644259405530aa72dfe72c8a73ddb4d403",
+      "bytes": 5155
+    }
+  ],
+  "evidence": {
+    "source_contracts": "9 direct live GitHub probes: 7 PASS, 2 evidence HOLD (historical Host50 and PACK01 native ledger)",
+    "original_P04_negative": "Actual original sha256_tree excerpt Linux test 2 PASS/1 expected RED: FIFO invisibility",
+    "repaired_P04_positive": "Proposed same source function with special-file rejection 3 PASS; matches owner already-integrated Git blob 413e5395c736934b2c0bf523382a569b0baa2b33",
+    "P04_repo_tests": "Saved source-linked tests, actual full import test NOT_RUN",
+    "P05_CSharp": "Saved original-owner source-linked regression; dotnet unavailable, NOT_RUN",
+    "WINDOWS": "No installed final EXE E2E, 0/10 NOT_RUN"
+  },
+  "original_3part_git_metadata": {
+    "original_sha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef5d607a0de"
+    ],
+    "part_sizes": [
+      20971520,
+      20971520,
+      18421306
+    ],
+    "raw_sha256_full_member_729": "NOT_REHASHED_ON_THIS_HEAD"
+  },
+  "resolved_current_source": {
+    "P02_atomic": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+    "P04_sha_tree": "413e5395c736934b2c0bf523382a569b0baa2b33",
+    "P04_RAG_index": "58af025bd05f0e99a445b56c307e12d600b8f19f",
+    "P05_cache": "6349d0f4f8a33f0fda7c12243ea07c5734810289",
+    "D02_home": "e78d2c9e538c24cd8be9431ce9d8f460809f9225",
+    "E07_immutability": "5811fa58d0b64aadaf555cb37cfc548aa3bfe727"
+  },
+  "gates": [
+    {
+      "id": "C01",
+      "criterion": "PR162 current HEAD",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C02",
+      "criterion": "Original 3 Git blob IDs and sizes",
+      "status": "PASS_METADATA_ONLY"
+    },
+    {
+      "id": "C03",
+      "criterion": "Original physical 729 ZIP per member SHA",
+      "status": "HOLD"
+    },
+    {
+      "id": "C04",
+      "criterion": "PACK01 50 distinct IDs",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C05",
+      "criterion": "HOST50 50 native receipts",
+      "status": "HOLD"
+    },
+    {
+      "id": "C06",
+      "criterion": "PACK02 50 source functions",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C07",
+      "criterion": "PACK02 native host",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C08",
+      "criterion": "D02 8 CoreID/HELION",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C09",
+      "criterion": "5 Persona guard",
+      "status": "PASS_SRC_NOT_MEDIA"
+    },
+    {
+      "id": "C10",
+      "criterion": "WOW 51-200 catalog IDs",
+      "status": "PASS_SRC_NOT_RUNTIME"
+    },
+    {
+      "id": "C11",
+      "criterion": "P02 deep JSON + atomic rollback",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C12",
+      "criterion": "P03 ModelCenter owner binding",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C13",
+      "criterion": "P04 only regular file hash tree",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C14",
+      "criterion": "P04 RAG strict JSON",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C15",
+      "criterion": "P05 feed cache by provider and endpoint",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C16",
+      "criterion": "E07 one seal CreateNew",
+      "status": "PASS_SRC"
+    },
+    {
+      "id": "C17",
+      "criterion": "Full fixed P01-P05 TaskID ledger",
+      "status": "HOLD"
+    },
+    {
+      "id": "C18",
+      "criterion": "One independent SOURCE_FREEZE",
+      "status": "HOLD"
+    },
+    {
+      "id": "C19",
+      "criterion": "Final Setup/installed EXE SHA",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "C20",
+      "criterion": "Native same-SHA E07 ten tests",
+      "status": "NOT_RUN_0_OF_10"
+    }
+  ],
+  "priorities": [
+    {
+      "p": "P0",
+      "id": "HOST50_RECONCILE_50",
+      "owner": "#1",
+      "note": "Historic 37 source-bound/13 HOLD is stale, require new 50 real owners/handlers/receipts"
+    },
+    {
+      "p": "P0",
+      "id": "SOURCELOCK_729_SAME_HEAD",
+      "owner": "#1 + independent #2",
+      "note": "Full raw ZIP and member SHA proof, metadata alone inadequate"
+    },
+    {
+      "p": "P0",
+      "id": "FULL_TASKID_MATRIX",
+      "owner": "#1 + W1-W5",
+      "note": "Signed all fixed P01-P05 rows and native route evidence"
+    },
+    {
+      "p": "P1",
+      "id": "RUN_OWNER_REGRESSION",
+      "owner": "#1",
+      "note": "Original P04 Python and P05 .NET source-linked tests on latest source SHA"
+    },
+    {
+      "p": "P1",
+      "id": "WOW200_SCOPE",
+      "owner": "#1 W2",
+      "note": "Do not call 200 catalog entries 200 accepted visual runtime effects"
+    }
+  ],
+  "progress": {
+    "weights": {
+      "P01": 20,
+      "P02": 25,
+      "P03": 20,
+      "P04": 25,
+      "P05": 10
+    },
+    "weighted_accepted_percentage": "N/D",
+    "CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "INTEGRATED": "HOLD",
+    "WINDOWS_BUILD": "NOT_RUN",
+    "E07": "0/10 NOT_RUN"
+  },
+  "no_loss": "No owner code, PR162/main, user data, D02/WOW, original ZIP or previous DONE changed by QA",
+  "improvement": "NO_DUPLICATE_SOURCE_FIX: compare live Git blob to accepted donor before reporting a missing code fix; keep source PASS and E07 independent"
+}
