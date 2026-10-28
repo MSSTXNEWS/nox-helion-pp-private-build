@@ -232,8 +232,23 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(raf){win.cancelAnimationFrame(raf);raf=0;}
     clearParticles();
   }
+  function rearmBursts(policy,previousPolicy){
+    if(policy.fps===0)return true;
+    if(previousPolicy.fps!==0&&policy.minimumBurstMs<=previousPolicy.minimumBurstMs&&
+       each.every(orb=>Number.isFinite(orb.nextBurst)))return true;
+    let now;try{now=time();}catch(_){return false;}
+    if(!Number.isFinite(now)||now<initialNow)return false;
+    const deadlines=each.map(orb=>now+policy.minimumBurstMs*(orb.index===0?1:2.1));
+    if(deadlines.some(deadline=>!Number.isFinite(deadline)))return false;
+    each.forEach((orb,i)=>{orb.nextBurst=previousPolicy.fps===0||!Number.isFinite(orb.nextBurst)
+      ?deadlines[i]:Math.max(orb.nextBurst,deadlines[i]);});
+    return true;
+  }
   function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
-  const onMotion=e=>{if(disposed)return;preference=!!e.matches;
+  const onMotion=e=>{if(disposed)return;
+    const nextPreference=!!e.matches;
+    if(!rearmBursts(profileFor(mode,nextPreference),profileFor(mode,preference)))return;
+    preference=nextPreference;
     root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
     if(preference)sleep();else wake();};
   let listenerReady=false,motionReady=false,observer=null;
@@ -316,15 +331,13 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       if(!profileSet.has(next))return false;
       // Budget applies to ALREADY LIVE ejecta, not just the next emission.
       const newPolicy=profileFor(next,preference);
+      // Resume from the current clock, not a stale frame or an Infinity pause.
+      // Validate before altering particle budget, mode or original DOM state.
+      if(!rearmBursts(newPolicy,profileFor(mode,preference)))return false;
       while(particles.length>newPolicy.maxParticles){
         const p=particles.pop();p.node.remove();
       }
       particleCount=particles.length;
-      // A slower ECO policy must not inherit MAX's imminent burst.
-      if(PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
-        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
-          (lastFrame||initialNow)+newPolicy.minimumBurstMs);
-      }
       mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },

@@ -38,7 +38,15 @@ export function mountApprovedHome(doc=document){
   }
   // Existing approved PR30 source owns the visual physics of these exact nine
   // elements. No trusted events are supplied until the native bridge is attested.
-  const scene=installNoxCinemaFX({root:stage,orbs,profile:chosenMode()});
+  // Decorate only EXISTING D02 controls/panels. Do not add or replace handlers.
+  // Exclude the original HELION and eight CoreID elements even if they are buttons.
+  const controls=[...new Set(stage.querySelectorAll(
+    '.nox-cinema-control, [data-nox-fx-control], button:not(.nox-orbit-core), [role="button"]:not(.nox-orbit-core)'
+  ))].filter(e=>e!==central&&!items.includes(e));
+  const panels=[...new Set(stage.querySelectorAll(
+    '.nox-cinema-panel, [data-nox-fx-panel], .nox-panel, [data-nox-panel]'
+  ))].filter(e=>e!==central&&!items.includes(e)&&!controls.includes(e));
+  const scene=installNoxCinemaFX({root:stage,orbs,controls,panels,profile:chosenMode()});
   let detachMotion=()=>{};
   // FX-owned DOM markers and observers form one rollback transaction.
   let disposed=false;
@@ -55,7 +63,7 @@ export function mountApprovedHome(doc=document){
     try{scene.destroy();}finally{mounted=null;}
   }
   try{
-    const sync=()=>{scene.setVisible(home.classList.contains('active'));
+    const sync=()=>{if(disposed)return;scene.setVisible(home.classList.contains('active'));
       scene.setProfile(chosenMode());};
     observer=new view.MutationObserver(sync);
     observer.observe(home,{attributes:true,attributeFilter:['class']});

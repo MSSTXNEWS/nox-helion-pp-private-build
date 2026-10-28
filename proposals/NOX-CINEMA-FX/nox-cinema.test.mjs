@@ -3,6 +3,56 @@ import assert from "node:assert/strict";
 import {clamp,validateScene,profileFor,gravitationalSample,
         installNoxCinemaFX,PROFILES} from "./nox-cinema.mjs";
 
+for(const mode of ["BALANCED","ECO","MAX"]){
+  test(`R27 REDUCED -> ${mode} re-arms rare ejecta from current resume clock`,()=>{
+    const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,random:()=>0});
+    try{
+      o.tick(10000);
+      const before=fx.snapshot().emitted;
+      assert.ok(before>0);
+      fx.setProfile("REDUCED");
+      o.tick(100000); // User can remain in reduced motion much longer than one frame.
+      assert.equal(fx.setProfile(mode),true);
+      o.tick(100000+PROFILES[mode].minimumBurstMs-1);
+      assert.equal(fx.snapshot().emitted,before,"no burst before the resumed rarity budget");
+      o.tick(100000+PROFILES[mode].minimumBurstMs+100);
+      assert.ok(fx.snapshot().emitted>before,"ejecta resumes instead of retaining Infinity");
+    }finally{fx.destroy();}
+  });
+}
+
+test("R27 OS Reduced Motion then profile change resumes after rarity budget",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,random:()=>0});
+  try{
+    o.tick(10000);const before=fx.snapshot().emitted;
+    o.reduced(true);fx.setProfile("ECO");o.tick(100000);o.reduced(false);
+    o.tick(131999);assert.equal(fx.snapshot().emitted,before);
+    o.tick(132100);assert.ok(fx.snapshot().emitted>before);
+  }finally{fx.destroy();}
+});
+
+test("R27 invalid resume clock leaves reduced profile unchanged and permits retry",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,random:()=>0});
+  try{
+    fx.setProfile("REDUCED");const originalNow=o.win.performance.now;
+    o.win.performance.now=()=>NaN;
+    assert.equal(fx.setProfile("MAX"),false);
+    assert.equal(fx.snapshot().profile,"REDUCED");assert.equal(o.pending,0);
+    o.win.performance.now=originalNow;
+    assert.equal(fx.setProfile("MAX"),true);
+  }finally{fx.destroy();}
+});
+
+test("R27 ECO duration rule follows equal-specificity nth-child timing",async()=>{
+  const {readFileSync}=await import('node:fs');
+  const css=readFileSync(new URL('./nox-cinema.css',import.meta.url),'utf8');
+  const eco='.nox-cinema-scope[data-nox-fx-mode="eco"] .nox-cinema-control[data-nox-float="true"]::before';
+  const timing=css.lastIndexOf(':nth-child(4n+3)::before');
+  const override=css.lastIndexOf(eco);
+  assert.ok(override>timing,'ECO must win the equal-specificity cascade');
+  assert.match(css.slice(override,css.indexOf('}',override)+1),/animation-duration:\s*10s/);
+});
+
 class FakeClassList {
   constructor(){this.values=new Set();}
   add(x){this.values.add(x);}

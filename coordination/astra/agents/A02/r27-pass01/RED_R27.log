@@ -1,0 +1,194 @@
+✖ R27 queued DOM and motion callbacks cannot invoke destroyed D02 (2.033514ms)
+✖ R27 queued callbacks after failed initial sync remain inactive (0.563847ms)
+✖ R27 exact original controls and panels are passed once without replacing handlers (0.769775ms)
+✖ R27 REDUCED -> BALANCED re-arms rare ejecta from current resume clock (8.156897ms)
+✖ R27 REDUCED -> ECO re-arms rare ejecta from current resume clock (1.417418ms)
+✖ R27 REDUCED -> MAX re-arms rare ejecta from current resume clock (0.501403ms)
+✖ R27 OS Reduced Motion then profile change resumes after rarity budget (5.110844ms)
+✖ R27 invalid resume clock leaves reduced profile unchanged and permits retry (2.035536ms)
+✖ R27 ECO duration rule follows equal-specificity nth-child timing (1.203026ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 0
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 115.771589
+
+✖ failing tests:
+
+test at ../../../tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:42:1
+✖ R27 queued DOM and motion callbacks cannot invoke destroyed D02 (2.033514ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  8 !== 2
+  
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:45:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 8,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:47:1
+✖ R27 queued callbacks after failed initial sync remain inactive (0.563847ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  7 !== 1
+  
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:50:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 7,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:52:1
+✖ R27 exact original controls and panels are passed once without replacing handlers (0.769775ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - [
+  -   {
+  -     onclick: [Function: click]
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs:54:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [Array],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:7:3
+✖ R27 REDUCED -> BALANCED re-arms rare ejecta from current resume clock (8.156897ms)
+  AssertionError [ERR_ASSERTION]: ejecta resumes instead of retaining Infinity
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:19:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:7:3
+✖ R27 REDUCED -> ECO re-arms rare ejecta from current resume clock (1.417418ms)
+  AssertionError [ERR_ASSERTION]: ejecta resumes instead of retaining Infinity
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:19:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:7:3
+✖ R27 REDUCED -> MAX re-arms rare ejecta from current resume clock (0.501403ms)
+  AssertionError [ERR_ASSERTION]: ejecta resumes instead of retaining Infinity
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:19:14)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:24:1
+✖ R27 OS Reduced Motion then profile change resumes after rarity budget (5.110844ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(fx.snapshot().emitted>before)
+  
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:30:27)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:34:1
+✖ R27 invalid resume clock leaves reduced profile unchanged and permits retry (2.035536ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:39:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:46:1
+✖ R27 ECO duration rule follows equal-specificity nth-child timing (1.203026ms)
+  AssertionError [ERR_ASSERTION]: ECO must win the equal-specificity cascade
+      at TestContext.<anonymous> (file:///tmp/tmpnnnmcm8a/proposals/NOX-CINEMA-FX/nox-cinema.test.mjs:52:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,0 +1,73 @@
+{
+  "run_id": "ASTRA-R27-A02-20261029-PASS01",
+  "agent_id": "/root/a02",
+  "parent_commit": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 1,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P01-D02-REDUCED-EJECTA-RESUME",
+    "P01-D02-QUEUED-CALLBACK-DISPOSE",
+    "P01-D02-ORIGINAL-CONTROL-PANEL-DECORATION",
+    "P01-D02-ECO-CASCADE-MINIMUM"
+  ],
+  "donors": [
+    "8c46541408202634b1a18fd8bb03f75ed9c2a6d2",
+    "f9580658b575d41803b8d6574ece019be5b7598d"
+  ],
+  "files": [
+    {
+      "path": "integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs",
+      "pre_git_blob": "512d5a24471e1d05a40873bc7db6e4c0cca0212d",
+      "post_git_blob": "061e253eea4a3068a19cdc8c6d35cd88324941e8",
+      "pre_sha256": "d840e62c703558f62f7bf29b00ea6f117d7b9b03576a4eacb932a7bd19b307ce",
+      "post_sha256": "7d81655a0ba7b386177547a6ce0db265a250c627701352bdd2a2cd6e6df0bf84"
+    },
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "pre_git_blob": "da4a4e26d913636649bf22901ef4a07d37fdb718",
+      "post_git_blob": "24963fcd35c3d15adb4f9d701bdf65d14a091374",
+      "pre_sha256": "1f00f30ecb53e895b94605ce084889a8880f8ed9a5bc7026ee644a9c164f3957",
+      "post_sha256": "c16c5a49d635c1cc07c13cd421c8b7bb2e21daeb9cc5e62a5ebc38632a2bae35"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.css",
+      "pre_git_blob": "77417160147607f2d7350209b865d86bfe49abd0",
+      "post_git_blob": "b2c2e46a476202dad50a1059472477efcf07721f",
+      "pre_sha256": "6467e4b09db257675a415ae4729d1dff58bff5d8edf29304283c371201cfedb0",
+      "post_sha256": "f84ce0663cd1e116727c9cd84c9b8a119a71c92533184def73a4770dc996a971"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "pre_git_blob": "7e4acf43c287b3578e38e0acab0266e0343132e3",
+      "post_git_blob": "09e74921a160dfde8d24e25badb476d9da268f82",
+      "pre_sha256": "580013df32f5e221fa6c425f4c55b4d2c978d0682e5a1881f63d5393b21e2e23",
+      "post_sha256": "17e1f36c1a94c7107d4b86ca80d98a6d7f8fcc53ff811c61ada968bff3ba1c6d"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.test.mjs",
+      "pre_git_blob": "fde93f66644c1a607ba2eff83143d53073177249",
+      "post_git_blob": "1624daec51c4681ee70feb74b4df1997cd5c5d2a",
+      "pre_sha256": "62a54d5dd7f421b9b8c34888bb442f52bb1704efb93e795bd7c3541df398f5f4",
+      "post_sha256": "2965b345ab66081be94660f8eee63766f8b52418dc44c4c4e08fb80a884e0b01"
+    }
+  ],
+  "tests": {
+    "baseline_existing": "88/88 PASS",
+    "red_new": "9/9 FAIL on pinned baseline",
+    "green_all": "97/97 PASS",
+    "command": "node --test proposals/NOX-CINEMA-FX/*.test.mjs integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs",
+    "limitations": "Node deterministic DOM fixtures; no real browser/GPU/Windows visual acceptance"
+  },
+  "lesson": "Resume from a validated CURRENT clock before mutating visual budget; cover user and OS motion transitions. Reuse donor fixes and verify exact original controls/handlers plus queued callbacks.",
+  "remaining": [
+    "Full WOW200 runtime coverage",
+    "Real browser responsive 320/390/800x480/FHD/4K visual checks",
+    "Native event bridge attestation",
+    "Five Persona asset provenance"
+  ],
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN",
+  "product_readiness_percent": null
+}
