@@ -332,3 +332,35 @@ test("R08 rejects nonfinite ejecta geometry before SVG transforms",()=>{
   assert.throws(()=>gravitationalSample({...p,brightness:2},900),/INVALID_PARTICLE/);
   assert.ok(Number.isFinite(gravitationalSample(p,900).x));
 });
+
+
+// R09: source QA only. Native/approved button animations are not FX-owned.
+test("R09 malformed decorative RNG cannot emit NaN/Infinity geometry",()=>{
+  for(const random of [()=>Number.NaN,()=>Infinity,()=>{throw Error("RNG_FAIL");}]){
+    const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,
+      profile:"MAX",random});
+    o.tick(14000);o.tick(15000);
+    assert.ok(fx.snapshot().emitted>0);
+    for(const orb of o.orbs){
+      const svg=orb.element.querySelector(".nox-cinema-orb__ejecta");
+      for(const path of svg.children)
+        assert.equal(/NaN|Infinity/.test(path.getAttribute("transform")||""),false);
+    }
+    fx.destroy();assert.equal(o.pending,0);
+  }
+});
+test("R09 reject malformed clock before host subscription or D02 mutation",()=>{
+  const o=fakeScene();let subscriptions=0;
+  assert.throws(()=>installNoxCinemaFX({root:o.root,orbs:o.orbs,
+    clock:37,hostEvents:{subscribe(){subscriptions++;return()=>{};}}}),/INVALID_OPTIONS/);
+  assert.equal(subscriptions,0);
+  assert.ok(o.orbs.every(v=>!v.element.querySelector(".nox-cinema-orb__layers")));
+});
+test("R09 CSS never pauses or replaces host element animation",async()=>{
+  const fs=await import("node:fs");
+  const css=fs.readFileSync(new URL("../candidates/nox-cinema.css",import.meta.url),"utf8");
+  assert.equal(css.includes('.nox-cinema-control[data-nox-float="true"] { animation:none; }'),false);
+  assert.equal(css.includes('.nox-cinema-scope[data-nox-fx-visible="false"] .nox-cinema-control,'),false);
+  assert.equal(/\.nox-cinema-control:disabled\s*\{[^}]*animation\s*:/.test(css),false);
+  assert.match(css,/data-nox-fx-visible="false"\] \.nox-cinema-control::before/);
+});
