@@ -6,6 +6,7 @@ Unknown/unavailable actions always HOLD; never simulate completion.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Callable, Any
 import json
 import re
@@ -31,6 +32,62 @@ ALLOWED_ROUTES = frozenset((
     "mobile.connect",
 ))
 assert len(ALLOWED_ROUTES) == 50
+
+# Immutable canonical E06 admission floor. Kept local to support the existing
+# standalone native host without importing a second dispatcher or mutable UI data.
+# Cross-checked at source time against coordination/e06_host50/admission.py.
+APPROVED_NATIVE_POLICY = (
+    ("helion.chat", 2, "safe"),
+    ("core.chat", 2, "safe"),
+    ("persona.chat", 2, "safe"),
+    ("chat.model", 2, "safe"),
+    ("chat.history", 2, "sensitive"),
+    ("chat.attach", 2, "sensitive"),
+    ("chat.rag", 2, "safe"),
+    ("chat.voice", 2, "sensitive"),
+    ("chat.stop", 2, "safe"),
+    ("chat.commands", 2, "safe"),
+    ("models.catalog", 3, "safe"),
+    ("models.installed", 3, "safe"),
+    ("models.pull", 3, "sensitive"),
+    ("models.gguf.import", 3, "sensitive"),
+    ("models.queue", 3, "safe"),
+    ("models.cancel", 3, "safe"),
+    ("models.retry", 3, "sensitive"),
+    ("models.digest", 3, "safe"),
+    ("models.preflight", 3, "safe"),
+    ("models.licenses", 3, "safe"),
+    ("rag.import", 4, "sensitive"),
+    ("rag.search", 4, "safe"),
+    ("memory.manage", 4, "sensitive"),
+    ("datasets.review", 4, "safe"),
+    ("gpu.preflight", 4, "safe"),
+    ("training.start", 4, "dangerous"),
+    ("training.pause", 4, "safe"),
+    ("training.resume", 4, "sensitive"),
+    ("training.checkpoints", 4, "sensitive"),
+    ("training.evaluate", 4, "safe"),
+    ("translate.ru_es", 2, "sensitive"),
+    ("maestro.spanish", 2, "safe"),
+    ("voice.settings", 2, "safe"),
+    ("calls.dial", 2, "dangerous"),
+    ("calls.history", 2, "sensitive"),
+    ("media.player", 1, "sensitive"),
+    ("media.subtitles", 1, "safe"),
+    ("browser.open", 1, "sensitive"),
+    ("browser.bookmarks", 1, "safe"),
+    ("images.generate", 4, "sensitive"),
+    ("space.news", 5, "safe"),
+    ("space.weather", 5, "safe"),
+    ("space.fx", 5, "safe"),
+    ("space.bitcoin", 5, "safe"),
+    ("space.brent", 5, "safe"),
+    ("system.telemetry", 5, "safe"),
+    ("system.update", 1, "dangerous"),
+    ("system.backup", 1, "dangerous"),
+    ("system.pc_control", 1, "dangerous"),
+    ("mobile.connect", 6, "sensitive"),
+)
 
 class HostHold(RuntimeError):
     """No concrete approved and working owner backend bound for this route."""
@@ -75,17 +132,25 @@ class NoxPackHost:
         actions = catalog.get("actions")
         if not isinstance(actions, list) or len(actions) != 50:
             raise ValueError("Exactly 50 approved contracts required")
-        ids = [item.get("routeId") for item in actions if isinstance(item, dict)]
-        if set(ids) != ALLOWED_ROUTES or len(set(ids)) != 50:
+        if any(type(item) is not dict for item in actions):
+            raise ValueError("Native catalogue entries must be objects")
+        ids = [item.get("routeId") for item in actions]
+        if any(type(route) is not str for route in ids) or set(ids) != ALLOWED_ROUTES:
             raise ValueError("Route set mismatch or duplicate")
         task_ids = [item.get("taskId") for item in actions]
-        if (len(set(task_ids)) != 50 or
+        if (any(type(task) is not str for task in task_ids) or
                 task_ids != [f"NIP01-{i:02d}" for i in range(1, 51)]):
             raise ValueError("Invalid or reordered canonical TaskID")
-        if any(type(row.get("owner")) is not int or not 1 <= row["owner"] <= 6 or
-               row.get("risk") not in ("safe", "sensitive", "dangerous") for row in actions):
-            raise ValueError("Invalid approved native owner/risk policy")
-        self.routes = {item["routeId"]:item for item in actions}
+        # UI catalogue is never allowed to downgrade dangerous routes to safe,
+        # swap owner IDs or reorder immutable RouteID/TaskID associations.
+        if tuple((item["routeId"], item.get("owner"), item.get("risk"))
+                 for item in actions) != APPROVED_NATIVE_POLICY:
+            raise ValueError("Immutable native route/owner/risk policy mismatch")
+        # Freeze security decisions: caller edits to original catalogue must not
+        # change consent or owner checks after native registration.
+        self.routes = MappingProxyType({
+            item["routeId"]: MappingProxyType(dict(item)) for item in actions
+        })
         self.ports:dict[str,BoundPort] = {}
         self.native_approve = native_approve
 
