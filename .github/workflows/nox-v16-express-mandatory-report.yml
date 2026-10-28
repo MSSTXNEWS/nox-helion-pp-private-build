@@ -1,0 +1,71 @@
+name: NOX V16 EXPRESS mandatory evidence report
+on:
+  push:
+    branches:
+      - integration/nox-v16-express-noloss-e06-20261028-r01
+    paths:
+      - 'Packages/P05/E05/**'
+      - '.github/workflows/nox-v16-express-mandatory-report.yml'
+  pull_request:
+    paths:
+      - 'Packages/P05/E05/**'
+      - '.github/workflows/nox-v16-express-mandatory-report.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Source readback, 129 Node regressions, and seven evidence bars
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re,subprocess,sys
+          root=pathlib.Path('.')
+          paths={
+            'Packages/P05/E05/src/E05SamplingLoop.cs':'505f9fb57fd430ddccb847af6a8c9544072790bd',
+            'Packages/P05/E05/checks/E05HostTelemetryChecks.cs':'bedde69a9485fc4f2f39af3509c035ba6ef39f73',
+            'Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs':'260570700e9a35b0083409190bab4aee5e2b5936',
+            'Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs':'44df570e71e03134e344c6aefad5ffe82f29f9af'}
+          receipts=[]
+          for name,want in paths.items():
+              p=root/name
+              if p.is_symlink() or not p.is_file():
+                  receipts.append({'path':name,'status':'HOLD_MISSING'})
+                  continue
+              b=p.read_bytes()
+              actual=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
+              receipts.append({'path':name,'status':'PASS' if actual==want else 'HOLD_DRIFT','sha256':hashlib.sha256(b).hexdigest(),'git_blob_sha1':actual,'expected_git_blob_sha1':want})
+          source_ok=all(x['status']=='PASS' for x in receipts)
+          js='Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs'
+          test='Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs'
+          checks=[subprocess.run(['node','--check',p],capture_output=True,text=True) for p in (js,test)] if source_ok else []
+          result=subprocess.run(['node',test],capture_output=True,text=True,timeout=90) if source_ok and all(p.returncode==0 for p in checks) else None
+          passed=[int(x) for x in re.findall(r'^PASS (\d+) ',result.stdout,re.M)] if result else []
+          ok=source_ok and result is not None and result.returncode==0 and passed==list(range(1,130))
+          lanes=[{'executor':i+1,'weight':[.20,.25,.20,.25,.10][i],'accepted_percent':None,'state':'N_D'} for i in range(5)]
+          lanes += [{'executor':6,'weight':None,'accepted_percent':None,'state':'HOLD'},{'executor':7,'weight':None,'accepted_percent':None,'state':'NOT_RUN'}]
+          report={'schema':'NOX_V16_EXPRESS_EVIDENCE_V1','run_id':os.environ.get('GITHUB_RUN_ID'),'run_attempt':os.environ.get('GITHUB_RUN_ATTEMPT'),'git_sha':os.environ.get('GITHUB_SHA'),'paths':receipts,'node_passed':len(passed),'node_expected':129,'syntax_passed':sum(p.returncode==0 for p in checks),'seven_lanes':lanes,'weighted_release_percent':None,'verified_technical_gates':(1 if source_ok else 0)+(1 if ok else 0),'technical_gate_total':6,'source_lock_729':'HOLD','windows_onehost':'NOT_RUN','live_feeds_and_app_drive':'NOT_RUN','e07_same_exe':'NOT_RUN','release':'BLOCKED','note':'Offline source verification never equals installed EXE or Windows acceptance'}
+          folder=pathlib.Path('evidence/express');folder.mkdir(parents=True,exist_ok=True)
+          (folder/'REPORT.json').write_text(json.dumps(report,indent=2)+'\n')
+          lines=['# NOX V16 EXPRESS · '+str(report['run_id']),'Source exact: '+str(sum(r['status']=='PASS' for r in receipts))+'/4','Node: '+str(len(passed))+'/129','Verified offline technical gates: '+str(report['verified_technical_gates'])+'/6 (NOT release percent)','']
+          lines += ['#'+str(x['executor'])+' '+x['state']+' · accepted N/D' for x in lanes]
+          lines += ['','Overall P01–P05 accepted readiness: N/D','Original 729 SourceLock: HOLD','Windows host: NOT_RUN','Live licensed feeds/app OAuth: NOT_RUN','E07 installed same-SHA: NOT_RUN','RELEASE: BLOCKED','']
+          (folder/'REPORT.md').write_text('\n'.join(lines))
+          print('\n'.join(lines))
+          sys.exit(0 if ok else 1)
+          PY
+      - name: Preserve report on every executed workflow attempt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-express-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/express/
+          if-no-files-found: warn
+          retention-days: 30
