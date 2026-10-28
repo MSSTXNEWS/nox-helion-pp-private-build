@@ -32,13 +32,48 @@ def reject_reparse_ancestors(path: Path) -> None:
             raise ValueError("MERGE_PATH_REPARSE_ANCESTOR")
 
 
+def parse_strict_json_object(text: str, *, maximum: int = 1_048_576) -> dict[str, Any]:
+    """Reject duplicate nested keys and nonfinite JSON before any merge approval.
+
+    The training worker enforces this same contract; the merge entry point must
+    not silently reinterpret a previously rejected manifest or verifier reply.
+    """
+    if not isinstance(text, str) or len(text) > maximum:
+        raise ValueError("MERGE_JSON_TOO_LARGE")
+
+    def distinct_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("MERGE_JSON_DUPLICATE_KEY")
+            result[key] = value
+        return result
+
+    def reject_nonfinite(_token: str) -> None:
+        raise ValueError("MERGE_JSON_NONFINITE")
+
+    def finite_float(value: str) -> float:
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError("MERGE_JSON_NONFINITE")
+        return result
+
+    try:
+        obj = json.loads(text, object_pairs_hook=distinct_keys,
+                         parse_constant=reject_nonfinite, parse_float=finite_float)
+    except (json.JSONDecodeError, UnicodeError) as exc:
+        raise ValueError("MERGE_JSON_INVALID") from exc
+    if not isinstance(obj, dict):
+        raise ValueError("INPUT_JSON_MUST_BE_OBJECT")
+    return obj
+
+
 def read_object(path: Path) -> dict[str, Any]:
     if path.is_symlink() or not path.is_file():
         raise ValueError("INPUT_MUST_BE_REGULAR_FILE")
-    value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict):
-        raise ValueError("INPUT_JSON_MUST_BE_OBJECT")
-    return value
+    if path.stat().st_size > 1_048_576:
+        raise ValueError("MERGE_JSON_TOO_LARGE")
+    return parse_strict_json_object(path.read_text(encoding="utf-8"))
 
 
 def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
@@ -62,7 +97,14 @@ def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
         if not isinstance(value, str) or not value.strip():
             raise ValueError("DATASET_" + field.upper() + "_MISSING")
         recorded = receipt_dataset.get(receipt_field)
-        if not isinstance(recorded, str) or recorded.casefold() != value.casefold():
+        if not isinstance(recorded, str):
+            raise ValueError("TRAINING_RECEIPT_DATASET_MISMATCH")
+        # A dataset ID, revision or approval is case-sensitive. Only a
+        # validated SHA-256 hexadecimal representation may vary by case.
+        if field.endswith("_sha256"):
+            if re.fullmatch(r"[0-9a-fA-F]{64}", recorded) is None or recorded.lower() != value.lower():
+                raise ValueError("TRAINING_RECEIPT_DATASET_MISMATCH")
+        elif recorded != value:
             raise ValueError("TRAINING_RECEIPT_DATASET_MISMATCH")
     for field in ("train_sha256", "holdout_sha256"):
         if re.fullmatch(r"[0-9a-fA-F]{64}", manifest[field]) is None:
@@ -77,10 +119,7 @@ def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
     )
     if result.returncode != 0:
         raise ValueError("RIGHTS_VERIFIER_REJECTED_MANIFEST")
-    try:
-        attestation = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise ValueError("RIGHTS_VERIFIER_INVALID_RESPONSE") from exc
+    attestation = parse_strict_json_object(result.stdout, maximum=65_536)
     expected_attestation = {
         "schema": "nox-rights-attestation-v1",
         "status": "VERIFIED",
@@ -93,11 +132,18 @@ def verify_dataset_attestation(manifest_path: Path, verifier_path: Path,
         "holdout_sha256": manifest["holdout_sha256"].lower(),
         "intent": "training",
     }
-    if (not isinstance(attestation, dict)
-            or any(not isinstance(attestation.get(key), str)
-                   or attestation[key].casefold() != expected.casefold()
-                   for key, expected in expected_attestation.items())
-            or not isinstance(attestation.get("attestation_id"), str)
+    digest_fields = {"manifest_sha256", "train_sha256", "holdout_sha256"}
+    for key, expected in expected_attestation.items():
+        actual = attestation.get(key)
+        if not isinstance(actual, str):
+            raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+        if key in digest_fields:
+            if (re.fullmatch(r"[0-9a-fA-F]{64}", actual) is None
+                    or actual.lower() != expected.lower()):
+                raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+        elif actual != expected:
+            raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
+    if (not isinstance(attestation.get("attestation_id"), str)
             or not attestation["attestation_id"].strip()):
         raise ValueError("RIGHTS_VERIFIER_ATTESTATION_MISMATCH")
     attestation_sha = hashlib.sha256(
@@ -132,21 +178,30 @@ def sha256_file(path: Path) -> str:
 def tree_sha256(root: Path, *, skip_merge_receipt: bool = False) -> str:
     if root.is_symlink() or not root.is_dir():
         raise ValueError("MODEL_TREE_NOT_REGULAR_DIRECTORY")
+    reject_reparse_ancestors(root.absolute())
+    root_info = root.lstat()
+    if getattr(root_info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0):
+        raise ValueError("REPARSE_POINT_IN_MODEL_TREE")
     digest = hashlib.sha256()
-    files = sorted(root.rglob("*"))
-    regular_files = [path for path in files if path.is_file()]
-    if not regular_files:
-        raise ValueError("MODEL_TREE_EMPTY")
+    files = sorted(root.rglob("*"), key=lambda path: path.relative_to(root).as_posix())
+    count = 0
     for path in files:
-        if path.is_symlink():
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
             raise ValueError("SYMLINK_IN_MODEL_TREE")
-    for path in regular_files:
+        if getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0):
+            raise ValueError("REPARSE_POINT_IN_MODEL_TREE")
+        if not stat.S_ISREG(info.st_mode):
+            continue
         if skip_merge_receipt and path.relative_to(root).as_posix() == "merge-receipt.json":
             continue
+        count += 1
         relative = path.relative_to(root).as_posix().encode("utf-8")
         digest.update(len(relative).to_bytes(4, "big"))
         digest.update(relative)
         digest.update(bytes.fromhex(sha256_file(path)))
+    if count == 0:
+        raise ValueError("MODEL_TREE_EMPTY")
     return digest.hexdigest()
 
 
@@ -212,11 +267,15 @@ def main() -> int:
         baseline_loss = training.get("baseline_eval_loss")
         adapter_loss = training.get("adapter_eval_loss")
         baseline_loss, adapter_loss = verified_loss_improvement(baseline_loss, adapter_loss)
+        if training.get("evaluation_status") != "VALID":
+            raise ValueError("MERGE_REQUIRES_VALID_EVALUATION_RECEIPT")
         if args.output_dir.is_symlink():
             raise ValueError("MERGE_OUTPUT_MUST_NOT_BE_SYMLINK")
         output = args.output_dir.absolute()
         if output.exists() or output.is_symlink() or not output.parent.is_dir() or output.parent.is_symlink():
             raise ValueError("MERGE_OUTPUT_MUST_BE_NEW_DIRECTORY_IN_EXISTING_PARENT")
+        training_receipt_hash = sha256_file(receipt_path)
+        consent_manifest_hash = sha256_file(dataset_manifest_path)
         temp_output = Path(tempfile.mkdtemp(prefix=".nox-merge-", dir=output.parent))
 
         import torch
@@ -237,6 +296,13 @@ def main() -> int:
         del merged, tuned, base
         torch.cuda.empty_cache()
 
+        # Re-hash immutable inputs after the expensive model load/merge;
+        # never publish a result after a concurrent dataset/model/adapter swap.
+        if (tree_sha256(model_dir).lower() != snapshot_hash.lower()
+                or tree_sha256(adapter_dir).lower() != receipt["adapter_sha256"].lower()
+                or sha256_file(receipt_path) != training_receipt_hash
+                or sha256_file(dataset_manifest_path) != consent_manifest_hash):
+            raise ValueError("MERGE_INPUTS_CHANGED_DURING_EXECUTION")
         payload_hash = tree_sha256(temp_output)
         merge_receipt = {
             "schema": "NOX-QLORA-MERGE-RECEIPT-v1",
@@ -244,7 +310,7 @@ def main() -> int:
             "model_id": model_id,
             "model_revision": revision,
             "model_snapshot_sha256": snapshot_hash.lower(),
-            "training_receipt_sha256": sha256_file(receipt_path),
+            "training_receipt_sha256": training_receipt_hash,
             "adapter_sha256": receipt["adapter_sha256"].lower(),
             "adapter_eval_loss": float(adapter_loss),
             "baseline_eval_loss": float(baseline_loss),
@@ -253,6 +319,9 @@ def main() -> int:
         }
         (temp_output / "merge-receipt.json").write_text(
             json.dumps(merge_receipt, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        reject_reparse_ancestors(output.absolute())
+        if output.exists() or output.is_symlink():
+            raise ValueError("MERGE_OUTPUT_TARGET_CHANGED")
         os.rename(temp_output, output)
         temp_output = None
         print(json.dumps({"status": "CREATED", "output": str(output), "payload_sha256": payload_hash}))
