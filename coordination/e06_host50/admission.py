@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import re
 import secrets
+import threading
 import time
 import uuid
 from urllib.parse import urlsplit
@@ -277,6 +278,9 @@ class Host50Admission:
         self.capabilities = dict(capabilities)
         self.pending = {}
         self.pending_deadlines = {}
+        # Existing in-process admission state; NOT a second DB/host.
+        # Both capacity reservation and ACK consumption must be atomic.
+        self._pending_lock = threading.RLock()
 
     def _reap_pending(self, now: float) -> None:
         """Bound the existing in-process admission store, never a second database."""
@@ -315,7 +319,8 @@ class Host50Admission:
     def _cap(self, row: dict) -> Capability:
         c = self.capabilities.get(row["routeId"])
         if (not isinstance(c, Capability) or not row["sourceBinding"] or
-            c.route != row["routeId"] or c.owner != row["owner"] or
+            c.route != row["routeId"] or type(c.owner) is not int or
+            c.owner != row["owner"] or
             c.handler != row["sourceBinding"] or c.frozen_tree != BASE_TREE or
             not SHA256.fullmatch(c.owner_receipt_sha256) or
             c.integrated is not True or c.ready is not True):
@@ -370,10 +375,10 @@ class Host50Admission:
                 if verified is not True:
                     raise Denied("UNVERIFIED_NATIVE_SELECT_VALUE")
         cap = self._cap(row)
-        now = time.monotonic()
-        self._reap_pending(now)
-        if len(self.pending) >= MAX_PENDING:
-            raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
+        with self._pending_lock:
+            self._reap_pending(time.monotonic())
+            if len(self.pending) >= MAX_PENDING:
+                raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
         if row["risk"] != "safe" and route not in session.sensitive:
             raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
         if row["risk"] == "dangerous" and (
@@ -425,11 +430,22 @@ class Host50Admission:
                   "fileTicketSha256":hashlib.sha256(file_info.ticket.encode("utf-8")).hexdigest()
                       if file_info else None,
                   "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
-        self.pending[run_id] = ticket
-        self.pending_deadlines[run_id] = time.monotonic() + ACK_LEASE_SECONDS
+        with self._pending_lock:
+            # Second check closes the race across native consent/device/picker
+            # callbacks, none of which should run under the pending mutex.
+            self._reap_pending(time.monotonic())
+            if len(self.pending) >= MAX_PENDING:
+                raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
+            self.pending[run_id] = ticket
+            self.pending_deadlines[run_id] = time.monotonic() + ACK_LEASE_SECONDS
         return dict(ticket)
 
     def finish(self, run_id: str, native_ack: dict) -> dict:
+        """Consume each signed native ACK exactly once, even across threads."""
+        with self._pending_lock:
+            return self._finish_locked(run_id, native_ack)
+
+    def _finish_locked(self, run_id: str, native_ack: dict) -> dict:
         """ACK only after EXISTING owner handler performed a real action.
         Not a new executor. No page-provided OK can produce completed status.
         """
@@ -451,7 +467,8 @@ class Host50Admission:
             authenticated = False
         if (not authenticated or
             body.get("runId")!=run_id or body.get("taskId")!=ticket["taskId"] or
-            body.get("routeId")!=ticket["routeId"] or body.get("owner")!=ticket["owner"] or
+            body.get("routeId")!=ticket["routeId"] or
+            type(body.get("owner")) is not int or body.get("owner")!=ticket["owner"] or
             body.get("ownerReceiptSha256")!=ticket["ownerReceiptSha256"] or
             body.get("payloadSha256")!=ticket["payloadSha256"] or
             body.get("sourceLockTree")!=ticket["sourceLockTree"] or
