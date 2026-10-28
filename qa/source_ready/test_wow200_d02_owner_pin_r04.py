@@ -24,7 +24,7 @@ def git_blob_sha(path: Path) -> str:
     if not path.is_file() or path.is_symlink():
         raise AssertionError("MISSING_OR_SYMLINK_SOURCE:" + str(path))
     raw = path.read_bytes()
-    return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\\0" + raw).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw).hexdigest()
 
 
 def approved_pins():
