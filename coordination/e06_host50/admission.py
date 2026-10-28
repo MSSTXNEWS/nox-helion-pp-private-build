@@ -11,6 +11,8 @@ from dataclasses import dataclass
 import hashlib
 import hmac
 import json
+import os
+import stat
 from pathlib import Path
 from types import MappingProxyType
 import re
@@ -544,15 +546,72 @@ class Host50Admission:
         return result
 
 
+# Audit inputs are untrusted *source descriptions*, not executable host files.
+# A digest of a second read must never be attached to a different parsed first read.
+MAX_AUDIT_SOURCE_BYTES = 8 * 1024 * 1024
+REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+
+
+def _snapshot_source_bytes(path: Path) -> bytes:
+    """Read one bounded regular-file snapshot and keep its provenance together.
+
+    This is a component-level source audit. It is NOT a Windows SourceLock or
+    an atomic native-host deployment attestation.
+    """
+    try:
+        # Include every existing ancestor: on Windows a directory junction is
+        # not necessarily reported by Path.is_symlink() on older Python builds.
+        for ancestor in (path, *path.parents):
+            st = ancestor.lstat()
+            if stat.S_ISLNK(st.st_mode) or (getattr(st, "st_file_attributes", 0) & REPARSE_POINT):
+                raise Hold("AUDIT_SOURCE_REPARSE_POINT")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(path, flags)
+        with os.fdopen(fd, "rb") as source:
+            opened = os.fstat(source.fileno())
+            if (not stat.S_ISREG(opened.st_mode) or
+                (getattr(opened, "st_file_attributes", 0) & REPARSE_POINT) or
+                opened.st_size > MAX_AUDIT_SOURCE_BYTES):
+                raise Hold("AUDIT_SOURCE_NOT_BOUNDED_REGULAR_FILE")
+            data = source.read(MAX_AUDIT_SOURCE_BYTES + 1)
+            if len(data) > MAX_AUDIT_SOURCE_BYTES:
+                raise Hold("AUDIT_SOURCE_TOO_LARGE")
+            current = path.lstat()
+            if ((opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino) or
+                stat.S_ISLNK(current.st_mode) or
+                (getattr(current, "st_file_attributes", 0) & REPARSE_POINT)):
+                raise Hold("AUDIT_SOURCE_CHANGED_DURING_READ")
+        return data
+    except Hold:
+        raise
+    except (OSError, ValueError) as exc:
+        raise Hold("INVALID_SOURCE_FILE") from exc
+
+
+def _strict_json_object_pairs(pairs: list[tuple[str, object]]) -> dict:
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise Hold("AUDIT_DUPLICATE_JSON_KEY")
+        out[key] = value
+    return out
+
+
 def run_read_only_audit(catalog_path: str, bindings_path: str) -> dict:
-    src1,src2=Path(catalog_path),Path(bindings_path)
-    if any(p.is_symlink() or not p.is_file() for p in (src1,src2)):
-        raise Hold("INVALID_SOURCE_FILE")
-    a=json.loads(src1.read_text(encoding="utf-8"))
-    b=json.loads(src2.read_text(encoding="utf-8"))
-    result=audit_registry(a,b)
-    result["catalogSha256"]=hashlib.sha256(src1.read_bytes()).hexdigest()
-    result["bindingMapSha256"]=hashlib.sha256(src2.read_bytes()).hexdigest()
+    src1, src2 = Path(catalog_path), Path(bindings_path)
+    # Exactly one byte sequence is parsed AND hashed for each provenance entry.
+    catalog_bytes = _snapshot_source_bytes(src1)
+    binding_bytes = _snapshot_source_bytes(src2)
+    try:
+        a = json.loads(catalog_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
+        b = json.loads(binding_bytes.decode("utf-8"), object_pairs_hook=_strict_json_object_pairs)
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise Hold("AUDIT_INVALID_UTF8_JSON") from exc
+    if not isinstance(a, dict) or not isinstance(b, dict):
+        raise Hold("AUDIT_REQUIRES_JSON_OBJECTS")
+    result = audit_registry(a, b)
+    result["catalogSha256"] = hashlib.sha256(catalog_bytes).hexdigest()
+    result["bindingMapSha256"] = hashlib.sha256(binding_bytes).hexdigest()
     return result
 
 
