@@ -69,8 +69,10 @@ export function translateNativeEvent(raw,now=Date.now()){
 export function reviewWowScopes(pack01=null){
   validateCueCatalog();validateShots();
   const groups=Object.freeze({
-    uiFirst50:50,materialsAndAtmosphere51to100:CUES.length,
-    director101to150:SHOTS.length,aggregate:150
+    uiFirst50:pack01===null?0:50,
+    materialsAndAtmosphere51to100:CUES.length,
+    director101to150:SHOTS.length,
+    aggregate:pack01===null?100:150
   });
   if(pack01!==null){
     if(!Array.isArray(pack01?.actions)||pack01.actions.length!==50||
@@ -80,6 +82,7 @@ export function reviewWowScopes(pack01=null){
   return Object.freeze({groups,hostDrivenAvailable:
     Object.freeze([81,85,86,87,89]),
     hostDrivenHold:Object.freeze([82,83,84,88,90]),
+    externalUiPrerequisite:pack01===null,
     notEquivalentToAcceptedExe:true});
 }
 
