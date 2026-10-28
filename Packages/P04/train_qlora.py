@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -198,9 +199,12 @@ def read_object(path: Path) -> dict[str, Any]:
 
     def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         obj: dict[str, Any] = {}
+        seen: set[str] = set()
         for key, value in pairs:
-            if key in obj:
+            identity = unicodedata.normalize("NFC", key).casefold()
+            if identity in seen:
                 raise ValueError("INPUT_JSON_DUPLICATE_KEY")
+            seen.add(identity)
             obj[key] = value
         return obj
 
@@ -235,9 +239,12 @@ def parse_rights_verifier_response(text: str) -> dict[str, Any]:
 
     def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         value = {}
+        seen: set[str] = set()
         for key, item in pairs:
-            if key in value:
+            identity = unicodedata.normalize("NFC", key).casefold()
+            if identity in seen:
                 raise ValueError("RIGHTS_VERIFIER_DUPLICATE_KEY")
+            seen.add(identity)
             value[key] = item
         return value
 
@@ -367,9 +374,12 @@ def parse_dataset_record(line: str, label: str, number: int) -> dict[str, Any]:
     """
     def unique_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         obj = {}
+        seen: set[str] = set()
         for key, value in pairs:
-            if key in obj:
+            identity = unicodedata.normalize("NFC", key).casefold()
+            if identity in seen:
                 raise ValueError(f"{label}_JSON_DUPLICATE_KEY_{number}")
+            seen.add(identity)
             obj[key] = value
         return obj
 
