@@ -59,6 +59,15 @@ jobs:
       if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
       python tests/P04/test_e04_role_type_before_membership.py
       if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
+      # Existing E06 P02/P04 owner seam regressions: deterministic native stubs only.
+      # Pass is NOT installed Windows/GPU/SQLite/Ollama acceptance.
+      python -m unittest discover -s tests/e06 -p 'test_onehost_post_history_r10.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_ONEHOST_OFFLINE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_binding_drift_r09.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_OWNER_BINDING_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_wire_type_r08.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_JSON_WIRE_REGRESSION_HOLD' }
+      Write-Host 'E06_MOCK_CONTRACT_GATE_ONLY_NOT_E07_NATIVE_ACCEPTANCE'
       & ./private_build.ps1
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
       python coordination/e06/stage_p01.py
