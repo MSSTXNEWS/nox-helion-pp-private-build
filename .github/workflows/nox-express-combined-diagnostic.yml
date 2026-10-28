@@ -101,7 +101,7 @@ jobs:
           & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $nsisPath 'Verify-Payload.ps1') -Root $stage -Manifest (Join-Path $stage 'payload.sha256.json')
           if($LASTEXITCODE -ne 0){throw 'ORIGINAL_OWNER_P01_PAYLOAD_VERIFY_FAIL'}
           "NOX_EXPRESS_STAGE=$stage" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
-          "NOX_EXPRESS_NSIS=$nsisPath" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
+          "NOX_EXPRESS_NSIS=$((Resolve-Path -LiteralPath $nsisPath).Path)" | Out-File -LiteralPath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "NOX_EXPRESS_PINNED_SOURCELOCK_AND_ASSETS_PASS: files=$($files.Count) Main UI WPF; Python components inert"
       - name: Compile combined diagnostic NSIS setup
         shell: pwsh
