@@ -36,6 +36,9 @@ EVENT_STATES = frozenset(("QUEUED", "RUNNING", "PAUSED", "COMPLETED",
     "ERROR", "STOPPED", "OFFLINE", "HOLD", "READY", "N_D"))
 SENSORS = frozenset(("cpu.system.percent", "gpu.percent",
     "gpu.vram.used_bytes", "gpu.vram.total_bytes", "gpu.temperature.c"))
+P02_REQUIRED = frozenset(("helion.chat", "core.chat", "persona.chat",
+    "chat.model", "chat.history", "chat.stop"))
+P03_REQUIRED = frozenset(("models.catalog", "models.installed", "models.digest"))
 
 
 class G2Hold(RuntimeError):
@@ -116,7 +119,7 @@ class ExistingE05Projection:
             tile = matched[0]
             ok = (tile.get("Status") == "SOURCE_DATED"
                   and isinstance(tile.get("Source"), str)
-                  and 0 < len(tile["Source"]) <= 100
+                  and 0 < len(tile["Source"].strip()) <= 100
                   and _fresh(tile.get("SourceUtc"), now, 24 * 3600)
                   and _fresh(tile.get("FetchedUtc"), now, 24 * 3600)
                   and _stamp(tile.get("SourceUtc")) <= _stamp(tile.get("FetchedUtc"))
@@ -143,7 +146,9 @@ class ExistingE05Projection:
             value = sample.get("Value")
             good = (sample.get("Status") == "LIVE"
                     and type(value) in (int, float) and math.isfinite(value)
-                    and value >= 0 and (not key.endswith("percent") or value <= 100)
+                    and value >= 0
+                    and (not key.endswith("_bytes") or type(value) is int)
+                    and (not key.endswith("percent") or value <= 100)
                     and (key != "gpu.temperature.c" or value <= 150)
                     and isinstance(sample.get("Source"), str)
                     and bool(sample["Source"])
@@ -154,13 +159,19 @@ class ExistingE05Projection:
                          "source": sample["Source"] if good else None}
             observed_by_key[key] = sample.get("ObservedAtUtc") if good else None
         used, total = safe.get("gpu.vram.used_bytes"), safe.get("gpu.vram.total_bytes")
-        if (used and total and used["value"] is not None and total["value"] is not None
-                and (total["value"] <= 0 or used["value"] > total["value"]
-                     or used["source"] != total["source"]
-                     or observed_by_key.get("gpu.vram.used_bytes") !=
-                        observed_by_key.get("gpu.vram.total_bytes"))):
-            for key in ("gpu.vram.used_bytes", "gpu.vram.total_bytes"):
-                safe[key] = {"value": None, "status": "N_D", "source": None}
+        # Two VRAM counters form ONE sample: partial or fractional bytes are N/D.
+        if used is not None or total is not None:
+            paired = (
+                used is not None and total is not None
+                and used["value"] is not None and total["value"] is not None
+                and total["value"] > 0 and used["value"] <= total["value"]
+                and used["source"] == total["source"]
+                and observed_by_key.get("gpu.vram.used_bytes") ==
+                    observed_by_key.get("gpu.vram.total_bytes")
+            )
+            if not paired:
+                for key in ("gpu.vram.used_bytes", "gpu.vram.total_bytes"):
+                    safe[key] = {"value": None, "status": "N_D", "source": None}
         seal = getattr(self.owner, "product_receipts_sealed", None)
         percent = raw.get("ProductProgress")
         verified = callable(seal) and seal() is True
@@ -265,6 +276,8 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
             or event.get("event_type") not in EVENT_TYPES
             or event.get("state") not in EVENT_STATES
             or type(event.get("evidence_verified")) is not bool
+            or not isinstance(event.get("message"), str)
+            or len(event["message"]) > 480
             or not _stamp(event.get("timestamp_utc"))
             or any(not isinstance(event.get(k), str) or
                    not 0 < len(event[k]) <= 240
@@ -286,6 +299,13 @@ def relay_existing_events_v3(event: dict, *, run_id: str,
             raise G2Hold("Native event evidence verification failed") from exc
         if not attested or not still_sealed:
             raise G2Hold("Verified event lacks native receipt or stable SourceLock")
+    # Even an unverified progress event must not cross a revoked SourceLock.
+    try:
+        still_sealed = trusted_owner() is True
+    except Exception as exc:
+        raise G2Hold("SourceLock check failed immediately before publish") from exc
+    if not still_sealed:
+        raise G2Hold("SourceLock revoked before existing events.v3 publish")
     return existing_publish(dict(event)) is True
 
 
@@ -362,14 +382,41 @@ class G2OneHostBinder:
                 p2 = self.p02.register(self.host, receipt=self._receipt("P02"))
                 p3 = self.p03.register(self.host, self.port_type,
                                       receipt=self._receipt("P03"))
+                # Registration reports alone are not evidence of installed ports.
+                claimed = set()
+                for owner_no, routes, mandatory, name in (
+                    (2, p2, P02_REQUIRED, "P02"),
+                    (3, p3, P03_REQUIRED, "P03"),
+                ):
+                    if (not isinstance(routes, (set, frozenset))
+                            or not mandatory.issubset(routes)):
+                        raise G2Hold("Missing original mandatory " + name + " routes")
+                    for route in routes:
+                        port = self.host.ports.get(route)
+                        if (not isinstance(route, str) or route not in frozen_routes
+                                or port is None
+                                or getattr(port, "owner", None) != owner_no
+                                or getattr(port, "evidence_id", None) != self._receipt(name)):
+                            raise G2Hold("Unattested owner route registration: " + str(route))
+                        claimed.add(route)
+                if set(p2) & set(p3) or claimed & intended:
+                    raise G2Hold("Cross-owner route collision on one host")
                 for route in sorted(e05_routes):
                     self.host.bind(route, self.port_type(
                         lambda s, a, r=route: self.e05.read(s, r, a),
                         lambda r=route: self.e05.available(r),
                         self._receipt("P05"), 5))
+                def voice_ready(route):
+                    try:
+                        return (self.voice.available(route) is True
+                            and (route != "calls.dial"
+                                 or (self.voice.verified_sip() is True
+                                     and callable(getattr(self.host, "native_approve", None)))))
+                    except Exception:
+                        return False
                 for route, handler in sorted(voice_routes.items()):
                     self.host.bind(route, self.port_type(
-                        handler, lambda r=route: self.voice.available(r),
+                        handler, lambda r=route: voice_ready(r),
                         self._receipt("P02"), 2))
                 if "mobile.connect" in mobile_routes:
                     self.host.bind("mobile.connect", self.port_type(
