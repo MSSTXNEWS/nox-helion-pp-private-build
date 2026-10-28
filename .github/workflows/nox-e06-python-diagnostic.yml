@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          .\private_build.ps1
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\private_build.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record candidate identity without false acceptance
         if: always()
