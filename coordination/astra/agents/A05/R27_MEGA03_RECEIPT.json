@@ -1,0 +1,31 @@
+{
+  "agent": "/root/a05",
+  "run_id": "ASTRA-R27-A05-20261029-03",
+  "approaches_completed": 3,
+  "planned_approaches": 10,
+  "source_parent": "9fa42dd868cafe74f2c53f60958d1129861787fa",
+  "task": "fix(p02): validate and snapshot voice request before one-use capture",
+  "test_result": "4 focused imported-module tests PASS; malformed metadata never consumes capture or prompts; callback mutation isolated; RU-ES/ES-RU MAESTRO preserved",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_sha256": "31a0b726cb4554dbf4dbe93594a5250589c2415aef9766d12f15e7e60966912d",
+      "post_sha256": "f0663045dfea3aaa8e6fc8cec29c17e0e24ae6f55241f2643a1dbbd50a5acbd6",
+      "git_blob": "c7576e29f15571889fdcbdc33073e8ce719d2496"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_sha256": "3244884ca68981b34ef55dc9109a9ae149348ba3aac5a93d0ae7ceeb86a922c6",
+      "post_sha256": "65ec76b3e2558341910fe3eab31073fae98d6340ebd0020d4c399b3173c3a48a",
+      "git_blob": "896dfd9cbfd2e9f56793f89d4e98c33e21e33071"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_request_r27.py",
+      "pre_sha256": null,
+      "post_sha256": "ed044881f4932b1c03f9435aa0c5d53d7186b91b0338b90bbff72007161505d7",
+      "git_blob": "65d9cbcf537235b79d783d4ec5b41064cf08591d"
+    }
+  ],
+  "native_hardware": "NOT_RUN",
+  "no_final_integration": true
+}

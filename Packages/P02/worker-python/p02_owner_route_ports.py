@@ -113,15 +113,21 @@ class OwnerTwoPorts:
 
     def captured_voice(self, scope: NativeScope, args: dict, stop: threading.Event | None = None) -> dict:
         """Consume ONLY native-host-captured audio; never accept JS audio/path bytes."""
+        if (type(args) is not dict or any(key in args for key in
+                ("audio", "audio_path", "microphone_consent", "mic_consent"))):
+            raise PermissionError("Audio and consent must come from trusted native capture")
+        # Capture primitive request values before any native callback can mutate
+        # the caller's request. Invalid input must not burn a one-use capture.
+        cap_id = args.get("capture_id")
+        source, target, voice = args.get("source"), args.get("target"), args.get("voice")
+        mode, level = args.get("mode", "translate"), args.get("level", "A2")
         self._session(scope, "chat.voice")
         if not self.available("chat.voice"):
             raise RouteHold("INSTALLED_LOCAL_ASR_TTS_OR_HOST_CAPTURE_HOLD")
-        if (not isinstance(args, dict) or any(key in args for key in
-                ("audio", "audio_path", "microphone_consent", "mic_consent"))):
-            raise PermissionError("Audio and consent must come from trusted native capture")
-        cap_id = args.get("capture_id")
-        if not isinstance(cap_id, str) or not _TOKEN.fullmatch(cap_id):
+        if type(cap_id) is not str or not _TOKEN.fullmatch(cap_id):
             raise ValueError("Opaque native capture id required")
+        self.voice.validate_request(scope.identity, source=source, target=target,
+                                    voice=voice, mode=mode, level=level)
         # STOP before consumption must preserve the one-use native capture.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
@@ -143,9 +149,8 @@ class OwnerTwoPorts:
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
         result = self.voice.run(
-            scope.identity, audio, source=args.get("source"), target=args.get("target"),
-            voice=args.get("voice"), mode=args.get("mode", "translate"),
-            level=args.get("level", "A2"), microphone_consent=consented, stop=stop)
+            scope.identity, audio, source=source, target=target, voice=voice,
+            mode=mode, level=level, microphone_consent=consented, stop=stop)
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")

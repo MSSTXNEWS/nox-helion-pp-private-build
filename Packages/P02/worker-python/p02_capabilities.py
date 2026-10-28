@@ -78,6 +78,20 @@ class LocalVoicePipeline:
         self.approved_models = approved_models
         self.permitted_voices = permitted_voices
 
+    def validate_request(self, scope: Identity, *, source: str, target: str,
+                         voice: str, mode: str = 'translate', level: str = 'A2') -> None:
+        """Pure preflight, shared with native capture admission before consumption."""
+        if (type(source) is not str or type(target) is not str
+                or source not in LANG or target not in LANG or source == target):
+            raise ValueError('Only RU↔ES is enabled')
+        if type(voice) is not str or voice not in self.permitted_voices:
+            raise PermissionError('Unapproved voice identity')
+        if (type(mode) is not str or type(level) is not str
+                or mode not in ('translate', 'maestro') or level not in LEVELS):
+            raise ValueError('Unsupported voice mode or learning level')
+        if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
+            raise PermissionError('Missing trusted native principal')
+
     def run(self, scope: Identity, audio: bytes, *, source: str, target: str,
             voice: str, mode: str = 'translate', level: str = 'A2',
             microphone_consent: bool = False,
@@ -91,14 +105,8 @@ class LocalVoicePipeline:
             raise P02Error('LOCAL_ASR_LLM_TTS_PROVIDER_HOLD')
         if not isinstance(audio, bytes) or not 0 < len(audio) <= 16 * 1024 * 1024:
             raise ValueError('Invalid capped microphone audio buffer')
-        if source not in LANG or target not in LANG or source == target:
-            raise ValueError('Only RU↔ES is enabled')
-        if voice not in self.permitted_voices:
-            raise PermissionError('Unapproved voice identity')
-        if mode not in ('translate', 'maestro') or level not in LEVELS:
-            raise ValueError('Unsupported voice mode or learning level')
-        if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
-            raise PermissionError('Missing trusted native principal')
+        self.validate_request(scope, source=source, target=target, voice=voice,
+                              mode=mode, level=level)
         transcript = self.asr(scope, audio, source, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after ASR')
         if not isinstance(transcript, str) or not 0 < len(transcript) <= 20000:
