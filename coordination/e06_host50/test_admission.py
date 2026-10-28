@@ -380,5 +380,77 @@ class HostThreadSafetyTests(unittest.TestCase):
         self.assertEqual(results.count('HOLD'),40)
         self.assertEqual(len(self.host.pending),MAX_PENDING)
 
+
+class HostAdmissionR07TOCTOUTests(unittest.TestCase):
+    """Host-only races and post-audit mutation; synthetic capabilities, NO Windows claim."""
+    def setUp(self):
+        HostScopeAndReceiptTests.setUp(self)
+
+    def _file(self):
+        from admission import NativeFileSelection
+        return NativeFileSelection(ticket='native-ticket-not-a-path',sha256='c'*64,
+            size_bytes=91,tenant='tenant',principal='person',chat='chat1')
+
+    def test_page_request_mutation_during_native_picker_is_denied(self):
+        req=HostScopeAndReceiptTests.req(self,'chat.attach','NIP01-06')
+        def picker(*_):
+            req['routeId']='system.pc_control'
+            return self._file()
+        with self.assertRaisesRegex(Denied,'REQUEST_MUTATED_DURING_NATIVE_CHECKS'):
+            self.host.admit(session=self.s,actual_origin=self.s.origin,
+                request=req,native_file_picker=picker)
+        self.assertEqual(self.host.pending,{})
+
+    def test_page_select_mutation_during_native_verifier_is_denied(self):
+        from admission import Host50Admission
+        self.cat['actions'][0]['settings']=[{'key':'model','kind':'select',
+                                             'source':'host.models.installed'}]
+        host=Host50Admission(self.cat,self.mapping,signing_key=self.host.key,
+            allowed_origins={'https://nox.invalid'},active_tree=BASE_TREE,
+            capabilities=self.host.capabilities)
+        req=HostScopeAndReceiptTests.req(self,'helion.chat','NIP01-01')
+        req['settings']={'model':'installed-good'}
+        def verifier(*_):
+            req['settings']['model']='forged-after-native-proof'
+            return True
+        with self.assertRaisesRegex(Denied,'REQUEST_MUTATED_DURING_NATIVE_CHECKS'):
+            host.admit(session=self.s,actual_origin=self.s.origin,request=req,
+                       native_option_verifier=verifier)
+        self.assertEqual(host.pending,{})
+
+    def test_expired_session_after_native_picker_is_denied(self):
+        from unittest.mock import patch
+        now=[2000000000]
+        with patch('admission.time.time', side_effect=lambda:now[0]):
+            s=self.host.issue_session(tenant='tenant',principal='person',chat='chat1',
+                origin='https://nox.invalid',scopes=('chat.attach',),
+                sensitive=('chat.attach',),duration_seconds=30)
+            def picker(*_):
+                now[0]+=31
+                return self._file()
+            with self.assertRaisesRegex(Denied,'AUTH_INVALID_OR_EXPIRED'):
+                self.host.admit(session=s,actual_origin=s.origin,
+                    request=HostScopeAndReceiptTests.req(self,'chat.attach','NIP01-06'),
+                    native_file_picker=picker)
+        self.assertEqual(self.host.pending,{})
+
+    def test_capability_revocation_during_native_picker_is_hold(self):
+        from dataclasses import replace
+        def picker(*_):
+            cap=self.host.capabilities['chat.attach']
+            self.host.capabilities['chat.attach']=replace(cap,ready=False)
+            return self._file()
+        with self.assertRaisesRegex(Hold,'NATIVE_OWNER_CAPABILITY_UNVERIFIED'):
+            self.host.admit(session=self.s,actual_origin=self.s.origin,
+                request=HostScopeAndReceiptTests.req(self,'chat.attach','NIP01-06'),
+                native_file_picker=picker)
+        self.assertEqual(self.host.pending,{})
+
+    def test_native_policy_is_immutable_after_constructor_audit(self):
+        with self.assertRaises(TypeError):
+            self.host.by_route['chat.attach']['risk']='safe'
+        with self.assertRaises(TypeError):
+            self.host.by_route['chat.attach']={'risk':'safe'}
+
 if __name__ == "__main__":
     unittest.main()

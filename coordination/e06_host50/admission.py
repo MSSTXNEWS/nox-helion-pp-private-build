@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import json
 from pathlib import Path
+from types import MappingProxyType
 import re
 import secrets
 import threading
@@ -274,7 +275,21 @@ class Host50Admission:
             raise Hold("WHOLE_TREE_SOURCELOCK_NOT_RECONCILED")
         self.key = signing_key
         self.origins = frozenset(allowed_origins)
-        self.by_route = {x["routeId"]: x for x in self.audit["routes"]}
+        # Freeze executable policy after the audited catalog has been read.
+        # A later catalog/UI mutation must never lower risk, owner, or select rules.
+        # Keep separate from reporting rows, which are not authority to dispatch.
+        frozen = {}
+        for x in self.audit["routes"]:
+            frozen[x["routeId"]] = MappingProxyType({
+                "taskId": x["taskId"], "routeId": x["routeId"],
+                "owner": x["owner"], "risk": x["risk"],
+                "sourceBinding": x["sourceBinding"],
+                "allowedSettings": frozenset(x["allowedSettings"]),
+                "settingPolicy": MappingProxyType({
+                    key: MappingProxyType(dict(policy))
+                    for key, policy in x["settingPolicy"].items()}),
+            })
+        self.by_route = MappingProxyType(frozen)
         self.capabilities = dict(capabilities)
         self.pending = {}
         self.pending_deadlines = {}
@@ -431,8 +446,21 @@ class Host50Admission:
                       if file_info else None,
                   "state":"ADMITTED_NOT_EXECUTED","nativeAck":"PENDING"}
         with self._pending_lock:
-            # Second check closes the race across native consent/device/picker
-            # callbacks, none of which should run under the pending mutex.
+            # Native checks may call UI/native code and take arbitrary time.
+            # A mutable WebView2 request, expired session or revoked capability
+            # cannot be admitted based on the earlier pre-callback snapshot.
+            self._verify_session(session, actual_origin)
+            try:
+                still_raw = canonical(request)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise Denied("REQUEST_MUTATED_DURING_NATIVE_CHECKS") from exc
+            if still_raw != raw:
+                raise Denied("REQUEST_MUTATED_DURING_NATIVE_CHECKS")
+            if self._cap(row) != cap:
+                raise Hold("NATIVE_CAPABILITY_CHANGED_DURING_ADMISSION")
+            # Only the existing native owner may execute the exact approved
+            # payload; the page request object is never a dispatch authority.
+            # Its hash must match payloadSha256 in the eventual sealed ACK.
             self._reap_pending(time.monotonic())
             if len(self.pending) >= MAX_PENDING:
                 raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
