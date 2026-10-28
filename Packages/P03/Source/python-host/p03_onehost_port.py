@@ -180,26 +180,37 @@ class P03OneHostPort:
     def register(self, dispatcher: object, bound_port_type: type, *, receipt: str) -> frozenset[str]:
         if not isinstance(receipt, str) or not receipt.strip():
             raise P03PortHold("SourceLock-bound owner3 receipt required")
-        bound = set()
-        for route, callback, ready in (
+        # Validate the complete owner3 route set BEFORE the first mutation.
+        # A partially registered Models menu would misrepresent capabilities
+        # and could clash with the separate PACK01 P03OwnerPack donor.
+        pending = [
             ("models.catalog", self.catalog, lambda: True),
             ("models.installed", self.installed, self._local_ready),
             ("models.digest", self.digest, self._metadata_ready),
-        ):
-            self._bind(dispatcher, bound_port_type, route, callback, ready, receipt)
-            bound.add(route)
+        ]
         if self.backend is not None:
             for route, method in OWNER_ROUTES.items():
-                # Never advertise a write button when host-native approval cannot run.
                 if route in SENSITIVE and not callable(self.native_approve):
                     continue
                 if not callable(getattr(self.backend, method, None)):
                     continue
-                self._bind(dispatcher, bound_port_type, route,
-                           lambda session, payload, r=route: self.execute_backend(session, r, payload),
-                           self._backend_ready, receipt)
-                bound.add(route)
-        return frozenset(bound)
+                pending.append((
+                    route,
+                    lambda session, payload, r=route: self.execute_backend(session, r, payload),
+                    self._backend_ready,
+                ))
+        host_routes = getattr(dispatcher, "routes", None)
+        ports = getattr(dispatcher, "ports", None)
+        if not isinstance(host_routes, dict) or not isinstance(ports, dict):
+            raise P03PortHold("Existing PACK01 host ports/owner map required")
+        ids = [route for route, _, _ in pending]
+        if len(ids) != len(set(ids)) or any(
+                host_routes.get(route, {}).get("owner") != 3 or route in ports
+                for route in ids):
+            raise P03PortHold("P03 route ownership collision: register none")
+        for route, callback, ready in pending:
+            self._bind(dispatcher, bound_port_type, route, callback, ready, receipt)
+        return frozenset(ids)
 
     def _local_ready(self) -> bool:
         try:
