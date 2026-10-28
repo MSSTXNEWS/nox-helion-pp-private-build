@@ -187,5 +187,52 @@ class IngressTests(unittest.TestCase):
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
             ingress.handle(packet(8))
 
+
+    def test_r27_immutable_host50_mapping_proxy_allows_p03_readonly_routes(self):
+        # Actual native PACK01 freezes both the registry and descriptors as
+        # MappingProxyType. A dict-only P02 admission falsely rejects all
+        # approved ModelCenter read routes even when owner and receipt match.
+        from types import MappingProxyType
+        approved = ("models.catalog", "models.installed", "models.digest")
+        self.provider.routes = MappingProxyType({
+            route: MappingProxyType({"owner": 3}) for route in approved})
+        self.provider.ports = {
+            route: type("Port", (), {
+                "owner": 3, "evidence_id": "R27_PINNED_P03_READ_ONLY",
+                "call": staticmethod(lambda scope, args: {"p03": True}),
+                "available": staticmethod(lambda: True)})()
+            for route in approved}
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        for i, route in enumerate(approved, 201):
+            with self.subTest(route=route):
+                response = json.loads(ingress.handle(packet(i, route)))
+                self.assertEqual(response["status"], "OK")
+                self.assertEqual(response["result"]["route"], route)
+        self.assertEqual([entry[0] for entry in self.provider.seen], list(approved))
+        with self.assertRaises(TypeError):
+            self.provider.routes["models.catalog"]["owner"] = 2
+
+    def test_r27_immutable_wrong_owner_or_missing_port_still_fails_closed(self):
+        from types import MappingProxyType
+        self.provider.routes = MappingProxyType({
+            "models.catalog": MappingProxyType({"owner": True}),
+            "models.installed": MappingProxyType({"owner": 3})})
+        self.provider.ports = {
+            "models.catalog": type("Port", (), {
+                "owner": 3, "evidence_id": "R27_PINNED_P03_READ_ONLY",
+                "call": staticmethod(lambda scope, args: {}),
+                "available": staticmethod(lambda: True)})()}
+        ingress = NativeIngress(self.provider, lambda: self.trusted,
+                                expected_run_id=R, allow_modelcenter_reads=True)
+        for i, route in ((211, "models.catalog"), (212, "models.installed")):
+            with self.subTest(route=route):
+                with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+                    ingress.handle(packet(i, route))
+        self.assertFalse(self.provider.seen)
+        with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
+            ingress.handle(packet(213, "models.pull"))
+
+
 if __name__ == "__main__":
     unittest.main()
