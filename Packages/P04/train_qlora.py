@@ -407,7 +407,9 @@ def validate_jsonl(path: Path, label: str) -> int:
                 raise ValueError(f"{label}_ROW_NEEDS_TEXT_OR_MESSAGES_{number}")
             valid_assistant = False
             for item in messages:
-                if (not isinstance(item, dict) or item.get("role") not in {"system", "user", "assistant"}
+                if (not isinstance(item, dict)
+                        or not isinstance(item.get("role"), str)
+                        or item["role"] not in {"system", "user", "assistant"}
                         or not isinstance(item.get("content"), str)):
                     raise ValueError(f"{label}_INVALID_MESSAGE_{number}")
                 valid_assistant |= item["role"] == "assistant" and bool(item["content"].strip())
