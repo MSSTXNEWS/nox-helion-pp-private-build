@@ -331,7 +331,8 @@ class P02Store:
         no implicit commit of host transactions, no schema deletion/downgrade.
         """
         reserved = {'p02_chats','p02_messages','p02_attachments',
-                    'p02_gc','p02_meta','p02_messages_by_chat'}
+                    'p02_gc','p02_meta','p02_messages_by_chat',
+                    'p02_messages_stable_seq'}
         native_chat_names = {'chat','chats','messages','chat_messages',
                              'conversations','conversation_messages','chat_history',
                              'chat_sessions','message_history'}
@@ -348,7 +349,7 @@ class P02Store:
                 if 'p02_meta' not in existing:
                     raise P02Error('INCOMPLETE_P02_SCHEMA; refusing implicit repair')
                 version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
-                if version != ('1',):
+                if version not in (('1',), ('2',)):
                     raise P02Error('Incompatible existing P02 schema; refusing downgrade')
                 # Existing user data is immutable until every required table and
                 # its primary-key/foreign-key fields are confirmed. A partial
@@ -366,6 +367,9 @@ class P02Store:
                 for table, expected_columns in required.items():
                     # Static table names only; never interpolate web/user input.
                     cols = {r[1] for r in self.db.execute(f'PRAGMA table_info({table})')}
+                    # C13: permit only the original owner-reviewed V2 field.
+                    if table == 'p02_messages' and version == ('2',):
+                        expected_columns = expected_columns | {'stable_seq'}
                     if cols != expected_columns:
                         raise P02Error('P02_SCHEMA_COLUMNS_MISMATCH; restore verified backup')
                     key_columns = {'p02_chats': 'id', 'p02_messages': 'id',
@@ -402,6 +406,9 @@ class P02Store:
                         raise P02Error('P02_SCHEMA_FOREIGN_KEY_DRIFT; restore verified backup')
                 if self.db.execute('PRAGMA foreign_key_check').fetchone() is not None:
                     raise P02Error('P02_SCHEMA_FOREIGN_KEY_VIOLATION; restore verified backup')
+                if version == ('2',):
+                    from p02_history_stable import verify_v2_contract
+                    verify_v2_contract(self.db)
             self.db.execute('PRAGMA foreign_keys=ON')
             schema = """
                 CREATE TABLE IF NOT EXISTS p02_chats(
@@ -426,7 +433,7 @@ class P02Store:
                 if statement.strip():
                     self.db.execute(statement)
             version = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
-            if version != ('1',):
+            if version not in (('1',), ('2',)):
                 raise P02Error('Incompatible existing P02 schema; refuse automatic downgrade')
 
     def _owned(self, tenant: str, user: str, chat: str):
@@ -461,6 +468,13 @@ class P02Store:
             # timestamps reorders user/assistant messages.  Existing P02
             # message tables use SQLite rowid, the insertion-order tie breaker.
             # Do not alter schema, timestamps, IDs or any persisted message.
+            schema = self.db.execute("SELECT value FROM p02_meta WHERE key='schema'").fetchone()
+            if schema == ('2',):
+                # Same original SQLite/ACL. A validated existing V2, no auto-migration.
+                from p02_history_stable import stable_history
+                return stable_history(self.db, tenant, user, chat, limit)
+            if schema != ('1',):
+                raise P02Error('P02_HISTORY_SCHEMA_UNRECOGNIZED')
             rows = self.db.execute("""SELECT role,content FROM p02_messages WHERE chat_id=?
                        ORDER BY created_at DESC,rowid DESC LIMIT ?""", (chat, limit)).fetchall()
         return [{"role": role, "content": content} for role, content in reversed(rows)]
