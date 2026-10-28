@@ -654,7 +654,7 @@ class EventWriter:
                 # One valid tail is not a valid append-only provenance ledger.
                 with self.path.open("rb") as stream:
                     for line in stream:
-                        if (not line.endswith(b"\\n") or len(line) > 4096
+                        if (not line.endswith(b"\n") or len(line) > 4096
                                 or len(line) <= 1):
                             raise ValueError("EVENT_LOG_INCOMPLETE_OR_LONG_RECORD")
                         try:
