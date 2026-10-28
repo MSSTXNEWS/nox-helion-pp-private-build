@@ -16,7 +16,8 @@ BAD = re.compile(r'[<>:"|?*\x00-\x1f]')
 RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$', re.I)
 
 def safe_name(name: str) -> bool:
-    if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
+    # Require one canonical ZIP directory suffix; match E06 NFC/path policy.
+    if (not name or len(name) > 500 or name.endswith("//") or name.startswith("/") or "\\" in name or BAD.search(name)
             or unicodedata.normalize("NFC", name) != name):
         return False
     parts = name.rstrip("/").split("/")
@@ -34,6 +35,12 @@ def validate_members(infos) -> None:
     required_directories = set()
     for info in infos:
         name = info.filename
+        # ZipInfo truncates filename at NUL (and normalizes separators on
+        # Windows). Validate the decoded central-directory name before that
+        # lossy transformation can hide a suffix or falsify the receipt path.
+        original_name = info.orig_filename
+        if original_name != name:
+            raise ValueError(f"Unsafe original ZIP name: {original_name!r}")
         if not safe_name(name):
             raise ValueError(f"Unsafe path: {name!r}")
         canonical = name.rstrip("/")
@@ -101,6 +108,8 @@ def audit(directory: pathlib.Path, expected_files: int):
                 total += info.file_size
                 if total > 4*1024**3 or info.flag_bits & 1:
                     raise ValueError(f"Archive quota/encryption gate: {name!r}")
+                if info.file_size > max(1, info.compress_size) * 500:
+                    raise ValueError(f"Suspicious ZIP compression ratio: {name!r}")
                 digest, count = hashlib.sha256(), 0
                 with z.open(info) as stream:
                     for chunk in iter(lambda: stream.read(1024*1024), b""):

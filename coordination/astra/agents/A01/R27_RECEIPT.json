@@ -1,0 +1,60 @@
+{
+  "run_id": "ASTRA-R27-A01-20261029-ZIP-NAME",
+  "agent_id": "/root/a01",
+  "parent": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "branch": "astra/r27-a01-20261029",
+  "task_ids": [
+    "A01.R27.ZIP_ORIGINAL_NAME_NO_TRUNCATION",
+    "A01.R27.REUSE_R20_CANONICAL_PARITY"
+  ],
+  "source_pre_git_blob": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+  "source_pre_sha256": "089200b6be61a375346fc1825a7ab96bd507d61d57ae79461650381933770307",
+  "files": [
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "sha256": "ca85f89319143d9e6c36fef351ac1a5464f27317ad1621a1bfa06414284b6723",
+      "git_blob_sha1": "fd5a4c9b7ad5238e8a149b1ca71b990873387134"
+    },
+    {
+      "path": "coordination/astra/agents/A01/test_zip_original_name_r27.py",
+      "sha256": "998ade53e95a9a98687ced129b06c90efe3cb8e9b018623d39e6a4a3395b8471",
+      "git_blob_sha1": "67595fe2f58a701c7c141ecbc96f279b7a55ee16"
+    },
+    {
+      "path": "coordination/astra/agents/A01/test_donor_zip_parity_r20.py",
+      "sha256": "050237f4565caffcf872b2204b3befb465b75ee82fe2e92f4258b93b66110d2e",
+      "git_blob_sha1": "b957d4f0801fb68ecc8c9d878f0afded7f3c59a9"
+    }
+  ],
+  "donor_reused": "d8ef3d5d4af66edbdde00f0dc70a855ccfdc7d71",
+  "test_results": {
+    "actual_python_suite": "37/37 PASS",
+    "new_nul_regression_before": "4 FAIL / 1 PASS",
+    "new_nul_regression_after": "5/5 PASS",
+    "donor_parity_before": "4 FAIL / 5 PASS",
+    "donor_parity_after": "9/9 PASS",
+    "existing_tests": "23/23 PASS"
+  },
+  "completed_approaches": [
+    6
+  ],
+  "completed_blocks": 1,
+  "remaining_approaches": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    10
+  ],
+  "physical_original_parts": "HOLD_NOT_AVAILABLE_LOCALLY",
+  "physical_729_member_hashes": "NOT_RUN",
+  "code_complete": "HOLD",
+  "integration": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "lesson": "Validate ZipInfo.orig_filename before lossy filename normalization; preserve existing error codes by checking changed raw name first, then existing safe-name policy.",
+  "scope": "Only canonical validator and owner tests/receipt; no PR162/main/build changes."
+}
