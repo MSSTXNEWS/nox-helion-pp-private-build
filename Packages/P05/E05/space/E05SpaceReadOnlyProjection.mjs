@@ -163,8 +163,21 @@ export function projectCorePersona(core, nowMs) {
 }
 
 export function projectFeeds(feeds, nowMs) {
-  if (!Array.isArray(feeds)) return [];
-  return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).map(f=>{
+  if (!Array.isArray(feeds) || feeds.length>4096) return [];
+  // Single current quotes for financial instruments only. News may contain
+  // multiple articles; market duplicates must never show conflicting prices.
+  // Scan the entire bounded batch, not only the first 16 display records.
+  const marketCounts=new Map();
+  for (const f of feeds) if (f && singletonMarketIds.has(f.id))
+    marketCounts.set(f.id,(marketCounts.get(f.id)||0)+1);
+  const emittedMarkets=new Set();
+  return feeds.slice(0,16).filter(f=>f && sourceIds.has(f.id)).flatMap(f=>{
+    if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
+      if (emittedMarkets.has(f.id)) return [];
+      emittedMarkets.add(f.id);
+      return [{id:f.id,stage:'HOLD_DUPLICATE_FEED',sourceUtc:null,value:null,
+        observedKind:'N_D'}];
+    }
     const fxDate=f.id==='eur-usd'||f.id==='usd-eur';
     const observationSupplied=fxDate && f.observation_date!==undefined;
     const dateOnly=observationSupplied && observationUtc(f.observation_date);
@@ -183,9 +196,9 @@ export function projectFeeds(feeds, nowMs) {
     const stale=['OFFLINE_CACHE','STALE_CACHE','STALE_SOURCE','OFFLINE'].includes(f.status);
     const stage=!approved?'DISABLED':stale?'STALE_CACHE':
       temporalOrder && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
-    return {id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
+    return [{id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
       value:stage==='SOURCE_DATED' && f.parsed_by_owner===true && numericValid?f.value:null,
-      observedKind:dateOnly?'ECB_OBSERVATION_DATE':'SOURCE_TIMESTAMP'};
+      observedKind:dateOnly?'ECB_OBSERVATION_DATE':'SOURCE_TIMESTAMP'}];
   });
 }
 
