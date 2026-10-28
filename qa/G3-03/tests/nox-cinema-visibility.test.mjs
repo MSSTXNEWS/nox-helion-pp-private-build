@@ -310,3 +310,25 @@ test("R07 event snapshots preserve the initial trusted state during synchronous 
   assert.equal(o.root.dataset.noxFxState,"idle");
   fx.destroy();
 });
+
+
+// R08: isolated QA only; original approved assets and native handlers stay untouched.
+test("R08 ECO downgrade immediately prunes MAX ejecta",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});
+  o.tick(12000);
+  assert.ok(fx.snapshot().particles>PROFILES.ECO.maxParticles);
+  assert.equal(fx.setProfile("ECO"),true);
+  assert.ok(fx.snapshot().particles<=PROFILES.ECO.maxParticles);
+  assert.equal(fx.snapshot().profile,"ECO");
+  assert.equal(o.root.dataset.noxFxMode,"eco");
+  fx.destroy();
+  assert.equal(o.pending,0);
+});
+test("R08 rejects nonfinite ejecta geometry before SVG transforms",()=>{
+  const p={started:100,duration:3600,surfaceRadius:89,reach:32,angle:1.234,swirl:5,brightness:.85,rotation:12};
+  assert.throws(()=>gravitationalSample({...p,reach:Infinity},900),/INVALID_PARTICLE/);
+  assert.throws(()=>gravitationalSample({...p,surfaceRadius:NaN},900),/INVALID_PARTICLE/);
+  assert.throws(()=>gravitationalSample({...p,swirl:undefined},900),/INVALID_PARTICLE/);
+  assert.throws(()=>gravitationalSample({...p,brightness:2},900),/INVALID_PARTICLE/);
+  assert.ok(Number.isFinite(gravitationalSample(p,900).x));
+});
