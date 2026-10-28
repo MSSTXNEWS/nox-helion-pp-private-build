@@ -7,6 +7,7 @@ Windows E07 are outside this component test.
 Run: python -m unittest discover -s integrations/creative/tests -p test_model_weight_gate_r21.py -v
 """
 from pathlib import Path
+import io
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 import json
@@ -214,6 +215,59 @@ class ModelWeightBoundary(unittest.TestCase):
             def is_junction(self):
                 return False
         self.assertFalse(Studio._is_untrusted_link(NormalPath()))
+
+
+    def _comfy_asset(self):
+        asset={"filename":"clip.mp4","subfolder":"","type":"output","media":"videos"}
+        self.studio.history=lambda _:{"status":"COMPLETE","files":[asset]}
+        return asset
+
+    def test_comfy_video_stream_import_retains_full_bytes(self):
+        asset=self._comfy_asset()
+        with patch("nox_fastpack.engine.urlopen",return_value=io.BytesIO(b"VIDEO FILE")):
+            result=self.studio.import_asset("source-job",asset,"movie1")
+        self.assertEqual(result["status"],"IMPORTED")
+        self.assertEqual(result["bytes"],10)
+        self.assertEqual(Path(result["file"]).read_bytes(),b"VIDEO FILE")
+
+    def test_oversized_comfy_response_does_not_leave_partial_video(self):
+        asset=self._comfy_asset()
+        with patch("nox_fastpack.engine.MAX_COMFY_MEDIA_BYTES",4), \
+             patch("nox_fastpack.engine.urlopen",return_value=io.BytesIO(b"TOO LONG")):
+            with self.assertRaisesRegex(StudioError,"exceeds"):
+                self.studio.import_asset("source-job",asset,"movie1")
+        assets=self.root/"projects"/"movie1"/"assets"
+        self.assertFalse(list(assets.iterdir()))
+
+    def test_empty_comfy_response_is_not_marked_imported(self):
+        asset=self._comfy_asset()
+        with patch("nox_fastpack.engine.urlopen",return_value=io.BytesIO(b"")):
+            with self.assertRaisesRegex(StudioError,"empty media"):
+                self.studio.import_asset("source-job",asset,"movie1")
+        self.assertFalse(list((self.root/"projects"/"movie1"/"assets").iterdir()))
+
+    def test_symlinked_comfy_project_assets_folder_is_denied(self):
+        asset=self._comfy_asset()
+        project=self.studio._project("movie1")
+        outside=self.root/"elsewhere"
+        outside.mkdir()
+        (project/"assets").symlink_to(outside,target_is_directory=True)
+        with patch("nox_fastpack.engine.urlopen") as network:
+            with self.assertRaisesRegex(StudioError,"assets folder"):
+                self.studio.import_asset("source-job",asset,"movie1")
+        network.assert_not_called()
+        self.assertFalse(list(outside.iterdir()))
+
+    def test_symlinked_comfy_projects_root_is_denied(self):
+        asset=self._comfy_asset()
+        outside=self.root/"elsewhere"
+        outside.mkdir()
+        self.studio.projects.rmdir()
+        self.studio.projects.symlink_to(outside,target_is_directory=True)
+        with patch("nox_fastpack.engine.urlopen") as network:
+            with self.assertRaisesRegex(StudioError,"projects root"):
+                self.studio.import_asset("source-job",asset,"movie1")
+        network.assert_not_called()
 
 
 if __name__=="__main__":
