@@ -62,7 +62,8 @@
           "before": "active:!doc.hidden&&active&&!disposed,coreCount:CORE_COUNT,",
           "after": "active:isActive(),coreCount:CORE_COUNT,"
         }
-      ]
+      ],
+      "post_git_blob_sha1": "f391cba548a46b68c32477f0a12bf1352fb90c74"
     },
     {
       "path": "qa/G3-03/candidates/nox-cinema.css",
@@ -87,7 +88,8 @@
           "before": ".nox-cinema-scope[data-nox-fx-visible=\"false\"] .nox-cinema-control::before,",
           "after": ".nox-cinema-scope[data-nox-fx-visible=\"false\"] .nox-cinema-control::before,\n.nox-cinema-scope[data-nox-fx-visible=\"false\"] .nox-cinema-control[data-nox-float=\"true\"]::after,"
         }
-      ]
+      ],
+      "post_git_blob_sha1": "ac6641a2f89ba487843b62020792c5c8f8d8e928"
     },
     {
       "path": "qa/G3-03/tests/nox-cinema-visibility.test.mjs",
@@ -95,7 +97,8 @@
       "pre_sha256": "ABSENT",
       "post_sha256": "3ff0b1a3214a2f518b89e16b241e1847dd6bb3a88f0f62e1e9c3d40ddcd29992",
       "pre_git_blob_sha1": "ABSENT",
-      "diff_exact": "New self-contained Node test suite from approved PR30 plus 3 visibility/reduced regressions. Fixed QA regex literal quoting in same G3.03 R02 branch. Previously-created test SHA256=5ee94bf1a1f39c4b82d05440c57153a61bd6a7b26dba239610dfaa2443972c20; current SHA256=3ff0b1a3214a2f518b89e16b241e1847dd6bb3a88f0f62e1e9c3d40ddcd29992"
+      "diff_exact": "New self-contained Node test suite from approved PR30 plus 3 visibility/reduced regressions. Fixed QA regex literal quoting in same G3.03 R02 branch. Previously-created test SHA256=5ee94bf1a1f39c4b82d05440c57153a61bd6a7b26dba239610dfaa2443972c20; current SHA256=3ff0b1a3214a2f518b89e16b241e1847dd6bb3a88f0f62e1e9c3d40ddcd29992",
+      "post_git_blob_sha1": "9ec068171e04be0865165724e23a7248d248f8c3"
     }
   ],
   "ten_tasks": [
@@ -288,5 +291,8 @@
     "RAG GPU trainer",
     "NSIS/EXE/archive/source_00/01/02"
   ],
-  "status": "SOURCE_CANDIDATE__INTEGRATED_HOLD__WINDOWS_NOT_RUN"
+  "status": "SOURCE_CANDIDATE__INTEGRATED_HOLD__WINDOWS_NOT_RUN",
+  "final_git_sha1_original_source_distinct": true,
+  "readback": "PASS__THREE_SOURCE_FILES_ACTUAL_GIT_BLOB_SHA1_AND_SHA256",
+  "receipt_file_self_hash": "EXTERNAL_MASTER_E06_SHA_ONLY__NO_SELF_REFERENTIAL_HASH"
 }
