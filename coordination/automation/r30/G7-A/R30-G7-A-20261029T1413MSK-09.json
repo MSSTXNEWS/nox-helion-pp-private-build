@@ -1,0 +1,111 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "slot": "G7-A",
+  "runId": "R30-G7-A-20261029T1413MSK-09",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T1413MSK-09",
+  "status": "SOURCE_PATCH_SAVED_SOURCE_READY_HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader D02 only; SOURCE ONLY",
+  "ancestry": {
+    "baseRef": "automation/r30/g7a/R30-G7-A-20261029T1313MSK-08",
+    "baseCommit": "a510b09416bc2617a83f64ce70ad515c47463535",
+    "reconstructedBaseGitTree": "ac40fd73bfc0e642cfb82ec739b0c221b7b468cd"
+  },
+  "ownership": {
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbiddenPaths": [
+      "proposals/NOX-PACK02-50/",
+      "proposals/NOX-PACK01-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "uniqueReceiptPath": "coordination/automation/r30/G7-A/R30-G7-A-20261029T1413MSK-09.json"
+  },
+  "inputEvidence": {
+    "rules56GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rulesStatus": "56 consolidated §33 rules read, historical verbatim not verified",
+    "currentSpecDrive": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": [
+      "33",
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "conflictIndexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots": {
+      "indexedDirectories": 25,
+      "fullPhysicalFilesRead": false,
+      "modified": false
+    },
+    "driveReadOnlyIds": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "c34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "e06": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    }
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-ZERO-RAF-HANDLE-CLEANUP-R09",
+    "sourcePath": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "preimageGitBlob": "82d055f250b4b1362cc8c2af845dda46a247c72d",
+    "newGitBlob": "027382303a9a286ab8deea1b167abb20920bc0ba",
+    "defect": "Valid RAF handle 0 was confused with falsy unscheduled state, allowing duplicate scheduled frames and missed cancellation.",
+    "patch": "Use null sentinel and exact null checks for RAF lifecycle in original D02 renderer; no new effects or controls."
+  },
+  "regression": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.raf-zero.test.mjs",
+    "gitBlob": "48926c4bbf28a19d2b4bc725cbff8ba4d40ad83d",
+    "newTestCount": 1,
+    "before": {
+      "pass": false,
+      "count": 1,
+      "error": "Error: redundant wake cannot double-schedule handle zero: 0,1 !== 0"
+    },
+    "after": {
+      "pass": true,
+      "count": 1
+    },
+    "executor": "Actual saved module and authored Node-style test executed within V8 isolated DOM/RAF fixture; separate Node CLI NOT_RUN",
+    "harnessCorrection": "First dry-run harness mistakenly called factory result before injecting fixture; corrected and reran RED/GREEN before any Git write.",
+    "nodeCLI": "NOT_RUN",
+    "windowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "changedPaths": [
+      "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.raf-zero.test.mjs",
+      "coordination/automation/r30/G7-A/R30-G7-A-20261029T1413MSK-09.json"
+    ],
+    "deletedPaths": [],
+    "priorDone": "PRESERVED",
+    "historicalSnapshots": "UNCHANGED",
+    "mainPR162": "UNCHANGED",
+    "installerPack01Pack02": "UNCHANGED",
+    "sharedR30AndDocs": "UNCHANGED"
+  },
+  "selfImprovement": {
+    "appliedEarlier": "Treat profile/visibility resumption as separate paths with bounded validated timestamps.",
+    "newLesson": "Opaque browser handles require an explicit null sentinel, not falsy checks: ID 0 is valid. Test zero, duplicate wake, cancellation and destroy."
+  },
+  "coordinator": {
+    "onlyCentralGoogleDocsWriter": "Astra-C",
+    "ownGoogleDocsWrites": "NONE",
+    "request": "Collect own immutable receipt and append lesson via Google Docs CAS with readback",
+    "driveCommonWrite": "PENDING_ASTRA_C"
+  },
+  "release": {
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "finalIntegration": "NOT_RUN",
+    "progressPercentage": "N/D"
+  }
+}

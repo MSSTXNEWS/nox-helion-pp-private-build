@@ -110,7 +110,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
   let preference=!!motion?.matches;
   let mode=profile;
-  let disposed=false,hostVisible=true,intersectVisible=true,raf=0,lastFrame=0,frameCount=0;
+  let disposed=false,hostVisible=true,intersectVisible=true,raf=null,lastFrame=0,frameCount=0;
   let state="idle",stateRunId=null,emissions=0,particleCount=0;
   let ownerRoot=false;
   const decorated=[];
@@ -198,7 +198,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     particles.push(p);particleCount++;emissions++;
   }
   function loop(now){
-    raf=0;
+    raf=null;
     // Browser clocks may be malformed; fail closed without emitting SVG NaN.
     if(!Number.isFinite(now)||now<0){sleep();return;}
     if(disposed||!hostVisible||!intersectVisible||doc.hidden)return;
@@ -229,7 +229,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   // before touching any live D02 timer or restarting RAF.
   let resumePending=false;
   function wake(){
-    if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&mode!=="REDUCED"&&!raf){
+    if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&mode!=="REDUCED"&&raf===null){
       if(resumePending){
         let now;
         try{now=time();}catch(_){return;}
@@ -252,7 +252,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     }
   }
   function sleep(){
-    if(raf){win.cancelAnimationFrame(raf);raf=0;}
+    if(raf!==null){win.cancelAnimationFrame(raf);raf=null;}
     resumePending=true;
     clearParticles();
   }
