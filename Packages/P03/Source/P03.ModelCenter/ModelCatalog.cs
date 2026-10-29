@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 
 namespace Nox.P03;
 
@@ -28,7 +29,7 @@ public sealed record ModelCatalogEntry(
     string? ExpectedManifestDigestSha256 = null)
 {
     public bool CanOfferOneClickPull => EvidenceStatus == CatalogEvidenceStatus.ArtifactVerified
-        && !string.IsNullOrWhiteSpace(ExactTag)
+        && IsPinnedTag(ExactTag)
         && !string.IsNullOrWhiteSpace(Version)
         && !string.IsNullOrWhiteSpace(License)
         && ArtifactBytes is > 0
@@ -43,6 +44,14 @@ public sealed record ModelCatalogEntry(
         && (RecommendedRamBytes is null or > 0)
         && (RecommendedVramBytes is null or > 0)
         && CompatibilityReviewed;
+
+    // Keep discoverable models disabled unless a concrete tag matches the
+    // exact queue grammar; family names and ':latest' are not immutable pins.
+    private static bool IsPinnedTag(string? tag) =>
+        tag is { Length: > 0 and <= 160 }
+        && !tag.Contains("..", StringComparison.Ordinal)
+        && !tag.EndsWith(":latest", StringComparison.OrdinalIgnoreCase)
+        && Regex.IsMatch(tag, @"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$");
 
     private static bool IsSha256(string? value) => value is { Length: 64 }
         && value.All(Uri.IsHexDigit);
