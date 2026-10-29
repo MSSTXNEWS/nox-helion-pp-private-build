@@ -36,6 +36,7 @@ if (Test-Path -LiteralPath $root -PathType Container) {
   if (($markerItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_INSTALL_MARKER_REPARSE' }
   # Reject padded/trailing-data marker; ownership proof must match exact NSIS bytes.
   $want = [Text.Encoding]::ASCII.GetBytes('NOXHELION.P01 V16'+[char]13+[char]10)
+  if ($markerItem.Length -ne 19) { throw 'P01_INSTALL_MARKER_INVALID' }
   $actual = [IO.File]::ReadAllBytes($marker)
   if ($actual.Length -ne $want.Length -or
       [Convert]::ToBase64String($actual) -cne [Convert]::ToBase64String($want)) {
