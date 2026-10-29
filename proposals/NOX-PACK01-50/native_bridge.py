@@ -254,7 +254,13 @@ class NoxPackHost:
         if self.ports.get(route) is not port:
             raise HostHold("Native owner binding changed during request admission")
         if not ready:raise HostHold("Owner backend unavailable")
-        return port.call(session,frozen_payload)
+        result = port.call(session,frozen_payload)
+        # A native handler may return data after revoking caller identity/port.
+        # Fail closed before publishing any cross-session owner result.
+        require_unchanged_session()
+        if self.ports.get(route) is not port:
+            raise HostHold("Native owner binding changed during execution")
+        return result
 
 
 class ExistingP02Adapter:
