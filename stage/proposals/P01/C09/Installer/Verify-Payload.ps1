@@ -27,6 +27,8 @@ if ($manifestFull -ine (Join-Path $rootFull 'payload.sha256.json')) { Fail 'nonc
 Assert-NoReparseAncestors $manifestFull
 $manifestItem=Get-Item -LiteralPath $manifestFull -Force -ErrorAction Stop
 if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe manifest' }
+# Bound user-controlled manifest before Raw read and JSON object allocation.
+if ($manifestItem.Length -le 0 -or $manifestItem.Length -gt 16MB) { Fail 'manifest too large or empty' }
 $m = Get-Content -LiteralPath $manifestFull -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1') { Fail 'schema' }
 if ($m.entrypoint -cne 'NOX.P01.Shell.exe') { Fail 'entrypoint' }
