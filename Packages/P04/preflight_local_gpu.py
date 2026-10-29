@@ -208,7 +208,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
             # A previously initialized runtime cannot be rebound by rewriting
             # environment variables; one visible device may be the wrong GPU.
             loaded_torch = sys.modules.get("torch")
-            if loaded_torch is not None and loaded_torch.cuda.is_initialized():
+            # Import-time CUDA probing may cache device visibility even without
+            # a live CUDA context. The UUID pin must precede the first import.
+            if loaded_torch is not None:
                 report["errors"].append("CUDA_PREFLIGHT_FRESH_PROCESS_REQUIRED")
                 return report
             # Match training's single approved UUID before importing CUDA.
