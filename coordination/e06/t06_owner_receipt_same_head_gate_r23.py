@@ -28,9 +28,17 @@ def git(*args):
     return p.stdout
 
 def safe_path(value):
-    return (isinstance(value,str) and bool(value) and
-        not value.startswith("/") and "\\" not in value and "\x00" not in value
-        and all(x not in ("",".","..") for x in value.split("/")))
+    """Reject unsafe Windows path components even on non-Windows QA hosts."""
+    if type(value) is not str or not value or value.startswith("/") or "\\" in value:
+        return False
+    for component in value.split("/"):
+        if (component in ("", ".", "..") or component != component.rstrip(" .")
+                or not component.isprintable()
+                or re.search(r'[<>:"|?*\x00-\x1f\x7f]', component)
+                or re.fullmatch(r'(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?',
+                                component, flags=re.IGNORECASE)):
+            return False
+    return True
 
 def blob_at(head,path):
     if not safe_path(path):raise ValueError("UNSAFE_OWNER_RECEIPT_PATH")
