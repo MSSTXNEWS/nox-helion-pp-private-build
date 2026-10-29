@@ -249,5 +249,40 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
 
 
+    def test_local_manifest_sha_tracks_weight_bytes_not_only_config(self):
+        first = probe.inspect(self.root, REV)
+        self.assertEqual(first["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(first["candidate_sha256_scope"], "CONFIG_JSON_ONLY")
+        self.assertEqual(len(first["snapshot_manifest_sha256"]), 64)
+        weights = self.root / "model.safetensors"
+        original = weights.read_bytes()
+        weights.write_bytes(original[:-1] + bytes([original[-1] ^ 1]))
+        second = probe.inspect(self.root, REV)
+        self.assertEqual(second["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(first["candidate_sha256"], second["candidate_sha256"])
+        self.assertNotEqual(first["snapshot_manifest_sha256"],
+                            second["snapshot_manifest_sha256"])
+
+    def test_local_manifest_sha_tracks_shard_index_bytes(self):
+        path = self.root / "model.safetensors.index.json"
+        path.write_text(json.dumps({"weight_map": {"q.weight": "model.safetensors"}}),
+                        encoding="utf-8")
+        first = probe.inspect(self.root, REV)
+        self.assertEqual(first["status"], "LOCAL_FILES_PRESENT_ONLY")
+        path.write_text('{"weight_map": {"q.weight": "model.safetensors"}}',
+                        encoding="utf-8")
+        second = probe.inspect(self.root, REV)
+        self.assertEqual(second["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertNotEqual(first["snapshot_manifest_sha256"],
+                            second["snapshot_manifest_sha256"])
+
+    def test_invalid_unicode_shard_filename_is_hold_not_crash(self):
+        path = self.root / "model.safetensors.index.json"
+        path.write_text(json.dumps({"weight_map": {
+            "q.weight": "bad" + chr(0xD800) + ".safetensors"}}, ensure_ascii=True),
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_PATH_UNSAFE")
+
 if __name__ == "__main__":
     unittest.main()

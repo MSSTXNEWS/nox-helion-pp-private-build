@@ -43,7 +43,8 @@ _INVALID_WINDOWS_FILENAME_CHARS = frozenset('<>:"/\\|?*')
 def _valid_shard_filename(name: object) -> bool:
     return (isinstance(name, str) and bool(name) and
             name == Path(name).name and name.endswith(".safetensors") and
-            len(name.encode("utf-16-le")) <= 510 and
+            sum(2 if ord(c) > 0xFFFF else 1 for c in name) <= 255 and
+            not any(0xD800 <= ord(c) <= 0xDFFF for c in name) and
             not any(c in _INVALID_WINDOWS_FILENAME_CHARS or
                     ord(c) < 32 or ord(c) == 127 for c in name) and
             name.split(".", 1)[0].rstrip(" ").upper() not in _WINDOWS_RESERVED)
@@ -175,6 +176,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         "status": "HOLD",
         "reason": None,
         "candidate_sha256": None,
+        "candidate_sha256_scope": "CONFIG_JSON_ONLY",
+        "snapshot_manifest_sha256": None,
         "weight_files": [],
         "tensor_headers": 0,
         "model_license_verified": False,
@@ -224,7 +227,19 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": file.stat().st_size,
                 "sha256": _sha256(file),
             })
-        report["candidate_sha256"] = _sha256(base / "config.json")
+        # The historical candidate SHA covers config only; keep semantics explicit.
+        config_sha = _sha256(base / "config.json")
+        index_sha = _sha256(index) if expected_by_shard is not None else None
+        manifest = {
+            "schema": "NOX-P04-LOCAL-SNAPSHOT-CONTENT-v1",
+            "config_sha256": config_sha,
+            "index_sha256": index_sha,
+            "weight_files": report["weight_files"],
+        }
+        encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=True).encode("utf-8")
+        report["snapshot_manifest_sha256"] = hashlib.sha256(encoded).hexdigest()
+        report["candidate_sha256"] = config_sha
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
     except (ValueError, OSError) as exc:
