@@ -1,0 +1,209 @@
+{
+  "schema": "NOX_V16_G3_M1_SOURCE_ONLY_OWNER_SAFE_RECEIPT_V1",
+  "task_id": "T03_G3_M1_P04_GPU_RAG",
+  "run_id": "NOX-V16-G3M1-20261029T184102MSK-R01",
+  "date_msk": "20261029T184102MSK",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader only",
+  "status": "HOLD",
+  "source_code_complete": "HOLD",
+  "train_executed": false,
+  "progress": {
+    "start": "0/4 0.0%",
+    "end": "0/4 0.0%",
+    "delta_pp": 0,
+    "criteria": [
+      {
+        "id": 1,
+        "description": "model snapshot source",
+        "accepted": false,
+        "reason": "Historical G4-A R11 source is owned and not integrated at current PR162 HEAD"
+      },
+      {
+        "id": 2,
+        "description": "GPU preflight",
+        "accepted": false,
+        "reason": "Historical G4-B R09 source is owned and not integrated at current PR162 HEAD"
+      },
+      {
+        "id": 3,
+        "description": "training.start/evaluate actual native binding",
+        "accepted": false,
+        "reason": "Owner-safe adapter source/test committed on private branch, not T06-host-bound; no native proof"
+      },
+      {
+        "id": 4,
+        "description": "T06 same-HEAD handoff",
+        "accepted": false,
+        "reason": "Immutable receipt prepared, T06 owner ACK/application not received"
+      }
+    ]
+  },
+  "read_inputs": {
+    "v16_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc sections 1-33,54-56; 56 consolidated §33 rules",
+    "owner_lock_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "register_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+    "register_stats": {
+      "OPEN": 4,
+      "FIX_APPLIED_UNVERIFIED": 5,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "source_head_pre": "e1ed247dfadfa7829c6db5cf1e701ee657aa8030",
+    "source_tree_pre": "182677d0aff264e48692c99f3b922817e14bf70e",
+    "master_delta_last": "NOX-V16-C-20261029T181207MSK-DELTA-R20",
+    "c34": "C34 process incident read-only"
+  },
+  "source_preimages": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "git_blob_at_pr162": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+      "reserved_owner": "G4-A",
+      "historical_owner_branch": "automation/r30/g4a/20261029T154738MSK-R11",
+      "historical_post_blob": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_at_pr162": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "reserved_owner": "G4-B",
+      "historical_owner_branch": "automation/r30/g4b/R30-G4B-20261029T1352MSK-09",
+      "historical_post_blob": "02b65c3bcd961390f828519cb5b50a2e4a652ee9"
+    },
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "git_blob_at_pr162": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "reserved_owner": "P04 original worker",
+      "action": "UNMODIFIED"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "git_blob_at_pr162": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+      "owner": "T06 native PACK01",
+      "action": "UNMODIFIED"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/p04_training_readonly.py",
+      "git_blob_at_pr162": "9581415a59824803df074b101aa60ec0f2a9c74b",
+      "owner": "PACK01 P04 adapter",
+      "action": "UNMODIFIED"
+    }
+  ],
+  "owner_safe_source": {
+    "stage_path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/p04_training_native_binding_g3m1.py",
+    "pre": "ABSENT_ON_CANONICAL_HEAD",
+    "post_sha256": "94d2632cfc2a2203681a34e12a2163223dec9664c30f9026d3523c6126f30e0f",
+    "local_expected_git_blob": "66af5a113fd5d3f1d7bb7ad3fd6b0beeed6f6a02",
+    "purpose": "Uses existing PACK01 bind_owner_methods; native authorization, model/dataset rights, worker lease, verified owner ACK. No second host/worker."
+  },
+  "source_test": {
+    "path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/test_g3m1_training_native_binding.py",
+    "pre": "ABSENT_ON_CANONICAL_HEAD",
+    "post_sha256": "ec0a7323cf3d885b56b2dd85c2e613909a72a30dcaab1e7b0036bd070bc6cc17",
+    "expected_git_blob": "5dfe877e882fe33fcb48d92bd04a3e6750135015",
+    "command": "python -m py_compile <source> <test> && python -m unittest discover -s <stage_dir> -p test_g3m1_training_native_binding.py -v",
+    "environment": "local Python synthetic mock owner, no real Windows host/GPU/trainer",
+    "result": "9/9 PASS, no training launched",
+    "full_existing_module": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "gpu": "NOT_RUN"
+  },
+  "cross_agent_error_ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "ack": "HANDOFF",
+      "reason": "owner-safe P04 bridge candidate and exact mutable HEAD; only T06 can bind it with native consent and same SHA"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06/Host50",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "status": "OPEN",
+      "owner": "T06+P01-P05 functional owners",
+      "ack": "HANDOFF",
+      "reason": "owner-safe P04 bridge candidate and exact mutable HEAD; only T06 can bind it with native consent and same SHA"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T07/T09",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T04",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T09",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "status": "OPEN",
+      "owner": "ALL_EXECUTORS",
+      "ack": "HANDOFF",
+      "reason": "owner-safe P04 bridge candidate and exact mutable HEAD; only T06 can bind it with native consent and same SHA"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "ack": "HANDOFF",
+      "reason": "owner-safe P04 bridge candidate and exact mutable HEAD; only T06 can bind it with native consent and same SHA"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T08",
+      "ack": "NO_IMPACT",
+      "reason": "outside G3/M1 permitted files, existing owner preserves disposition; no reopen of CLOSED"
+    }
+  ],
+  "applied_lesson": "ERR-SYS-002 stale HEAD; re-read actual PR162 HEAD immediately before source proposal, bound all preimages to live Git blobs. ERR-SYS-001/incident: no HOLD-only repetition; created code+real focused tests and owner-safe handoff.",
+  "t06_handoff": {
+    "required": "T06 only: owner PRE/CAS compare; take G4-A R11 + G4-B R09 exact owner receipts without overwriting, then bind this new adapter via existing PACK01 NoxPackHost/bind_owner_methods with real license, dataset rights, native lease, fresh dangerous action approval, signed ACK; independently run source tests on pinned HEAD. If native backend missing keep HOLD.",
+    "no_assumed_acceptance": true,
+    "no_owner_override": true
+  },
+  "safety": {
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "shared_register_untouched": true,
+    "shared_drive_journals_untouched": true,
+    "r30_snapshots_untouched": true,
+    "preflight_local_gpu_untouched": true,
+    "model_snapshot_probe_untouched": true,
+    "three_original_zip_parts_untouched": true,
+    "exe_nsis_windowsci_gitlab_e07_not_run": true
+  }
+}
