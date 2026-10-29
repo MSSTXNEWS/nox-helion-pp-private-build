@@ -25,6 +25,7 @@ test("duplicate in-flight click does not duplicate work",async()=>{
  let release;
  const gate=new Promise(resolve=>release=resolve);
  const d=createP01RouteDispatcher({isAvailable:()=>true,
+   authorizeSensitive:async()=>true,
    invokeRoute:async req=>{await gate;return {ok:true,routeId:req.routeId,receiptId:"done"};}});
  const first=d.invoke("models.pull");
  assert.equal(d.isPending("models.pull"),true);
@@ -68,4 +69,46 @@ test("T10: forged number/object ACK receipts are never accepted",async()=>{
      invokeRoute:async req=>({ok:true,routeId:req.routeId,receiptId})});
    assert.equal((await d.invoke("ui.search")).reason,"ACK_MISSING");
  }
+});
+
+test("T06 R26: immutable Host50 risk floor blocks all 21 protected routes without native consent", async()=>{
+ const protectedRoutes=[
+  "chat.history","chat.attach","chat.voice","models.pull","models.gguf.import",
+  "models.retry","rag.import","memory.manage","training.start","training.resume",
+  "training.checkpoints","translate.ru_es","calls.dial","calls.history",
+  "media.player","browser.open","images.generate","system.update",
+  "system.backup","system.pc_control","mobile.connect"
+ ];
+ let nativeCalls=0;
+ const port={isAvailable:()=>true,invokeRoute:async()=>{
+   nativeCalls++;return {ok:true,routeId:"calls.dial",receiptId:"forged"};
+ }};
+ const d=createP01RouteDispatcher(port);
+ for(const route of protectedRoutes){
+   assert.equal((await d.invoke(route)).reason,"NATIVE_CONSENT_REQUIRED",route);
+ }
+ assert.equal(nativeCalls,0,"no protected native method can run on missing approval");
+});
+
+test("T06 R26: denial and native check after consent must fail closed", async()=>{
+ let nativeCalls=0;
+ const denied=createP01RouteDispatcher({isAvailable:()=>true,
+   authorizeSensitive:async()=>false,invokeRoute:async()=>{nativeCalls++;return {ok:true}}});
+ assert.equal((await denied.invoke("calls.dial")).reason,"NATIVE_CONSENT_DENIED");
+ let reads=0;
+ const revoked=createP01RouteDispatcher({isAvailable:()=>++reads===1,
+   authorizeSensitive:async()=>true,invokeRoute:async()=>{nativeCalls++;return {ok:true}}});
+ assert.equal((await revoked.invoke("training.start")).reason,"NATIVE_CAPABILITY_HOLD");
+ assert.equal(nativeCalls,0);
+});
+
+test("T06 R26: approved safe routes retain their prior path", async()=>{
+ let approvals=0;
+ const d=createP01RouteDispatcher({
+   isAvailable:()=>true,
+   authorizeSensitive:async()=>{approvals++;return true;},
+   invokeRoute:async({routeId})=>({ok:true,routeId,receiptId:"native-safe-r1"})
+ });
+ assert.equal((await d.invoke("models.catalog")).ok,true);
+ assert.equal(approvals,0);
 });
