@@ -67,7 +67,7 @@ def audit(head):
             actual=blob_at(head,target)
             expected=(item.get("post_git_blob_sha1") or
                       item.get("postGitBlobSha1") or item.get("git_blob_sha1"))
-            if expected and HEX40.fullmatch(expected):
+            if isinstance(expected,str) and HEX40.fullmatch(expected):
                 ok=actual==expected
                 method="GIT_BLOB"
             elif isinstance(item.get("sha256"),str) and HEX64.fullmatch(item["sha256"]):
