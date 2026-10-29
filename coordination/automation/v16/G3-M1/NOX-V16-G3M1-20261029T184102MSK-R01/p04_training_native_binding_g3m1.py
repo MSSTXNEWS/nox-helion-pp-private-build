@@ -94,7 +94,12 @@ class ExistingP04TrainingBinding:
         # Only NoxPackHost.execute may call these methods. Its frozen session,
         # native_approve and source receipt are required by the host contract.
         frozen = self._snapshot_wire(payload)
-        with self._lease:
+        # Fail closed if a native owner lease explicitly declines acquisition.
+        # Context managers yielding None still represent valid acquired leases;
+        # only an explicit False denies the protected training action.
+        with self._lease as lease_granted:
+            if lease_granted is False:
+                raise P04NativeTrainingHold("P04_NATIVE_OWNER_LEASE_DENIED")
             if self._authorize(session, route) is not True:
                 raise PermissionError("P04_NATIVE_OWNER_PERMISSION_OR_CONSENT_REVOKED")
             if self._attest(session, route, self.receipt) is not True:

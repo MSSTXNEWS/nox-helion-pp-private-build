@@ -1,0 +1,198 @@
+{
+  "schema": "NOX_V16_R18_G3A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-G3A-20261029T203230MSK-R12",
+  "slot": "G3-A",
+  "task_id": "T03_G3_M1_P04_GPU_RAG",
+  "mode": "SOURCE_ONLY",
+  "status": "INCOMPLETE_HOLD",
+  "planned_slot_msk": "18:35 hourly",
+  "started_at": "2026-10-29T20:32:30+03:00",
+  "receipt_assembled_at": "2026-10-29T17:40:31.860Z",
+  "gates": {
+    "A_fresh_read": "PASS",
+    "B_physical": "PASS_SOURCE_PATCH_AND_ISOLATED_REPRO",
+    "C_personal_receipt": "PENDING_FINAL_CAS_READBACK",
+    "C_shared_journal": "DELEGATED_T02_NOT_CLAIMED",
+    "D_improvement": "PASS_SCOPED_RELEVANT_CLUSTER_ACTION"
+  },
+  "prestart_read_proof": {
+    "canon_url": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_chars": 207541,
+    "canon_paragraphs": 684,
+    "canon_scope": "§§1–33,54–56/R29 and consolidated 56-rule §33",
+    "register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_status_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "TOTAL": 11
+    },
+    "error_acks": [
+      {
+        "error_id": "ERR-SYS-001",
+        "action": "HANDOFF",
+        "owner": "T02",
+        "evidence": "No direct shared journal writes; attach immutable own receipt and explicit ownership."
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "action": "APPLY",
+        "owner": "G3-A",
+        "evidence": "Live HEAD drift 3b94fed3 to 7b081ee2; re-read changed P03-only commit, no stale same-head product acceptance."
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "action": "DELEGATE",
+        "owner": "T06/T08",
+        "evidence": "Host50 baseline reconciliation owner path, independently verify 13 native routes on accepted SHA."
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "action": "APPLY+DELEGATE",
+        "owner": "G3-A/T06",
+        "evidence": "Fail-closed declined P04 lease patched; existing PACK01 execute silently drops duplicate JSON properties before P04 validation; exact host owner handoff."
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "action": "DELEGATE",
+        "owner": "T08",
+        "evidence": "Pinned runner source FIX_APPLIED_UNVERIFIED; need independent same-SHA test."
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "action": "ALREADY_FIXED",
+        "owner": "T09/T07",
+        "evidence": "Three original ZIP parts and 729/729 independently verified, do not reopen."
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "action": "ALREADY_FIXED",
+        "owner": "T04",
+        "evidence": "34/34 archived decisions retained."
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "action": "DELEGATE",
+        "owner": "T09/T02",
+        "evidence": "Freeze only after pinned T06/T08 acceptance."
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "APPLY",
+        "owner": "G3-A",
+        "evidence": "Fixed denominator 0/4 unchanged, source patch not TASK_DONE."
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "action": "DELEGATE",
+        "owner": "T06",
+        "evidence": "Need 8/8 owner acceptance, independent QA not from this role."
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "action": "DELEGATE",
+        "owner": "T08",
+        "evidence": "Signed native 13/13 still unverified."
+      }
+    ],
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "previous_receipt_branch": "automation/v16/g3a/NOX-V16-G3A-20261029T1940MSK-R11",
+    "previous_receipt_blob": "010bb0a6d03392dc9ea71763d3b8fb84ca99ab10",
+    "old_owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "owner_scope": "Owned isolated T03 adapter and uniquely named G3-A regression; G4-A model_snapshot_probe.py and G4-B preflight_local_gpu.py excluded.",
+    "pr162_head_first": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pr162_head_refreshed": "7b081ee270018c65254bf6436bff27062457750e",
+    "pr162_tree_refreshed": "a4c83b6b69751bd43715c7f5243ca3a96484b319",
+    "head_drift": "T06 R18 touched only Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs, its own receipt and a test; no P04/PACK01 touched."
+  },
+  "physical": {
+    "type": "OWNED_PREPARED_SOURCE_CHANGE",
+    "source_path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/p04_training_native_binding_g3m1.py",
+    "source_gitblob_PRE": "81212d3686b0efecc72709a6a512dfa97f37be61",
+    "source_gitblob_POST": "1eb13bf49c10ecddb0147da8d348eaab82f78b33",
+    "test_path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/test_g3a_r12_training_owner_lease.py",
+    "test_gitblob_POST": "4664571bebdfa65d8cc9460e8add4b231d87fb6d",
+    "change": "with self._lease as lease_granted; explicit False => P04_NATIVE_OWNER_LEASE_DENIED before authorize, rights, ready and any owner callbacks; retains success for RLock and context manager yielding None.",
+    "isolated_test": "5/5 PASS locally on exact old/new lease semantics + Python JSON collision reproducer; NOT entire GitHub module",
+    "new_repo_test": "4 source-only owner-lease regression methods authored in genuine repository test file; NOT_RUN locally against full canonical checkout",
+    "no_native_training_run": true,
+    "canonical_host_path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "canonical_host_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "new_cross_owner_defect": "NoxPackHost.execute serializes a Python payload containing keys '1' and 1 then json.loads(raw) at line 204, before own adapter; duplicate JSON property disappears. At line 210 it re-decodes for native dangerous approval. R11 adapter collision check alone cannot catch already lost property.",
+    "cross_owner_repro": "json.loads(json.dumps({'1':'approved',1:'unapproved'})) == {'1':'unapproved'}; local standard Python repro PASS",
+    "cross_owner_status": "UNFIXED_IN_PR162; NOT_CHANGED_BY_G3-A",
+    "model_snapshot_pr_head_blob": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+    "gpu_preflight_pr_head_blob": "15d6807033040711ac54c4c9f63432c5653e62bd"
+  },
+  "progress": {
+    "own_before": "0/4 0%",
+    "own_after": "0/4 0%",
+    "delta_pp": 0,
+    "own_criteria": [
+      "model snapshot owner POST same-head accepted",
+      "GPU preflight owner POST same-head accepted",
+      "training.start/evaluate native binding verified with real STOP/ACL/consent/rights/signed ACK",
+      "T06 immutable owner integration and independent acceptance"
+    ],
+    "source_patch_prepared": true,
+    "source_verified": "ISOLATED_ONLY",
+    "integrated_on_current_PR162": false,
+    "owner_QA_accepted": false,
+    "PRODUCT": "N/D — fixed complete accepted P01–P05 TaskID ledger not independently proven"
+  },
+  "self_improvement": {
+    "active_register_count": 11,
+    "all_11_acked": true,
+    "latest_delta_extra": "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE present in E06 R22, not current 11-item Git register: DELEGATE T06/P02 and T02 journal owner",
+    "relevant_root_clusters": 5,
+    "applied": 2,
+    "already_fixed": 2,
+    "delegated": 4,
+    "blocked": 1,
+    "remaining": "native PACK01 duplicate-key fix and independent source acceptance",
+    "lesson_applied": "Never treat a downstream JSON collision guard as sufficient if the upstream native host has already lossy-decoded user data; patch explicit false owner lease locally and hand off upstream host fix to sole T06 writer. Rechecked live HEAD after drift."
+  },
+  "handoff": {
+    "T06": {
+      "owner": "T06/manual #1 only PR162 writer",
+      "fix_path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "exact_PRE_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+      "required": "Before native_approve and port.call, reject duplicate JSON member names at all nesting levels using object_pairs_hook in original host decode(s); never silently accept stringified duplicate keys. Apply exact-CAS, host negative regression for dangerous training.start plus STOP/ACL/consent; then integrate own isolated lease guard only after owner verification.",
+      "owner_scoped_received_patch": {
+        "path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/p04_training_native_binding_g3m1.py",
+        "PRE": "81212d3686b0efecc72709a6a512dfa97f37be61",
+        "POST": "1eb13bf49c10ecddb0147da8d348eaab82f78b33"
+      },
+      "P04_handoffs": "G4-A model shard and G4-B GPU exact receipts independently compare to current PR PREs before integration, no unapproved overwrite."
+    },
+    "T02": {
+      "owner": "T02/C sole shared register/Master/E06/Lessons writer",
+      "required": "Ingest own R12 Git receipt and add source-contract cross-owner finding to current ERR-SRC-004 cluster (do not duplicate without checking register); note T06 stale/native boundary and deferred acceptance."
+    },
+    "QA": {
+      "owner": "Manual #2/T08/T10",
+      "required": "Independent same-SHA native safety verification after T06 integration; not signed by G3-A."
+    }
+  },
+  "safety": {
+    "PR162_main_unchanged": true,
+    "shared_journals_unchanged": true,
+    "G4A_G4B_files_untouched": true,
+    "original_3ZIP_729_untouched": true,
+    "D02_WOW200_8CoreID_5Persona_untouched": true,
+    "ACL_STOP_native_consent_user_data_untouched": true,
+    "EXE_NSIS_CI_GitLab_E07_training_release_NOT_RUN": true
+  },
+  "checkpoint": {
+    "owner_branch": "automation/v16/g3a/NOX-V16-G3A-20261029T203230MSK-R12",
+    "source_base_commit": "b83b952cc90fe33dd8c3bd2711ca23611b0b0960",
+    "expected_source_gitblob_POST": "1eb13bf49c10ecddb0147da8d348eaab82f78b33",
+    "next_action": "T06 fix PACK01 duplicate JSON decode on exact live PRE, stage G3-A owner patch and G4A/G4B POST via exact CAS, run native owner-ACK/lease/security tests at pinned SHA, then T08 sign; T02 journal only."
+  },
+  "immutable_receipt_rule": "Single atomic commit with source/test/this receipt, verify GitHub readback after branch CAS. Shared Docs never written by G3-A."
+}
