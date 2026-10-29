@@ -94,6 +94,34 @@ class BackupAdapterTests(unittest.TestCase):
         port.runner = lambda argv, *, stop: (1, "")
         with self.assertRaises(mod.BackupHold):
             port(object(), {"operation": "backup"})
+    def test_reuses_existing_pack01_binder_and_owner_identity(self):
+        import sys
+        from types import ModuleType
+        native = ModuleType("native_bridge")
+        seen = []
+        def bind(host, owner, provider, methods, *, receipt, probe):
+            seen.append((host, owner, methods, receipt, probe()))
+            return frozenset(methods)
+        native.bind_owner_methods = bind
+        previous = sys.modules.get("native_bridge")
+        sys.modules["native_bridge"] = native
+        try:
+            host = object()
+            expected = self.port().register(host, receipt="c" * 64)
+            self.assertEqual(expected, frozenset(("system.backup",)))
+            self.assertEqual(seen[0][1], 1)
+            self.assertEqual(seen[0][2], {"system.backup": "backup"})
+            self.assertTrue(seen[0][-1])
+        finally:
+            if previous is None:
+                del sys.modules["native_bridge"]
+            else:
+                sys.modules["native_bridge"] = previous
+    def test_explicit_registration_denies_unavailable_pinned_binary(self):
+        self.exe.write_bytes(b"drifted bytes")
+        with self.assertRaises(mod.BackupHold):
+            self.port().register(object(), receipt="c" * 64)
+
     def test_restic_must_emit_snapshot_summary(self):
         port = self.port()
         port.runner = lambda argv, *, stop: (0, "{}")
