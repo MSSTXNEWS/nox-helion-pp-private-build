@@ -200,27 +200,6 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         )
         self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
 
-    def test_rejects_windows_backslash_shard_path(self):
-        (self.root / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"q.weight": "..\\\\escape.safetensors"}}),
-            encoding="utf-8"
-        )
-        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
-
-    def test_rejects_windows_drive_relative_shard_path(self):
-        (self.root / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"q.weight": "C:escape.safetensors"}}),
-            encoding="utf-8"
-        )
-        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
-
-    def test_rejects_control_character_shard_path(self):
-        (self.root / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"q.weight": "bad\n.safetensors"}}),
-            encoding="utf-8"
-        )
-        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
-
     def test_rejects_symlink_weights(self):
         weight = self.root / "model.safetensors"
         weight.rename(self.root / "actual.safetensors")
@@ -247,6 +226,27 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
 
 
+    def test_rejects_windows_backslash_shard_path(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": "..\\\\escape.safetensors"}}),
+            encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
+
+    def test_rejects_windows_drive_relative_shard_path(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": "C:escape.safetensors"}}),
+            encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
+
+    def test_rejects_control_character_shard_path(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": "bad\n.safetensors"}}),
+            encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_PATH_UNSAFE")
+
     def test_rejects_windows_specific_shard_paths_on_any_host_os(self):
         for unsafe in (r"subdir\\model.safetensors", "C:weights.safetensors",
                        "CON.safetensors", "LPT1.safetensors", "COM¹.safetensors",
@@ -267,6 +267,8 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         )
         self.assertEqual(probe.inspect(self.root, REV)["reason"],
                          "MODEL_SHARD_PATH_UNSAFE")
+
+
 
     def test_local_manifest_sha_tracks_weight_bytes_not_only_config(self):
         first = probe.inspect(self.root, REV)
