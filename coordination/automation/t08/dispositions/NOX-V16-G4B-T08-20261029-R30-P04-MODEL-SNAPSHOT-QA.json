@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261029-R30-P04-MODEL-SNAPSHOT-QA",
+  "role": "G4-B / Manual M2 / T08 independent QA",
+  "existing_task_id": "P04/model_snapshot",
+  "timestamp_msk": "2026-10-29T22:55:00+03:00",
+  "canonical": {
+    "pr": 162,
+    "head_sha": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+    "tree_sha": null,
+    "tree_status": "NOT_RETURNED_BY_AVAILABLE_GITHUB_CONNECTOR",
+    "source_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+    "test_blob": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec"
+  },
+  "registry": {
+    "ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "active_error_count": 11,
+    "related_error_ids": [
+      "ERR-SRC-004"
+    ]
+  },
+  "owner_handoff": {
+    "issue": 177,
+    "marker": "NOX_V16_COMPONENT_QA_HANDOFF_V1",
+    "receipt_blob": "53e2bc677e1a2a86bce8ed3c6cf467d6c4e71eb7",
+    "owner": "T06/manual-1"
+  },
+  "stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": false,
+    "INTEGRATED_ON_CURRENT_HEAD": true,
+    "OWNER_QA_ACCEPTED": false
+  },
+  "disposition": "FAIL",
+  "reason": "CURRENT_INTEGRATED_P04_ACCEPTS_NONFULLY_INDEXED_SAFETENSORS_DATA_BUFFER",
+  "local_reproduction": {
+    "integrity": "Exact current Git source and test reconstructed; git hash-object equal to connector SHA1.",
+    "cmd_original": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -v",
+    "original_tests": {
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "environment": "isolated Linux local Python with byte-identical PR162 source and tests"
+    },
+    "cmd_delta": "python test_p04_delta.py",
+    "delta": {
+      "scenarios": 6,
+      "variant_runs": 12,
+      "passed": 12,
+      "failures": 0,
+      "cases": [
+        {
+          "name": "prefix_gap",
+          "current": "LOCAL_FILES_PRESENT_ONLY",
+          "donor": "HOLD"
+        },
+        {
+          "name": "middle_gap",
+          "current": "LOCAL_FILES_PRESENT_ONLY",
+          "donor": "HOLD"
+        },
+        {
+          "name": "trailing_unindexed",
+          "current": "LOCAL_FILES_PRESENT_ONLY",
+          "donor": "HOLD"
+        },
+        {
+          "name": "overlap",
+          "current": "HOLD",
+          "donor": "HOLD"
+        },
+        {
+          "name": "valid_contiguous",
+          "current": "LOCAL_FILES_PRESENT_ONLY",
+          "donor": "LOCAL_FILES_PRESENT_ONLY"
+        },
+        {
+          "name": "empty_tensor",
+          "current": "LOCAL_FILES_PRESENT_ONLY",
+          "donor": "LOCAL_FILES_PRESENT_ONLY"
+        }
+      ]
+    },
+    "test_script_sha256": "3da8156b0ff55f4284ba3ef04d8b0c1491c48a72f30d116ad1d5ccdc4d667446",
+    "native_windows": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "actual_license_attestation": "NOT_RUN"
+  },
+  "proposed_owner_safe_fix": {
+    "source_ref": "Packages/P04/model_snapshot_probe.py",
+    "pre_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+    "ready_donor_blob": "ca028a0c249f28aabc4e285d365da90c988b9435",
+    "donor_pr": 221,
+    "donor_head": "5c0e15d2e15590483273dd4ded762e401389be48",
+    "test_ref": "tests/P04/test_model_snapshot_probe.py",
+    "test_pre_blob": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+    "donor_test_blob": "33457771cccc0b8194e279a4eaa5407ce6430710",
+    "instructions": "T06 sole PR162 writer: verify exact current PRE and complete donor diff, run donor full Python suite and relevant no-loss/STOP/ACL/consent/privacy checks, CAS merge with readback, send newly pinned HEAD/tree to independent T08. Do not overwrite concurrent changes or claim native/GPU."
+  },
+  "safety": {
+    "stop_acl_consent": "DEPENDENT_NATIVE_NOT_RUN; NO RELATED SOURCE MODIFIED BY T08",
+    "privacy": "local synthetic fixtures only",
+    "model_license_verified": false,
+    "dataset_rights_verified": false,
+    "gpu_training_verified": false,
+    "snapshot_revision_attested": false,
+    "no_loss": true,
+    "source_lock_originals_729": "HISTORICAL_DONE_UNTOUCHED",
+    "build": "NOT_RUN",
+    "release": "NOT_RUN"
+  },
+  "lessons": {
+    "applied": [
+      "ERR-SRC-004: pin exact current blob and execute existing project tests plus independent security negatives; reuse ready donor rather than invent a new fix"
+    ],
+    "delegated": [
+      "T06 integrate donor after verifying current PRE",
+      "T02 shared register status only after independent acceptance"
+    ],
+    "remaining": [
+      "native Windows/ACL/STOP/consent",
+      "full P01-P05 frozen owner acceptance"
+    ]
+  },
+  "progress": {
+    "new_accepted_task_ids": 0,
+    "t08_operational_before": "1/3",
+    "t08_operational_after": "1/3",
+    "product": "N/D"
+  },
+  "result": "INCOMPLETE",
+  "next_checkpoint": {
+    "owner": "T06",
+    "sha": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+    "current_source": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+    "expected_source_after_owner_cas": "ca028a0c249f28aabc4e285d365da90c988b9435",
+    "independent_qa": "T08 retest post-CAS on same HEAD"
+  }
+}
