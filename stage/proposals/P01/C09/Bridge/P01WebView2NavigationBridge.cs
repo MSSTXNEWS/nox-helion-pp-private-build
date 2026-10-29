@@ -25,6 +25,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     // Completed IDs are also remembered: replay after native ACK must not run twice.
     private readonly HashSet<string> _seenRequestIds = new(StringComparer.Ordinal);
     private const int MaxRequestsPerDocument = 1024;
+    // Prevent a page from opening unbounded native dialogs or route callbacks.
+    private const int MaxPendingNativeRequests = 8;
     private long _documentEpoch;
     // Cancelling a stale native token may synchronously re-enter WebView2.
     private int _epochRevocationDepth;
@@ -152,10 +154,19 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
                 ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_BAD_MESSAGE");
                 return;
             }
-            // A duplicate request ID must not race a false ACK against the first request.
+            // A completed or in-flight request must never receive a contradictory HOLD
+            // simply because the document quota was reached after its original ACK.
+            if (_seenRequestIds.Contains(requestId)) return;
             if (_seenRequestIds.Count >= MaxRequestsPerDocument)
             {
                 ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_DOCUMENT_REQUEST_LIMIT");
+                return;
+            }
+            // Bound concurrent native confirmations and callbacks. A busy request
+            // is not reserved and can safely retry with the same request ID.
+            if (_pending.Count >= MaxPendingNativeRequests)
+            {
+                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_BUSY");
                 return;
             }
             if (!_seenRequestIds.Add(requestId)) return;
