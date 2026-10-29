@@ -1,0 +1,268 @@
+{
+  "schema": "NOX_V16_T11_PROGRESS_IMMUTABLE_RECEIPT_R16",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T1740MSK-R16-ACCESS-HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows LOADER ONLY, source preparation, no EXE",
+  "recorded_moscow": "2026-10-29T17:42:10.457+03:00",
+  "planned_moscow": "2026-10-29T17:40:00+03:00",
+  "observed_start_moscow": "2026-10-29T17:42:09.270+03:00",
+  "observed_end_moscow": null,
+  "duration_seconds": null,
+  "previous_checkpoint": {
+    "run_id": "NOX-V16-T11-20261029T1715MSK-R15-ACCESS-HOLD",
+    "immutable_commit": "9f3b1387399efb93900bdcbe36007c283bfcc88e",
+    "done": 2,
+    "total": 5,
+    "percent": 40
+  },
+  "progress_checkpoint": {
+    "done": 2,
+    "total": 5,
+    "percent": 40,
+    "bar": "████░░░░░░",
+    "delta_pp": 0,
+    "remaining": 3
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "status": "DONE",
+      "proof": {
+        "migration_github_commit": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+        "r12_receipt_blob": "7ec747bbe1d7bf0430e9d9eee710a403bd9a01ba",
+        "source": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/3cef69137be12e740b739d8a070a463e8eb62182"
+      },
+      "note": "Historic GitLab Free migration is identified from GitHub source, not live GitLab."
+    },
+    {
+      "id": 2,
+      "status": "DONE",
+      "proof": {
+        "unique_migration_paths": 27,
+        "immutable_handoff_run": "NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD",
+        "r12_blob": "7ec747bbe1d7bf0430e9d9eee710a403bd9a01ba",
+        "r12_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+      },
+      "note": "27 migration-unique files and history inventoried; preservation on live GitLab remains unverified."
+    },
+    {
+      "id": 3,
+      "status": "HOLD",
+      "blocker": "GITLAB_LIVE_ACCESS_HOLD",
+      "proof": {
+        "gitlab_project": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "live_authenticated_gitlab_head": null,
+        "live_branch_ref": null,
+        "verified_permissions": false
+      },
+      "owner": "authorized GitLab private-project owner",
+      "note": "No authenticated live GitLab connector/session. Historic GitHub migration SHA cannot count as GitLab HEAD."
+    },
+    {
+      "id": 4,
+      "status": "HOLD",
+      "blocker": "FROZEN_SOURCE_SHA_NOT_ACCEPTED",
+      "proof": {
+        "historic_ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "historic_entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+        "manual_approval_gate": "NOX_APPROVE_WINDOWS_BUILD=YES and CI_PIPELINE_SOURCE web/api",
+        "entrypoint_ref_guard": "migration/nox-v16-gitlab-free-20261028-r01",
+        "github_unfrozen_source_head": "7f8f022087e6653ef0dcea2ff4dfd68a80d76950",
+        "accepted_t09_frozen_source_head": null,
+        "independent_t10_source_ready_pass": null
+      },
+      "owner": "T06 source owner, T09 freeze, T10 independent QA; then T12 CI owner",
+      "note": "No CI/entrypoint edits before same-SHA freeze; separate owner must review pinned-ref update."
+    },
+    {
+      "id": 5,
+      "status": "HOLD",
+      "blocker": "GITLAB_ACCESS_AND_SOURCE_READY_HOLD",
+      "proof": {
+        "single_existing_conditional_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+        "gitlab_live_head": null,
+        "gitlab_same_sha_verified": false,
+        "final_t12_ready_handoff": null
+      },
+      "owner": "T11 then authorized T12 build owner",
+      "note": "Do not duplicate R12 conditional handoff or assert GitLab READY."
+    }
+  ],
+  "new_observation": {
+    "canonical_source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_observed_at_msk": "2026-10-29T17:42:10.458+03:00",
+    "current_github_source_head": "7f8f022087e6653ef0dcea2ff4dfd68a80d76950",
+    "compared_against_r15_latest_source_sha": "d9ddcfa908ddde5bbd60847adf7f681f671d490d",
+    "comparison": {
+      "status": "ahead",
+      "ahead_by": 15,
+      "behind_by": 0,
+      "total_commits": 15,
+      "changed_path_count": 31,
+      "changed_paths": [
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+          "status": "modified"
+        },
+        {
+          "path": "Packages/P04/model_snapshot_probe.py",
+          "status": "modified"
+        },
+        {
+          "path": "Packages/P04/preflight_local_gpu.py",
+          "status": "modified"
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "status": "modified"
+        },
+        {
+          "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+          "status": "modified"
+        },
+        {
+          "path": "coordination/automation/t06/NOX-V16-T06-20261029T172252MSK-R09.json",
+          "status": "added"
+        },
+        {
+          "path": "coordination/automation/t06/NOX-V16-T06-20261029T173423MSK-R10.json",
+          "status": "added"
+        },
+        {
+          "path": "coordination/automation/t06/NOX-V16-T06-ONE-TREE-R04-FIXED-DECISIONS.json",
+          "status": "added"
+        },
+        {
+          "path": "coordination/automation/t06/NOX_V16_T06_PREMATURE_CLOSEOUT_ROOT_CAUSE_R01.json",
+          "status": "added"
+        },
+        {
+          "path": "coordination/e06/run_source_integrations_r13.py",
+          "status": "added"
+        },
+        {
+          "path": "coordination/e06/t06_closeout_guard.py",
+          "status": "added"
+        },
+        {
+          "path": "coordination/e06/t06_stage_original_voice.py",
+          "status": "added"
+        },
+        {
+          "path": "coordination/e06/test_t06_closeout_guard.py",
+          "status": "added"
+        },
+        {
+          "path": "coordination/e06_host50/admission.py",
+          "status": "modified"
+        },
+        {
+          "path": "coordination/megablocks/NOX_V16_R31_10X6_SOURCE_QUEUE_20261029.json",
+          "status": "added"
+        },
+        {
+          "path": "coordination/providers/NOX_V16_VERIFIED_OPEN_SOURCE_PIN_CANDIDATES_R10.json",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+          "status": "modified"
+        },
+        {
+          "path": "integrations/creative/nox_fastpack/engine.py",
+          "status": "modified"
+        },
+        {
+          "path": "integrations/creative/tests/test_atomic_movie_publish_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_bounded_media_import_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_project_boundary_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_provider_json_budget_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_storyboard_shape_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_verified_local_ffmpeg_stop_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_weight_receipts_r20.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/tests/test_workflow_admission_r31.py",
+          "status": "added"
+        },
+        {
+          "path": "integrations/creative/web/studio.js",
+          "status": "modified"
+        },
+        {
+          "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+          "status": "added"
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_shutdown_cancellation_safety_r12.py",
+          "status": "added"
+        },
+        {
+          "path": "tests/e06/adapters/test_g2_space_mobile.py",
+          "status": "modified"
+        },
+        {
+          "path": "tests/e06/test_creative_stop_exit_attestation_r19.py",
+          "status": "added"
+        }
+      ],
+      "deleted_paths": 0
+    },
+    "source_head_is_signed_final_frozen": false,
+    "t07_t09_original_archive_physical_receipt": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "original_archive_joined_size_bytes": 60364346,
+    "original_members_verified_in_prior_t09_receipt": 729,
+    "original_archive_does_not_prove_integrated_source_ready": true
+  },
+  "one_controlling_blocker": {
+    "id": "GITLAB_LIVE_ACCESS_HOLD",
+    "owner": "authorized private GitLab project owner",
+    "required_evidence": "authenticated project ID, actual branch/ref HEAD SHA, permissions and live ref/history readback, then match to accepted frozen SHA"
+  },
+  "lesson_applied": "A changing GitHub source tree and a historical GitLab CI/entrypoint source blob prove neither the private GitLab live HEAD nor final SourceLock. Preserve previous 2/5 and avoid premature CI rebind or duplicate T12 handoff; never infer full acceptance from isolated static/fixture source checks.",
+  "handoff_to_T02": {
+    "request": "CAS_APPEND_ONLY_IF_NEW_RUNID",
+    "only_shared_docs_writer": "T02",
+    "run_id": "NOX-V16-T11-20261029T1740MSK-R16-ACCESS-HOLD",
+    "shared_docs_written_by_t11": false,
+    "source_commit_to_verify": "7f8f022087e6653ef0dcea2ff4dfd68a80d76950",
+    "expected_progress": "2/5;40.0%;delta 0.0pp",
+    "do_not_count_as_new_T11_DONE": true
+  },
+  "safety": {
+    "t11_source_code_edits": 0,
+    "t11_ci_edits": 0,
+    "t11_shared_docs_writes": 0,
+    "gitlab_push": 0,
+    "force_push": 0,
+    "reimport": 0,
+    "exe": 0,
+    "nsis": 0,
+    "gitlab_ci": 0,
+    "e07": 0,
+    "release": 0,
+    "original_729_untouched": true,
+    "history_27_unique_files_untouched": true,
+    "previous_done_preserved": true,
+    "automation_state_change": 0
+  }
+}
