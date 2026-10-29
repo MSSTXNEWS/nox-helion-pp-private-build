@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-MANUAL2-20261029-R23-P04-INDEPENDENT-SOURCE-SCOPE",
+  "role": "MANUAL2/T08",
+  "existing_task_id": "P04/model_snapshot",
+  "error_id": "ERR-SRC-004",
+  "source_head": "d23956686fd9634225512f456b194fc723eda933",
+  "source_tree": "dd1e245a61767c0c47585d412fe18e763decb4e6",
+  "source_path": "Packages/P04/model_snapshot_probe.py",
+  "source_git_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+  "test_path": "tests/P04/test_model_snapshot_probe.py",
+  "test_git_blob": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e",
+  "source_contract": "INDEPENDENT_SOURCE_SCOPE_PASS",
+  "full_task_accepted": false,
+  "qa_work": {
+    "owner_existing_full_python_suite": "T06 reported 32/32 on same P04 blobs",
+    "independent_local_slice_prior": "16/16 PASS",
+    "independent_local_extra": "7/7 PASS",
+    "extra_fixtures": "contiguous 1-24 tensors, each 1-13 missing-byte hole, huge dimension checks, JSON duplicate name, metadata, scalar utf8",
+    "exact_full_module_independent": "NOT_RUN",
+    "native_windows_gpu": "NOT_RUN",
+    "license_rights": "NOT_ATTESTED"
+  },
+  "artifact": {
+    "local_zip": "NOX_V16_M2_R23_CYCLE3_INDEPENDENT_QA.zip",
+    "sha256": "934b3e0277548c385afc44a3ff25ff1ca4eed756744ed3089d4559e6398270e4"
+  },
+  "official_github_review": 5704529703,
+  "status": "SOURCE_COMPONENT_PARTIAL_PASS__FULL_QA_INCOMPLETE",
+  "journal_writer": "T02 ONLY",
+  "next_checkpoint": "T08 independent execute full 32 exact source test; T06 source owner resolve other P01-P05/Host50; T02 append ERR-SRC-004 only; T09/T10 downstream after signed same-head evidence",
+  "no_exe_nsis_ci_e07": true
+}
