@@ -77,6 +77,14 @@ public sealed class GoogleDocsAppendReadback
                 acknowledgedId.ValueKind != JsonValueKind.String ||
                 acknowledgedId.GetString() != documentId)
                 return new(runId, documentId, revision, null, "WRITE_DOCUMENT_ID_MISMATCH", entry.Length);
+            // Docs returns the updated requiredRevisionId after applying the batch.
+            if (!ack.RootElement.TryGetProperty("writeControl", out var control) ||
+                control.ValueKind != JsonValueKind.Object ||
+                !control.TryGetProperty("requiredRevisionId", out var acknowledgedRev) ||
+                acknowledgedRev.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(acknowledgedRev.GetString()) ||
+                acknowledgedRev.GetString() == revision)
+                return new(runId, documentId, revision, null, "WRITE_REVISION_UNVERIFIED", entry.Length);
 
             using var after = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
                 token, null, stop).ConfigureAwait(false);
