@@ -1,0 +1,239 @@
+{
+  "schema": "NOX_V16_T09_R23_SAME_HEAD_FREEZE_NEGATIVE_RECEIPT_V1",
+  "task_id": "T09",
+  "run_id": "NOX-V16-T09-20261029T230952MSK-R21-SAMEHEAD-FOCUSED-TEST",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader/installer V16/R29; source freeze ONLY",
+  "time_msk": {
+    "planned_start": "2026-10-29T23:03:00+03:00",
+    "first_directly_observed": "2026-10-29T23:09:52+03:00",
+    "prepared_utc": "2026-10-29T20:12:37.052Z",
+    "end": "PENDING_READBACK"
+  },
+  "prestart_read_proof": {
+    "canon_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "rule_33_consolidated_count": 56,
+    "section_54_56_r29_read": true,
+    "original_role_blob": "be468852e4138c70095ea6d46ccfcc86c4bd981e",
+    "active_error_register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "active_error_register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "other_document_revisions": {
+      "Master": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+      "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+      "Lessons": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "r23_policy_blob": "11da1dd30ae4ad2a761e4d94b7f47bfdbb2e428f"
+  },
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "errors_ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "owner": "T02",
+      "action": "HANDOFF",
+      "reason": "Shared error/document backfill incomplete; T09 does not write common ledger."
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "owner": "T02",
+      "action": "APPLY",
+      "reason": "Refreshed PR162 live HEAD/tree 42cc.../c09d...; stale queue and prior source pin not accepted."
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "owner": "T06/T08",
+      "action": "HANDOFF",
+      "reason": "Host50 signature/native same-head still unproven; cannot promote source-only fix."
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "owner": "T06",
+      "action": "HANDOFF",
+      "reason": "P04 snapshot current code 9a837... unchanged, independent T08 gap QA FAIL; owner P01-P05 full acceptance absent."
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "owner": "T08",
+      "action": "HANDOFF",
+      "reason": "Pinned fixture runner independently unverified; do not promote."
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "owner": "T07/T09",
+      "action": "ALREADY_VERIFIED",
+      "reason": "Original ZIP 3/3,729/729 verified by immutable physical receipts; no repeat."
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "owner": "T04",
+      "action": "ALREADY_VERIFIED",
+      "reason": "Historical 34/34 version resolution retained; not product acceptance."
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "owner": "T09",
+      "action": "APPLY",
+      "reason": "Closeout fail closed: T09 1/6, no frozen claim, explicit HEAD+tree evidence."
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "owner": "ALL",
+      "action": "APPLY",
+      "reason": "Do not equate run completed, receipt saved, report, or HOLD with Task DONE."
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "owner": "T06",
+      "action": "HANDOFF",
+      "reason": "Owner T06 8/8 and signed manifest absent; T10 cannot be made prerequisite."
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "owner": "T06/T08",
+      "action": "HANDOFF",
+      "reason": "At 42cc current gate d839... checks focused test status PASS without _consistent_source_heads(test, head); existing R26 minimal patch f433... not integrated; T08 native routes pending."
+    }
+  ],
+  "source": {
+    "pr": 162,
+    "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pre_head": "42cc000ad1b04eb96d0e3f886d469451d1f5501f",
+    "observed_tree": "c09d7afad4aa6f5b311470f0bc666ee1ac6a99eb",
+    "prior_3fc_to_current": {
+      "ahead": 7,
+      "behind": 0,
+      "changed_paths": 4,
+      "deleted_paths": 0
+    },
+    "canonical_p04_source_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+    "canonical_p04_test_blob": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+    "latest_isolated_p04_pr221_head": "3434f21904910f579c4175f961c84db5f4e2dfd9",
+    "latest_isolated_p04_source_blob": "fe81cefda2970479f18cc50bae485d006d28f03f",
+    "latest_isolated_p04_test_blob": "1b9fd37a56a39c728b663b7eefda6f800037fded",
+    "owner_gate_t08_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85",
+    "t06_signed_8_of_8": "NOT_EVIDENCED",
+    "t08_exact_current_head_accepted": "NOT_EVIDENCED",
+    "no_loss_full_tree": "NOT_RECHECKED",
+    "archive_original_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "focused_security_check": {
+    "kind": "ACTUAL_SOURCE_STATIC_CONTRACT_CHECK",
+    "not_windows_runtime": true,
+    "target": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+    "actual_current_git_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85",
+    "checked_expression": "if test.get(\"status\") != \"PASS\": return False",
+    "missing_condition": "_consistent_source_heads(test, head) for PATCH_APPLIED focused_test_blob",
+    "outcome": "FAIL_CANNOT_SIGN_T08_SAME_HEAD",
+    "existing_owner_safe_candidate_post_blob": "f43376777e9024f634c2551d7efedace8d0e58fa",
+    "existing_candidate_receipt_commit": "df26f9c4eb00a009e1f2b233ca98079701fb65c6",
+    "duplicate_full_qa_not_run": true
+  },
+  "historical": {
+    "original_sourcelock": {
+      "status": "PASS_ORIGINAL_ONLY",
+      "parts": "3/3",
+      "files": "729/729",
+      "zip_bytes": 60364346,
+      "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "t07_receipt_blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+      "t09_cosign_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0"
+    },
+    "t04_34_of_34": true,
+    "t05_old_decisions_retained": true
+  },
+  "progress": {
+    "before": {
+      "accepted": 1,
+      "denominator": 6,
+      "pct": 16.7
+    },
+    "after": {
+      "accepted": 1,
+      "denominator": 6,
+      "pct": 16.7,
+      "bar": "██░░░░░░░░"
+    },
+    "delta_pp": 0,
+    "outstanding": 5,
+    "criteria": [
+      {
+        "id": 1,
+        "status": "HOLD",
+        "why": "No T06 8/8 owner-signed accepted current HEAD"
+      },
+      {
+        "id": 2,
+        "status": "HOLD",
+        "why": "Selected owner patches and final manifest not all accepted"
+      },
+      {
+        "id": 3,
+        "status": "DONE",
+        "why": "T07/T09 original ZIP SourceLock physical immutable proof"
+      },
+      {
+        "id": 4,
+        "status": "HOLD",
+        "why": "T08 same-current-head independent P0/P1 absent; focused test SHA guard fails source-only"
+      },
+      {
+        "id": 5,
+        "status": "HOLD",
+        "why": "No immutable final accepted manifest SHA256"
+      },
+      {
+        "id": 6,
+        "status": "HOLD",
+        "why": "No frozen tuple to hand off T10/T11"
+      }
+    ]
+  },
+  "next_owner": {
+    "owner": "T06/manual #1",
+    "issue": "ERR-SRC-004 + ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+    "action": "On ACTUAL current PRE d8396f6c... integrate existing minimal T08 test-head binding (R26 donor f433... after owner CAS); independently resolve P04 source gap/shape against live PRE 9a837... latest donor fe81...; produce genuine T06 8/8 owner-accepted HEAD/tree/manifest with native Host50 ACL/STOP/consent receipts; T08 independently signs same exact resulting SHA. No T10 prerequisite for T09.",
+    "after_acceptance": "T09 pin one immutable HEAD/tree/manifest/SourceLock and hand identical tuple to T10/T11"
+  },
+  "gates": {
+    "A_READ": "PASS",
+    "B_PHYSICAL": "PASS_TARGETED_SOURCE_SECURITY_NEGATIVE_ONLY",
+    "C_PERSONAL_GIT_RECEIPT": "PENDING_CAS_READBACK",
+    "C_SHARED_T02_DOCS": "NOT_CLAIMED",
+    "D_LESSONS": "APPLIED_CURRENT_SHA_FAIL_CLOSED"
+  },
+  "no_source_code_written": true,
+  "no_shared_docs_written": true,
+  "final_freeze": {
+    "status": "HOLD",
+    "head": null,
+    "tree": null,
+    "manifest_sha256": null,
+    "source_lock_integrated_sha256": null
+  },
+  "product_progress": "N/D",
+  "forbidden": {
+    "exe": true,
+    "nsis": true,
+    "gitlab_ci": true,
+    "e07": true,
+    "release": true
+  }
+}
