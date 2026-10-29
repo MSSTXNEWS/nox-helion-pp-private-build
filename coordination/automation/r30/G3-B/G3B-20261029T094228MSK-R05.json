@@ -1,0 +1,114 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3B_SOURCE_RECEIPT_V5",
+  "run_id": "G3B-20261029T094228MSK-R05",
+  "slot": "G3-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "status": "SOURCE_PATCH_SAVED; V8_SOURCE_16_OF_16_PASS; NATIVE_HOLD; TEST_PATH_OWNER_HOLD",
+  "branch": "automation/r30/g3b/G3B-20261029T094228MSK-R05",
+  "base_ref": "automation/r30/g3b/G3B-20261029T084339MSK-R04",
+  "base_head_commit": "07f7d7da2381ef8e43ef5a71098709ac05462403",
+  "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "source_commits": [
+    "8170e73c73fa35b51e47f53e0aa78758f4967f25",
+    "64cbc07c8f968d8b2af8f46b421cd98ebfe4dedb",
+    "90d2d650c2d8b2717943b145d82aa7ea993e540c"
+  ],
+  "source_git_blob_before": "20fd3c069c55e63fcbd243dbd4faebf8e724943a",
+  "source_git_blob_after": "565db45528a805775f558699a0965ce50afeec7b",
+  "source_sha256_before": "7e90b0dcb08612173372c77717807db407c72d1ce694a4b4732adb7b97196ce5",
+  "source_sha256_after": "a1836d0c4a98668f5b40bc9da327491aaee7e4e3f1538f6edcba2389bf8f886a",
+  "task_ids": [
+    "G3B-R30-P03-BACKGROUND-STOP-RETRY-PINNED-JOB-AND-NULL-SNAPSHOT-CANCEL-R05"
+  ],
+  "previous_done_not_recredited": [
+    "G3B-P03-DURABLE-STOP-RACE",
+    "G3B-P03-UNPINNED-QUEUED-CANCEL-RACE",
+    "G3B-R30-P03-UNMERGED-CONSENT-IMMUTABLE-COMMAND-PORT",
+    "G3B-R30-P03-UI-BACKGROUND-ACTIVEJOB-EVENT-INGEST-R03",
+    "G3B-R30-P03-UI-DURABLE-STOP-OUT-OF-ORDER-EVENT-SNAPSHOT-R04"
+  ],
+  "defect": "When a different catalog card is selected, the UI disables Stop/Retry for the still-running actual host queue job. The outgoing modelId and pending ACK pin were likewise selection-dependent. A stale null/omitted activeJob snapshot can also erase an unacknowledged Cancelling state.",
+  "fix": "Retained the selected-model hero and prior R03/R04 event handling, but routed queue STOP/Retry through state.activeJob and the host job's uniquely resolved catalog model. Sent and ACK-pinned actual jobId/modelId, displayed targeted queue model tag. Kept Cancelling on null/missing activeJob snapshots until Cancelled is confirmed by host.",
+  "test": {
+    "source_parse": "PASS JavaScript V8 new Function on complete GitHub ui.js after readback",
+    "mode": "Exact source-extracted sendAction/processMessage handlers run in V8 against isolated host/DOM doubles; no mock Ollama success asserted",
+    "red": "FAIL as expected on R04: background-stop-to-correct-job misrouted",
+    "green": "16/16 PASS",
+    "scenarios": [
+      "background-stop-to-correct-job",
+      "deduplicate-STOP",
+      "background-ACK-pinned-job",
+      "background-retry",
+      "no-repeat-stop-while-Cancelling",
+      "completed-not-stoppable",
+      "unknown-host-model-failclosed",
+      "null-snapshot-sticky-Cancelling",
+      "missing-job-snapshot-sticky",
+      "stale-completed-event-blocked",
+      "cancelled-event-confirms",
+      "running-can-clear",
+      "cancelled-can-clear",
+      "cancelled-snapshot-confirms",
+      "normal-progress",
+      "buttons-bound-to-queue"
+    ],
+    "native_ollama_pull": "NOT_RUN",
+    "native_ollama_cancel": "NOT_RUN",
+    "native_ollama_retry": "NOT_RUN",
+    "native_ollama_progress": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "windows_webview2": "NOT_RUN",
+    "test_file": "NOT_WRITTEN: tests/P03/ is outside the exact assigned_paths manifest",
+    "owner_request": "Astra-C to resolve and grant exact path tests/P03/g3b_r30_background_stop_retry_null_snapshot_20261029.cjs before a persistent test commit"
+  },
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_source_paths": [
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "forbidden_paths": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ]
+  },
+  "historical": {
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_indexed": 25,
+    "snapshots_full_bodies": "NOT_VERIFIED",
+    "original_729_sha256": "NOT_RUN"
+  },
+  "rules": {
+    "section33": "56/56 read from coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md Git blob 46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections54_56": "READ",
+    "R29_loader_override": "READ"
+  },
+  "google_drive_read_ids": [
+    "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  ],
+  "previous_lesson_applied": "R04: durable STOP must remain sticky across both event and snapshot streams. R05 adds missing null/omitted activeJob case. R03 activeJob events had become background-independent, but STOP/Retry action targeting had not.",
+  "new_self_improvement_lesson": "Always test lifecycle across BOTH foreground-to-background catalog switching and host-state omissions; pin STOP/Retry authorization and ACK to the running queue job, not mutable view selection. A missing job is NOT a Cancelled receipt.",
+  "worker_drive_writes": false,
+  "central_drive_writer": "Astra-C only",
+  "native_status": "HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "accepted_product_delta": 0,
+  "product_percent": "N/D",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_pipeline": true,
+  "no_final_integration": true,
+  "no_main_write": true,
+  "no_pr162_write": true
+}
