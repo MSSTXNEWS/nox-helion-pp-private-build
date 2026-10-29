@@ -100,6 +100,20 @@ var hugeUnderstated = await Fetch(forged);
 Pass(hugeUnderstated.Status == "OFFLINE" && hugeUnderstated.ErrorCode == "RESPONSE_TOO_LARGE",
     "understated Content-Length: streaming cap is authoritative");
 
+var badDate = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes("{\"source_time\":\"not-a-date\"}"))));
+var badDateStatus = await Fetch(badDate);
+Pass(badDateStatus.Status == "OFFLINE" &&
+     badDateStatus.ErrorCode == "INVALID_SOURCE_TIME" && badDateStatus.Data is null,
+     "malformed provider timestamp is a safe typed failure");
+
+var wrongDateType = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes("{\"source_time\":123}"))));
+var wrongDateStatus = await Fetch(wrongDateType);
+Pass(wrongDateStatus.Status == "OFFLINE" &&
+     wrongDateStatus.ErrorCode == "INVALID_SOURCE_TIME" && wrongDateStatus.Data is null,
+     "non-string provider timestamp is a safe typed failure");
+
 var badJson = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes("{"))));
 var invalid = await Fetch(badJson);
 Pass(invalid.Status == "OFFLINE" && invalid.ErrorCode == "INVALID_JSON",
@@ -114,7 +128,7 @@ try {
     Console.WriteLine("PASS pre-canceled STOP: no cache success");
 }
 
-Console.WriteLine("11/11 semantic assertions PASS (when this project actually runs on .NET 8)");
+Console.WriteLine("13/13 semantic assertions PASS (when this project actually runs on .NET 8)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {

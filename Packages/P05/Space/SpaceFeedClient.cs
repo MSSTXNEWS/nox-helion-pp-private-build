@@ -123,7 +123,18 @@ public sealed class SpaceFeedClient
             using var json = await JsonDocument.ParseAsync(bounded,
                 cancellationToken: timeout.Token).ConfigureAwait(false);
             var cloned = json.RootElement.Clone();
-            var observed = extractSourceTime(cloned);
+            DateTimeOffset? observed;
+            try
+            {
+                observed = extractSourceTime(cloned);
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidOperationException
+                                       or KeyNotFoundException)
+            {
+                // Provider-controlled malformed or missing timestamps may
+                // never abort SPACE or leak raw parser details to the UI.
+                throw new InvalidDataException("INVALID_PROVIDER_SOURCE_TIMESTAMP", ex);
+            }
             var checkedAt = DateTimeOffset.UtcNow;
             // Provider timestamps are evidence, not authority. A timestamp
             // far in the future must never be reported as LIVE or CACHE.
@@ -141,12 +152,14 @@ public sealed class SpaceFeedClient
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or
-            JsonException or FeedResponseTooLargeException)
+            JsonException or InvalidDataException or FeedResponseTooLargeException)
         {
             stop.ThrowIfCancellationRequested();
             string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
                 ex is OperationCanceledException ? "TIMEOUT" :
                 ex is JsonException ? "INVALID_JSON" :
+                ex is InvalidDataException && ex.Message == "INVALID_PROVIDER_SOURCE_TIMESTAMP"
+                    ? "INVALID_SOURCE_TIME" :
                 ex is HttpRequestException && ex.Message == "PROVIDER_ENDPOINT_CHANGED"
                     ? "PROVIDER_ENDPOINT_CHANGED" : "NETWORK_ERROR";
             if (old is not null)

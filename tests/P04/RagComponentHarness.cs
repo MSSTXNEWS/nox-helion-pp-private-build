@@ -187,6 +187,21 @@ internal static class Program
                 Check((await reopened.SearchAsync(ownerA, conversation, "alpha")).Count == 0,
                     "deleted conversation stays deleted across service restart");
             }
+            // 19 full long chunks overflow the bounded host context; the
+            // final short verified passage must still appear after skipping.
+            for (var seq = 0; seq < 19; seq++)
+                await ingest.IngestTextAsync(ownerA, conversation, "long-" + seq,
+                    "long-" + seq + ".md", "alpha " + new string('q', 1170));
+            await ingest.IngestTextAsync(ownerA, conversation, "short-last",
+                "short.md", "alpha short verified passage");
+            var hostContext = await ingest.BuildContextAsync(ownerA, conversation, "alpha", 20);
+            Check(hostContext.Sources.Any(hit => hit.SourceId == "short-last"),
+                "host context skips oversized hit instead of hiding later small evidence");
+            Check(hostContext.Sources.All(hit =>
+                    hit.OwnerSid == ownerA && hit.ConversationId == conversation &&
+                    hit.ChunkSha256 == Sha(hit.Text)),
+                "host context preserves owner scope and full chunk digest");
+            await ingest.DeleteConversationAsync(ownerA, conversation);
             var indexPath = Path.Combine(directory, "index.json");
             using (var oversized = new FileStream(indexPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 oversized.SetLength(256L * 1024 * 1024 + 1);
