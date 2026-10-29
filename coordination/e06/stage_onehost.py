@@ -78,6 +78,7 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             raise RuntimeError("OWNER6_STAGE_LOCK_LOST_HOLD")
     prepared = []
     prepared_ids = {}
+    prepared_bytes = {}
     published = []
     installed_identity = None
     before_identity = None
@@ -93,6 +94,7 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             temporary = _prepare(trusted_path(path), raw)
             prepared.append(temporary)
             prepared_ids[temporary] = _identity(temporary)
+            prepared_bytes[temporary] = raw
         backup = prepared[3]
         # Even the first published addon needs the cooperative owner lease.
         require_lock_owned()
@@ -154,7 +156,8 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         if not keep_recovery:
             for temporary in prepared:
                 try:
-                    if _identity(temporary) == prepared_ids[temporary]:
+                    if _owned(temporary, prepared_ids[temporary],
+                              prepared_bytes[temporary]):
                         temporary.unlink()
                 except FileNotFoundError:
                     pass
