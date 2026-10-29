@@ -265,7 +265,8 @@ class NoxPackHost:
         def session_scope():
             session.validate()
             return (session.tenant, session.principal, session.chat_id,
-                    session.allowed, session.private_approved)
+                    session.allowed, session.private_approved,
+                    session.windows_sid, session.session_lease)
         authorized_scope = session_scope()
         def require_unchanged_session():
             if session_scope() != authorized_scope:
