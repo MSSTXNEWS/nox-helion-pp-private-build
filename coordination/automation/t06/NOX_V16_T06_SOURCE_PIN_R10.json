@@ -1,0 +1,152 @@
+{
+  "schema": "NOX_V16_T06_ONE_SOURCE_CANDIDATE_LOCK_R10",
+  "scope": "Only original Windows loader code. Source-only SHA manifest, not final SOURCE_READY/EXE.",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "pinned_head": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+  "pinned_tree": "5d07e1b04f531d9774f0747be89f5c1cee2700d5",
+  "tree_derivation": "Base tree e6390f797429a8d918daf4afb88fa7ea856cc18a from commit 2c08ec865c25d9d40252b969c6933eb5986a8bf7 plus exactly 6 added immutable receipt/coordination paths; computed via GitHub create_tree",
+  "prior_full_974_manifest": {
+    "commit": "e223a2c749940340e562f2389d64ebb067f29b43",
+    "blob": "1615f22de296384a610f5528d6069fecb0df5c44",
+    "full_blob_count": 974
+  },
+  "diff_from_prior_full_manifest": {
+    "base_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "ahead": 9,
+    "behind": 0,
+    "added": 18,
+    "modified": 6,
+    "deleted": 0,
+    "expected_total_blob_count": 992,
+    "paths": [
+      {
+        "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+        "status": "modified"
+      },
+      {
+        "path": "coordination/automation/t06/NOX-V16-T06-ONE-TREE-R04-FIXED-DECISIONS.json",
+        "status": "added"
+      },
+      {
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "status": "added"
+      },
+      {
+        "path": "coordination/e06/t06_stage_original_voice.py",
+        "status": "added"
+      },
+      {
+        "path": "coordination/megablocks/NOX_V16_R31_10X6_SOURCE_QUEUE_20261029.json",
+        "status": "added"
+      },
+      {
+        "path": "coordination/providers/NOX_V16_VERIFIED_OPEN_SOURCE_PIN_CANDIDATES_R10.json",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+        "status": "modified"
+      },
+      {
+        "path": "integrations/creative/nox_fastpack/engine.py",
+        "status": "modified"
+      },
+      {
+        "path": "integrations/creative/tests/test_atomic_movie_publish_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_bounded_media_import_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_project_boundary_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_provider_json_budget_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_storyboard_shape_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_verified_local_ffmpeg_stop_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_weight_receipts_r20.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/tests/test_workflow_admission_r31.py",
+        "status": "added"
+      },
+      {
+        "path": "integrations/creative/web/studio.js",
+        "status": "modified"
+      },
+      {
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "status": "modified"
+      },
+      {
+        "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "status": "added"
+      },
+      {
+        "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_shutdown_cancellation_safety_r12.py",
+        "status": "added"
+      },
+      {
+        "path": "tests/e06/adapters/test_g2_space_mobile.py",
+        "status": "modified"
+      },
+      {
+        "path": "tests/e06/test_creative_stop_exit_attestation_r19.py",
+        "status": "added"
+      },
+      {
+        "path": "tests/e06/test_immutable_onehost_binder_r12.py",
+        "status": "added"
+      },
+      {
+        "path": "tests/e06/test_pack01_owner_batch_r10.py",
+        "status": "added"
+      }
+    ]
+  },
+  "physical_original_archive": {
+    "verified_by": "T09 manual and T07 independent acceptance",
+    "source_zip_bytes": 60364346,
+    "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "physical_files_verified": 729,
+    "raw_part_count": 3
+  },
+  "t04_version_choices": {
+    "status": "DONE",
+    "count": 34,
+    "receipt": "edc94ddc70e8eca7db47f5165c63a36740fbafef"
+  },
+  "no_loss": "No deleted existing code paths compared with previous full 974-tree manifest; original ZIP preserved. Does NOT demonstrate native feature acceptance.",
+  "source_gates": {
+    "P01_P05_acceptance": "UNVERIFIED_ON_SINGLE_TREE",
+    "Host50": "13_HISTORICAL_SOURCE_HOLD_REQUIRE_BINDINGS",
+    "T08": "RECHECK_ON_PINNED_HEAD",
+    "T09_source_freeze": "PENDING_T10_SOURCE_CRITERIA",
+    "T10_SOURCE_READY": "NOT_YET_SIGNED",
+    "Windows_build": "NOT_STARTED"
+  },
+  "existing_functions_must_remain": [
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Personas",
+    "PACK01/02",
+    "Host50",
+    "Voice/STOP",
+    "RAG/GPU",
+    "SPACE/SQLite",
+    "user data"
+  ]
+}
