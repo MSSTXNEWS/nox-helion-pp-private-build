@@ -1,0 +1,175 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T08_EXACT_HEAD_SOURCE_GATE_R16",
+  "task": "T08",
+  "runId": "NOX-V16-T08-MANUAL-R16-20261029-EXACT-E51B2B",
+  "recordedMoscow": "2026-10-29T17:31:02+03:00",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader only",
+  "status": "SOURCE_P0P1_DISPOSITION_COMPLETE_BUT_T08_FINAL_ACCEPTANCE_HOLD",
+  "canonicalIdentity": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "sourceCommitGitSha1": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "sourceTreeGitSha1": "5d07e1b04f531d9774f0747be89f5c1cee2700d5",
+    "sourceBlobCount": 992,
+    "sourceManifestGitBlob": "71fa2fa66fde46a5e267b9118d380c58f657e973",
+    "originalSourceZipSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalMembers": 729,
+    "originalSourcePreserved": true
+  },
+  "provenance": {
+    "T02FixedFive": "NOX-V16-T02-P0-REGISTER-20261029T155718MSK-R11",
+    "T06SourceSeal": "NOX-V16-T06-SOURCE-SEAL-20261029-R05",
+    "T06ManifestGitBlob": "71fa2fa66fde46a5e267b9118d380c58f657e973",
+    "T06GitSourceIdentityAccepted": "PINNED_AND_MERGED_GIT_TREE_ONLY__NOT_FULL_P01_P05_FUNCTIONAL_ACCEPTANCE",
+    "T04VersionSelection": "34 historical choices preserved",
+    "T09FrozenOldSHA": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a HISTORICAL_NOT_CURRENT",
+    "T08Previous": "NOX-V16-T08-20261029T171500MSK-R14-AUTO"
+  },
+  "fixedP0P1": [
+    {
+      "id": "P0-01",
+      "classification": "ORIGINAL_ARCHIVE_EVIDENCE_RESOLVED",
+      "codeDefect": false,
+      "evidence": "T07/T09 physically verified original ZIP 3/3 and 729/729 SHA, not patched tree functional acceptance"
+    },
+    {
+      "id": "P0-02",
+      "classification": "SOURCE_GATE_PARTIAL",
+      "codeDefect": false,
+      "evidence": "T06 source 992 blobs merged/pinned; full P01–P05 and owner native-binding acceptance still absent"
+    },
+    {
+      "id": "P0-03",
+      "classification": "HOST50_13_NATIVE_BINDINGS_UNVERIFIED",
+      "codeDefect": "NOT_PROVEN",
+      "evidence": "Existing registry lists 37 SOURCE CANDIDATE, 13 SOURCE HOLD, integratedAcceptedRoutes=0; fail-closed HostHold for unbound routes expected"
+    },
+    {
+      "id": "P1-01",
+      "classification": "NATIVE_RUNTIME_NOT_PROVEN",
+      "codeDefect": "NOT_PROVEN",
+      "evidence": "Windows/.NET/SIP/GPU/Host50 same-SHA contract end-to-end not established; not a reproduced source code failure"
+    },
+    {
+      "id": "P1-02",
+      "classification": "COORDINATION_METADATA",
+      "codeDefect": false,
+      "evidence": "Owner and reused AutomationID provenance, no production code change required"
+    }
+  ],
+  "host50UnverifiedOwnerBindings": [
+    {
+      "route": "chat.voice",
+      "owner": 2
+    },
+    {
+      "route": "training.start",
+      "owner": 4
+    },
+    {
+      "route": "training.evaluate",
+      "owner": 4
+    },
+    {
+      "route": "calls.history",
+      "owner": 2
+    },
+    {
+      "route": "media.player",
+      "owner": 1
+    },
+    {
+      "route": "media.subtitles",
+      "owner": 1
+    },
+    {
+      "route": "browser.open",
+      "owner": 1
+    },
+    {
+      "route": "browser.bookmarks",
+      "owner": 1
+    },
+    {
+      "route": "images.generate",
+      "owner": 4
+    },
+    {
+      "route": "system.update",
+      "owner": 1
+    },
+    {
+      "route": "system.backup",
+      "owner": 1
+    },
+    {
+      "route": "system.pc_control",
+      "owner": 1
+    },
+    {
+      "route": "mobile.connect",
+      "owner": 6
+    }
+  ],
+  "componentFacts": {
+    "framedWorkerGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "framedWorkerOwnerTestGitBlob": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+    "nativeIngressGitBlob": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+    "sourceHostBridgeGitBlob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "ownerSavedFramedREDGREEN": "4/4 PASSED in earlier own receipt; not re-run under T08",
+    "newTestsExecutedByT08": 0,
+    "productFilesChangedByT08": 0
+  },
+  "noCodeBlockers": {
+    "status": "NO_NEW_REPRODUCED_AUTHORIZED_P0_P1_CODE_DEFECT_IN_FIXED_FIVE",
+    "scope": "only T02 historical five and exact source SHA; not a general proof of complete source, Windows, or 13 native handlers"
+  },
+  "fixedT08Criteria": {
+    "denominator": 3,
+    "completed": 1,
+    "percentage": 33.3,
+    "criteria": [
+      {
+        "n": 1,
+        "status": "HOLD",
+        "name": "T06 full owner-accepted source HEAD/tree + fixed T02 register",
+        "reason": "exact integrated source identity available; complete source contracts P01–P05 Host50/voice owner acceptance not signed"
+      },
+      {
+        "n": 2,
+        "status": "HOLD",
+        "name": "NO_CODE_BLOCKERS or code fix on same accepted HEAD",
+        "reason": "conditional no reproduced P0/P1 is recorded at exact SHA, but formal gate requires T06 full acceptance"
+      },
+      {
+        "n": 3,
+        "status": "DONE",
+        "name": "Immutable T08 handoff previously delivered to T09/T10",
+        "evidence": "manual R14 Git receipt and AUTO R14 issue handoff"
+      }
+    ]
+  },
+  "requiredPhysicalCloseout": {
+    "owner": "T06 sole source integrator and native owner G6-B plus owners 1/2/4/6",
+    "trigger": "Same SHA exact owner-approved native source proof, binding for 13 or documented runtime-only gating, then T09/T10 independent source PASS",
+    "T08Next": "If accepted HEAD identical, reuse this fixed five-entries disposition (no redundant tests); record final 3/3 CAS receipt. If different, inspect only actual changed files/owner tests.",
+    "noNewTaskIds": true
+  },
+  "selfImprovement": {
+    "cause": "Multiple HOLD reports and unstable PR162 SHA created artificial repeated work",
+    "fixApplied": "Pin immutable full HEAD/tree + 13 exact owner routes + already proven owner tests once, separate source identity from native source admission and final acceptance; leave new code untouched without reproduced P0/P1",
+    "proof": "one append-only Git receipt on non-product branch; after-write Git blob and changed-files compare required"
+  },
+  "noLoss": {
+    "oldDonePreserved": true,
+    "originalPartsPreserved": true,
+    "noUserDataAccess": true,
+    "productCodeMutated": false,
+    "EXE": false,
+    "NSIS": false,
+    "GitLabCI": false,
+    "E07": false,
+    "mainModified": false,
+    "PR162Modified": false,
+    "sharedDocsModified": false
+  }
+}
