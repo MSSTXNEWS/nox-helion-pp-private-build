@@ -1,0 +1,193 @@
+{
+  "schema": "NOX_V16_R18_G1C_PINNED_GPU_FIXTURE_REPAIR_VERIFICATION_V1",
+  "taskId": "G1-C-P04-P05",
+  "runId": "NOX-V16-G1C-20261029T210721MSK-R18-R14",
+  "scope": "EXPRESS_INTEGRATOR_SOURCE_ONLY",
+  "observedUtc": "2026-10-29T18:12:49.904Z",
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "treeSha": "60e4d3a1b7d18082efac38d72fecf3f0881c343b",
+    "headAtWrite": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "headDrift": false,
+    "tracked": [
+      {
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "blobSha": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+      },
+      {
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "blobSha": "15d6807033040711ac54c4c9f63432c5653e62bd"
+      },
+      {
+        "path": "tests/P04/test_local_gpu_preflight.py",
+        "blobSha": "2977f79608e93adf35011436d56f23a9e65531ca"
+      },
+      {
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "blobSha": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+      },
+      {
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "blobSha": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+      }
+    ]
+  },
+  "sourceChangeAlreadyInPr162": {
+    "path": "tests/P04/test_local_gpu_preflight.py",
+    "previousRunBlob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "observedNewBlob": "2977f79608e93adf35011436d56f23a9e65531ca",
+    "owner": "G4-B via T06",
+    "newModificationByG1C": false
+  },
+  "verification": {
+    "mode": "INDEPENDENT_CURRENT_GIT_SOURCE_STATIC_CONTRACT_CHECK_NOT_PYTHON_EXECUTION",
+    "passed": 14,
+    "total": 14,
+    "checks": [
+      {
+        "id": "BOUND:Packages/P04/model_snapshot_probe.py",
+        "pass": true
+      },
+      {
+        "id": "BOUND:Packages/P04/preflight_local_gpu.py",
+        "pass": true
+      },
+      {
+        "id": "BOUND:Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "pass": true
+      },
+      {
+        "id": "BOUND:Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "pass": true
+      },
+      {
+        "id": "GPU_TEST_ACTUAL_NEW_BLOB",
+        "pass": true
+      },
+      {
+        "id": "GPU_FIXTURE_STUBS_ACTUAL_CHILD_SEAM",
+        "pass": true
+      },
+      {
+        "id": "GPU_FIXTURE_REMOVES_PARENT_TORCH_STUB",
+        "pass": true
+      },
+      {
+        "id": "GPU_FIXTURE_THREE_EXISTING_NEGATIVE_POSITIVE_CASES",
+        "pass": true
+      },
+      {
+        "id": "GPU_FIXTURE_NO_FALSE_TRAINING_ATTESTATION",
+        "pass": true
+      },
+      {
+        "id": "GPU_PROBE_CHILD_SANDBOX",
+        "pass": true
+      },
+      {
+        "id": "GPU_PROBE_FAIL_CLOSED_TIMEOUT",
+        "pass": true
+      },
+      {
+        "id": "GPU_PROBE_UUID_AND_PARENT_SCOPE",
+        "pass": true
+      },
+      {
+        "id": "GPU_PROBE_RESPONSE_SCHEMA_GUARD",
+        "pass": true
+      },
+      {
+        "id": "GPU_TEST_NO_PRODUCT_WRITE",
+        "pass": true
+      }
+    ],
+    "pythonUnittest": "NOT_RUN",
+    "windowsCUDA": "NOT_RUN",
+    "dotNetNode": "NOT_RUN",
+    "fullStopAclConsentPrivacy": "NOT_RUN_NOT_CLAIMED",
+    "runtimeQaAccepted": false
+  },
+  "gates": {
+    "A": "FRESH_READ_PASS_PINNED",
+    "B": "NEW_SOURCE_DELTA_CORROBORATION_PASS_NONRUNTIME",
+    "C": "PENDING_THIS_RECEIPT_GIT_READBACK",
+    "D": "ACTIVE_11_TRIAGED_REAL_UPDATED_GPU_FIXTURE_REVIEW"
+  },
+  "freshRead": {
+    "canonicalRevision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canonicalRules33": "56/56",
+    "activeRegisterBlob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "errorCounts": {
+      "open": 5,
+      "fixAppliedUnverified": 4,
+      "verifiedClosed": 2
+    },
+    "errorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "r18ControlsBranchHead": "21da5946133c81bac0b303de5560c91f6c5c8562",
+    "r18OperationsBlob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18ToolkitBlob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "archivePromptBlob": "757e64e3c012d064561bd3331d50b87a2858e06b",
+    "masterRevision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06Revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessonsRevision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34Revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "selfImprovement": {
+    "activeReviewed": 11,
+    "archived419NotActive": true,
+    "classes": {
+      "APPLY": [
+        "ERR-SYS-002",
+        "ERR-SRC-004",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "ALREADY_FIXED": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "DELEGATE": [
+        "ERR-SYS-001",
+        "ERR-SRC-003",
+        "ERR-SRC-005",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ]
+    },
+    "appliedLesson": "Recheck exact code/test boundary after a forked CUDA probe: parent torch mock is obsolete; once owner replaces it, verify actual source and new synthetic fixture without reapplying old donor patch.",
+    "remaining": "Native owner GPU unittest/Windows CUDA and independent frozen-HEAD acceptance; T02 shared-register ingestion unconfirmed."
+  },
+  "progress": {
+    "sourceBindings": "4/4",
+    "sourceBindingBefore": "4/4",
+    "newAcceptedUniqueTaskIds": 0,
+    "deltaAcceptedPercentagePoints": 0,
+    "product": "N/D"
+  },
+  "ownership": {
+    "solePr162Writer": "T06",
+    "soleSharedLogWriter": "T02",
+    "independentQA": "T08/manual2",
+    "g1cProductWrites": 0
+  },
+  "nextCheckpoint": {
+    "owner": "G4-B/T06",
+    "action": "Run existing tests/P04/test_local_gpu_preflight.py on pinned HEAD in Python runtime, preserve STOP/ACL/consent, get independent T08 same-SHA QA; do not reapply prior owner fixture patch unless new SHA drift.",
+    "head": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a"
+  },
+  "noEXE_NSIS_CI_E07": true
+}
