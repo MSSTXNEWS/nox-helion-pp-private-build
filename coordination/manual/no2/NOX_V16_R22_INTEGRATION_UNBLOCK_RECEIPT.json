@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_V16_MANUAL2_R22_ZERO_ACCEPTED_ROOT_CAUSE_HANDOFF",
+  "run_id": "NOX-V16-MANUAL2-20261029-R22-UNBLOCK-OWNER-GIT-WRITE",
+  "role": "MANUAL2 INDEPENDENT QA -- existing TaskID ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "canon_revision": "60",
+  "master_revision": "341",
+  "e06_revision": "501",
+  "lessons_revision": "392",
+  "c34_revision": "106",
+  "observed": {
+    "pr162_live_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "draft": true,
+    "registry_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "active_errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "T06_failed_run_id": "de5371c0-cef0-832b-8f0b-053bfa7504a7",
+    "T06_previous_provider_status": "failed",
+    "T06_last_failure": "Git create_tree rejected by connector safety; PR162 no source change during that run; task automatically disabled",
+    "T06_reenabled_this_checkpoint": true
+  },
+  "physical_process_fix": "Existing T06 automation prompt patched with R22_GIT_WRITE_RECOVERY_AND_ACCEPTANCE_FLOW; restored enabled true with unchanged schedule; run_now once requested; task provider readback PASS",
+  "owner_ready_candidates": [
+    {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "source_pre_blob": "12bc43ca210022fba418ca7345876e598edc33e3",
+      "donor_blob": "bd61bc61f66314d5f4840ef6ad516e72f6314995",
+      "donor_commit": "7bf335dd8f0c90223c93958a25be41daf02c612e",
+      "action": "owner exact PRE/POST and 2 tests for NUL/single backslash"
+    },
+    {
+      "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+      "source_pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+      "candidate_blob": "d4cd3a2d7bc830f7158d7e73aabdc63ddb723e63",
+      "candidate_commit": "146715ee47e92343ef24f5ca7072cd95f569ad9a",
+      "action": "cumulative independent patch: all HEAD aliases and focused test receipt same-head binding"
+    }
+  ],
+  "recovery_sequence": [
+    "READ actual source PR162 HEAD and ref and original exact PRE blob",
+    "Do not retry blocked create_tree API; use Contents create_file/update_file on existing isolated owner branch, passing exact blob SHA to update_file",
+    "Read back each staged owner file; ensure all coupled source/test artifacts staged, green focused security tests",
+    "Recheck PR162 current HEAD, conflicts and owner receipts; integrate only via atomic fast-forward CAS ref expected_sha, force=false",
+    "Hand exact final HEAD to independent T08 and T02, preserve owner/source/ACL/STOP/consent/SourceLock/NO-LOSS"
+  ],
+  "anti_deadlock": [
+    "RUN_COMPLETE != TASK_DONE",
+    "No new TaskID or duplicate error",
+    "Author-owned code cannot be independently QA-accepted by its writer",
+    "Platform FAILED != Git rollback",
+    "Read-only R20/R21 flow cannot write product",
+    "No build CI/NSIS/E07 until source-ready and permission"
+  ],
+  "status": "PROCESS_RECOVERY_CONFIG_PERSISTED; OWNER PRODUCT INTEGRATION NOT_YET_ACCEPTED",
+  "next": "T06 use normal GitHub Contents API; T08 independent acceptance on post SHA; T02 append to existing premature stop error via CAS; T09/T10 require evidence"
+}
