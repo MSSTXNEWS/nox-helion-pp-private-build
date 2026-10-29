@@ -53,16 +53,18 @@ public static class E05SealedProgress
         if (lanes is null || lanes.Count != 5 || HasCrossLaneTaskCollision(lanes)) return null;
         decimal[] weights = { .20m, .25m, .20m, .25m, .10m };
         decimal result = 0;
+        bool allAccepted = true;
         for (int i = 0; i < 5; i++)
         {
-            if (lanes[i].LaneId != i + 1) return null;
+            if (lanes[i] is null || lanes[i].LaneId != i + 1) return null;
             var percent = Evaluate(lanes[i], verifier);
             if (percent is null) return null;
+            allAccepted &= percent.Value == 100m;
             result += percent.Value * weights[i];
         }
         var rounded = Math.Round(result, 2);
         // Weighting can itself round 99.99% incomplete lanes back to 100%.
-        return lanes.All(l => Evaluate(l, verifier) == 100m) ? 100m : Math.Min(99.99m, rounded);
+        return allAccepted ? 100m : Math.Min(99.99m, rounded);
     }
     // TaskID is global across P01-P05; reject the same receipt counted in
     // multiple owners, even when each lane's local ledger is self-consistent.
