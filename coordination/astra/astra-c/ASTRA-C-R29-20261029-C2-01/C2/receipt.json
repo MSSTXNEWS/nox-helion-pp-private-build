@@ -1,0 +1,20 @@
+{
+  "runId": "ASTRA-C-R29-20261029-C2-01",
+  "lane": "C2",
+  "owner": "Astra-A/P02",
+  "task": "P02 native STOP failure containment",
+  "baseCommit": "693cbd7d741e97d4d137ae3f515b9ac7a1e00c44",
+  "path": "Packages/P02/worker-python/p02_framed_worker.py",
+  "preimageGitBlobSha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+  "defect": "chat.stop handler only catches ProtocolHold; unexpected exception from ingress.handle escapes serve_native_frames and terminates the pipe.",
+  "minimalFix": "Catch unexpected exceptions on STOP and return bounded NATIVE_PROVIDER_HOLD; preserve validated ProtocolHold behavior.",
+  "test": "NOT_RUN (host runtime/fixture unavailable in this execution)",
+  "nativeRuntime": "NOT_RUN",
+  "status": "PATCH_CANDIDATE_NOT_ACCEPTED",
+  "constraints": [
+    "No production files changed",
+    "Owner must verify current preimage and execute targeted injected STOP failure test",
+    "Do not claim Windows pass"
+  ],
+  "lesson": "Cancellation must preserve transport even when an underlying provider throws."
+}
