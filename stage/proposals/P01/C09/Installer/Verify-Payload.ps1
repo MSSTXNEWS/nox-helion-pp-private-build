@@ -39,6 +39,10 @@ foreach($f in $m.files) {
   $validBytes = [int64]0
   if (-not [int64]::TryParse(([string]$f.bytes),[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$validBytes)) { Fail 'invalid file length' }
   $rel = [string]$f.path
+  # Reject visually equivalent Unicode names before admission or hashing.
+  if ($rel -cne $rel.Normalize([Text.NormalizationForm]::FormC)) {
+    Fail 'noncanonical Unicode payload path'
+  }
   if ([string]::IsNullOrWhiteSpace($rel) -or [IO.Path]::IsPathRooted($rel) -or $rel -match '(^|[\\/])\.\.([\\/]|$)' -or $rel -match '[:*?"<>|]') { Fail "invalid path $rel" }
   $segments=@($rel -split '[\\/]')
   foreach ($part in $segments) {
