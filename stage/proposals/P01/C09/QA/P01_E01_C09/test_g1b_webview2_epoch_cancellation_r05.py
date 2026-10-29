@@ -44,6 +44,16 @@ class G1BEpochCancellationR05(unittest.TestCase):
         self.assertNotIn("await _invokeExistingNativeRoute(routeId, _lifetime.Token)", handler)
         self.assertIn("requestLifetime?.Dispose();", handler)
 
+    def test_epoch_revocation_blocks_reentrant_native_authority(self):
+        self.assertIn("private int _epochRevocationDepth;", TEXT)
+        epoch = self._part("private void AdvanceDocumentEpoch", "private async void OnWebMessageReceived")
+        self.assertIn("Interlocked.Increment(ref _epochRevocationDepth);", epoch)
+        self.assertIn("finally { Interlocked.Decrement(ref _epochRevocationDepth); }", epoch)
+        handler = self._part("private async void OnWebMessageReceived", "private bool IsCurrent")
+        current = self._part("private bool IsCurrent", "private void ReplyIfCurrent")
+        self.assertIn("Volatile.Read(ref _epochRevocationDepth) != 0", handler)
+        self.assertIn("Volatile.Read(ref _epochRevocationDepth) != 0", current)
+
     def test_home_menu_core_origin_and_ack_require_native(self):
         self.assertIn('routeId == "HOME" || routeId == "MENU" || routeId == "CORE"', TEXT)
         self.assertIn("IsTrustedSource(args.Source)", TEXT)
