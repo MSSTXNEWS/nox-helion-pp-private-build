@@ -355,9 +355,17 @@ public sealed class ModelDownloadQueueStore
             ModelLocalAttestation.RequireNoExistingReparsePoint(backup);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
             if (!File.Exists(backup)) throw new FileNotFoundException("No queue backup exists.", backup);
-            var bytes = await File.ReadAllBytesAsync(backup, ct);
-            if (bytes.Length == 0 || bytes.Length > MaxQueueFileBytes)
-                throw new InvalidDataException("Queue backup is invalid or too large.");
+            // Check backup size BEFORE allocating, then read through the same
+            // open handle so a replaced filename cannot substitute other bytes.
+            byte[] bytes;
+            await using (var backupHandle = new FileStream(backup, FileMode.Open,
+                             FileAccess.Read, FileShare.Read, 65536, FileOptions.Asynchronous))
+            {
+                if (backupHandle.Length <= 0 || backupHandle.Length > MaxQueueFileBytes)
+                    throw new InvalidDataException("Queue backup is invalid or too large.");
+                bytes = new byte[checked((int)backupHandle.Length)];
+                await backupHandle.ReadExactlyAsync(bytes, ct);
+            }
             using (var parsedBackup = JsonDocument.Parse(bytes))
                 RequireUniqueQueueKeys(parsedBackup.RootElement);
             var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
