@@ -74,7 +74,10 @@
         "T06 R09 1/8; PR162 current draft",
         "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted",
         "2026-10-29 T06 G3C R14 commit c0d706e0f75046d08a6785c55f74f4497a5ef401 and receipt ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be: P03 ModelCatalog.cs blob 72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf, ModelDownloadQueueWorker.cs blob 3692811ac3234afb54e82958c7415b23619c1f0f, focused test source 0650f8d927d3abc65b92cdd58b3057335ad547b2; 13/13 STATIC owner-check only, .NET/native NOT_RUN; T06 1/8 SOURCE_READY HOLD.",
-        "2026-10-29 T06 P01 SourceLock orphan-retry root corrected on PR162 at b9076c62a7e9de67146ff5397ef6882250efad00, stage_p01.py b0bd954407949965e4871acaa9f15ccc060e3187 -> d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7; at live dde1be7f03cd512a22f30046c6ba2d5de3582353 exact source blob still d12ff786; source-only test, native/owner full QA NOT_RUN. Existing error remains OPEN."
+        "2026-10-29 T06 P01 SourceLock orphan-retry root corrected on PR162 at b9076c62a7e9de67146ff5397ef6882250efad00, stage_p01.py b0bd954407949965e4871acaa9f15ccc060e3187 -> d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7; at live dde1be7f03cd512a22f30046c6ba2d5de3582353 exact source blob still d12ff786; source-only test, native/owner full QA NOT_RUN. Existing error remains OPEN.",
+        "R23 G5-A T02/C physical Git readback 2026-10-29 22:4x MSK: PR162 observed HEAD 3fc87724730c4ef9d777f7a740953425f0ae65cb, P01 owner-receipt SAME-HEAD security verifier coordination/e06/t06_owner_receipt_same_head_gate_r23.py Git blob bd61bc61f66314d5f4840ef6ad516e72f6314995 and targeted test bea76d1ef9080ae7eea78178a23f8aa0701b1e04; SAME blobs as isolated T08 donor 7bf335dd8f0c90223c93958a25be41daf02c612e. Thus prior R23 donor NOT_INTEGRATED classification is STALE for this exact path; status INTEGRATED SOURCE ONLY, T08 QA_ACCEPTED/native NOT_RUN, not task DONE.",
+        "R23 manual #3 P04 model_snapshot PR221 latest observed HEAD 5c0e15d2e15590483273dd4ded762e401389be48: source Packages/P04/model_snapshot_probe.py blob ca028a0c249f28aabc4e285d365da90c988b9435, test tests/P04/test_model_snapshot_probe.py blob 33457771cccc0b8194e279a4eaa5407ce6430710. These differ from R23 former donor pinned 74fca01f.../9a837f86.../b0244acd...; old RED/GREEN acceptance does not transfer automatically to changed dependency bytes. Donor SOURCE_PREPARED; full current Python suite and T08 independent current SHA QA NOT_RUN; T06 owner PR162 integration NOT_VERIFIED.",
+        "R23 T02/C acceptance bridge: T08 immutable per-TaskID P01 disposition 03c04c1d193d2ce3c231a71f889910fde08ecfa4 / blob 0a60ead02ae55b7c3906d3a0a75dd7c9a0ec3d3f is SOURCE_VERIFIED_LIMITED on older PR162 5a335a3d; expressly QA_ACCEPTED=false; must re-pin affected dependencies after drift. Host50 numbers are different ledgers: historical source HOLD=13, owner-map source unbound=11, owner-map native_pending=14."
       ],
       "source_ref": "Existing P01–P05 functional source contracts; latest subroot P01 WPF source provenance and P02 PACK01 route mapping",
       "recurrence": 0,
@@ -227,22 +230,17 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "NOX-V16-T02C-G5A-20261029T213335MSK-R20-FLOW-FIRST-JOURNAL",
-    "source_head_observed": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
-    "source_tree_observed": "106c03a6a8b85700d1b2442f345bb43380436977",
+    "run_id": "NOX-V16-T02C-G5A-20261029T224102MSK-R23-RECOVERY-DELTA",
+    "source_head_observed": "3fc87724730c4ef9d777f7a740953425f0ae65cb",
+    "source_tree_observed": "UNKNOWN",
     "progress": {
-      "historical_t02": "4/4 100%",
-      "current_c": "0/4 0%",
-      "prior_percent": 0,
-      "current_percent": 0,
-      "delta_pp": 0,
-      "bar": "░░░░░░░░░░"
+      "historical_t02": "4/4 DONE unchanged",
+      "current_c": "0/4",
+      "accepted_task_id_delta": 0,
+      "product": "N/D"
     },
-    "docs_gate": "PENDING_EXTERNAL_REVISION_CAS_AFTER_GIT_COMMIT",
-    "history": "PARTIAL",
-    "registered_errors": 11,
-    "source_acked": "T06 and G5-A 11/11 on their old pinned blob; remaining owners ACK pending",
-    "next": "T06 reconcile committed source and owner 8/8; T08 independent exact HEAD+13 native Host50; T09 freeze; T10 SOURCE_READY; T02 Docs CAS+readback."
+    "docs_gate": "PENDING_LIVE_DOC_REVISION_CAS",
+    "next": "T06 exact current PRE/CAS for unintegrated P04 after focused tests; T08 same-HEAD independent QA; T02 E06/Lessons CAS"
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -518,6 +516,56 @@
       "no_build": true,
       "no_source_pr162_write": true,
       "next": "T06 reconcile committed source and owner 8/8; T08 independent exact HEAD+13 native Host50; T09 freeze; T10 SOURCE_READY; T02 Docs CAS+readback."
+    },
+    {
+      "run_id": "NOX-V16-T02C-G5A-20261029T224102MSK-R23-RECOVERY-DELTA",
+      "source_head_observed": "3fc87724730c4ef9d777f7a740953425f0ae65cb",
+      "source_tree_observed": "UNKNOWN_FROM_CURRENT_GITHUB_PR_METADATA",
+      "error_register_pre_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+      "stage_evidence": [
+        {
+          "existing_task_id": "T06/P01",
+          "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+          "source_blob": "bd61bc61f66314d5f4840ef6ad516e72f6314995",
+          "test_blob": "bea76d1ef9080ae7eea78178a23f8aa0701b1e04",
+          "status": "INTEGRATED_SOURCE_ONLY",
+          "owner": "T06",
+          "independent_acceptance": "NOT_PROVEN"
+        },
+        {
+          "existing_task_id": "T06/P04",
+          "donor_head": "5c0e15d2e15590483273dd4ded762e401389be48",
+          "source_blob": "ca028a0c249f28aabc4e285d365da90c988b9435",
+          "test_blob": "33457771cccc0b8194e279a4eaa5407ce6430710",
+          "status": "SOURCE_PREPARED_DONOR",
+          "owner": "manual #3 -> T06",
+          "independent_acceptance": "NOT_RUN"
+        }
+      ],
+      "qa_disposition": {
+        "task_id": "T06/P01",
+        "receipt_commit": "03c04c1d193d2ce3c231a71f889910fde08ecfa4",
+        "evaluated_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+        "current_head": "3fc87724730c4ef9d777f7a740953425f0ae65cb",
+        "accepted": false,
+        "reason": "only SOURCE_VERIFIED_LIMITED; full Python/native Windows and current dependency SAME-HEAD independent QA missing"
+      },
+      "host50": {
+        "legacy_source_hold": 13,
+        "source_unbound_current_owner_map": 11,
+        "native_pending_current_owner_map": 14
+      },
+      "accepted_task_id_delta": 0,
+      "product": "N/D",
+      "lessons": {
+        "clusters_processed": 3,
+        "already_integrated": 1,
+        "delegated": 2,
+        "applied": "invalidate stale donor and QA HEAD for changed dependency SHA",
+        "new_ids": 0
+      },
+      "build": "NOT_RUN",
+      "next_owner": "T06 exact current PRE/CAS for unintegrated P04 after focused tests; T08 same-HEAD independent QA; T02 E06/Lessons CAS"
     }
   ]
 }
