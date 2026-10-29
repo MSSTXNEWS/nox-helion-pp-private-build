@@ -550,7 +550,8 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
         if not (_nonempty_id(previous.get(key)) and previous.get(key) == new_job.get(key)):
             reasons.append("RETRY_NATIVE_SESSION_MISMATCH")
             break
-    if new_job.get("eventSequence") != 1 or not _positive(previous.get("eventSequence")):
+    if (type(new_job.get("eventSequence")) is not int or new_job.get("eventSequence") != 1
+            or not _positive(previous.get("eventSequence"))):
         reasons.append("RETRY_SEQUENCE_NOT_RESET")
     # Original P03 RetryAsync intentionally clears TotalBytes and
     # CompletedBytes to null. A queued retry has no verified bytes yet.
