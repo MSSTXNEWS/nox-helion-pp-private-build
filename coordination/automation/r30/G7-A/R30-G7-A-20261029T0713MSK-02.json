@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T0713MSK-02",
+  "slot": "G7-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY",
+  "status": "SOURCE_PATCH_SAVED_TEST_V8_GREEN_NATIVE_NOT_RUN; SOURCE_READY_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T0713MSK-02",
+  "parent_commit": "a99803a63f822365e55b2f44f3b545e2ca4d56db",
+  "parent_tree_sha": "dc28fc1116352a0100940ed2e86362a658150a3c",
+  "previous_done_receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T0610MSK-01.json",
+  "source": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "32e323dce776ef25da47f46aad527c74b390670d",
+    "post_blob_sha": "b3cdc08f6baaca942a84c5ddcd85dd17e9d4b9cf",
+    "collection_historical_blob": "7e4acf43c287b3578e38e0acab0266e0343132e3"
+  },
+  "test": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.eco-clock.test.mjs",
+    "blob_sha": "9a7d349fa14f7581ab51c105ff5927ad410802c8",
+    "proposed_native_command": "node --test proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.eco-clock.test.mjs",
+    "executed": "V8 actual source-module evaluation and exact stored node:test body (both profiles)",
+    "red": "FAIL: MAX stale ECO burst after suspended RAF, emitted=2 instead of 0",
+    "green": "PASS: MAX and REDUCED resume; no bursts before ECO minimum, two after; teardown restores original scene",
+    "node_runtime": "NOT_RUN",
+    "windows_runtime": "NOT_RUN"
+  },
+  "fix": {
+    "TaskID": "G7A-R30-D02-ECO-SUSPENDED-BURST-20261029-02",
+    "symptom": "Switching MAX to ECO after long paused RAF uses stale lastFrame/initialNow; next visible frame ejects MAX-era burst immediately. Also REDUCED resume left stale schedule.",
+    "root_cause": "Burst reschedule uses last executed frame rather than current trusted clock; oldMin Infinity ignored.",
+    "correction": "Rebase each existing orb nextBurst against validated current time plus finite ECO minimum when slowing or waking from REDUCED; reject invalid clock without changing mode.",
+    "scope": "Only original loader cinema FX scene; original HELION+8 CoreID DOM, five Persona, WOW001-200, buttons, ECO/Reduced Motion preserved."
+  },
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-A/",
+    "forbidden_paths_touched": false
+  },
+  "reads": {
+    "spec": "NOX FIN ZAGR V16 §33 56/56; §§54-56 + R29 loader-only",
+    "source_rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "r30_snapshots": {
+      "immutable_dirs": 25,
+      "recursive_git_tree_inventories_checked": 25,
+      "all_file_body_bytes_read": false,
+      "scene_variant_note": "r27-a02 stored historical blob 09e74921; no overwrite"
+    },
+    "drive": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "e06": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "historical_c34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "read": "PASS",
+      "write": "NOT_ATTEMPTED_CENTRAL_WRITER_ASTRA_C_ONLY"
+    }
+  },
+  "quality": {
+    "no_build": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab": true,
+    "no_final_integration": true,
+    "no_other_owner_edits": true,
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "product_done_not_inferred": true,
+    "source_ready": "HOLD",
+    "release": "HOLD"
+  },
+  "self_improvement": {
+    "lesson": "Time-of-last-render is not a trustworthy clock after tab suspension; on policy downgrade, sample validated current clock and handle REDUCED Infinity explicitly. Add a fake RAF gap and one deterministic RED→GREEN regression before candidate source commit.",
+    "forward": "Astra-C will read this own Git receipt and append centrally with revision CAS/readback; do not write shared Docs from G7-A."
+  }
+}

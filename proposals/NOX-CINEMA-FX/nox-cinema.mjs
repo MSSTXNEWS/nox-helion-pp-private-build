@@ -326,10 +326,16 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
         const p=particles.pop();p.node.remove();
       }
       particleCount=particles.length;
-      // A slower ECO policy must not inherit MAX's imminent burst.
-      if(PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
-        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
-          (lastFrame||initialNow)+newPolicy.minimumBurstMs);
+      // A slower ECO policy (or waking from REDUCED) must not inherit a
+      // stale, imminent burst. lastFrame may predate a long suspended tab.
+      const nextMin=PROFILES[next].minimumBurstMs;
+      const oldMin=PROFILES[mode].minimumBurstMs;
+      if(Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity)){
+        let now;
+        try{now=time();}catch(_){return false;}
+        if(!Number.isFinite(now)||now<0||!Number.isFinite(now+nextMin))
+          return false;
+        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,now+nextMin);
       }
       mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
