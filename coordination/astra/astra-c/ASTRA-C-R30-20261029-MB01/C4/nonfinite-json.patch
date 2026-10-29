@@ -1,10 +1,18 @@
 --- a/Packages/P04/model_snapshot_probe.py
 +++ b/Packages/P04/model_snapshot_probe.py
-@@
+@@ -9,7 +9,8 @@
+ 
+ import argparse
+ import hashlib
  import json
 +import math
  import os
-@@
+ import re
+ import stat
+@@ -64,7 +65,15 @@
+         if (len(raw) > MAX_JSON_BYTES or stamp(initial) != stamp(final) or
+                 not _regular(path) or stamp(path.stat()) != stamp(initial)):
+             raise ValueError("MODEL_METADATA_CHANGED_DURING_INSPECTION")
 -        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
 +        def reject_constant(_value):
 +            raise ValueError("non-finite model metadata constant")
@@ -15,3 +23,6 @@
 +            return number
 +        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
 +                         parse_constant=reject_constant, parse_float=finite_float)
+     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
+         raise ValueError("MODEL_METADATA_INVALID") from exc
+     if not isinstance(obj, dict):
