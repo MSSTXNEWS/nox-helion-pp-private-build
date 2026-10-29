@@ -73,7 +73,8 @@
       "proof": [
         "T06 R09 1/8; PR162 current draft",
         "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted",
-        "2026-10-29 T06 G3C R14 commit c0d706e0f75046d08a6785c55f74f4497a5ef401 and receipt ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be: P03 ModelCatalog.cs blob 72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf, ModelDownloadQueueWorker.cs blob 3692811ac3234afb54e82958c7415b23619c1f0f, focused test source 0650f8d927d3abc65b92cdd58b3057335ad547b2; 13/13 STATIC owner-check only, .NET/native NOT_RUN; T06 1/8 SOURCE_READY HOLD."
+        "2026-10-29 T06 G3C R14 commit c0d706e0f75046d08a6785c55f74f4497a5ef401 and receipt ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be: P03 ModelCatalog.cs blob 72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf, ModelDownloadQueueWorker.cs blob 3692811ac3234afb54e82958c7415b23619c1f0f, focused test source 0650f8d927d3abc65b92cdd58b3057335ad547b2; 13/13 STATIC owner-check only, .NET/native NOT_RUN; T06 1/8 SOURCE_READY HOLD.",
+        "2026-10-29 T06 P01 SourceLock orphan-retry root corrected on PR162 at b9076c62a7e9de67146ff5397ef6882250efad00, stage_p01.py b0bd954407949965e4871acaa9f15ccc060e3187 -> d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7; at live dde1be7f03cd512a22f30046c6ba2d5de3582353 exact source blob still d12ff786; source-only test, native/owner full QA NOT_RUN. Existing error remains OPEN."
       ],
       "source_ref": "Existing P01–P05 functional source contracts; latest subroot P01 WPF source provenance and P02 PACK01 route mapping",
       "recurrence": 0,
@@ -176,7 +177,8 @@
       "issue": "Host50 exact tree admission source fix present; signed same-head native 13/13 unverified",
       "next_action": "T08/Host50: source hook исправлен, но нужно native 13-route same-head acceptance; пока не закрывать.",
       "proof": [
-        "2026-10-29 manual #2 owner-override real main PR162 CAS: PRE 632bc1464a2f927087e77d394d5248890fad4912 -> POST dde1be7f03cd512a22f30046c6ba2d5de3582353; gate Git blob 56806fb744694b2dd146db88229597722953ddd9 -> 923211baca7f0aab4229e7676b36de0436b10ac5; legacy tests post 5c42fb191e95aafd630c67e2b998b1ba0b46ab43; real Git object tests dbb0e683d60f48cf095b44be4e6f6f622356cdba; receipt ac1525567ea65239c8537e60567eda472cff3e28; PR162 4/4 Git readback PASS. Candidate negative 21/21 local PASS, exact integrated runner and native Host50 NOT_RUN; DO NOT mark VERIFIED_CLOSED."
+        "2026-10-29 manual #2 owner-override real main PR162 CAS: PRE 632bc1464a2f927087e77d394d5248890fad4912 -> POST dde1be7f03cd512a22f30046c6ba2d5de3582353; gate Git blob 56806fb744694b2dd146db88229597722953ddd9 -> 923211baca7f0aab4229e7676b36de0436b10ac5; legacy tests post 5c42fb191e95aafd630c67e2b998b1ba0b46ab43; real Git object tests dbb0e683d60f48cf095b44be4e6f6f622356cdba; receipt ac1525567ea65239c8537e60567eda472cff3e28; PR162 4/4 Git readback PASS. Candidate negative 21/21 local PASS, exact integrated runner and native Host50 NOT_RUN; DO NOT mark VERIFIED_CLOSED.",
+        "2026-10-29 canonical PR162 dde1be7f03cd512a22f30046c6ba2d5de3582353 source gate actual blob 923211baca7f0aab4229e7676b36de0436b10ac5 (PRE 56806fb744694b2dd146db88229597722953ddd9), T08 forged-SHA blocker corrected in source only; 13/13 native attested QA PENDING."
       ],
       "recurrence": 1,
       "last_seen": "2026-10-29",
@@ -225,7 +227,9 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "NOX-V16-C-20261029T1855MSK-R21-DELTA",
+    "run_id": "NOX-V16-T02C-G5A-20261029T213335MSK-R20-FLOW-FIRST-JOURNAL",
+    "source_head_observed": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+    "source_tree_observed": "106c03a6a8b85700d1b2442f345bb43380436977",
     "progress": {
       "historical_t02": "4/4 100%",
       "current_c": "0/4 0%",
@@ -234,11 +238,11 @@
       "delta_pp": 0,
       "bar": "░░░░░░░░░░"
     },
-    "source_head_observed": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
-    "docs_gate": "PENDING_REQUIRED_REVISION_CAS_READBACK",
+    "docs_gate": "PENDING_EXTERNAL_REVISION_CAS_AFTER_GIT_COMMIT",
+    "history": "PARTIAL",
     "registered_errors": 11,
-    "source_acked": "T06 current 11/11; T09 stale 11/11; others partial",
-    "history": "PARTIAL"
+    "source_acked": "T06 and G5-A 11/11 on their old pinned blob; remaining owners ACK pending",
+    "next": "T06 reconcile committed source and owner 8/8; T08 independent exact HEAD+13 native Host50; T09 freeze; T10 SOURCE_READY; T02 Docs CAS+readback."
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -277,6 +281,22 @@
         "ERR-SYS-002"
       ],
       "owner_safe_only": true
+    },
+    "G5-A-R19": {
+      "run_id": "NOX-V16-G5A-20261029T211411MSK-R19-T02-OWNER-READY-DELTA",
+      "blob_sha": "8aa142fadcace6840c639a0b701458a12491c7e3",
+      "read": 11,
+      "ack": 11,
+      "head_at_receipt": "b9076c62a7e9de67146ff5397ef6882250efad00",
+      "role": "support only; no shared journal write"
+    },
+    "T06-R18": {
+      "run_id": "NOX-V16-T06-20261029T181347Z-G3C-R18-PR221-STRICT-PRECHECK",
+      "blob_sha": "33edf7f1a96d1d5aaf03cf27958f8bc2718f1735",
+      "read": 11,
+      "ack": 11,
+      "head_at_receipt": "632bc1464a2f927087e77d394d5248890fad4912",
+      "note": "source preview only; platform recorded FAILED, source commit persisted"
     }
   },
   "last_delta": {
@@ -317,5 +337,187 @@
     "repeated_process_error": "NOX-V16-T06-ROOT-STOP-20261029-R01",
     "no_exe_nsis_ci_e07": true,
     "correlative_git_cas": "SHA moved while R21 registry CAS started; one corrective Git CAS after exact source readback"
-  }
+  },
+  "run_deltas": [
+    {
+      "run_id": "NOX-V16-T02C-G5A-20261029T213335MSK-R20-FLOW-FIRST-JOURNAL",
+      "observed_time_utc": "2026-10-29T18:33:35Z",
+      "registry_pre_blob": "fecf68671d30b0c879ae5f43fbaa210143e3c530",
+      "registry_pre_branch_head": "c559a19f0410927adac43bb1e285a3907231c986",
+      "canonical_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+      "source_head": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+      "source_tree": "106c03a6a8b85700d1b2442f345bb43380436977",
+      "source_head_pre_to_post": "b9076c62a7e9de67146ff5397ef6882250efad00 -> dde1be7f03cd512a22f30046c6ba2d5de3582353",
+      "owner_receipts": [
+        {
+          "role": "G5-A",
+          "blob": "8aa142fadcace6840c639a0b701458a12491c7e3"
+        },
+        {
+          "role": "T06",
+          "blob": "33edf7f1a96d1d5aaf03cf27958f8bc2718f1735"
+        }
+      ],
+      "physical_result": "Deduplicated 11 active ERROR_ID and two new exact owner receipts; amended existing ERR-SRC-004 and ERR-T08 evidence; reconciled one SYSTEM FAILED vs persisted Git source without replay; kept statuses unchanged.",
+      "platform_watchdog": {
+        "read_method": "per-ID automations.peek, not stale aggregate list",
+        "observed_run_ids": [
+          {
+            "role": "G1-A",
+            "automation_id": "6ae2af28e4b8819192bbf6bb3857cc84",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "28e0009d-28c0-832c-acd7-c5f83a1854bb"
+          },
+          {
+            "role": "G1-B",
+            "automation_id": "6ae2aecc59f88191a10a9342f8a1930c",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "988c8792-9f68-832e-bb39-f3f70552a128"
+          },
+          {
+            "role": "G1-C",
+            "automation_id": "6ae2aefbde94819183730a2ed3cad78c",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "d84632b6-1b50-832f-bf37-9aceccc875ae"
+          },
+          {
+            "role": "G2-A",
+            "automation_id": "6ae2af31f2988191902bae4aaec2635e",
+            "enabled": true,
+            "recorded_status": "in_progress",
+            "run_id": "3c85084a-90e0-832c-a115-1938372872a3"
+          },
+          {
+            "role": "G2-B",
+            "automation_id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+            "enabled": true,
+            "recorded_status": "in_progress",
+            "run_id": "d6de5bc5-bae4-832c-b659-e5416d6e76bd"
+          },
+          {
+            "role": "G2-C",
+            "automation_id": "6ae2aefe3c248191a7131fc9876611e6",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "2aabc7fe-b77c-8331-a35c-5b7ff95c3c29"
+          },
+          {
+            "role": "G3-A",
+            "automation_id": "6ae2af008eac8191a03526f290b801c6",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "5c9bb49a-bac0-832c-8b57-cfaa81be372d"
+          },
+          {
+            "role": "G3-B",
+            "automation_id": "6ae2af347fbc81918ddafed356511243",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "888a4a04-561c-832d-b688-96890bc61887"
+          },
+          {
+            "role": "G3-C/T06",
+            "automation_id": "6ae2aef78ba881919e6022c1103959a2",
+            "enabled": true,
+            "recorded_status": "failed",
+            "run_id": "618410a4-864c-8320-98e0-1e8a6b0e1cdb"
+          },
+          {
+            "role": "G4-A",
+            "automation_id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "8a2308f5-8bc4-8333-885f-a989324f2e8a"
+          },
+          {
+            "role": "G4-B",
+            "automation_id": "6ae2af03ddd88191b39ad44b379cc3dc",
+            "enabled": true,
+            "recorded_status": "in_progress",
+            "run_id": "a612eb36-1534-8324-b0b8-8aecc463cbc0"
+          },
+          {
+            "role": "G4-C",
+            "automation_id": "6ae2af2f84088191ba04843861edf73b",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "14d8b4bb-90f8-8331-86d8-b646191f9c20"
+          },
+          {
+            "role": "G5-A",
+            "automation_id": "6ae2af4f6c448191932f01b35fa364c1",
+            "enabled": true,
+            "recorded_status": "in_progress",
+            "run_id": "2ad82435-a004-8330-a91a-52aa0937fb4f"
+          },
+          {
+            "role": "G5-B",
+            "automation_id": "6ae2aef4bbc081918693b0552743bd0d",
+            "enabled": true,
+            "recorded_status": "in_progress",
+            "run_id": "e746ed99-53b0-832c-8b10-7aaa51e52d78"
+          },
+          {
+            "role": "G5-C",
+            "automation_id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+            "enabled": true,
+            "recorded_status": "completed",
+            "run_id": "a976ffa2-3f48-832b-b5a1-12c47415c363"
+          }
+        ],
+        "last_recorded_counts": {
+          "completed": 9,
+          "in_progress": 5,
+          "failed": 1
+        },
+        "enabled_count": 15,
+        "system_failure_count_in_latest_records": 1,
+        "total_historic_failure_counts": "N/D",
+        "restored_count": 0,
+        "one_failed_owner": "G3-C/T06",
+        "failed_run": "618410a4-864c-8320-98e0-1e8a6b0e1cdb",
+        "failure_reason": "UNKNOWN; platform FAILED, immutable source previously saved; enabled=true verified, no reenable or replay"
+      },
+      "lessons": {
+        "current_entries_reviewed": 11,
+        "normalized_clusters": 5,
+        "applied_process": 2,
+        "delegated": 2,
+        "already_closed": 1,
+        "remaining_independent_owner_qa": "multiple; not accepted",
+        "actions": {
+          "ERR-SYS-001": "APPLY: CAS update existing register and readback; 15 direct per-ID receipts reviewed; old 419 fingerprint archive unchanged. Missing historical T02/independent branch coverage still PARTIAL.",
+          "ERR-SYS-002": "APPLY: fresh ref PR162 dde1be7f03cd512a22f30046c6ba2d5de3582353/tree 106c03a6a8b85700d1b2442f345bb43380436977; invalidate old source-head assumptions.",
+          "ERR-SRC-003": "DELEGATE T06/Host50 -> T08 native 13-route independent same-SHA acceptance, not CLOSED.",
+          "ERR-SRC-004": "APPLY receipt aggregation P01 exact source-lock pre b0bd9544→post d12ff786, current source QA static; P04/P05 donor PRE reviewed but test dependency missing; remains OPEN.",
+          "ERR-SRC-005": "DELEGATE T08 pinned fixture runner acceptance; source FIX_APPLIED_UNVERIFIED.",
+          "ERR-SYS-006": "ALREADY_FIXED, 729 ZIP/3 parts verified historically, no repeat.",
+          "ERR-SYS-007": "ALREADY_FIXED, T04 historical 34/34, no repeat.",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "BLOCKED T09 frozen head requires T06 owner 8/8 and independent T08.",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY: RUN-completed, source patch and SHA receipt all separated from QA accepted; all 15 currently enabled, 1 last-run platform failed without rollback proof.",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 platform failed root cause UNKNOWN; immutable source receipt b907.../632... persisted; no restart or duplicate commit.",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "APPLY source-only new gate blob 923211baca7f0aab4229e7676b36de0436b10ac5 in PR162, but native 13-route and pinned T08 acceptance not proven."
+        },
+        "new_task_ids": 0
+      },
+      "role_progress": {
+        "historical_t02": "4/4 DONE unchanged",
+        "coordination_c": "0/4; 0.0%; bar ░░░░░░░░░░",
+        "accepted_task_id_delta": 0,
+        "product": "N/D"
+      },
+      "docs_prior_revision": {
+        "Master": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+        "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+        "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg"
+      },
+      "docs_gate": "PENDING_EXTERNAL_REVISION_CAS_AFTER_THIS_ATOMIC_GIT_SAVE",
+      "no_build": true,
+      "no_source_pr162_write": true,
+      "next": "T06 reconcile committed source and owner 8/8; T08 independent exact HEAD+13 native Host50; T09 freeze; T10 SOURCE_READY; T02 Docs CAS+readback."
+    }
+  ]
 }
