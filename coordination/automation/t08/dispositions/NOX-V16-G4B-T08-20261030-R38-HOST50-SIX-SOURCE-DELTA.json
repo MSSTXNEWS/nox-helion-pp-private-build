@@ -1,0 +1,118 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "role": "AUTO_G4B_T08_AUXILIARY_INDEPENDENT_SOURCE_QA",
+  "runId": "NOX-V16-G4B-T08-20261030-R38-HOST50-SIX-SOURCE-DELTA",
+  "taskId": "T08",
+  "source": {
+    "pr": 162,
+    "head": "852ccc1611d99afaf48e7fc4c33a5509d385f9a9",
+    "tree": "17bdb7db4ccf0138f5f41356009215dea37077f2",
+    "live_head_at_receipt": "852ccc1611d99afaf48e7fc4c33a5509d385f9a9",
+    "source_path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+    "map_pre_blob": "6e3436821a975b1986261791de060a1020de7079",
+    "map_post_blob": "66b59aaa6d4db7c6adc7d34a802ba9c42498bda7",
+    "owner_receipt_path": "coordination/automation/t06/NOX-V16-T06-20261030-M1-SOURCE-ONEPASS-R01.json",
+    "owner_receipt_blob": "ccf32a8f571d110965b1347840ae58e3d8f732e3",
+    "dependencies": {
+      "proposals/NOX-PACK01-50/owner-binding-map.json": "66b59aaa6d4db7c6adc7d34a802ba9c42498bda7",
+      "proposals/NOX-PACK01-50/p04_owner_training_port.py": "6d9ec2bfe0ec13baf8ebc9fd4fd1830c9c4d91a3",
+      "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py": "5e63900d660e64303d10babe7fedbf03fbe64188",
+      "proposals/NOX-PACK01-50/p01_restic_backup_port.py": "858b7086d5974045fb938bfdb58cac31e7cf8ec7",
+      "integrations/creative/bridge/CreativeHostBridge.cs": "5a43dc50c1c5afe31b3a6636c319da3779aaad0d"
+    }
+  },
+  "checks": {
+    "kind": "READ_ONLY_EXECUTED_JAVASCRIPT_CONTRACT_ASSERTIONS",
+    "count": 40,
+    "pass": 40,
+    "fail": 0,
+    "unitPython": "NOT_RUN",
+    "dotNet": "NOT_RUN",
+    "windowsNative": "NOT_RUN",
+    "negative_mutation": "PASS_DUPLICATE_ROUTE_AND_FALSE_EXE_CLAIM_DENIED_BY_INDEPENDENT_VALIDATOR",
+    "security": "SOURCE_ONLY STOP ACL native consent fail-closed guards inspected; native enforcement NOT_RUN"
+  },
+  "changed_existing_tasks": [
+    {
+      "id": "NIP01-26",
+      "route": "training.start"
+    },
+    {
+      "id": "NIP01-30",
+      "route": "training.evaluate"
+    },
+    {
+      "id": "NIP01-36",
+      "route": "media.player"
+    },
+    {
+      "id": "NIP01-37",
+      "route": "media.subtitles"
+    },
+    {
+      "id": "NIP01-40",
+      "route": "images.generate"
+    },
+    {
+      "id": "NIP01-48",
+      "route": "system.backup"
+    }
+  ],
+  "host50": {
+    "catalogue": 50,
+    "sourceCandidatePre": 40,
+    "sourceCandidateNow": 46,
+    "unbound": 4,
+    "nativePending": 14,
+    "windowsAccepted": 0,
+    "releaseAccepted": 0,
+    "remainingUnbound": [
+      "browser.open",
+      "browser.bookmarks",
+      "system.update",
+      "system.pc_control"
+    ]
+  },
+  "finiteGate": {
+    "path": "coordination/manual/no2/finite_acceptance_r33.mjs",
+    "branch": "qa/manual2-r26-20261030-sourceqa-r01",
+    "blob": "33b425e0523b71c34d734ce7ab0731fd9b21fce1",
+    "executed": true,
+    "phase": "SOURCE_GATES_INCOMPLETE",
+    "sourceCoverage": 0.92,
+    "completedCriteria": 0,
+    "totalCriteria": 8,
+    "productPercent": null,
+    "ready": false
+  },
+  "readProof": {
+    "canonDocRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "roleBlob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "errorRegisterBlob": "45a684f905d4c7f1bd04266d6c080e69a3dacee1",
+    "errorCounts": {
+      "open": 5,
+      "fixAppliedUnverified": 4,
+      "verifiedClosed": 2
+    },
+    "masterRevision": "AHj4eMR4eLeZmFxx_kRVIkQTRREKxDs4Us3poK5SSlOyXZJvGzpLnZjhO_kwLd1YsjKCpj4kUiiPKXk59qwG7YK_msHR_ZgxwSUBsOq1sjc",
+    "e06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessonsRevision": "AHj4eMSnr_jlkJjGvzAwxG9C-B4n3vjeWJP_DtyF2JiQenFwK8P6GoVEoJe7MebtB7jxbA1TqbltjdM8U9m-5PCba-axGbxbeOHvb1rsns8"
+  },
+  "stage": {
+    "sourcePrepared": true,
+    "sourceContractVerified": true,
+    "integratedOnPinnedHead": true,
+    "qaAccepted": false,
+    "sourceReady": false,
+    "gitlabBuild": false,
+    "e07Accepted": false
+  },
+  "qaDisposition": "SOURCE_CONTRACT_VERIFIED_LIMITED_NATIVE_NOT_RUN",
+  "acceptedNewTaskIds": 0,
+  "ownerHandoff": {
+    "manual1": "4 remaining native owner method bindings and Windows proof for 14 pending, plus targeted tests for 6 new candidates",
+    "manual2": "independent Windows STOP ACL consent and owner native receipt exact SHA",
+    "t02": "dedup ERR-SRC-004 and ERR-SYS-002, shared CAS only by T02"
+  },
+  "lesson": "Advance six source candidates without counting native success; use immutable blob delta rather than HEAD churn; source-only contract tests not acceptance."
+}
