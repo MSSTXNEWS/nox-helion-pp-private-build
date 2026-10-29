@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R12_SCOPED_DELTA",
+  "runId": "ASSEMBLY-A-20261029T1715MSK-R12",
+  "product": "EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "observedTarget": {
+    "pr": 162,
+    "headGitSha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "ownerAcceptedFinalHead": false
+  },
+  "baseline": "P01_R11_V2",
+  "sourceOnly": true,
+  "scope": "P03",
+  "owner": "G3-A catalog, G3-B queue + manual #1",
+  "decision": "OWNER_HOLD_NO_SAFE_APPLY",
+  "paths": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "currentPreGitBlob": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+      "donorPreGitBlob": "0b94237d7861c021a7db3cfda56073939562d312",
+      "donorPostGitBlob": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "currentPreGitBlob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+      "donorPreGitBlob": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+      "donorPostGitBlob": "3692811ac3234afb54e82958c7415b23619c1f0f"
+    }
+  ],
+  "donorPatchBlobGitSha1": "f5d4c4006988a5f5fc0b2ca7f3620f5f58341987",
+  "required": "G3-A/G3-B compare actual code+focused existing tests, approve exact new PRE/POST; T06 apply only per-path CAS",
+  "productAccepted": false,
+  "tests": "NOT_RUN"
+}
