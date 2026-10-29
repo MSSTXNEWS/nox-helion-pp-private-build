@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_V16_G3A_R26_OWNER_SAFE_PATCH_RECEIPT_V1",
+  "run_id": "NOX-V16-G3A-20261030T012913MSK-R16",
+  "slot": "G3-A",
+  "task_id": "existing P04 model snapshot source",
+  "scope": "EXPRESS_INTEGRATOR_SOURCE_ONLY",
+  "status": "INCOMPLETE",
+  "accepted": "0/4",
+  "accepted_delta": 0,
+  "product": "N/D",
+  "manual_owner": "#3 P04/P05",
+  "next_integrator": "T06/#1",
+  "qa_owner": "manual #2/T08",
+  "shared_register_writer": "T02",
+  "source_prestart": {
+    "canonical_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonical_paragraphs": 705,
+    "register_git_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "register_entries": 11,
+    "register_statuses": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "pr162_head": "30143a71c824e654d11b633265faea38bbad0b31",
+    "pr162_tree": "513dfb1605037907cf2946427a3b4827b6589751",
+    "pr221_last_seen": "d62117b218f8cf435d267d5b518470f1a18595a1",
+    "master_revision": "AHj4eMQJfPI1zFjcKDNuP9g5p7RhzHfm42pB2h4QGAsEUVHH5IGqmICx29vCOBhcqFu0P3mU4aJCr0EPsXzTxtJypdg6QEWjmwusEC3G-rk",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "e06_lessons": "READ_BLOCKED direct current canonical E06/Lessons file IDs not resolved, last R15 revisions historical"
+  },
+  "physical": {
+    "kind": "ISOLATED_PRE_SHA_PINNED_P04_PATCH_GENERATOR_AND_REGRESSION_TEST",
+    "source_path": "Packages/P04/model_snapshot_probe.py",
+    "source_git_blob_PRE": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+    "source_proposed_git_blob_POST": "11c447b6d22c4dde4bcd7aa9d311a8cd3ee2b200",
+    "product_source_changed": false,
+    "isolated_branch": "automation/v16/g3a/NOX-V16-G3A-20261030T012913MSK-R16",
+    "files": [
+      "coordination/automation/v16/G3-A/NOX-V16-G3A-20261030T012913MSK-R16/p04_snapshot_guard_proposal_g3a.py",
+      "coordination/automation/v16/G3-A/NOX-V16-G3A-20261030T012913MSK-R16/test_p04_json_guard_g3a.py",
+      "coordination/automation/v16/G3-A/NOX-V16-G3A-20261030T012913MSK-R16/NOX-V16-G3A-20261030T012913MSK-R16.json"
+    ],
+    "red_reproduction": "4/4 isolated faithful excerpts; exact complete GitHub module NOT_RUN",
+    "green": "PROPOSED_NOT_RUN",
+    "functional_security": "target tests written for overflow float, lone UTF-16 surrogate in nested config and tensor headers, u64 zero tensor; valid local model retains no rights/GPU attestation",
+    "current_source_comparison": "Exact P04 PR162 source and PR221 source at query are identical blob c0286fe58c020835ec1fd8c4a7b6d1345f115598"
+  },
+  "error_ack": {
+    "ERR-SYS-001": "HANDOFF_T02 personal immutable receipt, shared journal untouched",
+    "ERR-SYS-002": "APPLY pinned current PR162 source HEAD and P04 preimage; no stale donor overwrite",
+    "ERR-SRC-003": "DELEGATE_T06 Host50 admission outside G3-A ownership",
+    "ERR-SRC-004": "APPLY source-only P04 candidate Unicode/overflow/u64 security and test; manual #3 then T06/T08",
+    "ERR-SRC-005": "DELEGATE_T06/T08 fixture runner, no dependency changes",
+    "ERR-SYS-006": "VERIFIED_CLOSED no reopen 729/3",
+    "ERR-SYS-007": "VERIFIED_CLOSED no reopen T04 34/34",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE_T09/T02 freeze dependent on same-head T08",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY 0/4 accepted; candidate != product DONE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE_T06 owner 8/8 exact SHA",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE_T08 exact-head native pending"
+  },
+  "lessons": {
+    "applied": [
+      "ERR-SYS-002 exact Git object PRE gate; output fail-closed",
+      "ERR-SRC-004 refuse native-incompatible safetensors configs even if Python JSON parses",
+      "PREMATURE-STOP no QA/DONE from candidate or local repro"
+    ],
+    "remaining": [
+      "Python test exact product module",
+      "manual #3 approve patch",
+      "T06 only PR162 owner CAS",
+      "T08 independent same-HEAD QA",
+      "T02 shared journal CAS/readback"
+    ]
+  },
+  "gates": {
+    "A": "PARTIAL: canonical/register/PR162/Master/C34 read, E06/Lessons current direct not located",
+    "B": "ISOLATED_PATCH_PREPARED",
+    "C": "IMMUTABLE_RECEIPT_IN_OWN_BRANCH_PENDING_REMOTE_READBACK",
+    "D": "APPLIED_PINNED_REGRESSION",
+    "E": "OTCH1_CHECKPOINT"
+  },
+  "flow_tools": {
+    "R21": "TOOL_NOT_RUN",
+    "R22": "TOOL_NOT_RUN"
+  },
+  "next_action": "manual #3 confirm Packages/P04/model_snapshot_probe.py PRE blob c0286fe58c020835ec1fd8c4a7b6d1345f115598, execute generator to isolated candidate, run test_g3a... on exact proposed source; if PASS owner approve; T06 compare live PR162 source preimage c0286fe58c020835ec1fd8c4a7b6d1345f115598, CAS only approved patch + targeted security tests; T08 current SHA QA; T02 read receipt.",
+  "restrictions": [
+    "no PR162 write",
+    "no shared journal write",
+    "no preflight_local_gpu.py edit",
+    "no CUDA/training",
+    "no EXE/NSIS/GitLabCI/E07/release",
+    "no modification of SourceLock 729/3/D02/WOW/8CoreID/5Persona"
+  ]
+}
