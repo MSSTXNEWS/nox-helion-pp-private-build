@@ -57,8 +57,12 @@ public sealed class ModelDownloadQueueWorker(
                 var current = started;
                 async ValueTask OnProgress(OllamaStreamUpdate u, CancellationToken token)
                 {
+                    // Ollama metadata can contain paths, URLs and credentials.
+                    // Persist and broadcast only bounded public labels and digests.
+                    var publicStatus = PublicProgressStatus(u.Status);
+                    var publicDigest = PublicProgressDigest(u.Digest);
                     var persisted = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
-                        ? j with { Status = u.Status, CompletedBytes = u.Completed, TotalBytes = u.Total }
+                        ? j with { Status = publicStatus, CompletedBytes = u.Completed, TotalBytes = u.Total }
                         : j, token);
                     // STOP may win the queue race while an HTTP progress callback
                     // is inflight. Do not publish a fake RUNNING event after STOP.
@@ -67,7 +71,7 @@ public sealed class ModelDownloadQueueWorker(
                         linked.Cancel();
                         return;
                     }
-                    await SafePublishAsync(job, "progress", u.Status, persisted.CompletedBytes, persisted.TotalBytes, u.Digest, null, token);
+                    await SafePublishAsync(job, "progress", publicStatus, persisted.CompletedBytes, persisted.TotalBytes, publicDigest, null, token);
                 }
                 string? digest;
                 if (current.Kind == ModelJobKind.OllamaPull)
@@ -185,6 +189,40 @@ public sealed class ModelDownloadQueueWorker(
             System.Diagnostics.Trace.TraceError(
                 "P03_CANCEL_WATCH_ERROR job={0} type={1}", jobId, ex.GetType().Name);
         }
+    }
+
+    // Fail closed on untrusted Ollama progress strings; keep numeric counters.
+    private static string PublicProgressStatus(string? upstream)
+    {
+        if (string.IsNullOrWhiteSpace(upstream) || upstream.Length > 128)
+            return "Transferring";
+        var status = upstream.Trim();
+        if (status.Equals("pulling manifest", StringComparison.OrdinalIgnoreCase))
+            return "Pulling manifest";
+        if (status.Equals("verifying sha256 digest", StringComparison.OrdinalIgnoreCase))
+            return "Verifying digest";
+        if (status.Equals("writing manifest", StringComparison.OrdinalIgnoreCase))
+            return "Writing manifest";
+        if (status.Equals("removing any unused layers", StringComparison.OrdinalIgnoreCase))
+            return "Cleaning cache";
+        if (status.Equals("success", StringComparison.OrdinalIgnoreCase))
+            return "Transfer complete";
+        if (status.StartsWith("pulling ", StringComparison.OrdinalIgnoreCase))
+            return "Pulling layer";
+        if (status.StartsWith("copying ", StringComparison.OrdinalIgnoreCase))
+            return "Copying layer";
+        return "Transferring";
+    }
+
+    // Never include an arbitrary provider identifier in the UI/event stream.
+    private static string? PublicProgressDigest(string? upstream)
+    {
+        if (upstream is null || upstream.Length != 71 ||
+            !upstream.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+            return null;
+        for (var i = 7; i < upstream.Length; ++i)
+            if (!Uri.IsHexDigit(upstream[i])) return null;
+        return "sha256:" + upstream[7..].ToLowerInvariant();
     }
 
     public async Task<bool> CancelAsync(Guid id, CancellationToken ct = default)
