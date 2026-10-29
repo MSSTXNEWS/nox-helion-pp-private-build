@@ -31,6 +31,7 @@ SUITES=(
     ("WOW exact 200 catalog IDs and compositions",E06_TESTS,"test_wow200_catalog_integrity_r02.py"),
     ("Creative verified worker STOP R19",E06_TESTS,"test_creative_stop_exit_attestation_r19.py"),
     ("Creative local weight SHA receipts R20",CREATIVE_TESTS,"test_weight_receipts_r20.py"),
+    ("Creative R31 bundled regressions",CREATIVE_TESTS,"test_*_r31.py"),
     ("P02 native frames",P02,"test_p02_native_ingress.py"),
     ("P03 ModelCenter real owner adapter",P03,"test_p03_onehost_port.py"),
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
