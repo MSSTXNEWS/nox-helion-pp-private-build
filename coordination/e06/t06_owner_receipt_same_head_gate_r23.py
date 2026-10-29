@@ -33,6 +33,7 @@ def safe_path(value):
         return False
     for component in value.split("/"):
         if (component in ("", ".", "..") or component != component.rstrip(" .")
+                or any(part.endswith(" ") for part in component.split("."))
                 or not component.isprintable()
                 or re.search(r'[<>:"|?*\x00-\x1f\x7f]', component)
                 or re.fullmatch(r'(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?',
