@@ -188,6 +188,20 @@ Function RestorePrevious
     SetErrorLevel 2
     Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
   ${EndIf}
+  ; The backup's generated Uninstall.exe is not SHA-attested by payload.sha256.json.
+  ; Generate a trusted replacement from THIS setup before moving either app tree.
+  ClearErrors
+  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
+  IfErrors 0 RollbackUninstallerPrepared
+    SetErrorLevel 2
+    Abort "Cannot prepare rollback uninstaller; both app versions remain untouched."
+  RollbackUninstallerPrepared:
+  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 RollbackUninstallerMissing
+    Goto RollbackUninstallerReady
+  RollbackUninstallerMissing:
+    SetErrorLevel 2
+    Abort "Generated rollback uninstaller missing; both app versions remain untouched."
+  RollbackUninstallerReady:
   Rename "$INSTDIR" "$TmpDir"
   IfErrors 0 +2
     Abort "Cannot move current app. Close NOX first."
@@ -195,6 +209,18 @@ Function RestorePrevious
   IfErrors 0 +3
     Rename "$TmpDir" "$INSTDIR"
     Abort "Rollback activation failed; attempted restoration."
+  ; Never reactivate the prior, merely size-checked Uninstall.exe as executable.
+  ; Copy a fresh one from the trusted setup and verify exact SHA before registry writes.
+  ClearErrors
+  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$INSTDIR"
+  IfErrors RollbackUninstallerRecovery
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe" -ReportVersion'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    Goto RollbackUninstallerRecovery
+  ${EndIf}
   ; Leave newer version saved for operator recovery, NEVER delete it.
   ; The backup verifier returned its validated version without a trailing newline.
   ; Register it only after BOTH directory renames succeeded.
@@ -205,6 +231,20 @@ Function RestorePrevious
     Abort "Previous files restored, but Windows version registration failed. Recovery copies retained."
   DetailPrint "Previous version restored; superseded app retained at $TmpDir."
   Return
+  RollbackUninstallerRecovery:
+    ; Never report success after installer executable integrity fails.
+    ; Preserve both app trees and attempt restoration of the original install.
+    SetOutPath "$TEMP"
+    ClearErrors
+    Rename "$INSTDIR" "$BackupDir"
+    IfErrors RollbackRecoveryFailed
+    Rename "$TmpDir" "$INSTDIR"
+    IfErrors RollbackRecoveryFailed
+    SetErrorLevel 2
+    Abort "Rollback uninstaller verification failed; current install restored, backup retained."
+  RollbackRecoveryFailed:
+    SetErrorLevel 2
+    Abort "Rollback uninstaller integrity failed; operator recovery needed, app trees retained."
   NoPrevious:
     Abort "No installer-owned previous version available for rollback."
   NoCurrent:
