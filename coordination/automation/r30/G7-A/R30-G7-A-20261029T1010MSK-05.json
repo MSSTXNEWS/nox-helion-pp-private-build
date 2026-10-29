@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T1010MSK-05",
+  "slot": "G7-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "status": "SOURCE_PATCH_SAVED; TARGETED_EXACT_SOURCE_V8_RED_TO_GREEN; SOURCE_READY_HOLD; RELEASE_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T1010MSK-05",
+  "base_branch": "automation/r30/g7a/R30-G7-A-20261029T0910MSK-04",
+  "prior_receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T0910MSK-04.json",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbidden_paths": [
+      "proposals/NOX-PACK01-50/",
+      "proposals/NOX-PACK02-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ]
+  },
+  "read_evidence": {
+    "v16_rules_56_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16_document_sections": "Google Doc §§54–56, updated loader-only instructions; read",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "conflict_index_branch_count": 25,
+    "frozen_snapshots": "25/25 exact indexed historic branch commits had Git compare changed-file count matching frozen index (zero deletions)",
+    "full_individual_snapshot_file_content_read": false,
+    "physical_original_archive_729_hashes": "NOT_VERIFIED",
+    "google_drive_read_only": [
+      "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ],
+    "applied_previous_lesson": "Validate every deadline and clock before changing the active D02 animation state.",
+    "historical_reduced_profile_note": "Earlier R20 QA found stale Infinity deadlines after explicit REDUCED; current owner source differs and this run addresses OS prefers-reduced-motion resume stale deadlines, not a duplicate old patch."
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-OS-REDUCED-RESUME-20261029-05",
+    "source_path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "e1d5592d8405f8ca69ad329cd5f2253ac88a02ed",
+    "post_blob_sha": "c3135acd0ec32ea575f169cb1b0c8145d3dcee9e",
+    "code_commit": "17c50072148b9987952f2e33d7cec50853e23ad9",
+    "observed_defect": "After OS prefers-reduced-motion was enabled, a prolonged pause left old burst deadlines expired. Clearing the preference resumed the original FX and immediately emitted a burst in MAX, BALANCED, ECO.",
+    "patch": "On preference resume, read and validate clock and each finite policy min/max orbit deadline before changing anything; clamp each existing deadline into a fresh resumed window, then restore preference and RAF. Keep reduced-motion refusal on bad clock.",
+    "unchanged_scope": "Original nine D02 nodes, HELION + eight CoreIDs, five Personas, buttons, visual assets, WOW001–200, installer, PACK01/PACK02 untouched."
+  },
+  "test": {
+    "file": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.os-motion-resume.test.mjs",
+    "blob_sha": "af1001dde73005ebfe08d173c076814321d2fe39",
+    "test_commit": "da9f8b06cf7eca74d5a506fea82769859a507b02",
+    "unique_test_file_count": 1,
+    "engine": "V8 execution of actual serialized pre/post GitHub JavaScript module and same serialized regression test using deterministic DOM/RAF/media fixtures",
+    "preimage_RED": "MAX: failed no immediate stale burst (emitted 4 versus expected 2)",
+    "patched_GREEN": "One end-to-end targeted test PASS. MAX/BALANCED/ECO: baseline 2, immediate 2, before minimum 2, by maximum 4, after destroy 0 pending RAF, all original 9 nodes preserved; corrupt resume clock leaves profile REDUCED and 0 RAF.",
+    "native_node_cli": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "test_replay_git_readback": "SOURCE_AND_TEST_EXACT_GIT_BLOB_VERIFIED"
+  },
+  "change_scope": {
+    "compared_to_parent": "2 files, source modified+one new owner-local test, zero deleted; source commit and test commit only before receipt",
+    "previous_DONE_untouched": true,
+    "existing_snapshots_untouched": true
+  },
+  "self_improvement": {
+    "applied": "Previous G7-A lesson: clock/deadlines validation precedes any live D02 state mutation.",
+    "new_lesson": "An OS Reduced Motion preference callback is a separate resume path from explicit setProfile(). All resume entry points must re-arm or clamp animation deadlines from a validated current clock; otherwise a long suspension causes an immediate multi-orb burst. Test preference-toggle paths independently from profile-switch paths."
+  },
+  "coordination": {
+    "central_writer": "Astra-C ONLY",
+    "this_worker_google_docs_writes": "NONE",
+    "receipt_handoff": "Astra-C should collect this immutable personal Git receipt and append the lesson to common Docs with CAS+RunID readback.",
+    "drive_write_status": "ASTRA_C_PENDING"
+  },
+  "acceptance": {
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "product_progress_percent": "N/D"
+  }
+}
