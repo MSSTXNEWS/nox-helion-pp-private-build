@@ -47,6 +47,7 @@ public static class E05DriveRunGate
             receipts.Add(receipt);
             // Confirm the returned receipt belongs to this run and document.
             if (receipt.RunId != runId || receipt.DocumentId != target.DocumentId ||
+                receipt.ExpectedChars != text.Length ||
                 receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
                 string.IsNullOrWhiteSpace(receipt.RevisionAfter))
                 return new(runId, "HOLD_WRITE_OR_READBACK", receipts);
