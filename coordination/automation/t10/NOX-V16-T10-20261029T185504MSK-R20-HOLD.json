@@ -1,0 +1,46 @@
+{
+  "task": "T10",
+  "run_id": "NOX-V16-T10-20261029T185504MSK-R20-HOLD",
+  "status": "HOLD",
+  "scope": "NOX EXPRESS INTEGRATOR loader SOURCE QA ONLY",
+  "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+  "register_sha": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+  "source_pre_sha": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+  "source_tree_sha": "fa6adadb028a3dec9cf7c16b25ea4c68ac4a4f70",
+  "historical": "T07 original ZIP 729/729 PASS, T04 34/34 preserved",
+  "progress": {
+    "before": "1/7 14.3% █░░░░░░░░░",
+    "after": "1/7 14.3% █░░░░░░░░░",
+    "delta_pp": 0,
+    "remaining": 6
+  },
+  "criteria": [
+    "HOLD T09 frozen SHA absent; R16 blob 51170f031d1c724d093baccdf2859d3af2fbe651",
+    "HOLD T06 P01-P05 ledger 1/8; R14 blob ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be",
+    "DONE T07 729/729 physical ZIP source lock; T09 physical commit aab1154cf127ef0a216b19d06362343bbda4e152",
+    "HOLD D02/WOW/CoreID/Persona/PACK no final same-HEAD seal; P01 R11 donor provenance unresolved",
+    "HOLD Host50 13 native/Voice STOP ACL GPU RAG SPACE owner acceptance",
+    "HOLD ERR-SRC-004 source blocker; T08 same-HEAD P0/P1 review absent",
+    "HOLD independent SOURCE_READY PASS depends on 1,2,4,5,6"
+  ],
+  "spot_check": "P03 catalog POST 72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf and queue STOP POST 3692811ac3234afb54e82958c7415b23619c1f0f exact Git parity + static STOP check; no C# runtime test",
+  "delta": "T06 changed only coordination/e06/run_source_integrations_r13.py to skip pyc in source snapshot, blob e124a33066d25736851e3860c6292dd13d0ff71. No new T09 frozen tuple.",
+  "owner_handoff": "T06/G1-B: coordination/e06/stage_p01.py R11 donor MainWindow provenance and bridge host binding; T06/G6-B/T08: coordination/e06_host50/admission.py 13 owner native attestations; T09 freeze exact HEAD/tree/manifest.",
+  "error_ids": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "lesson": "Do not treat the original 729 ZIP as WPF XAML provenance; donor R11 source needs independent proof. Source security test != native acceptance.",
+  "shared_docs_changed": false,
+  "production_changed": false,
+  "build_exe_nsis_gitlab_e07": "NOT_RUN"
+}
