@@ -1,0 +1,20 @@
+{
+  "schema": "NOX_V16_MANUAL2_R34_T06_CLOSEOUT_PATH_CONTRACT_QA",
+  "run_id": "NOX-V16-MANUAL2-20261029-R34-T06-CLOSEOUT-SECOND-PATH-GUARD",
+  "role": "MANUAL2 INDEPENDENT QA",
+  "existing_task_id": "ERR-SRC-004",
+  "pr162_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "source_path": "coordination/e06/t06_closeout_guard.py",
+  "source_git_blob": "68662ebc7395465b10331b45c049c569939b33db",
+  "related_source_path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+  "related_source_blob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+  "verified_function": "_path",
+  "test_execution": "3/3 Python source-slice unittest PASS; 7 dangerous inputs admitted by current, 7 rejected by candidate, valid paths preserved",
+  "log_sha256": "e79c049f1e4629da97d57ca94b38c84cf84cd40e29264a787279e7eed21a8156",
+  "native_windows": "NOT_RUN",
+  "full_t06_closeout_suite": "NOT_RUN",
+  "root_cause": "Second existing T06 _path gate shares control/Unicode and colon/ADS acceptance issue; batch one owner-safe patch with safe_path verifier instead of separate cycles",
+  "owner_next": "T06 only source writer for PR162; apply minimal colon rejection + str.isprintable to BOTH helpers after fresh exact PRE; focused tests and CAS/readback; T08 independent same HEAD QA; T02 shared ledger.",
+  "full_qa_accepted": false,
+  "no_source_code_write": true
+}
