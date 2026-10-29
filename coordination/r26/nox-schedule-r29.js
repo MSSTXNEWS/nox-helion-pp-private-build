@@ -1,359 +1,336 @@
-/* Observed actual run timestamps via authenticated Automations.peek, UTC. Last actual first, schedule secondary. Snapshot must be refreshed by T02. */
+/* NOX R29 authenticated scheduler status snapshot; last ACTUAL run first. */
 window.NOX_SCHEDULE_SNAPSHOT={
   "schema": "NOX_R29_SCHEDULE_SNAPSHOT_V1",
-  "source": "authenticated Automations list; next run derived as plan when next_run_time is null",
-  "observed_at": "2026-10-30",
+  "observed_at": "2026-10-29T23:50:00.602Z",
+  "last_run_observed_at": "2026-10-29T23:50:00.602Z",
+  "complete": true,
+  "missing_ids": [],
+  "source": "authenticated Automations.list and individually peeked 25 task IDs, pinned snapshot",
   "tasks": [
-    {
-      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
-      "title": "NOX V16 G5-C T11 GitLab READY",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T232700\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=27;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T20:36:37.223313+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:31:35.547863Z",
-        "completed_at": null,
-        "status": "in_progress"
-      }
-    },
-    {
-      "id": "6ae2aef4bbc081918693b0552743bd0d",
-      "title": "NOX V16 G5-B T10 SOURCE_READY",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T231500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=15;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:27:35.949072+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:16:04.213568Z",
-        "completed_at": "2026-10-29T21:27:33.645013Z",
-        "status": "completed"
-      }
-    },
-    {
-      "id": "6ae2af4f6c448191932f01b35fa364c1",
-      "title": "NOX V16 G5-A T02 журнал",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T233900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:23:47.816742+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:34:14.833408Z",
-        "completed_at": null,
-        "status": "in_progress"
-      }
-    },
-    {
-      "id": "6ae2af2f84088191ba04843861edf73b",
-      "title": "NOX V16 G4-C T09 freeze",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T230300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=3;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:13:33.204221+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:05:57.330218Z",
-        "completed_at": "2026-10-29T21:13:29.366720Z",
-        "status": "completed"
-      }
-    },
-    {
-      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
-      "title": "NOX V16 G4-B T08 блокеры",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T225100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=51;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:21:10.699884+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:34:34.096154Z",
-        "completed_at": null,
-        "status": "in_progress"
-      }
-    },
-    {
-      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
-      "title": "NOX V16 G4-A T07 NOLOSS",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T224800\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=48;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T20:58:10.182584+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T20:49:25.201805Z",
-        "completed_at": "2026-10-29T20:58:06.939839Z",
-        "status": "completed"
-      }
-    },
-    {
-      "id": "6ae2aef78ba881919e6022c1103959a2",
-      "title": "NOX V16 G3-C T06 интегратор",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T223900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T15:05:52.215559+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T20:28:38.233731Z",
-        "completed_at": "2026-10-29T20:41:47.829001Z",
-        "status": "failed"
-      }
-    },
     {
       "id": "6ae2af347fbc81918ddafed356511243",
       "title": "NOX V16 G3-B PACK02",
       "enabled": true,
+      "scope": "current",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T20:37:16.909797+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
-        "started_at": "2026-10-29T21:29:20.830139Z",
-        "completed_at": null,
-        "status": "in_progress"
+        "status": "completed",
+        "started_at": "2026-10-29T23:30:31.411132Z",
+        "completed_at": "2026-10-29T23:40:05.476334Z",
+        "run_id": "4609e8f3-4478-832e-88a2-63afc92da2ba"
       }
     },
     {
       "id": "6ae2af008eac8191a03526f290b801c6",
       "title": "NOX V16 G3-A P04 GPU/RAG",
       "enabled": true,
+      "scope": "current",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T20:32:14.348460+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
-        "started_at": "2026-10-29T21:29:50.452114Z",
-        "completed_at": "2026-10-29T21:39:07.826952Z",
-        "status": "completed"
-      }
-    },
-    {
-      "id": "6ae2aefe3c248191a7131fc9876611e6",
-      "title": "NOX V16 G2-C P03 Queue",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:22:35.201720+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:12:47.239975Z",
-        "completed_at": "2026-10-29T21:22:33.644361Z",
-        "status": "completed"
+        "status": "completed",
+        "started_at": "2026-10-29T23:25:04.582050Z",
+        "completed_at": "2026-10-29T23:35:41.555083Z",
+        "run_id": "b2f7a51e-95c8-832d-add6-1abcbd92317d"
       }
     },
     {
       "id": "6ae2aef9c3fc81918fd4c4b0041207ef",
       "title": "NOX V16 G2-B P02 Voice",
       "enabled": true,
+      "scope": "current",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:24:38.014025+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
-        "started_at": "2026-10-29T21:13:03.022058Z",
-        "completed_at": "2026-10-29T21:24:35.670038Z",
-        "status": "completed"
-      }
-    },
-    {
-      "id": "6ae2af31f2988191902bae4aaec2635e",
-      "title": "NOX V16 G2-A Host50",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:22:13.841313+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:34:04.328874Z",
-        "completed_at": null,
-        "status": "in_progress"
-      }
-    },
-    {
-      "id": "6ae2aefbde94819183730a2ed3cad78c",
-      "title": "NOX V16 G1-C P04–P05",
-      "enabled": true,
-      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:11:31.015069+00:00",
-      "timezone": "Europe/Moscow",
-      "last_run": {
-        "started_at": "2026-10-29T21:02:36.960249Z",
-        "completed_at": "2026-10-29T21:11:26.648373Z",
-        "status": "completed"
+        "status": "completed",
+        "started_at": "2026-10-29T23:10:33.294216Z",
+        "completed_at": "2026-10-29T23:13:25.800342Z",
+        "run_id": "90037171-ed7c-832a-b1c9-c3052a0a2b8e"
       }
     },
     {
       "id": "6ae2aecc59f88191a10a9342f8a1930c",
       "title": "NOX V16 G1-B NSIS source",
       "enabled": true,
+      "scope": "current",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:30:30.775686+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
-        "started_at": "2026-10-29T21:16:09.729016Z",
-        "completed_at": "2026-10-29T21:30:27.934440Z",
-        "status": "completed"
+        "status": "completed",
+        "started_at": "2026-10-29T23:17:57.270091Z",
+        "completed_at": "2026-10-29T23:22:46.921696Z",
+        "run_id": "d02feff0-f568-8323-829a-0875d0c10674"
+      }
+    },
+    {
+      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "title": "NOX V16 G4-B T08 блокеры",
+      "enabled": true,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T225100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=51;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T22:53:48.172487Z",
+        "completed_at": "2026-10-29T23:00:12.272016Z",
+        "run_id": "2237d416-612c-832b-99a2-2b327093c46e"
+      }
+    },
+    {
+      "id": "6ae2af4f6c448191932f01b35fa364c1",
+      "title": "NOX V16 G5-A T02 журнал",
+      "enabled": true,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T233900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "in_progress",
+        "started_at": "2026-10-29T23:39:16.385732Z",
+        "completed_at": null,
+        "run_id": "1848df49-67a4-8329-b3df-c947b699518b"
+      }
+    },
+    {
+      "id": "6ae2af31f2988191902bae4aaec2635e",
+      "title": "NOX V16 G2-A Host50",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T23:17:21.029329Z",
+        "completed_at": "2026-10-29T23:20:08.092436Z",
+        "run_id": "51b0c6d2-6f50-832a-87c0-53605cc99b57"
+      }
+    },
+    {
+      "id": "6ae2aefe3c248191a7131fc9876611e6",
+      "title": "NOX V16 G2-C P03 Queue",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T23:12:18.264085Z",
+        "completed_at": "2026-10-29T23:20:05.302500Z",
+        "run_id": "91b07992-5c50-8326-a640-c130b7ac9ba6"
       }
     },
     {
       "id": "6ae2af28e4b8819192bbf6bb3857cc84",
       "title": "NOX V16 G1-A P01–P03",
-      "enabled": true,
+      "enabled": false,
+      "scope": "current",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T21:08:19.210308+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
-        "started_at": "2026-10-29T21:33:52.300793Z",
-        "completed_at": null,
-        "status": "in_progress"
+        "status": "completed",
+        "started_at": "2026-10-29T22:58:33.047229Z",
+        "completed_at": "2026-10-29T23:01:53.384296Z",
+        "run_id": "7e0f826e-9670-8327-ba68-a1eb7c68e6af"
+      }
+    },
+    {
+      "id": "6ae2aefbde94819183730a2ed3cad78c",
+      "title": "NOX V16 G1-C P04–P05",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T22:57:33.366189Z",
+        "completed_at": "2026-10-29T23:00:35.581614Z",
+        "run_id": "0bfbf14b-fdd0-832a-be13-b4c4f7be72b4"
+      }
+    },
+    {
+      "id": "6ae2aef4bbc081918693b0552743bd0d",
+      "title": "NOX V16 G5-B T10 SOURCE_READY",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T231500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=15;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T22:16:12.791283Z",
+        "completed_at": "2026-10-29T22:27:13.206933Z",
+        "run_id": "fe6fcc1a-2518-8326-9676-94d8d196dc0e"
+      }
+    },
+    {
+      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "title": "NOX V16 G5-C T11 GitLab READY",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T232700\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=27;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T21:31:35.547863Z",
+        "completed_at": "2026-10-29T21:40:29.528803Z",
+        "run_id": "c08e0e9d-cddc-8321-8b12-ee66f8883af3"
+      }
+    },
+    {
+      "id": "6ae2af2f84088191ba04843861edf73b",
+      "title": "NOX V16 G4-C T09 freeze",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T230300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=3;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T22:03:43.025859Z",
+        "completed_at": "2026-10-29T22:11:35.030122Z",
+        "run_id": "a89eb080-c6c4-8330-a295-ed6674e9ec6c"
+      }
+    },
+    {
+      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "title": "NOX V16 G4-A T07 NOLOSS",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T224800\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=48;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "completed",
+        "started_at": "2026-10-29T21:50:56.926222Z",
+        "completed_at": "2026-10-29T21:58:04.742167Z",
+        "run_id": "a4cd03a2-af88-832a-ba7e-25e0cfb892aa"
+      }
+    },
+    {
+      "id": "6ae2aef78ba881919e6022c1103959a2",
+      "title": "NOX V16 G3-C T06 интегратор",
+      "enabled": false,
+      "scope": "current",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T223900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "last_run": {
+        "status": "failed",
+        "started_at": "2026-10-29T21:42:13.744075Z",
+        "completed_at": "2026-10-29T21:48:20.206662Z",
+        "run_id": "7c83ca61-7c98-8320-ab52-49660ca305aa"
       }
     },
     {
       "id": "6ae342e4a0248191954f95217ebee33b",
       "title": "NOX V16 T13 E07 PAUSED",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART:20261029T173000\nRRULE:FREQ=HOURLY\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T14:32:15.002169+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-29T14:31:30.229533Z",
         "completed_at": "2026-10-29T14:32:13.180463Z",
-        "status": "completed"
+        "run_id": "3c340092-b638-8326-b8ab-acf94633b47b"
       }
     },
     {
       "id": "6ae342df73788191b8d8fb6b179dad46",
       "title": "NOX V16 T12 BUILD PAUSED",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART:20261029T173000\nRRULE:FREQ=HOURLY\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T14:31:19.701459+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-29T14:30:42.254922Z",
         "completed_at": "2026-10-29T14:31:18.211941Z",
-        "status": "completed"
+        "run_id": "ac4ef882-92dc-8331-a8cc-a86154c59128"
       }
     },
     {
       "id": "6ae342e74028819197da844e6468b640",
       "title": "NOX V16 T14 RELEASE FIX PAUSED",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART:20261029T173000\nRRULE:FREQ=HOURLY\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T14:28:27.038516+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-29T14:27:49.862070Z",
         "completed_at": "2026-10-29T14:28:25.521499Z",
-        "status": "completed"
+        "run_id": "8409fd9e-c1b4-832b-a3b7-a76e8a08d709"
       }
     },
     {
       "id": "6ae342ea03d48191ad25ba7bcf4e5c8a",
       "title": "NOX V16 T15 RELEASE PAUSED",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART:20261029T173000\nRRULE:FREQ=HOURLY\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-29T14:27:27.725764+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-29T14:26:56.322252Z",
         "completed_at": "2026-10-29T14:27:25.501720Z",
-        "status": "completed"
+        "run_id": "019af9cf-4344-832d-89ce-7ded5b65a288"
       }
     },
     {
       "id": "6ae16157f7388191a5d0634fb13d3d01",
       "title": "NOX W4·02 P05 Events SPACE",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T220500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=5;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T23:11:11.647488+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T23:03:22.342308Z",
         "completed_at": "2026-10-28T23:11:08.953945Z",
-        "status": "completed"
+        "run_id": "8dd3c97f-cc98-832e-9055-1b0a6daa4b3d"
       }
     },
     {
       "id": "6ae1618c11908191b891c76f2ffa4238",
       "title": "NOX W4·03 SPACE Mobile Bridge",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T220500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=5;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T23:10:54.552245+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T23:05:15.492936Z",
         "completed_at": "2026-10-28T23:10:52.626091Z",
-        "status": "completed"
+        "run_id": "859890d8-d354-8332-9ee9-dade73b3dccb"
       }
     },
     {
       "id": "6ae161819d9481919f3dbb52cbfd9e62",
       "title": "NOX W1·01 SourceLock 729",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T213500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=35;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T22:42:45.116265+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T22:35:22.586837Z",
         "completed_at": "2026-10-28T22:42:43.443425Z",
-        "status": "completed"
+        "run_id": "f3e5b522-84a0-8333-8a3d-1f03fa69a215"
       }
     },
     {
       "id": "6ae161b0c5f88191ada31d0e3b12364d",
       "title": "NOX W1·03 Security NO-LOSS",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T213500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=35;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T22:38:55.196647+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T22:30:05.631153Z",
         "completed_at": "2026-10-28T22:38:53.741620Z",
-        "status": "completed"
+        "run_id": "67b208e4-0748-8328-acef-a2ddedc4ffd0"
       }
     },
     {
       "id": "6ae1618459288191b6be333b6af9c89b",
       "title": "NOX W1·02 Native Host50",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T213500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=35;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T22:38:44.181590+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T22:30:04.889906Z",
         "completed_at": "2026-10-28T22:38:42.485867Z",
-        "status": "completed"
+        "run_id": "879ede72-4b74-832e-927e-fa97551930a4"
       }
     },
     {
       "id": "6ae1614c140881918783372458d52f29",
       "title": "NOX W2·01 D02 WOW E01",
       "enabled": false,
+      "scope": "historical",
       "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261028T214500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=45;BYSECOND=0\nEND:VEVENT",
-      "next_run_time": null,
-      "last_run_time": "2026-10-28T22:52:52.884202+00:00",
-      "timezone": "Europe/Moscow",
       "last_run": {
+        "status": "completed",
         "started_at": "2026-10-28T22:46:49.591428Z",
         "completed_at": "2026-10-28T22:52:51.304022Z",
-        "status": "completed"
+        "run_id": "cd277714-0cec-8325-9843-714885db3dee"
       }
     }
-  ],
-  "last_run_observed_at": "2026-10-29T21:41:00Z"
+  ]
 };
