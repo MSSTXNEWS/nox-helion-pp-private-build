@@ -7,14 +7,16 @@ from __future__ import annotations
 import ast
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 import unittest
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-PACK = ROOT / "proposals" / "NOX-PACK01-50"
-MOBILE = ROOT / "coordination" / "e06" / "adapters" / "g2_space_mobile.py"
+PACK = Path(os.environ.get("NOX_PINNED_PACK01_PATH", ROOT / "proposals" / "NOX-PACK01-50"))
+G2 = Path(os.environ.get("NOX_PINNED_G2_PATH", ROOT / "coordination" / "e06" / "adapters"))
+MOBILE = G2 / "g2_space_mobile.py"
 
 spec = importlib.util.spec_from_file_location("nox_t06_mobile_admission", HERE / "admission.py")
 admission = importlib.util.module_from_spec(spec)
