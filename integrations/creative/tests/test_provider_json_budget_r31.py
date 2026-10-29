@@ -29,5 +29,19 @@ class ProviderJsonAdmission(unittest.TestCase):
                             engine._get("http://127.0.0.1:11434/api/tags")
 
 
+    def test_local_model_tag_catalog_rejects_malformed_rows(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as root:
+            studio=engine.Studio(root)
+            for tags in (None, [None], [{"name": ""}], [42]):
+                with self.subTest(tags=tags):
+                    with patch.object(engine,"_get",return_value={"models":tags}):
+                        with self.assertRaises(engine.StudioError):
+                            studio._text("Hi")
+            responses=[{"models":[{"name":"qwen3:4b"}]},{"response":"Hola"}]
+            with patch.object(engine,"_get",side_effect=responses):
+                self.assertEqual(studio._text("Hello"),"Hola")
+
+
 if __name__=="__main__":
     unittest.main()
