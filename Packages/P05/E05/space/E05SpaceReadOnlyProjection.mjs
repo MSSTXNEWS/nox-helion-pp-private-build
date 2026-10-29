@@ -35,6 +35,7 @@ const derivedLaneProgress = b => {
   if (!Number.isInteger(b.total_tasks) || b.total_tasks < 1 || b.total_tasks > 5000 ||
       !Array.isArray(b.task_ledger) || b.task_ledger.length !== b.total_tasks) return null;
   let denominator = 0, accepted = 0;
+  let allAccepted = true;
   const seen = new Set();
   for (const task of b.task_ledger) {
     if (!task || !validRunId(task.task_id) || seen.has(task.task_id) ||
@@ -46,10 +47,14 @@ const derivedLaneProgress = b => {
     if (task.status === 'COMPONENT_VERIFIED') {
       if (!sha(task.receipt_sha256)) return null;
       accepted += task.weight;
-    } else if (task.receipt_sha256 != null) return null; // reject claiming a receipt for pending work
+    } else {
+      allAccepted = false;
+      if (task.receipt_sha256 != null) return null; // pending work is not accepted evidence
+    }
   }
   if (Math.abs(denominator - 100) > 0.000001) return null;
-  return round2(accepted);
+  // Any unfinished TaskID forbids a displayed 100, even after rounding.
+  return allAccepted ? 100 : Math.min(99.99, round2(accepted));
 };
 
 
@@ -92,7 +97,9 @@ export function projectReadiness(readiness, runId, nowMs) {
     validRunId(stage7.build_id) && stage7.build_id===readiness.build_id &&
     stage7.exe_sha256===readiness.exe_sha256;
   bars[6].stage=windowsAccepted?'WINDOWS_ACCEPTED':'NOT_RUN';
-  const overall = Math.round(five.reduce((v,x,i)=>v+x*weights[i],0)*100)/100;
+  const roundedOverall = round2(five.reduce((v,x,i)=>v+x*weights[i],0));
+  // Overall 100 also requires every sealed TaskID in every lane to be complete.
+  const overall = five.every(value=>value===100) ? 100 : Math.min(99.99, roundedOverall);
   return {bars, overall: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? overall:null,
     reason: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? 'E06_OWNER_PROJECTED':'WEIGHTED_MISMATCH'};
 }
@@ -285,6 +292,13 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   typeof e.message==='string' && e.message.length<=240 &&
   !/[\x00-\x1f\x7f]/.test(e.message) &&
   typeof e.evidence_verified==='boolean' &&
+  // Required events.v3 counters are present even for terminals with null progress.
+  Object.prototype.hasOwnProperty.call(e,'numerator') &&
+  Object.prototype.hasOwnProperty.call(e,'denominator') &&
+  ((e.numerator===null && e.denominator===null) ||
+   (Number.isSafeInteger(e.numerator) && Number.isSafeInteger(e.denominator) &&
+    e.numerator>=0 && e.denominator>0 && e.numerator<=e.denominator)) &&
+  (e.event_type!=='model.stopped' || e.package_id==='P04') &&
   ((e.event_type==='model.stopped' && e.state==='STOPPED') ||
    (e.event_type==='task.failed' && e.state==='ERROR'));
 
@@ -311,8 +325,10 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // evidence of successful termination; quarantine rather than skip it.
     if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
         !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
-    if (!canonicalTerminal(e) || e.run_id!==runId ||
-        Date.parse(e.timestamp_utc)>nowMs) continue;
+    if (!canonicalTerminal(e) || e.run_id!==runId) continue;
+    // Do not erase a future same-run failure behind a verified STOP.
+    if (Date.parse(e.timestamp_utc)>nowMs)
+      return {state:'HOLD_FUTURE_TERMINAL',errors:null};
     // A schema-valid terminal with evidence_verified:false is only a report,
     // NOT proof that STOP completed or that the failure was authenticated.
     // It must not overwrite an actually verified error or STOP in this tile.
@@ -321,7 +337,8 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // replayed native receipt, not an instruction to choose arrival order.
     const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,
       e.task_id,e.package_id,e.action_id,e.timestamp_utc,e.state,
-      e.source,e.message,e.evidence_verified]);
+      e.source,e.message,e.evidence_verified,e.numerator,e.denominator,
+      e.event_sequence??null,e.error_code??null]);
     const previous=seen.get(e.event_id);
     if (previous!==undefined) {
       if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
