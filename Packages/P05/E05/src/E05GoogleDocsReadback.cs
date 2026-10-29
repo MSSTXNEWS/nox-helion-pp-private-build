@@ -172,9 +172,18 @@ public sealed class GoogleDocsAppendReadback
     private static bool ContainsRunIdOutsideTab(JsonElement root, string? approvedTab,
         string runId)
     {
-        if (approvedTab is null || root.ValueKind != JsonValueKind.Object ||
-            !root.TryGetProperty("tabs", out var tabs) || tabs.ValueKind != JsonValueKind.Array)
-            return false; // Legacy single-body document has no other tabs.
+        if (root.ValueKind != JsonValueKind.Object) return false;
+        // Legacy single-body responses put headers, footers and footnotes at
+        // the document root, not inside documentTab. They must not escape the
+        // immutable RunID collision scan. This also covers mixed responses.
+        if (SegmentContainsRunId(root, "headers", runId) ||
+            SegmentContainsRunId(root, "footers", runId) ||
+            SegmentContainsRunId(root, "footnotes", runId))
+            return true;
+        if (approvedTab is null ||
+            !root.TryGetProperty("tabs", out var tabs) ||
+            tabs.ValueKind != JsonValueKind.Array)
+            return false; // A legacy body has no sibling tabs.
         return HasRunIdOnOtherTab(tabs, approvedTab, runId);
     }
     private static bool HasRunIdOnOtherTab(JsonElement tabs, string approvedTab,
