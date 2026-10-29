@@ -346,7 +346,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       // Validate the policy clock BEFORE touching live particles: a rejected
       // mode change must not partially discard the existing D02 animation.
       const newPolicy=profileFor(next,preference);
-      const nextMin=PROFILES[next].minimumBurstMs;
+      // OS Reduced Motion caps live FX; target profile owns future burst bounds.
+      const targetPolicy=PROFILES[next];
+      const nextMin=targetPolicy.minimumBurstMs;
       const oldMin=PROFILES[mode].minimumBurstMs;
       // Explicit REDUCED -> active profile also needs a bounded fresh burst window.
       // Otherwise a dormant ECO deadline can exceed MAX/BALANCED's maximum.
@@ -362,8 +364,8 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
         if(faster){
           fastBounds=each.map(orb=>{
             const scale=orb.index===0?1:2.1;
-            return [rebaseNow+newPolicy.minimumBurstMs*scale,
-                    rebaseNow+newPolicy.maximumBurstMs*scale];
+            return [rebaseNow+targetPolicy.minimumBurstMs*scale,
+                    rebaseNow+targetPolicy.maximumBurstMs*scale];
           });
           if(fastBounds.some(bounds=>!bounds.every(Number.isFinite)))return false;
         }

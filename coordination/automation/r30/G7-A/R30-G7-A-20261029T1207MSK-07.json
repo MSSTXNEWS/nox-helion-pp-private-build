@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "slot": "G7-A",
+  "runId": "R30-G7-A-20261029T1207MSK-07",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-only; SOURCE ONLY",
+  "status": "SOURCE_PATCH_SAVED_SOURCE_READY_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T1207MSK-07",
+  "ancestry": {
+    "baseRef": "automation/r30/g7a/R30-G7-A-20261029T1107MSK-06",
+    "baseCommit": "a79299c02074fb7d9a3bebcf17eb11ab94d267fc",
+    "baseGitTree": "245a79040cdb811ec8dfbe15be6666050c464867"
+  },
+  "ownership": {
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "uniqueReceiptPath": "coordination/automation/r30/G7-A/R30-G7-A-20261029T1207MSK-07.json",
+    "forbiddenPaths": [
+      "proposals/NOX-PACK01-50/",
+      "proposals/NOX-PACK02-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ]
+  },
+  "inputEvidence": {
+    "rules56GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "currentSpecDrive": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "readSections": [
+      "33 (56/56 consolidated historical, acknowledged reconstructed rather than verbatim original)",
+      "54",
+      "55",
+      "56",
+      "latest R29 loader-only clarification"
+    ],
+    "r30ConflictIndexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots": {
+      "count": 25,
+      "verification": "25/25 recursive Git tree enumerations, all non-truncated",
+      "historicalCinemaDifferentBlob": "r27-a02:09e74921a160dfde8d24e25badb476d9da268f82",
+      "fullSnapshotFileBytesRehash": "NOT_PERFORMED",
+      "original729RawPhysicalSHA256": "NOT_VERIFIED"
+    },
+    "driveReadOnlyIds": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "c34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "e06": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    }
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-OS-REDUCED-USER-PROFILE-INTENT-20261029-R07",
+    "sourcePath": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "preimageGitBlob": "3123b0b23be88b605249a69c1deeba02779bbb49",
+    "newGitBlob": "4615f30785f73814a721390edd587018af48aaa6",
+    "defect": "On Windows prefers-reduced-motion=true, setProfile(BALANCED->MAX) and explicit REDUCED->BALANCED returned false despite valid target profile; after OS resume selected profile reverted to old value.",
+    "rootCause": "Scheduling fast burst bounds were derived from profileFor(target,OSReduced) = effective REDUCED with infinite intervals, instead of desired PROFILES[target].",
+    "patch": "Maintain OS-reduced effective render cap/RAF veto, but calculate validated future burst bounds only from the user's explicit target policy. No original D02/controls replaced."
+  },
+  "regression": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.os-reduced-profile-intent.test.mjs",
+    "gitBlob": "46ad8e7989c06c5e5fb3c5efe185d4594f5d0961",
+    "newTestCount": 1,
+    "scenarios": [
+      "OS-Reduced BALANCED->MAX",
+      "OS-Reduced explicit REDUCED->BALANCED",
+      "RAF emission deadline and nine original orb preservation"
+    ],
+    "executor": "Exact source and exact authored Node-style regression evaluated in V8 fixture (no separate Node CLI)",
+    "before": "RED: select MAX while OS Reduced: expected true; actual false",
+    "after": "GREEN: 1 focused test PASS (two transitions)",
+    "nodeCLI": "NOT_RUN",
+    "windowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "changedPaths": [
+      "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.os-reduced-profile-intent.test.mjs",
+      "coordination/automation/r30/G7-A/R30-G7-A-20261029T1207MSK-07.json"
+    ],
+    "deletedPaths": [],
+    "legacyDONE": "PRESERVED",
+    "historicalSnapshots": "UNCHANGED",
+    "mainAndPR162": "UNCHANGED",
+    "installerPack01Pack02": "UNCHANGED",
+    "sharedR30AndDocs": "UNCHANGED"
+  },
+  "selfImprovement": {
+    "appliedEarlier": "Validate every finite clock and next-burst bound before visual-state mutation.",
+    "newLesson": "Never derive future user-selected visual profile limits from an OS-enforced effective Reduced Motion policy. Desired intent and effective resource budget are separate; exercise mode selections WHILE suspended, not only after resumption."
+  },
+  "coordinator": {
+    "onlyCentralWriter": "Astra-C",
+    "ownGoogleDocsWrites": "NONE",
+    "request": "Astra-C collects immutable RunID receipt and new lesson into common Docs by CAS+readback.",
+    "DriveCommonWrite": "PENDING_ASTRA_C"
+  },
+  "release": {
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "finalIntegration": "NOT_RUN",
+    "progressPercentage": "N/D"
+  }
+}
