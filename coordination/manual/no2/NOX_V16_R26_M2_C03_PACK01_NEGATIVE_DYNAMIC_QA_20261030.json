@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_V16_R26_M2_SOURCE_QA_CYCLE_V1",
+  "run_id": "NOX-V16-M2-R26-20261030-C03-10",
+  "owner": "manual2-independent-qa",
+  "created_at_utc": "2026-10-29T21:52:08.922Z",
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "pr": 162,
+  "head": "4489cf46dbaa2e0bc543cade2afcc2e61532dfe8",
+  "cycle": 3,
+  "checks_completed": 10,
+  "checks_required": 10,
+  "source": {
+    "registry_path": "proposals/NOX-PACK01-50/registry.mjs",
+    "registry_blob": "1e059650658ba806da1c087625dc34308822978c",
+    "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "owner_binding_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5"
+  },
+  "executed_in": "JavaScript V8 exact ES module functions evaluated without network/privileged host; cloned actual Git-pinned PACK01 JSON catalog",
+  "native_windows": "NOT_RUN",
+  "security_acceptance": "NOT_ACCEPTED",
+  "new_product_done": 0,
+  "qa_accepted_delta": 0,
+  "checks": [
+    {
+      "n": 1,
+      "case": "original 50-item catalog baseline",
+      "observed": "VALID"
+    },
+    {
+      "n": 2,
+      "case": "duplicate route ID",
+      "observed": "REJECT DUPLICATE_OR_INVALID_ROUTE"
+    },
+    {
+      "n": 3,
+      "case": "duplicate TaskID",
+      "observed": "REJECT DUPLICATE_OR_INVALID_TASK_ID"
+    },
+    {
+      "n": 4,
+      "case": "out-of-policy owner",
+      "observed": "REJECT INVALID_ROUTE_METADATA"
+    },
+    {
+      "n": 5,
+      "case": "invalid risk label",
+      "observed": "REJECT INVALID_ROUTE_METADATA"
+    },
+    {
+      "n": 6,
+      "case": "dangerous + VERIFIED + enabled + nativeConsent false",
+      "observed": "UI_DISABLED"
+    },
+    {
+      "n": 7,
+      "case": "dangerous + VERIFIED + enabled + nativeConsent true",
+      "observed": "UI_ENABLED_PROJECTION_ONLY"
+    },
+    {
+      "n": 8,
+      "case": "AVAILABLE + enabled + consent true",
+      "observed": "UI_DISABLED"
+    },
+    {
+      "n": 9,
+      "case": "unknown ADMIN state + enabled + consent true",
+      "observed": "UI_DISABLED"
+    },
+    {
+      "n": 10,
+      "case": "tampered catalog dangerous→safe for training.start with nativeConsent false",
+      "observed": "UI_ENABLED_AFTER_RISK_DOWNGRADE",
+      "status": "SOURCE_UI_RISK_TRUST_WEAKNESS_NOT_NATIVE_ACL_PROOF"
+    }
+  ],
+  "status": "TEN_CASES_EXECUTED_WITH_ONE_FAIL_OPEN_UI_NEGATIVE",
+  "error_id": "ERR-SRC-004",
+  "task_id_existing": "Host50/PACK01",
+  "source_ready": "HOLD",
+  "e07": "0/10",
+  "release": "HOLD",
+  "next": "Owner1/T06 pin immutable risk classifications to native source policy and SourceLock, reject downgraded catalogue before enabling UI actions. Manual2/T08 independently test exact changed SHA including native ACL and consent; T02 owns shared log CAS. Do not confuse source UI projection with privilege escalation."
+}
