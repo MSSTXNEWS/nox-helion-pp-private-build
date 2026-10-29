@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_V16_R28_MANUAL3_P04_JSON_RECURSION_OWNER_RECEIPT",
+  "run_id": "NOX-V16-MANUAL03-R28-20261030-P04-JSON-DEEP-FAIL-CLOSED",
+  "role": "manual_no3",
+  "existing_task_id": "P04 model snapshot validation",
+  "error_id": "ERR-SRC-004",
+  "parent_sha": "967584dfe27a0f28ee5496a48d02a558b7631b94",
+  "source_commit": "d7a791ef83537d282fb955f2980c365591341ba7",
+  "source_tree": "11793a830e6f49cb870555201356d940c07ab496",
+  "owner_branch": "manual/no3/r26-p04-p05-no-loss-handoff-20261030",
+  "content": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "1ab9b9d90016ba062f2785c9143239b6efa90e05",
+      "post_git_blob_sha1": "27d5c850028acc32bb4c677b879b27ec2b8e4d25",
+      "pre_sha256": "575a3db0492a49cab7eff02fcfaa4e1cb4aa66cdbf8cf8c4630cfa47bd3e1e91",
+      "post_sha256": "679f616345b626f94e3fc3e3c182cc0c3995439e3c8f9b2c8fff49b5759de1f8",
+      "bytes": 11517
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "941146d84297e724c7f75585ecd7667bff1af0f2",
+      "post_git_blob_sha1": "3f10447c31ba5da5b4c12a1d02ce4865a5bbb869",
+      "pre_sha256": "7995216ddd0f3205a609e50a4c9eb6498b1ef87740a0d26f8ce1c1dede2d9f8c",
+      "post_sha256": "e5accde914c643e8b1a10879c2e4bc599dd21e11c8758acd7d08345d8a0df5ff",
+      "bytes": 17046
+    }
+  ],
+  "regression_counts": {
+    "prior": 38,
+    "post": 40,
+    "removed_prior": 0
+  },
+  "source_static": "PASS",
+  "python_json_deep_fixture": "CONFIRMED_RECURSION_ERROR_IN_LOCAL_PYTHON",
+  "github_component_runtime": "NOT_RUN",
+  "dotnet": "NOT_RUN",
+  "windows": "NOT_RUN",
+  "model_gpu_training": "NOT_RUN",
+  "independent_qa": "NOT_RUN",
+  "t02_shared_journal_cas": "NOT_WRITTEN",
+  "restrictions": "Retain SourceLock 729, D02, original task IDs, STOP/ACL/consent and preserve source without premature acceptance."
+}
