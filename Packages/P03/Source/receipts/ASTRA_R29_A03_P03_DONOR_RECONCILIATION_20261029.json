@@ -1,0 +1,30 @@
+{
+  "runId": "ASTRA-R29-A03-CONTINUATION-P03-DONOR-RECONCILIATION-20261029",
+  "owner": "A03 P03",
+  "parentSha": "91da142f30aa8f57bd3dadbfdd35a964cddbdec6",
+  "branch": "astra/r29-a03-20261029",
+  "previousApproachesPreserved": 5,
+  "continuationApproachesSourceTested": 2,
+  "taskIds": ["P03-R29-DONOR-ATTESTATION-TYPE-RECONCILIATION"],
+  "status": "SOURCE_TESTED_DONOR_REUSE",
+  "source": "Packages/P03/Admission/p03_modelcenter_gate.py",
+  "preGitBlob": "8d26aaaf5e2eacc1b5d90707da359f912c26b472",
+  "donor": {
+    "owner": "Historical R27 A06 role P03, not current R29 E06",
+    "commit": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+    "sourceBlob": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f",
+    "reused": ["bounded exact evidence snapshot around native callbacks", "strict requiresGPU boolean", "safe invalid previous queue state", "strict integer retry sequence"]
+  },
+  "preservedR29": ["growing native layer totals", "unknown denominator progress", "GGUF Ollama prerequisite", "route-specific digest revisions", "metadata-only native review adapter and unchanged admission allowlist"],
+  "tests": {
+    "command": "python -m unittest test_p03_attestation_binding_r27 test_p03_native_types_r27 test_p03_connected_download_chain_r29 test_p03_native_revision_contract_r29 test_p03_reviewed_artifact_adapter -q",
+    "cwd": "Packages/P03/Admission",
+    "donorRed": "11 tests: 13 failing subcases and 4 errors on previous R29 source",
+    "combinedGreen": "35 PASS",
+    "scope": "Actual Python admission, callback, metadata and queue-policy fixtures; no native C# or real model download"
+  },
+  "lesson": "Replay exact ready donor regressions on current owner source, then apply only non-overlapping owner hunks. Preserve current layer/revision semantics and test the combined component instead of replacing it with either older whole file.",
+  "remaining": ["Historical P03 Python one-host command binding donor reconciliation", "Authenticated native registry/session/receipt provider composition", "C# export execution and native Windows acceptance", "Real model rights and pinned artifact inputs"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

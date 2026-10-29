@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, Any
 import re
+import json
 import ipaddress
 import ntpath
 import unicodedata
@@ -116,6 +117,43 @@ def _https_url(s: Any) -> bool:
 
 def _positive(value: Any) -> bool:
     return type(value) is int and 0 < value < (1 << 63)
+
+
+def _evidence_snapshot(*values: Mapping[str, Any]) -> str:
+    """Bound callback evidence including nested MappingProxyType records.
+
+    Native attestations must describe exactly the objects evaluated by policy;
+    mutating valid identifiers after an earlier check cannot inherit its PASS.
+    No user-defined scalar coercion, non-finite JSON or unbounded graphs.
+    """
+    nodes = 0
+
+    def plain(value, depth=0):
+        nonlocal nodes
+        nodes += 1
+        if depth > 32 or nodes > 4096:
+            raise ValueError("Evidence structure limit")
+        if isinstance(value, Mapping):
+            if len(value) > 4096 or any(type(k) is not str or len(k) > 65536 for k in value):
+                raise ValueError("Evidence object keys")
+            return {k: plain(v, depth + 1) for k, v in value.items()}
+        if type(value) is list:
+            if len(value) > 4096:
+                raise ValueError("Evidence array limit")
+            return [plain(v, depth + 1) for v in value]
+        if type(value) is str:
+            if len(value) > 65536:
+                raise ValueError("Evidence text limit")
+            return value
+        if value is None or type(value) in (bool, int, float):
+            return value
+        raise ValueError("Evidence JSON value required")
+
+    encoded = json.dumps([plain(v) for v in values], sort_keys=True,
+                         separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    if len(encoded.encode("utf-8")) > 262144:
+        raise ValueError("Evidence byte limit")
+    return encoded
 
 
 def _nonblank_license_id(value: Any) -> bool:
@@ -231,12 +269,17 @@ def admit_for_existing_downloader(
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")
+    if type(evidence.get("requiresGPU")) is not bool:
+        reasons.append("GPU_REQUIREMENT_FLAG_UNVERIFIED")
     if not callable(trusted_attestor):
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
         try:
+            snapshot = _evidence_snapshot(evidence, context)
             if trusted_attestor(evidence, context) is not True:
                 reasons.append("OWNER_ATTESTATION_REJECTED")
+            if _evidence_snapshot(evidence, context) != snapshot:
+                reasons.append("OWNER_ATTESTATION_EVIDENCE_CHANGED")
         except Exception:
             reasons.append("OWNER_ATTESTATION_ERROR")
 
@@ -349,8 +392,11 @@ def _trusted_queue_receipt_errors(
     if not callable(trusted_queue_verifier):
         return ("NATIVE_QUEUE_VERIFIER_MISSING",)
     try:
+        snapshot = _evidence_snapshot(previous, update)
         if trusted_queue_verifier(previous, update) is not True:
             return ("NATIVE_QUEUE_RECEIPT_REJECTED",)
+        if _evidence_snapshot(previous, update) != snapshot:
+            return ("NATIVE_QUEUE_RECEIPT_CHANGED",)
     except Exception:
         return ("NATIVE_QUEUE_VERIFIER_ERROR",)
     return ()
@@ -372,6 +418,9 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
     before, after = previous.get("state"), update.get("state")
     if not isinstance(before, str) or before not in _QUEUE_STATES:
         reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
+        # Preserve all other diagnostics while preventing an IPC array/object
+        # from reaching hash-table membership below and raising TypeError.
+        before = None
     if isinstance(after, str) and after in {"STOP", "CANCEL", "PAUSE", "RETRY"}:
         reasons.append("REQUEST_NOT_SERVER_CONFIRMED")
         if after == "STOP":
@@ -469,7 +518,9 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
         if not (_nonempty_id(previous.get(key)) and previous.get(key) == new_job.get(key)):
             reasons.append("RETRY_NATIVE_SESSION_MISMATCH")
             break
-    if new_job.get("eventSequence") != 1 or not _positive(previous.get("eventSequence")):
+    if (type(new_job.get("eventSequence")) is not int
+            or new_job.get("eventSequence") != 1
+            or not _positive(previous.get("eventSequence"))):
         reasons.append("RETRY_SEQUENCE_NOT_RESET")
     # Original P03 RetryAsync intentionally clears TotalBytes and
     # CompletedBytes to null. A queued retry has no verified bytes yet.
