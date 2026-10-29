@@ -1,0 +1,67 @@
+{
+  "schema": "NOX_V16_T07_FINAL_PHYSICAL_SOURCELOCK_PASS_V2",
+  "RunID": "T07-MANUAL-20261029-PHYSICAL-FINAL-R03",
+  "timestamp_utc": "2026-10-29T14:13:28.621703+00:00",
+  "TaskID": "T07",
+  "scope": "ORIGINAL 3-part archive and original 729 member bytes; not T06 final integrated source HEAD",
+  "status": "PASS",
+  "sourceGoogleDriveFileID": "14SWJzNFgBSuLdSTdPmM2O1ckQ4D4DnDn",
+  "archiveBytesComputed": 60364346,
+  "archiveSha256Computed": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "parts": [
+    {
+      "path": "source_00.part",
+      "size": 20971520,
+      "sha256": "44540669046b43a71c2abfd78a509fbbdbc59a0b37bb62535257e9f640c1456f",
+      "gitBlobSha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+    },
+    {
+      "path": "source_01.part",
+      "size": 20971520,
+      "sha256": "9e5d4c0b8dcb8d874fed343ea8b8c1a3fd7260b0da5bf19d4d73c5cb76c21bdd",
+      "gitBlobSha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+    },
+    {
+      "path": "source_02.part",
+      "size": 18421306,
+      "sha256": "6e1171b6d0e642a2370ea92c426adeab146ead84d450cae83730208a3b89185f",
+      "gitBlobSha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    }
+  ],
+  "filesReadAndHashed": 729,
+  "uncompressedBytes": 67102932,
+  "crcErrors": 0,
+  "duplicateNames": 0,
+  "canonicalGitManifestBlobSha1": "60bba6a6b34431f4edc8c4e9ab665472cf7ce356",
+  "canonicalGitManifestCommit": "4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db",
+  "canonicalGitManifestPath": "coordination/astra/agents/A06/ORIGINAL_729_PHYSICAL_SOURCELOCK.json",
+  "normalized729RowsSha256Computed": "5d9e9dba44e8ca39bf52eca2cb05e9d52e06bb4661417aa74ff5410c66f331ce",
+  "normalized729RowsGitCanonicalSha256": "5d9e9dba44e8ca39bf52eca2cb05e9d52e06bb4661417aa74ff5410c66f331ce",
+  "gates": {
+    "G1_three_parts_and_git_blobs": "PASS",
+    "G2_total_size": "PASS",
+    "G3_archive_sha256": "PASS",
+    "G4_729_unique_members": "PASS",
+    "G5_member_crc_sha256": "PASS",
+    "G6_git_canonical_manifest_729_exact_digest": "PASS"
+  },
+  "blocker": null,
+  "priorError": "GitHub fetch could not read >20MB binary parts as UTF8",
+  "appliedLesson": "Use authenticated Drive raw original and pinned Git 729 manifest. Do not re-audit previously proven Git trees. Original archive seal is not final accepted merged source.",
+  "errorJournal": "Previous ACCESS_HOLD closed by raw byte verification; C34 unchanged",
+  "handoff": {
+    "T02": "append report+lesson to E06/Master using T02-only CAS/readback",
+    "T09": "original archive PASS, final unified T06 HEAD separate",
+    "T10": "independent SOURCE_READY requires T06 frozen HEAD"
+  },
+  "noBuild": {
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "GitLabCI": "NOT_RUN"
+  },
+  "t07ArtifactFiles": [
+    "T07_FINAL_SOURCELOCK_PASS.json",
+    "T07_FINAL_729_FILES.json"
+  ]
+}
