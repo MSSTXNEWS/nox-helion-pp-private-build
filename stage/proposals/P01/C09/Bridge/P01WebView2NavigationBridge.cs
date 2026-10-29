@@ -49,6 +49,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         _invokeExistingNativeRoute = invokeExistingNativeRoute ?? throw new ArgumentNullException(nameof(invokeExistingNativeRoute));
         _webView.NavigationStarting += OnNavigationStarting;
         _webView.SourceChanged += OnSourceChanged;
+        _webView.ContentLoading += OnContentLoading;
         _webView.WebMessageReceived += OnWebMessageReceived;
     }
 
@@ -78,17 +79,26 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
 
     // A URL is NOT a document identity: reload, away-and-back and history updates
     // may restore identical URLs while an action is awaiting native consent.
+    // Starting a navigation revokes any in-flight native ACK. The old page may
+    // survive when the navigation is canceled, so its replay IDs stay reserved.
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs args)
-        => AdvanceDocumentEpoch();
+        => AdvanceDocumentEpoch(newDocument: false);
 
+    // Fragment/history changes invalidate in-flight replies but do not create
+    // a fresh document. Clearing replay IDs here would allow action replay.
     private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)
-        => AdvanceDocumentEpoch();
+        => AdvanceDocumentEpoch(newDocument: args.IsNewDocument);
 
-    private void AdvanceDocumentEpoch()
+    // Same-URL reloads can skip SourceChanged. ContentLoading is the document
+    // boundary at which a new page may legitimately reuse request IDs.
+    private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs args)
+        => AdvanceDocumentEpoch(newDocument: true);
+
+    private void AdvanceDocumentEpoch(bool newDocument)
     {
         if (Volatile.Read(ref _disposed) != 0) return;
         Interlocked.Increment(ref _documentEpoch);
-        _seenRequestIds.Clear();
+        if (newDocument) _seenRequestIds.Clear();
     }
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
@@ -195,6 +205,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             _webView.WebMessageReceived -= OnWebMessageReceived;
             _webView.NavigationStarting -= OnNavigationStarting;
             _webView.SourceChanged -= OnSourceChanged;
+            _webView.ContentLoading -= OnContentLoading;
         }
         catch (Exception) { /* native WebView2 may already be disposed */ }
         _lifetime.Cancel();
