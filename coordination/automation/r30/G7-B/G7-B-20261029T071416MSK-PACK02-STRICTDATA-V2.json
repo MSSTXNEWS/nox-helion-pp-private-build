@@ -1,0 +1,150 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V2",
+  "run_id": "G7-B-20261029T071416MSK-PACK02-STRICTDATA-V2",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer only",
+  "status": "SOURCE_PATCH_SAVED_REPORT_GATE_HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T071416MSK-PACK02-STRICTDATA-V2",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T0610MSK-PACK02-DATA-BOUNDARY-01",
+  "ownership_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "receipt_path": "coordination/automation/r30/G7-B/"
+  },
+  "read_sources": {
+    "V16_rules_56": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections": [
+      "33",
+      "54",
+      "55",
+      "56",
+      "R29 loader-only correction"
+    ],
+    "conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_frozen": 25,
+    "snapshot_trees_enumerated": 25,
+    "snapshot_git_tree_listing_truncated": 0,
+    "snapshot_file_bytes_full_read": "NO",
+    "snapshot_archive_part_git_sha_consistency": "25/25 same three Git blob IDs, not raw SHA-256",
+    "snapshot_source_part_blobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "Google_Drive_docs_read": [
+      {
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "name": "master errors"
+      },
+      {
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "name": "E06 report"
+      },
+      {
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "name": "self-improvement"
+      },
+      {
+        "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+        "name": "historical C34"
+      }
+    ],
+    "last_astra_C_run": "ASTRA-C-R30-20261029T0630MSK-01"
+  },
+  "task_ids": [
+    "G7B-PACK02-CSV-LOSSLESS-20261029-02",
+    "G7B-PACK02-URL-AMBIGUITY-20261029-02"
+  ],
+  "changed_source": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "preimage_git_blob_sha": "1ee8e495909e642a8f104c46d23632de157e789e",
+    "postimage_git_blob_sha": "196bc0260e4480bf0fec012883e7bffd225ddc7a",
+    "commit_sha": "4b0fe8ced9663f0e724aadd0028424203bcf08a6",
+    "reverified_git_readback": true,
+    "changes": [
+      "Ported verified frozen r27-a10 lossless CSV parsing with quoted CR/CRLF preservation, empty quoted record handling, normalized duplicate header rejection and legacy specific invalid-quote errors",
+      "CSV stringify now unions columns across all records, preserves nested values via JSON cells, rejects malformed/nonobject records and case/NFC-colliding headers",
+      "Query decode rejects duplicate exact/casefold/NFC keys and stores __proto__ as an own property, without prototype mutation",
+      "HTTP URL inspect rejects unescaped raw control chars/backslash before URL canonicalization; preserved protocol and credential guards"
+    ],
+    "existing_routes_retained": 50,
+    "new_routes": 0
+  },
+  "targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-csv-url-boundaries.test.mjs",
+    "git_blob_sha": "2478fd5f52a52816714f570b4af2ab0c432a716c",
+    "commit_sha": "ed6f862b3bca4060b65aa84525d87399634f3434",
+    "command": "node --test proposals/NOX-PACK02-50/g7b-r30-csv-url-boundaries.test.mjs",
+    "node_native_execution": "NOT_RUN",
+    "V8_isolated_CSV_checks": {
+      "passed": 9,
+      "total": 9
+    },
+    "Git_source_readback": "PASS",
+    "Git_test_readback": "PASS",
+    "Windows_component_run": "NOT_RUN"
+  },
+  "frozen_donor": {
+    "snapshot": "coordination/astra/r30/snapshots/r27-a10-20261029",
+    "donor_ops_blob_sha": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6",
+    "collection_ops_blob_sha": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+    "donor_extra_test_files": [
+      "no_loss_r27.test.mjs",
+      "source_security_r22.test.mjs"
+    ],
+    "snapshot_distribution": "24 frozen trees use collection PACK02 ops SHA; one r27-a10 carries different ops and two extra tests",
+    "ported": "CSV strict/lossless and URL query duplicate protection only",
+    "outstanding_conflict": "Donor JSON dotted-key escaping/preservation of empty objects differs from current G7-B fail-closed collision-rejecting flat; requires explicit compatibility decision and dedicated regression before adopting. No donor overwrite or false DONE."
+  },
+  "Host50_handoff": {
+    "status": "HOLD_FOR_ORIGINAL_HOST_OWNER_LICENSE_AND_ADMISSION",
+    "read_only_host_file": "proposals/NOX-PACK01-50/native_bridge.py",
+    "observed_git_blob_sha": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "requested": "Owner to verify licensed internet-adapter provenance/version, credentials isolation, native Host50 permission and cancel contracts; PACK02 must not add competing host.",
+    "modified": false
+  },
+  "applied_previous_lesson": "R30 G7-B guard input boundaries with adversarial regression; Astra-C requires source-task IDs and exact owner paths; historical frozen donor must be inspected before overwriting apparently absent changes.",
+  "new_lesson": {
+    "id": "R30_G7B_COMPARE_ALL_SNAPSHOT_TREES_BEFORE_PACK02_WRITE",
+    "observed_error": "R30 conflict index contained no PACK02 overlap entry, but one of 25 frozen complete Git trees (r27-a10) has diverged PACK02 ops and two security tests not present on collection branch.",
+    "root_cause": "Conflict index summarizes changed-path overlaps and does not guarantee every source snapshot retains identical useful code. Also CSV parser normalized CRLF before decoding quoted fields and stringify read only first-row fields.",
+    "correction": "Enumerated all 25 recursive snapshot trees, pinned the sole divergent PACK02 blob and tests, ported compatible lossless CSV and URL key protections onto isolated previous G7-B commit, verified both Git blobs and one scope test.",
+    "prevention": "Before declaring a loader-owned function complete, compare all frozen trees' per-path Git blobs and inspect divergent donor tests; preserve old error contract, never equate archive Git hashes with physical SHA-256 or static V8 checks with native Node/Windows QA."
+  },
+  "no_loss": {
+    "historical_DONE_preserved": true,
+    "frozen_25_snapshots_untouched": true,
+    "source_parts_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "shared_R30_branch_untouched": true,
+    "Google_Docs_untouched": true,
+    "PACK01_native_bridge_untouched": true,
+    "D02_WOW_untouched": true
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "native_Host50": "NOT_VERIFIED",
+    "P01_P05_weighted_percent": "N/D",
+    "WINDOWS_EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GITLAB_CI": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "DRIVE_WRITE_AND_READBACK": "ASTRA_C_ONLY_NOT_PERFORMED",
+    "REPORT_GATE": "HOLD",
+    "RELEASE": "HOLD"
+  },
+  "instruction_to_Astra_C": "Append this owner receipt's observed new error and self-improvement exactly once to shared Google Docs with revision CAS and RunID readback; leave all source paths and frozen donor snapshots unchanged."
+}
