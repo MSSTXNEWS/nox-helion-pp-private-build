@@ -1,0 +1,137 @@
+{
+  "schema": "NOX_V16_G2C_R21_ISOLATED_OWNER_CHECKPOINT_V1",
+  "run_id": "G2C-20261029T221434MSK-R13",
+  "role": "NOX V16 G2-C P03 Queue, G3-B exclusive source ownership, loader SOURCE ONLY",
+  "status": "INCOMPLETE_CHECKPOINT",
+  "started_at_msk": "2026-10-29T22:14:34+03:00",
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMRrCbChJWt98LEivPvtVSvsMHcQ6QqK9EydK-rkKXwQ8_wa5t9TDjReH3OgbVHK-e71u8r77ecSxTEv3sb4ZzCtRd0Z2WG3ZUzLW90",
+    "canonical_paragraphs": 699,
+    "canonical_rules": "§33 56 rules; §§54-56/R29 read",
+    "owner_lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "source_pr162_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+    "source_pr162_tree": "ec9541ba05fb26612284e15ca4c62b90f0c56334",
+    "register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "drive_revision": {
+      "Master": "AHj4eMR6lCsYpZbcGVZ-kvAedg7-aEN4GCVR65pOf8GzWTCxwzWfBhb3OyDUbfdEl_0IMt4IefLbltxt6D7ROCiU2XLwdqA0Pz9uE2Na7cw",
+      "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+      "Lessons": "AHj4eMSqxXTbS8hogjyN5cjHUFhyFwD0f8jKqFgh3EUc_GSztbEWttqpsPSlTiJ5lsPSXKrotPw3jmhBIQ1MKaST1arCHLJw16U94suo7wo"
+    }
+  },
+  "physical": {
+    "selected_existing_task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+    "new_product_source_bytes": 0,
+    "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "source_blob_pre": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+    "source_blob_post": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+    "existing_R12_patch": "CONFIRMED_INTEGRATED_ON_CURRENT_PR162_SOURCE_BLOB; not rewritten and not newly QA accepted",
+    "source_v8_replay": {
+      "blob": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+      "checks": "8/8",
+      "environment": "real ui.js executed in isolated V8 with mock DOM/WebView2, not Windows/Ollama",
+      "tested": [
+        "GGUF orphan STOP enabled",
+        "progress remains visible",
+        "STOP jobId",
+        "STOP ACK",
+        "late completed event ignored while Cancelling",
+        "Cancelled terminal",
+        "Retry enabled",
+        "Retry jobId"
+      ]
+    },
+    "r21": {
+      "script_path": "coordination/r21/flow_r21.py",
+      "script_blob": "5f5503d9cdef177d43f715846d4c34efa91b41a8",
+      "saved_queue_path": "coordination/r19/R19_ACTIVE_ERROR_AND_GATE_QUEUE.json",
+      "saved_queue_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+      "saved_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+      "saved_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+      "actual_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+      "actual_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+      "adapter_actual_execution": "STALE_SNAPSHOT_REGENERATE",
+      "head_drift": true,
+      "register_drift": false,
+      "ready": 0,
+      "qa_accepted": false,
+      "remote_mutations": 0
+    },
+    "new_unique_test_path": "coordination/automation/r30/G3-B/G2C_20261029T221434_R13_queue_source_test.py",
+    "new_unique_test_git_blob_expected": "6ba1bdd0be3805393bf2b36383e3542c8bf0facb",
+    "new_unique_test_result": "8/8 PASS source-only against exact R21+R20 Git blob bytes"
+  },
+  "four_gates": {
+    "A_FRESH_READ": "PASS",
+    "B_PHYSICAL_RESULT": "PASS: new reproducible 8/8 owner-safe source gate regression and real stale-head proof; no new P03 product code",
+    "C_JOURNAL": "pending_single_atomic_git_commit_readback; own receipt only",
+    "D_MASS_LESSONS": "PARTIAL: active 11 deduplicated, R21 regression applied, P03 already integrated, rest delegated/pending native QA"
+  },
+  "lesson_clusters": {
+    "total_active_records": 11,
+    "processed": 11,
+    "applied": [
+      "ERR-SYS-002: source HEAD moved while register stable; original R20 READY became STALE; 8/8 recurrence test"
+    ],
+    "already_fixed": [
+      "P03_QUEUE_GGUF_STOP_RETRY R12 source integrated on pinned ui blob a777328e"
+    ],
+    "delegated": [
+      "ERR-SRC-003 T06 Host50 owner",
+      "ERR-SRC-004 T06 integration and T08 native/QA",
+      "ERR-SRC-005 T08 fixture runner",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN T08 signed native"
+    ],
+    "not_applicable": [
+      "ERR-SYS-006 historical 729/729",
+      "ERR-SYS-007 historical T04 34/34"
+    ],
+    "blocked": [
+      "T09/T10/T11 dependent T06→T08 acceptance",
+      "Owner T02 journal CAS outside this role"
+    ]
+  },
+  "progress": {
+    "operational_equal_weight_x_of_4": "0/4 independently QA_ACCEPTED remains unproven; unchanged",
+    "new_accepted_task_ids": 0,
+    "source_verified": true,
+    "integrated_at_observed_sha": true,
+    "qa_accepted": false,
+    "product_percent": "N/D"
+  },
+  "handoff": {
+    "T06": "P03 R12 GGUF STOP/Retry was already integrated at PR162 5a335a3d / ui blob a777328e; do not duplicate. At live HEAD inspect changed dependency paths and provide owner 8/8; rerun G2-C source-only test with authorized fresh PR HEAD/reg blob after regenerating queue.",
+    "T02": "Record ERR-SYS-002 R21 live-head drift only after CAS receipt readback; no mutation to shared register by G2-C.",
+    "T08": "Independently verify P03 GGUF orphan STOP/Retry and real native Ollama progress/cancel/retry against pinned owner-accepted exact PR SHA; source V8 is not native acceptance."
+  },
+  "next_checkpoint": "Regenerate R20 queue snapshot on authenticated live PR162 HEAD+active register; independent T06 owner acceptance then T08 same-SHA; no older READY or acceptance carryover.",
+  "forbidden_actions_not_run": [
+    "main changes",
+    "PR162 writes",
+    "shared register writes",
+    "GitLab CI",
+    "EXE",
+    "NSIS",
+    "E07",
+    "release"
+  ]
+}
