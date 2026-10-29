@@ -1,0 +1,15 @@
+{
+  "schema": "ASTRA_R29_SOURCE_ONLY_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB10",
+  "sourceOwner": "A5 P03 queue",
+  "task": "Reject duplicate/canonical-alias keys in both primary and backup model queue JSON before deserializing states",
+  "commit": "051c5093115243f25bf75db4e278a1a0313cf45b",
+  "gitBlob": "7080032027c8b783fa076c36d2e4d3bfbe591c31",
+  "oneTargetedSourceTest": "4 static source guards PASS and Git readback PASS",
+  "dotnetNative": "NOT_RUN",
+  "otherOwners": "No invented modification",
+  "noAstraBPaths": true,
+  "noFinalBuild": true,
+  "remainingNewRounds": 1,
+  "lesson": "Persisted cancellation state must not be read through last-key-wins JSON ambiguity."
+}
