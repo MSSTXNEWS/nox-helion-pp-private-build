@@ -1,0 +1,470 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_AUTOMATION_15_OWNER_EXCLUSIVE_JOURNAL_V1",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY",
+  "timezone": "Europe/Moscow",
+  "recurrence": "hourly from 2026-10-29",
+  "run_schedule": [
+    {
+      "time": "05:30",
+      "slots": [
+        "G1-A",
+        "G1-B"
+      ]
+    },
+    {
+      "time": "05:40",
+      "slots": [
+        "G2-A",
+        "G2-B"
+      ]
+    },
+    {
+      "time": "05:45",
+      "slots": [
+        "G3-A",
+        "G3-B"
+      ]
+    },
+    {
+      "time": "05:50",
+      "slots": [
+        "G4-A",
+        "G4-B"
+      ]
+    },
+    {
+      "time": "06:00",
+      "slots": [
+        "G5-A",
+        "G5-B"
+      ]
+    },
+    {
+      "time": "06:05",
+      "slots": [
+        "G6-A",
+        "G6-B"
+      ]
+    },
+    {
+      "time": "06:10",
+      "slots": [
+        "G7-A",
+        "G7-B"
+      ]
+    },
+    {
+      "time": "06:30",
+      "slots": [
+        "C"
+      ]
+    }
+  ],
+  "owner_lanes": [
+    {
+      "slot": "G1-A",
+      "time": "05:30",
+      "area": "P01 NSIS",
+      "automation_id": "6ae2aecc59f88191a10a9342f8a1930c",
+      "assigned_paths": [
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+      ],
+      "forbidden_paths": [
+        "stage/proposals/P01/C09/Installer/"
+      ],
+      "peer": "G1-B",
+      "unique_receipt_dir": "coordination/automation/r30/G1-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g1a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G1-B",
+      "time": "05:30",
+      "area": "P01 WPF UI",
+      "automation_id": "6ae2aef4bbc081918693b0552743bd0d",
+      "assigned_paths": [
+        "stage/proposals/P01/C09/"
+      ],
+      "forbidden_paths": [
+        "stage/proposals/P01/C09/Installer/"
+      ],
+      "peer": "G1-A",
+      "unique_receipt_dir": "coordination/automation/r30/G1-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g1b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G2-A",
+      "time": "05:40",
+      "area": "P02 IPC SQLite",
+      "automation_id": "6ae2aef78ba881919e6022c1103959a2",
+      "assigned_paths": [
+        "Packages/P02/worker-python/p02_runtime.py",
+        "Packages/P02/worker-python/p02_native_ingress.py",
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-python/p02_host_admission.py"
+      ],
+      "forbidden_paths": [
+        "Packages/P02/worker-python/p02_capabilities.py",
+        "Packages/P02/worker-python/p02_original_voice_port.py",
+        "Packages/P02/worker-python/p02_owner_route_ports.py"
+      ],
+      "peer": "G2-B",
+      "unique_receipt_dir": "coordination/automation/r30/G2-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g2a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G2-B",
+      "time": "05:40",
+      "area": "P02 voice SIP",
+      "automation_id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+      "assigned_paths": [
+        "Packages/P02/worker-python/p02_capabilities.py",
+        "Packages/P02/worker-python/p02_original_voice_port.py",
+        "Packages/P02/worker-python/p02_owner_route_ports.py"
+      ],
+      "forbidden_paths": [
+        "Packages/P02/worker-python/p02_runtime.py",
+        "Packages/P02/worker-python/p02_native_ingress.py",
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-python/p02_host_admission.py"
+      ],
+      "peer": "G2-A",
+      "unique_receipt_dir": "coordination/automation/r30/G2-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g2b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G3-A",
+      "time": "05:45",
+      "area": "P03 catalog",
+      "automation_id": "6ae2aefbde94819183730a2ed3cad78c",
+      "assigned_paths": [
+        "Packages/P03/Admission/",
+        "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+      ],
+      "forbidden_paths": [
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+      ],
+      "peer": "G3-B",
+      "unique_receipt_dir": "coordination/automation/r30/G3-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g3a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G3-B",
+      "time": "05:45",
+      "area": "P03 queue",
+      "automation_id": "6ae2aefe3c248191a7131fc9876611e6",
+      "assigned_paths": [
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+      ],
+      "forbidden_paths": [
+        "Packages/P03/Admission/",
+        "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+      ],
+      "peer": "G3-A",
+      "unique_receipt_dir": "coordination/automation/r30/G3-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g3b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G4-A",
+      "time": "05:50",
+      "area": "P04 model shards",
+      "automation_id": "6ae2af008eac8191a03526f290b801c6",
+      "assigned_paths": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ],
+      "forbidden_paths": [
+        "Packages/P04/preflight_local_gpu.py",
+        "tests/P04/test_local_gpu_preflight.py",
+        "tests/P04/test_wheel_inventory_preflight_r29.py"
+      ],
+      "peer": "G4-B",
+      "unique_receipt_dir": "coordination/automation/r30/G4-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g4a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G4-B",
+      "time": "05:50",
+      "area": "P04 GPU",
+      "automation_id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "assigned_paths": [
+        "Packages/P04/preflight_local_gpu.py",
+        "tests/P04/test_local_gpu_preflight.py",
+        "tests/P04/test_wheel_inventory_preflight_r29.py"
+      ],
+      "forbidden_paths": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ],
+      "peer": "G4-A",
+      "unique_receipt_dir": "coordination/automation/r30/G4-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g4b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G5-A",
+      "time": "06:00",
+      "area": "P05 events",
+      "automation_id": "6ae2af28e4b8819192bbf6bb3857cc84",
+      "assigned_paths": [
+        "Packages/P05/E05/src/E05CanonicalEvents.cs",
+        "Packages/P05/E05/src/E05CriterionSeal.cs",
+        "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+        "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+      ],
+      "forbidden_paths": [
+        "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "Packages/P05/E05/src/E05SafeRunReports.cs"
+      ],
+      "peer": "G5-B",
+      "unique_receipt_dir": "coordination/automation/r30/G5-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g5a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G5-B",
+      "time": "06:00",
+      "area": "P05 Drive adapter",
+      "automation_id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "assigned_paths": [
+        "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "Packages/P05/E05/src/E05SafeRunReports.cs"
+      ],
+      "forbidden_paths": [
+        "Packages/P05/E05/src/E05CanonicalEvents.cs",
+        "Packages/P05/E05/src/E05CriterionSeal.cs",
+        "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+        "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+      ],
+      "peer": "G5-A",
+      "unique_receipt_dir": "coordination/automation/r30/G5-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g5b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G6-A",
+      "time": "06:05",
+      "area": "E06 SourceLock",
+      "automation_id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "assigned_paths": [
+        "coordination/e06/verify_original_729_source.py",
+        "coordination/e06/source_deep_inventory.py",
+        "coordination/e06/stage_onehost.py"
+      ],
+      "forbidden_paths": [
+        "coordination/e06/adapters/pc_control_owner_port.py",
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "peer": "G6-B",
+      "unique_receipt_dir": "coordination/automation/r30/G6-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g6a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G6-B",
+      "time": "06:05",
+      "area": "E06 native Host50",
+      "automation_id": "6ae2af2f84088191ba04843861edf73b",
+      "assigned_paths": [
+        "coordination/e06/adapters/pc_control_owner_port.py",
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "forbidden_paths": [
+        "coordination/e06/verify_original_729_source.py",
+        "coordination/e06/source_deep_inventory.py",
+        "coordination/e06/stage_onehost.py"
+      ],
+      "peer": "G6-A",
+      "unique_receipt_dir": "coordination/automation/r30/G6-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g6b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G7-A",
+      "time": "06:10",
+      "area": "P01 D02 WOW",
+      "automation_id": "6ae2af31f2988191902bae4aaec2635e",
+      "assigned_paths": [
+        "integrations/wow200/",
+        "proposals/NOX-CINEMA-FX/"
+      ],
+      "forbidden_paths": [
+        "proposals/NOX-PACK02-50/",
+        "proposals/NOX-PACK01-50/",
+        "stage/proposals/P01/C09/Installer/"
+      ],
+      "peer": "G7-B",
+      "unique_receipt_dir": "coordination/automation/r30/G7-A/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g7a/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    },
+    {
+      "slot": "G7-B",
+      "time": "06:10",
+      "area": "PACK02 50 tools",
+      "automation_id": "6ae2af347fbc81918ddafed356511243",
+      "assigned_paths": [
+        "proposals/NOX-PACK02-50/"
+      ],
+      "forbidden_paths": [
+        "integrations/wow200/",
+        "proposals/NOX-CINEMA-FX/",
+        "proposals/NOX-PACK01-50/"
+      ],
+      "peer": "G7-A",
+      "unique_receipt_dir": "coordination/automation/r30/G7-B/",
+      "one_writer_per_path": true,
+      "private_branch": "automation/r30/g7b/<RunID>",
+      "required_on_every_run": [
+        "read V16 56 rules and latest journal delta",
+        "Git SHA preimage",
+        "real source patch",
+        "targeted test command/result",
+        "immutable receipt and self-improvement lesson",
+        "no build, no merge"
+      ]
+    }
+  ],
+  "central_writer": {
+    "slot": "C",
+    "automation_id": "6ae2af4f6c448191932f01b35fa364c1",
+    "single_writer_google_docs": true,
+    "source_write_forbidden": true,
+    "targets": {
+      "error_master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    },
+    "rules": "Use Docs CAS+RunID readback. If concurrent edit or access fails, stage immutable Git receipt and status HOLD. Do not write owner source."
+  },
+  "no_loss": {
+    "archive_original_three_parts_untouched": true,
+    "r30_snapshots": "coordination/astra/r30/snapshots/",
+    "conflicts": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "no_merge": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true
+  },
+  "conflict_algorithm": "For any path not unambiguously exclusively owned, DO NOT write; send proposal+preimage to owner. Each agent writes only own commit on own branch. If simultaneous source preimage changed, abort exact path. Journals: each worker Git receipts only, coordinator single Google Docs writer."
+}
