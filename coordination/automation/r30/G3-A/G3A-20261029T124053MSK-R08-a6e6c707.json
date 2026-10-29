@@ -1,0 +1,136 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "G3A-20261029T124053MSK-R08-a6e6c707",
+  "slot": "G3-A",
+  "time_msk": "2026-10-29T12:40:53+03:00",
+  "scope": "EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "mode": "SOURCE_ONLY",
+  "source_task_id": "P03-G3A-R08-NUMERIC-IPV4-ALIAS-LICENCE-URL-ADMISSION",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "forbidden": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "spec": {
+    "consolidated_56_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": "§33/§54/§55/§56 + R29 loader-only override"
+  },
+  "history": {
+    "last_owner_run": "G3A-20261029T114422MSK-R07-159ce0bb",
+    "last_owner_head": "a6e6c70753da89464c788cdf5d5e80b9ebea314d",
+    "prev_lesson": "Windows reserved console device names CONIN$ and CONOUT$ must be rejected before native GGUF import; preserve previous guards.",
+    "master_last_seen": "ASTRA-C-R30-20261029T1226MSK-07",
+    "master_drive": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "c34_drive": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "e06_drive": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_drive": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  },
+  "snapshots": {
+    "index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_count_indexed": 25,
+    "all_25_full_snapshot_file_bytes_read": false,
+    "old_snapshot_modified": false,
+    "physical_729_files_rehashed": false
+  },
+  "issue": {
+    "before": "_https_url used ipaddress.ip_address() then a broad DNS-label regex on ValueError, so legacy IPv4 aliases 127.1, 0x7f.1, 0177.0.0.1 could be incorrectly classified as valid HTTPS evidence hosts despite resolving to 127.0.0.1 on some OS stacks.",
+    "risk": "Unsafe rights/license/compatibility evidence URL may reach trusted native reviewer; Python policy is only lexical and remains subject to DNS/redirect checks in native host.",
+    "fix": "Reject hostnames with every dot-separated label decimal or 0x-hex before treating ipaddress.ValueError as a DNS hostname. Preserve global IPv4 literal and public HTTPS domain admission."
+  },
+  "git": {
+    "private_branch": "automation/r30/g3a/G3A-20261029T124053MSK-R08-a6e6c707",
+    "pre_head": "a6e6c70753da89464c788cdf5d5e80b9ebea314d",
+    "head_after_source_and_test": "24e840ad480e1845cbf048816f1b6a21ae950be6",
+    "source_path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+    "pre_blob_sha1": "fd1f81295b6fd7384c291c2299e99bbf4beafef4",
+    "post_blob_sha1": "c1c4b38a81f8d9ea7f12c2c3f454ec359ff7450b",
+    "pre_sha256": "5feb40122dd9b4343b0b8b8bfc0ea18a0b323f9ebc35673b84956be1b185a501",
+    "post_sha256": "32624d97910ccf90c437495b5b5af52b9f2c7d98922c7796f75031aa133c9f70",
+    "code_commit": "4efc850388658d7b811b131a19a0097c6148c09d",
+    "test_path": "Packages/P03/Admission/test_g3a_r08_numeric_ipv4_alias_gate.py",
+    "test_blob_sha1": "394306cde5808e1990c007ae098a3ba1f150ecd6",
+    "test_commit": "24e840ad480e1845cbf048816f1b6a21ae950be6",
+    "pre_receipt_compare": {
+      "ahead_by": 2,
+      "behind_by": 0,
+      "changed_files": [
+        "Packages/P03/Admission/p03_modelcenter_gate.py",
+        "Packages/P03/Admission/test_g3a_r08_numeric_ipv4_alias_gate.py"
+      ],
+      "forbidden_path_changes": 0
+    },
+    "source_readback": "GitHub fetch_file post_blob MATCH",
+    "test_readback": "GitHub fetch_file test_blob MATCH",
+    "shared_main_pr162_modified": false,
+    "common_r30_branch_modified": false
+  },
+  "tests": {
+    "saved_10_unittests": true,
+    "full_repo_command": "python -m unittest discover -s Packages/P03/Admission -p 'test_g3a_r08_numeric_ipv4_alias_gate.py' -v",
+    "full_repo_python_execution": "NOT_RUN",
+    "source_extracted_python_preimage": "RED (6/10 unsafe aliases admitted; 3/10 allowed + 1/10 canonical loopback behaved correctly)",
+    "source_extracted_python_postimage": "PASS 10/10",
+    "test_environment": "isolated Python 3 with extracted function exactly mirrored; not imported full GitHub module",
+    "static_regressions": [
+      "earlier Windows CONIN$/CONOUT$ denial intact",
+      "strict builtin-int retry eventSequence preserved",
+      "native RAM preflight preserved",
+      "attestation evidence immutability guard preserved"
+    ],
+    "native_windows_runtime": "NOT_RUN"
+  },
+  "catalogue": {
+    "discovery_families": 30,
+    "confirmed_downloadable_artifacts": 0,
+    "real_rights_licenses_model_source_sha_ram_vram": "HOLD_UNVERIFIED"
+  },
+  "handoff": [
+    {
+      "owner": "G3-B",
+      "status": "NEEDS_OWNER_REVIEW",
+      "request": "Native loader/transport must reject redirect/DNS-rebinding/local IP aliases incl. abbreviated/octal/hex IPv4 in any rights/source URL before network access; pin actual resolved host/IP/port, protect TLS and receipts, do not weaken STOP/queue."
+    },
+    {
+      "owner": "E06",
+      "status": "HOLD",
+      "request": "Independently attest 3 raw archive parts/729 files, native session identity, local available RAM and artifact license/rights/revision/SHA; no Python-only admission promoted to install."
+    }
+  ],
+  "improvement": "Reproduce a parsing discrepancy with OS socket.inet_aton and standard ipaddress BEFORE patching; admit only canonical public-IP literals or nonnumeric DNS names, perform one isolated RED→GREEN source test, save owned Git pre/post and unique receipt. Earlier R07 CONIN$/CONOUT$ and exact-int retry checks must remain untouched.",
+  "status": {
+    "source_saved": true,
+    "source_static": "PASS",
+    "isolated_python": "PASS_10_OF_10",
+    "full_python": "NOT_RUN",
+    "runtime": "HOLD",
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "report_gate": "GIT_RECEIPT_SAVED_DRIVE_COORDINATOR_PENDING"
+  },
+  "prohibitions": {
+    "executable_build": false,
+    "nsis": false,
+    "windows_ci": false,
+    "gitlab": false,
+    "final_integration": false,
+    "main": false,
+    "pr162": false,
+    "other_owner_paths": false,
+    "old_snapshots": false,
+    "drive_write": false
+  }
+}
