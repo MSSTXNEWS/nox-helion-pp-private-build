@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V10",
+  "slot": "G6-A",
+  "runId": "G6A-20261029-R10-FINALPATH-01",
+  "status": "HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "taskId": "G6A-R30-R10-OWNED-SOURCELOCK-ZIP-SHA-CHECK",
+  "scope": "SOURCE_ONLY; no EXE/NSIS/GitLab CI/final integration",
+  "branch": "automation/r30/g6a/G6A-20261029-R10-FINALPATH-01",
+  "parentCommit": "8b4a81781941fc304b9003519b5022f8812f8b3a",
+  "parentTreeSha": "329665ef7daf9d6dcf0cdf2d26952e35521893c7",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "gitBlobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPaths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "receiptDir": "coordination/automation/r30/G6-A/"
+  },
+  "conflictIndexGitBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "rule56GitBlobSha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+  "source": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "preimageGitBlobSha1": "b2668179e64e9c85913931f52b7c6fab83166893",
+    "postGitBlobSha1": "972f7e14746a6b4e633adcfce248322d69590499",
+    "modifiedFunction": "verify_original",
+    "defect": "R09 checks a source part's pathname right after its own read; another writer can replace already-checked source_00.part while SourceLock scans later parts or all ZIP members. Identical bytes at a different inode pass the combined hash but the final path is no longer the verified one.",
+    "fix": "Record original pathname and descriptor identity for all three source parts, then re-lstat all input paths after scanning every ZIP member and before returning a SourceLock evidence receipt. Reject replaced, missing, non-regular, or Windows reparse files.",
+    "limit": "Not an OS-level immutable read-only snapshot: uncooperative writers can still race after the final check. Physical original ZIP 729 SHA has not been run."
+  },
+  "targetedTest": {
+    "id": "G6A-R10-FINAL-PATH-LATE-SWAP",
+    "command": "python /mnt/data/g6a_r10_final_source_path_recheck_test.py",
+    "result": "PASS_ISOLATED_ONLY",
+    "count": 1,
+    "observations": [
+      "RED old per-part gate permits an identical-byte foreign inode swap during subsequent ZIP scan",
+      "GREEN final pathname identity check rejects such a swap",
+      "Stable three-part ZIP still accepted"
+    ],
+    "fileLocalOnly": "/mnt/data/g6a_r10_final_source_path_recheck_test.py",
+    "testFileSha256": "346271aab8602cb519db3d7e86871631f7c5e95692bf3b3a6fbc4f6f4ef106a5",
+    "committed": false,
+    "reason": "tests/e06 is not in assigned_paths; requesting a uniquely owned G6-A test path",
+    "fullSourceModuleTest": "NOT_RUN",
+    "nativeWindowsTest": "NOT_RUN"
+  },
+  "inputVerification": {
+    "ownerJournal": "READ",
+    "rules56of56": "READ_CONSOLIDATED_NOT_VERBATIM_HISTORICAL",
+    "sections54to56": "READ_WITH_R29_LOADER_SCOPE_OVERRIDE",
+    "driveMaster": "READ_ONLY",
+    "driveE06Report": "READ_ONLY",
+    "driveE06Lessons": "READ_ONLY",
+    "driveC34": "READ_ONLY",
+    "r30Snapshots": "25_INDEXED_AND_ALL_25_BRANCH_COMMIT_DIFFS_READ",
+    "r30SnapshotOriginalZipDiffs": "NONE_IN_25_DIFFS",
+    "r30SnapshotFullBodies": "NOT_READ_THIS_RUN",
+    "originalPartsGitBlobSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "originalPartsGitBlobSize": [
+      20971520,
+      20971520,
+      18421306
+    ],
+    "archiveCombinedSha256Expected": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "zip729InnerSha256": "NOT_VERIFIED_BINARIES_NOT_READ",
+    "frozen968ManifestSha1": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "frozen968MetadataCount": 968,
+    "priorR09PreservationReceipt": "968/968 PATHS PRESENT (HISTORICAL_R09_CLAIM)",
+    "thisRunComplete968Recheck": "NOT_RUN; verify new commit diff preserves prior tree",
+    "rollbackRuntime": "NOT_RUN",
+    "originalsModified": false
+  },
+  "previousLesson": "R09 established descriptor/path identity is necessary; R10 extends it across the whole ZIP scan to prevent a later member read from invalidating an earlier part's attestation.",
+  "newLesson": "A per-input post-read lstat is still insufficient for a multi-input, multi-stage integrity operation. Reattest every input path together at the final evidence gate, distinguish Git blob SHA from actual ZIP inner hashes, and disclose the residual post-gate race rather than claiming immutable SourceLock.",
+  "permissionRequest": "Astra-C: assign a unique tests/e06/test_g6a_r10_final_source_path_recheck.py path (or equivalent) to G6-A in the owner journal; no Git test written without authorization.",
+  "sharedDocsWrite": "FORBIDDEN_FOR_G6A_ASTRA_C_ONLY",
+  "sharedDocsReadback": "NOT_APPLICABLE_NO_WRITE",
+  "priorDonePreserved": true,
+  "mainAndPr162Untouched": true,
+  "otherOwnerPathsUntouched": true,
+  "snapshotsUntouched": true,
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "ZIP_729_INNER_SHA256": "HOLD",
+    "FULL_MODULE_TEST": "NOT_RUN"
+  }
+}

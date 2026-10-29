@@ -92,6 +92,7 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
         raise SourceHold("UNSAFE_SOURCE_DIRECTORY")
     digest = hashlib.sha256()
     parts_receipts = []
+    original_part_paths = []
     # TemporaryFile is disposed regardless of failure; do not leave reconstructed ZIPs.
     with tempfile.TemporaryFile(mode="w+b") as joined:
         for name, size, expected_blob in part_pins:
@@ -131,6 +132,8 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
                 raise SourceHold("SOURCE_PART_GIT_BLOB_SHA1_MISMATCH:" + name)
             parts_receipts.append({"path": name, "bytes": size, "sha256": own.hexdigest(),
                                    "gitBlobSha1": git.hexdigest()})
+            original_part_paths.append((candidate, name, (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)))
         observed = digest.hexdigest()
         if observed != archive_sha:
             raise SourceHold("RECONSTRUCTED_ZIP_SHA256_MISMATCH")
@@ -187,6 +190,20 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
                               "crc32": format(entry.CRC, "08x")})
         if len(files) != expected_files:
             raise SourceHold(f"ZIP_FILE_COUNT_MISMATCH:{len(files)}!= {expected_files}")
+    # Re-check ALL three input path identities after the full ZIP/member scan.
+    # A later part read or member scan can outlive an earlier identity check.
+    # This does not claim an immutable filesystem snapshot after return.
+    for candidate, name, identity in original_part_paths:
+        try:
+            current = candidate.lstat()
+        except OSError as exc:
+            raise SourceHold("SOURCE_PART_PATH_UNAVAILABLE_AT_FINAL_GATE:" + name) from exc
+        if (not stat.S_ISREG(current.st_mode) or
+                (getattr(current, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or
+                (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns)
+                != identity):
+            raise SourceHold("SOURCE_PART_CHANGED_BEFORE_FINAL_GATE:" + name)
     return {
         "schema": "NOX_V16_ORIGINAL_729_INNER_SHA256_SOURCELOCK_V1",
         "runId": run_id,
