@@ -233,7 +233,8 @@ export function projectFeeds(feeds, nowMs) {
   // The host/E06 verifies the receipt; a SHA-shaped string alone is not proof.
   const licenseReady=f=>f.license_status==='APPROVED' &&
     sha(f.license_receipt_sha256) && typeof f.provider==='string' &&
-    f.provider.length<=120 && f.provider.trim().length>0;
+    f.provider.length<=120 && f.provider.trim().length>0 &&
+    !/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/u.test(f.provider);
   const recognized=feeds.filter(f=>f && sourceIds.has(f.id));
   const licensed=recognized.filter(licenseReady);
   const disabled=recognized.filter(f=>!licenseReady(f));
