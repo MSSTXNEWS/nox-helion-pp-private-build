@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_V16_MANUAL2_R32_EXACT_T08_SOURCE_TEST_RECEIPT",
+  "run_id": "NOX-V16-MANUAL2-20261029-R32-EXACT-T08-GATE-SOURCE",
+  "role": "MANUAL2_INDEPENDENT_QA",
+  "existing_error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "canon_revision": "63",
+  "r23_policy_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+  "pr162_live_head_observed": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "source_path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+  "source_blob_sha1": "73eac868c0e7cc43a263a733c771339632e9fe8e",
+  "source_byte_exact_local_git_hash_verified": true,
+  "shared_register_current_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "test_execution": {
+    "python_command": "python -m unittest discover -s coordination/manual/no2 -p 'test_t08*py' -v",
+    "case_runs": 37,
+    "status": "PASS",
+    "elapsed_s": 1.454,
+    "log_sha256": "8e6bc1d6d98ad32745f882e788007f55a2b51d4ee1c073711b7e40d8b0dc9193",
+    "duplicate_fixture_caveat": "Repeated inherited Git fixture tests were included; 37 is actual unittest runs, not 37 unique capabilities",
+    "positive_proof": "Real temporary Git SHA/tree/blobs and synthetic T06 guard",
+    "negative_proofs": [
+      "stale owner HEAD",
+      "fake Git SHA",
+      "bad manifest bytes",
+      "stale test PASS from other HEAD",
+      "HEAD contradictions",
+      "missing readback",
+      "document bad readback",
+      "no unbounded receipt",
+      "SOURCE_READY rejected without native evidence"
+    ]
+  },
+  "local_evidence_zip_name": "NOX_V16_M2_R32_EXACT_T08_QA.zip",
+  "local_evidence_sha256": "277ba30a782ddc6d2b9fd7d4c9c8284fe75f8e25ec48fa02c17c445c282b397f",
+  "result": "EXACT_INTEGRATED_T08_GATE_SOURCE_QA_PASS",
+  "full_T08_task_qa_accepted": false,
+  "native_windows": "NOT_RUN",
+  "host50_native": "NOT_VERIFIED",
+  "T06_source_owner_8_of_8": "NOT_VERIFIED",
+  "source_ready": false,
+  "next": "T02 sole register owner append under existing error with CAS; T06 owner preserve already integrated same-head focused receipt fix; T08 continue independent P01-P05/Host50; no new TaskID",
+  "security_preservation": [
+    "STOP",
+    "ACL",
+    "native consent",
+    "SourceLock",
+    "729 original files",
+    "NO-LOSS"
+  ],
+  "release_build": "NOT_AUTHORIZED"
+}
