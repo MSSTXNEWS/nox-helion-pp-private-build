@@ -1,0 +1,2992 @@
+{
+  "schema": "NOX_V16_T01_DONE_RECOVERY_FINAL_LEDGER_V1",
+  "runId": "NOX-V16-T01-20261029T162643MSK-R01",
+  "scope": "ONLY existing NOX HELION EXPRESS INTEGRATOR V16/R29; source-only ledger recovery",
+  "plannedMsk": "N/D - no manual scheduled start supplied",
+  "observedStartedMsk": "2026-10-29T16:26:43+03:00",
+  "observedReceiptPreparationMsk": "2026-10-29T16:30:59+03:00",
+  "durationAtPreparationSeconds": 256,
+  "completionTime": "Git commit server timestamp; post-commit readback required",
+  "authority": {
+    "v16": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "sections": "§§1–33,54–56 + latest R29/T01–T15",
+    "original56RuleCount": 56,
+    "rule33TextPreserved": "Referenced unchanged; no edits to canonical text",
+    "master": "https://docs.google.com/document/d/1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98/edit",
+    "masterContinuation": "https://docs.google.com/document/d/1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50/edit",
+    "e06": "https://docs.google.com/document/d/17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4/edit",
+    "lessons": "https://docs.google.com/document/d/14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ/edit",
+    "c34": "https://docs.google.com/document/d/1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU/edit",
+    "baseline100": "https://docs.google.com/spreadsheets/d/1mrZzbF5fRFlnysIHHNZa7b0rxi73b4nOEpt8CdqHS5M/edit"
+  },
+  "sourceSnapshot": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "observedSourceBranch": "astra/v16-code-complete-source-only-20261029",
+    "observedHeadGitSha1": "f0064948119c55001601e1bae1cd3755826605ed",
+    "observedGitTreeSha1": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+    "readOnly": true,
+    "notT09Frozen": true,
+    "sourcePartsGitBlobSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ]
+  },
+  "metrics": {
+    "original100TaskIDsRestored": 100,
+    "original100ByPackage": {
+      "P01": 20,
+      "P02": 25,
+      "P03": 20,
+      "P04": 25,
+      "P05": 10
+    },
+    "original100CriterionAcceptedVerified": 0,
+    "original100SourceDoneFullCriteria": "N/D",
+    "original100RemainingUnverifiedCriteria": 100,
+    "pack01Routes": 50,
+    "pack02Routes": 50,
+    "pack01HistoricalSourceCandidateCount": 37,
+    "pack01HistoricalHoldCount": 13,
+    "pack02HistoricalSourceImplementedCount": 50,
+    "pack02AcceptedCount": 0,
+    "astraPriorVerifiedSourceBlocksHistoricallyPreserved": 38,
+    "astraSplitHistoricalSourceTestedBlocks": 44,
+    "sourcePatchEvidenceGroups": 11,
+    "astraGitReceiptFilesPreserved": 28,
+    "weightedProductProgress": "N/D",
+    "denominatorBeyondBaseline100": "N/D (V16 WOW200/50+50 and latest extras not normalized onto same weights)"
+  },
+  "statusSemantics": {
+    "SOURCE_DONE": "Individual historical source fixes and component tests kept with immutable receipts. Does not close a full canonical TaskID.",
+    "INTEGRATED": "Only one approved T06 source tree and receipts; separate state.",
+    "ACCEPTED": "Same-SHA native acceptance later, not present here.",
+    "UNKNOWN": "N/D/HOLD rather than zero or fabricated percent"
+  },
+  "baseline100": [
+    {
+      "taskId": "P01-01",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "WPF host",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-02",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "WebView2 bridge",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-03",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "HOME assets",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-04",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "MENU assets",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-05",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Eight CoreID",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-06",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Eight tiles",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-07",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Five action buttons",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-08",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Obsidian style",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-FX12"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+      ]
+    },
+    {
+      "taskId": "P01-09",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Lighting",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-FX12"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+      ]
+    },
+    {
+      "taskId": "P01-10",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Eclipse animation",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-FX12"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+      ]
+    },
+    {
+      "taskId": "P01-11",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Five Persona",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-12",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Window/fullscreen",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-13",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "F11 Escape",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-14",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "DPI 100-200",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-15",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Keyboard focus",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-16",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Reduced motion",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-FX12"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+      ]
+    },
+    {
+      "taskId": "P01-17",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "events.v3",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-R26"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R26_P01_SOURCE_CLOSURE_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P01-18",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Action progress error",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P01-R26"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R26_P01_SOURCE_CLOSURE_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P01-19",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Telemetry binding",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P01-20",
+      "owner": "P01",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Windows visual QA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-01",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Detect Ollama",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-02",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "API ping",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-03",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Model discovery",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-04",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Model selector",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-05",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Real chat",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-06",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Streaming",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-IPC"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-07",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "STOP",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-IPC"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-08",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "STOP/TIMEOUT",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-IPC"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-09",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Retry",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-10",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Latency",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-11",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "SQLite history",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-R23B"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R23B_P02_HISTORY_EXPECTEDFAILURE_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-12",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "JSON migration",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-R23B"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R23B_P02_HISTORY_EXPECTEDFAILURE_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-13",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "SQLite ACL",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-14",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "TOCTOU",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-IPC",
+        "SRC-P02-VOICE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json",
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-15",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Retention",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-16",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Attachments",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-17",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "MIME size",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-18",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Quotas",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-19",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "ACK SHA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-20",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "STORED-ID cleanup",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-VOICE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-21",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Persona context",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P02-VOICE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P02-22",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "RAG citations",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-23",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Codex official sign-in",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-24",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Subscription/API separation",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P02-25",
+      "owner": "P02",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Windows chat QA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-01",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "NSIS provenance",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-02",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Windows preflight",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-03",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Python Ollama Git",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-R25"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_MANUAL1_R25_P03_E06_MAPPING_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P03-04",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Consent install",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-05",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Hardware check",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-MB09"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json"
+      ]
+    },
+    {
+      "taskId": "P03-06",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "24+ catalog",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-07",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "15 provenance sources",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-08",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Licenses revisions",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-09",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Weights UI",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-R25"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_MANUAL1_R25_P03_E06_MAPPING_20261029.json"
+      ]
+    },
+    {
+      "taskId": "P03-10",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Persistent queue",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-QUEUE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+      ]
+    },
+    {
+      "taskId": "P03-11",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Cancel retry",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-QUEUE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+      ]
+    },
+    {
+      "taskId": "P03-12",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "SHA integrity",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-13",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "GGUF import",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-14",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Existing downloads",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-15",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Safe update",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-16",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Migration",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P03-17",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Backup restore",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-QUEUE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+      ]
+    },
+    {
+      "taskId": "P03-18",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Rollback",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-QUEUE"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+      ]
+    },
+    {
+      "taskId": "P03-19",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Diagnostics",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P03-MB09"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json"
+      ]
+    },
+    {
+      "taskId": "P03-20",
+      "owner": "P03",
+      "originalWeightPct": 20,
+      "acceptanceCriterion": "Windows installer QA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-01",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Document import",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-02",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Embeddings",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-03",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Chunks metadata",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-04",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Atomic index",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-05",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Ranking",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-06",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Citations update delete",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-07",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Chat RAG",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-08",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Dataset consent",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-09",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Train validation holdout",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-10",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Model tokenizer",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-11",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "PEFT toolchain",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-12",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Real LoRA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-13",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Real QLoRA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-14",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Epochs steps",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-15",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Learning rate",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-16",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Background training",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-17",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "ECO Balance Intensive",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-18",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "GPU telemetry",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-19",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Adaptive load",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-20",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Pause STOP",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-C14"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-21",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Checkpoint SHA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-22",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Resume",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-23",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Loss curves",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P04-24",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Evaluation merge",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P04-ACCEL"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+      ]
+    },
+    {
+      "taskId": "P04-25",
+      "owner": "P04",
+      "originalWeightPct": 25,
+      "acceptanceCriterion": "Windows GPU QA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-01",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "CoreID Persona status",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-02",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "CPU GPU VRAM",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-03",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Download RAG train progress",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P05-UI"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P05/E05/src/E05Progress.cs"
+      ]
+    },
+    {
+      "taskId": "P05-04",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Weighted bars",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P05-UI"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P05/E05/src/E05Progress.cs"
+      ]
+    },
+    {
+      "taskId": "P05-05",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Executor bars",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [
+        "SRC-P05-UI"
+      ],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": [
+        "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P05/E05/src/E05Progress.cs"
+      ]
+    },
+    {
+      "taskId": "P05-06",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "OTCH1 time/forecast",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-07",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Drive write readback",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-08",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Error journal SourceLock",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Owner-bound TaskID exact SHA + criterion-level evidence against T09 frozen tree",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-09",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Windows CI SHA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    },
+    {
+      "taskId": "P05-10",
+      "owner": "P05",
+      "originalWeightPct": 10,
+      "acceptanceCriterion": "Independent same EXE QA",
+      "originalSheetStatus": "UNVERIFIED",
+      "originalSheetSource": "N/D",
+      "historicalSourcePatchRefs": [],
+      "sourceDoneCriterionLevel": "NOT_ATTESTED",
+      "integrated": "UNVERIFIED",
+      "accepted": "UNVERIFIED",
+      "currentFrozenCodeSha": "N/D",
+      "remaining": "Deferred prebuild; retain criterion, later source freeze and native proof",
+      "evidence": []
+    }
+  ],
+  "sourcePatchDoneHistoricalEvidence": [
+    {
+      "id": "SRC-P01-R26",
+      "owner": "P01",
+      "taskId": "V16.P01.CREATIVE_STOP_EXIT_TRUTH_R26 / BACKUP_ROLLBACK_SHA_GATE_R26",
+      "path": "coordination/e06/receipts/NOX_V16_M1_R26_P01_SOURCE_CLOSURE_20261029.json",
+      "head": "6c77baaec91653d70c49d928cb7c1833e7c9a4cd",
+      "status": "HISTORICAL_SOURCE_FIX_RECORDED_17_17_STATIC_NATIVE_NOT_RUN",
+      "criterionIDs": [
+        "P01-17",
+        "P01-18"
+      ],
+      "remaining": "Exact current frozen-tree remap and owner component/native gates",
+      "receiptGitBlobSha1": "a2a57a978392fe31f418b532528e5d5c0e0d6206",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R26_P01_SOURCE_CLOSURE_20261029.json"
+    },
+    {
+      "id": "SRC-P01-FX12",
+      "owner": "P01",
+      "taskId": "ASTRA-A-R29-20261029-1525-MB10 / P01-C5.12",
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json",
+      "head": "d8dd3c1821a6223254d87ce14690b87cb6ff5602",
+      "status": "SOURCE_COMPONENT_VERIFIED_12_12_NODE_NON_NATIVE",
+      "criterionIDs": [
+        "P01-08",
+        "P01-09",
+        "P01-10",
+        "P01-16"
+      ],
+      "remaining": "Confirm current target tree exact blob; Windows visuals not run",
+      "receiptGitBlobSha1": "7ec59b7108ac5867e6c7b4df1d71f9afc5cc1fda",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+    },
+    {
+      "id": "SRC-P02-R23B",
+      "owner": "P02",
+      "taskId": "V16.P02.OWNER_HISTORY_R23_STALE_EXPECTED_FAILURE",
+      "path": "coordination/e06/receipts/NOX_V16_M1_R23B_P02_HISTORY_EXPECTEDFAILURE_20261029.json",
+      "head": "e2c31cbdeacb94888bb1b65ed2d862f83e2317da",
+      "status": "SOURCE_PATCH_SAVED_TEST_NOT_RUN",
+      "criterionIDs": [
+        "P02-11",
+        "P02-12"
+      ],
+      "remaining": "Owner-bound source regression and full history/ACL acceptance",
+      "receiptGitBlobSha1": "968cdd519aff9f9b56ee49aca28837b731547b9f",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_M1_R23B_P02_HISTORY_EXPECTEDFAILURE_20261029.json"
+    },
+    {
+      "id": "SRC-P02-IPC",
+      "owner": "P02",
+      "taskId": "ASTRA-A-R29-20261029-10X6-MB09",
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json",
+      "head": "e5974d8d0f2344e927758fdeb4d7e7a325ed4ba4",
+      "status": "SOURCE_FIX_GIT_READBACK_PASS_NATIVE_NOT_RUN",
+      "criterionIDs": [
+        "P02-06",
+        "P02-07",
+        "P02-08",
+        "P02-14"
+      ],
+      "remaining": "Native IPC/STOP contract verification by owner",
+      "receiptGitBlobSha1": "5ba92ef662886d2ba793e8ae0f05b21ee4ea133c",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json"
+    },
+    {
+      "id": "SRC-P02-VOICE",
+      "owner": "P02",
+      "taskId": "ASTRA-A-R29-20261029-10X6-MB11",
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json",
+      "head": "4bd43f1e5ed54cf023378d5bc6c093dab074e274",
+      "status": "SOURCE_FIX_GIT_READBACK_PASS_NATIVE_NOT_RUN",
+      "criterionIDs": [
+        "P02-14",
+        "P02-20",
+        "P02-21"
+      ],
+      "remaining": "Real voice/native callback authority test; independent source admission",
+      "receiptGitBlobSha1": "fb102431fcfafd24b723fe07959c3ae4d1f4dc7f",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json"
+    },
+    {
+      "id": "SRC-P03-MB09",
+      "owner": "P03",
+      "taskId": "ASTRA-A-R29-20261029-1525-MB09",
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json",
+      "head": "d25993c0f61f1776f7486ca7420611719d6c4365",
+      "status": "SOURCE_GIT_READBACK_PASS_NATIVE_NOT_RUN",
+      "criterionIDs": [
+        "P03-05",
+        "P03-19"
+      ],
+      "remaining": "Windows hardware probe and frozen-tree mapping",
+      "receiptGitBlobSha1": "2409d5e2c70e69f883794b28987bd3845c6c0a4c",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json"
+    },
+    {
+      "id": "SRC-P03-QUEUE",
+      "owner": "P03",
+      "taskId": "ASTRA-A-R29-20261029-1525-MB01",
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json",
+      "head": "de88dc4e40c3365afe31a02bb0be4b1498722309",
+      "status": "SOURCE_GIT_READBACK_PASS_NATIVE_NOT_RUN",
+      "criterionIDs": [
+        "P03-10",
+        "P03-11",
+        "P03-17",
+        "P03-18"
+      ],
+      "remaining": "Real queue transfer and backup rollback native tests",
+      "receiptGitBlobSha1": "a7b2859fbab3c57fde64eb3fad7eaddb138d682a",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+    },
+    {
+      "id": "SRC-P03-R25",
+      "owner": "P03/E06",
+      "taskId": "NOX-V16-M1-20261029-R25-P03-E06-MAPPING",
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_R25_P03_E06_MAPPING_20261029.json",
+      "head": "e7c0fe438b7e74c5d7ca5852299be570ec097b2d",
+      "status": "SOURCE_PATCH_RECEIPT_MAPPINGPROXY_REPRO_PASS_FULL_RUNTIME_NOT_RUN",
+      "criterionIDs": [
+        "P03-03",
+        "P03-09"
+      ],
+      "remaining": "Exact pinned immutable registry contract; source admission",
+      "receiptGitBlobSha1": "c01041520bab5662c1afeba8d79f35aecfd7e0d2",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/e06/receipts/NOX_V16_MANUAL1_R25_P03_E06_MAPPING_20261029.json"
+    },
+    {
+      "id": "SRC-P04-C14",
+      "owner": "P04",
+      "taskId": "NOX-V16-E04-CLOSURE-C14-20261028",
+      "path": "Packages/P04/E04_C14_CLOSURE_RECEIPTS.json",
+      "head": "5fd41d114c9ff140d6fd0a1397b88a865d46fc87",
+      "status": "HISTORICAL_COMPONENT_CI_PASS_LINUX_AND_WINDOWS_REAL_GPU_NOT_RUN",
+      "criterionIDs": [
+        "P04-10",
+        "P04-11",
+        "P04-17",
+        "P04-18",
+        "P04-19",
+        "P04-20"
+      ],
+      "remaining": "Pinned source comparison, authorized model/dataset and actual GPU runtime; no same-SHA Windows EXE",
+      "receiptGitBlobSha1": "b5a0622a249db0c13e5a45e786adb610d655720c",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_C14_CLOSURE_RECEIPTS.json"
+    },
+    {
+      "id": "SRC-P04-ACCEL",
+      "owner": "P04",
+      "taskId": "NOX-V16-E04-ACCEL-20261028",
+      "path": "Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json",
+      "head": "7a8c759c51b59ce6e650a988c3cdfffad731ca38",
+      "status": "HISTORICAL_COMPONENT_CHECKS_PASSED_NO_REAL_OLLAMA_GPU",
+      "criterionIDs": [
+        "P04-01",
+        "P04-02",
+        "P04-06",
+        "P04-12",
+        "P04-13",
+        "P04-21",
+        "P04-22",
+        "P04-24"
+      ],
+      "remaining": "Real authorized data/hardware component proof and current source mapping",
+      "receiptGitBlobSha1": "5442f6dfa83fcc7bc73dd739ec9549975767d528",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P04/E04_ACCEL_HANDOFF_RECEIPTS.json"
+    },
+    {
+      "id": "SRC-P05-UI",
+      "owner": "P05",
+      "taskId": "P05 events.v3/progress historical source",
+      "path": "Packages/P05/E05/src/E05Progress.cs",
+      "head": "N/D",
+      "status": "SOURCE_PRESENT_GIT_BLOB_ONLY_NO_CRITERION_ACCEPTANCE",
+      "criterionIDs": [
+        "P05-03",
+        "P05-04",
+        "P05-05"
+      ],
+      "remaining": "events.v3 live data, owner test and app-side readback needed",
+      "receiptGitBlobSha1": "e1c06667e7f923d3232a98c5ed3fe8f048dc95a1",
+      "receiptUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/Packages/P05/E05/src/E05Progress.cs"
+    }
+  ],
+  "pack01Routes": [
+    {
+      "taskId": "NIP01-01",
+      "owner": "2",
+      "route": "helion.chat",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-02",
+      "owner": "2",
+      "route": "core.chat",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-03",
+      "owner": "2",
+      "route": "persona.chat",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-04",
+      "owner": "2",
+      "route": "chat.model",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-05",
+      "owner": "2",
+      "route": "chat.history",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-06",
+      "owner": "2",
+      "route": "chat.attach",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-07",
+      "owner": "2",
+      "route": "chat.rag",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-08",
+      "owner": "2",
+      "route": "chat.voice",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-09",
+      "owner": "2",
+      "route": "chat.stop",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-10",
+      "owner": "2",
+      "route": "chat.commands",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-11",
+      "owner": "3",
+      "route": "models.catalog",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-12",
+      "owner": "3",
+      "route": "models.installed",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-13",
+      "owner": "3",
+      "route": "models.pull",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-14",
+      "owner": "3",
+      "route": "models.gguf.import",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-15",
+      "owner": "3",
+      "route": "models.queue",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-16",
+      "owner": "3",
+      "route": "models.cancel",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-17",
+      "owner": "3",
+      "route": "models.retry",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-18",
+      "owner": "3",
+      "route": "models.digest",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-19",
+      "owner": "3",
+      "route": "models.preflight",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-20",
+      "owner": "3",
+      "route": "models.licenses",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-21",
+      "owner": "4",
+      "route": "rag.import",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-22",
+      "owner": "4",
+      "route": "rag.search",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-23",
+      "owner": "4",
+      "route": "memory.manage",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-24",
+      "owner": "4",
+      "route": "datasets.review",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-25",
+      "owner": "4",
+      "route": "gpu.preflight",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-26",
+      "owner": "4",
+      "route": "training.start",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-27",
+      "owner": "4",
+      "route": "training.pause",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-28",
+      "owner": "4",
+      "route": "training.resume",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-29",
+      "owner": "4",
+      "route": "training.checkpoints",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-30",
+      "owner": "4",
+      "route": "training.evaluate",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-31",
+      "owner": "2",
+      "route": "translate.ru_es",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-32",
+      "owner": "2",
+      "route": "maestro.spanish",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-33",
+      "owner": "2",
+      "route": "voice.settings",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-34",
+      "owner": "2",
+      "route": "calls.dial",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-35",
+      "owner": "2",
+      "route": "calls.history",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-36",
+      "owner": "1",
+      "route": "media.player",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-37",
+      "owner": "1",
+      "route": "media.subtitles",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-38",
+      "owner": "1",
+      "route": "browser.open",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-39",
+      "owner": "1",
+      "route": "browser.bookmarks",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-40",
+      "owner": "4",
+      "route": "images.generate",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-41",
+      "owner": "5",
+      "route": "space.news",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-42",
+      "owner": "5",
+      "route": "space.weather",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-43",
+      "owner": "5",
+      "route": "space.fx",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-44",
+      "owner": "5",
+      "route": "space.bitcoin",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-45",
+      "owner": "5",
+      "route": "space.brent",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-46",
+      "owner": "5",
+      "route": "system.telemetry",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-47",
+      "owner": "1",
+      "route": "system.update",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-48",
+      "owner": "1",
+      "route": "system.backup",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-49",
+      "owner": "1",
+      "route": "system.pc_control",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    },
+    {
+      "taskId": "NIP01-50",
+      "owner": "6",
+      "route": "mobile.connect",
+      "originalRouteContract": "SOURCE_CANDIDATE",
+      "originalNativeHost": "HOLD",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "344c128c49da4887bcc1fcbf2089d871bbce48af",
+      "remaining": "Owner route/native bind and T09/T10 stage proof; preserve source candidates"
+    }
+  ],
+  "pack02Routes": [
+    {
+      "taskId": "NIP02-01",
+      "route": "media.srt.parse",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-02",
+      "route": "media.srt.to_vtt",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-03",
+      "route": "media.vtt.to_srt",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-04",
+      "route": "media.subtitles.shift",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-05",
+      "route": "media.subtitles.strip",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-06",
+      "route": "media.subtitles.search",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-07",
+      "route": "media.subtitles.duration",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-08",
+      "route": "media.subtitles.overlaps",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-09",
+      "route": "media.subtitles.renumber",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-10",
+      "route": "media.transcript.speakers",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-11",
+      "route": "docs.words.count",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-12",
+      "route": "docs.paragraphs.list",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-13",
+      "route": "docs.sentences.split",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-14",
+      "route": "docs.lines.dedupe",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-15",
+      "route": "docs.whitespace.normalize",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-16",
+      "route": "docs.text.titlecase",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-17",
+      "route": "docs.slug.make",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-18",
+      "route": "docs.urls.extract",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-19",
+      "route": "docs.emails.extract",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-20",
+      "route": "docs.text.chunks",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-21",
+      "route": "data.csv.parse",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-22",
+      "route": "data.csv.stringify",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-23",
+      "route": "data.csv.select",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-24",
+      "route": "data.csv.filter",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-25",
+      "route": "data.csv.sort",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-26",
+      "route": "data.csv.dedupe",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-27",
+      "route": "data.csv.stats",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-28",
+      "route": "data.json.pretty",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-29",
+      "route": "data.json.flatten",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-30",
+      "route": "data.json.keys",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-31",
+      "route": "dev.diff.lines",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-32",
+      "route": "dev.json.compare",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-33",
+      "route": "dev.json.validate",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-34",
+      "route": "dev.url.inspect",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-35",
+      "route": "dev.url.query_encode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-36",
+      "route": "dev.url.query_decode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-37",
+      "route": "dev.base64.encode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-38",
+      "route": "dev.base64.decode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-39",
+      "route": "dev.hex.encode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-40",
+      "route": "dev.hex.decode",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-41",
+      "route": "workflow.checklist.parse",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-42",
+      "route": "workflow.checklist.format",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-43",
+      "route": "workflow.tasks.kanban",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-44",
+      "route": "workflow.tasks.sort",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-45",
+      "route": "workflow.tasks.group",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-46",
+      "route": "workflow.tasks.duration",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-47",
+      "route": "workflow.progress.weighted",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-48",
+      "route": "workflow.receipt.inspect",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-49",
+      "route": "workflow.manifest.compare",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    },
+    {
+      "taskId": "NIP02-50",
+      "route": "workflow.runid.validate",
+      "source": "SOURCE_IMPLEMENTED",
+      "accepted": "NO",
+      "evidenceGitBlobSha1": "b56f0d27cf5039f7d4a21fe94bf983233bd2ab06",
+      "remaining": "Owner/native admission, do not demote SOURCE_IMPLEMENTED"
+    }
+  ],
+  "archiveGitReceipts": [
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB02_11_SUPERVISOR_20261029.json",
+      "gitBlobSha1": "b955423a95f7948349fee6bfbe288447ce000d96",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB02_11_SUPERVISOR_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB02_20261029.json",
+      "gitBlobSha1": "dd6045348129e40cb312d9be1f33447a29d9c5e3",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB02_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB03_20261029.json",
+      "gitBlobSha1": "e229ede8655d3befc10d10a2b9f4622b4e853e0f",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB03_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB04_20261029.json",
+      "gitBlobSha1": "01c9a231c5d90ddc8a66e96dcabe9c7bef6bd453",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB04_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB05_20261029.json",
+      "gitBlobSha1": "3b6e91a93340f1368ae798f1f81a112a3787a40a",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB05_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB06_20261029.json",
+      "gitBlobSha1": "6f10b90a4000c96342f32e49ca7eab51d4af2e04",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB06_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB07_20261029.json",
+      "gitBlobSha1": "c2d13f7d4ad6d3d7bb023923550ee7347beb9f65",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB07_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB08_20261029.json",
+      "gitBlobSha1": "f4955b48757d6ec0d5c98416562ed5d3ed5c4e47",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB08_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json",
+      "gitBlobSha1": "5ba92ef662886d2ba793e8ae0f05b21ee4ea133c",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB09_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB10_20261029.json",
+      "gitBlobSha1": "0fcb4f3a3eb59c700a9534f8019ffa3274154206",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB10_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json",
+      "gitBlobSha1": "fb102431fcfafd24b723fe07959c3ae4d1f4dc7f",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_MB11_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_10X6_SOURCE_MB01_20261029.json",
+      "gitBlobSha1": "0214d030e7c707d74af6a75de40d794e9ca9dad4",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_10X6_SOURCE_MB01_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json",
+      "gitBlobSha1": "7ec59b7108ac5867e6c7b4df1d71f9afc5cc1fda",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json",
+      "gitBlobSha1": "a7b2859fbab3c57fde64eb3fad7eaddb138d682a",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB02.json",
+      "gitBlobSha1": "330f9bfd1eb845f37366c4d9375102407ed846a9",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB02.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB03.json",
+      "gitBlobSha1": "e630f09ecd63eb83ae43af9a8607775b488f7da1",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB03.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB04.json",
+      "gitBlobSha1": "dac0788afcb5d508f99debb578d2c71a8baa2559",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB04.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB05.json",
+      "gitBlobSha1": "4e4864c87100dba86b71f8818f96e481ead7a8e0",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB05.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB06.json",
+      "gitBlobSha1": "5d13ed180d89f96da3e263726ce174c77b3cc5c0",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB06.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB07.json",
+      "gitBlobSha1": "dfd67307c723b01252bb5d86f3dae9033d118042",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB07.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB08.json",
+      "gitBlobSha1": "063547ccf48cc5758e16d11cea184c577543793e",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB08.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json",
+      "gitBlobSha1": "2409d5e2c70e69f883794b28987bd3845c6c0a4c",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB10.json",
+      "gitBlobSha1": "f296efe586033a15b7fee5d215cfdabd2d95306f",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB10.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_A_R29_SPLIT_05_20261029.json",
+      "gitBlobSha1": "b46476716aa231830a9189eae11ed87760f9695f",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_A_R29_SPLIT_05_20261029.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_R29_20261029_CONSOLIDATION_03.json",
+      "gitBlobSha1": "b7cc1fb05e02625a3995ae936125b027dbed9e84",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_CONSOLIDATION_03.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_R29_20261029_CONTINUATION_04.json",
+      "gitBlobSha1": "ed6478810bab894f76d159e6cf2e10c2bbdf6797",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_CONTINUATION_04.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_R29_20261029_LOADER_SOURCE_01.json",
+      "gitBlobSha1": "3fc2aa3e4f56aae5286292852e2e3882eb6e2f84",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_LOADER_SOURCE_01.json"
+    },
+    {
+      "path": "coordination/astra/run-receipts/ASTRA_R29_20261029_OPTIMIZATION_02.json",
+      "gitBlobSha1": "420c1534a66cefb91381f5bac7d42a7d823e7b9c",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/astra/v16-code-complete-source-only-20261029/coordination/astra/run-receipts/ASTRA_R29_20261029_OPTIMIZATION_02.json"
+    }
+  ],
+  "source729Conflict": {
+    "priorPhysicalProofCommit": "4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db",
+    "priorClaim": "60,364,346 bytes; archive SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a; 729 member hashes",
+    "laterRootReceipt": "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_FINAL_OWNER_HANDOFF.json",
+    "laterRootStates": "physical729Sha256 NOT_RUN in that run; historical proof not negated",
+    "disposition": "T07/T09 reuses exact earlier physical proof only when matching bytes/source scope; no fresh physical recheck by T01"
+  },
+  "exactHOLD": [
+    "100 original criteria lack sealed criterion-to-commit-to-frozen-T09-SHA conversions; preserve source DONE separately; do not auto-mark accepted.",
+    "Astra A P01/P02/P03 and Astra B P04/P05/E06 work in disjoint owner branches; current root f006 is evidence archive, not T09 frozen final.",
+    "No validated current single HEAD+SourceLock covering all owner branch fixes; T06/T09/T10 must not merge or claim acceptance from this receipt.",
+    "T01 does not change source code, NSIS, EXE, GitLab CI, or E07."
+  ],
+  "selfImprovement": {
+    "lesson": "C34/R29 stage separation and collision root cause",
+    "applied": "Rebuilt from exact 100 original TaskIDs and typed Git SHA-1 receipts instead of counting 10/10 loops, source candidates, or 37/50 routes as accepted; preserved 38 historical source-test blocks and explicit contradictory 729 record without downgrading them."
+  },
+  "handoff": {
+    "intendedReaders": [
+      "T02",
+      "T04",
+      "T05",
+      "T06"
+    ],
+    "action": "Read this one immutable ledger; update common Google Docs only via T02 CAS/readback; verify fresh owner/frozen SHA before promotions, do not regenerate these TaskIDs."
+  },
+  "prohibitedActionsConfirmed": {
+    "newDevelopment": false,
+    "newTasks": false,
+    "exe": false,
+    "nsis": false,
+    "gitlabCI": false,
+    "E07": false,
+    "commonDocsWrite": false
+  }
+}
