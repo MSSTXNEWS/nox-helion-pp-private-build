@@ -6,13 +6,17 @@ temporary copies, not new service implementations or native acceptance.
 Run from repository checkout: python coordination/e06/run_source_integrations_r13.py
 """
 from __future__ import annotations
+import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
+
+from t06_closeout_guard import decide as decide_t06_closeout
 
 ROOT=Path(__file__).resolve().parents[2]
 P02=ROOT/"Packages"/"P02"/"worker-python"
@@ -70,7 +74,7 @@ def snapshot_owner(source:Path,destination:Path)->int:
             raise RuntimeError("OWNER_FIXTURE_SHA_MISMATCH:"+str(relative))
     return len(original)
 
-def main()->int:
+def main(*, closeout_receipt: Path | None = None)->int:
     required=[P02/"p02_native_ingress.py",P03/"p03_onehost_port.py",
               PACK/"native_bridge.py",PACK/"catalog.json",
               ADAPTER_TESTS/"test_g2_space_mobile.py"]
@@ -117,7 +121,26 @@ def main()->int:
             return 1
     print("R13 COMPONENT_SUITES_PASS; WINDOWS_E07_NOT_RUN; SOURCE_READY_REQUIRES_FULL_OWNER_QA",
           flush=True)
-    return 0
+    if closeout_receipt is None:
+        # Component tests do not imply source-owner or independent acceptance.
+        return 0
+    if closeout_receipt.is_symlink() or not closeout_receipt.is_file():
+        print("HOLD: T06_CLOSEOUT_RECEIPT_MISSING_OR_REPARSE", flush=True)
+        return 2
+    if closeout_receipt.stat().st_size > 1_000_000:
+        print("HOLD: T06_CLOSEOUT_RECEIPT_UNBOUNDED", flush=True)
+        return 2
+    try:
+        closeout = decide_t06_closeout(json.loads(closeout_receipt.read_text(encoding="utf-8")))
+    except (OSError, ValueError, UnicodeError, TypeError) as exc:
+        print("HOLD: T06_CLOSEOUT_RECEIPT_INVALID", type(exc).__name__, flush=True)
+        return 2
+    print("T06_SOURCE_OWNER_CLOSEOUT", json.dumps(closeout, ensure_ascii=False), flush=True)
+    return 0 if closeout["done"] else 2
 
 if __name__=="__main__":
-    sys.exit(main())
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--closeout-receipt", type=Path,
+                        help="8-criterion owner source acceptance receipt; never implies T10 SOURCE_READY")
+    options=parser.parse_args()
+    sys.exit(main(closeout_receipt=options.closeout_receipt))
