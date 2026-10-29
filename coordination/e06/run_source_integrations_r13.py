@@ -38,6 +38,7 @@ SUITES=(
     ("T06 one-host P02 duplicate-route native ACL regression",E06_TESTS,"test_t06_r09_native_source_owner.py"),
     ("T06 existing E06 mobile source binding (native still HOLD)",HOST50_TESTS,"test_t06_mobile_binding_r26.py"),
     ("P01 NSIS-PowerShell source CLI contract; no compiler",E06_TESTS,"test_t06_p01_nsis_powershell_contract_r15.py"),
+    ("P01 PS5.1 JSON reader rejects duplicate manifest properties (source-only)",E06_TESTS,"test_p01_manifest_duplicate_reader_r35.py"),
     ("P01 original WPF donor full namespace preflight",E06_TESTS,"test_stage_p01_shared_zip_guard.py"),
     ("WOW owner/runtime registry",E06_TESTS,"test_wow_owner_runtime_preflight_r06.py"),
     ("WOW exact 200 catalog IDs and compositions",E06_TESTS,"test_wow200_catalog_integrity_r02.py"),
