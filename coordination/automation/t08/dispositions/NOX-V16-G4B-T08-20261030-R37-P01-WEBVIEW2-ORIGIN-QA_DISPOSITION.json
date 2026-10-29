@@ -1,0 +1,78 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261030-R37-P01-WEBVIEW2-ORIGIN",
+  "role": "G4-B/T08 AUTO auxiliary; manual #2 owns independent final QA",
+  "task_id": "T08/P01 existing",
+  "source_pr": 162,
+  "source_head": "0b30916551c34381b3a0905eeafa5e30050aacea",
+  "source_tree": "25df250acfa59e838242addee808f2339d7e6db7",
+  "comparison_checkpoint_head": "f6c8eebf811848863f65001ddebaf5e6cb9c2590",
+  "compare_commits": {
+    "ahead_by": 2,
+    "files_only": [
+      "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "tests/e06/test_theater_webview2_routes_r13.py"
+    ]
+  },
+  "changed_files": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "pre_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "post_blob": "d42e7ee44691efdbb3a87eb9dfe630f9ec23ed5d"
+    },
+    {
+      "path": "tests/e06/test_theater_webview2_routes_r13.py",
+      "pre_blob": "823fbb63ce1c0c9204d6ce61c2b0ef33f9647e16",
+      "post_blob": "fe296a4dc6ba21d8c33972a510349f71d2002cda"
+    }
+  ],
+  "verified_dependencies": [
+    {
+      "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+      "blob": "6d466b5fb113edcbc2db3dd694e98e86962defda"
+    },
+    {
+      "path": "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+      "blob": "f4eb000843bc78af116e4015ed06528b032ee991"
+    }
+  ],
+  "focused_qa": {
+    "runner": "JavaScript V8 source-contract assertions performed directly on authenticated GitHub connector file bytes (C# not executed)",
+    "assertions": 31,
+    "pass": 30,
+    "fail": 1,
+    "notes": [
+      "Only IsReservedVirtualHost matcher changed in C# bridge; remaining source byte-identical including native consent/STOP/replay/epoch guards.",
+      "Explicit nox.local allowed, arbitrary .local LAN hosts rejected; exact-host origin, HTTPS, native consent, replay and unsafe-navigation fail-close source predicates present.",
+      "Existing WPF host actually sets theaterUrl to https://nox.local/creative/theater.html then calls viewer.CoreWebView2.Navigate(theaterUrl).",
+      "Existing tests/e06/test_theater_webview2_routes_r13.py test_existing_host_not_replaced expects literal Navigate(\"https://nox.local/creative/theater.html\"), which does NOT occur in current actual WPF host. Exact-string assertion is FALSE: pre-existing stale fixture, not a demonstrated product defect.",
+      "Targeted follow-up source assertions: actual mapping=true, theaterUrl assignment=true, Navigate(theaterUrl)=true, WPF origin guard=true, legacy literal assertion=false."
+    ],
+    "source_runtime": "NOT_RUN (no .NET / WebView2 Windows host in execution environment)",
+    "python_unittest": "NOT_RUN (original repo cannot be materialized in local Python environment via current connector; exact static fixture contradiction proved)",
+    "native_stop_acl_consent": "NOT_RUN (source guards inspected only)",
+    "no_loss_full_integration": "NOT_RUN"
+  },
+  "disposition": "FAIL_TEST_FIXTURE_SOURCE_ONLY",
+  "code_security_findings": "No new native bypass established by this source-only QA.",
+  "error_ids": [
+    "ERR-SRC-004"
+  ],
+  "root_cause": "E06 Python unit contract fixture assumes a direct Navigate(string literal) whereas existing WPF host uses an assigned theaterUrl variable. Requiring old literal may falsely block code acceptance.",
+  "owner_handoff": {
+    "manual_1": "Update only E06 test_existing_host_not_replaced to assert existing theaterUrl assignment and Navigate(theaterUrl) (or equivalent behavior); run actual python -m unittest tests/e06/test_theater_webview2_routes_r13.py and related origin/STOP/ACL/consent regressions; integrate via owner CAS on PR162.",
+    "manual_2": "Independently rerun QA on exact integrated source+test blobs and obtain Windows-native STOP/ACL/consent proof before QA_ACCEPTED.",
+    "T02": "Record as existing ERR-SRC-004 fixture mismatch; no new ERROR_ID, no duplicate accepted TaskID."
+  },
+  "stages": {
+    "source_prepared": true,
+    "source_verified": "HOST_MATCHER_STATIC_ONLY",
+    "integrated_on_pr162": true,
+    "qa_accepted": false,
+    "source_ready": false
+  },
+  "accepted_task_delta": 0,
+  "product": "N/D",
+  "no_build": true,
+  "integrity": "Independent immutable source-only receipt; NOT Windows-native proof; no product files modified."
+}
