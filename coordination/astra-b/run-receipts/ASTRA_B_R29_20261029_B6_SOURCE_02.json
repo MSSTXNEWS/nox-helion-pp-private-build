@@ -1,0 +1,21 @@
+{
+  "schema": "ASTRA_B_R29_SOURCE_ONLY_BLOCK_V1",
+  "run_id": "ASTRA-B-R29-20261029-B6-02",
+  "worker_label": "B6",
+  "real_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE_THIS_SESSION",
+  "task_id": "B6-E06-STAGING-OWNER-LOCK-RECHECK",
+  "branch": "astra-b/r29-b6-20261029",
+  "source_commit": "6cdf43b93e25db229818a68839de0165a8e3c578",
+  "source_file": "coordination/e06/stage_onehost.py",
+  "source_git_blob": "632bbabf2c35662100bf41937c569453378d758f",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "focused_test": "FOCUSED_SOURCE_INVARIANT_PASS; PYTHON/NTFS_RUNTIME_NOT_RUN",
+  "source_readback": "EXACT_COMMIT_BLOB_MATCH",
+  "lesson": "An initial cooperative lock is not an ongoing lease; check ownership before source and receipt publication.",
+  "original_729_physical_check": "NOT_RUN",
+  "native_windows_check": "NOT_RUN",
+  "source_complete": false,
+  "release_build": false,
+  "shared_drive_journal": "ASTRA_A_ONLY"
+}
