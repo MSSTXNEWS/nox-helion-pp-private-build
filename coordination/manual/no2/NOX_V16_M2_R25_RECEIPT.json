@@ -1,0 +1,32 @@
+{
+  "schema": "NOX_V16_M2_R25_INDEPENDENT_QA_RECEIPT",
+  "run_id": "NOX-V16-M2-20261029-R25-T08-STALE-TEST-RECEIPT",
+  "role": "MANUAL_2_INDEPENDENT_SOURCE_QA",
+  "task_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "pre_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+  "canon_revision": "60",
+  "master_revision": "341",
+  "e06_revision": "501",
+  "lessons_revision": "392",
+  "c34_revision": "106",
+  "r19_policy_blob": "df0c6c0017fb5ed8773630e261f00e54bbd172c0",
+  "r20_manual_blob": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+  "r20_queue_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+  "current_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "owner": "T06 PR162; T02 shared Docs and register",
+  "scope": "Existing TaskID only; QA owner-safe proposal and focused regression",
+  "root_cause": "Both P0/handoff receipt identities and focused PASS test receipt can be stale/contradictory while T08 erroneously accepts",
+  "code_change": "All declared Git HEAD aliases agree; focused test receipt must contain at least one current HEAD alias; no new dependency or host",
+  "local_test": {
+    "type": "source-equivalent offline Python with real temp Git blobs",
+    "red": "Stale test PASS reached TRUE on vulnerable downstream gate",
+    "green": "29/29 local suite PASS including stale test denial (some inherited fixture tests duplicated)",
+    "exact_candidate_byte_test": "NOT_RUN; Git saved candidate byte readback only",
+    "native_windows": "NOT_RUN"
+  },
+  "physical_status": "SOURCE_QA_PATCH_PREPARED",
+  "no_production_write": true,
+  "required_owner_next": "T06 exact-PRE source CAS; independent T08 SAME HEAD test; T02 append existing incident only; T09 freeze then T10",
+  "release_stage": "NOT_AUTHORIZED"
+}
