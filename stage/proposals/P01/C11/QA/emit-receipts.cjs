@@ -42,6 +42,9 @@ const out={schema:"NOX_P01_C12_OWNER_SOURCE_RECEIPTS_V2",run_id:RUN_ID,owner:"E0
  windows_exe_accepted:false,deleted_count:0,source_files:files,changed_paths:changed,
  evidence:"GitHub Windows checkout byte reads, immutable git base commit"};
 fs.mkdirSync("ci-evidence",{recursive:true});
+const evidenceFolder=fs.lstatSync("ci-evidence");
+if (!evidenceFolder.isDirectory() || evidenceFolder.isSymbolicLink())
+  throw new Error("P01_C11_EVIDENCE_DIR_UNSAFE");
 const output="ci-evidence/p01-c12-owner-receipts.json";
 fs.writeFileSync(output, JSON.stringify(out,null,2)+"\n",{flag:"wx"});
 console.log("P01_C11_RECEIPTS_PASS",files.length,"files",changed.length,"paths","sha256",SHA(fs.readFileSync(output)),"head",HEAD);
