@@ -36,6 +36,48 @@ def pages(path, token):
             return records
     raise ValueError("GitLab pagination cap hit; not verified complete")
 
+def evaluate_live_evidence(result, handoff):
+    """Independent fail-closed GitLab migration proof; never grants build consent."""
+    problems = []
+    def require(condition, code):
+        if not condition:
+            problems.append(code)
+    history = handoff["history"]
+    ci = handoff["ci"]
+    required_files = history["migration_only_files"]
+    required_parts = history["original_source_part_blobs"]
+    require(result.get("project_visible") is True, "PROJECT_NOT_AUTHENTICATED")
+    require(result.get("visibility") == "private", "PROJECT_PRIVACY_UNVERIFIED")
+    require(isinstance(result.get("live_gitlab_head"), str) and
+            len(result["live_gitlab_head"]) == 40, "LIVE_HEAD_UNVERIFIED")
+    require(isinstance(result.get("migration_live_head"), str) and
+            len(result["migration_live_head"]) == 40, "MIGRATION_HEAD_UNVERIFIED")
+    require(isinstance(result.get("access_level"), int) and
+            result["access_level"] >= 20, "PROJECT_READ_PERMISSION_UNVERIFIED")
+    require(result.get("migration_commit_preserved") is True,
+            "HISTORIC_MIGRATION_COMMIT_MISSING")
+    require(len({f["path"] for f in required_files}) == 27 and
+            len(required_files) == 27, "HISTORIC_27_MANIFEST_INVALID")
+    require(result.get("migration_unique_verified") == len(required_files) and
+            not result.get("migration_unique_mismatches"),
+            "MIGRATION_27_BLOB_MISMATCH")
+    require(result.get("original_parts_verified") == len(required_parts) and
+            len(required_parts) == 3 and
+            not result.get("original_parts_mismatches"),
+            "ORIGINAL_3_PARTS_GIT_BLOB_MISMATCH")
+    require(result.get("ci_git_blob") ==
+            ci["historical_gitlab_ci_blob_sha1"], "CI_BLOB_DRIFT")
+    require(result.get("entrypoint_git_blob") ==
+            ci["historical_gitlab_entrypoint_blob_sha1"], "ENTRYPOINT_BLOB_DRIFT")
+    require(result.get("windows_runner_proven_online") is True,
+            "WINDOWS_RUNNER_NOT_PROVEN_ONLINE")
+    result["evidence_errors"] = problems
+    result["status"] = ("LIVE_MIGRATION_VERIFIED_NOT_SOURCE_READY" if not problems
+                        else "LIVE_INSPECTED_INCOMPLETE")
+    result["source_ready"] = False
+    result["build_authorized"] = False
+    return not problems
+
 def main():
     parser = argparse.ArgumentParser(description="GitLab T11 read-only audit")
     parser.add_argument("--handoff", required=True, type=pathlib.Path)
@@ -60,6 +102,13 @@ def main():
         "migration_unique_verified": 0,
         "migration_unique_total": len(handoff["history"]["migration_only_files"]),
         "migration_unique_mismatches": [],
+        "original_parts_verified": 0,
+        "original_parts_mismatches": [],
+        "access_level": None,
+        "permission_error": None,
+        "evidence_errors": [],
+        "source_ready": False,
+        "build_authorized": False,
         "runners": [],
         "windows_runner_proven_online": False,
         "ci_git_blob": None,
@@ -75,6 +124,17 @@ def main():
         result["visibility"] = info.get("visibility")
         result["default_branch"] = info.get("default_branch")
         pid = str(info["id"])
+        try:
+            actor = get("user", token)
+            actor_id = actor.get("id")
+            if type(actor_id) is not int or actor_id <= 0:
+                raise ValueError("Authenticated GitLab user ID missing")
+            member = get("projects/" + pid + "/members/all/" + str(actor_id), token)
+            access = member.get("access_level")
+            result["access_level"] = access if type(access) is int else None
+        except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError) as ex:
+            result["permission_error"] = type(ex).__name__
+
         branches = pages("projects/" + pid + "/repository/branches", token)
         result["branches"] = [
             {"name": b.get("name"), "sha": (b.get("commit") or {}).get("id"),
@@ -116,6 +176,15 @@ def main():
                                "?ref=" + q, token).get("blob_id")
                 except urllib.error.HTTPError:
                     return None
+            for part in handoff["history"]["original_source_part_blobs"]:
+                actual = observed_blob(part["path"])
+                if actual == part["sha"]:
+                    result["original_parts_verified"] += 1
+                else:
+                    result["original_parts_mismatches"].append({
+                        "path": part["path"], "expected": part["sha"],
+                        "observed": actual
+                    })
             result["ci_git_blob"] = observed_blob(".gitlab-ci.yml")
             result["entrypoint_git_blob"] = observed_blob(
                 "coordination/e06/gitlab_windows_entrypoint.ps1")
@@ -132,7 +201,7 @@ def main():
                 for r in result["runners"])
         except urllib.error.HTTPError as ex:
             result["runners_error"] = "HTTP_" + str(ex.code)
-        result["status"] = "LIVE_INSPECTED_NOT_BUILD_READY"
+        evaluate_live_evidence(result, handoff)
     except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError) as ex:
         result["read_error_type"] = type(ex).__name__
         result["status"] = "GITLAB_ACCESS_HOLD"
@@ -147,7 +216,7 @@ def main():
         "windows_runner_proven_online": result["windows_runner_proven_online"],
         "audit_file": str(args.out)
     }, ensure_ascii=False))
-    return 0 if result["status"] == "LIVE_INSPECTED_NOT_BUILD_READY" else 2
+    return 0 if result["status"] == "LIVE_MIGRATION_VERIFIED_NOT_SOURCE_READY" else 2
 
 if __name__ == "__main__":
     sys.exit(main())

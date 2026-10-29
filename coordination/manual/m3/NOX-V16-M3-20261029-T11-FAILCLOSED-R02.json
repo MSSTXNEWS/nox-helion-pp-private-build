@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_V16_M3_T11_FAIL_CLOSED_HELPER_R02",
+  "task_id": "M3/T11",
+  "run_id": "NOX-V16-M3-20261029-T11-R02-LESSONS-INTEGRATION",
+  "source_branch_parent": "manual/t11/gitlab-free-readonly-handoff-20261029-r01",
+  "source_parent_head": "788692caf529d9d990daec6b95ceb836f88b3486",
+  "source_parent_tree": "ca40e32c2546ddc9dabf6cd879b3e4362673aa34",
+  "canonical_candidate_observed": "ab5159fd8045c5ba232cb5cb1e4f3452f6cd845f",
+  "t09_frozen_signed_head": null,
+  "t10_source_ready": false,
+  "error_register_pre_blob": "72d8a84b89663748feb4187d527b138728d0a604",
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "history_coverage": "PARTIAL_OWNER_HISTORIC_INDEX",
+  "lessons_read": {
+    "lessons_paragraphs": 1701,
+    "lesson_like_lines": 777,
+    "not_independent_verified_fixes": true,
+    "master_e06_c34_and_registry": true
+  },
+  "changed_files": [
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": "0b57108e02b9cac5630ade54dacbbcbf6a709c4f",
+      "post_blob": "8bc0bdaa51c672269908609f09f44885c1a4e753",
+      "owner": "M3/T11",
+      "scope": "read-only GitLab audit"
+    },
+    {
+      "path": "coordination/t11/test_NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": null,
+      "post_blob": "399bf4e13dcccdd312fbe26cecfa61d40a4cb2a9",
+      "owner": "M3/T11"
+    }
+  ],
+  "concrete_changes": [
+    "Fail-closed GitLab readiness evaluation with 27 unique blob checks, 3 original source part blob IDs, CI and entrypoint parity.",
+    "Authenticated project membership level and private project visibility, explicit missing live SHA and runner rejection.",
+    "Never conflates migration verified with SOURCE_READY, CI approval, or Windows Build.",
+    "No duplicate project, no migration rewrite, no automatic pipeline."
+  ],
+  "test": {
+    "static_source_contract": "PASS",
+    "real_python_test_execution": "NOT_RUN",
+    "seven_offline_regressions": "AUTHORED_NOT_EXECUTED",
+    "git_readback": "PENDING"
+  },
+  "progress_before": {
+    "T10": "1/7",
+    "T11": "2/5",
+    "M3": "3/12",
+    "percent": 25
+  },
+  "progress_after": {
+    "T10": "1/7",
+    "T11": "2/5",
+    "M3": "3/12",
+    "percent": 25
+  },
+  "why_not_done": "T09 final source freeze and authenticated GitLab live HEAD not yet available; new script must not bypass these external gates",
+  "lesson_applied": "Cross-run error histories converted into executable fail-closed checks, replacing superficial repeated HOLD prose. Records classification and ownership preserved.",
+  "handoff": {
+    "T02": "Ingest immutable receipt only with CAS/readback; do not credit T11 readiness without live GitLab proof",
+    "T09": "Frozen integrated sha+tree+manifest required",
+    "T11": "Run existing helper in trusted GitLab owner environment, share sanitized result; no API token in chat"
+  },
+  "no_build": true,
+  "no_ci": true,
+  "no_gitlab_mutations": true,
+  "no_force_push": true,
+  "no_other_owners_code_changed": true
+}
