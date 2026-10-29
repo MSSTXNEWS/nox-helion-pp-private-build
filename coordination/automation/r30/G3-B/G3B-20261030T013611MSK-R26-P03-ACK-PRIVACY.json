@@ -1,0 +1,130 @@
+{
+  "schema": "NOX_V16_G3B_R26_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows source only",
+  "status": "INCOMPLETE_ISOLATED_SOURCE_V8_VERIFIED_T06_T08_PENDING",
+  "slot": "G3-B",
+  "owner_policy": "G3-B assigned P03 ui.js; PACK02 ops belongs G7-B; T06 sole PR162 writer; T02 sole shared journals writer",
+  "prestart": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "section33_rules": 56,
+    "sections": "1-33,54-56,R29",
+    "owner_lock": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "r26_policy": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+    "register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "register_errors": [
+      {
+        "id": "ERR-SYS-001",
+        "status": "OPEN"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "status": "OPEN"
+      },
+      {
+        "id": "ERR-SRC-003",
+        "status": "OPEN"
+      },
+      {
+        "id": "ERR-SRC-004",
+        "status": "OPEN"
+      },
+      {
+        "id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED"
+      },
+      {
+        "id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED"
+      },
+      {
+        "id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED"
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN"
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED"
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED"
+      }
+    ],
+    "pr162_head": "30143a71c824e654d11b633265faea38bbad0b31",
+    "pr162_tree": "513dfb1605037907cf2946427a3b4827b6589751",
+    "master_revision": "AHj4eMQJfPI1zFjcKDNuP9g5p7RhzHfm42pB2h4QGAsEUVHH5IGqmICx29vCOBhcqFu0P3mU4aJCr0EPsXzTxtJypdg6QEWjmwusEC3G-rk",
+    "lessons_revision": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL-QXf0E",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0"
+  },
+  "existing_error_id": "ERR-SRC-004",
+  "task_stage": "SOURCE_PREPARED + V8_VERIFIED (not T06 integrated or T08 QA accepted)",
+  "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "source_pre_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+  "source_post_blob": "839c67cdcf65a9da2c8a1bf9ab6f1f757faf961c",
+  "test_path": "coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs",
+  "test_blob": "c43e76711fdbf5a90fc73b6f7568b6d0eea122c4",
+  "checks": {
+    "actual_v8_mocked_webview": [
+      "malformed snapshot atomic consent",
+      "event privacy public-only",
+      "snapshot privacy public-only",
+      "ACK denial privacy",
+      "STOP durable job routed",
+      "foreign job ACK not accepted",
+      "foreign tag ACK not accepted",
+      "correct ACK clears pending",
+      "STOP Cancelling dominates stale Installed"
+    ],
+    "node_saved_not_run": true,
+    "dotnet_not_run": true,
+    "windows_not_run": true,
+    "acl_native_path_unchanged": true
+  },
+  "lessons": {
+    "applied": [
+      "ERR-SRC-004",
+      "ERR-SYS-002",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ],
+    "delegated": [
+      "ERR-SYS-001",
+      "ERR-SRC-003",
+      "ERR-SRC-005",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "historical_closed_unchanged": [
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "root_cause": "ACK matching commandId without optional jobId/modelTag identity can release unrelated STOP. Raw host progress/status/denials leak private data. Fail closed before pending unlock; public field allowlist; atomic snapshot validation.",
+    "check": "matched and mismatched STOP ACK, negative ACK redaction, malformed snapshot and terminal STOP cases."
+  },
+  "no_loss": [
+    "729 original / 3 ZIP untouched",
+    "PACK02 50 operations untouched",
+    "D02 WOW200 CoreID Persona untouched",
+    "native consent and ACL untouched",
+    "no second host/queue",
+    "no EXE/NSIS/GitLab CI/E07/release"
+  ],
+  "new_qa_accepted": 0,
+  "operational": "1/4 historical, Δ 0",
+  "product": "N/D",
+  "handoff": {
+    "T06": "Review same SHA 30143a71c824e654d11b633265faea38bbad0b31, CAS source 1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf -> 839c67cdcf65a9da2c8a1bf9ab6f1f757faf961c, test c43e76711fdbf5a90fc73b6f7568b6d0eea122c4 and run STOP/ACL/consent/privacy/NO-LOSS target checks before PR162 write",
+    "T08": "independently verify integrated PR162 exact HEAD; no QA by G3-B",
+    "T02": "dedup ERR-SRC-004 under existing ID; shared journal only by T02",
+    "G7B": "PACK02 ops owned by G7-B; coordinate 50 existing routes with T06; no source cross-write"
+  },
+  "next": "T06 exact PRE/CAS admission if still applicable, T08 independent same-SHA QA; G7-B review PACK02 route bindings; preserve unrelated DONE."
+}

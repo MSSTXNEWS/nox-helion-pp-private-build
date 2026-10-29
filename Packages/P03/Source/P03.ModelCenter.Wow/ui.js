@@ -18,6 +18,32 @@ const bytes = x => {const n=numeric(x);if(n===null)return unknown;
 const fmtRam = n => numeric(n) === null ? unknown : `${n.toLocaleString('ru-RU',{maximumFractionDigits:1})} ГБ`;
 const safeText = x => typeof x === 'string' && x.length>0 ? x : unknown;
 const ellipsis = (s,n=180) => String(s ?? '').slice(0,n);
+
+/* P03 public UI boundary; raw host diagnostics remain inside ONEHOST. */
+const publicQueueStatus = value => {
+ const labels={'Starting':'Starting','REVIEW_REQUIRED':'REVIEW_REQUIRED',
+ 'Cancelling':'Cancelling','Cancelled':'Cancelled','Failed':'Failed',
+ 'Installed':'Installed','Transferring':'Transferring',
+ 'Pulling manifest':'Pulling manifest','Pulling layer':'Pulling layer',
+ 'Copying layer':'Copying layer','Verifying digest':'Verifying digest',
+ 'Writing manifest':'Writing manifest','Cleaning cache':'Cleaning cache',
+ 'Transfer complete':'Transfer complete',
+ 'Cancelled; Ollama may resume this pull later':'Cancelled; Ollama may resume this pull later'};
+ return typeof value==='string'&&Object.prototype.hasOwnProperty.call(labels,value)
+ ? labels[value]:'Обновление';
+};
+const publicModelTag = tag => typeof tag==='string' &&
+ state.models.some(m=>tag===m.id||tag===m.exactTag)?tag:'MODEL';
+const publicAckReason = reason => {
+ switch(reason){
+  case 'REVIEW_REQUIRED': return 'Нужна проверка артефакта';
+  case 'CONSENT_REQUIRED': return 'Нужно подтверждение';
+  case 'NOT_AUTHORIZED': return 'Нет разрешения';
+  case 'STOP_PENDING': return 'Остановка уже запрошена';
+  case 'BUSY': return 'Операция занята';
+  default: return 'причина скрыта';
+ }
+};
 const isDigest = s => typeof s==='string' && /^[a-f0-9]{64}$/i.test(s);
 const isOfficial = str => {try {const u=new URL(str);return u.protocol==='https:' && (u.hostname==='ollama.com'||u.hostname==='www.ollama.com') && !u.username && !u.password;}catch{return false;}};
 const modelId = x=>typeof x==='string' && /^[a-z0-9][a-z0-9._-]{0,79}$/i.test(x);
@@ -121,9 +147,9 @@ function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvid
   const complete=numeric(j?.completedBytes),total=numeric(j?.totalBytes);const realPct=complete!==null&&total!==null&&total>0&&complete<=total?Math.min(100,Math.round(complete/total*100)):null;
   $('orbit').style.setProperty('--pct',realPct===null?'0%':realPct+'%');$('orbit').classList.toggle('working',j?.state==='Running'||j?.state==='Downloading');
   $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПЕРЕДАНО';
-  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?`${safeText(j.modelTag)} · ${j.status||'Нет активной операции'}`:'Нет активной операции';
+  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?`${publicModelTag(j.modelTag)} · ${publicQueueStatus(j.status)}`:'Нет активной операции';
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
-  $('transferNote').textContent=j?`${safeText(j.modelTag)} · ${realPct===null?'Без достоверного процента':`Передано ${realPct}%`} · установка требует receipt`:'Без достоверного процента';
+  $('transferNote').textContent=j?`${publicModelTag(j.modelTag)} · ${realPct===null?'Без достоверного процента':`Передано ${realPct}%`} · установка требует receipt`:'Без достоверного процента';
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
   const cap=state.capabilities||{};const queue=state.activeJob;
   const canStop=state.hostReady&&cap.stop===true&&queue&&['Queued','Running'].includes(queue.state);
@@ -165,7 +191,7 @@ function renderComparison(){const root=$('comparison');root.replaceChildren();if
 }
 function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(state.events.length===0){feed.append(el('li','empty','Нет событий от host.'));return;}
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||'');const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
+  li.append(el('span','event-time',time),el('span','',ellipsis(`${publicModelTag(evt.modelTag||evt.ModelTag)} · ${evt.phase||evt.Phase||'event'} · ${publicQueueStatus(evt.status||evt.Status)}`,150)));feed.append(li);}
 }
 function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
 function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retry'].includes(action);
@@ -198,6 +224,11 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const models=data.models;
   if(models.some(m=>!m||!modelId(m.id)||typeof m.name!=='string'||m.name.length>100)||
     new Set(models.map(m=>m.id)).size!==models.length)return;
+  // Validate the incoming durable job before changing license consent or model cards.
+  const incomingCheck=data.activeJob,uuidCheck=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if(incomingCheck!=null&&(typeof incomingCheck!=='object'||!uuidCheck.test(incomingCheck.jobId||'')||
+     typeof incomingCheck.modelTag!=='string'||incomingCheck.modelTag.length>160||
+     !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incomingCheck.state)))return;
   const before=current(),after=models.find(m=>m.id===state.activeId);
   if(!before||!after||['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
   state.models=models.map(m=>({...m}));
@@ -209,7 +240,11 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       typeof incoming!=='object'||!uuid.test(incoming.jobId||'')||
       typeof incoming.modelTag!=='string'||incoming.modelTag.length>160||
       !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
-  let next=incoming?{...incoming}:null;
+  // Never retain untrusted host diagnostic keys or raw status in WebView state.
+  let next=incoming?{jobId:incoming.jobId,modelTag:incoming.modelTag,
+    modelId:typeof incoming.modelId==='string'&&modelId(incoming.modelId)?incoming.modelId:null,
+    state:incoming.state,status:publicQueueStatus(incoming.status),
+    completedBytes:incoming.completedBytes,totalBytes:incoming.totalBytes}:null;
   // An absent/null job is not confirmation of the durable STOP request.
   if(next===null&&old?.state==='Cancelling')next={...old};
   if(next){
@@ -246,7 +281,8 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     !['started','progress','completed','failed','cancelled'].includes(evt.phase)||
     (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
-  const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
+  const safe={jobId:evt.jobId,phase:evt.phase,modelTag:publicModelTag(evt.modelTag),
+    status:publicQueueStatus(evt.status)};
   // The active queue job is independent of the selected catalog card.
   const job=state.activeJob;
   const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
@@ -258,7 +294,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
      (evt.phase==='started'&&job.state!=='Queued')))return;
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
   if(sameJob){
-    if(typeof evt.status==='string')job.status=evt.status;
+    job.status=publicQueueStatus(evt.status);
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
        (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
@@ -272,12 +308,16 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
  }else if(data.type==='p03.command.ack.v1'){
   if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action)||typeof data.commandId!=='string'||typeof data.accepted!=='boolean')return;
   const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
+  // M1/M2: queue ACK must match both the durable STOP/Retry job and model intent.
+  const queueAck=['stop','retry'].includes(data.action),hasOwn=Object.prototype.hasOwnProperty;
+  if(queueAck&&hasOwn.call(data,'jobId')&&data.jobId!==pending.jobId)return;
+  if(hasOwn.call(data,'modelTag')&&data.modelTag!==(queueAck?pending.jobTag:pending.tag))return;
   if(pending.timer!==null)clearTimeout(pending.timer);
   state.pending.delete(data.action);renderHero();renderQuick20();
   const isQueue=['stop','retry'].includes(data.action),m=isQueue?queueJobModel():current();
   const samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null)&&
     (!isQueue||(pending.jobId===state.activeJob?.jobId&&pending.jobTag===state.activeJob?.modelTag));
-  showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
+  showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${publicAckReason(data.reason)}`);
  }}
 $('search').addEventListener('input',renderCatalog);
 for(const b of document.querySelectorAll('[data-filter]'))b.addEventListener('click',()=>{state.filter=b.dataset.filter;for(const btn of document.querySelectorAll('[data-filter]')){btn.classList.toggle('active',btn===b);btn.setAttribute('aria-pressed',String(btn===b));}renderCatalog();});
