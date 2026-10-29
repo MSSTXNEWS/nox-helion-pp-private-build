@@ -261,7 +261,9 @@ export function projectFeeds(feeds, nowMs) {
   // Show conflicting quotes before a long news list, but count only one
   // HOLD tile per instrument before applying the 16-card display limit.
   const conflicting = f => singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1;
-  const ordered=[...visible.filter(conflicting),...visible.filter(f=>!conflicting(f))];
+  const ordered=[...visible.filter(conflicting),
+    ...visible.filter(f=>!conflicting(f) && singletonMarketIds.has(f.id)),
+    ...visible.filter(f=>!conflicting(f) && !singletonMarketIds.has(f.id))];
   const conflictSeen=new Set();
   const capped=ordered.filter(f=>{
     if (!conflicting(f)) return true;
