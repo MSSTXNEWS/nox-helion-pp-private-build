@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B6",
+  "worker_label": "B6",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b6-20261029",
+  "code_commits": [
+    "f671328806e7b44dd646b225904ca9d419587cf2",
+    "6d8c32932eec486422ae2176a3edb54ce5ad80cb",
+    "bca7d7c39345fc07a357a62940aa87cf2115c808",
+    "5736ae607da1a78b38fefcc450510f9b0635cc25"
+  ],
+  "change_summary": "Foreign temp cleanup, pre-publish owner lock, prepared bytes, rollback backup provenance",
+  "focused_tests": "Python focused source checks; NTFS/crash recovery NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "Verify owner lease and prepared bytes before any publication; avoid recovering from foreign backup.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
