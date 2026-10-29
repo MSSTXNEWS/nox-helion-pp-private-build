@@ -281,8 +281,13 @@ class Studio(CreativeExtensions):
                      f"Format: {kind}. User story: {prompt}")
         try: data=json.loads(self._text(instruction,True))
         except json.JSONDecodeError as exc:raise StudioError("Storyboard LLM returned invalid JSON") from exc
-        if not isinstance(data,dict) or not isinstance(data.get("scenes"),list) or not data["scenes"]:raise StudioError("Invalid scenes")
-        data["scenes"]=data["scenes"][:int(scenes)]
+        if not isinstance(data,dict) or not isinstance(data.get("scenes"),list):
+            raise StudioError("Invalid scenes")
+        chosen=data["scenes"][:int(scenes)]
+        if (len(chosen)!=int(scenes)
+                or any(type(scene) is not dict for scene in chosen)):
+            raise StudioError("Storyboard scenes incomplete or malformed")
+        data["scenes"]=chosen
         (folder/"storyboard.json").write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
         # A real editable SRT timing draft, only from model-provided dialogue.
         def srt_stamp(seconds):
