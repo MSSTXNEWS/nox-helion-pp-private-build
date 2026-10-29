@@ -193,7 +193,7 @@ public sealed class GoogleDocsAppendReadback
     private static bool DocumentMatches(JsonElement root, string expected)
     {
         if (root.ValueKind != JsonValueKind.Object) return false;
-        if (!root.TryGetProperty("documentId", out var id)) return true;
+        if (!root.TryGetProperty("documentId", out var id)) return false;
         return id.ValueKind == JsonValueKind.String &&
             string.Equals(id.GetString(), expected, StringComparison.Ordinal);
     }
