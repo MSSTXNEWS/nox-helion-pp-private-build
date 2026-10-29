@@ -453,6 +453,9 @@ class Studio(CreativeExtensions):
         manifest=work/"concat.txt"
         manifest.write_text("".join("file '"+p.name+"'\n" for p in parts),encoding="utf-8")
         output=folder/"NOX_MOVIE_FINAL.mp4"
+        # Preserve the previous successful film until the entire new render
+        # has completed; FFmpeg -y must write to a unique staging MP4.
+        staged=folder/(".NOX_MOVIE_"+uuid.uuid4().hex+".mp4")
         cmd=["ffmpeg","-hide_banner","-loglevel","error","-y","-f","concat","-safe","0","-i",str(manifest)]
         if soundtrack:
             audio=self._within(folder,folder/soundtrack)
@@ -468,9 +471,14 @@ class Studio(CreativeExtensions):
         cmd += ["-c:v","copy"]
         if soundtrack:cmd += ["-c:a","aac","-shortest"]
         if subtitle_file:cmd += ["-c:s","mov_text"]
-        cmd += ["-movflags","+faststart",str(output)]
-        self._exec(cmd,3600)
-        if not output.exists() or not output.stat().st_size:raise StudioError("Empty MP4 output")
+        cmd += ["-movflags","+faststart",str(staged)]
+        try:
+            self._exec(cmd,3600)
+            if not staged.exists() or not staged.stat().st_size:
+                raise StudioError("Empty MP4 output")
+            staged.replace(output)
+        finally:
+            if staged.exists():staged.unlink()
         return {"status":"RENDERED","path":str(output),"bytes":output.stat().st_size,"clips":len(clips)}
 
     def _exec(self,argv,timeout):
