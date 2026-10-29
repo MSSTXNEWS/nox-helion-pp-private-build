@@ -235,7 +235,14 @@ class NoxPackHost:
             raise HostDenied("Missing/oversize request")
         # Capture the exact JSON approved at this native boundary. Neither the
         # source caller nor a provider-ready check may change the execution data.
-        frozen_payload = json.loads(raw)
+        def distinct_fields(pairs):
+            result = {}
+            for name, value in pairs:
+                if name in result:
+                    raise HostDenied("Duplicate native JSON field")
+                result[name] = value
+            return result
+        frozen_payload = json.loads(raw, object_pairs_hook=distinct_fields)
         require_unchanged_session()
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
