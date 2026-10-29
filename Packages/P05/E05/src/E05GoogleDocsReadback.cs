@@ -79,6 +79,11 @@ public sealed class GoogleDocsAppendReadback
             string? revAfter = ReadRevision(afterJson.RootElement);
             if (string.IsNullOrWhiteSpace(revAfter))
                 return new(runId, documentId, revision, null, "NO_READBACK_REVISION", entry.Length);
+            // Legacy first-body responses carry no stable tab identity. Do not
+            // infer that a newly tabbed response refers to that same body.
+            if (tabId is null && afterJson.RootElement.ValueKind == JsonValueKind.Object &&
+                afterJson.RootElement.TryGetProperty("tabs", out _))
+                return new(runId, documentId, revision, revAfter, "READBACK_TAB_MISSING", entry.Length);
             if (!TryBody(afterJson.RootElement, tabId, out _, out var afterBody))
                 return new(runId, documentId, revision, revAfter, "READBACK_TAB_MISSING", entry.Length);
             var buffer = new StringBuilder();

@@ -1,0 +1,22 @@
+{
+  "run_id": "ASTRA-R29-A05-CONT01-FOLLOWUP",
+  "source_parent": "a03c033ee887e80906a2a1dc887ed429cab58e4f",
+  "same_block": "ASTRA-R29-A05-CONT01",
+  "extra_pass_credit": 0,
+  "status": "PATCH_CANDIDATE_NATIVE_TEST_NOT_RUN",
+  "saved_utc": "2026-10-29T01:12:10.396960+00:00",
+  "fix": "Reject legacy-body to tabbed-document readback transition because legacy read has no stable tab ID. Modern-to-legacy already denied.",
+  "tests": "One native HTTP counterexample added; all eleven scenario groups NOT_RUN (compiler unavailable). git diff --check only.",
+  "files": [
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "pre_sha256": "8279109d6dcf357d03c2040e0a03fa6b20293216be30fd25b3ebfcb31f9c0d29",
+      "post_sha256": "a179ea93c15c72ba9e25f5da0544062a77e954e3658ca27b42fb8d41845734fe"
+    },
+    {
+      "path": "Packages/P05/E05/checks/E05DriveAdmissionR29Checks.cs",
+      "pre_sha256": "70a8889247fedebc2d13416c61fedea4c0d21cd89a3d37798fd2ac400343f22f",
+      "post_sha256": "0bf7561bd518657709fbcdf2dda85d42b53cb9ff9f161ca93a5fce2c4a325d2a"
+    }
+  ]
+}

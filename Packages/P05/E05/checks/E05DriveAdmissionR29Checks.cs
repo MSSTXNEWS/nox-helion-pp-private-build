@@ -65,6 +65,19 @@ public static class E05DriveAdmissionR29Checks
             Doc("rev1", Tab("tab-A", "")), Doc(null, Tab("tab-A", Entry)), "NO_READBACK_REVISION");
 
         using (var handler = new ScriptedHandler(new[] {
+            (HttpMethod.Get, JsonSerializer.Serialize(new { revisionId = "rev1", body = Body("") }), HttpStatusCode.OK),
+            (HttpMethod.Post, "{}", HttpStatusCode.OK),
+            (HttpMethod.Get, Doc("rev2", Tab("new-tab", Entry)), HttpStatusCode.OK)
+        }))
+        {
+            using var http = new HttpClient(handler);
+            var result = await new GoogleDocsAppendReadback(http, _ => Task.FromResult("fixture"))
+                .AppendAsync("Document1", Run, Entry, CancellationToken.None);
+            Check(result.Status == "READBACK_TAB_MISSING" && handler.Remaining == 0,
+                "legacy-to-tabs transition cannot invent original destination identity");
+        }
+
+        using (var handler = new ScriptedHandler(new[] {
             (HttpMethod.Get, Doc("rev1", Tab("tab-A", "")), HttpStatusCode.OK),
             (HttpMethod.Post, "{}", HttpStatusCode.BadRequest),
             (HttpMethod.Get, Doc("rev2", Tab("tab-A", "")), HttpStatusCode.OK),
