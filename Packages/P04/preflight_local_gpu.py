@@ -95,6 +95,31 @@ def _check_pypa_wheel_abi(report: dict) -> None:
     if not report["errors"]:
         report["wheel_abi_status"] = "INSTALLED_ROOT_TAG_MATCH_ONLY"
 
+
+def _validate_gpu_memory_snapshot(selected: dict, memory: dict) -> None:
+    """Reject inconsistent NVIDIA inventory/VRAM reads before importing CUDA.
+
+    Memory telemetry is a separate nvidia-smi query; a changed total or
+    malformed headroom response cannot attest the selected physical GPU.
+    """
+    raw_total = selected.get("memory_total_mib")
+    if not isinstance(raw_total, str) or re.fullmatch(r"[0-9]{1,9}", raw_total) is None:
+        raise RuntimeError("GPU_VRAM_TELEMETRY_CONTRACT_INVALID")
+    inventory_total = int(raw_total)
+    required = ("free_mib", "total_mib", "gui_reserve_mib")
+    if not isinstance(memory, dict) or any(type(memory.get(k)) is not int for k in required):
+        raise RuntimeError("GPU_VRAM_TELEMETRY_CONTRACT_INVALID")
+    free, total, reserve = (memory[k] for k in required)
+    if not (1 <= inventory_total <= 1024 * 1024 and
+            1 <= total <= 1024 * 1024 and
+            0 <= free <= total and
+            1024 <= reserve < total and
+            free >= reserve + 1024):
+        raise RuntimeError("GPU_VRAM_TELEMETRY_CONTRACT_INVALID")
+    if total != inventory_total:
+        raise RuntimeError("GPU_INVENTORY_VRAM_TOTAL_MISMATCH")
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
@@ -162,6 +187,7 @@ def inspect(profile: str, gpu_index: int) -> dict:
         if temperature >= limit:
             raise RuntimeError("GPU_THERMAL_HEADROOM_UNAVAILABLE")
         memory = train_qlora.gpu_vram_headroom(exe, selected["uuid"], profile)
+        _validate_gpu_memory_snapshot(selected, memory)
         report["gpu"] = {
             "name": selected["name"], "uuid": selected["uuid"],
             "temperature_c": temperature, **memory
