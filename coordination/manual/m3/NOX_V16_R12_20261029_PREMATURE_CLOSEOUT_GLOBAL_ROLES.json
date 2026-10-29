@@ -1,0 +1,30 @@
+{
+  "schema": "NOX_V16_R12_CROSS_ROLE_PREMATURE_CLOSEOUT_REMEDIATION",
+  "run_id": "NOX-V16-M3-20261029-R12-GLOBAL",
+  "existing_error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+  "root_cause": "A completed automation run/HOLD-only report was wrongly treated as TASK DONE before independently accepted fixed x/n.",
+  "physical_change": "R12_EXIT_GATE_P0_20261029 PREPENDED to existing 15 active G1–G5 prompts; 15/15 updated and readback verified; previous R11/R10 and role scope preserved.",
+  "anti_recidivism": "Before DONE verify x/n=n/n, owner accepted exact source SHA/tree, required security contracts and immutable Git readback. Otherwise INCOMPLETE plus exact checkpoint and owners.",
+  "automation_roles": 15,
+  "readback_roles": 15,
+  "enabled_roles": 15,
+  "shared_register": {
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "observed_blob_sha1": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "mutated_by_M3": false,
+    "writer": "T02/C",
+    "status": "PENDING_T02_CAS_READBACK"
+  },
+  "t02_action": {
+    "automation_id": "6ae2af4f6c448191932f01b35fa364c1",
+    "requested_run_now": true,
+    "run_recorded_status": "completed",
+    "common_register_updated": false
+  },
+  "project_criteria": {
+    "M3": "3/12",
+    "pct": 25,
+    "unchanged": true
+  },
+  "restrictions": "T06 sole source writer; T02 sole shared writer; no EXE/NSIS/GitLab CI/E07, preserve 729/729 and 34/34"
+}
