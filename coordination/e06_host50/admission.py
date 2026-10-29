@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 BASE_COMMIT = "0b3a7d435be735148d64171deb9027093a89646e"
 BASE_TREE = "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+GIT_SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 ROUTE = re.compile(r"[a-z][a-z0-9]*(?:[._][a-z0-9]+)*\Z")
 TASKS = tuple(f"NIP01-{i:02}" for i in range(1, 51))
 # Immutable, SOURCE-only route/owner/risk floor from PR #27 exact HEAD
@@ -271,14 +272,61 @@ class Host50Admission:
     its OWN existing handler AFTER admission, then pass back native ACK evidence.
     """
     def __init__(self, catalog: dict, binding_map: dict, *, signing_key: bytes,
-                 allowed_origins: set[str], active_tree: str, capabilities: dict[str, Capability]):
+                 allowed_origins: set[str], active_tree: str, capabilities: dict[str, Capability],
+                 source_attestation: dict | None = None, native_source_verifier=None):
         self.audit = audit_registry(catalog, binding_map)
         if not isinstance(signing_key, bytes) or len(signing_key) < 32:
             raise ValueError("NATIVE_SECRET_REQUIRED")
         if not allowed_origins or any(validate_origin(x) != x for x in allowed_origins):
             raise ValueError("EXACT_NATIVE_ORIGIN_SET_REQUIRED")
-        if active_tree != BASE_TREE or self.audit["baselineDrift"]:
+        # BASE_TREE records the immutable historical PACK01 provenance; it is
+        # NOT the accepted tree of the current integrated loader source.
+        # Preserve legacy baseline-only tests, but never admit a different
+        # tree without a separately sealed native/owner source attestation.
+        if self.audit["baselineDrift"]:
             raise Hold("WHOLE_TREE_SOURCELOCK_NOT_RECONCILED")
+        if active_tree == BASE_TREE and source_attestation is None:
+            self.source_tree = BASE_TREE
+        else:
+            keys = frozenset({"sourceHead", "sourceTree", "ownerReceiptSha256",
+                              "ownerMapBaseCommit", "ownerMapBaseTree",
+                              "nativeApproved", "seal"})
+            if (type(active_tree) is not str or not GIT_SHA1.fullmatch(active_tree) or
+                type(source_attestation) is not dict or
+                frozenset(source_attestation) != keys):
+                raise Hold("NATIVE_SOURCE_ATTESTATION_REQUIRED")
+            proof = {k: v for k, v in source_attestation.items() if k != "seal"}
+            if (type(proof["sourceHead"]) is not str or
+                not GIT_SHA1.fullmatch(proof["sourceHead"]) or
+                type(proof["sourceTree"]) is not str or
+                proof["sourceTree"] != active_tree or
+                type(proof["ownerReceiptSha256"]) is not str or
+                not SHA256.fullmatch(proof["ownerReceiptSha256"]) or
+                proof["ownerMapBaseCommit"] != BASE_COMMIT or
+                proof["ownerMapBaseTree"] != BASE_TREE or
+                proof["nativeApproved"] is not True):
+                raise Hold("NATIVE_SOURCE_ATTESTATION_MISMATCH")
+            # A Git receipt hash alone is not proof of owner approval.
+            # The existing native host must verify the owner receipt, the
+            # Git commit-to-tree binding and its immutable SourceLock.
+            try:
+                expected_seal = hmac.new(signing_key, canonical(proof),
+                                         hashlib.sha256).hexdigest()
+            except (TypeError, ValueError, UnicodeError) as exc:
+                raise Hold("NATIVE_SOURCE_ATTESTATION_INVALID") from exc
+            seal = source_attestation["seal"]
+            if (type(seal) is not str or not SHA256.fullmatch(seal) or
+                not hmac.compare_digest(seal, expected_seal)):
+                raise Hold("NATIVE_SOURCE_ATTESTATION_SIGNATURE_INVALID")
+            if not callable(native_source_verifier):
+                raise Hold("NATIVE_SOURCE_VERIFIER_MISSING")
+            try:
+                approved = native_source_verifier(dict(proof))
+            except Exception as exc:
+                raise Hold("NATIVE_SOURCE_VERIFIER_FAILED") from exc
+            if approved is not True:
+                raise Hold("NATIVE_SOURCE_OWNER_APPROVAL_MISSING")
+            self.source_tree = active_tree
         self.key = signing_key
         self.origins = frozenset(allowed_origins)
         # Freeze executable policy after the audited catalog has been read.
@@ -345,7 +393,7 @@ class Host50Admission:
         if (not isinstance(c, Capability) or not row["sourceBinding"] or
             c.route != row["routeId"] or type(c.owner) is not int or
             c.owner != row["owner"] or
-            c.handler != row["sourceBinding"] or c.frozen_tree != BASE_TREE or
+            c.handler != row["sourceBinding"] or c.frozen_tree != self.source_tree or
             type(c.owner_receipt_sha256) is not str or
             not SHA256.fullmatch(c.owner_receipt_sha256) or
             c.integrated is not True or c.ready is not True):
@@ -478,7 +526,7 @@ class Host50Admission:
                     raise Denied("UNVERIFIED_NATIVE_SELECT_VALUE")
         run_id = str(uuid.uuid4())
         ticket = {"runId":run_id,"taskId":row["taskId"],"routeId":route,
-                  "owner":row["owner"],"sourceLockTree":BASE_TREE,
+                  "owner":row["owner"],"sourceLockTree":self.source_tree,
                   "ownerReceiptSha256":cap.owner_receipt_sha256,
                   "payloadSha256":hashlib.sha256(raw).hexdigest(),
                   "sessionScopeSha256":digest({"tenant":session.tenant,
