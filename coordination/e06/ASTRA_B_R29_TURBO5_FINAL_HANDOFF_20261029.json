@@ -1,0 +1,65 @@
+{
+  "schema": "ASTRA_B_R29_TURBO5_FINAL_SOURCE_HANDOFF",
+  "run_id": "ASTRA-B-R29-20261029-TURBO5-FINAL",
+  "scope": "NOX HELION EXPRESS INTEGRATOR LOADER SOURCE_ONLY",
+  "owner_release_sha": "3322a52b529a1351a0f6a9453dadb5c074131f0f",
+  "base_head_at_start": "f70376419f648e0b97772626dd516d0a40776232",
+  "real_subagents_started": 0,
+  "subagent_status": "SPAWN_TOOL_UNAVAILABLE",
+  "parallel_work_queues": 6,
+  "source_commits_this_run": 28,
+  "approaches_saved": {
+    "B1": 5,
+    "B2": 5,
+    "B3": 4,
+    "B4": 4,
+    "B5": 5,
+    "B6": 5
+  },
+  "final_source_commits": {
+    "B1": "76563dd1169c6e11fbf3f0a1caaec31970a589ab",
+    "B2": "4b2ce00b40b5b7c90f84b172a89dbcf498039b53",
+    "B3": "41b779d2d2419c4523be38bfc61185d5e581eae7",
+    "B4": "f06b2f05c08b5d6e2d7634c15da2ed37eb952a63",
+    "B5": "3ee3af5339682b33a33ef4ea7ea04663d13929d2",
+    "B6": "24116fe8f3bb00131d8ad2e3dfd2fa524eacb160"
+  },
+  "worker_receipts": {
+    "B1": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B1.json",
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO5_B1.json"
+    ],
+    "B2": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B2.json",
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO5_B2.json"
+    ],
+    "B3": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B3.json"
+    ],
+    "B4": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B4.json"
+    ],
+    "B5": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B5.json",
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO5_B5.json"
+    ],
+    "B6": [
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B6.json",
+      "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO5_B6.json"
+    ]
+  },
+  "source_checks": "EXACT_BLOB_READBACK_FOR_28_COMMITS",
+  "runtime_checks": "B3 JAVASCRIPT_FOCUSED_PASS; other source invariant checks only, private Python/CSharp/Windows NOT_RUN",
+  "external_docs": "OFFICIAL_SAFETENSORS_AND_PYPA_AND_GOOGLE_DOCS_CONTRACTS_READ",
+  "original_archive_729": "NOT_REVERIFIED",
+  "product_taskid_readiness": "N_D",
+  "remaining_real_source_patches": "UNMEASURED",
+  "report_gate": "ASTRA_A_SINGLE_WRITER_FOR_MASTER_E06_LESSON",
+  "drive_read": "PASS",
+  "drive_write": "NOT_ATTEMPTED_BY_B_TEAM",
+  "source_loss_scope": "ONLY P04/P05 E06 owner files and isolated run receipts changed",
+  "release": "HOLD",
+  "gitlab_write": false,
+  "windows_build": false,
+  "checklist_for_astra_a": "Reconcile exact owned diffs into latest frozen source by blob SHA; do not merge six whole divergent trees; keep native NOT_RUN; append compact RunID to master/E06/lesson with revision CAS and readback."
+}
