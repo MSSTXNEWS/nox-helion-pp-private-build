@@ -1,0 +1,154 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T100236MSK-05",
+  "recorded_utc": "2026-10-29T07:09:32.644Z",
+  "slot": "G5-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — WINDOWS LOADER/INSTALLER ONLY (not main NOX)",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "source_code_complete": "HOLD",
+  "report_gate": "HOLD_ASTRA_C_SHARED_DRIVE_READBACK_PENDING",
+  "release_status": "HOLD",
+  "accepted_product_TaskIDs_new": 0,
+  "historical_DONE": "PRESERVED_NOT_RECOUNTED",
+  "branch": "automation/r30/g5a/20261029T100236MSK-05",
+  "parent_branch": "automation/r30/g5a/20261029T090303MSK-04",
+  "parent_head_sha": "9263659d2978775472c68a6520179615f9f7edff",
+  "source_commit_sha": "e6455056b2556fb2c1ae159dacbeac3edbe78e24",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_touched": []
+  },
+  "references": {
+    "spec_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "historical_rules_read": "56/56 V16 §33 and exact 56-rule Git copy",
+    "historical_rule_file_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "active_sections": [
+      "§54",
+      "§55",
+      "§56",
+      "R29 loader-only override"
+    ],
+    "events_contract": "Contracts/events.v3.json",
+    "events_contract_blob_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "previous_receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T090303MSK-04.json",
+    "read_drive_docs": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ]
+  },
+  "frozen_snapshots": {
+    "directory": "coordination/astra/r30/snapshots/",
+    "count": 25,
+    "full_recursive_git_tree_manifests_read": 25,
+    "git_tree_manifests_truncated": 0,
+    "original_snapshot_files_modified": 0,
+    "every_file_body_read": false,
+    "physical_original_729_SHA256": "NOT_VERIFIED",
+    "all_results_index_collected_branches": 25,
+    "overlapping_r29_donors_not_merged": true
+  },
+  "change": {
+    "task_id": "G5A-R30-P05-EVENTS-OPTIONAL-ENVELOPE-05",
+    "task_kind": "SOURCE_DEFECT_FIX_NOT_ACCEPTED_PRODUCT_TASKID",
+    "source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_git_blob_sha": "5d8212c77ed72bfbe6456eefe5411935ea82fed1",
+    "postimage_git_blob_sha": "0af2faed570ba82c368c475b6e01346885dee8fe",
+    "source_commit_sha": "e6455056b2556fb2c1ae159dacbeac3edbe78e24",
+    "root_cause": "The read-only terminal projector checked core events.v3 keys but ignored schema-constrained optional metric fields. Malformed verified task.failed metadata such as temperature_c=-1, gpu_utilization_percent=101, negative MiB/index, invalid metric_value, and oversized metric_name/gpu_name was skipped as valid; a later valid P04 STOP could be shown as STOPPED. Terminal replay fingerprint also ignored changed optional numeric values.",
+    "fix": "Added fail-closed validation for eight optional events.v3 fields on same-run STOP/ERROR terminals, with JSON-schema ranges/types and nullable handling; included their values in event-id collision fingerprint. Preserved UTC, identity, replay, current error and future/HOLD policy. No native writer/approval added.",
+    "diff": "exactly one assigned source path, +20/-1 lines"
+  },
+  "targeted_test": {
+    "description": "One focused events.v3 optional-envelope and replay regression suite executed against exact JavaScript source in isolated V8",
+    "scope": "EXECUTED_V8_EXACT_GITHUB_SOURCE",
+    "preimage_red": "9/19 scenarios failed expected semantics (8 malformed optional fields plus changed optional-metric replay); malformed failure followed by verified STOP incorrectly yielded STOPPED",
+    "postimage_green": "19/19 state assertions PASS",
+    "post_git_readback": "19/19 state assertions PASS, Git blob SHA 0af2faed570ba82c368c475b6e01346885dee8fe",
+    "test_cases": [
+      "baseline",
+      "negative-temp",
+      "gpu-over-100",
+      "negative-memory-used",
+      "negative-memory-total",
+      "negative-gpu-index",
+      "wrong-metric-type",
+      "metric-name-65",
+      "gpu-name-257",
+      "valid-optional-boundaries",
+      "nullable-optional",
+      "changed-optional-replay",
+      "identical-optional-replay",
+      "future",
+      "invalid-calendar",
+      "event-id-129",
+      "seven-digit-UTC",
+      "unverified",
+      "historical-error"
+    ],
+    "new_repository_test_file_written": false,
+    "reason_no_test_file": "Owner lock allows four exact source paths and this G5-A receipt directory; no assigned test path. Regression was ephemeral and executed, not misrepresented as a committed test.",
+    "proposed_optional_test_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.optional-fields.test.mjs",
+    "proposal_only_no_write": true,
+    "csharp_dotnet": "NOT_RUN",
+    "native_node_cli": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "pre_receipt_branch_compare": "ahead 1, behind 0; only assigned source +20/-1"
+  },
+  "self_improvement": {
+    "previous_lesson_applied": "R30_G5A_VALIDATE_NATIVE_UTC_PRECISION_AND_OFFSET_NOT_ONLY_Z_MS",
+    "evidence": "Seven-digit +00:00 valid UTC, invalid calendar, future terminal, unverified and overlength EventID remained PASS in the same 19-state suite.",
+    "new_lesson_id": "R30_G5A_VALIDATE_OPTIONAL_SCHEMA_FIELDS_AND_REPLAY_FINGERPRINT",
+    "observation": "A required-envelope-only validator silently accepts known optional fields that violate the events.v3 JSON schema, and a replay fingerprint omitting optional numeric values treats modified receipts as identical.",
+    "method_change": "Cross-check every known optional schema property (type, limits, nullability) before accepting terminal observations, and fingerprint all provenance-significant optional fields; write RED fixtures with a malformed failure followed by a verified STOP.",
+    "future_prevention": "Retain a contract-derived optional-field boundary and idempotent-versus-mutated replay fixture, assert HOLD on malformed events without promoting any source-only test to accepted TaskID."
+  },
+  "astra_c_handoff": {
+    "shared_google_docs_writer": "Astra-C ONLY",
+    "instruction": "Read immutable Git receipt for R30-G5A-20261029T100236MSK-05 and append exact pre/post Git blobs, one scoped 19/19 V8 result, nine RED cases, new lesson, and continued PRODUCT_HOLD to master/E06/lessons using CAS+readback. Preserve all historical DONE; do not increase accepted TaskID or percentages.",
+    "shared_google_docs_worker_write": "NOT_PERFORMED_POLICY",
+    "shared_drive_append_status": "HOLD_ASTRA_C_ONLY"
+  },
+  "readiness": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "overall": "N/D",
+    "no_false_100": true
+  },
+  "forbidden_writes": {
+    "PR162": false,
+    "main": false,
+    "shared_R30": false,
+    "other_owner_files": false,
+    "DriveAdapters": false,
+    "SafeRunReports": false,
+    "GoogleDocs": false
+  }
+}
