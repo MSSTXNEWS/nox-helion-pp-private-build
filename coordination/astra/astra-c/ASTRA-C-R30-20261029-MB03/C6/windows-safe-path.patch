@@ -1,6 +1,6 @@
 --- a/coordination/e06/verify_integration.py
 +++ b/coordination/e06/verify_integration.py
-@@ -15,7 +15,11 @@
+@@ -15,7 +15,12 @@
  )
  
 -def safe_path(p):
