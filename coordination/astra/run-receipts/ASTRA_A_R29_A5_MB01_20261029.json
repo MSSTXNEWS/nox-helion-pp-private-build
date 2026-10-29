@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A5-MB01-20261029",
+  "owner": "A5",
+  "branch": "astra/r29-a03-20261029",
+  "taskId": "P03 no RUNNING progress publication after persisted cancellation",
+  "prePostGitBlobs": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "pre": "cb48e90bf9ede51e96e3a706c6a77faf81d142c1",
+      "post": "29c97e201a99de897acccc273d73611d81e0ec46",
+      "commit": "0ddf3e867ac9fe5d74900d59b3015bb106091796"
+    }
+  ],
+  "sourceStaticAssertions": "3/3 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 1,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "1/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
