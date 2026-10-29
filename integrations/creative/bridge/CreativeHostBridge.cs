@@ -39,10 +39,11 @@ public partial class MainWindow
         {
             // STOP is not accepted merely because Kill was requested. The
             // existing worker must actually exit before success is reported.
-            var stopped=await StopCreativeWorkerAsync();
-            if (stopped)
+            var stopResult=await StopCreativeWorkerAsync();
+            if (stopResult=="STOPPED" || stopResult=="NO_ACTIVE_WORKER")
                 PostMessage(new {kind="creativeResult",requestId,ok=true,
-                    data=new {status="STOPPED",source="NATIVE_WORKER_EXIT_VERIFIED"}});
+                    data=new {status=stopResult,source=stopResult=="STOPPED"
+                        ? "NATIVE_WORKER_EXIT_VERIFIED" : "NATIVE_NO_ACTIVE_WORKER"}});
             else
                 PostMessage(new {kind="creativeResult",requestId,ok=false,
                     error="CREATIVE_STOP_NOT_CONFIRMED"});
@@ -427,7 +428,7 @@ public partial class MainWindow
         catch(Exception ex){WriteLog("CREATIVE_PROJECTOR "+ex.GetType().Name);}
     }
 
-    private async Task<bool> StopCreativeWorkerAsync()
+    private async Task<string> StopCreativeWorkerAsync()
     {
         // Hold the same existing start/write gates so a simultaneous dispatch
         // cannot restart the worker while STOP is being verified.
@@ -438,6 +439,10 @@ public partial class MainWindow
             try
             {
                 var worker=_creativeWorker;
+                // Pending requests with no worker can be queued for startup;
+                // do not claim they were stopped before their owner confirms.
+                if (worker is null && !_creativePending.IsEmpty)
+                    return "STOP_UNCONFIRMED";
                 if (worker is not null)
                 {
                     try
@@ -451,7 +456,7 @@ public partial class MainWindow
                         if (!worker.HasExited)
                         {
                             WriteLog("CREATIVE_WORKER_STOP_EXIT_NOT_CONFIRMED");
-                            return false;
+                            return "STOP_UNCONFIRMED";
                         }
                     }
                     catch (Exception ex)
@@ -459,7 +464,7 @@ public partial class MainWindow
                         // Preserve in-flight request receipts on timeout/Kill
                         // failure; an unverified worker may still be alive.
                         WriteLog("CREATIVE_WORKER_STOP_UNCONFIRMED "+ex.GetType().Name);
-                        return false;
+                        return "STOP_UNCONFIRMED";
                     }
                     if (ReferenceEquals(_creativeWorker,worker))
                         _creativeWorker=null;
@@ -472,7 +477,7 @@ public partial class MainWindow
                         PostMessage(new {kind="creativeResult",requestId=pending,
                             ok=false,error="STOPPED_BY_USER"});
                 }
-                return true;
+                return worker is null ? "NO_ACTIVE_WORKER" : "STOPPED";
             }
             finally { _creativeWriteGate.Release(); }
         }

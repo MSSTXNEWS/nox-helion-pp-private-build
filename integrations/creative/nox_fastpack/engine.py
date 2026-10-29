@@ -6,6 +6,7 @@ without an explicit user action. The canonical HOME and its assets are untouched
 """
 from __future__ import annotations
 import json
+import hashlib
 import re
 import shutil
 import subprocess
@@ -31,6 +32,8 @@ MODEL_CATALOG = [
     ("kokoro-82m", "Kokoro 82M TTS", "voice", "hexgrad/Kokoro-82M", "varies"),
 ]
 KINDS = ("movie", "cartoon2d", "cartoon3d", "anime", "adult18", "video", "photo", "3d", "voice", "sound", "slides", "site", "code", "memory", "learning")
+MAX_CREATIVE_IMPORT_BYTES = 256 * 1024 * 1024  # Existing WPF native import budget
+MAX_CREATIVE_WORKFLOW_BYTES = 2_000_000  # Bounded local ComfyUI graph
 TERMS = {"фильм":"movie", "кино":"movie", "мультик":"cartoon2d", "мультфильм":"cartoon2d", "аниме":"anime", "хентай":"adult18", "18+":"adult18", "видео":"video", "ролик":"video", "фото":"photo", "изображен":"photo", "картинк":"photo", "3д":"3d", "3d":"3d", "озвуч":"voice", "музык":"sound", "презентац":"slides", "сайт":"site", "код":"code", "программ":"code", "памят":"memory", "обучен":"learning"}
 
 class StudioError(Exception):
@@ -41,7 +44,15 @@ def _get(url: str, *, payload=None, timeout=20):
                   headers={"Content-Type":"application/json"} if payload is not None else {},
                   method="POST" if payload is not None else "GET")
     with urlopen(req, timeout=timeout) as res:
-        return json.loads(res.read(8_000_000).decode("utf-8"))
+        # Read one byte beyond the trusted response budget. Never accept a
+        # valid JSON *prefix* while dropping trailing untrusted provider data.
+        wire=res.read(8_000_001)
+        if len(wire)>8_000_000:
+            raise ValueError("NOX_PROVIDER_JSON_OVERSIZE")
+        result=json.loads(wire.decode("utf-8"))
+        if type(result) is not dict:
+            raise ValueError("NOX_PROVIDER_JSON_OBJECT_REQUIRED")
+        return result
 
 class Studio(CreativeExtensions):
     """Local provider adapter; use through a trusted NOX host, not public internet."""
@@ -57,8 +68,19 @@ class Studio(CreativeExtensions):
         self._assemble_lock=threading.Lock()
 
     def _project(self, project_id: str):
-        if not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I): raise StudioError("Invalid project ID")
-        p=self.projects/project_id; p.mkdir(parents=True,exist_ok=True); return p
+        if not isinstance(project_id,str) or not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I):
+            raise StudioError("Invalid project ID")
+        # Never follow an existing projects junction/symlink or redirected
+        # project folder when writing editable user films.
+        if self.projects.is_symlink() or not self.projects.resolve().is_relative_to(self.root):
+            raise StudioError("NOX projects root is redirected")
+        p=self.projects/project_id
+        if p.is_symlink() or (p.exists() and not p.resolve().is_relative_to(self.projects.resolve())):
+            raise StudioError("NOX project path is redirected")
+        p.mkdir(parents=True,exist_ok=True)
+        if not p.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("NOX project creation escaped data root")
+        return p
 
     @staticmethod
     def _within(root:Path, path:Path):
@@ -77,10 +99,92 @@ class Studio(CreativeExtensions):
         try: import trimesh; return True
         except ImportError: return False
 
+    @staticmethod
+    def _digest_file(path):
+        digest=hashlib.sha256()
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(4*1024*1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _model_receipt_ok(self, model_id, repository, *, verify_hashes=False, allow_legacy=False):
+        # A standalone RECEIPT.json is NOT evidence of installed weights.
+        # This only reads the existing Studio folder; it never downloads.
+        root=self.models/model_id
+        receipt=root/"RECEIPT.json"
+        try:
+            if (self.models.is_symlink() or root.is_symlink() or receipt.is_symlink()
+                    or not receipt.is_file()):
+                return False
+            if receipt.stat().st_size > 65536:
+                return False
+            meta=json.loads(receipt.read_text(encoding="utf-8"))
+            if not isinstance(meta,dict):
+                return False
+            legacy=meta.get("schema") is None
+            if (legacy and not allow_legacy) or (
+                    not legacy and meta.get("schema")!="NOX-CREATIVE-WEIGHTS-SHA256-V1"):
+                return False
+            if (meta.get("model")!=model_id
+                    or (legacy and meta.get("source")!="https://huggingface.co/"+repository)
+                    or (not legacy and meta.get("repository")!=repository)
+                    or not isinstance(meta.get("revision"),str)
+                    or not re.fullmatch(r"[0-9a-f]{40}",meta["revision"])):
+                return False
+            files=meta.get("files")
+            if not isinstance(files,list) or not 1<=len(files)<=256:
+                return False
+            seen=set()
+            for item in files:
+                if not isinstance(item,dict):
+                    return False
+                name=item.get("filename")
+                if (not isinstance(name,str) or len(name)>240 or name in seen
+                        or "\\" in name or not re.search(r"\.(safetensors|gguf|ckpt|bin|pth)$",name,re.I)):
+                    return False
+                relative=Path(name)
+                if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+                    return False
+                seen.add(name)
+                if type(item.get("bytes")) is not int or item["bytes"]<=0:
+                    return False
+                if not legacy and (not isinstance(item.get("sha256"),str)
+                        or not re.fullmatch(r"[a-f0-9]{64}",item["sha256"])):
+                    return False
+                upstream=item.get("upstream_sha256")
+                if not legacy and upstream is not None and (
+                        not isinstance(upstream,str) or
+                        upstream.lower()!=item["sha256"]):
+                    return False
+                file=root/relative
+                if file.is_symlink() or any(parent.is_symlink()
+                    for parent in list(file.parents) if parent!=root and root in parent.parents):
+                    return False
+                if not file.is_file() or file.stat().st_size!=item["bytes"]:
+                    return False
+                if verify_hashes and (legacy or self._digest_file(file)!=item["sha256"]):
+                    return False
+            return True
+        except (OSError,ValueError,TypeError,UnicodeError):
+            return False
+
     def catalog(self):
-        return {"models":[{"id":a,"name":b,"category":c,"repository":d,"vram":e,
-                          "url":"https://huggingface.co/"+d,"installed":(self.models/a/"RECEIPT.json").is_file()}
-                          for a,b,c,d,e in MODEL_CATALOG],"categories":KINDS}
+        def card(a,b,c,d,e):
+            current=self._model_receipt_ok(a,d)
+            legacy=(not current and self._model_receipt_ok(a,d,allow_legacy=True))
+            return {"id":a,"name":b,"category":c,"repository":d,"vram":e,
+                    "url":"https://huggingface.co/"+d,"installed":bool(current or legacy),
+                    "checksum":"ON_DEMAND" if current else
+                               "LEGACY_UNVERIFIED" if legacy else "HOLD"}
+        return {"models":[card(a,b,c,d,e) for a,b,c,d,e in MODEL_CATALOG],
+                "categories":KINDS}
+
+    def verify_model(self,model_id):
+        model=self._model(model_id)
+        if not self._model_receipt_ok(model_id,model[3],verify_hashes=True):
+            raise StudioError("Installed model weights or SHA-256 receipt do not match")
+        return {"status":"VERIFIED_LOCAL_SHA256","model":model_id,
+                "note":"Local weight bytes match the receipt, not a remote publisher signature"}
 
     def _model(self, model_id):
         selected=next((m for m in MODEL_CATALOG if m[0]==model_id),None)
@@ -98,33 +202,83 @@ class Studio(CreativeExtensions):
 
     def download(self, model_id, filenames, revision, license_confirmed=False):
         model=self._model(model_id)
-        if not license_confirmed:raise StudioError("Confirm license, size and storage before download")
+        if license_confirmed is not True:raise StudioError("Confirm license, size and storage before download")
         if not revision or not re.fullmatch(r"[0-9a-f]{40}",revision):raise StudioError("Pin a model revision from variants()")
-        if not isinstance(filenames,list) or not filenames:raise StudioError("Choose one or more exact weight files")
+        if not isinstance(filenames,list) or not 1<=len(filenames)<=256 or len(set(map(str,filenames)))!=len(filenames):
+            raise StudioError("Choose unique exact weight files")
         try: from huggingface_hub import HfApi,snapshot_download
         except ImportError as exc:raise StudioError("Install optional huggingface_hub") from exc
         info=HfApi().model_info(model[3],revision=revision,files_metadata=True)
-        valid={s.rfilename for s in info.siblings or []}
-        if any(not isinstance(x,str) or x not in valid or x.startswith("/") or ".." in Path(x).parts or "\\" in x for x in filenames):
+        valid={s.rfilename:s for s in info.siblings or []}
+        if info.sha!=revision:
+            raise StudioError("Pinned model repository revision changed")
+        if any(not isinstance(x,str) or x not in valid or len(x)>240 or x.startswith("/")
+               or ".." in Path(x).parts or "\\" in x
+               or not re.search(r"\.(safetensors|gguf|ckpt|bin|pth)$",x,re.I)
+               for x in filenames):
             raise StudioError("Unapproved weight filename")
-        target=self.models/model_id;target.mkdir(parents=True,exist_ok=True)
+        # Never let an existing junction/symlink redirect HF snapshots outside
+        # the trusted NOX model root. No removal of existing user files.
+        if self.models.is_symlink() or (self.models.exists()
+                and not self.models.resolve().is_relative_to(self.root)):
+            raise StudioError("NOX model directory is redirected")
+        target=self.models/model_id
+        if target.is_symlink():
+            raise StudioError("Selected model directory is redirected")
+        target.mkdir(parents=True,exist_ok=True)
         snapshot_download(repo_id=model[3],revision=revision,allow_patterns=filenames,local_dir=str(target),max_workers=2)
         files=[]
         for f in filenames:
-            p=self._within(target,target/f)
-            if not p.is_file():raise StudioError("Download incomplete: "+f)
-            files.append({"filename":f,"bytes":p.stat().st_size})
-        receipt={"model":model_id,"revision":revision,"files":files,"source":"https://huggingface.co/"+model[3]}
-        (target/"RECEIPT.json").write_text(json.dumps(receipt,indent=2),encoding="utf-8")
-        return {"status":"DOWNLOADED","receipt":receipt,"note":"Weights downloaded, but inference backend may need setup"}
+            candidate=target/f
+            if (candidate.is_symlink() or any(parent.is_symlink()
+                    for parent in candidate.parents if parent!=target and target in parent.parents)):
+                raise StudioError("Downloaded weight file path is redirected: "+f)
+            p=self._within(target,candidate)
+            if not p.is_file() or p.stat().st_size<=0:
+                raise StudioError("Downloaded weight file missing or unsafe: "+f)
+            expected=getattr(valid[f],"size",None)
+            if expected is not None and p.stat().st_size!=expected:
+                raise StudioError("Downloaded weight length mismatch: "+f)
+            local_digest=self._digest_file(p)
+            hub_lfs=getattr(valid[f],"lfs",None)
+            hub_digest=(hub_lfs.get("sha256") if isinstance(hub_lfs,dict)
+                        else getattr(hub_lfs,"sha256",None))
+            if hub_digest is not None and (
+                    not isinstance(hub_digest,str) or
+                    not re.fullmatch(r"[a-fA-F0-9]{64}",hub_digest) or
+                    local_digest!=hub_digest.lower()):
+                raise StudioError("Downloaded weight SHA-256 differs from Hub metadata: "+f)
+            files.append({"filename":f,"bytes":p.stat().st_size,
+                          "sha256":local_digest,"upstream_sha256":hub_digest})
+        receipt={"schema":"NOX-CREATIVE-WEIGHTS-SHA256-V1",
+                 "model":model_id,"repository":model[3],"revision":revision,
+                 "files":files,"source":"https://huggingface.co/"+model[3]}
+        # No success receipt is published until every selected local file was
+        # checked. Keep a previous approved receipt if the new write fails.
+        tmp=target/("RECEIPT."+uuid.uuid4().hex+".tmp")
+        try:
+            tmp.write_text(json.dumps(receipt,indent=2),encoding="utf-8")
+            tmp.replace(target/"RECEIPT.json")
+        finally:
+            if tmp.is_file():tmp.unlink()
+        return {"status":"DOWNLOADED","receipt":receipt,
+                "note":"Local weights SHA-256 recorded; model execution still requires an approved backend"}
 
     def _text(self, prompt, format_json=False):
         model=self.ollama_model
         if not model:
             try: tags=_get(self.ollama+"/api/tags",timeout=3).get("models",[])
             except (OSError,URLError,ValueError) as exc:raise StudioError("Ollama offline") from exc
-            if not tags:raise StudioError("Select/download an Ollama chat model")
-            model=tags[0].get("name","")
+            if type(tags) is not list:
+                raise StudioError("Ollama model catalog is malformed")
+            names=[row.get("name") for row in tags if type(row) is dict
+                   and type(row.get("name")) is str and 0<len(row["name"])<=200]
+            if not names:
+                raise StudioError("Select/download an Ollama chat model")
+            model=names[0]
+        if type(model) is not str or not 0<len(model)<=200 or any(
+                ord(c)<33 or ord(c)==127 for c in model):
+            raise StudioError("Invalid local Ollama model identity")
         try:
             result=_get(self.ollama+"/api/generate",{"model":model,"prompt":prompt,"stream":False,
                  **({"format":"json"} if format_json else {})},timeout=300)
@@ -147,8 +301,13 @@ class Studio(CreativeExtensions):
                      f"Format: {kind}. User story: {prompt}")
         try: data=json.loads(self._text(instruction,True))
         except json.JSONDecodeError as exc:raise StudioError("Storyboard LLM returned invalid JSON") from exc
-        if not isinstance(data,dict) or not isinstance(data.get("scenes"),list) or not data["scenes"]:raise StudioError("Invalid scenes")
-        data["scenes"]=data["scenes"][:int(scenes)]
+        if not isinstance(data,dict) or not isinstance(data.get("scenes"),list):
+            raise StudioError("Invalid scenes")
+        chosen=data["scenes"][:int(scenes)]
+        if (len(chosen)!=int(scenes)
+                or any(type(scene) is not dict for scene in chosen)):
+            raise StudioError("Storyboard scenes incomplete or malformed")
+        data["scenes"]=chosen
         (folder/"storyboard.json").write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
         # A real editable SRT timing draft, only from model-provided dialogue.
         def srt_stamp(seconds):
@@ -197,16 +356,26 @@ class Studio(CreativeExtensions):
 
     def workflow(self,workflow_name,node_id,prompt):
         if not re.fullmatch(r"[a-zA-Z0-9_.-]{1,100}\.json",workflow_name):raise StudioError("Unsafe workflow name")
-        path=self._within(self.workflows,self.workflows/workflow_name)
-        if not path.is_file():raise StudioError("Install a ComfyUI API-format workflow first")
-        graph=json.loads(path.read_text(encoding="utf-8"))
+        candidate=self.workflows/workflow_name
+        if candidate.is_symlink():
+            raise StudioError("ComfyUI workflow symlink is not approved")
+        path=self._within(self.workflows,candidate)
+        if (not path.is_file() or not 0<path.stat().st_size<=MAX_CREATIVE_WORKFLOW_BYTES):
+            raise StudioError("Missing/oversized local ComfyUI API workflow")
+        try: graph=json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError,UnicodeError) as exc:
+            raise StudioError("Invalid local ComfyUI API workflow") from exc
+        if type(graph) is not dict:
+            raise StudioError("ComfyUI API workflow must be an object")
         node=graph.get(str(node_id))
         if not isinstance(node,dict) or not isinstance(node.get("inputs"),dict) or "text" not in node["inputs"]:
             raise StudioError("Explicit text node ID required")
         node["inputs"]["text"]=str(prompt)[:5000]
         try: data=_get(self.comfy+"/prompt",payload={"prompt":graph,"client_id":"nox_helion"},timeout=30)
         except (URLError,OSError,ValueError) as exc:raise StudioError("ComfyUI unavailable/rejected: "+str(exc)) from exc
-        if not data.get("prompt_id"):raise StudioError("ComfyUI did not queue a job")
+        if (type(data.get("prompt_id")) is not str or
+                not re.fullmatch(r"[a-fA-F0-9-]{10,64}",data["prompt_id"])):
+            raise StudioError("ComfyUI returned an invalid queue receipt")
         return {"status":"QUEUED","prompt_id":data["prompt_id"],"workflow":workflow_name}
 
     def history(self,prompt_id):
@@ -227,13 +396,40 @@ class Studio(CreativeExtensions):
         state=self.history(prompt_id)
         if state["status"] != "COMPLETE" or asset not in state["files"]:
             raise StudioError("Only completed, reported ComfyUI assets may be imported")
-        name=asset["filename"]
-        if not re.fullmatch(r"[^/\\]{1,220}",name):raise StudioError("Bad output filename")
+        name=asset.get("filename")
+        if (type(name) is not str or not re.fullmatch(r"[^/\\:]{1,220}",name)
+                or name in (".","..")):
+            raise StudioError("Bad output filename")
+        subfolder=asset.get("subfolder","")
+        if (type(subfolder) is not str or len(subfolder)>240 or
+                subfolder.startswith(("/","\\")) or "\\" in subfolder or ":" in subfolder or
+                (subfolder and any(part in ("",".","..") for part in subfolder.split("/")))):
+            raise StudioError("Unsafe ComfyUI output subfolder")
+        if asset.get("type","output") not in ("output","temp","input"):
+            raise StudioError("Unapproved ComfyUI media source type")
         folder=self._project(project_id)/"assets";folder.mkdir(parents=True,exist_ok=True)
         output=folder/(uuid.uuid4().hex[:8]+"_"+name)
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
-        with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("wb") as out:shutil.copyfileobj(inp,out)
-        return {"status":"IMPORTED","file":str(output),"bytes":output.stat().st_size}
+        # Never stream an unlimited remote response into the NOX user disk.
+        # Stage a bounded file and publish it only after successful EOF.
+        limit=MAX_CREATIVE_IMPORT_BYTES
+        temporary=folder/("."+uuid.uuid4().hex+".download")
+        received=0
+        try:
+            with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,temporary.open("xb") as out:
+                while True:
+                    chunk=inp.read(min(1024*1024,limit-received+1))
+                    if not chunk:break
+                    received+=len(chunk)
+                    if received>limit:
+                        raise StudioError("ComfyUI asset exceeds local 256 MiB import limit")
+                    out.write(chunk)
+            if received<=0:
+                raise StudioError("ComfyUI returned an empty asset")
+            temporary.replace(output)
+        finally:
+            if temporary.exists():temporary.unlink()
+        return {"status":"IMPORTED","file":str(output),"bytes":received}
 
     def assemble(self,project_id,clips,soundtrack="",subtitle_file=""):
         with self._assemble_lock:
@@ -257,6 +453,9 @@ class Studio(CreativeExtensions):
         manifest=work/"concat.txt"
         manifest.write_text("".join("file '"+p.name+"'\n" for p in parts),encoding="utf-8")
         output=folder/"NOX_MOVIE_FINAL.mp4"
+        # Preserve the previous successful film until the entire new render
+        # has completed; FFmpeg -y must write to a unique staging MP4.
+        staged=folder/(".NOX_MOVIE_"+uuid.uuid4().hex+".mp4")
         cmd=["ffmpeg","-hide_banner","-loglevel","error","-y","-f","concat","-safe","0","-i",str(manifest)]
         if soundtrack:
             audio=self._within(folder,folder/soundtrack)
@@ -272,9 +471,14 @@ class Studio(CreativeExtensions):
         cmd += ["-c:v","copy"]
         if soundtrack:cmd += ["-c:a","aac","-shortest"]
         if subtitle_file:cmd += ["-c:s","mov_text"]
-        cmd += ["-movflags","+faststart",str(output)]
-        self._exec(cmd,3600)
-        if not output.exists() or not output.stat().st_size:raise StudioError("Empty MP4 output")
+        cmd += ["-movflags","+faststart",str(staged)]
+        try:
+            self._exec(cmd,3600)
+            if not staged.exists() or not staged.stat().st_size:
+                raise StudioError("Empty MP4 output")
+            staged.replace(output)
+        finally:
+            if staged.exists():staged.unlink()
         return {"status":"RENDERED","path":str(output),"bytes":output.stat().st_size,"clips":len(clips)}
 
     def _exec(self,argv,timeout):
@@ -299,14 +503,24 @@ class Studio(CreativeExtensions):
                 if self._active_process is proc:self._active_process=None
 
     def stop(self,interrupt_comfy=False):
-        """Cancel this Studio's active FFmpeg; Comfy interruption separately consented."""
+        """Verify this Studio's FFmpeg exit; never infer Comfy interruption."""
+        if type(interrupt_comfy) is not bool:
+            raise StudioError("ComfyUI interruption requires an explicit native boolean")
         self._stop_event.set()
         with self._process_lock:proc=self._active_process
         ffmpeg_running=bool(proc and proc.poll() is None)
-        if ffmpeg_running:proc.kill()
-        result={'status':'STOP_REQUESTED' if ffmpeg_running else 'NO_ACTIVE_LOCAL_RENDER',
-                'ffmpeg_cancelled':ffmpeg_running,'comfy_interrupted':False}
-        if interrupt_comfy:
+        confirmed=False
+        if ffmpeg_running:
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+                confirmed=proc.poll() is not None
+            except (OSError,subprocess.TimeoutExpired):
+                confirmed=proc.poll() is not None
+        result={'status':'STOPPED' if confirmed else
+                         'STOP_UNCONFIRMED' if ffmpeg_running else 'NO_ACTIVE_LOCAL_RENDER',
+                'ffmpeg_cancelled':confirmed,'comfy_interrupted':False}
+        if interrupt_comfy is True:
             try:
                 _get(self.comfy+'/interrupt',payload={},timeout=10)
                 result['comfy_interrupted']=True
@@ -344,6 +558,7 @@ class Studio(CreativeExtensions):
         if action=="status":return self.status()
         if action=="stop":return self.stop(request.get("interrupt_comfy",False))
         if action=="catalog":return self.catalog()
+        if action=="verify_model":return self.verify_model(request.get("model_id",""))
         if action=="variants":return self.variants(request.get("model_id",""))
         if action=="download":return self.download(request.get("model_id",""),request.get("filenames",[]),request.get("revision",""),request.get("license_confirmed",False))
         if action=="route_chat":return self.chat_route(request.get("text",""))
