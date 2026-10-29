@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import math
 import re
 import threading
 import time
@@ -202,19 +203,34 @@ class ConsentGatedSip:
         if not all(callable(x) for x in
                    (self.provider, self.user_approval, self.provider_quote_verify)):
             raise P02Error('SIP_PROVIDER_QUOTE_OR_CONSENT_HOLD')
-        if not isinstance(quote,CallQuote) or quote.expires_at <= time.time():
-            raise PermissionError('Expired SIP quote')
+        def require_fresh_quote():
+            # Provider verification and the native consent dialog may block.
+            # Recheck the original quote after each callback, not only on entry.
+            if (not isinstance(quote, CallQuote)
+                    or type(quote.expires_at) not in (int, float)
+                    or not math.isfinite(quote.expires_at)
+                    or quote.expires_at <= time.time()):
+                raise PermissionError('Expired SIP quote')
+        require_fresh_quote()
+        if stop.is_set():
+            raise Cancelled('CALL_STOP_BEFORE_START')
         with self._lock:
+            require_fresh_quote()
             if quote.quote_id in self._used: raise PermissionError('Call quote already consumed')
             # The price and number must be independently bound to a real provider
             # quote; a caller-constructed CallQuote is NOT sufficient authority.
             if self.provider_quote_verify(scope,quote) is not True:
                 raise PermissionError('Provider quote verification required')
+            require_fresh_quote()
+            if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_APPROVAL')
             # approval callback MUST be the native consent dialog, not page JS.
             if self.user_approval(scope,quote) is not True:
                 raise PermissionError('Native user confirmation required')
+            require_fresh_quote()
+            if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
             self._used.add(quote.quote_id)
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
+        require_fresh_quote()
         return self.provider(scope,quote,stop)
 
 

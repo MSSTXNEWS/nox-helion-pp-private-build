@@ -11,3 +11,7 @@ Command: PYTHONPATH=Packages/P02/worker-python python -m unittest test_ollama_pr
 Remaining ready source: A05 SIP quote freshness/STOP donor, plus A04 exact SQLite schema/native-origin proof admission. Native host/provider composition and Windows same-SHA verification are later distinct obligations, not substitutes for these ready source fixes. VoiceSession/consent/source originals unchanged. No cross-owner integration/build/CI.
 
 Lesson: transplant strict transport and terminal snapshots while retaining the newer typed error overlay; consumer mutation after yield must never redefine an already validated completion state.
+
+## Append-only donor provenance correction (PASS09)
+
+The current R27 A04 runtime donor blob is dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd, confirmed by authenticated GitHub readback of astra/r27-a04-20261029 and exact equality to the reused local donor bytes. The earlier 1908f8c41c4c86da0b9772b61356a63316c45158 reference above was stale. Production source, pre/post receipt hashes, tests and saved PASS08 commit are unaffected. The ChatBridge donor blob remains 19632f3a0d2abbd94a58dfa2af86db299347b87e.
