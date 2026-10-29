@@ -1,0 +1,25 @@
+{
+  "schema": "NOX_V16_MANUAL2_R26_FOCUSED_HEAD_SOURCE_QA",
+  "run_id": "NOX-V16-MANUAL2-20261029-R26-FOCUSED-TEST-HEAD",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "task_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "canon_revision": "60",
+  "R20_manual_blob": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+  "PR162_current_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+  "gate_source_pre_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85",
+  "fix": "Replace focused test PASS check with existing strict _consistent_source_heads(test, head) validation; no new helper and no secret writes",
+  "local_regression": "17/17 source-equivalent Python tests PASS using real temporary Git; exact byte candidate tests NOT_RUN",
+  "native_windows": "NOT_RUN",
+  "component_accepted": false,
+  "owner": "T06 sole canonical writer, T02 sole shared journal writer",
+  "owner_action": "T06 exact PRE and Git CAS; T08 independent SAME HEAD after integration; no SOURCE_READY before P01-P05/Host50",
+  "original_source_729_unmodified": true,
+  "security": [
+    "STOP",
+    "ACL",
+    "SourceLock",
+    "native consent",
+    "NO-LOSS"
+  ],
+  "no_build": true
+}
