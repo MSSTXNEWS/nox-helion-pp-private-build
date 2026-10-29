@@ -1,0 +1,359 @@
+{
+  "schema": "NOX_V16_G2A_R26_M2M3_AUXILIARY_PINNED_PREP_V1",
+  "runId": "NOX-V16-G2A-HOST50-202610300044-R27",
+  "dateUTC": "2026-10-29T21:44:02.275Z",
+  "pinnedSourceHead": "d8e13c639ce2ba48459a66c9bc8bdbc398754f37",
+  "pinnedTree": "e751a4831b8cfc71d0d76556f4777b57c7ad5097",
+  "role": "G2-A supporting M2/M3; no TaskID changes; no shared PR162 writes",
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon": "whole §33/56 + §§54–56/R29 fetched",
+    "registerSHA": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "registerCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "activeErrorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "masterRevision": "AHj4eMRH4s02CnscyxLfXvbnCpYVof0vTbD_eicB_A5BxLpF4iU9F-I89O1S4q6BI4VoCfsWUwHL5QNuR788S6tdIMCbU1fqVQH8odcggoU",
+    "e06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessonsRevision": "AHj4eMRCqBU1PeuHIsbSn2ZbS0FHMAGPdsKUQkVxIcFCusLXEMJ7RGNs01dNHfDY9ezkQ_yBo9hbfhlFMJhIR8JGspcIgOvikriTjzsWeU4",
+    "C34Revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "mapSHA": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "catalogSHA": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "admissionSHA": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "mobileSHA": "e1f14ea075e9a384346757d7fd23c9a61745200c"
+  },
+  "physicalProof": {
+    "checks": {
+      "exact50": true,
+      "canonicalTasks": true,
+      "canonicalRouteOwnerRisk": true,
+      "uniqueRoutes": true,
+      "unbound11": true,
+      "native14": true,
+      "pendingContainsMissing": true,
+      "pendingExtraThree": true,
+      "noFakeRelease": true,
+      "securityMarkers": true,
+      "mobileEpochUnverified": true
+    },
+    "passed": 11,
+    "failed": 0,
+    "kind": "read-only structural source-security cross-check; QA test vectors PREPARED only"
+  },
+  "unboundRoutes": [
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "sourceBinding": null,
+      "status": "SOURCE_UNBOUND",
+      "next": "Manual #1/T06 exact original owner handler+PRE/CAS+ACL/consent/source attestation"
+    }
+  ],
+  "nativePendingCases": [
+    {
+      "taskId": "NIP01-07",
+      "routeId": "chat.rag",
+      "owner": 2,
+      "risk": "safe",
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.rag_context",
+      "sourceStage": "DESCRIPTOR_ONLY",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P02 RAG SID/ACL; cross-tenant and fake citations denied",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
+      "sourceStage": "DESCRIPTOR_ONLY",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P02 native capture+ASR/TTS+STOP; revoke mic permission mid-call",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "risk": "dangerous",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P04 original GPU worker + model/dataset rights+consent; STOP and missing GPU",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "risk": "safe",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P04 original evaluation + checkpoint/holdout; reject fake metrics",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
+      "sourceStage": "DESCRIPTOR_ONLY",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P02 native provider + SID/ACL; reject cross-principal call records",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 owner media+native picker; deny page path and unscoped playback",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "risk": "safe",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 original subtitle handler+picker; deny traversal and stale selection",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 original browser opener; reject javascript/file URL and foreign origin",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "risk": "safe",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 native bookmark store; reject foreign-tenant data",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P04 licensed installed weights; deny unlicensed model/false generation",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 signed update/rollback; deny revoked dangerous consent",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 native picker scoped backup; deny cross-user files and failed restore",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "P01 privileged bounded control; deny raw shell/expired consent",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "risk": "sensitive",
+      "sourceBinding": null,
+      "sourceStage": "UNBOUND",
+      "qaStage": "NOT_RUN",
+      "qaAccepted": false,
+      "positive": "E06 original private TLS/origin/CSRF; revoke peer permission after final advertise",
+      "negative": "Current exact frozen SHA: deny cross-SID, wrong route/owner, forged source/ACK, missing native consent, unsafe origin or STOP (as applicable)"
+    }
+  ],
+  "knownGap": {
+    "taskId": "NIP01-50",
+    "path": "coordination/e06/adapters/g2_space_mobile.py",
+    "PRE": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "detail": "No final native peer consent attestation after second host.advertise; previous R23 owner patch exists and is not integrated."
+  },
+  "progress": {
+    "M2_sourceReady": "0/11",
+    "M3_nativeAccepted": "0/14",
+    "legacyT04": "34/34 historical",
+    "legacySourceZIP": "729/729 historical",
+    "deltaQaAccepted": 0,
+    "product": "N/D",
+    "sourceReady": false
+  },
+  "errorLesson": {
+    "ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "action": "Separate static source proof vs original owner method vs native QA; avoid stale snapshots and premature DONE",
+    "remaining": "11 source bindings, 14 native checks"
+  },
+  "nextOwners": {
+    "manual1": "11 owner methods, E06/P02 consent; sole PR162 CAS",
+    "manual3": "P04 original GPU/evaluation/images owner donor",
+    "manual2": "14 native positive/negative exact-head checks",
+    "T02": "shared journal only after immutable receipt confirmed"
+  },
+  "notRun": [
+    "Windows native tests",
+    "GitLab",
+    "CI",
+    "EXE",
+    "E07",
+    "R21 toolkit",
+    "R22 toolkit"
+  ],
+  "sourceCodeModified": false
+}
