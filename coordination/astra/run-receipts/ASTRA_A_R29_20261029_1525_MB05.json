@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB05",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P02 reject blank/oversized/truncated SIP quote; drop stale callbacks after destroy",
+  "sourceCommits": [
+    "aada1ec273708e4832c7ca7b6f7a8ad3b4547a6a"
+  ],
+  "sourceTest": "Source quote/consent and disposal guards PASS",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub own-file CAS and SHA readbacks; source gates are not Windows E07",
+  "lesson": "Only confirmed source effects and immutable preimages count; no mock as native PASS."
+}
