@@ -1,6 +1,10 @@
 /* Owner E01 · native-only route dispatcher. Never equate a click to a host ACK. */
 const ROUTE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-// Mirror the immutable native PACK01 owner/risk floor. Every sensitive or\n// dangerous approved route requires native consent here as defense in depth.\n// Native host still independently enforces ACL, consent and signed ACK.\nconst NATIVE_SENSITIVE = new Set([\n  "chat.history",
+// Mirror the immutable native PACK01 owner/risk floor. Every sensitive or
+// dangerous approved route requires native consent here as defense in depth.
+// Native host still independently enforces ACL, consent and signed ACK.
+const NATIVE_SENSITIVE = new Set([
+  "chat.history",
   "chat.attach",
   "chat.voice",
   "models.pull",
@@ -21,7 +25,8 @@ const ROUTE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
   "system.backup",
   "system.pc_control",
   "mobile.connect"
-]);\nconst LEGACY_SENSITIVE = /^(?:system\.(?:restart|uninstall|clean|delete)|(?:sip|phone)\.|files\.delete|models\.remove)/i;
+]);
+const LEGACY_SENSITIVE = /^(?:system\.(?:restart|uninstall|clean|delete)|(?:sip|phone)\.|files\.delete|models\.remove)/i;
 const denied = reason => Object.freeze({ok:false,reason});
 export function createP01RouteDispatcher(port) {
   if (!port || typeof port.isAvailable !== 'function' || typeof port.invokeRoute !== 'function')
