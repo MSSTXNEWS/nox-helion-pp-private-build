@@ -1,0 +1,113 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V1",
+  "run_id": "G7-B-20261029T0610MSK-PACK02-DATA-BOUNDARY-01",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer only",
+  "status": "SOURCE_PATCH_SAVED_REPORT_GATE_HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T0610MSK-PACK02-DATA-BOUNDARY-01",
+  "base_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "ownership_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "exclusive_owner": true
+  },
+  "inputs": {
+    "consolidated_rules_read": "56/56 (V16 section 33 and pinned Git copy)",
+    "latest_v16_sections_read": [
+      "54",
+      "55",
+      "56",
+      "R29 scope correction"
+    ],
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "r30_snapshots_registered_in_index": 25,
+    "full_snapshot_tree_independent_read": "NOT_COMPLETED_GITHUB_DIRECTORY_ENUMERATION_UNAVAILABLE",
+    "shared_drive_docs_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ]
+  },
+  "changed_source": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "preimage_git_blob_sha": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+    "postimage_git_blob_sha": "1ee8e495909e642a8f104c46d23632de157e789e",
+    "commit_sha": "f51e5ba34812dac5259eeebd3d03028c56fa9137",
+    "change": [
+      "CSV quoted-field strict parser: rejects trailing bytes after quote and embedded unquoted quotes",
+      "JSON flatten preserves own __proto__ key with null-prototype result and rejects aliased dotted paths",
+      "URL inspect rejects embedded username/password userinfo"
+    ],
+    "existing_routes_retained": 50,
+    "new_routes": 0
+  },
+  "targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-data-boundary.test.mjs",
+    "git_blob_sha": "f3ee678d58df9aa10b0b26fa47ce700d36033ecf",
+    "commit_sha": "127828b175b260670503155a73c090306a3fbb49",
+    "command": "node --test proposals/NOX-PACK02-50/g7b-data-boundary.test.mjs",
+    "node_command_execution": "NOT_RUN",
+    "source_derived_v8_checks": {
+      "observed": true,
+      "total": 9,
+      "passed": 9,
+      "preimage_red_reproduction": 2,
+      "postimage_behavior_checks": 6,
+      "static_url_guard_check": 1
+    },
+    "url_runtime_case": "NOT_RUN_Code_Mode_V8_does_not_expose_URL",
+    "windows_native_exe_tests": "NOT_RUN"
+  },
+  "prior_lesson_applied": "R29_OBSERVABLE_BOUNDARY_WITH_DISJOINT_OWNERS: pin preimage and validate actual object/content at input boundary; one owner, one focused regression, one receipt.",
+  "new_lesson": {
+    "id": "R30_G7B_CSV_QUOTE_JSON_PROTOTYPE_URL_USERINFO_BOUNDARIES",
+    "observed_error": "Prior PACK02 CSV parser silently tolerated quote bytes after closing quote and in unquoted fields; flattened JSON with __proto__ silently lost own key. URL inspect offered no explicit userinfo rejection.",
+    "root_cause": "CSV quote-state transitions were under-specified, JSON result used a normal prototype-bearing object, and URL security checked scheme but not embedded credentials.",
+    "correction": "Fail closed on CSV state violations, use an own-property-safe null-prototype accumulator with path-collision rejection, and reject URL userinfo before generating inspection output.",
+    "prevention": "Every input transform must include malformed/ambiguous adversarial input plus a valid regression; record preimage RED/postimage green separately from native runtime not executed; never claim license/internet or Windows acceptance from static tests."
+  },
+  "owner_handoff": {
+    "topic": "Licensed internet adapters through original Host50",
+    "status": "HOLD_FOR_ORIGINAL_HOST_OWNER",
+    "owner_file": "proposals/NOX-PACK01-50/native_bridge.py",
+    "observed_git_blob_sha": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "request": "Original Host50 owner must approve trusted native route admission, legal license/version/provider receipt, credentials isolation and permission/cancellation tests before any internet adapter is enabled; PACK02 does not modify native_bridge or introduce a competing host.",
+    "original_host_changed": false
+  },
+  "no_loss": {
+    "historical_DONE_preserved": true,
+    "source_archives_untouched": true,
+    "original_25_snapshots_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "shared_R30_branch_untouched": true,
+    "shared_Google_Docs_untouched": true,
+    "PACK01_untouched": true,
+    "D02_untouched": true
+  },
+  "acceptance": {
+    "pack02_existing_source_routes": 50,
+    "pack02_new_routes": 0,
+    "pack02_native_host_admitted": "NOT_VERIFIED",
+    "product_weighted_percent": "N/D",
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "WINDOWS_EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GITLAB_CI": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "DRIVE_WRITE_AND_READBACK": "ASTRA_C_ONLY_NOT_PERFORMED",
+    "REPORT_GATE": "HOLD",
+    "RELEASE": "HOLD"
+  },
+  "instruction_to_Astra_C": "Single-writer aggregator may ingest this immutable Git receipt and append to common Google Docs only with revision CAS and exact RunID readback; no shared docs mutated by G7-B."
+}
