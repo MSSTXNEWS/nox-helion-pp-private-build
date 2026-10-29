@@ -228,5 +228,12 @@ class G6BNativeLeaseR30Tests(unittest.TestCase):
         self.assertNotIn("pc_execute_preview(", pc_source)
 
 
+    def test_native_sid_and_lease_are_excluded_from_debug_repr(self):
+        scope = session("helion.chat")
+        description = repr(scope)
+        self.assertNotIn(SID, description)
+        self.assertNotIn(LEASE, description)
+
+
 if __name__ == "__main__":
     unittest.main()
