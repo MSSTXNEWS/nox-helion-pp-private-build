@@ -1,0 +1,24 @@
+{
+  "schema": "NOX_V16_G3A_R16_IMMUTABLE_ERRATA_V1",
+  "run_id": "NOX-V16-G3A-20261030T012913MSK-R16",
+  "previous_commit": "28836c143c00c90b989d8fce2c4ecf8457155b2c",
+  "status": "INCOMPLETE",
+  "reason": "Post-save readback identified double-escaped byte literals in generated Python proposal and fixtures. The generator would compute incorrect Git blob SHA, and red/green tests would construct incorrect tensor payloads and Unicode probes.",
+  "action": "One owner-safe atomic correction, no product source touched; apply lesson exact source readback before owner handoff.",
+  "pre": {
+    "generator_blob": "09433d52524d2d1002eba45be6cd7586928fbd77",
+    "test_blob": "c5b4f937fd9dc6f84c232b90dfb9b2d39070aa3e"
+  },
+  "post_contract": {
+    "generator": "git_blob uses Python byte literal b\"\\0\" (one backslash in source)",
+    "fixture": "two b'\\x00' actual four-byte payloads",
+    "unicode": "one escaped \\ud800 in JSON fixture and Python tensor string"
+  },
+  "regression": "JS exact semantic literal source check; Python full module NOT_RUN in environment; manual #3 must run full targeted tests",
+  "parent_receipt": "coordination/automation/v16/G3-A/NOX-V16-G3A-20261030T012913MSK-R16/NOX-V16-G3A-20261030T012913MSK-R16.json",
+  "source_pre": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+  "source_proposed_post": "11c447b6d22c4dde4bcd7aa9d311a8cd3ee2b200",
+  "owner": "manual #3 for owner approval, T06 only PR162 integration, T08 independent QA, T02 shared register",
+  "qa_accepted_delta": 0,
+  "notes": "Original receipt immutable; this errata supersedes its test fixture executable bytes only."
+}

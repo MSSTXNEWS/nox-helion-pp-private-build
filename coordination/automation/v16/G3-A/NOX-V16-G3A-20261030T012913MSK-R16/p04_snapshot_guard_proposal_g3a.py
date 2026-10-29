@@ -28,7 +28,7 @@ CHANGES = [
 ]
 
 def git_blob(data: bytes) -> str:
-    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
 
 def propose(source: bytes) -> bytes:
     if git_blob(source) != SOURCE_PRE_BLOB:

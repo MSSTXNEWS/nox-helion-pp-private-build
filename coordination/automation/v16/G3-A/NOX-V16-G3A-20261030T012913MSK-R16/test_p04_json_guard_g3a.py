@@ -23,7 +23,7 @@ class P04JsonSafetyG3A(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.config('{"model_type":"llama"}')
-        self.weights({"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}, b"\\x00" * 4)
+        self.weights({"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}, b"\x00" * 4)
 
     def config(self, raw):
         (self.root / "config.json").write_text(raw, encoding="utf-8")
@@ -49,13 +49,13 @@ class P04JsonSafetyG3A(unittest.TestCase):
         self.assertEqual((report["status"], report["reason"]), ("HOLD", "MODEL_METADATA_INVALID"))
 
     def test_g3a_rejects_nested_escaped_surrogate(self):
-        self.config(r'{"model_type":"llama","nested":{"key":"\\ud800"}}')
+        self.config(r'{"model_type":"llama","nested":{"key":"\ud800"}}')
         report = self.inspect()
         self.assertEqual((report["status"], report["reason"]), ("HOLD", "MODEL_METADATA_INVALID"))
 
     def test_g3a_rejects_surrogate_tensor_name(self):
-        self.weights({"\\ud800":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}},
-                     b"\\x00" * 4)
+        self.weights({"\ud800":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}},
+                     b"\x00" * 4)
         report = self.inspect()
         self.assertEqual((report["status"], report["reason"]),
                          ("HOLD", "MODEL_SAFETENSORS_HEADER_INVALID"))
