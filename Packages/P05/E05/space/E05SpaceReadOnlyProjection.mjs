@@ -292,6 +292,13 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   typeof e.message==='string' && e.message.length<=240 &&
   !/[\x00-\x1f\x7f]/.test(e.message) &&
   typeof e.evidence_verified==='boolean' &&
+  // Optional events.v3 fields are still schema-governed. A malformed replay
+  // sequence or bidi/control-laden error code cannot certify a terminal.
+  (!Object.prototype.hasOwnProperty.call(e,'event_sequence') ||
+    (Number.isSafeInteger(e.event_sequence) && e.event_sequence >= 1)) &&
+  (!Object.prototype.hasOwnProperty.call(e,'error_code') || e.error_code === null ||
+    (typeof e.error_code === 'string' &&
+      /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(e.error_code))) &&
   // Required events.v3 counters are present even for terminals with null progress.
   Object.prototype.hasOwnProperty.call(e,'numerator') &&
   Object.prototype.hasOwnProperty.call(e,'denominator') &&
@@ -310,6 +317,9 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
   const terminal=[];
   const seen=new Map();
+  // A single TaskID journal sequence cannot identify two distinct terminal
+  // events. This is a display HOLD, not a new writer or acceptance gate.
+  const seenTerminalSequence=new Map();
   // errors is the deduplicated, verified count for THIS bounded RunID journal,
   // not merely the most recent 30-second LIVE status window. An older native
   // failure must not silently turn into a false “0 errors” after it ages out.
@@ -343,6 +353,15 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     if (previous!==undefined) {
       if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
       continue; // Identical replay, counted once.
+    }
+    if (e.event_sequence !== undefined) {
+      // The original schema makes sequence optional; scope it to TaskID so
+      // independent native producers may safely use overlapping numbers.
+      const sequenceKey=JSON.stringify([e.task_id,e.event_sequence]);
+      const priorEventId=seenTerminalSequence.get(sequenceKey);
+      if (priorEventId !== undefined && priorEventId !== e.event_id)
+        return {state:'HOLD_EVENT_SEQUENCE_COLLISION',errors:null};
+      seenTerminalSequence.set(sequenceKey,e.event_id);
     }
     seen.set(e.event_id,fingerprint);
     if (e.event_type==='task.failed') runErrorCount++;
