@@ -233,7 +233,30 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     clearParticles();
   }
   function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
-  const onMotion=e=>{if(disposed)return;preference=!!e.matches;
+  const onMotion=e=>{
+    if(disposed)return;
+    const wantsReduced=!!e?.matches;
+    // G7-A R30: after an OS Reduced Motion pause, stale burst timers must
+    // neither fire immediately nor remain parked outside the resumed policy.
+    // Validate every new deadline before mutating any live D02 state.
+    if(preference&&!wantsReduced&&mode!=="REDUCED"){
+      let resumedAt;
+      try{resumedAt=time();}catch(_){return;}
+      if(!Number.isFinite(resumedAt)||resumedAt<0)return;
+      const policy=PROFILES[mode];
+      const bounds=each.map(orb=>{
+        const scale=orb.index===0?1:2.1;
+        return [resumedAt+policy.minimumBurstMs*scale,
+                resumedAt+policy.maximumBurstMs*scale];
+      });
+      if(bounds.some(pair=>!pair.every(Number.isFinite)))return;
+      each.forEach((orb,index)=>{
+        const [earliest,latest]=bounds[index];
+        orb.nextBurst=Number.isFinite(orb.nextBurst)
+          ?Math.min(latest,Math.max(earliest,orb.nextBurst)):earliest;
+      });
+    }
+    preference=wantsReduced;
     root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
     if(preference)sleep();else wake();};
   let listenerReady=false,motionReady=false,observer=null;
