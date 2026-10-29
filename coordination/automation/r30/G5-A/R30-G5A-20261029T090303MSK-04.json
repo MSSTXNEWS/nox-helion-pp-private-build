@@ -1,0 +1,151 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T090303MSK-04",
+  "recorded_utc": "2026-10-29T06:04:14.825Z",
+  "slot": "G5-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — Windows LOADER/INSTALLER ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "source_code_complete": "HOLD",
+  "release_status": "HOLD",
+  "accepted_product_TaskIDs_new": 0,
+  "historical_DONE": "PRESERVED_NOT_RECOUNTED",
+  "branch": "automation/r30/g5a/20261029T090303MSK-04",
+  "parent_branch": "automation/r30/g5a/20261029T080112MSK-03",
+  "parent_commit_sha": "1bfe6ddc7acf1b7294edcbd1dc1402c5083b8386",
+  "source_commit_sha": "9b3b442fbe0715adbbb5366dce1e66fab89eb5da",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_touched": []
+  },
+  "references": {
+    "spec_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "historical_rules_read": "56/56 from V16 §33",
+    "active_sections": [
+      "§54",
+      "§55",
+      "§56",
+      "§56 R29 loader-only override"
+    ],
+    "events_contract": "Contracts/events.v3.json",
+    "events_contract_blob_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "previous_receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T080112MSK-03.json",
+    "drive_docs_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ]
+  },
+  "frozen_snapshots": {
+    "directory_count": 25,
+    "git_tree_manifests_read": 25,
+    "truncated_tree_manifests": 0,
+    "read_original_full_file_bytes": false,
+    "snapshot_files_modified": 0,
+    "overlapping_r29_donors_not_merged": true,
+    "physical_original_729_SHA256": "NOT_VERIFIED"
+  },
+  "change": {
+    "source_taskid": "G5A-R30-P05-EVENTS-UTC-RFC3339-TICKS-04",
+    "task_kind": "SOURCE_DEFECT_FIX_NOT_ACCEPTED_PRODUCT_TASKID",
+    "source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_git_blob_sha": "b254d9e760ea4b658fd75ede79fa3419411d9b82",
+    "postimage_git_blob_sha": "5d8212c77ed72bfbe6456eefe5411935ea82fed1",
+    "source_commit_sha": "9b3b442fbe0715adbbb5366dce1e66fab89eb5da",
+    "root_cause": "Strict isoUtc accepted only Z timestamps with 0–3 fractional digits; valid RFC3339 UTC +00:00 and seven-digit DateTimeOffset timestamps were rejected as HOLD_MALFORMED_TERMINAL_TIMESTAMP, obscuring an otherwise valid verified STOP.",
+    "fix": "The existing UTC-only isoUtc validator now also accepts +00:00 and 1–9 fractional digits. Nonzero offsets, -00:00, invalid dates, >9 digits, future terminals and event-id replay conflicts remain HOLD. No bus writer/native authority added.",
+    "diff": "+3/-1 lines exactly one assigned source path"
+  },
+  "targeted_test": {
+    "description": "One focused events.v3 UTC timestamp regression suite on exact saved E05SpaceReadOnlyProjection.mjs in V8",
+    "scope": "ACTUALLY_EXECUTED_V8_EXACT_GITHUB_SOURCE",
+    "preimage_red": "three valid UTC scenarios incorrectly HOLD: 7-digit Z, 7-digit +00:00, zero-fraction +00:00; baseline Z STOPPED",
+    "postimage": "18/18 PASS",
+    "github_saved_postimage_readback": "18/18 PASS",
+    "test_cases": [
+      "baseline-Z",
+      "7-digit-Z",
+      "7-digit-plus0000",
+      "no-fraction-plus0000",
+      "9-digit-UTC",
+      "nonUTC-plus0100",
+      "unknown-negative-zero",
+      "invalid-calendar",
+      "too-precise",
+      "future-UTC",
+      "duplicate-idempotent",
+      "129-id",
+      "128-id",
+      "zero-sequence",
+      "sequence-collision",
+      "id-content-collision",
+      "unverified",
+      "error-historical"
+    ],
+    "native_node_cli": "NOT_RUN",
+    "csharp_dotnet": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "post_branch_compare": "ahead 1, behind 0, only assigned source file +3/-1 before receipt"
+  },
+  "ownership_test_policy": {
+    "new_repository_test_file_written": false,
+    "reason": "Owner lock assigns only four exact source paths and unique G5-A receipt directory; focused tests executed ephemerally without creating an unauthorized test path.",
+    "proposed_optional_test_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.utc-fixture.test.mjs",
+    "proposal_only_no_write": true
+  },
+  "self_improvement": {
+    "previous_lesson_applied": "R30_G5A_VALIDATE_CONTRACT_FIELD_BOUNDS_NOT_GENERIC_RUNID",
+    "evidence": "Identity length 128/129, replay collision and sequence checks remain PASS in the 18-case regression.",
+    "new_lesson_id": "R30_G5A_VALIDATE_NATIVE_UTC_PRECISION_AND_OFFSET_NOT_ONLY_Z_MS",
+    "observation": "A UTC-only validator that assumes browser millisecond-Z formatting rejects correct native DateTimeOffset/RFC3339 UTC serializations; valid STOP appears as a malformed terminal.",
+    "change_of_method": "Before modifying events.v3 view, compare date-time schema with both C# native serializer formats and WebView2 parser behavior; RED fixtures must cover Z and +00:00 with seven fractional digits, then verify timestamp order/HOLD controls.",
+    "future_prevention": "Keep one UTC-only RFC3339 regression fixture; do not convert timestamps to local time; ensure unchanged event identity/sequence/replay tests and exact Git blob readback."
+  },
+  "astra_c_handoff": {
+    "shared_google_docs_writer": "Astra-C only",
+    "instruction": "Read this immutable G5-A Git receipt and append RunID, real defect, SHA/targeted result, and new lesson to master/E06/lessons via CAS and readback. No product TaskID acceptance.",
+    "shared_drive_docs_worker_write": "NOT_PERFORMED_POLICY",
+    "shared_drive_append_status": "HOLD_ASTRA_C_ONLY"
+  },
+  "readiness": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "overall": "N/D",
+    "no_false_100": true
+  },
+  "forbidden_writes": {
+    "PR162": false,
+    "main": false,
+    "shared_R30": false,
+    "other_owner_files": false,
+    "DriveAdapters": false,
+    "SafeRunReports": false,
+    "GoogleDocs": false
+  }
+}
