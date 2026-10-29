@@ -1,0 +1,252 @@
+{
+  "schema": "NOX_V16_T09_OWNER_SAFE_IMMUTABLE_FREEZE_INPUT_GATE_R17",
+  "task_id": "T09",
+  "run_id": "NOX-V16-T09-20261029T182039MSK-R17-FREEZE-INPUT-GATE",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader ONLY",
+  "source_only": true,
+  "execution": {
+    "planned_start_msk": "2026-10-29T17:40:00+03:00",
+    "first_observed_msk": "2026-10-29T18:16:31+03:00",
+    "receipt_prepared_msk": "2026-10-29T18:20:39+03:00",
+    "actual_end_msk": "NOT_YET_OBSERVED",
+    "duration_seconds": null
+  },
+  "registry_git_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+  "registry_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+  "registry_state": {
+    "OPEN": 4,
+    "FIX_APPLIED_UNVERIFIED": 5,
+    "VERIFIED_CLOSED": 2,
+    "history_backfill_complete": false
+  },
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "errors_ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "action": "HANDOFF",
+      "reason": "T02 owns cumulative index/CAS; current full register consumed, no shared writes by T09",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "action": "APPLY",
+      "reason": "Live PR162 ref reread; old 46e09f... discarded as current after owner M1 commit e7b17b...",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "action": "HANDOFF",
+      "reason": "T06/Host50 + independent T08: native owner attestation and 13 route consent/STOP/ACL remain unverified",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "action": "HANDOFF",
+      "reason": "T06/G1-B: full P01-P05 accepted source contracts unavailable; T10 physically found zero MainWindow.xaml files in original 729 and current Git tree, so restoration-from-ZIP is invalid",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "action": "HANDOFF",
+      "reason": "T08 must independently verify fixture runner on accepted same SHA; prior patch exists but source verification incomplete",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "action": "ALREADY_VERIFIED",
+      "reason": "T07 physical original ZIP 729/729 PASS retained; source drift does not reopen original ZIP",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "action": "ALREADY_VERIFIED",
+      "reason": "T04 archive selection 34/34 DONE; donor branch decisions not integrated functional acceptance",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "APPLY",
+      "reason": "One scoped Git ACK+input gate and owner handoff, no fabricated frozen SHA, preserve T02-only Docs CAS",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLY",
+      "reason": "Physical SHA source delta checked and unique receipt committed; not a repeated HOLD-only report",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "HANDOFF",
+      "reason": "T06 8/8 still 1/8 after M1 source commit; its guard source fix is not full owner functional acceptance",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "HANDOFF",
+      "reason": "T08 closeout gate blob 56806f... exists; current e7b... requires fresh same-head P0/P1 disposition after owner acceptance",
+      "source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
+    }
+  ],
+  "cross_owner_index_git_blob": "dba5a0230fe4dd73b68095431f426c3de7111a8f",
+  "source_checkpoint": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "tree": "44377fc99428eec0fd8c451ed87ddede94eaba4f",
+    "live_ref_checked_msk": "2026-10-29T18:20:39+03:00",
+    "frozen": false,
+    "owner_acceptance": false,
+    "observed_prior_head": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "latest_owner_delta_commit": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "latest_owner_delta_message": "NOX V16 T06 M1: integrate real immutable PACK01 P02 owner route mapping; preserve native ACL and receipt",
+    "owner_changed_files": [
+      {
+        "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "pre_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+        "post_blob": "4d02549071fa645c4dc6789f3be2e276a1f530f6"
+      },
+      {
+        "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+        "pre_blob": "55086d3bf29b8c7f600346a9fe14729f93b440e4",
+        "post_blob": "368c0da31cd99155c24b5d7672f64a7036ee4720"
+      }
+    ],
+    "owner_receipt": {
+      "run_id": "NOX-V16-T06-20261029T181631MSK-M1-R12",
+      "blob": "b07e4d6974e9ed67a5911deccc76c32c213d3a00",
+      "status": "1/8; P01-P05, common_integration, accepted_head_manifest HOLD",
+      "runtime_python_tests": "NOT_RUN"
+    },
+    "p01_provenance": {
+      "independent_t10_run": "NOX-V16-T10-P01-PHYSICAL-20261029-R19",
+      "receipt_blob": "bec03aac158c4a0f7a1be8d14b8717b7706d6d74",
+      "finding": "No .xaml/.xaml.cs in original 729 ZIP or prior exact source tree; no automatic original ZIP MainWindow restore."
+    }
+  },
+  "original_sourcelock": {
+    "scope": "ORIGINAL_ARCHIVE_ONLY",
+    "status": "PASS_PRIOR_SIGNED",
+    "archive_bytes": 60364346,
+    "archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "parts_verified": "3/3",
+    "members_verified": "729/729",
+    "t07_owner_receipt_blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+    "t09_immutable_receipt_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+    "no_rehash_this_run": true
+  },
+  "t08_same_sha": {
+    "required_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "latest_known_r19_head": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "latest_known_r19_receipt_blob": "e832497a966d7d39aa908e70c61aff0faccd4512",
+    "status": "HOLD_DIFFERENT_SOURCE_SHA",
+    "t08_guard_blob": "56806fb744694b2dd146db88229597722953ddd9"
+  },
+  "t09_fixed_criteria": {
+    "done": 1,
+    "total": 6,
+    "previous_percent": 16.7,
+    "current_percent": 16.7,
+    "delta_pp": 0,
+    "remaining": 5,
+    "bar": "██░░░░░░░░",
+    "criteria": [
+      {
+        "criterion": 1,
+        "status": "HOLD",
+        "reason": "T06 current R12 owner acceptance 1/8; 8/8 signed head/tree/manifest absent"
+      },
+      {
+        "criterion": 2,
+        "status": "HOLD",
+        "reason": "Owner patches/manifest not all accepted, P01-P05/13 Host50 native outstanding"
+      },
+      {
+        "criterion": 3,
+        "status": "DONE",
+        "reason": "Physical original ZIP/729 SourceLock immutable T07 and T09 receipts; scope original only"
+      },
+      {
+        "criterion": 4,
+        "status": "HOLD",
+        "reason": "T08 R19 disposition on old 46e09f... not exact new e7b17b..."
+      },
+      {
+        "criterion": 5,
+        "status": "HOLD",
+        "reason": "No owner-approved immutable integrated HEAD/tree/manifest blob SHA"
+      },
+      {
+        "criterion": 6,
+        "status": "HOLD",
+        "reason": "No frozen SHA to transmit to T10/T11/T12"
+      }
+    ]
+  },
+  "one_minimum_verification": {
+    "scope": "LIVE_GIT_SOURCE_DELTA_AND_P02_ACL_NO_LOSS_STATIC",
+    "status": "PASS_SCOPED_ONLY",
+    "evidence": "Git PRE=46e09f..., POST=e7b17b...; git tree=44377fc...; changed two P02 source/test paths plus owner receipt; 0 deletions. Post blobs Git readback match R12. Source retains Mapping-based immutable route inspection, explicit exact owner=2 guard, route collision rejection, native scope/receipt guard and staged rollback. No native/Windows run.",
+    "tests_executed_by_t09": 0,
+    "not_proven": [
+      "P02 runtime tests",
+      "13 Host50 native owner attestations",
+      "P01-P05 functional acceptance",
+      "complete 968 blob manifest",
+      "T08 NO_CODE_BLOCKERS same-head",
+      "SOURCE_READY"
+    ]
+  },
+  "one_applied_lesson": "REF-DRIFT: re-read mutable PR162 before freeze. T06 source e7b17b... supersedes prior 46e09f...; original 729 SourceLock PASS persists independently; no old-HEAD T08 PASS carryover.",
+  "owner_action": {
+    "error_id": "ERR-SRC-004",
+    "owner": "T06/#1 + G1-B P01 and functional owners P02-P05; T08 independently verifies after acceptance",
+    "action": "On current e7b17b... or latest later PR162 source, supply signed T06 8/8 owner receipt with real P01 existing WPF host provenance, P02-P05 runnable owner test evidence, 13 Host50 native ownership/ACL/STOP/consent attestation, exact HEAD/tree/manifest blob and no-loss. Then T08 gives same-HEAD P0/P1 disposition; T09 signs integrated freeze WITHOUT awaiting T10.",
+    "handoff_issue": 177
+  },
+  "write_scope": {
+    "product_source_paths_changed_by_t09": 0,
+    "github_main_changed": false,
+    "pr162_changed_by_t09": false,
+    "shared_google_docs_changed_by_t09": false,
+    "private_t09_receipt_only": true
+  },
+  "frozen_head": null,
+  "frozen_tree": null,
+  "frozen_manifest_blob_sha": null,
+  "phase": {
+    "SOURCE": "CANDIDATE",
+    "INTEGRATED": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "next_writers": {
+    "T06": "sole canonical source",
+    "T08": "same-head independent P0/P1",
+    "T09": "final immutable freeze after owner acceptance",
+    "T02": "sole shared error register and Docs CAS writer",
+    "T10": "independent source QA AFTER T09",
+    "T11": "GitLab Free destination check AFTER SOURCE_READY"
+  },
+  "restrictions": [
+    "NO_EXE",
+    "NO_NSIS",
+    "NO_GITLAB_CI",
+    "NO_E07",
+    "NO_FORCE_PUSH",
+    "NO_SOURCE_BRANCH_CANDIDATES",
+    "NO_REHASH_729_WITHOUT_DRIFT"
+  ]
+}
