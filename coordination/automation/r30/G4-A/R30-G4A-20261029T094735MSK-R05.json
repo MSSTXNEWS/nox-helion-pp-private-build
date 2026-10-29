@@ -1,0 +1,170 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T094735MSK-R05",
+  "slot": "G4-A",
+  "task_id": "P04-G4A-R05-METADATA_REREAD_AFTER_SHARD_HASH_FAIL_CLOSED",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — WINDOWS LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "release_status": "HOLD",
+  "source_change": "COMMITTED_PENDING_RECEIPT_READBACK",
+  "product_task_accepted": false,
+  "source_ready": false,
+  "branch": "automation/r30/g4a/20261029T094735MSK-R05",
+  "parent_branch": "automation/r30/g4a/20261029T085818MSK-R04",
+  "parent_commit_sha": "46489e448a7e6308079d6233aba4b69e1965f4e4",
+  "code_head_commit_sha": "e9ffc2a5414dcef7dfef779328370a99e601ef03",
+  "code_commits": [
+    "017ff197ff6ec1bde3f16a50461885f9e6739f46",
+    "e9ffc2a5414dcef7dfef779328370a99e601ef03"
+  ],
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_first": true,
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "peer": "G4-B",
+    "only_owned_paths_modified": true
+  },
+  "rules": {
+    "consolidated_56_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "consolidated_56_git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "count_read": 56,
+    "sections_54_55_56_read_in_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "note": "56 rules are the verified consolidation, not proven verbatim ancient source; §54 SOURCE_ONLY overrides historical build instructions."
+  },
+  "historical": {
+    "A04": {
+      "ref": "astra/r29-a04-20261029",
+      "source_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+    },
+    "B1": {
+      "ref": "astra-b/r29-b1-20261029",
+      "source_git_blob_sha1": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f"
+    },
+    "B2": {
+      "ref": "astra-b/r29-b2-20261029",
+      "source_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+    },
+    "resolution": "Continue from latest verified sequential G4-A R04 source; historical overlapping snapshots left intact and unmerged.",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshots_indexed": 25,
+    "snapshot_root": "coordination/astra/r30/snapshots/",
+    "raw_archives_sha256": "NOT_VERIFIED",
+    "full_snapshot_file_bodies": "NOT_VERIFIED",
+    "original_729_physical_SHA": "NOT_VERIFIED",
+    "snapshots_changed": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "9f0d04647152dc415654eef29b937d3852b3d7a6",
+      "post_git_blob_sha1": "de30534ecfef79fd1744d5ebe0d2400dc7144f63",
+      "pre_sha256": "1f8f09a8835a714116211ac42c0a9649f3e50a5702d6c9ade78a7184369dc610",
+      "post_sha256": "8f366dc42a8cb4f52aa8f42850c41232fba9c82b5907d53058c1c4223c9d9a6e",
+      "commit": "017ff197ff6ec1bde3f16a50461885f9e6739f46"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "5a4976392e2cdea5a2b95ff42628e0b2bd2aeaaa",
+      "post_git_blob_sha1": "911be5823a273de11530be6def3c29a64bf60d64",
+      "pre_sha256": "1f5716368fa74f03bc386678ed8f0bf6f805a3f808a6b67435dfd7378f760747",
+      "post_sha256": "56d84705fd5bff2c768e9ede3b7d5ef4d1ac0138c2d46faf75453df1e088204e",
+      "commit": "e9ffc2a5414dcef7dfef779328370a99e601ef03"
+    }
+  ],
+  "code_delta": {
+    "reason": "The existing snapshot probe can spend a long time hashing large safetensors shards while config.json or model.safetensors.index.json is changed or newly published. Without a bounded metadata post-read check, it could expose a seemingly complete but inconsistent mixed-time observation.",
+    "changes": [
+      "Re-read and compare SHA-256 of bounded config.json after all shard SHA-256 and total_size checks.",
+      "For indexed snapshots, re-read and compare SHA-256 of original model.safetensors.index.json.",
+      "For originally unindexed snapshots, reject an index first published during the weight hash.",
+      "On any detected mismatch, return HOLD and clear weight_files/tensor_headers/observed fingerprint; preserve existing full-shard SHA and size logic."
+    ],
+    "caution": "A second read mitigates ordinary mutation/replacement; it is NOT an atomic multi-file filesystem lock or protection against an adversary changing files back between reads."
+  },
+  "focused_tests": {
+    "isolated_command": "python /tmp/g4a_r05_isolated.py && python -m py_compile /tmp/g4a_r05_isolated.py",
+    "scope": "ISOLATED_EXTRACTED_INSPECT_LOGIC_WITH_FAKE_WEIGHT_PARSER; NOT FULL REPOSITORY MODULE",
+    "result": "5/5 PASS",
+    "checked": [
+      "valid config.json modification during shard loop -> HOLD with zero partial evidence",
+      "valid index JSON modification during shard loop -> HOLD with zero partial evidence",
+      "index.json appearing mid-hash -> HOLD with zero partial evidence",
+      "unchanged indexed metadata -> LOCAL_FILES_PRESENT_ONLY, sha256 present and rights flags false",
+      "unchanged unindexed metadata -> LOCAL_FILES_PRESENT_ONLY, sha256 present and rights flags false"
+    ],
+    "authored_repo_test_methods": [
+      "test_g4a_r05_config_modified_during_shard_hash_holds_without_evidence",
+      "test_g4a_r05_index_modified_during_shard_hash_holds_without_evidence",
+      "test_g4a_r05_new_index_published_mid_hash_holds_without_evidence"
+    ],
+    "authored_tests_executed_in_original_module": false,
+    "full_P04_tests": "NOT_RUN",
+    "native_Windows_tests": "NOT_RUN",
+    "actual_GPU_training": "NOT_RUN",
+    "license_dataset_revision_attestation": "NOT_DONE",
+    "source_and_tests_exact_git_blob_readback": "PASS",
+    "changes_before_receipt": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "notes": "No GitLab/Windows CI, EXE or NSIS invoked."
+  },
+  "google_drive": {
+    "read": [
+      "NOX FIN ZAGR V16 §33, §§54–56",
+      "NOX_GROWTH_JOURNAL_MASTER_CONTINUATION_V16_20261028_R04",
+      "NOX Group B Task 14 E06 coordinator — run report",
+      "NOX Group B Task 14 E06 coordinator — self-improvement",
+      "NOX C34 Error Journal",
+      "NOX Group B Task 10 P04 RAG — self-improvement"
+    ],
+    "last_coordinator_delta": "ASTRA-C-R30-20261029T0927MSK-04",
+    "common_docs_modified": false,
+    "aggregator": "Astra-C ONLY",
+    "receipt_to_aggregate": "R30-G4A-20261029T094735MSK-R05"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_R05_RECHECK_BOUND_METADATA_AFTER_SLOW_SHARD_HASHING",
+    "prior_lesson_applied": "R04 preserve full-file SHA-256 separate from aggregate safetensors payload total_size and purge partial evidence on HOLD.",
+    "observed_gap": "R04 verified shards/index totals but never checked whether original config or shard index changed after the potentially long hashing loop.",
+    "implementation": "Add bounded config/index SHA256 readback and index publication detection before accepting LOCAL_FILES_PRESENT_ONLY.",
+    "verification": "5/5 isolated Python checks pass; 3 repository regression methods saved; full test module NOT_RUN.",
+    "process_change": "Use exact-owner Git pre/post blob and SHA-256 provenance; distinguish isolated behavior from full repo/native proof; do not mark PRODUCT DONE.",
+    "next": "Run existing tests/P04/test_model_snapshot_probe.py against pinned R05 owner branch in a source checkout and add native Windows handle/ACL verification before any release attestation."
+  },
+  "scope_guards": {
+    "no_PR162": true,
+    "no_main": true,
+    "no_common_R30_write": true,
+    "no_other_owner_paths": true,
+    "no_snapshots_modified": true,
+    "no_preflight_local_gpu": true,
+    "no_EXE": true,
+    "no_NSIS": true,
+    "no_Windows_CI": true,
+    "no_GitLab_execution": true,
+    "no_final_integration": true
+  },
+  "blockers": [
+    "Full real repository test module NOT_RUN; five isolated helper checks do not prove complete code behavior.",
+    "Cross-file metadata recheck is not an atomic snapshot lock; Windows path/handle and multi-GB race checks NOT_RUN.",
+    "Raw 729 original ZIP SHA-256, frozen complete snapshot bodies and rights/revision/GPU attestation NOT_VERIFIED.",
+    "E06 integration, independent E07, accepted EXE and release NOT_RUN."
+  ],
+  "completed_source_task_count_this_run": 0,
+  "provisional_source_patch_count_this_run": 1,
+  "project_completion_percentage": "N/D",
+  "conclusion": "HOLD — scoped source code updated on private branch; no claim of 100% completion or release."
+}
