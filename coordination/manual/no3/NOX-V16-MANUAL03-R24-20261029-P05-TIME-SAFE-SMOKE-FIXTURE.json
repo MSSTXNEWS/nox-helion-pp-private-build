@@ -1,0 +1,21 @@
+{
+  "run_id": "NOX-V16-MANUAL03-R24-20261029-P05-TIME-SAFE-SMOKE-FIXTURE",
+  "role": 3,
+  "task_ids": [
+    "P05 SPACE freshness"
+  ],
+  "error_id": "ERR-SRC-004",
+  "pre_head": "1065bb8894042ebd4fb7d5033d20586942a62456",
+  "test_path": "Packages/P05/Space/tests/Program.cs",
+  "pre_blob": "10a4e5b3b2d0b3b562d28bd34095fde1f6a915a1",
+  "post_blob": "16cf9bf1182244622e316e6f42a2de324a1e6f18",
+  "root_cause": "Fixed source_time 2026-10-28T20:00Z makes E05 LIVE test fail after 24h even if code is correct",
+  "fix": "Replace only test timestamp with runtime UTC minus ten minutes; preserve real source freshness rejection",
+  "focused_test": "Python simulated clock later than fixed date: RED old / GREEN relative-time PASS",
+  "native_dotnet": "NOT_RUN_NO_SDK",
+  "stage": "SOURCE_PREPARED; INTEGRATED NO; QA_ACCEPTED NO",
+  "T06": "Run existing P05 R16 smoke on exact owner SHA before source CAS",
+  "T08": "Independent same-head P05 source QA",
+  "T02": "Shared journal sole writer, deduplicate ERR-SRC-004",
+  "safety": "NO-LOSS, original 729, SourceLock, STOP/ACL/consent, no PR162 or EXE/NSIS/CI/E07"
+}

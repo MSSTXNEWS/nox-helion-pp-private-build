@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using NoxHelion.Space.E05;
 
 const int Cap = 8 * 1024 * 1024;
-const string Json = "{\"source_time\":\"2026-10-28T20:00:00Z\"}";
+// Use an offline fresh timestamp relative to execution time.\nvar Json = JsonSerializer.Serialize(new { source_time = DateTimeOffset.UtcNow.AddMinutes(-10) });
 static DateTimeOffset? SourceAt(JsonElement e) => e.GetProperty("source_time").GetDateTimeOffset();
 static HttpResponseMessage Reply(HttpContent content) => new(HttpStatusCode.OK) { Content = content };
 static void Pass(bool ok, string description)
