@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_M2_R36_REUSE_FIRST_FREE_SOURCE_CANDIDATES_V1",
+  "runId": "NOX-V16-M2-R36-THREE-BLOCKS-20261030",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "status": "OFFICIAL_UPSTREAM_REFERENCE_ONLY_NOT_IMPORTED_OR_INTEGRATED",
+  "budget": "source libraries free; model weights and hosting/hardware costs separate; no API expense claimed",
+  "policy": "owner approval + verified revision/license/sha256 + source tests + native tests before integration; DO NOT auto-download or replace canonical NOX",
+  "candidateCount": 8,
+  "candidates": [
+    {
+      "block": "P01",
+      "name": "Microsoft WebView2 WPF samples",
+      "upstream": "https://learn.microsoft.com/en-us/microsoft-edge/webview2/samples/",
+      "source": "https://github.com/MicrosoftEdge/WebView2Samples",
+      "license": "REVIEW_REQUIRED_AT_FILE_LEVEL",
+      "reuse": "reuse official WebView2 virtual-host mapping, NavigationStarting, WebMessageReceived patterns, NOT copy entire shell",
+      "integrationTarget": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "check": "exact trusted origin, consent, navigation revocation, WPF/PS5.1 runtime"
+    },
+    {
+      "block": "P01",
+      "name": "Microsoft WPF-Samples",
+      "upstream": "https://github.com/microsoft/WPF-Samples",
+      "license": "MIT_UNLESS_NOTED",
+      "reuse": "WPF DPI/reduced-motion/data-binding reference with NO D02/WOW overwrite",
+      "integrationTarget": "existing P01 WPF owner source only",
+      "check": "pin .NET target and original design approved paths"
+    },
+    {
+      "block": "P02",
+      "name": "Ollama local HTTP API",
+      "upstream": "https://docs.ollama.com/api",
+      "source": "https://github.com/ollama/ollama",
+      "license": "VERIFY_RELEASE_ARTIFACT",
+      "reuse": "native /api/tags /api/chat /api/pull streaming, existing P02 OllamaClient, no second model daemon",
+      "integrationTarget": "Packages/P02/worker-python/p02_runtime.py",
+      "check": "loopback, redirects, timeout, STOP, model digest, permissions"
+    },
+    {
+      "block": "P02",
+      "name": "faster-whisper",
+      "upstream": "https://github.com/SYSTRAN/faster-whisper",
+      "license": "MIT_SOURCE;WEIGHTS_SEPARATE_REVIEW",
+      "reuse": "local ASR callback into existing LocalVoicePipeline; no duplicate voice engine",
+      "integrationTarget": "Packages/P02/worker-python/p02_capabilities.py",
+      "check": "CPU/CUDA dependency and license per model; consent native mic"
+    },
+    {
+      "block": "P02",
+      "name": "Argos Translate",
+      "upstream": "https://github.com/argosopentech/argos-translate",
+      "license": "MIT_OR_CC0_SOURCE;MODEL_PACKAGES_SEPARATE_REVIEW",
+      "reuse": "local RU/ES translation callback behind existing voice pipeline",
+      "integrationTarget": "Packages/P02/worker-python/p02_capabilities.py",
+      "check": "licensed pinned .argosmodel, no automatic external download"
+    },
+    {
+      "block": "P04",
+      "name": "Hugging Face PEFT",
+      "upstream": "https://github.com/huggingface/peft",
+      "license": "Apache-2.0_SOURCE",
+      "reuse": "LoRA adapter APIs only via existing train_qlora.py, no new trainer",
+      "integrationTarget": "Packages/P04/train_qlora.py",
+      "check": "pin torch/transformers/peft/trl/bitsandbytes, model and data rights, VRAM"
+    },
+    {
+      "block": "P04",
+      "name": "safetensors",
+      "upstream": "https://huggingface.co/docs/safetensors/index",
+      "source": "https://github.com/huggingface/safetensors",
+      "license": "REVIEW_REQUIRED_AT_COMMIT",
+      "reuse": "safe_open security and format compatibility; reject unsafe pickle fallback",
+      "integrationTarget": "Packages/P04/model_snapshot_probe.py",
+      "check": "specific revision SHA, reject giant dims/nonfinite JSON, owner-aligned parser"
+    },
+    {
+      "block": "P05",
+      "name": "LibreHardwareMonitorLib",
+      "upstream": "https://github.com/LibreHardwareMonitor/LibreHardwareMonitor",
+      "license": "MPL-2.0_WITH_THIRD_PARTY_NOTICES",
+      "reuse": "read supported CPU/GPU temp/load/fan sensors through existing host E05 adapters",
+      "integrationTarget": "Packages/P05/E05/src/E05HostTelemetryFacade.cs",
+      "check": "driver/admin consent only when needed, DLL license duties, stale/power readings never fake"
+    }
+  ],
+  "versionPins": "PENDING; libraries not imported by QA",
+  "toolChecks": {
+    "internetUpstreamPages": "READ",
+    "dependenciesDownloaded": false,
+    "modelWeightsDownloaded": false,
+    "productSourceModified": false
+  },
+  "noLoss": "All historical DONE, SourceLock 729, D02/WOW200, 8 CoreID/5 Persona, STOP/ACL/consent preserved"
+}
