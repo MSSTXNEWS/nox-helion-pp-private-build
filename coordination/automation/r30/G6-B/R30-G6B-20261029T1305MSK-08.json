@@ -1,0 +1,173 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_IMMUTABLE_SOURCE_RECEIPT_R08",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER ONLY",
+  "slot": "G6-B",
+  "run_id": "R30-G6B-20261029T1305MSK-08",
+  "phase": "SOURCE_ONLY",
+  "status": "SOURCE_CANDIDATE_INTEGRATION_HOLD",
+  "source_task": {
+    "id": "G6B-R30-HOST50-ADVERTISE-OWNER-REGISTRY-SNAPSHOT-R08",
+    "accepted_product_TaskID": false,
+    "source_defect": "NoxPackHost.advertise checked each BoundPort identity only; a reentrant ready/live callback could mutate call/available/owner/evidence_id on same frozen BoundPort or a previously advertised route, without changing registry reference."
+  },
+  "inputs": {
+    "owner_lock": {
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+      "read_first": true,
+      "exclusive_paths": [
+        "coordination/e06/adapters/pc_control_owner_port.py",
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "receipt_dir": "coordination/automation/r30/G6-B/",
+      "test_file_explicit_assignment": false
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "consolidated_56_read": true,
+      "historical_verbatim_rules_verified": false
+    },
+    "spec": {
+      "google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "read_sections": [
+        54,
+        55,
+        56
+      ],
+      "read_R29_latest_override": true
+    },
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "frozen_donor_branches": 25,
+      "adopted_conflicting_donors": 0
+    },
+    "snapshots": {
+      "path": "coordination/astra/r30/snapshots/",
+      "full_recursive_git_trees_inspected": 25,
+      "truncated_trees": 0,
+      "three_original_part_git_blobs_consistent_all_25": true,
+      "original_part_git_blobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "original_part_bytes_read": false,
+      "physical_sha256_729_originals": "NOT_VERIFIED"
+    },
+    "google_drive_read_only": {
+      "master_errors": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "historical_C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "latest_coordinator_delta": "ASTRA-C-R30-20261029T1226MSK-07"
+    }
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "new_unique_branch": "automation/r30/g6b/R30-G6B-20261029T1305MSK-08",
+    "parent_branch": "automation/r30/g6b/R30-G6B-20261029T1202MSK-07",
+    "modified_paths": [
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "preimage_git_blob": "c5792c3ccdc35ccf5ce2dbc86e17c99345b5d5c2",
+    "postimage_git_blob": "cffd8d5b3860f35353636fef3a3801393c91b003",
+    "source_commit": "bafef5da1f966bfbf91069424e6d9be1686fbb63",
+    "source_git_readback": "PASS exact byte-for-byte content and blob",
+    "unchanged_second_owned_path": "coordination/e06/adapters/pc_control_owner_port.py",
+    "unchanged_second_owned_blob": "5f567effc336ca6611757e581841710450287a29",
+    "before_receipt_branch_compare": {
+      "ahead_by": 1,
+      "behind_by": 0,
+      "changed_paths": [
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ]
+    },
+    "change": "Snapshot all existing BoundPort objects, exact call/available callable identities, owner IDs, evidence receipts and registry cardinality before first advertisement callback; recheck at every native probe boundary, including after exceptions and before returning UI state. Reject drift with HostHold, preserve no-probe rule for dangerous routes."
+  },
+  "checks": {
+    "targeted_test": {
+      "command": "python /tmp/g6b_r08_advertise_owner_snapshot.py",
+      "kind": "isolated Python model of advertise owner registry snapshot, NOT imported production module",
+      "passed": 8,
+      "total": 8,
+      "status": "PASS",
+      "cases": [
+        "ordinary synchronous chat.stop path unchanged",
+        "same BoundPort call mutation blocked",
+        "same BoundPort available mutation blocked",
+        "same BoundPort owner mutation blocked",
+        "same BoundPort evidence_id mutation blocked",
+        "port deletion blocked",
+        "foreign port addition blocked",
+        "port instance replacement blocked"
+      ],
+      "persistent_test_file_committed": false,
+      "reason": "Owner lock assigns only two exact production source paths plus immutable receipt, NOT a test path."
+    },
+    "source_static": {
+      "kind": "GitHub source-specific prewrite checks and exact Git readback",
+      "passed": 13,
+      "total": 13,
+      "status": "PASS"
+    },
+    "canonical_route_policy": {
+      "path": "coordination/e06_host50/admission.py",
+      "git_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+      "exact_order_owner_risk": "50/50 PASS"
+    },
+    "real_windows_sid_token": "NOT_RUN",
+    "native_session_revocation": "NOT_RUN",
+    "native_consent": "NOT_RUN",
+    "live_STOP": "NOT_RUN",
+    "full_python_import": "NOT_RUN",
+    "physical_original_sha256": "NOT_VERIFIED",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN"
+  },
+  "lesson": {
+    "id": "G6B_R08_ADVERTISE_CAPABILITY_SNAPSHOT_NOT_ONLY_PORT_IDENTITY",
+    "applied_previous": "R07 pinned call, available, owner and receipt in execute; R08 applies the same defense to advertise where all earlier route capabilities remain mutable during later probes.",
+    "observation": "A frozen dataclass with object.__setattr__ can be mutated by a trusted/reentrant native availability callback; checking only self.ports[route] is port cannot detect changed sourceId, owner or callable, including an earlier advertised route.",
+    "improvement": "Snapshot the entire initially bound Host50 registry before calling any availability or revocation callbacks, and fail closed on content drift after each callback and before publishing capability UI. Keep the synchronous-owner boundary and do not infer native security from synthetic tests.",
+    "next": "Request explicit unique G6-B regression-test path; independent full-module test of advertise reentrancy on a real imported source; G6-A owner supplies Windows SID-bound revocation and consent attestation. Avoid cross-owner edits."
+  },
+  "proposals": [
+    {
+      "recipient": "Astra-C ownership maintainer",
+      "request": "Assign exact new G6-B owned test path proposals/NOX-PACK01-50/test_native_bridge_G6B_r08.py before any Git test write; current assigned_paths only two production files."
+    },
+    {
+      "recipient": "G6-A native Windows host",
+      "request": "Provide concrete native SID/token, live lease revocation and fresh dangerous consent tests on one pinned source tree, without editing G6-A paths from G6-B."
+    },
+    {
+      "recipient": "P02/E11 owners",
+      "request": "Verify pre-effect session revocation and owner callback behavior inside existing services; G6-B must not edit their files."
+    }
+  ],
+  "integrity": {
+    "forbidden_paths_modified": 0,
+    "foreign_source_paths_modified": 0,
+    "shared_R30_modified": false,
+    "main_modified": false,
+    "PR162_modified": false,
+    "old_DONE_preserved": true,
+    "original_snapshots_25_modified": false,
+    "shared_Google_Docs_modified": false,
+    "docs_writer": "Astra-C ONLY",
+    "DRIVE_WRITE_HOLD": true,
+    "merges": 0,
+    "builds": 0,
+    "product_accepted_TaskIDs": 0,
+    "weighted_progress": "N/D",
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  }
+}
