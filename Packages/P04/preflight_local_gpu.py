@@ -113,6 +113,10 @@ def _check_installed_metadata(report: dict) -> None:
                 UndefinedComparison, UndefinedEnvironmentName):
             report["errors"].append("PACKAGE_DEPENDENCY_METADATA_INVALID:" + package)
     report["dependency_extras_unverified"] = sorted(extras)
+    # Requires-Dist: package[extra] activates more dependencies of that package.
+    # Direct version checks cannot certify those unexpanded required extras.
+    if extras:
+        report["errors"].append("PACKAGE_REQUIRED_EXTRAS_NOT_RESOLVED")
     if len(report["errors"]) == initial_errors:
         report["dependency_metadata_status"] = "DIRECT_BASE_METADATA_CHECK_PASSED"
 
