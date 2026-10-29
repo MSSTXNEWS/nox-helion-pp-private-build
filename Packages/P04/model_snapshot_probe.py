@@ -211,7 +211,8 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
         raw_header = f.read(length)
         if not raw_header.startswith(b"{"):
             raise ValueError("invalid safetensors header prefix")
-        header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs)
+        header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs,
+                            parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)))
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
