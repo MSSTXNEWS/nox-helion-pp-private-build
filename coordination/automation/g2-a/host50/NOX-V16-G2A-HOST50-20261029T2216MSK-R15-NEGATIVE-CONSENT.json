@@ -1,0 +1,214 @@
+{
+  "schema": "NOX_V16_G2A_HOST50_IMMUTABLE_SOURCE_SECURITY_HANDOFF_R15",
+  "run_id": "NOX-V16-G2A-HOST50-20261029T2216MSK-R15-NEGATIVE-CONSENT",
+  "scope": "NOX_HELION_EXPRESS_INTEGRATOR_ONLY",
+  "role": "G2-A Host50, non-writer PR162",
+  "task_id": "NIP01-50",
+  "status": "INCOMPLETE",
+  "historical_T04": {
+    "accepted": 34,
+    "total": 34,
+    "carry_forward": true
+  },
+  "fixed_host50": {
+    "accepted_before": 0,
+    "accepted_after": 0,
+    "total": 13,
+    "delta": 0,
+    "remaining": 13,
+    "metric": "NATIVE_OWNER_APPROVED_SAME_SHA_ONLY",
+    "routes": [
+      {
+        "task_id": "NIP01-08",
+        "route_id": "chat.voice",
+        "owner": 2,
+        "source_binding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-26",
+        "route_id": "training.start",
+        "owner": 4,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-30",
+        "route_id": "training.evaluate",
+        "owner": 4,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-35",
+        "route_id": "calls.history",
+        "owner": 2,
+        "source_binding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-36",
+        "route_id": "media.player",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-37",
+        "route_id": "media.subtitles",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-38",
+        "route_id": "browser.open",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-39",
+        "route_id": "browser.bookmarks",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-40",
+        "route_id": "images.generate",
+        "owner": 4,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-47",
+        "route_id": "system.update",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-48",
+        "route_id": "system.backup",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-49",
+        "route_id": "system.pc_control",
+        "owner": 1,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      },
+      {
+        "task_id": "NIP01-50",
+        "route_id": "mobile.connect",
+        "owner": 6,
+        "source_binding": null,
+        "status": "NATIVE_NOT_QA_ACCEPTED"
+      }
+    ]
+  },
+  "preread": {
+    "canon_revision": "AHj4eMRrCbChJWt98LEivPvtVSvsMHcQ6QqK9EydK-rkKXwQ8_wa5t9TDjReH3OgbVHK-e71u8r77ecSxTEv3sb4ZzCtRd0Z2WG3ZUzLW90",
+    "canonical_rules_confirmed": "56/56",
+    "shared_error_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_e06_lessons_c34": "CURRENT_REVISION_READ_NO_WRITES",
+    "current_source_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "current_source_tree": "656ed36f4f61eaba1276f38fdd2136afbb2cfef1",
+    "owner_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5"
+  },
+  "r21": {
+    "python_script_blob": "5f5503d9cdef177d43f715846d4c34efa91b41a8",
+    "queue_snapshot_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+    "snapshot_schema": "NOX_V16_R20_FIXED_DISPATCH_SNAPSHOT_V1",
+    "observed_live_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "observed_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "real_python_tool_run": true,
+    "result": "READ_ONLY_PLAN_NOT_AUTHORIZED",
+    "ready_count": 11,
+    "deferred_count": 4,
+    "zero_mutations": true,
+    "qa_accepted": false,
+    "local_result_sha256": "5c210a23348895023676d72582964a575402ec3ef0be5c34a2e0bc7fa6ac0590"
+  },
+  "physical_proof": {
+    "source_path": "coordination/e06/adapters/g2_space_mobile.py",
+    "pre_git_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "post_git_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "modified_product_paths": 0,
+    "type": "SOURCE_EXTRACTED_CALLBACK_NEGATIVE_REPRO",
+    "fixture_sha256": "7f6f92fc5ac51862511a2173358a769cf4a2775074f74446b2061f7e305ec249",
+    "test_sha256": "f1b10d93e32dabf9c93ee68783fdcf7631ee4e15ab4be49f884734581be068cc",
+    "cases": [
+      {
+        "scenario": "baseline_native_consent_true",
+        "callback_count": 2,
+        "expected": "ALLOWED",
+        "actual": "ALLOWED"
+      },
+      {
+        "scenario": "consent_revoked_during_first_advertise",
+        "callback_count": 1,
+        "expected": "DENIED",
+        "actual": "DENIED"
+      },
+      {
+        "scenario": "consent_revoked_during_final_advertise",
+        "callback_count": 2,
+        "expected": "DENIED",
+        "actual": "ALLOWED",
+        "finding": "NEGATIVE_REGRESSION_REPRODUCED"
+      },
+      {
+        "scenario": "private_gateway_revoked_during_final_advertise",
+        "callback_count": 2,
+        "expected": "DENIED",
+        "actual": "DENIED"
+      }
+    ],
+    "test_scope": "Local Python replay of class extracted from verified Git blob; not real WPF/Windows host; no native QA signature.",
+    "root_cause": "Last call host.advertise() can revoke existing P02 policy consent, but connect() checks gateway and capability equivalence only before returning PRIVATE_NATIVE_ATTESTED; no policy epoch re-attestation after final advertisement.",
+    "severity": "P0_CONSENT_CONTRACT_CANDIDATE"
+  },
+  "handoff": {
+    "to": "T06 sole PR162 writer + P02 native consent policy owner",
+    "owner_of_original_module": "E06",
+    "need_exact_pre_git_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "route": "NIP01-50 mobile.connect",
+    "action": "At existing PrivateMobileContract.connect require valid native P02 permission/CSRF/session epoch after final host.advertise; preserve same-host SourceLock/HMAC, STOP/ACL, private TLS gateway, no duplicate host. Perform owner-safe regression with revocation during final advertisement plus unchanged baseline and gateway-denied controls; commit exact PRE/POST to PR162 via T06 CAS, then T08 independent same-SHA source QA.",
+    "acceptance": "Source-bounded original owner method, actual native gateway/origin/ACL/STOP/consent provenance and independent signed same-SHA receipt; no implied acceptance from this proof.",
+    "t02": "Log ERR-SRC-004 subroot for existing TaskID NIP01-50, do not create new TaskID or mutate shared docs outside T02."
+  },
+  "mass_lessons": {
+    "active_error_ids_reviewed": 11,
+    "clusters_deduplicated": 6,
+    "source_fixes": 0,
+    "reproduced_negative_regressions": 1,
+    "delegated_owner_subroots": 1,
+    "archived_closed_unchanged": 2,
+    "unresolved_route_criteria": 13,
+    "lesson": "Security validation must occur after the final state-mutating native owner callback; gateway-only recheck is not consent recheck."
+  },
+  "safety": {
+    "original_three_parts_729_untouched": true,
+    "t04_historical_34_untouched": true,
+    "PR162_mutated": false,
+    "main_mutated": false,
+    "build": false,
+    "nsis": false,
+    "ci": false,
+    "e07": false,
+    "source_ready": false,
+    "product_progress": "N/D"
+  },
+  "next_checkpoint": "T06 owner exact-PRE mobile consent-epoch fix / owner receipt; T08 negative regression at same frozen PR162 SHA; G2-A recheck only changed routes and R21 stale gate."
+}
