@@ -23,9 +23,36 @@ const isOfficial = str => {try {const u=new URL(str);return u.protocol==='https:
 const modelId = x=>typeof x==='string' && /^[a-z0-9][a-z0-9._-]{0,79}$/i.test(x);
 function el(tag, className, text){const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;}
 const current = () => state.models.find(m=>m.id===state.activeId)||state.models[0]||null;
-const hasEvidence = m => !!(m && m.artifactVerified===true && m.exactTag && m.immutableRevision && m.license &&
-  m.licenseEvidenceUrl && numeric(m.artifactBytes)>0 && isDigest(m.sha256) && isDigest(m.manifestSha256) &&
-  (numeric(m.requiredVramGiB)>0 || numeric(m.recommendedRamGiB)>0) && m.compatibilityReviewed===true);
+// Match native ModelCatalog pin/evidence shape; host still enforces ACL/consent/rights.
+const reviewedDigest = s => isDigest(s) && !/^0{64}$/.test(s);
+const reviewedRevision = s => typeof s==='string' &&
+  (reviewedDigest(s) || /^sha256:/i.test(s) && reviewedDigest(s.slice(7)));
+const reviewedTag = (s,id) => typeof s==='string' && s.length<=160 &&
+  /^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._-]*$/i.test(s) &&
+  s.toLowerCase().startsWith(id.toLowerCase()+':') &&
+  !s.includes('..') && !s.toLowerCase().endsWith(':latest');
+const reviewedEvidenceUrl = s => {try {
+  if(typeof s!=='string' || s.length>2048)return false;
+  const u=new URL(s),host=u.hostname.toLowerCase();
+  return u.protocol==='https:' && !u.username && !u.password && !u.port &&
+    !u.hash && host!=='' && host!=='localhost' && !host.endsWith('.localhost') &&
+    !host.endsWith('.local') && !host.endsWith('.internal') &&
+    host!=='127.0.0.1' && host!=='[::1]';
+} catch{return false;}};
+const officialFamilyUrl = m => {try {
+  if(!isOfficial(m.officialUrl))return false;
+  const u=new URL(m.officialUrl);
+  return u.hostname==='ollama.com' && !u.port && !u.search && !u.hash &&
+    u.pathname.toLowerCase()==='/library/'+m.id.toLowerCase();
+} catch{return false;}};
+const hasEvidence = m => !!(m && m.artifactVerified===true &&
+  reviewedTag(m.exactTag,m.id) && reviewedRevision(m.immutableRevision) &&
+  typeof m.license==='string' && m.license.trim().length>0 &&
+  reviewedEvidenceUrl(m.licenseEvidenceUrl) && officialFamilyUrl(m) &&
+  numeric(m.artifactBytes)>0 && reviewedDigest(m.sha256) &&
+  reviewedDigest(m.manifestSha256) &&
+  (numeric(m.requiredVramGiB)>0 || numeric(m.recommendedRamGiB)>0) &&
+  m.compatibilityReviewed===true);
 const currentJob = () => state.activeJob && current() &&
   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
    state.activeJob.modelTag===current().id) ? state.activeJob : null;

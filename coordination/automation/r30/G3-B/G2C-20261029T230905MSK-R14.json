@@ -1,0 +1,113 @@
+{
+  "schema": "NOX_V16_G2C_G3B_R23_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "G2C-20261029T230905MSK-R14",
+  "role": "G2-C P03 Queue / G3-B exclusive source owner",
+  "status": "INCOMPLETE_SOURCE_VERIFIED_QA_PENDING",
+  "started_at_utc": "2026-10-29T20:19:31.650Z",
+  "observed_pr162_head": "229f4dc7569c7f3792322b62885dc41c08b66fc5",
+  "observed_pr162_tree": "0a373b7fed1337a7a103716423328c7d192ad60d",
+  "register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+  "new_task_ids": 0,
+  "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "source_blob_pre": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+  "source_blob_post": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6",
+  "test_path": "tests/P03/test_g2c_g3b_ui_evidence_r23.cjs",
+  "test_blob_post": "daa29ef0109984fc5ae345779d32eb9f0ea05542",
+  "historical_done_preserved": true,
+  "source_only": true,
+  "not_main_or_pr162": true,
+  "issue": "P03 ModelCenter UI accepted weak pin/rights metadata (object revision/tag, HTTP/local license, mismatched family, all-zero digest), potentially displaying unauthorized READY while native backend correctly denies.",
+  "root_cause": "UI hasEvidence used truthiness rather than source-owner ModelCatalog validation contracts.",
+  "correction": "Fail-closed UI metadata checks: native-style pinned revision, canonical exactTag and official family URL, HTTPS non-local evidence URL, nonzero digests, typed license. Preserve jobId GGUF STOP/Retry and host consent.",
+  "tests": {
+    "runner": "actual ui.js compiled/executed under V8 mock DOM/WebView2",
+    "pre": {
+      "passed": 7,
+      "total": 15,
+      "failures": [
+        {
+          "name": "unreviewed object tag denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed latest tag denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed object revision denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed HTTP license URL denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed localhost license URL denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed mismatched official family denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed all-zero digest denied",
+          "pass": false
+        },
+        {
+          "name": "unreviewed object license denied",
+          "pass": false
+        }
+      ]
+    },
+    "post": {
+      "passed": 15,
+      "total": 15,
+      "failures": []
+    },
+    "real_ollama": "NOT_RUN",
+    "windows_webview2": "NOT_RUN",
+    "dotnet": "NOT_RUN"
+  },
+  "guards": [
+    "STOP jobId",
+    "Retry jobId",
+    "no click without license acknowledgement",
+    "no duplicate backend",
+    "no ACL or consent bypass",
+    "no user data touched"
+  ],
+  "error_ids": [
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "self_improvement": {
+    "root_cause": "UI/host validation mismatch",
+    "action": "APPLY",
+    "recurrence_guard": "tests/P03/test_g2c_g3b_ui_evidence_r23.cjs",
+    "clusters_total_relevant": 2,
+    "applied": 1,
+    "delegated": 1,
+    "remaining": 1,
+    "delegated_to": "T06 owner integration / T08 independent exact-head QA / T02 shared register"
+  },
+  "stage": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": true,
+    "INTEGRATED_ON_CURRENT_PR162": false,
+    "OWNER_QA_ACCEPTED": false
+  },
+  "accepted_task_delta": 0,
+  "product_progress": "N/D",
+  "r22_flow_tool": "TOOL_NOT_RUN",
+  "next_action": "T06 compare on current PR162 ui.js preimage, accept owner-safe diff by CAS; T08 validate same SHA and native consent as applicable; T02 ingest immutable receipt without granting DONE.",
+  "no_loss": [
+    "original 729 preserved",
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02"
+  ]
+}
