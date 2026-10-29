@@ -187,6 +187,9 @@ class OwnerTwoPorts:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Call history limit 1..100")
         rows = self.call_history(scope, limit)
+        # A provider callback can revoke the native session/ACL. Re-evaluate
+        # trusted authority before any call records are exposed to WebView.
+        self._session(scope, "calls.history")
         if not isinstance(rows, list) or len(rows) > limit:
             raise RouteHold("CALL_HISTORY_PROVIDER_INVALID")
         safe = []
