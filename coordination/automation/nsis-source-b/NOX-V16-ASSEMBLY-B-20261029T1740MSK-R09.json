@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_B_OWNER_CANDIDATE_PATCH_HANDOFF_V1",
+  "runId": "NOX-V16-ASSEMBLY-B-20261029T1740MSK-R09",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader installer V16 SOURCE ONLY",
+  "slot": "ASSEMBLY_B_NON_OWNER_T06_HANDOFF",
+  "result": "EXACT_UNAPPLIED_THREE_FILE_PATCH_READY_NOT_OWNER_APPROVED_NOT_INTEGRATED",
+  "scheduledMsk": "2026-10-29T17:40:00+03:00",
+  "observedStartFromAutomationContextMsk": "2026-10-29T17:39:14+03:00",
+  "recordedUtc": "2026-10-29T14:44:05.154Z",
+  "target": {
+    "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headSnapshot": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+    "headRecheckBeforeArtifact": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+    "headStatus": "HEAD_MATCH"
+  },
+  "ownerLock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "exclusiveSlot": "G1-A",
+    "writerB": false,
+    "oldT03": "DONE_5_OF_5_PRESERVED"
+  },
+  "t04": "34/34 historical version choice DONE: NSIS and Remove KEEP_TARGET; donor G1-A safety improvements not auto-admitted",
+  "donor": {
+    "ref": "automation/r30/g1a/R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+    "owner": "G1-A",
+    "sourceCommit": "02296b235581f2b7f1577131960c959ae61a7f1f",
+    "testBlob": "e6b9813dbd22b00957add869e58c7eba6bea39d2",
+    "nativeStatus": "NOT_RUN"
+  },
+  "files": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "preGitBlobSha1": "87d901c3846359a91be3e8288f24302cc7060257",
+      "proposedPostGitBlobSha1": "969f8c11eaca20c69e9610422731862c7bd3ed62",
+      "sourceOwner": "G1-A",
+      "gitApplyIndexRequired": true,
+      "hunks": 5,
+      "additions": 135,
+      "deletions": 5,
+      "integrated": false
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "preGitBlobSha1": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "proposedPostGitBlobSha1": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "sourceOwner": "G1-A",
+      "gitApplyIndexRequired": true,
+      "hunks": 3,
+      "additions": 26,
+      "deletions": 2,
+      "integrated": false
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "preGitBlobSha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "proposedPostGitBlobSha1": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+      "sourceOwner": "G1-A",
+      "gitApplyIndexRequired": true,
+      "hunks": 1,
+      "additions": 2,
+      "deletions": 0,
+      "integrated": false
+    }
+  ],
+  "patchArtifactPath": "coordination/automation/nsis-source-b/NOX-V16-ASSEMBLY-B-20261029T1740MSK-R09.patch",
+  "patchDiffRoundtripValidation": "3/3 PASS source reconstruction by LCS and hunk apply; no git apply executed",
+  "sourceRegression": {
+    "existingOwnerTest": "stage/proposals/P01/C09/Installer/test_G1-A_activation_attestation_r30_20261029.cjs",
+    "gitBlob": "e6b9813dbd22b00957add869e58c7eba6bea39d2",
+    "method": "exact committed CommonJS source run in isolated V8 with mocked Node fs and assert",
+    "donor": "17/17 PASS",
+    "currentTarget": "RED at staged and activated attestation",
+    "nativeNSISWindows": "NOT_RUN"
+  },
+  "sourceContractStatic": {
+    "uninstallerTrust": true,
+    "verifyTrustedParam": true,
+    "verifyReportVersion": true,
+    "conservativeRemove": true,
+    "rollbackCopiesRetained": true,
+    "noRecursiveNSIS": true,
+    "postActivationBeforeRegistry": true
+  },
+  "handoffConditions": [
+    "G1-A accepts exact 3-file candidate or supplies narrower compatible consent",
+    "T06 sole writer explicitly resolves T04 KEEP_TARGET versus new G1-A safety source",
+    "all three PRE Git blob SHA match target HEAD at CAS",
+    "T06 git apply --check --index with owner and source locks, no force push",
+    "T06 source readback 3/3 equals exact POST SHA and preserves rollback/user data",
+    "T10 independently assesses SOURCE_READY on one final HEAD; no early EXE/NSIS/CI"
+  ],
+  "progress": {
+    "previousDone": 0,
+    "total": 4,
+    "nowDone": 0,
+    "deltaPercentagePoints": 0,
+    "reason": "three source files not integrated; artifact exists but T06 has not acknowledged owner-approved handoff"
+  },
+  "sharedDriveWriter": "T02_ONLY_NOT_WRITTEN",
+  "oneAppliedLesson": "V16 Lessons R17: verification of an owner's donor tree and T04 archival arbitration is not the same as T06 same-HEAD CAS acceptance; preserve untouched target while delivering exact reproducible patch and hashes.",
+  "safeguards": {
+    "sourceFilesChanged": false,
+    "commonT06BranchChanged": false,
+    "snapshotsChanged": false,
+    "userDataChanged": false,
+    "archive729Changed": false,
+    "exe": false,
+    "nsisCompiler": false,
+    "powershellNative": false,
+    "ci": false,
+    "e07": false
+  }
+}
