@@ -77,11 +77,19 @@ def _check_installed_metadata(report: dict) -> None:
     from packaging.markers import UndefinedComparison, UndefinedEnvironmentName
     from packaging.specifiers import SpecifierSet
     from packaging.version import Version
+    from packaging.utils import canonicalize_name
     initial_errors = len(report["errors"])
     extras = set()
     for package in PACKAGES:
         try:
             installed_metadata = metadata.metadata(package)
+            # Metadata from a mismatched distribution is not proof of the root.
+            declared_names = installed_metadata.get_all("Name", [])
+            declared_versions = installed_metadata.get_all("Version", [])
+            if (len(declared_names) != 1 or len(declared_versions) != 1 or
+                canonicalize_name(declared_names[0]) != canonicalize_name(package) or
+                Version(declared_versions[0]) != Version(report["packages"][package]["version"])):
+                raise ValueError("distribution metadata identity mismatch")
             python_constraints = installed_metadata.get_all("Requires-Python", [])
             if len(python_constraints) > 1 or any(
                 not isinstance(value, str) or not value.strip()
