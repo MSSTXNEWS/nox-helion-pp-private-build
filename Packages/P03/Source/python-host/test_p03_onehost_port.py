@@ -192,7 +192,10 @@ class P03HostPortTests(unittest.TestCase):
 
     def test_15_wrong_owner_map_rejects_without_mutation(self):
         other = pack01.NoxPackHost(self.catalog)
-        other.routes["models.installed"] = dict(other.routes["models.installed"], owner=2)
+        # Explicit legacy mutable fixture: the modern native host's
+        # MappingProxyType owner map must remain read-only in production.
+        other.routes = {key: dict(value) for key, value in other.routes.items()}
+        other.routes["models.installed"]["owner"] = 2
         with self.assertRaises(P03PortHold):
             self.port.register(other, pack01.BoundPort, receipt="P03_TEST_LOCK")
         self.assertEqual(other.ports, {})

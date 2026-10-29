@@ -8,6 +8,7 @@ Page JSON is never accepted as user/session identity or authorization.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 import math
 import re
 import threading
@@ -143,12 +144,13 @@ class NativeIngress:
                 raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
             routes = getattr(self._dispatch, "routes", None)
             ports = getattr(self._dispatch, "ports", None)
-            route_info = routes.get(route) if isinstance(routes, dict) else None
+            route_info = routes.get(route) if isinstance(routes, Mapping) else None
             port = ports.get(route) if isinstance(ports, dict) else None
-            if (not isinstance(route_info, dict)
+            if (not isinstance(route_info, Mapping)
                     or type(route_info.get("owner")) is not int
                     or route_info["owner"] != 3
-                    or getattr(port, "owner", None) != 3
+                    or type(getattr(port, "owner", None)) is not int
+                    or port.owner != 3
                     or not isinstance(getattr(port, "evidence_id", None), str)
                     or not port.evidence_id.strip()
                     or not callable(getattr(port, "call", None))
