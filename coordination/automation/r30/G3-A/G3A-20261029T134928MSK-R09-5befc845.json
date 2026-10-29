@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_GIT_RECEIPT_V1",
+  "run_id": "G3A-20261029T134928MSK-R09-5befc845",
+  "date_moscow": "2026-10-29T13:49:28+03:00",
+  "slot": "G3-A",
+  "task_id": "P03-G3A-R09-REJECT-ALL-ZERO-40HEX-IMMUTABLE-REVISION",
+  "scope": "EXPRESS_INTEGRATOR_LOADER_P03_ONLY",
+  "source_only": true,
+  "source_base_commit": "5befc8451b034dbb4079f7f584046f3c72744a51",
+  "private_branch": "automation/r30/g3a/G3A-20261029T134928MSK-R09-5befc845",
+  "owner_lock_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "owner_lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+  "owner_lock_git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+  "file_changes": [
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "change": "UPDATE",
+      "git_blob_pre_sha1": "c1c4b38a81f8d9ea7f12c2c3f454ec359ff7450b",
+      "git_blob_post_sha1": "0724081e28662a3915a17d5a468322a819774547",
+      "sha256_pre": "32624d97910ccf90c437495b5b5af52b9f2c7d98922c7796f75031aa133c9f70",
+      "sha256_post": "4c0f9e5ac5e76e6120203d5f60d554157b798a37eddada5df1bd6b459b6585bd",
+      "source_commit": "9b4f799cd18b017ede825f803056fbbe998ec497",
+      "patch_sha256": "a7d1dd939d00c7bc6b42d88e2a5a9e993d97a802540f6bb4bc405be874f5d846"
+    },
+    {
+      "path": "Packages/P03/Admission/test_g3a_r30_r09_revision_zero_pin.py",
+      "change": "ADD",
+      "git_blob_pre_sha1": null,
+      "git_blob_post_sha1": "0e8caea098e10e0b8cafb95a5ff3a5dc7134fedb",
+      "sha256_pre": null,
+      "sha256_post": "89b57f1dc7bf733557dac823ccf03df34362f66bc5df33f78049483be784e069",
+      "commit": "01e0e2eb8921361f130548ca7469f92e1fe01161"
+    }
+  ],
+  "bug": "REVISION.fullmatch accepted 40 hexadecimal zeroes as a real immutableRevision, although 64-digit all-zero digest is already rejected; placeholder could reach trusted native attestor despite missing nonzero revision identity.",
+  "change": "Reject 40-hex all-zero revision before reaching E06 owner attestor. Preserve nonzero 40-hex and owner Ollama 64-hex digest syntax; no rights asserted from syntax.",
+  "checks": [
+    {
+      "name": "local isolated Python clone of exact helper",
+      "command": "python - <<'PY'  # isolated copied helper + 8 standard-library unittest assertions; no full GitHub module",
+      "status": "PASS",
+      "cases_passed": 8,
+      "cases_total": 8
+    },
+    {
+      "name": "GitHub exact source+test readback",
+      "status": "PASS",
+      "post_source_sha256": "4c0f9e5ac5e76e6120203d5f60d554157b798a37eddada5df1bd6b459b6585bd",
+      "test_sha256": "89b57f1dc7bf733557dac823ccf03df34362f66bc5df33f78049483be784e069"
+    },
+    {
+      "name": "committed full module Python test",
+      "command": "python -m unittest discover -s Packages/P03/Admission -p 'test_g3a_r30_r09_revision_zero_pin.py' -v",
+      "status": "NOT_RUN",
+      "reason": "private repo not mounted in local Python execution environment"
+    },
+    {
+      "name": "native Windows/Ollama/GGUF test",
+      "status": "NOT_RUN",
+      "reason": "SOURCE ONLY"
+    }
+  ],
+  "owner_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+  "historical_snapshots": {
+    "index_frozen_branches": 25,
+    "root_directories_observed": 25,
+    "contents_sha256_full_verification": "NOT_RUN",
+    "modified": false
+  },
+  "modification_scope": "two owned Packages/P03/Admission/ paths, and this slot-owned receipt only",
+  "peer_handoff": {
+    "slot": "G3-B",
+    "request": "Ensure existing native queue/transport verifies the actual immutable model revision against artifact file, manifest SHA-256, license/right receipts and current reviewed owner export; reject zero placeholders regardless of policy input; do not treat syntactically valid 40-hex as rights proof.",
+    "peer_files_modified": false
+  },
+  "lesson_applied": "R08 taught that lexical validation must reject alternative/placeholder representations before crossing the native boundary. Applied identical fail-closed pre-attestor treatment to the 40-hex revision sentinel; preserved previously working 64-hex behavior.",
+  "status": "SOURCE_SAVED_ISOLATED_PYTHON_PASS_FULL_TEST_HOLD_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "RELEASE": "HOLD",
+  "rights_verified_artifacts": 0,
+  "general_drive_journal_writer": "Astra-C only",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_pipeline": true,
+  "no_merge": true,
+  "no_main_or_pr162_write": true
+}
