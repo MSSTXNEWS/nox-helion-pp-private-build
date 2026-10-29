@@ -126,7 +126,7 @@ def render(snapshot, issues):
                        and sha(t["qa"].get("receipt_blob")) for t in tasks)
         d = r.get("frozen_denominator")
         lines += ["## Manual №" + role + " — " + str(r.get("role_name", "UNNAMED")),
-                  "Approaches: " + bar(complete, 10),
+                  "Approaches: " + (bar(complete, 10) if r.get("approaches_logged") is True else "N/D (legacy report lacks 10-step evidence)"),
                   "Gates A–E: " + bar(pass_count, 5),
                   "Accepted fixed criteria: " + bar(accepted, d),
                   "Stages (reported, not additive): PREPARED " + str(prepared) +
