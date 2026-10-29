@@ -1,0 +1,31 @@
+{
+  "schema": "ASTRA_B_SOURCE_ONLY_10_PASS_RECEIPT_V1",
+  "run_id": "ASTRA-B-R30-TURBO10-20261029",
+  "worker_label": "B6",
+  "real_subagent_id": null,
+  "spawn_status": "NOT_AVAILABLE",
+  "source_branch": "astra-b/r29-b6-20261029",
+  "baseline_previous_saved_source_approaches": 6,
+  "new_source_commits": [
+    "7a507084040cdbb8f862caf52f73dd90512d5b72",
+    "851b92d1a005f184510bfdc3f21174d90a52371f",
+    "2054d22cb29cb3bcaf4616cc5a3dc4705ad38dfb",
+    "506bb0dc3c75d22e6bf2fb92b4cebde9453b8821"
+  ],
+  "source_commits_saved_total_in_lane": 10,
+  "new_task_ids_local": [
+    "failed-temp-inode",
+    "exe-stream-hash",
+    "exe-fstat-bind",
+    "staging-source-preflight"
+  ],
+  "terminal_code_commit": "506bb0dc3c75d22e6bf2fb92b4cebde9453b8821",
+  "prepost_compare_readback": "PASS_ONLY_ASSIGNED_PATH",
+  "targeted_test": "four targeted source invariants PASS; NTFS/native NOT_RUN",
+  "release_acceptance": "NOT_RUN",
+  "product_taskid_coverage": "N_D",
+  "original_archive_729_this_run": "NOT_REVERIFIED",
+  "lesson": "A source-assertion and GitHub SHA prove code text, not native installer behavior; preserve unresolved gates.",
+  "shared_docs_writer": "ASTRA_A_ONLY",
+  "source_complete": false
+}
