@@ -1,0 +1,113 @@
+{
+  "schema": "NOX_V16_G3A_R22_SAFE_SOURCE_HANDOFF_V1",
+  "run_id": "NOX-V16-G3A-20261029T223056MSK-R13",
+  "slot": "G3-A",
+  "existing_task_id": "T03_G3_M1_P04_GPU_RAG",
+  "status": "INCOMPLETE_HOLD",
+  "scope": "EXPRESS_INTEGRATOR_SOURCE_ONLY",
+  "started_at": "2026-10-29T22:30:56+03:00",
+  "receipt_built_at": "2026-10-29T19:43:45.966Z",
+  "read_proof": {
+    "canon_revision": "AHj4eMRrCbChJWt98LEivPvtVSvsMHcQ6QqK9EydK-rkKXwQ8_wa5t9TDjReH3OgbVHK-e71u8r77ecSxTEv3sb4ZzCtRd0Z2WG3ZUzLW90",
+    "rules_33_read": 56,
+    "sections_read": "§§1–33,54–56/R29",
+    "R22_policy_blob": "1a4be5b5dbb60f8c8a81bdf48a81fca8e30c3125",
+    "register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "register_total": 11,
+    "pr162_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMSqxXTbS8hogjyN5cjHUFhyFwD0f8jKqFgh3EUc_GSztbEWttqpsPSlTiJ5lsPSXKrotPw3jmhBIQ1MKaST1arCHLJw16U94suo7wo",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "physical": {
+    "new_owned_patch_source": "coordination/automation/v16/G3-A/NOX-V16-G3A-20261029T223056MSK-R13/patch_native_bridge_strict_json_g3a.py",
+    "new_source_blob_sha1": "0914c0c1c15fc8edf8c269c0dd518402c789df63",
+    "new_test_source": "coordination/automation/v16/G3-A/NOX-V16-G3A-20261029T223056MSK-R13/test_g3a_r13_strict_json_patch.py",
+    "new_test_blob_sha1": "4bbe462fe31019432656b5163c11a7372be2f2c5",
+    "proposed_target": "proposals/NOX-PACK01-50/native_bridge.py",
+    "target_owner": "T06/ручной #1",
+    "target_exact_pre_git_blob_sha1": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "target_proposed_post_git_blob_sha1": "05eebe8533932336c665742498ca5e6fa7090230",
+    "target_post_is_persisted": false,
+    "delta": "Owner-scoped exact-preimage source patch generator rejects lossy duplicate JSON object members before native consent and backend; it does not overwrite foreign files."
+  },
+  "test": {
+    "local_fixture_python": "6/6 PASS",
+    "local_semantic_isolated": "6/6 PASS",
+    "repository_full_module": "NOT_RUN",
+    "native_gpu_training": "NOT_RUN",
+    "security": "explicit collision/ACL/private_approved/native consent and unchanged 50 routes: fixture-based static checks; owner must run real source checks after CAS"
+  },
+  "gates": {
+    "A": "PASS",
+    "B": "PASS_NEW_OWNER_SAFE_PATCHER_SOURCE",
+    "C": "GIT_ATOMIC_RECEIPT_PENDING_READBACK",
+    "D": "PASS_RECURSION_SECURITY_REGRESSION"
+  },
+  "progress": {
+    "x": 0,
+    "n": 4,
+    "before_pct": 0,
+    "after_pct": 0,
+    "delta_pp": 0,
+    "product": "N/D"
+  },
+  "error_ack_groups": [
+    {
+      "ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002"
+      ],
+      "decision": "T02 handoff; current SHA re-read and no stale acceptance"
+    },
+    {
+      "ids": [
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005"
+      ],
+      "decision": "ERR-SRC-004 owner-safe patch prepared; Host50/T08/fixture independent gates delegated"
+    },
+    {
+      "ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "decision": "ALREADY_FIXED do not reopen historic ZIP729/T04 34"
+    },
+    {
+      "ids": [
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "decision": "INCOMPLETE; fixed denominator, exact SHA T06→T08→T09→T10→T11"
+    }
+  ],
+  "flow_r22": "TOOL_NOT_RUN; full live register fetched, no old READY lease promoted",
+  "lessons": {
+    "applied": "Downstream P04 guard cannot restore data already lost by upstream PACK01 json.loads; reject collisions before native dangerous approval; fail closed on preimage drift.",
+    "remaining": "T06 actual source integration, signed/native owner tests, T08 independent same-SHA QA, T02 journal receipt."
+  },
+  "handoff": {
+    "T06": "Verify live exact PRE, run patch generator read-only, compare POST 05eebe..., apply with sole owner CAS, run target security regressions and P04 owner binding; no duplicates.",
+    "T02": "Ingest this receipt into ERR-SRC-004; only T02 may change shared Docs/register.",
+    "T08": "Independently QA current pinned PR162 HEAD after T06."
+  },
+  "no_loss": {
+    "PR162_changed": false,
+    "main_changed": false,
+    "shared_journals_changed": false,
+    "G4A_G4B_changed": false,
+    "three_zip_729_preserved": true,
+    "NO_EXE_NSIS_CI_E07_training": true
+  },
+  "checkpoint": "Resume T06 exact CAS 1cd8f2...→05eebe... if live pre unchanged; otherwise refresh owner PRE, do not auto-reapply. G3-A 0/4."
+}
