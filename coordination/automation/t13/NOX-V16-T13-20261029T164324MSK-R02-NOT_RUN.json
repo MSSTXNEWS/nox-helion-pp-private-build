@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_V16_T13_INDEPENDENT_E07_GATE_V1",
+  "task_id": "T13",
+  "run_id": "NOX-V16-T13-20261029T164324MSK-R02-NOT_RUN",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows installer ONLY",
+  "planned_msk": "2026-10-29T16:45:00+03:00",
+  "observed_run_context_msk": "2026-10-29T16:43:24+03:00",
+  "end_time_and_duration": "NOT_MEASURED",
+  "status": "NOT_RUN",
+  "decision": "HOLD_NO_T12_INSTALLED_EXE",
+  "evidence": {
+    "t12": {
+      "automation_id": "6ae342df73788191b8d8fb6b179dad46",
+      "last_run": null,
+      "latest_result": null,
+      "installed_exe": "NOT_AVAILABLE",
+      "setup_sha256": null,
+      "exe_sha256": null,
+      "build_id": null
+    },
+    "t09": {
+      "status": "HOLD",
+      "last_confirmed": "NO_FROZEN_HEAD"
+    },
+    "t10": {
+      "status": "HOLD",
+      "source_ready": "NOT_PASS"
+    },
+    "t11": {
+      "status": "ACCESS_HOLD",
+      "gitlab_frozen_sha_verified": false
+    },
+    "canonical_pr162": {
+      "sha": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "status": "DRAFT_NOT_MERGED_NOT_FROZEN",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162"
+    },
+    "t14": {
+      "status": "NO_VERIFIED_T12_T13_RELEASE_DEFECT",
+      "note": "No E07 executions; this is NOT evidence of no defects"
+    }
+  },
+  "criteria": {
+    "total": 10,
+    "accepted": 0,
+    "executed": 0,
+    "not_run": 10,
+    "details": [
+      {
+        "index": 1,
+        "id": "E07-01",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 2,
+        "id": "E07-02",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 3,
+        "id": "E07-03",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 4,
+        "id": "E07-04",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 5,
+        "id": "E07-05",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 6,
+        "id": "E07-06",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 7,
+        "id": "E07-07",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 8,
+        "id": "E07-08",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 9,
+        "id": "E07-09",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      },
+      {
+        "index": 10,
+        "id": "E07-10",
+        "status": "NOT_RUN",
+        "reason": "NO_INSTALLED_T12_EXE_BUILDID_SAME_SHA"
+      }
+    ]
+  },
+  "no_loss": {
+    "existing_done_preserved": true,
+    "original_729_members_preserved": true,
+    "original_3parts_unchanged": true,
+    "git_968_blobs_unchanged": true,
+    "d02_wow200_8coreid_5persona_preserved": true,
+    "pack01_pack02_50plus50_preserved": true,
+    "voice_rag_gpu_space_preserved": true,
+    "user_data_permissions_preserved": true
+  },
+  "actions": {
+    "windows_install": "NOT_RUN",
+    "ten_native_e2e": "NOT_RUN",
+    "sha_match": "NOT_POSSIBLE",
+    "code_modified": false,
+    "pr162_modified": false,
+    "gitlab_ci_run": false,
+    "e07_accept": false,
+    "t14_new_errors": 0,
+    "master_e06_lessons_modified": false
+  },
+  "blocker": {
+    "owner": "T12",
+    "description": "Missing actually built and installed Windows Setup/EXE with exact BuildID and SHA256; prerequisite SOURCE_READY T09/T10 and live GitLab access T11 also not PASS.",
+    "required": "T12 provides real immutable Windows EXE/Setup artifact SHA256+BuildID, installation environment and successful T09/T10/T11 gate evidence; then independent T13 E07 tests exactly this installed artifact."
+  },
+  "lesson": "Never transfer source-only, Git metadata, legacy failed Windows pipeline or absence-of-findings into native E07 PASS. HOLD until exact installed T12 EXE BuildID/SHA.",
+  "next": "T12 should notify/reactivate T13 after valid handoff; do not create new TaskID. T14 may receive only reproduced installed-EXE failures."
+}
