@@ -160,10 +160,17 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             if (raw.Length > 2048) return;
             using var json = JsonDocument.Parse(raw, new JsonDocumentOptions { MaxDepth = 5 });
             var root = json.RootElement;
+            // Extract requestId before validating other fields. A malformed replay
+            // of a reserved ID must not emit REJECTED while its native operation
+            // can still finish with COMPLETED; keep exactly one reply authority.
+            if (root.ValueKind == JsonValueKind.Object)
+            {
+                TryString(root, "requestId", out requestId);
+                if (RequestId.IsMatch(requestId) && _seenRequestIds.Contains(requestId)) return;
+            }
             if (root.ValueKind != JsonValueKind.Object ||
                 !TryString(root, "kind", out var kind) ||
                 !TryString(root, "routeId", out routeId) ||
-                !TryString(root, "requestId", out requestId) ||
                 !RouteId.IsMatch(routeId) || !RequestId.IsMatch(requestId) ||
                 (kind != "navigate" && kind != "action") ||
                 (kind == "navigate" && !IsNavigation(routeId)))
@@ -173,7 +180,6 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             }
             // A completed or in-flight request must never receive a contradictory HOLD
             // simply because the document quota was reached after its original ACK.
-            if (_seenRequestIds.Contains(requestId)) return;
             if (_seenRequestIds.Count >= MaxRequestsPerDocument)
             {
                 ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_DOCUMENT_REQUEST_LIMIT");
