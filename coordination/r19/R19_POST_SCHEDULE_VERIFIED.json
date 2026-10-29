@@ -1,0 +1,160 @@
+{
+  "schema": "NOX_V16_R19_POST_RESCHEDULE_VERIFIED",
+  "created": "2026-10-29",
+  "role_count": 15,
+  "active": 15,
+  "unmodified_task_ids": true,
+  "source_policy": "coordination/r19/R19_FLOW_FIRST_POLICY.md",
+  "records": [
+    {
+      "id": "6ae2af28e4b8819192bbf6bb3857cc84",
+      "title": "NOX V16 G1-A P01–P03",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 1636
+    },
+    {
+      "id": "6ae2aefbde94819183730a2ed3cad78c",
+      "title": "NOX V16 G1-C P04–P05",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3767
+    },
+    {
+      "id": "6ae2aecc59f88191a10a9342f8a1930c",
+      "title": "NOX V16 G1-B NSIS source",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3723
+    },
+    {
+      "id": "6ae2af31f2988191902bae4aaec2635e",
+      "title": "NOX V16 G2-A Host50",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3885
+    },
+    {
+      "id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+      "title": "NOX V16 G2-B P02 Voice",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3711
+    },
+    {
+      "id": "6ae2af008eac8191a03526f290b801c6",
+      "title": "NOX V16 G3-A P04 GPU/RAG",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3662
+    },
+    {
+      "id": "6ae2af347fbc81918ddafed356511243",
+      "title": "NOX V16 G3-B PACK02",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3612
+    },
+    {
+      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "title": "NOX V16 G4-A T07 NOLOSS",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T224800\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=48;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3658
+    },
+    {
+      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "title": "NOX V16 G4-B T08 блокеры",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T225100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=51;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3793
+    },
+    {
+      "id": "6ae2af2f84088191ba04843861edf73b",
+      "title": "NOX V16 G4-C T09 freeze",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T230300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=3;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3695
+    },
+    {
+      "id": "6ae2af4f6c448191932f01b35fa364c1",
+      "title": "NOX V16 G5-A T02 журнал",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T233900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 4042
+    },
+    {
+      "id": "6ae2aef4bbc081918693b0552743bd0d",
+      "title": "NOX V16 G5-B T10 SOURCE_READY",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T231500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=15;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3791
+    },
+    {
+      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "title": "NOX V16 G5-C T11 GitLab READY",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T232700\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=27;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3788
+    },
+    {
+      "id": "6ae2aefe3c248191a7131fc9876611e6",
+      "title": "NOX V16 G2-C P03 Queue",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3676
+    },
+    {
+      "id": "6ae2aef78ba881919e6022c1103959a2",
+      "title": "NOX V16 G3-C T06 интегратор",
+      "enabled": true,
+      "timezone": "Europe/Moscow",
+      "mode": "exact_schedule",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T223900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "prompt_version": "NOX_V16_R19_FLOW_FIRST_20261029 ·",
+      "prompt_length": 3928
+    }
+  ]
+}
