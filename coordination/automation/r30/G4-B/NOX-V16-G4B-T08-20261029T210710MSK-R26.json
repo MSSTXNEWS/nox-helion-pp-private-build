@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_V16_G4B_T08_R18_INDEPENDENT_SOURCE_DELTA_RECEIPT",
+  "run_id": "NOX-V16-G4B-T08-20261029T210710MSK-R26",
+  "scheduled_msk": "2026-10-29T20:45:00+03:00",
+  "start_msk": "2026-10-29T21:07:10+03:00",
+  "status": "INCOMPLETE_SOURCE_P1_OWNER_HANDOFF",
+  "owner_role": "G4-B / T08 independent source QA, NO PRODUCT WRITE",
+  "prestart": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "section33_rule_count": 56,
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2
+    },
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20"
+  },
+  "current_source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "tree": "OWNER_REPORTED_13316feaba1fbf16aec78eafdde62abeefca1faf_at_b6c8; CURRENT_53ce_TREE_NOT_INDEPENDENTLY_AVAILABLE",
+    "previous_code_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "new_code_commit": "b6c8db1a0383a6ae3a9331240c8acd8b76386694",
+    "current_stage_blob": "b0bd954407949965e4871acaa9f15ccc060e3187",
+    "stage_path": "coordination/e06/stage_p01.py",
+    "t06_followup_commit": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "changed_since_b6c8": "only T06 coordination receipt; 0 product source changes",
+    "test_blob_unchanged": "d97775098b68492f52463b45e30828e7dca72137",
+    "host50_admission_blob_unchanged": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "p02_runner_blob_unchanged": "303194331b1387690f8ac935bdcc968f8312143b"
+  },
+  "finding": {
+    "error_parent": "ERR-SRC-004",
+    "severity": "P1_SOURCE_RETRY_BLOCKER",
+    "code_sequence": [
+      "verified R11 directory is renamed from temporary scratch to WORK/R11",
+      "temporary staging context closes",
+      "only then WORK/source_lock.json is created exclusively by open('x')",
+      "on FileExistsError/PermissionError at SourceLock publication R11 remains; next attempt fails E06_R11_ALREADY_EXISTS_NO_OVERWRITE"
+    ],
+    "independent_reproducer": "/mnt/data/T08_R26_stage_publication_failure_repro.py",
+    "reproducer_sha256": "d256f9a8aea6f00f5a72a2b128b78bc0483856e9a52fae47b629d9980d3bfa33",
+    "reproducer_result": "PASS: reproduced R11 orphan and retry HOLD on exclusive SourceLock collision in same-sequence minimal Python reproducer, NOT full project unittest",
+    "native_windows": "NOT_RUN",
+    "required_owner_fix": "T06 alone: on exact code preimage b0bd954..., make staging+SourceLock publication exception-safe, preserve concurrent SourceLock and all existing user files, add deterministic negative regression that forces exclusive source_lock publication failure and verifies no orphan R11/retry HOLD; targeted permission/STOP/ACL/consent/no-loss checks and owner CAS Git readback.",
+    "source_patch_written_by_t08": false
+  },
+  "progress": {
+    "own_operational_before": "1/3=33.3%",
+    "own_operational_after": "1/3=33.3%",
+    "accepted_delta": 0,
+    "remaining_criteria": 2,
+    "criterion1": "HOLD no T06 accepted full HEAD+manifest/fixed P0P1",
+    "criterion2": "HOLD no same-head final disposition: P1 staged publication failure",
+    "criterion3": "DONE preserved historical T09/T10 handoff"
+  },
+  "error_ack": {
+    "ERR-SYS-001": "DELEGATE T02 journal CAS",
+    "ERR-SYS-002": "APPLIED fresh HEAD/rechecked only changed product path",
+    "ERR-SRC-003": "DELEGATE T06 Host50, source blob present, 13 native routes NOT_VERIFIED",
+    "ERR-SRC-004": "OWNER_HANDOFF new P01 R11 publication-after-rename retry blocker",
+    "ERR-SRC-005": "NO_IMPACT unchanged fixture runner; independent functional pass NOT_RUN",
+    "ERR-SYS-006": "ALREADY_VERIFIED 729/3 ZIP",
+    "ERR-SYS-007": "ALREADY_VERIFIED T04 34/34",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09 after accepted HEAD",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED x/3 remains INCOMPLETE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 owner 8/8",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "BLOCKED same-head signed 13-route native acceptance"
+  },
+  "self_improvement": {
+    "lesson": "ERR-SYS-002 + premature-stop: verify current source delta before attributing prior PASS or repeating a stale HOLD",
+    "processed": 11,
+    "relevant_clusters": 4,
+    "applied": 1,
+    "already_fixed": 2,
+    "delegated": 3,
+    "remaining": 1,
+    "coverage_note": "per-cluster categories overlap; counts not summed as distinct error IDs"
+  },
+  "gates": {
+    "A": "PASS fresh canon/active register/current Git and shared journal revisions",
+    "B": "PASS targeted independent same-code-sequence reproducer, NOT full project test",
+    "C": "PENDING_GIT_RECEIPT_READBACK",
+    "D": "PASS recurrence cluster applied; no false accepted"
+  },
+  "no_build": "EXE/NSIS/GitLab CI/E07 NOT_RUN",
+  "next_checkpoint": "T06 owner fix exact stage_p01.py blob b0bd... with targeted negative test+receipt; T08 verify changed blob and same-head Host50/STOP/ACL/consent; T02 update existing ERR-SRC-004 without new TaskID"
+}
