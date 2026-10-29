@@ -96,6 +96,13 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         backup = prepared[3]
         # Even the first published addon needs the cooperative owner lease.
         require_lock_owned()
+        # A prepared pathname may change after fsync/readback; do not publish
+        # substituted bytes under a valid stage owner lease.
+        if (not _owned(prepared[0], prepared_ids[prepared[0]], patched) or
+                not _owned(prepared[1], prepared_ids[prepared[1]], extra) or
+                not _owned(prepared[2], prepared_ids[prepared[2]], receipt_bytes) or
+                not _owned(backup, prepared_ids[backup], before)):
+            raise RuntimeError("OWNER6_PREPARED_FILES_CHANGED_HOLD")
         # Hard-link publication is atomic and refuses an existing destination.
         os.link(prepared[1], trusted_path(dest))
         published.append((dest, _identity(prepared[1]), extra))
