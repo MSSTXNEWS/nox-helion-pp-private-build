@@ -19,7 +19,12 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private readonly Func<string, bool> _isNativeRouteAvailable;
     private readonly Func<string, CancellationToken, Task<bool>> _confirmNativeConsent;
     private readonly Func<string, CancellationToken, Task<bool>> _invokeExistingNativeRoute;
-    private readonly HashSet<string> _pending = new(StringComparer.Ordinal);
+    // Pending keys include the page epoch; a new document may reuse its own IDs.
+    private readonly HashSet<(long Epoch, string Id)> _pending = new();
+    // Completed IDs are also remembered: replay after native ACK must not run twice.
+    private readonly HashSet<string> _seenRequestIds = new(StringComparer.Ordinal);
+    private const int MaxRequestsPerDocument = 1024;
+    private long _documentEpoch;
     private readonly CancellationTokenSource _lifetime = new();
     private int _disposed;
 
@@ -42,6 +47,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         _isNativeRouteAvailable = isNativeRouteAvailable ?? throw new ArgumentNullException(nameof(isNativeRouteAvailable));
         _confirmNativeConsent = confirmNativeConsent ?? throw new ArgumentNullException(nameof(confirmNativeConsent));
         _invokeExistingNativeRoute = invokeExistingNativeRoute ?? throw new ArgumentNullException(nameof(invokeExistingNativeRoute));
+        _webView.NavigationStarting += OnNavigationStarting;
+        _webView.SourceChanged += OnSourceChanged;
         _webView.WebMessageReceived += OnWebMessageReceived;
     }
 
@@ -69,11 +76,27 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private static bool IsNavigation(string routeId) =>
         routeId == "HOME" || routeId == "MENU" || routeId == "CORE";
 
+    // A URL is NOT a document identity: reload, away-and-back and history updates
+    // may restore identical URLs while an action is awaiting native consent.
+    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs args)
+        => AdvanceDocumentEpoch();
+
+    private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)
+        => AdvanceDocumentEpoch();
+
+    private void AdvanceDocumentEpoch()
+    {
+        if (Volatile.Read(ref _disposed) != 0) return;
+        Interlocked.Increment(ref _documentEpoch);
+        _seenRequestIds.Clear();
+    }
+
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
     {
         if (Volatile.Read(ref _disposed) != 0 || !IsTrustedSource(args.Source)) return;
         // Bind this request to the exact source document, not a later same-origin navigation.
         var documentSource = args.Source;
+        var documentEpoch = Interlocked.Read(ref _documentEpoch);
         string requestId = "";
         string routeId = "";
         bool reserved = false;
@@ -91,15 +114,21 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
                 (kind != "navigate" && kind != "action") ||
                 (kind == "navigate" && !IsNavigation(routeId)))
             {
-                ReplyIfCurrent(documentSource, requestId, routeId, "REJECTED", "P01_BAD_MESSAGE");
+                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_BAD_MESSAGE");
                 return;
             }
             // A duplicate request ID must not race a false ACK against the first request.
-            if (!_pending.Add(requestId)) return;
-            reserved = true;
-            if (!IsCurrent(documentSource) || !_isNativeRouteAvailable(routeId))
+            if (_seenRequestIds.Count >= MaxRequestsPerDocument)
             {
-                ReplyIfCurrent(documentSource, requestId, routeId, "HOLD", "P01_NATIVE_ROUTE_UNAVAILABLE");
+                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_DOCUMENT_REQUEST_LIMIT");
+                return;
+            }
+            if (!_seenRequestIds.Add(requestId)) return;
+            if (!_pending.Add((documentEpoch, requestId))) return;
+            reserved = true;
+            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId))
+            {
+                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_ROUTE_UNAVAILABLE");
                 return;
             }
             // Any non-navigation button action must receive NEW consent in native WPF.
@@ -108,44 +137,45 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             {
                 if (!await _confirmNativeConsent(routeId, _lifetime.Token))
                 {
-                    ReplyIfCurrent(documentSource, requestId, routeId, "REJECTED", "P01_NATIVE_CONSENT_DENIED");
+                    ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_NATIVE_CONSENT_DENIED");
                     return;
                 }
                 // Consent dialogs can navigate the page or change native capabilities.
-                if (!IsCurrent(documentSource) || !_isNativeRouteAvailable(routeId)) return;
+                if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
             }
-            if (!IsCurrent(documentSource) || !_isNativeRouteAvailable(routeId)) return;
+            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
             var accepted = await _invokeExistingNativeRoute(routeId, _lifetime.Token);
-            ReplyIfCurrent(documentSource, requestId, routeId,
+            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
+            ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
                 accepted ? "COMPLETED" : "HOLD", accepted ? "" : "P01_NATIVE_ACK_MISSING");
         }
         catch (OperationCanceledException) { /* disposed host: no stale acknowledgement */ }
         catch (Exception)
         {
             // No exception, file path or native stack is returned to untrusted page JS.
-            ReplyIfCurrent(documentSource, requestId, routeId, "HOLD", "P01_NATIVE_BRIDGE_ERROR");
+            ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_BRIDGE_ERROR");
         }
         finally
         {
-            if (reserved) _pending.Remove(requestId);
+            if (reserved) _pending.Remove((documentEpoch, requestId));
         }
     }
 
-    private bool IsCurrent(string documentSource)
+    private bool IsCurrent(string documentSource, long documentEpoch)
     {
         if (Volatile.Read(ref _disposed) != 0 || _lifetime.IsCancellationRequested) return false;
         try
         {
             var current = _webView.Source;
-            return IsTrustedSource(current) &&
-                   string.Equals(current, documentSource, StringComparison.OrdinalIgnoreCase);
+            return Interlocked.Read(ref _documentEpoch) == documentEpoch && IsTrustedSource(current) &&
+                   string.Equals(current, documentSource, StringComparison.Ordinal);
         }
         catch (Exception) { return false; /* WebView2 may be closing or disposed */ }
     }
 
-    private void ReplyIfCurrent(string documentSource, string requestId, string routeId, string status, string error)
+    private void ReplyIfCurrent(string documentSource, long documentEpoch, string requestId, string routeId, string status, string error)
     {
-        if (!IsCurrent(documentSource) || !RequestId.IsMatch(requestId)) return;
+        if (!IsCurrent(documentSource, documentEpoch) || !RequestId.IsMatch(requestId)) return;
         try
         {
             _webView.PostWebMessageAsJson(JsonSerializer.Serialize(new
@@ -160,10 +190,16 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        try { _webView.WebMessageReceived -= OnWebMessageReceived; }
+        try
+        {
+            _webView.WebMessageReceived -= OnWebMessageReceived;
+            _webView.NavigationStarting -= OnNavigationStarting;
+            _webView.SourceChanged -= OnSourceChanged;
+        }
         catch (Exception) { /* native WebView2 may already be disposed */ }
         _lifetime.Cancel();
         _lifetime.Dispose();
         _pending.Clear();
+        _seenRequestIds.Clear();
     }
 }
