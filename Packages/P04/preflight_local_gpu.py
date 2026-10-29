@@ -223,8 +223,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
                 report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
             else:
                 report["gpu"]["cuda_runtime"] = torch.version.cuda
-                report["gpu"]["cuda_device_count"] = torch.cuda.device_count()
-                if torch.cuda.device_count() != 1:
+                visible_count = torch.cuda.device_count()
+                report["gpu"]["cuda_device_count"] = visible_count
+                if visible_count != 1:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
                 else:
                     props = torch.cuda.get_device_properties(0)
