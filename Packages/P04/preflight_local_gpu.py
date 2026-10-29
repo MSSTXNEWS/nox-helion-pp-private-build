@@ -79,8 +79,16 @@ def _check_pypa_wheel_abi(report: dict) -> None:
                 wheel_tags.update(parse_tag(tag))
             if not wheel_tags:
                 raise ValueError("empty wheel tags")
-            if wheel_tags.isdisjoint(supported):
+            compatible_tags = wheel_tags.intersection(supported)
+            if not compatible_tags:
                 report["errors"].append("WHEEL_ABI_TAG_MISMATCH:" + package)
+            elif package in ("torch", "bitsandbytes") and not any(
+                tag.platform == "win_amd64" for tag in compatible_tags
+            ):
+                # GPU-critical binary dependencies must expose an installed
+                # Windows AMD64 wheel, not merely a universal py3-none-any
+                # tag. This remains metadata-only: no CUDA/driver proof.
+                report["errors"].append("GPU_NATIVE_WIN_AMD64_WHEEL_REQUIRED:" + package)
         except (ValueError, TypeError, OSError, metadata.PackageNotFoundError):
             report["errors"].append("WHEEL_METADATA_INVALID:" + package)
     if not report["errors"]:
