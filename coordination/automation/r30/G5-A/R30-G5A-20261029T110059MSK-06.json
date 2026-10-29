@@ -1,0 +1,145 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T110059MSK-06",
+  "recorded_utc": "2026-10-29T08:08:40.486Z",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER/INSTALLER ONLY; NOT main NOX",
+  "slot": "G5-A",
+  "project_status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "branch": "automation/r30/g5a/20261029T110059MSK-06",
+  "parent_branch": "automation/r30/g5a/20261029T100236MSK-05",
+  "parent_head_commit": "27cb5596ff0e619e9ea67af25c2f3ffdad774950",
+  "source_commit": "973f1406cfd6e07839597cb01683d604865df656",
+  "owner_manifest": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_touched": []
+  },
+  "prework": {
+    "spec_google_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "rules": "V16 §33 consolidated rules 01–56 read individually; historical earliest original unverified",
+    "latest_spec_sections": [
+      "§54",
+      "§55",
+      "§56"
+    ],
+    "read_only_google_docs": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "historical_C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    },
+    "last_G5A_receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T100236MSK-05.json",
+    "contracts_events_v3_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2"
+  },
+  "snapshots": {
+    "index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "index_branch_count": 25,
+    "individual_snapshot_directories_queried": 25,
+    "individual_directories_existing": 25,
+    "each_file_body_read": false,
+    "full_recursive_tree_manifests_independently_read_this_run": false,
+    "original_729_file_raw_SHA256": "NOT_VERIFIED",
+    "snapshot_writes": 0
+  },
+  "source_patch": {
+    "task_id": "G5A-R30-P05-EVENTS-SCHEMA-DIAGNOSTIC-BOUNDS-R06",
+    "task_class": "SOURCE_DEFECT_FIX_NOT_ACCEPTED_PRODUCT_TASKID",
+    "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_git_blob_sha": "0af2faed570ba82c368c475b6e01346885dee8fe",
+    "postimage_git_blob_sha": "e2f537bf3edaea070702efb44af7a3cc2e10c8be",
+    "git_source_commit_sha": "973f1406cfd6e07839597cb01683d604865df656",
+    "canonical_schema_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "root_cause": "Read-only terminal projector used source<=120 and message<=240, although actual Contracts/events.v3.json allows source maxLength=128 and message maxLength=4096. Schema-valid task.failed native receipts with diagnostic messages 241..4096 or source length 121..128 became HOLD_MALFORMED_TERMINAL rather than verified ERROR.",
+    "fix": "Bound source at 128 and message at 4096 while retaining control-char checks, required fields, dates, optional-metric schema, replay fingerprints, anti-false-100 logic, read-only status and all historic DONE.",
+    "branch_compare_before_receipt": {
+      "ahead": 1,
+      "behind": 0,
+      "files": [
+        "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+      ],
+      "diff": "+3/-2"
+    },
+    "readback": "exact remote text matched generated patch and new Git blob SHA e2f537bf3edaea070702efb44af7a3cc2e10c8be"
+  },
+  "test": {
+    "description": "One focused events.v3 canonical diagnostic envelope regression suite in V8 on exact GitHub JS source",
+    "preimage_red": "11/16 PASS; five schema-valid diagnostic-boundary cases failed",
+    "post_patch_green": "16/16 PASS",
+    "post_git_readback_with_previous_lesson": "19/19 PASS",
+    "previous_lesson_cases": [
+      "negative temperature failure followed by STOP -> HOLD_MALFORMED_TERMINAL",
+      "gpu_utilization_percent 101 followed by STOP -> HOLD_MALFORMED_TERMINAL",
+      "event_id optional-metric modified replay -> HOLD_EVENT_ID_COLLISION"
+    ],
+    "cases_include": [
+      "source length 120,121,128,129",
+      "message length 240,241,4096,4097",
+      "missing source",
+      "identical and changed replay",
+      "valid long failure then later valid STOP",
+      "future, impossible UTC date, unverified terminal",
+      "three previous R05 optional-field cases"
+    ],
+    "targeted_test_scope": "V8 in-memory executing exact GitHub source; no committed test path because assigned_paths are four exact source files only",
+    "new_test_file_written": false,
+    "proposed_test_path_only": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.diagnostic-bounds.test.mjs",
+    "native_node_cli": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "Windows": "NOT_RUN",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "initial_test_harness_attempt": "One generated JS comment used a literal backslash-n, causing a V8 ReferenceError; corrected in test harness before any source write, then RED/GREEN completed. Not counted as product test failure."
+  },
+  "self_improvement": {
+    "previous_lesson_id": "R30_G5A_VALIDATE_OPTIONAL_SCHEMA_FIELDS_AND_REPLAY_FINGERPRINT",
+    "application": "Three prior-lesson cases reexecuted and PASS in 19/19 post-Git exact-source regression",
+    "new_lesson_id": "R30_G5A_EVENTS_V3_DIAGNOSTIC_LIMITS_FROM_CANONICAL_JSON_SCHEMA",
+    "mistake": "UI-specific 120/240 limits were silently substituted for the canonical native events.v3 128/4096 envelope.",
+    "cause": "Limit duplication without authoritative contract boundary tests.",
+    "corrective_process": "Compare every length/type boundary to exact frozen events.v3 JSON blob and add both max-inclusion and max+1 rejection cases, including a valid task.failed with long diagnostics.",
+    "follow_up": "The separately owned-in-slot E05CanonicalEvents.cs also currently limits Source/Message at 120/240; independently test and align only in a future isolated G5-A owner patch with available .NET verification, not falsely mark it fixed. Avoid converting UI hardening to schema-invalid native rejection.",
+    "prevention": "Keep contract-driven regression for every read-only projection, and make test harness newline escape checks fail before any Git write."
+  },
+  "preservation": {
+    "historical_DONE": "PRESERVED",
+    "PR162": "NOT_MODIFIED",
+    "main": "NOT_MODIFIED",
+    "shared_R30": "NOT_MODIFIED",
+    "other_owner_files": "NOT_MODIFIED",
+    "DriveAdapters": "NOT_MODIFIED",
+    "SafeRunReports": "NOT_MODIFIED",
+    "GoogleDocs": "READ_ONLY",
+    "snapshot_originals": "NOT_MODIFIED"
+  },
+  "report_gate": "HOLD_ASTRA_C_ONLY_SHARED_DRIVE_CAS_READBACK_PENDING",
+  "astra_c_handoff": "Astra-C alone may append the G5-A immutable receipt summary/lesson into shared Google Docs with requiredRevisionId CAS and readback; owner G5-A did not write Google Docs.",
+  "readiness": {
+    "new_accepted_product_TaskIDs": 0,
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "overall": "N/D",
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "no_false_100": true
+  }
+}
