@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_RECEIPT_V1",
+  "slot": "G5-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "run_id": "R30-G5B-20261029T1057MSK-06",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T1057MSK-06",
+  "task_id": "G5B-R30-GOOGLE-DOCS-HTTP-CAS-AND-TRANSIENT-HOLD-R06",
+  "base_commit_sha1": "0e6e15398b5f1f722110f6e8afd4770b313153ef",
+  "base_tree_sha1": "fe8a44c1ac6b50da1c3dbed8c3a53d2e6ac14952",
+  "ownership_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+  },
+  "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "rules": {
+    "section33_rules_read": 56,
+    "section54_56_read": true,
+    "latest_r29_loader_only_read": true,
+    "original_ancient_56_verbatim": "UNVERIFIED_CONSOLIDATED_COPY"
+  },
+  "assigned_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "Packages/P05/E05/src/E05DriveRunGate.cs",
+    "Packages/P05/E05/src/E05SafeRunReports.cs"
+  ],
+  "forbidden_paths_untouched": [
+    "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "Packages/P05/E05/src/E05CriterionSeal.cs",
+    "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+    "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+  ],
+  "preimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "311f2f5fabcfd12a7bfa1c8003dd9a6a18fe0de4"
+  },
+  "postimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "7b470401c07e51ff8dabec04c351c612dd31af90"
+  },
+  "modified_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "coordination/automation/r30/G5-B/R30-G5B-20261029T1057MSK-06.json"
+  ],
+  "change": "Fail-closed, stage-specific Google Docs HTTP diagnostics: classify 409/412 as revision-CAS-or-rejected; classify 408/429/502/503/504 as transient HOLD on initial GET, POST and readback GET; preserve permission-denied mapping and previous failure fallback. No automatic retry, no new success paths.",
+  "targeted_test": {
+    "name": "G5-B-R06-GOOGLE-DOCS-HTTP-HOLD-CLASSIFICATION-JS-SOURCE-FIXTURE",
+    "method": "one executable JS status-classification semantic model with exact post-patch C# source-static assertions (NOT C# runtime)",
+    "model_cases_passed": 18,
+    "model_cases_total": 18,
+    "static_source_tokens_checked": 10,
+    "result": "PASS_SOURCE_STATIC_JS_MODEL_ONLY",
+    "native_dotnet": "NOT_RUN_DOTNET_SDK_ABSENT",
+    "live_google_docs_http": "NOT_RUN_NO_G5B_WRITE",
+    "windows": "NOT_RUN",
+    "test_files_committed": "NONE_OWNER_LOCK_ASSIGNED_PATHS_ONLY"
+  },
+  "snapshots": {
+    "original_branches": 25,
+    "recursive_git_trees_checked": 25,
+    "entries_including_directories": 30363,
+    "all_truncated_false": true,
+    "source_parts_git_blob_sha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "physical_729_sha256": "NOT_VERIFIED",
+    "snapshot_files_modified": false
+  },
+  "google_drive": {
+    "docs_writer": "Astra-C ONLY",
+    "g5b_writes": false,
+    "read_documents": [
+      {
+        "purpose": "master",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "tab_id": "t.0",
+        "revision_id": "AHj4eMRWH6krQ3TCP5pWiJL8UaEnFURP_H-LsDa11EPKqh-iDZPBh4cqnkmnQ59xuNG6472gc-hhh_RwO4XhP98FMrWoTcrp50PJSYbDdFg",
+        "drive_roles_observed": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "report",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "tab_id": "t.0",
+        "revision_id": "AHj4eMR1B75EnskLeoEiG3Wf-nmydVpyBlLZCrnzxkT-iQu8N7HMhACWI0nPUrQ_IgrVpXnjlwfZMqPTDKOV9jd5HpLbXwHCV-5yxerj2IE",
+        "drive_roles_observed": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "tab_id": "t.0",
+        "revision_id": "AHj4eMQbly45a06IkFHjj83cg6fp30wy1AztInGfrFefn-O0DWtZhoZ4nYnO_vp3J-BL_NLO3yXNgVu2JKA6Es_DKAm7WvQhqBP47jFoEuU",
+        "drive_roles_observed": [
+          "owner"
+        ]
+      }
+    ],
+    "revisions_note": "observed via read-only Docs API; CAS/readback of a new write NOT performed; active revisions may change",
+    "run_id_tab_cas_readback": "SOURCE_INSPECTED_ONLY",
+    "report_gate": "HOLD",
+    "shared_docs_mutated": false
+  },
+  "prior_error_and_lesson": "Astra-C R05 and G5-B R05: legacy/root/nonbody duplicate RunID detection; never claim model is native .NET proof. Separate Source Git SHA, physical archive SHA256 and native acceptance.",
+  "new_lesson": "Google Docs API rejects can be recoverable (408/429/502/503/504), stale CAS (409/412), or ACL (401/403). Preserve distinct HOLD diagnostics across pre-read, append and readback, never convert them to PASS or blindly retry with new RunID. A JS model/static fixture is not a native HTTP test.",
+  "release_gates": {
+    "source_code_complete": "HOLD",
+    "native_dotnet": "HOLD",
+    "shared_docs_write": "HOLD_ASTRA_C_ONLY",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_pct": "N/D"
+  },
+  "no_exe": true,
+  "no_nsis": true,
+  "no_gitlab_ci": true,
+  "no_final_integration": true,
+  "no_main_pr162_change": true,
+  "old_done_preserved": true
+}

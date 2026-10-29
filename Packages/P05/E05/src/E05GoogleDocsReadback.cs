@@ -49,6 +49,7 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, null, null,
                     before.StatusCode is System.Net.HttpStatusCode.Forbidden or
                         System.Net.HttpStatusCode.Unauthorized ? "READ_PERMISSION_DENIED" :
+                        IsTransientHttpStatus(before.StatusCode) ? "READ_TRANSIENT_HOLD" :
                         "READ_FAILED", entry.Length);
             using var beforeJson = await ParseBoundedAsync(before, stop).ConfigureAwait(false);
             string? revision = ReadRevision(beforeJson.RootElement);
@@ -81,8 +82,12 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, revision, null,
                     write.StatusCode is System.Net.HttpStatusCode.Forbidden or
                         System.Net.HttpStatusCode.Unauthorized ? "WRITE_PERMISSION_DENIED" :
-                    write.StatusCode == System.Net.HttpStatusCode.BadRequest ?
-                        "REVISION_CONFLICT_OR_REJECTED" : "APPEND_REJECTED", entry.Length);
+                    write.StatusCode is System.Net.HttpStatusCode.BadRequest or
+                        System.Net.HttpStatusCode.Conflict or
+                        System.Net.HttpStatusCode.PreconditionFailed ?
+                        "REVISION_CONFLICT_OR_REJECTED" :
+                    IsTransientHttpStatus(write.StatusCode) ? "WRITE_TRANSIENT_HOLD" :
+                        "APPEND_REJECTED", entry.Length);
 
             using var after = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
                 token, null, stop).ConfigureAwait(false);
@@ -90,6 +95,7 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, revision, null,
                     after.StatusCode is System.Net.HttpStatusCode.Forbidden or
                         System.Net.HttpStatusCode.Unauthorized ? "READBACK_PERMISSION_DENIED" :
+                        IsTransientHttpStatus(after.StatusCode) ? "READBACK_TRANSIENT_HOLD" :
                         "READBACK_FAILED", entry.Length);
             using var afterJson = await ParseBoundedAsync(after, stop).ConfigureAwait(false);
             string? revAfter = ReadRevision(afterJson.RootElement);
@@ -124,6 +130,15 @@ public sealed class GoogleDocsAppendReadback
         }
         // Cancellation should propagate, not be interpreted as success.
     }
+    // Retryable transport responses are HOLD, never evidence of an append.
+    // OAuth/ACL rejection and revision-CAS conflicts have their own diagnostics.
+    private static bool IsTransientHttpStatus(System.Net.HttpStatusCode status) =>
+        status is System.Net.HttpStatusCode.RequestTimeout or
+            System.Net.HttpStatusCode.TooManyRequests or
+            System.Net.HttpStatusCode.BadGateway or
+            System.Net.HttpStatusCode.ServiceUnavailable or
+            System.Net.HttpStatusCode.GatewayTimeout;
+
     internal static bool ValidInput(string documentId, string runId, string entry)
     {
         if (string.IsNullOrWhiteSpace(documentId) || string.IsNullOrWhiteSpace(runId) ||
