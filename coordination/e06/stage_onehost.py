@@ -126,6 +126,8 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         if installed_identity is not None:
             if _owned(original, installed_identity, patched):
                 try:
+                    if not _owned(backup, prepared_ids[backup], before):
+                        raise RuntimeError("OWNER6_ROLLBACK_BACKUP_CHANGED_HOLD")
                     os.replace(backup, trusted_path(original))
                 except BaseException:
                     conflicts.append(str(original))
