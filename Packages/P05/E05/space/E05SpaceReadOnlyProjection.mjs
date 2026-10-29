@@ -284,9 +284,12 @@ export function projectFeeds(feeds, nowMs) {
 // The original R11 events.v3 has a strict envelope, not just an event_type.
 // This view is deliberately not an event writer, journal or second bus.
 const eventPackages = new Set(['P01','P02','P03','P04','P05','E06','E07']);
+// Contract events.v3 bounds event identity fields at 128 characters. The
+// general UI RunID helper allows 160 and is not an event envelope validator.
+const eventToken128 = v => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,128}$/.test(v);
 const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
-  validRunId(e.run_id) && validRunId(e.event_id) && validRunId(e.task_id) &&
-  validRunId(e.action_id) && eventPackages.has(e.package_id) &&
+  eventToken128(e.run_id) && eventToken128(e.event_id) && eventToken128(e.task_id) &&
+  eventToken128(e.action_id) && eventPackages.has(e.package_id) &&
   typeof e.source==='string' && e.source.length>0 && e.source.length<=120 &&
   !/[\x00-\x1f\x7f]/.test(e.source) &&
   typeof e.message==='string' && e.message.length<=240 &&
