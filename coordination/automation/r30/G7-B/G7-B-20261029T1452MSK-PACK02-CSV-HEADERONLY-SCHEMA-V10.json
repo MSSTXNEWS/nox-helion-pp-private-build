@@ -1,0 +1,140 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V10",
+  "run_id": "G7-B-20261029T1452MSK-PACK02-CSV-HEADERONLY-SCHEMA-V10",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY (NOT main NOX)",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T1452MSK-PACK02-CSV-HEADERONLY-SCHEMA-V10",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T1408MSK-PACK02-CSV-FILTER-SORT-SCHEMA-V9",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "personal_receipt_dir": "coordination/automation/r30/G7-B/"
+  },
+  "pre_read": {
+    "section33_rules": "56/56 consolidated, historical verbatim original not verified",
+    "rules_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only scope override"
+    ],
+    "v16_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_error_doc_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "C34_historical_error_doc_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06_report_doc_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons_doc_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "R30_conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_recursive_tree_sha": "34350552e847909e5945c8d1418cc3cc282796b4",
+    "snapshot_directories": 25,
+    "snapshot_recursive_tree_entries": 30388,
+    "snapshot_git_blobs": 24876,
+    "snapshot_tree_truncated": false,
+    "raw_archive_file_bytes_sha256": "NOT_VERIFIED",
+    "raw_original_729_file_sha256": "NOT_VERIFIED"
+  },
+  "task_id": "G7B-PACK02-CSV-HEADERONLY-SCHEMA-BOUNDARY-20261029-10",
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "previous_lesson_applied": "R09 flagged CSV header-only schema ambiguity after enforcing own fields on select/filter/sort; preserve the parsed schema for zero-row CSV and validate selectors at the same boundary while keeping original JSON data rows [] unchanged.",
+  "bug": {
+    "source_path": "proposals/NOX-PACK02-50/ops.mjs",
+    "routes": [
+      "data.csv.parse",
+      "data.csv.stats",
+      "data.csv.select",
+      "data.csv.filter",
+      "data.csv.sort"
+    ],
+    "before": "Header-only CSV had declared columns but parser discarded them, stats returned columns:[] and select/filter/sort accepted nonexistent or inherited JS fields because rows.length was zero.",
+    "after": "Parsed header is retained on the internal rows array as nonenumerable symbol metadata; stats reports declared columns and select/filter/sort reject undeclared fields with CSV_UNKNOWN_FIELD even if there are zero data rows. JSON-visible parse remains []; normal nonempty rows unaffected.",
+    "git_blob_before": "4337ef89a3ea2a8aa8cc45fc620649e6f76b83fb",
+    "git_blob_after": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+    "source_commit": "c098d0881e42c6df8f58133eb7afc0d5585c370a",
+    "route_ids_before": 50,
+    "route_ids_after": 50,
+    "new_routes": 0
+  },
+  "targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-csv-header-only-schema.test.mjs",
+    "blob_sha": "9a708eee013ba1c2c0c34fec55b523b6868401ca",
+    "test_commit": "36a9ea961a15aa519a22f23aaed990aee26488c5",
+    "command": "node --test proposals/NOX-PACK02-50/g7b-r30-csv-header-only-schema.test.mjs",
+    "native_node_execution": "NOT_RUN",
+    "exact_source_precommit_v8": "22/22 PASS after patch, baseline RED header-only schema stats [] reproduced",
+    "windows_host50_execution": "NOT_RUN",
+    "limitation": "V8 evaluation of Git module functions is not Node native execution, installer validation or Host50/adapters admission."
+  },
+  "comparison_before_receipt": {
+    "base": "automation/r30/g7b/G7-B-20261029T1408MSK-PACK02-CSV-FILTER-SORT-SCHEMA-V9",
+    "head": "automation/r30/g7b/G7-B-20261029T1452MSK-PACK02-CSV-HEADERONLY-SCHEMA-V10",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "files": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-csv-header-only-schema.test.mjs"
+    ]
+  },
+  "errors_observed": [
+    {
+      "event": "First create_file attempt with enlarged test content blocked by tool safety checks; no file written in that attempt.",
+      "resolution": "Used a smaller owner-scoped test and confirmed its committed blob by readback."
+    }
+  ],
+  "self_improvement": {
+    "lesson_id": "R30_G7B_PRESERVE_HEADER_ONLY_CSV_SCHEMA_AS_NONENUMERABLE_METADATA",
+    "observed_error": "Zero CSV data rows erased validated header schema and bypassed own-field gate; historical tests covered only nonempty datasets.",
+    "root_cause": "Schema membership was inferred from first data record instead of immutable parsed header.",
+    "applied_fix": "Attach internal nonenumerable symbol header to parsed rows; reuse shared csvColumn gate in select/filter/sort; update stats to use header even with zero data rows; verify route inventory and payload compatibility.",
+    "future_prevention": "Test schema-bearing empty datasets independently from truly blank input, and keep provider-specific runtime/Node acceptance separate from exact-source V8 checks. Seek owner approval for any external behavioral contract change."
+  },
+  "owner_request": {
+    "to": "G6-B original Host50 owner",
+    "status": "HOLD_OWNER_APPROVAL",
+    "description": "Licensed/permission-gated internet adapters can only connect via original Host50 with origin, consent and license checks; no native_bridge or cross-owner source write.",
+    "foreign_files_written": false
+  },
+  "unresolved": [
+    "Header-only CSV stats and field-validation semantics require downstream consumer approval before integrated adoption.",
+    "Historical r27-a10 dotted-key JSON semantics conflict with current fail-closed JSON_PATH_COLLISION; no cross-branch copy.",
+    "Node --test using full module not run; independent Windows/Host50 admission not run.",
+    "Original 729-file archive per-file raw SHA256, E06/E07 and integrated SourceLock not verified."
+  ],
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "Host50": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_GOOGLE_DOCS_CAS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "historical_snapshots_modified": false,
+    "PACK01_native_bridge_modified": false,
+    "D02_WOW_modified": false,
+    "foreign_owner_paths_modified": false,
+    "Google_Docs_modified": false,
+    "old_DONE_deleted": false,
+    "EXE_run": false,
+    "NSIS_run": false,
+    "GitLab_CI_run": false,
+    "final_integration_run": false
+  },
+  "Astra_C_instruction": "Astra-C only: read this personal Git receipt, append RunID and new lesson to shared Google Docs via CAS then readback. Preserve HOLD and older DONE."
+}
