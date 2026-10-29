@@ -1,0 +1,129 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T10_INDEPENDENT_SOURCE_READY_GATE_V5",
+  "taskId": "T10",
+  "runId": "NOX-V16-T10-MANUAL-20261029T172838MSK-R15-HOLD",
+  "moscowTime": "2026-10-29T17:28:38.498+03:00",
+  "checkedAtUTC": "2026-10-29T14:28:38.498Z",
+  "plannedTimeMSK": "N/D (manual on request)",
+  "observedEnd": "N/D",
+  "duration": "N/D",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader/installer V16 only",
+  "verification": "Read only, source before build",
+  "decision": "SOURCE_READY_HOLD",
+  "pass": false,
+  "fixedChecklist": {
+    "done": 1,
+    "total": 7,
+    "percentage": 14.3,
+    "remaining": 6,
+    "deltaPercentagePoints": 0,
+    "bar": "█░░░░░░░░░",
+    "criteria": [
+      {
+        "id": 1,
+        "criterion": "T09 owner-accepted frozen HEAD/tree/manifest",
+        "status": "HOLD",
+        "owner": "T06 → T09",
+        "evidence": "Latest completed T09 R15 1/6; final accepted freeze absent."
+      },
+      {
+        "id": 2,
+        "criterion": "Full P01–P05 owner receipts on frozen SHA",
+        "status": "HOLD",
+        "owner": "P01–P05 owners / T06",
+        "evidence": "T06 R08 1/8; no final unified functional source acceptance."
+      },
+      {
+        "id": 3,
+        "criterion": "Original 3-part ZIP and 729/729 files physical integrity",
+        "status": "DONE",
+        "owner": "T07",
+        "evidence": "Three signed archive manifests agree, ZIP SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a; original only."
+      },
+      {
+        "id": 4,
+        "criterion": "D02/WOW200/8 CoreID/5 Persona/PACK01-02 NO-LOSS on frozen SHA",
+        "status": "HOLD",
+        "owner": "P01/P05 / T06",
+        "evidence": "No complete bound one-tree NO-LOSS acceptance."
+      },
+      {
+        "id": 5,
+        "criterion": "Host50/IPC STOP/Voice/ACL/GPU/RAG/SPACE/data preservation",
+        "status": "HOLD",
+        "owner": "T06/G6-B + P01–P05",
+        "evidence": "13 Host50 source HOLD; combined owner acceptance missing."
+      },
+      {
+        "id": 6,
+        "criterion": "No mandatory source blockers on same frozen SHA",
+        "status": "HOLD",
+        "owner": "T06 → T08",
+        "evidence": "Prior NO_CODE_BLOCKERS was on older HEAD and cannot transfer."
+      },
+      {
+        "id": 7,
+        "criterion": "Independent SOURCE_READY PASS exact signed SHA",
+        "status": "HOLD",
+        "owner": "T10",
+        "evidence": "Prerequisites 1,2,4,5,6 missing."
+      }
+    ]
+  },
+  "ids": {
+    "frozenHeadSha1": null,
+    "frozenTreeSha1": null,
+    "finalFrozenManifestSha256": null,
+    "reason": "T09 R15 explicitly HOLD",
+    "t09WorkingHeadSha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "t09WorkingGitTreeSha1": "bd564152829af66e91c0216e6912591c0c64389b",
+    "currentPr162HeadSha1Metadata": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "currentPr162GitTreeSha1": null,
+    "currentHeadIsFrozen": false,
+    "caveat": "PR162 metadata HEAD has advanced since T09 R15; GitHub direct commit-object fetch returned 422/404 inconsistently; do not infer tree or treat branch as frozen."
+  },
+  "preserved": {
+    "originalThreeParts": 3,
+    "originalMembers": 729,
+    "originalZipBytes": 60364346,
+    "originalZipSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "sourceProof": "T07 original source 6/6, three independent archive manifests, T09 original-only co-sign; raw bytes not rehashed in T10",
+    "t04VersionSelections": "34/34 archival version choices, not P01–P05 functional acceptance",
+    "t06LastCompleted": "NOX-V16-T06-20261029T170832MSK-R08, 1/8",
+    "t09LastCompleted": "NOX-V16-T09-20261029T171541MSK-R15-HOLD, 1/6",
+    "t10PriorReceiptGitCommit": "33cbfb467cc732c9fbfcd849542f7f7d2e1e1466",
+    "t10PriorReceiptGitBlobSha1": "0ca91ddc381871fd109c2e0c53b988a73b1e9dc8",
+    "historicDoneRetained": true
+  },
+  "reviewed": {
+    "canon": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "sections": "1–33,54–56,R29; 56 consolidated rules",
+    "master": "https://docs.google.com/document/d/1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98/edit",
+    "e06": "https://docs.google.com/document/d/17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4/edit",
+    "lessons": "https://docs.google.com/document/d/14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ/edit",
+    "c34": "https://docs.google.com/document/d/1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU/edit",
+    "t06WorkingManifest": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e223a2c749940340e562f2389d64ebb067f29b43/coordination/automation/t06/NOX-V16-T06-20261029T170832MSK-R08_WORKING_BASE_MANIFEST.json"
+  },
+  "oneCriticalBlocker": {
+    "id": "T09-BLOCK-T06-OWNER1-ACCEPTED-UNIFIED-SOURCE",
+    "owner": "T06/manual owner #1 → T09",
+    "required": "One signed exact integrated HEAD/tree/manifest SHA with complete P01–P05, owner CAS, NO-LOSS, Host50 13 routes, STOP/ACL/consent and data safeguards. T09 must freeze same identity. T10 only then may issue independent PASS."
+  },
+  "lessonApplied": "From E06/C34: never transfer old HEAD-linked acceptance to a newer Git SHA. In this run a new PR162 HEAD was observed, so old T08 NO_CODE_BLOCKERS remains unpromoted while original archive T07 DONE is preserved.",
+  "handoff": {
+    "target": "T02 sole CAS/readback writer Master/E06/Lessons; T11 receives read-only source gate; T06/T09 own source freeze",
+    "issue": 177,
+    "requireReadback": true
+  },
+  "noWork": {
+    "productionCodeModified": false,
+    "alternativeBranchCreated": false,
+    "newTaskIdCreated": false,
+    "repeatAudit": false,
+    "exe": false,
+    "nsis": false,
+    "gitlabCI": false,
+    "e07": false,
+    "sharedDocsModified": false
+  }
+}
