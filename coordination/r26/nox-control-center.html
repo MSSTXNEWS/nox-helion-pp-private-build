@@ -57,7 +57,7 @@ button,a,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-v
 const data=window.NOX_CONTROL_DATA;
 const q=(id)=>document.getElementById(id);
 const esc=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const number=(x)=>Number.isFinite(Number(x))?Number(x):null;
+const number=(x)=>(x===null||x===undefined||x==="")?null:(Number.isFinite(Number(x))?Number(x):null);
 const ratio=(done,total)=>number(done)!==null&&number(total)>0?Math.min(100,Math.max(0,100*done/total)):null;
 const label=(n,t)=>ratio(n,t)===null?"Н/Д":esc(n)+"/"+esc(t);
 const progress=(n,t)=>'<div class="track"><span style="width:'+ (ratio(n,t)??0) +'%"></span></div>';
