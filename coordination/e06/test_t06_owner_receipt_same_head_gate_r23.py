@@ -27,13 +27,13 @@ class OwnerReceiptGateR23(unittest.TestCase):
         sha="a"*40
         def fake_git(*args):
             if args[:1]==("rev-parse",):
-                return (sha+"\\n").encode()
+                return (sha+"\n").encode()
             if args[:2]==("cat-file","-t"):
-                return b"tree\\n"
+                return b"tree\n"
             raise AssertionError(args)
         with patch.object(gate,"git",side_effect=fake_git):
             self.assertIsNone(gate.blob_at("b"*40,target))
-        with patch.object(gate,"git",side_effect=lambda *args:(sha+"\\n").encode() if args[0]=="rev-parse" else b"blob\\n"):
+        with patch.object(gate,"git",side_effect=lambda *args:(sha+"\n").encode() if args[0]=="rev-parse" else b"blob\n"):
             self.assertEqual(gate.blob_at("b"*40,target),sha)
 
     def test_true_git_receipts_do_not_claim_native_and_stale_receipts_fail(self):
