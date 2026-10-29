@@ -129,7 +129,25 @@ Section "NOX HELION application" SEC_MAIN
     SetErrorLevel 2
     Abort "Could not write ownership marker. No application directories moved."
   MarkerReady:
+  ; Prepare and SHA-attest the generated uninstaller in STAGING, before moving
+  ; either live application tree. Keep the independently generated plugin copy
+  ; as provenance for an after-activation integrity check.
   SetOutPath "$TEMP" ; release current working directory before Rename
+  ClearErrors
+  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
+  IfErrors InstallUninstallerPreparationFailed
+  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 InstallUninstallerPreparationFailed
+  ClearErrors
+  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$StageDir"
+  IfErrors InstallUninstallerPreparationFailed
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$StageDir" -Manifest "$StageDir\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    SetErrorLevel 2
+    Abort "Staged uninstaller or payload SHA-256 verification failed; no application directories moved."
+  ${EndIf}
   ; Preserve one backup for explicit rollback. Failed activation restores original.
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 ActivateNew
     Rename "$INSTDIR" "$BackupDir"
@@ -141,17 +159,46 @@ Section "NOX HELION application" SEC_MAIN
     IfFileExists "$BackupDir\nox-p01-owned.txt" 0 +2
       Rename "$BackupDir" "$INSTDIR"
     Abort "Activation failed; previous version restored if present."
-  ; Registry/shortcuts only after activation.
+  ; Re-hash the live activated directory BEFORE changing the registry.
+  ; No success metadata may point to a missing, altered or untrusted Uninstall.exe.
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    Goto InstallPostActivationRecovery
+  ${EndIf}
+  ; Registry/shortcuts only after activation and exact live attestation.
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayName" "${APP_NAME}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "NoModify" 1
   SetOutPath "$INSTDIR"
-  WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\NOX HELION"
   CreateShortcut "$SMPROGRAMS\NOX HELION\NOX HELION.lnk" "$INSTDIR\NOX.P01.Shell.exe"
   DetailPrint "NOX installed. Persistent state under LOCALAPPDATA is untouched."
+  Goto FinishInstall
+  InstallUninstallerPreparationFailed:
+    SetErrorLevel 2
+    Abort "Could not prepare a trusted uninstaller; no application directories moved."
+  InstallPostActivationRecovery:
+    ; Fail closed: preserve the suspect new tree as staging, and restore
+    ; the prior app if it was moved. Never delete/recurse user data.
+    SetOutPath "$TEMP"
+    ClearErrors
+    Rename "$INSTDIR" "$StageDir"
+    IfErrors InstallRecoveryHold
+    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 InstallRecoveryDone
+      ClearErrors
+      Rename "$BackupDir" "$INSTDIR"
+      IfErrors InstallRecoveryHold
+  InstallRecoveryDone:
+    SetErrorLevel 2
+    Abort "Activated payload attestation failed; previous app restored if present, failed stage retained."
+  InstallRecoveryHold:
+    SetErrorLevel 2
+    Abort "Activated payload attestation failed; operator recovery needed, both app trees retained."
   FinishInstall:
 SectionEnd
 
