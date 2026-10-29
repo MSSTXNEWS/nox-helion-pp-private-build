@@ -59,6 +59,25 @@ def _sha(s: Any) -> bool:
     return isinstance(s, str) and SHA.fullmatch(s) is not None and s != "0" * 64
 
 
+def _immutable_revision(s: Any, kind: str) -> bool:
+    """Recognize existing owner formats without treating digest as Git commit.
+
+    Historical evidence uses a 40-hex source revision. Original Ollama
+    ModelArtifactReviewRegistry.TryPromote also emits a 64-hex digest reference,
+    optionally sha256-prefixed. Only that route has this native contract; never
+    infer it for GGUF/external source revisions or turn syntax into rights proof.
+    The original string still reaches the trusted attestor unchanged.
+    """
+    if not isinstance(s, str):
+        return False
+    if REVISION.fullmatch(s):
+        return True
+    if kind != "ollama":
+        return False
+    digest = s[7:] if s[:7].lower() == "sha256:" else s
+    return re.fullmatch(r"[a-fA-F0-9]{64}", digest) is not None and digest != "0" * 64
+
+
 def _https_url(s: Any) -> bool:
     """Lexical E06 evidence URL gate; NEVER fetch/DNS-resolve in this policy.
 
@@ -208,7 +227,7 @@ def admit_for_existing_downloader(
         reasons.append("ARTIFACT_BYTES_UNVERIFIED")
     elif evidence["requiredDiskBytes"] < evidence["artifactBytes"]:
         reasons.append("INSUFFICIENT_REQUIRED_DISK_BUDGET")
-    if not isinstance(evidence.get("immutableRevision"), str) or not REVISION.fullmatch(evidence["immutableRevision"]):
+    if not _immutable_revision(evidence.get("immutableRevision"), kind):
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")

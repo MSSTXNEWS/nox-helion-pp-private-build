@@ -1,0 +1,31 @@
+{
+  "runId": "ASTRA-R29-A03-NATIVE-REVISION-20261029",
+  "startedUtc": "2026-10-29T00:46:37Z",
+  "owner": "A03 P03",
+  "parentSha": "39f230a04cd9dcedbee0dca5d31c2cf115f1623b",
+  "branch": "astra/r29-a03-20261029",
+  "approachesCompleted": 5,
+  "approachesPlanned": 10,
+  "taskIds": ["P03-R29-NATIVE-REVIEW-REVISION-CONTRACT"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Admission/p03_modelcenter_gate.py",
+  "preGitBlob": "37e9f8add720c3b882819a6e37dd69fa3076d27f",
+  "postGitBlob": "8d26aaaf5e2eacc1b5d90707da359f912c26b472",
+  "postSha256": "7e4064aac53fc157b3b09528fae854ffb81ef3982422e597e5f3f0b03f31d05c",
+  "tests": {
+    "command": "python -m unittest discover -s Packages/P03/Admission -p 'test_p03_native_revision_contract_r29.py' -q",
+    "before": "4 native-format subcase failures in 6 tests",
+    "after": "6 PASS",
+    "scope": "Existing Python admission function; synthetic owner attestation and native-registry-format evidence. No C# execution, real rights review or model download. Previous 157-test lifecycle suite unchanged and not rerun."
+  },
+  "reused": ["Original ModelArtifactReviewRegistry.TryPromote revision format", "Existing trusted-owner attestation", "Existing catalog, original queue and Ollama adapter", "Existing historical 40-hex revision contract"],
+  "lesson": "Preserve hash domains across native/Python boundaries: native Ollama digest references are not Git commits. Recognize only route-specific formats and pass original evidence unchanged to the owner verifier; shape never proves rights.",
+  "remainingSourceFindings": [
+    {"taskId": "P03-R29-REVIEWED-TAG-COVERAGE", "status": "HOLD", "path": "Packages/P03/Admission/p03_modelcenter_gate.py", "finding": "Admission exact-tag allowlist has 25 leads across 7 families, whereas native review registry can promote artifacts from 30 original families. Needs a reviewed-catalog contract; do not silently remove admission guard."}
+  ],
+  "remainingInputs": ["Actual reviewer/rights receipts and pinned model metadata; discovery family lists and review templates are not approved artifacts"],
+  "laterVerification": ["Independent donor/owner reconciliation", "Native attestor and authenticated composition", "Windows/live Ollama pull/import acceptance"],
+  "nativeWindowsAcceptance": "HOLD",
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}
