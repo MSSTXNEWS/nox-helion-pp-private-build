@@ -1,0 +1,81 @@
+test_actual_authorized_stop_reaches_same_original_voice_session (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_actual_authorized_stop_reaches_same_original_voice_session) ... ERROR
+test_cross_session_and_stale_target_stop_cannot_cancel (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_cross_session_and_stale_target_stop_cannot_cancel) ... ERROR
+test_denied_stop_does_not_set_original_token (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_denied_stop_does_not_set_original_token) ... ERROR
+test_run_nonce_and_completed_session_are_not_reusable (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_run_nonce_and_completed_session_are_not_reusable) ... ERROR
+test_stop_during_output_persistence_revokes_donor_receipt (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_stop_during_output_persistence_revokes_donor_receipt) ... ERROR
+test_stop_terminates_original_registered_subprocess (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_stop_terminates_original_registered_subprocess) ... ERROR
+
+======================================================================
+ERROR: test_actual_authorized_stop_reaches_same_original_voice_session (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_actual_authorized_stop_reaches_same_original_voice_session)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+======================================================================
+ERROR: test_cross_session_and_stale_target_stop_cannot_cancel (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_cross_session_and_stale_target_stop_cannot_cancel)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+======================================================================
+ERROR: test_denied_stop_does_not_set_original_token (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_denied_stop_does_not_set_original_token)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+======================================================================
+ERROR: test_run_nonce_and_completed_session_are_not_reusable (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_run_nonce_and_completed_session_are_not_reusable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+======================================================================
+ERROR: test_stop_during_output_persistence_revokes_donor_receipt (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_stop_during_output_persistence_revokes_donor_receipt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+======================================================================
+ERROR: test_stop_terminates_original_registered_subprocess (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_stop_terminates_original_registered_subprocess)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 34, in setUp
+    self.ingress = NativeIngress(self.dispatcher, lambda: self.current,
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: NativeIngress.__init__() got an unexpected keyword argument 'enable_voice_stop'
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.006s
+
+FAILED (errors=6)
+
+DETERMINISTIC COMPLETION BOUNDARY BEFORE ATOMIC RETIREMENT FIX
+test_completion_retirement_is_atomic_with_final_stop_check (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_completion_retirement_is_atomic_with_final_stop_check) ... FAIL
+
+======================================================================
+FAIL: test_completion_retirement_is_atomic_with_final_stop_check (test_p02_native_voice_lifecycle_r29.NativeVoiceLifecycle.test_completion_retirement_is_atomic_with_final_stop_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py", line 179, in test_completion_retirement_is_atomic_with_final_stop_check
+    self.assertIsNot(observations[0].get('voiceStopped'), True)
+AssertionError: unexpectedly identical: True
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)

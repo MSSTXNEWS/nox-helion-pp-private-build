@@ -1,0 +1,58 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS06",
+  "agent_id": "/root/a02",
+  "parent_commit": "dc72e1a39633cadbd49a4eddf0cdae1663b36afb",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 6,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-VOICE-STOP-LIFECYCLE"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_git_blob": "d17270551ed924b6be4715f1d5383339568d51f0",
+      "post_git_blob": "144523b0227a5824b14bec678deaa5ea449059bc",
+      "pre_sha256": "548cd4f28e2c1b991028b26668fb098fa970de7d9b2228a231b085fd738ff06a",
+      "post_sha256": "8e74f9c84336ff6da02c4d85f383362d3031c1c7f6a57c86866e65e7cec5bffc"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "1547d03fc1ffeeaa202dfab40061708f87e18a01",
+      "post_git_blob": "de89a0eb8e896018f8d1184f05e7b7fe6c1b8560",
+      "pre_sha256": "a6e14cd8aee81b6f51c3264ee38d5902597e4d4c7e60fdca039b7cf622694189",
+      "post_sha256": "b8a4954029b6c23efff575199b74658af825e70557072d059ca56b09bb1190a6"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "pre_git_blob": "b8749db4d9b86897a748983f22bb335f6cf01528",
+      "post_git_blob": "b6cfaf70bc0e0ef07f9f4420b52c3e17fac7a59a",
+      "pre_sha256": "51b17cb649e07b98a509d7f62adb2c4de9cb5f3c5193a9d60ab4c9c8019dc2d5",
+      "post_sha256": "9a8f58d1e73e343d1049cb7d7afadc8c915d41085189fc1d5b59c12ffab7270b"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "580844125858fb5a0ba5e82db708ac70f76f4057",
+      "pre_sha256": null,
+      "post_sha256": "168ad6865cf8c711301bb5047377d8b6ea13e50158c2dae12a27c79ba6e7fdde"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_PASS06/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "76b2cd7deaeaf34dec319163d0f3238cf1cd5420",
+      "pre_sha256": null,
+      "post_sha256": "5c64a75e2eafffb95bd490daa064f6a22d0f9f35e877266c982ae9e9d392a326"
+    }
+  ],
+  "lesson": "Reuse original VoiceSession; bind native identity and request, authorize real STOP, atomically retire completion, and assert actual token/process effects outside HOLD wrappers.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

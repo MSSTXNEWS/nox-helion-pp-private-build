@@ -48,6 +48,7 @@ class OwnerTwoPorts:
                  voice_pipeline: LocalVoicePipeline | None = None,
                  native_take_audio: Callable[[NativeScope, str], bytes] | None = None,
                  native_store_output_audio: Callable[[NativeScope, bytes], str] | None = None,
+                 native_discard_output_audio: Callable[[NativeScope, str], bool] | None = None,
                  native_call_history: Callable[[NativeScope, int], list[dict]] | None = None,
                  owner_ready: Callable[[str], bool] | None = None):
         if not isinstance(store, P02Store) or not callable(native_authorize):
@@ -56,6 +57,7 @@ class OwnerTwoPorts:
         self.rag, self.voice, self.take_audio, self.call_history = (
             rag_index, voice_pipeline, native_take_audio, native_call_history)
         self.store_output_audio = native_store_output_audio
+        self.discard_output_audio = native_discard_output_audio
         self.owner_ready = owner_ready
 
     def _session(self, scope: NativeScope, route: str) -> None:
@@ -135,6 +137,19 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
+        # Reuse R18's post-persistence STOP boundary, then revoke the exact
+        # native receipt. Only the authenticated host may delete its audio.
+        if stop is not None and stop.is_set():
+            if (not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id)
+                    or not callable(self.discard_output_audio)):
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            try:
+                discarded = self.discard_output_audio(scope, output_id)
+            except Exception as exc:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD") from exc
+            if discarded is not True:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
         return {"transcript": result.transcript, "response": result.response,

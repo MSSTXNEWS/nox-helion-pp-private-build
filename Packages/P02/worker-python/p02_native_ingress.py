@@ -95,7 +95,10 @@ class NativeIngress:
     """
 
     def __init__(self, existing_dispatcher: Any, native_session: Callable[[], Any],
-                 *, expected_run_id: str, allow_modelcenter_reads: bool = False):
+                 *, expected_run_id: str, allow_modelcenter_reads: bool = False,
+                 enable_voice_stop: bool = False):
+        if type(enable_voice_stop) is not bool:
+            raise ValueError("Explicit native voice lifecycle gate required")
         if type(allow_modelcenter_reads) is not bool:
             raise ValueError("Explicit native ModelCenter read gate required")
         if not callable(native_session) or not (isinstance(expected_run_id, str)
@@ -111,6 +114,88 @@ class NativeIngress:
         self._seen = set()
         self._replay_lock = threading.Lock()
         self._serial = threading.Lock()
+        self._voice_lock = threading.RLock()
+        self._active_voice = None
+        self._voice_session_type = None
+        if enable_voice_stop:
+            # Reuse the original 729-source implementation, including process
+            # termination. No second cancellation engine or global token store.
+            from helion_voice.control import VoiceSession
+            self._voice_session_type = VoiceSession
+
+    def voice_session_from_native(self, session):
+        """Original VoiceSession for the current authenticated native request.
+
+        The native resolver must preserve its session object for its lifetime.
+        A reconstructed/equal session is not authority to access another run.
+        Providers using original subprocess adapters receive this same object.
+        """
+        with self._voice_lock:
+            active = self._active_voice
+            if active is None:
+                raise ProtocolHold("NATIVE_ACTIVE_VOICE_REQUIRED")
+            if active[0] is not session:
+                raise ProtocolHold("NATIVE_VOICE_SESSION_MISMATCH")
+            return active[2]
+
+    def voice_stop_token(self, session):
+        """Compatibility adapter to P02's existing Event-based pipeline.
+
+        Original VoiceSession has no public Event accessor. This narrow adapter
+        reuses its pinned _cancelled Event; it never creates or resets a token.
+        """
+        voice = self.voice_session_from_native(session)
+        token = voice._cancelled
+        if not isinstance(token, threading.Event):
+            raise ProtocolHold("NATIVE_ORIGINAL_VOICE_TOKEN_REQUIRED")
+        return token
+
+    def _execute_voice(self, route, payload, trusted_session, nonce):
+        if route != "chat.voice" or self._voice_session_type is None:
+            return self._dispatch.execute(route, payload, trusted_session)
+        voice = self._voice_session_type()
+        active = (trusted_session, nonce, voice)
+        with self._voice_lock:
+            self._active_voice = active
+        try:
+            result = self._dispatch.execute(route, payload, trusted_session)
+            with self._voice_lock:
+                if voice.stopped:
+                    raise ProtocolHold("NATIVE_VOICE_STOPPED")
+                # Completion and retirement are one transition. A STOP that
+                # authorizes later cannot ACK cancellation of this result.
+                if self._active_voice is active:
+                    self._active_voice = None
+            return result
+        finally:
+            with self._voice_lock:
+                if self._active_voice is active:
+                    self._active_voice = None
+                # Original scopes are non-reusable; retire even on provider
+                # failure and terminate any child still owned by this request.
+                voice.stop()
+
+    def _execute_stop(self, payload, trusted_session):
+        with self._voice_lock:
+            active = self._active_voice
+            target = payload.get("voice_request_id")
+            if active is not None and active[0] is not trusted_session:
+                raise ProtocolHold("NATIVE_VOICE_SESSION_MISMATCH")
+            if target is not None and (active is None or target != active[1]):
+                raise ProtocolHold("NATIVE_VOICE_REQUEST_MISMATCH")
+        # The unchanged PACK01 dispatcher enforces native scopes/consent and
+        # invokes its real STOP route FIRST. Never manufacture authorization.
+        result = self._dispatch.execute("chat.stop", payload, trusted_session)
+        if active is not None:
+            if not isinstance(result, dict) or result.get("stopRequested") is not True:
+                raise ProtocolHold("NATIVE_VOICE_STOP_ACK_REQUIRED")
+            with self._voice_lock:
+                stopped = self._active_voice is active
+                if stopped:
+                    active[2].stop()
+            # A delayed STOP must never cancel a subsequently admitted request.
+            result = dict(result, voiceStopped=stopped)
+        return result
 
     def handle(self, encoded: bytes) -> bytes:
         """Pure byte-frame handler; no stdout/pipe/socket opened here."""
@@ -171,16 +256,22 @@ class NativeIngress:
         try:
             # Only host-supplied session objects; do not import an identity
             # from untrusted WebView JSON or invent a local user account.
-            trusted_session = self._session()
-            if trusted_session is None:
-                raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
             if route == "chat.stop":
-                result = self._dispatch.execute(route, payload, trusted_session)
+                trusted_session = self._session()
+                if trusted_session is None:
+                    raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
+                result = self._execute_stop(payload, trusted_session)
             else:
                 # Shared native SQLite connections may not be thread safe.
                 # STOP is deliberately not queued behind this lock.
                 with self._serial:
-                    result = self._dispatch.execute(route, payload, trusted_session)
+                    # Native revocation may happen while waiting for another
+                    # operation. Resolve at dispatch admission, never before
+                    # a potentially blocking serial wait.
+                    trusted_session = self._session()
+                    if trusted_session is None:
+                        raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
+                    result = self._execute_voice(route, payload, trusted_session, nonce)
             answer = {"protocol": "NOX-P02-NATIVE-v1", "runId": self.run_id,
                       "requestId": nonce, "status": "OK", "result": result}
             out = json.dumps(answer, allow_nan=False, ensure_ascii=False,
