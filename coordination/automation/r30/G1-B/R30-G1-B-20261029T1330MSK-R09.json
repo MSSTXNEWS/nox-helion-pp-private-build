@@ -1,0 +1,129 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V9",
+  "runId": "R30-G1-B-20261029T1330MSK-R09",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "taskId": "G1B-P01-WEBVIEW2-MALFORMED-DUPLICATE-REQUESTID-CONTRADICTORY-ACK-R09",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "ownership": {
+    "lockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "privateBranch": "automation/r30/g1b/R30-G1-B-20261029T1330MSK-R09",
+    "sharedWriter": "Astra-C",
+    "foreignFileEdits": 0
+  },
+  "base": {
+    "previousBranch": "automation/r30/g1b/R30-G1-B-20261029T1230MSK-R08",
+    "preCommit": "24773f0494ba1d49ecb0885d43ffbd439b11564c",
+    "sourceCommit": "c5f3a561ab056f08bb4256a42885a92ca2f98b8b",
+    "testCommit": "c94af3e6cc3d6f408cfd62bc6d44331ba1e7bf2c",
+    "preReceiptHead": "c94af3e6cc3d6f408cfd62bc6d44331ba1e7bf2c"
+  },
+  "sourceReads": {
+    "consolidated56Path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "consolidated56GitBlobSHA1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "consolidated56Count": 56,
+    "historicalVerbatim56Verified": false,
+    "v16Doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "v16Sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "masterErrorsDrive": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06ReportDrive": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06LessonsDrive": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34Drive": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "priorR08ReceiptRead": true,
+    "sharedDriveWritePerformed": false
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlobSHA1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "historicalIndexedRefs": 25,
+    "individualSnapshotPhysicalSHA256Verified": false,
+    "changed": 0,
+    "priorP01HistoricalConflict": "Installer reserved by G1-A / forbidden to G1-B"
+  },
+  "observedProblem": "Malformed WebMessage JSON with a valid requestId already reserved by an in-flight or completed native action could fail validation on kind or routeId before duplicate detection, leading to a second REJECTED/P01_BAD_MESSAGE reply while the first native action could later COMPLETED. This is a source-code defect; no runtime exploit observed.",
+  "actualFix": "Extract requestId independently for JSON objects before other-field validation; if it matches the established request-ID grammar and is in the document replay set, silently ignore duplicate even when kind/route is malformed. Leave new malformed request IDs on existing P01_BAD_MESSAGE path, keep eight-inflight and 1024-document ceilings, native consent, HOME/MENU/CORE, HTTPS-origin, popup suppression and ProcessFailed intact. No new WPF host.",
+  "sourceChanges": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "34c07c7e7a97df99b3e4b60da767483c54d7fc39",
+      "postGitBlobSHA1": "4d0a2123f3663bd62dca8a0a1bd312a382ce870d",
+      "preSHA256": "400549441f31d8543fd96d7b710102266ca3cb19cfe9797eb5dfb499fabbbe42",
+      "postSHA256": "f30bc3539e9523a69e71da21bc73bed3032488f9f38f478c8c606bb2b31387fe",
+      "commit": "c5f3a561ab056f08bb4256a42885a92ca2f98b8b"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_malformed_requestid_replay_r09.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "da237dbca26113857de8d2f25f92942904a0a194",
+      "commit": "c94af3e6cc3d6f408cfd62bc6d44331ba1e7bf2c"
+    }
+  ],
+  "targetedSourceTest": {
+    "engine": "Executable V8 source assertions against exact GitHub UTF-8 readback (not compiled C#)",
+    "testCommandDescription": "Fetch exact branch bridge + committed G1-B R09 regression; assert event/input/replay/route/native-consent/error/origin invariants and source Git blob",
+    "prePatchChecksPass": 10,
+    "prePatchChecksTotal": 10,
+    "postGitReadbackChecksPass": 20,
+    "postGitReadbackChecksTotal": 20,
+    "regressionTestFileSaved": true,
+    "savedPythonUnittestCases": 8,
+    "pythonUnittestExecuted": false,
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "nativeHomeMenuCoreObserved": false,
+    "nativeButtonsObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorHandlingObserved": false,
+    "nativeWindowsOriginObserved": false,
+    "gitCompare": {
+      "ahead": 2,
+      "behind": 0,
+      "changedFilesBeforeReceipt": [
+        "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_malformed_requestid_replay_r09.py"
+      ]
+    },
+    "foreignPathEdits": 0
+  },
+  "blocker": {
+    "status": "HOLD",
+    "reason": "Existing C08 MainWindow.xaml.cs has not been verified wired to this C09 bridge. SOURCE-only checks do not establish WPF host execution, real HOME/MENU/CORE, buttons, native consent, cancellation, origin, or ACK. Native callbacks must cooperate with CancellationToken.",
+    "ownerRequest": "C08 original WPF-host owner should wire exactly this adapter to its existing single WebView2 host and independently test malformed duplicate requestId before/during/after native callback, HOME/MENU/CORE, permitted routes, consent, errors, origin, window.open and navigation on Windows. No second host; do not grant G1-B access to foreign paths."
+  },
+  "lesson": {
+    "applied": "R08 proved popup navigation has a separate WebView2 event family and keeps a single existing host; R09 preserves all previously DONE native/origin gates and reviews reply behavior for malformed duplicate messages.",
+    "new": "Deduplication must precede schema rejection whenever an incoming record contains an independently extractable, syntactically valid reserved requestId. Otherwise a malformed replay may generate an inconsistent second rejection for a native action still in flight. A source-level PASS is not real runtime proof.",
+    "driveStatus": "ASTRA_C_ONLY_COMMON_JOURNAL_WRITER"
+  },
+  "forbiddenWorkNotPerformed": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
