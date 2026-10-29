@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T10_INDEPENDENT_SOURCE_READY_QA_V1",
+  "project": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY; not main NOX",
+  "run_id": "NOX-V16-T10-20261029T160303MSK-R11",
+  "task_id": "T10-INDEPENDENT-SOURCE_READY-GATE-20261029-11",
+  "source_only": true,
+  "status": "HOLD",
+  "source_ready_pass": false,
+  "no_production_edits": true,
+  "no_merge": true,
+  "no_build": true,
+  "no_ci": true,
+  "moscow": {
+    "planned_start": "2026-10-29T16:00:00+03:00",
+    "observed_start": "2026-10-29T16:03:03+03:00",
+    "actual_end": "not independently observable at receipt drafting",
+    "duration_seconds": null
+  },
+  "pinned_from_T09": {
+    "t09_result": "FREEZE HOLD; not one frozen source tree",
+    "astra_source": {
+      "commit": "f0064948119c55001601e1bae1cd3755826605ed",
+      "reported_tree": "d905a55464fc",
+      "compared_to_current_ref": "identical",
+      "ahead": 0,
+      "behind": 0
+    },
+    "r30_snapshot": {
+      "commit": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+      "reported_tree": "6f38d9a3e4fc",
+      "compared_to_current_ref": "identical",
+      "ahead": 0,
+      "behind": 0
+    },
+    "pr162": {
+      "commit": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "reported_tree": "4255004c379a",
+      "compared_to_current_branch": "identical",
+      "ahead": 0,
+      "behind": 0
+    },
+    "source_sha_pre": "f0064948119c55001601e1bae1cd3755826605ed",
+    "source_sha_post": "f0064948119c55001601e1bae1cd3755826605ed",
+    "source_tree_changed_by_T10": false
+  },
+  "source_evidence": {
+    "v16_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": "1-33 and 54-56 with R29 loader-only override",
+    "consolidated_56_git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "source_inventory_git_blob_sha1": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "inventory_metadata": "968 baseline Git blob paths; T09 reports 968/968 present, 966 equal and two historical P02 changed; T10 did not repeat broad 968 comparison",
+    "source_parts": "three Git blobs reported unchanged by T09; raw archive 729 file SHA256 and physical 3-part reassembly NOT VERIFIED",
+    "ownership_lock_git_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "ownership_revision_delta": "Current G1-A explicit Installer paths no longer forbidden; do not propagate stale G1-A self-conflict",
+    "conflicts_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "targeted_source_test": {
+      "requirement": "P01 C09 bridge presence in one pinned accepted source tree",
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "t09_astra_head": "NOT_FOUND 404",
+      "t09_pr162_head": "NOT_FOUND 404",
+      "standalone_r12_branch": "PRESENT",
+      "standalone_r12_bridge_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "source_readback_checks": "3/3 GitHub fetch results confirmed; 0/2 pinned candidates contain this C09 bridge path",
+      "native_host_binding": "NOT VERIFIED; original MainWindow.xaml.cs wiring and native Windows origin/consent untested",
+      "interpretation": "The separately proven R12 owner file is NOT included in either checked T09 source candidate; this alone is not proof of functionality or an instruction to merge prematurely."
+    }
+  },
+  "mandatory_acceptance_gates": {
+    "accepted_full": 0,
+    "total": 7,
+    "blockers": [
+      "T09 frozen one approved HEAD/tree/SourceLock not available (T09 SOURCE FREEZE HOLD; three distinct refs).",
+      "P01-P05 fixed TaskID acceptance ledger and immutable owner pre/post SHA + receipts not independently sealed.",
+      "Original three-part ZIP physical SHA256, full 729 members and original E06 raw proofs not independently verified.",
+      "Functional NO-LOSS D02/WOW001-200/8 CoreIDs/5 Personas/Host50/PACK01+PACK02 not established at a single accepted HEAD.",
+      "Verified native ACL/STOP/consent/voice/GPU/RAG/SPACE/source contract bindings incomplete; specific P01 bridge absent from both pinned T09 source candidates.",
+      "E06 onehost/owner arbitration and cross-owner conflicting changes not accepted against one source tree.",
+      "Independent complete SOURCE_READY requirements checklist (100% mandatory) not passed; E07 installed Windows explicitly NOT_RUN."
+    ]
+  },
+  "product_progress": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "weighted_percent": "N/D",
+    "weights": "20/25/20/25/10",
+    "historic_DONE": "preserved; not reset"
+  },
+  "phases": {
+    "SOURCE": "CANDIDATE",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "applied_lesson": "T09 lesson applied: exact Git ref and Git blob presence are separate from raw archive SHA and functional acceptance. Avoid duplicate broad QA; one targeted P01 bridge readback confirms a concrete source gap.",
+  "requested_coordinator_action": "T02 ONLY: append this immutable T10 QA receipt with CAS + readback to shared Google Docs; T10 will not write shared documents."
+}
