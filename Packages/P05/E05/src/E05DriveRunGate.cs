@@ -48,6 +48,9 @@ public static class E05DriveRunGate
             // Confirm the returned receipt belongs to this run and document.
             if (receipt.RunId != runId || receipt.DocumentId != target.DocumentId ||
                 receipt.ExpectedChars != text.Length ||
+                string.IsNullOrWhiteSpace(receipt.RevisionBefore) ||
+                (receipt.Status == "READBACK_PASS" &&
+                 receipt.RevisionBefore == receipt.RevisionAfter) ||
                 receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
                 string.IsNullOrWhiteSpace(receipt.RevisionAfter))
                 return new(runId, "HOLD_WRITE_OR_READBACK", receipts);
