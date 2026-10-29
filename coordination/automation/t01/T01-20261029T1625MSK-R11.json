@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T01_HISTORICAL_50_TASK_LEDGER_HOLD_V1",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 (Windows loader-installer only)",
+  "task_id": "T01",
+  "run_id": "T01-20261029T1625MSK-R11",
+  "planned_time_msk": "2026-10-29T16:25:00+03:00",
+  "mode": "SOURCE_ONLY_NO_CODE_CHANGES",
+  "status": "HOLD_ORIGINAL_50_TASKID_IDENTITIES_NOT_AVAILABLE",
+  "scope": "Restore yesterday's original FIN ZAGR V15 fixed P01-P05 50-TaskID DONE/REMAINING, without zeroing old DONE. This is an evidence-safe aggregate handoff, NOT an exact per-TaskID acceptance ledger.",
+  "lineage": {
+    "source_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "source_branch_head_git_commit_sha1": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "source_recursive_tree_entry_count": 31607,
+    "source_recursive_tree_truncated": false,
+    "ownership_journal_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ownership_journal_git_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_count_from_index": 25,
+    "current_main_observed_git_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "pr162_observed_head_git_commit_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "task_definition_google_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_document_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_report_document_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06_lessons_document_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  },
+  "legacy_fixed_denominator": {
+    "source": "FIN ZAGR V15 Run10 aggregate source coverage, corroborated by V16 §33 historical note, active Master/E06 journal and prior report; NOT current acceptance",
+    "original_full_per_task_ledger_filename": "FIN_ZAGR_V15_TASK_LEDGER.csv",
+    "original_full_per_task_ledger_found": false,
+    "original_per_task_immutable_receipts_mapped": false,
+    "distinct_taskid_names_proven_for_this_denominator": false,
+    "expected_total_tasks": 50,
+    "packages": [
+      {
+        "package": "P01",
+        "count": 10,
+        "historical_source_done_count": 7,
+        "historical_source_remaining_count": 3,
+        "weight_global": 0.2,
+        "legacy_source_contribution_percentage_points": 14,
+        "original_taskid_membership": "NOT_RECOVERED",
+        "current_accepted_percent": null
+      },
+      {
+        "package": "P02",
+        "count": 10,
+        "historical_source_done_count": 4,
+        "historical_source_remaining_count": 6,
+        "weight_global": 0.25,
+        "legacy_source_contribution_percentage_points": 10,
+        "original_taskid_membership": "NOT_RECOVERED",
+        "current_accepted_percent": null
+      },
+      {
+        "package": "P03",
+        "count": 10,
+        "historical_source_done_count": 8,
+        "historical_source_remaining_count": 2,
+        "weight_global": 0.2,
+        "legacy_source_contribution_percentage_points": 16,
+        "original_taskid_membership": "NOT_RECOVERED",
+        "current_accepted_percent": null
+      },
+      {
+        "package": "P04",
+        "count": 10,
+        "historical_source_done_count": 3,
+        "historical_source_remaining_count": 7,
+        "weight_global": 0.25,
+        "legacy_source_contribution_percentage_points": 7.5,
+        "original_taskid_membership": "NOT_RECOVERED",
+        "current_accepted_percent": null
+      },
+      {
+        "package": "P05",
+        "count": 10,
+        "historical_source_done_count": 5,
+        "historical_source_remaining_count": 5,
+        "weight_global": 0.1,
+        "legacy_source_contribution_percentage_points": 5,
+        "original_taskid_membership": "NOT_RECOVERED",
+        "current_accepted_percent": null
+      }
+    ],
+    "historical_source_done_total": 27,
+    "historical_source_remaining_total": 23,
+    "historical_raw_source_coverage_percent": 54,
+    "historical_weighted_source_coverage_percent": 52.5,
+    "current_comparable_taskid_done_total": null,
+    "current_comparable_taskid_remaining_total": null,
+    "current_weighted_component_ready_percent": null,
+    "current_weighted_accepted_percent": null,
+    "newly_independently_accepted_product_tasks_in_this_run": 0,
+    "no_past_done_revoked": true,
+    "no_new_individual_taskid_done_claimed": true
+  },
+  "non_equivalent_other_50_ledger": {
+    "path": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+    "git_blob_sha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "namespace": "NIP01-01..NIP01-50 (PACK01/E06 host routes)",
+    "entries": 50,
+    "source_handler_descriptors": 37,
+    "unbound_routes": 13,
+    "native_integrated": 0,
+    "windows_accepted": 0,
+    "explicit_warning": "This E06 route/capability ledger is NOT the missing FIN_ZAGR_V15_TASK_LEDGER.csv. Do not substitute 50 route IDs as the P01-P05 original weighted acceptance denominator; do not deduplicate across namespaces."
+  },
+  "distinct_stage_gates": {
+    "source": "HISTORICAL_PRESENCE_ONLY_NOT_CURRENT_VERIFIED",
+    "integrated": "HOLD",
+    "source_ready": "HOLD",
+    "exe_nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "e07_same_sha": "NOT_RUN_0_OF_10",
+    "release": "HOLD"
+  },
+  "exact_blocker": "Original FIN_ZAGR_V15_TASK_LEDGER.csv with exact 50 original TaskID identities, per-ID DONE/REMAINING and corresponding acceptance receipts could not be located in examined canonical Google Docs/Drive search, current R30 recursive Git tree, PR162 recursive Git tree and bounded GitHub code search. Therefore individual old DONE assignments and their duplication status cannot be safely reconstructed. Historical package aggregates are retained unchanged.",
+  "handoff_for_T04_T05_T06": {
+    "input_artifact": null,
+    "T04": "Acquire original per-TaskID CSV and immutable historical receipts; dedupe by (original canonical TaskID, owner, evidence SHA, acceptance level) only, never by coincident names or NIP01 route IDs. Preserve each old DONE until positive contrary evidence with same identity.",
+    "T05": "Use exact owner path/preimage Git blob/receipt/RunID to admit already-produced patches; no new TaskID or source-code rewrite.",
+    "T06": "Assemble the one source tree only after owner/evidence reconciliation, with independent original 729/three-part SourceLock; no final integration/build at this stage.",
+    "invariant": "No change to main, PR162, shared R30, historic snapshots, shared Google Docs, SourceLock or production code."
+  },
+  "one_practical_lesson": "Namespace collision: equal counts of 50 do not imply equal TaskID ledgers. Keep V15 historical 27/50 and weighted 52.5% under SOURCE_HISTORY, keep NIP01-01..50 under E06_HOST_ROUTES, and keep CURRENT_ACCEPTANCE=N/D until exact original TaskID/owner/receipt identity is proven.",
+  "no_loss": {
+    "original_729_source_parts_unchanged": true,
+    "d02_wow_8core_5persona_preserved": true,
+    "pack01_pack02_preserved": true,
+    "owner_code_modified": false,
+    "main_or_pr162_modified": false,
+    "shared_docs_modified": false,
+    "windows_build_invoked": false,
+    "gitlab_ci_invoked": false
+  },
+  "actual_receipt_preparation_utc": "2026-10-29T13:27:01.528Z",
+  "actual_receipt_preparation_msk": "2026-10-29 16:27:01"
+}
