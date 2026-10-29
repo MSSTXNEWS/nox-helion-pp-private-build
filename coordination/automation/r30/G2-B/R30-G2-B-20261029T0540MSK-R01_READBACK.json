@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_R30_G2B_POST_COMMIT_READBACK_V1",
+  "run_id": "R30-G2-B-20261029T0540MSK-R01",
+  "slot": "G2-B",
+  "status": "SOURCE_COMMITTED_READBACK_PASS_NATIVE_HOLD",
+  "source_commit_sha": "9ddb8202ad3cd46923e8194897adde7a9de87311",
+  "source_commit_parent_sha": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "source_commit_tree_sha": "7195cd97d6a09c27acb4e68738ce4b1d6c756b21",
+  "owner_branch": "automation/r30/g2b/20261029T0540MSK-r01",
+  "modified_paths": 5,
+  "forbidden_owner_paths_modified": 0,
+  "actual_readback": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "observed_git_blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f",
+      "recorded_sha256": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+      "exact_git_blob_readback": "PASS"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "observed_git_blob_sha1": "ddb9cb4a398d5e0744afd2579be33b3f97ae01ba",
+      "recorded_sha256": "35f7b3b820f4cb06afb80691564806f7bf5a772c4b6e8fdc667fea5e735406a4",
+      "exact_git_blob_readback": "PASS"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "observed_git_blob_sha1": "1f6c7dd66c9d01e28022a25c97a9d2d2112b7646",
+      "recorded_sha256": "cf366a29a34f8dcef7b63c5c78a4bb4647dc8c82cf1c94025e9a22848a5f6377",
+      "exact_git_blob_readback": "PASS"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_g2b_r30_voice_sip.py",
+      "observed_git_blob_sha1": "f1a08afa54065e77ab3c2a485adb2cc3cc017921",
+      "recorded_sha256": "61439fefae29dbc48ca7e5fc144e4f91cdb25318263aac74e99f682d5dcef890",
+      "exact_git_blob_readback": "PASS"
+    },
+    {
+      "path": "coordination/automation/r30/G2-B/R30-G2-B-20261029T0540MSK-R01.json",
+      "observed_git_blob_sha1": "90e34baced279eb52e8d335901f31a57e0535324",
+      "recorded_sha256": null,
+      "exact_git_blob_readback": "PASS"
+    }
+  ],
+  "cross_branch_compare": "ahead_by=1; total_commits=1; no deletions; exactly 5 allowed G2-B paths",
+  "tests": "16/16 executed exact-source static assertions; 12 Python unittest cases SAVED, execution NOT_RUN",
+  "windows_ci": "NOT_RUN",
+  "nsis": "NOT_RUN",
+  "gitlab": "NOT_RUN",
+  "release": "HOLD",
+  "lesson": "Keep static source assertions distinct from executable Python tests; native mic consent, timed SIP quote, STOP cleanup remain independent E07/host HOLD.",
+  "master_google_docs": "Astra-C only; no worker write"
+}
