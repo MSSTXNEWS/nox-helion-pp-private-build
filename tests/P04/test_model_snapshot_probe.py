@@ -523,6 +523,35 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(result["tensor_headers"], 0)
         self.assertIsNone(result["observed_snapshot_sha256"])
 
+    def test_g4a_r07_windows_console_device_aliases_hold_before_weight_io(self):
+        for shard in ("CONIN$.safetensors", "conout$.safetensors"):
+            with self.subTest(shard=shard):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {"q.weight": shard}}), encoding="utf-8")
+                with mock.patch.object(probe, "_inspect_weight",
+                                       side_effect=AssertionError("shard I/O before path safety gate")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r07_canonically_equivalent_shard_names_hold_before_io(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {
+                "q.weight": "Caf\\u00e9.safetensors",
+                "r.weight": "Cafe\\u0301.safetensors"
+            }}), encoding="utf-8")
+        with mock.patch.object(probe, "_inspect_weight",
+                               side_effect=AssertionError("shard I/O before alias gate")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+        self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r07_normal_distinct_shard_names_remain_admissible(self):
+        self.assertIsNone(probe._validate_windows_shard_names(
+            ["model-00001.safetensors", "model-00002.safetensors"]))
+
 
 if __name__ == "__main__":
     unittest.main()
