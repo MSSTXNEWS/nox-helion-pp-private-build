@@ -52,6 +52,33 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         (self.root / "model.safetensors").write_bytes(b"not safetensors")
         self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
 
+    def test_rejects_duplicate_config_metadata(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","model_type":"other"}', encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_METADATA_INVALID")
+
+    def test_rejects_duplicate_shard_map_names(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            '{"weight_map":{"q.weight":"part-1.safetensors","q.weight":"part-2.safetensors"}}',
+            encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_METADATA_INVALID")
+
+    def test_rejects_duplicate_safetensors_tensor_names(self):
+        header = (b'{"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]},'
+                  b'"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}')
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(4)
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_nonfinite_json_metadata(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","untrusted":NaN}', encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_METADATA_INVALID")
+
     def test_detects_shard_missing(self):
         (self.root / "model.safetensors.index.json").write_text(
             json.dumps({"weight_map": {"a": "model-00001-of-00002.safetensors"}}),

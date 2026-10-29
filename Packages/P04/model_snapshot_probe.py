@@ -19,6 +19,25 @@ MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_WEIGHT_FILES = 512
 REVISION_RE = re.compile(r"[0-9a-fA-F]{40}")
 
+def _strict_json_object(raw: str | bytes) -> dict:
+    """Reject ambiguous duplicate keys and nonfinite JSON constants at every depth."""
+    def unique_pairs(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("MODEL_DUPLICATE_JSON_KEY")
+            obj[key] = value
+        return obj
+
+    def reject_constant(_value):
+        raise ValueError("MODEL_NONFINITE_JSON_CONSTANT")
+
+    obj = json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=reject_constant)
+    if not isinstance(obj, dict):
+        raise ValueError("MODEL_JSON_NOT_OBJECT")
+    return obj
+
+
 
 def _regular(path: Path, directory: bool = False) -> bool:
     try:
@@ -46,7 +65,7 @@ def _json_file(path: Path) -> dict:
     if not _regular(path) or path.stat().st_size > MAX_JSON_BYTES:
         raise ValueError("MODEL_METADATA_INVALID")
     try:
-        obj = json.loads(path.read_text(encoding="utf-8"))
+        obj = _strict_json_object(path.read_text(encoding="utf-8"))
     except (UnicodeError, ValueError, OSError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
@@ -74,7 +93,7 @@ def _weight_header(path: Path) -> frozenset[str]:
         if length < 2 or length > MAX_JSON_BYTES or size < length + 8:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
         try:
-            header = json.loads(f.read(length))
+            header = _strict_json_object(f.read(length))
         except (UnicodeError, ValueError) as exc:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
