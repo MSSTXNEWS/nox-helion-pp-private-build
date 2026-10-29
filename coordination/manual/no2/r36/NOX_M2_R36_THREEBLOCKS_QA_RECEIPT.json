@@ -1,0 +1,172 @@
+{
+  "schema": "NOX_V16_M2_R36_THREE_SOURCE_QA_BLOCKS_V1",
+  "runId": "NOX-V16-M2-R36-THREE-BLOCKS-20261030",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "status": "SOURCE_ONLY_FINITE_QA_COMPLETE__PRODUCT_NOT_ACCEPTED",
+  "targetPr": 162,
+  "checkedHead": "d5bb9d0628b634e359d38ce409d5063cb1b51573",
+  "checkedTree": "53293b4974b813b6e7aff07cf0aca9c339c72f4c",
+  "timeUtc": "N/D",
+  "scope": "Reused existing product source and tests; no original code, source archive, PR162 or main modified",
+  "sourceStages": {
+    "sourceVerified": "PARTIAL",
+    "integrated": "OWNER_CANDIDATE",
+    "qaAccepted": "HOLD",
+    "sourceReady": "HOLD",
+    "windowsNative": "NOT_RUN",
+    "e07": "NOT_RUN",
+    "gitlabBuild": "NOT_AUTHORIZED",
+    "deltaDone": 0,
+    "acceptedPercent": "N/D"
+  },
+  "blocks": [
+    {
+      "id": "M2-R36-BLOCK01",
+      "domain": "P01 WPF/WebView2/NSIS/route-dispatch",
+      "status": "SOURCE_CHECKS_COMPLETE__FIXTURE_FAIL",
+      "sourceBlobs": {
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1": "bb70d4c39963ebe9255afb62b7ac9e85365da780",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1": "5a0e9711af82677644783ba2e471caf512c67f1e",
+        "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
+        "tests/e06/test_theater_webview2_routes_r13.py": "fe296a4dc6ba21d8c33972a510349f71d2002cda",
+        "integrations/creative/bridge/CreativeHostBridge.cs": "6d466b5fb113edcbc2db3dd694e98e86962defda"
+      },
+      "executed": {
+        "engine": "V8 execute original JS dispatcher with mocked owner callbacks",
+        "pass": 10,
+        "total": 10,
+        "fail": 0
+      },
+      "sourceChecks": [
+        "both PS5.1 sources guard duplicate JSON object members before ConvertFrom-Json",
+        "manifest file size is bounded before full ReadAllBytes",
+        "installer preflight checks reparse points",
+        "dangerous route consent/ACK/closure/capability tests mocked PASS"
+      ],
+      "remaining": [
+        {
+          "id": "ERR-SRC-004",
+          "status": "TEST_FIXTURE_FAIL",
+          "path": "tests/e06/test_theater_webview2_routes_r13.py",
+          "reason": "Literal Navigate(\"https://nox.local/creative/theater.html\") assertion does not match existing host's theaterUrl variable",
+          "owner": "MANUAL_1_T06",
+          "action": "fix test fixture against exact Git preimage, run original unittest and native WebView2 acceptance"
+        }
+      ],
+      "notes": "PowerShell5.1/WPF/NSIS native tests NOT_RUN. No successful installation claim."
+    },
+    {
+      "id": "M2-R36-BLOCK02",
+      "domain": "P02/P03 chat, voice, ACL, queue ACK, native admission",
+      "status": "SOURCE_MOCK_CONTRACT_PASS__NATIVE_HOLD",
+      "sourceBlobs": {
+        "Packages/P02/worker-python/p02_runtime.py": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+        "Packages/P02/worker-python/p02_owner_route_ports.py": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+        "Packages/P02/worker-python/p02_native_ingress.py": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+        "tests/P03/test_G2C_G3B_R16_queue_ack_binding.cjs": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+        "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json": "21c9b4504ed89f0c59fd1a8178acef20958bb375"
+      },
+      "executed": {
+        "engine": "V8 execute P03 ui.js actual module prefix against mocked WebView2 callbacks",
+        "pass": 13,
+        "total": 13,
+        "fail": 0
+      },
+      "sourceChecks": [
+        "P02 loopback-only Ollama and bounded responses code present",
+        "P02 native scope requires Windows SID/ACL recheck after RAG and voice",
+        "P03 stop/retry ACK target matching on exact current source",
+        "P02 native_ingress rejects nonfinite JSON exponent"
+      ],
+      "remaining": [
+        "P02 native onehost STOP/ACL/consent and real Ollama not run",
+        "Host50 historical ledger 37/50 source-bound and 13 old HOLD is stale for current owner ledger; separate 40/10 source-binding claim requires current owner receipt",
+        "14 native pending distinct from source coverage",
+        "PACK02 50 offline actions not equal 50 native Host50 routes"
+      ],
+      "notes": "Source component mocks do not prove runtime."
+    },
+    {
+      "id": "M2-R36-BLOCK03",
+      "domain": "P04 RAG/QLoRA/GPU and P05 SPACE/events.v3",
+      "status": "STATIC_SOURCE_REVIEW__NEW_NEGATIVE_FIXTURE_SAVED__RUNTIME_HOLD",
+      "sourceBlobs": {
+        "Packages/P04/model_snapshot_probe.py": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+        "Packages/P04/train_qlora.py": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+        "Packages/P04/preflight_local_gpu.py": "15d6807033040711ac54c4c9f63432c5653e62bd",
+        "Packages/P05/E05/src/E05HostTelemetryFacade.cs": "fec1e138807aa8e336cad89e518b81ec63ff7713",
+        "Packages/P05/E05/src/E05DriveRunGate.cs": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "Packages/P05/E05/src/E05VerifiedReadiness.cs": "71b623cb114667c3b37b26103ec220f99233c398"
+      },
+      "staticReview": {
+        "observations": 13,
+        "positiveGuardPatterns": 11,
+        "suspectedParserGaps": 2,
+        "originalPythonDotnetTests": "NOT_RUN"
+      },
+      "newQaFixture": "coordination/manual/no2/r36/test_p04_snapshot_r36.py",
+      "newFixtureTests": {
+        "negative": 3,
+        "positive": 2,
+        "execution": "NOT_RUN",
+        "expected": "3 negative tests likely RED on original P04; owner fixes then manual #2 executes"
+      },
+      "observedRisks": [
+        {
+          "id": "ERR-SRC-004",
+          "sourcePath": "Packages/P04/model_snapshot_probe.py",
+          "cause": "json.loads parse_constant rejects NaN but not overflow exponent 1e9999 parsed to +inf; no parse_float finite guard",
+          "owner": "MANUAL_3_P04",
+          "required": "reject non-finite parsed floats with standard library and test"
+        },
+        {
+          "id": "ERR-SRC-004",
+          "sourcePath": "Packages/P04/model_snapshot_probe.py",
+          "cause": "zero-element safetensors [0, 2**64] bypasses multiplication dimension bound",
+          "owner": "MANUAL_3_P04",
+          "required": "enforce uint64-safe tensor dimension bound before zero-capacity short-circuit"
+        },
+        {
+          "id": "ERR-SRC-004",
+          "sourcePath": "Packages/P04/model_snapshot_probe.py",
+          "cause": "escaped lone UTF16 surrogate accepted by vanilla json.loads until later handling",
+          "owner": "MANUAL_3_P04",
+          "required": "reject unpaired surrogate recursively in parsed metadata before acceptance"
+        }
+      ],
+      "verifiedSourcePatterns": [
+        "QLoRA has STOP, thermal, checkpoint SHA and approved model rights gates",
+        "P05 GPU metrics require LIVE and 30-second fresh frame",
+        "P05 Drive gate requires readback",
+        "SPACE progress must be receipt verified, 5 lanes and approved owner"
+      ],
+      "notes": "No real GPU/QLoRA training, no Windows, real telemetry or source-ready acceptance."
+    }
+  ],
+  "handoff": {
+    "soleSharedJournalWriter": "T02",
+    "journalWrite": "NOT_ATTEMPTED_BY_M2",
+    "t02ReceiptDelivery": "PENDING",
+    "commonMasterE06LessonsCas": "NOT_VERIFIED",
+    "sourceFixOwner": "MANUAL_1_T06",
+    "p04P05Owner": "MANUAL_3",
+    "manual2Next": "run targeted source fixtures on post-owner exact frozen HEAD, native same-SHA QA only when authorized",
+    "dedupeErrorIds": [
+      "ERR-SRC-004",
+      "ERR-SYS-001",
+      "ERR-SYS-002"
+    ]
+  },
+  "safetyPreserved": [
+    "SourceLock729/3",
+    "D02/WOW200",
+    "8CoreID/5Persona",
+    "PACK01/02",
+    "STOP",
+    "ACL",
+    "consent",
+    "NO-LOSS",
+    "historical DONE/TaskID"
+  ]
+}
