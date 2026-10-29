@@ -8,6 +8,7 @@ import json
 import re
 import stat
 import zipfile
+import tempfile
 import importlib.util
 from pathlib import Path, PurePosixPath
 
@@ -138,41 +139,47 @@ def main():
                 raise SystemExit("R11_ORIGINAL_MISSING_FILES")
             if not required.issubset(planned):
                 raise SystemExit("P01_REQUIRED_ASSETS_MISSING:"+repr(required-planned))
-            seen=set();files=[];uncompressed=0
-            for inf in archive.infolist():
-                name=safe(inf.filename,inf).as_posix()
-                if inf.is_dir():continue
-                if name.casefold() in seen:raise SystemExit("DUPLICATE_ARCHIVE_MEMBER")
-                seen.add(name.casefold())
-                uncompressed+=inf.file_size
-                if uncompressed>200*1024*1024 or inf.file_size>64*1024*1024:
-                    raise SystemExit("ARCHIVE_SIZE_CAP")
-                if name.startswith("R11/"):
-                    target=WORK/name
-                    # Reject a symlink at any pre-existing parent or leaf.
-                    node=target.parent
-                    while True:
-                        if node.is_symlink():raise SystemExit("E06_STAGE_REPARSE_PARENT:"+name)
-                        if node==WORK:break
-                        if WORK not in node.parents:raise SystemExit("E06_TARGET_OUTSIDE_STAGE")
-                        node=node.parent
-                    target.parent.mkdir(parents=True,exist_ok=True)
-                    if target.exists() or target.is_symlink():
-                        raise SystemExit("TARGET_EXISTS_NO_OVERWRITE:"+name)
-                    with archive.open(inf) as reader,target.open("xb") as writer:
-                        b=hashlib.sha256()
-                        while chunk:=reader.read(1024*1024):
-                            b.update(chunk);writer.write(chunk)
-                    files.append({"path":name,"bytes":inf.file_size,"sha256":b.hexdigest()})
-            if len(files)<75:raise SystemExit("R11_ORIGINAL_MISSING_FILES")
-            names={x["path"] for x in files}
-            # Required P01 donor assets were checked before extraction.
-            if not required<=names:raise SystemExit("P01_REQUIRED_ASSETS_MISSING:"+repr(required-names))
-            report={"schema":"NOX-E06-P01-WINDOWS-DIAGNOSTIC-SOURCE-v1","run_id":RUN,
-                    "source_origin":"NOX_V16_E01_TURBO10_C07_HANDOFF.zip","donor_zip_sha256":total.hexdigest(),
-                    "original_members":len(files),"uncompressed_bytes":uncompressed,
-                    "source_unchanged":True,"diagnostic":True,"release_accepted":False,
-                    "artifacts":files}
+            # Stage into a private throwaway directory; invalid/truncated ZIP
+            # cannot leave a partial R11 tree and prevent the next safe run.
+            with tempfile.TemporaryDirectory(prefix=".nox-r11-pending-", dir=WORK) as scratch:
+                seen=set();files=[];uncompressed=0
+                for inf in archive.infolist():
+                    name=safe(inf.filename,inf).as_posix()
+                    if inf.is_dir():continue
+                    if name.casefold() in seen:raise SystemExit("DUPLICATE_ARCHIVE_MEMBER")
+                    seen.add(name.casefold())
+                    uncompressed+=inf.file_size
+                    if uncompressed>200*1024*1024 or inf.file_size>64*1024*1024:
+                        raise SystemExit("ARCHIVE_SIZE_CAP")
+                    if name.startswith("R11/"):
+                        target=Path(scratch)/name
+                        # Reject a symlink at any pre-existing parent or leaf.
+                        node=target.parent
+                        while True:
+                            if node.is_symlink():raise SystemExit("E06_STAGE_REPARSE_PARENT:"+name)
+                            if node==Path(scratch):break
+                            if Path(scratch) not in node.parents:raise SystemExit("E06_TARGET_OUTSIDE_STAGE")
+                            node=node.parent
+                        target.parent.mkdir(parents=True,exist_ok=True)
+                        if target.exists() or target.is_symlink():
+                            raise SystemExit("TARGET_EXISTS_NO_OVERWRITE:"+name)
+                        with archive.open(inf) as reader,target.open("xb") as writer:
+                            b=hashlib.sha256()
+                            while chunk:=reader.read(1024*1024):
+                                b.update(chunk);writer.write(chunk)
+                        files.append({"path":name,"bytes":inf.file_size,"sha256":b.hexdigest()})
+                if len(files)<75:raise SystemExit("R11_ORIGINAL_MISSING_FILES")
+                names={x["path"] for x in files}
+                # Required P01 donor assets were checked before extraction.
+                if not required<=names:raise SystemExit("P01_REQUIRED_ASSETS_MISSING:"+repr(required-names))
+                report={"schema":"NOX-E06-P01-WINDOWS-DIAGNOSTIC-SOURCE-v1","run_id":RUN,
+                        "source_origin":"NOX_V16_E01_TURBO10_C07_HANDOFF.zip","donor_zip_sha256":total.hexdigest(),
+                        "original_members":len(files),"uncompressed_bytes":uncompressed,
+                        "source_unchanged":True,"diagnostic":True,"release_accepted":False,
+                        "artifacts":files}
+                if R11.exists() or R11.is_symlink():
+                    raise SystemExit("E06_R11_CONCURRENT_OWNER_HOLD")
+                (Path(scratch)/"R11").rename(R11)
         lock_out=WORK/"source_lock.json"
         # Do not overwrite a concurrent or historical SourceLock.
         with lock_out.open("x",encoding="utf-8") as receipt:
