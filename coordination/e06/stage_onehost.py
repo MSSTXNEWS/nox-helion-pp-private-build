@@ -121,6 +121,10 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             raise RuntimeError("OWNER6_RECEIPT_READBACK_HOLD")
         require_lock_owned()
     except BaseException as cause:
+        # A foreign takeover invalidates even best-effort rollback authority.
+        if not _owned(lock, lock_identity, lock_bytes):
+            keep_recovery = True
+            raise RuntimeError("OWNER6_ROLLBACK_OWNER_LOCK_LOST_HOLD") from cause
         conflicts = []
         # Source replacement may fail before rename: distinguish original preimage.
         if installed_identity is not None:
