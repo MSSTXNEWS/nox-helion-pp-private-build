@@ -1,0 +1,33 @@
+{
+  "runId": "ASTRA-R29-A03-CONTINUATION-NATIVE-REVIEW-EXPORT-20261029",
+  "startedUtc": "2026-10-29T01:07:56Z",
+  "owner": "A03 P03",
+  "parentSha": "f58afc47d36324f3a67f65dec845e96d11959bd7",
+  "branch": "astra/r29-a03-20261029",
+  "previousApproachesPreserved": 5,
+  "continuationApproachesSourceTested": 1,
+  "taskIds": ["P03-R29-OWNER-REVIEWED-ARTIFACT-EXPORT", "P03-R29-EXACT-REVIEWED-METADATA-ADAPTER"],
+  "pythonStatus": "SOURCE_TESTED",
+  "nativeExportStatus": "SOURCE_CANDIDATE_NOT_EXECUTED",
+  "tests": {
+    "command": "python -m unittest discover -s Packages/P03/Admission -p 'test_p03_reviewed_artifact_adapter.py' -v",
+    "passed": 11,
+    "scope": "Actual new Python adapter using synthetic original-registry-shaped native exports; no C# execution or real reviewer authorization"
+  },
+  "nativeExport": {
+    "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+    "function": "TryExportReviewedArtifact",
+    "preGitBlob": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+    "behavior": "Calls original TryPromote with owner-supplied verified receipt, exports exact promoted artifact metadata and reviewer receipt reference"
+  },
+  "pythonAdapter": {
+    "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+    "function": "read_native_reviewed_artifact",
+    "behavior": "Trusted native reader only, bounded duplicate-free JSON, exact tag/family, valid bytes/memory/SHA/revision/evidence URI, immutable result and identity-only comparison"
+  },
+  "authorityBoundary": "Snapshot is metadata, not permission. Existing 25-tag allowlist unchanged. No generic bool/page flag can approve a new tag. E06 must supply authenticated session-bound native provider, verify reviewer receipt content/rights/SourceLock and separately authorize the existing queue.",
+  "lesson": "Export exact original owner metadata once and validate its immutable identity at the next boundary. Do not turn a metadata digest or reviewer receipt reference into an authenticity/rights proof.",
+  "remaining": ["Native export execution/Windows check", "E06 authenticated provider composition and reviewer receipt binding", "Only then reviewed-tag admission expansion", "Actual model license/pin inputs and native transfer acceptance"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

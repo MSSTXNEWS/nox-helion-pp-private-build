@@ -1,0 +1,715 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASTRA_CONTROLLER_PLUS_6_REAL_SUBAGENTS_10_PASSES_R29",
+  "version": "R29",
+  "strict_product_scope": "ONE EXPRESS INTEGRATOR Windows loader-installer defined by NOX FIN ZAGR V16 §§1-56; not standalone main NOX HELION product",
+  "controller": "1 Astra High manages six subagents A01..A06, authoring/verifying loader/installer code",
+  "requested_real_subagents": 6,
+  "passes_per_subagent": 10,
+  "planned_passes_total": 60,
+  "status": "PLANNED_NOT_EXECUTED",
+  "initial_source_commit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "branch": "astra/v16-code-complete-source-only-20261029",
+  "source_spec": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+  "rules_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+  "error_journal": "https://docs.google.com/document/d/1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50/edit",
+  "journals": {
+    "errors": "https://docs.google.com/document/d/1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50/edit",
+    "C34": "https://docs.google.com/document/d/1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU/edit",
+    "report": "https://docs.google.com/document/d/17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4/edit",
+    "lessons": "https://docs.google.com/document/d/14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ/edit"
+  },
+  "build_provider_future_only": "GitLab Free private s-grouptwet/nox-helion-pp-private-build; NO CI/EXE before source code complete",
+  "spawn_fallback": "Call real spawn tools if available; if not, explicitly report unavailable and work in sequential six role queues, NEVER stop without attempting code.",
+  "progress": "6 bars show real test-backed approaches 0..10; P01-P05 20/25/20/25/10 only from verified TaskID denominator. No fake 100%.",
+  "immutable_original": "3 source parts/729 archive source, D02/WOW200, 8 CoreID, 5 Persona, PACK01/PACK02 50+50 IDs, V15 56 rules; never delete or rewrite unrelated main NOX product",
+  "agents": [
+    {
+      "id": "A01",
+      "role": "P01 · EXPRESS INTEGRATOR WPF/WebView2 HOME/MENU/CORE, D02/WOW and installer-source",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "stage/proposals/P01/",
+        "proposals/P01/WOW-MAX10/",
+        "integrations/wow200/",
+        "proposals/NOX-CINEMA-FX/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Source inspect original Express Integrator HOME/MENU/CORE + VisualLock from 3-part 729 archive",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Reconcile 8 MENU tiles separately from 8 CoreID and approved five Persona portraits",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Restore functional approved five or later owner-authorized UI controls, no decorative handlers",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Audit one WPF/WebView2 host bridge and native permissions; no duplicate UI host",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Fix fullscreen/F11/Escape/DPI 100–200%, mobile-size preview/Reduced Motion for existing UI",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Verify D02 black liquid sun and WOW001–200 original approved visual inputs and rights",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Repair P01 NSIS staged payload metadata and preflight original owner files without running installer",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Prove install/update/rollback/uninstall source safety and no user data loss",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Source-only negative test dangerous paths/ownership/backup and owner receipt",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "P01 closure matrix full Express Integrator UI/installer TaskIDs, no builds",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    },
+    {
+      "id": "A02",
+      "role": "P02 · EXPRESS INTEGRATOR existing chatbot/voice/SQLite wiring and STOP boundaries",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "Packages/P02/",
+        "proposals/NOX-VOICE-LAB/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit original P02 route/contract interface; NO new Ollama/backend/SQLite",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Verify existing Ollama /api/tags /api/chat through one host with bounded timeout",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Fix P02 streaming+STOP native protocol handling for installer UI",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Connect original chat model selector in Express Integrator without fake model",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Verify original SQLite schema ACL/retention/history owner scope, no new store",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Check existing attachments MIME/quota/SHA/recovery bindings",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Connect already-existing RAG citation context by approved owner port, not new index",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Connect RU↔ES voice ASR/TTS + MAESTRO through existing permission-gated adapters",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Check SIP permission/consent/quote and call history as installer-facing opt-in only",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "Source-only real tests for P02 route/STOP/ownership/output; handoff receipts",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "role": "P03 · EXPRESS INTEGRATOR ModelCenter installer/downloader and prerequisites",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "Packages/P03/",
+        "coordination/providers/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Recover existing ModelCenter source from original V16 P03 C37/C41, NOT a new loader",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Verify catalogue 24+ model families and 15–20 artifact metadata where supported",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Check license/revision/SHA/model card rights and unavailable REVIEW_REQUIRED",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Connect real Ollama pull via existing downloader queue without second service",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Source controller for GGUF import path/format/hash/consent",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Fix byte progress/error/unknown total/Stop and cancellation",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Repair retry/resume/persistent queue without false success",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Detect Windows Python/Ollama/Git/WebView2/dotnet prerequisites without auto-install",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Check VRAM/RAM/size/format compatibility with real host values",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "Component tests of installed-download owner wiring and P03 acceptance receipts",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "role": "P04 · EXPRESS INTEGRATOR existing RAG/LoRA/GPU training integration contracts",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "Packages/P04/",
+        "tests/P04/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Inventory existing RAG/embedding source and installer handoff requirements",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Verify bounded provenance/SID/chunks/citations and P02 chat contract",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Verify local licensed dataset/holdout prerequisites and consent gates",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Connect installer UI button and owner-port to approved existing RAG, NO second store",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Wire source-level PEFT LoRA/QLoRA worker start without fake weight training",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Fix pause/resume/stop owner contract with checkpoint integrity",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Test model/dataset/revision/GPU identity checks for restore",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Verify GPU/VRAM/temp/battery ECO/BALANCED/INTENSIVE authentic statuses",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Confirm eval/merge compatibility and license/weights records, no unapproved download",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "Targeted source tests and handoff RAG/training capability statuses, hardware HOLD",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "role": "P05 · EXPRESS INTEGRATOR telemetry/progress/SPACE events and Google Drive",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "Packages/P05/",
+        "proposals/NOX-PACK02-50/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Verify one events.v3 and current app status contracts for installer",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Wire actual CPU/GPU/VRAM telemetry statuses, N/D if unavailable",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Connect P01–P05 real states to five weighted progress bars and combined result",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Verify status VERIFIED/HOLD/FAILED by immutable source RunID/TaskID",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Check 8 CoreID and 5 Persona status projections without inventing live metrics",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Wire existing SPACE optional presence/status inside installer, no new app backend",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Verify one existing PACK02 50 offline operations and do not duplicate",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Verify Drive error journal read per run and one report/lesson CAS readback",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Test UI progress/STOP/error/recovery with real source fixture",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "Source-only acceptance of P05 without writing unrelated main-NOX modules",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "role": "E06 · EXPRESS INTEGRATOR SourceLock/no-loss/host contracts + GitLab handoff",
+      "scope": "ONLY NOX HELION EXPRESS INTEGRATOR loader-installer FIN ZAGR V16",
+      "allowed_path_hints": [
+        "coordination/e06/",
+        "coordination/source-lock/",
+        "coordination/migration/",
+        "coordination/astra/"
+      ],
+      "spawn_status": "NOT_STARTED",
+      "worker_id": null,
+      "progress_bar": "[..........] 0/10",
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Verify Git blobs + physical original 3-part 60,364,346-byte ZIP where bytes accessible",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 2,
+          "goal": "Verify 729 inner SourceLock SHA/path and 56 ordered V15 rules against loader requirements",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 3,
+          "goal": "Guard original 968 tracked baseline files and historical unique GitLab migration blobs",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 4,
+          "goal": "Trace exact original WPF and Python host ownership/paths incl 50 PACK01 routes",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 5,
+          "goal": "Check cross-owner P01–P05 installer contracts only, no early cross-package merge",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 6,
+          "goal": "Inspect safe origin of ready donor patches R21/R22/PR203/204/208/209/210/211",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 7,
+          "goal": "Verify GitLab Free project migration adapter source and hard-coded branch; NEVER launch CI",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 8,
+          "goal": "Check official internet sources/licenses for installer prereqs, weights and WOW, share owner patches",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 9,
+          "goal": "Run focused source regression matrix, no EXE/NSIS/full release CI",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        },
+        {
+          "approach": 10,
+          "goal": "Prepare CODE_COMPLETE_CANDIDATE TaskID→path/blob/test and future GitLab integration handoff only",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocker": null
+        }
+      ]
+    }
+  ]
+}

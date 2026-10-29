@@ -1,0 +1,28 @@
+{
+  "voice_received_same_host_fixture_token": true,
+  "stop_response": {
+    "protocol": "NOX-P02-NATIVE-v1",
+    "runId": "R29-A02-STOP-PROBE",
+    "requestId": "00000000000000000000000000000002",
+    "status": "OK",
+    "result": {
+      "stopRequested": true
+    }
+  },
+  "voice_token_set_after_actual_stop": false,
+  "voice_response": {
+    "protocol": "NOX-P02-NATIVE-v1",
+    "runId": "R29-A02-STOP-PROBE",
+    "requestId": "00000000000000000000000000000001",
+    "status": "OK",
+    "result": {
+      "transcript": "привет",
+      "response": "hola",
+      "output_audio_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "target_lang": "es",
+      "mode": "translate"
+    }
+  },
+  "scope": "OFFLINE_IMPORTED_SOURCE_DIAGNOSTIC_NOT_NATIVE_ACCEPTANCE",
+  "finding": "EXISTING_CHAT_STOP_ACK_DOES_NOT_CANCEL_VOICE_EVENT"
+}

@@ -1,0 +1,17 @@
+{
+  "runId": "ASTRA-R29-A03-ONEHOST-DONOR-FIXTURE-CHECK-20261029",
+  "parentSha": "9a336a80c5d79d6d6d2f922500df027eaa409506",
+  "owner": "A03 P03",
+  "continuationApproachesSourceTested": 4,
+  "additionalApproach": false,
+  "purpose": "Complete exact saved donor fixture reconciliation for CONT3; no new product feature or pass count",
+  "donorCommit": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+  "files": ["Packages/P03/Source/python-host/test_p03_onehost_port.py", "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py"],
+  "tests": {
+    "command": "NOX_PINNED_P02_PATH=<pinned-local-P02-worker-python> NOX_PINNED_PACK01_PATH=<pinned-local-PACK01> python -m unittest discover -s Packages/P03/Source/python-host -q",
+    "result": "78 PASS",
+    "scope": "Current P03 Python source with existing local pinned P02/PACK01 test dependencies and fixture loopback HTTP; no native composition, weights or Windows execution"
+  },
+  "lesson": "When reusing saved owner source, retain its corresponding frozen-registry test fixture corrections. Do not misreport old test-fixture errors as product failures or count fixture completion as another product approach.",
+  "noBuildNoIntegration": true
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "NOX_V16_E06_R10_ATOMIC_SOURCE_MANIFEST_RECEIPT_V1",
+  "runId": "NOX-V16-E06-HOST50-20261028T1512MSK-R10",
+  "owner": "E06",
+  "stagingPR": 162,
+  "historicalBaselineCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "historicalBaselineTree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "requiredFrozenInputs": "CURRENT_PR162_HEAD_AND_OWNER_PREIMAGES; 729 original ZIP SourceLock still missing",
+  "taskIdLedger": {
+    "path": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+    "gitBlobSha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "rows": 50,
+    "sourceCandidates": 37,
+    "unbound": 13,
+    "verifiedNativeCapabilities": 0,
+    "integrated": 0,
+    "windowsAccepted": 0
+  },
+  "changes": [
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "owner": "E06",
+      "preSha256": "93cdab3505a002fa4dffac1c663bc77d4ded8ed90c48e6777bfb9ef4c998fdd4",
+      "preGitBlobSha1": "3d9ba4aafb14beac9ecc2c458fac80d2a50d5705",
+      "postSha256": "23069445f33a1bee04616fec0b156bef8a7b183a8cd8aa20766babd158819ea0",
+      "postGitBlobSha1": "dfa3b42b000c6f9f44370b2cc4e0ce4c51eadb1a"
+    },
+    {
+      "path": "tests/e06/test_original_archive_receipt_r10.py",
+      "owner": "E06",
+      "preSha256": "ABSENT",
+      "preGitBlobSha1": "ABSENT",
+      "postSha256": "0ff2dbdc3a8c6a8617bf55f843ca45b0d19ccb4fc8b524d564863bbeedbdef43",
+      "postGitBlobSha1": "892c316e15394585171714888e5c170f734e5a6f"
+    }
+  ],
+  "rootCause": "Old manifest publication checked Path.exists() then Path.write_text(); dangling symlink to nonexistent target passes exists() and creates target, plus concurrent writers can race/overwrite.",
+  "fix": "Audit receipt is first written to fsynced temp in same trusted parent; os.link publishes atomically only when output leaf is absent; symlink/reparse parents are rejected; no overwrite and no replacement.",
+  "redEvidence": "Exact historical preimage Git blob 3d9ba4a: synthetic audit returned exit 0 and created dangling-symlink target outside intended manifest path (local test).",
+  "tests": {
+    "environment": "Linux Python local (not Windows host)",
+    "newTestsPassed": 8,
+    "newTestsTotal": 8,
+    "pythonCompile": "PASS",
+    "syntheticOriginal729": "NOT_TESTED",
+    "windowsInstalledEXE": "NOT_RUN"
+  },
+  "noLoss": "No originals, D02, WOW, 8 CoreID, 5 Persona, owner P01–P05, main, EXE or archives deleted or changed.",
+  "status": "SOURCE_COMPONENT_LOCAL_PASS; SOURCELOCK729_HOLD; NATIVE_HOST_HOLD; E07_NOT_RUN; RELEASE_HOLD",
+  "weightedProgress": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+    "overall": "N/D"
+  },
+  "onePracticalLesson": "ATOMIC_EXCLUSIVE_SOURCELOCK_RECEIPT_PUBLICATION: audited SHA manifest must be fully fsynced and published with create-if-absent semantics, never exists()+write_text(), so symlink/concurrency cannot silently corrupt owner evidence."
+}

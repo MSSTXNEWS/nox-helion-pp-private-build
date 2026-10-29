@@ -1,0 +1,57 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-CONT01",
+  "agent_id": "/root/a02",
+  "parent_commit": "220c95cd3e705c819c89d82d53baa52e22c69153",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "previous_queue_completed": 10,
+  "previous_queue_planned": 10,
+  "continuation_completed": 1,
+  "continuation_planned": 10,
+  "task_mapping": "R29 matrix A02 approach08; V16 26.4.8; canonical product TaskID denominator N/D",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "cd977e9da7e13acb9530f49e495c22ee16657dc8",
+      "post_git_blob": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359",
+      "pre_sha256": "5614394558a735ad70b371c03312060026f1e54df0b2644649e03f89c7173ec2",
+      "post_sha256": "746d724b1b5b704f3db000cdc6f4241d1cba7c0b9ee3ee95a776490713280a1e"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_CONT01/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "d00ef20a5581a0ca4d5d4eebb7176137c17a16c1",
+      "pre_sha256": null,
+      "post_sha256": "a6a0811f27bc2cec625ab7dbeb6d6afdef0460c13ca6e77481ce6271e806d3a1"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_CONT01/original_sources.json",
+      "pre_git_blob": null,
+      "post_git_blob": "10bd9dee42fc6fb1ca8b5df8bd8e91d9a3a75a43",
+      "pre_sha256": null,
+      "post_sha256": "240406f87552146eee97cbf02089c1a16f8953876d84e18b552ca5d313d7a1e3"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "pre_git_blob": null,
+      "post_git_blob": "ef8d16b52b767f460ea34312ac90f3716258592a",
+      "pre_sha256": null,
+      "post_sha256": "8c92330b7db4ab9d79c7a957efb34392befc18fc481c4ebe98afb031dde202eb"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_original_voice_port_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "213c2caf7984dfb5922543355824a3e0cd36acd5",
+      "pre_sha256": null,
+      "post_sha256": "f3d2c9595ffa2a39eab8927b9fae0d664c73c8e08cdc22805e587b5ff65ec8c6"
+    }
+  ],
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "physical_providers": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "lesson": "Preserve original native preview/playback receipt semantics and per-stage authority; do not loosen byte-audio contract or fabricate approval/playback.",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

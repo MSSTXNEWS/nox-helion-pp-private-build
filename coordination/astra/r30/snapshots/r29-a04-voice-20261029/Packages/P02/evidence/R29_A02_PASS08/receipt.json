@@ -1,0 +1,58 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS08",
+  "agent_id": "/root/a02",
+  "parent_commit": "5c3e407b6e22a8467c11cc3ee75a7f779698b686",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 8,
+  "planned_approaches": 10,
+  "task_ids": [
+    "R29-A02-APPROACH03-OLLAMA-PROTOCOL-SNAPSHOT"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "pre_git_blob": "bc18f08181930562c12d58dc5f1871120b9d4594",
+      "post_git_blob": "ddf27032f81fb70c121c3729f7df75b44df40f64",
+      "pre_sha256": "9488f9db787debfe531d503d56a96a16bc429cdf2e22575a1a134dca816ea531",
+      "post_sha256": "d0b42269122998cd4e0c3c63d6a896d209ed4ed881a95d261ff444094a5b09cb"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_git_blob": "b79e3a304a99f97641bc9c72ea7260af8e033b0f",
+      "post_git_blob": "9c3a7c43197efac03558304c838594e8dab4c11f",
+      "pre_sha256": "3be5558f8d5a3f776aa48c51aac88d48100cc6fc051aca920baae2dae06f33cc",
+      "post_sha256": "8dd8d2c62beedc9c34b6be73da012d8b93c31b18f7cccb6387b5b22addc0dcac"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_PASS08/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "7f605cc6e32bccf916be1d98e992398f56b50dbf",
+      "pre_sha256": null,
+      "post_sha256": "5a544561327d560300f71a19233961712586f069e1bd595033f6517d571f6bfe"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_ollama_protocol_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "e2f81d6915e842f733572f3a7ec63cdf1f7bb215",
+      "pre_sha256": null,
+      "post_sha256": "8bde9682b846943276d843432f3362f6196498ccc044f0abf6fa4b77179d1fc3"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_stream_snapshot_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "d24b2e4cc38efc0a344861041878db286fbc37f8",
+      "pre_sha256": null,
+      "post_sha256": "618eff656b5ee5f9a4f2a05b58f48250221d8be31110acf128f91ce658ca3d9f"
+    }
+  ],
+  "lesson": "Reuse strict stream donor while retaining typed TIMEOUT; snapshot terminal bits before yielding mutable provider data.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

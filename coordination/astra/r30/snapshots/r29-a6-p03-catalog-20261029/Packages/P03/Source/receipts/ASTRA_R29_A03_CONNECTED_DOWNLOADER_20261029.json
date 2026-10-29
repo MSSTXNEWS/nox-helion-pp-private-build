@@ -1,0 +1,33 @@
+{
+  "runId": "ASTRA-R29-A03-CONNECTED-DOWNLOADER-20261029",
+  "owner": "A03 P03",
+  "parentSha": "1d0b2e173b5722ba40d88029e72020b153c20b37",
+  "branch": "astra/r29-a03-20261029",
+  "approachesCompleted": 4,
+  "approachesPlanned": 10,
+  "taskIds": ["P03-R29-NATIVE-LAYER-AGGREGATE-ADMISSION", "P03-R29-GGUF-OLLAMA-PREREQUISITE", "P03-R29-DOWNLOADER-CONNECTED-POLICY-CHAIN"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Admission/p03_modelcenter_gate.py",
+  "preGitBlob": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+  "postGitBlob": "37e9f8add720c3b882819a6e37dd69fa3076d27f",
+  "postSha256": "382c8bb5f448f2c7b72aa6692a3157dbedf8b1e96597a3c08f4d7ebe92cc5388",
+  "existingNativeSourceReused": [
+    "OllamaModelAdapter.PullAsync aggregates discovered digest layers; total grows as layers appear",
+    "OllamaModelAdapter.ImportGgufAsync uses the original local Ollama api/blobs and api/create",
+    "ModelDownloadQueueStore.RetryAsync creates new UUID and clears byte counters",
+    "Prior A06 callback/type hardening head e96ff6a87d0ab089029b3218ecea36759897e8bf inspected; donor edits not copied or overwritten"
+  ],
+  "tests": {
+    "command": "python -m unittest discover -s Packages/P03/Admission -q",
+    "before": "Connected chain 3 FAIL/3 PASS; additional missing-Ollama fixture failed before prerequisite correction",
+    "after": "157 PASS including 7 new connected-chain cases",
+    "kind": "Execute existing Python admission/progress/retry policy; synthetic trusted-native callback, selected artifact, queue states and receipts. No C# execution or real model transfer."
+  },
+  "chain": ["selected reviewed artifact admission", "existing pull/GGUF route", "unknown counters", "measured bytes without total", "discovered layer aggregate growth", "STOP remains request", "attested cancellation", "unique retry job and reset bytes", "completion requires full bytes, observed SHA and native receipt"],
+  "preservedNegativeGates": ["missing/rejected native verifier", "job/manifest/SHA drift", "shrinking counters", "unsafe integer bytes", "terminal state replay", "growth after STOP", "unknown-total completion", "wrong observed SHA"],
+  "lesson": "Match admission invariants to the original producer: aggregate transfer total is discovered layer state, not immutable artifact identity. Verify original queue identity/receipts while allowing monotone layer discovery; GGUF also requires its existing Ollama transport.",
+  "remaining": ["Independent application of prior A06 donor fixes", "Native E06 attestor and source-lock evidence", "Real Windows component/live Ollama transfer and GGUF acceptance", "Full P03 canonical TaskID denominator not established"],
+  "nativeWindowsAcceptance": "HOLD",
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

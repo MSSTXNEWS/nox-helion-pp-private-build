@@ -1,0 +1,270 @@
+# Azure DevOps WINDOWS fallback for NOX V16 private repository.
+# CONNECT in Azure DevOps to GitHub PR162 branch, select this YAML file.
+# Do not treat diagnostic artifacts as release/E07 acceptance.
+trigger: none
+pr: none
+name: NOX-V16-AZ-$(Date:yyyyMMdd)-$(Rev:r)
+pool:
+  vmImage: 'windows-2022'
+jobs:
+- job: original_source_and_onehost
+  displayName: 'Original source 729 SHA + real Windows ONEHOST diagnostic'
+  timeoutInMinutes: 60
+  steps:
+  - checkout: self
+    displayName: 'Exact private GitHub commit'
+    clean: true
+    fetchDepth: 0
+    persistCredentials: false
+  - task: UsePythonVersion@0
+    displayName: 'Exact Python 3.12.10 x64 (original source pinned)'
+    inputs:
+      versionSpec: '3.12.10'
+      architecture: 'x64'
+      addToPath: true
+  - task: UseDotNet@2
+    displayName: '.NET 8 SDK'
+    inputs:
+      packageType: sdk
+      version: '8.0.x'
+  - pwsh: |
+      $ErrorActionPreference='Stop'
+      Set-StrictMode -Version Latest
+      $head=(& git rev-parse HEAD).Trim().ToLowerInvariant()
+      if ($head -cne '$(Build.SourceVersion)'.ToLowerInvariant()) { throw 'AZURE_PINNED_SOURCE_HEAD_MISMATCH' }
+      Write-Host "SOURCE_COMMIT_SHA=$head"
+      # Fail fast on a malformed/duplicated E07 handoff BEFORE a 60 MB archive
+      # reconstruction or any costly Windows builder step. This is a source
+      # admission check, not native E07 release acceptance.
+      $handoffPath='coordination/e06/Emit-E07ImmutableHandoff.ps1'
+      if (!(Test-Path -LiteralPath $handoffPath -PathType Leaf)) { throw 'AZURE_E07_HANDOFF_MISSING_HOLD' }
+      $tokens=$null
+      $parseErrors=$null
+      [System.Management.Automation.Language.Parser]::ParseFile(
+        (Resolve-Path -LiteralPath $handoffPath).Path,[ref]$tokens,[ref]$parseErrors) | Out-Null
+      if ($null -ne $parseErrors -and $parseErrors.Count -gt 0) {
+        throw 'AZURE_E07_HANDOFF_POWERSHELL_SYNTAX_HOLD'
+      }
+      $handoffSource=Get-Content -LiteralPath $handoffPath -Raw -Encoding UTF8
+      if ([regex]::Matches($handoffSource,'Write-Host "E07_BUILDID_SEALED').Count -ne 1 -or
+          [regex]::Matches($handoffSource,'foreach \(\$expected in @\(\$source.parts\)\)').Count -ne 1 -or
+          !$handoffSource.Contains('([string]$matching[0].sha256).ToLowerInvariant() -cne ([string]$expected.sha256).ToLowerInvariant()') -or
+          !$handoffSource.Contains('([string]$matching[0].gitBlobSha1).ToLowerInvariant() -cne ([string]$expected.git_blob_sha1).ToLowerInvariant()') -or
+          !$handoffSource.Contains('release_accepted=$false')) {
+        throw 'AZURE_E07_HANDOFF_SINGLE_SEAL_AND_PART_PARITY_HOLD'
+      }
+      Write-Host 'E07_HANDOFF_PARSE_AND_SINGLE_SEAL_SOURCE_PASS_NOT_RELEASE'
+      # Execute actual writer AST with pre-existing receipt and 8 competing threads.
+      # This is a native PowerShell SOURCE gate, not installed E07.
+      & ./tests/e06/Test-E07NoClobberConcurrent.ps1
+      if ($LASTEXITCODE -ne 0 -or !$?) { throw 'AZURE_E07_RECEIPT_NO_CLOBBER_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_e07_no_clobber_source_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E07_RECEIPT_SOURCE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_azure_exact_python_pin.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_PYTHON_PIN_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e07 -p 'test_original_archive_namespace.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NAMESPACE_TEST_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_manifest_contract.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E07_CONTRACT_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_e07_source_part_identity_r14.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'E07_DUAL_PART_RECEIPT_PARITY_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_original_729_source.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'E06_PART_PIN_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_r17_nfc_namespace_gate.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'SOURCELOCK_NFC_NAMESPACE_REGRESSION_HOLD' }
+      $pinnedManifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-owner-pinned.json'
+      python coordination/e06/verify_original_729_source.py --parts-dir . --out $pinnedManifest --run-id 'NOX-V16-AZURE-$(Build.BuildId)'
+      if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_THREE_PART_PIN_SHA_HOLD' }
+      $pinReceipt=Get-Content -LiteralPath $pinnedManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($pinReceipt.fileCount -ne 729 -or $pinReceipt.combinedZip.sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a') { throw 'E06_PINNED_SOURCE_RECEIPT_INVALID' }
+      $manifest=Join-Path '$(Agent.TempDirectory)' 'nox-original-729-sha256.json'
+      python coordination/source-lock/verify_original_archive.py --parts-dir . --output $manifest --expected-files 729
+      if ($LASTEXITCODE -ne 0) { throw 'REAL_SOURCE_729_SHA_HOLD' }
+      $evidence=Get-Content -LiteralPath $manifest -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($evidence.file_count -ne 729 -or $evidence.status -cne 'SOURCE_ARCHIVE_VERIFIED_ONLY_NOT_E07_RELEASE') { throw 'ORIGINAL_SHA_RECEIPT_INVALID' }
+      Write-Host 'ORIGINAL_729_ACTUAL_BYTES_PASS_RELEASE_NOT_ACCEPTED'
+    displayName: 'Read and verify original 60 MB source ZIP and all 729 entries'
+  - pwsh: |
+      $ErrorActionPreference='Stop'
+      $env:GITHUB_RUN_ID='AZURE-$(Build.BuildId)'
+      $env:GITHUB_SHA='$(Build.SourceVersion)'
+      # Read-only native ingress and training validation before source staging.
+      python Packages/P02/worker-python/test_p02_native_ingress.py
+      if ($LASTEXITCODE -ne 0) { throw 'P02_NATIVE_INGRESS_UNIT_HOLD' }
+      python -m unittest discover -s Packages/P02/worker-python -p 'test_p02_sqlite_stop_before_commit_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P02_REAL_SQLITE_STOP_PRECOMMIT_HOLD' }
+      python tests/P04/test_training_failure_status.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_STATUS_UNIT_HOLD' }
+      python tests/P04/test_gpu_inventory_identity_gate_r13.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_GPU_INVENTORY_OWNER_UNIT_HOLD' }
+      python tests/P04/test_e04_role_type_before_membership.py
+      if ($LASTEXITCODE -ne 0) { throw 'P04_TRAINING_DATA_ROLE_UNIT_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_worker_payload_integrity_r18.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_PRELAUNCH_SOURCE_GATE_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_worker_stdout_admission_r14.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_WORKER_STDOUT_SOURCE_GATE_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_creative_request_replay_r17.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'CREATIVE_DUPLICATE_REQUEST_REGRESSION_HOLD' }
+      python -m unittest discover -s coordination/e06_host50 -p 'test_untrusted_wire_recursion_r15.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'HOST50_NESTED_WIRE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_p02_pack01_atomic_bind_r16.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'PACK01_ATOMIC_BIND_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_p03_queue_claim_cleanup_r16.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P03_QUEUE_CLAIM_SOURCE_REGRESSION_HOLD' }
+      # Offline .NET8 smoke only: verifies duplicate nested C# RAG-index
+      # provenance keys are rejected BEFORE the existing deserializer.
+      dotnet run --project qa/e07/P04NativeIndexDuplicateR10/P04NativeIndexDuplicateR10.csproj
+      if ($LASTEXITCODE -ne 0) { throw 'P04_CSHARP_RAG_INDEX_DUPLICATE_REGRESSION_HOLD' }
+      python -m unittest discover -s Packages/P03/Source/python-host -p 'test_p03_scope_shape_r10.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P03_NATIVE_OWNER_SCOPE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/P04 -p 'test_e04_rights_verifier_unavailable_r14.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'P04_RIGHTS_VERIFIER_FAILURE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_terminal_cleanup_r13.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'E06_OWNER_STREAM_TERMINAL_CLEANUP_HOLD' }
+      # Existing E06 P02/P04 owner seam regressions: deterministic native stubs only.
+      # Pass is NOT installed Windows/GPU/SQLite/Ollama acceptance.
+      python -m unittest discover -s tests/e06 -p 'test_onehost_post_history_r10.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_ONEHOST_OFFLINE_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_binding_drift_r09.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_OWNER_BINDING_REGRESSION_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_onehost_wire_type_r08.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_JSON_WIRE_REGRESSION_HOLD' }
+      Write-Host 'E06_MOCK_CONTRACT_GATE_ONLY_NOT_E07_NATIVE_ACCEPTANCE'
+      # private_build.ps1 is byte-preserved. Its py -3.12 launcher must resolve
+      # to THIS tool-cache Python, never an unrelated preinstalled patch version.
+      & python -c 'import sys,struct; assert sys.version_info[:3] == (3,12,10); assert struct.calcsize("P") == 8'
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_EXACT_PYTHON_3_12_10_OR_X64_HOLD' }
+      function py {
+        $arguments=@($args)
+        if ($arguments.Count -lt 1 -or $arguments[0] -cne '-3.12') {
+          throw 'AZURE_UNEXPECTED_PY_LAUNCHER_SELECTOR'
+        }
+        $pythonArgs=@($arguments | Select-Object -Skip 1)
+        & python @pythonArgs
+        if ($LASTEXITCODE -ne 0) { throw 'AZURE_PINNED_PY_LAUNCH_FAILED' }
+      }
+      & ./private_build.ps1
+      if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
+      python -m unittest discover -s tests/e06 -p 'test_azure_visual_single_stage.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_VISUAL_SINGLE_STAGE_CONTRACT_HOLD' }
+      python coordination/e06/stage_p01.py
+      if ($LASTEXITCODE -ne 0) { throw 'EXACT_P01_R11_STAGE_HOLD' }
+      node --test qa/G3-03/tests/nox-d02-home-reduced-motion-r13.test.mjs
+      if ($LASTEXITCODE -ne 0) { throw 'D02_REDUCED_MOTION_PROFILE_REGRESSION_HOLD' }
+      python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'WOW200_SOURCE_TEST_HOLD' }
+      # The canonical build_onehost_installer.ps1 stages both Creative and WOW
+      # once after SHA-pinned source validation; double staging causes an
+      # intentional D02_CREATIVE_STAGE_ALREADY_PRESENT fail-closed error.
+    displayName: 'Original Python candidate + approved P01/Creative/WOW source staging'
+  - pwsh: |
+      $ErrorActionPreference='Stop'
+      $pin='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+      $m=@(Get-ChildItem -LiteralPath 'work/candidate' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $pin })
+      if ($m.Count -ne 1) { throw 'PINNED_ORIGINAL_EXE_MISSING' }
+      # Reuse original Creative owner worker and installer patch, on a disposable CI copy.
+      # The ONEHOST packager must include the real worker BEFORE payload.sha256.json.
+      $creativeRoot=(Resolve-Path -LiteralPath 'integrations/creative').Path
+      $workerRoot=Join-Path (Resolve-Path -LiteralPath '.').Path 'work/e06/azure-creative-worker'
+      if (Test-Path -LiteralPath $workerRoot) { throw 'AZURE_CREATIVE_WORKER_OUTPUT_EXISTS_HOLD' }
+      New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+      python -m venv (Join-Path $workerRoot '.venv')
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_VENV_HOLD' }
+      $workerPython=Join-Path $workerRoot '.venv/Scripts/python.exe'
+      # Fixed original owner dependency versions in isolated build venv (no global pip).
+      & $workerPython -m pip install --disable-pip-version-check --no-input 'pyinstaller==6.16.0' 'huggingface_hub==0.36.0' 'trimesh==4.8.2' 'numpy==2.3.4'
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_DEPS_HOLD' }
+      $env:PYTHONPATH=$creativeRoot
+      & $workerPython -m unittest discover -s (Join-Path $creativeRoot 'tests') -v
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_PROTOCOL_HOLD' }
+      & $workerPython -m PyInstaller --noconfirm --clean --onedir --console --name NOX_CreativeWorker --paths $creativeRoot --collect-all huggingface_hub --collect-all trimesh --distpath (Join-Path $workerRoot 'dist') --workpath (Join-Path $workerRoot 'build') (Join-Path $creativeRoot 'creative_worker.py')
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_WORKER_COMPILE_HOLD' }
+      $workerDist=Join-Path $workerRoot 'dist/NOX_CreativeWorker'
+      if (!(Test-Path -LiteralPath (Join-Path $workerDist 'NOX_CreativeWorker.exe') -PathType Leaf)) { throw 'AZURE_CREATIVE_WORKER_BINARY_MISSING_HOLD' }
+      $builderCopy=Join-Path $workerRoot 'build_onehost_creative_disposable.ps1'
+      Copy-Item -LiteralPath 'coordination/e06/build_onehost_installer.ps1' -Destination $builderCopy -ErrorAction Stop
+      & $workerPython (Join-Path $creativeRoot 'patch_installer.py') $builderCopy $workerDist
+      if ($LASTEXITCODE -ne 0) { throw 'AZURE_CREATIVE_INSTALLER_STAGE_HOLD' }
+      $patchedBuilder=Get-Content -LiteralPath $builderCopy -Raw -Encoding UTF8
+      if ($patchedBuilder -notmatch 'CREATIVE_PAYLOAD_MISSING_HOLD' -or $patchedBuilder -notmatch 'NOX_CreativeWorker.exe') { throw 'AZURE_CREATIVE_BUILDER_COPY_NOT_PATCHED_HOLD' }
+      $out='work/e06/azure-onehost-diagnostic'
+      & $builderCopy -SourceRoot 'work/e06/staged/R11' -PythonExe $m[0].FullName -OutputRoot $out -RunId 'NOX-AZURE-$(Build.BuildId)' -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
+      if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_ONEHOST_NSIS_BUILD_HOLD' }
+      $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+      $exe=Join-Path $out 'payload/NOX.P01.Shell.exe'
+      $receipt=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
+      foreach ($p in @($setup,$exe,$receipt)) { if (!(Test-Path -LiteralPath $p -PathType Leaf)) { throw "MISSING_WINDOWS_BUILD_FILE:$p" } }
+      $args=@{Original729Receipt=(Join-Path '$(Agent.TempDirectory)' 'nox-original-729-sha256.json');Owner729Receipt=(Join-Path '$(Agent.TempDirectory)' 'nox-original-729-owner-pinned.json');OneHostReceipt=$receipt;SetupExe=$setup;PublishedExe=$exe;SourceCommitSha='$(Build.SourceVersion)';Output=(Join-Path $out 'E07_BUILT_HANDOFF.json');Phase='BUILT'}
+      & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 @args
+      if ($LASTEXITCODE -ne 0) { throw 'E07_BUILT_HANDOFF_HOLD' }
+      Write-Host "SETUP_SHA256=$((Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
+      Write-Host "WPF_SHA256=$((Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant())"
+      Write-Host 'BUILD_ONLY_NOT_E07_ACCEPTED'
+    displayName: 'WPF/WebView2 + Python + NSIS and immutable BuildID/EXE SHA'
+  - pwsh: |
+      $ErrorActionPreference='Stop'
+      $dst=Join-Path '$(Build.ArtifactStagingDirectory)' 'nox-v16-diagnostic'
+      New-Item -ItemType Directory -Path $dst -Force | Out-Null
+      $files=@(
+        @('$(Agent.TempDirectory)/nox-original-729-sha256.json','original-729-sha256.json'),
+        @('$(Agent.TempDirectory)/nox-original-729-owner-pinned.json','original-729-owner-pinned.json'),
+        @('work/e06/azure-onehost-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json','ONEHOST_DIAGNOSTIC_RECEIPT.json'),
+        @('work/e06/azure-onehost-diagnostic/E07_BUILT_HANDOFF.json','E07_BUILT_HANDOFF.json'),
+        @('work/e06/azure-onehost-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json','D02_VISUAL_PUBLISH_RECEIPT.json'),
+        @('work/e06/azure-onehost-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe','NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
+      )
+      foreach ($entry in $files) {
+        if (!(Test-Path -LiteralPath $entry[0] -PathType Leaf)) { continue }
+        $source=Get-Item -LiteralPath $entry[0] -Force
+        if (($source.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'AZURE_DIAGNOSTIC_EVIDENCE_REPARSE_HOLD' }
+        $target=Join-Path $dst $entry[1]
+        $digest=(Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        Copy-Item -LiteralPath $source.FullName -Destination $target -ErrorAction Stop
+        if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digest) { throw 'AZURE_DIAGNOSTIC_EVIDENCE_COPY_SHA_HOLD' }
+      }
+      # PublishSingleFile=false: the WPF EXE requires its DLLs and runtime payload.
+      # Keep the diagnostic bundle in the PRIVATE pipeline artifact, never public release.
+      $payloadSource='work/e06/azure-onehost-diagnostic/payload'
+      if (Test-Path -LiteralPath $payloadSource -PathType Container) {
+        $nodes=@(Get-Item -LiteralPath $payloadSource -Force)+@(Get-ChildItem -LiteralPath $payloadSource -Recurse -Force)
+        foreach ($node in $nodes) {
+          if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'AZURE_PUBLISHED_REPARSE_HOLD' }
+        }
+        $payloadTarget=Join-Path $dst 'payload'
+        if (Test-Path -LiteralPath $payloadTarget) { throw 'AZURE_PUBLISHED_TARGET_EXISTS_HOLD' }
+        Copy-Item -LiteralPath $payloadSource -Destination $payloadTarget -Recurse -ErrorAction Stop
+        $originalFiles=@(Get-ChildItem -LiteralPath $payloadSource -File -Recurse -Force)
+        $publishedFiles=@(Get-ChildItem -LiteralPath $payloadTarget -File -Recurse -Force)
+        if ($originalFiles.Count -ne $publishedFiles.Count) { throw 'AZURE_PUBLISHED_FILE_COUNT_HOLD' }
+        $digestRows=@()
+        foreach ($file in $originalFiles) {
+          $relative=$file.FullName.Substring($payloadSource.Length+1)
+          $published=Join-Path $payloadTarget $relative
+          if (!(Test-Path -LiteralPath $published -PathType Leaf)) { throw 'AZURE_PUBLISHED_MISSING_FILE_HOLD' }
+          $digest=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ((Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digest) { throw 'AZURE_PUBLISHED_PAYLOAD_SHA_HOLD' }
+          $digestRows+=([ordered]@{path=$relative.Replace('\','/');sha256=$digest;bytes=$file.Length})
+        }
+        $seal='work/e06/azure-onehost-diagnostic/E07_BUILT_HANDOFF.json'
+        if (Test-Path -LiteralPath $seal -PathType Leaf) {
+          $handoff=Get-Content -LiteralPath $seal -Raw -Encoding UTF8 | ConvertFrom-Json
+          $binary=Join-Path $payloadTarget 'NOX.P01.Shell.exe'
+          $setup=Join-Path $dst 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+          if (!(Test-Path -LiteralPath $binary -PathType Leaf) -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'AZURE_E07_BUILT_BINARY_MISSING_HOLD' }
+          if ($handoff.phase -cne 'BUILT' -or $handoff.release_accepted -ne $false -or
+              ([string]$handoff.published_exe_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -or
+              ([string]$handoff.setup_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'AZURE_E07_BUILT_SHA_HOLD' }
+        }
+        $manifest=[ordered]@{schema='NOX_AZURE_PRIVATE_DIAGNOSTIC_SHA_V1';source_commit='$(Build.SourceVersion)';azure_build_id='$(Build.BuildId)';release_accepted=$false;files=$digestRows}
+        [IO.File]::WriteAllText((Join-Path $dst 'PUBLISHED_PRIVATE_PAYLOAD_SHA256.json'),($manifest | ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
+      }
+      Write-Host 'Private diagnostic bundle with complete WPF runtime SHA-checked, NOT E07 accepted.'
+    displayName: 'Retain evidence and diagnostic installer without secrets'
+    condition: succeededOrFailed()
+  - task: PublishPipelineArtifact@1
+    displayName: 'Publish candidate for manual #1/#3, NOT release'
+    condition: succeededOrFailed()
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/nox-v16-diagnostic'
+      artifact: nox-v16-azure-diagnostic
+      publishLocation: pipeline

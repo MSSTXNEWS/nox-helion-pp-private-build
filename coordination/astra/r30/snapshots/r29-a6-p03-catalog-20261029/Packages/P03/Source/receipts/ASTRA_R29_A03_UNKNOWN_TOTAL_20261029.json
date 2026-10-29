@@ -1,0 +1,20 @@
+{
+  "runId": "ASTRA-R29-A03-UNKNOWN-TOTAL-20261029",
+  "owner": "A03 P03",
+  "parentSha": "653df039392216e7867b436b86da20e03f133641",
+  "branch": "astra/r29-a03-20261029",
+  "approachesCompleted": 2,
+  "approachesPlanned": 10,
+  "taskIds": ["P03-R29-UNKNOWN-TOTAL-PROGRESS"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "preGitBlob": "ff4a4445b8c776409130dbbc7483bc205985fb57",
+  "postGitBlob": "cd2db9c74077ddc7ae6a8c99b58a05a155d019d9",
+  "postSha256": "f6e96ecd7eaa8f568c3b06ebc5b37805abd9444594ade9f41d2763694c13348c",
+  "tests": {"command": "node --test Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs", "before": "4 new failures, prior 8 pass", "after": "12 PASS", "kind": "Original WebView JavaScript executed in Node VM with inert DOM/native-event fixtures"},
+  "lesson": "An unknown denominator must suppress percentage, not discard a known numerator. Validate exact integer bytes, preserve monotone evidence and separately render unknown total.",
+  "priorLessonApplied": "Queue lifecycle remains keyed by job identity; all eight previous lifecycle/atomic-snapshot regressions still pass.",
+  "nativeWindowsAcceptance": "HOLD: no native host, model download or Windows installer run",
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

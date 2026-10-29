@@ -1,0 +1,142 @@
+test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) ... 
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"partial"},"done":false,"done":true}\n') ... FAIL
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"partial","content":"replacement"},"done":true}\n') ... FAIL
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"ok"},"done":true,"eval_duration":NaN}\n') ... FAIL
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"ok"},"done":true,"eval_duration":1e999}\n') ... FAIL
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"\\ud800"},"done":true}\n') ... FAIL
+  test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'\xff\xfe{\x00"\x00d\x00o\x00n\x00e\x00"\x00:\x00t\x00r\x00u\x00e\x00}\x00') ... FAIL
+test_duplicate_model_registry_is_denied (test_ollama_protocol_r27.OllamaProtocolTests.test_duplicate_model_registry_is_denied) ... FAIL
+test_http_200_midstream_error_remains_failure (test_ollama_protocol_r27.OllamaProtocolTests.test_http_200_midstream_error_remains_failure) ... ok
+test_ndjson_line_allocation_is_bounded_before_read (test_ollama_protocol_r27.OllamaProtocolTests.test_ndjson_line_allocation_is_bounded_before_read) ... FAIL
+test_normal_finite_frames_remain_supported (test_ollama_protocol_r27.OllamaProtocolTests.test_normal_finite_frames_remain_supported) ... ok
+test_adapter_mutation_during_delta_cannot_complete_partial_turn (test_stream_snapshot_r27.StreamSnapshotTests.test_adapter_mutation_during_delta_cannot_complete_partial_turn) ... FAIL
+test_consumer_cannot_promote_partial_chunk_to_terminal (test_stream_snapshot_r27.StreamSnapshotTests.test_consumer_cannot_promote_partial_chunk_to_terminal) ... FAIL
+test_consumer_cannot_revoke_actual_terminal_chunk (test_stream_snapshot_r27.StreamSnapshotTests.test_consumer_cannot_revoke_actual_terminal_chunk) ... ERROR
+
+======================================================================
+ERROR: test_consumer_cannot_revoke_actual_terminal_chunk (test_stream_snapshot_r27.StreamSnapshotTests.test_consumer_cannot_revoke_actual_terminal_chunk)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_stream_snapshot_r27.py", line 36, in test_consumer_cannot_revoke_actual_terminal_chunk
+    self.assertEqual(list(chunks), [])
+                     ^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_runtime.py", line 244, in stream
+    raise P02Error("Ollama stream truncated before done=true")
+p02_runtime.P02Error: Ollama stream truncated before done=true
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"partial"},"done":false,"done":true}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"partial","content":"replacement"},"done":true}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"ok"},"done":true,"eval_duration":NaN}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"ok"},"done":true,"eval_duration":1e999}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'{"message":{"content":"\\ud800"},"done":true}\n')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ambiguous_or_nonfinite_frames_never_publish (test_ollama_protocol_r27.OllamaProtocolTests.test_ambiguous_or_nonfinite_frames_never_publish) (event=b'\xff\xfe{\x00"\x00d\x00o\x00n\x00e\x00"\x00:\x00t\x00r\x00u\x00e\x00}\x00')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 51, in test_ambiguous_or_nonfinite_frames_never_publish
+    with self.assertRaises(P02Error):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_duplicate_model_registry_is_denied (test_ollama_protocol_r27.OllamaProtocolTests.test_duplicate_model_registry_is_denied)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 56, in test_duplicate_model_registry_is_denied
+    with self.assertRaises(P02Error): client.models()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_ndjson_line_allocation_is_bounded_before_read (test_ollama_protocol_r27.OllamaProtocolTests.test_ndjson_line_allocation_is_bounded_before_read)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_ollama_protocol_r27.py", line 37, in test_ndjson_line_allocation_is_bounded_before_read
+    self.assertEqual(client.response.read_limits, [1024 * 1024 + 1])
+AssertionError: Lists differ: [-1] != [1048577]
+
+First differing element 0:
+-1
+1048577
+
+- [-1]
++ [1048577]
+
+======================================================================
+FAIL: test_adapter_mutation_during_delta_cannot_complete_partial_turn (test_stream_snapshot_r27.StreamSnapshotTests.test_adapter_mutation_during_delta_cannot_complete_partial_turn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_stream_snapshot_r27.py", line 57, in test_adapter_mutation_during_delta_cannot_complete_partial_turn
+    self.assertEqual([r['type'] for r in rest], ['chat.delta', 'chat.complete'])
+AssertionError: Lists differ: ['chat.complete'] != ['chat.delta', 'chat.complete']
+
+First differing element 0:
+'chat.complete'
+'chat.delta'
+
+Second list contains 1 additional elements.
+First extra element 1:
+'chat.complete'
+
+- ['chat.complete']
++ ['chat.delta', 'chat.complete']
+
+======================================================================
+FAIL: test_consumer_cannot_promote_partial_chunk_to_terminal (test_stream_snapshot_r27.StreamSnapshotTests.test_consumer_cannot_promote_partial_chunk_to_terminal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_stream_snapshot_r27.py", line 28, in test_consumer_cannot_promote_partial_chunk_to_terminal
+    self.assertEqual([r['delta'] for r in rest], ['last'])
+AssertionError: Lists differ: [] != ['last']
+
+Second list contains 1 additional elements.
+First extra element 0:
+'last'
+
+- []
++ ['last']
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.005s
+
+FAILED (failures=10, errors=1)

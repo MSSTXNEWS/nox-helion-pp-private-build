@@ -1,0 +1,591 @@
+test_missing_native_proof_holds_without_consumption (test_p02_voice_consent_r27.ConsentTests.test_missing_native_proof_holds_without_consumption) ... FAIL
+test_native_exception_holds_before_capture (test_p02_voice_consent_r27.ConsentTests.test_native_exception_holds_before_capture) ... FAIL
+test_native_proof_receives_exact_scope_and_capture (test_p02_voice_consent_r27.ConsentTests.test_native_proof_receives_exact_scope_and_capture) ... FAIL
+test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) ... 
+  test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=False) ... FAIL
+  test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=1) ... ERROR
+  test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value='yes') ... ERROR
+  test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=None) ... ERROR
+test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) ... FAIL
+test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) ... 
+  test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) (key='mic_consent') ... FAIL
+  test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) (key='microphone_consent') ... ERROR
+test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) ... FAIL
+test_stop_inside_consent_preserves_capture (test_p02_voice_consent_r27.ConsentTests.test_stop_inside_consent_preserves_capture) ... FAIL
+test_authorization_callback_cannot_replace_request (test_p02_voice_request_r27.RequestTests.test_authorization_callback_cannot_replace_request) ... ERROR
+test_both_directions_and_maestro_still_supported (test_p02_voice_request_r27.RequestTests.test_both_directions_and_maestro_still_supported) ... ok
+test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) ... 
+  test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='target', value='ru') ... ERROR
+  test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='voice', value='unknown') ... ERROR
+  test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='mode', value='bad') ... ERROR
+  test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='level', value=[]) ... ERROR
+  test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='source', value={'ru': True}) ... ERROR
+test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) ... FAIL
+test_native_capture_callback_cannot_replace_request (test_p02_voice_request_r27.RequestTests.test_native_capture_callback_cannot_replace_request) ... ERROR
+test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) ... 
+  test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) (text=' ') ... FAIL
+  test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) (text='\ud800') ... FAIL
+test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) ... FAIL
+test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) ... 
+  test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) (text='\n\t') ... FAIL
+  test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) (text='\udfff') ... FAIL
+test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) ... FAIL
+test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) ... 
+  test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate') ... FAIL
+  test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='maestro') ... FAIL
+  test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate') ... FAIL
+  test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate') ... FAIL
+test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) ... FAIL
+test_unicode_spanish_russian_and_emoji_roundtrip (test_p02_voice_result_r27.ResultTests.test_unicode_spanish_russian_and_emoji_roundtrip) ... ok
+test_external_voice_set_cannot_broaden_permission (test_p02_voice_lifecycle_r27.LifecycleTests.test_external_voice_set_cannot_broaden_permission) ... FAIL
+test_model_revocation_at_each_stage_prevents_later_stages (test_p02_voice_lifecycle_r27.LifecycleTests.test_model_revocation_at_each_stage_prevents_later_stages) ... 
+  test_model_revocation_at_each_stage_prevents_later_stages (test_p02_voice_lifecycle_r27.LifecycleTests.test_model_revocation_at_each_stage_prevents_later_stages) (stage='asr') ... FAIL
+test_model_revocation_at_each_stage_prevents_later_stages (test_p02_voice_lifecycle_r27.LifecycleTests.test_model_revocation_at_each_stage_prevents_later_stages) ... FAIL
+test_normal_pipeline_keeps_one_ordered_provider_chain (test_p02_voice_lifecycle_r27.LifecycleTests.test_normal_pipeline_keeps_one_ordered_provider_chain) ... ok
+test_provider_hot_swap_cannot_redirect_inflight_audio (test_p02_voice_lifecycle_r27.LifecycleTests.test_provider_hot_swap_cannot_redirect_inflight_audio) ... FAIL
+test_stop_at_each_provider_boundary_has_no_later_call (test_p02_voice_lifecycle_r27.LifecycleTests.test_stop_at_each_provider_boundary_has_no_later_call) ... ok
+test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) ... 
+  test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent=1) ... FAIL
+  test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent='yes') ... FAIL
+  test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent=<object object at 0x7ff37f211060>) ... FAIL
+test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) ... FAIL
+
+======================================================================
+ERROR: test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 25, in test_only_exact_true_native_proof_authorizes
+    self.fx.ports.captured_voice(self.fx.scope, self.args)
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value='yes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 25, in test_only_exact_true_native_proof_authorizes
+    self.fx.ports.captured_voice(self.fx.scope, self.args)
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 25, in test_only_exact_true_native_proof_authorizes
+    self.fx.ports.captured_voice(self.fx.scope, self.args)
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) (key='microphone_consent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 53, in test_page_cannot_supply_consent_or_audio
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: True})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_authorization_callback_cannot_replace_request (test_p02_voice_request_r27.RequestTests.test_authorization_callback_cannot_replace_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 23, in test_authorization_callback_cannot_replace_request
+    result = self.fx.ports.captured_voice(self.fx.scope, self.args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 131, in captured_voice
+    result = self.voice.run(
+             ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_capabilities.py", line 96, in run
+    raise PermissionError('Unapproved voice identity')
+PermissionError: Unapproved voice identity
+
+======================================================================
+ERROR: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='target', value='ru')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 15, in test_invalid_request_never_consumes_or_prompts
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: value})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='voice', value='unknown')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 15, in test_invalid_request_never_consumes_or_prompts
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: value})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='mode', value='bad')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 15, in test_invalid_request_never_consumes_or_prompts
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: value})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='level', value=[])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 15, in test_invalid_request_never_consumes_or_prompts
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: value})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts) (key='source', value={'ru': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 124, in captured_voice
+    audio = self.take_audio(scope, cap_id)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_owner_route_ports.py", line 28, in take
+    def take(scope,id):return self.audio.pop(id)
+                              ^^^^^^^^^^^^^^^^^^
+KeyError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 15, in test_invalid_request_never_consumes_or_prompts
+    self.fx.ports.captured_voice(self.fx.scope, {**self.args, key: value})
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 126, in captured_voice
+    raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
+p02_owner_route_ports.RouteHold: NATIVE_CAPTURE_EXPIRED_OR_CONSUMED
+
+======================================================================
+ERROR: test_native_capture_callback_cannot_replace_request (test_p02_voice_request_r27.RequestTests.test_native_capture_callback_cannot_replace_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 32, in test_native_capture_callback_cannot_replace_request
+    result = self.fx.ports.captured_voice(self.fx.scope, self.args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 131, in captured_voice
+    result = self.voice.run(
+             ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_capabilities.py", line 94, in run
+    raise ValueError('Only RU↔ES is enabled')
+ValueError: Only RU↔ES is enabled
+
+======================================================================
+FAIL: test_missing_native_proof_holds_without_consumption (test_p02_voice_consent_r27.ConsentTests.test_missing_native_proof_holds_without_consumption)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 16, in test_missing_native_proof_holds_without_consumption
+    self.assertFalse(self.fx.ports.available('chat.voice'))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_native_exception_holds_before_capture (test_p02_voice_consent_r27.ConsentTests.test_native_exception_holds_before_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 39, in test_native_exception_holds_before_capture
+    with self.assertRaisesRegex(RouteHold, 'NATIVE_MIC_PERMISSION_CHECK_HOLD'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_native_proof_receives_exact_scope_and_capture (test_p02_voice_consent_r27.ConsentTests.test_native_proof_receives_exact_scope_and_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 32, in test_native_proof_receives_exact_scope_and_capture
+    self.assertEqual(seen, [(self.fx.scope, 'a'*32)])
+AssertionError: Lists differ: [] != [(NativeScope(tenant='tenant', principal='[241 chars]aa')]
+
+Second list contains 1 additional elements.
+First extra element 0:
+(NativeScope(tenant='tenant', principal='alice', conversation_id='chat', windows_sid='S-1-5-21-123-456-789', session_id='session', identity=Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session')), 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+
+- []
++ [(NativeScope(tenant='tenant',
++               principal='alice',
++               conversation_id='chat',
++               windows_sid='S-1-5-21-123-456-789',
++               session_id='session',
++               identity=Identity(tenant='tenant',
++                                 principal='alice',
++                                 core_id='core-1',
++                                 persona_id='persona-1',
++                                 session_id='session')),
++   'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')]
+
+======================================================================
+FAIL: test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes) (value=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 24, in test_only_exact_true_native_proof_authorizes
+    with self.subTest(value=value), self.assertRaises(PermissionError):
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_only_exact_true_native_proof_authorizes (test_p02_voice_consent_r27.ConsentTests.test_only_exact_true_native_proof_authorizes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 26, in test_only_exact_true_native_proof_authorizes
+    self.assertIn('a'*32, self.fx.audio)
+AssertionError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' not found in {}
+
+======================================================================
+FAIL: test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio) (key='mic_consent')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 52, in test_page_cannot_supply_consent_or_audio
+    with self.subTest(key=key), self.assertRaises(PermissionError):
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_page_cannot_supply_consent_or_audio (test_p02_voice_consent_r27.ConsentTests.test_page_cannot_supply_consent_or_audio)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 54, in test_page_cannot_supply_consent_or_audio
+    self.assertIn('a'*32, self.fx.audio)
+AssertionError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' not found in {}
+
+======================================================================
+FAIL: test_stop_inside_consent_preserves_capture (test_p02_voice_consent_r27.ConsentTests.test_stop_inside_consent_preserves_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_consent_r27.py", line 46, in test_stop_inside_consent_preserves_capture
+    with self.assertRaisesRegex(RouteHold, 'STOPPED_BEFORE_CAPTURE'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_invalid_request_never_consumes_or_prompts (test_p02_voice_request_r27.RequestTests.test_invalid_request_never_consumes_or_prompts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_request_r27.py", line 16, in test_invalid_request_never_consumes_or_prompts
+    self.assertIn('a'*32, self.fx.audio); self.assertEqual(called, [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' not found in {}
+
+======================================================================
+FAIL: test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) (text=' ')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 18, in test_invalid_asr_text_never_reaches_llm_or_storage
+    with self.subTest(text=text[:4]), self.assertRaisesRegex(P02Error, 'ASR_INVALID_RESULT'):
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage) (text='\ud800')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 18, in test_invalid_asr_text_never_reaches_llm_or_storage
+    with self.subTest(text=text[:4]), self.assertRaisesRegex(P02Error, 'ASR_INVALID_RESULT'):
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_invalid_asr_text_never_reaches_llm_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_asr_text_never_reaches_llm_or_storage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 20, in test_invalid_asr_text_never_reaches_llm_or_storage
+    self.assertEqual(llm, []); self.assertEqual(self.stored, [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [(Identity(tenant='tenant', principal='ali[342 chars]et>)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+(Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session'), ' ', 'ru', 'es', 'RU_ES_TRANSLATE', <threading.Event at 0x7ff37e9ce090: unset>)
+
++ []
+- [(Identity(tenant='tenant',
+-            principal='alice',
+-            core_id='core-1',
+-            persona_id='persona-1',
+-            session_id='session'),
+-   ' ',
+-   'ru',
+-   'es',
+-   'RU_ES_TRANSLATE',
+-   <threading.Event at 0x7ff37e9ce090: unset>),
+-  (Identity(tenant='tenant',
+-            principal='alice',
+-            core_id='core-1',
+-            persona_id='persona-1',
+-            session_id='session'),
+-   '\ud800',
+-   'ru',
+-   'es',
+-   'RU_ES_TRANSLATE',
+-   <threading.Event at 0x7ff37e9ce150: unset>)]
+
+======================================================================
+FAIL: test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) (text='\n\t')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 25, in test_invalid_llm_text_never_reaches_tts_or_storage
+    with self.subTest(text=text[:4]), self.assertRaisesRegex(P02Error, 'LLM_INVALID_RESULT'):
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage) (text='\udfff')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 25, in test_invalid_llm_text_never_reaches_tts_or_storage
+    with self.subTest(text=text[:4]), self.assertRaisesRegex(P02Error, 'LLM_INVALID_RESULT'):
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_invalid_llm_text_never_reaches_tts_or_storage (test_p02_voice_result_r27.ResultTests.test_invalid_llm_text_never_reaches_tts_or_storage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 27, in test_invalid_llm_text_never_reaches_tts_or_storage
+    self.assertEqual(tts, []); self.assertEqual(self.stored, [])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Lists differ: [(Identity(tenant='tenant', principal='ali[311 chars]et>)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+(Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session'), '\n\t', 'es', 'es-v', <threading.Event at 0x7ff37e9cefc0: unset>)
+
++ []
+- [(Identity(tenant='tenant',
+-            principal='alice',
+-            core_id='core-1',
+-            persona_id='persona-1',
+-            session_id='session'),
+-   '\n\t',
+-   'es',
+-   'es-v',
+-   <threading.Event at 0x7ff37e9cefc0: unset>),
+-  (Identity(tenant='tenant',
+-            principal='alice',
+-            core_id='core-1',
+-            persona_id='persona-1',
+-            session_id='session'),
+-   '\udfff',
+-   'es',
+-   'es-v',
+-   <threading.Event at 0x7ff37e9cf140: unset>)]
+
+======================================================================
+FAIL: test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 33, in test_native_owner_rejects_mismatched_or_oversized_adapter_result
+    with self.subTest(field=result.mode), self.assertRaises(P02Error):
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='maestro')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 33, in test_native_owner_rejects_mismatched_or_oversized_adapter_result
+    with self.subTest(field=result.mode), self.assertRaises(P02Error):
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 33, in test_native_owner_rejects_mismatched_or_oversized_adapter_result
+    with self.subTest(field=result.mode), self.assertRaises(P02Error):
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result) (field='translate')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 33, in test_native_owner_rejects_mismatched_or_oversized_adapter_result
+    with self.subTest(field=result.mode), self.assertRaises(P02Error):
+                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_native_owner_rejects_mismatched_or_oversized_adapter_result (test_p02_voice_result_r27.ResultTests.test_native_owner_rejects_mismatched_or_oversized_adapter_result)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_result_r27.py", line 35, in test_native_owner_rejects_mismatched_or_oversized_adapter_result
+    self.assertEqual(self.stored, [])
+AssertionError: Lists differ: [(NativeScope(tenant='tenant', principal='[16778213 chars]xx')] != []
+
+First list contains 4 additional elements.
+First extra element 0:
+(NativeScope(tenant='tenant', principal='alice', conversation_id='chat', windows_sid='S-1-5-21-123-456-789', session_id='session', identity=Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session')), b'audio')
+
+Diff is 18643285 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_external_voice_set_cannot_broaden_permission (test_p02_voice_lifecycle_r27.LifecycleTests.test_external_voice_set_cannot_broaden_permission)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 54, in test_external_voice_set_cannot_broaden_permission
+    self.assertEqual(voice.permitted_voices, frozenset({'ru-v'}))
+AssertionError: {'ru-v', 'other'} != frozenset({'ru-v'})
+
+======================================================================
+FAIL: test_model_revocation_at_each_stage_prevents_later_stages (test_p02_voice_lifecycle_r27.LifecycleTests.test_model_revocation_at_each_stage_prevents_later_stages) (stage='asr')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 31, in test_model_revocation_at_each_stage_prevents_later_stages
+    with self.subTest(stage=stage), self.assertRaisesRegex(PermissionError, 'RIGHTS_REVOKED'):
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_model_revocation_at_each_stage_prevents_later_stages (test_p02_voice_lifecycle_r27.LifecycleTests.test_model_revocation_at_each_stage_prevents_later_stages)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 33, in test_model_revocation_at_each_stage_prevents_later_stages
+    self.assertEqual(len(self.seen), ('asr','chat','tts').index(stage))
+AssertionError: 2 != 0
+
+======================================================================
+FAIL: test_provider_hot_swap_cannot_redirect_inflight_audio (test_p02_voice_lifecycle_r27.LifecycleTests.test_provider_hot_swap_cannot_redirect_inflight_audio)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 40, in test_provider_hot_swap_cannot_redirect_inflight_audio
+    with self.assertRaisesRegex(P02Error, 'PROVIDER_CHANGED'): self.run_voice()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent=1)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 20, in test_truthy_flags_do_not_grant_consent_or_rights
+    with self.subTest(consent=consent), self.assertRaises(PermissionError): self.run_voice(consent)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent='yes')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 20, in test_truthy_flags_do_not_grant_consent_or_rights
+    with self.subTest(consent=consent), self.assertRaises(PermissionError): self.run_voice(consent)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights) (consent=<object object at 0x7ff37f211060>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 20, in test_truthy_flags_do_not_grant_consent_or_rights
+    with self.subTest(consent=consent), self.assertRaises(PermissionError): self.run_voice(consent)
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_truthy_flags_do_not_grant_consent_or_rights (test_p02_voice_lifecycle_r27.LifecycleTests.test_truthy_flags_do_not_grant_consent_or_rights)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py", line 22, in test_truthy_flags_do_not_grant_consent_or_rights
+    with self.assertRaises(PermissionError): self.run_voice()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+----------------------------------------------------------------------
+Ran 20 tests in 1.659s
+
+FAILED (failures=28, errors=11)

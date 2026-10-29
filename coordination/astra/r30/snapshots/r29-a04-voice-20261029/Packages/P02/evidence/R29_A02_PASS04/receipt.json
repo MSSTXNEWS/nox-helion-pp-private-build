@@ -1,0 +1,37 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS04",
+  "agent_id": "/root/a02",
+  "parent_commit": "95461800d6fbd8e2c4989f74c3f81e6a3c03200c",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 4,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P02-LOADER-IMMUTABLE-PACK01-REGISTRY"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "ed346d450b8c8a65436cc5a0fa51718ccbe865bf",
+      "post_git_blob": "1547d03fc1ffeeaa202dfab40061708f87e18a01",
+      "pre_sha256": "b9c93d806d7f29099bbd62df78b2d05b6e1ec0ecb12216c664f1cd539d54b34a",
+      "post_sha256": "a6e14cd8aee81b6f51c3264ee38d5902597e4d4c7e60fdca039b7cf622694189"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_loader_existing_pack_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "48260d1d143f57e5176114156b88b6a65a303ea7",
+      "pre_sha256": null,
+      "post_sha256": "f033fa77cdb65f6ab97924098882c12f82a99406665f352ee01dcb07d265612f"
+    }
+  ],
+  "lesson": "Source wiring must be tested against the actual host registry type: a dict-only preflight rejected its MappingProxyType, leaving all three original ports HOLD. Accept Mapping read-only and never mutate the host catalog.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

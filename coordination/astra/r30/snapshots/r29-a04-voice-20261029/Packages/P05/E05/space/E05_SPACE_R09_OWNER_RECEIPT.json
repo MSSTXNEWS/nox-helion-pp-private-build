@@ -1,0 +1,67 @@
+{
+  "schema": "NOX_V16_E05_TURBO10_R09_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-05-20261028T1351MSK-R09",
+  "owner": "E05/P05",
+  "source_baseline_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_baseline_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "source_lock": "HOLD: PR66 inventory only; source_00/01/02 and raw 729-file SHA256 unverified; no new E06 SourceLock sealed",
+  "immutable_owner_parent_commit_sha1": "5e45cfd43b3621537bdd089efc33547ea57a5f32",
+  "owner_candidate_code_test_commit_sha1": "a898f54a32dca954f53e12c37885ba0bd6aef459",
+  "branch": "e05/v16-g1-05-gpu-sample-provenance-20261028-r09",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "E05/P05",
+      "run_id": "NOX-V16-G1-05-20261028T1351MSK-R09",
+      "pre_sha256": "d5b3890220c86a51a1546c35a5fdc67c98013f038dbe640f6c29e3be6c150ea5",
+      "post_sha256": "8ce4b5d4cd6e0aac05c4e6122ef47f944d60d83a937d82d670c72f1ca4d184c3",
+      "pre_git_blob_sha1": "753960b0b42608cb6de89ae8039cfcd5297dc14b",
+      "post_git_blob_sha1": "78e46c5ce025cfa0c63550970a9a221ba893e71e",
+      "source_baseline_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "source_baseline_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "immutable_owner_parent_commit_sha1": "5e45cfd43b3621537bdd089efc33547ea57a5f32",
+      "diff": "E05_R09_SOURCE.patch",
+      "tests": "R09_GREEN.log (Node 113/113); node --check 2/2; native Windows NOT_RUN"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "owner": "E05/P05",
+      "run_id": "NOX-V16-G1-05-20261028T1351MSK-R09",
+      "pre_sha256": "2e3305fd88da10bcae33e355f4c08f10615c68c6e99fd9f8385339f8e806fbc3",
+      "post_sha256": "f8f681ab6a2d43c561376cefab067ed37c2d7f41ab5d308f2bef5c92148fed15",
+      "pre_git_blob_sha1": "7f1d7caa689d25f2560f54eb115f4ef75640311e",
+      "post_git_blob_sha1": "d1f68d788709f10960dca94b813db6db5ec90448",
+      "source_baseline_commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "source_baseline_tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "immutable_owner_parent_commit_sha1": "5e45cfd43b3621537bdd089efc33547ea57a5f32",
+      "diff": "E05_R09_SOURCE.patch",
+      "tests": "R09_GREEN.log (Node 113/113); node --check 2/2; native Windows NOT_RUN"
+    }
+  ],
+  "receipt_file": {
+    "path": "Packages/P05/E05/space/E05_SPACE_R09_OWNER_RECEIPT.json",
+    "owner": "E05/P05",
+    "pre_sha256": "ABSENT",
+    "pre_git_blob_sha1": "ABSENT",
+    "post_sha256": "SEE_INDEPENDENT_PACKAGE_MANIFEST",
+    "post_git_blob_sha1": "VERIFY_GITHUB_READBACK"
+  },
+  "diff_sha256": "84ceb1509171689edc51df87297bca01df34dd2b63cc62a451359e917a361cac",
+  "checks": {
+    "red_preimage": "R09_RED.log confirms 40 !== null where quarantine expected",
+    "local_node_assertions_pass": 113,
+    "local_node_assertions_failed": 0,
+    "new_regressions": 12,
+    "node_syntax_checks_pass": 2,
+    "git_source_readback_sha1": "78e46c5ce025cfa0c63550970a9a221ba893e71e",
+    "git_test_readback_sha1": "d1f68d788709f10960dca94b813db6db5ec90448",
+    "native_windows": "NOT_RUN",
+    "gpu_physical": "NOT_RUN",
+    "webview2": "NOT_RUN",
+    "app_side_drive": "NOT_RUN"
+  },
+  "one_practical_self_improvement": "GPU_COHERENT_PROVIDER_SAMPLE_GATE: one GPU visual snapshot admits all available LIVE metrics only with the same physical device, same provider, timestamps within 5 seconds, and matching optional native sample_id across every displayed metric. Otherwise HOLD_GPU_SAMPLE_CONFLICT instead of a plausible fabricated tile.",
+  "no_loss": "E05 read-only module only; native events.v3 producer, D02, WOW, model/weights, EXE, archives, main untouched",
+  "weighted_overall": "N/D",
+  "release": "HOLD"
+}

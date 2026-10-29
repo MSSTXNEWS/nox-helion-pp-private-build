@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_V16_E01_R12_OWNER_RECEIPT",
+  "run_id": "NOX-V16-W2-01-E01-20261028T1745MSK-R12",
+  "start_local": "2026-10-28T17:45:53+03:00",
+  "owner": "E01/P01",
+  "source_head": "ef742c5dd27f28939b38a3c1599250f9c4e2bc78",
+  "source_tree": "dfc6e991a795a50dc4908e488a65e676f3e199bf",
+  "historic_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "task_ids": [
+    "E01-W2-R12-01",
+    "E01-W2-R12-02",
+    "E01-W2-R12-03",
+    "E01-W2-R12-04",
+    "E01-W2-R12-05",
+    "E01-W2-R12-06",
+    "E01-W2-R12-07",
+    "E01-W2-R12-08",
+    "E01-W2-R12-09",
+    "E01-W2-R12-10"
+  ],
+  "files": [
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema-events.mjs",
+      "pre_sha256": "bb2bb3034df9502b85bb07ff1feee7ccffcf5a4dceedf62a6e40c5855b56d9e1",
+      "post_sha256": "2dfd1850c01849eb2a95720e66a9bc546c8c94e64babcf261eb93f53a8321c4a",
+      "pre_git_blob_sha1": "6428b45ad88a6a0fa9bdd7212d81fc35dfb7e0ef",
+      "post_git_blob_sha1": "8faec3dffca15978add253b7d169ead192030da2",
+      "change": "Fix render rejection/exception consumed sequences, malformed native envelopes and orphaned subscriptions; fail closed invalid clock."
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema-events.test.mjs",
+      "pre_sha256": "fb45d9e8fc5bad7f6b6c98e4b58ded7b478a351627d2282cce296e2f53d865ea",
+      "post_sha256": "34b2fc7481b718fe228a500e38c503b4c23dce6fd42cf37ac006e99a20f517aa",
+      "pre_git_blob_sha1": "774c6351195ddbf983563a306b4e3fe293866071",
+      "post_git_blob_sha1": "bdbc1fc0cde3bb5e895ab22188df0666501bad33",
+      "change": "Add ten R12 negative/positive regression tests; preserve all previous cases."
+    }
+  ],
+  "evidence": {
+    "synthetic_v8_red_failed": 9,
+    "synthetic_v8_green_passed": 10,
+    "tests_node": "NOT_RUN",
+    "windows_webview2": "NOT_RUN",
+    "azure": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "status": "SOURCE_CANDIDATE_ONLY",
+  "no_loss": "NO BACKEND/HOST/CSS/MAIN/ARCHIVES/WOW/COREID/PERSONA CHANGES",
+  "receipt_sha256": "SELF_REFERENCE_NOT_POSSIBLE; provided in E06 report"
+}

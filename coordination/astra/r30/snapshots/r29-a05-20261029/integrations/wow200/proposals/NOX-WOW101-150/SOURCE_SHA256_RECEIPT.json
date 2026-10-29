@@ -1,0 +1,64 @@
+{
+  "schema": "NOX-WOW101-150-EXACT-FILE-SHA256",
+  "runId": "NOX-V16-WOW101-150-20261028",
+  "owner": "E01 visual candidate; E06 host integration only",
+  "baseCommit": "50592a6b9d41cab2a7abd8e02881cb933d2b69d9",
+  "sourceCommit": "08567f727feca3e4ede13a6c31a310e0be33459c",
+  "paths": [
+    {
+      "path": "proposals/NOX-WOW101-150/catalog.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "74cc45eaae1732c7678faf92b8eff84acb3e24d676b96ef00acb49009501dfb7",
+      "bytes_utf8": 9437,
+      "git_blob_sha1": "28fbb3ddd02563c3dbb43bfdece9a69722e5d010"
+    },
+    {
+      "path": "proposals/NOX-WOW101-150/director.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "8f38fd0a87404cf4c9c2ee002a6eba659f1731340383e6db615c0583db8e846a",
+      "bytes_utf8": 5116,
+      "git_blob_sha1": "9bc7ad86dbea4f0f91a1448906f0f17d721d2e0c"
+    },
+    {
+      "path": "proposals/NOX-WOW101-150/director.css",
+      "preimage": "ABSENT",
+      "post_sha256": "5bd40d93409ea11a36dcc0778ee0d15aa313304d371db9e52e85bdb74a826ea0",
+      "bytes_utf8": 1762,
+      "git_blob_sha1": "2620fa10f1827671ea66324bba384f6ea9f03544"
+    },
+    {
+      "path": "proposals/NOX-WOW101-150/director.test.mjs",
+      "preimage": "ABSENT",
+      "post_sha256": "bd15238be2d37ec359027dc68143d7b6c125ce60bc8e9c24fcaaadf353e61601",
+      "bytes_utf8": 3881,
+      "git_blob_sha1": "c46f842f20b02ac5514e04015ea074aa4831fe5b"
+    },
+    {
+      "path": "proposals/NOX-WOW101-150/preview.html",
+      "preimage": "ABSENT",
+      "post_sha256": "ba01603f074cba34338acb55a5c3eb0f62083677df0cc6617936e06b57caf6d7",
+      "bytes_utf8": 2878,
+      "git_blob_sha1": "a00dfdf162efa3c76e44b336483e9a2a47940bad"
+    },
+    {
+      "path": "proposals/NOX-WOW101-150/README.md",
+      "preimage": "ABSENT",
+      "post_sha256": "2342749d50b68011f81ce91fcffec275647fe7096dd8b471131f5527e52da92b",
+      "bytes_utf8": 1355,
+      "git_blob_sha1": "1344eb3251c7f04ba447af3399f52778dd10c2ab"
+    },
+    {
+      "path": ".github/workflows/nox-wow101-150.yml",
+      "preimage": "ABSENT",
+      "post_sha256": "94255fa1863088e17ffe25e50d4d67e27fbdda60dc2d7b9e72b6fb67c6d7c603",
+      "bytes_utf8": 727,
+      "git_blob_sha1": "0da5bd87e42ad0945c0a1edbeb22ec654862798f"
+    }
+  ],
+  "notes": [
+    "All changes additive: preimage ABSENT on PR31 branch, no original asset modified.",
+    "Canonical Git UTF-8 LF bytes hashed, not CRLF-converted Windows checkout bytes.",
+    "Git blob SHA1 and file SHA256 are distinct typed hashes.",
+    "CI component checks are not native EXE visual or functional acceptance."
+  ]
+}

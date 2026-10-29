@@ -1,0 +1,20 @@
+{
+  "runId": "ASTRA-R29-A03-RAM-PREFLIGHT-20261029",
+  "owner": "A03 P03",
+  "parentSha": "3a98de33206a5f01cdf3d752af5c379a6a218d2f",
+  "branch": "astra/r29-a03-20261029",
+  "approachesCompleted": 3,
+  "approachesPlanned": 10,
+  "taskIds": ["P03-R29-RAM-ONLY-PREFLIGHT"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "preGitBlob": "cd2db9c74077ddc7ae6a8c99b58a05a155d019d9",
+  "postGitBlob": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb",
+  "postSha256": "9a4cf0a31d302172033d8db12698efb4d20dd30db78cef9252fd7fda0307fd03",
+  "tests": {"command": "node --test Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs", "before": "1 FAIL, 15 PASS", "after": "16 PASS", "kind": "Original JavaScript decision function, synthetic host-supplied RAM/VRAM values, no real PC sensor measurement"},
+  "lesson": "Use the reviewed artifact's actual memory requirement: RAM-only artifacts must not require a nonexistent VRAM denominator; positive GPU requirements cannot be satisfied by system RAM.",
+  "priorLessonApplied": "Missing/invalid sensors remain unknown, not zero or compatible; byte progress and queue lifecycle regression fixtures retained.",
+  "nativeWindowsAcceptance": "HOLD: no real sensor, live download, Windows installer or integrated host run",
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

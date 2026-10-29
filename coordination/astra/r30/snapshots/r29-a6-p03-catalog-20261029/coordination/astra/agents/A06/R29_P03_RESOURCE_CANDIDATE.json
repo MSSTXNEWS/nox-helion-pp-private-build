@@ -1,0 +1,54 @@
+{
+  "schema": "NOX_R29_A6_P03_CATALOG_RESOURCE_CANDIDATE_V1",
+  "runId": "ASTRA-A-R29-A6-20261029-P03-RESOURCES-01",
+  "branch": "astra/r29-a6-p03-catalog-20261029",
+  "baseCommit": "17b09c2ff0827b36f3ba554736e39f57ba93de80",
+  "baseTree": "7272788cf8213a5757579e3da87cadec5b00bc71",
+  "status": "SOURCE_CODE_CANDIDATE_NATIVE_TEST_NOT_RUN",
+  "sourceStartedUtc": "2026-10-29T01:55:42Z",
+  "receiptUtc": "2026-10-29T01:58:04.102593+00:00",
+  "preimages": {
+    "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+    "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs": "a5a6bb768f2820567053af55a48cd68919813ed9",
+    "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs": "13ae4b4e9bf465a8fb31e8893cd381b1464c4702"
+  },
+  "sourceFiles": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "sha256": "261ccd0dad94c93b9b6ea0059a62f13dd06d09293b25cbed67ad0057e11947e1"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "sha256": "e97cd220a3491243ec776bcbd2c01268196c0f4db361a026314f1bcd0df3c59b"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/CatalogResourceFixture.cs",
+      "sha256": "0c376e6743b8b12c614bcc433c25fc11df7a444c367caeb32cbb549200a3398c"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "sha256": "821be04245d7a51155de0180243cc8f2f722d36d26b2d15c1da809ed62595e19"
+    }
+  ],
+  "defect": "Direct ModelCatalogEntry allowed required disk below artifact size and invalid optional memory fields whenever another memory field was positive. Failed review promotion exposed a non-null partially populated result.",
+  "change": "Existing catalog resource predicate now requires disk>=artifact and each supplied RAM/VRAM positive; at least one remains mandatory. Registry assigns result only after successful shared catalog predicate.",
+  "focusedFixture": "Existing P03.ModelCenter.HardeningSmoke invokes CatalogResourceFixture.Run: 12 cases across direct catalog and review promotion, plus null candidate. Synthetic review boolean is test-only, never production authority.",
+  "nativeTestStatus": "NOT_RUN",
+  "compilerProbe": {
+    "dotnet": null,
+    "csc": null,
+    "mcs": null
+  },
+  "testExecution": "None; no C# compiler/runtime available. No source inspection is called native PASS.",
+  "verifiedApproachIncrement": 0,
+  "sourceCandidateBlocks": 1,
+  "previousE06VerifiedApproaches": 4,
+  "E06BranchPreserved": "cbfe853500c781bfeac6419ccc581843ea1bedce",
+  "limits": [
+    "No real artifact license/revision/hardware/registry authority invented",
+    "No new downloader, queue or backend",
+    "No edits to A5 p03_modelcenter_gate.py",
+    "No build, native execution, GitLab write, final integration or owner merge"
+  ],
+  "lesson": "Enforce resource consistency in the directly consumable catalog entry as well as review inputs. Failed Try operations must not return a partially promoted object; compile/runtime acceptance remains separate."
+}

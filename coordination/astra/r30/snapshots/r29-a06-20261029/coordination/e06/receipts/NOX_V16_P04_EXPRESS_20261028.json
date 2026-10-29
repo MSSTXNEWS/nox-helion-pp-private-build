@@ -1,0 +1,104 @@
+{
+  "schema": "NOX-V16-P04-EXPRESS-SOURCE-RECEIPT-v1",
+  "run_id": "NOX-V16-P04-EXPRESS-20261028",
+  "owner_code": "P04",
+  "owner_integrator": "E06",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "integrated_source_commit_git_sha1": "ebdd97ea6691b392c439af73a6398b2577604637",
+  "premerge_unified_commit_sha1": "30fd0e759f33cac075615747c55913a639eaf5b9",
+  "source_tree_sha1": "c85a6afece25f2fc58bce53d9bb56cba7b751183",
+  "feature_pr": 168,
+  "source_operation": "verified fast-forward of existing unified SOURCE branch; NOT a final Windows app/release",
+  "admitted_prs": [
+    "PR160 selected merge_qlora_adapter.py already present in latest E06 unified preimage",
+    "PR165 selected train_qlora.py already present in latest E06 unified preimage",
+    "PR62 file-descriptor provenance safety contextual graft onto more recent RAG"
+  ],
+  "files": [
+    {
+      "task_id": "P04-EXP-01",
+      "path": "Packages/P04/rag_python_compat.py",
+      "pre_git_blob_sha1": "2c11b9e142b7cd0a566f2351bbf69238f1329b46",
+      "post_git_blob_sha1": "77cae9dacfcd36ad2b5199268654a55a71ee03b2",
+      "pre_sha256": "169aaf7c9e4623795b8b5966e578641ec59433b959a5001d93efbd99c10a17fd",
+      "post_sha256": "7041112cc279bc435003f225e15521397213137f73f4001797bbc11c7f6ef69e",
+      "patch_sha256": "d148366aeb4a5d50ff197cbd45ab9f3c79cf05329ef1868a1c6af7c5013efb61"
+    },
+    {
+      "task_id": "P04-EXP-02",
+      "path": "Packages/P04/train_qlora.py",
+      "pre_git_blob_sha1": "c4f7961bc137179c01e9c8b33a503deab2048baf",
+      "post_git_blob_sha1": "c4f7961bc137179c01e9c8b33a503deab2048baf",
+      "pre_sha256": "e8a225b586be4c00c8d82aeff89b884a4164133f9ec10f0061f284bbb72340ef",
+      "post_sha256": "e8a225b586be4c00c8d82aeff89b884a4164133f9ec10f0061f284bbb72340ef",
+      "note": "already admitted concurrently by E06 into source unified baseline, byte unchanged in this fast forward"
+    },
+    {
+      "task_id": "P04-EXP-03",
+      "path": "Packages/P04/merge_qlora_adapter.py",
+      "pre_git_blob_sha1": "51a27181e94cf5e766e2faf943f8aa17ec6418c7",
+      "post_git_blob_sha1": "51a27181e94cf5e766e2faf943f8aa17ec6418c7",
+      "pre_sha256": "8839132e2c68c46ddc04918008ad17ea208212c86ff2f2fd8c57b1ff3ea62484",
+      "post_sha256": "8839132e2c68c46ddc04918008ad17ea208212c86ff2f2fd8c57b1ff3ea62484",
+      "note": "already admitted concurrently by E06 into source unified baseline, byte unchanged in this fast forward"
+    },
+    {
+      "task_id": "P04-EXP-04",
+      "path": ".github/workflows/nox-p04-express-gate.yml",
+      "pre_git_blob_sha1": null,
+      "post_git_blob_sha1": "a335aeae0206f06b52105a157f544ca953fe5128",
+      "pre_sha256": null,
+      "post_sha256": "838e2a19dc304ad53948f361c43773209757b9506ae03d45c979a851c8139b28",
+      "patch_sha256": "6db3b31b4a643cf57f114ae8d95dd4a6c6a898190ee6a472b3707f6db82c4834"
+    }
+  ],
+  "rollback_blobs": [
+    {
+      "path": "coordination/donor_conflicts/PR162_pre_E04/Packages/P04/train_qlora.py",
+      "git_blob_sha1": "a42251f454dd07b5d022edce62796164f6b09a65"
+    },
+    {
+      "path": "coordination/donor_conflicts/PR162_pre_E04/Packages/P04/merge_qlora_adapter.py",
+      "git_blob_sha1": "8cdd0cbba5a0153361053753c68df0d42396d852"
+    }
+  ],
+  "tests": {
+    "branch_ci_run": 40686042782,
+    "status": "HOLD_CI_RUNNER_NOT_ASSIGNED",
+    "windows_steps": 0,
+    "linux_steps": 0,
+    "prior_owner_ci_run": 40614259216,
+    "prior_owner_ci_status": "HISTORICAL_SUCCESS_DIFFERENT_CODE_SHA",
+    "real_ollama_local": false,
+    "real_gpu_training": false
+  },
+  "physical_training": {
+    "authorized_model_snapshot": "NOT_VERIFIED",
+    "dataset_rights": "NOT_VERIFIED",
+    "gpu_on_user_PC": "NOT_INSPECTED",
+    "cuda_training_steps": 0,
+    "checkpoint": "NOT_PRODUCED",
+    "eval_loss": null,
+    "merge": "NOT_RUN"
+  },
+  "release_gates": {
+    "original_3_part_729_file_SourceLock": "HOLD",
+    "one_installed_Windows_WPF_Python_host": "HOLD",
+    "native_NSIS_install": "HOLD",
+    "same_EXE_E07_accepted": "NOT_RUN",
+    "product_readiness": "N/D",
+    "release": "BLOCKED"
+  },
+  "no_loss": {
+    "source_paths_deleted": 0,
+    "original_D02_WOW_assets_touched": false,
+    "other_owner_production_paths_touched": false,
+    "main_branch_touched": false
+  },
+  "references": [
+    "https://huggingface.co/docs/transformers/main_classes/trainer",
+    "https://huggingface.co/docs/peft/developer_guides/checkpoint",
+    "https://github.com/ollama/ollama/blob/main/docs/api.md"
+  ]
+}

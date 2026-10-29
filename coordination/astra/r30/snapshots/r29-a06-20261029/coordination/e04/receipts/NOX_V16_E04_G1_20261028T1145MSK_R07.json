@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V16_E04_SOURCE_RECEIPT_R07",
+  "run_id": "NOX-V16-E04-G1-20261028T1145MSK-R07",
+  "owner": "E04",
+  "task_id": "V16.26.6",
+  "baseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "source_lock_729": "HOLD_UNVERIFIED",
+    "source_parts_sha256": "HOLD_UNVERIFIED",
+    "e06_owner_receipt": "HOLD"
+  },
+  "parent": {
+    "commit": "c97e0380b20a04e98d5e9852d4d868d98c1fa623",
+    "tree": "6e34941ce0232cc89bf8f279162c58d6522bd0fd"
+  },
+  "branch": "e04/v16-g1-04-rights-attestation-20261028-r07",
+  "patch": "Fail-closed external rights verifier stdout JSON: duplicate keys (incl. nested), NaN/Infinity, overflow and oversized/nonobject attestation are rejected before dataset authorization.",
+  "exact_diff": {
+    "source": {
+      "insert_before": "def verify_manifest(",
+      "added_helper": "parse_rights_verifier_response",
+      "replace_old": "    try:\n        attestation = json.loads(result.stdout)\n    except json.JSONDecodeError as exc:\n        raise ValueError(\"RIGHTS_VERIFIER_INVALID_RESPONSE\") from exc",
+      "replace_new": "    attestation = parse_rights_verifier_response(result.stdout)"
+    },
+    "workflow": {
+      "branch_added": "e04/v16-g1-04-rights-attestation-20261028-r07",
+      "path_added": "tests/P04/test_e04_rights_verifier_response.py",
+      "step_added": "python -m unittest discover -s tests/P04 -p 'test_e04_rights_verifier_response.py' -v"
+    },
+    "tests": "9 direct actual-module test methods, 1 test file; no training fixtures treated as GPU proof"
+  },
+  "files": [
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "owner": "E04 P04",
+      "pre_sha256": "e327d58146c6329430acffd88ca61923bfa936e1d819aa156208c0772d416d0c",
+      "post_sha256": "20c5c1d9c7ac92c44ca53f9e73c90175288364aab037dc87b27bd958413f480a",
+      "pre_git_blob_sha1": "d82889460c911c7ff44afc9071003026fe50d749",
+      "post_git_blob_sha1": "112ae8a58c7aaaf7cde9c0ea8a4bbe7010ce8984",
+      "pre_bytes": 55064,
+      "post_bytes": 56271
+    },
+    {
+      "path": "tests/P04/test_e04_rights_verifier_response.py",
+      "owner": "E04 P04",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "35aa2c9329e94d378b594ea2f9965d0c11b9734015a3d22a58cbb24a16c87242",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "3a5c7da4adc5d3c078f750a0bba16f18a95ae1c6",
+      "pre_bytes": 0,
+      "post_bytes": 2215
+    },
+    {
+      "path": ".github/workflows/nox-e04-g1-holdout-integrity.yml",
+      "owner": "E04 P04",
+      "pre_sha256": "2c4e8e9dc3dc5f39f029b302db5b74ab03627ad72c74e977005fde33b19afc87",
+      "post_sha256": "d485f2ef26616e5462002b3b2486289e65174cef73edaa530a809dd35742e2b2",
+      "pre_git_blob_sha1": "11eab403d9a76313db0275646529a861fdde3cc1",
+      "post_git_blob_sha1": "f8933e286c3a139a5a742aa676d3395a633cd8ab",
+      "pre_bytes": 1463,
+      "post_bytes": 1737
+    }
+  ],
+  "testing": {
+    "helper_cpu_mirror": "9/9 PASS in external local Python 3 environment, not the actual GitHub imported module",
+    "actual_module": "NOT_RUN before CI",
+    "gpu": "HOLD_NO_AUTHORIZED_DEVICE_OR_WEIGHTS_DATASET",
+    "windows": "NOT_RUN"
+  },
+  "merge": "HOLD pending E06 SourceLock/owner receipt; no main change; preserve PR6/7/12 and original D02/WOW/EXE"
+}

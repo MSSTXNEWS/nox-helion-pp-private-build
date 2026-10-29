@@ -1,0 +1,18 @@
+test_bounded_host_delivery_with_single_run (test_p02_admission.ExistingEventBusOnly.test_bounded_host_delivery_with_single_run) ... ok
+test_cross_run_or_privileged_fields_rejected (test_p02_admission.ExistingEventBusOnly.test_cross_run_or_privileged_fields_rejected) ... ok
+test_missing_existing_host_registry_fails_closed (test_p02_admission.ExistingEventBusOnly.test_missing_existing_host_registry_fails_closed) ... ok
+test_sources_accept_valid_https_after_rejections (test_p02_admission.ExistingEventBusOnly.test_sources_accept_valid_https_after_rejections) ... ok
+test_sources_reject_ambiguous_https_links_without_publishing (test_p02_admission.ExistingEventBusOnly.test_sources_reject_ambiguous_https_links_without_publishing) ... ok
+test_mutating_host_route_map_does_not_change_admitted_event_destination (test_p02_admission.ImmutableNativeBinding.test_mutating_host_route_map_does_not_change_admitted_event_destination) ... ok
+test_native_session_proof_requires_true_boolean (test_p02_admission.ImmutableNativeBinding.test_native_session_proof_requires_true_boolean) ... ok
+test_approved_unrelated_host_table_can_share_same_connection (test_p02_admission.SharedDatabaseAdmission.test_approved_unrelated_host_table_can_share_same_connection) ... ok
+test_existing_schema_columns_mismatch_fails_without_rewriting (test_p02_admission.SharedDatabaseAdmission.test_existing_schema_columns_mismatch_fails_without_rewriting) ... ok
+test_host_transaction_never_silently_committed (test_p02_admission.SharedDatabaseAdmission.test_host_transaction_never_silently_committed) ... ok
+test_partial_p02_schema_refuses_repair_without_data_loss (test_p02_admission.SharedDatabaseAdmission.test_partial_p02_schema_refuses_repair_without_data_loss) ... ok
+test_unknown_host_schema_holds_without_creating_parallel_history (test_p02_admission.SharedDatabaseAdmission.test_unknown_host_schema_holds_without_creating_parallel_history) ... ok
+test_unrecognized_schema_version_preserved_without_new_tables (test_p02_admission.SharedDatabaseAdmission.test_unrecognized_schema_version_preserved_without_new_tables) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.006s
+
+OK

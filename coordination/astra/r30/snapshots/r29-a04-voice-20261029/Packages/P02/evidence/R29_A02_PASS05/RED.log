@@ -1,0 +1,108 @@
+test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) ... 
+  test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=True) ... FAIL
+  test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=nan) ... FAIL
+  test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value='30') ... ERROR
+  test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=None) ... ERROR
+test_model_list_read_timeout_has_same_typed_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_model_list_read_timeout_has_same_typed_outcome) ... ERROR
+test_refused_connection_is_not_mislabeled_timeout (test_p02_loader_timeout_r29.TimeoutContract.test_refused_connection_is_not_mislabeled_timeout) ... ok
+test_socket_timeout_has_typed_provider_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_socket_timeout_has_typed_provider_outcome) ... 
+  test_socket_timeout_has_typed_provider_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_socket_timeout_has_typed_provider_outcome) (error='TimeoutError') ... FAIL
+  test_socket_timeout_has_typed_provider_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_socket_timeout_has_typed_provider_outcome) (error='URLError') ... FAIL
+test_stop_after_partial_frame_remains_stop_even_if_socket_times_out (test_p02_loader_timeout_r29.TimeoutContract.test_stop_after_partial_frame_remains_stop_even_if_socket_times_out) ... ok
+test_stream_timeout_emits_timeout_without_assistant_success (test_p02_loader_timeout_r29.TimeoutContract.test_stream_timeout_emits_timeout_without_assistant_success) ... FAIL
+
+======================================================================
+ERROR: test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value='30')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 57, in test_invalid_timeout_budgets_do_not_reach_host_transport
+    with self.subTest(value=value),self.assertRaises(ValueError):runtime.OllamaClient(timeout=value)
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_runtime.py", line 56, in __init__
+    if timeout <= 0 or timeout > 600:
+       ^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'str' and 'int'
+
+======================================================================
+ERROR: test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=None)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 57, in test_invalid_timeout_budgets_do_not_reach_host_transport
+    with self.subTest(value=value),self.assertRaises(ValueError):runtime.OllamaClient(timeout=value)
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_runtime.py", line 56, in __init__
+    if timeout <= 0 or timeout > 600:
+       ^^^^^^^^^^^^
+TypeError: '<=' not supported between instances of 'NoneType' and 'int'
+
+======================================================================
+ERROR: test_model_list_read_timeout_has_same_typed_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_model_list_read_timeout_has_same_typed_outcome)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 36, in test_model_list_read_timeout_has_same_typed_outcome
+    with self.assertRaises(runtime.P02Error) as failure:runtime.OllamaClient().models()
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_runtime.py", line 79, in models
+    raw = r.read(2 * 1024 * 1024 + 1)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 34, in read
+    def read(self,*args):raise TimeoutError()
+                         ^^^^^^^^^^^^^^^^^^^^
+TimeoutError
+
+======================================================================
+FAIL: test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 57, in test_invalid_timeout_budgets_do_not_reach_host_transport
+    with self.subTest(value=value),self.assertRaises(ValueError):runtime.OllamaClient(timeout=value)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_invalid_timeout_budgets_do_not_reach_host_transport (test_p02_loader_timeout_r29.TimeoutContract.test_invalid_timeout_budgets_do_not_reach_host_transport) (value=nan)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 57, in test_invalid_timeout_budgets_do_not_reach_host_transport
+    with self.subTest(value=value),self.assertRaises(ValueError):runtime.OllamaClient(timeout=value)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ValueError not raised
+
+======================================================================
+FAIL: test_socket_timeout_has_typed_provider_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_socket_timeout_has_typed_provider_outcome) (error='TimeoutError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 30, in test_socket_timeout_has_typed_provider_outcome
+    self.assertEqual(type(failure.exception).__name__,'ProviderTimeout')
+AssertionError: 'P02Error' != 'ProviderTimeout'
+- P02Error
++ ProviderTimeout
+
+
+======================================================================
+FAIL: test_socket_timeout_has_typed_provider_outcome (test_p02_loader_timeout_r29.TimeoutContract.test_socket_timeout_has_typed_provider_outcome) (error='URLError')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 30, in test_socket_timeout_has_typed_provider_outcome
+    self.assertEqual(type(failure.exception).__name__,'ProviderTimeout')
+AssertionError: 'P02Error' != 'ProviderTimeout'
+- P02Error
++ ProviderTimeout
+
+
+======================================================================
+FAIL: test_stream_timeout_emits_timeout_without_assistant_success (test_p02_loader_timeout_r29.TimeoutContract.test_stream_timeout_emits_timeout_without_assistant_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_timeout_r29.py", line 42, in test_stream_timeout_emits_timeout_without_assistant_success
+    self.assertEqual(events[-1]['code'],'TIMEOUT');self.assertEqual(store.rows,[('user','hello')])
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'OLLAMA_ERROR' != 'TIMEOUT'
+- OLLAMA_ERROR
++ TIMEOUT
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.004s
+
+FAILED (failures=5, errors=3)

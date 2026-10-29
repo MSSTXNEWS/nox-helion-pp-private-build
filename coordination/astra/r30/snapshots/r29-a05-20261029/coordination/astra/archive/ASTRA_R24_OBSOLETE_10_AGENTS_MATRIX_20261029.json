@@ -1,0 +1,1258 @@
+{
+  "schema": "NOX_V16_R24_ASTRA_TEN_AGENTS_TEN_APPROACHES_WITH_MANDATORY_ERROR_JOURNAL",
+  "version": "R24",
+  "owner_directive": "10 real subagents if tools support them; each attempts 10 substantive source development approaches. Never claim actual spawn or approach DONE without tool events, changed code and evidence. If no real subagent tool, report SUBAGENT_SPAWN_UNAVAILABLE and run 10 isolated work queues sequentially, labeled simulated, with 10 planned approaches, not pretend 10 agents.",
+  "initial_immutable_source_commit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "primary_astra_branch": "astra/v16-code-complete-source-only-20261029",
+  "requested_true_subagents": 10,
+  "requested_approaches_per_agent": 10,
+  "total_planned_approaches": 100,
+  "status": "PLANNED_NOT_EXECUTED",
+  "GitHub_parent": "MSSTXNEWS/nox-helion-pp-private-build",
+  "Google_Drive": {
+    "requirements_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "run_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "self_improvement_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "master_journal_doc": "1qPG5zZIrqHvAxOzjeNf0Pj4bHMJrjS50",
+    "error_master_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historical_error_journal_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "earlier_growth_master_doc": "1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98"
+  },
+  "metrics": {
+    "total_approach_checkpoints": 100,
+    "actual_approach_completions": 0,
+    "verified_task_id_denominator": null,
+    "product_code_complete_percent": null,
+    "weighted_P01_P02_P03_P04_P05": [
+      20,
+      25,
+      20,
+      25,
+      10
+    ],
+    "progress_formula": "weighted P01..P05 from independently verified TaskID DONE / immutable total; unknown -> N/D. Approach pass count is a scheduling metric, NEVER product readiness.",
+    "progress_bars": "Print per agent 10-char progress bar using only actually completed approaches: completed '#' + remainder '.'; mark UNKNOWN product progress N/D separately."
+  },
+  "no_loss_inventory_path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+  "original_3_parts_raw_sha_verified": false,
+  "requires_drive_readback_each_launch": true,
+  "journal_writes": "ONE concise RunID append in run report and master, ONE real lesson learned/appended to self-improvement; CAS revision protection, readback verifying run id; on failure GitHub backup then Drive=HOLD not saved.",
+  "no_early_integration": true,
+  "no_builds": true,
+  "agents": [
+    {
+      "id": "A01",
+      "role": "SourceLock + no-loss + coverage",
+      "exclusive_owner_paths": [
+        "coordination/astra/agents/A01/**",
+        "coordination/source-lock/** (source validators only)",
+        "coordination/e06/verify_original_729_source.py"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Reconstruct expected original 3-part ZIP SHA in permitted filesystem",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Verify all 729 original inner member paths and SHA256",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Cross-check protected historical 674 source paths vs 968 Git blob freeze",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Verify original D02/8 CoreID/5 Persona/200 WOW assets provenance",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Inventory donor PR/branches by current SHA with no deletion",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Harden archive/ZIP Unicode, path traversal, symlink, ZIP-bomb parity",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Run strict raw Git blob/source-file identity checks",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Produce traceable V15/V16 requirement-to-file coverage ledger",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Independently recheck unchanged protected source and original parts",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Issue source-only no-loss receipt, list remaining unproven raw bytes",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A02",
+      "role": "P01 D02 HOME/MENU/CORE + WOW001–200",
+      "exclusive_owner_paths": [
+        "integrations/wow200/**",
+        "proposals/NOX-CINEMA-FX/**",
+        "proposals/P01/WOW-MAX10/**",
+        "coordination/astra/agents/A02/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit exact central HELION and eight distinct CoreIDs",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Preserve five approved personas and original HOME/MENU/CORE",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Fix original buttons, navigations, functional UI callbacks",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Prove 200 WOW IDs map to actual source effects, not only catalog strings",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Fix visual effects and FX particles on existing DOM",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Repair ECO/BALANCED/MAX/Reduced Motion and Power limits",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Audit responsive 320/390/800x480/FHD/4K",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Fix cinema/projector presentation UX without new host",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Use reviewed donor visual patches, targeted regressions",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Document source-verified WOW coverage and remaining real device HOLD",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A03",
+      "role": "P01 native WPF/WebView2 + Creative + security + installer source",
+      "exclusive_owner_paths": [
+        "stage/proposals/P01/**",
+        "integrations/creative/bridge/**",
+        "integrations/creative/stage_persona_media.py",
+        "coordination/astra/agents/A03/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit original single WPF/WebView2 host and native event contract",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Repair runtime invoke permissions and data origin checks",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Harden CreativeWorker requestId and bounded STDIO",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Guarantee STOP truthful worker exit + pending callback revocation",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Fix media/subtitle browser controls' original callbacks",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Harden PC control/updates/backups with explicit native consent",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Test lifecycle, close, update, restore source semantics",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Harden NSIS/rollback source path+SHA guards without building",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Ensure no second host, no removed original working installer functionality",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Source-only negative tests, owner receipt, E07 blockers left untouched",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A04",
+      "role": "P02 chat/Ollama/SQLite + attachments + STOP",
+      "exclusive_owner_paths": [
+        "Packages/P02/worker-chat/**",
+        "Packages/P02/worker-python/p02_runtime.py",
+        "Packages/P02/worker-python/p02_chat_bridge.py",
+        "Packages/P02/worker-python/p02_native_ingress.py",
+        "Packages/P02/worker-python/test_p02_runtime.py",
+        "coordination/astra/agents/A04/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit one Ollama endpoint and exact stream lifecycle",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Fix generation STOP and late event leakage",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Verify one SQLite history with tenant/principal/session ACL",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Protect SQLite transactions and source migration/recovery",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Harden attachment picker MIME/size and storage ACL",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Audit memory/Chat/Persona/8 CoreID context separation",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Repair RAG citations in chat without second RAG index",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Verify native ModelCenter read preflight and MappingProxyType",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Run focused P02 real-module tests, error/timeout/stop",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Emit code-complete chat owner receipt with external runtime holds",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A05",
+      "role": "P02 voice RU↔ES MAESTRO SIP + one-use audio",
+      "exclusive_owner_paths": [
+        "Packages/P02/worker-python/p02_capabilities.py",
+        "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+        "proposals/NOX-VOICE-LAB/**",
+        "coordination/astra/agents/A05/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Verify permission-scoped real microphone capture and audio limits",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "ASR RU→ES and ES→RU with approved provider adapters",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "LLM translation/MAESTRO grammar mode no dummy responses",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Real TTS/voice-id selection, missing weights = HOLD",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "One-use capture ID and no browser-provided raw microphone path",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "STOP discard/cancel before and after each async stage",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Fix post-storage STOP race and output temp-audio revocation",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "SIP quote/provider approval cost display/consent gates",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Call history owner ACL + immutable Host50 route source compatibility",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Targeted voice/SIP tests and honest provider/Windows missing states",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A06",
+      "role": "P03 ModelCenter / models / licenses / all weights families",
+      "exclusive_owner_paths": [
+        "Packages/P03/**",
+        "coordination/providers/**",
+        "coordination/astra/agents/A06/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit existing 24+ model catalogue and owner source paths",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Check exact pinned text/GGUF/Ollama model definitions",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Fix real pull/queue/cancel/retry/bytes/unknown total handling",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Secure checksums, revisions, dependency supply chain",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Review ASR/TTS translation source options and per-voice rights",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Review image/animation/video/3D models and VRAM/RAM fit",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Guard download filesystem/reparse/rollback/resume integrity",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Check licenses of code, model weights and datasets separately",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Offline narrow ModelCenter controller+port tests",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Produce pinned dependency intake list and actual code receipts only",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A07",
+      "role": "P04 RAG ingestion, memory and citations",
+      "exclusive_owner_paths": [
+        "Packages/P04/Rag/**",
+        "Packages/P04/rag_python_compat.py",
+        "tests/P04/Rag*",
+        "tests/P04/test_rag*",
+        "tests/P04/test_python_host_rag_compat.py",
+        "coordination/astra/agents/A07/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit one RAG store/index and owner-side ACL",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Ingest text/PDF safely with bounded chunks and metadata",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Validate document provenance, citations and per-owner SID",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Fix append/update/delete transactions, no lost prior knowledge",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Protect against ambiguous duplicate JSON properties",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Verify RAG Python/C# index compatibility",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Ensure real citations in P02 chat without changing P02-owned files",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Test malicious filenames/reparse/size/UTF8",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Run focused RAG tests source-only and record independent results",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Provide source-complete RAG matrix and unsatisfied model rights",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A08",
+      "role": "P04 GPU/LoRA/QLoRA/checkpoints + Studio kernels",
+      "exclusive_owner_paths": [
+        "Packages/P04/GpuGuardian/**",
+        "Packages/P04/train_qlora.py",
+        "Packages/P04/merge_qlora_adapter.py",
+        "Packages/P04/preflight_local_gpu.py",
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_training*",
+        "tests/P04/test_gpu*",
+        "coordination/astra/agents/A08/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit real NVIDIA GPU worker and VRAM headroom source contracts",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Pin local approved datasets/model revisions/rights",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Implement LoRA/QLoRA start/pause/resume/stop state safely",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Handle GPU temperature/VRAM/CPU/RAM load with kill gates",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Protect checkpoint optimizer/scheduler/RNG and atomic saves",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Validate full event history/run ID and replay protections",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Separate holdout evaluation and prevent data leakage",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Review model merge and adapter hash/reference provenance",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Test failure injection and checkpoint resume source-only",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Deliver P04 GPU source receipt, real-hardware NOT_RUN if absent",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A09",
+      "role": "P05 SPACE/mobile/events/telemetry/projection",
+      "exclusive_owner_paths": [
+        "Packages/P05/**",
+        "coordination/e06/adapters/g2_space_mobile.py",
+        "coordination/astra/agents/A09/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Audit one events.v3 schema and deterministic TaskID progress",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Fix CPU/GPU/VRAM/temperature native sensor sampling and N/D",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Restore historical run/error timeline with bounded provenance",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Implement authorized weather/ECB/market/news read-only feeds",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Protect offline cache freshness, licenses, origin of data",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Harden SPACE mobile gateway HTTPS/auth/CSRF permissions",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Revoke mobile/audio/remote sessions on STOP/disconnect",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Support projector/cinema routing without new media host",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Validate 320/390px mobile responsive UI and touch accessibility",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Write focused P05 tests, no new event bus or fake live services",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    },
+    {
+      "id": "A10",
+      "role": "PACK01+PACK02 + source-only online integration research",
+      "exclusive_owner_paths": [
+        "proposals/NOX-PACK01-50/**",
+        "proposals/NOX-PACK02-50/**",
+        "integrations/creative/web/**",
+        "coordination/astra/agents/A10/**"
+      ],
+      "approaches": [
+        {
+          "approach": 1,
+          "goal": "Reconcile all 50 PACK01 canonical RouteID/TaskID/owner/risk entries",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 2,
+          "goal": "Close real missing binding methods only in owner-approved original services",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 3,
+          "goal": "Test native request scopes, dangerous consent and no spoofed ACK",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 4,
+          "goal": "Reconcile PACK02 50 offline operations with existing golden tests",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 5,
+          "goal": "Fix CSV/JSON/query parser non-loss, inspect isolated R22 source patch",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 6,
+          "goal": "Source test media/subtitles browser/bookmarks/PC controls routes",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 7,
+          "goal": "Review original Creative Studio photo/film/anime workflows source",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 8,
+          "goal": "Find official open-source additions, pin git/tag/license only",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 9,
+          "goal": "Compare donor PR204/208/209/210/211, avoid duplicate implementations",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        },
+        {
+          "approach": 10,
+          "goal": "Prove 50+50 exact inventory and release-ready source handoff without build",
+          "status": "NOT_STARTED",
+          "task_ids": [],
+          "changed_paths": [],
+          "tests": [],
+          "evidence_git_sha": null,
+          "blocked_reason": null
+        }
+      ],
+      "last_checked_56_rules": null,
+      "last_error_delta_runid": null,
+      "last_applied_lesson": null,
+      "progress_bar": "[..........] 0/10 approaches",
+      "actual_spawn_receipt": null
+    }
+  ],
+  "requirements_56_checklist_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+  "per_launch_journal_contract_path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+  "mandatory_read_before_every_launch": [
+    "full 56/56 V15 consolidated numbered rules from exact local copy and latest V16 §54",
+    "current master-error journal delta since last verified RunID",
+    "historical C34 error journal relevant prior lessons",
+    "E06 report last RunID and code SHA",
+    "E06 self-improvement prior lesson applicable to next code change"
+  ],
+  "mandatory_write_every_launch": [
+    "active V16 master errors append with RunID/code SHA/error delta and readback",
+    "E06 run report append RunID/10 progress bars/actual TaskID + SHA tests and readback",
+    "E06 self-improvement append genuine lesson or NO_NEW_LESSON with evidence and readback",
+    "C34 historical log read always; if permitted and needed append RunID pointer with readback; avoid needless rewrite"
+  ],
+  "journal_failure_policy": "REPORT_GATE=HOLD, commit write payload as immutable GitHub fallback, never falsely claim Drive saved; do not overwrite earlier text; single supervisor writer CAS revision",
+  "default_agent_spawn": "NOT_STARTED_NO_ACTUAL_SPAWN_RECEIPTS",
+  "primary_windows_ci": {
+    "chosen_provider": "GitLab Free",
+    "gitlab_project": "s-grouptwet/nox-helion-pp-private-build",
+    "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "historical_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+    "historical_pipeline_id": 3000422727,
+    "historical_windows_job_id": 17549234693,
+    "runner_tag": "saas-windows-medium-amd64",
+    "last_confirmed_result": "FAILED_P02_SOURCE_TEST_NO_EXE",
+    "source_files_on_github_migration_branch": [
+      ".gitlab-ci.yml",
+      "coordination/e06/gitlab_windows_entrypoint.ps1",
+      "azure-pipelines-nox-v16.yml",
+      "private_build.ps1",
+      "coordination/e06/build_onehost_installer.ps1"
+    ],
+    "live_gitlab_head_verified_now": false,
+    "astra_permitted_actions": "SOURCE_CODE_ONLY; NO GITLAB CI OR FINAL INTEGRATION",
+    "source_handoff_document": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+    "git_branch_drift_manifest": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json"
+  }
+}

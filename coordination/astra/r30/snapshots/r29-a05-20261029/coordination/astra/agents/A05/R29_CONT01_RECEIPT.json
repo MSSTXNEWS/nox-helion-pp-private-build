@@ -1,0 +1,67 @@
+{
+  "run_id": "ASTRA-R29-A05-CONT01",
+  "source_parent": "4bb80cfd31c90623562bfe53a82bbc9063ec41c4",
+  "owner": "A05/P05",
+  "started_utc": "2026-10-29T01:08:02Z",
+  "saved_utc": "2026-10-29T01:11:27.648523+00:00",
+  "previous_verified_approaches": 3,
+  "continuation_verified_approaches": 0,
+  "continuation_source_candidates": 1,
+  "total_source_blocks": 5,
+  "status": "PATCH_CANDIDATE_NATIVE_TEST_NOT_RUN",
+  "task": "Pin existing Drive append/readback to one tab and snapshot all authorized report destinations before callbacks",
+  "tests": {
+    "suite": "E05DriveAdmissionR29Checks.RunAsync added to existing checks/Program.cs",
+    "scenarios": "10 scenario groups: tab isolation/fragments/reorder/missing tab/revision, explicit fresh CAS retry, both allowlist callback mutations, invalid-target preflight",
+    "execution": "NOT_RUN: dotnet/csc/mcs unavailable; no native PASS",
+    "formatting": "git diff --check PASS (format only)"
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "pre_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "pre_sha256": "4542928f293477c5f828687a7bbb6ecf4d5b91dfbf8ca8b192514ef89bd9af76",
+      "post_sha256": "8279109d6dcf357d03c2040e0a03fa6b20293216be30fd25b3ebfcb31f9c0d29"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "pre_blob": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "pre_sha256": "101fcab139db11d8f2824e812728b3367c50d2e1bf641019ccc8d6d51ee49c8c",
+      "post_sha256": "8cb7c684afe5402c1d5c0a018ceeebae7b09842b93c58fdf70ed21430e3c7d13"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "pre_blob": "9315534a691d9a2040b48daffd3543c1b66e373e",
+      "pre_sha256": "4237daf0f39d8f03dc787f43dfedcb94a2ebc05e1ad4ccc9c69a60fe48802b66",
+      "post_sha256": "ed5b5cb025473792829f218bb30b68370ae4a6aa6e8b24b7f0b3bc39792ec664"
+    },
+    {
+      "path": "Packages/P05/E05/checks/E05DriveAdmissionR29Checks.cs",
+      "pre_blob": null,
+      "pre_sha256": null,
+      "post_sha256": "70a8889247fedebc2d13416c61fedea4c0d21cd89a3d37798fd2ac400343f22f"
+    },
+    {
+      "path": "Packages/P05/E05/checks/Program.cs",
+      "pre_blob": "28a2657e6254d477b24d3effbd266a12ed9ebb1f",
+      "pre_sha256": "58c4a078b7308919698898f0ba45ce6bdf576712ae12bd7ae5b5c7685a05584c",
+      "post_sha256": "a8c704814808a5aa276e038f84809fa2ee4850caee0ce68ac42c1d5daea9168b"
+    }
+  ],
+  "official_sources": [
+    "https://developers.google.com/workspace/docs/api/how-tos/tabs",
+    "https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/request",
+    "https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/batchUpdate"
+  ],
+  "lesson": "Bind readback to the same tab body and snapshot all approved destinations before asynchronous native callbacks. RequiredRevisionId CAS remains unchanged; a400 is HOLD, retries reread.",
+  "critical_remaining": [
+    "Execute existing C# checks for collision/canonical/Drive candidates in approved native environment.",
+    "IE05ReceiptVerifier production authority must be supplied by current frozen E06 composition; scoped P05 source has interface and fixture implementations only.",
+    "Authenticated existing app OAuth/document approval/event port runtime evidence remains unverified."
+  ],
+  "root_docs_written": false,
+  "oauth_exercised": false,
+  "build": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_percent": null
+}

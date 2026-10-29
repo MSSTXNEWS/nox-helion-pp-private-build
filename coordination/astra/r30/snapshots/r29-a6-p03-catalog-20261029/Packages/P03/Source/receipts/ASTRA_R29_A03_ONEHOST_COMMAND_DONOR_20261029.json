@@ -1,0 +1,32 @@
+{
+  "runId": "ASTRA-R29-A03-CONTINUATION-ONEHOST-COMMAND-DONOR-20261029",
+  "startedUtc": "2026-10-29T01:16:01Z",
+  "owner": "A03 P03",
+  "parentSha": "94e59e12a8787a7d99522cb785fc7e7a3e72368e",
+  "branch": "astra/r29-a03-20261029",
+  "previousApproachesPreserved": 5,
+  "continuationApproachesSourceTested": 3,
+  "taskIds": ["P03-R29-ONEHOST-COMMAND-DONOR-RECONCILIATION"],
+  "status": "SOURCE_TESTED_DONOR_REUSE",
+  "source": "Packages/P03/Source/python-host/p03_onehost_port.py",
+  "preGitBlob": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+  "postGitBlob": "c04d5a56c9fc6547488386f3b4a3eefd9795efee",
+  "donor": {
+    "owner": "Historical R27 A06 role P03",
+    "commit": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+    "sourceByteIdentical": true,
+    "testBlob": "8c0c9d7976110db75b0a7e28044d79a5b442f19b",
+    "reused": ["bounded JSON command snapshot", "detached nested request", "native identity and route revocation recheck after consent/health callbacks"]
+  },
+  "tests": {
+    "command": "python -m unittest discover -s Packages/P03/Source/python-host -p 'test_p03_command_binding_r27.py' -q",
+    "red": "8 tests, 16 failing subcases on exact previous source",
+    "green": "8 PASS",
+    "scope": "Actual original Python P03 port; native consent/backend fixtures, no actual native queue or model transfer"
+  },
+  "preserved": ["All R29 admission/layer/revision/export changes are in separate paths", "Original one-host injected backend", "No new downloader or external dependency"],
+  "lesson": "Reuse the saved owner port byte-for-byte when its preimage is unchanged. Replaying its own regressions proves why the donor is needed without rewriting its already-correct command fence.",
+  "remaining": ["Authenticated native registry/backend composition", "C# export execution and Windows acceptance", "Actual reviewed model artifact inputs"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}
