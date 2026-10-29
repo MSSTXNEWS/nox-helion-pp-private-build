@@ -59,6 +59,9 @@ public sealed class GoogleDocsAppendReadback
             var priorText = new StringBuilder();
             GatherText(beforeBody, priorText);
             string current = priorText.ToString();
+            if (ContainsRunIdOutsideTab(beforeJson.RootElement, tabId, runId))
+                return new(runId, documentId, revision, revision, "RUNID_OTHER_TAB_COLLISION", entry.Length)
+                    { VerifiedTabId = tabId };
             if (current.Contains(entry, StringComparison.Ordinal))
                 return new(runId, documentId, revision, revision, "ALREADY_PRESENT", entry.Length)
                     { VerifiedTabId = tabId };
@@ -101,6 +104,9 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, revision, revAfter, "READBACK_TAB_MISSING", entry.Length);
             if (!TryBody(afterJson.RootElement, tabId, out _, out var afterBody))
                 return new(runId, documentId, revision, revAfter, "READBACK_TAB_MISSING", entry.Length);
+            if (ContainsRunIdOutsideTab(afterJson.RootElement, tabId, runId))
+                return new(runId, documentId, revision, revAfter, "READBACK_RUNID_OTHER_TAB_COLLISION", entry.Length)
+                    { VerifiedTabId = tabId };
             var buffer = new StringBuilder();
             GatherText(afterBody, buffer);
             return new(runId, documentId, revision, revAfter,
@@ -156,6 +162,44 @@ public sealed class GoogleDocsAppendReadback
                 (end == text.Length || !IsRunIdPart(text[end])))
                 return true;
             offset = index + 1;
+        }
+        return false;
+    }
+
+    // RunID is immutable across the entire document, not just the approved tab.
+    // A matching RunID on another root/child tab is a conflicting report, even
+    // if the approved tab is otherwise readable and has a valid revision.
+    private static bool ContainsRunIdOutsideTab(JsonElement root, string? approvedTab,
+        string runId)
+    {
+        if (approvedTab is null || root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("tabs", out var tabs) || tabs.ValueKind != JsonValueKind.Array)
+            return false; // Legacy single-body document has no other tabs.
+        return HasRunIdOnOtherTab(tabs, approvedTab, runId);
+    }
+    private static bool HasRunIdOnOtherTab(JsonElement tabs, string approvedTab,
+        string runId)
+    {
+        foreach (var tab in tabs.EnumerateArray())
+        {
+            if (tab.ValueKind != JsonValueKind.Object) continue;
+            bool isApproved = tab.TryGetProperty("tabProperties", out var properties) &&
+                properties.ValueKind == JsonValueKind.Object &&
+                properties.TryGetProperty("tabId", out var id) &&
+                id.ValueKind == JsonValueKind.String &&
+                string.Equals(id.GetString(), approvedTab, StringComparison.Ordinal);
+            if (!isApproved && tab.TryGetProperty("documentTab", out var documentTab) &&
+                documentTab.ValueKind == JsonValueKind.Object &&
+                documentTab.TryGetProperty("body", out var body) &&
+                body.ValueKind == JsonValueKind.Object)
+            {
+                var text = new StringBuilder();
+                GatherText(body, text);
+                if (ContainsExactRunId(text.ToString(), runId)) return true;
+            }
+            if (tab.TryGetProperty("childTabs", out var children) &&
+                children.ValueKind == JsonValueKind.Array &&
+                HasRunIdOnOtherTab(children, approvedTab, runId)) return true;
         }
         return false;
     }

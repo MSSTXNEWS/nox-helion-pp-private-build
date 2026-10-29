@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_SOURCE_ONLY_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5B-20261029T0803MSK-03",
+  "slot": "G5-B",
+  "automation_id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+  "product": "NOX HELION EXPRESS INTEGRATOR LOADER-INSTALLER ONLY",
+  "stage": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED__DOTNET_AND_LIVE_DOCS_WRITE_HOLD",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T0803MSK-03",
+  "parent": {
+    "ref": "automation/r30/g5b/R30-G5B-20261029T0700MSK-02",
+    "commit_git_sha1": "d6e0c0aa8b60637c1c7a4f76ee2d6c09b580f1a9",
+    "tree_git_sha1": "90c1dc49b5d598238f1fd8e3f955c5ea26fb6a74",
+    "old_DONE_preserved": true
+  },
+  "owned_patch": [
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "preimage_git_blob_sha1": "5fdb19d4b735774792d291b1af15bfdbc0674305",
+      "postimage_git_blob_sha1": "1751b4d4a7982fb498bbc853618ba007f1c8beee"
+    }
+  ],
+  "not_modified": [
+    "Packages/P05/E05/src/E05DriveRunGate.cs",
+    "Packages/P05/E05/src/E05SafeRunReports.cs",
+    "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "Packages/P05/E05/src/E05CriterionSeal.cs",
+    "Packages/P05/E05/src/E05VerifiedReadiness.cs"
+  ],
+  "ownership": {
+    "journal": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "journal_git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_paths_respected": true,
+    "receipt_exception_path": "coordination/automation/r30/G5-B/R30-G5B-20261029T0803MSK-03.json"
+  },
+  "reviewed": {
+    "section33_rules": 56,
+    "latest_v16_sections": [
+      54,
+      55,
+      56
+    ],
+    "R29_loader_only_override": true,
+    "C34_error_journal": "READ_ONLY",
+    "master_delta": "READ_ONLY",
+    "E06_report": "READ_ONLY",
+    "E06_lessons": "READ_ONLY",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "full_snapshot_git_trees": 25,
+    "tree_entries_inspected": 30363,
+    "tree_truncated": 0,
+    "original_three_part_git_blobs_consistent": true,
+    "physical_729_SHA256": "NOT_RUN"
+  },
+  "task_id": "G5B-R30-RUNID-OTHER-TAB-IMMUTABILITY-03",
+  "defect": "An approved/pinned Google Docs tab could accept a new or replayed RunID already present in a different root or child tab, since prior collision detection scanned only the selected tab. Same-tab readback then incorrectly appears sufficient for document-wide immutable RunID.",
+  "change": "Check every non-approved root and nested Google Docs tab for an exact RunID before writing/idempotent acceptance and again during post-write readback. Fail closed with RUNID_OTHER_TAB_COLLISION or READBACK_RUNID_OTHER_TAB_COLLISION; preserve pinned tab, CAS and readback.",
+  "targeted_test": {
+    "name": "R30-G5B-CROSS-TAB-RUNID-STATIC-MODEL-03",
+    "type": "ONE_TARGETED_SOURCE_STATIC_PLUS_JS_FIXTURE",
+    "result": "PASS_SOURCE_MODEL_ONLY",
+    "assertions": 15,
+    "red_old_unprotected": true,
+    "fixtures": [
+      "single approved",
+      "sibling collision",
+      "nested child collision",
+      "prefix R-100 not R-10",
+      "suffix R-10X not R-10",
+      "nested approved tab not collision",
+      "other root collision with nested approved",
+      "unrelated tab ignored"
+    ],
+    "dotnet_sdk": "NOT_AVAILABLE",
+    "csharp_compilation": "NOT_RUN",
+    "native_http_fixture": "NOT_RUN",
+    "live_docs_write": "NOT_ATTEMPTED"
+  },
+  "google_docs_read": {
+    "targets": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ],
+    "all_revisions_present": true,
+    "all_single_tab_id": "t.0",
+    "permission_metadata_owner_role_seen": true,
+    "oauth_write_permission": "NOT_PROVEN",
+    "writer": "Astra-C only",
+    "write_attempts": 0,
+    "readback_new_own_lesson": "PENDING_ASTRA_C",
+    "run_id_immutable_source_guard": true
+  },
+  "lesson": {
+    "id": "G5B_R30_CROSS_TAB_RUNID_COLLISION_IS_NOT_IDEMPOTENCE",
+    "previous": "An unpinned Google Doc with multiple tabs must HOLD; exact pinned TabId, requiredRevisionId CAS and after-write same-tab readback must be preserved.",
+    "observation": "Same-tab idempotence and readback allow duplicate immutable RunID stored on another tab of the same document.",
+    "applied": "Scan all non-target documentTab bodies, including childTabs, before append and during readback; exact token avoids R-10 vs R-100 false positives.",
+    "next": "Execute native .NET HttpMessageHandler fixture and test before/after collision statuses once SDK is available; a model check is not compiled C#.",
+    "prevent": "Treat the Google Doc as a RunID uniqueness domain while preserving one approved write tab and an Astra-C-only shared writer."
+  },
+  "external_gates": {
+    "main": "UNTOUCHED",
+    "PR162": "UNTOUCHED",
+    "R30_shared": "UNTOUCHED",
+    "snapshots": "UNTOUCHED",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "SOURCE_READY": "HOLD",
+    "RELEASE": "HOLD"
+  }
+}
