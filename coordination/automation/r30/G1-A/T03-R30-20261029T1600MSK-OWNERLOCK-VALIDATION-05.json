@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_T03_R30_IMMUTABLE_OWNERLOCK_VALIDATION_V1",
+  "taskId": "T03-NSIS-OWNERLOCK",
+  "runId": "T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05",
+  "slot": "G1-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY",
+  "status": "DONE",
+  "status_detail": "Ownership conflict resolved by existing authorized canonical commit; validation and immutable receipt only. No repeated owner-lock source patch.",
+  "timezone": "Europe/Moscow",
+  "planned_start_msk": "2026-10-29T16:00:00+03:00",
+  "actual_start_observable": "2026-10-29T15:59:51+03:00 (automation runtime reported; not independently metered)",
+  "validation_observed_utc": "2026-10-29T13:03:21.790Z",
+  "receipt_prepare_observed_utc": "2026-10-29T13:04:22.273Z",
+  "actual_end_msk": "recorded in Git commit created_at; exact automation end not observable",
+  "duration_seconds": null,
+  "owner_lock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "pre": {
+      "commit": "316fd4e48c21c69d90258886082442e2d9c76489",
+      "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+      "self_forbidden_count": 3
+    },
+    "post": {
+      "commit": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+      "blob_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+      "self_forbidden_count": 0
+    },
+    "existing_fix_commit_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "actual_change": "G1-A forbidden_paths [stage/proposals/P01/C09/Installer/] -> []; exact three assigned paths unchanged; G1-B forbidden Installer/ unchanged; ownership_fix explanatory key added",
+    "assigned_paths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "peer": "G1-B",
+    "peer_forbidden_prefix": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "exclusive_path_count": 3,
+    "validated_count": 3,
+    "source_nsis_blob_unchanged": "87d901c3846359a91be3e8288f24302cc7060257"
+  },
+  "targeted_regression": {
+    "existing_source": "stage/proposals/P01/C09/QA/P01_E01_C09/test_source_c09.py",
+    "test_blob_sha": "7754a083a3663f0e8e29a360fd49cf37e766c297",
+    "case": "Guard.test_installer_update_marker_and_recovery",
+    "execution": "V8 evaluates the existing Python case's exact 4 source assertions plus verifies test case presence against GitHub readback; Python/NSIS/EXE/CI NOT_RUN",
+    "checks": {
+      "owner marker": "PASS",
+      "RequestExecutionLevel user": "PASS",
+      "__p01_rollback_saved": "PASS",
+      "no RMDir /r $INSTDIR": "PASS",
+      "test_case_presence": "PASS"
+    },
+    "pass": 5,
+    "total": 5,
+    "result": "PASS_STATIC_ONLY",
+    "source_nsi_sha": "87d901c3846359a91be3e8288f24302cc7060257",
+    "source_preflight_sha": "eb45add5a929eee99bc09ef87f2db3735556b78b"
+  },
+  "secondary_diagnostic": {
+    "result": "TEST_ASSERTION_DRIFT_NOT_PRODUCT_FAILURE",
+    "checks_pass": 6,
+    "checks_total": 7,
+    "case": "Guard.test_all_or_nothing_preflight_before_first_remove",
+    "finding": "Existing static assertion expects foreach ($path in $verified) then Remove-Item, while current source instead deletes via foreach ($entry in $checked) after PHASE 2 and rechecks Assert-VerifiedEntry. Requires G1-A owned QA-test review; no test file touched by T03."
+  },
+  "guardrails": {
+    "source_file_changes": 0,
+    "other_owner_paths_changed": 0,
+    "snapshots_changed": 0,
+    "original_729_files_and_3_raw_parts_changed": 0,
+    "merges": 0,
+    "pr162_changes": 0,
+    "windows_exe_builds": 0,
+    "nsis_builds": 0,
+    "ci_runs": 0,
+    "gitlab_pipeline_runs": 0,
+    "google_docs_writes": 0
+  },
+  "historical_receipts": "Preserve prior R30 G1-A OWNER_HOLD R03/R04 and old DONE. This receipt supersedes ONLY current ownership gate and does not reclassify code or native QA.",
+  "master_docs": {
+    "coordinator": "T02/Astra-C sole CAS writer",
+    "master_doc_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_report_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "request": "Coordinator append T03 DONE and replace stale 14:52 G1-A conflict assertion with an append-only correction, CAS+RunID readback. Do not silently edit old text or other owners."
+  },
+  "acceptance": {
+    "canonical_lock_fix_present": true,
+    "pre_post_blob_verified": true,
+    "exclusive_paths_validated": true,
+    "targeted_existing_regression_static_pass": true,
+    "immutable_git_receipt_readback": "PENDING_VERIFY",
+    "criteria_completed_prior_to_receipt": 4,
+    "total_criteria": 5
+  },
+  "gates": {
+    "T03_OWNERSHIP": "DONE",
+    "SOURCE": "HOLD_UNPROVEN",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "weighted_P01_20_P02_25_P03_20_P04_25_P05_10": "N/D"
+  },
+  "improvement": {
+    "applied": "Read current canonical owner-lock before accepting prior R04 HOLD; compare exact pre/post Git blobs and deny/allow semantics instead of replaying a duplicate patch.",
+    "new_lesson": "A permission gate may be resolved by an independently committed canonical owner patch between runs. Revalidate on HEAD, preserve old HOLD history, and never count obsolete test pattern failures as a proven functional regression."
+  },
+  "next_action": "No new T03 code. T02 coordinator CAS append once. G1-A separately owns optional QA test drift fix; not part of T03."
+}
