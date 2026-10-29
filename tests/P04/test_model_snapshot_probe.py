@@ -478,6 +478,52 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertIsNone(result["observed_snapshot_sha256"])
 
 
+    def _g4a_r06_make_two_shards(self):
+        names = ("g4a-r06-1.safetensors", "g4a-r06-2.safetensors")
+        for filename, tensor in zip(names, ("q.weight", "r.weight")):
+            header = json.dumps({tensor: {"dtype": "F32", "shape": [1],
+                                          "data_offsets": [0, 4]}}).encode("utf-8")
+            (self.root / filename).write_bytes(
+                len(header).to_bytes(8, "little") + header + bytes(4))
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"metadata": {"total_size": 8},
+                        "weight_map": {"q.weight": names[0], "r.weight": names[1]}}),
+            encoding="utf-8")
+        return names
+
+    def test_g4a_r06_unchanged_multi_shard_sha_and_total_size(self):
+        names = self._g4a_r06_make_two_shards()
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 2)
+        self.assertEqual(
+            {row["name"]: row["sha256"] for row in result["weight_files"]},
+            {name: hashlib.sha256((self.root / name).read_bytes()).hexdigest()
+             for name in names})
+        self.assertEqual(len(result["observed_snapshot_sha256"]), 64)
+        self.assertIs(result["snapshot_revision_attested"], False)
+
+    def test_g4a_r06_older_shard_mutated_after_later_hash_holds(self):
+        first, second = self._g4a_r06_make_two_shards()
+        original = probe._inspect_weight
+
+        def inspect_then_mutate_earlier(path, *, include_hash=False):
+            artifact = original(path, include_hash=include_hash)
+            if path.name == second:
+                with (self.root / first).open("ab") as stream:
+                    stream.write(b"late-mutation")
+            return artifact
+
+        with mock.patch.object(probe, "_inspect_weight",
+                               side_effect=inspect_then_mutate_earlier):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_CHANGED_AFTER_HASH")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
