@@ -1,0 +1,258 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T11_IMMUTABLE_ERROR_GATE_CHECKPOINT_R17",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T1754MSK-R17-ERROR-GATE",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader; SOURCE ONLY, no CI/EXE/NSIS/E07; T06 sole canonical source writer; T02 sole shared Docs/register writer",
+  "run_context_moscow": {
+    "planned_schedule": "2026-10-29T17:40:00+03:00",
+    "observed_run_context": "2026-10-29T17:54:23+03:00",
+    "actual_end_moscow": null,
+    "actual_duration_seconds": null,
+    "reason": "No independently measured completion timestamp in receipt; do not invent duration."
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "github_live_head_at_preflight": "c8243c0306ef78dd1fd09ad02a0aea57ca502f4d",
+    "base_for_own_receipt_branch": "c8243c0306ef78dd1fd09ad02a0aea57ca502f4d",
+    "frozen_head": null,
+    "source_ready": "HOLD",
+    "source_accepted_by_T06": false,
+    "T09_frozen_sha": null,
+    "T10_independent_pass": false,
+    "changes_to_canonical": [],
+    "source_code_preimage": null,
+    "source_code_postimage": null,
+    "note": "GitHub current source candidate is mutable; HEAD observed is not a freeze and is not live GitLab HEAD."
+  },
+  "preflight": {
+    "canon_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_paragraphs_read": 679,
+    "canon_full_text_chars": 204195,
+    "canon_sections": "V16 §§1-33,54-56; R29; 56 consolidated §33 rules",
+    "error_register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "error_register_path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "error_register_blob_sha": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+    "cross_owner_index_ref": "manual/t11/gitlab-free-readonly-handoff-20261029-r01",
+    "cross_owner_index_blob_sha": "dba5a0230fe4dd73b68095431f426c3de7111a8f",
+    "history_coverage": "BACKFILL_REQUIRED_NOT_CLAIMED_COMPLETE",
+    "historic_error_backfill_owner": "T02/C",
+    "shared_docs_read_only": [
+      {
+        "role": "Master",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "revision": "AHj4eMSOztqNkx62K6CClwDRtbL8kBIJhwsauYWDGTEbfOxbNdmsXErTQHzNA5osCW-YSa2saF1zRdCvyCBtylxFMfegYPTZxDzkQXC88Kg"
+      },
+      {
+        "role": "E06",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "revision": "AHj4eMTYRWoXsNvT2nk93ZhaW4jX9B0hbZ0F8ToIMO-4s4DO0nLkzFXlxVHHcNKsDFuz6qBrnZxY_vMQ3U2kji1iBIqvaLk3-JB-I8SSLwo"
+      },
+      {
+        "role": "Lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "revision": "AHj4eMQ1PEoVa43ehB72QcjCdCGqsYH_7uA_c3PfQyoRLmGNH8J3bxbvPRgO98xUZdrYCujiYyRKAvsxazaywFHgyX-uqS-He5mq7DNg5Nc"
+      },
+      {
+        "role": "C34",
+        "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+        "revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+      }
+    ],
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "errors_ack": [
+      {
+        "error_id": "ERR-SYS-001",
+        "action": "OWNER_HANDOFF",
+        "owner": "T02/C",
+        "reason": "Read full 7-entry register; current T11 receipt has exact blob and ACK for all 7; T02 must independently complete cross-agent/history backfill and CAS readback; not marked CLOSED."
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "action": "APPLIED",
+        "owner": "T02/C",
+        "reason": "Fetched fresh canonical GitHub ref c8243c03... in this run. Previous 7f8f... was not reused or represented as frozen. No T11 source acceptance minted."
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "action": "NO_IMPACT",
+        "owner": "T06/T08",
+        "reason": "Host50 source admission path not owned by GitLab migration; PRE 9a3cdd17 POST efd5af93 owner fix remains FIX_APPLIED_UNVERIFIED pending independent same-SHA native verification."
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "action": "OWNER_HANDOFF",
+        "owner": "T06/P01-P05",
+        "reason": "No accepted one-tree P01-P05 Host50/voice/STOP/ACL/consent evidence; do not make GitLab availability a new source task. T09/T10 gates must remain HOLD."
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "action": "NO_IMPACT",
+        "owner": "T06/T08",
+        "reason": "Pinned fixture runner correction belongs to source integrator+independent verifier; remains FIX_APPLIED_UNVERIFIED without same-HEAD acceptance."
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "action": "ALREADY_VERIFIED",
+        "owner": "T07/T09",
+        "reason": "Original 729/729 archive pass preserved; do not rehash/reopen original GitHub byte-access HOLD; final integrated tree is separate."
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "action": "ALREADY_VERIFIED",
+        "owner": "T04",
+        "reason": "34/34 historic archival choices already verified; no new source hash invalidates that historical decision."
+      }
+    ],
+    "cross_owner_incidents_ack": [
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "action": "EXTERNAL_BLOCKER",
+        "owner": "T09/T06",
+        "reason": "Owner accepted same-HEAD frozen SourceLock still absent; no false T09 DONE."
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "APPLIED",
+        "owner": "ALL",
+        "reason": "Fresh HEAD+registry+one owner-scoped physical check+single immutable receipt; run closure never promoted to T11 DONE."
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "action": "NOT_APPLICABLE",
+        "owner": "T06",
+        "reason": "Closeout guard owner source contract; T11 only migrates after T09/T10."
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "action": "NOT_APPLICABLE",
+        "owner": "T08/T06",
+        "reason": "Host50 native source attestation/13 routes belong to T06 and T08 verifier, not T11 GitLab config."
+      }
+    ],
+    "new_incident_ids_found_this_run": [],
+    "future_error_history_cursor": "ISSUE_177_LAST_269_COMMENTS_OBSERVED; register historic backfill still incomplete"
+  },
+  "one_megablock": {
+    "kind": "READ_ONLY_GITLAB_SOURCE_PRESERVATION_AND_OWNER_GATED_CI_PREPARATION",
+    "actual_work": "Verified current GitHub migration ref points to historical commit; compared 27 unique migration path Git blob SHA and 3 original archive part blobs byte-identity by Git object ids against immutable R12 inventory; inspected original .gitlab-ci.yml and PowerShell entrypoint authorization checks. Cross-owner error dispositions recorded without source code mutation.",
+    "github_migration_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+    "github_migration_live_ref_sha": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "historic_inventory_commit": "3cef69137be12e740b739d8a070a463e8eb62182",
+    "historic_inventory_blob": "7ec747bbe1d7bf0430e9d9eee710a403bd9a01ba",
+    "historic_tree_recursion_truncated": false,
+    "historic_tree_entries_examined": 1101,
+    "unique_migration_paths_verified_by_git_blob": 27,
+    "total_unique_migration_paths": 27,
+    "git_blob_mismatches": 0,
+    "original_part_blobs_verified_by_git_blob": 3,
+    "original_part_mismatches": 0,
+    "physical_729_sha_from_previous_T09": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "physical_729_not_recomputed": true,
+    "ci_migration_file": ".gitlab-ci.yml",
+    "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "windows_entrypoint": "coordination/e06/gitlab_windows_entrypoint.ps1",
+    "entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+    "ci_original_gate": "CI_PIPELINE_SOURCE web or api AND NOX_APPROVE_WINDOWS_BUILD=YES",
+    "entrypoint_existing_hardcoded_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+    "ci_change": "NONE",
+    "entrypoint_change": "NONE",
+    "future_T12_owner_patch_spec": "After T09 immutable accepted frozen sha/tree/manifest AND T10 independent SOURCE_READY on exact same tuple AND authenticated GitLab target history+rights+actual HEAD readback, T12 owner reviews rebinding entrypoint CI_COMMIT_REF_NAME guard to exact chosen migration ref and adds an explicit SHA match against frozen SHA, preserving CI approval gate, HEAD==CI_COMMIT_SHA, all 27 unique paths, historical refs and fail-closed no-pipeline defaults. Do not write CI now.",
+    "single_focused_check": "PASS: 27/27 migration-unique Git blobs, 3/3 original part Git blobs match R12 inventory on historical GitHub migration commit. This does NOT verify live GitLab, installed Windows app or native source.",
+    "single_save": "THIS IMMUTABLE RECEIPT ONLY"
+  },
+  "gitlab": {
+    "target": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "auth_connector_available": false,
+    "authenticated_live_gitlab_head": null,
+    "authenticated_permissions": null,
+    "status": "GITLAB_LIVE_ACCESS_HOLD",
+    "blocker_owner": "authorized private GitLab project owner",
+    "missing_external_evidence": "authenticated API read of existing project ID, real branch HEAD SHA, protected refs, project permissions and historical 27-path preservation; no GitHub SHA is substituted for GitLab HEAD",
+    "no_force_push": true,
+    "no_reimport": true,
+    "no_pipeline": true,
+    "no_build": true,
+    "existing_single_T12_conditional_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+    "final_ready_handoff_created": false
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "status": "DONE",
+      "proof": "historic GitLab migration GitHub ref fe4a3dab... + R12 immutable inventory"
+    },
+    {
+      "id": 2,
+      "status": "DONE",
+      "proof": "R12 blob 7ec747bb... + R17 focused GitHub tree readback 27/27 and migration history ref unchanged"
+    },
+    {
+      "id": 3,
+      "status": "HOLD",
+      "blocker": "GITLAB_LIVE_ACCESS_HOLD",
+      "proof": null
+    },
+    {
+      "id": 4,
+      "status": "HOLD",
+      "blocker": "FROZEN_SHA_AND_T10_MISSING",
+      "proof": "original CI+entrypoint Git blobs read, no permissible frozen SHA to rebind"
+    },
+    {
+      "id": 5,
+      "status": "HOLD",
+      "blocker": "NO_SAME_SHA_READY",
+      "proof": "R12 conditional handoff only; live GitLab HEAD and T09/T10 acceptance missing"
+    }
+  ],
+  "progress": {
+    "previous_run_id": "NOX-V16-T11-20261029T1740MSK-R16-ACCESS-HOLD",
+    "before_done": 2,
+    "after_done": 2,
+    "total": 5,
+    "before_percent": 40,
+    "after_percent": 40,
+    "delta_percentage_points": 0,
+    "bar": "████░░░░░░",
+    "remaining": 3
+  },
+  "error_count_from_read_register": {
+    "OPEN": 3,
+    "FIX_APPLIED_UNVERIFIED": 2,
+    "VERIFIED_CLOSED": 2
+  },
+  "lesson": {
+    "source_error_id": "ERR-SYS-002",
+    "applied_action": "Read exact mutable canonical GitHub ref c8243c... and separately confirmed historical migration 27/27 blob SHA preservation without labelling GitHub as live GitLab or a source freeze.",
+    "prevents_recurrence_by": "Disallows stale-HEAD reuse, false GitLab readiness and repeated rehash of already-verified original archive."
+  },
+  "owner_handoff": {
+    "to": "T02/C",
+    "request": "Ingest one immutable T11 receipt by RunID and registry blob 6cb3a261...; do not grant new T11 DONE or duplicate old R12 T12 handoff. Master/E06/Lessons only T02 CAS+readback.",
+    "to_build_owner": "T12 AFTER T09+T10 only",
+    "build_authorized": false
+  },
+  "safety": {
+    "canonical_branch_writes": 0,
+    "gitlab_pushes": 0,
+    "force_pushes": 0,
+    "reimports": 0,
+    "exe": 0,
+    "nsis": 0,
+    "ci_pipelines": 0,
+    "e07": 0,
+    "release": 0,
+    "shared_docs_writes": 0,
+    "automation_disable": 0,
+    "old_DONE_preserved": true
+  }
+}
