@@ -392,6 +392,33 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                 self.assertEqual(result["weight_files"], [])
 
 
+    def test_g4a_r04_two_shard_total_size_and_digest_contract(self):
+        shard_a, shard_b = "model-1.safetensors", "model-2.safetensors"
+        for shard, tensor in ((shard_a, "q.weight"), (shard_b, "r.weight")):
+            header = json.dumps({tensor: {"dtype": "F32", "shape": [1],
+                                          "data_offsets": [0, 4]}}).encode("utf-8")
+            (self.root / shard).write_bytes(
+                len(header).to_bytes(8, "little") + header + b"ABCD")
+        index = self.root / "model.safetensors.index.json"
+        mapping = {"q.weight": shard_a, "r.weight": shard_b}
+        index.write_text(json.dumps({"metadata": {"total_size": 8},
+                                     "weight_map": mapping}), encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 2)
+        self.assertEqual(len(result["weight_files"]), 2)
+        for row in result["weight_files"]:
+            self.assertEqual(row["sha256"],
+                             hashlib.sha256((self.root / row["name"]).read_bytes()).hexdigest())
+        index.write_text(json.dumps({"metadata": {"total_size": 9},
+                                     "weight_map": mapping}), encoding="utf-8")
+        bad = probe.inspect(self.root, REV)
+        self.assertEqual(bad["status"], "HOLD")
+        self.assertEqual(bad["reason"], "MODEL_SHARD_TOTAL_SIZE_MISMATCH")
+        self.assertEqual(bad["weight_files"], [])
+        self.assertEqual(bad["tensor_headers"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
 
