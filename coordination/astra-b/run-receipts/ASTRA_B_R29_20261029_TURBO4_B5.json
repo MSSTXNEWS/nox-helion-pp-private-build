@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B5",
+  "worker_label": "B5",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b5-20261029",
+  "code_commits": [
+    "d4bdc8067a9ed0abbdb3da8ea506c83fb1786074",
+    "4f2b4a13b9b5435b6bcf7491ce28ff7a341553d0",
+    "dc9e8cd163f7afd544ac23b744450a9ce30a50f8",
+    "325a4e39f856f770e5d0ee8a5233faf4a5104b0f"
+  ],
+  "change_summary": "Attachment picker scope, SIP quote scope, microphone scope, streamed chat ACL scope",
+  "focused_tests": "Python focused source checks; native IPC/voice NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "Pin authorization and tenant identity BEFORE every callback with side effects.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
