@@ -1,0 +1,146 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V5",
+  "runId": "R30-G1-B-20261029T0927MSK-R05",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "taskId": "G1-B-P01-DOCUMENT-EPOCH-REVOCABLE-NATIVE-CONSENT-AND-ROUTE-R05",
+  "ownership": {
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "ownerSlot": "G1-B",
+    "exclusive": true
+  },
+  "base": {
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T0830MSK-R04",
+    "headCommit": "1e28783a63bf8f8f360412b4683e48e6086631a6"
+  },
+  "rules": {
+    "section33Consolidated56Read": true,
+    "section33GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections54to56ReadFromActiveV16": true,
+    "latestR29LoaderOnlyPrecedence": true,
+    "masterErrorsDriveRead": true,
+    "lessonsDriveRead": true,
+    "E06ReportDriveRead": true,
+    "historicC34Read": true,
+    "GoogleDriveWritePerformed": false,
+    "GoogleDriveWriter": "Astra-C"
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexedHistoricalSnapshots": 25,
+    "existingSnapshotRootsEnumerated": 25,
+    "fullSnapshotFilesRead": false,
+    "physical729ArchiveSHA256Verified": false,
+    "frozenUnchanged": true
+  },
+  "cause": "R04 invalidated the epoch and dropped pending keys after navigation/process failure, but handed native consent and route delegates only the long-lived host cancellation token. These callbacks could keep working after page authority vanished; synchronous cancellation callbacks could also re-enter the bridge before revocation completed.",
+  "fix": "A separate linked CancellationTokenSource is created for each admitted native request and bound to the document epoch. Every navigation/document/process transition increments epoch, copies and retires pending tokens, cancels them, and uses a depth guard to reject synchronous re-entry. The same per-request token is passed to consent and native route; finally disposes the lease. No new host.",
+  "source": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "a9b43387096b5dceec16989afd8c63414e0efc17",
+      "postGitBlobSHA1": "c7987a15d485b8197d7a55a3f2547df6e53eb9c6",
+      "preSHA256": "fb96f9417dc96e8e1f3929cb80cc2cf53a3403e1dc5103c267dded24593e5fc0",
+      "postSHA256": "70097486f99d4abdc84ae98265f30c7eb34d0a3eaad0c6e1975f64e180dd40ce",
+      "sourceCommits": [
+        "22cf0cc1104764ef2e5a4b06e2ed142fff8b2806",
+        "55f648757a93ea4236da95bf1e8e50a86fbbbbaa"
+      ]
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_epoch_cancellation_r05.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "e4cb73ff277713bbe192eace62843b315c4514fd",
+      "postSHA256": "5e7fb6b1b5ff4d1c42c8917e3e65ecfb514f93320c8062982ff275635e1a825e",
+      "testCommits": [
+        "97b2bc7718b85b0cfebb6b85fd23424958188a7e",
+        "d3f02cfba381168b15c20a8ae9f7616c4e0af3d1"
+      ]
+    }
+  ],
+  "sourceTest": {
+    "runner": "V8 JS assertions of actual GitHub C# source readback",
+    "prePatchRED": "R04 had no per-request linked cancellation token",
+    "beforeWrite": {
+      "passed": 20,
+      "total": 20
+    },
+    "afterFirstCodeWrite": {
+      "passed": 11,
+      "total": 11
+    },
+    "afterSecondCodeWrite": {
+      "passed": 13,
+      "total": 13
+    },
+    "finalGitReadback": {
+      "passed": 25,
+      "total": 25
+    },
+    "pythonRegressionSaved": {
+      "methods": 7,
+      "executed": false
+    },
+    "dotNetCompiled": false,
+    "WindowsWebView2Run": false,
+    "nativeHOME_MENU_CORE": false,
+    "nativeConsent": false,
+    "nativeErrorPath": false,
+    "nativeWindowsOrigin": false
+  },
+  "gitVerify": {
+    "baseRef": "1e28783a63bf8f8f360412b4683e48e6086631a6",
+    "aheadByBeforeReceipt": 4,
+    "changedOwnerPathsBeforeReceipt": [
+      "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_epoch_cancellation_r05.py"
+    ],
+    "unownedPaths": 0,
+    "postGitBlobReadback": true,
+    "postSHA256Recomputed": true
+  },
+  "limitations": [
+    "Native delegate must honor CancellationToken to stop side effects: tokens alone cannot undo an action already committed or a delegate ignoring cancellation.",
+    "Existing MainWindow.xaml.cs is absent from owned C09; actual WPF callback binding and virtual origin mapping remain unverified.",
+    "Seven Python regression cases were authored but not executed; C# compilation and native Windows behavior are untested.",
+    "25 historical snapshots were inventoried by index/root listing; individual snapshot trees/raw archive bytes were not fully read."
+  ],
+  "ownerHandoff": {
+    "status": "HOLD",
+    "target": "Owner of existing WPF MainWindow + E06 integrator",
+    "request": "Wire only the existing MainWindow/CoreWebView2 virtual origin/route/consent delegates with this bridge and ensure native consent/action implementation honors the cancellation token before each irreversible side effect. Do not create second host and do not change G1-B ownership."
+  },
+  "lesson": {
+    "priorLessonApplied": "R04 renderer/process failure should revoke pending document authority, not just URL comparison.",
+    "newLesson": "Checking epoch after awaiting native work suppresses stale replies but does not cancel in-flight effects. Bind a revocable token to document epoch and explicitly forbid re-entrant admission while cancellation callbacks fire. Source tests are not proof of native side-effect cancellation.",
+    "handoff": "Astra-C is sole writer of shared Google Drive journals; consume this immutable Git receipt. No G1-B Drive mutation."
+  },
+  "forbiddenActionsNotPerformed": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
