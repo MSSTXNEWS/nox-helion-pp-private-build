@@ -90,12 +90,32 @@ def probe(args: argparse.Namespace) -> tuple[int, dict]:
                         report["reason"] = "P04_TEST_DISCOVERY_INCOMPLETE"
                         report["status"] = "FAILED"
                         return 1, report
+                if label == "P04-RAG" and not re.search(
+                    r"(?m)^P04_RAG_SYNTHETIC_COMPONENT_PASS:\s*[1-9]\d* checks", log):
+                    report["reason"] = "P04_RAG_PROOF_MISSING"
+                    report["status"] = "FAILED"
+                    return 1, report
+                if label == "P04-GPU-ACK" and (
+                    "PASS: receipt-gated worker STOP/PAUSE/RESUME" not in log):
+                    report["reason"] = "P04_GPU_ACK_PROOF_MISSING"
+                    report["status"] = "FAILED"
+                    return 1, report
                 if label == "P05-FEED" and "P05 R16 smoke: 24 semantic assertions PASS" not in log:
                     report["reason"] = "P05_FEED_PROOF_MISSING"
                     report["status"] = "FAILED"
                     return 1, report
+                if label == "P05-FEED" and sum(
+                    line.startswith("PASS ") for line in log.splitlines()) != 24:
+                    report["reason"] = "P05_FEED_ASSERTION_COUNT_MISMATCH"
+                    report["status"] = "FAILED"
+                    return 1, report
                 if label == "P05-FRESHNESS" and "P05 SOURCE_FRESHNESS 7/7" not in log:
                     report["reason"] = "P05_FRESHNESS_PROOF_MISSING"
+                    report["status"] = "FAILED"
+                    return 1, report
+                if label == "P05-FRESHNESS" and sum(
+                    line.startswith("PASS ") for line in log.splitlines()) != 7:
+                    report["reason"] = "P05_FRESHNESS_ASSERTION_COUNT_MISMATCH"
                     report["status"] = "FAILED"
                     return 1, report
             except subprocess.TimeoutExpired:
