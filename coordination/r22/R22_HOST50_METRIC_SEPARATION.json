@@ -1,0 +1,67 @@
+{
+  "schema": "NOX_V16_R22_HOST50_STAGE_SEPARATION_V1",
+  "source_head_at_observation": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "observed_at": "2026-10-29",
+  "source_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+  "host50_ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+  "metrics": {
+    "historical_source_ledger": {
+      "candidate": 37,
+      "hold": 13,
+      "total": 50
+    },
+    "current_owner_map": {
+      "routes": 50,
+      "source_unbound": 11,
+      "native_pending": 14
+    }
+  },
+  "important": "13 HISTORICAL SOURCE HOLD != 14 NATIVE PENDING != 11 current-map SOURCE UNBOUND. Do not subtract or claim discrepancy fix until exact route and stage comparison.",
+  "native_pending_ids": [
+    "chat.rag",
+    "chat.voice",
+    "training.start",
+    "training.evaluate",
+    "calls.history",
+    "media.player",
+    "media.subtitles",
+    "browser.open",
+    "browser.bookmarks",
+    "images.generate",
+    "system.update",
+    "system.backup",
+    "system.pc_control",
+    "mobile.connect"
+  ],
+  "historical_source_hold_ids": [
+    "chat.voice",
+    "training.start",
+    "training.evaluate",
+    "calls.history",
+    "media.player",
+    "media.subtitles",
+    "browser.open",
+    "browser.bookmarks",
+    "images.generate",
+    "system.update",
+    "system.backup",
+    "system.pc_control",
+    "mobile.connect"
+  ],
+  "source_unbound_ids": [
+    "training.start",
+    "training.evaluate",
+    "media.player",
+    "media.subtitles",
+    "browser.open",
+    "browser.bookmarks",
+    "images.generate",
+    "system.update",
+    "system.backup",
+    "system.pc_control",
+    "mobile.connect"
+  ],
+  "product_progress": "N/D",
+  "native_independent_accepted": 0,
+  "action": "T06/Host50 reconcile route IDs and policy with exact blobs, T08 independent current-head verification; T02 records three separate metrics."
+}
