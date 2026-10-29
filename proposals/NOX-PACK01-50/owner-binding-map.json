@@ -5,19 +5,20 @@
   "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
   "counts": {
     "catalogue": 50,
-    "sourceOwnerMethodBound": 39,
+    "sourceOwnerMethodBound": 40,
     "p02": 15,
     "p03": 10,
     "p04": 8,
     "e05": 6,
-    "unbound": 11,
+    "e06": 1,
+    "unbound": 10,
     "exeIntegrated": 0,
     "releaseAccepted": 0
   },
   "notes": [
-    "39 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
+    "40 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
     "User's original 729-file source is integrity verified but still not unified with this proposal.",
-    "Remaining 11 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
+    "Remaining 10 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
     "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
     "Voice settings require installed approved voices, do not claim free weights installed.",
     "Model license view lists REVIEW_REQUIRED for unverified catalog families, never marks them legally approved.",
@@ -570,12 +571,12 @@
       "taskId": "NIP01-50",
       "routeId": "mobile.connect",
       "owner": 6,
-      "sourceBinding": null,
+      "sourceBinding": "coordination/e06/adapters/g2_space_mobile.py:PrivateMobileContract.connect",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "NATIVE_PRIVATE_GATEWAY_HOST_ACK_AND_SAME_SHA_QA_PENDING"
     }
   ],
   "proof": {
