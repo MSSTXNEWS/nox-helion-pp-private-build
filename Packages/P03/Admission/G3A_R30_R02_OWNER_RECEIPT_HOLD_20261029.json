@@ -1,0 +1,1 @@
+{"runId":"G3A-20261029T064402MSK-R02-8dfd6872","slot":"G3-A","sourceCommit":"6bb1e3b2166c04232cfab29e305a88bee21971ee","testCommit":"ed6e7f653bd7081fe3ccdd094271a16a6c8105b2","status":"HOLD","lesson":"Only invoke trusted native model attestor after all local consent, rights, source and hardware checks pass.","canonicalReceipt":"HOLD"}
