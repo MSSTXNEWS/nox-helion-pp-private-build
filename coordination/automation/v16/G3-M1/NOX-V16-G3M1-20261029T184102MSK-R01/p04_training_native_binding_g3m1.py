@@ -68,7 +68,18 @@ class ExistingP04TrainingBinding:
                              separators=(",", ":")).encode("utf-8", "strict")
             if not 0 < len(raw) <= _MAX_WIRE_BYTES:
                 raise ValueError("wire size")
-            return json.loads(raw)
+            # Non-string Python mapping keys can serialize to the SAME JSON
+            # property name (for example 1 and "1"). Reject the collision at
+            # every nesting level instead of silently replacing trusted data.
+            def unique_properties(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise P04NativeTrainingHold(
+                            "P04_NATIVE_OWNER_JSON_PROPERTY_COLLISION")
+                    result[key] = value
+                return result
+            return json.loads(raw, object_pairs_hook=unique_properties)
         except (ValueError, TypeError, UnicodeError, RecursionError,
                 OverflowError) as exc:
             raise P04NativeTrainingHold("P04_NATIVE_OWNER_WIRE_INVALID") from exc

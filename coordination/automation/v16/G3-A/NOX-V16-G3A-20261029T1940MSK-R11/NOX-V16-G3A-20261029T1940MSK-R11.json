@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_V16_G3A_R11_IMMUTABLE_RECEIPT_V1",
+  "task_id": "T03_G3_M1_P04_GPU_RAG",
+  "run_id": "NOX-V16-G3A-20261029T1940MSK-R11",
+  "slot": "G3-A",
+  "mode": "SOURCE_ONLY",
+  "status": "INCOMPLETE_HOLD",
+  "readproof": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_scope": "V16 §§1-33,54-56,R29, consolidated 56 rules §33",
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "latest_docs_delta": "C/R22 20261029T1933MSK",
+    "register_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "register_count": 11,
+    "register_count_by_status": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "r30_ownership_file_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "owner_scope": "Only own prior T03/G3-M1 source proposal under coordination/automation/v16/G3-M1; G4-A owns model_snapshot_probe.py, G4-B owns preflight_local_gpu.py",
+    "pr162_live_head": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "pr162_live_tree": "200e2520a5fca30e7a723ef796fe617cf3da0b51",
+    "own_branch_base": "98d9bd2a1b6ec736a9ab561f4205c4f258f8baa2",
+    "owner_pre_blob": "66af5a113fd5d3f1d7bb7ad3fd6b0beeed6f6a02"
+  },
+  "physical": {
+    "result": "PATCH_AND_TARGETED_TEST",
+    "owner_source_path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/p04_training_native_binding_g3m1.py",
+    "gitblob_PRE": "66af5a113fd5d3f1d7bb7ad3fd6b0beeed6f6a02",
+    "gitblob_POST_expected": "81212d3686b0efecc72709a6a512dfa97f37be61",
+    "sha256_PRE": "94d2632cfc2a2203681a34e12a2163223dec9664c30f9026d3523c6126f30e0f",
+    "sha256_POST": "c54cf404fa2a34cad85ae422eb5c1f093699c694d0e3ebbbf15ef204d3928cf5",
+    "test_path": "coordination/automation/v16/G3-M1/NOX-V16-G3M1-20261029T184102MSK-R01/test_g3a_r11_training_wire_collision.py",
+    "test_gitblob_expected": "55e62abed7076837b3a73ba95fbb8f0a0a93e6c6",
+    "test_sha256": "d186939faaa21f61d7fda807af031f9109dcfb13d58facffded1cdf98ff87cb7",
+    "red": "3 tests FAILED against exact PRE blob; silent JSON key collision reproduced",
+    "green": "5/5 unittest PASS + Python py_compile PASS using exact locally mirrored POST blob",
+    "test_runtime": "local Python source-only; no GPU, no Windows native bind or training",
+    "bug": "dict with '1' and 1 serializes two equal JSON names; json.loads silently overwrote one value before training.start/evaluate, or accepted tainted native ACK",
+    "fix": "object_pairs_hook rejects duplicate properties at every nesting depth, including owner ACK, before reporting result; no ACL/STOP/consent bypass",
+    "native_PACK01_binder_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "pr162_model_snapshot_blob": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+    "g4a_owner_R11_POST": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+    "pr162_GPU_preflight_blob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "g4b_owner_R09_POST": "02b65c3bcd961390f828519cb5b50a2e4a652ee9"
+  },
+  "progress": {
+    "before": {
+      "x": 0,
+      "n": 4,
+      "pct": 0
+    },
+    "after": {
+      "x": 0,
+      "n": 4,
+      "pct": 0
+    },
+    "delta_pp": 0,
+    "still_unaccepted": [
+      "model snapshot owner POST not integrated/same-head checked",
+      "GPU preflight owner POST not integrated/same-head checked",
+      "training.start/evaluate native real binding and signed ACK absent",
+      "T06 immutable owner ACK/integration absent"
+    ],
+    "T06_global_accepted": "1/8 at latest E06 R22",
+    "T01_T11_total_accepted": "NOT_VERIFIED"
+  },
+  "error_ACK": {
+    "ERR-SYS-001": "HANDOFF T02/C: register consistency and immutable Git receipt; not shared write",
+    "ERR-SYS-002": "APPLY: refreshed exact owner Git preimage and live PR162 before save",
+    "ERR-SRC-003": "DELEGATE T06/T08: sourceBaseCommit/owner map and native source-lock same SHA",
+    "ERR-SRC-004": "APPLY+HANDOFF: owner training wire duplicate-key closure, T06 native binding pending",
+    "ERR-SRC-005": "DELEGATE T08: pinned fixture runner unverified on live HEAD",
+    "ERR-SYS-006": "NO_IMPACT VERIFIED_CLOSED: 3/729 original parts preserved",
+    "ERR-SYS-007": "NO_IMPACT VERIFIED_CLOSED: T04 34/34 retained",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09: freeze only after T06/T08 same-HEAD acceptance",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY: x/4 stays zero; source patch is not DONE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06: native 8/8 not T10 premature requirement",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08: 13-route same-SHA native verification"
+  },
+  "self_improvement": {
+    "active_entries_reviewed": 11,
+    "archive_419_reindexing": "PARTIAL/NOT_REPEATED",
+    "clusters": 4,
+    "applied": 1,
+    "delegated": 2,
+    "not_applicable": 1,
+    "unprocessed_active": 0,
+    "lesson": "Never let duplicated serialized JSON keys mutate a model/dataset or owner ACK identity; maintain same-head CAS and fail-closed verification, not mock success.",
+    "verified_action": "local RED 3/5 -> GREEN 5/5, source git blob pre/post pinned"
+  },
+  "handoff": {
+    "to_T06": "Owner PRE/CAS and exact G4-A/G4-B receipt check; stage this own T03 source patch into the existing PACK01 bind_owner_methods, then verify native SourceLock/session, explicit dangerous consent, model/dataset rights, GPU lease, STOP and signed owner ACK at one HEAD. No second worker and no training now.",
+    "to_T02": "Only T02/C may update shared register/Master/E06/Lessons via CAS, ingest all 11 ACK and tested lesson from this immutable owner receipt.",
+    "qa": "Independent T08/T10 same SHA required, not signed by this slot",
+    "next_action": "T06 reconcile exact current PR162 HEAD against owner candidates and run source contract plus native owner ACK; if PR HEAD changed, re-read only touched paths and rebase handoff.",
+    "repeat_without_remediation": false
+  },
+  "safety": {
+    "original_zip_3_729_not_touched": true,
+    "r30_snapshots_not_touched": true,
+    "main_PR162_shared_register_not_touched": true,
+    "exe_nsis_gitlab_ci_e07_release_training_NOT_RUN": true
+  }
+}
