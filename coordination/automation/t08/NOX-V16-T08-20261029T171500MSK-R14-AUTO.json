@@ -1,0 +1,157 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T08_FIXED_3_CRITERIA_IMMUTABLE_R14",
+  "task_id": "T08",
+  "run_id": "NOX-V16-T08-20261029T171500MSK-R14-AUTO",
+  "scope": "NOX EXPRESS INTEGRATOR Windows loader ONLY · source only",
+  "status": "HOLD_NO_T06_OWNER_ACCEPTED_FINAL_UNIFIED_SOURCE",
+  "created_utc": "2026-10-29T14:16:49.865Z",
+  "time": {
+    "timezone": "Europe/Moscow",
+    "planned_start": "2026-10-29T17:15:00+03:00",
+    "observed_automation_start": "2026-10-29T17:12:24+03:00",
+    "exact_end_after_readback": "N/D in immutable pre-readback receipt"
+  },
+  "history": {
+    "previous_run": "NOX-V16-T08-20261029T164625MSK-R13-AUTO",
+    "previous_git_commit": "2dedb1c37b77b9674a9041c1970e17a04b65c70b",
+    "previous_receipt_blob_sha1": "535f26b00bb10b9d3519c6605f275aa2114c83e7",
+    "previous_checkpoint": {
+      "fixed_denominator": 3,
+      "completed": 1,
+      "percent": 33.3,
+      "remaining": 2,
+      "bar": "███░░░░░░░"
+    },
+    "preserve_old_done": true
+  },
+  "current_sources": {
+    "canon": {
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc"
+    },
+    "T02_fixed_p0p1": [
+      "P0-01",
+      "P0-02",
+      "P0-03",
+      "P1-01",
+      "P1-02"
+    ],
+    "T02_last_shared_Master_run": "NOX-V16-C-20261029T170328MSK-R15",
+    "T06_latest_accepted_evidence": {
+      "run_id": "NOX-V16-T06-20261029T165543MSK-R07",
+      "receipt_git_sha1": "a6a03ae7dcc9dd269b2f13caab8532df96011241",
+      "accepted_final_integrated_head": null,
+      "progress": "1/8",
+      "status": "HOLD"
+    },
+    "T09_pinned_candidate": {
+      "commit_sha1": "2fcd72a001c084697e696d6a44dd1a47d7c8a0e0",
+      "tree_sha1": "93f26c73a80695801405ea03ae398de7b1dde355",
+      "manifest_sha256": "41c900c5f14d0ef4cc0daf274d9f55a3e978d0a81d16d661a7a8b4bad9de1841",
+      "status": "PINNED_NOT_OWNER_ACCEPTED"
+    },
+    "PR162_new_moving_candidate": {
+      "checked_commit_sha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+      "previous_R13_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "compare_ahead": 9,
+      "behind": 0,
+      "pr214_merged": true,
+      "exact_source_changes": [
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-python/p02_native_ingress.py"
+      ],
+      "additional_two_tests": true,
+      "owner_journals_present": true,
+      "not_final_T06_acceptance": true
+    },
+    "G2A_framed_worker": {
+      "pre_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post_git_blob_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "old_owner_RED_GREEN": "4/4 saved; not re-run by T08"
+    },
+    "G2A_native_ingress": {
+      "observed_current_blob_sha1": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+      "status": "MUTATED_IN_PR162_BUT_NO_T08_RETEST"
+    },
+    "T04_voice_source_selection": {
+      "run_id": "NOX-V16-T04-VOICE-COHERENCE-R03-20261029",
+      "receipt_git_sha1": "563f4fad54973eb2be3457414025066e460fa8e1",
+      "accepted": 18,
+      "skipped": 15,
+      "technical_owner_hold": 1,
+      "position": 30
+    },
+    "T07_original_archive": {
+      "full_729_sha_crc_proof_from_saved_T07_T09": true,
+      "original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "zip_size_bytes": 60364346,
+      "not_final_integrated_tree_attestation": true
+    }
+  },
+  "progress": {
+    "fixed_denominator": 3,
+    "previous_percent": 33.3,
+    "current_completed": 1,
+    "current_percent": 33.3,
+    "delta_percentage_points": 0,
+    "remaining": 2,
+    "bar": "███░░░░░░░",
+    "criteria": [
+      {
+        "id": 1,
+        "status": "HOLD",
+        "description": "T06 one OWNER-ACCEPTED final HEAD/tree and T02 fixed P0/P1 ledger",
+        "evidence": "T02 five fixed entries read; T06 R07 accepted_final_integrated_head=null; PR214 merge and PR162 source choice are not final T06 acceptance"
+      },
+      {
+        "id": 2,
+        "status": "HOLD",
+        "description": "Fix reproduced code P0/P1 or prove NO_CODE_BLOCKERS on EXACT owner-accepted T06 HEAD",
+        "evidence": "T02 five fixed dispositions are not reproducible code bugs on old candidate; PR162 moved to 7f78...; no owner-accepted final HEAD, therefore no new source-level NO_CODE_BLOCKERS claim"
+      },
+      {
+        "id": 3,
+        "status": "DONE",
+        "description": "Prior terminal immutable receipt delivered to T09/T10",
+        "evidence": {
+          "run": "NOX-V16-T08-20261029T164625MSK-R13-AUTO",
+          "blob": "535f26b00bb10b9d3519c6605f275aa2114c83e7",
+          "issue_comment_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6498485331"
+        }
+      }
+    ]
+  },
+  "blocker": {
+    "code": "T06_OWNER_ONE_FINAL_INTEGRATED_HEAD_TREE_MANIFEST_CAS_MISSING",
+    "owner": "T06 / manual source owner #1",
+    "why": "PR162 branch now includes merged P02 patches and archival owner decisions, yet no T06 immutable signed acceptance of one final source HEAD/tree/manifest covering P01-P05, Host50, voice position #30.",
+    "unblock": "T06 publishes exact owner-accepted HEAD/tree/manifests with per-path CAS and voice #30 disposition. Then reuse existing owner RED→GREEN and T02 fixed five-item classification on THAT SHA only, no full QA."
+  },
+  "changes": {
+    "source_pre_commit_sha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "source_post_commit_sha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "source_sha256": "N/A no byte source mutation",
+    "product_files_changed_by_T08": 0,
+    "code_patch": "NONE",
+    "qa_tests": "NOT_RUN_BY_T08",
+    "original_zip_modified": false,
+    "main_modified": false,
+    "pr162_modified_by_T08": false,
+    "shared_docs_modified": false,
+    "EXE": false,
+    "NSIS": false,
+    "GitLab_CI": false,
+    "Windows_CI": false,
+    "E07": false
+  },
+  "handoff": {
+    "recipients": [
+      "T09",
+      "T10",
+      "T02 sole shared Docs writer"
+    ],
+    "new_delta": "PR214 merged into PR162; current PR162 commit newer than T09 pinned snapshot, but T06 R07 owner-accepted final HEAD is still null. Do not count T08 criteria 1/2, do not invoke E07.",
+    "no_new_task_ids": true
+  },
+  "applied_lesson": "Reuse immutable owner test/SourceLock proofs and verify current Git SHA; a merged candidate patch and an archival version-choice document are not equivalent to one T06-signed final source manifest. Preserve previously proven T08 handoff criterion 3 and fixed 3 denominator."
+}
