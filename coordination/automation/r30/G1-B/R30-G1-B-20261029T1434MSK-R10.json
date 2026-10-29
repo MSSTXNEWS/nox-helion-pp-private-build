@@ -1,0 +1,134 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V10",
+  "runId": "R30-G1-B-20261029T1434MSK-R10",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "taskId": "G1B-P01-WEBVIEW2-LIVE-NATIVE-CALLBACK-CANCEL-TERMINAL-UI-R10",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "ownership": {
+    "lockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "privateBranch": "automation/r30/g1b/R30-G1-B-20261029T1434MSK-R10",
+    "sharedWriter": "Astra-C",
+    "foreignFileEdits": 0
+  },
+  "base": {
+    "previousBranch": "automation/r30/g1b/R30-G1-B-20261029T1330MSK-R09",
+    "preCommit": "9298757dd9e8b5462b4fc0cf74bb300472c0d4fd",
+    "sourceCommit": "a62c7975cf43ceb151436ec1edebfa370753d59f",
+    "testCommit": "6e28df9c56489137e700596e61d72af2e5bd7263",
+    "testCorrectionCommit": "7223dab30570e0872ec27bf34b6edc05b25997b6",
+    "preReceiptHead": "7223dab30570e0872ec27bf34b6edc05b25997b6"
+  },
+  "sourceReads": {
+    "consolidated56Path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "consolidated56GitBlobSHA1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "consolidated56Count": 56,
+    "historicalVerbatim56Verified": false,
+    "v16Doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "v16Sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "masterErrorsDrive": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06ReportDrive": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06LessonsDrive": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34Drive": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "priorR09ReceiptRead": true,
+    "sharedDriveWritePerformed": false,
+    "latestDriveControllerDelta": "ASTRA-C-R30-20261029T1330MSK-08"
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlobSHA1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "historicalIndexedRefs": 25,
+    "individualSnapshotPhysicalSHA256Verified": false,
+    "changed": 0
+  },
+  "observedProblem": "The previous R09 bridge silently swallowed every OperationCanceledException. A native consent or route callback may cancel its own Task without the host/document CancellationToken being canceled. The still-current UI then receives no terminal response and may wait indefinitely, despite the native action not completing. This is a source-level potential failure, not an observed Windows runtime result.",
+  "actualFix": "Track whether native consent is awaiting; if a callback throws OperationCanceledException while the request token is still alive and source document current, reply terminal REJECTED/P01_NATIVE_CONSENT_CANCELLED for consent or HOLD/P01_NATIVE_OPERATION_CANCELLED for route cancellation. Preserve silence for host disposal/navigation token cancellation. Keep one existing WebView2 host, current-document reply gate, consent, origin, HOME/MENU/CORE, replay guard and native ACK.",
+  "sourceChanges": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "4d0a2123f3663bd62dca8a0a1bd312a382ce870d",
+      "postGitBlobSHA1": "a507e7d4c4c5d75073fa38293eb941b3a37db004",
+      "preSHA256": "f30bc3539e9523a69e71da21bc73bed3032488f9f38f478c8c606bb2b31387fe",
+      "postSHA256": "6dd56f20f83a0b5fccec09e2d377b02d783cc0d9ce129e54fa18996761596d11",
+      "commit": "a62c7975cf43ceb151436ec1edebfa370753d59f"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_live_callback_cancellation_r10.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "f9bb9282178a166408b473ab624b18c3651e31a6",
+      "postSHA256": "21a824b265f6bd0c9804cf63461ac1381161227a9900594a8c79375eeacc273f",
+      "commits": [
+        "6e28df9c56489137e700596e61d72af2e5bd7263",
+        "7223dab30570e0872ec27bf34b6edc05b25997b6"
+      ]
+    }
+  ],
+  "targetedSourceTest": {
+    "engine": "Executed V8 JavaScript assertions against exact GitHub UTF-8 readback (not compiled C# or native Windows runtime)",
+    "testCommandDescription": "Fetch R10 bridge and unique G1-B R10 test from the branch, compare with R09 commit, check cancellation catch, consent stage, error contract, current-document gate, native ACK, HOME/MENU/CORE, origin, popup/replay/lifecycle, owner-only changed paths",
+    "prePatchRegression": "RED: previous R09 source contained no P01_NATIVE_OPERATION_CANCELLED, catch swallowed OperationCanceledException",
+    "postGitReadbackChecksPass": 26,
+    "postGitReadbackChecksTotal": 26,
+    "testFileSaved": true,
+    "savedPythonUnittestCases": 8,
+    "pythonUnittestExecuted": false,
+    "testAuthoringErrorFixed": "Initial static test searched for first 'awaitingNativeConsent = false' and incorrectly matched variable initialization. Revised to search after consent_await; Git readback confirmed.",
+    "gitCompareBeforeReceipt": {
+      "ahead": 3,
+      "behind": 0,
+      "changedFiles": [
+        "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_live_callback_cancellation_r10.py"
+      ]
+    },
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "nativeHomeMenuCoreObserved": false,
+    "nativeButtonsObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorHandlingObserved": false,
+    "nativeWindowsOriginObserved": false,
+    "foreignPathEdits": 0
+  },
+  "blocker": {
+    "status": "HOLD",
+    "reason": "Existing C08 MainWindow.xaml.cs has not been verified wired to this C09 bridge. SOURCE-only static checks cannot establish native WPF execution or verify callback-internal cancellation behavior. Host must ensure callbacks honor CancellationToken and all original HOME/MENU/CORE/consent/origin/ACK flows.",
+    "ownerRequest": "Owner of original C08 WPF MainWindow.xaml.cs: wire the existing C09 bridge to the single current WebView2 host; test consent-dismissal throwing OperationCanceledException, native-route self cancellation, host navigation/disposal cancellation without stale response, and real buttons/Windows origin. Do not grant G1-B ownership of foreign host files; return receipt to coordinator."
+  },
+  "lesson": {
+    "applied": "R09 reserved malformed duplicate requestId before other schema checks; R10 preserves that replay guard and adjusts only the independent native-callback cancellation terminal-response path.",
+    "new": "OperationCanceledException has two distinct authorities: a revoked host/document CancellationToken is a stale event and must stay silent; callback-local cancellation on a still-current document needs a terminal UI response. Verify the cancellation source before mapping status. Also fix regression test search offsets to avoid matching initialization instead of post-await state.",
+    "driveStatus": "ASTRA_C_ONLY_COMMON_JOURNAL_WRITER"
+  },
+  "forbiddenWorkNotPerformed": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
