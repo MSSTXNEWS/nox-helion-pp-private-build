@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -47,12 +48,54 @@ def evidence_readback_valid(result):
             and sha1(result.get('live_gitlab_head'))
             and sha1(result.get('migration_live_head')))
 
+EXPECTED_MIGRATION_REF = "migration/nox-v16-gitlab-free-20261028-r01"
+
+def verified_handoff_layout(raw):
+    """Accept existing T11 R12 history as READ-ONLY inventory; never authorize CI."""
+    if not isinstance(raw, dict):
+        raise ValueError("T11 handoff must be a JSON object")
+    if raw.get("schema") == "NOX_FIN_ZAGR_V16_T11_GITLAB_FREE_SOURCE_HANDOFF_V1":
+        target, verified = raw["gitlab_target"], raw["github_verified"]
+        url = urllib.parse.urlsplit(target["url"])
+        if (url.scheme, url.netloc, url.path.strip("/"), url.query, url.fragment) != ("https", "gitlab.com", EXPECTED_PROJECT, "", ""):
+            raise ValueError("Unexpected GitLab project URL")
+        handoff = {
+            "gitlab": {"path": EXPECTED_PROJECT, "historical_migration_branch": verified["historical_migration_ref"]},
+            "history": {"migration_github_commit": verified["historical_migration_head_sha1"], "migration_only_files": verified["migration_only_files"]},
+            "ci": {"default_windows_runner_tag": target["historic_runner_tag"]}
+        }
+    elif all(k in raw for k in ("gitlab", "history", "ci")):
+        handoff = raw
+    else:
+        raise ValueError("Unrecognized T11 handoff schema")
+    files = handoff["history"]["migration_only_files"]
+    if not isinstance(files, list) or len(files) != 27:
+        raise ValueError("Expected exactly 27 unique migration files")
+    paths = set()
+    for item in files:
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str) or not item["path"] or item["path"] in paths:
+            raise ValueError("Missing or duplicate migration file path")
+        paths.add(item["path"])
+        if not isinstance(item.get("git_blob_sha1"), str) or re.fullmatch(r"[0-9a-f]{40}", item["git_blob_sha1"]) is None:
+            raise ValueError("Invalid migration blob SHA")
+    if (handoff["gitlab"]["path"] != EXPECTED_PROJECT or
+            handoff["gitlab"]["historical_migration_branch"] != EXPECTED_MIGRATION_REF or
+            not isinstance(handoff["history"]["migration_github_commit"], str) or
+            re.fullmatch(r"[0-9a-f]{40}", handoff["history"]["migration_github_commit"]) is None or
+            not isinstance(handoff["ci"]["default_windows_runner_tag"], str) or
+            not handoff["ci"]["default_windows_runner_tag"]):
+        raise ValueError("T11 historical ref, commit or runner tag invalid")
+    return handoff
+
 def main():
     parser = argparse.ArgumentParser(description="GitLab T11 read-only audit")
     parser.add_argument("--handoff", required=True, type=pathlib.Path)
     parser.add_argument("--out", required=True, type=pathlib.Path)
     args = parser.parse_args()
-    handoff = json.loads(args.handoff.read_text(encoding="utf-8"))
+    try:
+        handoff = verified_handoff_layout(json.loads(args.handoff.read_text(encoding="utf-8")))
+    except (KeyError, TypeError, ValueError) as ex:
+        raise SystemExit("T11_HANDOFF_SCHEMA_HOLD: " + type(ex).__name__) from None
     token = os.environ.get("NOX_GITLAB_READ_API_TOKEN")
     if not token:
         raise SystemExit("GITLAB_ACCESS_HOLD: set NOX_GITLAB_READ_API_TOKEN locally; do not paste token into chat")
