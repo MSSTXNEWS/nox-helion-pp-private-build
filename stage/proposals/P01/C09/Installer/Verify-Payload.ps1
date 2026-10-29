@@ -26,6 +26,47 @@ if ($manifestFull -ine (Join-Path $rootFull 'payload.sha256.json')) { Fail 'nonc
 Assert-NoReparseAncestors $manifestFull
 $manifestItem=Get-Item -LiteralPath $manifestFull -Force -ErrorAction Stop
 if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe manifest' }
+# Reuse the .NET Framework JSON -> XML infoset reader included with Windows PS 5.1.
+# ConvertFrom-Json alone silently keeps the last duplicate object member.
+# Validate all nested members before any install activation or file operations.
+function Assert-P01UniqueManifestMembers([string]$Path) {
+  Add-Type -AssemblyName System.Runtime.Serialization -ErrorAction Stop
+  $bytes = [IO.File]::ReadAllBytes($Path)
+  if ($bytes.Length -lt 2 -or $bytes.Length -gt 16777216) { Fail 'manifest too large or empty' }
+  $quotas = New-Object System.Xml.XmlDictionaryReaderQuotas
+  $quotas.MaxDepth = 32
+  $quotas.MaxStringContentLength = 16777216
+  $quotas.MaxArrayLength = 16777216
+  $quotas.MaxNameTableCharCount = 65536
+  $frames = New-Object System.Collections.Stack
+  $reader = $null
+  $rootSeen = $false
+  try {
+    $reader = [System.Runtime.Serialization.Json.JsonReaderWriterFactory]::CreateJsonReader($bytes,$quotas)
+    while ($reader.Read()) {
+      if ($reader.NodeType -ne [System.Xml.XmlNodeType]::Element) { continue }
+      $depth = [int]$reader.Depth
+      $kind = $reader.GetAttribute('type')
+      while ($frames.Count -gt 0 -and $frames.Peek().Depth -ge $depth) { [void]$frames.Pop() }
+      if ($depth -eq 0) {
+        if ($rootSeen -or $kind -cne 'object') { throw 'manifest root not object' }
+        $rootSeen = $true
+      } elseif ($frames.Count -gt 0) {
+        $parent = $frames.Peek()
+        if ($parent.Kind -ceq 'object' -and $depth -eq ($parent.Depth+1)) {
+          if (-not $parent.Names.Add($reader.LocalName)) { throw 'duplicate JSON member' }
+        }
+      }
+      if ($kind -ceq 'object' -or $kind -ceq 'array') {
+        $names = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        $frames.Push(@{Depth=$depth;Kind=$kind;Names=$names})
+      }
+    }
+    if (-not $rootSeen) { throw 'manifest root missing' }
+  } catch { Fail 'duplicate or invalid JSON manifest' }
+  finally { if ($null -ne $reader) { $reader.Close() } }
+}
+Assert-P01UniqueManifestMembers $manifestFull
 $m = Get-Content -LiteralPath $manifestFull -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1') { Fail 'schema' }
 if ($m.entrypoint -cne 'NOX.P01.Shell.exe') { Fail 'entrypoint' }
