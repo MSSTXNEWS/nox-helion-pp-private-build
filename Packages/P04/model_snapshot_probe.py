@@ -31,6 +31,25 @@ _TENSOR_WIDTH = {
 _MAX_TENSOR_RANK = 32
 _MAX_TENSOR_NAME = 1024
 
+# Windows path semantics must be checked even when the probe runs on Linux.
+# Reject reserved device names, NTFS alternate data streams and paths whose
+# case-folded names collide on a later Windows filesystem import.
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL"}
+_WINDOWS_RESERVED.update(f"{prefix}{n}" for prefix in ("COM", "LPT") for n in range(1, 10))
+_WINDOWS_RESERVED.update(f"{prefix}{n}" for prefix in ("COM", "LPT") for n in ("¹", "²", "³"))
+_INVALID_WINDOWS_FILENAME_CHARS = frozenset('<>:"/\\|?*')
+
+
+def _valid_shard_filename(name: object) -> bool:
+    return (isinstance(name, str) and bool(name) and
+            name == Path(name).name and name.endswith(".safetensors") and
+            sum(2 if ord(c) > 0xFFFF else 1 for c in name) <= 255 and
+            not any(0xD800 <= ord(c) <= 0xDFFF for c in name) and
+            not any(c in _INVALID_WINDOWS_FILENAME_CHARS or
+                    ord(c) < 32 or ord(c) == 127 for c in name) and
+            name.split(".", 1)[0].rstrip(" ").upper() not in _WINDOWS_RESERVED)
+
+
 def _strict_json_object(raw: str | bytes) -> dict:
     """Reject ambiguous duplicate keys and nonfinite JSON constants at every depth."""
     def unique_pairs(pairs):
@@ -157,6 +176,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         "status": "HOLD",
         "reason": None,
         "candidate_sha256": None,
+        "candidate_sha256_scope": "CONFIG_JSON_ONLY",
+        "snapshot_manifest_sha256": None,
         "weight_files": [],
         "tensor_headers": 0,
         "model_license_verified": False,
@@ -186,16 +207,15 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
                 expected_by_shard.setdefault(shard_name, set()).add(tensor_name)
             names = sorted(expected_by_shard)
+            if len({name.casefold() for name in names}) != len(names):
+                raise ValueError("MODEL_SHARD_PATH_UNSAFE")
         else:
             expected_by_shard = None
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         for name in names:
-            if (not isinstance(name, str) or not name or name != Path(name).name or
-                    "/" in name or chr(92) in name or ":" in name or
-                    any(ord(ch) < 32 or ord(ch) == 127 for ch in name) or
-                    not name.endswith(".safetensors") or name in {".", ".."}):
+            if not _valid_shard_filename(name):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
             tensor_names = _weight_header(file)
@@ -207,7 +227,19 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": file.stat().st_size,
                 "sha256": _sha256(file),
             })
-        report["candidate_sha256"] = _sha256(base / "config.json")
+        # The historical candidate SHA covers config only; keep semantics explicit.
+        config_sha = _sha256(base / "config.json")
+        index_sha = _sha256(index) if expected_by_shard is not None else None
+        manifest = {
+            "schema": "NOX-P04-LOCAL-SNAPSHOT-CONTENT-v1",
+            "config_sha256": config_sha,
+            "index_sha256": index_sha,
+            "weight_files": report["weight_files"],
+        }
+        encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":"),
+                             ensure_ascii=True).encode("utf-8")
+        report["snapshot_manifest_sha256"] = hashlib.sha256(encoded).hexdigest()
+        report["candidate_sha256"] = config_sha
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
     except (ValueError, OSError) as exc:

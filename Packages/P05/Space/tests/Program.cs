@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using NoxHelion.Space.E05;
 
 const int Cap = 8 * 1024 * 1024;
-// Use an offline fresh timestamp relative to execution time.
+// Keep the offline LIVE fixture fresh across execution dates.
 var Json = JsonSerializer.Serialize(new { source_time = DateTimeOffset.UtcNow.AddMinutes(-10) });
 static DateTimeOffset? SourceAt(JsonElement e) => e.GetProperty("source_time").GetDateTimeOffset();
 static HttpResponseMessage Reply(HttpContent content) => new(HttpStatusCode.OK) { Content = content };
@@ -30,6 +30,21 @@ var valid = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json)
 var small = await Fetch(valid);
 Pass(small.Status == "LIVE" && small.Data is not null && small.SourceTimestamp is not null,
     "small valid JSON: LIVE with source timestamp");
+
+// A provider that omits source time must never be accepted as live evidence.
+var missingSourceTime = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json))),
+    TimeSpan.FromMinutes(1));
+var noTime = await missingSourceTime.FetchAsync("brent",
+    new Uri("https://example.invalid/brent"), "APPROVED_TEST_SOURCE",
+    _ => (DateTimeOffset?)null);
+Pass(noTime.Status == "UNVERIFIED_TIMESTAMP" &&
+     noTime.ErrorCode == "SOURCE_TIME_MISSING" && noTime.IsStale,
+    "unverified provider timestamp must stay stale");
+var noTimeCached = await missingSourceTime.FetchAsync("brent",
+    new Uri("https://example.invalid/brent"), "APPROVED_TEST_SOURCE",
+    _ => (DateTimeOffset?)null);
+Pass(noTimeCached.Status == "UNVERIFIED_TIMESTAMP" && noTimeCached.IsStale,
+    "missing timestamp must not be promoted to LIVE/CACHE");
 
 var futureBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
     source_time = DateTimeOffset.UtcNow.AddDays(2)
@@ -115,6 +130,46 @@ Pass(wrongDateStatus.Status == "OFFLINE" &&
      wrongDateStatus.ErrorCode == "INVALID_SOURCE_TIME" && wrongDateStatus.Data is null,
      "non-string provider timestamp is a safe typed failure");
 
+// Provider adapters can raise ordinary validation errors for untrusted source
+// times; neither case may escape the SPACE error/status contract.
+var invalidArgument = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json))));
+var invalidArgumentResult = await invalidArgument.FetchAsync("brent",
+    new Uri("https://example.invalid/brent"), "APPROVED_TEST_SOURCE",
+    _ => throw new ArgumentException("fixture-invalid-timestamp"));
+Pass(invalidArgumentResult.Status == "OFFLINE" &&
+     invalidArgumentResult.ErrorCode == "INVALID_SOURCE_TIME" &&
+     invalidArgumentResult.IsStale, "provider ArgumentException maps to typed invalid timestamp");
+var overflowDate = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json))));
+var overflowDateResult = await overflowDate.FetchAsync("brent",
+    new Uri("https://example.invalid/brent"), "APPROVED_TEST_SOURCE",
+    _ => throw new OverflowException("fixture-out-of-range-timestamp"));
+Pass(overflowDateResult.Status == "OFFLINE" &&
+     overflowDateResult.ErrorCode == "INVALID_SOURCE_TIME" &&
+     overflowDateResult.IsStale, "provider OverflowException maps to typed invalid timestamp");
+
+// Duplicate provider keys are ambiguous provenance, even in nested metadata.
+var sourceTimeJson = JsonSerializer.Serialize(new { source_time = DateTimeOffset.UtcNow });
+var duplicateRootJson = sourceTimeJson[..^1] + "," + sourceTimeJson[1..];
+var duplicateRoot = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes(duplicateRootJson))));
+var duplicateRootResult = await Fetch(duplicateRoot);
+Pass(duplicateRootResult.Status == "OFFLINE" &&
+     duplicateRootResult.ErrorCode == "INVALID_JSON" &&
+     duplicateRootResult.Data is null && duplicateRootResult.IsStale,
+    "duplicate provider source-time key rejected before LIVE cache");
+
+var duplicateNestedJson = JsonSerializer.Serialize(new {
+    source_time = DateTimeOffset.UtcNow,
+    metadata = new { license = 1, LICENSE = 2 }
+});
+var duplicateNested = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes(duplicateNestedJson))));
+var duplicateNestedResult = await Fetch(duplicateNested);
+Pass(duplicateNestedResult.Status == "OFFLINE" &&
+     duplicateNestedResult.ErrorCode == "INVALID_JSON" &&
+     duplicateNestedResult.Data is null && duplicateNestedResult.IsStale,
+    "case-insensitive nested duplicate provider key rejected");
+
 var badJson = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes("{"))));
 var invalid = await Fetch(badJson);
 Pass(invalid.Status == "OFFLINE" && invalid.ErrorCode == "INVALID_JSON",
@@ -151,7 +206,7 @@ var unverified = (ProgressEvidence[])lanes.Clone();
 unverified[2] = unverified[2] with { State = "SOURCE_PREPARED" };
 Pass(EvidenceProgress.WeightedProduct(unverified) is null,
     "source-only TaskID cannot count toward accepted progress");
-Console.WriteLine("17/17 semantic assertions PASS (when this project actually runs on .NET 8)");
+Console.WriteLine("P05 R16 smoke: 23 semantic assertions PASS (only after this .NET 8 program actually runs)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
