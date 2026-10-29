@@ -102,6 +102,11 @@ class OwnerTwoPorts:
             raise ValueError("top_k must be 1..20")
         output = self.rag.context(scope.windows_sid, scope.conversation_id, query, topk)
         context, citations = ChatBridge._rag_evidence(output)
+        # Recheck the existing P02 store and native ACL after a provider call:
+        # RAG can revoke access while collecting private context.
+        self._session(scope, "chat.rag")
+        if not self.available("chat.rag"):
+            raise RouteHold("EXISTING_P04_RAG_REVOKED_BEFORE_PUBLICATION")
         return {"context": context, "sources": citations}
 
     def captured_voice(self, scope: NativeScope, args: dict, stop: threading.Event | None = None) -> dict:
@@ -133,10 +138,23 @@ class OwnerTwoPorts:
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
+        # Native ACL/consent may be revoked during ASR/LLM/TTS.
+        self._session(scope, "chat.voice")
+        if not self.available("chat.voice"):
+            raise RouteHold("NATIVE_VOICE_REVOKED_BEFORE_OUTPUT")
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
+        # Reentrant native storage can revoke access. Never reveal a staged
+        # output ticket after revocation; host owns orphan expiry/cleanup.
+        self._session(scope, "chat.voice")
+        if not self.available("chat.voice"):
+            raise RouteHold("NATIVE_VOICE_REVOKED_AFTER_STORE")
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         return {"transcript": result.transcript, "response": result.response,
                 "output_audio_id": output_id, "target_lang": result.target_lang,
                 "mode": result.mode}
@@ -166,6 +184,10 @@ class OwnerTwoPorts:
             # Never copy opaque provider/internal attributes into the WebView.
             safe.append({"call_id": r["call_id"], "status": r["status"],
                          "started_epoch": r["started_epoch"]})
+        # A provider may revoke tenant/principal access during the fetch.
+        self._session(scope, "calls.history")
+        if not self.available("calls.history"):
+            raise RouteHold("CALL_HISTORY_PROVIDER_REVOKED_BEFORE_PUBLICATION")
         return {"calls": safe}
 
     def route_methods(self):

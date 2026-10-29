@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_V16_M1_T06_WHOLE_LESSONS_APPLICABILITY_SOURCE_R13",
+  "task_id": "M1/T06",
+  "run_id": "NOX-V16-T06-20261029T182515MSK-M1-R13",
+  "phase": "SOURCE_ONLY",
+  "canonical_head_before": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+  "canonical_tree_before": "44377fc99428eec0fd8c451ed87ddede94eaba4f",
+  "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "shared_register_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+  "lessons_read": {
+    "document": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "modified_utc": "2026-10-29T15:20:13.547Z",
+    "characters": 476603,
+    "lines": 2633,
+    "distinct_actionable_candidates": 705,
+    "classification_note": "Entries are historical observations/duplicates and owner-specific recommendations, NOT 705 verified open defects",
+    "categories": [
+      "SOURCELOCK_SHA",
+      "HOST_NATIVE",
+      "ACL_CONSENT",
+      "STOP_VOICE",
+      "MODEL_RAG",
+      "VISUAL_WOW",
+      "DATA_SAFE",
+      "REPORT_PROCESS"
+    ],
+    "applicability_policy": {
+      "physical_now": [
+        "P02 post-provider native ACL reauthentication",
+        "VOICE STOP/consent before publication",
+        "same-HEAD pre/post Git blobs"
+      ],
+      "preserved": [
+        "T04 34/34 arbitration",
+        "T07/T09 original 729/729 archive",
+        "old accepted DONE"
+      ],
+      "handoff": [
+        "13 Host50 native owner attestations",
+        "P01 real original host contract",
+        "P03 ModelCenter native service",
+        "P04 real GPU/LoRA and RAG",
+        "P05 live events/projections",
+        "final whole-tree SourceLock, T09 freeze, T10 independent QA"
+      ],
+      "not_automatic": [
+        "historic owner conflicting patches",
+        "disable ACL/consent to remove HOLD",
+        "synthetic fixture pass as native acceptance",
+        "EXE/NSIS/GitLab E07 before authorization"
+      ]
+    }
+  },
+  "source_paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_blob": "4d02549071fa645c4dc6789f3be2e276a1f530f6",
+      "post_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "pre_blob": "368c0da31cd99155c24b5d7672f64a7036ee4720",
+      "post_blob": "c129aec0f446b63704928e84d962146a8431fa21"
+    }
+  ],
+  "error_ids_ack": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "verified_closed_preserved": [
+    "ERR-SYS-006",
+    "ERR-SYS-007"
+  ],
+  "focused_check": {
+    "method": "SOURCE_CONTRACT_STATIC_AND_PREIMAGE",
+    "results": [
+      [
+        "PRE_GIT_BLOBS_PINNED",
+        true
+      ],
+      [
+        "NO_NEW_BACKEND",
+        true
+      ],
+      [
+        "PACK01_MAPPING_FIX_PRESERVED",
+        true
+      ],
+      [
+        "ROUTE_OWNER_BOUND",
+        true
+      ],
+      [
+        "ONE_USE_VOICE_CAPTURE_PRESERVED",
+        true
+      ],
+      [
+        "RAG_REAUTH",
+        true
+      ],
+      [
+        "CALL_REAUTH",
+        true
+      ],
+      [
+        "VOICE_REAUTH_BEFORE_OUTPUT",
+        true
+      ],
+      [
+        "VOICE_REAUTH_AFTER_STORE",
+        true
+      ],
+      [
+        "FOCUSED_NEGATIVE_TESTS",
+        true
+      ],
+      [
+        "STOP_GATE_PRESERVED",
+        true
+      ],
+      [
+        "EXISTING_ACL_PRESERVED",
+        true
+      ],
+      [
+        "ATOMIC_REGISTRATION_ROLLBACK_PRESERVED",
+        true
+      ]
+    ],
+    "status": "PASS",
+    "python_negative_tests": "ADDED_NOT_EXECUTED",
+    "native_windows": "NOT_RUN",
+    "independent_source_verification": "NOT_RUN"
+  },
+  "lesson_applied": "Native scope/consent can be revoked during long-running owner call; check again at publication without new service, DB, or backend.",
+  "progress": {
+    "done": 1,
+    "total": 8,
+    "percent": 12.5,
+    "previous": 12.5,
+    "delta_pp": 0,
+    "remaining": [
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "Host50/D02/WOW/NO-LOSS source acceptance",
+      "final HEAD/tree/manifest to M2"
+    ]
+  },
+  "no_loss": "Original archive/P01/NSIS/D02/WOW/P03/P04/P05/storage unmodified",
+  "shared_docs_not_written": true,
+  "no_exe": true,
+  "no_nsis": true,
+  "no_gitlab": true,
+  "no_e07": true
+}

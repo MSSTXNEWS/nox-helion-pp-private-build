@@ -107,6 +107,55 @@ class RouteTests(unittest.TestCase):
     def test_limits_bool_rejected(self):
         with self.assertRaises(ValueError):self.ports.calls_history(self.scope,{'limit':True})
         with self.assertRaises(ValueError):self.ports.rag_context(self.scope,{'query':'hi','top_k':True})
+    def test_rag_revoked_during_existing_provider_call_cannot_publish_context(self):
+        def revoke_and_read(*args):
+            self.permissions.discard("chat.rag")
+            return {"context": "private data", "sources": []}
+        self.rag.context = revoke_and_read
+        with self.assertRaises(PermissionError):
+            self.ports.rag_context(self.scope, {"query": "facts"})
+
+    def test_rag_owner_readiness_revoked_during_provider_call(self):
+        def revoke_readiness(*args):
+            self.ready.discard("chat.rag")
+            return {"context": "private data", "sources": []}
+        self.rag.context = revoke_readiness
+        with self.assertRaisesRegex(RouteHold, "RAG_REVOKED"):
+            self.ports.rag_context(self.scope, {"query": "facts"})
+
+    def test_call_history_revoked_during_existing_provider_call(self):
+        def revoke_and_return(scope, limit):
+            self.permissions.discard("calls.history")
+            return self.rows[:limit]
+        self.ports.call_history = revoke_and_return
+        with self.assertRaises(PermissionError):
+            self.ports.calls_history(self.scope, {})
+
+    def test_voice_revoked_during_model_run_does_not_publish_audio(self):
+        from types import SimpleNamespace
+        published = []
+        def revoke_during_asr(*args, **kwargs):
+            self.permissions.discard("chat.voice")
+            return SimpleNamespace(audio=b"private", transcript="x",
+                                   response="y", target_lang="es", mode="translate")
+        self.ports.voice.run = revoke_during_asr
+        self.ports.store_output_audio = lambda scope, audio: published.append(audio) or "b"*32
+        with self.assertRaises(PermissionError):
+            self.ports.captured_voice(self.scope, {"capture_id": "a"*32})
+        self.assertEqual(published, [])
+
+    def test_voice_output_store_revocation_never_returns_ticket(self):
+        from types import SimpleNamespace
+        self.ports.voice.run = lambda *args, **kwargs: SimpleNamespace(
+            audio=b"private", transcript="x", response="y", target_lang="es",
+            mode="translate")
+        def revoke_during_store(scope, audio):
+            self.permissions.discard("chat.voice")
+            return "b"*32
+        self.ports.store_output_audio = revoke_during_store
+        with self.assertRaises(PermissionError):
+            self.ports.captured_voice(self.scope, {"capture_id": "a"*32})
+
 if __name__=='__main__':unittest.main(verbosity=2)
 
 class ExistingDispatcherBindingTests(RouteTests):
