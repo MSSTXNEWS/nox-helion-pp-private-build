@@ -1,0 +1,146 @@
+{
+  "schema": "NOX_V16_M2_T08T09_OWNER_PATCH_HANDOFF_R01",
+  "task_id": "M2/T08/T09",
+  "run_id": "NOX-V16-M2-20261029-R01-EXACT-GIT-GATE",
+  "scope": "Only NOX HELION EXPRESS INTEGRATOR V16 Windows loader SOURCE ONLY",
+  "checkpoint_registry_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+  "registry_open": 4,
+  "registry_fixed_unverified": 5,
+  "registry_verified_closed": 2,
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "errors_ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "action": "T02: require register checkpoint acknowledgments"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "action": "M2 applied live SHA refresh; handoff T02 for recurrence"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "action": "T06/Host50: native attestation needed; code fix present"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "action": "M1/T06: full P01-P05 source owner receipts missing"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "action": "T06: scope verifier on same accepted source"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "action": "CLOSED ORIGINAL ZIP, preserve"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "action": "CLOSED T04 34/34, preserve"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "T02 register present, T09 must acknowledge"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "M2 patch is physical remediation; no fake DONE"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "M1/T06 accepts full receipts or stays pending"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "M2 source-gate correction submitted for T06 owner review"
+    }
+  ],
+  "new_error": {
+    "error_id": "ERR-T08-20261029-GIT-EVIDENCE-FORGED-DONE",
+    "type": "SOURCE_ACCEPTANCE_EVIDENCE_DEFECT",
+    "status": "PATCH_PREPARED_NOT_APPLIED",
+    "owner": "T08/M1",
+    "cause": "T08 gate treats fabricated 40hex SHA as real accepted Git evidence; existing test's all-synthetic SHA returns DONE. No Git cat-file or T06 owner gate readback.",
+    "actual_gate_blob": "56806fb744694b2dd146db88229597722953ddd9",
+    "actual_test_blob": "b9503bb02ed44d95daab902c1b382b5f4a460967"
+  },
+  "source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_at_preimage": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "tree_at_preimage": "44377fc99428eec0fd8c451ed87ddede94eaba4f",
+    "owner_accepted": false,
+    "frozen": false,
+    "accepted_manifest": null
+  },
+  "patch": {
+    "mode": "COORDINATION_ONLY_OWNER_HANDOFF",
+    "preimage_gate_git_blob": "56806fb744694b2dd146db88229597722953ddd9",
+    "preimage_test_git_blob": "b9503bb02ed44d95daab902c1b382b5f4a460967",
+    "files": [
+      "coordination/m2/NOX_V16_T08_GATE_PROPOSED.py",
+      "coordination/m2/NOX_V16_T08_GATE_FORGED_SHA_REGRESSION.py"
+    ],
+    "canonical_source_changed": false,
+    "apply_to": "coordination/automation/t08/t08_autofix_closeout_gate.py via exact preimage CAS by sole source integrator M1/T06",
+    "behavior": "Requires locally git-readable HEAD/tree, actual T06 accepted owner receipt, exact manifest SHA256 and T06 guard 8/8. Rejects fabricated SHA-only DONE. No STOP/ACL/consent bypass."
+  },
+  "check": {
+    "kind": "SOURCE_STATIC_PREIMAGE_AND_FAIL_CLOSED_TEST_DESIGNED",
+    "preimage_readback": true,
+    "proposed_py_runtime": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "status": "PREPARED_FOR_OWNER_FOCUSED_TEST",
+    "no_false_test_claim": true
+  },
+  "original_source_lock": {
+    "scope": "ORIGINAL_ARCHIVE_ONLY",
+    "source_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "members_verified": "729/729",
+    "source": "T07/T09 prior immutable receipts",
+    "rehash": false
+  },
+  "historical_done": [
+    "T04 34/34",
+    "T05 13/13 candidate triage",
+    "T07 729/729 original SourceLock"
+  ],
+  "progress": {
+    "before": {
+      "T08": 1,
+      "T09": 1,
+      "total": 2,
+      "denominator": 9,
+      "pct": 22.2222
+    },
+    "after": {
+      "T08": 1,
+      "T09": 1,
+      "total": 2,
+      "denominator": 9,
+      "pct": 22.2222
+    },
+    "delta_pp": 0,
+    "bar": "██░░░░░░░░",
+    "remaining": 7,
+    "reason": "Owner accepted source and same-head P0/P1 are NOT proven; patch handoff must not be counted as accepted."
+  },
+  "applied_lesson": "Physical fail-closed code instead of repeated HOLD-only narrative; reuse existing T06 Git-backed gate to avoid creating duplicate source attestation logic.",
+  "handoff": [
+    "M1/T06 apply exact gate-owner patch and run one focused unittest",
+    "T02/C record new incident in shared register, retain closed historic IDs",
+    "T09 no freeze until T06 8/8 same SHA and T08 disposition",
+    "T10/T11 not frozen, no SOURCE_READY claim"
+  ],
+  "no_exe_nsis_gitlab_ci_e07": true
+}
