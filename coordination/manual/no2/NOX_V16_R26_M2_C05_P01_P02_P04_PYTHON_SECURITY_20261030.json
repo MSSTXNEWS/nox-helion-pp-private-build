@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_V16_R26_M2_INDEPENDENT_SOURCE_ONLY_CYCLE_V1",
+  "run_id": "NOX-V16-M2-R26-20261030-C05-10",
+  "role": "manual-2-independent-qa",
+  "pr": 162,
+  "source_head": "79005fcb92dd540d00d82355203757bd367e2f20",
+  "utc": "2026-10-29T21:55:33.662Z",
+  "mode": "EXTRACTED_EXACT_SOURCE_FUNCTION_BODIES_EXECUTED_IN_PYTHON_3_13_LINUX_NO_PRIVATE_CHECKOUT",
+  "runs": "3 isolated functional units, 40 negative/normal assertions, plus P01 exact safe_path",
+  "approaches_done": 10,
+  "sources": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "git_blob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "functions": [
+        "_valid_shard_filename",
+        "_strict_json_object"
+      ]
+    },
+    {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "git_blob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+      "functions": [
+        "safe_path"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "git_blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "functions": [
+        "authorized_app_message"
+      ]
+    }
+  ],
+  "cases": {
+    "p04_filename": {
+      "assertions": 14,
+      "passed": 14,
+      "examples": [
+        "valid",
+        "CON reserved",
+        "COM¹ reserved",
+        "ADS colon",
+        "backslash escape",
+        "slash escape",
+        "LF",
+        "lone surrogate",
+        "UTF16 length",
+        "255/256 boundary",
+        "tab",
+        "trailing space",
+        "multi-shard"
+      ]
+    },
+    "p04_json": {
+      "assertions": 6,
+      "passed": 6,
+      "cases": [
+        "valid",
+        "duplicate root",
+        "duplicate nested",
+        "NaN",
+        "Infinity",
+        "top-level array"
+      ]
+    },
+    "p01_owner_receipt_path": {
+      "assertions": 8,
+      "unsafe_accepted": 8,
+      "negative_rejection_pass": 0,
+      "examples": [
+        "COM1:stream",
+        "control LF",
+        "?",
+        "AUX",
+        "trailing dot-space",
+        "|",
+        "DEL",
+        "C:relative"
+      ],
+      "status": "SOURCE_FAIL_REPEATED"
+    },
+    "p02_authorized_message": {
+      "assertions": 12,
+      "passed": 12,
+      "cases": [
+        "canonical chat send",
+        "off-origin HTTP",
+        "lookalike host",
+        "subframe",
+        "port",
+        "userinfo",
+        "unapproved operation",
+        "history.delete consent deny/allow",
+        "attachment.pick consent deny/allow",
+        "chat.stop"
+      ]
+    }
+  },
+  "meaningful_approaches": [
+    "P04 valid filename acceptance",
+    "P04 reserved Windows device names",
+    "P04 alternate data streams and traversals",
+    "P04 control/unicode/UTF16 path bounds",
+    "P04 duplicate root/nested JSON",
+    "P04 nonfinite/array JSON",
+    "P01 Windows owner-receipt unsafe path negatives",
+    "P02 trusted host origin/main frame/port/userinfo",
+    "P02 operation allowlist",
+    "P02 explicit user confirmation for sensitive actions"
+  ],
+  "total_assertions": 40,
+  "security_failures": 8,
+  "success_assertions": 32,
+  "status": "SOURCE_QA_PARTIAL_P01_FAIL_NATIVE_NOT_RUN",
+  "native_windows": "NOT_RUN",
+  "E07": "0/10 NOT_RUN",
+  "source_ready": "HOLD",
+  "taskid_new": 0,
+  "qa_accepted_new": 0,
+  "product_done_delta": 0,
+  "product_percentage": null,
+  "repeat_issue_id": "ERR-SRC-004",
+  "next": "T06/manual1 integrate existing safe_path Windows unsafe path guard against current exact Git PRE; test Python and native Windows semantics. Manual2/T08 independent exact post-SHA QA; do not count isolated functions as full module tests or native E07."
+}
