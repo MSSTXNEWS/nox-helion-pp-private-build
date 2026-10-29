@@ -104,8 +104,8 @@ class NativeSession:
     allowed: frozenset[str] = field(default_factory=frozenset)
     private_approved: frozenset[str] = field(default_factory=frozenset)
     # Verified by the trusted Windows host, never copied from WebView/page JSON.
-    windows_sid: str = ""
-    session_lease: str = ""
+    windows_sid: str = field(default="", repr=False)
+    session_lease: str = field(default="", repr=False)
 
     def validate(self):
         if not all(isinstance(s, str) and 0 < len(s) <= 128 and
