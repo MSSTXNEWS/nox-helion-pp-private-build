@@ -337,7 +337,11 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         for name in names:
-            if (not isinstance(name, str) or not name or name != Path(name).name or
+            # Portable Windows basename policy: reject ADS, drive syntax, and
+            # separators even when this preflight runs on another OS.
+            if (not isinstance(name, str) or not name or
+                    re.search(r'[<>:"/\\\\|?*\x00-\x1f]', name) or
+                    name != Path(name).name or
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
