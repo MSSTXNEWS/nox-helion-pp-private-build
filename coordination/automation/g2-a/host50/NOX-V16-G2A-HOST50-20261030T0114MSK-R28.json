@@ -1,0 +1,262 @@
+{
+  "schema": "NOX_V16_R26_G2A_M2M3_AUXILIARY_DELTA_PINNED_V1",
+  "run_id": "NOX-V16-G2A-HOST50-20261030T0114MSK-R28-MOBILE-OWNER-BOUND",
+  "role": "G2-A / M2 ONEHOST + M3 native QA preparation; support only",
+  "source": {
+    "pr": 162,
+    "head": "2bb94db2e9bf7328437e2bfacb2cb6008ff514a5",
+    "head_pre": "2bb94db2e9bf7328437e2bfacb2cb6008ff514a5",
+    "head_post": "2bb94db2e9bf7328437e2bfacb2cb6008ff514a5",
+    "tree": "UNKNOWN_NOT_EXPOSED_BY_THIS_GITHUB_CONNECTOR",
+    "read_at": "2026-10-29T22:19Z",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "files": [
+      {
+        "key": "map",
+        "path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+        "blob_sha": "6e3436821a975b1986261791de060a1020de7079"
+      },
+      {
+        "key": "catalog",
+        "path": "proposals/NOX-PACK01-50/catalog.json",
+        "blob_sha": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d"
+      },
+      {
+        "key": "mobile",
+        "path": "coordination/e06/adapters/g2_space_mobile.py",
+        "blob_sha": "e1f14ea075e9a384346757d7fd23c9a61745200c"
+      },
+      {
+        "key": "admission",
+        "path": "coordination/e06_host50/admission.py",
+        "blob_sha": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4"
+      },
+      {
+        "key": "r27",
+        "path": "coordination/automation/g2-a/host50/NOX-V16-G2A-HOST50-202610300044-R27.json",
+        "blob_sha": "d0ebdbc49d2e0ad28eb23e41162abc3343344adb"
+      },
+      {
+        "key": "owner",
+        "path": "coordination/automation/t06/NOX_V16_R26_T06_M1_MOBILE_SOURCE_RECEIPT_20261030.json",
+        "blob_sha": "739c3c4cdcb04784b1c9931f826a964bfdb89d8f"
+      }
+    ]
+  },
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "error_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+  "error_register_counts": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "total": 11
+  },
+  "relevant_errors": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "change_detected": {
+    "task_id": "NIP01-50",
+    "route": "mobile.connect",
+    "source_map_prior_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "source_map_current_blob": "6e3436821a975b1986261791de060a1020de7079",
+    "owner_T06_commit": "bd042dc694829b7cf4d41a55ddba088aee7451ac",
+    "owner_source_receipt_blob": "739c3c4cdcb04784b1c9931f826a964bfdb89d8f",
+    "stage": "INTEGRATED_SOURCE_DESCRIPTOR_ONLY",
+    "previous_source_bound": 39,
+    "current_source_bound": 40,
+    "previous_unbound": 11,
+    "current_unbound": 10,
+    "change_is_owner_T06_not_this_role": true,
+    "QA_ACCEPTED": false
+  },
+  "source_structural_checks": {
+    "passed": 14,
+    "total": 14,
+    "checks": {
+      "exact_50_catalog": true,
+      "exact_50_binding_map": true,
+      "unique_taskids": true,
+      "unique_routeids": true,
+      "full_NIP01_01_to_50": true,
+      "owner_route_identity_match": true,
+      "source_bound_40": true,
+      "source_unbound_10": true,
+      "map_counters_match": true,
+      "native_pending_14": true,
+      "mobile_binding_exact_existing_method": true,
+      "mobile_handler_present": true,
+      "no_false_native_acceptance": true,
+      "old_to_new_owner_blob_proof": true
+    },
+    "kind": "read-only current Git exact-blob source corroboration; not executed Windows/native QA"
+  },
+  "m2": {
+    "source_bound": 40,
+    "source_unbound": 10,
+    "unbound": [
+      {
+        "task_id": "NIP01-26",
+        "route": "training.start",
+        "owner": 4,
+        "owner_handoff": "manual #3 P04 isolated handler receipt -> manual #1/T06 exact PRE source CAS"
+      },
+      {
+        "task_id": "NIP01-30",
+        "route": "training.evaluate",
+        "owner": 4,
+        "owner_handoff": "manual #3 P04 isolated handler receipt -> manual #1/T06 exact PRE source CAS"
+      },
+      {
+        "task_id": "NIP01-36",
+        "route": "media.player",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-37",
+        "route": "media.subtitles",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-38",
+        "route": "browser.open",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-39",
+        "route": "browser.bookmarks",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-40",
+        "route": "images.generate",
+        "owner": 4,
+        "owner_handoff": "manual #3 P04 isolated handler receipt -> manual #1/T06 exact PRE source CAS"
+      },
+      {
+        "task_id": "NIP01-47",
+        "route": "system.update",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-48",
+        "route": "system.backup",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      },
+      {
+        "task_id": "NIP01-49",
+        "route": "system.pc_control",
+        "owner": 1,
+        "owner_handoff": "manual #1/T06 existing P01 handler + ACL/STOP/consent binding"
+      }
+    ]
+  },
+  "m3": {
+    "native_pending": 14,
+    "native_pending_task_ids": [
+      "NIP01-07",
+      "NIP01-08",
+      "NIP01-26",
+      "NIP01-30",
+      "NIP01-35",
+      "NIP01-36",
+      "NIP01-37",
+      "NIP01-38",
+      "NIP01-39",
+      "NIP01-40",
+      "NIP01-47",
+      "NIP01-48",
+      "NIP01-49",
+      "NIP01-50"
+    ],
+    "native_pending_routes": [
+      "chat.rag",
+      "chat.voice",
+      "training.start",
+      "training.evaluate",
+      "calls.history",
+      "media.player",
+      "media.subtitles",
+      "browser.open",
+      "browser.bookmarks",
+      "images.generate",
+      "system.update",
+      "system.backup",
+      "system.pc_control",
+      "mobile.connect"
+    ],
+    "owner": "manual #2/T08 independent same-SHA; security STOP/ACL/origin/consent/SourceLock/native ACK/negative revocation",
+    "status": "TEST_VECTORS_PREPARED_NOT_RUN",
+    "qa_accepted": 0
+  },
+  "mobile_consent_security": {
+    "source_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "examination": {
+      "final_advertise_line": 318,
+      "gateway_available_rechecked": true,
+      "identity_attestation_rechecked": false,
+      "status": "POTENTIAL_POST_FINAL_ADVERTISE_ATTESTATION_GAP"
+    },
+    "finding": "Existing source checks available() after final advertise, but no final attest() after callback; identity/CSRF/consent-revocation during last callback still needs owner negative regression on exact existing method.",
+    "risk": "POTENTIAL_STATIC_EPOCH_GAP_NOT_NATIVE_EXPLOIT_PROOF",
+    "next": "Reuse existing R23 patch only if exact PRE matches; no duplicated host/handler/new code"
+  },
+  "lessons": {
+    "processed_error_entries": 11,
+    "archived_duplicate_fingerprints": "NOT_REOPENED",
+    "root_causes": [
+      {
+        "ids": [
+          "ERR-SYS-001",
+          "ERR-SYS-002"
+        ],
+        "action": "APPLY_PROCESS_SOURCE_DRIFT_CHECK",
+        "proof": "39/11 owner receipt -> 40/10 live map"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-SRC-004",
+          "ERR-SRC-005"
+        ],
+        "action": "DELEGATE_T06_T08",
+        "proof": "source-bound descriptor is not native acceptance"
+      },
+      {
+        "ids": [
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "action": "CHECKPOINT_INCOMPLETE",
+        "proof": "native 14 unchanged; no release claims"
+      }
+    ],
+    "remaining": "native, SHA-bound independent QA; T02 journal CAS"
+  },
+  "gates": {
+    "A": "PASS_FRESH_CONNECTOR_READ",
+    "B": "PASS_NEW_INDEPENDENT_SHA_BOUND_SOURCE_CORROBORATION_NOT_NATIVE",
+    "C": "PENDING_GIT_RECEIPT_READBACK",
+    "D": "PARTIAL_PROCESS_TRIAGE_NO_CODE_FIX",
+    "E": "REPORT_READY"
+  },
+  "accepted_task_delta": 0,
+  "legacy_T04": "34/34 historic preserved",
+  "original_archive": "729/729 historic preserved no reread",
+  "product": "N/D",
+  "source_ready": false,
+  "exe_ci_e07": "NOT_RUN",
+  "shared_register_write": "T02_ONLY_NOT_WRITTEN",
+  "next_checkpoint": "T06 rebase 10 unbound only with owner exact PRE; NIP01-50 native consent epoch test; T08 14 exact-HEAD negative+positive on actual native host; T02 journal append+readback"
+}
