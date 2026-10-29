@@ -1,0 +1,36 @@
+{
+  "schema": "NOX_V16_M2_R18_QA_SOURCE_RECEIPT",
+  "run_id": "NOX-V16-MANUAL2-20261029-R18-PROOF-HARDENING",
+  "owner": "manual #2 independent QA",
+  "source_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+  "source_pre_blob": "56806fb744694b2dd146db88229597722953ddd9",
+  "task_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "scope": "ISOLATED QA PROPOSAL - canonical T08/PR162 NOT edited",
+  "test_evidence": "Prior local 11/11 PASS incl. 8 real temporary Git-object cases and 3 forged-SHA focused checks. New reduced 6-case source regression in branch is NOT_RUN until independently reproduced.",
+  "qa_status": "SOURCE_CANDIDATE_REQUIRES_T08_OWNER_INTEGRATION",
+  "source_contracts": [
+    "HEAD/tree real Git",
+    "owner manifest blob SHA-256",
+    "existing T06 closeout guard",
+    "P0/handoff real Git receipt",
+    "three T02 docs source receipt blobs",
+    "native/Windows 13 routes NOT verified"
+  ],
+  "registry_sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "journal": "T02 only writer; no shared journal changes",
+  "prevention": "Reject claims from synthetic hashes; stage fixed source/QA on exact HEAD; independent same-source acceptance; no full DONE without native signed proof",
+  "open_holds": [
+    "P01-P05 full same-tree acceptance",
+    "Host50 13 native Windows",
+    "T02 shared journal CAS",
+    "GitLab authorized readback"
+  ],
+  "excluded": [
+    "No EXE",
+    "No NSIS",
+    "No CI",
+    "No E07",
+    "No product source modification"
+  ],
+  "next": "T08 owner integrate on exact preimage, T06 owner and T02 process new evidence"
+}
