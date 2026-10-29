@@ -1,0 +1,430 @@
+{
+  "schema": "ASTRA_R30_R29_B",
+  "rows": [
+    {
+      "ref": "astra-b/r29-b4-20261029",
+      "head_sha": "1eacb5f01a50f121e72973380bab940e4a131fc6",
+      "at": "2026-10-29T02:00:43Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 7,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P05/E05/b4-tests/B4DriveOrder.csproj",
+          "status": "added",
+          "previous": null,
+          "added": 13,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/b4-tests/Program.cs",
+          "status": "added",
+          "previous": null,
+          "added": 56,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/checks/E05DriveAdmissionR29Checks.cs",
+          "status": "added",
+          "previous": null,
+          "added": 174,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/checks/E05VerifiedProjectionChecks.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 39,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/checks/Program.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/docs/B4_DRIVE_ORDER_R29_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 24,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05CanonicalTerminalR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05FailedCriterionR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 21,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05PartialReadinessR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 21,
+          "deleted": 11
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceRunErrorHistoryR15.test.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 5,
+          "deleted": 3
+        },
+        {
+          "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 24,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 10,
+          "deleted": 4
+        },
+        {
+          "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 79,
+          "deleted": 13
+        },
+        {
+          "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 8,
+          "deleted": 6
+        },
+        {
+          "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 4,
+          "deleted": 2
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_CONT01_FOLLOWUP.json",
+          "status": "added",
+          "previous": null,
+          "added": 22,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_CONT01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS1_PREIMAGE_CORRECTION.json",
+          "status": "added",
+          "previous": null,
+          "added": 19,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS1_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 24,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS2_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS3_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS4_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra-b/r29-b5-20261029",
+      "head_sha": "98b516cf057bf50832fe094bbeb8a6fbd4bc9002",
+      "at": "2026-10-29T02:02:55Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 8,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "coordination/astra-b/B5/R29_ADVERTISE_SCOPE_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 27,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra-b/B5/R29_OWNER_CALLBACK_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 28,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/ORIGINAL_729_PHYSICAL_SOURCELOCK.json",
+          "status": "added",
+          "previous": null,
+          "added": 4415,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_NATIVE_SESSION_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 38,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_ORIGINAL729_PROVENANCE.json",
+          "status": "added",
+          "previous": null,
+          "added": 40,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_PC_PREVIEW_STOP_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_SOURCE_RESIDUAL_MAP_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/adapters/pc_control_owner_port.py",
+          "status": "added",
+          "previous": null,
+          "added": 89,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/adapters/test_pc_control_owner_port.py",
+          "status": "added",
+          "previous": null,
+          "added": 150,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/source_deep_inventory.py",
+          "status": "modified",
+          "previous": null,
+          "added": 73,
+          "deleted": 63
+        },
+        {
+          "path": "coordination/e06/stage_onehost.py",
+          "status": "modified",
+          "previous": null,
+          "added": 26,
+          "deleted": 9
+        },
+        {
+          "path": "coordination/e06/test_sourcelock_publication_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 88,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/test_stage_onehost_paths_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 72,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/verify_original_729_source.py",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 5
+        },
+        {
+          "path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "status": "modified",
+          "previous": null,
+          "added": 41,
+          "deleted": 0
+        },
+        {
+          "path": "tests/e06/test_pack01_advertise_session_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 88,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra-b/r29-b6-20261029",
+      "head_sha": "0f4d08ad2f247ec410eb34e18e36e242bc0dbd41",
+      "at": "2026-10-29T02:03:10Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 7,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "coordination/astra/agents/A06/ORIGINAL_729_PHYSICAL_SOURCELOCK.json",
+          "status": "added",
+          "previous": null,
+          "added": 4415,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_NATIVE_SESSION_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 38,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_ORIGINAL729_PROVENANCE.json",
+          "status": "added",
+          "previous": null,
+          "added": 40,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_PC_PREVIEW_STOP_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A06/R29_SOURCE_RESIDUAL_MAP_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/B6_STAGE_TRANSACTION_RECEIPT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 53,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/adapters/pc_control_owner_port.py",
+          "status": "added",
+          "previous": null,
+          "added": 89,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/adapters/test_pc_control_owner_port.py",
+          "status": "added",
+          "previous": null,
+          "added": 150,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/source_deep_inventory.py",
+          "status": "modified",
+          "previous": null,
+          "added": 73,
+          "deleted": 63
+        },
+        {
+          "path": "coordination/e06/stage_onehost.py",
+          "status": "modified",
+          "previous": null,
+          "added": 130,
+          "deleted": 10
+        },
+        {
+          "path": "coordination/e06/test_sourcelock_publication_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 88,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/test_stage_onehost_paths_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 72,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/verify_original_729_source.py",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 5
+        },
+        {
+          "path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "status": "modified",
+          "previous": null,
+          "added": 14,
+          "deleted": 0
+        },
+        {
+          "path": "tests/e06/test_stage_onehost_atomic_b6.py",
+          "status": "added",
+          "previous": null,
+          "added": 149,
+          "deleted": 0
+        }
+      ]
+    }
+  ]
+}
