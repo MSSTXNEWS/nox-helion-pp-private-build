@@ -148,7 +148,13 @@ public sealed class ModelDownloadQueueWorker(
                 ? j with { State = ModelJobState.Cancelling, Status = "Cancelling" } : j, ct);
             if (record?.State == ModelJobState.Cancelling)
             {
-                running.Cancel();
+                // The worker owns this CTS and may retire/dispose it while the
+                // durable intent write above is awaited. The STOP request was
+                // persisted; losing that completion race is not an error.
+                // Never hold _running while invoking cancellation callbacks:
+                // callbacks can reenter owner cleanup or another STOP request.
+                try { running.Cancel(); }
+                catch (ObjectDisposedException) { }
                 return true;
             }
             // STOP can arrive after token registration but before the atomic
