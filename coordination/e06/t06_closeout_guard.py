@@ -24,8 +24,17 @@ def decide(receipt: dict) -> dict:
         if not isinstance(row, dict):
             raise ValueError("INVALID_CRITERION_" + name)
         evidence = row.get("evidence")
-        ok = row.get("status") == "DONE" and isinstance(evidence, dict) and all(
-            isinstance(evidence.get(k), str) and bool(evidence[k].strip()) for k in PROOF)
+        if name == "base":
+            # A pinned source base needs a real head and source-choice receipt,
+            # not imaginary PRE/POST changes or a test for an unchanged baseline.
+            ok = (row.get("status") == "DONE" and isinstance(evidence, dict)
+                  and isinstance(evidence.get("canonical_head_sha"), str)
+                  and bool(HEX40.fullmatch(evidence["canonical_head_sha"]))
+                  and isinstance(evidence.get("source_choice_receipt"), str)
+                  and bool(evidence["source_choice_receipt"].strip()))
+        else:
+            ok = row.get("status") == "DONE" and isinstance(evidence, dict) and all(
+                isinstance(evidence.get(k), str) and bool(evidence[k].strip()) for k in PROOF)
         if name == "accepted_head_manifest" and ok:
             ok = all(isinstance(receipt.get(key), str) and bool(HEX40.fullmatch(receipt[key]))
                      for key in ("head_sha", "tree_sha", "manifest_blob_sha"))
