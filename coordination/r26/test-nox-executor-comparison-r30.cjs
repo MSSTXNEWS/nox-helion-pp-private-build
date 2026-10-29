@@ -1,0 +1,21 @@
+/* node test-nox-executor-comparison-r30.cjs | zero dependencies */
+"use strict";
+const fs=require("node:fs"),path=require("node:path"),vm=require("node:vm"),assert=require("node:assert/strict");
+const code=fs.readFileSync(path.join(__dirname,"nox-executor-comparison-r30.js"),"utf8");
+const context={window:{},document:{readyState:"loading",addEventListener(){}}};
+vm.runInNewContext(code,context,{filename:"nox-executor-comparison-r30.js"});
+const {series,metrics}=context.window.NOX_R30_ENGINE;
+const h="a".repeat(40),proof="https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/"+h,blob="b".repeat(40);
+const s=(at,accepted,integrated,reviewer="manual-2",head=h)=>({at,head,workers:[{id:"1",accepted,integrated,receipt_blob:blob,evidence_url:proof,qa_reviewer:reviewer,fixed_total:10}]});
+const ts=values=>values.map((v,i)=>s("2026-10-29T0"+i+":00:00Z",v,Math.max(v,2)));
+const q=arr=>series({schema:"NOX_R30_HISTORY_V1",snapshots:arr},"1",h);
+assert.equal(metrics(q(ts([0,2,3]))).trend,"ПАДЕНИЕ СКОРОСТИ");
+assert.equal(metrics(q(ts([0,1,3]))).trend,"РОСТ СКОРОСТИ");
+assert.equal(metrics(q(ts([0,1,2]))).trend,"СКОРОСТЬ БЕЗ ИЗМЕНЕНИЙ");
+assert.equal(metrics(q(ts([1]))).delta,null);
+assert.equal(q([s("2026-10-29T01:00:00Z",1,1,"manual-1")]).length,0);
+assert.equal(q([s("2026-10-29T01:00:00Z",1,1,"manual-2","c".repeat(40))]).length,0);
+assert.equal(metrics(q(ts([0,0]))).delta,0);
+const regressed=q(ts([3,2]));
+assert.equal(metrics(regressed).trend,"ПРОВЕРИТЬ ОТКАТ");
+console.log("NOX R30: 8 evidence / history / speed tests PASS");
