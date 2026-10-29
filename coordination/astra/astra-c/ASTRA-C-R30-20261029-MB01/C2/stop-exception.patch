@@ -1,12 +1,27 @@
 --- a/Packages/P02/worker-python/p02_framed_worker.py
 +++ b/Packages/P02/worker-python/p02_framed_worker.py
-@@ -164,6 +164,9 @@
-                 except ProtocolHold as exc:
-                     code = str(exc)
-                     send(_encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD"))
-+                except Exception:
-+                    # Never close the authenticated pipe on a STOP provider fault.
-+                    send(_encode_status(ingress, nonce, "NATIVE_PROVIDER_HOLD"))
+@@ -158,13 +158,17 @@
                  continue
+             # Let NativeIngress validate even malformed STOP envelopes; it
+             # independently verifies run ID, nonce, capabilities and session.
+-            if route == "chat.stop":
+-                try:
+-                    send(ingress.handle(data))
+-                except ProtocolHold as exc:
+-                    code = str(exc)
+-                    send(_encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD"))
+-                continue
++            if route == "chat.stop":
++                try:
++                    response = ingress.handle(data)
++                except ProtocolHold as exc:
++                    code = str(exc)
++                    response = _encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD")
++                except Exception:
++                    # Only provider failures become HOLD; output failure is fatal.
++                    response = _encode_status(ingress, nonce, "NATIVE_PROVIDER_HOLD")
++                send(response)
++                continue
              with active_lock:
                  require_output_transport()
+                 if active:
