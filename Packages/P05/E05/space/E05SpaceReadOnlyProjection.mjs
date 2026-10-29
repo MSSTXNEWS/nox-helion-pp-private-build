@@ -320,9 +320,8 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   // not merely the most recent 30-second LIVE status window. An older native
   // failure must not silently turn into a false “0 errors” after it ages out.
   let runErrorCount=0;
-  let observedSameRun=false;
+  let observedVerifiedTerminal=false;
   for (const e of events) {
-    if (e?.run_id===runId) observedSameRun=true;
     // A same-run task.failed/model.stopped with a broken envelope is NOT a
     // harmless nonterminal. Quarantine it, or a malformed error can disappear
     // behind a later clean STOP. Foreign runs and nonterminals stay ignored.
@@ -352,6 +351,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
       continue; // Identical replay, counted once.
     }
     seen.set(e.event_id,fingerprint);
+    observedVerifiedTerminal=true;
     if (e.event_type==='task.failed') runErrorCount++;
     // Only recent terminals determine the current LIVE state; older verified
     // errors remain counted as history without becoming a current error tile.
@@ -361,7 +361,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     (a.state==='ERROR'?1:0)-(b.state==='ERROR'?1:0));
   // Foreign-run-only or empty telemetry cannot establish zero errors here.
   return {state:terminal.length===0?'N_D':terminal.at(-1).state,
-    errors:observedSameRun?runErrorCount:null};
+    errors:observedVerifiedTerminal?runErrorCount:null};
 }
 
 // E06 must project the original native DTO into these same-run envelopes.
