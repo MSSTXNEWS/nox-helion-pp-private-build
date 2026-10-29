@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T06_FIXED_8_OWNER_HANDOFF_V2",
+  "task_id": "T06",
+  "run_id": "NOX-V16-T06-20261029T164013MSK-R06",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "status": "HOLD_NO_OWNER1_AUTHORIZATION_NO_ACCEPTED_ONE_TREE",
+  "source_only": true,
+  "timing": {
+    "timezone": "Europe/Moscow",
+    "planned_start": "2026-10-29T16:45:00+03:00",
+    "observed_start": "2026-10-29T16:40:13+03:00",
+    "receipt_created_utc": "2026-10-29T13:45:15.202Z",
+    "observed_end": "NOT_YET_OBSERVED",
+    "duration_seconds": null
+  },
+  "official_base": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "git_head_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "git_tree_sha1_prior_r05": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "tree_independently_reverified": false,
+    "source_pre_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "source_post_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "source_byte_sha256": "NOT_COMPUTED_NO_SOURCE_MUTATION",
+    "owner1_explicit_source_write_delegation": false
+  },
+  "previous_checkpoint": {
+    "run_id": "NOX-V16-T06-20261029T162028MSK-R05",
+    "receipt_commit": "e5913abec08cb843036edecc015c9a77abdf9b0c",
+    "receipt_blob": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "restoration": "Prior R05 source_pre_head/source_post_head pinned PR162 as official candidate, satisfying criterion 1 before this run; earlier N/D percent was uncalibrated under now fixed 8 criteria."
+  },
+  "current_evidence": {
+    "T01": "Historical DONE; receipt commit 9bcf1e8ce035424592ebcb3c9619a7bdf795b451; PR207 donor DRAFT not merged.",
+    "T03": "Owner journal fixed; Git blob bb41f403080b51332f80db6cfed7dce6d0b98f73; 5/5 manifest DONE, not source integration.",
+    "T04": "No current independently verified semantic conflict resolution receipt at latest T02 checkpoint.",
+    "T05": "Final 13/13 disposition commit d219d47dff1b02afadfd9abb921317bf1bd68f3e, manifest blob e1db8ff1f24b97041209eb162313fa4c8ab1d3a7; 1 source-compatible candidate G2-A and 12 HOLD; zero integrated.",
+    "T07": "3/3 Git original-part object IDs; raw joined ZIP sha256 NOT_COMPUTED, 0/729 member hashes.",
+    "T09": "SOURCE_FROZEN FALSE, 0/6; prior receipt blob 46cfc7bf8870dc17c72be3b0b0b09f88dafbb6c2.",
+    "T10": "SOURCE_READY HOLD 0/7 per independent T02 16:25 E06 delta.",
+    "T11": "PREP_ONLY until T09/T10 gates.",
+    "PR207": "OPEN DRAFT head 61b24683cebaf06411f45600864ee949310c700f, 2 source files + 2 tests; unmerged.",
+    "Astra": "f0064948119c55001601e1bae1cd3755826605ed; compare with PR162 diverged 72 ahead/1 behind; 46 changes.",
+    "R30": "f1352cb0fa2b584377d892ccb378501e698b78f6; 25 immutable snapshots; 34 overlap paths are not 34 defects.",
+    "Host50": "37 SOURCE CANDIDATE / 13 SOURCE HOLD, no accepted integrated native routes.",
+    "prior_lessons": "Owner post blob existence does not establish same-tree admission; exact source PRE SHA and owner permission required. Do not attribute old G-lane results to new Txx."
+  },
+  "progress": {
+    "denominator_fixed": 8,
+    "previous_accepted": 1,
+    "before_percent": 12.5,
+    "current_accepted": 1,
+    "after_percent": 12.5,
+    "delta_percentage_points": 0,
+    "remaining": 7,
+    "bar": "█░░░░░░░░░",
+    "rounding": "nearest of 10 segments"
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "status": "DONE",
+      "name": "Official base HEAD chosen",
+      "proof": "GitHub PR162 live HEAD 47a817f6d1f47b5d73f858c3f986de4d3fb7d219; prior R05 pinned same source_pre_head, not newly counted."
+    },
+    {
+      "id": 2,
+      "status": "HOLD",
+      "name": "P01 accepted in unified tree",
+      "proof": "T05 G1-B P01 bridge target absent in PR162/Astra; no owner integration."
+    },
+    {
+      "id": 3,
+      "status": "HOLD",
+      "name": "P02 accepted in unified tree",
+      "proof": "G2-A only candidate; PR162 PRE p02_framed_worker.py blob 255dfb7ab330c825fcc362b619614189c4915e6c; owner POST 8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1 unmerged."
+    },
+    {
+      "id": 4,
+      "status": "HOLD",
+      "name": "P03 accepted in unified tree",
+      "proof": "T05 G3-A/G3-B source preimages diverge; owner semantic admission missing."
+    },
+    {
+      "id": 5,
+      "status": "HOLD",
+      "name": "P04 accepted in unified tree",
+      "proof": "T05 G4-A/G4-B source preimages diverge; owner semantic admission missing."
+    },
+    {
+      "id": 6,
+      "status": "HOLD",
+      "name": "P05 accepted in unified tree",
+      "proof": "T05 G5-A/G5-B source preimages diverge; owner semantic admission missing."
+    },
+    {
+      "id": 7,
+      "status": "HOLD",
+      "name": "D02/WOW/Host50/E06 and NO-LOSS verified together",
+      "proof": "PR207 DRAFT source variants; Host50 13 HOLD; T07 archive physical SHA/member hashes NOT_VERIFIED."
+    },
+    {
+      "id": 8,
+      "status": "HOLD",
+      "name": "One real unified source HEAD/tree/manifest/owner receipts passed T09",
+      "proof": "PR162 unchanged; no integrated source tree or source manifest; T09 0/6."
+    }
+  ],
+  "owner_handoff": {
+    "owner": "Only manual owner #1 may update PR162 product files by CAS. T04 owns conflict decisions, T07 owns physical ZIP729; T02 only writer of shared Docs.",
+    "minimum_actions": [
+      "Re-pin PR162 live HEAD 47a817f6d1f47b5d73f858c3f986de4d3fb7d219 and Git tree; on drift abort and re-evaluate per-path Git preimages.",
+      "Use T05 final 13 dispositions; G2-A only currently matching source candidate, reuse exact owner RED→GREEN, do not infer P02 done.",
+      "For G2-A p02_framed_worker.py, require PRE blob 255dfb7ab330c825fcc362b619614189c4915e6c before adopting POST 8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1 with owner #1 approval and readback.",
+      "T04 resolves 12 diverged/missing candidates and P01 C09 bridge absent in PR162; preserve all 25 R30 snapshots and old DONE.",
+      "PR207 four donor files require exact preimage reconciliation and saved focused tests, no wholesale merge or new host.",
+      "T07 verify joined 60,364,346-byte ZIP sha256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a plus all 729 member SHA256; Git blob SHA1 not a substitute.",
+      "Owner #1 must publish real unified source HEAD + actual Git tree SHA + signed/immutable manifest and per-file CAS receipts; send to T09; T10 independent gate; T11 PREP only."
+    ],
+    "recipients": [
+      "T02",
+      "T09",
+      "T10",
+      "T11"
+    ]
+  },
+  "blocker": "No explicit authority for T06 to modify PR162 under sole owner #1; 12 T05 variants require T04/owner adjudication and T07 physical source-lock incomplete.",
+  "lessons_applied": "Do not promote donor POST/readback to integration without exact target PRE+owner; preserve historical DONE and don't double count base selection.",
+  "actions": {
+    "new_source_changes": 0,
+    "owner_source_tests_executed_by_T06": 0,
+    "shared_google_docs_written": false,
+    "main_modified": false,
+    "pr162_modified": false,
+    "snapshots_modified": false,
+    "gitlab": false,
+    "exe": false,
+    "nsis": false,
+    "windows_ci": false,
+    "e07": false
+  }
+}
