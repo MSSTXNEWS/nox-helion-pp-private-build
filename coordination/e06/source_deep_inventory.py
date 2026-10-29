@@ -8,6 +8,8 @@ import json
 import re
 import stat
 import sys
+import tempfile
+import importlib.util
 import zipfile
 from collections import Counter
 from pathlib import Path, PurePosixPath
@@ -21,6 +23,21 @@ TARGETS=("MainWindow.xaml","MainWindow.xaml.cs","App.xaml","App.xaml.cs",
          "NOX.P01.Shell.csproj","C_RELEASE_SPRINT_BUILD.ps1",
          "Contracts/integration.manifest.json","Assets/index.html")
 TEXT_EXTS=(".csproj",".sln",".json",".yml",".yaml",".xaml",".cs",".ps1",".md")
+def _canonical_validator():
+    """Use the existing canonical SourceLock validator for both read and publish."""
+    canonical=Path(__file__).resolve().parents[1]/"source-lock/verify_original_archive.py"
+    if not canonical.is_file() or canonical.is_symlink():
+        raise RuntimeError("CANONICAL_ARCHIVE_VALIDATOR_UNAVAILABLE")
+    spec=importlib.util.spec_from_file_location("nox_inventory_publication",canonical)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("CANONICAL_ARCHIVE_VALIDATOR_UNAVAILABLE")
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not callable(getattr(module,"validate_members",None)) or not callable(getattr(module,"publish_manifest_exclusive",None)):
+        raise RuntimeError("CANONICAL_ARCHIVE_CONTRACT_HOLD")
+    return module
+
+
 def safe_member(member):
     name=member.filename.replace("\\","/")
     p=PurePosixPath(name)
@@ -31,67 +48,76 @@ def safe_member(member):
     return name.rstrip("/")
 def main():
     out=ROOT/"e06-source-inventory.json"
-    sha=hashlib.sha256()
-    file=ROOT/"e06-source-verified.zip"
-    with file.open("wb") as sink:
-        for path in PARTS:
-            with (ROOT/path).open("rb") as src:
-                while chunk:=src.read(1024*1024):
-                    sha.update(chunk);sink.write(chunk)
-    if file.stat().st_size!=EXPECTED_SIZE or sha.hexdigest()!=EXPECTED_SHA:
-        raise SystemExit("ARCHIVE_SHA_OR_SIZE_HOLD")
-    lines=[]
-    with zipfile.ZipFile(file) as archive:
-        members=archive.infolist()
-        seen=set()
-        total=0
-        for item in members:
-            name=safe_member(item)
-            if not name:continue
-            low=name.casefold()
-            if low in seen:raise RuntimeError("DUPLICATE_ZIP_PATH:"+name)
-            seen.add(low)
-            total+=item.file_size
-            if total>1024*1024*1024:raise RuntimeError("OVERSIZED_ORIGINAL_ARCHIVE")
-            if item.file_size > 200*1024*1024:raise RuntimeError("OVERSIZED_MEMBER:"+name)
-        wanted=[]
-        for item in members:
-            name=safe_member(item)
-            if not item.is_dir():
-                with archive.open(item) as f:
-                    digest=hashlib.sha256()
-                    while chunk:=f.read(1024*1024):digest.update(chunk)
-                lines.append(dict(path=name,bytes=item.file_size,sha256=digest.hexdigest()))
-            if any(name.endswith(x) for x in TARGETS) or name.endswith(".sln") or name.endswith(".csproj"):
-                wanted.append(name)
-        lines.sort(key=lambda a:a["path"])
-        source_paths=[x["path"] for x in lines]
-        roles={key: [n for n in source_paths if key.lower() in n.lower()][:30]
-               for key in ("MainWindow","Assets/","Persona","Core","Modules/","Contracts/","Packages/","Installer","voice","train","rag","model","NSIS","MAESTRO")}
-        samples={}
-        for name in wanted[:35]:
-            obj=archive.getinfo(name)
-            if obj.file_size>1024*1024:continue
-            data=archive.read(obj)
-            if b"\x00" in data[:1024]:continue
-            text=data.decode("utf-8",errors="replace")
-            if name.endswith(("MainWindow.xaml.cs","C_RELEASE_SPRINT_BUILD.ps1")):
-                methods=re.findall(r"(?m)^\s*(?:private|public|internal|protected|async|static|\s){1,70}(?:void|Task|bool|string|int|[A-Za-z]+)\s+([A-Za-z_]\w*)\s*\(",text)
-                samples[name]={"bytes":len(data),"method_names":methods[:90],"lines_start":text[:1300]}
-            else:
-                samples[name]={"bytes":len(data),"lines_start":text[:4000]}
-        manifest={"schema":"NOX-E06-ORIGINAL-SOURCE-SCAN-v1",
-                  "source_archive_sha256":sha.hexdigest(),"archive_bytes":file.stat().st_size,
-                  "source_member_count":len(lines),"uncompressed_bytes":total,
-                  "role_paths":roles,"important_sources":wanted,"samples":samples,"members":lines,
-                  "integrated":False,"release_accepted":False}
-    out.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
-    print("E06_ARCHIVE_SHA_PASS",sha.hexdigest(),"MEMBERS",len(lines),"UNCOMPRESSED",total)
-    for k,names in roles.items():
-        print("E06_SOURCE_AREA",k,json.dumps(names[:16]))
-    for key,entry in samples.items():
-        print("E06_CODE_CONTRACT",key,json.dumps(entry,ensure_ascii=False)[:2400])
-    print("E06_INVENTORY_ARTIFACT_BYTES",out.stat().st_size)
-    # The full verified source zip is scratch only; never upload it.
-    file.unlink()
+    # Never reconstruct over an owner archive: private temporary bytes are removed
+    # on every success and failure path, including checksum rejection.
+    with tempfile.TemporaryDirectory(prefix="nox-deep-inventory-") as temporary:
+        file=Path(temporary)/"original.zip"
+        sha=hashlib.sha256()
+        with file.open("wb") as sink:
+            for path in PARTS:
+                with (ROOT/path).open("rb") as src:
+                    while chunk:=src.read(1024*1024):
+                        sha.update(chunk);sink.write(chunk)
+        if file.stat().st_size!=EXPECTED_SIZE or sha.hexdigest()!=EXPECTED_SHA:
+            raise SystemExit("ARCHIVE_SHA_OR_SIZE_HOLD")
+        lines=[]
+        with zipfile.ZipFile(file) as archive:
+            members=archive.infolist()
+            # G6-A: all names and member types are validated before any byte read.
+            module=_canonical_validator()
+            try:
+                module.validate_members(members)
+            except ValueError as exc:
+                raise RuntimeError("ORIGINAL_ZIP_NAMESPACE_HOLD") from exc
+            seen=set()
+            total=0
+            for item in members:
+                name=safe_member(item)
+                if not name:continue
+                low=name.casefold()
+                if low in seen:raise RuntimeError("DUPLICATE_ZIP_PATH:"+name)
+                seen.add(low)
+                total+=item.file_size
+                if total>1024*1024*1024:raise RuntimeError("OVERSIZED_ORIGINAL_ARCHIVE")
+                if item.file_size > 200*1024*1024:raise RuntimeError("OVERSIZED_MEMBER:"+name)
+            wanted=[]
+            for item in members:
+                name=safe_member(item)
+                if not item.is_dir():
+                    with archive.open(item) as f:
+                        digest=hashlib.sha256()
+                        while chunk:=f.read(1024*1024):digest.update(chunk)
+                    lines.append(dict(path=name,bytes=item.file_size,sha256=digest.hexdigest()))
+                if any(name.endswith(x) for x in TARGETS) or name.endswith(".sln") or name.endswith(".csproj"):
+                    wanted.append(name)
+            if len(lines)!=729:
+                raise RuntimeError("ORIGINAL_729_FILE_COUNT_HOLD:"+str(len(lines)))
+            lines.sort(key=lambda a:a["path"])
+            source_paths=[x["path"] for x in lines]
+            roles={key: [n for n in source_paths if key.lower() in n.lower()][:30]
+                   for key in ("MainWindow","Assets/","Persona","Core","Modules/","Contracts/","Packages/","Installer","voice","train","rag","model","NSIS","MAESTRO")}
+            samples={}
+            for name in wanted[:35]:
+                obj=archive.getinfo(name)
+                if obj.file_size>1024*1024:continue
+                data=archive.read(obj)
+                if b"\x00" in data[:1024]:continue
+                text=data.decode("utf-8",errors="replace")
+                if name.endswith(("MainWindow.xaml.cs","C_RELEASE_SPRINT_BUILD.ps1")):
+                    methods=re.findall(r"(?m)^\s*(?:private|public|internal|protected|async|static|\s){1,70}(?:void|Task|bool|string|int|[A-Za-z]+)\s+([A-Za-z_]\w*)\s*\(",text)
+                    samples[name]={"bytes":len(data),"method_names":methods[:90],"lines_start":text[:1300]}
+                else:
+                    samples[name]={"bytes":len(data),"lines_start":text[:4000]}
+            manifest={"schema":"NOX-E06-ORIGINAL-SOURCE-SCAN-v1",
+                      "source_archive_sha256":sha.hexdigest(),"archive_bytes":file.stat().st_size,
+                      "source_member_count":len(lines),"uncompressed_bytes":total,
+                      "role_paths":roles,"important_sources":wanted,"samples":samples,"members":lines,
+                      "integrated":False,"release_accepted":False}
+        module.publish_manifest_exclusive(out,manifest)
+        print("E06_ARCHIVE_SHA_PASS",sha.hexdigest(),"MEMBERS",len(lines),"UNCOMPRESSED",total)
+        for k,names in roles.items():
+            print("E06_SOURCE_AREA",k,json.dumps(names[:16]))
+        for key,entry in samples.items():
+            print("E06_CODE_CONTRACT",key,json.dumps(entry,ensure_ascii=False)[:2400])
+        print("E06_INVENTORY_ARTIFACT_BYTES",out.stat().st_size)
 if __name__=="__main__":main()

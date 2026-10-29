@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T060610MSK-R01",
+  "project": "NOX HELION EXPRESS INTEGRATOR loader-installer ONLY",
+  "branch": "automation/r30/g6a/G6A-20261029T060610MSK-R01",
+  "baseBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "parentCommit": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "status": "HOLD",
+  "sourceState": "SOURCE_PATCH_SAVED_NOT_SOURCE_READY",
+  "sourcePreimage": {
+    "path": "coordination/e06/source_deep_inventory.py",
+    "sha": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65"
+  },
+  "savedDonor": {
+    "path": "coordination/astra/r30/snapshots/astra-b_r29-b6-20261029/coordination/e06/source_deep_inventory.py",
+    "sha": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+  },
+  "sourcePostimage": {
+    "path": "coordination/e06/source_deep_inventory.py",
+    "sha": "3a9ec72f46bda8851861c790fc8e0bea33bb0ab4"
+  },
+  "testFile": {
+    "path": "coordination/automation/r30/G6-A/tests/test_e06_namespace_g6a.py",
+    "sha": "b502e493f0f1763135a4aa2fe31abf2edeed29b3",
+    "command": "python -m unittest discover -s coordination/automation/r30/G6-A/tests -p test_e06_namespace_g6a.py -v",
+    "execution": "NOT_RUN_PYTHON_CHECKOUT_UNAVAILABLE"
+  },
+  "runEvidence": {
+    "targetedStaticSourceContract": "PASS",
+    "assertions": {
+      "canonical_before_archive_open": true,
+      "after_infolist": true,
+      "single_canonical_import": true,
+      "scratch_temp_dir_cleanup": true,
+      "receipt_no_clobber": true,
+      "requires_729": true,
+      "no_build_or_shell_run": true
+    },
+    "pythonExecuted": false,
+    "attempts": [
+      {
+        "n": 1,
+        "outcome": "ABORT_NO_WRITE",
+        "reason": "Static no-NSIS scan false-positive on inert inventory label 'NSIS'; corrected to detect execution only"
+      },
+      {
+        "n": 2,
+        "outcome": "STATIC_PASS_SOURCE_BLOB_PREPARED"
+      }
+    ]
+  },
+  "defect": "E06 inventory scanned ZIP members before canonical type/parent/casefold check, allowing invalid namespace to be represented as inventory; original root scratch ZIP/output could overwrite files.",
+  "fix": "Preserve B6 temporary archive and exclusive no-clobber receipt, invoke canonical validate_members before opening any entry, HOLD if file count is not exactly 729.",
+  "newLesson": "Guard the semantic trust boundary (namespace/type) BEFORE hashing or publishing; reuse canonical validator and proven B6 temporary cleanup rather than fork one. Do not treat substring 'NSIS' in a role label as build execution.",
+  "protection": {
+    "snapshotsGitTreesEnumerated": 25,
+    "all25TreesUntruncated": true,
+    "snapshotOriginalThreePartGitShasMatched": true,
+    "originalPartBlobShas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozen968AgainstB6Snapshot": "968/968 paths present, six changed blob candidates retained",
+    "physical729InnerSHA256": "NOT_RUN",
+    "rollbackNativeWindows": "NOT_RUN",
+    "sourcePartsModified": false
+  },
+  "changedPaths": [
+    "coordination/e06/source_deep_inventory.py",
+    "coordination/automation/r30/G6-A/tests/test_e06_namespace_g6a.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T060610MSK-R01.json"
+  ],
+  "otherOwnersModified": false,
+  "previousDoneRetained": true,
+  "pr162Changed": false,
+  "mainChanged": false,
+  "gitlabTouched": false,
+  "exeNsisCiRun": false,
+  "journal": "Only Astra-C may append consolidated Google Docs with CAS and RunID readback."
+}
