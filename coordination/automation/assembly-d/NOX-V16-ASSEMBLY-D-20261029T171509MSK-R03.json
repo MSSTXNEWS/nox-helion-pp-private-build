@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_D_LIVE_HEAD_REBIND_R03",
+  "task": "ASSEMBLY-D (historical T05 13/13 DONE unchanged)",
+  "run_id": "NOX-V16-ASSEMBLY-D-20261029T171509MSK-R03",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader only; SOURCE ONLY; no EXE/NSIS/GitLab E07",
+  "planned_start_msk": "2026-10-29T17:15:00+03:00",
+  "observed_first_live_time_msk": "2026-10-29T17:13:43+03:00",
+  "observed_head_check_msk": "2026-10-29T17:15:09+03:00",
+  "baseline_prior_d_receipt": {
+    "commit": "b8b06431fce8fe024b98343bb22a7a39f2dc0996",
+    "blob": "fc02391a76f8535fee5f87f17b38b63c319de566",
+    "scale": "2/3 (66.7%)"
+  },
+  "current_pr162_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+  "change_since_prior_d": {
+    "prior_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr214_merged": true,
+    "pr214_merge_commit": "93e677684d428b56ef2aa576b07b545b21090009",
+    "new_owner_selection_blob": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+    "new_t04_final_arbitration_blob": "f723d37b39cb82425c873b51545f720d90af778d",
+    "new_t04_final_arbitration_summary": {
+      "positions": 34,
+      "duplicate_skips": 15,
+      "keep_existing": 17,
+      "patches_admitted": 2
+    },
+    "new_owner_physical_archive_receipt": "coordination/owner-decisions/NOX_V16_T07_ORIGINAL_729_PHYSICAL_PASS_R01.json",
+    "changes_on_P04_P05_Host50_since_prior_d": 0,
+    "new_source_head_is_t06_final_signed_accepted": false
+  },
+  "P04": {
+    "status": "COMPLETE_SCOPED_DISPOSITION_KEEP_CANONICAL",
+    "files": [
+      {
+        "owner": "G4-A",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "exact_current_git_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "donor_required_pre": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+        "action": "KEEP; R30 donor exact PRE mismatch, no unsafe rebase"
+      },
+      {
+        "owner": "G4-B",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "exact_current_git_blob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "donor_required_pre": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+        "action": "KEEP; R30 donor exact PRE mismatch, no unsafe rebase"
+      }
+    ],
+    "prior_owner_tests": "already indexed in previous D receipt; NOT_RUN in R03"
+  },
+  "P05": {
+    "status": "COMPLETE_SCOPED_DISPOSITION_KEEP_CANONICAL",
+    "files": [
+      {
+        "owner": "G5-A",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "exact_current_git_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "donor_required_pre": "a6d723190213feb10091ab6dd699d56c46a00c46",
+        "action": "KEEP; R30 donor PRE mismatch"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "exact_current_git_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "donor_required_pre": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+        "action": "KEEP; R30 donor PRE mismatch"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "exact_current_git_blob": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "action": "KEEP; T04 final arbitration"
+      }
+    ],
+    "prior_owner_tests": "No new focused tests added/executed; missing T05 durable test evidence retained as historical"
+  },
+  "Host50": {
+    "owner": "G6-B",
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "exact_current_git_blob": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "action": "KEEP; Assembly-A v2 alternative remains owner-gated, do not duplicate or overwrite",
+    "assembly_a_patch_blob": "0896593033c36ad64354e6eeac272ce89f1d6919"
+  },
+  "progress": {
+    "criteria": [
+      "P04 scoped patch disposition PASS",
+      "P05 scoped patch disposition PASS",
+      "SIGNED T06 handoff HOLD"
+    ],
+    "previous": "2/3 (66.7%)",
+    "current": "2/3 (66.7%)",
+    "delta_percentage_points": 0,
+    "bar": "███████░░░"
+  },
+  "blocker": "No VERIFIED signed/manual owner #1 acceptance of a final T06 unified source HEAD/tree+per-path CAS. Source selection/merged P02 alone do not prove P04/P05 functional SOURCE_READY.",
+  "lesson_applied": "On ref advance after owner arbitration, rebind all six scoped file blobs to the live PR162 HEAD before deciding NOOP vs rebase. Owner version choice/PR merge do not equal independent full-source acceptance.",
+  "handoff_to": "T06 owner #1, T02 sole shared Docs writer via GitHub issue #177",
+  "historical_t05": "DONE 13/13 preserved; 12 T05 R30 divergent candidates still not auto-admitted",
+  "forbidden_actions": "No product code edits; no merge to PR162/main; no Google Docs writes; no new tasks; no tests retread; no EXE, NSIS, GitLab pipeline, E07",
+  "product_patch_pre_post_sha": "NO PRODUCT PATCH; P04/P05/Host50 PRE=POST exact git blob hashes above",
+  "receipt_branch": "automation/v16/assembly-d/NOX-V16-ASSEMBLY-D-20261029T171509MSK-R03"
+}
