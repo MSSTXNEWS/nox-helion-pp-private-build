@@ -1,0 +1,38 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R13_SCOPED_DELTA",
+  "runId": "ASSEMBLY-A-20261029T1740MSK-R13",
+  "baseCommit": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+  "scope": "P02",
+  "owner": [
+    "G2-A",
+    "G2-B",
+    "T06/#1"
+  ],
+  "decision": "NOOP_ALREADY_ADMITTED_SOURCE_NOT_E2E",
+  "paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "preGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "postGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "preGitBlob": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+      "postGitBlob": "842f3d60f9506a7ed54a4cf4e158254bf6617df6"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "preGitBlob": "b606aaba1a7e82eb294a87d64fde6a8c399c605d",
+      "postGitBlob": "b606aaba1a7e82eb294a87d64fde6a8c399c605d"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "preGitBlob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "postGitBlob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+    }
+  ],
+  "voiceStop": "chat.stop bypasses non-STOP framed worker lock; native ingress enforces native session/RunID/nonce; owner route ports preserves STOP between capture/ASR/TTS. No duplicate transport or host.",
+  "unproven": "No native MainWindow/Voice session callback binding or Windows E2E in this task.",
+  "testsThisRun": "NOT_RUN",
+  "productDone": false
+}
