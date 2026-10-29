@@ -1,0 +1,331 @@
+{
+  "schema": "NOX_V16_R30_R12_OTCH1_G2B_IMMUTABLE_OWNER_CHECKPOINT_V1",
+  "run_id": "R30-G2-B-20261029T1943MSK-R06",
+  "slot": "G2-B",
+  "role": "G2/M1 P02 original Voice/ASR/TTS/SIP source-only",
+  "status": "INCOMPLETE_SOURCE_PATCH_PENDING_SAME_SHA_INDEPENDENT_ACCEPTANCE",
+  "time": {
+    "timezone": "Europe/Moscow",
+    "planned": "2026-10-29T19:30:00+03:00",
+    "runtime_observed_actual": "2026-10-29T19:43:34+03:00",
+    "duration_minutes": null,
+    "reason": "End time was not observed independently; no synthetic efficiency metric"
+  },
+  "restrictions": {
+    "main_and_PR162_unchanged": true,
+    "no_exe_nsis_ci_gitlab_e07": true,
+    "no_new_voice_engine": true,
+    "original_25_snapshots_unchanged": true,
+    "forbidden_owner_paths_touched": 0,
+    "shared_drive_journal_writes": 0
+  },
+  "prestart_read_proof": {
+    "canon": {
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+      "paragraphs": 679,
+      "section33_checked_rules": "56/56",
+      "sections": "1–33,54–56,R29"
+    },
+    "owner_lock": {
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+    },
+    "snapshots": {
+      "index_count": 25,
+      "contents_bytewise_read": false,
+      "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "active_register": {
+      "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+      "blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+      "counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "total": 11,
+      "open_ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "fixed_unverified_ids": [
+        "ERR-SRC-005",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "closed_ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ]
+    },
+    "pr162": {
+      "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+      "head_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+      "tree_sha": "NOT_EXPOSED_BY_CONNECTED_PR_METADATA",
+      "owner_route_current_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+      "owner_cap_current_blob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8"
+    },
+    "own_branch": {
+      "branch": "automation/r30/g2b/R30-G2-B-20261029T1943MSK-R06",
+      "parent_head_sha": "957e8bae1f901a29c31f30cffce94991764aea1d",
+      "parent_tree_from_prior_receipt": "eb2a5c04cf8a6598c92cdaa0da16068f6ea82700"
+    },
+    "google_drive": {
+      "Master": {
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM"
+      },
+      "E06": {
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0"
+      },
+      "Lessons": {
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+        "revision_source": "Live Google Docs metadata readback current RunID"
+      }
+    },
+    "latest_global_lessons": [
+      "A completed runner/receipt is NOT a completed product TaskID",
+      "Do not restore nonexistent WPF XAML from the verified original ZIP",
+      "Owner route duplication in PR requires T06 only to reconcile",
+      "Native STOP/ACL/consent must remain fail-closed and independently accepted"
+    ]
+  },
+  "otch1": {
+    "manifest_status": "FULL_TASKID_INVENTORY_NOT_LOCATED_PRODUCT_N_D",
+    "role": "G2-B",
+    "megablock": "M1 Voice/ASR/TTS/IPC/STOP existing owner contracts",
+    "blocks": [
+      {
+        "block": "chat.voice native owner binding",
+        "fixed_operational_criterion": "M1-G2B-C1",
+        "accepted": 0,
+        "denominator": 1,
+        "independent_same_sha": false,
+        "outstanding": "T06 bind real native session and independent evidence"
+      },
+      {
+        "block": "calls.history native provider",
+        "fixed_operational_criterion": "M1-G2B-C2",
+        "accepted": 0,
+        "denominator": 1,
+        "independent_same_sha": false,
+        "outstanding": "T06 existing provider + ACL/scope evidence"
+      },
+      {
+        "block": "P02 Voice/SIP STOP and ACL",
+        "fixed_operational_criterion": "M1-G2B-C3",
+        "accepted": 0,
+        "denominator": 1,
+        "independent_same_sha": false,
+        "outstanding": "Source patch present only; tests against full original/Windows and QA outstanding"
+      },
+      {
+        "block": "exact T06 handoff accepted",
+        "fixed_operational_criterion": "M1-G2B-C4",
+        "accepted": 0,
+        "denominator": 1,
+        "independent_same_sha": false,
+        "outstanding": "T06 owner acknowledgement and source reconciliation needed"
+      }
+    ],
+    "operational_scale": "equal-weight operational x/4, NOT immutable product TaskID manifest",
+    "before": "0/4",
+    "after": "0/4",
+    "delta_accepted_TaskID": 0,
+    "role_operational_pct": 0,
+    "PRODUCT": "N/D",
+    "stage_gate": "SOURCE_ONLY_HOLD",
+    "unique_product_TaskID": {
+      "DONE": "N/D",
+      "OPEN": "N/D",
+      "HOLD": "N/D",
+      "reason": "No complete frozen P01-P05 TaskID manifest independently read"
+    },
+    "other_coordination_cells": [
+      {
+        "group": "G1",
+        "cells": "A/B/C",
+        "task_ids": "NOT_IN_OWN_G2B_MANIFEST",
+        "percent": "N/D"
+      },
+      {
+        "group": "G2",
+        "cells": "A/B/C",
+        "task_ids": "NOT_IN_OWN_G2B_MANIFEST",
+        "percent": "N/D"
+      },
+      {
+        "group": "G3",
+        "cells": "A/B/C",
+        "task_ids": "NOT_IN_OWN_G2B_MANIFEST",
+        "percent": "N/D"
+      },
+      {
+        "group": "G4",
+        "cells": "A/B/C",
+        "task_ids": "NOT_IN_OWN_G2B_MANIFEST",
+        "percent": "N/D"
+      },
+      {
+        "group": "G5",
+        "cells": "A/B/C",
+        "task_ids": "NOT_IN_OWN_G2B_MANIFEST",
+        "percent": "N/D"
+      }
+    ]
+  },
+  "changes": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_git_blob": "da8d42570d5732e5fe009f86caf02b45d935edc9",
+      "post_git_blob": "2e7d39a8d6b49fafdf09fb70821da57b3284d341",
+      "actions": [
+        "LocalVoicePipeline rejects missing/foreign native STOP Event",
+        "SIP rejects detached native STOP Event",
+        "SIP reentrant/concurrent consent/quote callbacks fail closed and lock finally released"
+      ]
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "ddb9cb4a398d5e0744afd2579be33b3f97ae01ba",
+      "post_git_blob": "185ecca5e004aecb10e10b9bc89ec969c39946f3",
+      "actions": [
+        "Host owner voice route rejects absent STOP before one-use capture consumption"
+      ],
+      "merge_caution": "Canonical PR162 file is different (11660f...); T06 must port only targeted STOP preflight to its current source, never replace entire owner file"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_g2b_r30_1943_owner_native_stop.py",
+      "pre_git_blob": "ABSENT",
+      "post_git_blob": "bcbfad6d3f024128d3fbb9f277bca3bec8cb29b3",
+      "actions": [
+        "7 native STOP/consent/SIP/reentrancy source regression tests authored"
+      ]
+    }
+  ],
+  "tests": {
+    "isolated_extracted_contract": "26/26 PASS (19 existing +7 R06) on local simplified stand-ins, NOT original full module",
+    "new_test_syntax": "py_compile PASS",
+    "git_source_structure": "10/10 PASS before blob creation",
+    "original_full_module": "NOT_RUN",
+    "real_sip_microphone_windows_native": "NOT_RUN",
+    "security": [
+      "STOP required",
+      "native consent denied",
+      "no dial on missing STOP",
+      "reentrant confirmation nonblocking",
+      "one-use quote retained"
+    ]
+  },
+  "lessons": {
+    "relevant_register_entries": 9,
+    "closed_archival_entries_not_reopened": 2,
+    "historical_index_fingerprints_not_live_errors": 419,
+    "clusters": [
+      {
+        "key": "C1_PREMATURE_DONE",
+        "ids": [
+          "ERR-SYS-001",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "action": "DELEGATE_T02",
+        "root": "RUN/HOLD receipt misread as completion",
+        "prevention": "Force accepted fixed criterion x/n on source SHA; current role remains 0/4"
+      },
+      {
+        "key": "C2_SHA_DRIFT",
+        "ids": [
+          "ERR-SYS-002"
+        ],
+        "action": "APPLIED",
+        "root": "Mutable PR head",
+        "prevention": "Read live HEAD 23c155... and own exact PRE before source blob; no PR edits"
+      },
+      {
+        "key": "C3_P02_VOICE_STOP",
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "action": "APPLIED_SOURCE_PENDING_QA",
+        "root": "Detached default STOP and blocking reentry could consume capture or freeze SIP",
+        "prevention": "Fail-closed on missing native token before effects, nonblocking SIP lock and source negative regressions"
+      },
+      {
+        "key": "C4_HOST50",
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "action": "DELEGATE_T06_T08",
+        "root": "Owner attestation and 13 native bindings",
+        "prevention": "Do not claim native PASS based on source-only patch"
+      },
+      {
+        "key": "C5_FIXTURE_RUNNER",
+        "ids": [
+          "ERR-SRC-005"
+        ],
+        "action": "DELEGATE_T08",
+        "root": "Full original source test import isolation unverified",
+        "prevention": "Pin owner-source fixtures on same HEAD before acceptance"
+      }
+    ],
+    "summary": {
+      "active_discovered": 9,
+      "clusters": 5,
+      "applied_source_or_process": 2,
+      "delegated": 3,
+      "remaining_untriaged_active": 0,
+      "archival_full_coverage": "N/D",
+      "immutable_receipt_sha": "ASSIGNED_ON_BLOB_CREATE"
+    },
+    "lesson_id": "G2B_R06_NATIVE_STOP_BEFORE_IRREVERSIBLE_CAPTURE",
+    "lesson": "Require the native session cancellation token before consuming a one-use audio capture or starting SIP confirmation; run extracted regression but hold product acceptance until full original on same SHA passes."
+  },
+  "gates": {
+    "A": "PARTIAL_HEAD_TREE_NOT_EXPOSED",
+    "B": "SOURCE_BLOBS_CREATED_PENDING_ATOMIC_COMMIT",
+    "C": "RECEIPT_BLOB_PENDING_ATOMIC_COMMIT",
+    "D": "ACTIVE_TRIAGE_DONE_NATIVE_EVIDENCE_PENDING"
+  },
+  "handoffs": {
+    "T06": {
+      "owner": "T06 / manual #1 sole PR162 writer",
+      "current_pr_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+      "pr_owner_route_pre_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+      "request": "Copy only native-stop preflight before voice take_audio, SIP/voice stop guards and nonblocking SIP confirmation from owner code blobs, preserving current PR162 calls.history duplicate-owner fix. Run source tests against pinned current files. Publish accepted HEAD/tree and receipt. Do NOT cherry-pick obsolete complete owner_route_ports file."
+    },
+    "G2_A": {
+      "owner": "G2-A",
+      "forbidden_files": [
+        "p02_runtime.py",
+        "p02_native_ingress.py",
+        "p02_host_admission.py",
+        "p02_framed_worker.py"
+      ],
+      "request": "Bind actual authenticated native session STOP token for Voice and SIP; guarantee stop/dispose and native consent; no source writes by G2-B."
+    },
+    "T02": {
+      "owner": "T02 single writer Master/E06/Lessons/error register",
+      "request": "Ingest this immutable G2-B Git receipt with new R06 native STOP before capture lesson and exact PR owner handoff; record no accepted TaskID and no synthetic 100%."
+    }
+  },
+  "exit_gate": {
+    "status": "INCOMPLETE",
+    "source_ready": "HOLD",
+    "release": "HOLD",
+    "TASK_DONE": false,
+    "accepted": "0/4",
+    "next_action": "T06 compare on PR162 current HEAD and apply owner-safe delta (not replace files), G2-A verify native ingress binding; independent source-only QA same SHA to accept C1/C3/C4. G2-B next RunID pin branch HEAD and run actual module tests once source is materialized."
+  },
+  "atomic_git_note": "Receipt is in SAME prospective commit as source and tests; self-referencing final commit SHA cannot be placed inside immutable own blob. Verify commit SHA+all blob readbacks externally after CAS update."
+}

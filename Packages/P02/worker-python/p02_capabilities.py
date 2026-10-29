@@ -107,7 +107,9 @@ class LocalVoicePipeline:
             voice: str, mode: str = 'translate', level: str = 'A2',
             microphone_consent: bool = False,
             stop: threading.Event | None = None) -> VoiceResult:
-        stop = stop or threading.Event()
+        # Never invent a detached cancellation Event for microphone capture.
+        if not isinstance(stop, threading.Event):
+            raise P02Error('VOICE_NATIVE_STOP_TOKEN_REQUIRED')
         if stop.is_set():
             raise Cancelled('Voice STOP before start')
         if microphone_consent is not True or self.approved_models is not True:
@@ -196,7 +198,9 @@ class ConsentGatedSip:
         return CallQuote(number,purpose,value,currency,quote_id,expires_at)
 
     def place(self, scope: Identity, quote: CallQuote, stop: threading.Event | None = None):
-        stop = stop or threading.Event()
+        # The SIP provider must share STOP with the authenticated native session.
+        if not isinstance(stop, threading.Event):
+            raise P02Error('SIP_NATIVE_STOP_TOKEN_REQUIRED')
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_START')
         if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
             raise PermissionError('Native principal required')
@@ -234,7 +238,11 @@ class ConsentGatedSip:
         require_fresh_quote()
         if stop.is_set():
             raise Cancelled('CALL_STOP_BEFORE_START')
-        with self._lock:
+        # Native approval/provider verification may synchronously reenter SIP.
+        # Holding a blocking Lock here would deadlock a native callback.
+        if not self._lock.acquire(blocking=False):
+            raise P02Error('SIP_CONCURRENT_OR_REENTRANT_CONFIRMATION_HOLD')
+        try:
             require_fresh_quote()
             require_native_authority()
             if quote.quote_id in self._used: raise PermissionError('Call quote already consumed')
@@ -252,6 +260,8 @@ class ConsentGatedSip:
             require_fresh_quote()
             if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
             self._used.add(quote.quote_id)
+        finally:
+            self._lock.release()
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
         require_fresh_quote()
         require_native_authority()

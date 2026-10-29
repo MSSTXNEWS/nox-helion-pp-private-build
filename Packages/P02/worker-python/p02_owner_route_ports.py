@@ -116,6 +116,9 @@ class OwnerTwoPorts:
         if (type(args) is not dict or any(key in args for key in
                 ("audio", "audio_path", "microphone_consent", "mic_consent"))):
             raise PermissionError("Audio and consent must come from trusted native capture")
+        # A missing host STOP token must NOT consume a one-use capture.
+        if not isinstance(stop, threading.Event):
+            raise RouteHold("NATIVE_VOICE_STOP_TOKEN_REQUIRED")
         # Capture primitive request values before any native callback can mutate
         # the caller's request. Invalid input must not burn a one-use capture.
         cap_id = args.get("capture_id")
