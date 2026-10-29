@@ -147,7 +147,8 @@
       "next_action": "T02/C: on every run collect independent per-role R12 CHECKPOINT proof and actual x/n; reject premature TASK_DONE; if physical output missing, require exact owner action and continue other safe work. Close only after independently proven adherence; never count prompt persistence as task completion.",
       "proof": [
         "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID.",
-        "R12 physical policy config: 25/25 automation prompts carry anti-premature-closeout (15 enabled G1-G5; 10 historical disabled); direct automation provider readback 2026-10-29. M3 immutable receipt commit 3cf974fa286e9fa826206ee09d79a42439e192a7, blob 47e8996d9a8ea84d408a2f98e118536581c621ec. M2 immutable Git R11 proof commit 5aeb94269a61233109f324510e08373d55688d6b; 3/3 central Docs R22 markers independently read back. Root cause: RUN_COMPLETED/HOLD/report/commit/test erroneously interpreted as TASK_DONE before fixed x/n same-SHA acceptance. Prevention mandatory for ALL roles: fresh canonical and full shared journal read, owner-scoped physical mega-block + minimum necessary test + atomic Git receipt/readback, TASK_DONE only with independent n/n same-SHA proof; otherwise INCOMPLETE + exact owner/path/PRE-SHA blocker + checkpoint and continue remaining safe work. No bypass of NO-LOSS/STOP/ACL/native consent/SourceLock; T06 source ownership and T02 journal coordination remain canonical. Future role-run adherence NOT VERIFIED; keep incident OPEN."
+        "R12 physical policy config: 25/25 automation prompts carry anti-premature-closeout (15 enabled G1-G5; 10 historical disabled); direct automation provider readback 2026-10-29. M3 immutable receipt commit 3cf974fa286e9fa826206ee09d79a42439e192a7, blob 47e8996d9a8ea84d408a2f98e118536581c621ec. M2 immutable Git R11 proof commit 5aeb94269a61233109f324510e08373d55688d6b; 3/3 central Docs R22 markers independently read back. Root cause: RUN_COMPLETED/HOLD/report/commit/test erroneously interpreted as TASK_DONE before fixed x/n same-SHA acceptance. Prevention mandatory for ALL roles: fresh canonical and full shared journal read, owner-scoped physical mega-block + minimum necessary test + atomic Git receipt/readback, TASK_DONE only with independent n/n same-SHA proof; otherwise INCOMPLETE + exact owner/path/PRE-SHA blocker + checkpoint and continue remaining safe work. No bypass of NO-LOSS/STOP/ACL/native consent/SourceLock; T06 source ownership and T02 journal coordination remain canonical. Future role-run adherence NOT VERIFIED; keep incident OPEN.",
+        "2026-10-29 false DONE prevention now PHYSICALLY integrated in PR162 (dde1be7f03cd512a22f30046c6ba2d5de3582353), but process recurrence remains OPEN pending independent T08 all-role x/n later-run verification. RUN_COMPLETED/report/hex40/Git commit must not be counted TASK_DONE. Manual2 wrote narrowly under explicit direct owner override; T02 remains future single writer."
       ],
       "recurrence": 2,
       "last_seen": "2026-10-29"
@@ -174,8 +175,13 @@
       "priority": "PROCESS_AND_SOURCE_GATES_ONLY",
       "issue": "Host50 exact tree admission source fix present; signed same-head native 13/13 unverified",
       "next_action": "T08/Host50: source hook исправлен, но нужно native 13-route same-head acceptance; пока не закрывать.",
-      "proof": [],
-      "recurrence": 1
+      "proof": [
+        "2026-10-29 manual #2 owner-override real main PR162 CAS: PRE 632bc1464a2f927087e77d394d5248890fad4912 -> POST dde1be7f03cd512a22f30046c6ba2d5de3582353; gate Git blob 56806fb744694b2dd146db88229597722953ddd9 -> 923211baca7f0aab4229e7676b36de0436b10ac5; legacy tests post 5c42fb191e95aafd630c67e2b998b1ba0b46ab43; real Git object tests dbb0e683d60f48cf095b44be4e6f6f622356cdba; receipt ac1525567ea65239c8537e60567eda472cff3e28; PR162 4/4 Git readback PASS. Candidate negative 21/21 local PASS, exact integrated runner and native Host50 NOT_RUN; DO NOT mark VERIFIED_CLOSED."
+      ],
+      "recurrence": 1,
+      "last_seen": "2026-10-29",
+      "current_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+      "source_ref": "coordination/automation/t08/t08_autofix_closeout_gate.py"
     }
   ],
   "history": {
