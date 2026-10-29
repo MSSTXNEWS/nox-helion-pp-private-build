@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB06",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 source receipt detects original-file rename/deletion; P01 responsive Reduced Motion supports legacy WebView2 MediaQueryList listeners",
+  "sourceCommits": [
+    "9893097c9c1941c7ee5eb6ca3ee2276b351d9ab3",
+    "9ca724e68ca825ae6919d12bd8fc87dc3c7fd488"
+  ],
+  "sourceTest": "2/2 exact Git readback; legacy listener compatibility source gate",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub owner-file CAS/Git blob readback; exact Node suite for final P01 FX only.",
+  "lesson": "Only execute safe owned source changes; native acceptance requires later independent pinned Windows run."
+}
