@@ -1,0 +1,118 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V6",
+  "run_id": "R30-G4B-20261029T1046MSK-06",
+  "slot": "G4-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "G4B-R30-P04-GPU-IDENTITY-TOCTOU-THERMAL-ADMISSION-R06",
+  "status": "SOURCE_GIT_READBACK_PASS_ISOLATED_HELPER_7_7_FULL_MODULE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T1046MSK-06",
+  "pre_commit": "0d512cce9620c208137958e0033bd141f73227a3",
+  "code_commit": "a7d80ba5b12ddd31c7d950fd9d8b0c4196eb1424",
+  "test_commit": "9d246ab4ab6a3d7d25bf97e9da7f77e6803ff046",
+  "read_inputs": {
+    "owner_lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "count_read": 56,
+      "note": "Consolidated, not claimed exact historical original"
+    },
+    "spec": "Google Drive 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§54–56 and R29 loader-only override",
+    "latest_master": "Google Drive 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 Astra-C R05 10:34",
+    "latest_e06": "Google Drive 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 Astra-C R05 10:34",
+    "latest_lessons": "Google Drive 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ Astra-C R05 10:34",
+    "historical_errors": "Google Drive 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU read-only",
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "snapshots": {
+      "indexed": 25,
+      "originals_untouched": true,
+      "all_bodies_fully_read_and_rehashed": false,
+      "raw_original_729_sha256_verified": false
+    },
+    "preceding_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T0954MSK-05.json"
+  },
+  "cause": "R05 compared independent VRAM totals but could still claim HARDWARE_READY_ONLY after GPU reindex or mutable source row while temperature and VRAM probes were in flight; NaN/bool thermal values could pass the prior >= limit gate.",
+  "fix": "Freeze selected GPU (index,UUID,total memory) before telemetry, require a second independent inventory observation with exactly the same selected identity after VRAM sample, and reject untyped/nonfinite/out-of-range temperature before VRAM/CUDA.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "blob_pre": "cfcc532d0386538d14fd371e072b591b33f9064c",
+      "sha256_pre": "b6b048d0a468162f7a528f9d5992b0fb4fd854abb6ae845de618451f3d33c5c2",
+      "sha256_post": "88c3966c06cd60dbb871e716a8ca8b9e6c2132c6da2c5db0c75c99775dec9b01",
+      "blob_post": "d3c85a2bca69a9660b9a9ccdc2ca46949a55f42f"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "blob_pre": "df737f8513a3dbd10979c47dd42f86631be58c49",
+      "sha256_pre": "e2165259acb0c1e5e4a030d7629d037d6fcf3f961ccdf9449a1c439af4a0b222",
+      "sha256_post": "c464d2f7c9269db667430eac90b9d4adc0ebf61435f6c1fa22262dcb65ba4f39",
+      "blob_post": "1b48a54c870e58f97284d4900732548c74de846d"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "other_owner_paths_untouched": true,
+    "original_snapshots_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "central_drive_untouched": true
+  },
+  "tests": {
+    "isolated_command": "python3 unittest isolated exact _require_gpu_identity_stable helper + typed/finite temperature guard cases (no private checkout)",
+    "isolated_result": "PASS 7/7 before Git writes, genuine Python execution of copied helper, not full module",
+    "new_owner_regressions": "2 new test methods with negative subtests saved under assigned tests/P04/test_local_gpu_preflight.py; NOT_EXECUTED as complete module",
+    "source_readback": "SHA256+Git-blob MATCH 2/2",
+    "full_python_suite": "NOT_RUN",
+    "Windows_CUDA": "NOT_RUN",
+    "physical_gpu": "NOT_MEASURED",
+    "LoRA_QLoRA": "NOT_RUN",
+    "PyPA_transitive_wheel_SHA256": "NOT_VERIFIED"
+  },
+  "previous_lesson_applied": "R05 detected VRAM-total conflicts; R06 now checks selected device identity across sampling, not just equality of VRAM totals.",
+  "self_improvement": {
+    "lesson_id": "G4B_R06_SELECTED_GPU_IDENTITY_AND_THERMAL_FINITE",
+    "observed_error": "Matching VRAM totals do not prove selected UUID/index remained stable across sequential nvidia-smi sensor reads; NaN thermal values slip a >= threshold comparison.",
+    "applied_fix": "Freeze identity, repeat inventory after VRAM sample, require a strictly typed finite thermal reading before CUDA.",
+    "prevention": "Use independent cross-read identity checks for non-atomic telemetry, and never equate source/isolated helper PASS with an atomic GPU binding or real hardware acceptance."
+  },
+  "holds": [
+    "Inventory recheck is not atomic hardware lock and cannot prove a later CUDA context still maps same physical GPU",
+    "Real Windows NVIDIA driver/CUDA, temperature, CPU and VRAM unverified",
+    "Full owner test module and PyPA target hashed wheel ABI matrix not run",
+    "Original 25 snapshot bodies, 729 raw archive SHA256 not rehashed",
+    "SOURCE_CODE_COMPLETE/E06/E07/RELEASE HOLD; no accepted product TaskID"
+  ],
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_run": true,
+  "no_final_integration": true,
+  "no_training": true,
+  "drive_single_writer": "Astra-C only"
+}
