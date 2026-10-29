@@ -142,6 +142,7 @@ class OwnerTwoPorts:
         pinned_audio_store = self.store_output_audio
         pinned_audio_discard = self.discard_output_audio
         pinned_voice = self.voice
+        pinned_store = self.store
         pinned_authorize = self.authorize
         pinned_ready = self.owner_ready
         def require_stable_voice_hooks():
@@ -150,6 +151,7 @@ class OwnerTwoPorts:
                     or self.store_output_audio is not pinned_audio_store
                     or self.discard_output_audio is not pinned_audio_discard
                     or self.voice is not pinned_voice
+                    or self.store is not pinned_store
                     or self.authorize is not pinned_authorize
                     or self.owner_ready is not pinned_ready):
                 raise RouteHold("NATIVE_VOICE_HOOK_REBOUND_HOLD")
@@ -264,16 +266,32 @@ class OwnerTwoPorts:
             raise RouteHold("CALL_HISTORY_PROVIDER_INVALID")
         safe = []
         for r in rows:
-            if (not isinstance(r, dict) or r.get("tenant") != scope.tenant
-                    or r.get("principal") != scope.principal
-                    or not _bounded(r.get("call_id", ""))
-                    or r.get("status") not in _STATUS
-                    or type(r.get("started_epoch")) is not int
-                    or not 0 <= r["started_epoch"] <= 253402300799):
+            if not isinstance(r, dict):
                 raise PermissionError("Call record not authorized / malformed")
-            # Never copy opaque provider/internal attributes into the WebView.
-            safe.append({"call_id": r["call_id"], "status": r["status"],
-                         "started_epoch": r["started_epoch"]})
+            # Provider rows may override get/item access. Snapshot the five
+            # allowed fields once: no second lookup after trust validation.
+            tenant = r.get("tenant")
+            principal = r.get("principal")
+            call_id = r.get("call_id")
+            status = r.get("status")
+            started_epoch = r.get("started_epoch")
+            if (tenant != scope.tenant or principal != scope.principal
+                    or type(call_id) is not str or not _bounded(call_id)
+                    or type(status) is not str or status not in _STATUS
+                    or type(started_epoch) is not int
+                    or not 0 <= started_epoch <= 253402300799):
+                raise PermissionError("Call record not authorized / malformed")
+            # No provider-specific/private columns reach the WebView.
+            safe.append({"call_id": call_id, "status": status,
+                         "started_epoch": started_epoch})
+        # Row inspection itself can invoke callbacks that rebind the owner,
+        # revoke ACL, or alter session scope. Fail closed before publication.
+        if not stable_history_binding():
+            raise RouteHold("CALL_HISTORY_NATIVE_BINDING_CHANGED_BEFORE_PUBLICATION_HOLD")
+        self._session(scope, "calls.history")
+        if (not stable_history_binding() or not self.available("calls.history")
+                or not stable_history_binding()):
+            raise RouteHold("CALL_HISTORY_NATIVE_BINDING_CHANGED_BEFORE_PUBLICATION_HOLD")
         return {"calls": safe}
 
     def route_methods(self):

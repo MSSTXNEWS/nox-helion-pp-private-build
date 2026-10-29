@@ -1,0 +1,177 @@
+{
+  "schema": "NOX_V16_G2B_R26_IMMUTABLE_SOURCE_CHECKPOINT_V1",
+  "run_id": "R30-G2-B-20261030T0113MSK-R12",
+  "component": "NOX HELION EXPRESS INTEGRATOR · P02 Voice only",
+  "owner": "G2-B",
+  "status": "INCOMPLETE_SOURCE_PATCH_PREPARED",
+  "source_only": true,
+  "build": "NOT_RUN",
+  "ci": "NOT_RUN",
+  "exe": "NOT_RUN",
+  "native_sip_call": "NOT_RUN",
+  "prestart_read_proof": {
+    "canon": {
+      "doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+      "rules_33": "56/56",
+      "sections": "54-56/R29"
+    },
+    "owner_lock": {
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+    },
+    "role_archive_blob": "15d353379505c178589939f926c3de2b5f984f0d",
+    "execution_policy_r26_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+    "active_error_register": {
+      "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+      "blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+      "counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2,
+        "total": 11
+      },
+      "error_ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ]
+    },
+    "master_revision": "AHj4eMQJfPI1zFjcKDNuP9g5p7RhzHfm42pB2h4QGAsEUVHH5IGqmICx29vCOBhcqFu0P3mU4aJCr0EPsXzTxtJypdg6QEWjmwusEC3G-rk",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL_QXf0E",
+    "pr162": {
+      "head": "f973a1118ea3a0cfc587fc4b5b5b38583d29dcc3",
+      "tree": "6ca7202cecd77dfba361b554f87a7cc36732f837",
+      "p02_route_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c"
+    }
+  },
+  "role_progress": {
+    "criteria": [
+      "chat.voice native binding",
+      "calls.history",
+      "P02 Voice+STOP/ACL",
+      "T06 handoff"
+    ],
+    "independently_qa_accepted_before": 0,
+    "after": 0,
+    "denominator": 4,
+    "product": "N/D"
+  },
+  "physical_source": {
+    "branch": "automation/r30/g2b/R30-G2-B-20261030T0113MSK-R12",
+    "source_file": "Packages/P02/worker-python/p02_owner_route_ports.py",
+    "pre_blob": "d122c1c1236cbae9da8f3ed5b1375eedabe4aca8",
+    "post_blob": "e3b495335a3a29e7991c8e303c5d1be56d7d27d4",
+    "regression_test": "Packages/P02/worker-python/test_p02_g2b_r26_r12_history.py",
+    "regression_blob": "c79bd8228b9a45e3724c55c89a78ead22490655b",
+    "base_commit": "ad2c0672db6b69db35d4f3e666ca2e227dba9ef0",
+    "base_tree": "b329775894a97c512720bc32c1aed6364694e52a",
+    "changes": [
+      "pin existing native voice P02Store to reject reentrant rebinding",
+      "single-read history provider fields before serialization",
+      "revalidate same scope, ACL, route availability after row callbacks, fail closed"
+    ],
+    "preserves": [
+      "no host/backend",
+      "no database changes",
+      "no real SIP",
+      "no new voice engine",
+      "STOP/ACL/native consent",
+      "no-loss original source"
+    ],
+    "tests": {
+      "isolated_prepared_R10_R11": "13/13 PASS local extracted contract only",
+      "git_original_module_regression": "NOT_RUN in this execution environment",
+      "git_test_syntax": "NOT_RUN exact submitted blob",
+      "native_windows": "NOT_RUN",
+      "real_call": "NOT_RUN"
+    },
+    "stage": "SOURCE_PATCH_PREPARED; NO QA_ACCEPTED"
+  },
+  "lessons": {
+    "deduplicated_clust": [
+      {
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "priority": "P0",
+        "root": "provider field getters and native callbacks can change ACL/bindings between validation and WebView publication",
+        "action": "APPLY owner-isolated source patch; provider once-read and reauthorization",
+        "recurrence": "original-module targeted history+STOP regression to be executed in canonical checkout",
+        "status": "PATCHED_NOT_FULLY_VERIFIED"
+      },
+      {
+        "ids": [
+          "ERR-SYS-001",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "action": "DELEGATE T02 journal; keep 0/4 accepted"
+      },
+      {
+        "ids": [
+          "ERR-SYS-002",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "action": "DELEGATE T06/T08 exact HEAD QA; do not promote stale SHA"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "action": "DELEGATE T06 native binding and signed same-head QA"
+      },
+      {
+        "ids": [
+          "ERR-SRC-005"
+        ],
+        "action": "NOT_APPLICABLE route scope, T06 fixture owner"
+      },
+      {
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "action": "ALREADY_VERIFIED_CLOSED; do not reopen"
+      }
+    ],
+    "coverage": {
+      "total_register_entries": 11,
+      "reviewed": 11,
+      "dedup_clusters": 6,
+      "applied_candidates": 1,
+      "already_verified_closed_clusters": 1,
+      "delegated_clusters": 3,
+      "not_applicable_clusters": 1,
+      "historical_coverage": "PARTIAL"
+    }
+  },
+  "handoff": {
+    "t06_manual_1": {
+      "target": "PR162 integration/nox-v16-unified-candidate-20261028-r01",
+      "pre_head": "f973a1118ea3a0cfc587fc4b5b5b38583d29dcc3",
+      "pre_source_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+      "source_donor_blob": "e3b495335a3a29e7991c8e303c5d1be56d7d27d4",
+      "instruction": "Review exact function-level delta; DO NOT overwrite PR162 file. Apply compatible edits after refreshing current HEAD and owner CAS; exercise targeted regression in actual repo and native STOP/consent; only #1 can integrate."
+    },
+    "t08_manual_2": "Independent exact post-integration HEAD QA, do not sign isolated donor.",
+    "g2a": "Confirm real WebView2/native session STOP token and admission path; forbidden p02_runtime/native_ingress/host_admission/framed_worker untouched.",
+    "t02": "Sole ERROR/Master/E06/Lessons writer; update ERR-SRC-004 evidence after receipt readback only; shared journal update NOT_CONFIRMED."
+  },
+  "checkpoint": {
+    "last_known_good_branch_head": "ad2c0672db6b69db35d4f3e666ca2e227dba9ef0",
+    "next": "Git source+test+receipt one atomic tree; then source owner CAS handoff to T06, exact module tests, native STOP/consent and QA",
+    "exit_gate": "INCOMPLETE until four accepted same-SHA criteria",
+    "product": "N/D"
+  }
+}
