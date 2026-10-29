@@ -1,0 +1,130 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T060247MSK-01",
+  "slot": "G5-A",
+  "area": "P05 canonical events/readiness",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "recorded_utc": "2026-10-29T03:12:15.886Z",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "release_status": "HOLD",
+  "source_complete": "HOLD",
+  "accepted_product_TaskID_new": 0,
+  "prior_done": "PRESERVED_NOT_RECOUNTED",
+  "execution_prohibitions": {
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "github_actions": "NOT_RUN",
+    "e07": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "drive_writes": "NONE"
+  },
+  "references": {
+    "ownership_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ownership_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "baseline_collection_commit": "316fd4e48c21c69d90258886082442e2d9c76489",
+    "v16_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "rules": "section 33, 56 of 56 consolidated historical requirements",
+    "active_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only clarification"
+    ],
+    "master_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06_lessons_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historical_error_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "original_events_contract": "Contracts/events.v3.json",
+    "original_events_contract_blob": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "snapshot_branches_indexed": 25,
+    "snapshot_p05_js_files_read": 25,
+    "snapshot_full_trees_exhaustively_read": false,
+    "snapshot_comment": "All 25 frozen branch directories indexed and the G5-A P05 JS path fetched in each; no claim that every unrelated file in 25 full repository snapshots was inspected."
+  },
+  "branch": "automation/r30/g5a/20261029T060247MSK-01",
+  "actions": [
+    {
+      "task_id": "R30-G5A-P05-EVENTS-V3-TERMINAL-ADMISSION",
+      "kind": "NEW_SOURCE_BUG_FIX",
+      "result": "SOURCE_PATCH_SAVED",
+      "root_cause": "Future same-run task.failed was skipped, unverified schema-required counter fields and non-P04 model.stopped could be rendered as valid; replay fingerprint omitted counter changes.",
+      "fix": "HOLD_FUTURE_TERMINAL; require events.v3 numerator/denominator; restrict model.stopped to P04; include counters+sequence+error_code in duplicate receipt identity."
+    },
+    {
+      "task_id": "R30-G5A-P05-SEALED-TASKID-NO-FALSE-100",
+      "kind": "HISTORICAL_B3_LESSON_REUSED_AND_ADAPTED",
+      "result": "SOURCE_PATCH_SAVED_PRODUCT_NOT_ACCEPTED",
+      "historical_provenance": "astra-b/r29-b3-20261029; historical DONE not re-credited",
+      "fix": "Cap any incomplete per-lane and weighted aggregate to 99.99; cross-owner duplicate TaskIDs fail closed in C# readiness."
+    }
+  ],
+  "sources": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "preimage_git_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "postimage_git_blob": "b02452968884bc007ba5d3cec6aa1591cd40929f",
+      "commit": "0015f56980ebc47560a5a57c8563aedc71fac8e7"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "preimage_git_blob": "b1be2beaf849089a2fddc76219af37cbea926940",
+      "postimage_git_blob": "af6e22995d75be62ecc7ff8dea7c58b5a5535d20",
+      "commits": [
+        "e07e8017f491848a8d01b0020bd30b782e8952f3",
+        "556af8618f344a36e9ce235dab87f8a6fccbe2af"
+      ]
+    },
+    {
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "preimage_git_blob": "71b623cb114667c3b37b26103ec220f99233c398",
+      "postimage_git_blob": "2187ee5ecae18179a5daa7c60859cad06f275b81",
+      "commit": "fa77033b890cb241eef7c98b1c39aa3b7626f9de"
+    }
+  ],
+  "untouched_owned_source": {
+    "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "blob": "0bdaa2effa766bb798443ee5057c8116acbf25fe"
+  },
+  "exclusive_write_paths_checked": true,
+  "forbidden_paths_written": [],
+  "main_or_PR162_written": false,
+  "shared_snapshots_written": false,
+  "checks": {
+    "focused_test": "isolated V8 evaluation of exact committed JavaScript source, not product integration",
+    "prepatch_regressions": "5 old-source negative cases reproduced (RED), corresponding patched-source behavior GREEN",
+    "exact_remote_readback": "PASS: all 3 modified blobs and 1 unchanged events owner blob matched",
+    "focused_postreadback_tests": "8/8 PASS (6 events.v3 cases +2 synthetic sealed TaskID readiness cases)",
+    "csharp_static_invariants": "PASS (cross-lane TaskID collision guard and 99.99 incomplete cap markers)",
+    "csharp_native_tests": "NOT_RUN; dotnet SDK unavailable in this runtime",
+    "windows_native_runtime": "NOT_RUN",
+    "accepted_release_evidence": "NOT_PRESENT"
+  },
+  "self_improvement": {
+    "lesson_id": "R30_G5A_FAIL_CLOSED_TERMINAL_AND_VERIFY_ONCE",
+    "observed_error": "An invalid/future native terminal or rounding can turn an unfinished/failed TaskID into a misleading STOPPED/100% tile; repeated C# verification while aggregating was also a source of inconsistent observations.",
+    "change_applied": "Check native event envelope and future-time gate before display; derive a completion indicator before rounding; cache the per-lane verification result instead of rerunning it during weighted aggregation.",
+    "prevention": "Each next owner patch starts from exact blob preimage, runs one targeted old/new regression, performs exact remote readback, retains N/D and HOLD until native E06 and independent E07 receipts. Avoid crediting historical B3 fixes as new DONE.",
+    "application_next_cycle": "Use event_sequence/counter replay permutations and frozen TaskID ledger with one owner-issued receipt; no second event bus or unverified percentage."
+  },
+  "coordinator_handoff": {
+    "single_google_docs_writer": "Astra-C only",
+    "action": "Append this immutable receipt RunID into master, E06 report, E06 lessons using CAS and exact readback; owner did not write Google Docs.",
+    "docs_gate": "HOLD_UNTIL_ASTRA_C_READBACK",
+    "suggested_new_test_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.test.mjs",
+    "test_file_written": false,
+    "rationale": "Owner lock currently permits four existing source paths plus unique receipt, not an explicitly assigned new test pathname; request approval through coordinator rather than silently creating it."
+  },
+  "measured_progress": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "overall": "N/D"
+  }
+}
