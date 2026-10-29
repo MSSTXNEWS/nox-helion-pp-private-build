@@ -172,7 +172,7 @@ body.nox-eco .hero:before,body.nox-eco .hero #orbital-lights,body.nox-eco .hero 
 <div class="glass arch-panel"><div class="arch-toolbar"><div class="legend"><span><b>●</b> Ручные владельцы</span><span>◇ Мегаблоки</span><span style="color:var(--cyan)">◌ Группы AUTO</span></div><button class="btn" id="reset-network" type="button">Сбросить выбор</button></div><div class="graph-scroll"><svg id="network" class="graph-svg" role="img" aria-label="Интерактивная схема связи ручных исполнителей, мегаблоков и групп автоматизаций" viewBox="0 0 1120 690"></svg></div><div class="inspector" id="inspector" aria-live="polite"><h3>Визуальная архитектура</h3><p>Выберите исполнителя, мегаблок или группу AUTO.</p></div></div>
 <div class="section-head"><div><h2>Матрица TaskID → мегаблок → владелец</h2><p>Только подтверждённые записи из доступной истории. Это неполный TaskID ledger; статусы не равны принятым функциям.</p></div><span class="chip warn">PARTIAL INVENTORY</span></div><div id="task-matrix" class="task-grid"></div>
 <div class="section-head"><div><h2>Контур приёмки</h2><p>Распределение задач не означает автоматического подписания QA.</p></div></div><div class="block-grid" id="pipeline"></div></section>
-<section id="tab-executors" hidden><div class="section-head"><div><h2>Все исполнители</h2><p>Число ручных и автоматических ролей формируется из снимка. Исторические отключённые роли не удаляются.</p></div><span class="chip gold" id="auto-total">—</span></div><div class="controls"><input id="auto-search" type="search" placeholder="Поиск: T06, P04, Host50, G3…" aria-label="Поиск исполнителя"><button type="button" class="filter active" data-filter="all">Все</button><button type="button" class="filter" data-filter="enabled">Включены</button><button type="button" class="filter" data-filter="disabled">Отключены</button><button type="button" class="filter" data-filter="legacy_or_future">Архив / будущие</button></div><div id="auto-grid" class="auto-grid"></div></section>
+<section id="tab-executors" hidden><div class="section-head"><div><h2>Все исполнители</h2><p>3 ручных — главные, 15 авто — актуальные помощники. Ещё 10 архивных/отложенных — отдельно, история сохранена.</p></div><span class="chip gold" id="auto-total">—</span></div><div class="controls"><input id="auto-search" type="search" placeholder="Поиск: T06, P04, Host50, G3…" aria-label="Поиск исполнителя"><button type="button" class="filter active" data-filter="all">Все</button><button type="button" class="filter" data-filter="enabled">Включены</button><button type="button" class="filter" data-filter="disabled">Отключены</button><button type="button" class="filter" data-filter="legacy_or_future">Архив / будущие</button></div><div id="auto-grid" class="auto-grid"></div></section>
 <section id="tab-acceptance" hidden><div class="section-head"><div><h2>Контроль ОТЧ-1 и приёмки</h2><p>Старые доказательства не переносятся на новый HEAD без проверки.</p></div><span class="chip warn">EVIDENCE LOCK</span></div><div class="gates-layout"><article class="glass gate-panel"><div class="eyebrow">T06 → T08 → T09 → T10 → T11</div><h3 style="font-weight:550">Контрольные этапы</h3><div id="gates"></div></article><article class="glass errors-panel"><div class="eyebrow">T02 / CANONICAL REGISTER</div><h3 style="font-weight:550">Ошибки и журнал</h3><div id="errors"></div><p class="meta">Общий журнал ведёт только T02. Исторические закрытия не аннулируются, незавершённые записи не объявляются DONE.</p></article></div><div class="section-head"><div><h2>Следующий допуск</h2><p>Строго после независимой проверки одного frozen HEAD.</p></div></div><div class="glass" style="padding:19px;line-height:1.8;font-size:12px;color:var(--dim)">№3 готовит исправления → №1 интегрирует в единственный исходный HEAD → №2 независимо проверяет SHA → T09 замораживает исходники → T10 подписывает SOURCE_READY → T11 проверяет GitLab → разрешённая Windows-сборка → E07 на одном BuildID.<p style="color:var(--gold)">Текущий источник — снимок, не непрерывная телеметрия. Повторное открытие страницы само по себе не перечитывает приватный GitHub API.</p></div></section>
 <section id="tab-reports" hidden>
 <div class="section-head"><div><h2>ОТЧ-1 · Контроль циклов</h2><p>Доказательства ручных №1 / №3 / №2, вспомогательные авто и события диспетчера.</p></div><span class="chip gold">A · B · C · D · E</span></div>
@@ -204,7 +204,7 @@ if(!data||!Array.isArray(data.manuals)||!Array.isArray(data.automations)||!Array
  q("notice-text").textContent="Ошибка: файл nox-control-data.js не загружен. Числа и диаграммы скрыты, чтобы не выдавать демонстрационные данные за реальные.";
  return;
 }
-const manuals=data.manuals, autos=data.automations, blocks=data.blocks;
+const manuals=data.manuals, allAutos=data.automations, autos=allAutos.filter(a=>a.kind==="source_support"), archivedAutos=allAutos.filter(a=>a.kind!=="source_support"), blocks=data.blocks;
 const active=autos.filter(a=>a.enabled).length;
 q("side-head").textContent=data.head?data.head.slice(0,14)+"…":"UNKNOWN";
 q("github-link").href="https://github.com/"+encodeURI(data.repository||"")+"/pull/"+encodeURIComponent(data.pr||"162");
@@ -212,10 +212,10 @@ q("notice-text").textContent="Снимок "+(data.observed_at||"без даты
 q("snapshot-meta").textContent="SOURCE: "+(data.source_mode||"SNAPSHOT")+" · "+(data.observed_at||"Н/Д");
 const previous=(data.gates||[]).filter(g=>Number.isInteger(g.done)&&Number.isInteger(g.total)&&g.total>0);const totalGate=previous.reduce((sum,g)=>sum+g.total,0);const doneGate=previous.reduce((sum,g)=>sum+g.done,0);q("gate-numeric").textContent=totalGate?doneGate+" / "+totalGate:"Н/Д";q("gate-pct").textContent=totalGate?((100*doneGate/totalGate).toFixed(1).replace(".",",")+"% · архивный срез"):"нет доказательств";q("gate-track").style.width=(totalGate?100*doneGate/totalGate:0)+"%";
 q("manual-total").textContent=manuals.length+" MANUAL · PRIMARY";
-q("auto-total").textContent=autos.length+" AUTO · "+active+" ACTIVE";
+q("auto-total").textContent=autos.length+" CURRENT AUTO · "+archivedAutos.length+" ARCHIVE";
 q("metrics").innerHTML=[
 ["РУЧНЫЕ · PRIMARY",manuals.length,"Основные функции у ручных"],
-["AUTO · SUPPORT",autos.length,active+" включено · "+(autos.length-active)+" отключено"],
+["AUTO · CURRENT",autos.length,active+" включено · "+archivedAutos.length+" в архиве"],
 ["ERROR REGISTER",data.errors?.total??"Н/Д",(data.errors?.OPEN??"Н/Д")+" открытых · "+(data.errors?.FIX_APPLIED_UNVERIFIED??"Н/Д")+" не проверены"],
 ["PRODUCT", "Н/Д","Недостаточно независимых TaskID"]
 ].map(v=>'<article class="glass metric"><span class="eyebrow">'+esc(v[0])+'</span><b>'+esc(v[1])+'</b><small>'+esc(v[2])+'</small></article>').join("");
@@ -230,7 +230,7 @@ const groups=()=>{const map=new Map();for(const a of autos){const g=(a.title.mat
 const autoGroups=groups();
 function renderAutos(){
 const s=q("auto-search").value.trim().toLocaleLowerCase("ru");
-let rows=autos.filter(a=>(filter==="all"||(filter==="enabled"&&a.enabled)||(filter==="disabled"&&!a.enabled)||(filter==="legacy_or_future"&&a.kind==="legacy_or_future"))&&a.title.toLocaleLowerCase("ru").includes(s));
+let rows=(filter==="legacy_or_future"?archivedAutos:autos).filter(a=>(filter==="legacy_or_future"||filter==="all"||(filter==="enabled"&&a.enabled)||(filter==="disabled"&&!a.enabled))&&a.title.toLocaleLowerCase("ru").includes(s));
 q("auto-grid").innerHTML=rows.map(a=>'<article class="glass auto-card"><span class="auto-status '+(a.enabled?"":"off")+'">'+(a.enabled?"● ВКЛЮЧЕНА":"○ ОТКЛЮЧЕНА")+'</span><b>'+esc(a.title)+'</b><p class="mono">'+esc(a.id.slice(0,14))+'… · '+esc(a.kind)+'</p></article>').join("")||'<div class="empty">Нет совпадений. Измените фильтр или поиск.</div>';
 }
 q("auto-search").addEventListener("input",renderAutos);
@@ -278,7 +278,7 @@ q("manual-reports").innerHTML=manuals.map(m=>{
 }).join("")||'<div class="empty">Нет подтверждённых данных о ручных исполнителях.</div>';
 q("report-provenance").innerHTML=[
 ["SOURCE HEAD",data.head?data.head.slice(0,16)+"…":"Н/Д","Последний экспорт, не гарантия текущего HEAD"],
-["AUTO DEFINITIONS",autos.length,autos.filter(a=>a.enabled).length+" включены · экспорт перечня"],
+["AUTO CURRENT",autos.length,autos.filter(a=>a.enabled).length+" включены · отдельно архив "+archivedAutos.length],
 ["ERRORS",data.errors?.total??"Н/Д","T02 REGISTER · "+(data.errors?.history_complete?"FULL":"BACKFILL REQUIRED")],
 ["QA_ACCEPTED","Н/Д","До самостоятельной same-HEAD проверки №2"]
 ].map(v=>'<article class="glass evidence-card"><div class="eyebrow">'+esc(v[0])+'</div><b class="mono">'+esc(v[1])+'</b><p>'+esc(v[2])+'</p></article>').join("");
@@ -336,4 +336,4 @@ if(location.protocol==="https:"||location.protocol==="http:"){refreshOnline();do
 else liveStatus("Локальный автономный снимок · для live нужен защищённый Vercel API",false);
 
 })();
-</script><script src="./nox-wow-motion.js"></script></body></html>
+</script><script src="./nox-wow-motion.js"></script><script src="./nox-schedule-r29.js"></script><script src="./nox-ops-timing-r29.js"></script></body></html>
