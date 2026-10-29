@@ -1,0 +1,152 @@
+{
+  "schema": "NOX_V16_M3_T11_RUNNER_GATE_SCOPING_R04",
+  "run_id": "NOX-V16-M3-20261029-R04",
+  "task_id": "M3/T11",
+  "context": "NOX HELION EXPRESS INTEGRATOR V16 source-only independent T10 + private GitLab T11",
+  "checkpoint": {
+    "owner_branch": "manual/m3/t11-gitlab-audit-failclosed-20261029-r02",
+    "pre_commit": "8ca6bf7392bb8161a4f0b57202715745cb689835",
+    "pre_tree": "35ed184919bcb649612e8ccd650b609466b9866e",
+    "pr162_observed_head": "e1ed247dfadfa7829c6db5cf1e701ee657aa8030",
+    "registry_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registry_blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2"
+  },
+  "all_cross_role_error_ids": [
+    {
+      "error_id": "ERR-SYS-001",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "action": "ACK_NOT_CLOSED"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "action": "ACK_NOT_CLOSED"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06/Host50",
+      "action": "OWNER_SAME_SHA_NATIVE_PROOF"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "status": "OPEN",
+      "owner": "T06+P01-P05 functional owners",
+      "action": "ACK_NOT_CLOSED"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "action": "OWNER_SAME_SHA_NATIVE_PROOF"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T07/T09",
+      "action": "PRESERVE_CLOSED"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T04",
+      "action": "PRESERVE_CLOSED"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T09",
+      "action": "ACK_NOT_CLOSED"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "status": "OPEN",
+      "owner": "ALL_EXECUTORS",
+      "action": "ACK_NOT_CLOSED"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "action": "OWNER_SAME_SHA_NATIVE_PROOF"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T08",
+      "action": "OWNER_SAME_SHA_NATIVE_PROOF"
+    }
+  ],
+  "lesson": {
+    "source": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01 + T11 fixed acceptance 5 criteria + ERR-SYS-002",
+    "root_cause": "A future T12 operational dependency (online Windows runner) was unnecessarily treated as evidence required for T11 read-only history/HEAD verification",
+    "applied": "Runner retained as informational runner_available_for_future_T12; T11 historical migration approval still requires authenticated private GitLab, real SHA, 27+3 exact blobs, permissions and historical CI/entrypoint integrity; SOURCE_READY and build_authorized remain False",
+    "prevents": "Repeated artificial HOLD when runner is unavailable before T12 without bypassing operational safety"
+  },
+  "files": [
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": "a0ec79b0fd72bd55add3fe97f3e6a57179faad42",
+      "post_blob": "5cecbb361c47d69bd4ed03bdee4e7ae31ce807cf"
+    },
+    {
+      "path": "coordination/t11/test_NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": "9162dd2d7c6e7fc3a56d488293821594a9bd135f",
+      "post_blob": "177eec89e0ccc183459e780bec690099a051e8dd"
+    }
+  ],
+  "one_test": {
+    "name": "ISOLATED_T11_EXACT_GATE_LOGIC_13_CASES",
+    "result": "PASS_13_OF_13",
+    "scope": "Pure function logic reproduced from checked evaluator; NOT full checked-out module unittest, NOT GitLab API and NOT Windows runtime",
+    "source_static_contract": "PASS"
+  },
+  "one_save": {
+    "mode": "SINGLE_ATOMIC_GIT_TREE_AND_COMMIT_WITH_READBACK",
+    "readback": "PENDING"
+  },
+  "fixed_progress": {
+    "T10": "1/7",
+    "T11": "2/5",
+    "M3": "3/12",
+    "before_pct": 25,
+    "after_pct": 25,
+    "delta_pp": 0,
+    "bar": "███░░░░░░░"
+  },
+  "unclosed_criteria": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    10,
+    11,
+    12
+  ],
+  "external_blockers": {
+    "t09_frozen_accepted_sha": null,
+    "authenticated_gitlab_live_head": null
+  },
+  "handoff": {
+    "T02": "Sole shared register/docs CAS writer; read immutable receipt and ACK all 11; do not count readback as shared Docs append",
+    "T06": "P01-P05 8/8 and owner native attestation",
+    "T08": "same-head independent Host50/STOP/ACL",
+    "T09": "signed immutable SHA/tree/manifest",
+    "GitLabOwner": "Use protected read_api token and sanitized audit result only, no token in chat",
+    "T12": "Do not run until authorized frozen SHA and full T10/T11"
+  },
+  "safety": {
+    "gitlab_writes": 0,
+    "force_push": 0,
+    "exe": 0,
+    "nsis": 0,
+    "gitlab_ci": 0,
+    "e07": 0,
+    "canonical_source_changed": false,
+    "source_archive_729_original_preserved": true
+  }
+}

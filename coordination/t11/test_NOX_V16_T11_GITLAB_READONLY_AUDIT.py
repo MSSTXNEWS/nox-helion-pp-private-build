@@ -55,9 +55,10 @@ class GateTests(unittest.TestCase):
     def test_ci_drift_fails(self):
         x=self.verify({"ci_git_blob":"tamper"},False)
         self.assertIn("CI_BLOB_DRIFT",x["evidence_errors"])
-    def test_no_runner_fails(self):
-        x=self.verify({"windows_runner_proven_online":False},False)
-        self.assertIn("WINDOWS_RUNNER_NOT_PROVEN_ONLINE",x["evidence_errors"])
+    def test_no_runner_does_not_block_readonly_migration(self):
+        x=self.verify({"windows_runner_proven_online":False},True)
+        self.assertFalse(x["runner_available_for_future_T12"])
+        self.assertEqual(x["status"],"LIVE_MIGRATION_VERIFIED_NOT_SOURCE_READY")
     def test_nonprivate_project_fails(self):
         x=self.verify({"visibility":"public"},False)
         self.assertIn("PROJECT_PRIVACY_UNVERIFIED",x["evidence_errors"])
