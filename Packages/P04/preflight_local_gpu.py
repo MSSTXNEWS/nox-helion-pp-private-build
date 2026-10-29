@@ -22,6 +22,70 @@ PACKAGES = (
 )
 
 
+def _check_pypa_wheel_abi(report: dict) -> None:
+    """Check installed root package ranges and WHEEL tags; never install/resolve.
+
+    Compatible local metadata is not a hashed wheel lock or CUDA binary proof.
+    """
+    try:
+        from email.parser import Parser
+        from packaging.requirements import Requirement
+        from packaging.tags import parse_tag, sys_tags
+        from packaging.utils import canonicalize_name
+        from packaging.version import Version
+    except ImportError:
+        report["errors"].append("PYPA_WHEEL_ABI_PARSER_UNAVAILABLE")
+        return
+    try:
+        requirements = {}
+        for raw in Path(__file__).with_name("requirements-qlora.txt").read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            requirement = Requirement(line)
+            name = canonicalize_name(requirement.name)
+            if (name in requirements or requirement.url or requirement.extras
+                    or requirement.marker or not requirement.specifier):
+                raise ValueError("unsupported requirement")
+            requirements[name] = requirement
+        if set(requirements) != set(PACKAGES):
+            raise ValueError("incomplete root requirements")
+        supported = set(sys_tags())
+        if not supported:
+            raise ValueError("no interpreter tags")
+    except (OSError, UnicodeError, ValueError, TypeError):
+        report["errors"].append("PYPA_DECLARED_ABI_CONTRACT_INVALID")
+        return
+    for package in PACKAGES:
+        if report["packages"][package]["state"] != "INSTALLED":
+            continue
+        try:
+            installed = Version(report["packages"][package]["version"])
+            if not requirements[package].specifier.contains(installed, prereleases=False):
+                report["errors"].append("PACKAGE_VERSION_OUT_OF_RANGE:" + package)
+                continue
+            wheel_text = metadata.distribution(package).read_text("WHEEL")
+            if not isinstance(wheel_text, str) or not 0 < len(wheel_text) <= 65536:
+                raise ValueError("missing or oversized WHEEL")
+            wheel = Parser().parsestr(wheel_text)
+            versions = wheel.get_all("Wheel-Version", [])
+            tags = wheel.get_all("Tag", [])
+            if len(versions) != 1 or versions[0] not in ("1.0", "1.1") or not 1 <= len(tags) <= 128:
+                raise ValueError("ambiguous WHEEL headers")
+            wheel_tags = set()
+            for tag in tags:
+                if not isinstance(tag, str) or len(tag) > 256:
+                    raise ValueError("invalid wheel tag")
+                wheel_tags.update(parse_tag(tag))
+            if not wheel_tags:
+                raise ValueError("empty wheel tags")
+            if wheel_tags.isdisjoint(supported):
+                report["errors"].append("WHEEL_ABI_TAG_MISMATCH:" + package)
+        except (ValueError, TypeError, OSError, metadata.PackageNotFoundError):
+            report["errors"].append("WHEEL_METADATA_INVALID:" + package)
+    if not report["errors"]:
+        report["wheel_abi_status"] = "INSTALLED_ROOT_TAG_MATCH_ONLY"
+
 def inspect(profile: str, gpu_index: int) -> dict:
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
@@ -31,6 +95,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
         "platform": platform.system(),
         "python": platform.python_version(),
         "packages": {},
+        "wheel_abi_status": "HOLD",
+        "dependency_lock_verified": False,
+        "wheel_artifact_sha256_verified": False,
         "gpu": None,
         "errors": [],
         "runtime_training_verified": False,
@@ -53,6 +120,10 @@ def inspect(profile: str, gpu_index: int) -> dict:
     # This is an ABI admission guard, NOT proof of wheel or CUDA compatibility.
     if sys.maxsize <= (1 << 32) or platform.machine().lower() not in ("amd64", "x86_64"):
         report["errors"].append("WINDOWS_AMD64_64BIT_PYTHON_REQUIRED")
+        return report
+    if not report["errors"]:
+        _check_pypa_wheel_abi(report)
+    if report["errors"]:
         return report
     exe = train_qlora.nvidia_smi()
     if not exe:
