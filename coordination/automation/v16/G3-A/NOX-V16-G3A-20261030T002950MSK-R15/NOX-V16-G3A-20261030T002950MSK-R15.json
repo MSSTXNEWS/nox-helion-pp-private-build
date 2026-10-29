@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_V16_G3A_R25_SOURCE_DELTA_CHECKPOINT_V1",
+  "run_id": "NOX-V16-G3A-20261030T002950MSK-R15",
+  "role": "G3-A supporting manual #3; existing P04 GPU/RAG",
+  "task_id": "existing P04 model snapshot source",
+  "scope": "NOX HELION EXPRESS INTEGRATOR SOURCE ONLY",
+  "status": "INCOMPLETE",
+  "accepted_delta": 0,
+  "accepted_criteria": "0/4",
+  "product": "N/D",
+  "start_local": "2026-10-30T00:29:50+03:00",
+  "read_proof": {
+    "canonical_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs_read": 705,
+    "canon_56_rules": "FULL_DOC_READ; text section labelled 56 consolidated rules",
+    "register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "error_count": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMRCqBU1PeuHIsbSn2ZbS0FHMAGPdsKUQkVxIcFCusLXEMJ7RGNs01dNHfDY9ezkQ_yBo9hbfhlFMJhIR8JGspcIgOvikriTjzsWeU4",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "source_head": "d9dfa486eae186ed0efac32bccecb7d6bac769f9",
+    "source_tree": "3119aa1c022b03f8149556aecf8f10a84a80c22d",
+    "donor_pr221_head": "fabc3f35de9242498f55f0dd2416c34cd0bf1eb7"
+  },
+  "source_blobs": {
+    "PR162_P04_source": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+    "PR162_P04_tests": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e",
+    "PR221_P04_source": "98b51bdbf59e56a629dbafc81d74b5c03a67e7b5",
+    "PR221_P04_tests": "4f60e931161bbaedba25a417a3610c7e6da2505d"
+  },
+  "physical": {
+    "type": "NEW_SHA_PINNED_INDEPENDENT_SOURCE_DELTA_PROOF_AND_RUNNABLE_GUARD",
+    "check_source": "Authenticated GitHub exact file bytes, checked by read-only JavaScript comparison",
+    "static_checks": "7/7 PASS; no direct Python product module run",
+    "local_script_selftest": "7/7 PASS; py_compile PASS on locally authored equivalent",
+    "finding": "PR162 P04 lacks Windows reserved-device and casefold collision guards present in manual #3 PR221 donor; donor has two tests not in PR162. Existing PR162 has three distinct safety tests absent from PR221. Preserve union; never blind replace.",
+    "script_path": "coordination/automation/v16/G3-A/NOX-V16-G3A-20261030T002950MSK-R15/p04_snapshot_delta_guard_g3a.py",
+    "script_product_execution": "NOT_RUN",
+    "gpu_training": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "independent_QA": "NOT_SIGNED"
+  },
+  "lessons": {
+    "applied": [
+      "ERR-SYS-002 exact source and donor SHA revalidated before handoff",
+      "ERR-SRC-004 preserve original three PR162 tests and existing overlap/weight_map checks; no unsafe donor overwrite",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01 distinguish static proof from accepted TaskID"
+    ],
+    "remaining": "Manual #3 owns source delta; T06 alone can CAS into PR162; T08 independent same-HEAD tests, T02 sole shared journal writer"
+  },
+  "error_ack": {
+    "ERR-SYS-001": "HANDOFF_T02: immutable personal receipt; shared CAS not assumed",
+    "ERR-SYS-002": "FIX_PROCESS: exact current PR HEAD/tree and 4 P04 blobs pinned",
+    "ERR-SRC-003": "NO_IMPACT: Host50 admission owned T06",
+    "ERR-SRC-004": "HANDOFF_MANUAL3_T06: Windows filename validation/negative tests, preserve no-loss",
+    "ERR-SRC-005": "NO_IMPACT: source fixture runner owner T06/T08",
+    "ERR-SYS-006": "VERIFIED_CLOSED, do not reopen",
+    "ERR-SYS-007": "VERIFIED_CLOSED, do not reopen",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09/T02 exact-head gates",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "FIX_PROCESS: INCOMPLETE 0/4 and next action",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 8/8 native proof",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08 native exact-head safety QA"
+  },
+  "handoff": {
+    "manual3": "Review existing PR221 Windows filename/Windows device-name + casefold protection against PR162 exact P04 source f5cf...; use existing donor, not duplicate patch. Preserve three integrated PR162 negative tests and all existing functionality.",
+    "T06": "Read live PR162 HEAD, require P04 source preimage f5cf5df231ee9ba4344a6445358034b5aaad9241 (otherwise refresh affected paths), selectively integrate owner-approved PR221 protections/test union, run full Python tests/P04/test_model_snapshot_probe.py plus STOP/ACL/consent/privacy/NO-LOSS, commit CAS/readback only as sole writer.",
+    "T08": "Independently test owner accepted exact PR162 SHA; do not sign from isolated evidence.",
+    "T02": "Ingest this immutable G3-A receipt via authorized shared-register/Master/E06/Lessons CAS+readback, without declaring shared write PASS."
+  },
+  "tool_status": {
+    "R21": "TOOL_NOT_RUN",
+    "R22": "TOOL_NOT_RUN"
+  },
+  "gates": {
+    "A": "PASS current read",
+    "B": "STATIC_SOURCE_DELTA_PROOF_ONLY, no product patch",
+    "C": "OWN_IMMUTABLE_GIT_RECEIPT_AWAITING_READBACK",
+    "D": "PASS anti-regression cluster",
+    "E": "REPORT pending final SHA"
+  },
+  "restrictions": [
+    "PR162 unchanged",
+    "main unchanged",
+    "P04 owner files unchanged",
+    "no GPU training",
+    "no EXE/NSIS/CI/E07/release",
+    "no shared journal write"
+  ],
+  "next_action": "Manual #3 -> T06 exact selective current P04 CAS+Python tests -> independent T08 same-HEAD acceptance; 0/4 remains."
+}
