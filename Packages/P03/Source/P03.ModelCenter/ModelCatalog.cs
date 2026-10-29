@@ -39,7 +39,7 @@ public sealed record ModelCatalogEntry(
         && IsSha256(ExpectedManifestDigestSha256)
         && LicenseEvidenceUri is { Scheme: "https" }
         && CompatibilityEvidenceUri is { Scheme: "https" }
-        && !string.IsNullOrWhiteSpace(ImmutableRevision)
+        && IsImmutableRevision(ImmutableRevision)
         && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
         && (RecommendedRamBytes is null or > 0)
         && (RecommendedVramBytes is null or > 0)
@@ -52,6 +52,14 @@ public sealed record ModelCatalogEntry(
         && !tag.Contains("..", StringComparison.Ordinal)
         && !tag.EndsWith(":latest", StringComparison.OrdinalIgnoreCase)
         && Regex.IsMatch(tag, @"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$");
+
+    // A direct native catalog entry must meet the same immutable revision
+    // proof as the reviewed artifact registry; arbitrary "latest" is HOLD.
+    private static bool IsImmutableRevision(string? value) =>
+        IsSha256(value) ||
+        (value is { Length: 71 } &&
+         value.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) &&
+         IsSha256(value[7..]));
 
     private static bool IsSha256(string? value) => value is { Length: 64 }
         && value.All(Uri.IsHexDigit);
