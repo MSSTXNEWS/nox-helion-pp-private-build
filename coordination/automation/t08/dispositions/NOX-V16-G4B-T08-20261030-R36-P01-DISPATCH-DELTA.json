@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_V16_T08_INDEPENDENT_DELTA_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261030-R36-P01-DISPATCH-DELTA",
+  "existing_task_ids": [
+    "T08",
+    "P01"
+  ],
+  "owner": "AUTO G4-B T08 auxiliary, manual #2 final independent QA; no PR162 code write",
+  "rule": "R32_FINITE_QA_DELTA_GATE: material file/dep delta only; compare blob not just HEAD",
+  "prestart_read_proof": {
+    "canon_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "role_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "r26_policy_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+    "error_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "error_register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL-QXf0E",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "exact_git": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "qa_exec_head": "30143a71c824e654d11b633265faea38bbad0b31",
+    "qa_exec_tree": "513dfb1605037907cf2946427a3b4827b6589751",
+    "post_qacheck_live_head": "1cda912558c8636cc85dd4a08c65efcd19a11905",
+    "post_qacheck_tree": "e98ff3a9ccab56d81625b02cef9f5d721b79fd8c",
+    "post_drift_files": [
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "dependency_delta_on_tested_P01": false,
+    "p01_dispatch_path": "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+    "prior_R35_source_blob": "5b7717d1db46485bf763462d1eccd8eec2f4dbc0",
+    "immediate_parent_source_blob": "887bbd49eb2948362d5773764e92cabad953fa0e",
+    "current_source_blob": "f4eb000843bc78af116e4015ed06528b032ee991",
+    "p01_test_path": "proposals/P01/WOW-MAX10/route-dispatch.test.mjs",
+    "prior_R35_test_blob": "d6cf2df02da12b5c522a0603876d9a3aeff95df4",
+    "current_test_blob": "1e6196ce49d20d90d440c34df3bb70489c4c7109",
+    "p04_fixture_followon_delta": "cf115be6729a975244ed3c87067823e8b6c33f6d -> 525b77d61050b0bac5b1653aedc7b5eec3314991; unrelated to P01 QA and not re-executed"
+  },
+  "focused_execution": {
+    "type": "V8 in-session execution of exact Git source and original 12 test bodies with Node test/assert compatible stub",
+    "original_test_bodies_executed": 12,
+    "passed": 12,
+    "failed": 0,
+    "additional_security_negative_cases": 5,
+    "passed_security": 5,
+    "failed_security": 0,
+    "security_cases": [
+      "CLOSED_AFTER_APPROVAL",
+      "LEGACY_SENSITIVE_CONSENT",
+      "POST_CONSENT_CAPABILITY_REVOKED",
+      "ACK_WRONG_ROUTE_DENY",
+      "CLOSE_DURING_NATIVE_ACK"
+    ],
+    "actual_node_cli": "NOT_RUN_private_checkout_unavailable_in_runtime",
+    "windows_native": "NOT_RUN",
+    "native_ACL_STOP_consent": "NOT_RUN",
+    "source_lock_729_revalidation": "NOT_RUN_unchanged_dependency",
+    "qa_scope": "Changed P01 route dispatch source+tests only, not all Host50 or Windows"
+  },
+  "errors": [
+    {
+      "id": "ERR-SRC-004",
+      "status": "OPEN",
+      "disposition": "SOURCE_ONLY_CHANGE_CONFIRMED_NATIVE_PENDING"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "status": "OPEN",
+      "disposition": "SAME_DEPENDENCY_BLOBS_CHECKED_AFTER_HEAD_DRIFT"
+    }
+  ],
+  "lesson": "Differentiate coordination/other-component HEAD drift from changed source/dependency blob; pass V8 tests only as source corroboration, never Windows native acceptance",
+  "stage": {
+    "SOURCE_PREPARED": true,
+    "SOURCE_VERIFIED": "P01_DISPATCH_SOURCE_ONLY",
+    "INTEGRATED": true,
+    "QA_ACCEPTED": false
+  },
+  "accepted_taskid_delta": 0,
+  "t08_fixed_criteria": "1/3 prior preserved; no new independent native criterion",
+  "product": "N/D",
+  "host50_last_source_snapshot": "40/50 source-bound, 10/50 unbound, 14 native pending; unrefreshed this run",
+  "owner_handoff": {
+    "manual1_T06": "Retain integrated P01 dispatch f4eb..; finish P01 Windows safe_path/JSON owner fixes and 10 Host50 bindings. Provide exact native STOP/ACL/consent evidence; do not replay source fix.",
+    "manual2_T08": "Independent Windows/native signed QA only against owner accepted latest SHA; P04 fixture 525b77.. now integrated, compare before targeted rerun.",
+    "t02": "Journal existing ERR-SRC-004/ERR-SYS-002 after T02-only CAS/readback; receipt is not shared journal success."
+  },
+  "build": "NOT_AUTHORIZED_NO_EXE_NSIS_GITLAB_CI_E07",
+  "status": "INCOMPLETE_SOURCE_VERIFIED_ONLY"
+}
