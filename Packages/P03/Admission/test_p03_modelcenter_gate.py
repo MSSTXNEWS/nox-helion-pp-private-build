@@ -171,7 +171,7 @@ class Admission(unittest.TestCase):
         e,c=example(); e.update(kind="gguf",existingRoute="EnqueueVerifiedGgufAsync",
                                 localGgufPath="C:/model/verified.gguf",nativeGgufMagicVerified=True,
                                 nativeLocalFileSha256="a"*64)
-        c["verifiedPrerequisites"]={"python":True,"git":True}
+        c["verifiedPrerequisites"]={"python":True,"git":True,"ollama":True}
         self.assertEqual(g.admit_for_existing_downloader(e,c,lambda _e,_c:True).status,"PASS_FOR_EXISTING_QUEUE")
 
     def test_69_training_all_dependencies(self):
@@ -223,8 +223,10 @@ class QueueStateRegression(unittest.TestCase):
         old, new = queue_fixture(); new["expectedArtifactSha256"] = "f"*64
         self.expect(old,new,"QUEUE_JOB_PROVENANCE_DRIFT_OR_MISSING")
 
-    def test_38_changed_total_bytes(self):
-        old, new = queue_fixture(); new["totalBytes"] = 200
+    def test_38_shrinking_total_bytes(self):
+        # Native PullAsync legitimately discovers additional digest layers;
+        # shrinking the aggregate is still invalid within the same attempt.
+        old, new = queue_fixture(); new["totalBytes"] = 90
         self.expect(old,new,"TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
 
     def test_39_terminal_cannot_restart(self):
@@ -496,7 +498,7 @@ class R06WindowsGgufPathRegressions(unittest.TestCase):
         e.update(kind="gguf", existingRoute="EnqueueVerifiedGgufAsync",
                  localGgufPath=path, nativeGgufMagicVerified=True,
                  nativeLocalFileSha256="a"*64)
-        c["verifiedPrerequisites"] = {"python": True, "git": True}
+        c["verifiedPrerequisites"] = {"python": True, "git": True, "ollama": True}
         got = g.admit_for_existing_downloader(e, c, lambda _e, _c: True)
         self.assertEqual(got.status, expected, f"{path!r}: {got.reasons}")
         if expected == "HOLD":
@@ -665,3 +667,4 @@ class R08EvidenceUriRegressions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

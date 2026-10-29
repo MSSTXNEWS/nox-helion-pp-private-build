@@ -148,6 +148,10 @@ def prerequisite_gates(facts: Mapping[str, Any], role: str) -> tuple[str, ...]:
     if not isinstance(facts, Mapping):
         facts = {}
     needed = ("ollama",) if role == "OLLAMA" else ("python", "git")
+    if role == "GGUF":
+        # Original ImportGgufAsync uploads api/blobs and invokes api/create on
+        # the SAME local Ollama service. Python/Git alone cannot fulfill it.
+        needed = ("python", "git", "ollama")
     if role in {"TRAINING", "GPU_TRAINING"}:
         needed = ("python", "git", "cuda", "torch", "peft", "trl", "accelerate")
     return tuple("PREREQUISITE_" + x.upper() + "_UNVERIFIED"
@@ -254,7 +258,7 @@ def admit_for_existing_downloader(
             reasons.append("GGUF_NATIVE_MAGIC_UNVERIFIED")
         if not (_sha(evidence.get("nativeLocalFileSha256")) and evidence.get("nativeLocalFileSha256") == evidence.get("artifactSha256")):
             reasons.append("GGUF_LOCAL_FILE_SHA_NOT_MATCHED")
-        role = "EXTERNAL"
+        role = "GGUF"
     else:
         if not isinstance(evidence.get("leadId"), str) or evidence.get("leadId") not in dict(EXTERNAL_LEADS):
             reasons.append("UNKNOWN_EXTERNAL_WEIGHT_LEAD")
@@ -360,33 +364,33 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
 
     old_total, new_total = previous.get("totalBytes"), update.get("totalBytes")
     old_done, new_done = previous.get("completedBytes"), update.get("completedBytes")
-    # Original P03 ModelJob.Queued starts with null counters. Its native worker
-    # can publish RUNNING with unknown bytes, then the FIRST measured byte pair.
-    # Requiring a known old total would reject every genuine first transfer event.
-    # Unknown -> known is allowed ONCE on the same trusted job; known -> unknown,
-    # mismatched totals and fabricated 0/0 counters are never progress evidence.
-    old_unknown = old_total is None and old_done is None
-    new_unknown = new_total is None and new_done is None
-    old_known = (_positive(old_total) and type(old_done) is int
-                 and 0 <= old_done <= old_total)
+    # Original PullAsync sums discovered digest layers, so aggregate total grows
+    # during one native job. It is NOT the immutable artifact size. The trusted
+    # verifier above must bind both counters to that original job/manifest.
+    # A measured numerator may also precede its denominator; this is real bytes,
+    # never a percentage or permission to mark the artifact installed.
+    def valid_counters(done, total):
+        if done is None:
+            return total is None
+        return (type(done) is int and 0 <= done < (1 << 63)
+                and (total is None or (_positive(total) and done <= total)))
+
     new_known = (_positive(new_total) and type(new_done) is int
                  and 0 <= new_done <= new_total)
-    if old_known and new_known:
-        if old_total != new_total:
-            reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
-        if new_done < old_done:
-            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
-    elif old_unknown and new_known:
-        # Native queue can emit its first measured bytes after QUEUED/RUNNING.
-        # The state transition and E06's trusted receipt still gate admission.
-        if before not in {"QUEUED", "RUNNING"}:
-            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
-    elif old_unknown and new_unknown:
-        pass  # indeterminate queued/running or terminal cancellation, NOT 0%/100%
-    else:
+    if not (valid_counters(old_done, old_total) and valid_counters(new_done, new_total)):
         if not _positive(old_total) or not _positive(new_total):
             reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
         reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+    else:
+        if old_done is not None and (new_done is None or new_done < old_done):
+            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+        if old_total is not None and (new_total is None or new_total < old_total):
+            reasons.extend(("TOTAL_BYTES_UNVERIFIED_OR_CHANGED", "NON_MONOTONIC_OR_INVALID_PROGRESS"))
+        if old_done is None and new_done is not None and before not in ("QUEUED", "RUNNING"):
+            reasons.append("NON_MONOTONIC_OR_INVALID_PROGRESS")
+        if new_total is not None and new_total != old_total:
+            if before not in ("QUEUED", "RUNNING") or after not in ("RUNNING", "COMPLETED"):
+                reasons.append("TOTAL_BYTES_UNVERIFIED_OR_CHANGED")
     if isinstance(after, str) and after in {"CANCEL_REQUESTED", "CANCELLING"}:
         reasons.append("STOP_REQUESTED_NOT_SERVER_CONFIRMED")
     elif after == "CANCELLED" and not (_sha(update.get("cancelAckReceiptSha256"))
@@ -467,3 +471,4 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
     if reasons:
         return Decision("HOLD", tuple(dict.fromkeys(reasons)))
     return Decision("PASS_FOR_EXISTING_QUEUE", ())
+
