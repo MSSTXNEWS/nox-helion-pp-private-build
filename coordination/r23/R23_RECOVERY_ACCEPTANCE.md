@@ -14,3 +14,12 @@
 
 ## Owners and safety
 T06/manual #1 sole shared PR162 source writer. Manual #3 isolated P04/P05 patch writer. Manual #2 independent SOURCE QA without product writes. T02 sole shared journal writer. Never bypass authorizations, privacy or security for speed. Preserve original functionality; do not replace entire host, database, LLM, trainer, Model queue or event bus. Product overall % remains N/D without full frozen canonical TaskID denominator and independent acceptance. The Git-linked R23 document is a coordination addendum, not a release authorization.
+
+## Previously known P0/P1 risks that must not disappear from the queue
+- P01 **postpublish SourceLock atomicity:** a previous negative test showed R11 published before source_lock.json receipt could leave a partly committed state; audit the actual current publishing/rollback path and focused crash-injection regression, do not overwrite user data.
+- PACK01 **duplicate JSON keys:** current native ingress must reject repeated keys *before* identity/consent/ACL decision; do not silently accept Python json.loads last-key-wins. Verify the exact latest source before claiming the issue still exists, reuse existing owner patch if already applied.
+- P02 Voice/SIP **STOP and authorization**: respect live native scoped consent, tariff and permissions revocation, do not report a call/translation operation successful from a mocked/test source.
+- P03 GGUF Queue/Retry **jobId, digest, privacy**: parts were previously integrated; check current HEAD/test evidence before recreating fixes.
+- P04 model snapshot **overlapping safetensors spans**: explicitly preserve no-overlap safety and run Python unit tests on exact source, then T08 independent QA. Actual GPU/LoRA training is a separate gate with genuine hardware, data rights and license.
+- P05 Events v3/SPACE: preserve the actual canonical v3 wire types; unapproved telemetry events are not accepted. Do not introduce a parallel event bus, second host or silent new SDK.
+- Verify all original owner lanes and G1/G2/G3 patches against exact PRE; stop repeating tests on untouched paths, but never omit changed security gates.
