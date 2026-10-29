@@ -76,6 +76,15 @@ def _verified_git_proof(source, t06):
         return False
 
 
+def _consistent_source_heads(proof, expected_head):
+    """Every PRESENT source SHA alias must match. Reject absent or contradictory aliases."""
+    if type(proof) is not dict or not _sha(expected_head):
+        return False
+    aliases = ("head", "head_sha", "source_head", "source_head_sha")
+    present = [proof[key] for key in aliases if key in proof]
+    return bool(present) and all(_sha(value) and value == expected_head for value in present)
+
+
 def _verified_downstream(source, p0, handoff, journal):
     """Reject forged downstream hashes; T02 must separately verify native Drive revisions."""
     import subprocess
@@ -86,8 +95,7 @@ def _verified_downstream(source, p0, handoff, journal):
             return False
         for part in (p0, handoff):
             proof = _actual_json_blob(git, part.get("receipt_blob"))
-            if not any(proof.get(k) == head for k in
-                       ("head", "head_sha", "source_head", "source_head_sha")):
+            if not _consistent_source_heads(proof, head):
                 return False
         if p0.get("status") == "PATCH_APPLIED":
             test = _actual_json_blob(git, p0.get("focused_test_blob"))
