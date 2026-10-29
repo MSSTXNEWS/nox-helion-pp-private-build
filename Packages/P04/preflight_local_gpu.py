@@ -219,6 +219,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
             import torch
+            from packaging.version import Version
+            if Version(torch.__version__) != Version(report["packages"]["torch"]["version"]):
+                report["errors"].append("TORCH_IMPORTED_VERSION_MISMATCH")
             if not isinstance(getattr(torch.version, "cuda", None), str) or not torch.version.cuda:
                 report["errors"].append("TORCH_CUDA_BUILD_UNAVAILABLE")
             if not torch.cuda.is_available():
