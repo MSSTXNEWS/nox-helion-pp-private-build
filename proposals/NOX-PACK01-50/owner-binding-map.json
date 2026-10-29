@@ -5,26 +5,29 @@
   "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
   "counts": {
     "catalogue": 50,
-    "sourceOwnerMethodBound": 39,
+    "sourceOwnerMethodBound": 46,
     "p02": 15,
     "p03": 10,
-    "p04": 8,
+    "p04": 11,
     "e05": 6,
-    "unbound": 11,
+    "e06": 1,
+    "unbound": 4,
     "exeIntegrated": 0,
-    "releaseAccepted": 0
+    "releaseAccepted": 0,
+    "p01": 3
   },
   "notes": [
-    "39 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
+    "46 existing owner method descriptors are SOURCE CANDIDATES only; 0 accepted in native Windows EXE.",
     "User's original 729-file source is integrity verified but still not unified with this proposal.",
-    "Remaining 11 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
+    "Remaining 4 routes need native owner methods: browser.open, browser.bookmarks, system.update, system.pc_control. 14 original native-pending gates remain.",
     "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
     "Voice settings require installed approved voices, do not claim free weights installed.",
     "Model license view lists REVIEW_REQUIRED for unverified catalog families, never marks them legally approved.",
     "Dataset rights and checkpoint functions call exact owner methods; real GPU training/merged LoRA/phone call NOT RUN.",
     "P02 history same-second ordering regression still tracked, not resolved by candidate routes.",
     "Original WOW 10+10+10, 8 CoreID, Persona/D02 and source archived files untouched.",
-    "P02 OwnerTwoPorts: three source route method descriptors linked; native owner services/STOP/SID/consent unverified, all 14 original native-blocker rows preserved."
+    "P02 OwnerTwoPorts: three source route method descriptors linked; native owner services/STOP/SID/consent unverified, all 14 original native-blocker rows preserved.",
+    "R26 M1 six owner method candidates reuse P01 theater/restic and P04 original QLoRA/Comfy; no automatic native permissions, downloads, or Windows acceptance."
   ],
   "routes": [
     {
@@ -306,12 +309,12 @@
       "taskId": "NIP01-26",
       "routeId": "training.start",
       "owner": 4,
-      "sourceBinding": null,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_owner_training_port.py:P04OriginalTrainingPorts.start",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-27",
@@ -350,12 +353,12 @@
       "taskId": "NIP01-30",
       "routeId": "training.evaluate",
       "owner": 4,
-      "sourceBinding": null,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_owner_training_port.py:P04OriginalTrainingPorts.evaluate",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-31",
@@ -416,23 +419,23 @@
       "taskId": "NIP01-36",
       "routeId": "media.player",
       "owner": 1,
-      "sourceBinding": null,
+      "sourceBinding": "integrations/creative/bridge/CreativeHostBridge.cs:OpenOwnerMediaRouteAsync",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-37",
       "routeId": "media.subtitles",
       "owner": 1,
-      "sourceBinding": null,
+      "sourceBinding": "integrations/creative/bridge/CreativeHostBridge.cs:OpenOwnerMediaRouteAsync",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-38",
@@ -460,12 +463,12 @@
       "taskId": "NIP01-40",
       "routeId": "images.generate",
       "owner": 4,
-      "sourceBinding": null,
+      "sourceBinding": "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py:P04ComfyOwnerPort.generate",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-41",
@@ -548,12 +551,12 @@
       "taskId": "NIP01-48",
       "routeId": "system.backup",
       "owner": 1,
-      "sourceBinding": null,
+      "sourceBinding": "proposals/NOX-PACK01-50/p01_restic_backup_port.py:P01ResticBackupPort.backup",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "OWNER_SOURCE_CANDIDATE_NATIVE_RECEIPT_CONSENT_SAME_SHA_QA_HOLD"
     },
     {
       "taskId": "NIP01-49",
@@ -570,12 +573,12 @@
       "taskId": "NIP01-50",
       "routeId": "mobile.connect",
       "owner": 6,
-      "sourceBinding": null,
+      "sourceBinding": "coordination/e06/adapters/g2_space_mobile.py:PrivateMobileContract.connect",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "NATIVE_PRIVATE_GATEWAY_HOST_ACK_AND_SAME_SHA_QA_PENDING"
     }
   ],
   "proof": {

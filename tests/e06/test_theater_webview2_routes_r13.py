@@ -12,6 +12,14 @@ class TheaterRouteContract(unittest.TestCase):
     def test_existing_host_not_replaced(self):
         self.assertIn('Navigate("https://nox.local/creative/theater.html")',HOST)
         self.assertIn('SetVirtualHostNameToFolderMapping("nox.local"',HOST)
+    def test_p01_bridge_reuses_exact_existing_nox_virtual_host(self):
+        bridge=(ROOT/'stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs').read_text(encoding='utf-8')
+        self.assertIn('string.Equals(host, "nox.local", StringComparison.OrdinalIgnoreCase)',bridge)
+        self.assertIn('host.EndsWith(".invalid", StringComparison.OrdinalIgnoreCase)',bridge)
+        self.assertNotIn('host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)',bridge)
+        self.assertIn('!IsReservedVirtualHost(_trustedVirtualOrigin.Host)',bridge)
+        self.assertIn('args.Cancel = true;',bridge)
+
     def test_relative_assets_resolve_under_virtual_webview2_origin(self):
         self.assertIn('<script src="theater.js"></script>',HTML)
         self.assertIn("url('../menu_sections.png')",HTML)

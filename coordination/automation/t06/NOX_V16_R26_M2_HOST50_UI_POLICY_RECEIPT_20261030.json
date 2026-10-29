@@ -1,0 +1,52 @@
+{
+  "schema": "NOX_V16_R26_T06_M2_HOST50_UI_SECURITY_RECEIPT_V1",
+  "run_id": "NOX-V16-T06-20261030-R26-M2-RISK-PIN",
+  "role": "MANUAL1/T06",
+  "target": "NOX HELION EXPRESS INTEGRATOR, existing WebView2 PACK01 UI",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "head_pre": "4489cf46dbaa2e0bc543cade2afcc2e61532dfe8",
+  "source_head_post": "328a5849536dbf334023277e17dadfc798d1a5f3",
+  "source_tree_post": "de44cf8fd91b09d870cb53512dee1231d0788b86",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK01-50/registry.mjs",
+      "pre_blob": "1e059650658ba806da1c087625dc34308822978c",
+      "post_blob": "f63b0139efaf11aa128d1b68435df3d056fcb3a5",
+      "commit": "a42f7f00520757f820ffd75eba4fd5bb2649a10f",
+      "purpose": "Canonical route+owner+risk+TaskID pin 50/50 against existing native policy"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/smoke.test.mjs",
+      "pre_blob": "455e2ef2833def3a28a6f01c9e81be3a2a2fada6",
+      "post_blob": "d39122860f4052a9552f3ae13805d0c2e0616d22",
+      "commit": "328a5849536dbf334023277e17dadfc798d1a5f3",
+      "purpose": "Negative catalog risk/owner/route/taskid regressions; native consent guarded"
+    }
+  ],
+  "evidence": {
+    "native_policy_source": "proposals/NOX-PACK01-50/native_bridge.py",
+    "crosscheck": "50/50 exact route/owner/risk match",
+    "v8_exact_integrated_source_checks": {
+      "pass": 206,
+      "total": 206
+    },
+    "full_node_test_current_head": "NOT_RUN",
+    "native_webview": "NOT_RUN",
+    "windows_exe": "NOT_RUN"
+  },
+  "host50": {
+    "total": 50,
+    "source_bound": 39,
+    "source_unbound": 11,
+    "native_pending": 14,
+    "exe_accepted": 0
+  },
+  "qa_accepted": false,
+  "source_ready": false,
+  "source_lock": "historical 729/3 preserved; new whole-tree archive runtime NOT_RUN",
+  "error_id": "ERR-SRC-004",
+  "t02_journal_writer_only": true,
+  "app_level_security": "UI presentation hardening only; never a replacement for native ACL/consent",
+  "next": "T08 independently rerun PACK01 smoke Node tests on exact HEAD, native host checks; T06 finish M2 missing owner callbacks with verified native methods, no fake bindings",
+  "status": "SOURCE_INTEGRATED_QA_PENDING"
+}
