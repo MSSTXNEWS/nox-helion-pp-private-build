@@ -65,6 +65,35 @@ def _verified_git_proof(source, t06):
             ImportError, subprocess.TimeoutExpired, UnicodeError):
         return False
 
+def _bound_receipt(repo, sha, head, status=None):
+    """Verify existence and source identity of receipts, not their SHA-shaped text."""
+    import subprocess
+    if not _sha(sha):
+        return False
+    try:
+        def git(*args):
+            p = subprocess.run(["git", "-C", str(repo), *args],
+                               capture_output=True, timeout=12, check=False)
+            if p.returncode: raise ValueError("GIT_EVIDENCE_UNREADABLE")
+            return p.stdout
+        if git("cat-file", "-t", sha).strip() != b"blob":
+            return False
+        data = json.loads(git("cat-file", "blob", sha))
+        return (type(data) is dict and
+                (data.get("head") == head or data.get("source_head") == head) and
+                (status is None or data.get("status") == status) and
+                type(data.get("run_id")) is str and len(data["run_id"]) >= 8)
+    except (ValueError, TypeError, UnicodeError, OSError, subprocess.TimeoutExpired):
+        return False
+
+def _source_repo():
+    try:
+        return next(p for p in Path(__file__).resolve().parents
+                    if (p / "coordination/e06/t06_closeout_guard.py").is_file())
+    except StopIteration:
+        return None
+
+
 def decide(receipt):
     if type(receipt) is not dict or type(receipt.get("incident_id")) is not str:
         raise ValueError("UNIQUE_ERROR_INCIDENT_REQUIRED")
@@ -83,24 +112,29 @@ def decide(receipt):
         and _sha(t06.get("owner_receipt_blob"))
         and t06.get("p01_p05_accepted") is True
         and t06.get("host50_native_contracts_verified") is True)
-    disposition = ready and type(p0) is dict and (
+    root = _source_repo()
+    disposition = ready and root is not None and type(p0) is dict and (
         p0.get("head") == target and p0.get("status") in
-        ("NO_CODE_BLOCKERS", "PATCH_APPLIED") and _sha(p0.get("receipt_blob"))
-        and (p0.get("status") != "PATCH_APPLIED" or _sha(p0.get("focused_test_blob"))))
+        ("NO_CODE_BLOCKERS", "PATCH_APPLIED") and
+        _bound_receipt(root, p0.get("receipt_blob"), target, p0.get("status")) and
+        (p0.get("status") != "PATCH_APPLIED" or
+         _bound_receipt(root, p0.get("focused_test_blob"), target, "PASS")))
     docs = (type(journal) is dict and all(
         type(journal.get(name)) is dict and
         journal[name].get("incident_id") == receipt["incident_id"] and
         type(journal[name].get("revision_id")) is str and
         len(journal[name]["revision_id"]) >= 8 and
         journal[name].get("readback_pass") is True for name in DOCS))
+    docs = docs and root is not None and _bound_receipt(
+        root, journal.get("t02_readback_receipt_blob"), target, "PASS")
     delivered = disposition and docs and type(handoff) is dict and (
         handoff.get("head") == target and
         handoff.get("t09_t10_delivered") is True and
         handoff.get("comment_readback_pass") is True and
-        _sha(handoff.get("receipt_blob")))
+        _bound_receipt(root, handoff.get("receipt_blob"), target))
     values = (bool(ready), bool(disposition), bool(delivered))
     count = sum(values)
-    return {"schema": "NOX_V16_T08_AUTOFIX_CLOSEOUT_GATE_V1",
+    return {"schema": "NOX_V16_T08_GIT_EVIDENCE_R02",
             "incident_id": receipt["incident_id"],
             "status": "DONE" if count == 3 else "HOLD_EVIDENCE",
             "progress": f"{count}/3", "percentage": round(count * 100 / 3, 1),
