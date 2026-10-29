@@ -286,6 +286,7 @@ q("report-provenance").innerHTML=[
 renderReports();
 let liveRequest=null;
 function liveStatus(message,online){
+ document.dispatchEvent(new CustomEvent("nox:connection",{detail:{online:online===true,checkedAt:new Date().toISOString()}}));
 const el=q("live-status");const sensor=q("pulse-state");if(sensor)sensor.dataset.state=online?"online":"offline";if(q("pulse-label"))q("pulse-label").textContent=online?"API ONLINE":"SNAPSHOT";if(!el)return;el.replaceChildren();
 const dot=document.createElement("span");dot.className="dot"+(online?"":" red");
 el.append(dot,document.createTextNode(message));
@@ -321,6 +322,7 @@ try{
  if(!payload||typeof payload!=="object"||payload.error)throw Error("API_INVALID_RESULT");
  const events=normalizeLiveEvents(payload);
  showLiveEvents(events);
+ document.dispatchEvent(new CustomEvent("nox:ops-events",{detail:{events:events,verifiedAt:new Date().toISOString(),source:"protected_same_origin_api"}}));
  const now=new Date().toLocaleTimeString("ru-RU");
  liveStatus("API отвечает · "+now+" · "+events.length+" событий; GitHub SHA проверяется отдельно",true);
 }catch(e){
