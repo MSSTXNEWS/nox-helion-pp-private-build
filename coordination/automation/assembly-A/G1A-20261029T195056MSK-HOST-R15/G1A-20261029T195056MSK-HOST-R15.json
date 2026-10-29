@@ -1,0 +1,221 @@
+{
+  "schema": "NOX_V16_G1A_R15_HOST_PROVENANCE_IMMUTABLE_CHECKPOINT",
+  "run_id": "G1A-20261029T195056MSK-HOST-R15",
+  "at_utc": "2026-10-29T16:50:56.318Z",
+  "role": "G1-A Assembly A P01-P03/Host50",
+  "status": "INCOMPLETE_OWNER_T06_HANDOFF_REQUIRED",
+  "canonical": {
+    "revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "rules_33_count": 56,
+    "sections": "1-33,54-56,R29"
+  },
+  "registry": {
+    "sha": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "stats": {
+      "open": 5,
+      "unverified": 4,
+      "closed": 2,
+      "total": 11
+    },
+    "errors": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ]
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "head_pre": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "tree_pre": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "tree_entries": 1232,
+    "truncated": false,
+    "head_post_product": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "changes_to_product_source": 0,
+    "pre_post": {
+      "bridge": [
+        "6338c56c509c31d8deee70afef6eb639603e1e2d",
+        "UNCHANGED"
+      ],
+      "builder": [
+        "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+        "UNCHANGED"
+      ],
+      "p02": [
+        "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "UNCHANGED"
+      ],
+      "p03_catalog": [
+        "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+        "UNCHANGED"
+      ],
+      "p03_queue": [
+        "3692811ac3234afb54e82958c7415b23619c1f0f",
+        "UNCHANGED"
+      ]
+    }
+  },
+  "targeted_test": {
+    "file": "coordination/automation/assembly-A/G1A-20261029T195056MSK-HOST-R15/g1a_p01_host_provenance_contract_r15.cjs",
+    "mode": "REMOTE_TREE_V8_EQUIVALENT",
+    "result": {
+      "audit_pass": true,
+      "checks": 13,
+      "passed": 13,
+      "failed": [],
+      "source_p01_accepted": false,
+      "source_p02_p03_not_reaccepted": true,
+      "status": "P01_EXISTING_WPF_HOST_PROVENANCE_HOLD",
+      "required_owner": "T06/manual №1",
+      "next_action": "Provide exact owner-approved original WPF csproj/MainWindow/Pack01HostBridge from a preserved non-ZIP729 source, pin Git PRE/POST and prove C09 binding to ONE host; same-SHA independent QA."
+    },
+    "windows_native": "NOT_RUN",
+    "git_local_node": "NOT_RUN",
+    "no_build": true
+  },
+  "exact_host50_source_hold_count": 13,
+  "owner_handoff": {
+    "to": "T06/manual №1",
+    "block": "P01 original WPF host provenance and MainWindow/C09 binding",
+    "evidence": "Current complete nontruncated Git tree has C09 bridge candidate, but no NOX.P01.Shell.csproj or MainWindow.xaml. E06 builder requires source project and throws EXISTING_WPF_SOURCE_MISSING. Original ZIP729 was already reported to lack MainWindow; do not re-open.",
+    "required_files": [
+      "NOX.P01.Shell.csproj",
+      "MainWindow.xaml",
+      "MainWindow.xaml.cs or equivalent codebehind",
+      "Integration/Pack01HostBridge.cs"
+    ],
+    "required_owner_action": "Locate existing owner-approved original WPF source outside three-part ZIP, attest Git SHA/source provenance and exact binding to C09 + one-host / STOP/consent. If unavailable keep P01 HOLD; do not invent host.",
+    "acceptance": "One pinned source HEAD with original WPF host/binding, P01 test PASS, independent T08 same-SHA evidence. No EXE/NSIS/CI/E07."
+  },
+  "lessons": {
+    "total_discovered": 12,
+    "active_register": 11,
+    "additional_from_T02_delta": [
+      "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE"
+    ],
+    "deduplicated_clusters": 7,
+    "clusters": [
+      {
+        "id": "PRESTART_AND_LEDGER",
+        "errors": [
+          "ERR-SYS-001"
+        ],
+        "decision": "DELEGATE",
+        "owner": "T02"
+      },
+      {
+        "id": "MUTABLE_HEAD_AND_PINNED_FIXTURE",
+        "errors": [
+          "ERR-SYS-002",
+          "ERR-SRC-005"
+        ],
+        "decision": "APPLY_PROOF",
+        "owner": "G1-A/T08"
+      },
+      {
+        "id": "HOST50_SOURCELOCK",
+        "errors": [
+          "ERR-SRC-003",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "decision": "DELEGATE",
+        "owner": "T06/T08"
+      },
+      {
+        "id": "P01_P05_SOURCE_CONTRACT",
+        "errors": [
+          "ERR-SRC-004",
+          "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE"
+        ],
+        "decision": "APPLY_PROOF_AND_DELEGATE",
+        "owner": "G1-A/T06"
+      },
+      {
+        "id": "PREMATURE_CLOSEOUT",
+        "errors": [
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "decision": "DELEGATE",
+        "owner": "T02/T06/T09"
+      },
+      {
+        "id": "ZIP_SOURCELOCK_ORIGINAL",
+        "errors": [
+          "ERR-SYS-006"
+        ],
+        "decision": "ALREADY_FIXED",
+        "owner": "T07/T09"
+      },
+      {
+        "id": "T04_ARBITRATION",
+        "errors": [
+          "ERR-SYS-007"
+        ],
+        "decision": "ALREADY_FIXED",
+        "owner": "T04"
+      }
+    ],
+    "processed": 12,
+    "applied_proof": 2,
+    "delegated": 3,
+    "already_fixed": 2,
+    "remaining_unresolved_clusters": 5,
+    "coverage_note": "All 11 Git register entries plus one newer Docs-delta error triaged. 419 historical fingerprints not current errors."
+  },
+  "hierarchy": {
+    "role": "G1-A",
+    "megablock": "T06 P01-P03/Host50 integration preparation",
+    "criteria": [
+      {
+        "id": "P01",
+        "status": "HOLD",
+        "accepted": false
+      },
+      {
+        "id": "P02",
+        "status": "SOURCE_PRESENT_NOT_REACCEPTED",
+        "accepted": true,
+        "prior_acceptance_only": true
+      },
+      {
+        "id": "P03",
+        "status": "OWNER_HOLD",
+        "accepted": false
+      },
+      {
+        "id": "T06_SIGNED_HANDOFF",
+        "status": "PENDING",
+        "accepted": false
+      }
+    ],
+    "historical_T01": "100/100 DONE UNCHANGED",
+    "before": "1/4 25%",
+    "after": "1/4 25%",
+    "delta_pp": 0,
+    "product_percent": "N/D",
+    "t06_owner": "1/8 INCOMPLETE",
+    "fixed_denominator": 4
+  },
+  "process": {
+    "gate_A": "PASS_FRESH_DOC_REGISTER_PR_TREE_MASTER_E06_LESSONS_C34",
+    "gate_B": "PASS_NEW_PINNED_R15_CROSS_CONTRACT_TEST",
+    "gate_C": "AWAITING_IMMUTABLE_GIT_READBACK",
+    "gate_D": "PARTIAL_FULL_RELEVANT_TRIAGE_WITH_EVIDENCE",
+    "next_checkpoint": "T06 source owner obtains original WPF host provenance + validates C09 binding; T08 same SHA; T02 registry entry acknowledgement; G1-A independent recheck only on new HEAD."
+  },
+  "safety": {
+    "original_729_unmodified": true,
+    "t04_34_34_unmodified": true,
+    "STOP_ACL_consent_data_unchanged": true,
+    "EXE_NSIS_CI_E07_NOT_RUN": true
+  }
+}
