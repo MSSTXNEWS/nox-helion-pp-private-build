@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_V16_M2_HOST50_INDEPENDENT_SCOPED_SOURCE_VERIFICATION_R10",
+  "task_id": "M2/T08/T09",
+  "run_id": "NOX-V16-M2-20261029T1915MSK-R10-HOST50-SOURCE",
+  "scope": "Independent scoped source code verification, NOT native integration / not T06 owner acceptance",
+  "prestart_read_proof": {
+    "canon": "NOX FIN ZAGR V16 §33 56/56 + §54–56 R29; same chat R09",
+    "registry_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ]
+  },
+  "source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "observed_head": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+    "observed_tree": "32e3efcd5858049bc96eba8a0c783fc4124a78bc",
+    "host50_source_path": "coordination/e06_host50/admission.py",
+    "host50_blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "owner_map_path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+    "owner_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "historical_owner_map_base": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "historical_owner_map_tree": "bedea674b77d14d94028ba86251d8f4d690353c1"
+  },
+  "one_scoped_check": {
+    "kind": "INDEPENDENT_STATIC_SOURCE_CONTRACT",
+    "passed": 12,
+    "total": 12,
+    "outcome": "PASS_CODE_LEVEL_ONLY",
+    "checks": [
+      "known immutable owner-map provenance matched",
+      "legacy map requires attestation",
+      "signed proof matches exact owner map commit",
+      "signed proof matches exact owner map tree",
+      "HMAC compare_digest present",
+      "native verifier callable and used",
+      "literal native approval checked",
+      "capability bound to accepted active source tree",
+      "origin and scope enforced",
+      "STOP and native consent protected",
+      "50 expected catalog routes preserved",
+      "zero routes represented as native-integrated or release-accepted"
+    ],
+    "owner_map_routes_total": 50,
+    "source_bound": 39,
+    "source_unbound": 11,
+    "native_routes_accepted": 0,
+    "windows": "NOT_RUN",
+    "independent_native_acceptance": "NOT_RUN"
+  },
+  "errors_ack": [
+    {
+      "id": "ERR-SYS-001",
+      "action": "T02 single-writer ACK receipt"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "APPLIED pinned latest observed HEAD"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "action": "STATIC CODE-LEVEL FIX PRESENT SAME HEAD; ask T02 to move OPEN to FIX_APPLIED_UNVERIFIED scoped only, NOT verified closed"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "action": "T06 owner-accepted P01–P05/13 native route evidence still unavailable"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "action": "Fixture runner verification pending at final accepted HEAD"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "action": "PRESERVE VERIFIED_CLOSED original ZIP 729"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "action": "PRESERVE VERIFIED_CLOSED T04 34/34"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "NOT FROZEN; no fake DONE"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "Physical new scoped verification and owner handoff not duplicate patch"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "T06 8/8 required; current evidence insufficient"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "12/12 source checks PASS; native 13 routes still unverified"
+    }
+  ],
+  "self_improvement": {
+    "lesson": "Do not patch already-corrected Host50 provenance: independently check actual integrated source and pass only new SHA-scoped findings to single-owner T06/T02; avoid duplicate gates, reports and patch candidates.",
+    "applied": "Used real branch source, existing owner-map and exact provenance/HMAC/native contract to rule out duplicate code fix; focused owner action only",
+    "scope": "M2"
+  },
+  "progress": {
+    "before": {
+      "T08": 1,
+      "T09": 1,
+      "total": 2,
+      "denominator": 9
+    },
+    "after": {
+      "T08": 1,
+      "T09": 1,
+      "total": 2,
+      "denominator": 9
+    },
+    "delta_pp": 0,
+    "reason": "Scoped static verification cannot substitute for T06 owner 8/8 and 13 native attestation"
+  },
+  "next_exact": {
+    "T06": "Finish 8/8 with 13 native owner receipts and signed accepted manifest; maintain ACL/STOP/consent; do not rewrite this reconciled code without new defect.",
+    "T08": "Independently disposition fixed P0/P1 registry on one accepted T06 HEAD",
+    "T09": "Immutable HEAD/tree/manifest freeze after T08 same-HEAD",
+    "T02": "CAS-journal this independent scoped source evidence; status err-src-003 stays OPEN or FIX_APPLIED_UNVERIFIED until owner corroborates; never VERIFIED_CLOSED without native proof",
+    "T10_T11": "downstream frozen SHA only"
+  },
+  "prohibitions": {
+    "canonical_source_changed": false,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "no_e07": true,
+    "no_loss": true
+  }
+}
