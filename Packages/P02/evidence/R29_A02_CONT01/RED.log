@@ -1,0 +1,86 @@
+test_mismatched_native_preview_digest_never_speaks (test_p02_original_voice_port_r29.OriginalVoiceContract.test_mismatched_native_preview_digest_never_speaks) ... ERROR
+test_missing_consent_preserves_one_use_capture_and_has_no_worker (test_p02_original_voice_port_r29.OriginalVoiceContract.test_missing_consent_preserves_one_use_capture_and_has_no_worker) ... ERROR
+test_missing_preview_ui_preserves_capture (test_p02_original_voice_port_r29.OriginalVoiceContract.test_missing_preview_ui_preserves_capture) ... ERROR
+test_model_revocation_after_original_asr_prevents_translation (test_p02_original_voice_port_r29.OriginalVoiceContract.test_model_revocation_after_original_asr_prevents_translation) ... ERROR
+test_native_review_cannot_change_principal_before_playback (test_p02_original_voice_port_r29.OriginalVoiceContract.test_native_review_cannot_change_principal_before_playback) ... ERROR
+test_original_preview_never_autoplays_or_invents_audio_storage (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_preview_never_autoplays_or_invents_audio_storage) ... ERROR
+test_original_sapi_dict_is_native_receipt_after_bound_native_review (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_sapi_dict_is_native_receipt_after_bound_native_review) ... ERROR
+test_page_supplied_approval_is_rejected (test_p02_original_voice_port_r29.OriginalVoiceContract.test_page_supplied_approval_is_rejected) ... ERROR
+test_stop_in_native_review_cancels_original_session_before_sapi (test_p02_original_voice_port_r29.OriginalVoiceContract.test_stop_in_native_review_cancels_original_session_before_sapi) ... ERROR
+
+======================================================================
+ERROR: test_mismatched_native_preview_digest_never_speaks (test_p02_original_voice_port_r29.OriginalVoiceContract.test_mismatched_native_preview_digest_never_speaks)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_missing_consent_preserves_one_use_capture_and_has_no_worker (test_p02_original_voice_port_r29.OriginalVoiceContract.test_missing_consent_preserves_one_use_capture_and_has_no_worker)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_missing_preview_ui_preserves_capture (test_p02_original_voice_port_r29.OriginalVoiceContract.test_missing_preview_ui_preserves_capture)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_model_revocation_after_original_asr_prevents_translation (test_p02_original_voice_port_r29.OriginalVoiceContract.test_model_revocation_after_original_asr_prevents_translation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_native_review_cannot_change_principal_before_playback (test_p02_original_voice_port_r29.OriginalVoiceContract.test_native_review_cannot_change_principal_before_playback)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_original_preview_never_autoplays_or_invents_audio_storage (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_preview_never_autoplays_or_invents_audio_storage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_original_sapi_dict_is_native_receipt_after_bound_native_review (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_sapi_dict_is_native_receipt_after_bound_native_review)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_page_supplied_approval_is_rejected (test_p02_original_voice_port_r29.OriginalVoiceContract.test_page_supplied_approval_is_rejected)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+======================================================================
+ERROR: test_stop_in_native_review_cancels_original_session_before_sapi (test_p02_original_voice_port_r29.OriginalVoiceContract.test_stop_in_native_review_cancels_original_session_before_sapi)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_original_voice_port_r29.py", line 49, in setUp
+    register_with_existing_pack01(self.dispatcher,host.BoundPort,self.scope,self.fx.ports,
+TypeError: register_with_existing_pack01() got an unexpected keyword argument 'original_voice_port'
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.015s
+
+FAILED (errors=9)

@@ -1,0 +1,7 @@
+{
+  "helion_voice/service.py": "91edfc757a9052a52bf8468baae035add538b923a688eddbf98d643c36442b99",
+  "helion_voice/adapters.py": "dd78b8cb380d46d959754ba641ece60dd4e15a8a305cbefdf0b612c9c9d72c12",
+  "helion_voice/control.py": "30e51e9163683a6b8a84c306feba3bb6958f58e35d18a664e6bb08cc73137395",
+  "helion_voice/audio.py": "e3f5f63f6f42b7ac1bc55a3dc4461ca5f393af336070ef998f52e2d194c18fae",
+  "helion_voice/devices.py": "978848a1240c5688599062bfc950eb7bec25cba9e8bb26f03c137b1a7f01568d"
+}
