@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_V16_T05_IMMUTABLE_HANDOFF_READBACK_V1",
+  "task_id": "T05-R29-R30-OWNER-INTAKE-R11",
+  "run_id": "T05-20261029T160000MSK-R11-f0064948",
+  "status": "PASS_MANIFEST_GIT_READBACK; PARTIAL_SOURCE_INTAKE_HOLD",
+  "observed_moscow": "2026-10-29T16:14:14+03:00",
+  "manifest_path": "coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.json",
+  "manifest_git_blob_sha1": "cb40add312db492a06a16baa600740bcb5575de2",
+  "manifest_commit_sha": "ccb2a29af63afbc611514b88e1185f927d3df78f",
+  "source_parent_sha": "f0064948119c55001601e1bae1cd3755826605ed",
+  "source_parent_tree": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+  "readback_evidence": {
+    "owner_slots": 14,
+    "frozen_snapshots": 25,
+    "source_paths": 13,
+    "preimage_match_to_f006_and_pr162": 1,
+    "post_git_blob_matches": 13,
+    "pre_and_post_sha256_known_verified": 7,
+    "focused_committed_test_file_git_blobs_verified": 8,
+    "missing_persisted_root_cause_focused_test": 5,
+    "unit_tests_executed_by_t05": 0,
+    "independently_product_accepted": 0,
+    "all_source_readiness_gates": "HOLD"
+  },
+  "compare_before_witness": {
+    "base": "f0064948119c55001601e1bae1cd3755826605ed",
+    "head": "ccb2a29af63afbc611514b88e1185f927d3df78f",
+    "ahead": 1,
+    "behind": 0,
+    "changed_only": [
+      "coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.json"
+    ]
+  },
+  "no_product_changes": true,
+  "no_original_snapshot_changes": true,
+  "no_main_pr162_or_common_r30_changes": true,
+  "no_shared_google_docs_writes": true,
+  "applied_lesson": "A stale owner receipt's lock SHA must not override fresh canonical owner lock: G1-A R04 depended on prior 56ae; current canonical bb41 removes the denied Installer prefix. Recheck through owner CAS; never rewrite historical HOLD.",
+  "handoff_to": "T06 source-only integrator (intake conditions, not permission for merge/build)"
+}
