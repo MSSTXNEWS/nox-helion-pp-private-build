@@ -259,6 +259,13 @@ class ConsentGatedSip:
             require_native_authority()
             require_fresh_quote()
             if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
+            # Consent can outlive a provider quote. Reverify the same pinned
+            # read-only provider authorization before consuming it.
+            if quote_verify(scope, quote) is not True:
+                raise PermissionError('Provider quote revoked during native consent')
+            require_native_authority()
+            require_fresh_quote()
+            if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
             self._used.add(quote.quote_id)
         finally:
             self._lock.release()

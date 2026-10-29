@@ -1,0 +1,71 @@
+{
+  "schema": "G2B_R30_R16_OWNER_RECEIPT_V1",
+  "run_id": "R30-G2-B-20261029T202656MSK-R07",
+  "status": "INCOMPLETE",
+  "source_only": true,
+  "owner": "G2-B",
+  "read": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "rules": "56/56",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_counts": "5 OPEN,4 FIX_APPLIED_UNVERIFIED,2 VERIFIED_CLOSED",
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "prior_receipt_blob": "ff7552167431f626f869d9e4402cdf8b87cc44d9",
+    "PR162_head": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "PR162_tree": "4918c5009b084b9b02dcc36642c86731b572b9df"
+  },
+  "code": {
+    "path": "Packages/P02/worker-python/p02_capabilities.py",
+    "pre_blob": "2e7d39a8d6b49fafdf09fb70821da57b3284d341",
+    "post_blob": "7fb461ed6d1a0a3bc16ad9d58766524241433d3d",
+    "parent_HEAD": "a1445574fb6c01c7f6e0d001d3844af33284f4ec",
+    "change": "Recheck pinned read-only quote verifier after native consent; reject revoked quote before dial; preserve STOP/expiry/hook checks; no new provider."
+  },
+  "test": {
+    "kind": "isolated extracted contract; NOT actual original native module",
+    "path": "test_p02_g2b_r30_20261029_r07_sip_quote_revocation_extracted.py",
+    "sha256": "67f4d19273303073b9150a0da152bd8816d204bc2ee6a1aa457c9cf6c895adbb",
+    "pre_red": "4 of 6 expected failures",
+    "post_green": "6 of 6 PASS",
+    "native_windows_sip": "NOT_RUN"
+  },
+  "lessons": {
+    "relevant_active": 9,
+    "deduplicated_clusters": 5,
+    "applied": 1,
+    "delegated": 2,
+    "already_fixed_source_pending_QA": 1,
+    "process_guard": 1,
+    "historical_419": "not treated as live; full historical coverage N/D"
+  },
+  "progress": {
+    "operational_accepted": "0/4",
+    "delta_product_accepted": 0,
+    "PRODUCT": "N/D",
+    "stages": {
+      "source_patch": "PREPARED",
+      "source_verified": "ISOLATED_ONLY",
+      "PR162_integrated": false,
+      "independent_QA_accepted": false
+    }
+  },
+  "handoff": {
+    "T06": "CAS-port R06 native STOP + R07 quote revocation to PR162, current pre blobs cap 6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8 / owner 11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c; verify quote verifier is read-only and native dialer atomically enforces tariff/STOP.",
+    "G2A": "Attest same-session Windows native STOP and mic consent; own ingress/runtime paths only.",
+    "T02": "Ingest receipt only after readback; do not prematurely close ERR-SRC-004 or premature-stop incident."
+  },
+  "checkpoint": {
+    "owner": "G2-B",
+    "remaining": [
+      "chat.voice native binding independent same-SHA",
+      "calls.history native provider ACL acceptance",
+      "P02 STOP/voice/SIP full-source contract",
+      "T06 handoff owner accepted"
+    ],
+    "next": "T06 minimal CAS port and independent QA, no Windows/EXE/NSIS/CI/GitLab/E07",
+    "task_done": false
+  }
+}
