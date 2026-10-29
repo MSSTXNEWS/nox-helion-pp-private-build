@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "runId": "R30-G1-B-20261029T0530MSK-01",
+  "owner": "G1-B",
+  "domain": "P01 C09 WPF/WebView2 UI message bridge",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader only",
+  "status": "SOURCE_CANDIDATE_NATIVE_BINDING_HOLD",
+  "createdAtUtc": "2026-10-29T02:38:19.907Z",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "ownerBranch": "astra/r30-g1-b-p01-ui-20261029-t0530-msk-r01",
+  "sourceBranchAtStart": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "sourceHeadAtStart": "2d2d7fa3e737e6868b906cfff74d37c547c4579f",
+  "sourceHeadRecheck": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "sourceHeadDrift": {
+    "commits": 2,
+    "changedPaths": [
+      "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "coordination/astra/r30/R30_15_AUTOMATION_OWNERSHIP_CONFLICT_CHECK.json"
+    ],
+    "touchesOwnedC09": false,
+    "action": "preserve isolated base; do not merge/cherry-pick"
+  },
+  "frozenSnapshotsChecked": 25,
+  "conflictIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+  "governingRules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md (consolidated 56/56, not proven literal earlier V15)",
+  "specification": "NOX FIN ZAGR V16 sections 33, 54-56 and R29 loader-only override",
+  "priorError": "P01 WebView2 native host donor MainWindow.xaml.cs absent as a standalone path in C09; previous source candidates cannot count as native acceptance.",
+  "appliedPreviousLesson": "R29_OBSERVABLE_BOUNDARY_WITH_DISJOINT_OWNERS: validate source/document epoch and native capability again after the consent callback; never mark navigation complete before native callback acknowledgement.",
+  "sourceFiles": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preSha256": null,
+      "preState": "ABSENT_ON_STARTING_R30_HEAD",
+      "postSha256": "dd9f6a2276a98a0d8e8f9a62404f667ad1222ed7e4c27d3dcb7afb21cdeb1c16",
+      "postGitBlobSha1": "c187649a6fe74d5cf76baef3453cad2d91089e45"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py",
+      "preSha256": null,
+      "preState": "ABSENT_ON_STARTING_R30_HEAD",
+      "postSha256": "d900170bc3b0331ef8757debfd2674ae329011e604d465e867536027a159a9b3",
+      "postGitBlobSha1": "fb689a8ed0da7a1daf505a8d3ab353ebc1bd8679"
+    }
+  ],
+  "sourceCommits": [
+    "fc41d3632e93154bcd06246c9ec00695ce13d6f1",
+    "e83504f54cd83d0c266d4faaf31273b72b9694dd"
+  ],
+  "test": {
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/QA/P01_E01_C09 -p test_webview2_bridge_source.py -v",
+    "environment": "Linux python, isolated exact-blob local source",
+    "results": "6/6 PASS",
+    "type": "SOURCE_STRUCTURAL_ONLY",
+    "gitBlobReadback": "2/2 MATCH",
+    "nativeCSharpCompile": "NOT_RUN",
+    "windowsWebView2Runtime": "NOT_RUN",
+    "realNavigationHOME_MENU_CORE": "HOLD_HOST_NOT_BOUND",
+    "nativeConsentDialog": "HOLD_HOST_NOT_BOUND",
+    "webviewOriginMapping": "HOLD_HOST_NOT_BOUND"
+  },
+  "codeChanges": "One additive adapter takes EXISTING CoreWebView2, native capability/consent/dispatch callbacks; exact reserved HTTPS origin, current document epoch, strict HOME/MENU/CORE navigation, action button native consent, fail-closed errors, pending request IDs, cancellation, truthful completion ACK.",
+  "noNewHost": true,
+  "noInstallerChanges": true,
+  "noD02WowChanges": true,
+  "noP02ToP05Changes": true,
+  "noMainOrPR162Writes": true,
+  "noSharedR30Writes": true,
+  "noDriveCommonWrites": true,
+  "noExeNsisWindowsCiGitLabFinalIntegration": true,
+  "newError": "Original WPF MainWindow and its navigation bridge protocol exist in archived donor ZIP, not as accessible editable C09 host source. Do not fabricate binding or claim real UI button clicks without donor host and Windows runner.",
+  "lesson": "Deliver one owner-local bridge candidate and six narrow static tests; next pass must obtain exact donor MainWindow preimage and prove event binding/real native ACK on Windows before changing SOURCE_CANDIDATE to VERIFIED. Always suppress duplicate request-ID ACK and re-check origin/capability after consent.",
+  "pending": "Astra-C alone may later reconcile Drive shared journals from this receipt. Owner host integration, C# compilation, Windows WebView2 acceptance, E07 and product readiness remain HOLD.",
+  "progress": {
+    "P01Percent": null,
+    "loaderProductPercent": null,
+    "sourceCodeComplete": false,
+    "releaseAccepted": false
+  }
+}
