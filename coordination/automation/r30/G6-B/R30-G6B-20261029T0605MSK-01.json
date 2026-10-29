@@ -1,0 +1,181 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_E06_NATIVE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G6B-20261029T0605MSK-01",
+  "slot": "G6-B",
+  "task": "Only NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer native Host50 (not main NOX)",
+  "owner_automation_id": "6ae2af2f84088191ba04843861edf73b",
+  "source_only": true,
+  "result": "SOURCE_CANDIDATE_IN_ISOLATED_BRANCH",
+  "integration": "HOLD",
+  "release": "HOLD",
+  "branch": "automation/r30/g6b/R30-G6B-20261029T0605MSK-01",
+  "base_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "base_commit": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "ownership": {
+    "lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "forbidden_paths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "changed_paths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "coordination/e06/adapters/tests/test_native_lease_g6b_r30_20261029.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "change_stats": [
+      {
+        "path": "coordination/e06/adapters/pc_control_owner_port.py",
+        "status": "added",
+        "additions": 97,
+        "deletions": 0
+      },
+      {
+        "path": "coordination/e06/adapters/tests/test_native_lease_g6b_r30_20261029.py",
+        "status": "added",
+        "additions": 239,
+        "deletions": 0
+      },
+      {
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "status": "modified",
+        "additions": 148,
+        "deletions": 13
+      }
+    ],
+    "foreign_files_modified": 0,
+    "private_branch_only": true
+  },
+  "source_evidence": {
+    "v16_full_56_rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "v16_sections": "§33, §54, §55, §56 and R29 loader-only priority",
+    "active_google_drive_master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "C34_errors": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "conflict_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "indexed_snapshot_branches": 25
+    },
+    "immutable_relevant_snapshots_read": [
+      {
+        "path": "coordination/astra/r30/snapshots/astra-b_r29-b5-20261029/proposals/NOX-PACK01-50/native_bridge.py",
+        "git_blob_sha1": "164c7c0027c98c5bf201977d4cf23591dc1562a0"
+      },
+      {
+        "path": "coordination/astra/r30/snapshots/astra-b_r29-b5-20261029/coordination/e06/adapters/pc_control_owner_port.py",
+        "git_blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e"
+      },
+      {
+        "path": "coordination/astra/r30/snapshots/r29-a06-20261029/proposals/NOX-PACK01-50/native_bridge.py",
+        "git_blob_sha1": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+      },
+      {
+        "path": "coordination/astra/r30/snapshots/astra-b_r29-b6-20261029/proposals/NOX-PACK01-50/native_bridge.py",
+        "git_blob_sha1": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+      }
+    ],
+    "note": "25 snapshots inventoried through immutable conflict index; exact relevant E06 snapshot files read. No claim all 25 full source trees were exhaustively code-reviewed.",
+    "frozen_b5_bridge_git_blob_sha1": "164c7c0027c98c5bf201977d4cf23591dc1562a0",
+    "live_b5_donor_git_blob_sha1": "3b89627fa4d17afd3ea5edcc8060a2c8d9bc0902",
+    "live_donor_differs_from_frozen": true,
+    "canonical_catalog_path": "proposals/NOX-PACK01-50/catalog.json",
+    "canonical_catalog_git_blob_sha1": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d"
+  },
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "pre_git_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "pinned_reused_donor_git_blob_sha1": "3b89627fa4d17afd3ea5edcc8060a2c8d9bc0902",
+      "post_git_blob_sha1": "693367daebc6d28b1782f7e6b3fa7d186456a782",
+      "description": "Reused B5 callback/owner-binding pre/post guards, added host-only Windows SID and native session lease, fail-closed revocation callback before and after every route admission/consent/probe/owner result; 50 route/owner/risk policy preserved; dangerous routes not probed for UI; SID/lease redacted from repr."
+    },
+    {
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "pre_git_blob_sha1": null,
+      "pre_status": "ABSENT on R30 collection branch",
+      "frozen_donor_git_blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e",
+      "post_git_blob_sha1": "2869bf3bf80642cb79f486c669a953595fc9caf2",
+      "description": "Restored original E11 session-owned preview/STOP adapter from frozen snapshot; pinned SID, lease, scopes before and after owner callbacks; no privileged operations exported."
+    },
+    {
+      "path": "coordination/e06/adapters/tests/test_native_lease_g6b_r30_20261029.py",
+      "pre_status": "ABSENT",
+      "post_git_blob_sha1": "85728c024b6e82fa69c592577191bc6672ce3a22",
+      "description": "One unique G6-B focused Python unittest source file, 14 mock-only cases for 50 route policy, SID/lease, scopes, danger consent, revoke during consent/ready/owner, STOP, advertised HOLD, E11 source and repr."
+    }
+  ],
+  "commits": [
+    "945b16ac24174ab9adf3f694b70e81fb25100108",
+    "838ef170234c6d419a2da0fdb15c11e796e6cedd",
+    "04d6136e3567d88ae2df5f9cca6717805030cfb4",
+    "744cc14d26a393ababe8beb785ae5661781c2aa9",
+    "59f9d47846ec2c7aabc3233ea31ad91321552e2b",
+    "0420e0f1cc1f55259335d32928649472e527df84",
+    "d5534926ce14dabadcc8e2dcb511b4da98c6eaff"
+  ],
+  "test": {
+    "target": "coordination/e06/adapters/tests/test_native_lease_g6b_r30_20261029.py",
+    "command": "python -m unittest discover -s coordination/e06/adapters/tests -p 'test_native_lease_g6b_r30_20261029.py' -v",
+    "target_python_test_cases_authored": 14,
+    "python_runtime_result": "NOT_RUN; private GitHub checkout not locally available to this automation's Python runtime",
+    "focused_js_source_static_check": {
+      "status": "PASS",
+      "assertions": {
+        "50_route_owner_risk_policy_pinned": true,
+        "5_dangerous_routes": true,
+        "two_scope_snapshots_cover_sid_lease": true,
+        "native_lease_requires_exact_true": true,
+        "native_verifier_missing_blocks": true,
+        "sid_format_fails_closed": true,
+        "lease_format_fails_closed": true,
+        "fresh_native_consent_remains": true,
+        "before_after_each_native_callback": true,
+        "owner_registry_identity_postcheck": true,
+        "dangerous_routes_not_UI_probed": true,
+        "native_secrets_not_repr": true,
+        "original_E11_owner_reused": true,
+        "PC_stop_and_preview_only": true,
+        "PC_sid_lease_pre_postcheck": true,
+        "test_14_targeted_methods": true,
+        "test_inert_no_windows": true,
+        "original_25_snapshot_index_immutable": true
+      },
+      "passed": 18
+    },
+    "actual_dangerous_actions": 0,
+    "native_windows_test": "NOT_RUN",
+    "system_pc_control_real_stop": "NOT_RUN; only source and mock cases",
+    "real_risk_classification_downgrade": "NONE",
+    "claimed_accepted_test_count": 0
+  },
+  "error_and_self_improvement": {
+    "root_cause": "Mutable live donor branch B5 is NOT the immutable R30 B5 snapshot: 3b89627... != 164c7c0...; initial scope patch did not include SID/lease in the differently formatted execute snapshot.",
+    "observed_fix": "Pinned both frozen and live exact Git blob SHA. Reviewed post-write code, corrected execute SID/lease snapshot, added 2/2 tuple assertions and explicit token redaction with Git readback. Original E11 adapter restored from exact frozen snapshot.",
+    "lesson": "Never assume a donor branch HEAD equals a frozen snapshot, nor trust a single string replacement across differently-indented identity scopes; exact donor SHA plus callback-bound identity regression + mandatory final Git readback is required before receipt.",
+    "prevention": "At every future G6-B run re-read file-lock and exact branch HEAD, compare all owned preimage Git blobs, compare immutable snapshots with live donor, ensure 50-route canonical tuple and 2/2 SID/lease scope snapshots, run focused Python test where checkout exists and preserve HOLD without native evidence."
+  },
+  "foreign_owner_proposal": {
+    "to": "G6-A/current native host owner and later E06 integrator (do not write their files)",
+    "required": "Construct NativeSession.windows_sid from verified Windows token SID; generate unpredictable host-owned base64url session_lease; bind native_session_live(session) to exact OS SID/principal/scopes/active session with immediate revocation on logout/STOP; provide fresh native_approve for 5 dangerous routes; wire original E11Service with session-only owner binding; host-level emergency STOP on revocation, owner-side recheck immediately before irreversible operations.",
+    "residual_risk": "Outer post-return denial cannot undo an operation performed by a backend during callback; requires owner-level cancellation/revocation gate and native Windows validation.",
+    "status": "PROPOSAL_ONLY; foreign host files untouched"
+  },
+  "coordination": {
+    "Astra_C_is_only_shared_Google_Docs_writer": true,
+    "shared_Docs_written_by_G6_B": false,
+    "request_for_Astra_C": "Append this Git receipt's actual root-cause lesson to E06 report, self-improvement, master via revision CAS and exact run_id readback; preserve historical DONE.",
+    "docs_readback_for_this_run": "NOT_APPLICABLE_TO_G6_B; Astra-C only",
+    "own_git_receipt_readback": "PENDING until next explicit fetch",
+    "PR162_main_R30_modified": false,
+    "original_25_snapshots_modified": false,
+    "EXE_NSIS_GitLab_CI_final_integration": "NOT_RUN",
+    "overall_product_progress": "N/D; do not infer percent or release acceptance from source"
+  }
+}
