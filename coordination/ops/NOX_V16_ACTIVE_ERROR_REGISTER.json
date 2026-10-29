@@ -851,6 +851,72 @@
       "source_ready": false,
       "build": "NOT_AUTHORIZED",
       "next_owner": "manual-1/T06 finishes P01 security/P03 ACK/10 Host50 source-unbound; manual-2/T08 verifies changed exact dependent source+STOP/ACL/native consent/NOLOSS; T02 projected dashboard sync only after Git CAS."
+    },
+    {
+      "schema": "NOX_R34_FINITE_JOURNAL_DELTA_V1",
+      "run_id": "NOX-V16-T02C-G5A-20261030T023917MSK-R34-FINITE-JOURNAL",
+      "observed_at": "2026-10-29T23:45:17.399Z",
+      "owner": "T02/C G5-A sole journal writer",
+      "source_head_prior_confirmed_cas": "1cda912558c8636cc85dd4a08c65efcd19a11905",
+      "source_head_observed": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+      "source_tree_observed": "bff2619b8cbef0c4f946a5ef3a4b9dcb5a8cf9d4",
+      "source_compare_commits": 29,
+      "source_paths_changed": [
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+        "integrations/creative/bridge/CreativeHostBridge.cs",
+        "integrations/creative/tests/test_p01_media_owner_reuse_r36.py",
+        "proposals/NOX-PACK01-50/p01_restic_backup_port.py",
+        "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py",
+        "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+        "proposals/NOX-PACK01-50/test_p01_restic_backup_port.py",
+        "proposals/NOX-PACK01-50/test_p04_comfy_image_owner_port.py",
+        "proposals/NOX-PACK01-50/test_p04_owner_training_port.py",
+        "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "tests/P03/test_G2C_G3B_R16_queue_ack_binding.cjs"
+      ],
+      "exact_source_p03_blob": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+      "owner_donor_p03_privacy": {
+        "owner": "G3-B helper -> manual #1/T06",
+        "commit": "a691c8a0e017f9313737a0181272959acb339d72",
+        "post_blob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+        "integrated": false,
+        "claimed_v8_only_5of5": true,
+        "node_windows_not_run": true
+      },
+      "independent_qa": {
+        "owner": "manual #2/T08",
+        "run_id": "NOX-V16-M2-R36-THREE-BLOCKS-20261030",
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6510971410",
+        "pinned_source_head": "d5bb9d0628b634e359d38ce409d5063cb1b51573",
+        "same_head_pass": false,
+        "qa_accepted_delta": 0,
+        "coverage": "source/mock checks only; native Windows/PowerShell/Node NOT_RUN"
+      },
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "host50": {
+        "source_bound": 40,
+        "source_unbound": 10,
+        "native_pending": 14,
+        "historical_source_hold": 13
+      },
+      "stages": {
+        "SOURCE_PREPARED": "DONOR_PRESENT",
+        "SOURCE_VERIFIED": "PARTIAL_STATIC_MOCK_ONLY",
+        "INTEGRATED": "ONLY_EXACT_SOURCE_PATHS_IN_PR162",
+        "QA_ACCEPTED": false
+      },
+      "first_missing_acceptance": "manual #1 T06 exact-PRE owner integration of P03 privacy donor if absent; manual #2 T08 independent same-head STOP/ACL/consent/privacy/NO-LOSS + native tests; then T09/T10",
+      "product_percent": null,
+      "accepted_task_ids_delta": 0,
+      "source_ready": false,
+      "build_authorized": false,
+      "policy": "NO_LOSS 729/3, V16 §33 56 rules, D02/WOW200, 8 CoreID, 5 Persona, STOP/ACL/consent/privacy preserved; no EXE/CI/E07",
+      "docs": "NOT_WRITTEN_AT_THIS_STAGE"
     }
   ]
 }
