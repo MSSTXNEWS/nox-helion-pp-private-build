@@ -25,7 +25,41 @@ def safe(name,metadata):
     if p.is_absolute() or ".." in p.parts or ":" in p.parts[0] or stat.S_IFMT(metadata.external_attr>>16)==stat.S_IFLNK:
         raise ValueError("UNSAFE_ZIP_MEMBER:"+name)
     return p
+
+def _require_repo_path(target: Path, hold: str) -> None:
+    """Reject a path outside this immutable repo, including parent reparse points."""
+    try:
+        parts = target.relative_to(ROOT).parts
+    except ValueError:
+        raise SystemExit(hold) from None
+    if not parts or any(part in (".", "..") for part in parts):
+        raise SystemExit(hold)
+    current = ROOT
+    for part in parts:
+        current = current / part
+        if current.is_symlink() or (hasattr(current, "is_junction") and current.is_junction()):
+            raise SystemExit(hold)
+    try:
+        if not target.resolve(strict=False).is_relative_to(ROOT.resolve(strict=True)):
+            raise SystemExit(hold)
+    except (OSError, RuntimeError):
+        raise SystemExit(hold) from None
+
+
+def _pinned_part(raw: str) -> Path:
+    """Pinned donor SHA alone does not authorize escaping a source-tree path."""
+    hold = "E06_DONOR_PATH_HOLD"
+    if (type(raw) is not str or not raw or raw.startswith("/")
+            or "\\" in raw or "\x00" in raw
+            or any(part in ("", ".", "..") for part in raw.split("/"))
+            or ":" in raw.split("/")[0]):
+        raise SystemExit(hold)
+    part = ROOT / raw
+    _require_repo_path(part, hold)
+    return part
+
 def main():
+    _require_repo_path(RECEIPT, "E06_DONOR_RECEIPT_REPARSE_HOLD")
     lock=json.loads(RECEIPT.read_text(encoding="utf-8"))
     sources=lock["parts"]
     if len(sources)!=28 or sum(p["size_bytes"] for p in sources)!=lock["original_zip_bytes"]:
@@ -52,6 +86,8 @@ def main():
     require_stage_tree()
     WORK.mkdir(parents=True,exist_ok=True)
     require_stage_tree()
+    if R11.exists():
+        raise SystemExit("E06_R11_ALREADY_EXISTS_NO_OVERWRITE")
     if (WORK/"source_lock.json").exists() or (WORK/"source_lock.json").is_symlink():
         raise SystemExit("E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE")
     temp=WORK/"source-donor-immutable.zip"
@@ -61,7 +97,7 @@ def main():
     try:
         with temp.open("xb") as stream:
             for item in sources:
-                src=ROOT/item["path"]
+                src=_pinned_part(item.get("path"))
                 if not src.is_file() or src.is_symlink():raise SystemExit("MISSING_PINNED_SOURCE:"+str(src))
                 part=src.read_bytes()
                 if len(part)!=item["size_bytes"]:raise SystemExit("DONOR_PART_SIZE_MISMATCH")

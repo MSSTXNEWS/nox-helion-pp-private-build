@@ -172,5 +172,37 @@ class ReusedCanonicalZipGate(unittest.TestCase):
   self.assertEqual(list(outside.iterdir()),[])
 
 
+
+ def test_donor_part_traversal_fails_closed(self):
+  self.create([(name,stat.S_IFREG) for name in NEEDED])
+  owner=json.loads(self.receipt.read_text())
+  owner["parts"][0]["path"]="../outside/private.part"
+  self.receipt.write_text(json.dumps(owner))
+  with self.assertRaisesRegex(SystemExit,"E06_DONOR_PATH_HOLD"):
+   STAGE.main()
+  self.assertFalse((self.work/"R11").exists())
+
+ def test_donor_part_symlink_parent_fails_closed(self):
+  self.create([(name,stat.S_IFREG) for name in NEEDED])
+  linked=self.root/"donorlink"
+  try:linked.symlink_to(self.root/"parts",target_is_directory=True)
+  except (NotImplementedError,OSError) as exc:self.skipTest(str(exc))
+  owner=json.loads(self.receipt.read_text())
+  owner["parts"][0]["path"]="donorlink/00.part"
+  self.receipt.write_text(json.dumps(owner))
+  with self.assertRaisesRegex(SystemExit,"E06_DONOR_PATH_HOLD"):
+   STAGE.main()
+  self.assertFalse((self.work/"R11").exists())
+
+ def test_existing_r11_keeps_original_data(self):
+  self.create([(name,stat.S_IFREG) for name in NEEDED])
+  r11=self.work/"R11";r11.mkdir(parents=True)
+  marker=r11/"USER_DATA.txt";marker.write_bytes(b"ORIGINAL_USER_DATA")
+  with self.assertRaisesRegex(SystemExit,"E06_R11_ALREADY_EXISTS_NO_OVERWRITE"):
+   STAGE.main()
+  self.assertEqual(marker.read_bytes(),b"ORIGINAL_USER_DATA")
+  self.assertEqual([p.name for p in r11.iterdir()],["USER_DATA.txt"])
+  self.assertFalse((self.work/"source_lock.json").exists())
+
 if __name__=="__main__":
  unittest.main()
