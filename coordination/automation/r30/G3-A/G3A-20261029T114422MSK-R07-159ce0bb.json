@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "G3A-20261029T114422MSK-R07-159ce0bb",
+  "slot": "G3-A",
+  "scope": "EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "mode": "SOURCE_ONLY",
+  "source_task_id": "P03-G3A-R07-WIN32-CONSOLE-DEVICE-PATH-20261029",
+  "owner_lock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignment": "Packages/P03/Admission/",
+    "forbidden": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "baseline": {
+    "previous_branch": "automation/r30/g3a/G3A-20261029T104739MSK-R06-61709f0e",
+    "previous_head": "159ce0bbe66a4159f051c124baf0247df02a7221",
+    "previous_lesson": "Reject bool and float eventSequence with exact builtin int before native retry callback; saved Python regressions NOT_RUN.",
+    "drive_lessons_read": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "drive_errors_read": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "drive_master_last_seen": "ASTRA-C-R30-20261029T1133MSK-06"
+  },
+  "specification_read": {
+    "section_33_consolidated_56_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "latest_v16_sections": "54-56 with R29 loader-only override",
+    "drive_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "r30_frozen_snapshot_roots_checked": 25,
+    "r30_snapshot_blob_paths_indexed": 24876,
+    "snapshot_content_all_bytes_hashed": false
+  },
+  "issue": {
+    "severity": "SOURCE_DEFENSE_IN_DEPTH",
+    "description": "The lexical local GGUF path gate rejected CON/PRN/AUX/NUL/COM/LPT but accepted CONIN$/CONOUT$ console device aliases with .gguf extensions and as directory components.",
+    "prior_result": "True for local path C:\\\\models\\\\CONIN$.gguf (isolated reproduction)",
+    "required_action": "Deny Windows console-device aliases before handing path to original native P03 GGUF importer. Never equate this with native ACL/reparse/file identity verification."
+  },
+  "source": {
+    "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+    "change": "One regex line; add CONIN\\$ and CONOUT\\$ to _WIN_DEVICE_STEM; preserve all existing checks and original routing.",
+    "pre_blob_sha1": "45d4544625a721f2704cdf8abf7697df27be8680",
+    "post_blob_sha1": "fd1f81295b6fd7384c291c2299e99bbf4beafef4",
+    "pre_sha256": "9f5c91631c80b1b8dc095a918cfd7cd9b100737efdcd8c87d353f5dd067faeed",
+    "post_sha256": "5feb40122dd9b4343b0b8b8bfc0ea18a0b323f9ebc35673b84956be1b185a501",
+    "source_commit": "4788c36dff12a61075ce70095949bc955418befc",
+    "readback": "GitHub fetch_file post blob MATCH"
+  },
+  "test": {
+    "path": "Packages/P03/Admission/test_g3a_r07_windows_reserved_device_guard.py",
+    "git_blob_sha1": "bac1da251d246bafc4ff91ebdc244c5eb7dda04f",
+    "test_commit": "3c7791b3911ee98934e694a646bb754ae121127f",
+    "saved_test_cases": 8,
+    "full_module_command": "python -m unittest discover -s Packages/P03/Admission -p 'test_g3a_r07_windows_reserved_device_guard.py' -v",
+    "full_git_module_execution": "NOT_RUN",
+    "isolated_exact_function_regression": "PASS 8/8 using locally reproduced source function; not full module",
+    "structural_git_comparison": "PASS ahead=2 behind=0 with exactly 2 owner-path files before receipt"
+  },
+  "attempts": [
+    {
+      "kind": "READ_ONLY_PREIMAGE_GUARD",
+      "result": "ABORTED_WITHOUT_WRITE",
+      "reason": "Mistyped expected blob SHA constant in local script; confirmed actual Git blob and corrected guard."
+    },
+    {
+      "kind": "SOURCE_UPDATE",
+      "result": "COMMITTED",
+      "commit": "4788c36dff12a61075ce70095949bc955418befc"
+    },
+    {
+      "kind": "OWNED_TEST_CREATE",
+      "result": "COMMITTED",
+      "commit": "3c7791b3911ee98934e694a646bb754ae121127f"
+    }
+  ],
+  "dependencies": [
+    {
+      "owner": "G3-B",
+      "status": "HANDOFF_REQUIRED",
+      "request": "Verify original native GGUF importer resolves canonical local paths and denies device namespace, reparse-point and reserved device aliases incl. CONIN$/CONOUT$ before hashing/queuing; report native check via own receipt, do not edit G3-B source from this lane."
+    },
+    {
+      "owner": "E06_NATIVE_HOST",
+      "status": "HOLD",
+      "request": "Verify source lock 3 raw parts/729 physical extracted SHA, trusted measured availableRamBytes, reviewed rights/actual model SHA and same-session attestations."
+    }
+  ],
+  "catalogue": {
+    "families_discovery_records": 30,
+    "verified_downloadable_artifacts": 0,
+    "model_licenses_rights_sha_ram_vram": "UNVERIFIED_NOT_PROMOTED"
+  },
+  "safety": {
+    "changed_main": false,
+    "changed_PR162": false,
+    "changed_astra_shared_r30": false,
+    "changed_other_owner_files": false,
+    "changed_25_snapshots": false,
+    "exe_nsis_windows_ci_gitlab": false,
+    "merged": false,
+    "drive_writes": false
+  },
+  "lesson": "Windows device-name screening must include CONIN$ and CONOUT$, not only classic CON/PRN/AUX/NUL/COM/LPT. Reproduce unsafe admission first, patch only the owner path, save unique tests, verify Git blob pre/post; don't upgrade an isolated Python test to native PASS. Keep previous R06 bool/float sequence guard intact.",
+  "status": {
+    "source_saved": true,
+    "static_source": "PASS",
+    "isolated_regression": "PASS_8_OF_8",
+    "full_python_test": "NOT_RUN",
+    "native_runtime": "HOLD",
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD"
+  },
+  "coordinator": "Astra-C is sole writer of shared Drive journals after collecting owner receipts."
+}
