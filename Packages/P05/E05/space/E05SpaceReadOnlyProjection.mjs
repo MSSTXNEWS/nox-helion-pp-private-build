@@ -296,7 +296,9 @@ export function projectFeeds(feeds, nowMs) {
       (!strictlyPositive || f.value>0);
     const approved=licenseReady(f);
     const stale=['OFFLINE_CACHE','STALE_CACHE','STALE_SOURCE','OFFLINE'].includes(f.status);
+    const invalidMarket = strictlyPositive && (!numericValid || f.parsed_by_owner!==true);
     const stage=!approved?'DISABLED':stale?'STALE_CACHE':
+      invalidMarket?'HOLD_INVALID_MARKET_VALUE':
       temporalOrder && ['LIVE','CACHE'].includes(f.status)?'SOURCE_DATED':'N_D';
     return [{id:f.id,stage,sourceUtc:isoUtc(sourceTime)?sourceTime:null,
       value:stage==='SOURCE_DATED' && f.parsed_by_owner===true && numericValid?f.value:null,
