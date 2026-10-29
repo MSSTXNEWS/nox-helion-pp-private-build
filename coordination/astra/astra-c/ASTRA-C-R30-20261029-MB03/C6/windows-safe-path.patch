@@ -1,6 +1,6 @@
 --- a/coordination/e06/verify_integration.py
 +++ b/coordination/e06/verify_integration.py
-@@ -15,7 +15,12 @@
+@@ -15,7 +15,14 @@
  )
  
 -def safe_path(p):
@@ -10,7 +10,9 @@
 +    # E06 must not admit Git paths that Windows would reinterpret at staging.
 +    return (isinstance(p, str) and bool(p) and not p.startswith("/")
 +            and not any(c in p for c in ('\\', '\x00', ':', '*', '?', '"', '<', '>', '|'))
++            and not any(ord(c) < 32 or ord(c) == 127 for c in p)
 +            and all(x not in ("", ".", "..") and not x.endswith((".", " "))
++                    and not re.fullmatch(r"(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\\..*)?", x)
 +                    for x in p.split("/")))
  
  def read_archive(parts, folder, expected):
