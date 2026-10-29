@@ -1,0 +1,25 @@
+{
+  "format": "NOX_ASTRA_C_EXACT_REPLACEMENT_V1",
+  "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+  "preimageGitBlobSha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+  "baseBranch": "astra/c-r30-c5-progress-overflow-20261029",
+  "operation": "Replace each unique exact string, abort if zero or multiple matches",
+  "replacements": [
+    {
+      "before": "        decimal total = 0, done = 0;\n        var unique = new HashSet<string>(StringComparer.Ordinal);",
+      "after": "        decimal total = 0, done = 0;\n        bool allAccepted = true;\n        var unique = new HashSet<string>(StringComparer.Ordinal);"
+    },
+    {
+      "before": "            else if (c.State is not (\"OPEN\" or \"FAILED\" or \"HOLD\")) return null;\n        }\n        return total > 0 ? Math.Round(100 * done / total, 2) : null;",
+      "after": "            else\n            {\n                allAccepted = false;\n                if (c.State is not (\"OPEN\" or \"FAILED\" or \"HOLD\")) return null;\n            }\n        }\n        // An incomplete frozen TaskID ledger must not round up to 100.\n        return total > 0 ? (allAccepted ? 100m :\n            Math.Min(99.99m, Math.Round(100 * done / total, 2))) : null;"
+    },
+    {
+      "before": "        decimal result = 0;\n        for (int i = 0; i < 5; i++)",
+      "after": "        decimal result = 0;\n        bool allAccepted = true;\n        for (int i = 0; i < 5; i++)"
+    },
+    {
+      "before": "            if (percent is null) return null;\n            result += percent.Value * weights[i];\n        }\n        return Math.Round(result, 2);",
+      "after": "            if (percent is null) return null;\n            allAccepted &= percent.Value == 100m;\n            result += percent.Value * weights[i];\n        }\n        return allAccepted ? 100m : Math.Min(99.99m, Math.Round(result, 2));"
+    }
+  ]
+}
