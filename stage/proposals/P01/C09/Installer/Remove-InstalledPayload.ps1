@@ -48,6 +48,10 @@ $directories = New-Object 'System.Collections.Generic.HashSet[string]' ([StringC
 $checked = New-Object 'System.Collections.Generic.List[object]'
 $verified = New-Object 'System.Collections.Generic.List[string]'
 function Normalize-Relative([string]$Value) {
+  # Windows filename identity must not be ambiguous across Unicode normalization.
+  if ($Value -cne $Value.Normalize([Text.NormalizationForm]::FormC)) {
+    throw 'P01_UNINSTALL_NONCANONICAL_UNICODE_PATH'
+  }
   if ([string]::IsNullOrWhiteSpace($Value) -or [IO.Path]::IsPathRooted($Value) -or $Value -match '[<>:"|?*]' -or $Value -match '[\x00-\x1f]') { throw 'P01_UNINSTALL_BAD_PATH' }
   $segments = @($Value -split '[\\/]')
   foreach ($part in $segments) {
