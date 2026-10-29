@@ -1,0 +1,52 @@
+{
+  "run_id": "ASTRA_R29_A04_06_OPTIMIZATION03",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-ACTIVE-DISTRIBUTION-METADATA",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "parent": "507dadf2dc7c0f6b16f56f41262b8f1943bcc488",
+  "local_commit": "a8b7d0d1450585d7ba16ec2ef3e18e3f0303afe0",
+  "files": [
+    {
+      "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+      "pre_blob": "c6e93026a631371f778ad0a315f5cc2afe5e4b81",
+      "post_blob": "e44d20ddd524e5a2dc737ea43b47ece92c5ca044",
+      "post_sha256": "14612ca6ad2881231604295795df6d868f18c2c27883dc35c681fe918f561e90"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "pre_blob": "b2d37412103871c07c1c220292dc7add2bccc7ed",
+      "post_blob": "d261a4b1256a82562f13161986ed6db46ded2636",
+      "post_sha256": "761fbb9420227124ca48c1fdf2dc944c004c74fde893d6cac5cd7061d85d38b2"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "pre_blob": "7d83583a037cb5ee9b309d51547792bd82207fb8",
+      "post_blob": "132e633853fc42e99b996dca0540915a7c803664",
+      "post_sha256": "10c8ee6e973c24cc9305220e64f77903a3f90b315705e581e761a3022bd35f39"
+    }
+  ],
+  "started_observed_utc": "2026-10-29T00:46:48Z",
+  "code_tested_observed_utc": "2026-10-29T00:49:59Z",
+  "red": "5 failed subcases+2 errors in 16 methods; additional distribution disappearance and actual undefined-marker-context each reproduced as one error",
+  "green": "18/18 tests/P04/test_local_gpu_preflight.py with real PyPA26.3 and synthetic installed-distribution/GPU metadata; no hardware PASS",
+  "fix": "Read Requires-Python and active Requires-Dist for existing eight P04 roots via importlib.metadata/PyPA. HOLD incompatible/missing/invalid direct metadata, URL provenance, unavailable marker context and disappearing distributions.",
+  "boundaries": "No arbitrary environment graph traversal; unselected optional markers skipped; selected dependency extras reported unverified; direct-base-only PASS not wheel lock or runtime attestation.",
+  "lesson": "Installed ranges and installed dependency metadata are different constraints; reuse standard marker interpretation and catch metadata lifecycle exceptions rather than inferring binary readiness.",
+  "prior_lesson_applied": "USE_MEASURED_SCOPE_AND_TYPED_EVIDENCE from OPTIMIZATION02; no invented target/ETA or rebuilt training/checkpoint engine.",
+  "reused": [
+    "stdlib importlib.metadata",
+    "existing PyPA packaging Requirement/SpecifierSet/Version/markers",
+    "existing train_qlora rights/model/validated_checkpoint gates"
+  ],
+  "remaining_task_ids": [
+    "P04-INSTALL-TARGET-PROFILE",
+    "P04-INSTALL-WHEEL-CLOSURE",
+    "P04-INSTALL-AUTHORIZED-RUN-INPUTS"
+  ],
+  "later_phase": "independent onehost composition and actual Windows/GPU acceptance",
+  "references": [
+    "https://docs.python.org/3.12/library/importlib.metadata.html",
+    "https://packaging.pypa.io/en/stable/markers.html"
+  ],
+  "no_install_download_build_ci_integration": true
+}

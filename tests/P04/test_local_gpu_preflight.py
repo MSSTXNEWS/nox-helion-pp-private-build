@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+from email.message import Message
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,6 +22,79 @@ VERSIONS = {"torch": "2.4.0+cu124", "transformers": "4.51.0", "peft": "0.15.0",
 
 
 class HardwarePreflightContracts(unittest.TestCase):
+    def setUp(self):
+        patcher = patch.object(probe.metadata, "metadata", return_value=Message())
+        self.package_metadata = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def metadata_result(self, *, python=None, dependencies=()):
+        value = Message()
+        if python is not None:
+            value["Requires-Python"] = python
+        for dependency in dependencies:
+            value["Requires-Dist"] = dependency
+        self.package_metadata.return_value = value
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            return probe.inspect("BALANCED", 0)
+
+    def test_installed_package_python_requirement_is_enforced(self):
+        result = self.metadata_result(python=">=99")
+        self.assertIn("PACKAGE_PYTHON_INCOMPATIBLE:torch", result["errors"])
+        self.assertEqual(result["dependency_metadata_status"], "HOLD")
+
+    def test_declared_active_dependency_conflict_is_hold(self):
+        result = self.metadata_result(dependencies=("transformers>=4.99",))
+        self.assertIn("PACKAGE_DEPENDENCY_INCOMPATIBLE:peft:transformers", result["errors"])
+
+    def test_missing_active_dependency_is_hold(self):
+        value = Message()
+        value["Requires-Dist"] = "missing-runtime>=1"
+        self.package_metadata.return_value = value
+        def version(name):
+            if name == "missing-runtime":
+                raise probe.metadata.PackageNotFoundError(name)
+            return VERSIONS[name]
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=version
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            result = probe.inspect("BALANCED", 0)
+        self.assertIn("PACKAGE_DEPENDENCY_MISSING:peft:missing-runtime", result["errors"])
+
+    def test_unselected_optional_and_false_environment_markers_do_not_require_packages(self):
+        result = self.metadata_result(python=">=3", dependencies=(
+            'missing-runtime>=1; extra == "optional-feature"',
+            'missing-runtime>=1; python_version < "2"',
+            'transformers>=4.51; python_version >= "3"'))
+        self.assertEqual(result["dependency_metadata_status"], "DIRECT_BASE_METADATA_CHECK_PASSED")
+        self.assertFalse(any(error.startswith("PACKAGE_DEPENDENCY_") for error in result["errors"]))
+        self.assertFalse(result["dependency_lock_verified"])
+
+    def test_invalid_metadata_and_direct_urls_are_not_compatible_evidence(self):
+        for raw, expected in (("not a requirement !!!", "PACKAGE_DEPENDENCY_METADATA_INVALID:torch"),
+                              ("torch @ https://example.invalid/torch.whl", "PACKAGE_DEPENDENCY_URL_UNVERIFIED:torch:torch")):
+            with self.subTest(raw=raw):
+                result = self.metadata_result(dependencies=(raw,))
+                self.assertIn(expected, result["errors"])
+
+    def test_declared_extras_are_reported_without_claiming_full_dependency_closure(self):
+        result = self.metadata_result(dependencies=("transformers[extra-feature]>=4.51",))
+        self.assertIn("transformers[extra-feature]", result["dependency_extras_unverified"])
+        self.assertFalse(result["runtime_compatibility_verified"])
+
+    def test_metadata_disappearing_after_version_probe_returns_hold(self):
+        self.package_metadata.side_effect = probe.metadata.PackageNotFoundError("removed-during-probe")
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            result = probe.inspect("BALANCED", 0)
+        self.assertIn("PACKAGE_DEPENDENCY_METADATA_INVALID:torch", result["errors"])
+
+    def test_marker_requiring_unavailable_metadata_context_returns_hold(self):
+        result = self.metadata_result(dependencies=('torch; extras == "feature"',))
+        self.assertIn("PACKAGE_DEPENDENCY_METADATA_INVALID:torch", result["errors"])
+
     def test_installed_versions_outside_declared_ranges_are_hold(self):
         for package, version in (("torch", "2.3.0"), ("transformers", "5.0.0"),
                                  ("peft", "1.0.0"), ("trl", "0.18.9"),

@@ -69,6 +69,48 @@ def _check_declared_versions(report: dict) -> None:
         report["dependency_status"] = "RANGE_CHECK_PASSED"
 
 
+def _check_installed_metadata(report: dict) -> None:
+    """Check active direct metadata for P04 roots, not the unrelated environment."""
+    if report["dependency_status"] != "RANGE_CHECK_PASSED":
+        return
+    from packaging.requirements import Requirement
+    from packaging.markers import UndefinedComparison, UndefinedEnvironmentName
+    from packaging.specifiers import SpecifierSet
+    from packaging.version import Version
+    initial_errors = len(report["errors"])
+    extras = set()
+    for package in PACKAGES:
+        try:
+            installed_metadata = metadata.metadata(package)
+            python_constraint = installed_metadata.get("Requires-Python")
+            if python_constraint and not SpecifierSet(python_constraint).contains(Version(report["python"])):
+                report["errors"].append("PACKAGE_PYTHON_INCOMPATIBLE:" + package)
+            for line in installed_metadata.get_all("Requires-Dist", []):
+                requirement = Requirement(line)
+                # P04's declared roots select no extras. Evaluate environment
+                # markers in this worker interpreter, not on the build machine.
+                if requirement.marker and not requirement.marker.evaluate({"extra": ""}):
+                    continue
+                if requirement.url:
+                    report["errors"].append("PACKAGE_DEPENDENCY_URL_UNVERIFIED:" + package + ":" + requirement.name)
+                    continue
+                if requirement.extras:
+                    extras.add(requirement.name + "[" + ",".join(sorted(requirement.extras)) + "]")
+                try:
+                    dependency_version = metadata.version(requirement.name)
+                except metadata.PackageNotFoundError:
+                    report["errors"].append("PACKAGE_DEPENDENCY_MISSING:" + package + ":" + requirement.name)
+                    continue
+                if not requirement.specifier.contains(Version(dependency_version)):
+                    report["errors"].append("PACKAGE_DEPENDENCY_INCOMPATIBLE:" + package + ":" + requirement.name)
+        except (OSError, ValueError, TypeError, metadata.PackageNotFoundError,
+                UndefinedComparison, UndefinedEnvironmentName):
+            report["errors"].append("PACKAGE_DEPENDENCY_METADATA_INVALID:" + package)
+    report["dependency_extras_unverified"] = sorted(extras)
+    if len(report["errors"]) == initial_errors:
+        report["dependency_metadata_status"] = "DIRECT_BASE_METADATA_CHECK_PASSED"
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     """Inspect in a dedicated worker process; CUDA state is process-global."""
     report = {
@@ -80,6 +122,8 @@ def inspect(profile: str, gpu_index: int) -> dict:
         "python": platform.python_version(),
         "packages": {},
         "dependency_status": "HOLD",
+        "dependency_metadata_status": "HOLD",
+        "dependency_extras_unverified": [],
         "dependency_lock_verified": False,
         "runtime_compatibility_verified": False,
         "gpu": None,
@@ -110,6 +154,7 @@ def inspect(profile: str, gpu_index: int) -> dict:
             report["errors"].append("PACKAGE_METADATA_INVALID:" + package)
 
     _check_declared_versions(report)
+    _check_installed_metadata(report)
     if platform.system() != "Windows":
         report["errors"].append("WINDOWS_GPU_HOST_REQUIRED")
         return report
