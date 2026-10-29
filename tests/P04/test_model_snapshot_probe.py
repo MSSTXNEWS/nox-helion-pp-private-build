@@ -85,6 +85,37 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["status"],
                          "LOCAL_FILES_PRESENT_ONLY")
 
+    def test_rejects_unindexed_gap_between_tensors(self):
+        header = json.dumps({
+            "first": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]},
+            "second": {"dtype": "F32", "shape": [1], "data_offsets": [8, 12]},
+        }).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(12)
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_unindexed_trailing_bytes(self):
+        header = json.dumps({
+            "first": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]},
+        }).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(8)
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_accepts_empty_tensor_and_complete_data_buffer(self):
+        header = json.dumps({
+            "empty": {"dtype": "F32", "shape": [0], "data_offsets": [0, 0]},
+            "full": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]},
+        }).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(4)
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
+
     def test_rejects_duplicate_safetensors_tensor_names(self):
         header = (b'{"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]},'
                   b'"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}')
