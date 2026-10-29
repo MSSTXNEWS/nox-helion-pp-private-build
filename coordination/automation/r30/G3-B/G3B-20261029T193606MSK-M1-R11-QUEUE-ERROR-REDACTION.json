@@ -1,0 +1,64 @@
+{
+  "schema": "G3B_R11_M1_RECEIPT_V1",
+  "runId": "G3B-20261029T193606MSK-M1-R11-QUEUE-ERROR-REDACTION",
+  "status": "INCOMPLETE",
+  "owner": "G3-B",
+  "A": {
+    "docRevision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "section33": "56/56",
+    "registerBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "active": "5 OPEN; 4 FIX_APPLIED_UNVERIFIED; 2 VERIFIED_CLOSED",
+    "prHead": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "prTree": "200e2520a5fca30e7a723ef796fe617cf3da0b51",
+    "lockBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+  },
+  "B": {
+    "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "pre": "3692811ac3234afb54e82958c7415b23619c1f0f",
+    "post": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+    "defect": "Untrusted adapter exception text persisted to queue JSON and broadcast as failed UI event.",
+    "fix": "Use stable P03_TRANSFER_FAILED instead of exception.Message for both channels; log exception type only; preserve STOP/queue/lease.",
+    "test": "One isolated static RED-GREEN source-contract test: 12/12 PASS, native NOT_RUN"
+  },
+  "C": {
+    "parent": "75a16bd0a756ff4f12255b47b8e8b4e04b61beda",
+    "branch": "automation/r30/g3b/G3B-20261029T193606MSK-M1-R11-QUEUE-ERROR-REDACTION",
+    "sharedJournals": "T02 only; not modified"
+  },
+  "D": {
+    "lesson": "C-R21: pin source SHA before PATCH, do not mark patch receipt as native acceptance.",
+    "coverage": "11/11 active ERROR_ID acknowledged, 5 deduplicated clusters, native independent acceptance pending"
+  },
+  "progress": {
+    "before": "1/4 25.0%",
+    "after": "1/4 25.0%",
+    "delta_pp": 0,
+    "bar": "███░░░░░░░",
+    "remaining": 3
+  },
+  "blocks": {
+    "PACK02": "G7-B+T06 unified 41cb40e3a1d77f36a74482cec6599c354e1cf3ee vs G7-B V10 824ee59fd0a1d656a757959da4b632f1f35d518b",
+    "Host50": "T06/T08 admission efd5af93853d04cf5c1748af41b13570fc49c0ad; native 13-route same-head HOLD",
+    "D02": "D02/WOW200/8 CoreID/5 Persona not independently accepted"
+  },
+  "ackIds": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "actions": {
+    "process": "APPLY SHA CAS, no premature DONE; T02 handoff",
+    "Host50": "DELEGATE T06/T08",
+    "fixture": "DELEGATE T06/T08",
+    "history": "ALREADY_VERIFIED_CLOSED"
+  },
+  "next": "T06 owner same-PRE cherry-pick to PR162; T08 independently verify, G3-B continue owner-safe P03. No EXE/NSIS/GitLab CI/E07."
+}

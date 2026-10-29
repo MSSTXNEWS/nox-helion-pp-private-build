@@ -114,6 +114,11 @@ public sealed class ModelDownloadQueueWorker(
             }
             catch (Exception ex)
             {
+                // Adapter exceptions may embed paths, URLs or credentials. Never
+                // store their raw messages in durable queue JSON or UI events.
+                const string publicError = "P03_TRANSFER_FAILED";
+                System.Diagnostics.Trace.TraceError(
+                    "P03_TRANSFER_FAILED job={0} kind={1}", job.Id, ex.GetType().Name);
                 // A second NOX window may persist STOP before our local 250 ms
                 // monitor cancels the token. Durable Cancelling beats local token
                 // state: an already-requested STOP must never become Failed.
@@ -128,7 +133,7 @@ public sealed class ModelDownloadQueueWorker(
                     }
                     return j.State == ModelJobState.Running
                         ? j with { State = ModelJobState.Failed,
-                            Status = "Failed", Error = ex.Message }
+                            Status = "Failed", Error = publicError }
                         : j;
                 }, CancellationToken.None);
                 if (stoppedBeforeFailure && outcome?.State == ModelJobState.Cancelled)
@@ -136,7 +141,7 @@ public sealed class ModelDownloadQueueWorker(
                         null, null, CancellationToken.None);
                 else if (outcome?.State == ModelJobState.Failed)
                     await SafePublishAsync(job, "failed", "Failed", null, null,
-                        null, ex.Message, CancellationToken.None);
+                        null, publicError, CancellationToken.None);
             }
             finally
             {
