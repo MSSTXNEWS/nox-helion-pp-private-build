@@ -1,0 +1,18 @@
+{
+  "schema": "ASTRA_B_R30_SOURCE_ONLY_V1",
+  "run_id": "ASTRA-B-R30-20261029-B1-01",
+  "label": "B1",
+  "actual_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "task_id": "P04-STRICT-SAFETENSORS-NONFINITE-JSON",
+  "owner_source_branch": "astra-b/r29-b1-20261029",
+  "code_commit": null,
+  "status": "WRITE_HOLD",
+  "focused_check": "SOURCE_PATCH_WRITE_HOLD",
+  "lesson": "Reject NaN/Infinity in safetensors header; do not report code patch absent a verified commit.",
+  "report_gate": "ASTRA_A_SHARED_DOCS_WRITER_ONLY",
+  "original_archive_729": "NOT_RUN",
+  "Windows_native": "NOT_RUN",
+  "finished_taskid_coverage": "N_D",
+  "release": "HOLD"
+}
