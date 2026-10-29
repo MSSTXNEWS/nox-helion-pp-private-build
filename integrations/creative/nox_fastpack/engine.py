@@ -68,8 +68,19 @@ class Studio(CreativeExtensions):
         self._assemble_lock=threading.Lock()
 
     def _project(self, project_id: str):
-        if not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I): raise StudioError("Invalid project ID")
-        p=self.projects/project_id; p.mkdir(parents=True,exist_ok=True); return p
+        if not isinstance(project_id,str) or not re.fullmatch(r"[a-z0-9_-]{1,48}",project_id,re.I):
+            raise StudioError("Invalid project ID")
+        # Never follow an existing projects junction/symlink or redirected
+        # project folder when writing editable user films.
+        if self.projects.is_symlink() or not self.projects.resolve().is_relative_to(self.root):
+            raise StudioError("NOX projects root is redirected")
+        p=self.projects/project_id
+        if p.is_symlink() or (p.exists() and not p.resolve().is_relative_to(self.projects.resolve())):
+            raise StudioError("NOX project path is redirected")
+        p.mkdir(parents=True,exist_ok=True)
+        if not p.resolve().is_relative_to(self.projects.resolve()):
+            raise StudioError("NOX project creation escaped data root")
+        return p
 
     @staticmethod
     def _within(root:Path, path:Path):
