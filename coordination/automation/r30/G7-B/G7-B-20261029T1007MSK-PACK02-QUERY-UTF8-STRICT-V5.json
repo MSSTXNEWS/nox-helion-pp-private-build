@@ -1,0 +1,170 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V5",
+  "run_id": "G7-B-20261029T1007MSK-PACK02-QUERY-UTF8-STRICT-V5",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY; not main NOX",
+  "status": "HOLD",
+  "source_patch_status": "GIT_SAVED_EXACT_BLOB_READBACK_SOURCE_ONLY",
+  "branch": "automation/r30/g7b/G7-B-20261029T1007MSK-PACK02-QUERY-UTF8-STRICT-V5",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T0910MSK-PACK02-URL-ENCODE-STRICT-V4",
+  "task_ids_source_only": [
+    "G7B-PACK02-QUERY-INVALID-UTF8-LOSSLESS-20261029-05"
+  ],
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "ownership": {
+    "lock": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-B/",
+    "one_writer_per_path": true
+  },
+  "sources_read": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rule_numbers": "01-56 consolidated; original older verbatim source not certified",
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "v16_google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "r30_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "r30_conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_directory": "coordination/astra/r30/snapshots/",
+    "snapshot_recursive_git_trees_read": 25,
+    "snapshot_recursive_git_tree_truncated": 0,
+    "snapshot_ops_sha_distribution": {
+      "41cb40e3a1d77f36a74482cec6599c354e1cf3ee": 24,
+      "3df02661abf3f75fdd3d883e4c30b75d6887eaf6": 1
+    },
+    "original_source_part_blob_sha": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "full_snapshot_file_bytes_read": false,
+    "original_physical_729_sha256": "NOT_VERIFIED",
+    "google_drive_read_only_docs": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    }
+  },
+  "applied_previous_lesson": "G7-B R04 + Astra-C R04: preserve frozen r27-a10 dotted-key semantics as HOLD; fix only compatible current URL boundaries with exact blob preimage and owner-only regression, not donor wholesale merge.",
+  "source_change": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "preimage_git_blob_sha": "7d2fc0da59dca2701eda5ee1237f3e7cbec4d173",
+    "postimage_git_blob_sha": "34d291bf7590011a689620c7feaa1e068c656dc8",
+    "source_commit_sha": "d2d10f3034e144b5a11a205d8a8e8f538697fe4d",
+    "git_readback": true,
+    "route_count_guard": 50,
+    "added_routes": 0,
+    "changed_routes": [
+      "dev.url.query_encode",
+      "dev.url.query_decode"
+    ],
+    "correction": [
+      "Before URLSearchParams query decode, reject malformed percent escapes and invalid encoded UTF-8 by strict decodeURIComponent.",
+      "Reject raw unpaired UTF-16 surrogates by encodeURIComponent(raw); decodeURIComponent alone is permissive for a literal lone surrogate.",
+      "Before query encode, reject unpaired surrogate key/value inputs to prevent silent U+FFFD replacement."
+    ]
+  },
+  "one_owner_targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-query-utf8-strict.test.mjs",
+    "git_blob_sha": "6944112383ea9788f42de78ba3cfcd1158b469aa",
+    "git_commit_sha": "7854a3f1aae48f22d639cd3b62ee2998de188e93",
+    "git_readback": true,
+    "authored_exact_module_command": "node --test proposals/NOX-PACK02-50/g7b-r30-query-utf8-strict.test.mjs",
+    "authored_exact_module_execution": "NOT_RUN",
+    "local_extracted_node_test": {
+      "command": "node --test /mnt/data/g7b-validation/query-utf8-extracted.test.mjs",
+      "execution": "RUN",
+      "result": "1/1 Node test subtest PASS; scoped extracted implementations only, not full original ops.mjs",
+      "first_candidate": "FAIL 1/1: decodeURIComponent did not reject literal lone surrogate",
+      "correction": "add encodeURIComponent(raw) prior to strict percent decode",
+      "rerun": "PASS 1/1"
+    },
+    "prepatch_node_red_observations": {
+      "old_decode_malformed_inputs_not_rejected": 4,
+      "old_encode_unpaired_surrogate_not_rejected": 1
+    },
+    "native_windows_host_test": "NOT_RUN"
+  },
+  "compare_to_prior_branch_before_receipt": {
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "files": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-query-utf8-strict.test.mjs"
+    ],
+    "other_owner_files_changed": false,
+    "pre_receipt_branch_head_sha": "7854a3f1aae48f22d639cd3b62ee2998de188e93"
+  },
+  "new_lesson": {
+    "id": "R30_G7B_PERCENT_UTF8_AND_RAW_SURROGATE_DOUBLE_VALIDATION",
+    "observed_error": "URLSearchParams silently replaces malformed percent-encoded UTF-8, and stringifies unpaired surrogate input into U+FFFD; even decodeURIComponent alone does not reject raw unpaired surrogate text.",
+    "root_cause": "Two distinct validation domains: strict decoded-percent bytes and strict raw UTF-16 code point pairing; checking only one leaves corruption.",
+    "applied_correction": "Before parsing, call encodeURIComponent(raw) and decodeURIComponent(raw with + interpreted as %20), mapping both failures to INVALID_QUERY_ENCODING; before encoding verify each key/value with encodeURIComponent.",
+    "prevention": "Build negative tests for both raw lone surrogates and invalid percent sequences; run RED on old behavior and isolated GREEN, and never represent extracted Node execution as full-module acceptance."
+  },
+  "Host50_owner_proposal": {
+    "status": "HOLD_OWNER_APPROVAL_AND_LICENSE_REQUIRED",
+    "original_host_path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "owner_slot": "G6-B",
+    "request": "Only owner may approve/licence online adapters through original Host50, with provenance/licensing/consent/scope/STOP; G7-B does not edit Host50, PACK01 or native_bridge.",
+    "cross_owner_written": false
+  },
+  "outstanding_conflicts": [
+    "Frozen r27-a10 escaped dotted-key JSON variant remains incompatible with current collision-reject API: explicit owner decision HOLD.",
+    "Full authored Node test of exact committed ops.mjs NOT_RUN; isolated extracted helper is weaker evidence.",
+    "Licensed online adapters unapproved through original Host50.",
+    "Physical 729 originals raw SHA-256, full Windows/E06/E07 not checked."
+  ],
+  "no_loss": {
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "shared_R30_branch_untouched": true,
+    "all_25_snapshots_untouched": true,
+    "three_original_source_parts_untouched": true,
+    "PACK01_native_bridge_untouched": true,
+    "D02_WOW_untouched": true,
+    "other_owner_files_untouched": true,
+    "historical_DONE_retained": true,
+    "shared_google_docs_untouched": true
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "native_Host50": "NOT_VERIFIED",
+    "Windows_EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_GOOGLE_DOCS_CAS_AND_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "instruction_to_Astra_C": "Please append only this RunID's actual evidence and new lesson in the three shared Google Docs with CAS+readback. Preserve prior Done and original receipts. No source edits or fabrication.",
+  "prohibitions_confirmed": [
+    "SOURCE_ONLY",
+    "NO_EXE",
+    "NO_NSIS",
+    "NO_GITLAB_CI",
+    "NO_FINAL_INTEGRATION",
+    "NO_PR162_MAIN_WRITES",
+    "NO_CROSS_OWNER_WRITES"
+  ]
+}
