@@ -1,0 +1,131 @@
+{
+  "schema": "NOX_V16_G1C_R25_OWNER_SAFE_AUX_EVIDENCE_V1",
+  "run_id": "NOX-V16-G1C-20261030T000239MSK-R27-P04-SECURITY",
+  "role": "G1-C",
+  "scope": "Windows EXPRESS INTEGRATOR PREBUILD SOURCE ONLY",
+  "status": "INCOMPLETE_NO_QA_ACCEPTED",
+  "canon": {
+    "document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "chars": 219067,
+    "expected_section_33_rules": 56
+  },
+  "register": {
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "total": 11
+  },
+  "journal_revisions": {
+    "Master": "AHj4eMTb0gnJFJVyiGiFmlCL6Xe1ppue6gWCiUVDgl0KUWZS3RoHKQQsp3CuA2PwvjN6mxvV789xdxOS_18e779jCqt96ejGilGfIfU9WJE",
+    "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "Lessons": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc",
+    "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "live_source": {
+    "PR": 162,
+    "HEAD_PRE": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "tree": "52303e2c8a06281db7f16d49f938f1f99d883ce7",
+    "HEAD_POST_OBSERVED": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "paths": {
+      "Packages/P04/model_snapshot_probe.py": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+      "Packages/P04/preflight_local_gpu.py": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+    }
+  },
+  "physical": {
+    "kind": "NEW_TARGETED_NEGATIVE_SECURITY_TESTS_SOURCE_ONLY",
+    "task_scope": "P04/model_snapshot_probe existing source contract; no TaskID closure",
+    "python_version": "CPython Linux",
+    "tests_passed": 10,
+    "tests_run": 10,
+    "result": "PASS",
+    "test_cases": [
+      "root symlink denied",
+      "config symlink denied",
+      "index symlink denied",
+      "nested duplicate JSON keys denied",
+      "nonfinite safetensors header denied",
+      "control character in tensor name denied",
+      "513 shard index denied",
+      "missing root HOLD",
+      "duplicate shard index key denied",
+      "undocumented trailing weight byte denied"
+    ],
+    "source_git_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+    "test_git_blob": "b540c4341ff1a80302efbc580e7eff48a7af139a",
+    "test_sha256": "34b7dd50b8c00a0a72c7ad364ad391d1fd7b01137e23f1d8dd0522661b2ac162",
+    "test_log_sha256": "ee7f6c15a835e9216bf9cf6326a8e3027bd9dfcf59d34451746980f727401903",
+    "zip_sha256": "c911ec1a638bd7eb3a3c2e7d9856ed0d685ed34c3a08e90e7fa3b2f461ae20b2",
+    "zip_bytes": 6094,
+    "changed_product_files": 0,
+    "windows_gpu_executed": false,
+    "python_native_windows_executed": false,
+    "p05_dotnet_executed": false,
+    "independent_qa_accepted": false
+  },
+  "progress": {
+    "binding_operational": "4/4",
+    "new_unique_QA_ACCEPTED_TaskIDs": 0,
+    "delta_accepted": 0,
+    "PRODUCT": "N/D",
+    "historical_T05": "13/13 unchanged",
+    "historical_D": "3/3 unchanged"
+  },
+  "lessons": {
+    "processed_active_error_ids": 11,
+    "clusters": [
+      {
+        "id": "ERR-SRC-004",
+        "action": "AUX_VERIFIED_ONLY",
+        "root_cause": "P01-P05 acceptance incomplete; local P04 synthetics cannot sign same-head QA",
+        "owner": "Manual #3 primary P04/P05, T06/#1 sole shared integration, manual #2/T08 independent QA",
+        "recurrence_guard": "Ten new negative tests, exact Git source blob"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "action": "ALREADY_FIXED_THIS_RUN",
+        "root_cause": "Mutable HEAD risks stale evidence",
+        "owner": "T02",
+        "recurrence_guard": "Fresh PR162 HEAD and exact four source file blobs"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "APPLY_PROCESS",
+        "root_cause": "Run receipt/test mistaken for TaskID closure",
+        "owner": "ALL",
+        "recurrence_guard": "Explicit INCOMPLETE and zero accepted TaskIDs"
+      },
+      {
+        "id": "ERR-SYS-001",
+        "action": "DELEGATE",
+        "root_cause": "Shared journal append restricted to T02",
+        "owner": "T02",
+        "recurrence_guard": "Immutable handoff plus T02 CAS required"
+      }
+    ],
+    "remaining_role_critical": [
+      "Manual #2/T08 must perform independent exact-HEAD P04 QA; T06/#1 owner accepts and pins HEAD if no dependent changes",
+      "Manual #3 P05 isolated donor integration and native .NET targeted test pending"
+    ],
+    "other_error_ids": "Non-P04/P05 clusters delegated to original owners; closed ERR-SYS-006/007 not reopened."
+  },
+  "gates": {
+    "A": "PASS",
+    "B": "PASS new 10/10 synthetic",
+    "C": "LOCAL_RECEIPT_PENDING_READBACK; SHARED_T02_PENDING",
+    "D": "PARTIAL: no new owner code modification, relevant clusters dispositioned",
+    "E": "PENDING_REPORT"
+  },
+  "next": {
+    "owner": "Manual #2/T08 and manual #3; T06/#1 for source commit; T02 for shared journal",
+    "exact_action": "Manual #2/T08 verify 10-case P04 evidence against same SHA plus canonical tests and affected STOP/ACL/consent/privacy/NO-LOSS; approve only with independent immutable QA, T02 logs delta after CAS/readback",
+    "stage": "SOURCE_BINDING_INTEGRATED_ONLY",
+    "BUILD": "NOT_AUTHORIZED"
+  }
+}
