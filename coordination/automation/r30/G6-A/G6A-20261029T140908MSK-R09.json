@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V9",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T140908MSK-R09",
+  "status": "HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY",
+  "taskId": "G6A-E06-ORIGINAL-ZIP-PART-PATH-INODE-R09",
+  "branch": "automation/r30/g6a/G6A-20261029T140908MSK-R09",
+  "parentCommit": "4082169b8c4357ae66d024e8cd2188bc352fa49d",
+  "parentTreeSha": "95570efcb1b6639dbe37d3a83e7d61ef478e2cfd",
+  "scope": "SOURCE_ONLY; NO EXE, NSIS, GitLab CI, or final integration",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPaths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "receiptOnlyDir": "coordination/automation/r30/G6-A/"
+  },
+  "source": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "preimageGitBlobSHA1": "9f1a615bfcec7f6a89554572205680e917ff887e",
+    "postGitBlobSHA1": "b2668179e64e9c85913931f52b7c6fab83166893",
+    "modifiedFunction": "verify_original",
+    "scope": "one exclusively assigned original ZIP source verifier",
+    "defect": "While reading an original ZIP part, R08 compared the initial candidate.stat() with fstat(opened descriptor) after reading; replacing the pathname after the read with a foreign inode holding identical bytes left those checks passing. The physical part at the path was no longer the one hashed.",
+    "fix": "After fd close, lstat the source-part pathname and compare dev/inode/size/mtime_ns against the opened descriptor; reject symlink, missing path or identity drift before SourceLock can claim verified inputs. No change to ZIP member validation or output publisher.",
+    "limitation": "An uncooperative writer can still race after final lstat; this is not an OS-level immutable snapshot or a substitute for complete physical SHA verification."
+  },
+  "targetedTest": {
+    "testId": "G6A-R09-ORIGINAL-PART-PATH-INODE",
+    "command": "python /mnt/data/g6a_r09_part_path_identity_test.py",
+    "result": "PASS_ISOLATED_ONLY",
+    "count": 1,
+    "observations": [
+      "RED old fstat-only extraction accepts a same-byte foreign path swapped immediately after closing the read descriptor",
+      "GREEN updated lstat identity gate rejects the same-byte inode replacement",
+      "Stable source part pathname still accepted"
+    ],
+    "testFileSHA256": "9b3e1fe8ce714da3321aab2ae0780783afd96a46889e70f85a6b70f6aec6830f",
+    "testCommitted": false,
+    "testPathOwnershipBlocker": "tests/e06/* absent from G6-A assigned_paths; no test written to GitHub",
+    "fullModuleTest": "NOT_RUN",
+    "nativeWindowsTest": "NOT_RUN",
+    "zip729Runtime": "NOT_RUN"
+  },
+  "inputVerification": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rulesGitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "specs": "Google Docs FIN ZAGR V16 §§54–56 plus latest R29 scope override READ",
+    "ownerLockGitBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "conflictsGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen968GitBlob": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "parentTreeEntries": 31621,
+    "parentTreeTruncated": false,
+    "baselineGitBlobs": 968,
+    "presentBaselinePaths": 968,
+    "missingBaselinePaths": 0,
+    "unchangedBaselineGitBlobs": 963,
+    "changedBaselineBlobs": 5,
+    "donorSnapshotsFullyRead": 25,
+    "donorSnapshotGitBlobFiles": 24876,
+    "donorSnapshotRawThreePartBlobMatches": 75,
+    "rawOriginalZIPInner729SHA256": "NOT_VERIFIED_BINARY_BYTES_NOT_READ",
+    "archiveCombinedExpectedSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "gitSHAIsNotSHA256OfArchive": true
+  },
+  "journalsReadOnly": {
+    "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "commonDocsModified": false,
+    "sharedWriter": "Astra-C only"
+  },
+  "appliedLesson": "R08 demonstrated that identical bytes cannot prove ownership of a path after an inode swap; transfer the same descriptor+pathname binding to SourceLock input part verification.",
+  "newLesson": "A Git blob ID, even a correct cryptographic hash of bytes read from an open descriptor, does not guarantee that the current input path still names that inode. Check post-read pathname identity and reject drift before publishing a SourceLock receipt; keep overall archive validity HOLD until physically tested end-to-end.",
+  "ownerProposal": "Astra-C to approve G6-A-unique tests/e06 path if commit-based regression evidence is required; do not write there before lock update.",
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "FULL_ZIP_729_SHA": "HOLD"
+  },
+  "originalsUntouched": true,
+  "priorDONEPreserved": true,
+  "PR162Untouched": true,
+  "mainUntouched": true,
+  "otherOwnerSourceUntouched": true,
+  "snapshotsUntouched": true
+}

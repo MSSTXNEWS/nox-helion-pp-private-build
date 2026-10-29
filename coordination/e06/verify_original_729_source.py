@@ -116,6 +116,17 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
                 after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
             ):
                 raise SourceHold("SOURCE_PART_CHANGED_DURING_READ:" + name)
+            # An owned open descriptor does not prove the path still names
+            # that file. Bind the verified bytes to the current path before
+            # claiming the original source part in the SourceLock receipt.
+            try:
+                current = candidate.lstat()
+            except OSError as exc:
+                raise SourceHold("SOURCE_PART_PATH_UNAVAILABLE_AFTER_READ:" + name) from exc
+            if (stat.S_ISLNK(current.st_mode) or
+                    (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) !=
+                    (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)):
+                raise SourceHold("SOURCE_PART_PATH_REPLACED_AFTER_READ:" + name)
             if git.hexdigest() != expected_blob:
                 raise SourceHold("SOURCE_PART_GIT_BLOB_SHA1_MISMATCH:" + name)
             parts_receipts.append({"path": name, "bytes": size, "sha256": own.hexdigest(),
