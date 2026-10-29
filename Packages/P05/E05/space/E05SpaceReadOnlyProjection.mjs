@@ -304,12 +304,13 @@ const eventOptionalFieldsCanonical = e => {
     field('gpu_index',nonnegativeInteger) &&
     field('gpu_name',v=>typeof v==='string' && v.length<=256);
 };
+// events.v3 schema source.maxLength=128, message.maxLength=4096; do not lose valid failures.
 const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   eventToken128(e.run_id) && eventToken128(e.event_id) && eventToken128(e.task_id) &&
   eventToken128(e.action_id) && eventPackages.has(e.package_id) &&
-  typeof e.source==='string' && e.source.length>0 && e.source.length<=120 &&
+  typeof e.source==='string' && e.source.length>0 && e.source.length<=128 &&
   !/[\x00-\x1f\x7f]/.test(e.source) &&
-  typeof e.message==='string' && e.message.length<=240 &&
+  typeof e.message==='string' && e.message.length<=4096 &&
   !/[\x00-\x1f\x7f]/.test(e.message) &&
   typeof e.evidence_verified==='boolean' &&
   eventOptionalFieldsCanonical(e) &&
