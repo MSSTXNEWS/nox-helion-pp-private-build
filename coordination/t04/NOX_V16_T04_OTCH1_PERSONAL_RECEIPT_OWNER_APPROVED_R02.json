@@ -1,0 +1,222 @@
+{
+  "schema": "NOX_V16_T04_OTCH1_PERSONAL_RECEIPT_R02",
+  "run_id": "NOX-V16-T04-OWNER-APPROVED-20261029-R02",
+  "task": "T04",
+  "date_msk": "2026-10-29",
+  "checkpoint_manifest_written_msk": "2026-10-29T16:53:27.454+03:00",
+  "receipt_time_utc": "2026-10-29T13:55:36.426Z",
+  "receipt_time_msk": "computed from UTC +03:00",
+  "observed_write_readback_duration_seconds": 129,
+  "full_run_duration_seconds": null,
+  "duration_note": "First exact start second was not captured; exact whole-turn duration cannot be proved. Measured Git manifest->personal receipt interval reported separately.",
+  "progress_bar": "██████████ — 34/34",
+  "previous_authoritative_r12": "15/34 confirmed SHA duplicates; 19/34 divergent paths pending owner source choice",
+  "current": {
+    "final_source_selection_decisions": 34,
+    "total": 34,
+    "SKIP": 15,
+    "ACCEPT": 19,
+    "OWNER_HOLD": 0,
+    "source_merged": 0,
+    "windows_tested": 0,
+    "exe": false,
+    "ci": false,
+    "e07": false
+  },
+  "closed_paths_this_run": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "owner": "G2-A",
+      "selected_git_blob_sha1": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "source_preimage_git_sha1": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "G5-A",
+      "selected_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "source_preimage_git_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+      "selected_git_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "source_preimage_git_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "owner": "G2-A",
+      "selected_git_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "source_preimage_git_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "owner": "G2-B",
+      "selected_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "source_preimage_git_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "owner": "G3-A",
+      "selected_git_blob_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+      "source_preimage_git_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": "G3-B",
+      "selected_git_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "source_preimage_git_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "owner": "G4-A",
+      "selected_git_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "source_preimage_git_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "owner": "G4-B",
+      "selected_git_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "source_preimage_git_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "owner": "G5-B",
+      "selected_git_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "source_preimage_git_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "owner": "G5-B",
+      "selected_git_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "source_preimage_git_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e"
+    },
+    {
+      "path": "coordination/e06/stage_onehost.py",
+      "owner": "G6-A",
+      "selected_git_blob_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+      "source_preimage_git_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "owner": "G6-B",
+      "selected_git_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "source_preimage_git_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "owner": "G1-A",
+      "selected_git_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257",
+      "source_preimage_git_sha1": "87d901c3846359a91be3e8288f24302cc7060257"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+      "selected_git_blob_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "source_preimage_git_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "owner": "G1-A",
+      "selected_git_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "source_preimage_git_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "owner": "G2-A",
+      "selected_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "source_preimage_git_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "owner": "G2-B",
+      "selected_git_blob_sha1": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4",
+      "source_preimage_git_sha1": null
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "owner": "G3-A",
+      "selected_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "source_preimage_git_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2"
+    }
+  ],
+  "existing_skips_preserved": [
+    {
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "sha": "cc407695882a1a3223699e24cb7d90cff813cf00"
+    },
+    {
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "sha": "d721cd9608d62052060ae2c7ff6db240b281802f"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "sha": "8c20156bee3db953f74b34f62bc5e57709d30c6a"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "sha": "3015fa132ee3fa83ccae335cda40f595aaca77cb"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "sha": "88aff5db7dbf54b8db1ea0657f175f6a3597c622"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "sha": "2187ee5ecae18179a5daa7c60859cad06f275b81"
+    },
+    {
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "sha": "005866951edbd17a4ab120feecc177c8fd414c8e"
+    },
+    {
+      "path": "coordination/e06/source_deep_inventory.py",
+      "sha": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+    },
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "sha": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "sha": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "sha": "bd4e3da6771242c2eb2b903411ed654885b1fddd"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "sha": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "sha": "e4fc503d37bf96d8894104078ee4c9198abd0834"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "sha": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb"
+    }
+  ],
+  "manifest_git_blob_sha1": "dce35f04f074620a365f1812aa1cbfb57ba7905a",
+  "canonical_source_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "source_head_changed": false,
+  "owner_manifest_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "git_conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "exception": "OriginalVoicePort #30 candidate selected from G2-B archived voice branch, PRE absent; T06 must verify exact add-only CAS and native contract before integration; no compatibility claim.",
+  "self_improvement": {
+    "learned_from": "Master, E06, Lessons, C34 and newer T04 R12 correction",
+    "error": "R11 asserted 17 SKIP; R12 direct Git reads invalidated #16 and #26.",
+    "applied_fix": "Rebase classification on latest R12 exact blob evidence, pin PR162 Git HEAD, use KEEP_CURRENT/no-overwrite for 18 divergent paths, explicit absent-path handling for #30, publish immutable manifest with readback.",
+    "regression_avoidance": "T06 apply only by exact preimage and owner approval; on PR162 HEAD drift re-evaluate paths, do not re-run full 25-branch inventory."
+  },
+  "recipients": {
+    "T05": "Read immutable manifest for conflict choices; preserve own 13/13 triage and T05 G2-A proposed patch.",
+    "T06": "Use PR162 exact SHA, keep 18 source versions and only evaluate #30 voice as add-only, source admission still requires focused proof.",
+    "T02": "This is private T04 receipt; append accurate delta to Master/E06/Lessons using revision CAS and readback. No direct shared Doc write by T04."
+  },
+  "no_loss": "P01–P05, D02/WOW200, 729 original files, all DONE preserved. No merge/code update/build/tests."
+}
