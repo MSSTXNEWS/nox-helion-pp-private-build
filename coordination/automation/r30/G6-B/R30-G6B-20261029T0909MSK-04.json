@@ -1,0 +1,131 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_E06_NATIVE_SOURCE_RECEIPT_V4",
+  "run_id": "R30-G6B-20261029T0909MSK-04",
+  "slot": "G6-B",
+  "area": "NOX HELION EXPRESS INTEGRATOR V16 Windows loader-installer ONLY",
+  "status": "SOURCE_CANDIDATE_IN_PRIVATE_BRANCH",
+  "integration": "HOLD",
+  "release": "HOLD",
+  "source_only": true,
+  "source_code_complete": "HOLD",
+  "accepted_product_task_ids": [],
+  "product_progress_percent": null,
+  "git": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "private_branch": "automation/r30/g6b/R30-G6B-20261029T0909MSK-04",
+    "base_branch": "automation/r30/g6b/R30-G6B-20261029T0808MSK-03",
+    "base_commit_sha": "2227d66e5bc860ca929e9997624b03a54fc02fa6",
+    "owner_lock_file": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "owner_lock_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "owner_lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "index_file": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "owned_paths_changed": [
+      {
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "pre_blob_sha1": "9b98cfc6e580046c8031cb0fb9b70a96b3c69c82",
+        "post_blob_sha1": "7a656242c1fed9fc8fe1d3d333065c7e39d8c180",
+        "commit_sha": "06e5fb425cf7363ad1fa6c55455eba63b3170970",
+        "additions": 21,
+        "deletions": 1
+      },
+      {
+        "path": "coordination/e06/adapters/pc_control_owner_port.py",
+        "pre_blob_sha1": "2869bf3bf80642cb79f486c669a953595fc9caf2",
+        "post_blob_sha1": "5f567effc336ca6611757e581841710450287a29",
+        "commit_sha": "dd46add37750662bbf4230ce8e555441f6af013c",
+        "additions": 4,
+        "deletions": 4
+      }
+    ],
+    "forbidden_path_writes": 0,
+    "foreign_path_writes": 0,
+    "unassigned_new_test_files": 0,
+    "inherited_historical_unassigned_tests": "Retained unchanged from parent branch; no new test file written pending owner manifest approval",
+    "diff_vs_parent": "2 source commits; 2 exact assigned paths; zero foreign paths before receipt"
+  },
+  "prerequisites_read": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md; 56 consolidated rules read; original earlier literal 56 not independently attested",
+    "rules_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16": "Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc sections 54-56 plus R29 loader-only clarification",
+    "master_errors": "Google Doc 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50; Astra-C R30 08:31 delta",
+    "e06_report": "Google Doc 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4; R30 08:31 review",
+    "e06_lessons": "Google Doc 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ; R30 08:31 source/autority lessons",
+    "historical_errors": "Google Doc 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU read-only",
+    "snapshots": "25/25 immutable R30 snapshot root directories fetched; each root has 27 entries and identical original 3 source_00/01/02.part Git blobs. Full recursive member bytes and physical original 729 SHA256 NOT_VERIFIED.",
+    "archive_part_git_blobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozen_snapshot_native_bridge_blobs": {
+      "B5": "164c7c0027c98c5bf201977d4cf23591dc1562a0",
+      "B6": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+    },
+    "canonical_admission_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f"
+  },
+  "change": {
+    "finding": "Existing P02 voice/SIP/streaming owner _native_owner_scope callbacks checked stable SID/lease fields but did not reconsult the trusted live Windows revocation verifier between effects; original E11 PC preview/STOP owner did the same tuple-only check. A lease can revoke while its string remains unchanged. Static source finding, not demonstrated physical exploit.",
+    "fix": "NoxPackHost.execute exposes its already pinned require_current_authority checker through a scoped ContextVar only during the existing owner call; _native_owner_scope now checks matching session object and invokes the checker at each adapter checkpoint. Original E11 PC adapter delegates its scope checkpoint to the same routine. Context token always resets in finally. No new host/server/backend.",
+    "preserved": "50 canonical native routeId/owner/risk tuples and owner bindings, frozenset scope checks, Windows SID/lease format checks, native dangerous consent, chat.stop, PC original preview/STOP and E11 scope binding",
+    "remaining_risk": "Windows token-to-SID assurance depends on real external native_session_live callback. Owner methods may perform effects internally before returning; async/deferred owner results require independent boundary audit. No real Windows runtime evidence."
+  },
+  "targeted_test": {
+    "name": "G6-B nested authority revocation/identity ContextVar microtest",
+    "method": "One isolated local Python synthetic fixture reproducing helper/context behavior, NOT an imported full native_bridge.py test",
+    "executed": true,
+    "result": "PASS",
+    "cases": "5/5",
+    "cases_checked": [
+      "valid SID/lease invokes live checker",
+      "same SID/lease with revoked verifier is denied",
+      "same fields in different NativeSession object are denied",
+      "ContextVar reset after exception",
+      "reentrant ContextVar scope restores outer authority"
+    ],
+    "separate_post_git_source_static": {
+      "result": "PASS",
+      "assertions": "9/9",
+      "focus": "50-policy exact match to admission.py, unique routes, verifier, scope/consent, exception-safe guard, session-owned E11 STOP/preview"
+    },
+    "python_full_module": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "real_native_SID_token_check": "NOT_RUN",
+    "real_STOP": "NOT_RUN",
+    "dangerous_actions_executed": 0,
+    "exe_nsis_gitlab_ci_final_integration": "NOT_RUN"
+  },
+  "errors_lessons": {
+    "previous_applied": "R03 froze identity of native verifier/approval callbacks. R30 08:31 Astra-C identified lack of physical SID/lease rechecks at nested voice/SIP/streaming owner effect boundaries.",
+    "new_lesson_id": "G6B_R30_REVOCATION_MUST_BE_RECHECKED_AT_EACH_OWNER_EFFECT_BOUNDARY",
+    "new_lesson": "Comparing an unchanged authenticated SID/lease tuple is not evidence the lease remains live. Reuse the one pinned native verifier at each trusted adapter checkpoint with exception-safe ContextVar propagation for synchronous nested callbacks; preserve cross-session refusal. A post-return check alone cannot undo irreversible owner side effects.",
+    "prevention": "Admit this source change only after true Windows token/lease revocation and STOP tests on exact SHA; require owner E11/P02 internal pre-effect checks and review deferred iterator/async owner callbacks. Never count synthetic fixtures as Windows acceptance."
+  },
+  "proposals_to_owners": [
+    {
+      "owner": "Astra-C / ownership manifest",
+      "request": "Authorize an explicitly assigned unique G6-B Python test path for imported full-module adversarial regression; inherited tests remain unchanged and unapproved."
+    },
+    {
+      "owner": "G6-A / native Windows host",
+      "request": "Provide physical session/token SID binding and revocation callback evidence; confirm pre-effect reauthorization within owner operations. Do not ask G6-B to edit stage_onehost.py or verify_original_729_source.py."
+    },
+    {
+      "owner": "Original P02/E11 owner",
+      "request": "Examine internally deferred/async operations after returning from native owner port and ensure live host authorization at effect boundary. External guard cannot certify delayed effects."
+    }
+  ],
+  "coordination": {
+    "single_google_docs_writer": "Astra-C ONLY",
+    "worker_shared_docs_writes": 0,
+    "worker_shared_docs_readback": "NOT_APPLICABLE",
+    "collect_git_receipt": true,
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "original_25_snapshots_modified": false,
+    "older_DONE_preserved": true,
+    "receipt_git_readback": "PENDING_POST_CREATE_VERIFICATION",
+    "merge": false
+  }
+}
