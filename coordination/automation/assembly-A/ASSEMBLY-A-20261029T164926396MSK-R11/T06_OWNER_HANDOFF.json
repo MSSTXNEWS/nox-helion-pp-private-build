@@ -1,0 +1,144 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASSEMBLY_A_T06_CAS_HANDOFF_V1",
+  "RunID": "ASSEMBLY-A-20261029T164926396MSK-R11",
+  "createdMsk": "2026-10-29T16:49:26.396+03:00",
+  "task": "Assembly A P01-P03 + Host50",
+  "product": "EXISTING Windows EXPRESS INTEGRATOR ONLY",
+  "mode": "SOURCE_ONLY_PREP_NO_PRODUCT_MUTATION",
+  "historicalT01": {
+    "status": "DONE_100_OF_100_NOT_REOPENED",
+    "commit": "9bcf1e8ce035424592ebcb3c9619a7bdf795b451",
+    "ledger_blob": "73d4e1d555497e573fcfef54ba34b7e469bf8646"
+  },
+  "exactSource": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "target": "PR162 (owner #1 exclusive)",
+    "base_commit": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "base_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "t06_receipt_commit": "e5913abec08cb843036edecc015c9a77abdf9b0c",
+    "t06_receipt_blob": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "t06_status": "HOLD_OWNER_1_CAS_NO_UNIFIED_SOURCE",
+    "astra_source": "f0064948119c55001601e1bae1cd3755826605ed"
+  },
+  "policy": {
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "T04_manifest_blob": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6",
+    "T05_exception_blob": "6b13a2138ab036273fe2f43c0515963694125e88",
+    "T05_intake_blob": "cb40add312db492a06a16baa600740bcb5575de2",
+    "historical_25_snapshots": "IMMUTABLE",
+    "historical_conflicts": "17 SKIP 17 OWNER_HOLD; none auto accepted",
+    "no_source_write": true,
+    "no_merge": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true
+  },
+  "patchSets": [
+    {
+      "package": "P01 + Host50",
+      "name": "P01_Host50.scoped.patch",
+      "blob": "22c1d86a2771488217d08a9415ba2ea5ca64bfbe",
+      "status": "SCOPED_PATCH_STAGED_OWNER_APPROVAL_REQUIRED_NOT_ADMITTED",
+      "files": [
+        {
+          "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+          "owner": "G1-B",
+          "expected_target_pre": "ABSENT",
+          "donor_author_pre": "c9c68bce1f1e1a6d074255f7150f2f04bc52179f",
+          "proposed_post": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+          "gate": "Add existing-host-only adapter after owner #1 and G1-B approval, confirm no competing WebView2 host; owner focused test 35edce19360db21dd5193f55e1c8b0834a54490e"
+        },
+        {
+          "path": "integrations/wow200/runtime/loader.mjs",
+          "owner": "G7-A + #1",
+          "expected_target_pre": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+          "proposed_post": "1fa3adcfd7aa6c1305e9406402a40e3236bd55ca",
+          "donor": "PR207 draft 61b24683cebaf06411f45600864ee949310c700f",
+          "gate": "Check live CAS, owner approval and existing focused test 925f3afe4a4d3a8958218994d8020f25ab7fb8f3"
+        },
+        {
+          "path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "owner": "G6-B + #1",
+          "expected_target_pre": "805ade553b3fd102f8995a54632d0ad904316c9c",
+          "proposed_post": "c60d4ef3983e56c8991370efb58839bd1216cd2d",
+          "donor": "PR207 draft 61b24683cebaf06411f45600864ee949310c700f",
+          "gate": "Only existing host; confirm authorization; existing focused test 6e001bab67d01849be5a5a1731c47b606d43d867, preserve 37 SOURCE candidates and 13 SOURCE HOLD"
+        }
+      ],
+      "exclude": [
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi: T04 OWNER_HOLD; no replacement",
+        "17 T04 SKIP duplicate historical donors",
+        "all 13 Host50 historical SOURCE HOLD from automatic acceptance"
+      ]
+    },
+    {
+      "package": "P02",
+      "name": "P02.scoped.patch",
+      "blob": "d9ce519d29749a36753589fab6fdda028beef3bd",
+      "status": "CAS_PREIMAGE_MATCHES_T06_OWNER_APPROVAL_AND_TEST_PENDING",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_framed_worker.py",
+          "owner": "G2-A + #1",
+          "expected_target_pre": "255dfb7ab330c825fcc362b619614189c4915e6c",
+          "proposed_post": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+          "owner_focused_test": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+          "test_blob": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+          "test_executed_by_A": false
+        }
+      ],
+      "exclude": [
+        "p02_capabilities.py: donor pre d721cd9608d62052060ae2c7ff6db240b281802f != live PR162 6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8; owner G2-B HOLD",
+        "T04 P02 historical variant conflicts OWNER_HOLD",
+        "No second Ollama/SQLite/voice backend"
+      ]
+    },
+    {
+      "package": "P03",
+      "name": "P03.owner_rebase_ONLY.patch",
+      "blob": "44a962f63cf0ff8aacca0f13e4749accc83eaca1",
+      "status": "REVIEW_ONLY_PREIMAGE_MISMATCH_DO_NOT_GIT_APPLY_TO_T06",
+      "files": [
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+          "owner": "G3-A + #1",
+          "expected_target_pre": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+          "donor_pre": "0b94237d7861c021a7db3cfda56073939562d312",
+          "donor_post": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+          "preimage_match": false,
+          "gate": "Owner semantic rebase and new PRE/POST CAS required; original test blob 0650f8d927d3abc65b92cdd58b3057335ad547b2"
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+          "owner": "G3-B + #1",
+          "expected_target_pre": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+          "donor_pre": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+          "donor_post": "3692811ac3234afb54e82958c7415b23619c1f0f",
+          "preimage_match": false,
+          "gate": "Owner semantic rebase required; no durable G3-B focused test in T05"
+        }
+      ],
+      "exclude": [
+        "T04 P03 Admission owner HOLD; do not overwrite",
+        "No second model center/downloader"
+      ]
+    }
+  ],
+  "handoff": {
+    "to": "T06 sole owner #1 and T04/T05 owners",
+    "integration_owner_signature": "PENDING",
+    "signed_git_commit": "NOT_YET_VERIFIED",
+    "instructions": "For each path re-read live T06 source HEAD/tree and blob. Require exact preimage equality or stop. Owner approvals and focused tests before apply. Never git apply P03 patch to base PR162 without semantic rebase. If HEAD moves, refresh all preimages and refuse old handoff. Integration DONE only by T06 one tree + readback.",
+    "source_post_head": "UNCHANGED"
+  },
+  "progress": {
+    "scale": "4 gates: P01_CAS_APPLICABLE,P02_CAS_APPLICABLE,P03_CAS_APPLICABLE,SIGNED_T06_OWNER_HANDOFF",
+    "former": "0/4",
+    "current": "1/4",
+    "delta": "1/4",
+    "segment": "███░░░░░░░",
+    "counting_basis": "Only P02 exact-PRE patch physically prepared; P01 owner multi-file permission pending, P03 pre mismatch, owner-signed handoff pending; not product progress",
+    "product_taskids_accepted": 0
+  },
+  "lesson": "Preserve T04 SKIP/OWNER_HOLD and T05 preimages as separate vetoes. A new patch artifact is not product merge: only owner #1 exact live preimage CAS, tests and readback can turn it into source integration."
+}

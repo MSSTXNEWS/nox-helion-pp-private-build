@@ -1,0 +1,22 @@
+diff --git a/Packages/P02/worker-python/p02_framed_worker.py b/Packages/P02/worker-python/p02_framed_worker.py
+index 255dfb7ab330c825fcc362b619614189c4915e6c..8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1 100644
+--- a/Packages/P02/worker-python/p02_framed_worker.py
++++ b/Packages/P02/worker-python/p02_framed_worker.py
+@@ -71,8 +71,15 @@
+         if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
+             raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
+         with write_lock:
+-            writer.write(_HEADER.pack(len(payload)))
+-            writer.write(payload)
++            # BinaryIO.write may legally return a partial byte count. Never
++            # emit the next frame segment until every byte has been written.
++            for segment in (_HEADER.pack(len(payload)), payload):
++                remaining = memoryview(segment)
++                while remaining:
++                    written = writer.write(remaining)
++                    if type(written) is not int or not 0 < written <= len(remaining):
++                        raise ProtocolHold("NATIVE_FRAME_WRITE_STALLED")
++                    remaining = remaining[written:]
+             writer.flush()
+ 
+     def dispatch(data: bytes, nonce: str | None) -> None:

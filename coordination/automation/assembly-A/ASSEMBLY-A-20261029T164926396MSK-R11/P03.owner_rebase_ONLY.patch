@@ -1,0 +1,78 @@
+diff --git a/Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs b/Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs
+index 0b94237d7861c021a7db3cfda56073939562d312..72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf 100644
+--- a/Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs
++++ b/Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs
+@@ -28,25 +28,41 @@
+     string? ExpectedManifestDigestSha256 = null)
+ {
+     public bool CanOfferOneClickPull => EvidenceStatus == CatalogEvidenceStatus.ArtifactVerified
+-        && IsCanonicalOwnerTag(ExactTag, Id)
+-        && !string.IsNullOrWhiteSpace(Version)
+-        && !string.IsNullOrWhiteSpace(License)
+-        && ArtifactBytes is > 0
+-        && RequiredDiskBytes is > 0
+-        && RequiredDiskBytes >= ArtifactBytes
+-        && IsSha256(ExpectedSha256)
+-        && IsSha256(ExpectedManifestDigestSha256)
+-        && IsReviewedHttpsEvidence(LicenseEvidenceUri)
+-        && IsReviewedHttpsEvidence(CompatibilityEvidenceUri)
+-        && IsNativeReviewedRevision(ImmutableRevision)
+-        && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
+-        && (RecommendedRamBytes is null or > 0)
+-        && (RecommendedVramBytes is null or > 0)
+-        && CompatibilityReviewed;
+-
+-    // This public record may be constructed without TryPromote. Do not allow
+-    // an ArtifactVerified flag alone to bypass the original owner's exact
+-    // tag, pinned digest, or evidence-URL requirements.
++        && IsCanonicalOfficialFamilyPage(Id, OfficialLibraryPage)
++        && IsCanonicalOwnerTag(ExactTag, Id)
++        && !string.IsNullOrWhiteSpace(Version)
++        && !string.IsNullOrWhiteSpace(License)
++        && ArtifactBytes is > 0
++        && RequiredDiskBytes is > 0
++        && RequiredDiskBytes >= ArtifactBytes
++        && IsSha256(ExpectedSha256)
++        && IsSha256(ExpectedManifestDigestSha256)
++        && IsReviewedHttpsEvidence(LicenseEvidenceUri)
++        && IsReviewedHttpsEvidence(CompatibilityEvidenceUri)
++        && IsNativeReviewedRevision(ImmutableRevision)
++        && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
++        && (RecommendedRamBytes is null or > 0)
++        && (RecommendedVramBytes is null or > 0)
++        && CompatibilityReviewed;
++
++    // This public record may be constructed without TryPromote. Do not allow
++    // an ArtifactVerified flag alone to bypass the original owner's exact
++    // tag, pinned digest, or evidence-URL requirements.
++    // A direct public record bypasses TryPromote. Require its family to exist in
++    // the canonical discovery list AND bind the page to that exact Ollama family.
++    // URL/record shape is not attestation of bytes, license or rights.
++    private static bool IsCanonicalOfficialFamilyPage(string? family, Uri? page) =>
++        family is { Length: > 0 }
++        && ModelCatalog.OfficialFamilies.Any(entry =>
++            string.Equals(entry.Id, family, StringComparison.OrdinalIgnoreCase))
++        && page is not null && page.IsAbsoluteUri
++        && page.Scheme == Uri.UriSchemeHttps && page.IsDefaultPort
++        && page.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
++        && string.IsNullOrEmpty(page.UserInfo)
++        && string.IsNullOrEmpty(page.Query)
++        && string.IsNullOrEmpty(page.Fragment)
++        && page.AbsolutePath.Equals("/library/" + family, StringComparison.OrdinalIgnoreCase);
++
+     private static bool IsCanonicalOwnerTag(string? tag, string family) =>
+         tag is { Length: <= 160 }
+         && tag.StartsWith(family + ":", StringComparison.OrdinalIgnoreCase)
+diff --git a/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs b/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs
+index 51ac82fee462113573775a9cb0c1e16dcdcf5172..3692811ac3234afb54e82958c7415b23619c1f0f 100644
+--- a/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs
++++ b/Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs
+@@ -67,7 +67,7 @@
+                         linked.Cancel();
+                         return;
+                     }
+-                    await SafePublishAsync(job, "progress", u.Status, u.Completed, u.Total, u.Digest, null, token);
++                    await SafePublishAsync(job, "progress", u.Status, persisted.CompletedBytes, persisted.TotalBytes, u.Digest, null, token);
+                 }
+                 string? digest;
+                 if (current.Kind == ModelJobKind.OllamaPull)
