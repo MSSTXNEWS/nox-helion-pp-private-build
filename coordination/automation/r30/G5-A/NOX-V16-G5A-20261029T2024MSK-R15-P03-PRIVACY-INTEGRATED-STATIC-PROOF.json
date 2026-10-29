@@ -1,0 +1,95 @@
+{
+  "schema": "NOX_V16_G5A_OWNER_SAFE_INDEPENDENT_SOURCE_CHECKPOINT_V1",
+  "run_id": "NOX-V16-G5A-20261029T2024MSK-R15-P03-PRIVACY-INTEGRATED-STATIC-PROOF",
+  "idempotency_key": "NOX-V16-G5A-20261029T2024MSK-R15-P03-PRIVACY-INTEGRATED-STATIC-PROOF",
+  "role": "G5-A support/manual3/T02, NO canonical source or shared journal write permission",
+  "status": "INCOMPLETE, SOURCE_ONLY_VERIFICATION",
+  "observed_utc": "2026-10-29T17:29:43.866Z",
+  "scheduled_msk": "2026-10-29T18:55:00+03:00 hourly",
+  "actual_run_started_msk": "2026-10-29T20:24:42+03:00",
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_head": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+  "source_tree_sha": "4918c5009b084b9b02dcc36642c86731b572b9df",
+  "source_pr": 162,
+  "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+  "canon_characters_read": 205078,
+  "canon_rules_33": 56,
+  "current_error_registry_sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "errors_count": {
+    "total": 11,
+    "open": 5,
+    "fix_applied_unverified": 4,
+    "verified_closed": 2
+  },
+  "master_rev": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+  "lessons_rev": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+  "prestart_proof": "fresh full canon/register and Google Docs read + current PR HEAD/tree + exact source readback; full historical backfill not claimed",
+  "task_id": "ERR-SRC-004/P03-TRANSFER-PRIVACY",
+  "evidence": {
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "previous_g5a_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "integration_pre_head": "a10e6820d374a049f51b5b80f41e2de33250b812",
+    "integration_post_head": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+    "current_head": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "source_pre_blob": "3692811ac3234afb54e82958c7415b23619c1f0f",
+    "source_post_blob": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+    "independent_static_contract_checks": {
+      "passed": 12,
+      "total": 12,
+      "old_durable_raw_error": true,
+      "old_ui_raw_error": true,
+      "current_has_no_ex_message": true,
+      "both_persistent_and_ui_error_redacted": true,
+      "exception_type_only_log": true,
+      "cancelled_stop_priority_preserved": true
+    },
+    "source_delta_since_g5a_r14": {
+      "ahead": 3,
+      "behind": 0,
+      "privacy_file_added_lines": 7,
+      "privacy_file_deleted_lines": 2
+    },
+    "dotnet_runtime": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "independent_owner_qa_acceptance": "PENDING_T08_MANUAL2"
+  },
+  "stages": {
+    "source_patch_prepared": true,
+    "source_verified": "G5-A independent static 12/12 on current SHA; NOT native",
+    "integrated_on_current_head": true,
+    "owner_qa_accepted": false
+  },
+  "all_11_error_acks": {
+    "ERR-SYS-001": "OWNER_HANDOFF T02/C: shared ACK/history still PARTIAL",
+    "ERR-SYS-002": "APPLIED: current HEAD/tree and exact P03 SHA re-read, avoid stale HOLD",
+    "ERR-SRC-003": "OWNER_HANDOFF T06/Host50 and T08: 13 native routes unverified",
+    "ERR-SRC-004": "APPLIED: previous P03 leak physically integrated, independent focused 12/12 source static PASS, broader P01-P05 remains OPEN",
+    "ERR-SRC-005": "NO_IMPACT: E06 fixture runner requires T08 independent acceptance, not changed in this check",
+    "ERR-SYS-006": "ALREADY_VERIFIED: 729/3 original ZIP immutable DONE",
+    "ERR-SYS-007": "ALREADY_VERIFIED: T04 34/34 owner decision immutable DONE",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "OWNER_HANDOFF T09 after accepted T06 one tree",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED: no false TASK DONE or source ready from physical patch",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "NO_IMPACT: T06 closeout guard owner separate",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "OWNER_HANDOFF T08 exact same-head native Host50 proof"
+  },
+  "cross_lessons": {
+    "dedup_clusters": 5,
+    "applied": 2,
+    "delegated": 3,
+    "applied_method": "Do not carry stale P03 leak HOLD onto a new HEAD: compare actual live Git blob PRE->POST and independently test persistent+UI error sinks and STOP priority",
+    "recurrence_test": "12/12 deterministic static assertions on live post blob; previous two raw sinks absent",
+    "unresolved": "T08/manual #2 independent acceptance, P01 host provenance and 13 Host50 native, T06 8/8, T09 freeze, T10 ready"
+  },
+  "hierarchy": {
+    "historical_t02": "DONE 4/4 unchanged",
+    "g5a_product_role": "N/D; full frozen TaskID ledger unavailable",
+    "c_4_criteria": "0/4 per last T02/C checkpoint, not recalculated by G5-A",
+    "product_weighted": "N/D (P01 0.20,P02 0.25,P03 0.20,P04 0.25,P05 0.10 need frozen complete denominator)",
+    "delta_new_product_accepted_taskids": 0,
+    "operational_progress": "stage for existing P03 privacy defect PREPARED -> VERIFIED_STATIC + INTEGRATED, still NOT ACCEPTED"
+  },
+  "scope_safety": "No canonical source edit, no shared Docs/register write, no EXE/NSIS/GitLabCI/E07/release; preserve NO-LOSS/ACL/STOP/consent/user data",
+  "next_action": "T08/manual2 independently accept P03 security/STOP on this or successor exact pinned HEAD; T02/C sole writer CAS update existing ERR-SRC-004 with integrated SHA and independent static proof (not CLOSED); T06 continue 8/8, Host50/P01 owner acceptance.",
+  "receipt_readback": "MUST_VERIFY_EXTERNALLY_BY_GITHUB_FETCH_FILE_AFTER_COMMIT"
+}
