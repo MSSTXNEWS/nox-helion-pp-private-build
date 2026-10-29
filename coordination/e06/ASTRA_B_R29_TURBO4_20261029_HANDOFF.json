@@ -1,0 +1,55 @@
+{
+  "schema": "ASTRA_B_R29_TURBO4_HANDOFF",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4",
+  "scope": "NOX HELION EXPRESS INTEGRATOR loader only SOURCE_ONLY",
+  "head_at_start": "f70376419f648e0b97772626dd516d0a40776232",
+  "owner_handoff": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "real_spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "parallel_operations": true,
+  "source_changes": 24,
+  "passes_per_queue": {
+    "B1": 4,
+    "B2": 4,
+    "B3": 4,
+    "B4": 4,
+    "B5": 4,
+    "B6": 4
+  },
+  "latest_source_sha": {
+    "B1": "ef6c17d6c2416ef6d5ebb39bb4c5d6a2557916c3",
+    "B2": "07d50161c69d59f6cac64d4dc7e4586ba47b9ec3",
+    "B3": "41b779d2d2419c4523be38bfc61185d5e581eae7",
+    "B4": "f06b2f05c08b5d6e2d7634c15da2ed37eb952a63",
+    "B5": "325a4e39f856f770e5d0ee8a5233faf4a5104b0f",
+    "B6": "5736ae607da1a78b38fefcc450510f9b0635cc25"
+  },
+  "owner_receipts": {
+    "B1": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B1.json",
+    "B2": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B2.json",
+    "B3": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B3.json",
+    "B4": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B4.json",
+    "B5": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B5.json",
+    "B6": "coordination/astra-b/run-receipts/ASTRA_B_R29_20261029_TURBO4_B6.json"
+  },
+  "source_readback": "ALL_24_EXACT_COMMIT_BLOB_MATCH",
+  "test_evidence": "B3 focused JavaScript runtime PASS; B1/B2/B4/B5/B6 focused source assertions PASS; private Python/C#/Windows native NOT_RUN",
+  "accepted_product_task_ids": "N_D",
+  "product_readiness": "N_D",
+  "remaining_approaches_per_queue": 6,
+  "remaining_blocks": "Only concrete incomplete TaskIDs; avoid speculative filler",
+  "immutable_original_archive_729": "NOT_REVERIFIED",
+  "do_not_merge_branch_trees": "Must cherry-pick or reconcile targeted owner diffs against latest shared base and SourceLock",
+  "shared_journal_writer": "ASTRA_A_ONLY",
+  "google_docs_access": "READ_PASS",
+  "google_docs_write_this_team": "NOT_ATTEMPTED",
+  "lessons": [
+    "Syntactic source checks are not native execution",
+    "Source snapshots must bind byte geometry and metadata identities",
+    "Consent and session scope must be frozen before native side effects",
+    "Readback PASS requires matching doc revision run and content",
+    "Drive master stays single-writer"
+  ],
+  "no_release": true,
+  "no_gitlab_write": true,
+  "no_build": true
+}
