@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_V16_R26_MANUAL2_INDEPENDENT_SOURCE_QA_CYCLE_V1",
+  "owner": "MANUAL_2",
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_pr": 162,
+  "source_sha": "c04ddef4f9ef2879fde50d323fc097f2137bc46c",
+  "observed_post_sha": "4489cf46dbaa2e0bc543cade2afcc2e61532dfe8",
+  "utc": "2026-10-29T21:50:25.450Z",
+  "code_changed_by_qa": false,
+  "native_windows_not_run": true,
+  "source_ready": "HOLD",
+  "e07": "0/10 NOT_RUN",
+  "accepted_new": 0,
+  "task_done_delta": 0,
+  "product_percent": null,
+  "shared_journal": "T02_ONLY_PENDING",
+  "errors_reused": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "no_loss": "NO_PRODUCT_EDIT",
+  "run_id": "NOX-V16-M2-R26-20261030-C01-10",
+  "cycle": 1,
+  "approaches_done": 10,
+  "approaches": [
+    {
+      "n": 1,
+      "t": "P03 consent",
+      "result": "SOURCE_V8_12_OF_12_PASS",
+      "blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "test": "0ec5792321a42a259698aa6aaf53bf9c88ed903c"
+    },
+    {
+      "n": 2,
+      "t": "P03 STOP/Retry ACK",
+      "result": "FAIL_MAIN_PASSES_DONOR_13_OF_13",
+      "main": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "donor": "d6c790f755d462bf1a266262d8dd1af1da723cff",
+      "test": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+      "defect": "ACK accepts wrong jobId/modelTag and drops pending lock"
+    },
+    {
+      "n": 3,
+      "t": "Host50 source owner map",
+      "result": "SOURCE_LEDGER_CONFIRMED_NOT_NATIVE",
+      "blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+      "total": 50,
+      "unbound": 11,
+      "native_pending": 14
+    },
+    {
+      "n": 4,
+      "t": "P05 nested JSON keys",
+      "result": "SOURCE_GUARD_NEGATIVE_FIXTURE_PRESENT_NOT_RUN",
+      "blob": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "test": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa"
+    },
+    {
+      "n": 5,
+      "t": "P05 STOP priority",
+      "result": "SOURCE_GUARD_NEGATIVE_FIXTURE_PRESENT_NOT_RUN",
+      "blob": "4437f9f111bd206c975f4af30d7b8fa95213af75"
+    },
+    {
+      "n": 6,
+      "t": "P05 bounded streamed responses",
+      "result": "SOURCE_GUARD_NEGATIVE_FIXTURE_PRESENT_NOT_RUN",
+      "blob": "4437f9f111bd206c975f4af30d7b8fa95213af75"
+    },
+    {
+      "n": 7,
+      "t": "P05 native host connection",
+      "result": "HOLD_NOT_WIRED_OR_PROVED",
+      "blob": "4437f9f111bd206c975f4af30d7b8fa95213af75"
+    },
+    {
+      "n": 8,
+      "t": "P01 receipt safe_path Windows negatives",
+      "result": "SOURCE_FAIL_7_OF_7_UNSAFE_VALUES_PASSED_PREDICATE",
+      "blob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+      "runtime": "JS equivalent predicate, NOT Python"
+    },
+    {
+      "n": 9,
+      "t": "P01 Verify-Payload JSON duplicate key guard",
+      "result": "HOLD_SOURCE_GUARD_NOT_PRESENT",
+      "blob": "6c178c04957d7397c0c081e3b123940637abc6e9"
+    },
+    {
+      "n": 10,
+      "t": "P01 Remove-InstalledPayload JSON duplicate key guard",
+      "result": "HOLD_SOURCE_GUARD_NOT_PRESENT",
+      "blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    }
+  ],
+  "next": "Owner1 exact-preimage P03 ACK R16; P01 Windows safe_path + strict manifest, then independent negative regression"
+}
