@@ -34,7 +34,8 @@ public static class WindowsHardwareFacts
                 if (!string.IsNullOrWhiteSpace(root))
                 {
                     var drive=new DriveInfo(root);
-                    if (drive.IsReady) disk=drive.AvailableFreeSpace;
+                    if (drive.IsReady && drive.AvailableFreeSpace > 0)
+                        disk=drive.AvailableFreeSpace;
                     else error.Add("SYSTEM_DISK_UNAVAILABLE");
                 }
                 else error.Add("SYSTEM_DISK_UNAVAILABLE");
