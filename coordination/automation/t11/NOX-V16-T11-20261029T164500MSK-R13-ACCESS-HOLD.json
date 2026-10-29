@@ -1,0 +1,168 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T11_FIXED_5_PROGRESS_CHECKPOINT_V1",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T164500MSK-R13-ACCESS-HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR V16 Windows loader-installer ONLY",
+  "state": "ACCESS_HOLD",
+  "gitlab_ready": false,
+  "ci_handoff_ready": false,
+  "source_ready": "HOLD",
+  "release": "HOLD",
+  "time_moscow": {
+    "scheduled_start": "2026-10-29T16:45:00+03:00",
+    "actual_first_observed": "2026-10-29T16:44:55+03:00",
+    "receipt_prepared_at": "2026-10-29T16:48:37.657+03:00",
+    "duration_to_receipt_seconds": 223,
+    "actual_end_after_readback": "NOT_IN_THIS_IMMUTABLE_RECEIPT"
+  },
+  "progress": {
+    "denominator_fixed": 5,
+    "previous_checkpoint_run_id": "NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD",
+    "previous_percent_explicitly_reported": false,
+    "reconstruction_basis": "R12 immutable receipt proves historical migration identification and complete list of 27 unique paths with blob SHA; remaining live GitLab HEAD, frozen CI agreement, ready same-SHA handoff unproven.",
+    "before": {
+      "done": 2,
+      "total": 5,
+      "percent": 40,
+      "bar": "████░░░░░░",
+      "remaining": 3
+    },
+    "after": {
+      "done": 2,
+      "total": 5,
+      "percent": 40,
+      "bar": "████░░░░░░",
+      "remaining": 3
+    },
+    "delta_percentage_points": 0,
+    "new_task_done": false
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "Historical GitLab Free migration identified",
+      "status": "DONE",
+      "evidence": {
+        "migration_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+        "commit_git_sha1": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+        "receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+      }
+    },
+    {
+      "id": 2,
+      "name": "27 migration-only files and distinct migration history preserved in one T12 conditional handoff",
+      "status": "DONE",
+      "evidence": {
+        "count": 27,
+        "history_commits_not_in_astra": 21,
+        "unique_files_full_list_in_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+        "receipt_git_blob_sha1": "7ec747bbe1d7bf0430e9d9eee710a403bd9a01ba",
+        "handoff_frozen": true
+      }
+    },
+    {
+      "id": 3,
+      "name": "Authenticated live GitLab HEAD read, or ACCESS_HOLD explicitly recorded (HOLD is not PASS)",
+      "status": "HOLD",
+      "diagnostic": "ACCESS_HOLD",
+      "evidence": {
+        "gitlab_project": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "read_live_head": false,
+        "gitlab_head_sha": null,
+        "reason": "No authorized GitLab connector/session; GitHub Git blob and historical pipeline cannot prove live GitLab HEAD."
+      }
+    },
+    {
+      "id": 4,
+      "name": "Existing .gitlab-ci.yml and Windows entrypoint aligned with T09 frozen SHA, without running CI",
+      "status": "HOLD",
+      "evidence": {
+        "historical_ci_blob_git_sha1": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "historical_entrypoint_blob_git_sha1": "a330977156c49aab0c433978b0d924549c5e2421",
+        "entrypoint_hardcoded_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+        "frozen_sha": null,
+        "t09_latest_independently_accepted": false,
+        "t10_last_status": "HOLD_T09_HAS_NO_FROZEN_HEAD",
+        "t10_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t10/NOX-V16-T10-20261029T164206MSK-R13-HOLD/coordination/automation/t10/NOX-V16-T10-20261029T164206MSK-R13-HOLD.json"
+      },
+      "reason": "Current branch-only gate rejects a new frozen ref. No accepted immutable source SHA exists yet; no owner-approved source changes made."
+    },
+    {
+      "id": 5,
+      "name": "Unambiguous GitLab READY with SAME frozen SHA CI/source handoff accepted by T12",
+      "status": "HOLD",
+      "evidence": {
+        "conditional_prebuild_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+        "same_sha_gitlab_head": null,
+        "source_ready_pass": false,
+        "gitlab_ready_pass": false,
+        "owner_T12_acceptance": false
+      },
+      "reason": "Single T12 conditional handoff exists but cannot be promoted to READY without #3/#4 plus T09/T10."
+    }
+  ],
+  "immutable_source_refs": {
+    "old_t11_receipt_commit": "3cef69137be12e740b739d8a070a463e8eb62182",
+    "historical_migration_head": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "historical_migration_only_file_count": 27,
+    "historical_shared_content_divergences": 43,
+    "original_source_three_git_blobs_match_historical": true,
+    "original_joined_zip_sha256_physical": "NOT_VERIFIED_T07",
+    "original_729_member_sha256_verified": 0,
+    "frozen_sha": null,
+    "t10_latest_receipt_git_blob_sha1": "875da2ae08b3fd1caec5ee189d34dbb5695acf21",
+    "unchanged_R30_conflict_index_blob_git_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+  },
+  "single_T12_handoff": {
+    "canonical_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+    "action": "REFERENCE_EXISTING_HANDOFF_ONLY_DO_NOT_CREATE_SECOND_CI_HANDOFF",
+    "exact_CI_source_change_proposal_for_T12_only": "After T09 publishes an approved frozen full SHA and T10 PASS, owner-review the historical migration branch guard and replace branch-only admission with protected, immutable pinned SHA plus approved target ref. Require actual git rev-parse HEAD == CI_COMMIT_SHA == T09 frozen SHA, manual pipeline source web/api AND NOX_APPROVE_WINDOWS_BUILD=YES; retain retry:0 and no push/schedule pipeline. Verify old 27 migration-only files and original history, 43 shared divergences, and 3 original ZIP blobs survive. If reconciliation creates a new commit, REFUSE same-SHA PASS and return to T09/T10 for re-freeze.",
+    "no_authorization": "DO NOT RUN PIPELINE/EXE/NSIS; DO NOT PUSH GITLAB/REIMPORT/FORCE_PUSH."
+  },
+  "single_primary_blocker": {
+    "code": "GITLAB_LIVE_ACCESS_HOLD",
+    "owner": "GitLab project owner / authenticated GitLab connector",
+    "details": "A read-only authenticated GitLab HEAD/refs/visibility/permissions inspection is not possible in this tool session. Independent downstream holds remain T09 frozen SHA and T10 SOURCE_READY."
+  },
+  "owner_readiness_dependencies": {
+    "T09": "HOLD_NO_FROZEN_SHA",
+    "T10": "HOLD_T09_HAS_NO_FROZEN_HEAD",
+    "T11": "ACCESS_HOLD",
+    "T12": "NOT_RUN",
+    "T13": "NOT_RUN",
+    "T15": "RELEASE_HOLD"
+  },
+  "sources_read": {
+    "canon": {
+      "url": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+      "revision": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc",
+      "sections": "1-33, 54-56, R29; full 56 §33 historical consolidated rules"
+    },
+    "shared_docs_read_only": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ]
+  },
+  "applied_lesson": "Do not equate known GitHub migration commit and Git blobs or past GitLab pipeline ID with authenticated live GitLab HEAD. Preserve a single immutable handoff and do not modify branch-gated CI without a pinned frozen source commit.",
+  "new_lesson": "A conditional T12 handoff is not criterion #5 READY: progress must count exact acceptance gates rather than number of receipts. If CI owner changes the source commit SHA during migration reconciliation, T09/T10 frozen-source evidence must be renewed before same-SHA build authorization.",
+  "no_loss": {
+    "historical_done_preserved": true,
+    "migration_27_paths_preserved_by_reference": true,
+    "original_parts_not_modified": true,
+    "no_source_or_pipeline_changes": true,
+    "main_not_modified": true,
+    "pr162_not_modified": true,
+    "shared_docs_not_modified": true
+  },
+  "executed": {
+    "new_tests": 0,
+    "gitlab_live_reads": 0,
+    "ci_runs": 0,
+    "exe_runs": 0,
+    "nsis_runs": 0,
+    "final_integrations": 0
+  },
+  "owner_writer": "T11 personal immutable Git receipt only. T02 exclusively writes shared Google Docs with CAS+readback."
+}
