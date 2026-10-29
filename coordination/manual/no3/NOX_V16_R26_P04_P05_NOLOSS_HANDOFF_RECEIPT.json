@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V16_R26_MANUAL3_OWNER_HANDOFF_V1",
+  "run_id": "NOX-V16-MANUAL03-R26-20261030-P04-P05-SURGICAL-NOLOSS",
+  "role": "manual_3",
+  "task_ids_existing": [
+    "P04 model snapshot validation",
+    "P05 SPACE existing source freshness / STOP"
+  ],
+  "error_ids_existing": [
+    "ERR-SRC-004"
+  ],
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_parent_commit": "d9dfa486eae186ed0efac32bccecb7d6bac769f9",
+  "owner_origin_pr": 221,
+  "owner_origin_commit": "d62117b218f8cf435d267d5b518470f1a18595a1",
+  "draft_pr": 222,
+  "proposed_source_commit": "e2516fddf520d7f25fd3524286aaa4f8ba5aceb4",
+  "purpose": "one-host P04/P05 fast handoff without overwriting prior common P04 tests",
+  "sha_algorithms": {
+    "git_blob": "sha1",
+    "content": "sha256"
+  },
+  "file_receipts": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+      "pre_sha256": "4ac92044bff3ba05d276d8722d4ba60ffd6f33b2a771ce8b54dfa566a73d662f",
+      "post_git_blob_sha1": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "post_sha256": "55278a499f3ffeabc6e033ad68795c86c065df9a7e5e333fc0c03f1795271683",
+      "size_utf8": 11353
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e",
+      "pre_sha256": "3df4b245a07cd9185c10fb46a01700e5c09bcdafce633e9b44e588da73114546",
+      "post_git_blob_sha1": "c7dedeed5f678b82a00b6c96b5250f1d82099253",
+      "post_sha256": "52dd8eaacb328e35cb68fe3a0540e49f4eb615530e2366c3766cc3fd216d3391",
+      "size_utf8": 15496
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre_git_blob_sha1": "dd04965a5f38e1809d1804b37a51aee08c7f5d8b",
+      "pre_sha256": "f0d0a7b5b1bacaa26222aaa1fe0ce37b1eaa4e72c21621be8ca876a6cb89cbda",
+      "post_git_blob_sha1": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "post_sha256": "c81ee42260b8546d04cc0ed14bd260674ac440d634767048b120b44cbe2d5a25",
+      "size_utf8": 12326
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre_git_blob_sha1": "682a33faf4ff5d0db955619b2b2ab9de4c168aaa",
+      "pre_sha256": "b34bbd160e8b65f31b4cf9340a219f4760df6f631a1599492f64697fe602eba9",
+      "post_git_blob_sha1": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "post_sha256": "8db519e75a7acabff4b0987515b2fc69138523e0ffce7c5759dac48ce7f51ac3",
+      "size_utf8": 12368
+    },
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.cs",
+      "pre_git_blob_sha1": null,
+      "pre_sha256": null,
+      "post_git_blob_sha1": "cbdd3d27d2eeb31f94edadc1263c13e31f0431ea",
+      "post_sha256": "249ca0dea876381c9308c234531cda22c246f16f57ede7771aad319018d3a6c6",
+      "size_utf8": 2853
+    },
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj",
+      "pre_git_blob_sha1": null,
+      "pre_sha256": null,
+      "post_git_blob_sha1": "b7c3414404bfcef04d186b0d3a95fc1bc003e9dd",
+      "post_sha256": "8bd8e353d1cbbc3e25e54a2715d21223fa165170ef27e41de61654dfaba73546",
+      "size_utf8": 388
+    }
+  ],
+  "test_union": {
+    "shared_preserved": 32,
+    "added": 5,
+    "final": 37
+  },
+  "integrator_owner": "manual_1_T06",
+  "independent_QA_owner": "manual_2",
+  "component_tests": "NOT_RUN",
+  "dotnet_native": "NOT_RUN",
+  "licensed_gpu_training": "NOT_RUN",
+  "host_integration": "NOT_VERIFIED",
+  "source_ready": false,
+  "qa_accepted": false,
+  "release": "HOLD",
+  "t02_shared_register_cas": "NOT_ATTEMPTED_SINGLE_WRITER"
+}
