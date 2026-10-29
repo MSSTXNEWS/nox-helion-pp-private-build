@@ -1,0 +1,179 @@
+{
+  "schema": "NOX_V16_R15_MANUAL02_INDEPENDENT_SOURCE_QA_V1",
+  "run_id": "NOX-V16-MANUAL02-20261029-R15-P03-PRIVACY-5PACK-QA",
+  "role": "manual №2 independent source QA P01-P05 + SOURCE_READY",
+  "assessment_date": "2026-10-29",
+  "qa_source_checks_timestamp_utc": "2026-10-29T17:08:07.909Z",
+  "actual_full_run_duration_seconds": null,
+  "duration_note": "Full manual run start timestamp not instrumented; do not invent elapsed time",
+  "scope": "SOURCE ONLY; production modified paths by this QA = 0",
+  "prestart_read_proof": {
+    "user_role_prompt": "NOX_V16_R15_MANUAL_02 in current conversation",
+    "rules_33": 56,
+    "sections": "§§1–33,54–56,R29",
+    "registry_git_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "registry_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "pr_162_head": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+    "pr_162_tree": "f508ceefaa1301e7b28f8a35ae4fd1efd35efadf",
+    "draft": true,
+    "repo_tree_entries": 1234,
+    "truncated": false,
+    "owner_receipt_p03_git_blob": "40cdd65dc82910ee796e6710afb49352a0bcc4ca",
+    "canonical_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU"
+  },
+  "tests": {
+    "kind": "one focused independent executable JavaScript source-contract test against exact GitHub file byte content",
+    "assertions": 24,
+    "passed": 24,
+    "failed": 0,
+    "meaning": "10 P03 privacy/STOP source checks, 4 P02 binding source checks, 4 P05 source checks, 2 missing WPF P01 checks, 2 P04 fixture defect checks, 2 PACK01 inventory checks. A PASS on detecting a defect is not product PASS.",
+    "dotnet": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "native_host": "NOT_RUN"
+  },
+  "product_megablocks": {
+    "P01": {
+      "decision": "FAIL_SOURCE_READY",
+      "repro": "Complete nontruncated 1234-entry PR162 tree lacks NOX.P01.Shell.csproj, MainWindow.xaml, MainWindow.xaml.cs, Pack01HostBridge.cs. Existing installer builder requires Shell.csproj and raises EXISTING_WPF_SOURCE_MISSING.",
+      "source_proof_git_blob": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+      "owner": "G1-A/P01 + T06",
+      "accepted_taskids": 0
+    },
+    "P02": {
+      "decision": "SOURCE_CONTRACT_PASS_ONLY_NATIVE_HOLD",
+      "source_proof_git_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+      "checks": [
+        "original one-host route lock",
+        "owner2/owner3 collision guard",
+        "P04 native permission callbacks",
+        "STOP/SIP consent gate"
+      ],
+      "missing": "Real Ollama/SQLite/Voice native owner service + ACL/STOP independent same-tree acceptance; 13 native Host50 contracts.",
+      "owner": "P02/Host50 + T06",
+      "accepted_taskids": 0
+    },
+    "P03": {
+      "decision": "QA_ACCEPTED_SOURCE_STATIC_ONLY",
+      "scope": "ERR-SRC-004/P03-TRANSFER-PRIVACY only",
+      "qa_accepted_source_patch_count": 1,
+      "source_pre_head": "a10e6820d374a049f51b5b80f41e2de33250b812",
+      "source_pre_git_blob": "3692811ac3234afb54e82958c7415b1f0f",
+      "source_post_git_blob": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+      "owner_receipt_git_blob": "40cdd65dc82910ee796e6710afb49352a0bcc4ca",
+      "checks": "Old source contained ex.Message exactly twice; new source no ex.Message, uses bounded P03_TRANSFER_FAILED for persisted job and event, preserves STOP cancellation winner, install receipt and single worker.",
+      "build_status": "NOT_RUN",
+      "owner": "T06/P03",
+      "accepted_product_taskids": 0
+    },
+    "P04": {
+      "decision": "FAIL_EXISTING_TEST_FIXTURE",
+      "source_git_blob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "test_pre_git_blob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+      "repro": "Production GPU _run_cuda_probe_isolated launches sys.executable -I -c child; existing test patches only parent sys.modules torch. Test mock cannot reach subprocess.",
+      "owner": "G4-B/P04 + T06",
+      "fix_required": "Owner-approved same-PRE mock of _run_cuda_probe_isolated inside existing test; run existing unittest; runtime GPU hardware acceptance separately.",
+      "accepted_taskids": 0
+    },
+    "P05": {
+      "decision": "SOURCE_CONTRACT_PASS_ONLY_OWNER_HOLD",
+      "projection_git_blob": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+      "event_schema_git_blob": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+      "checks": "Read-only projection; canonical events.v3 schema, nonterminal sequence collision guard and fail-closed malformed terminal; readiness requires owner evidence",
+      "missing": "Independent native host-bound events.v3+telemetry/SPACE same-head owner receipts and real SOURCE_READY",
+      "owner": "P05/E05 + T06",
+      "accepted_taskids": 0
+    }
+  },
+  "taskid_inventory": {
+    "known_pack01_route_taskids": 50,
+    "by_owner": {
+      "1": 7,
+      "2": 15,
+      "3": 10,
+      "4": 11,
+      "5": 6,
+      "6": 1
+    },
+    "source_bound": 39,
+    "native_accepted": 0,
+    "product_full_taskid_denominator": "N/D, not yet independently confirmed complete; 50 PACK01 route TaskIDs are a subset and not global product denominator",
+    "product_accepted": 0
+  },
+  "progress": {
+    "M2_before": "2/9",
+    "M2_after": "2/9",
+    "M2_delta_pp": 0,
+    "T06_last_proven": "1/8",
+    "new_scoped_QA_source_accepted": 1,
+    "source_ready": "HOLD"
+  },
+  "source_ready_gate": {
+    "status": "HOLD",
+    "reason": "T06 8/8 accepted HEAD/tree/manifest absent; P01 native WPF host absent; P04 test fixture stale; 13 Host50 native routes unaccepted; frozen T09 SHA and T10 independent SOURCE_READY unavailable."
+  },
+  "lesson_clusters": [
+    {
+      "ids": [
+        "ERR-SRC-004"
+      ],
+      "cause": "P03 raw error disclosure persisted",
+      "action": "T06 exact source POST now present and independent source-only 10-point check PASS; request native/.NET regression",
+      "owner": "T06/P03",
+      "status": "SCOPED_STATIC_ACCEPTED"
+    },
+    {
+      "ids": [
+        "ERR-SRC-004",
+        "ERR-SRC-003"
+      ],
+      "cause": "P01 original WPF host/Host50 accepted native paths missing",
+      "action": "Reproduce missing paths in full tree, require real owner-approved host provenance, never fabricate WPF",
+      "owner": "P01/T06",
+      "status": "OPEN_OWNER_EVIDENCE"
+    },
+    {
+      "ids": [
+        "ERR-SRC-004",
+        "ERR-SRC-005"
+      ],
+      "cause": "P04 synthetic parent torch patch cannot exercise isolated child",
+      "action": "Owner fix existing unittest fixture without production change, run targeted test; GPU native remains separate",
+      "owner": "G4-B/T06",
+      "status": "OPEN_TEST_DEFECT"
+    },
+    {
+      "ids": [
+        "ERR-SYS-002",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "cause": "Head drift and premature DONE",
+      "action": "Pin accepted HEAD + source/path blobs; keep QA source patch separate from task acceptance",
+      "owner": "ALL",
+      "status": "MITIGATED_PROCESS_NOT_CLOSED"
+    }
+  ],
+  "history_preservation": {
+    "T04_version_arbitration": "34/34 VERIFIED_CLOSED",
+    "T07_original_archive": "729/729 VERIFIED_CLOSED; SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "no_product_edits": true,
+  "no_exe_nsis_gitlab_ci_e07": true,
+  "readback": "TO_BE_CONFIRMED_AFTER_COMMIT"
+}
