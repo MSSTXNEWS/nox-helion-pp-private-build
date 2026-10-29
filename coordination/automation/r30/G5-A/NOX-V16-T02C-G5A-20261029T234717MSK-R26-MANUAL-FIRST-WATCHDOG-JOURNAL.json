@@ -1,0 +1,25 @@
+{
+  "run_id": "NOX-V16-T02C-G5A-20261029T234717MSK-R26-MANUAL-FIRST-WATCHDOG-JOURNAL",
+  "role": "G5-A / T02-C sole shared writer",
+  "source_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "register_pre_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "register_parent_head": "87e28c6cc14852ee1aa85da4ebcf572a7ad1580b",
+  "register_entries_preserved": 11,
+  "auto_T06_enabled_readback": "PASS",
+  "operation": "ONE_ATOMIC_REGISTER_PLUS_RECEIPT_GIT_CAS",
+  "product": "N/D",
+  "qa_accepted_delta": 0,
+  "source_changes": 0,
+  "distinct_host50": {
+    "legacy_source_hold": 13,
+    "owner_map_unbound": 11,
+    "owner_map_native_pending": 14
+  },
+  "errors": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-004"
+  ],
+  "next": "T06 accepted source P01 security + P03 candidate; T08 per TaskID exact HEAD acceptance; T02 E06/Lessons CAS only after successful safe doc preimage check; then T09/T10/T11",
+  "stage_status": "JOURNAL_DELTA_ONLY"
+}
