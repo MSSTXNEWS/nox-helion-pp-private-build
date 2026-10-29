@@ -72,7 +72,8 @@ def _immutable_revision(s: Any, kind: str) -> bool:
     if not isinstance(s, str):
         return False
     if REVISION.fullmatch(s):
-        return True
+        # An all-zero 40-hex revision is a placeholder, not an immutable pin.
+        return s != "0" * 40
     if kind != "ollama":
         return False
     digest = s[7:] if s[:7].lower() == "sha256:" else s
