@@ -1,0 +1,96 @@
+{
+  "run_id": "ASTRA-R29-20261029-CONSOLIDATION-03",
+  "scope": "Existing NOX HELION EXPRESS INTEGRATOR source only",
+  "parent": "74b9953a20b7086fe5186e198fecf8f5ea8454c9",
+  "owner_heads": {
+    "A01": "755c7968a5ddbcb85b858a4dda53d31a956892b5",
+    "A02": "220c95cd3e705c819c89d82d53baa52e22c69153",
+    "A03": "f58afc47d36324f3a67f65dec845e96d11959bd7",
+    "A04": "9ac1e0a0b34cf40b26223ab6631dce005c5bb2a7",
+    "A05": "4bb80cfd31c90623562bfe53a82bbc9063ec41c4",
+    "A06": "d969e5c8a2c6cec479fb7eacd6db2663f79f6f83"
+  },
+  "verified_approaches": [
+    2,
+    10,
+    5,
+    6,
+    3,
+    3
+  ],
+  "verified_total": 29,
+  "delta": 7,
+  "progress_is_not_product_readiness": true,
+  "product_readiness": null,
+  "source_code_complete": "NOT_DECLARED",
+  "timing": {
+    "scope": "Three measured completed owner blocks only; preliminary instruction reading excluded. Serial baseline is calculated by summing the same observed durations, not a separately run serial benchmark.",
+    "tasks": [
+      {
+        "owner": "A03",
+        "commit": "f58afc47d36324f3a67f65dec845e96d11959bd7",
+        "start_utc": "2026-10-29T00:46:37Z",
+        "end_utc": "2026-10-29T00:49:09Z",
+        "seconds": 152
+      },
+      {
+        "owner": "A02",
+        "commit": "5c3e407b6e22a8467c11cc3ee75a7f779698b686",
+        "start_epoch": 1793234798.5167003,
+        "end_utc": "2026-10-29T00:49:33.157278Z",
+        "seconds": 174.641
+      },
+      {
+        "owner": "A04",
+        "commit": "9ac1e0a0b34cf40b26223ab6631dce005c5bb2a7",
+        "start_utc": "2026-10-29T00:46:48Z",
+        "end_utc": "2026-10-29T00:50:30Z",
+        "seconds": 222,
+        "end_evidence": "Agent tool timestamp after exact4/4 remote readback; whole-second precision"
+      }
+    ],
+    "sum_worker_seconds": 548.641,
+    "parallel_span_seconds": 233,
+    "calculated_difference_seconds": 315.64099999999996,
+    "calculated_reduction_percent": 57.531427654878144,
+    "calculated_ratio": 2.3546824034334763,
+    "whole_product_eta": null,
+    "reuse_only_time_saving": null
+  },
+  "residual_snapshot": {
+    "commit": "d969e5c8a2c6cec479fb7eacd6db2663f79f6f83",
+    "path": "coordination/astra/agents/A06/R29_SOURCE_RESIDUAL_MAP_20261029.md",
+    "correction": "Both active P02 donor source rows now closed within inspected scope by PASS08-10; see P02 PASS10 HANDOFF at final owner head. Native composition and unknown global coverage remain."
+  },
+  "journal_readback": [
+    {
+      "name": "lesson",
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "revision": "AHj4eMTNsZckBgXglbByNmmfC-NBezLuBpqmSyVHVnJzaQdjdH06GKqaf6h6pKc5xhg2_PfpVYM078aM0UPD1SHUgKA8pD1HJgk0HFzhlvQ",
+      "readback": true,
+      "occurrences": 1
+    },
+    {
+      "name": "master",
+      "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "revision": "AHj4eMTqeU7n9Zd7kKBM3KZpvVUfsYZse6L-t8MrcjOTD5TKynKhcM1fBEnWZM3WFyAkiYh1Cgdortp4FB9xpWD16ELgVDZba5mCFIWNBKw",
+      "readback": true,
+      "occurrences": 1
+    },
+    {
+      "name": "report",
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "revision": "AHj4eMSf9aaTIbPy_EqZke889sfWDe5PW5LLBsggHaUsp2wEqVLMMnz0FG4ffKUyHT9a71DjHux5aBICqAIP6oh0I60DRmthEhvXVBEp_8c",
+      "readback": true,
+      "occurrences": 1
+    }
+  ],
+  "journal_payloads": {
+    "master": "\n\n=== ASTRA-R29-20261029-CONSOLIDATION-03 ===\nR29 loader source only. Six real owner identities /root/a01..a06 resumed independently. Full56 rules, current master/report/lesson delta and C34 read. Original729 proof remains PASS; no rebuild/reinventory. Reuse-first correction closes source gaps rather than filling the60-approach quota.\nA03 f58afc47d36324f3a67f65dec845e96d11959bd7: native Ollama digest revision contract,6 tests. A04 9ac1e0a0b34cf40b26223ab6631dce005c5bb2a7: installed Requires-Python/active Requires-Dist using importlib.metadata and PyPA,18 tests. A05 4bb80cfd31c90623562bfe53a82bbc9063ec41c4: canonical event owner/counters/replay/ID bounds,40 JS tests; C# bounds/collision fixtures NOT_RUN. A06 d969e5c8a2c6cec479fb7eacd6db2663f79f6f83 saves bounded residual map, no new codepass.\nMeasured comparison for A03/A02 PASS07/A04 only: observed durations152+174.641+222=548.641 seconds; common span00:46:37–00:50:30UTC=233seconds. Calculated difference315.641seconds(57.53%,2.35x) against the sum of the same durations. This is NOT a measured serial benchmark, reuse-only saving, or whole-product ETA; preliminary instruction reading excluded. Total product remaining denominator unknown.\nKnown remaining: NOX self-update trusted handoff and stale P01 C09 verifier; authenticated original host/provider composition for voice/PC/reviewed catalog/events; target ABI/CUDA and exact wheel closure plus real model/dataset rights inputs; later independent source reconciliation and native checks. Existing backup/restore, downloader, voice/PC services, DB and training engine reused, not rewritten. No EXE/NSIS build/CI/GitLab writes/finalintegration/main/PR162 change.\nA02 final220c95cd3e705c819c89d82d53baa52e22c69153: PASS07 consent/result donor5c3e407b(66tests), PASS08 strict stream/chat c0e77ce005da64ea3bf18a5f9f328d34a787b5d1(36tests), PASS09 SIP expiry/STOP af4a7212594e701f54716b39ce521aaeece86269(32tests), PASS10 global SQLite/native authority(41tests); suites overlap, not unique acceptance counts. All exact remote readbacks passed. The two active P02 source rows in earlier A06 snapshot are now closed within inspected donor scope; future native composition remains. PASS08 old donor-blob citation corrected append-only in PASS09; actual runtime donor dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd.\nCumulative verified approaches A01 2/10,A02 10/10,A03 5/10,A04 6/10,A05 3/10,A06 3/10=29, +7 this run. A02 10/10 is queue completion, NOT product100%. P01–P05 weighted20/25/20/25/10 readiness=N/D; SOURCE_CODE_COMPLETE not declared.\nErrors fixed include protocol/admission mismatch, dependency incompatibility, malformed canonical events, native proof truthiness, partial/composite SQLite constraints and SIP cancellation/expiry. No hidden failures promoted to native PASS.\n=== END ASTRA-R29-20261029-CONSOLIDATION-03 ===\n",
+    "report": "\n\n=== ASTRA-R29-20261029-CONSOLIDATION-03 ===\nR29 loader source only. Six real owner identities /root/a01..a06 resumed independently. Full56 rules, current master/report/lesson delta and C34 read. Original729 proof remains PASS; no rebuild/reinventory. Reuse-first correction closes source gaps rather than filling the60-approach quota.\nA03 f58afc47d36324f3a67f65dec845e96d11959bd7: native Ollama digest revision contract,6 tests. A04 9ac1e0a0b34cf40b26223ab6631dce005c5bb2a7: installed Requires-Python/active Requires-Dist using importlib.metadata and PyPA,18 tests. A05 4bb80cfd31c90623562bfe53a82bbc9063ec41c4: canonical event owner/counters/replay/ID bounds,40 JS tests; C# bounds/collision fixtures NOT_RUN. A06 d969e5c8a2c6cec479fb7eacd6db2663f79f6f83 saves bounded residual map, no new codepass.\nMeasured comparison for A03/A02 PASS07/A04 only: observed durations152+174.641+222=548.641 seconds; common span00:46:37–00:50:30UTC=233seconds. Calculated difference315.641seconds(57.53%,2.35x) against the sum of the same durations. This is NOT a measured serial benchmark, reuse-only saving, or whole-product ETA; preliminary instruction reading excluded. Total product remaining denominator unknown.\nKnown remaining: NOX self-update trusted handoff and stale P01 C09 verifier; authenticated original host/provider composition for voice/PC/reviewed catalog/events; target ABI/CUDA and exact wheel closure plus real model/dataset rights inputs; later independent source reconciliation and native checks. Existing backup/restore, downloader, voice/PC services, DB and training engine reused, not rewritten. No EXE/NSIS build/CI/GitLab writes/finalintegration/main/PR162 change.\nA02 final220c95cd3e705c819c89d82d53baa52e22c69153: PASS07 consent/result donor5c3e407b(66tests), PASS08 strict stream/chat c0e77ce005da64ea3bf18a5f9f328d34a787b5d1(36tests), PASS09 SIP expiry/STOP af4a7212594e701f54716b39ce521aaeece86269(32tests), PASS10 global SQLite/native authority(41tests); suites overlap, not unique acceptance counts. All exact remote readbacks passed. The two active P02 source rows in earlier A06 snapshot are now closed within inspected donor scope; future native composition remains. PASS08 old donor-blob citation corrected append-only in PASS09; actual runtime donor dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd.\nCumulative verified approaches A01 2/10,A02 10/10,A03 5/10,A04 6/10,A05 3/10,A06 3/10=29, +7 this run. A02 10/10 is queue completion, NOT product100%. P01–P05 weighted20/25/20/25/10 readiness=N/D; SOURCE_CODE_COMPLETE not declared.\n=== END ASTRA-R29-20261029-CONSOLIDATION-03 ===\n",
+    "lesson": "\n\n=== ASTRA-R29-20261029-CONSOLIDATION-03 ===\nLesson applied: reconcile narrow, already-tested same-owner donor hunks with current overlays before writing new engines. Exact source diff preserves R29 TIMEOUT/VoiceSession while reusing original consent, stream, SIP and SQLite constraints. Use original schema and public PyPA parsing, not custom permissive counterparts. Separate source fixes, trusted-host composition, external inputs and native acceptance in remaining-work map. Timing lesson: only compare the same measured operation intervals; sum548.641s versus overlapping233s supports a scoped calculated57.53% reduction, not a total project deadline or measured reuse-only benefit. Correct stale donor citation append-only without rewriting evidence.\n=== END ASTRA-R29-20261029-CONSOLIDATION-03 ===\n"
+  },
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN",
+  "gitlab_write": "NOT_RUN"
+}
