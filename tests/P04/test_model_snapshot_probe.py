@@ -613,6 +613,86 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                 self.assertIs(result["snapshot_revision_attested"], False)
 
 
+    def test_g4a_r09_overflow_float_in_config_holds_before_weight_hash(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","quantization":{"scale":1e9999}}',
+            encoding="utf-8"
+        )
+        with mock.patch.object(probe, "_sha256_stream",
+                               side_effect=AssertionError("bad config hashed weights")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_METADATA_INVALID")
+        self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r09_overflow_float_in_index_holds_before_weight_hash(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            '{"weight_map":{"q.weight":"model.safetensors"},'
+            '"metadata":{"total_size":4,"untrusted":{"scale":1e9999}}}',
+            encoding="utf-8"
+        )
+        with mock.patch.object(probe, "_sha256_stream",
+                               side_effect=AssertionError("bad index hashed weights")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_METADATA_INVALID")
+
+    def test_g4a_r09_overflow_float_safetensors_header_holds_before_hash(self):
+        header = (b'{"q.weight":{"dtype":"F32","shape":[1],'
+                  b'"data_offsets":[0,4],"untrusted":1e9999}}')
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(4))
+        with mock.patch.object(probe, "_sha256_stream",
+                               side_effect=AssertionError("bad header hashed")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_g4a_r09_nested_surrogates_in_config_and_index_hold(self):
+        invalid = [chr(0xD800), chr(0xDFFF)]
+        for surrogate in invalid:
+            with self.subTest(surrogate=hex(ord(surrogate)), position="config"):
+                config = {"model_type": "qwen3",
+                          "adapters": {"names": [surrogate]}}
+                (self.root / "config.json").write_text(
+                    json.dumps(config, ensure_ascii=True), encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_METADATA_INVALID")
+                self.assertEqual(result["weight_files"], [])
+                (self.root / "config.json").write_text(
+                    '{"model_type":"qwen3"}', encoding="utf-8")
+
+            with self.subTest(surrogate=hex(ord(surrogate)), position="index-key"):
+                index = {"weight_map": {"q.weight": "model.safetensors"},
+                         "metadata": {"total_size": 4, "nested": {surrogate: "x"}}}
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps(index, ensure_ascii=True), encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_METADATA_INVALID")
+
+    def test_g4a_r09_finite_json_and_unicode_scalar_still_valid(self):
+        (self.root / "config.json").write_text(
+            json.dumps({"model_type": "qwen3",
+                        "config": {"scale": 1.125,
+                                   "tag": "smile-" + chr(0x1F600)}},
+                       ensure_ascii=True), encoding="utf-8"
+        )
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"metadata": {"total_size": 4,
+                                     "note": "equipo-" + chr(0x1F600)},
+                        "weight_map": {"q.weight": "model.safetensors"}},
+                       ensure_ascii=True), encoding="utf-8"
+        )
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 1)
+        self.assertEqual(result["weight_files"][0]["sha256"],
+                         hashlib.sha256((self.root / "model.safetensors").read_bytes()).hexdigest())
+        self.assertIs(result["model_license_verified"], False)
+
+
 if __name__ == "__main__":
     unittest.main()
 
