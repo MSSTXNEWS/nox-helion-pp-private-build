@@ -226,6 +226,28 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
     metadata = header.get("__metadata__", {})
     if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    # Offset bounds alone can accept a tensor with impossible shape/byte length.
+    # Accept documented byte-addressable dtypes; unknown future dtypes HOLD.
+    element_bytes = {"BOOL": 1, "U8": 1, "I8": 1,
+                     "F8_E4M3FN": 1, "F8_E5M2": 1,
+                     "F16": 2, "BF16": 2, "I16": 2, "U16": 2,
+                     "F32": 4, "I32": 4, "U32": 4,
+                     "F64": 8, "I64": 8, "U64": 8}
+    for tensor in tensors:
+        width = element_bytes.get(tensor["dtype"])
+        if width is None:
+            raise ValueError("MODEL_UNSUPPORTED_TENSOR_DTYPE")
+        start, end = tensor["data_offsets"]
+        count = 1
+        for dim in tensor["shape"]:
+            if dim == 0:
+                count = 0
+                break
+            if count > capacity // width // dim:
+                raise ValueError("MODEL_TENSOR_SHAPE_BYTES_MISMATCH")
+            count *= dim
+        if count * width != end - start:
+            raise ValueError("MODEL_TENSOR_SHAPE_BYTES_MISMATCH")
     # Safetensors requires complete, nonoverlapping byte-buffer coverage.
     # Empty tensors use zero-width intervals and scalar shape [] is valid.
     cursor = 0
