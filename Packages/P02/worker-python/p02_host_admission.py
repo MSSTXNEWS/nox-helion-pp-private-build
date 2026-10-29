@@ -36,17 +36,23 @@ class P02EventRelay:
     def __init__(self, binding: NativeHostBinding):
         if not isinstance(binding, NativeHostBinding) or not isinstance(binding.principal, Identity):
             raise PermissionError('NATIVE_HOST_BINDING_REQUIRED')
-        if not binding.verified_user_session or not binding.principal.tenant or not binding.principal.principal:
+        if binding.verified_user_session is not True or not binding.principal.tenant or not binding.principal.principal:
             raise PermissionError('NATIVE_SESSION_UNVERIFIED')
         if not callable(binding.publish) or not isinstance(binding.allowed_host_event_types, frozenset):
             raise P02Error('EXISTING_EVENT_BRIDGE_REQUIRED')
-        if set(binding.route_map) != P02_TYPES:
+        if not isinstance(binding.route_map, Mapping):
+            raise P02Error('P02_HOST_EVENT_MAP_INCOMPLETE')
+        # The host may retain its mutable registration dictionary. Admit a
+        # detached map once so later registration cannot retarget this run.
+        route_map = dict(binding.route_map)
+        if set(route_map) != P02_TYPES:
             raise P02Error('P02_HOST_EVENT_MAP_INCOMPLETE')
         # #6 provides real events.v3 enums/registry; never invent event names.
-        if not all(isinstance(binding.route_map[p], str) and
-                   binding.route_map[p] in binding.allowed_host_event_types for p in P02_TYPES):
+        if not all(isinstance(route_map[p], str) and
+                   route_map[p] in binding.allowed_host_event_types for p in P02_TYPES):
             raise P02Error('EVENT_TYPE_NOT_IN_EXISTING_V3_REGISTRY')
         self._binding = binding
+        self._route_map = route_map
         self._last_run = None
         self._started = False
         self._finished = False
@@ -106,8 +112,10 @@ class P02EventRelay:
         if set(payload) - permitted[kind]:
             raise PermissionError('EVENT_PRIVILEGE_FIELDS_FORBIDDEN')
         if kind == 'chat.error':
+            # Error codes cross into the native events.v3/log boundary and must
+            # remain machine-readable ASCII tokens, never controls or bidi text.
             if (not isinstance(payload.get('code'), str) or
-                    not 0 < len(payload['code']) <= 32 or
+                    re.fullmatch(r'[A-Z][A-Z0-9_]{0,31}', payload['code']) is None or
                     not isinstance(payload.get('detail'), str) or
                     len(payload['detail']) > 256):
                 raise P02Error('CHAT_ERROR_SCHEMA_INVALID')
@@ -146,7 +154,7 @@ class P02EventRelay:
         # may mutate nested sources after validation (or the publisher may
         # retain a reference). Never let those mutations bypass citation gates.
         verified_payload = json.loads(encoded.decode('utf-8'))
-        mapped = self._binding.route_map[kind]
+        mapped = self._route_map[kind]
         self._binding.publish(mapped, verified_payload)
         if kind == 'chat.start':
             self._started, self._last_run = True, run
