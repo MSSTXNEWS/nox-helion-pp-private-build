@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B2",
+  "worker_label": "B2",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b2-20261029",
+  "code_commits": [
+    "05cfbc775bb1b50cec414f635ea8cd92b7b592c9",
+    "5033045ccd3399fde05a8b544cdf573bc9a1d9f9",
+    "61cf3dcba0db1dd41a9f5fa35c2b9427b9fbf3ce",
+    "07d50161c69d59f6cac64d4dc7e4586ba47b9ec3"
+  ],
+  "change_summary": "Installed identity, fresh torch process, CUDA build and GPU VRAM metadata",
+  "focused_tests": "Focused source checks; native Windows/CUDA NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "Do not accept an installed wheel as a valid CUDA runtime without checking actual adapter prerequisites.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
