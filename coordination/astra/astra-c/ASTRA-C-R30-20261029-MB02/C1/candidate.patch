@@ -1,0 +1,10 @@
+--- a/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
++++ b/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
+@@ -38,6 +38,7 @@
+   $validBytes = [int64]0
+   if (-not [int64]::TryParse(([string]$f.bytes),[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$validBytes)) { Fail 'invalid file length' }
+   $rel = [string]$f.path
++  if ($rel -cne $rel.Normalize([Text.NormalizationForm]::FormC)) { Fail 'noncanonical Unicode path' }
+   if ([string]::IsNullOrWhiteSpace($rel) -or [IO.Path]::IsPathRooted($rel) -or $rel -match '(^|[\\/])\.\.([\\/]|$)' -or $rel -match '[:*?"<>|]') { Fail "invalid path $rel" }
+   $segments=@($rel -split '[\\/]')
+   foreach ($part in $segments) {
