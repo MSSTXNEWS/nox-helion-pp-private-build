@@ -24,6 +24,7 @@ P03=ROOT/"Packages"/"P03"/"Source"/"python-host"
 PACK=ROOT/"proposals"/"NOX-PACK01-50"
 E06_TESTS=ROOT/"tests"/"e06"
 ADAPTER_TESTS=E06_TESTS/"adapters"
+HOST50_TESTS=ROOT/"coordination"/"e06_host50"
 G2_ADAPTERS=ROOT/"coordination"/"e06"/"adapters"
 P01_INSTALLER=ROOT/"stage"/"proposals"/"P01"/"C09"/"Installer"
 CREATIVE_TESTS=ROOT/"integrations"/"creative"/"tests"
@@ -34,6 +35,7 @@ SUITES=(
     ("Immutable P02/P03/E06 contracts",E06_TESTS,"test_immutable_routes_p03_e06_r11.py"),
     ("G2 source binder and rollback",E06_TESTS,"test_immutable_onehost_binder_r12.py"),
     ("T06 one-host P02 duplicate-route native ACL regression",E06_TESTS,"test_t06_r09_native_source_owner.py"),
+    ("T06 existing E06 mobile source binding (native still HOLD)",HOST50_TESTS,"test_t06_mobile_binding_r26.py"),
     ("P01 NSIS-PowerShell source CLI contract; no compiler",E06_TESTS,"test_t06_p01_nsis_powershell_contract_r15.py"),
     ("P01 original WPF donor full namespace preflight",E06_TESTS,"test_stage_p01_shared_zip_guard.py"),
     ("WOW owner/runtime registry",E06_TESTS,"test_wow_owner_runtime_preflight_r06.py"),
