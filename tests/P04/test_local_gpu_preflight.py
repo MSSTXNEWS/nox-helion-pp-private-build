@@ -277,5 +277,49 @@ class HardwarePreflightContracts(unittest.TestCase):
                                 ("GPU_TEMPERATURE_UNAVAILABLE", "GPU_THERMAL_HEADROOM_UNAVAILABLE")))
             self.assertIsNone(result["gpu"])
 
+    def test_g4b_r07_cuda_inherited_selector_contract(self):
+        selected = "GPU-12345678-1234-1234-1234-123456789012"
+        cases = (
+            ({"CUDA_VISIBLE_DEVICES": "0"}, "CUDA_PARENT_VISIBLE_DEVICES_CONFLICT"),
+            ({"CUDA_VISIBLE_DEVICES": ""}, "CUDA_PARENT_VISIBLE_DEVICES_CONFLICT"),
+            ({"CUDA_VISIBLE_DEVICES": "GPU-99999999-9999-9999-9999-999999999999"}, "CUDA_PARENT_VISIBLE_DEVICES_CONFLICT"),
+            ({"CUDA_DEVICE_ORDER": "FASTEST_FIRST"}, "CUDA_PARENT_DEVICE_ORDER_CONFLICT"),
+        )
+        for incoming, expected in cases:
+            with self.subTest(incoming=incoming), patch.dict(probe.os.environ, incoming, clear=True):
+                previous = dict(probe.os.environ)
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    probe._require_cuda_parent_selection_compatible(selected)
+                self.assertEqual(dict(probe.os.environ), previous)
+        with patch.dict(probe.os.environ, {}, clear=True):
+            self.assertIsNone(probe._require_cuda_parent_selection_compatible(selected))
+        with patch.dict(probe.os.environ, {
+            "CUDA_VISIBLE_DEVICES": selected, "CUDA_DEVICE_ORDER": "PCI_BUS_ID"
+        }, clear=True):
+            self.assertIsNone(probe._require_cuda_parent_selection_compatible(selected))
+
+    def test_g4b_r07_conflicting_parent_cuda_mask_holds_before_torch_import(self):
+        selected = "GPU-12345678-1234-1234-1234-123456789012"
+        card = {"index": "0", "uuid": selected, "name": "Synthetic NVIDIA",
+                "memory_total_mib": "12288"}
+        ready_memory = {"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
+        fake_torch = SimpleNamespace(cuda=SimpleNamespace(is_initialized=lambda: False))
+        with patch.dict(probe.os.environ, {"CUDA_VISIBLE_DEVICES": "0"}, clear=True), patch.object(
+            probe.platform, "system", return_value="Windows"
+        ), patch.object(probe.platform, "machine", return_value="AMD64"), patch.object(
+            probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"
+        ), patch.object(probe.train_qlora, "gpu_inventory", return_value=[card]), patch.object(
+            probe.train_qlora, "gpu_temperature", return_value=62.0
+        ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=ready_memory), patch.dict(
+            sys.modules, {"torch": fake_torch}
+        ):
+            result = probe.inspect("BALANCED", 0)
+            self.assertEqual(probe.os.environ["CUDA_VISIBLE_DEVICES"], "0")
+        self.assertEqual(result["status"], "HOLD")
+        self.assertIn("CUDA_PARENT_VISIBLE_DEVICES_CONFLICT", result["errors"])
+        self.assertIsNone(result["gpu"])
+        self.assertFalse(result["runtime_training_verified"])
+
+
 if __name__ == "__main__":
     unittest.main()
