@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V2",
+  "runId": "R30-G1-B-20261029T0630MSK-R02",
+  "owner": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader only",
+  "status": "SOURCE_CANDIDATE_NATIVE_BINDING_HOLD",
+  "ownerBranch": "automation/r30/g1b/R30-G1-B-20261029T0630MSK-R02",
+  "sourceBranchAtStart": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "sourceHeadAtStart": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "ownerPreviousBranch": "astra/r30-g1-b-p01-ui-20261029-t0530-msk-r01",
+  "ownerPreimageCommit": "ca89d040c81ed5287fe91991afb453e02022b283",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": "stage/proposals/P01/C09/",
+    "forbidden": [
+      "stage/proposals/P01/C09/Installer/"
+    ]
+  },
+  "rules": "V16 56/56 consolidated §33; current §§54–56 and R29 loader-only correction; Drive E06/master/lesson read",
+  "snapshotsIndexed": 25,
+  "conflictIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+  "taskId": "G1-B-P01-WEBVIEW2-DOCUMENT-EPOCH-AND-REPLAY-R02",
+  "previousDoneRetained": true,
+  "errorBefore": "Existing bridge checked only Source string; reload/away-back to same URL could cause stale ACK. _pending suppresses only simultaneous duplicate IDs, not replay after completion.",
+  "fix": "Use existing CoreWebView2 NavigationStarting and SourceChanged events to advance document epoch; bind per-message ACK to generation and exact URL; remember request IDs within bounded document cache; reauthorize capability after native action; detach native hooks on dispose. No new host.",
+  "files": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "40a648674a01b0498bb589f59db50dbb7cfe205b",
+      "preSHA256": "a8d74635d5c36faec701830a44c1ea37ab62bf910a3687e371de3105c6477228",
+      "postSHA256": "a93294a19cd14ca8e5a5e325a7690265a5e8518bd345d781fb908187f94ee240"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py",
+      "preGitBlobSHA1": "c869a2fcd7cfb52ff22bfbce7ed1171096f867ec",
+      "preSHA256": "e035fb0d2090279305aef195d6be215fd6ffdb5eb2c7714afe19949ec260c884",
+      "postSHA256": "9818c5e5e2c80400fa0485a61edb561bec1f6f04ba19ecf37c0b1459aa24123b"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_epoch_r02.py",
+      "preState": "ABSENT",
+      "postSHA256": "7c852ddb46f53f44eae2f5c6a660bab6e875cda6818abdb59a733ce9a2d8d019"
+    }
+  ],
+  "tests": {
+    "kind": "SOURCE_CONTRACT_JS_EXECUTED",
+    "redBefore": 7,
+    "checks": [
+      {
+        "name": "same-URL reload invalidates asynchronous route",
+        "passed": true
+      },
+      {
+        "name": "history/source swap invalidates epoch",
+        "passed": true
+      },
+      {
+        "name": "completed action cannot be replayed by same requestId",
+        "passed": true
+      },
+      {
+        "name": "bounded request-ID cache",
+        "passed": true
+      },
+      {
+        "name": "generation-isolated pending requests",
+        "passed": true
+      },
+      {
+        "name": "consent first and revalidation after callback",
+        "passed": true
+      },
+      {
+        "name": "exact current-URL equality and strict origin",
+        "passed": true
+      },
+      {
+        "name": "only existing WPF host and no build",
+        "passed": true
+      }
+    ],
+    "passCount": 8,
+    "failCount": 0,
+    "authoredPythonTests": "7 checks; execution NOT_RUN pending isolated source checkout",
+    "nativeCSharp": "NOT_RUN",
+    "windowsWebView2": "NOT_RUN"
+  },
+  "commits": {
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T0630MSK-R02",
+    "sourceCommit": "2d457236918d5f9c345330207739732c03f662f3",
+    "previousTestCommit": "3656833bccaebf8fe2120c2c0e17f08c941e82e0",
+    "newTestCommit": "765566d2f1827773fe8fe255b3862fb02ad85cd4"
+  },
+  "writeError": null,
+  "appliedPriorLesson": "Revalidate origin/native capability after asynchronous callback; use exact owner preimages and typed evidence; do not promote source guards to native PASS.",
+  "newLesson": "URL equality is not a document epoch. A same-URL reload bypasses Source-only stale callback checks; attach existing host navigation/source-change events and replay cache, then require an actual WPF bind and Windows fixture to promote from HOLD.",
+  "remaining": "Original MainWindow.xaml.cs only in archived donor, not editable standalone C09; no real host callback bind/installed UI/Windows origin and native consent acceptance. Owner may request donor preimage separately; Astra-C sole writer to Google Drive.",
+  "noInstallerWrites": true,
+  "noD02WowWrites": true,
+  "noP02ToP05Writes": true,
+  "noSharedR30Writes": true,
+  "noMainPR162Writes": true,
+  "noEXENsisWindowsCIGitLabBuildFinalIntegration": true,
+  "productPercent": null,
+  "sourceCodeComplete": false,
+  "releaseAccepted": false
+}
