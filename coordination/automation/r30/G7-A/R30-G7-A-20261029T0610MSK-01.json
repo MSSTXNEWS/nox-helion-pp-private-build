@@ -1,0 +1,86 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T0610MSK-01",
+  "slot": "G7-A",
+  "status": "SOURCE_PATCH_SAVED_TEST_V8_GREEN_NATIVE_NOT_RUN",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY",
+  "branch": "automation/r30/g7a/20261029T0610MSK",
+  "base_commit": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "source": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "7e4acf43c287b3578e38e0acab0266e0343132e3",
+    "post_blob_sha": "32e323dce776ef25da47f46aad527c74b390670d"
+  },
+  "test": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.test.mjs",
+    "blob_sha": "6deae63f28951dc16b9fbc22364f29c7ece0e9e0",
+    "command": "node --test proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.test.mjs",
+    "executed": "V8 source module evaluation + exact standalone test body",
+    "red": "FAIL: stale callback writes training state after rejected mount",
+    "green": "PASS: invalid-return, throw and failed initial RAF case in one targeted test",
+    "node_runtime": "NOT_RUN",
+    "windows_runtime": "NOT_RUN"
+  },
+  "issue": {
+    "symptom": "Failed native subscribe leaves a retained callback which mutates D02 FX state after rollback",
+    "root_cause": "rollbackFailedMount() did not retire disposed flag; wake failure did not release valid subscribed callback",
+    "correction": "Retire on failed mount before rollback; unsubscribe on failed RAF before rollback",
+    "preserved": "original HELION + 8 CoreID, original DOM controls, 5 Persona, 200 WOW, ECO/Reduced Motion; no feature edits"
+  },
+  "owner_lock": {
+    "source": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbidden_touched": false
+  },
+  "read_sources": {
+    "rules_56_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "spec_sections": [
+      33,
+      54,
+      55,
+      56
+    ],
+    "r30_conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "r30_frozen_refs_reviewed": 25,
+    "r30_all_full_file_contents_read": false,
+    "drive_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4"
+    ]
+  },
+  "lesson": {
+    "code": "G7A-R30-STALE_CALLBACK_AFTER_FAILED_SUBSCRIBE",
+    "observed": "A failed subscribe can outlive DOM rollback, and a failed initial RAF can outlive subscription.",
+    "improvement": "Mark disposed before rollback and call the accepted unsubscriber when RAF startup throws; keep one source behavioral regression for both",
+    "previous_lesson_applied": "Revalidate at operation boundary; do not mistake callback registration for successful mount."
+  },
+  "gates": {
+    "CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLabCI": "NOT_RUN",
+    "percent": "N/D",
+    "original_729_raw_sha": "NOT_VERIFIED",
+    "master_docs_write": "ASTRA-C_ONLY_PENDING"
+  },
+  "no_merge": true,
+  "main_modified": false,
+  "PR162_modified": false,
+  "old_DONE_preserved": true,
+  "receipt_backread": "PENDING_READBACK",
+  "commits": {
+    "source": "929eb1410d0f9f87f17a95dd96af477e0465d44b",
+    "targeted_test": "1c98a28679a806d936a7349aeffbcfde99c79492"
+  },
+  "tests_executed_count": 1,
+  "tests_node_executed_count": 0,
+  "tests_native_executed_count": 0,
+  "write_protocol": "CAS source patch; isolated test create; append-only receipt create; 3 commits because atomic tree operation unavailable"
+}
