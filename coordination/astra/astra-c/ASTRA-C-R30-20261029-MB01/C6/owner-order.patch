@@ -1,0 +1,6 @@
+--- a/coordination/e06/verify_integration.py
++++ b/coordination/e06/verify_integration.py
+@@
+-    outcomes[GATES[8]] = "PASS" if len(lanes) == 7 and sorted(x["owner"] for x in lanes) == list(range(1,8)) and all(
++    # Release uses lanes[:5]: order must bind owner IDs to their slots.
++    outcomes[GATES[8]] = "PASS" if len(lanes) == 7 and [x["owner"] for x in lanes] == list(range(1,8)) and all(
