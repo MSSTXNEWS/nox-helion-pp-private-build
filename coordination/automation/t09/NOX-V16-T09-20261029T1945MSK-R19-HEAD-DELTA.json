@@ -1,0 +1,306 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T09_R19_OWNER_SAFE_SOURCE_DELTA_RECEIPT",
+  "run_id": "NOX-V16-T09-20261029T1945MSK-R19-HEAD-DELTA",
+  "task_id": "T09",
+  "group": "G4-C",
+  "scope": "Windows EXPRESS INTEGRATOR loader-installer ONLY / SOURCE ONLY",
+  "planned_msk": "2026-10-29T19:45:00+03:00",
+  "observed_automation_start_msk": "2026-10-29T19:43:45+03:00",
+  "prepared_at_msk": "2026-10-29 19:47:59",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_chars": 205078,
+    "consolidated_rules_33": 56,
+    "sections": "1-33,54-56,R29",
+    "registry_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "registry_entries": 11,
+    "status_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "errors_ack": [
+      {
+        "error_id": "ERR-SYS-001",
+        "action": "HANDOFF",
+        "reason": "T02 exclusive shared registry writer; historical 419 fingerprints backfill PARTIAL; current 11/11 read"
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "action": "APPLY",
+        "reason": "Re-read current PR162 23c1557c... and exact tree 4dc3325a..., do not reuse e1ed247d freeze"
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "action": "APPLY_AND_HANDOFF",
+        "reason": "T06 Host50 admission PRE efd5af93... POST d8d8e898... read on current HEAD, source proof only; T08 needs signed native 13/13 same-head verification"
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "action": "HANDOFF",
+        "reason": "T06 latest R15 receipt blob 7c4a708280d694907aef8c53297c2fa7bb8a1747 explicitly INCOMPLETE_1_OF_8; P01-P05 native/owner attestations and accepted HEAD/tree/manifest missing"
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "action": "HANDOFF",
+        "reason": "T08 independent source runner fixture tests on exact source SHA still NOT_RUN"
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "action": "ALREADY_VERIFIED",
+        "reason": "T07 original ZIP 3/3 and 729/729 verified, no rehash"
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "action": "ALREADY_VERIFIED",
+        "reason": "T04 historic arbitration 34/34, no repeat"
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "action": "APPLY",
+        "reason": "T09 1/6 not 6/6; current source change cannot be frozen without T06/T08 proof; additive immutable personal receipt"
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "APPLY",
+        "reason": "One targeted new 5-commit source delta and owner-safe source attestation; no report-only DONE"
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "action": "HANDOFF",
+        "reason": "T06 acceptance 1/8; owner action required and no T10 prerequisite"
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "action": "HANDOFF",
+        "reason": "Signed native verifier and 13/13 real owner proofs NOT_RUN; T08 independently verify exact SHA once T06 owner accepts"
+      }
+    ],
+    "new_issue_not_yet_in_register": {
+      "error_id": "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE",
+      "action": "HANDOFF_T02",
+      "reason": "M1 source commit 0132da889... altered P02 owner collision route; current binding POST c8b937172eb431310229111945971bb11cd8ff90, independent native NOT_RUN"
+    },
+    "shared_docs_revisions": {
+      "master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "e06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "c34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "source_delta": {
+    "pre_head": "e1ed247dfadfa7829c6db5cf1e701ee657aa8030",
+    "post_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "post_tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "ahead": 5,
+    "behind": 0,
+    "paths_deleted": 0,
+    "paths_modified": [
+      "coordination/e06_host50/admission.py",
+      "proposals/NOX-PACK01-50/owner-binding-map.json",
+      "coordination/e06/adapters/g2_space_mobile.py",
+      "coordination/e06/run_source_integrations_r13.py"
+    ],
+    "new_test_source": "tests/e06/test_t06_p01_nsis_powershell_contract_r15.py",
+    "verified_git_blobs": {
+      "coordination/e06_host50/admission.py": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+      "proposals/NOX-PACK01-50/owner-binding-map.json": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+      "coordination/e06/adapters/g2_space_mobile.py": "c8b937172eb431310229111945971bb11cd8ff90",
+      "coordination/e06/run_source_integrations_r13.py": "5fc83d43d5da248938c2e6bc76f7011536663330",
+      "tests/e06/test_t06_p01_nsis_powershell_contract_r15.py": "10786b314eb1fc20ae66c539132c50da7daf1852",
+      "coordination/automation/t08/t08_autofix_closeout_gate.py": "56806fb744694b2dd146db88229597722953ddd9"
+    },
+    "note": "No source modifications by T09; Git PRE/POST here describes observed T06 branch delta, not a T09 CAS mutation"
+  },
+  "physical_check": {
+    "kind": "DIRECT_GIT_HEAD_BLOB_STATIC_SOURCE_SECURITY_ONLY",
+    "checks": [
+      {
+        "id": "HOST50_ROUTE_POLICY_50",
+        "result": "PASS",
+        "detail": "50 immutable route declarations inspected"
+      },
+      {
+        "id": "HOST50_HMAC_PROOF",
+        "result": "PASS",
+        "detail": "HMAC SHA256 source attestation branch present"
+      },
+      {
+        "id": "HOST50_NATIVE_VERIFIER_FAIL_CLOSED",
+        "result": "PASS",
+        "detail": "callable native verifier and explicit approved is True checks retained"
+      },
+      {
+        "id": "HOST50_NATIVE_CONSENT_GUARD",
+        "result": "PASS",
+        "detail": "native_consent referenced"
+      },
+      {
+        "id": "STOP_DECLARATIONS",
+        "result": "PASS",
+        "detail": "STOP_TARGETS/STOP_ROUTES retained"
+      },
+      {
+        "id": "P02_OWNER_COLLISION_AND_PREIMAGE_RECHECK",
+        "result": "PASS",
+        "detail": "P02_BASE_EXTRA_OWNER_COLLISION, existing-host route collision, verify_preimages required"
+      },
+      {
+        "id": "P01_UNSUPPORTED_NSIS_FLAGS_TEST_SOURCE",
+        "result": "PASS",
+        "detail": "negative PathOnly and MissingNativeVerifierFlag cases present; test NOT_EXECUTED"
+      },
+      {
+        "id": "T08_CLOSEOUT_GUARD",
+        "result": "PASS",
+        "detail": "t09_t10_delivered + comment_readback_pass symbols present"
+      }
+    ],
+    "scope": "8/8 static invariants, NOT runtime, no installed Host50, no actual Windows, no T08 QA independent PASS"
+  },
+  "original_source_lock": {
+    "criterion": 3,
+    "status": "DONE",
+    "original_zip_bytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "parts": "3/3",
+    "files": "729/729",
+    "t07_receipt_blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+    "t09_cosign_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+    "rehashed_now": false
+  },
+  "t06_receipt": {
+    "path": "coordination/automation/t06/NOX-V16-T06-20261029T1933MSK-G3C-R15.json",
+    "blob_sha": "7c4a708280d694907aef8c53297c2fa7bb8a1747",
+    "status": "INCOMPLETE_1_OF_8_SOURCE_ONLY",
+    "approved_full_head": null,
+    "approved_manifest_sha256": null
+  },
+  "t08": {
+    "required_same_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "independent_closeout": "NOT_PROVEN",
+    "native_13_routes": "NOT_RUN"
+  },
+  "role_hierarchy": {
+    "role": "G4-C/T09",
+    "mega_blocks": [
+      {
+        "name": "SOURCE_INPUTS",
+        "blocks": [
+          "T09_C1",
+          "T09_C2"
+        ],
+        "accepted": 0,
+        "total": 2
+      },
+      {
+        "name": "INTEGRITY_SECURITY",
+        "blocks": [
+          "T09_C3",
+          "T09_C4"
+        ],
+        "accepted": 1,
+        "total": 2
+      },
+      {
+        "name": "IMMUTABLE_FREEZE_HANDOFF",
+        "blocks": [
+          "T09_C5",
+          "T09_C6"
+        ],
+        "accepted": 0,
+        "total": 2
+      }
+    ],
+    "operational_equal_weight": true,
+    "product_progress": "N/D_FULL_P01_P05_INVENTORY_MISSING",
+    "group_cells_G1_to_G5": "N/D_NO_COMPLETE_VERIFIED_TASKID_LEDGER"
+  },
+  "criteria": [
+    {
+      "task_id": "T09_C1",
+      "status": "HOLD",
+      "reason": "owner-accepted T06 8/8 HEAD/tree missing"
+    },
+    {
+      "task_id": "T09_C2",
+      "status": "HOLD",
+      "reason": "all T04/T05 selected owner patches + manifest not accepted; T04 historical arbitration 34/34 preserved"
+    },
+    {
+      "task_id": "T09_C3",
+      "status": "DONE",
+      "reason": "physical original ZIP SourceLock only"
+    },
+    {
+      "task_id": "T09_C4",
+      "status": "HOLD",
+      "reason": "no independent T08 P0/P1 same-source-head PASS"
+    },
+    {
+      "task_id": "T09_C5",
+      "status": "HOLD",
+      "reason": "no one immutable accepted HEAD/tree/manifest SHA freeze"
+    },
+    {
+      "task_id": "T09_C6",
+      "status": "HOLD",
+      "reason": "no frozen source handoff T10/T11"
+    }
+  ],
+  "progress": {
+    "before": 1,
+    "total": 6,
+    "after": 1,
+    "before_pct": 16.7,
+    "after_pct": 16.7,
+    "delta_pp": 0,
+    "bar": "██░░░░░░░░",
+    "remaining": 5
+  },
+  "gate_status": {
+    "READ": "PASS",
+    "PHYSICAL": "PASS_STATIC_SOURCE_READBACK_ONLY",
+    "JOURNAL": "PENDING_GIT_CREATE_AND_READBACK",
+    "MASS_IMPROVE": "PARTIAL_OWNER_HANDOFF",
+    "source_ready": "HOLD",
+    "final_freeze": "HOLD",
+    "build": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "lesson_applied": "Change-sensitive source SHA pin and fail-closed native verifier are checked on current T06 tree; original ZIP physical SHA is independent and not a substitute for final integrated manifest; no fake 100%",
+  "owner_handoff": {
+    "error_id": "ERR-SRC-004",
+    "owner": "T06/M1",
+    "action": "Provide single accepted 8/8 same-source HEAD/tree/owner manifest SHA with P01-P05 and 13 Host50 signed native rights/ACL/STOP/consent; request T08 independent disposition on EXACT same SHA. Then T09 pins one source tree for T10/T11, not contingent on T10 PASS",
+    "t02": "T02 only append new R15 source patch/NEW ERR-T06-P02-OWNER-ROUTE and T09 R19 readback via requiredRevisionId CAS/readback"
+  },
+  "no_loss": {
+    "deletions_observed_in_5_commit_delta": 0,
+    "full_968_original_blob_physical_proof_on_integrated_tree": "NOT_CLAIMED",
+    "old_DONE_retained": true
+  },
+  "safety": {
+    "product_code_written_by_t09": false,
+    "main_changed": false,
+    "pr162_changed_by_t09": false,
+    "shared_docs_written_by_t09": false,
+    "exe_nsis_ci_e07": "NOT_RUN"
+  },
+  "next_checkpoint": "Fresh PR162 HEAD; if T06 owner 8/8 and T08 same SHA, pin one immutable frozen HEAD/tree/manifest; else owner-specific exact handoff without repeat QA."
+}
