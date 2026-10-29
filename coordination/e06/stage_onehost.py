@@ -94,6 +94,8 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             prepared.append(temporary)
             prepared_ids[temporary] = _identity(temporary)
         backup = prepared[3]
+        # Even the first published addon needs the cooperative owner lease.
+        require_lock_owned()
         # Hard-link publication is atomic and refuses an existing destination.
         os.link(prepared[1], trusted_path(dest))
         published.append((dest, _identity(prepared[1]), extra))
