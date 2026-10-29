@@ -99,7 +99,7 @@ def _verified_downstream(source, p0, handoff, journal):
                 return False
         if p0.get("status") == "PATCH_APPLIED":
             test = _actual_json_blob(git, p0.get("focused_test_blob"))
-            if test.get("status") != "PASS":
+            if test.get("status") != "PASS" or not _consistent_source_heads(test, head):
                 return False
         for name in DOCS:
             doc = journal[name]
