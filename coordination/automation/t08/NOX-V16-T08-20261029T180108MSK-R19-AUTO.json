@@ -1,0 +1,77 @@
+{
+  "task_id": "T08",
+  "run_id": "NOX-V16-T08-20261029T180108MSK-R19-AUTO",
+  "status": "HOLD_T06_1_OF_8",
+  "scope": "EXPRESS INTEGRATOR source only",
+  "source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "before": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+    "head": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "tree": "dfa7545a7e323b924ca2a4e7a7060af46002eac6",
+    "accepted_manifest": null
+  },
+  "registry": {
+    "blob": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+    "status": {
+      "OPEN": 3,
+      "FIX_APPLIED_UNVERIFIED": 2,
+      "VERIFIED_CLOSED": 2
+    },
+    "ack": {
+      "ERR-SYS-001": "T02_HANDOFF",
+      "ERR-SYS-002": "APPLIED_LIVE_HEAD_CHECK",
+      "ERR-SRC-003": "T06_NATIVE_OWNER_HANDOFF",
+      "ERR-SRC-004": "T06_ACCEPTANCE_HANDOFF",
+      "ERR-SRC-005": "T06_FIXTURE_VERIFY_HANDOFF",
+      "ERR-SYS-006": "ALREADY_VERIFIED",
+      "ERR-SYS-007": "ALREADY_VERIFIED"
+    }
+  },
+  "cross_index": {
+    "blob": "dba5a0230fe4dd73b68095431f426c3de7111a8f",
+    "ack": [
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ]
+  },
+  "delta": {
+    "source_product_changed": 0,
+    "t06_guard_pre": "422af16dfea51210b1c667cc5183ec5f0eb0bf63",
+    "t06_guard_post": "68662ebc7395465b10331b45c049c569939b33db",
+    "t06_test_pre": "d7593b0e766f0a5505b2475293ed0d054dba81b4",
+    "t06_test_post": "5525d01f297ee5bf5510f100c1f7359e2091efd7",
+    "deleted": 0
+  },
+  "one_check": {
+    "t08_guard_blob": "56806fb744694b2dd146db88229597722953ddd9",
+    "executed_exact_head": true,
+    "output": "HOLD_EVIDENCE_0_OF_3",
+    "output_sha256": "999fa0a78ecc905807a78cdc9858103aaafc6359db7387cc9e7312e73662c214",
+    "native": "NOT_RUN"
+  },
+  "progress": {
+    "previous": "1/3_33.3%",
+    "current": "1/3_33.3%",
+    "delta_pp": 0,
+    "bar": "███░░░░░░░",
+    "remaining": 2,
+    "criterion1": "HOLD",
+    "criterion2": "HOLD",
+    "criterion3": "HISTORICAL_DONE"
+  },
+  "handoff": {
+    "owner": "T06",
+    "required": "FULL accepted immutable HEAD/tree/manifest, P01-P05, 13 native Host50 STOP/ACL/consent receipts",
+    "then": [
+      "T08_P0P1_DELTA",
+      "T09_FREEZE",
+      "T10_INDEPENDENT_CHECK",
+      "T02_CAS"
+    ]
+  },
+  "lesson": "ERR-SYS-002: reread current SHA; preserve proven source results but never transplant P0/P1 acceptance across a new head.",
+  "no_product_code_write": true,
+  "no_build_ci_e07": true
+}
