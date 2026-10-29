@@ -28,6 +28,7 @@ public sealed record ModelCatalogEntry(
     string? ExpectedManifestDigestSha256 = null)
 {
     public bool CanOfferOneClickPull => EvidenceStatus == CatalogEvidenceStatus.ArtifactVerified
+        && IsCanonicalOfficialFamilyPage(Id, OfficialLibraryPage)
         && IsCanonicalOwnerTag(ExactTag, Id)
         && !string.IsNullOrWhiteSpace(Version)
         && !string.IsNullOrWhiteSpace(License)
@@ -47,6 +48,21 @@ public sealed record ModelCatalogEntry(
     // This public record may be constructed without TryPromote. Do not allow
     // an ArtifactVerified flag alone to bypass the original owner's exact
     // tag, pinned digest, or evidence-URL requirements.
+    // A direct public record bypasses TryPromote. Require its family to exist in
+    // the canonical discovery list AND bind the page to that exact Ollama family.
+    // URL/record shape is not attestation of bytes, license or rights.
+    private static bool IsCanonicalOfficialFamilyPage(string? family, Uri? page) =>
+        family is { Length: > 0 }
+        && ModelCatalog.OfficialFamilies.Any(entry =>
+            string.Equals(entry.Id, family, StringComparison.OrdinalIgnoreCase))
+        && page is not null && page.IsAbsoluteUri
+        && page.Scheme == Uri.UriSchemeHttps && page.IsDefaultPort
+        && page.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase)
+        && string.IsNullOrEmpty(page.UserInfo)
+        && string.IsNullOrEmpty(page.Query)
+        && string.IsNullOrEmpty(page.Fragment)
+        && page.AbsolutePath.Equals("/library/" + family, StringComparison.OrdinalIgnoreCase);
+
     private static bool IsCanonicalOwnerTag(string? tag, string family) =>
         tag is { Length: <= 160 }
         && tag.StartsWith(family + ":", StringComparison.OrdinalIgnoreCase)
