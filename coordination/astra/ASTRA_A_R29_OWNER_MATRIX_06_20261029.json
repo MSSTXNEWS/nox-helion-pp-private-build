@@ -31,9 +31,11 @@
       "ownership": [
         "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
         "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
-        "stage/proposals/P01/C09/QA/A2/**"
+        "stage/proposals/P01/C09/QA/A2/**",
+        "integrations/wow200/runtime/home-scene.mjs",
+        "proposals/NOX-CINEMA-FX/nox-cinema.css"
       ],
-      "task": "rollback/uninstall and P01 UI contracts, no A1 NSIS edits"
+      "task": "rollback/uninstall and P01 UI contracts, no A1 NSIS edits; existing HOME decoratable controls and ECO animation CSS (exclusive A2)"
     },
     "A3": {
       "package": "P02",
@@ -135,5 +137,6 @@
     0
   ],
   "productReadiness": "N/D",
-  "next": "A1 source-only ownership marker post-write verification; do not reuse already fixed FileWrite guard"
+  "next": "A1 source-only ownership marker post-write verification; do not reuse already fixed FileWrite guard",
+  "r29Extension": "A2 owns only the two explicit existing P01 visual contract files above; no change to D02 owner assets, effects, other UI paths or Astra-B."
 }
