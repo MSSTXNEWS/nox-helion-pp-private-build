@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_V16_G5A_R18_OWNER_SAFE_SOURCE_NEGATIVE_PROOF",
+  "run_id": "NOX-V16-G5A-20261029T210410MSK-R18-P01-SOURCELOCK-POSTPUBLISH-FAULT",
+  "role": "G5-A support T02; NOT shared journal writer, NOT T06 source writer",
+  "source_only": true,
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_rules": 56,
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_statuses": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "all_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "docs_revisions": {
+      "canon": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+      "master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "e06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "c34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "pr162_pre_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "pr162_post_head": "b6c8db1a0383a6ae3a9331240c8acd8b76386694",
+    "post_tree": "13316feaba1fbf16aec78eafdde62abeefca1faf",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "toolkit": "TOOL_NOT_RUN"
+  },
+  "finding": {
+    "parent_error_id": "ERR-SRC-004",
+    "path": "coordination/e06/stage_p01.py",
+    "pre_blob": "a56a9ccc369d584e6468bf7e41b8768e5672cbe2",
+    "post_blob": "b0bd954407949965e4871acaa9f15ccc060e3187",
+    "owner_commit": "b6c8db1a0383a6ae3a9331240c8acd8b76386694",
+    "root_cause": "T06 publication sequence moves fully-staged R11 into WORK then separately opens source_lock.json with mode x; on late receipt-open failure R11 remains without matching source_lock receipt, next run enters E06_R11_ALREADY_EXISTS_NO_OVERWRITE.",
+    "negative_repro": {
+      "status": "REPRODUCED_ISOLATED_ONLY",
+      "injected_failure": "PermissionError raised from Path.open on source_lock.json AFTER R11.rename",
+      "observed": "R11 exists; source_lock.json absent; subsequent preflight HOLD",
+      "script_sha256": "903944dcf41d3e5437173d9592dcb5fbbf6de7084b7f141badc4b4b29ced2e26",
+      "full_repository_runtime": "NOT_RUN",
+      "windows_native": "NOT_RUN"
+    },
+    "ancestor_reparse_guard": {
+      "status": "EXTRACTED_GUARD_ONLY_4_OF_4_PASS",
+      "script_sha256": "fa4de01ff490248d41203cf9eba01d1932b1a81783338451ced5269535331d23",
+      "source_blob": "a56a9ccc369d584e6468bf7e41b8768e5672cbe2",
+      "current_blob_order_verified": true
+    },
+    "proposed_owner_action": "T06/P01: on exact b0bd9544 PRE, make receipt-publication failure recoverable with safe no-loss semantics; add failure-injection regression for source_lock.json open/write after R11 publish, preserve already-existing R11/SourceLock/user data; T08 independent same-HEAD review. No automatic deletion.",
+    "status": "OPEN_SOURCE_ONLY_NO_PRODUCT_QA"
+  },
+  "error_actions": {
+    "ERR-SYS-001": "HANDOFF T02/C: shared register remains unchanged; include this unique source-derived P01 delta after readback",
+    "ERR-SYS-002": "APPLIED: refreshed live PR162 from 22ea5406... to b6c8db1a... and verified only changed P01 path",
+    "ERR-SRC-003": "DELEGATE T06/Host50 + T08; 13 native routes not accepted",
+    "ERR-SRC-004": "APPLIED isolated negative regression: receipt-open failure after R11 rename leaves partial publish; T06/P01 exact blob b0bd9544...",
+    "ERR-SRC-005": "NO_IMPACT: T06/T08 pinned fixture runner remains separate",
+    "ERR-SYS-006": "ALREADY_VERIFIED: 729/729 ZIP original preserved",
+    "ERR-SYS-007": "ALREADY_VERIFIED: T04 34/34 preserved",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09: freeze needs owner-accepted and independent same-HEAD QA",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED: isolated test, run and receipt are not TASK_DONE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06: source 1/8 not accepted 8/8",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08: source evidence chain and 13 native routes pending"
+  },
+  "improvements": {
+    "discovered_11": 11,
+    "clustered_3": 3,
+    "applied_2": 2,
+    "delegated_6": 6,
+    "already_verified_2": 2,
+    "remaining_owner_qa": 1,
+    "lesson": "a fully staged source directory can still be half-committed when its separate receipt is published afterward; verify both order and failure recovery"
+  },
+  "progress": {
+    "historical_t02": "4/4 unchanged",
+    "coordinator_c": "0/4 unchanged",
+    "new_accepted_taskids": 0,
+    "delta_pp": 0,
+    "product": "N/D; no frozen inventory",
+    "task_stage": "P01 source regression found, owner fix and QA pending"
+  },
+  "permissions": {
+    "pr162_changed_by_g5a": false,
+    "shared_docs_changed_by_g5a": false,
+    "build": "NOT_RUN",
+    "gitlab": "UNKNOWN"
+  },
+  "next_checkpoint": "T06 owner fix exact PRE b0bd...; T08 independent current-HEAD test; T02/C dedup into existing ERR-SRC-004 via Git CAS+Docs 3/3 only upon evidence."
+}
