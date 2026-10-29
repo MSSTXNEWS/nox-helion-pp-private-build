@@ -116,6 +116,12 @@ Section "NOX HELION application" SEC_MAIN
   ClearErrors
   FileRead $2 $3
   IfErrors MarkerReadFailed
+  ; Reject any appended second line or trailing bytes after the exact marker.
+  ClearErrors
+  FileRead $2 $4
+  IfErrors MarkerEofVerified
+  Goto MarkerReadFailed
+  MarkerEofVerified:
   FileClose $2
   StrCmp $3 "NOXHELION.P01 V16$\r$\n" MarkerReady MarkerReadbackFailed
   MarkerReadFailed:
