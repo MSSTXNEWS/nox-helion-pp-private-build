@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A4-MB01-20261029",
+  "owner": "A4",
+  "branch": "astra/r29-a04-voice-20261029",
+  "taskId": "P02 native authorization rechecked after call-history callback",
+  "prePostGitBlobs": [
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359",
+      "post": "0e94dda33dfb81511d57da2f18ed118d59ba5752",
+      "commit": "30aa4f0d5d2e9445dad3a97577cd4470d1e05307"
+    }
+  ],
+  "sourceStaticAssertions": "3/3 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 1,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "1/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
