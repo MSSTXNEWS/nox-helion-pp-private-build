@@ -1,0 +1,164 @@
+{
+  "schema": "NOX_V16_G3B_R22_IMMUTABLE_SOURCE_CHECKPOINT_V1",
+  "run_id": "G3B-20261029T223056MSK-R22-GGUF-STOP-HASH-CAS",
+  "scope": "Windows NOX HELION EXPRESS INTEGRATOR SOURCE ONLY",
+  "status": "INCOMPLETE_SOURCE_PATCH_NOT_OWNER_ACCEPTED",
+  "preserve": [
+    "T04 34/34",
+    "original 729/3 ZIP",
+    "D02/WOW200/8 CoreID/5 Persona",
+    "PACK01/PACK02 50+50",
+    "STOP/ACL/native consent/privacy/NO-LOSS"
+  ],
+  "no_build": true,
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMRrCbChJWt98LEivPvtVSvsMHcQ6QqK9EydK-rkKXwQ8_wa5t9TDjReH3OgbVHK-e71u8r77ecSxTEv3sb4ZzCtRd0Z2WG3ZUzLW90",
+    "canon_rule_count": 56,
+    "register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "registry_status": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMSqxXTbS8hogjyN5cjHUFhyFwD0f8jKqFgh3EUc_GSztbEWttqpsPSlTiJ5lsPSXKrotPw3jmhBIQ1MKaST1arCHLJw16U94suo7wo",
+    "c34_new_delta": "NOT_INDEPENDENTLY_VERIFIED",
+    "pr162_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+    "pr162_tree": "ec9541ba05fb26612284e15ca4c62b90f0c56334",
+    "role_archive_blob": "61f8f722263d188f95fc44bd5090237fa6bf560c",
+    "r22_policy_blob": "1a4be5b5dbb60f8c8a81bdf48a81fca8e30c3125"
+  },
+  "task_reference": "ERR-SRC-004 existing P03 queue/NO-LOSS intake; no new product TaskID",
+  "owner_scope": {
+    "owner": "G3-B isolated P03 queue",
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "source_base_branch": "automation/r30/g3b/G3B-20261029T204359MSK-R18-P03-REVIEW-PRIVACY-RECONCILE",
+    "source_base_commit": "f428aa26dd5ce46e1bb37505c932527ec04f8b22",
+    "source_base_tree": "eb30b9ee92606948d6c85b9d58e37cebd96a3a79",
+    "forbidden_peer_paths_not_touched": true,
+    "pr162_writer": "T06 only",
+    "shared_journal_writer": "T02 only"
+  },
+  "delta": {
+    "defect": "ImportGgufAsync could return after another window has already persisted STOP; unconditional ComputedSha256 update can mutate a Cancelling job or throw on Cancelled. Hash receipt must only be written while still Running.",
+    "before_blob": "7c35a248271cfc8b4194247fa69eea6a03187b3c",
+    "after_blob": "c8670e0fa63608c62a608c55d6c90ad165c1410e",
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "prior_R18_review_guard_retained": true,
+    "source_blobs": {
+      "source": "c8670e0fa63608c62a608c55d6c90ad165c1410e",
+      "test": "0053f4dd119b6252b42a966e6ea64e908973a91c"
+    },
+    "test_path": "coordination/automation/r30/G3-B/tests/G3B-20261029T223056MSK-R22-GGUF-STOP-HASH-CAS.test.mjs",
+    "tests": {
+      "source_text_static_assertions_passed": 20,
+      "source_text_static_assertions_total": 20,
+      "node_saved_test_run": "NOT_RUN",
+      "dotnet_runtime": "NOT_RUN",
+      "windows": "NOT_RUN"
+    },
+    "readback_pending": true
+  },
+  "coordination": {
+    "r20_head_at_snapshot": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "current_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+    "dispatch": "STALE_SNAPSHOT_REGENERATE",
+    "r22_tool": "TOOL_NOT_RUN"
+  },
+  "error_coverage": {
+    "total_discovered": 11,
+    "triaged": [
+      {
+        "id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "APPLY_PRESTART_SHA_EXIT_GUARD"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "APPLY_PRESTART_SHA_EXIT_GUARD"
+      },
+      {
+        "id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "action": "DELEGATE_NO_CROSS_OWNER_EDIT"
+      },
+      {
+        "id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "action": "APPLY_CANDIDATE_PLUS_T06_HANDOFF"
+      },
+      {
+        "id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "DELEGATE_NO_CROSS_OWNER_EDIT"
+      },
+      {
+        "id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "action": "ALREADY_FIXED"
+      },
+      {
+        "id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "action": "ALREADY_FIXED"
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "action": "DELEGATE_NO_CROSS_OWNER_EDIT"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "action": "APPLY_PRESTART_SHA_EXIT_GUARD"
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "DELEGATE_NO_CROSS_OWNER_EDIT"
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "action": "DELEGATE_NO_CROSS_OWNER_EDIT"
+      }
+    ],
+    "processed": 11,
+    "applied_clusters": [
+      "ERR-SRC-004:P03STOP_PREIMAGE_PATCH_CANDIDATE",
+      "ERR-SYS-002:LIVE_HEAD_NOT_STALE_QUEUE"
+    ],
+    "delegated_open": "Host50 owner T06 and independent T08/T09/T10/T11, shared journals T02",
+    "remaining": "owner-current PR162 CAS, target QA, journal readback"
+  },
+  "progress": {
+    "operational_before": "1/4",
+    "operational_after": "1/4",
+    "accepted_delta": 0,
+    "product": "N/D",
+    "stage": "SOURCE_PATCH_PREPARED"
+  },
+  "handoff": {
+    "to": [
+      "T06",
+      "T02",
+      "T08"
+    ],
+    "request": "T06 compare current PR162 worker blob d4f582552dad3906f9caa3b4e2dabb52ed89f52b against full G3-B candidate patch; CAS-admit only if owner map matches; retain T06 privacy/progress and R18 review guard; T08 independently test STOP GGUF race at exact accepted HEAD; T02 record only verified delta, no duplicate TaskID.",
+    "next_action": "T06 retrieve PR162 current HEAD+tree, exact path PRE, cherry-pick/reconcile full R18+R22 G3B candidate by owner-safe CAS; T08 same SHA QA. Do not run EXE/NSIS/CI/E07."
+  }
+}
