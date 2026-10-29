@@ -19,8 +19,12 @@ public sealed class ModelDownloadQueueWorker(
             if (job.Kind == ModelJobKind.OllamaPull &&
                 (job.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(job.ImmutableRevision)))
             {
-                await store.UpdateAsync(job.Id, j => j with { State = ModelJobState.Failed,
-                    Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }, ct);
+                // The queued snapshot can be cancelled by another NOX window before
+                // this review gate is persisted. Never rewrite terminal Cancelled.
+                await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Queued
+                    ? j with { State = ModelJobState.Failed,
+                        Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }
+                    : j, ct);
                 return;
             }
             // Hold one OS-backed lease through the transfer so a second window
@@ -53,10 +57,17 @@ public sealed class ModelDownloadQueueWorker(
                 var current = started;
                 async ValueTask OnProgress(OllamaStreamUpdate u, CancellationToken token)
                 {
-                    await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
+                    var persisted = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
                         ? j with { Status = u.Status, CompletedBytes = u.Completed, TotalBytes = u.Total }
                         : j, token);
-                    await SafePublishAsync(job, "progress", u.Status, u.Completed, u.Total, u.Digest, null, token);
+                    // STOP may win the queue race while an HTTP progress callback
+                    // is inflight. Do not publish a fake RUNNING event after STOP.
+                    if (persisted?.State != ModelJobState.Running || linked.IsCancellationRequested)
+                    {
+                        linked.Cancel();
+                        return;
+                    }
+                    await SafePublishAsync(job, "progress", u.Status, persisted.CompletedBytes, persisted.TotalBytes, u.Digest, null, token);
                 }
                 string? digest;
                 if (current.Kind == ModelJobKind.OllamaPull)
@@ -67,6 +78,9 @@ public sealed class ModelDownloadQueueWorker(
                     digest = "sha256:" + imported.Sha256;
                     await store.UpdateAsync(job.Id, j => j with { ComputedSha256 = imported.Sha256 }, ct);
                 }
+                // Ollama may finish while a native STOP is in flight; do not
+                // convert an already-cancelled transfer into Installed.
+                linked.Token.ThrowIfCancellationRequested();
                 var done = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
                     ? j with { State = ModelJobState.Completed, Status = "Installed",
                         ReceiptPath = ollama.ReceiptPathFor(j.Id) } : j, CancellationToken.None);
@@ -83,14 +97,46 @@ public sealed class ModelDownloadQueueWorker(
                 if (cancelled?.State == ModelJobState.Cancelled)
                     await SafePublishAsync(job, "cancelled", "Cancelled", null, null, null, null, CancellationToken.None);
             }
+            catch (Exception ex) when (linked.IsCancellationRequested)
+            {
+                // Native cancel can surface as an HTTP/IO exception rather than
+                // OperationCanceledException. Preserve durable CANCELLED.
+                var cancelled = await store.UpdateAsync(job.Id, j =>
+                    j.State is ModelJobState.Running or ModelJobState.Cancelling
+                        ? j with { State = ModelJobState.Cancelled,
+                            Status = "Cancelled; Ollama may resume this pull later" }
+                        : j, CancellationToken.None);
+                if (cancelled?.State == ModelJobState.Cancelled)
+                    await SafePublishAsync(job, "cancelled", "Cancelled", null, null,
+                        null, null, CancellationToken.None);
+                System.Diagnostics.Trace.TraceInformation(
+                    "P03_CANCEL_NETWORK_TERMINATED job={0} error={1}", job.Id, ex.GetType().Name);
+            }
             catch (Exception ex)
             {
-                var failed = await store.UpdateAsync(job.Id, j =>
-                    j.State is ModelJobState.Running or ModelJobState.Cancelling
-                        ? j with { State = ModelJobState.Failed, Status = "Failed", Error = ex.Message }
-                        : j, CancellationToken.None);
-                if (failed?.State == ModelJobState.Failed)
-                    await SafePublishAsync(job, "failed", "Failed", null, null, null, ex.Message, CancellationToken.None);
+                // A second NOX window may persist STOP before our local 250 ms
+                // monitor cancels the token. Durable Cancelling beats local token
+                // state: an already-requested STOP must never become Failed.
+                var stoppedBeforeFailure = false;
+                var outcome = await store.UpdateAsync(job.Id, j =>
+                {
+                    if (j.State == ModelJobState.Cancelling)
+                    {
+                        stoppedBeforeFailure = true;
+                        return j with { State = ModelJobState.Cancelled,
+                            Status = "Cancelled; Ollama may resume this pull later" };
+                    }
+                    return j.State == ModelJobState.Running
+                        ? j with { State = ModelJobState.Failed,
+                            Status = "Failed", Error = ex.Message }
+                        : j;
+                }, CancellationToken.None);
+                if (stoppedBeforeFailure && outcome?.State == ModelJobState.Cancelled)
+                    await SafePublishAsync(job, "cancelled", "Cancelled", null, null,
+                        null, null, CancellationToken.None);
+                else if (outcome?.State == ModelJobState.Failed)
+                    await SafePublishAsync(job, "failed", "Failed", null, null,
+                        null, ex.Message, CancellationToken.None);
             }
             finally
             {
@@ -148,7 +194,21 @@ public sealed class ModelDownloadQueueWorker(
                 ? j with { State = ModelJobState.Cancelling, Status = "Cancelling" } : j, ct);
             if (record?.State == ModelJobState.Cancelling)
             {
-                running.Cancel();
+                // The worker owns this CTS and may retire/dispose it while the
+                // durable intent write above is awaited. The STOP request was
+                // persisted; losing that completion race is not an error.
+                // Never hold _running while invoking cancellation callbacks:
+                // callbacks can reenter owner cleanup or another STOP request.
+                try { running.Cancel(); }
+                catch (ObjectDisposedException) { }
+                catch (AggregateException ex)
+                {
+                    // The intent was already persisted in the queue. A native
+                    // callback failure must not lose that cancellation request.
+                    System.Diagnostics.Trace.TraceError(
+                        "P03_CANCEL_CALLBACK_FAILED job={0} type={1}",
+                        id, ex.GetType().Name);
+                }
                 return true;
             }
             // STOP can arrive after token registration but before the atomic
