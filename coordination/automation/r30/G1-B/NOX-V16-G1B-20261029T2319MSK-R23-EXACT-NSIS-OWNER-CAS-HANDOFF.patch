@@ -1,0 +1,1011 @@
+diff --git a/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi b/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
+index 87d901c3846359a91be3e8288f24302cc7060257..bc1ab71e6e57ac865fd1f98665ca6fb9919d6138 100644
+--- a/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
++++ b/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
+@@ -1,196 +1,359 @@
+ ; NOX V16 P01 C3. Stage->verify->rename with rollback; one-user scope, no hidden prerequisite downloads.
+-Unicode true
+-RequestExecutionLevel user
+-!include "MUI2.nsh"
+-!include "LogicLib.nsh"
+-!include "FileFunc.nsh"
+-!ifndef PAYLOAD_DIR
+-  !error "Supply PAYLOAD_DIR pointing at self-contained published app"
+-!endif
+-!ifndef VERIFY_SCRIPT
+-  !error "Supply VERIFY_SCRIPT"
+-!endif
+-!ifndef PREFLIGHT_SCRIPT
+-  !error "Supply PREFLIGHT_SCRIPT"
+-!endif
+-!ifndef REMOVE_SCRIPT
+-  !error "Supply REMOVE_SCRIPT"
+-!endif
+-!ifndef OUTPUT_SETUP
+-  !error "Supply OUTPUT_SETUP"
+-!endif
+-!ifndef APP_VERSION
+-  !define APP_VERSION "0.1.0"
+-!endif
+-!define APP_NAME "NOX HELION"
+-!define APP_ID "NOXHELION.P01"
+-Name "${APP_NAME}"
+-OutFile "${OUTPUT_SETUP}"
+-InstallDir "$LOCALAPPDATA\Programs\NOX HELION"
+-SetCompressor /SOLID lzma
+-ShowInstDetails show
+-ShowUninstDetails show
+-!define MUI_ABORTWARNING
+-!insertmacro MUI_PAGE_WELCOME
+-!insertmacro MUI_PAGE_INSTFILES
+-!insertmacro MUI_PAGE_FINISH
+-!insertmacro MUI_UNPAGE_CONFIRM
+-!insertmacro MUI_UNPAGE_INSTFILES
+-!insertmacro MUI_LANGUAGE "English"
+-
+-Var StageDir
+-Var BackupDir
+-Var RollbackRequested
+-Var ExitCode
+-Var CheckResult
+-Var PrevDir
+-Var TmpDir
+-
+-Function .onInit
+-  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
+-  StrCpy $StageDir "$INSTDIR.__p01_stage"
+-  StrCpy $BackupDir "$INSTDIR.__p01_previous"
+-  StrCpy $RollbackRequested "0"
+-  ${GetParameters} $0
+-  ${GetOptions} "$0" "/ROLLBACK" $1
+-  IfErrors +2 0
+-    StrCpy $RollbackRequested "1"
+-FunctionEnd
+-
+-Section "NOX HELION application" SEC_MAIN
+-  ; The install location is fixed; user data outside it is never modified.
+-  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
+-  StrCpy $StageDir "$INSTDIR.__p01_stage"
+-  StrCpy $BackupDir "$INSTDIR.__p01_previous"
+-  ${If} $RollbackRequested == "1"
+-    Call RestorePrevious
+-    Goto FinishInstall
+-  ${EndIf}
+-  IfFileExists "$StageDir\*.*" 0 +2
+-    Abort "Previous staging dir found; manual recovery required."
+-  IfFileExists "$StageDir" 0 +2
+-    Abort "Previous staging dir found; manual recovery required."
+-  ; Only replace a folder whose explicit ownership marker was created by this installer.
+-  IfFileExists "$INSTDIR" 0 CheckBackup
+-    IfFileExists "$INSTDIR\nox-p01-owned.txt" +2 0
+-      Abort "Install path contains an unowned application. Refusing overwrite."
+-  CheckBackup:
+-  IfFileExists "$BackupDir" 0 Preflight
+-    Abort "Previous version backup exists. Run /ROLLBACK or preserve it before another update."
+-  Preflight:
+-  InitPluginsDir
+-  File "/oname=$PLUGINSDIR\Preflight-InstallPath.ps1" "${PREFLIGHT_SCRIPT}"
+-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Preflight-InstallPath.ps1" -InstallRoot "$INSTDIR"'
+-  Pop $ExitCode
+-  Pop $CheckResult
+-  ${If} $ExitCode != "0"
+-    DetailPrint "$CheckResult"
+-    Abort "Path or WebView2 runtime preflight failed. No changes made."
+-  ${EndIf}
+-  StagePayload:
+-  SetOutPath "$StageDir"
+-  File /r "${PAYLOAD_DIR}\*.*"
+-  IfErrors 0 +2
+-    Abort "Failed extracting staged payload."
+-  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
+-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$StageDir" -Manifest "$StageDir\payload.sha256.json"'
+-  Pop $ExitCode
+-  Pop $CheckResult
+-  ${If} $ExitCode != "0"
+-    DetailPrint "$CheckResult"
+-    Abort "Payload SHA-256 verification FAILED. No application files activated."
+-  ${EndIf}
+-  FileOpen $2 "$StageDir\nox-p01-owned.txt" w
+-  IfErrors 0 +2
+-    Abort "Could not write ownership marker."
+-  FileWrite $2 "NOXHELION.P01 V16$\r$\n"
+-  FileClose $2
+-  SetOutPath "$TEMP" ; release current working directory before Rename
+-  ; Preserve one backup for explicit rollback. Failed activation restores original.
+-  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 ActivateNew
+-    Rename "$INSTDIR" "$BackupDir"
+-    IfErrors 0 +2
+-      Abort "Old application in use. Close NOX before updating."
+-  ActivateNew:
+-  Rename "$StageDir" "$INSTDIR"
+-  IfErrors 0 +4
+-    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 +2
+-      Rename "$BackupDir" "$INSTDIR"
+-    Abort "Activation failed; previous version restored if present."
+-  ; Registry/shortcuts only after activation.
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayName" "${APP_NAME}"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "${APP_VERSION}"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "InstallLocation" "$INSTDIR"
+-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "NoModify" 1
+-  SetOutPath "$INSTDIR"
+-  WriteUninstaller "$INSTDIR\Uninstall.exe"
+-  CreateDirectory "$SMPROGRAMS\NOX HELION"
+-  CreateShortcut "$SMPROGRAMS\NOX HELION\NOX HELION.lnk" "$INSTDIR\NOX.P01.Shell.exe"
+-  DetailPrint "NOX installed. Persistent state under LOCALAPPDATA is untouched."
+-  FinishInstall:
+-SectionEnd
+-
+-Function RestorePrevious
+-  SetOutPath "$TEMP"
+-  IfFileExists "$BackupDir\nox-p01-owned.txt" 0 NoPrevious
+-  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 NoCurrent
+-  IfFileExists "$StageDir" 0 +2
+-    Abort "Pending stage detected; resolve it first."
+-  StrCpy $TmpDir "$INSTDIR.__p01_rollback_saved"
+-  IfFileExists "$TmpDir" 0 +2
+-    Abort "Rollback-save exists; resolve it first."
+-  ; Verify every previous payload hash BEFORE moving either app directory.
+-  ; A mere ownership marker is not evidence of unmodified program files.
+-  InitPluginsDir
+-  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
+-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
+-  Pop $ExitCode
+-  Pop $CheckResult
+-  ${If} $ExitCode != "0"
+-    DetailPrint "$CheckResult"
+-    SetErrorLevel 2
+-    Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
+-  ${EndIf}
+-  Rename "$INSTDIR" "$TmpDir"
+-  IfErrors 0 +2
+-    Abort "Cannot move current app. Close NOX first."
+-  Rename "$BackupDir" "$INSTDIR"
+-  IfErrors 0 +3
+-    Rename "$TmpDir" "$INSTDIR"
+-    Abort "Rollback activation failed; attempted restoration."
+-  ; Leave newer version saved for operator recovery, NEVER delete it.
+-  DetailPrint "Previous version restored; superseded app retained at $TmpDir."
+-  Return
+-  NoPrevious:
+-    Abort "No installer-owned previous version available for rollback."
+-  NoCurrent:
+-    Abort "Current install not owned by P01; refusing rollback."
+-FunctionEnd
+-
+-Section "Uninstall"
+-  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
+-  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 DoneUninstall
+-  ; Critical guard: user-provided install directories and arbitrary roots are forbidden.
+-  StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" 0 DoneUninstall
+-  ; Remove only manifest-listed, SHA-matching program files. Modified/unknown files survive.
+-  InitPluginsDir
+-  File "/oname=$PLUGINSDIR\Remove-InstalledPayload.ps1" "${REMOVE_SCRIPT}"
+-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Remove-InstalledPayload.ps1" -InstallRoot "$INSTDIR"'
+-  Pop $ExitCode
+-  Pop $CheckResult
+-  ${If} $ExitCode != "0"
+-    DetailPrint "$CheckResult"
+-    Abort "Conservative uninstall incomplete: modified files retained. No recursive removal."
+-  ${EndIf}
+-  Delete "$SMPROGRAMS\NOX HELION\NOX HELION.lnk"
+-  RMDir "$SMPROGRAMS\NOX HELION"
+-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
+-  SetOutPath "$TEMP"
+-  Delete "$INSTDIR\payload.sha256.json"
+-  Delete "$INSTDIR\nox-p01-owned.txt"
+-  Delete "$INSTDIR\Uninstall.exe"
+-  RMDir "$INSTDIR"
+-  ; Do not touch __p01_previous or __p01_rollback_saved: recovery must be explicit.
+-  DoneUninstall:
+-SectionEnd
++Unicode true
++RequestExecutionLevel user
++!include "MUI2.nsh"
++!include "LogicLib.nsh"
++!include "FileFunc.nsh"
++!ifndef PAYLOAD_DIR
++  !error "Supply PAYLOAD_DIR pointing at self-contained published app"
++!endif
++!ifndef VERIFY_SCRIPT
++  !error "Supply VERIFY_SCRIPT"
++!endif
++!ifndef PREFLIGHT_SCRIPT
++  !error "Supply PREFLIGHT_SCRIPT"
++!endif
++!ifndef REMOVE_SCRIPT
++  !error "Supply REMOVE_SCRIPT"
++!endif
++!ifndef OUTPUT_SETUP
++  !error "Supply OUTPUT_SETUP"
++!endif
++!ifndef APP_VERSION
++  !define APP_VERSION "0.1.0"
++!endif
++!define APP_NAME "NOX HELION"
++!define APP_ID "NOXHELION.P01"
++Name "${APP_NAME}"
++OutFile "${OUTPUT_SETUP}"
++InstallDir "$LOCALAPPDATA\Programs\NOX HELION"
++SetCompressor /SOLID lzma
++ShowInstDetails show
++ShowUninstDetails show
++!define MUI_ABORTWARNING
++!insertmacro MUI_PAGE_WELCOME
++!insertmacro MUI_PAGE_INSTFILES
++!insertmacro MUI_PAGE_FINISH
++!insertmacro MUI_UNPAGE_CONFIRM
++!insertmacro MUI_UNPAGE_INSTFILES
++!insertmacro MUI_LANGUAGE "English"
++
++Var StageDir
++Var BackupDir
++Var RollbackRequested
++Var ExitCode
++Var CheckResult
++Var PrevDir
++Var TmpDir
++Var PrevRegVersion
++Var HadPrevRegVersion
++
++Function .onInit
++  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
++  StrCpy $StageDir "$INSTDIR.__p01_stage"
++  StrCpy $BackupDir "$INSTDIR.__p01_previous"
++  StrCpy $RollbackRequested "0"
++  ${GetParameters} $0
++  ${GetOptions} "$0" "/ROLLBACK" $1
++  IfErrors +2 0
++    StrCpy $RollbackRequested "1"
++FunctionEnd
++
++Section "NOX HELION application" SEC_MAIN
++  ; The install location is fixed; user data outside it is never modified.
++  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
++  StrCpy $StageDir "$INSTDIR.__p01_stage"
++  StrCpy $BackupDir "$INSTDIR.__p01_previous"
++  ${If} $RollbackRequested == "1"
++    Call RestorePrevious
++    Goto FinishInstall
++  ${EndIf}
++  IfFileExists "$StageDir\*.*" 0 +2
++    Abort "Previous staging dir found; manual recovery required."
++  IfFileExists "$StageDir" 0 +2
++    Abort "Previous staging dir found; manual recovery required."
++  ; Only replace a folder whose explicit ownership marker was created by this installer.
++  IfFileExists "$INSTDIR" 0 CheckBackup
++    IfFileExists "$INSTDIR\nox-p01-owned.txt" +2 0
++      Abort "Install path contains an unowned application. Refusing overwrite."
++  CheckBackup:
++  IfFileExists "$BackupDir" 0 Preflight
++    Abort "Previous version backup exists. Run /ROLLBACK or preserve it before another update."
++  Preflight:
++  InitPluginsDir
++  File "/oname=$PLUGINSDIR\Preflight-InstallPath.ps1" "${PREFLIGHT_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Preflight-InstallPath.ps1" -InstallRoot "$INSTDIR"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Abort "Path or WebView2 runtime preflight failed. No changes made."
++  ${EndIf}
++  StagePayload:
++  SetOutPath "$StageDir"
++  File /r "${PAYLOAD_DIR}\*.*"
++  IfErrors 0 +2
++    Abort "Failed extracting staged payload."
++  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$StageDir" -Manifest "$StageDir\payload.sha256.json"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Abort "Payload SHA-256 verification FAILED. No application files activated."
++  ${EndIf}
++  ; Marker ownership is required by update, rollback and conservative uninstall.
++  ; A failed write must never reach either activation rename.
++  ClearErrors
++  FileOpen $2 "$StageDir\nox-p01-owned.txt" w
++  IfErrors MarkerOpenFailed
++  FileWrite $2 "NOXHELION.P01 V16$\r$\n"
++  IfErrors MarkerWriteFailed
++  FileClose $2
++  ; FileWrite success alone does not prove persisted exact marker contents.
++  ; Reopen/read back before FIRST rename; never accept partial/empty metadata.
++  ClearErrors
++  FileOpen $2 "$StageDir\nox-p01-owned.txt" r
++  IfErrors MarkerReadbackFailed
++  ClearErrors
++  FileRead $2 $3
++  IfErrors MarkerReadFailed
++  FileClose $2
++  StrCmp $3 "NOXHELION.P01 V16$\r$\n" MarkerReady MarkerReadbackFailed
++  MarkerReadFailed:
++    FileClose $2
++  MarkerReadbackFailed:
++    SetErrorLevel 2
++    Abort "Ownership marker readback failed; no application directories moved."
++  MarkerWriteFailed:
++    FileClose $2
++  MarkerOpenFailed:
++    SetErrorLevel 2
++    Abort "Could not write ownership marker. No application directories moved."
++  MarkerReady:
++  ; Prepare and SHA-attest the generated uninstaller in STAGING, before moving
++  ; either live application tree. Keep the independently generated plugin copy
++  ; as provenance for an after-activation integrity check.
++  SetOutPath "$TEMP" ; release current working directory before Rename
++  ClearErrors
++  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
++  IfErrors InstallUninstallerPreparationFailed
++  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 InstallUninstallerPreparationFailed
++  ClearErrors
++  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$StageDir"
++  IfErrors InstallUninstallerPreparationFailed
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$StageDir" -Manifest "$StageDir\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    SetErrorLevel 2
++    Abort "Staged uninstaller or payload SHA-256 verification failed; no application directories moved."
++  ${EndIf}
++  ; Preserve one backup for explicit rollback. Failed activation restores original.
++  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 ActivateNew
++    Rename "$INSTDIR" "$BackupDir"
++    IfErrors 0 +2
++      Abort "Old application in use. Close NOX before updating."
++  ActivateNew:
++  Rename "$StageDir" "$INSTDIR"
++  IfErrors 0 +4
++    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 +2
++      Rename "$BackupDir" "$INSTDIR"
++    Abort "Activation failed; previous version restored if present."
++  ; Re-hash the live activated directory BEFORE changing the registry.
++  ; No success metadata may point to a missing, altered or untrusted Uninstall.exe.
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Goto InstallPostActivationRecovery
++  ${EndIf}
++  ; Registry/shortcuts only after activation and exact live attestation.
++  ; Capture prior version before changing HKCU; do not claim install success on failure.
++  StrCpy $HadPrevRegVersion "0"
++  StrCpy $PrevRegVersion ""
++  ClearErrors
++  ReadRegStr $PrevRegVersion HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion"
++  IfErrors +2 0
++    StrCpy $HadPrevRegVersion "1"
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayName" "${APP_NAME}"
++  IfErrors InstallRegistrationFailed
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "${APP_VERSION}"
++  IfErrors InstallRegistrationFailed
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "InstallLocation" "$INSTDIR"
++  IfErrors InstallRegistrationFailed
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
++  IfErrors InstallRegistrationFailed
++  ClearErrors
++  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "NoModify" 1
++  IfErrors InstallRegistrationFailed
++  SetOutPath "$INSTDIR"
++  CreateDirectory "$SMPROGRAMS\NOX HELION"
++  ClearErrors
++  CreateShortcut "$SMPROGRAMS\NOX HELION\NOX HELION.lnk" "$INSTDIR\NOX.P01.Shell.exe"
++  IfErrors InstallRegistrationFailed
++  DetailPrint "NOX installed. Persistent state under LOCALAPPDATA is untouched."
++  Goto FinishInstall
++  InstallUninstallerPreparationFailed:
++    SetErrorLevel 2
++    Abort "Could not prepare a trusted uninstaller; no application directories moved."
++  InstallRegistrationFailed:
++    ; Failed HKCU/shortcut finalization: preserve both program trees and all user data.
++    ; Restore prior DisplayVersion best-effort, never delete unknown registry keys.
++    ${If} $HadPrevRegVersion == "1"
++      ClearErrors
++      WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "$PrevRegVersion"
++      IfErrors 0 +2
++        DetailPrint "Prior DisplayVersion restoration failed; manual registry recovery needed."
++    ${Else}
++      DetailPrint "Partial fresh-install registration may require manual cleanup; unknown HKCU data retained."
++    ${EndIf}
++    Goto InstallPostActivationRecovery
++  InstallPostActivationRecovery:
++    ; Fail closed: preserve the suspect new tree as staging, and restore
++    ; the prior app if it was moved. Never delete/recurse user data.
++    SetOutPath "$TEMP"
++    ClearErrors
++    Rename "$INSTDIR" "$StageDir"
++    IfErrors InstallRecoveryHold
++    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 InstallRecoveryDone
++      ClearErrors
++      Rename "$BackupDir" "$INSTDIR"
++      IfErrors InstallRecoveryHold
++  InstallRecoveryDone:
++    SetErrorLevel 2
++    Abort "Activated payload attestation failed; previous app restored if present, failed stage retained."
++  InstallRecoveryHold:
++    SetErrorLevel 2
++    Abort "Activated payload attestation failed; operator recovery needed, both app trees retained."
++  FinishInstall:
++SectionEnd
++
++Function RestorePrevious
++  SetOutPath "$TEMP"
++  ; Reuse install path/ownership checks, including parents above the backup root.
++  ; Existing preflight checks WebView2 too; missing runtime fails closed before moves.
++  InitPluginsDir
++  File "/oname=$PLUGINSDIR\Preflight-InstallPath.ps1" "${PREFLIGHT_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Preflight-InstallPath.ps1" -InstallRoot "$INSTDIR"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    SetErrorLevel 2
++    Abort "Rollback path or ownership preflight failed. No application directories moved."
++  ${EndIf}
++  IfFileExists "$BackupDir\nox-p01-owned.txt" 0 NoPrevious
++  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 NoCurrent
++  IfFileExists "$StageDir" 0 +2
++    Abort "Pending stage detected; resolve it first."
++  StrCpy $TmpDir "$INSTDIR.__p01_rollback_saved"
++  IfFileExists "$TmpDir" 0 +2
++    Abort "Rollback-save exists; resolve it first."
++  ; Verify every previous payload hash BEFORE moving either app directory.
++  ; A mere ownership marker is not evidence of unmodified program files.
++  InitPluginsDir
++  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -ReportVersion'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    SetErrorLevel 2
++    Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
++  ${EndIf}
++  ; The backup's generated Uninstall.exe is not SHA-attested by payload.sha256.json.
++  ; Generate a trusted replacement from THIS setup before moving either app tree.
++  ClearErrors
++  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
++  IfErrors 0 RollbackUninstallerPrepared
++    SetErrorLevel 2
++    Abort "Cannot prepare rollback uninstaller; both app versions remain untouched."
++  RollbackUninstallerPrepared:
++  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 RollbackUninstallerMissing
++    Goto RollbackUninstallerReady
++  RollbackUninstallerMissing:
++    SetErrorLevel 2
++    Abort "Generated rollback uninstaller missing; both app versions remain untouched."
++  RollbackUninstallerReady:
++  Rename "$INSTDIR" "$TmpDir"
++  IfErrors 0 +2
++    Abort "Cannot move current app. Close NOX first."
++  Rename "$BackupDir" "$INSTDIR"
++  IfErrors 0 +3
++    Rename "$TmpDir" "$INSTDIR"
++    Abort "Rollback activation failed; attempted restoration."
++  ; Never reactivate the prior, merely size-checked Uninstall.exe as executable.
++  ; Copy a fresh one from the trusted setup and verify exact SHA before registry writes.
++  ClearErrors
++  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$INSTDIR"
++  IfErrors RollbackUninstallerRecovery
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe" -ReportVersion'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Goto RollbackUninstallerRecovery
++  ${EndIf}
++  ; Leave newer version saved for operator recovery, NEVER delete it.
++  ; The backup verifier returned its validated version without a trailing newline.
++  ; Register it only after BOTH directory renames succeeded.
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "$CheckResult"
++  IfErrors 0 +3
++    SetErrorLevel 2
++    Abort "Previous files restored, but Windows version registration failed. Recovery copies retained."
++  DetailPrint "Previous version restored; superseded app retained at $TmpDir."
++  Return
++  RollbackUninstallerRecovery:
++    ; Never report success after installer executable integrity fails.
++    ; Preserve both app trees and attempt restoration of the original install.
++    SetOutPath "$TEMP"
++    ClearErrors
++    Rename "$INSTDIR" "$BackupDir"
++    IfErrors RollbackRecoveryFailed
++    Rename "$TmpDir" "$INSTDIR"
++    IfErrors RollbackRecoveryFailed
++    SetErrorLevel 2
++    Abort "Rollback uninstaller verification failed; current install restored, backup retained."
++  RollbackRecoveryFailed:
++    SetErrorLevel 2
++    Abort "Rollback uninstaller integrity failed; operator recovery needed, app trees retained."
++  NoPrevious:
++    Abort "No installer-owned previous version available for rollback."
++  NoCurrent:
++    Abort "Current install not owned by P01; refusing rollback."
++FunctionEnd
++
++Section "Uninstall"
++  StrCpy $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION"
++  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 DoneUninstall
++  ; Critical guard: user-provided install directories and arbitrary roots are forbidden.
++  StrCmp $INSTDIR "$LOCALAPPDATA\Programs\NOX HELION" 0 DoneUninstall
++  ; Remove only manifest-listed, SHA-matching program files. Modified/unknown files survive.
++  InitPluginsDir
++  File "/oname=$PLUGINSDIR\Remove-InstalledPayload.ps1" "${REMOVE_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Remove-InstalledPayload.ps1" -InstallRoot "$INSTDIR"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Abort "Conservative uninstall incomplete: modified files retained. No recursive removal."
++  ${EndIf}
++  Delete "$SMPROGRAMS\NOX HELION\NOX HELION.lnk"
++  RMDir "$SMPROGRAMS\NOX HELION"
++  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
++  SetOutPath "$TEMP"
++  Delete "$INSTDIR\payload.sha256.json"
++  Delete "$INSTDIR\nox-p01-owned.txt"
++  Delete "$INSTDIR\Uninstall.exe"
++  RMDir "$INSTDIR"
++  ; Do not touch __p01_previous or __p01_rollback_saved: recovery must be explicit.
++  DoneUninstall:
++SectionEnd
+
+diff --git a/stage/proposals/P01/C09/Installer/Verify-Payload.ps1 b/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
+index 6c178c04957d7397c0c081e3b123940637abc6e9..e448f8266ba15e809c13bff669924fa825fd4bc1 100644
+--- a/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
++++ b/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
+@@ -1,103 +1,127 @@
+ # P01: verify publisher-provided contents before any activation. Windows PowerShell 5.1-compatible.
+-[CmdletBinding()]
+-param(
+-  [Parameter(Mandatory=$true)][string]$Root,
+-  [Parameter(Mandatory=$true)][string]$Manifest,
+-  [switch]$AllowInstalledMetadata
+-)
+-$ErrorActionPreference = 'Stop'
+-function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
+-$rootInfo = Get-Item -LiteralPath $Root -ErrorAction Stop
+-if (-not $rootInfo.PSIsContainer -or (($rootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe or reparse root' }
+-$rootFull = [IO.Path]::GetFullPath($rootInfo.FullName).TrimEnd('\')
+-function Assert-NoReparseAncestors([string]$Target) {
+-  $cursor = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Target))
+-  while ($cursor -and ($cursor -ieq $rootFull -or $cursor.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase))) {
+-    $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+-    if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+-      Fail "reparse or non-directory ancestor $cursor"
+-    }
+-    if ($cursor -ieq $rootFull) { break }
+-    $cursor = [IO.Path]::GetDirectoryName($cursor)
+-  }
+-}
+-$manifestFull = [IO.Path]::GetFullPath($Manifest)
+-if ($manifestFull -ine (Join-Path $rootFull 'payload.sha256.json')) { Fail 'noncanonical manifest path' }
+-Assert-NoReparseAncestors $manifestFull
+-$manifestItem=Get-Item -LiteralPath $manifestFull -Force -ErrorAction Stop
+-if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe manifest' }
+-$m = Get-Content -LiteralPath $manifestFull -Raw -Encoding UTF8 | ConvertFrom-Json
+-if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1') { Fail 'schema' }
+-if ($m.entrypoint -cne 'NOX.P01.Shell.exe') { Fail 'entrypoint' }
+-if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { Fail 'invalid manifest length' }
+-if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { Fail 'invalid run ID' }
+-if ($m.version -isnot [string] -or $m.version -cnotmatch '^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}(\.[0-9]{1,5})?$') { Fail 'invalid version' }
+-$registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+-foreach($f in $m.files) {
+-  if ($null -eq $f -or $f.path -isnot [string] -or ([string]$f.sha256) -cnotmatch '^[a-fA-F0-9]{64}$') { Fail 'bad manifest row or SHA' }
+-  $validBytes = [int64]0
+-  if (-not [int64]::TryParse(([string]$f.bytes),[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$validBytes)) { Fail 'invalid file length' }
+-  $rel = [string]$f.path
+-  if ([string]::IsNullOrWhiteSpace($rel) -or [IO.Path]::IsPathRooted($rel) -or $rel -match '(^|[\\/])\.\.([\\/]|$)' -or $rel -match '[:*?"<>|]') { Fail "invalid path $rel" }
+-  $segments=@($rel -split '[\\/]')
+-  foreach ($part in $segments) {
+-    if ($part -eq '' -or $part -eq '.' -or $part -eq '..' -or $part -match '[. ]$' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$') { Fail 'unsafe Windows component' }
+-  }
+-  $rel = $rel.Replace('/','\')
+-  if ($rel -ieq 'payload.sha256.json' -or $rel -ieq 'nox-p01-owned.txt' -or $rel -ieq 'Uninstall.exe') { Fail 'installer metadata is not application payload' }
+-  if (-not $registered.Add($rel)) { Fail "duplicate path $rel" }
+-  $full = [IO.Path]::GetFullPath((Join-Path $rootFull $rel))
+-  if (-not $full.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase)) { Fail "escape $rel" }
+-  Assert-NoReparseAncestors $full
+-  $obj = Get-Item -LiteralPath $full -ErrorAction Stop
+-  if ($obj.PSIsContainer -or (($obj.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail "not regular file $rel" }
+-  if ($obj.Length -ne [int64]$f.bytes) { Fail "size mismatch $rel" }
+-  $actual = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
+-  if ($actual -cne ([string]$f.sha256).ToLowerInvariant()) { Fail "sha mismatch $rel" }
+-}
+-# Reject all nested directory reparse points, including empty junctions.
+-$allDirs = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -Directory)
+-foreach ($dir in $allDirs) {
+-  if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse directory $($dir.FullName)" }
+-  Assert-NoReparseAncestors $dir.FullName
+-}
+-# Installed backups also contain the installer ownership marker and the
+-# NSIS-generated uninstaller (not publisher payload). Allow ONLY these exact
+-# entries for the explicit rollback verifier, not for fresh staging.
+-$metadata = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+-if ($AllowInstalledMetadata) {
+-  $marker = Join-Path $rootFull 'nox-p01-owned.txt'
+-  Assert-NoReparseAncestors $marker
+-  $markerInfo = Get-Item -LiteralPath $marker -Force -ErrorAction Stop
+-  if ($markerInfo.PSIsContainer -or
+-      (($markerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+-      $markerInfo.Length -ne 19 -or
+-      [IO.File]::ReadAllText($marker,[Text.Encoding]::ASCII) -cne
+-        ('NOXHELION.P01 V16'+[char]13+[char]10)) {
+-    Fail 'invalid backup ownership marker'
+-  }
+-  [void]$metadata.Add('nox-p01-owned.txt')
+-  $uninstaller = Join-Path $rootFull 'Uninstall.exe'
+-  Assert-NoReparseAncestors $uninstaller
+-  $uninstallerInfo = Get-Item -LiteralPath $uninstaller -Force -ErrorAction Stop
+-  if ($uninstallerInfo.PSIsContainer -or
+-      (($uninstallerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+-      $uninstallerInfo.Length -lt 1024 -or $uninstallerInfo.Length -gt 104857600) {
+-    Fail 'invalid generated NSIS metadata'
+-  }
+-  # This file is NOT SHA-attested by the payload manifest; rollback does not
+-  # execute it, and E07 must verify the eventual installed uninstaller.
+-  [void]$metadata.Add('Uninstall.exe')
+-}
+-# Include only regular files the packager approved; prevents hidden extras in staging.
+-$actualFiles = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -File)
+-foreach ($file in $actualFiles) {
+-  Assert-NoReparseAncestors $file.FullName
+-  if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse $($file.FullName)" }
+-  $rel = $file.FullName.Substring($rootFull.Length+1)
+-  if ($rel -eq 'payload.sha256.json') { continue }
+-  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }
+-}
+-if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail 'file count mismatch' }
+-if (-not (Test-Path -LiteralPath (Join-Path $rootFull 'NOX.P01.Shell.exe') -PathType Leaf)) { Fail 'entrypoint absent' }
+-'P01_PAYLOAD_SHA256_PASS'
++[CmdletBinding()]
++param(
++  [Parameter(Mandatory=$true)][string]$Root,
++  [Parameter(Mandatory=$true)][string]$Manifest,
++  [switch]$AllowInstalledMetadata,
++  [switch]$ReportVersion,
++  [string]$TrustedUninstaller
++)
++$ErrorActionPreference = 'Stop'
++function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
++if ($TrustedUninstaller -and -not $AllowInstalledMetadata) { Fail 'trusted uninstaller requires installed metadata' }
++$rootInfo = Get-Item -LiteralPath $Root -ErrorAction Stop
++if (-not $rootInfo.PSIsContainer -or (($rootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe or reparse root' }
++$rootFull = [IO.Path]::GetFullPath($rootInfo.FullName).TrimEnd('\')
++function Assert-NoReparseAncestors([string]$Target) {
++  $cursor = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Target))
++  while ($cursor -and ($cursor -ieq $rootFull -or $cursor.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase))) {
++    $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
++    if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
++      Fail "reparse or non-directory ancestor $cursor"
++    }
++    if ($cursor -ieq $rootFull) { break }
++    $cursor = [IO.Path]::GetDirectoryName($cursor)
++  }
++}
++$manifestFull = [IO.Path]::GetFullPath($Manifest)
++if ($manifestFull -ine (Join-Path $rootFull 'payload.sha256.json')) { Fail 'noncanonical manifest path' }
++Assert-NoReparseAncestors $manifestFull
++$manifestItem=Get-Item -LiteralPath $manifestFull -Force -ErrorAction Stop
++if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe manifest' }
++$m = Get-Content -LiteralPath $manifestFull -Raw -Encoding UTF8 | ConvertFrom-Json
++if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1') { Fail 'schema' }
++if ($m.entrypoint -cne 'NOX.P01.Shell.exe') { Fail 'entrypoint' }
++if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { Fail 'invalid manifest length' }
++if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { Fail 'invalid run ID' }
++if ($m.version -isnot [string] -or $m.version -cnotmatch '^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}(\.[0-9]{1,5})?$') { Fail 'invalid version' }
++$registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
++foreach($f in $m.files) {
++  if ($null -eq $f -or $f.path -isnot [string] -or ([string]$f.sha256) -cnotmatch '^[a-fA-F0-9]{64}$') { Fail 'bad manifest row or SHA' }
++  $validBytes = [int64]0
++  if (-not [int64]::TryParse(([string]$f.bytes),[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$validBytes)) { Fail 'invalid file length' }
++  $rel = [string]$f.path
++  if ([string]::IsNullOrWhiteSpace($rel) -or [IO.Path]::IsPathRooted($rel) -or $rel -match '(^|[\\/])\.\.([\\/]|$)' -or $rel -match '[:*?"<>|]') { Fail "invalid path $rel" }
++  $segments=@($rel -split '[\\/]')
++  foreach ($part in $segments) {
++    if ($part -eq '' -or $part -eq '.' -or $part -eq '..' -or $part -match '[. ]$' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$') { Fail 'unsafe Windows component' }
++  }
++  $rel = $rel.Replace('/','\')
++  if ($rel -ieq 'payload.sha256.json' -or $rel -ieq 'nox-p01-owned.txt' -or $rel -ieq 'Uninstall.exe') { Fail 'installer metadata is not application payload' }
++  if (-not $registered.Add($rel)) { Fail "duplicate path $rel" }
++  $full = [IO.Path]::GetFullPath((Join-Path $rootFull $rel))
++  if (-not $full.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase)) { Fail "escape $rel" }
++  Assert-NoReparseAncestors $full
++  $obj = Get-Item -LiteralPath $full -ErrorAction Stop
++  if ($obj.PSIsContainer -or (($obj.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail "not regular file $rel" }
++  if ($obj.Length -ne [int64]$f.bytes) { Fail "size mismatch $rel" }
++  $actual = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant()
++  if ($actual -cne ([string]$f.sha256).ToLowerInvariant()) { Fail "sha mismatch $rel" }
++}
++# Reject all nested directory reparse points, including empty junctions.
++$allDirs = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -Directory)
++foreach ($dir in $allDirs) {
++  if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse directory $($dir.FullName)" }
++  Assert-NoReparseAncestors $dir.FullName
++}
++# Installed backups also contain the installer ownership marker and the
++# NSIS-generated uninstaller (not publisher payload). Allow ONLY these exact
++# entries for the explicit rollback verifier, not for fresh staging.
++$metadata = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
++if ($AllowInstalledMetadata) {
++  $marker = Join-Path $rootFull 'nox-p01-owned.txt'
++  Assert-NoReparseAncestors $marker
++  $markerInfo = Get-Item -LiteralPath $marker -Force -ErrorAction Stop
++  if ($markerInfo.PSIsContainer -or
++      (($markerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
++      $markerInfo.Length -ne 19 -or
++      [IO.File]::ReadAllText($marker,[Text.Encoding]::ASCII) -cne
++        ('NOXHELION.P01 V16'+[char]13+[char]10)) {
++    Fail 'invalid backup ownership marker'
++  }
++  [void]$metadata.Add('nox-p01-owned.txt')
++  $uninstaller = Join-Path $rootFull 'Uninstall.exe'
++  Assert-NoReparseAncestors $uninstaller
++  $uninstallerInfo = Get-Item -LiteralPath $uninstaller -Force -ErrorAction Stop
++  if ($uninstallerInfo.PSIsContainer -or
++      (($uninstallerInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
++      $uninstallerInfo.Length -lt 1024 -or $uninstallerInfo.Length -gt 104857600) {
++    Fail 'invalid generated NSIS metadata'
++  }
++  # This file is NOT SHA-attested by the payload manifest; rollback does not
++  # execute it, and E07 must verify the eventual installed uninstaller.
++  [void]$metadata.Add('Uninstall.exe')
++  if ($TrustedUninstaller) {
++    # Compare against executable generated by THIS setup, never backup metadata
++    # and never the restored uninstaller as its own authority.
++    if (-not [IO.Path]::IsPathRooted($TrustedUninstaller)) { Fail 'nonabsolute trusted uninstaller' }
++    $trustedFull = [IO.Path]::GetFullPath($TrustedUninstaller)
++    if ($trustedFull -ieq $uninstaller -or
++        $trustedFull.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase)) {
++      Fail 'untrusted self-reference in uninstaller comparison'
++    }
++    $trustedInfo = Get-Item -LiteralPath $trustedFull -Force -ErrorAction Stop
++    if ($trustedInfo.PSIsContainer -or (($trustedInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
++      Fail 'unsafe trusted uninstaller source'
++    }
++    if ($uninstallerInfo.Length -ne $trustedInfo.Length) { Fail 'trusted uninstaller length mismatch' }
++    $trustedSha = (Get-FileHash -LiteralPath $trustedFull -Algorithm SHA256).Hash
++    $installedSha = (Get-FileHash -LiteralPath $uninstaller -Algorithm SHA256).Hash
++    if ($installedSha -cne $trustedSha) { Fail 'trusted uninstaller SHA-256 mismatch' }
++  }
++}
++# Include only regular files the packager approved; prevents hidden extras in staging.
++$actualFiles = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -File)
++foreach ($file in $actualFiles) {
++  Assert-NoReparseAncestors $file.FullName
++  if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Fail "reparse $($file.FullName)" }
++  $rel = $file.FullName.Substring($rootFull.Length+1)
++  if ($rel -eq 'payload.sha256.json') { continue }
++  if (-not $registered.Contains($rel) -and -not $metadata.Contains($rel)) { Fail "unexpected file $rel" }
++}
++if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail 'file count mismatch' }
++if (-not (Test-Path -LiteralPath (Join-Path $rootFull 'NOX.P01.Shell.exe') -PathType Leaf)) { Fail 'entrypoint absent' }
++# Rollback registration uses ONLY the existing validated manifest version.
++# No newline: nsExec captures exactly this value, not a PASS marker or CR/LF.
++if ($ReportVersion) { [Console]::Out.Write([string]$m.version) }
++else { 'P01_PAYLOAD_SHA256_PASS' }
+
+diff --git a/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1 b/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
+index 81fbe7dfeb70801a0eaf5e4246a8789cb5032916..9975f9c1802040d0bb5f30b9563060a1ebd8c44b 100644
+--- a/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
++++ b/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
+@@ -1,105 +1,107 @@
+ # NOX V16 E01 C09 · fail-closed two-phase uninstall. Windows PowerShell 5.1.
+-# A compromised/modified payload is NEVER partly removed by preflight.
+-[CmdletBinding()]
+-param([Parameter(Mandatory=$true)][string]$InstallRoot)
+-$ErrorActionPreference = 'Stop'
+-Set-StrictMode -Version Latest
+-$expected = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION')).TrimEnd('\')
+-$root = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
+-if ($root -ine $expected) { throw 'P01_UNINSTALL_WRONG_ROOT' }
+-$localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+-function Assert-DirectoryChain([string]$Path, [string]$StopRoot) {
+-  $cursor = [IO.Path]::GetFullPath($Path).TrimEnd('\')
+-  while ($cursor -and ($cursor -ieq $StopRoot -or $cursor.StartsWith($StopRoot+'\',[StringComparison]::OrdinalIgnoreCase))) {
+-    if (Test-Path -LiteralPath $cursor) {
+-      $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+-      if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+-        throw "P01_UNINSTALL_UNSAFE_PARENT:$cursor"
+-      }
+-    }
+-    if ($cursor -ieq $StopRoot) { break }
+-    $cursor = [IO.Path]::GetDirectoryName($cursor)
+-  }
+-}
+-Assert-DirectoryChain $root $localRoot
+-if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw 'P01_UNINSTALL_ROOT_MISSING' }
+-$markerPath = Join-Path $root 'nox-p01-owned.txt'
+-$manifestPath = Join-Path $root 'payload.sha256.json'
+-foreach ($meta in @($markerPath, $manifestPath)) {
+-  Assert-DirectoryChain ([IO.Path]::GetDirectoryName($meta)) $root
+-  if (-not (Test-Path -LiteralPath $meta -PathType Leaf)) { throw 'P01_UNINSTALL_METADATA_MISSING' }
+-  $metaInfo=Get-Item -LiteralPath $meta -Force -ErrorAction Stop
+-  if (($metaInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_UNINSTALL_METADATA_REPARSE' }
+-}
+-$ownership = (Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8).Trim()
+-if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MARKER' }
+-$m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+-if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
+-if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
+-if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'P01_UNINSTALL_INVALID_RUN_ID' }
+-$registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+-$directories = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+-$checked = New-Object 'System.Collections.Generic.List[object]'
+-$verified = New-Object 'System.Collections.Generic.List[string]'
+-function Normalize-Relative([string]$Value) {
+-  if ([string]::IsNullOrWhiteSpace($Value) -or [IO.Path]::IsPathRooted($Value) -or $Value -match '[<>:"|?*]' -or $Value -match '[\x00-\x1f]') { throw 'P01_UNINSTALL_BAD_PATH' }
+-  $segments = @($Value -split '[\\/]')
+-  foreach ($part in $segments) {
+-    if ($part -eq '' -or $part -eq '.' -or $part -eq '..' -or $part -match '[. ]$' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$') {
+-      throw 'P01_UNINSTALL_BAD_PATH'
+-    }
+-  }
+-  return ($segments -join '\')
+-}
+-function Assert-VerifiedEntry([object]$Entry) {
+-  Assert-DirectoryChain ([IO.Path]::GetDirectoryName($Entry.Full)) $root
+-  if (-not (Test-Path -LiteralPath $Entry.Full -PathType Leaf)) { throw "P01_UNINSTALL_MISSING_PAYLOAD:$($Entry.Relative)" }
+-  $item = Get-Item -LiteralPath $Entry.Full -Force -ErrorAction Stop
+-  if ($item.PSIsContainer -or (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { throw "P01_UNINSTALL_UNSAFE_FILE:$($Entry.Relative)" }
+-  if ($item.Length -ne $Entry.Size) { throw "P01_UNINSTALL_MODIFIED_FILE:$($Entry.Relative)" }
+-  $actual = (Get-FileHash -LiteralPath $Entry.Full -Algorithm SHA256).Hash.ToLowerInvariant()
+-  if ($actual -cne $Entry.Digest) { throw "P01_UNINSTALL_MODIFIED_FILE:$($Entry.Relative)" }
+-}
+-# PHASE 1 — validate ALL manifest rows and ALL live files before removing ANYTHING.
+-foreach ($f in @($m.files)) {
+-  if ($null -eq $f -or $f.path -isnot [string]) { throw 'P01_UNINSTALL_BAD_ROW' }
+-  $relative = Normalize-Relative ([string]$f.path)
+-  if ($relative -ieq 'payload.sha256.json' -or $relative -ieq 'nox-p01-owned.txt' -or $relative -ieq 'Uninstall.exe') { throw 'P01_UNINSTALL_RESERVED_INSTALLER_METADATA' }
+-  if (-not $registered.Add($relative)) { throw 'P01_UNINSTALL_DUPLICATE_PATH' }
+-  $full = [IO.Path]::GetFullPath((Join-Path $root $relative))
+-  if (-not $full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'P01_UNINSTALL_PATH_ESCAPE' }
+-  $digest = [string]$f.sha256
+-  $sizeText = [string]$f.bytes
+-  $size = [int64]0
+-  if ($digest -cnotmatch '^[a-fA-F0-9]{64}$' -or -not [int64]::TryParse($sizeText,[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$size)) {
+-    throw 'P01_UNINSTALL_INVALID_HASH_OR_LENGTH'
+-  }
+-  if ($size -lt 0) { throw 'P01_UNINSTALL_INVALID_HASH_OR_LENGTH' }
+-  $entry = [pscustomobject]@{Relative=$relative;Full=$full;Size=$size;Digest=$digest.ToLowerInvariant()}
+-  Assert-VerifiedEntry $entry
+-  [void]$checked.Add($entry)
+-  [void]$verified.Add($entry.Full)
+-  $parent = [IO.Path]::GetDirectoryName($full)
+-  while ($parent -and $parent.Length -gt $root.Length -and $parent.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)) {
+-    [void]$directories.Add($parent)
+-    $parent=[IO.Path]::GetDirectoryName($parent)
+-  }
+-}
+-if ($checked.Count -ne $registered.Count -or $checked.Count -lt 1) { throw 'P01_UNINSTALL_REFUSED_MODIFIED_FILES:incomplete-validation' }
+-# PHASE 2 — full-list drift check BEFORE the first delete, for C08 no-loss parity.
+-foreach ($entry in $checked) {
+-  try { Assert-VerifiedEntry $entry } catch { throw "P01_UNINSTALL_FILE_CHANGED_DURING_COMMIT:$($entry.Relative)" }
+-}
+-# PHASE 3 — delete ONLY prevalidated payload paths, keep unknown/user data/metadata.
+-$removed=0
+-foreach ($entry in $checked) {
+-  # C11: enforce final per-file digest check just before removal.
+-  Assert-VerifiedEntry $entry
+-  Remove-Item -LiteralPath $entry.Full -Force -ErrorAction Stop
+-  $removed++
+-}
+-foreach ($dir in @($directories | Sort-Object Length -Descending)) {
+-  try { if ((Get-ChildItem -LiteralPath $dir -Force -ErrorAction Stop | Measure-Object).Count -eq 0) { Remove-Item -LiteralPath $dir -Force } } catch { }
+-}
+-# NSIS owns metadata + uninstaller cleanup ONLY after this script reports PASS.
+-Write-Output "P01_UNINSTALL_PAYLOAD_PASS verified=$($checked.Count) removed=$removed"
++# A compromised/modified payload is NEVER partly removed by preflight.
++[CmdletBinding()]
++param([Parameter(Mandatory=$true)][string]$InstallRoot)
++$ErrorActionPreference = 'Stop'
++Set-StrictMode -Version Latest
++$expected = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\NOX HELION')).TrimEnd('\')
++$root = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
++if ($root -ine $expected) { throw 'P01_UNINSTALL_WRONG_ROOT' }
++$localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
++function Assert-DirectoryChain([string]$Path, [string]$StopRoot) {
++  $cursor = [IO.Path]::GetFullPath($Path).TrimEnd('\')
++  while ($cursor -and ($cursor -ieq $StopRoot -or $cursor.StartsWith($StopRoot+'\',[StringComparison]::OrdinalIgnoreCase))) {
++    if (Test-Path -LiteralPath $cursor) {
++      $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
++      if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
++        throw "P01_UNINSTALL_UNSAFE_PARENT:$cursor"
++      }
++    }
++    if ($cursor -ieq $StopRoot) { break }
++    $cursor = [IO.Path]::GetDirectoryName($cursor)
++  }
++}
++Assert-DirectoryChain $root $localRoot
++if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw 'P01_UNINSTALL_ROOT_MISSING' }
++$markerPath = Join-Path $root 'nox-p01-owned.txt'
++$manifestPath = Join-Path $root 'payload.sha256.json'
++foreach ($meta in @($markerPath, $manifestPath)) {
++  Assert-DirectoryChain ([IO.Path]::GetDirectoryName($meta)) $root
++  if (-not (Test-Path -LiteralPath $meta -PathType Leaf)) { throw 'P01_UNINSTALL_METADATA_MISSING' }
++  $metaInfo=Get-Item -LiteralPath $meta -Force -ErrorAction Stop
++  if (($metaInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_UNINSTALL_METADATA_REPARSE' }
++}
++$ownership = (Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8).Trim()
++if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MARKER' }
++$m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
++if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
++if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
++if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'P01_UNINSTALL_INVALID_RUN_ID' }
++$registered = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
++$directories = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
++$checked = New-Object 'System.Collections.Generic.List[object]'
++$verified = New-Object 'System.Collections.Generic.List[string]'
++function Normalize-Relative([string]$Value) {
++  if ([string]::IsNullOrWhiteSpace($Value) -or [IO.Path]::IsPathRooted($Value) -or $Value -match '[<>:"|?*]' -or $Value -match '[\x00-\x1f]') { throw 'P01_UNINSTALL_BAD_PATH' }
++  $segments = @($Value -split '[\\/]')
++  foreach ($part in $segments) {
++    if ($part -eq '' -or $part -eq '.' -or $part -eq '..' -or $part -match '[. ]$' -or $part -match '^(?i:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$') {
++      throw 'P01_UNINSTALL_BAD_PATH'
++    }
++  }
++  return ($segments -join '\')
++}
++function Assert-VerifiedEntry([object]$Entry) {
++  Assert-DirectoryChain ([IO.Path]::GetDirectoryName($Entry.Full)) $root
++  if (-not (Test-Path -LiteralPath $Entry.Full -PathType Leaf)) { throw "P01_UNINSTALL_MISSING_PAYLOAD:$($Entry.Relative)" }
++  $item = Get-Item -LiteralPath $Entry.Full -Force -ErrorAction Stop
++  if ($item.PSIsContainer -or (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { throw "P01_UNINSTALL_UNSAFE_FILE:$($Entry.Relative)" }
++  if ($item.Length -ne $Entry.Size) { throw "P01_UNINSTALL_MODIFIED_FILE:$($Entry.Relative)" }
++  $actual = (Get-FileHash -LiteralPath $Entry.Full -Algorithm SHA256).Hash.ToLowerInvariant()
++  if ($actual -cne $Entry.Digest) { throw "P01_UNINSTALL_MODIFIED_FILE:$($Entry.Relative)" }
++}
++# PHASE 1 — validate ALL manifest rows and ALL live files before removing ANYTHING.
++foreach ($f in @($m.files)) {
++  if ($null -eq $f -or $f.path -isnot [string]) { throw 'P01_UNINSTALL_BAD_ROW' }
++  $relative = Normalize-Relative ([string]$f.path)
++  if ($relative -ieq 'payload.sha256.json' -or $relative -ieq 'nox-p01-owned.txt' -or $relative -ieq 'Uninstall.exe') { throw 'P01_UNINSTALL_RESERVED_INSTALLER_METADATA' }
++  if (-not $registered.Add($relative)) { throw 'P01_UNINSTALL_DUPLICATE_PATH' }
++  $full = [IO.Path]::GetFullPath((Join-Path $root $relative))
++  if (-not $full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'P01_UNINSTALL_PATH_ESCAPE' }
++  $digest = [string]$f.sha256
++  $sizeText = [string]$f.bytes
++  $size = [int64]0
++  if ($digest -cnotmatch '^[a-fA-F0-9]{64}$' -or -not [int64]::TryParse($sizeText,[Globalization.NumberStyles]::None,[Globalization.CultureInfo]::InvariantCulture,[ref]$size)) {
++    throw 'P01_UNINSTALL_INVALID_HASH_OR_LENGTH'
++  }
++  if ($size -lt 0) { throw 'P01_UNINSTALL_INVALID_HASH_OR_LENGTH' }
++  $entry = [pscustomobject]@{Relative=$relative;Full=$full;Size=$size;Digest=$digest.ToLowerInvariant()}
++  Assert-VerifiedEntry $entry
++  [void]$checked.Add($entry)
++  [void]$verified.Add($entry.Full)
++  $parent = [IO.Path]::GetDirectoryName($full)
++  while ($parent -and $parent.Length -gt $root.Length -and $parent.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)) {
++    [void]$directories.Add($parent)
++    $parent=[IO.Path]::GetDirectoryName($parent)
++  }
++}
++if ($checked.Count -ne $registered.Count -or $checked.Count -lt 1) { throw 'P01_UNINSTALL_REFUSED_MODIFIED_FILES:incomplete-validation' }
++# A partial manifest must never authorize metadata cleanup while leaving the app orphaned.
++if (-not $registered.Contains('NOX.P01.Shell.exe')) { throw 'P01_UNINSTALL_ENTRYPOINT_UNREGISTERED' }
++# PHASE 2 — full-list drift check BEFORE the first delete, for C08 no-loss parity.
++foreach ($entry in $checked) {
++  try { Assert-VerifiedEntry $entry } catch { throw "P01_UNINSTALL_FILE_CHANGED_DURING_COMMIT:$($entry.Relative)" }
++}
++# PHASE 3 — delete ONLY prevalidated payload paths, keep unknown/user data/metadata.
++$removed=0
++foreach ($entry in $checked) {
++  # C11: enforce final per-file digest check just before removal.
++  Assert-VerifiedEntry $entry
++  Remove-Item -LiteralPath $entry.Full -Force -ErrorAction Stop
++  $removed++
++}
++foreach ($dir in @($directories | Sort-Object Length -Descending)) {
++  try { if ((Get-ChildItem -LiteralPath $dir -Force -ErrorAction Stop | Measure-Object).Count -eq 0) { Remove-Item -LiteralPath $dir -Force } } catch { }
++}
++# NSIS owns metadata + uninstaller cleanup ONLY after this script reports PASS.
++Write-Output "P01_UNINSTALL_PAYLOAD_PASS verified=$($checked.Count) removed=$removed"

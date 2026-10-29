@@ -1,0 +1,136 @@
+{
+  "schema": "NOX_V16_G1B_R23_OWNER_PRE_POST_PATCH_HANDOFF_V1",
+  "runid": "NOX-V16-G1B-20261029T2319MSK-R23-EXACT-NSIS-OWNER-CAS-HANDOFF",
+  "task_id": "ERR-SRC-004/P01-NSIS-existing",
+  "role": "G1-B independent source patch corroboration; NOT G1-A owner, NOT T06 shared writer, NOT QA signer",
+  "planned_at_msk": "2026-10-29T23:13:00+03:00",
+  "observed_start_at_msk": "2026-10-29T23:14:07+03:00",
+  "receipt_created_at_utc": "2026-10-29T20:22:09.802Z",
+  "prestart": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "checked_56_rules": true,
+    "sections": "1-33,54-56/R29,R23",
+    "full_role_backup_parts": 5,
+    "register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "PR162_HEAD": "229f4dc7569c7f3792322b62885dc41c08b66fc5",
+    "PR162_TREE": "0a373b7fed1337a7a103716423328c7d192ad60d",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "owner_patch_commit": "b63b193f739bef21b406667cefff74635e1dc301",
+    "owner_receipt_blob": "d718351012d95ae2d0f15751be90b9d3def89949",
+    "master_e06_lessons_c34": "fresh full Google Docs document reads performed this run; T02 only writer"
+  },
+  "source_patch": {
+    "patch_file": "coordination/automation/r30/G1-B/NOX-V16-G1B-20261029T2319MSK-R23-EXACT-NSIS-OWNER-CAS-HANDOFF.patch",
+    "stage": "SOURCE_PATCH_PREPARED_EXACT_OWNER_POSTS_NOT_INTEGRATED",
+    "files": [
+      {
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "pre": "87d901c3846359a91be3e8288f24302cc7060257",
+        "post": "bc1ab71e6e57ac865fd1f98665ca6fb9919d6138",
+        "old_lines": 196,
+        "new_lines": 359
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "pre": "6c178c04957d7397c0c081e3b123940637abc6e9",
+        "post": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+        "old_lines": 103,
+        "new_lines": 127
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "pre": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "post": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+        "old_lines": 105,
+        "new_lines": 107
+      }
+    ],
+    "change_to_PR162": 0,
+    "security_checks": {
+      "five_HKCU_writes_in_main": true,
+      "five_immediate_registry_error_checks": true,
+      "rollback_report_version_parameter": true,
+      "trusted_uninstaller_attestation": true,
+      "no_invalid_pathonly_argument": true,
+      "recovery_preserves_old_backup": true,
+      "no_recursive_uninstall": true,
+      "uninstall_digest_and_exact_delete": true,
+      "owner_exclusive_scope": true,
+      "exact_full_blob_preimages": true
+    },
+    "passed_checks": 10,
+    "failed_checks": 0,
+    "roundtrip_reconstruction": 3,
+    "preimage_negative_control": "exact 3 Git blob SHA equality required; altered preimages reject before patch",
+    "native_git_apply": "NOT_RUN",
+    "native_powershell": "NOT_RUN",
+    "nsis_compiler": "NOT_RUN",
+    "CI": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "lesson": "First internal verification falsely counted restore/rollback WriteReg operations as installation writes (7 overall vs 5 main). Corrected scope to main registration block; zero product writes before safe check. Do not confuse test false positive with source defect.",
+  "mass_improvement": {
+    "active_entries": 11,
+    "clusters": [
+      {
+        "ids": [
+          "ERR-SYS-002",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "disposition": "APPLY_HEAD_PINNING_AND_0_ACCEPTED"
+      },
+      {
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "disposition": "APPLY_NEW_OWNER_BLOB_PINNED_PATCH_HANDOFF"
+      },
+      {
+        "ids": [
+          "ERR-SYS-001"
+        ],
+        "disposition": "DELEGATE_SHARED_LEDGER_TO_T02"
+      }
+    ],
+    "other_relevant": "ERR-SRC-003/005 and T06/T08/T09 delegated to named owners; ERR-SYS-006/007 remain historically closed",
+    "archived_419": "NOT_TREATED_AS_LIVE"
+  },
+  "progress": {
+    "operational_before": 1,
+    "operational_after": 1,
+    "total": 4,
+    "percent_before": 25,
+    "percent_after": 25,
+    "delta_accepted": 0,
+    "three_source_files_integrated": 0,
+    "product_percent": "N/D",
+    "historic_T03": "DONE 5/5 unchanged"
+  },
+  "handoff": {
+    "next_owner": "T06/manual #1, sole PR162 writer",
+    "owner_approval": "G1-A author signed isolated R16; T06 adoption/KEEP canonical approval still pending",
+    "action": "Fresh PR162 HEAD/ref; verify three exact PRE Git blobs; run git apply --check --index on this patch after owner authorization; apply only with T06 CAS force=false; Git readback three POST blobs; independent T08 same SHA; T02 shared register CAS",
+    "issue": 177
+  },
+  "state": "INCOMPLETE; prepared patch is not INTEGRATED, VERIFIED_NATIVE or QA_ACCEPTED"
+}
