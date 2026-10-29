@@ -22,6 +22,53 @@ PACKAGES = (
 )
 
 
+def _check_declared_versions(report: dict) -> None:
+    """Reuse PyPA's parser for existing ranges; never resolve/install packages."""
+    try:
+        from packaging.requirements import Requirement
+        from packaging.version import InvalidVersion, Version
+    except ImportError:
+        report["errors"].append("DEPENDENCY_REQUIREMENT_PARSER_UNAVAILABLE")
+        return
+    try:
+        lines = Path(__file__).with_name("requirements-qlora.txt").read_text(encoding="utf-8").splitlines()
+        requirements = {}
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            item = Requirement(line)
+            if (item.name in requirements or item.url or item.marker or item.extras
+                    or not item.specifier):
+                raise ValueError("unsupported dependency contract")
+            requirements[item.name] = item
+        if set(requirements) != set(PACKAGES):
+            raise ValueError("dependency package contract mismatch")
+    except (OSError, ValueError):
+        report["errors"].append("DECLARED_DEPENDENCY_CONTRACT_UNAVAILABLE")
+        return
+    compatible = True
+    for package, item in requirements.items():
+        installed = report["packages"][package]
+        installed["required"] = str(item.specifier)
+        if installed["state"] != "INSTALLED":
+            compatible = False
+            continue
+        try:
+            matches = item.specifier.contains(Version(installed["version"]), prereleases=False)
+        except InvalidVersion:
+            installed["state"] = "INVALID"
+            report["errors"].append("PACKAGE_METADATA_INVALID:" + package)
+            compatible = False
+            continue
+        if not matches:
+            installed["state"] = "INCOMPATIBLE"
+            report["errors"].append("PACKAGE_VERSION_OUT_OF_RANGE:" + package)
+            compatible = False
+    if compatible:
+        report["dependency_status"] = "RANGE_CHECK_PASSED"
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     """Inspect in a dedicated worker process; CUDA state is process-global."""
     report = {
@@ -32,6 +79,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
         "platform": platform.system(),
         "python": platform.python_version(),
         "packages": {},
+        "dependency_status": "HOLD",
+        "dependency_lock_verified": False,
+        "runtime_compatibility_verified": False,
         "gpu": None,
         "errors": [],
         "runtime_training_verified": False,
@@ -59,6 +109,7 @@ def inspect(profile: str, gpu_index: int) -> dict:
             report["packages"][package] = {"state": "INVALID", "version": None}
             report["errors"].append("PACKAGE_METADATA_INVALID:" + package)
 
+    _check_declared_versions(report)
     if platform.system() != "Windows":
         report["errors"].append("WINDOWS_GPU_HOST_REQUIRED")
         return report

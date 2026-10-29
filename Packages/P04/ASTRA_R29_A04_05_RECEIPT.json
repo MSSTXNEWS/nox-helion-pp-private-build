@@ -1,0 +1,67 @@
+{
+  "run_id": "ASTRA_R29_A04_05",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-DECLARED-DEPENDENCY-COMPATIBILITY",
+  "status": "SOURCE_COMPONENT_VERIFIED_TARGET_LOCK_PENDING",
+  "parent": "f62b87099472c33ab912e3727f958f94746dd3ce",
+  "local_commit": "5b964ff394e796106ff92b835e3411f66afe6d68",
+  "files": [
+    {
+      "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+      "pre_blob": null,
+      "post_blob": "c6e93026a631371f778ad0a315f5cc2afe5e4b81",
+      "post_sha256": "ae0af9355c08c5909be710146ce3bda637b14fcb8b1cb2604960e27d7c213cd3"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "pre_blob": "978d31123268cc84ed18bcd597cf0cafc905c149",
+      "post_blob": "b2d37412103871c07c1c220292dc7add2bccc7ed",
+      "post_sha256": "2599fd3f84a6bbf0a32693222061bc1467ffac609f650ad72f30f14829c5fcb5"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "pre_blob": "2156dda001cd0eb471c4060cc349969184472f33",
+      "post_blob": "7d83583a037cb5ee9b309d51547792bd82207fb8",
+      "post_sha256": "8d457541205c9f5ed77b25a1e92d10fc2e2a8c326577d9c20ad6b2419aa92cf2"
+    }
+  ],
+  "red": "7 failed subcases and 1 missing-report-field error across 10 targeted methods on exact f62b870 source",
+  "green": "10/10 test_local_gpu_preflight.py local Python with actual installed packaging 26.3 and synthetic distribution/GPU fixtures",
+  "fix": "Use existing PyPA Requirement/Version to enforce unchanged requirements-qlora ranges. Emit INCOMPATIBLE or INVALID/HOLD; separate range status from lock/runtime compatibility.",
+  "lesson": "Reuse the canonical dependency parser and declared source policy; installed metadata alone cannot prove usable worker prerequisites, and build Python is not automatically the runtime target.",
+  "previous_lesson_applied": "Structured HOLD before expensive CUDA work, retain fresh-process and environment restoration tests.",
+  "reuse": {
+    "library": "packaging",
+    "source_existing": "historical builder packaging25.0 and Transformers dependency",
+    "license": "Apache-2.0 OR BSD per official pypa/packaging LICENSE",
+    "no_install": true,
+    "no_new_version_selection": true
+  },
+  "known_target": {
+    "historical_build_python": "CPython 3.12.10 x64",
+    "historical_build_pyinstaller": "6.16.0",
+    "worker_python_binding": null,
+    "cuda_channel": null,
+    "gpu_compute_capability_floor": null,
+    "driver_floor": null
+  },
+  "required_remaining": [
+    "Owner-selected supported Windows/worker Python ABI",
+    "Supported NVIDIA compute-capability and driver floors, torch CUDA channel",
+    "Resolve exact transitive official wheel closure and SHA256/notices for that target"
+  ],
+  "eliminated_steps": [
+    "No custom PEP440 parser",
+    "No second training/RAG engine",
+    "No needless compile-from-source vendor libraries",
+    "No treating QA wheelhouse as AI dependency payload"
+  ],
+  "future_verification": "Windows hardware/runtime verification separate from source coding; no build/CI/integration executed",
+  "references": [
+    "https://packaging.pypa.io/en/stable/requirements.html",
+    "https://github.com/pypa/packaging/blob/main/LICENSE",
+    "https://pytorch.org/get-started/locally/",
+    "https://huggingface.co/docs/bitsandbytes/v0.45.0/installation",
+    "https://huggingface.co/docs/bitsandbytes/v0.48.0/installation"
+  ]
+}

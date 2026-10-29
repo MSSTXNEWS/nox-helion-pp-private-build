@@ -14,8 +14,46 @@ spec = importlib.util.spec_from_file_location("p04_host_gpu_probe", ROOT / "pref
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
 
+# Synthetic boundary fixtures, not a resolved/release dependency set.
+VERSIONS = {"torch": "2.4.0+cu124", "transformers": "4.51.0", "peft": "0.15.0",
+            "trl": "0.19.0", "accelerate": "1.6.0", "datasets": "3.6.0",
+            "bitsandbytes": "0.45.0", "safetensors": "0.5.0"}
+
 
 class HardwarePreflightContracts(unittest.TestCase):
+    def test_installed_versions_outside_declared_ranges_are_hold(self):
+        for package, version in (("torch", "2.3.0"), ("transformers", "5.0.0"),
+                                 ("peft", "1.0.0"), ("trl", "0.18.9"),
+                                 ("datasets", "5.0.0"), ("torch", "invalid")):
+            versions = {**VERSIONS, package: version}
+            with self.subTest(package=package, version=version), patch.object(
+                probe.platform, "system", return_value="Windows"
+            ), patch.object(probe.metadata, "version", side_effect=versions.__getitem__), patch.object(
+                probe.train_qlora, "nvidia_smi", return_value=None
+            ):
+                result = probe.inspect("BALANCED", 0)
+                self.assertEqual(result["status"], "HOLD")
+                error = "PACKAGE_METADATA_INVALID:" if version == "invalid" else "PACKAGE_VERSION_OUT_OF_RANGE:"
+                self.assertIn(error + package, result["errors"])
+
+    def test_compatible_ranges_are_not_a_resolved_release_lock(self):
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            result = probe.inspect("BALANCED", 0)
+        self.assertEqual(result["dependency_status"], "RANGE_CHECK_PASSED")
+        self.assertFalse(result["dependency_lock_verified"])
+        self.assertFalse(result["runtime_compatibility_verified"])
+        self.assertEqual(result["packages"]["torch"]["version"], "2.4.0+cu124")
+
+    def test_missing_declared_contract_never_bypasses_version_checks(self):
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None), patch.object(
+            probe.Path, "read_text", side_effect=FileNotFoundError("missing package payload")
+        ):
+            result = probe.inspect("BALANCED", 0)
+        self.assertIn("DECLARED_DEPENDENCY_CONTRACT_UNAVAILABLE", result["errors"])
     def test_invalid_host_arguments_hold_before_any_dependency_or_gpu_probe(self):
         for profile, index, reason in ((None, 0, "GPU_PROFILE_INVALID"),
                                       ([], 0, "GPU_PROFILE_INVALID"),
@@ -59,7 +97,7 @@ class HardwarePreflightContracts(unittest.TestCase):
 
     def test_missing_vendor_probe_holds_even_with_local_packages(self):
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
-            probe.metadata, "version", return_value="1.0"
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
         ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
             result = probe.inspect("BALANCED", 0)
         self.assertEqual(result["status"], "HOLD")
@@ -72,7 +110,7 @@ class HardwarePreflightContracts(unittest.TestCase):
                                is_initialized=lambda: False)
         fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
-            probe.metadata, "version", return_value="fixture"
+            probe.metadata, "version", side_effect=VERSIONS.__getitem__
         ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
             probe.train_qlora, "gpu_inventory", return_value=[device]
         ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
@@ -100,7 +138,7 @@ class HardwarePreflightContracts(unittest.TestCase):
                                        is_initialized=lambda: initialized)
                 fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
                 with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
-                    probe.metadata, "version", return_value="fixture"
+                    probe.metadata, "version", side_effect=VERSIONS.__getitem__
                 ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
                     probe.train_qlora, "gpu_inventory", return_value=[device]
                 ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
