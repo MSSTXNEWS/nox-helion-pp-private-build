@@ -1,0 +1,241 @@
+{
+  "schema": "NOX_V16_T11_G5C_R19_IMMUTABLE_READONLY_STAGE_GATE",
+  "run_id": "NOX-V16-T11-20261029T1948MSK-R19-G5C",
+  "task_id": "T11",
+  "scope": "NOX EXPRESS INTEGRATOR WINDOWS LOADER ONLY",
+  "observed_end_utc": "2026-10-29T16:48:27.275Z",
+  "read": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_characters": 205078,
+    "sections": "§§1-33,54-56; R29; 56 consolidated §33",
+    "active_register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "error_ids": [
+      {
+        "id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "ack": "OWNER_HANDOFF_T02"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "ack": "APPLIED_FRESH_SHA"
+      },
+      {
+        "id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "ack": "NO_IMPACT_T06_HOST50"
+      },
+      {
+        "id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "ack": "OWNER_HANDOFF_T06"
+      },
+      {
+        "id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "ack": "NO_IMPACT_T06_T08"
+      },
+      {
+        "id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "ack": "ALREADY_VERIFIED_T07_T09"
+      },
+      {
+        "id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "ack": "ALREADY_VERIFIED_T04"
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "ack": "OWNER_HANDOFF_T09"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "ack": "APPLIED_NO_PREMATURE_DONE"
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "ack": "NO_IMPACT_T06"
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "ack": "OWNER_HANDOFF_T08"
+      }
+    ],
+    "cross_index_blob": "dba5a0230fe4dd73b68095431f426c3de7111a8f",
+    "shared_doc_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "source_pr": 162,
+    "source_pre_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "source_readback_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "source_sha_stable_in_preflight": true,
+    "source_tree_sha": "NOT_RETURNED_BY_CURRENT_CONNECTOR",
+    "current_owner_receipt_blob": "7c4a708280d694907aef8c53297c2fa7bb8a1747",
+    "t06_progress": "1/8 INCOMPLETE",
+    "t09_frozen_sha": null,
+    "t10_same_sha_pass": false
+  },
+  "historical": {
+    "gitlab_migration_github_sha": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "unique_files": 27,
+    "inventory_receipt_sha": "3cef69137be12e740b739d8a070a463e8eb62182",
+    "r17_27_of_27_verified": true,
+    "orig_3part_729_sha_crc": "HISTORICAL_PASS_NO_RECHECK",
+    "t04_34_of_34": "HISTORICAL_DONE",
+    "no_loss": true
+  },
+  "hierarchy": {
+    "role": "G5-C / T11",
+    "megablock": "GitLab Free source migration readiness",
+    "weight_semantics": "operational/equal-weight fixed 5 criteria, NOT product",
+    "blocks": [
+      {
+        "criterion": 1,
+        "status": "DONE",
+        "evidence": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862"
+      },
+      {
+        "criterion": 2,
+        "status": "DONE",
+        "evidence": "R12 and R17 27/27 exact blobs"
+      },
+      {
+        "criterion": 3,
+        "status": "HOLD",
+        "reason": "AUTHENTICATED_GITLAB_HEAD_AND_PROJECT_PERMISSIONS_UNAVAILABLE"
+      },
+      {
+        "criterion": 4,
+        "status": "HOLD",
+        "reason": "T09_FROZEN_SHA_ABSENT; future CI candidate not admitted to canonical HEAD"
+      },
+      {
+        "criterion": 5,
+        "status": "HOLD",
+        "reason": "T10_SAME_SHA_SOURCE_READY_AND_GITLAB_LIVE_REQUIRED"
+      }
+    ],
+    "accepted": 2,
+    "fixed_denominator": 5,
+    "open_or_hold": 3,
+    "before_percent": 40,
+    "after_percent": 40,
+    "delta_pp": 0,
+    "bar": "████░░░░░░",
+    "product_progress": "N/D",
+    "other_group_coordination_cells": "N/D: no frozen independently accepted TaskID manifests read"
+  },
+  "physical": {
+    "kind": "FRESH_SHA_23c1557_AND_ONE_FOCUSED_FUTURE_GITLAB_CI_STATIC_SECURITY_PROOF",
+    "checks": {
+      "web/api gated by YES": true,
+      "exact frozen SHA required": true,
+      "exact frozen ref required": true,
+      "default DENY workflow": true,
+      "preflight runs before entrypoint": true,
+      "preflight HEAD + digest checks": true,
+      "preflight consent and traversal checks": true,
+      "historic entrypoint still pins migration branch": true
+    },
+    "pass_count": 8,
+    "total": 8,
+    "overall_static_result": "PASS",
+    "ci_candidate_git_blob": "a8cc88a39f5d8e431c5dc4fe1522b1fa13257642",
+    "preflight_git_blob": "f51a5c3471be4f03cc28e50507e042fce2078ee3",
+    "historic_entrypoint_git_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+    "historic_migration_branch_pinned_in_entrypoint": true,
+    "canonical_ci_admitted": false,
+    "source_code_changes": 0,
+    "native_gitlab_test": "NOT_RUN",
+    "runner_or_project_rights": "NOT_VERIFIED",
+    "new_accepted_criteria": 0
+  },
+  "mass_lessons": {
+    "discovered_current_error_ids": 11,
+    "processed_error_ids": 11,
+    "clusters": [
+      {
+        "id": "STALE_SHA",
+        "action": "APPLIED",
+        "proof": "PR162 exact HEAD 23c1557 checked, not frozen",
+        "anti_recurrence": "no READY without same frozen SHA"
+      },
+      {
+        "id": "PROJECT_ACL",
+        "action": "EXTERNAL_BLOCKER",
+        "owner": "GitLab project administrator",
+        "proof": "No authenticated GitLab connector/API session"
+      },
+      {
+        "id": "SOURCE_READY_DEPENDENCIES",
+        "action": "DELEGATED",
+        "owner": "T06/T09/T10",
+        "proof": "T06 receipt 1/8; T09/10 same-source not accepted"
+      },
+      {
+        "id": "NO_LOSS_ARCHIVE",
+        "action": "ALREADY_VERIFIED",
+        "proof": "T07/T09 archived 729 and T04 34/34 preserved"
+      }
+    ],
+    "deduplicated_clusters": 4,
+    "applied": 1,
+    "already_verified": 1,
+    "delegated": 1,
+    "blocked": 1,
+    "remaining_unresolved": 2,
+    "lessons_application": "Checked actual candidate CI SHA/ref/consent/preflight guards and preserved separate historical hardcoded migration entrypoint; refused to equate donor with executable frozen CI."
+  },
+  "next": {
+    "owner": "GitLab project administrator",
+    "single_external_action": "Run existing coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py with local read_api credential; deliver SANITIZED JSON only. Never share token.",
+    "t12_handoff": "REUSE_EXISTING_CONDITIONAL_HANDOFF; do not duplicate until T09 frozen + T10 same SHA",
+    "T02_handoff": "New HEAD 23c1557, current register 2c8e..., static candidate 8/8 check with no criterion advancement"
+  },
+  "safety": {
+    "gitlab_push": false,
+    "force_push": false,
+    "reimport": false,
+    "exe": false,
+    "nsis": false,
+    "gitlab_ci": false,
+    "e07": false,
+    "release": false,
+    "canonical_source_write": false,
+    "shared_document_write": false
+  },
+  "gate_A": "PASS",
+  "gate_B": "PASS_NEW_INDEPENDENT_STATIC_PROOF_NO_CRITERION_DELTA",
+  "gate_C": "PENDING_GIT_READBACK",
+  "gate_D": "PASS_PROCESSED_KNOWN_RELEVANT_4_CLUSTERS",
+  "final_status": "INCOMPLETE_2_OF_5_ACCESS_HOLD",
+  "protected_sources_unchanged": true
+}
