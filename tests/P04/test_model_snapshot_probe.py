@@ -116,6 +116,62 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         )
         self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
 
+    def _write_tensor_header(self, tensors, nbytes=4, metadata=None):
+        obj = dict(tensors)
+        if metadata is not None:
+            obj["__metadata__"] = metadata
+        header = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(nbytes)
+        )
+
+    def test_rejects_unknown_dtype(self):
+        self._write_tensor_header({"t": {"dtype": "UNVERIFIED", "shape": [1], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_boolean_shape_dimension(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [True], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_negative_shape_dimension(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [-1], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_fractional_shape_dimension(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [1.0], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_tensor_byte_length_too_short(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [2], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_tensor_byte_length_too_long(self):
+        self._write_tensor_header({"t": {"dtype": "F16", "shape": [1], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_empty_tensor_name(self):
+        self._write_tensor_header({"": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_control_character_tensor_name(self):
+        self._write_tensor_header({"t\\n": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_non_object_metadata(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}}, metadata="not-a-map")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_rejects_non_string_metadata_value(self):
+        self._write_tensor_header({"t": {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}}, metadata={"license": 5})
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_accepts_valid_scalar_and_half_precision_tensor(self):
+        self._write_tensor_header({
+            "scalar": {"dtype": "F64", "shape": [], "data_offsets": [0, 8]},
+            "half": {"dtype": "F16", "shape": [2], "data_offsets": [8, 12]},
+        }, nbytes=12, metadata={"format": "local-fixture"})
+        self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
+
     def test_rejects_duplicate_safetensors_tensor_names(self):
         header = (b'{"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]},'
                   b'"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]}}')

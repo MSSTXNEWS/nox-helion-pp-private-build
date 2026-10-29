@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_V16_MANUAL03_P04_SOURCE_CONTRACT_PATCH",
+  "run_id": "NOX-V16-MANUAL03-20261029-R29-P04-SAFETENSORS-SIZE-CONTRACT",
+  "role": "MANUAL3",
+  "task_id": "P04 model snapshot validation",
+  "owner_pre_head": "b1ab29be6146bd3221ce4ba533c3369ae7459371",
+  "owner_pre_tree": "99689c1da2969c0a477c06d48e9698533d13e2a7",
+  "changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre": "ca028a0c249f28aabc4e285d365da90c988b9435",
+      "post": "fe81cefda2970479f18cc50bae485d006d28f03f"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre": "33457771cccc0b8194e279a4eaa5407ce6430710",
+      "post": "1b9fd37a56a39c728b663b7eefda6f800037fded"
+    }
+  ],
+  "root_cause": "Safetensors local snapshot admitted mismatched tensor shape, dtype and byte range, as long as each range lay within bounds and coverage was complete.",
+  "fix": "Bind file offsets to dtype width and tensor shape; reject negative/noninteger dims, unrecognized widths, invalid metadata, oversized names and control characters; preserve duplicate-key, full-buffer, no-overlap and reparse guards.",
+  "tests": {
+    "new_cases": 11,
+    "existing_cases": 18,
+    "authored_cases_total": 29,
+    "structural_checks": 9,
+    "full_repository_unittest": "NOT_RUN",
+    "runtime_GPU_and_windows": "NOT_RUN"
+  },
+  "stages": {
+    "source_prepared": true,
+    "source_verified": false,
+    "integrated": false,
+    "qa_accepted": false
+  },
+  "next_owner": {
+    "T06": "Review existing PR221 R29 exact blobs, run Python focused unittest, integrate compatible Python owner patch into PR162 only after exact current PRE and CAS readback.",
+    "T08": "Independently validate exact integrated HEAD and safety contracts; no static/mock native PASS.",
+    "T02": "Only shared journal writer; record new existing ERR-SRC-004 delta using safe CAS/readback."
+  },
+  "no_loss": "Historical DONE, 729 files, SourceLock, D02/WOW200, 8 CoreID, 5 Persona, STOP, ACL, native consent, user data preserved. No EXE, NSIS, CI, E07."
+}
