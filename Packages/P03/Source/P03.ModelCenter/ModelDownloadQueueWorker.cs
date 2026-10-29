@@ -180,6 +180,14 @@ public sealed class ModelDownloadQueueWorker(
                 // callbacks can reenter owner cleanup or another STOP request.
                 try { running.Cancel(); }
                 catch (ObjectDisposedException) { }
+                catch (AggregateException ex)
+                {
+                    // The intent was already persisted in the queue. A native
+                    // callback failure must not lose that cancellation request.
+                    System.Diagnostics.Trace.TraceError(
+                        "P03_CANCEL_CALLBACK_FAILED job={0} type={1}",
+                        id, ex.GetType().Name);
+                }
                 return true;
             }
             // STOP can arrive after token registration but before the atomic
