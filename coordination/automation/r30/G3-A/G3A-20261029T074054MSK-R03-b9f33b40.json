@@ -1,0 +1,29 @@
+{
+  "schema": "NOX_R30_G3A_SOURCE_ATTEMPT_V1",
+  "runId": "G3A-20261029T074054MSK-R03-b9f33b40",
+  "slot": "G3-A",
+  "status": "HOLD",
+  "scope": "FIN ZAGR V16 LOADER P03 Admission only",
+  "baseHead": "b9f33b40e6599461c4757f551d37249ca4480cf6",
+  "sourcePath": "Packages/P03/Admission/p03_modelcenter_gate.py",
+  "sourceBlobBefore": "b3fe9f7a10a8b83452dc4494b88fe989309d1422",
+  "sourceBlobAfter": "b3fe9f7a10a8b83452dc4494b88fe989309d1422",
+  "sourceChanged": false,
+  "commit": null,
+  "tests": "NOT_RUN",
+  "postSha256": null,
+  "finding": "Admission checks measured disk and VRAM but does not check recommendedRamBytes against host-attested available RAM. CPU-only candidates can lack a RAM budget.",
+  "blocker": "GitHub update_file source write twice blocked by safety checks; no bypass or alternate-write workaround attempted.",
+  "improvement": "Preflight RAM and VRAM requirements and host resource evidence before native attestation; prohibit false PASS and request G3-B host RAM sensor binding.",
+  "handoffG3B": "Supply nativeMeasuredHardware.availableRamBytes as host-attested free RAM, bound to existing E06 session; do not trust UI measurements. No G3-B files modified.",
+  "noChangesTo": [
+    "main",
+    "PR162",
+    "shared R30",
+    "25 snapshots",
+    "queue/transport/ui.js"
+  ],
+  "noBuild": true,
+  "noMerge": true,
+  "noGitLab": true
+}
