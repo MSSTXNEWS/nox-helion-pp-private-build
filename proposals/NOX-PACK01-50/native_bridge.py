@@ -272,6 +272,33 @@ class NoxPackHost:
         pinned_routes = self.routes
         pinned_ports = self.ports
         pinned_live_probe = self.native_session_live
+        # A native availability probe may mutate a frozen BoundPort through
+        # object.__setattr__, including a DIFFERENT route probed earlier.
+        # Pin the entire bounded registry before calling any owner code.
+        pinned_port_state = {}
+        for bound_route, bound_port in pinned_ports.items():
+            if (bound_route not in pinned_routes or type(bound_port) is not BoundPort or
+                    type(bound_port.owner) is not int or
+                    bound_port.owner != pinned_routes[bound_route]["owner"] or
+                    type(bound_port.evidence_id) is not str or
+                    not bound_port.evidence_id.strip() or
+                    not callable(bound_port.call) or
+                    not callable(bound_port.available)):
+                raise HostHold("Invalid native owner binding during advertisement")
+            pinned_port_state[bound_route] = (
+                bound_port, bound_port.call, bound_port.available,
+                bound_port.owner, bound_port.evidence_id)
+        def require_unchanged_ports():
+            if len(pinned_ports) != len(pinned_port_state):
+                raise HostHold("Native owner registry changed during advertisement")
+            for bound_route, state in pinned_port_state.items():
+                bound_port, call, available, owner, receipt = state
+                if (pinned_ports.get(bound_route) is not bound_port or
+                        bound_port.call is not call or
+                        bound_port.available is not available or
+                        bound_port.owner != owner or
+                        bound_port.evidence_id != receipt):
+                    raise HostHold("Native owner capability drift during advertisement")
         # Availability probes are native callbacks too. Keep the advertised
         # capabilities bound to the same identity and permission snapshot;
         # never return a partial list assembled across different sessions.
@@ -287,6 +314,7 @@ class NoxPackHost:
             if (self.routes is not pinned_routes or self.ports is not pinned_ports or
                     self.native_session_live is not pinned_live_probe):
                 raise HostDenied("Native authority or registry changed during advertisement")
+            require_unchanged_ports()
         out = {}
         advertised_ports = {}
         for route, item in self.routes.items():
