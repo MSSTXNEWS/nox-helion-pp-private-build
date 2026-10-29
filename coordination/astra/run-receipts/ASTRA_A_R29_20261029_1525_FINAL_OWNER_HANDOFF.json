@@ -1,0 +1,137 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASTRA_A_R29_10_MEGABLOCKS_SOURCE_ONLY_FINAL",
+  "runId": "ASTRA-A-R29-20261029-1525-MB01-10",
+  "recordedUtc": "2026-10-29T12:46:51.801Z",
+  "project": "Existing NOX HELION EXPRESS INTEGRATOR, not main NOX",
+  "rootBranch": "astra/v16-code-complete-source-only-20261029",
+  "sourceOnly": true,
+  "requestedMegablocks": 10,
+  "savedMegablocks": 10,
+  "receiptPaths": [
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB01.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB02.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB03.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB04.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB05.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB06.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB07.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB08.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB09.json",
+    "coordination/astra/run-receipts/ASTRA_A_R29_20261029_1525_MB10.json"
+  ],
+  "sourceCommits": 20,
+  "owners": {
+    "A1": {
+      "branch": "astra/r29-a01-20261029",
+      "head": "2524fe86ea0195a2380a65fd8df4e6b997d0bea1",
+      "commits": 4,
+      "paths": [
+        "stage/proposals/P01/C11/QA/emit-receipts.cjs"
+      ]
+    },
+    "A2": {
+      "branch": "astra/r29-a2-p01-20261029",
+      "head": "d8dd3c1821a6223254d87ce14690b87cb6ff5602",
+      "commits": 7,
+      "paths": [
+        "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+        "proposals/P01/WOW-MAX10/p01-responsive.mjs",
+        "proposals/P01/WOW-MAX10/p01-mode-controller.mjs",
+        "proposals/P01/WOW-MAX10/c5-modes.test.mjs"
+      ]
+    },
+    "A3": {
+      "branch": "astra/r29-a02-20261029",
+      "head": "db72e0d6a979be6301103f6374fbe50f0bfab814",
+      "commits": 2,
+      "paths": [
+        "Packages/P02/worker-chat/NativePythonPipe.cs"
+      ]
+    },
+    "A4": {
+      "branch": "astra/r29-a04-voice-20261029",
+      "head": "aada1ec273708e4832c7ca7b6f7a8ad3b4547a6a",
+      "commits": 2,
+      "paths": [
+        "proposals/NOX-VOICE-LAB/voice-lab.js"
+      ]
+    },
+    "A5": {
+      "branch": "astra/r29-a03-20261029",
+      "head": "de88dc4e40c3365afe31a02bb0be4b1498722309",
+      "commits": 3,
+      "paths": [
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs"
+      ]
+    },
+    "A6": {
+      "branch": "astra/r29-a6-p03-catalog-20261029",
+      "head": "d25993c0f61f1776f7486ca7420611719d6c4365",
+      "commits": 2,
+      "paths": [
+        "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
+        "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs"
+      ]
+    }
+  },
+  "oneScopedTestPerBlock": "Source admission and exact GitHub CAS/readback; MB10 additionally real Node tests",
+  "directExecutedTest": {
+    "name": "P01 cinema mode controller regression",
+    "command": "node --test /tmp/nox_r29_mb10/c5-modes.test.mjs",
+    "passed": 12,
+    "failed": 0,
+    "exactGitBlobs": {
+      "source": "574181f5bdab26b901a3b554add1e55970b9fcc2",
+      "test": "613180072d71a8ee3251bb0ce248ea5f3037b9db"
+    },
+    "environment": "Node.js 22 local isolated exact Git-source copies; Windows WebView2 and P01 native NOT_RUN"
+  },
+  "noLoss": {
+    "originalGitPaths": 968,
+    "missing": 0,
+    "unchanged": 966,
+    "alreadyModifiedHistorical": 2,
+    "sourcePartsGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "physical729Sha256": "NOT_RUN",
+    "ownerBranchDeletedPaths": 0
+  },
+  "newActualAgentProcesses": 0,
+  "actualSpawnTool": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "scopeOfParallelWork": "Six disjoint GitHub source branches; operations run concurrently, no simulated worker IDs",
+  "r30Ownership": "Current R30 lock inspected. Avoided R30-assigned source paths and unresolved G1-A Installer owner conflict. Astra-B P04/P05/E06 untouched.",
+  "status": {
+    "sourceCodeComplete": "HOLD",
+    "sourceReady": "HOLD",
+    "exeBuild": "NOT_RUN",
+    "gitLabCI": "NOT_RUN",
+    "e07": "0/10 NOT_RUN",
+    "release": "HOLD",
+    "overallWeightedP01P02P03P04P05": "N/D",
+    "newAcceptedProductTaskIds": 0
+  },
+  "issueDelta": [
+    "P01 canonical 21 sensitive/dangerous Host50 route preflight now mirrored in UI",
+    "P02 regular busy latch no longer depends on STOP response or string object identity",
+    "P02 SIP call quote consent resets for changed price/phone/purpose; quote not truncated",
+    "P03 restore cannot overwrite active model transfer; bounded read and source/provenance gates",
+    "P01 Cinema FX explicit false/profile mutation rolled back; exact Node test 12/12 PASS"
+  ],
+  "lessons": [
+    "A source commit is not an accepted native TaskID.",
+    "Native authority and quote consent must be revalidated after callbacks and pending operations.",
+    "Cross-team owner-file conflicts are HOLD, never silent merge.",
+    "Bounded file reads, non-clobber and exact HEAD attestation precede issuing release receipts."
+  ],
+  "journalRouting": {
+    "master": "GIT_FALLBACK_FOR_R30_C_SOLE_DRIVE_WRITER",
+    "e06": "GIT_FALLBACK_FOR_R30_C_SOLE_DRIVE_WRITER",
+    "selfImprovement": "GIT_FALLBACK_FOR_R30_C_SOLE_DRIVE_WRITER",
+    "reason": "Current R30 canonical ownership grants connected Google Docs append exclusively to coordinator C; Astra-A will not race this writer.",
+    "sourceOfCControl": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json"
+  },
+  "next": "Independent owner-native tests, physical original 729 validation and source freeze by authorized integrator; do not build EXE until SourceReady."
+}
