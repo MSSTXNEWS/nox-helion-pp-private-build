@@ -1,0 +1,136 @@
+{
+  "schema": "NOX_V16_MANUAL2_R26_INDEPENDENT_SOURCE_QA_V1",
+  "run_id": "NOX-V16-MANUAL02-R26-20261030-SOURCEQA-01",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "utc_generated": "2026-10-29T21:28:11.845Z",
+  "source_pr": 162,
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_pre": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+  "source_post_observed": "6a10d3a3da84e7d39b57158b2265d261d292593b",
+  "head_frozen": false,
+  "scope": "source-only targeted independent inspection, no product source modifications; not natively executed E07",
+  "approaches_completed": 10,
+  "gates": {
+    "A": "PASS_READ_CANON_HEAD_REG_MASTER_E06_LESSONS",
+    "B": "PARTIAL_SOURCE_ONLY_10_CHECKS_ONE_FAIL",
+    "C": "HANDOFF_PENDING_T02_CAS_READBACK",
+    "D": "APPLIED_SOURCE_RECHECK_AFTER_HEAD_DRIFT",
+    "E": "RECEIPT_PENDING_READBACK"
+  },
+  "results": [
+    {
+      "number": 1,
+      "scope": "729/3 source archive identity",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "coordination/source-lock/verify_original_archive.py",
+      "limitation": "raw ZIP not physically reassembled"
+    },
+    {
+      "number": 2,
+      "scope": "P01 staging path/reparse/exclusive owner lock",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "coordination/e06/stage_p01.py",
+      "limitation": "Windows reparse/NSIS not natively executed"
+    },
+    {
+      "number": 3,
+      "scope": "P02 STOP, cancellable Ollama transport",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "Packages/P02/worker-python/p02_runtime.py",
+      "limitation": "Ollama stream not natively executed"
+    },
+    {
+      "number": 4,
+      "scope": "P02 one host SQLite connection + foreign keys + origin policy",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "Packages/P02/worker-python/p02_runtime.py",
+      "limitation": "native host binding not independently executed"
+    },
+    {
+      "number": 5,
+      "scope": "P03 13-field consent invalidation",
+      "status": "STATIC_RECHECK_ALL_13_FIELDS_PRESENT_ON_NEW_HEAD",
+      "proof": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+      "limitation": "committed dynamic Node regression test not executed by manual2; native consent not accepted"
+    },
+    {
+      "number": 6,
+      "scope": "P03 queue stop/retry ACK binding",
+      "status": "FAIL_SOURCE",
+      "proof": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "defect": "ACK handler removes pending on action+commandId; does not validate optional data.jobId/data.modelTag against pending durable job",
+      "existing_error_id": "ERR-SRC-004",
+      "existing_task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+      "donor_commit": "8ac474da750d540e68a16566b69be276e247d358",
+      "limitation": "host native ACL/STOP untested; owner1 must integrate exact PRE with consent fix preserved"
+    },
+    {
+      "number": 7,
+      "scope": "P04 model snapshot strict duplicate/nonfinite/reparse",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "Packages/P04/model_snapshot_probe.py",
+      "blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+      "limitation": "GPU/model runtime not tested"
+    },
+    {
+      "number": 8,
+      "scope": "P04 rights/holdout/checkpoint/v3 training receipts",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "Packages/P04/train_qlora.py",
+      "blob": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "limitation": "no authorized weights, data or GPU training"
+    },
+    {
+      "number": 9,
+      "scope": "P05 Drive three-target readback and N/D strict readiness",
+      "status": "STATIC_GUARDS_PRESENT",
+      "proof": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "blob": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "limitation": "app-side OAuth/CAS readback not independently exercised"
+    },
+    {
+      "number": 10,
+      "scope": "Host50 whole-tree attestation and current owner checks",
+      "status": "STATIC_GUARDS_PRESENT_BUT_ROUTE_ACCEPTANCE_HOLD",
+      "proof": "coordination/e06_host50/admission.py",
+      "blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+      "limitation": "13 prior source holds, 11 owner-unbound, 14 native pending; distinct ledgers"
+    }
+  ],
+  "summary": {
+    "source_checks": 10,
+    "static_guards_or_recheck": 9,
+    "source_fail": 1,
+    "qa_accepted_new": 0,
+    "task_done_delta": 0,
+    "source_verified_task_percent": null,
+    "integrated_task_percent": null,
+    "accepted_task_percent": null,
+    "p01_p05_weighted_product_percent": null,
+    "e07_native_scenarios_run": 0,
+    "e07_native_scenarios_required": 10,
+    "release": "HOLD"
+  },
+  "errors": {
+    "register_git_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "open": 5,
+    "fix_applied_unverified": 4,
+    "verified_closed": 2,
+    "total": 11,
+    "existing_ids": [
+      "ERR-SRC-004",
+      "ERR-SYS-002"
+    ],
+    "new_error_id": null
+  },
+  "lesson": "Re-fetch PR HEAD before acceptance and recheck only changed paths. PR advanced 2 commits during QA and fixed the earlier seven omitted P03 evidence fields; never carry the old FAIL to the new SHA, and do not turn source-guard presence into native PASS.",
+  "next": {
+    "owner1": "Integrate ACK jobId/modelTag matching from existing R16 donor onto current UI exact PRE without overwriting consent R15; source test+readback; then re-request manual2 exact-head QA",
+    "owner3": "Close P04/P05 approved donor patches/receipts",
+    "t02": "Add this manual2 receipt to ERROR_REGISTER/Master/E06/Lessons only after authorized CAS+readback; maintain existing 11 IDs",
+    "release_gate": "No SOURCE_READY/frozen HEAD/GitLab EXE/E07 until proved"
+  }
+}
