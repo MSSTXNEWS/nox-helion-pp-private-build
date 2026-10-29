@@ -1,0 +1,994 @@
+{
+  "schema": "NOX_V16_T04_SOURCE_VERSION_MANIFEST_R03_CORRECTED",
+  "task": "T04",
+  "run_id": "NOX-V16-T04-VOICE-COHERENCE-R03-20261029",
+  "created_utc": "2026-10-29T14:03:22.170Z",
+  "scope": "T04 historical source selection, no product code edit/merge/EXE/CI/E07",
+  "supersedes_manifest_git_blob_sha1": "dce35f04f074620a365f1812aa1cbfb57ba7905a",
+  "original_34_position_order_preserved": true,
+  "counts": {
+    "positions": 34,
+    "SKIP": 15,
+    "ACCEPT": 18,
+    "OWNER_HOLD": 1,
+    "final_decisions": 33,
+    "admitted_source_delta": 0,
+    "administrative_holds": 0
+  },
+  "progress": "██████████ — 33/34 final source selections (15 SKIP,18 ACCEPT,1 technical OWNER_HOLD); all 34 classified",
+  "evidence": {
+    "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "owner_lock": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "prior_t04_manifest_sha1": "dce35f04f074620a365f1812aa1cbfb57ba7905a",
+    "t06_staged_pr214_head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+    "t06_p02_framed_worker_owner_pre": "255dfb7ab330c825fcc362b619614189c4915e6c",
+    "t06_p02_framed_worker_staged_post": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "t09_original_729_physical_receipt_sha1": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+    "t09_physical_source_zip_status": "RECEIPT_VERIFIED_IN_GIT; WHOLE_ARCHIVE_NOT_REHASHED_BY_THIS_T04_RUN"
+  },
+  "pending": {
+    "only_position": 30,
+    "owner": "G2-B voice + G2-A ingress, T06 sole integrator",
+    "concrete_root_cause": "Selected voice donor expects a different native IPC and owner-route interface than PR162 current source. Original helion_voice files exist in verified 729 ZIP, not in PR162 exploded tree. A single-file addition is provably not a coherent source patch.",
+    "next_action": "T06 reuse exact original helion_voice package from validated original ZIP + reconcile required NativeIngress/OwnerTwoPorts APIs with current non-regressing STOP/ACL/consent; use donor owner tests and real current source tests before authoritative acceptance; never blindly replace entire worker modules.",
+    "safe_alternative": "Preserve current PR162 voice behavior and all original ZIP bytes while admission is pending; no destructive overwrite."
+  },
+  "optimization_applied": "Instead of searching 25 trees again or downloading third-party voice engines, reuse R12 exact-blob index, PR162 recursive tree, same-branch donor diff, and 729 original ZIP member SHA list; evidence pin and fail closed for one unready cross-owner module.",
+  "r29_no_loss": {
+    "historical_done": "preserved",
+    "D02_WOW200": "preserved",
+    "original_729": "physically verified by T09 receipt",
+    "original_parts": "untouched",
+    "product_changes": 0,
+    "prs_merged": 0
+  },
+  "handoff": {
+    "T05": "Do not change 13/13 triage. Voice bundle requires G2-A+G2-B owner compatibility; one G2-A framed-worker staged patch remains separate.",
+    "T06": "PR214 is source-only staging. Do NOT copy single voice donor beba4.. blindly. Use exact 3-file comparison and original ZIP modules, preserve PR162 HEAD as preimage, verify native interfaces and STOP. Recheck SHA after source admission.",
+    "T02": "Append this delta+lesson to Master/E06/Lessons via safe CAS+readback. No shared Docs writes by T04.",
+    "T09": "Original 729 physical SourceLock verified by existing immutable receipt; final integrated HEAD/tree freeze is a separate gate."
+  },
+  "rows": [
+    {
+      "position": 1,
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G2-A",
+      "assigned_owner": "G2-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "preimage_pr162_git_blob_sha1": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a01-20261029",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "ref": "astra/r27-a04-20261029",
+          "sha": "4efa3fec8ac7484d977e1a480dc37c00acb35805"
+        },
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "144523b0227a5824b14bec678deaa5ea449059bc"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 2,
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "assigned_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "selected_git_blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "refs": [
+            "astra/r27-a01-20261029",
+            "astra/r27-a02-20261029",
+            "astra/r27-a03-20261029",
+            "astra/r27-a04-20261029",
+            "astra/r27-a05-20261029",
+            "astra/r27-a06-20261029",
+            "astra/r27-a07-20261029",
+            "astra/r27-a08-20261029",
+            "astra/r27-a09-20261029",
+            "astra/r27-a10-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 3,
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "assigned_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "selected_git_blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "refs": [
+            "astra/r27-a01-20261029",
+            "astra/r27-a02-20261029",
+            "astra/r27-a03-20261029",
+            "astra/r27-a04-20261029",
+            "astra/r27-a05-20261029",
+            "astra/r27-a06-20261029",
+            "astra/r27-a07-20261029",
+            "astra/r27-a08-20261029",
+            "astra/r27-a09-20261029",
+            "astra/r27-a10-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 4,
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G5-A",
+      "assigned_owner": "G5-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "preimage_pr162_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a09-20261029",
+          "sha": "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc"
+        },
+        {
+          "ref": "astra/r29-a05-20261029",
+          "sha": "fd956f5b2c314b50eba080f721ca2c9b435f9339"
+        },
+        {
+          "ref": "astra-b/r29-b3-20261029",
+          "sha": "f1dc819173c113c731d09325534cd0e2eb8ef4cc"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 5,
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "UNASSIGNED",
+      "assigned_owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "preimage_pr162_git_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a04-20261029",
+          "sha": "19632f3a0d2abbd94a58dfa2af86db299347b87e"
+        },
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "ddf27032f81fb70c121c3729f7df75b44df40f64"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 6,
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G2-A",
+      "assigned_owner": "G2-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "preimage_pr162_git_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a04-20261029",
+          "sha": "dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd"
+        },
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "a76148c98bdbac20e77ae0b473485bf6175dfb34"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 7,
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G2-B",
+      "assigned_owner": "G2-B",
+      "selected_git_blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "d721cd9608d62052060ae2c7ff6db240b281802f",
+          "refs": [
+            "astra/r27-a05-20261029",
+            "astra/r29-a02-20261029",
+            "astra/r29-a04-voice-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 8,
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G2-B",
+      "assigned_owner": "G2-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "preimage_pr162_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a05-20261029",
+          "sha": "dcef668c010b9b215131e610eab960a3d864ec14"
+        },
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 9,
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G3-A",
+      "assigned_owner": "G3-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+      "preimage_pr162_git_blob_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a06-20261029",
+          "sha": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f"
+        },
+        {
+          "ref": "astra/r29-a03-20261029",
+          "sha": "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17"
+        },
+        {
+          "ref": "astra/r29-a6-p03-catalog-20261029",
+          "sha": "068f2217f3ce4b1cce2be930ff1453f42941efab"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 10,
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G3-B",
+      "assigned_owner": "G3-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "preimage_pr162_git_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r27-a06-20261029",
+          "sha": "c04d5a56c9fc6547488386f3b4a3eefd9795efee"
+        },
+        {
+          "ref": "astra/r29-a03-20261029",
+          "sha": "21d2db7c7916ccd54d926cff26044f7375a592c8"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 11,
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G4-A",
+      "assigned_owner": "G4-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "preimage_pr162_git_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a04-20261029",
+          "sha": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+        },
+        {
+          "ref": "astra-b/r29-b1-20261029",
+          "sha": "733a3a498419c7963d244335e8b109e0bb1b2359"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 12,
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G4-B",
+      "assigned_owner": "G4-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "preimage_pr162_git_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a04-20261029",
+          "sha": "d261a4b1256a82562f13161986ed6db46ded2636"
+        },
+        {
+          "ref": "astra-b/r29-b2-20261029",
+          "sha": "df7567599fc3317adc607b42f687ba01c77f780c"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 13,
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G5-A",
+      "assigned_owner": "G5-A",
+      "selected_git_blob_sha1": "8c20156bee3db953f74b34f62bc5e57709d30c6a",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "8c20156bee3db953f74b34f62bc5e57709d30c6a",
+          "refs": [
+            "astra/r29-a05-20261029",
+            "astra-b/r29-b3-20261029",
+            "astra-b/r29-b4-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 14,
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G5-A",
+      "assigned_owner": "G5-A",
+      "selected_git_blob_sha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+          "refs": [
+            "astra/r29-a05-20261029",
+            "astra-b/r29-b3-20261029",
+            "astra-b/r29-b4-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 15,
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G5-B",
+      "assigned_owner": "G5-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "preimage_pr162_git_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a05-20261029",
+          "sha": "4390085208078e9f5bf21c16155e1b046301cd13"
+        },
+        {
+          "ref": "astra-b/r29-b4-20261029",
+          "sha": "259206f4622919d54100d4c2cc22c1881af6c129"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 16,
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G5-B",
+      "assigned_owner": "G5-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "preimage_pr162_git_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a05-20261029",
+          "sha": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+        },
+        {
+          "ref": "astra-b/r29-b3-20261029",
+          "sha": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+        },
+        {
+          "ref": "astra-b/r29-b4-20261029",
+          "sha": "a32f9bab740a7694049c7f3cc1b36cd990f3d51e"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 17,
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G5-B",
+      "assigned_owner": "G5-B",
+      "selected_git_blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+          "refs": [
+            "astra/r29-a05-20261029",
+            "astra-b/r29-b3-20261029",
+            "astra-b/r29-b4-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 18,
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G5-A",
+      "assigned_owner": "G5-A",
+      "selected_git_blob_sha1": "2187ee5ecae18179a5daa7c60859cad06f275b81",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "2187ee5ecae18179a5daa7c60859cad06f275b81",
+          "refs": [
+            "astra/r29-a05-20261029",
+            "astra-b/r29-b3-20261029",
+            "astra-b/r29-b4-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 19,
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G6-B",
+      "assigned_owner": "G6-B",
+      "selected_git_blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "005866951edbd17a4ab120feecc177c8fd414c8e",
+          "refs": [
+            "astra/r29-a06-20261029",
+            "astra-b/r29-b5-20261029",
+            "astra-b/r29-b6-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 20,
+      "path": "coordination/e06/source_deep_inventory.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G6-A",
+      "assigned_owner": "G6-A",
+      "selected_git_blob_sha1": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c",
+          "refs": [
+            "astra/r29-a06-20261029",
+            "astra-b/r29-b5-20261029",
+            "astra-b/r29-b6-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 21,
+      "path": "coordination/e06/stage_onehost.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G6-A",
+      "assigned_owner": "G6-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+      "preimage_pr162_git_blob_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a06-20261029",
+          "sha": "8ae8523d83e175cb83a32ca497bb2c15f08948ca"
+        },
+        {
+          "ref": "astra-b/r29-b6-20261029",
+          "sha": "4136ae420ed953ad5715b5c4416834327c5fd096"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 22,
+      "path": "coordination/e06/verify_original_729_source.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G6-A",
+      "assigned_owner": "G6-A",
+      "selected_git_blob_sha1": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a",
+          "refs": [
+            "astra/r29-a06-20261029",
+            "astra-b/r29-b5-20261029",
+            "astra-b/r29-b6-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 23,
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G6-B",
+      "assigned_owner": "G6-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "preimage_pr162_git_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a06-20261029",
+          "sha": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+        },
+        {
+          "ref": "astra-b/r29-b5-20261029",
+          "sha": "164c7c0027c98c5bf201977d4cf23591dc1562a0"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 24,
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G1-A",
+      "assigned_owner": "G1-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257",
+      "preimage_pr162_git_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a01-20261029",
+          "sha": "19233446b6ee8b508106a548ff67eaffe13dbb82"
+        },
+        {
+          "ref": "astra/r29-a2-p01-20261029",
+          "sha": "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 25,
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "UNASSIGNED",
+      "assigned_owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "preimage_pr162_git_blob_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a01-20261029",
+          "sha": "ab76cd9fdcc46a31835e4fbca235d910ea819fb9"
+        },
+        {
+          "ref": "astra/r29-a2-p01-20261029",
+          "sha": "25eb2bc57a0feaf472490dff30f68d2a31cdf1ee"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 26,
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G1-A",
+      "assigned_owner": "G1-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "preimage_pr162_git_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a01-20261029",
+          "sha": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+        },
+        {
+          "ref": "astra/r29-a2-p01-20261029",
+          "sha": "5eca50b708a6865c585cd767259dfd78a11f0fdc"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 27,
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "assigned_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "selected_git_blob_sha1": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d",
+          "refs": [
+            "astra/r29-a02-20261029",
+            "astra/r29-a04-voice-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 28,
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G2-A",
+      "assigned_owner": "G2-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "preimage_pr162_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "a7f462b11050bc2fba27081cf9e1325657314eb7"
+        },
+        {
+          "ref": "astra/r29-a04-voice-20261029",
+          "sha": "f043f041db2634a40242d10a462e816330062118"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    },
+    {
+      "position": 29,
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G2-A",
+      "assigned_owner": "G2-A",
+      "selected_git_blob_sha1": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+          "refs": [
+            "astra/r29-a02-20261029",
+            "astra/r29-a04-voice-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 30,
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "decision": "OWNER_HOLD",
+      "final": false,
+      "selection": "G2_B_ARCHIVED_DONOR_SELECTED_NOT_COHERENT_WITH_PR162_NATIVE_INTERFACES",
+      "reason": "Direct Git tree proof: PR162 NativeIngress SHA b7edc3... lacks voice_session_from_native, _voice_session_type and enable_voice_stop; PR162 OwnerTwoPorts SHA b6b06... lacks mic_consent. Archived voice donor beba4... requires all these; copying only #30 is an incompatible single-file addition. Keep donor immutable until owner G2-A+G2-B/T06 produces safe compatible multi-file admission CAS + tests. Administrative HOLD removed by user; this is concrete technical gate.",
+      "original_owner": "G2-B",
+      "assigned_owner": "G2-B",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4",
+      "preimage_pr162_git_blob_sha1": null,
+      "preimage_condition": "PATH_MUST_BE_ABSENT_AT_PINNED_PR162",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a02-20261029",
+          "sha": "a0b7171b063d4c51832c0330b40261c0837941c1"
+        },
+        {
+          "ref": "astra/r29-a04-voice-20261029",
+          "sha": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "INCOMPATIBLE_AS_STANDALONE_WITH_PR162_EXACT_SHA",
+      "evidence_source": "Direct GitHub read of astra/r29-a04-voice-20261029 blob",
+      "required_adjacent_sources": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "owner": "G2-A",
+          "pr162_sha": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+          "archived_bundle_sha": "144523b0227a5824b14bec678deaa5ea449059bc",
+          "note": "Existing current strict IPC/STOP/replay contract must not be overwritten blindly"
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+          "owner": "G2-B",
+          "pr162_sha": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+          "archived_bundle_sha": "b1a163b0598067f213815c8d837d516543490cdf",
+          "note": "Native mic consent + owner service binding required; protect ACL, consent and session identity"
+        }
+      ],
+      "original_source_modules": [
+        {
+          "path": "helion_voice/__init__.py",
+          "source_zip_member_sha256": "c53ab711e2ed5e8e8abdf501ae6cd30db8c9bd6e917213083693861825496354"
+        },
+        {
+          "path": "helion_voice/adapters.py",
+          "source_zip_member_sha256": "dd78b8cb380d46d959754ba641ece60dd4e15a8a305cbefdf0b612c9c9d72c12"
+        },
+        {
+          "path": "helion_voice/control.py",
+          "source_zip_member_sha256": "30e51e9163683a6b8a84c306feba3bb6958f58e35d18a664e6bb08cc73137395"
+        },
+        {
+          "path": "helion_voice/service.py",
+          "source_zip_member_sha256": "91edfc757a9052a52bf8468baae035add538b923a688eddbf98d643c36442b99"
+        }
+      ],
+      "archived_owner_tests": [
+        {
+          "path": "Packages/P02/worker-python/test_p02_original_voice_port_r29.py",
+          "git_blob": "213c2caf7984dfb5922543355824a3e0cd36acd5"
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py",
+          "git_blob": "580844125858fb5a0ba5e82db708ac70f76f4057"
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_loader_existing_pack_r29.py",
+          "git_blob": "48260d1d143f57e5176114156b88b6a65a303ea7"
+        }
+      ],
+      "compatibility_evidence": {
+        "pr162_tree_sha": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+        "pr162_total_tree_entries": 1184,
+        "pr162_has_helion_voice_extracted": false,
+        "original_zip_729_proof_sha": "60bba6a6b34431f4edc8c4e9ab665472cf7ce356",
+        "original_joined_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+        "original_voice_modules_present": true,
+        "donor_branch": "astra/r29-a04-voice-20261029"
+      }
+    },
+    {
+      "position": 31,
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G3-A",
+      "assigned_owner": "G3-A",
+      "selected_git_blob_sha1": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0",
+          "refs": [
+            "astra/r29-a03-20261029",
+            "astra/r29-a6-p03-catalog-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 32,
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "assigned_owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "selected_git_blob_sha1": "e4fc503d37bf96d8894104078ee4c9198abd0834",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "e4fc503d37bf96d8894104078ee4c9198abd0834",
+          "refs": [
+            "astra/r29-a03-20261029",
+            "astra/r29-a6-p03-catalog-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 33,
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "decision": "SKIP",
+      "final": true,
+      "reason": "All confirmed archived variants byte-identical; exclude duplicated donor changes, preserve PR162",
+      "original_owner": "G3-B",
+      "assigned_owner": "G3-B",
+      "selected_git_blob_sha1": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb",
+      "preimage_pr162_git_blob_sha1": null,
+      "archived_variants": [
+        {
+          "sha": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb",
+          "refs": [
+            "astra/r29-a03-20261029",
+            "astra/r29-a6-p03-catalog-20261029"
+          ]
+        }
+      ],
+      "source_change": false,
+      "evidence_source": "R12 verified Git refs; owner journal"
+    },
+    {
+      "position": 34,
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "decision": "ACCEPT",
+      "final": true,
+      "selection": "KEEP_CANONICAL_PR162_EXISTING_VERSION",
+      "reason": "User-approved conservative no-overwrite choice. Keep existing PR162 preimage; competing archived variants explicitly excluded from automatic admission.",
+      "original_owner": "G3-A",
+      "assigned_owner": "G3-A",
+      "owner_approved_by_user_in_chat": true,
+      "selected_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "preimage_pr162_git_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "preimage_condition": "EXACT_GIT_BLOB_MATCH",
+      "archived_variants": [
+        {
+          "ref": "astra/r29-a03-20261029",
+          "sha": "a5a6bb768f2820567053af55a48cd68919813ed9"
+        },
+        {
+          "ref": "astra/r29-a6-p03-catalog-20261029",
+          "sha": "f32c250613ba7750f09b9a8fa14ce28cb9e8b7bd"
+        }
+      ],
+      "source_change": false,
+      "compatibility_status": "BASELINE_RETAINED_NO_NEW_COMPATIBILITY_ASSERTION",
+      "evidence_source": "Direct GitHub PR162 pinned file reads + R12 conflicting blobs"
+    }
+  ]
+}
