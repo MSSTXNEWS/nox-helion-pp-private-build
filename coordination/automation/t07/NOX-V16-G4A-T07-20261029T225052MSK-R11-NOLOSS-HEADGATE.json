@@ -1,0 +1,179 @@
+{
+  "schema": "NOX_V16_T07_SOURCE_ONLY_DELTA_GUARD_R23_V1",
+  "run_id": "NOX-V16-G4A-T07-20261029T225052MSK-R11-NOLOSS-HEADGATE",
+  "task_id": "T07",
+  "scope": "Windows NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16, SOURCE ONLY",
+  "status": "INCOMPLETE_NOT_SOURCE_READY",
+  "owner_scope": "G4-A/T07 independent delta NO-LOSS; T06 sole shared source writer; T02 sole shared journal writer",
+  "observed_start_msk": "2026-10-29T22:50:52+03:00",
+  "planned_start_msk": "2026-10-29T22:48:00+03:00",
+  "evidence": {
+    "canon": {
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+      "paragraphs": 705,
+      "characters": 218066,
+      "section33_rules": 56,
+      "latest": "R23"
+    },
+    "role_archive_blob": "8af458928b1b7f6bda8434f40df3fd04ab13349f",
+    "registry": {
+      "ref": "coordination/v16-shared-error-ledger-20261029-r01",
+      "blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+      "entries": 11,
+      "status_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      }
+    },
+    "master_revision": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r23_policy_blob": "ed7bf81059a1807eaaab82547d64d82e1549bd64",
+    "r22_policy_blob": "1a4be5b5dbb60f8c8a81bdf48a81fca8e30c3125",
+    "r18_r22_toolkit": "TOOL_NOT_RUN_LOCAL_PREVIEW_ONLY",
+    "source": {
+      "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+      "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+      "current_pr162_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+      "current_tree": "b1fd5ef45a1045c828a152cd3d7e32aeda50e1ab",
+      "previous_t07_checkpoint_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+      "commits_ahead": 17,
+      "modified_paths": 7,
+      "added_paths": 13,
+      "deleted_paths": 0,
+      "source_head_pre": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+      "source_head_post": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+      "product_files_written_by_t07": 0,
+      "original_part_files_in_changed_list": 0
+    }
+  },
+  "historical_original_zip": {
+    "status": "DONE_6_OF_6_REUSED_NO_REHASH",
+    "t09_physical_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "t07_accepted_commit": "a70ab3dc9c45e29afee737810d6be8f623b8f210",
+    "length_bytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "members": 729
+  },
+  "progress": {
+    "denominator": 4,
+    "previous_accepted": 2,
+    "current_accepted": 2,
+    "previous_percent": 50,
+    "current_percent": 50,
+    "delta_pp": 0,
+    "remaining": 2,
+    "bar": "█████░░░░░",
+    "criteria": [
+      {
+        "n": 1,
+        "name": "reuse_original_zip_proof",
+        "status": "DONE",
+        "evidence": "T09 physical aab1154c and T07 original accepted a70ab3dc, 729/729 CRC+SHA"
+      },
+      {
+        "n": 2,
+        "name": "current_T06_owner_accepted_unified_HEAD",
+        "status": "HOLD",
+        "evidence": "Live PR162 d0d941864a02... / tree b1fd5ef45a10... readback; latest T06 owner SAMEHEAD receipt evaluated old dde1be7f; independently accepted all 8/8 NOT evidenced"
+      },
+      {
+        "n": 3,
+        "name": "NO_LOSS_changed_paths_and_blobs",
+        "status": "DONE_DELTA_SCOPED",
+        "evidence": "Git compare e04c31...d0d941: 17 commits, 7 modified, 13 added, 0 deleted; archive parts absent from change list; 729/968 historical verified checkpoints reused, not rehashed"
+      },
+      {
+        "n": 4,
+        "name": "T09_sealed_freeze_handoff",
+        "status": "HOLD",
+        "evidence": "T09 R20 commit 6189c33d0481cb11e5e626d6661fa97254b707d8 blob f8a57a41cd9195368b8ddfeddcbb60dff31f4a65 evaluated stale e04c31...; accepted_head/frozen_head null"
+      }
+    ]
+  },
+  "physical_targeted_security": {
+    "t06_owner_git_blob_guard": {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "pre_at_3fc": "bd61bc61f66314d5f4840ef6ad516e72f6314995",
+      "post_current": "2c3144507280b12e4584539c3e518e0fb7f7ffdd",
+      "test_pre": "bea76d1ef9080ae7eea78178a23f8aa0701b1e04",
+      "test_post": "7f2870fdfe2553b1042eb06a73718dbb7cd94a06",
+      "finding": "3-commit delta adds git cat-file -t == blob type check and negative test; no rollback of earlier integrated P01 verifier; actual Python test NOT_RUN"
+    },
+    "p01_stage": {
+      "path": "coordination/e06/stage_p01.py",
+      "blob": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+      "finding": "Current code checks ancestors before WORK.mkdir and again after WORK.mkdir; old T09 symlink-parent source PRE 3283b9... no longer matches. Static check only; no runtime Windows crash regression."
+    },
+    "pack01_native_bridge": {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+      "finding": "P0 duplicate JSON object keys not rejected: json.loads(raw) at lines 204 and 210, no object_pairs_hook; independent Python minimal repro of duplicate consent keys produces last-value-wins True. This is a reproduced parser behavior and source-review finding, NOT end-to-end native exploit or QA.",
+      "reproducer": "json.loads('{\"route\":\"file.delete\",\"consent\":false,\"consent\":true}')[\"consent\"] == True",
+      "repro_status": "PASS_PYTHON_STDLIB_LAST_WINS_ONLY",
+      "owner": "T06/Host50",
+      "required_fix": "Exact PRE source 1cd8f2...; reject duplicate object keys before native approval/port.call; preserve STOP/ACL/consent; targeted negative regression and T08 same-SHA QA; T07 must not edit foreign source"
+    },
+    "p04_variant": {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "current_pr162_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+      "newer_isolated_donor_blob": "ca028a0c249f28aabc4e285d365da90c988b9435",
+      "status": "DIFFERENT_SOURCE_VERSION_OWNER_DECISION_REQUIRED; no automatic overwrite or acceptance"
+    }
+  },
+  "errors_triage": {
+    "ERR-SYS-001": "DELEGATE T02 shared ledger closure",
+    "ERR-SYS-002": "APPLY live HEAD/tree read and no stale freeze",
+    "ERR-SRC-003": "DELEGATE T06 Host50 source acceptance",
+    "ERR-SRC-004": "DELEGATE T06 P0 duplicate JSON + source P01/P04 + 8/8 owner",
+    "ERR-SRC-005": "DELEGATE T08 pinned fixtures current-HEAD QA",
+    "ERR-SYS-006": "ALREADY_VERIFIED original archive 729 no repeat",
+    "ERR-SYS-007": "ALREADY_VERIFIED T04 34/34 no repeat",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "APPLY no false T09 sealed freeze",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY no RUN=DONE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 owner 8/8 and real same-HEAD receipt",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08 native 13/13 QA not accepted"
+  },
+  "mass_lessons": {
+    "processed_error_ids": 11,
+    "applied_clusters": [
+      "fresh-head-recheck-and-avoid-stale-symlink-hold",
+      "duplicate-json-key-pre-consent-security-handoff"
+    ],
+    "already_verified": 2,
+    "delegated_owner_clusters": [
+      "T06_source_host50_P04",
+      "T08_native_QA",
+      "T09_freeze",
+      "T02_shared_docs"
+    ],
+    "remaining_acceptance": 2
+  },
+  "gates": {
+    "A_READ": "PASS",
+    "B_PHYSICAL": "PASS_SOURCE_ONLY_CURRENT_DELTA_AND_NEGATIVE_PARSER_REPRO",
+    "C_JOURNAL": "PENDING_GIT_READBACK",
+    "D_MASS_SELF_IMPROVEMENT": "PASS_TRIAGE_WITH_UNRESOLVED_OWNER_DEPENDENCIES",
+    "source_ready": false,
+    "product_percent": "N/D",
+    "build": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "ci": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "handoff": {
+    "T06": "Review current exact native_bridge.py blob 1cd8f2... duplicate-key issue before consent; retain stage_p01.py d12ff..., reconcile P04 9a837 vs isolated donor ca028 and accept 8/8 only on same frozen tuple",
+    "T08": "Independent exact-head STOP/ACL/consent/privacy & native 13/13 after T06 source integration; don't claim QA_ACCEPTED from static security check",
+    "T09": "Do not seal e04c stale tuple; wait T06 accepted d0d941 or successor, T08 same head, then signed frozen HEAD/tree/manifest",
+    "T02": "Receive personal receipt, dedupe ERR-SRC-004; only T02 CAS+readback shared docs"
+  },
+  "checkpoint": {
+    "current_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+    "tree": "b1fd5ef45a1045c828a152cd3d7e32aeda50e1ab",
+    "next_action": "At next run compare ONLY new delta from d0d941; if T06 8/8 owner-accepted and T08 same SHA then advance criterion 2; if T09 signed exact tuple then advance criterion 4; otherwise tackle fresh owner-safe NOLOSS source delta; never rehash original ZIP."
+  }
+}
