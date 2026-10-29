@@ -764,6 +764,93 @@
       },
       "control_center": "SNAPSHOT_UPDATE_PENDING",
       "build": "NOT_AUTHORIZED"
+    },
+    {
+      "schema": "NOX_R33_FINITE_JOURNAL_DELTA_V1",
+      "run_id": "NOX-V16-T02C-A39BBF36-20261030-R33-FINITE-SOURCE-DELTA",
+      "source_head_prior_confirmed_cas": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+      "source_head_observed": "1cda912558c8636cc85dd4a08c65efcd19a11905",
+      "source_tree_observed": "e98ff3a9ccab56d81625b02cef9f5d721b79fd8c",
+      "shared_register_pre_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+      "product_changes_since_prior": {
+        "commit_count": 25,
+        "files": [
+          "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+          "Packages/P04/model_snapshot_probe.py",
+          "Packages/P05/Space/SpaceFeedClient.cs",
+          "Packages/P05/Space/tests/Program.cs",
+          "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.cs",
+          "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj",
+          "coordination/e06/run_source_integrations_r13.py",
+          "coordination/e06_host50/test_t06_mobile_binding_r26.py",
+          "proposals/NOX-PACK01-50/owner-binding-map.json",
+          "proposals/NOX-PACK01-50/registry.mjs",
+          "proposals/NOX-PACK01-50/smoke.test.mjs",
+          "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+          "proposals/P01/WOW-MAX10/route-dispatch.test.mjs",
+          "tests/P03/test_g2c_g3b_consent_snapshot_r24.cjs",
+          "tests/P04/test_model_snapshot_probe.py"
+        ]
+      },
+      "owner_receipts": [
+        {
+          "owner": "manual-1/T06",
+          "existing_task_id": "T06/Host50",
+          "run_id": "NOX-V16-T06-M1-R26-20261030-MOBILE-SOURCE-R01",
+          "source_receipt_blob": "739c3c4cdcb04784b1c9931f826a964bfdb89d8f",
+          "owner_map_blob": "6e3436821a975b1986261791de060a1020de7079",
+          "stage": "INTEGRATED_SOURCE_ONLY",
+          "native_qa": "NOT_RUN"
+        },
+        {
+          "owner": "manual-1/T06",
+          "existing_task_id": "P04/model_snapshot",
+          "run_id": "NOX-V16-T06-20261030-R26-M1-P04P05-SAMEHEAD",
+          "owner_receipt_blob": "ca0ed1b8a639343f26887ed07c9826faa9311983",
+          "stage": "INTEGRATED_SOURCE_TEST_FIX_ON_CURRENT_HEAD",
+          "independent_native_qa": "NOT_RUN"
+        }
+      ],
+      "owner_map": {
+        "source_bound": 40,
+        "source_unbound": 10,
+        "native_pending": 14,
+        "historical_source_hold": 13,
+        "source_only": true
+      },
+      "qa_disposition": {
+        "owner": "manual-2",
+        "latest_issue_ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6510084060",
+        "status": "ISOLATED_DONOR_NOT_QA_ACCEPTED",
+        "same_head_native_acceptance": false
+      },
+      "automation_watchdog": {
+        "approved_current": 15,
+        "enabled": 10,
+        "disabled": 5,
+        "historical_disabled": 10,
+        "source": "authenticated Automations.peek on 2026-10-30",
+        "disabled_owners_not_autoresumed": true
+      },
+      "existing_error_ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-004",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "lessons": {
+        "dedup_clusters": [
+          "STALENESS_AFTER_HEAD_DRIFT",
+          "SOURCE_PREPARED_NOT_QA_ACCEPTED",
+          "SCHEDULER_ENABLED_NE_TASK_DONE"
+        ],
+        "new_ids": 0
+      },
+      "new_QA_ACCEPTED_TaskIDs": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build": "NOT_AUTHORIZED",
+      "next_owner": "manual-1/T06 finishes P01 security/P03 ACK/10 Host50 source-unbound; manual-2/T08 verifies changed exact dependent source+STOP/ACL/native consent/NOLOSS; T02 projected dashboard sync only after Git CAS."
     }
   ]
 }
