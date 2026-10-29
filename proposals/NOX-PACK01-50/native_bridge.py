@@ -449,8 +449,15 @@ class ExistingP02VoiceAdapter:
 
     def dial(self,session,args):
         if not self.sip_ready():raise HostHold("SIP provider, quote verification or consent not configured")
+        session.validate()
+        expected_scope=(session.tenant,session.principal,session.chat_id,
+                        session.allowed,session.private_approved)
         identity=self.native_identity(session)
         quote=self.native_quote(session)  # NEVER generated from client price or number.
+        session.validate()
+        if (session.tenant,session.principal,session.chat_id,
+                session.allowed,session.private_approved)!=expected_scope:
+            raise HostDenied("Native SIP quote changed authenticated scope")
         if quote is None:raise HostHold("No live quote approved by SIP provider")
         return self.sip.place(identity,quote)
 
