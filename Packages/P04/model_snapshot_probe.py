@@ -215,6 +215,12 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
                             parse_constant=lambda token: (_ for _ in ()).throw(ValueError(token)))
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
+    if isinstance(header, dict):
+        try:
+            for key in header:
+                key.encode("utf-8", errors="strict")
+        except UnicodeError as exc:
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
     capacity = size - length - 8
     if not tensors or any(
