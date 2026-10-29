@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V8",
+  "run_id": "R30-G4B-20261029T1252MSK-08",
+  "slot": "G4-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "G4B-R30-P04-CUDA-SELECTOR-TEMPORARY-ENV-RESTORE-R08",
+  "status": "SOURCE_GIT_READBACK_PASS_ISOLATED_HELPER_4_4_STATIC_11_11_FULL_MODULE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "branch": "automation/r30/g4b/R30-G4B-20261029T1252MSK-08",
+  "pre_commit": "c1906513e6493da7f3419e56001967e61c6713a2",
+  "code_commit": "9bbf35c2a0306d92928c9f0e63e6fb5c33ebdf66",
+  "test_commit": "1c9d52b296d4b59ffaeaf012d11bd06e19e58fa1",
+  "read_inputs": {
+    "owner_lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "consolidated_rules_read": 56
+    },
+    "spec": "Google Drive V16 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§33,54–56, loader-only R29 override",
+    "error_journal": "Drive 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 Astra-C R07 12:26 MSK",
+    "historical_c34": "Drive 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "e06_journal": "Drive 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 Astra-C R07 12:26 MSK",
+    "lessons": "Drive 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ Astra-C R07 12:26 MSK",
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "P04_preflight_historical_overlap": 3
+    },
+    "snapshots": {
+      "indexed": 25,
+      "github_directories_count": 25,
+      "bodies_fully_read_or_SHA256_rehashed": false,
+      "originals_untouched": true
+    },
+    "previous_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T1145MSK-07.json"
+  },
+  "cause": "R07 correctly refused contradictory inherited CUDA masks, but on successful admissible GPU probes inspect() overwrote the process-wide CUDA_VISIBLE_DEVICES and CUDA_DEVICE_ORDER and never restored them. Later loader tasks could inherit the previous inspection's selection; a failure after Torch import left the same leaked state.",
+  "fix": "Introduce scoped _temporary_cuda_selection contextmanager, wrapping only the existing torch CUDA preflight. A finally block restores each original CUDA environment entry on success and error without changing GPU admission, ABI or VRAM logic.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "blob_pre": "1ae973b5e44cc29fbb21df2b2439e5e931a5bbce",
+      "sha256_pre": "d95a92d3d18a2e93ef3f657f4d156b28d0e54f37d3a4054640b85a182a7f8100",
+      "blob_post": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+      "sha256_post": "68f57f0a3f23e6f065601455aa4dff90712fa7a02e10b24a4379fe214eb4baf9"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "blob_pre": "2dc9f7f6f983905fe23241db6e832498e1c0837f",
+      "sha256_pre": "c2ffd5d354e90ede602cd65e350ab17d533b1991d13f5129a53ffc5b1d4a82fc",
+      "blob_post": "7a1e1b968c9998840e24ffd8890050d4c9c18b7a",
+      "sha256_post": "9f50e3ae567853c31ddd52c20306906229709410cc3724406907ed33f21c6001"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "shared_branches_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "drive_single_writer": "Astra-C only"
+  },
+  "git_compare": {
+    "ahead_by": 2,
+    "behind_by": 0,
+    "total_commits": 2,
+    "changed_files": [
+      {
+        "filename": "Packages/P04/preflight_local_gpu.py",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 14,
+        "changes": 48,
+        "previous_filename": null
+      },
+      {
+        "filename": "tests/P04/test_local_gpu_preflight.py",
+        "status": "modified",
+        "additions": 49,
+        "deletions": 0,
+        "changes": 49,
+        "previous_filename": null
+      }
+    ]
+  },
+  "tests": {
+    "isolated_command": "python /tmp/g4b_r08_cuda_env_isolated.py; python -m py_compile /tmp/g4b_r08_cuda_env_isolated.py",
+    "isolated_result": "PASS 4/4 on extracted identical contextmanager source",
+    "exact_source_static": "11/11 structural constraints PASS and 2 GitHub blob readbacks",
+    "full_owner_test_module": "NOT_RUN (no authenticated local repo checkout)",
+    "new_owner_regressions": "2 unittest methods saved in owner-assigned test file, not executed as full module",
+    "Windows_CUDA": "NOT_RUN",
+    "actual_GPU": "NOT_MEASURED",
+    "LoRA_QLoRA": "NOT_RUN",
+    "PyPA_transitive_hash_lock": "NOT_VERIFIED"
+  },
+  "previous_lesson_applied": "R07 parent CUDA visibility/order must be treated as authoritative and conflicts rejected before Torch import. R08 preserves this parent context after an otherwise compatible probe.",
+  "self_improvement": {
+    "lesson_id": "G4B_R08_CUDA_PROCESS_ENV_LEAK_PREVENTION",
+    "observed_error": "Read-only preflight kept CUDA mask/order changed for later work even after the probe completed.",
+    "applied_fix": "Scope environment mutability to CUDA probe and restore values on success/error; add owner regression methods and test isolated helper.",
+    "limits": "Python process environment is global, not thread-safe; restored variables cannot undo CUDA contexts or prove GPU binding. A dedicated one-shot preflight subprocess is still safest for runtime."
+  },
+  "holds": [
+    "Full owner test module not executed",
+    "Only isolated helper tests, no real Windows/CUDA",
+    "Wheel ABI tag metadata not artifact hashes/transitive lock",
+    "Runtime process concurrency and CUDA context not validated",
+    "25 snapshots indexed and present, not every body rehashed",
+    "729 original source SHA physical unverified",
+    "Source code complete and release HOLD"
+  ],
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_run": true,
+  "no_final_integration": true,
+  "no_training": true
+}
