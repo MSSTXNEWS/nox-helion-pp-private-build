@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_G3B_R30_IMMUTABLE_OWNER_RECEIPT_V1",
+  "run_id": "G2C-20261030T001248MSK-R16",
+  "project": "NOX HELION EXPRESS INTEGRATOR V16 ONLY",
+  "slot": "G3-B / G2-C",
+  "role": "P03 Queue, STOP/Retry / isolated source-owner",
+  "recorded_run_local": "2026-10-30T00:12:48+03:00",
+  "status": "INCOMPLETE_SOURCE_VERIFIED",
+  "gates": {
+    "A_FRESH_READ": "PASS",
+    "B_PHYSICAL": "PASS_SOURCE_V8_REGRESSION",
+    "C_GIT_RECEIPT": "PENDING_FINAL_READBACK_AT_COMMIT_CREATION",
+    "D_MASS_LESSONS": "PARTIAL_OWNER_DEPENDENCIES",
+    "E_REPORT": "PENDING"
+  },
+  "prestart_read_proof": {
+    "canon_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_33_rule_scope": "56 rules, §§54–56/R29 read via connector",
+    "ownership_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "register_initial_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "register_refreshed_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "register_drift_detected": true,
+    "register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_doc_revision": "AHj4eMTb0gnJFJVyiGiFmlCL6Xe1ppue6gWCiUVDgl0KUWZS3RoHKQQsp3CuA2PwvjN6mxvV789xdxOS_18e779jCqt96ejGilGfIfU9WJE",
+    "e06_lessons_revision": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "current_pr162_head": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+    "current_pr162_tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae"
+  },
+  "task": {
+    "existing_task": "P03 Queue / GGUF / STOP / Retry",
+    "new_task_ids": 0,
+    "qa_accepted_new": 0,
+    "own_fixed_scale": "0/4 accepted; not PRODUCT",
+    "product": "N/D"
+  },
+  "defect": {
+    "root_cause": "p03.command.ack.v1 was matched only by action and commandId; an ACK carrying another jobId/modelTag could prematurely unlock STOP/Retry and show a false host acceptance.",
+    "boundary": "Optional native ACK target IDs; legacy native ACKs without target fields remain compatible. Host remains authoritative; no synthetic download success.",
+    "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "source_pre_blob": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+    "source_post_blob": "d6c790f755d462bf1a266262d8dd1af1da723cff",
+    "test_path": "tests/P03/test_G2C_G3B_R16_queue_ack_binding.cjs",
+    "test_post_blob": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+    "test_proof": "True V8 execution of extracted real UI sendAction/processMessage handlers: before 7/12, after 12/12; staged Node-compatible test V8 simulated execution 13/13 PASS.",
+    "safety": "HostReady+capability+jobId STOP/Retry unchanged; legacy ACK supported; no change to native ACL, consent, privacy, transfer or durable queue. Windows/Ollama NOT_RUN."
+  },
+  "lessons": {
+    "dedup_register_entries_seen": 11,
+    "history_unmodified": true,
+    "coverage_complete": false,
+    "triage": {
+      "ERR-SYS-001": "DELEGATE T02 shared journals; personal receipt saved",
+      "ERR-SYS-002": "APPLY refresh current HEAD and register; avoid stale snapshot",
+      "ERR-SRC-003": "DELEGATE T06 Host50 owner",
+      "ERR-SRC-004": "APPLY isolated P03 ACK regression; overall P01-P05 remains OPEN",
+      "ERR-SRC-005": "DELEGATE T08 pinned fixture QA",
+      "ERR-SYS-006": "ALREADY_FIXED historical 729/729; do not redo",
+      "ERR-SYS-007": "ALREADY_FIXED historical 34/34; do not redo",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09 no false freeze",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY INCOMPLETE x/n + separate source/QA stages",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 owner 8/8",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08 independent exact-head verifier"
+    },
+    "new_recurrence_guard": "G2C_G3B_R16_queue_ack_binding 13/13 real handler regression",
+    "remaining": "T06 integration and T08 exact-head independent QA, T02 journal acceptance"
+  },
+  "current_unintegrated_owner_donor": {
+    "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "issue": "R15 snapshot changed rights/license evidence must reset consent",
+    "donor_commit": "b85a4f5bfa7b9b6a82485ca009c6d14137d7db68",
+    "donor_post_blob": "336a7adf614058f15f5ef39cc7fcb9a9eace49ab",
+    "conflict_avoidance": "T06 merge only R15 one-line consent invalidation and R16 ACK targeted hunk, never overwrite full current ui.js"
+  },
+  "next_exact_action": {
+    "owner": "manual #1 / T06 sole PR162 writer",
+    "condition": "Re-fetch current ui.js blob, apply compatible owner-approved R15 consent + R16 ACK minimal hunks via CAS, run targeted Node/V8 tests and STOP/ACL/consent/privacy regressions; readback new HEAD; then manual #2/T08 independent acceptance on exact same SHA. T02 sole shared journal writer"
+  },
+  "forbidden_actions_confirmed": [
+    "main/PR162 write",
+    "shared Error/Master/E06/Lessons write",
+    "EXE/NSIS build",
+    "Windows CI",
+    "GitLab CI",
+    "E07",
+    "native install",
+    "force push"
+  ],
+  "r21_tool": "TOOL_NOT_RUN",
+  "r22_tool": "TOOL_NOT_RUN"
+}
