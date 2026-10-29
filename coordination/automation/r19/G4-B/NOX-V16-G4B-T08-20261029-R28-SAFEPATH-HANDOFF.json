@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_V16_T08_OWNER_SAFE_PATH_NEGATIVE_REGRESSION_PATCH_R28",
+  "run_id": "NOX-V16-G4B-T08-20261029-R28-T06-RECEIPT-SAFEPATH",
+  "source_owner": "T06/manual #1 only canonical writer",
+  "role": "G4-B/M2 T08 independent QA",
+  "existing_task": "ERR-SRC-004",
+  "existing_error_dependency": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+  "base_source_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "base_tree_prior_to_t06_R23": "106c03a6a8b85700d1b2442f345bb43380436977",
+  "target_files": [
+    {
+      "path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+      "pre_git_blob": "12bc43ca210022fba418ca7345876e598edc33e3",
+      "proposed_post_git_blob": "bd61bc61f66314d5f4840ef6ad516e72f6314995"
+    },
+    {
+      "path": "coordination/e06/test_t06_owner_receipt_same_head_gate_r23.py",
+      "pre_git_blob": "c36e6ed5fb0659c07539d7482169cfe363b67336",
+      "proposed_post_git_blob": "bea76d1ef9080ae7eea78178a23f8aa0701b1e04"
+    }
+  ],
+  "repro": "Exact extracted old source predicate accepts one Windows backslash and embedded NUL; isolated Python negative reproducer PRE accepted both, POST rejects both; valid Unix path and ../ control unchanged.",
+  "validation": {
+    "isolated_python_predicate": "4/4 PASS on PRE/POST comparison",
+    "local_exact_module_unit_tests": "NOT_RUN",
+    "added_focused_regression": "PREPARED_NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "source_ready": false
+  },
+  "root_cause": "Python literal \\\\\\\\ matched TWO backslashes and \\\\x00 matched literal text, not a single Windows path separator or embedded NUL.",
+  "risk": "Source-only owner-receipt path validation can admit unexpected path text on Windows and forge a misleading record; no observed filesystem compromise, no product QA acceptance.",
+  "preserve": "NO-LOSS, ZIP 729/729, P01-P05, Host50, STOP/ACL/native consent, user data, no EXE/NSIS/CI/E07",
+  "register_current_blob": "fecf68671d30b0c879ae5f43fbaa210143e3c530",
+  "lessons_applied": "Path safety must be validated using exact runtime literal meaning, not visual backslash count; add positive and negative regression before owner CAS.",
+  "next_action": "T06: exact PRE gate 12bc43... and test c36e... verify, run python -m unittest against these exact files on trusted checkout, CAS integrate only into PR162 if still current, readback. T02: dedup under existing ERR-SRC-004, not task expansion.",
+  "stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": false,
+    "INTEGRATED_ON_CURRENT_HEAD": false,
+    "OWNER_QA_ACCEPTED": false
+  },
+  "t08_historical": "1/3",
+  "new_accepted_tasks": 0,
+  "product": "N/D"
+}

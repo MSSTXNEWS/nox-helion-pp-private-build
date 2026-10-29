@@ -29,7 +29,7 @@ def git(*args):
 
 def safe_path(value):
     return (isinstance(value,str) and bool(value) and
-        not value.startswith("/") and "\\\\" not in value and "\\x00" not in value
+        not value.startswith("/") and "\\" not in value and "\x00" not in value
         and all(x not in ("",".","..") for x in value.split("/")))
 
 def blob_at(head,path):

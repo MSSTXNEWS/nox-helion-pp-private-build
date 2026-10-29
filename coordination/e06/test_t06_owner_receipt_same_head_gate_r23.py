@@ -13,6 +13,15 @@ spec.loader.exec_module(gate)
 
 
 class OwnerReceiptGateR23(unittest.TestCase):
+    def test_unsafe_owner_paths_are_rejected(self):
+        # Source-only: Windows reparse-style separators and embedded NUL must
+        # not reach Git show / receipt path matching on any host platform.
+        self.assertFalse(gate.safe_path(r"Packages\P04\model.py"))
+        self.assertFalse(gate.safe_path("Packages/P04/model\x00.py"))
+        self.assertFalse(gate.safe_path("Packages/../secret"))
+        self.assertFalse(gate.safe_path("/absolute/path"))
+        self.assertTrue(gate.safe_path("Packages/P04/model.py"))
+
     def test_true_git_receipts_do_not_claim_native_and_stale_receipts_fail(self):
         rows={}
         files={}
