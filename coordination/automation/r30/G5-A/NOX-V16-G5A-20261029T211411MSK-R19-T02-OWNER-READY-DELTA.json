@@ -1,0 +1,162 @@
+{
+  "schema": "NOX_V16_G5A_OWNER_READY_R19_DELTA_V1",
+  "run_id": "NOX-V16-G5A-20261029T211411MSK-R19-T02-OWNER-READY-DELTA",
+  "role": "G5-A (support T02, no shared writer)",
+  "state": "INCOMPLETE_NOT_TASK_DONE",
+  "read_proof": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_56_rules": true,
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "PR162_HEAD": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "PR162_tree": "11382ce77e1dce65157345d92600649bd3a399e2",
+    "g5_pre_head": "5c81b33693dba00dbda6fd4da3287db3f938a9cb",
+    "docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg"
+    },
+    "issue177_comments_read": 360,
+    "recent_comments": [
+      6504655861,
+      6504700713,
+      6504714751,
+      6504722903
+    ]
+  },
+  "one_targeted_integrity_check": {
+    "checked": 12,
+    "passed": 12,
+    "assertions": {
+      "active_registry_11_unique": true,
+      "register_blobs_consistent": true,
+      "status_count": true,
+      "source_commit_valid": true,
+      "source_tree_valid": true,
+      "p01_source_fix_current": true,
+      "p01_lock_before_publish": true,
+      "p01_negative_regression_present": true,
+      "p01_test_blob_current": true,
+      "t08_old_source_pending": true,
+      "p04_fixture_present": true,
+      "R22_error_id_not_in_active_register": true
+    },
+    "scope": "Git/source structural QA only, no Windows/.NET, no signed native QA"
+  },
+  "error_ack": {
+    "ERR-SYS-001": "HANDOFF/NO_IMPACT: T02/C is responsible for unresolved same-SHA acceptance.",
+    "ERR-SYS-002": "APPLIED: live HEAD drift refreshed exact P01 source+regression only; no stale HOLD",
+    "ERR-SRC-003": "HANDOFF/NO_IMPACT: T06/Host50 is responsible for unresolved same-SHA acceptance.",
+    "ERR-SRC-004": "APPLIED latest CAS readback: T06 committed P01 SourceLock publish fix, independent same-SHA QA pending",
+    "ERR-SRC-005": "HANDOFF/NO_IMPACT: T06 is responsible for unresolved same-SHA acceptance.",
+    "ERR-SYS-006": "ALREADY_VERIFIED archival NO-LOSS DONE preserved",
+    "ERR-SYS-007": "ALREADY_VERIFIED archival NO-LOSS DONE preserved",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "HANDOFF/NO_IMPACT: T09 is responsible for unresolved same-SHA acceptance.",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED: no accepted TaskID, RUN != DONE, no fake 100%",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "HANDOFF/NO_IMPACT: T06 is responsible for unresolved same-SHA acceptance.",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "HANDOFF/NO_IMPACT: T08 is responsible for unresolved same-SHA acceptance."
+  },
+  "new_deltas_for_T02_only": [
+    {
+      "parent_error": "ERR-SRC-004",
+      "cluster": "P01_SOURCELOCK_LATE_FAILURE",
+      "path": "coordination/e06/stage_p01.py",
+      "PRE": "b0bd954407949965e4871acaa9f15ccc060e3187",
+      "POST": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+      "test_PRE": "d97775098b68492f52463b45e30828e7dca72137",
+      "test_POST": "d67ec73b707526ecf6b878efe179254ec026f009",
+      "source_commit": "b9076c62a7e9de67146ff5397ef6882250efad00",
+      "owner_receipt_blob": "294da49253f19478c20d33b8946f19893684a42d",
+      "observed": "T06 physical fix: stage receipt fsync then exclusive os.link before R11 rename with own-inode cleanup, focused negative regression added",
+      "status": "FIX_APPLIED_UNVERIFIED_SOURCE_ONLY; parent ERR-SRC-004 remains OPEN",
+      "next": "T08 independent same-HEAD real project regression and P01/Host50 security/NO-LOSS; T02 append evidence not new ID",
+      "reference_issue": [
+        6504654752,
+        6504722903
+      ]
+    },
+    {
+      "parent_error": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "cluster": "SHA_SHAPED_FORGED_DONE",
+      "owner": "T08",
+      "canonical_pre": "56806fb744694b2dd146db88229597722953ddd9",
+      "candidate_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+      "candidate_test_blob": "2dd2c9f2ad68c33e02cc59c91e94bccfaa97f4c4",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "issue": 6504700713,
+      "next": "Owner T08 integrate proof gate with real Git type/readback and rerun focused tests; 13 native routes signed QA still missing"
+    },
+    {
+      "parent_error": "ERR-SRC-004",
+      "cluster": "P04_GPU_TEST_FIXTURE_ALREADY_IN_CANONICAL_SOURCE",
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "sha": "2977f79608e93adf35011436d56f23a9e65531ca",
+      "status": "SOURCE_STATIC_ONLY",
+      "issue": 6504714751,
+      "next": "G4-B/T06 targeted unittest on current SHA and T08 verification, do not reapply old patch"
+    },
+    {
+      "parent_error": "ERR-SRC-004",
+      "cluster": "R22_MISSING_HISTORICAL_ID_RECONCILIATION",
+      "historical_id": "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE",
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner_post": "c8b937172eb431310229111945971bb11cd8ff90",
+      "test_post": "73ce76dde019e4f87efa51971b0d39c31eb3ae46",
+      "status": "PARENT_CHILD_DEDUP_DECISION_PENDING_T02",
+      "next": "T02/C keep exact historical ID as alias/child under ERR-SRC-004, do not double count root/path; independent same-SHA acceptance unknown"
+    }
+  ],
+  "self_improvement": {
+    "discovered_11": 11,
+    "normalized_root_clusters": 4,
+    "applied": "HEAD drift re-evaluation: stale P01 OPEN subfinding -> physical fix present FIX_APPLIED_UNVERIFIED, exactly current blob checked",
+    "already_historical_2": 2,
+    "delegated_clusters": 3,
+    "remaining_owner_qa": 4,
+    "no_repeat_full_419": true,
+    "toolkit": "TOOL_NOT_RUN"
+  },
+  "progress": {
+    "historical_T02": "4/4 preserved",
+    "C": "0/4 last accepted",
+    "accepted_TaskID_delta": 0,
+    "product": "N/D",
+    "G5A_production_writes": 0,
+    "shared_journal_writes": 0,
+    "no_build_or_CI": true
+  },
+  "handoff": {
+    "T02": "ONLY T02/C: fresh register Git blob CAS + append dedup 4 facts, then Google Master/E06/Lessons revision CAS/readback 3/3. Do not mark shared journal written for this receipt.",
+    "T06": "P01 source was changed on exact HEAD, no repeat; prioritize full accepted P01-P05/Host50.",
+    "T08": "Independent QA same HEAD of new P01 stage and tests with STOP/ACL/consent/privacy; native 13 Host50 pending."
+  },
+  "checkpoint": {
+    "git_source_last_known_good": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "register_pre_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "owner_qa_pending": true,
+    "T09_T10": "SOURCE_READY no, frozen tree not accepted",
+    "build": "NOT_RUN",
+    "gitlab": "UNKNOWN",
+    "idempotency_key": "NOX-V16-G5A-20261029T211411MSK-R19-T02-OWNER-READY-DELTA"
+  }
+}
