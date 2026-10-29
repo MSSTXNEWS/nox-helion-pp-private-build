@@ -38,7 +38,12 @@ def blob_at(head,path):
         value=git("rev-parse",head+":"+path).decode().strip()
     except ValueError:
         return None
-    return value if HEX40.fullmatch(value) else None
+    if not HEX40.fullmatch(value):
+        return None
+    try:
+        return value if git("cat-file","-t",value).decode().strip()=="blob" else None
+    except ValueError:
+        return None
 
 def read_at(head,path):
     if not safe_path(path):raise ValueError("UNSAFE_OWNER_RECEIPT_PATH")
