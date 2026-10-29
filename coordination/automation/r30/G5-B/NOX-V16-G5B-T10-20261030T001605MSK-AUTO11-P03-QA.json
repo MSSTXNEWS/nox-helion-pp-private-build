@@ -1,0 +1,104 @@
+{
+  "schema": "NOX_V16_G5B_T10_SOURCE_QA_SUPPORT_R23_V1",
+  "run_id": "NOX-V16-G5B-T10-20261030T001605MSK-AUTO11-P03-QA",
+  "task_id": "T10",
+  "group": "G5-B",
+  "role": "AUTOMATION_SUPPORT_ONLY; manual #2 retains independent final SOURCE_READY sign-off",
+  "status": "INCOMPLETE",
+  "source": {
+    "pr": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_pre": "6a10d3a3da84e7d39b57158b2265d261d292593b",
+    "head_post": "6a10d3a3da84e7d39b57158b2265d261d292593b",
+    "tree_at_prior_head": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+    "ui_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "ui_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+    "test_path": "tests/P03/test_g2c_g3b_consent_snapshot_r24.cjs",
+    "test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c"
+  },
+  "preflight": {
+    "canonical_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "section33_rules_read": 56,
+    "register_blob_last_read": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "errors_total": 11,
+    "open": 5,
+    "fix_applied_unverified": 4,
+    "verified_closed": 2,
+    "docs": {
+      "master_revision": "AHj4eMTb0gnJFJVyiGiFmlCL6Xe1ppue6gWCiUVDgl0KUWZS3RoHKQQsp3CuA2PwvjN6mxvV789xdxOS_18e779jCqt96ejGilGfIfU9WJE",
+      "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+      "lessons_revision": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc",
+      "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "related_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-004",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ]
+  },
+  "physical": {
+    "validation": "source-extracted executable JS V8 and exact Git CJS verify() on current 6a10 HEAD",
+    "first_suite": {
+      "total": 32,
+      "pass": 32,
+      "source_blob_before": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+      "transferred_unchanged_functions": true,
+      "guards": [
+        "typed id/no TypeError",
+        "reviewedTag",
+        "STOP/Retry capability",
+        "durable job-id",
+        "license/consent negative gating"
+      ]
+    },
+    "latest_suite": {
+      "total": 12,
+      "pass": 12,
+      "source_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+      "checks": [
+        "changed license",
+        "licenseEvidenceUrl",
+        "officialUrl",
+        "artifact size/disk/VRAM/RAM",
+        "compatibility and verification verdict",
+        "changed license evidence cannot reuse old pull consent"
+      ],
+      "runner": "Exact CJS verify() on source; synthetic WHATWG-like URL parser due to missing native URL in connector V8; actual Node/WebView2/Windows NOT_RUN"
+    }
+  },
+  "security": "Source negative tests PASS only; true native STOP/ACL/consent/privacy/NO-LOSS integration not tested; no secret/user data accessed",
+  "stages": {
+    "SOURCE_PATCH_PREPARED": "EXISTING_OWNER_CODE",
+    "SOURCE_VERIFIED": "LIMITED_EXECUTABLE_CHECKS_44_OF_44_WITH_REUSED_UNCHANGED_DEPENDENCIES",
+    "INTEGRATED_ON_CURRENT_HEAD": "GIT_SOURCE_PRESENT",
+    "OWNER_QA_ACCEPTED": false
+  },
+  "progress": {
+    "t10_previous_done": 1,
+    "t10_current_done": 1,
+    "fixed_denominator": 7,
+    "percent_before": 14.3,
+    "percent_after": 14.3,
+    "delta_pp": 0,
+    "remaining": 6,
+    "source_ready": false,
+    "product": "N/D"
+  },
+  "handoff": {
+    "manual1_T06": "Close P01 safe_path colon/ADS and remaining P01-P05 source contracts, ensure Host50 bind and P05 integrated",
+    "manual2_T08": "Perform actual independent same-head security/native QA on exact P03 consent+typed-ID and all owner criteria",
+    "T09": "Freeze only after T06 accepted and T08 same-HEAD PASS",
+    "T10": "Independent 7/7 only on T09 frozen HEAD",
+    "T02": "Only shared writer, append errors/lessons after own CAS+readback"
+  },
+  "lesson": "HEAD drift invalidated old all-source assertion; rebased evidence only after exact dependent blobs and newly changed consent invalidate check; never promote isolated V8 PASS to native QA",
+  "extra_tasks_created": 0,
+  "product_files_modified": 0,
+  "build_actions": 0,
+  "shared_docs_modified": false,
+  "receipt_readback": "PENDING_POST_COMMIT_AT_CREATION",
+  "error_new_accepted": 0
+}
