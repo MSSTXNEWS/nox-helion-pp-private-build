@@ -34,7 +34,13 @@ if (Test-Path -LiteralPath $root -PathType Container) {
   if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw 'P01_INSTALL_EXISTING_UNOWNED' }
   $markerItem=Get-Item -LiteralPath $marker -Force -ErrorAction Stop
   if (($markerItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_INSTALL_MARKER_REPARSE' }
-  if ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -cne 'NOXHELION.P01 V16') { throw 'P01_INSTALL_MARKER_INVALID' }
+  # Reject padded/trailing-data marker; ownership proof must match exact NSIS bytes.
+  $want = [Text.Encoding]::ASCII.GetBytes('NOXHELION.P01 V16'+[char]13+[char]10)
+  $actual = [IO.File]::ReadAllBytes($marker)
+  if ($actual.Length -ne $want.Length -or
+      [Convert]::ToBase64String($actual) -cne [Convert]::ToBase64String($want)) {
+    throw 'P01_INSTALL_MARKER_INVALID'
+  }
 }
 # Rollback needs identical path/ownership guards even when the runtime is unavailable.
 if ($PathOnly) {
