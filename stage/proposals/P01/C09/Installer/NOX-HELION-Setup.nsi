@@ -166,7 +166,7 @@ Function RestorePrevious
   ; A mere ownership marker is not evidence of unmodified program files.
   InitPluginsDir
   File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -ReportVersion'
   Pop $ExitCode
   Pop $CheckResult
   ${If} $ExitCode != "0"
@@ -182,6 +182,13 @@ Function RestorePrevious
     Rename "$TmpDir" "$INSTDIR"
     Abort "Rollback activation failed; attempted restoration."
   ; Leave newer version saved for operator recovery, NEVER delete it.
+  ; The backup verifier returned its validated version without a trailing newline.
+  ; Register it only after BOTH directory renames succeeded.
+  ClearErrors
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "$CheckResult"
+  IfErrors 0 +3
+    SetErrorLevel 2
+    Abort "Previous files restored, but Windows version registration failed. Recovery copies retained."
   DetailPrint "Previous version restored; superseded app retained at $TmpDir."
   Return
   NoPrevious:

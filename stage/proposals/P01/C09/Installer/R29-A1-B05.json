@@ -1,0 +1,32 @@
+{
+  "run_id": "ASTRA-R29-A1-B05-ROLLBACK-VERSION-20261029",
+  "owner": "Astra-A/A1/P01",
+  "started_utc": "2026-10-29T01:56:57.522Z",
+  "tests_finished_utc": "2026-10-29T01:57:55.179Z",
+  "parent": "0850cc4fee232187e78d5825b8ea122a059bfeea",
+  "task": "P01 rollback application metadata consistency",
+  "preimages": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "git_blob_sha1": "a6fdecd79671c4720fe21366efca24dfb633970b"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "git_blob_sha1": "6c178c04957d7397c0c081e3b123940637abc6e9"
+    }
+  ],
+  "change": "Reuse existing strictly validated manifest version: optional verifier ReportVersion emits exact version after full success; rollback writes DisplayVersion only after both renames, preserves recovery copies and reports registry write failure.",
+  "tests": {
+    "kind": "bounded NSIS source-flow and verifier source contract; no native execution",
+    "red": "4 cases: 1 pass, 3 failures",
+    "green": "4 passed",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/Installer -p test_rollback_version_flow.py -v",
+    "native": "NOT_RUN: PowerShell/Windows unavailable",
+    "build": "NOT_RUN; forbidden"
+  },
+  "compatibility": "Default verifier PASS output unchanged. No new metadata schema or update authority introduced.",
+  "lesson": "Restoring files must restore advertised installed version from the same verified backup, not current setup version or arbitrary cached registry data.",
+  "cumulative_saved_blocks": 5,
+  "continuation_saved_blocks": 2,
+  "product_done": false
+}

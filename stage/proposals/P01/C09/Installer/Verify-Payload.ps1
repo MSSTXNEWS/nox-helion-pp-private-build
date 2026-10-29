@@ -3,7 +3,8 @@
 param(
   [Parameter(Mandatory=$true)][string]$Root,
   [Parameter(Mandatory=$true)][string]$Manifest,
-  [switch]$AllowInstalledMetadata
+  [switch]$AllowInstalledMetadata,
+  [switch]$ReportVersion
 )
 $ErrorActionPreference = 'Stop'
 function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
@@ -100,4 +101,7 @@ foreach ($file in $actualFiles) {
 }
 if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail 'file count mismatch' }
 if (-not (Test-Path -LiteralPath (Join-Path $rootFull 'NOX.P01.Shell.exe') -PathType Leaf)) { Fail 'entrypoint absent' }
-'P01_PAYLOAD_SHA256_PASS'
+# Rollback registration uses ONLY the existing validated manifest version.
+# No newline: nsExec captures exactly this value, not a PASS marker or CR/LF.
+if ($ReportVersion) { [Console]::Out.Write([string]$m.version) }
+else { 'P01_PAYLOAD_SHA256_PASS' }
