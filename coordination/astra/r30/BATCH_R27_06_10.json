@@ -1,0 +1,718 @@
+{
+  "schema": "ASTRA_R30_R27",
+  "rows": [
+    {
+      "ref": "astra/r27-a06-20261029",
+      "head_sha": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+      "at": "2026-10-28T23:28:57Z",
+      "base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+      "ahead": 32,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 47,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+          "status": "modified",
+          "previous": null,
+          "added": 53,
+          "deleted": 1
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_attestation_binding_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 55,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_native_types_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 46,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+          "status": "modified",
+          "previous": null,
+          "added": 52,
+          "deleted": 1
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_command_binding_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 101,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 1
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "previous": null,
+          "added": 85,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 1005,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "previous": null,
+          "added": 1258,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 5846,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "previous": null,
+          "added": 70,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 145,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "previous": null,
+          "added": 97,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra/r27-a07-20261029",
+      "head_sha": "37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+      "at": "2026-10-28T23:25:24Z",
+      "base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+      "ahead": 30,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 47,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/rag_python_compat.py",
+          "status": "modified",
+          "previous": null,
+          "added": 25,
+          "deleted": 1
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "previous": null,
+          "added": 85,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 1005,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "previous": null,
+          "added": 1258,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 5846,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "previous": null,
+          "added": 70,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 145,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A07/ASTRA_R27_A07_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 54,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "previous": null,
+          "added": 97,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_rag_delayed_admission_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 81,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_rag_fd_path_consistency.py",
+          "status": "modified",
+          "previous": null,
+          "added": 14,
+          "deleted": 1
+        }
+      ]
+    },
+    {
+      "ref": "astra/r27-a08-20261029",
+      "head_sha": "e2fd3c50190ffac04abc30d2bd1b46caf9dab454",
+      "at": "2026-10-28T23:25:15Z",
+      "base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+      "ahead": 30,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 47,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/train_qlora.py",
+          "status": "modified",
+          "previous": null,
+          "added": 6,
+          "deleted": 1
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "previous": null,
+          "added": 85,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 1005,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "previous": null,
+          "added": 1258,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 5846,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "previous": null,
+          "added": 70,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 145,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A08/R27_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 46,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A08/test_checkpoint_resume_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 69,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "previous": null,
+          "added": 97,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra/r27-a09-20261029",
+      "head_sha": "e953a5a9cbb914080697e2e810d2f5af66a8a14d",
+      "at": "2026-10-28T23:30:57Z",
+      "base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+      "ahead": 31,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 47,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 46,
+          "deleted": 9
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceRepollIdentityR19.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 64,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceTrustedQuorumR18.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 41,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "previous": null,
+          "added": 85,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 1005,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "previous": null,
+          "added": 1258,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 5846,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "previous": null,
+          "added": 70,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 145,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A09/R27_BLOCK_02.json",
+          "status": "added",
+          "previous": null,
+          "added": 17,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A09/R27_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 58,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A09/test_mobile_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 113,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "previous": null,
+          "added": 97,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/e06/adapters/g2_space_mobile.py",
+          "status": "modified",
+          "previous": null,
+          "added": 89,
+          "deleted": 42
+        },
+        {
+          "path": "tests/e06/adapters/test_g2_space_mobile.py",
+          "status": "modified",
+          "previous": null,
+          "added": 13,
+          "deleted": 5
+        }
+      ]
+    },
+    {
+      "ref": "astra/r27-a10-20261029",
+      "head_sha": "b18db96810b37b8740dc143dd2ffb5e3aae9088b",
+      "at": "2026-10-28T23:29:07Z",
+      "base": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+      "ahead": 31,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 47,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "previous": null,
+          "added": 85,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 1005,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "previous": null,
+          "added": 1258,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 5846,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "previous": null,
+          "added": 70,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "previous": null,
+          "added": 145,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A10/R27_PASS01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 63,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A10/R27_PASS02_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 52,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A10/test_theater_playback_r27.cjs",
+          "status": "added",
+          "previous": null,
+          "added": 57,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "previous": null,
+          "added": 97,
+          "deleted": 0
+        },
+        {
+          "path": "integrations/creative/web/theater.js",
+          "status": "modified",
+          "previous": null,
+          "added": 16,
+          "deleted": 5
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/no_loss_r27.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/ops.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 87,
+          "deleted": 5
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/source_security_r22.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 111,
+          "deleted": 0
+        }
+      ]
+    }
+  ]
+}
