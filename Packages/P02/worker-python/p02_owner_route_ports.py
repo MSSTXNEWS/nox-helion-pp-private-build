@@ -177,6 +177,20 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
+        # Persisting output may take time. If ACL was revoked during storage,
+        # discard this newly created receipt instead of exposing it to the page.
+        try:
+            self._session(scope, "chat.voice")
+        except PermissionError:
+            if not callable(self.discard_output_audio):
+                raise RouteHold("NATIVE_VOICE_REVOKED_OUTPUT_CLEANUP_HOLD")
+            try:
+                cleared = self.discard_output_audio(scope, output_id)
+            except Exception as exc:
+                raise RouteHold("NATIVE_VOICE_REVOKED_OUTPUT_CLEANUP_HOLD") from exc
+            if cleared is not True:
+                raise RouteHold("NATIVE_VOICE_REVOKED_OUTPUT_CLEANUP_HOLD")
+            raise
         return {"transcript": result.transcript, "response": result.response,
                 "output_audio_id": output_id, "target_lang": result.target_lang,
                 "mode": result.mode}
