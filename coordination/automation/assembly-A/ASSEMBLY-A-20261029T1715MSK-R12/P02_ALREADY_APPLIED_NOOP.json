@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R12_SCOPED_DELTA",
+  "runId": "ASSEMBLY-A-20261029T1715MSK-R12",
+  "product": "EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "observedTarget": {
+    "pr": 162,
+    "headGitSha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "ownerAcceptedFinalHead": false
+  },
+  "baseline": "P01_R11_V2",
+  "sourceOnly": true,
+  "scope": "P02",
+  "path": "Packages/P02/worker-python/p02_framed_worker.py",
+  "owner": "G2-A + manual #1",
+  "donorPreGitBlob": "255dfb7ab330c825fcc362b619614189c4915e6c",
+  "donorPostGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+  "currentPreGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+  "currentPostGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+  "decision": "NOOP_SKIP_ALREADY_IN_PR162; DO_NOT_REAPPLY_OLD_PATCH",
+  "pr214": {
+    "merged": true,
+    "mergeSha": "93e677684d428b56ef2aa576b07b545b21090009"
+  },
+  "sourcePathCAS": "READBACK_MATCH",
+  "productAccepted": false,
+  "tests": "NOT_RUN_THIS_CYCLE; old G2-A 4/4 was owner-reported only"
+}
