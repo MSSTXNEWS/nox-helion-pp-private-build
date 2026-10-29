@@ -1,0 +1,21 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C4",
+  "sourceBranch": "astra-b/r29-b1-20261029",
+  "preimageGitBlobSha1": "9c2e44039c744940a221f4ea235bd6a1b40a7a07",
+  "patchGitBlobSha1": "4990a731af69351ffeff678774bf12ed7732ac95",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "Python stdlib isolated malformed JSON cases 3/3 PASS",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN",
+  "taskId": "P04-NONFINITE-MODEL-JSON",
+  "owner": "Astra-B/P04",
+  "originalPath": "Packages/P04/model_snapshot_probe.py",
+  "patchPath": "coordination/astra/astra-c/ASTRA-C-R30-20261029-MB01/C4/nonfinite-json.patch",
+  "defect": "Metadata JSON parser accepted nonfinite NaN/Infinity/1e999 even in otherwise unchecked config keys.",
+  "fixStatus": "SAVED_PATCH_CANDIDATE",
+  "applicability": "Owner must compare exact preimage and run target native/code test before acceptance",
+  "limitations": "Full owner P04 integration/Windows/GPU NOT_RUN",
+  "patchCommit": "4990a731af69351ffeff678774bf12ed7732ac95",
+  "modelProofOnly": true
+}
