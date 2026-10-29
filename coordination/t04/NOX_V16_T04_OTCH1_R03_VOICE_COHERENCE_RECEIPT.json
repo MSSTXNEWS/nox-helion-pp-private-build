@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V16_T04_OTCH1_MANUAL_SOURCE_CONFLICT_R03",
+  "run_id": "NOX-V16-T04-VOICE-COHERENCE-R03-20261029",
+  "verified_at_msk": "2026-10-29 17:04:31",
+  "observed_first_exact_checkpoint_msk": "2026-10-29 17:03:22.170",
+  "actual_run_start_seconds": "N/D; no exact start timestamp saved before initial source reads",
+  "duration_seconds_exact": null,
+  "task": "T04",
+  "progress": "██████████ — 33/34 (97.06%) final; 34/34 classified",
+  "status": "ADMIN_HOLDS_CLEARED__ONE_TECHNICAL_INTEROP_GATE",
+  "previous": "T04 R02 selection 34/34 (including voice standalone ACCEPT candidate)",
+  "current": {
+    "positions": 34,
+    "SKIP": 15,
+    "ACCEPT": 18,
+    "OWNER_HOLD": 1,
+    "final_decisions": 33,
+    "admitted_source_delta": 0,
+    "administrative_holds": 0
+  },
+  "delta": "T04 R03 corrected one false sense of source admissibility. Reclassified voice #30 to OWNER_HOLD; 18 baseline ACCEPT and 15 SKIP remain unmodified, historic DONE unchanged.",
+  "paths_checked_this_run": [
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "owner": "G2-B",
+      "selected_donor_sha": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4",
+      "decision": "OWNER_HOLD",
+      "reason": "Requires incompatible current ingress/route APIs"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "owner": "G2-A",
+      "current_sha": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "historical_alternative_sha": "144523b0227a5824b14bec678deaa5ea449059bc",
+      "decision": "KEEP_BASELINE; SOURCE INTERFACE MISMATCH DOCUMENTED"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "owner": "G2-B",
+      "current_sha": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "historical_alternative_sha": "b1a163b0598067f213815c8d837d516543490cdf",
+      "decision": "KEEP_BASELINE; SOURCE INTERFACE MISMATCH DOCUMENTED"
+    }
+  ],
+  "new_independently_observed_evidence": {
+    "pr162_immutable_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "original_729_sha_manifest": "60bba6a6b34431f4edc8c4e9ab665472cf7ce356",
+    "t09_physical_zip_receipt": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+    "t06_pr214_staged_head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+    "corrected_manifest_blob": "563f4fad54973eb2be3457414025066e460fa8e1",
+    "t06_handoff_comment_id": 6498805171
+  },
+  "lessons": {
+    "observed_error": "Owner-approved selection was counted as 34/34 although voice file candidate has unmet native contract.",
+    "root_cause": "Donor imported a verified original package but its same-branch new native APIs were not present in PR162. User permission clears administrative decisions, not binary contract compatibility.",
+    "actual_improvement": "Read PR162 recursive tree and donor tree by exact SHA once, verify NativeIngress/OwnerTwoPorts API mismatch, confirm six original helion_voice SHA-256 modules from physical SourceLock receipt, preserve original ZIP and current source; escalate ONE precise G2-A/G2-B admission task instead of inventing a new voice engine.",
+    "regression_reduction": "Never mark single-file voice donor source-admissible until required native interfaces and original package are present under same target SHA, with source-only focused tests.",
+    "next_owner": "T06 (G2-A ingress + G2-B voice/ports)"
+  },
+  "write_evidence": {
+    "github_manifest_readback": "PASS",
+    "github_pr214_comment_id": 6498805171,
+    "shared_Master_E06_Lessons": "T02 CAS/READBACK REQUESTED_NOT_CLAIMED",
+    "source_edits": 0,
+    "merge": false,
+    "nsis": false,
+    "exe": false,
+    "gitlab_ci": false,
+    "e07": false
+  },
+  "source_only_no_loss": "D02/WOW200, original 729/3 parts, historic DONE and PR214 staged P02 retained."
+}
