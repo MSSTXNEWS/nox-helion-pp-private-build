@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_B_NSIS_SOURCE_ONLY_RECEIPT_V1",
+  "run_id": "NOX-V16-ASSEMBLY-B-20261029T1645MSK-R06",
+  "task": "NOX V16 ASSEMBLY B NSIS Source",
+  "status": "HOLD_OWNER_APPROVAL_AND_PREIMAGE",
+  "planned_start_msk": "2026-10-29T16:45:00+03:00",
+  "observed_start_msk": "2026-10-29T16:42:28+03:00",
+  "receipt_utc": "2026-10-29T13:49:44.128Z",
+  "scope": "NOX EXPRESS INTEGRATOR installer only, NOT main NOX",
+  "baseline": {
+    "t06_source_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "t06_receipt_blob": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "owner_journal_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "t04_manifest_blob": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6"
+  },
+  "ownership": "Exactly three Installer paths belong to G1-A, current forbidden_paths []; new NSIS-B is NOT G1-A or owner #1, so may create only its own isolated immutable receipt; no product-file modification.",
+  "source_pre_post": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "pre": "87d901c3846359a91be3e8288f24302cc7060257",
+      "post": "87d901c3846359a91be3e8288f24302cc7060257",
+      "owner_authored_unadmitted_donor": "969f8c11eaca20c69e9610422731862c7bd3ed62"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "pre": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "post": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "owner_authored_unadmitted_donor": "e448f8266ba15e809c13bff669924fa825fd4bc1"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "pre": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "post": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "owner_authored_unadmitted_donor": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    }
+  ],
+  "exact_candidate": "automation/r30/g1a/R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+  "t04_archival_34": "17 exact duplicate SKIP; 17 divergent OWNER_HOLD; 0 admitted. NSIS OWNER_HOLD, Remove archive duplicate SKIP, other non-owned Preflight OWNER_HOLD.",
+  "focused_findings": [
+    "Current NSIS publishes HKCU UninstallString BEFORE WriteUninstaller; failure can leave registered missing executable (source order, not reproduced Windows failure).",
+    "G1-A donor NSIS adds trusted preactivation generated uninstaller and postactivation SHA attestation. It requires matching Verify-Payload.ps1 -TrustedUninstaller; target verifier lacks this parameter; NEVER apply NSIS alone.",
+    "Current Remove has prevalidate/recheck/selective delete and no recursive tree deletion. Any G1-A donor addition must preserve this."
+  ],
+  "targeted_existing_regression": {
+    "test": "Guard.test_installer_update_marker_and_recovery",
+    "file": "stage/proposals/P01/C09/QA/P01_E01_C09/test_source_c09.py",
+    "blob": "7754a083a3663f0e8e29a360fd49cf37e766c297",
+    "method": "Four exact existing Python source assertions evaluated in V8 against GitHub-fetched target; NOT Python unittest",
+    "pass": 4,
+    "total": 4,
+    "result": "STATIC_PASS_ONLY",
+    "native_powershell": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "ci": "NOT_RUN"
+  },
+  "t06_handoff": {
+    "required": [
+      "G1-A owner approves minimal conflict-reconciled three-file candidate against these exact PRE blobs.",
+      "T06 sole owner #1 authorizes branch+source HEAD, checks all prior DONE, runs focused source test, applies CAS only on unchanged preimages and performs Git readback.",
+      "Do not replace Remove whole file; preserve three-phase safe uninstall and user data.",
+      "Do not modify any existing snapshot, PR162, shared Docs or GitLab."
+    ],
+    "owner_approval": "MISSING",
+    "target_preimage_matches_donor": false,
+    "accepted_product_patch": false
+  },
+  "progress": {
+    "previous": "0/4",
+    "current": "0/4",
+    "delta_percent": 0,
+    "bar": "░░░░░░░░░░",
+    "meaning": "3 accepted exact source files + approved immutable T06 handoff; receipt-only does not count as product acceptance"
+  },
+  "applied_lesson": "G1-A owner-authored donor SHA is not T06 authorization: verify exact base blob and protect current rollback/user data; T04 archived overlap is not an approved winner.",
+  "changes": {
+    "source": 0,
+    "receipts": 1,
+    "external_docs": 0,
+    "merges": 0,
+    "builds": 0
+  }
+}
