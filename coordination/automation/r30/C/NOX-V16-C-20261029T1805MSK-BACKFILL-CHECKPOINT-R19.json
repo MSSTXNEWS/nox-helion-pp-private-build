@@ -1,0 +1,150 @@
+{
+  "schema": "NOX_V16_C_R30_CUMULATIVE_ERROR_BACKFILL_RECEIPT_V1",
+  "task_id": "T02/C",
+  "run_id": "NOX-V16-C-20261029T1805MSK-BACKFILL-CHECKPOINT-R19",
+  "project": "EXPRESS INTEGRATOR loader only, source-only prebuild",
+  "historical_t02": {
+    "status": "DONE",
+    "criteria": "4/4",
+    "progress": 100
+  },
+  "C_new_criteria": {
+    "previous_new_scale": "0/4",
+    "current": "0/4",
+    "progress_percent": 0,
+    "delta_pp": 0,
+    "bar": "░░░░░░░░░░",
+    "criteria": {
+      "cumulative_historical_error_index": "PARTIAL_PENDING_ALL_OWNER_RECEIPTS",
+      "owner_ACK_handoff": "HANDOFF_REQUESTED_ACK_NOT_RECEIVED",
+      "T06_one_accepted_HEAD": "HOLD",
+      "T09_T10_same_head_source_ready": "HOLD"
+    }
+  },
+  "source_head_last_git_read": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+  "source_head_frozen": false,
+  "register": {
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+    "prior_blobs": [
+      "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+      "e085518fe4131ba76fbe8d929e5cae96cbada3af"
+    ],
+    "last_commit": "0534ebdb0d33a0137335540930d6adae0dedb2b0",
+    "preserved_initial_records": 7,
+    "total_explicit_error_ids": 11,
+    "status_counts": {
+      "OPEN": 4,
+      "FIX_APPLIED_UNVERIFIED": 5,
+      "VERIFIED_CLOSED": 2
+    },
+    "historical_observation_fingerprints": 419,
+    "mentions": 487,
+    "paths": 48,
+    "history_complete": false,
+    "remaining_receipt_coverage": "Older T01–T11 independent-branch receipts; latest direct 9/11 only"
+  },
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "ack": [
+    {
+      "id": "ERR-SYS-001",
+      "action": "APPLY_CHECKPOINT",
+      "owner": "T02/C"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "APPLY_CHECKPOINT",
+      "owner": "T02/C"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T06/Host50"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T06+P01-P05 functional owners"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T06"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "action": "ALREADY_VERIFIED",
+      "owner": "T07/T09"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "action": "ALREADY_VERIFIED",
+      "owner": "T04"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T09"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "ALL_EXECUTORS"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T06"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "OWNER_ACK_REQUESTED",
+      "owner": "T08"
+    }
+  ],
+  "owner_ack_actual": 0,
+  "docs": {
+    "master": {
+      "revision": "AHj4eMSALL2VgXcK8GhSLlnyQ3Ou1zNv0YnMtW4GP_VBoxiSMrLD8X8xtJIonp2RQ7wcaQIZ3QlFqiqvDcHlqh__p3_rZe09wWBLFr63UVM",
+      "readback": "PASS"
+    },
+    "e06": {
+      "revision": "AHj4eMRWD4-kppbA9amCCjZFHC3hae-7yE8GTmi_R_qH3z6ocvm37duQYL43WMspUpdUHYJXMWr6nCQwT5yIwb0TxfkDs3UriLLXP_pfO2g",
+      "readback": "PASS"
+    },
+    "lessons": {
+      "revision": "AHj4eMSXwjq4nYbmmixEVLOpPoN9Ee7i5htdkKc79U2uYM3muNtph4FAdcvrJlzcvlsQIhHB6gccgB_Ls6UHUfzyYdZdu5lPacfnSAeZweg",
+      "readback": "PASS"
+    },
+    "C34": "READ_ONLY"
+  },
+  "handoff": {
+    "issue": 177,
+    "comment_id": 6500448429,
+    "error": null,
+    "requested_ack": true,
+    "received_ack": false
+  },
+  "one_integrity_check": "7/7 seed IDs preserved; 11 total distinct IDs; Git content SHA CAS/readback, provenance list 419 and Docs 3/3; no native or build tests performed",
+  "source_changes": [],
+  "source_PRE": null,
+  "source_POST": null,
+  "source_owner_code_writes": 0,
+  "applied_lesson": "Never promote archival root-cause prose, a saved Git receipt or a colleague's isolated tests to verified active P0/P1/source READY; first require owner exact SHA and independent evidence.",
+  "one_remaining_controlling_blocker": "T06 owner accepted single SOURCE HEAD/tree/manifest still unproven, so signed T09 and independent T10 cannot close",
+  "run_mode": "ONE BACKFILL CHECKPOINT; subsequent runs use full OPEN register plus deltas, not historic rescan",
+  "created_at_utc": "2026-10-29T15:09:10.766Z"
+}
