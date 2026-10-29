@@ -1,0 +1,17 @@
+--- a/Packages/P04/model_snapshot_probe.py
++++ b/Packages/P04/model_snapshot_probe.py
+@@
+ import json
++import math
+ import os
+@@
+-        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
++        def reject_constant(_value):
++            raise ValueError("non-finite model metadata constant")
++        def finite_float(value):
++            number = float(value)
++            if not math.isfinite(number):
++                raise ValueError("non-finite model metadata number")
++            return number
++        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
++                         parse_constant=reject_constant, parse_float=finite_float)
