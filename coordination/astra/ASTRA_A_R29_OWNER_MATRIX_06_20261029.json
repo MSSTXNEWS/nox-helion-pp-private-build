@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_OWNER_MATRIX_V1",
+  "runId": "ASTRA-A-R29-20261029-OWNER_MATRIX-06",
+  "actualSupervisor": {
+    "branch": "astra/v16-code-complete-source-only-20261029",
+    "pinnedHead": "842e2fff0156ad66a00a94bff1ba304e1a704cf5"
+  },
+  "realSubagentsCreatedThisTurn": 0,
+  "spawnCapability": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "reportedHistoricalWorkerLabels": {
+    "A1": "/root/a01",
+    "A2": "/root/a05",
+    "A3": "/root/a02",
+    "A4": "/root/a04",
+    "A5": "/root/a03",
+    "A6": "/root/a06"
+  },
+  "historicalLabelsNotRuntimeVerified": true,
+  "lanes": {
+    "A1": {
+      "package": "P01",
+      "ownership": [
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "stage/proposals/P01/C09/QA/A1/**"
+      ],
+      "task": "install/ownership marker/transaction; do not touch A2 files"
+    },
+    "A2": {
+      "package": "P01",
+      "ownership": [
+        "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "stage/proposals/P01/C09/QA/A2/**"
+      ],
+      "task": "rollback/uninstall and P01 UI contracts, no A1 NSIS edits"
+    },
+    "A3": {
+      "package": "P02",
+      "ownership": [
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-chat/NativePythonPipe.cs",
+        "Packages/P02/worker-python/test_p02_framed_worker.py"
+      ],
+      "task": "framing IPC transport STOP, no voice files"
+    },
+    "A4": {
+      "package": "P02",
+      "ownership": [
+        "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "proposals/NOX-VOICE-LAB/**",
+        "Packages/P02/worker-python/test_p02_owner_route_ports.py"
+      ],
+      "task": "existing voice/SIP/Ollama owner ports; no A3 IPC files"
+    },
+    "A5": {
+      "package": "P03",
+      "ownership": [
+        "Packages/P03/Admission/p03_modelcenter_gate.py",
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "Packages/P03/Admission/test_p03_native_counter_lifecycle_r09.py"
+      ],
+      "task": "queue/Cancel/Retry/progress; no A6 catalog"
+    },
+    "A6": {
+      "package": "P03",
+      "ownership": [
+        "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs",
+        "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+      ],
+      "task": "catalog/artifact/RAM/VRAM; no A5 queue"
+    }
+  },
+  "ownerBranches": {
+    "A1": {
+      "branch": "astra/r29-a01-20261029",
+      "head": "78860a6dbc5c1eb5e55ebc1fbb8bb1bf65dda55d"
+    },
+    "A2": {
+      "branch": "astra/r29-a2-p01-20261029",
+      "head": "98916abf2a3ce6e7d3e88696340b2399fb5b1081"
+    },
+    "A3": {
+      "branch": "astra/r29-a02-20261029",
+      "head": "5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c"
+    },
+    "A4": {
+      "branch": "astra/r29-a04-voice-20261029",
+      "head": "cc79314e361655fa4230b0f4583fefafe8635960"
+    },
+    "A5": {
+      "branch": "astra/r29-a03-20261029",
+      "head": "99b28cbfc0b618129564964297d5df5c6e2a9b3e"
+    },
+    "A6": {
+      "branch": "astra/r29-a6-p03-catalog-20261029",
+      "head": "7bc1cec5ac5fd411f673c2847e6e0106986ae86b"
+    },
+    "B1": {
+      "branch": "astra/r29-a04-20261029",
+      "head": "995e1488bf0fac028dadabafad9c197d2ef3b1f7"
+    },
+    "B2": {
+      "branch": "astra/r29-a05-20261029",
+      "head": "856d225543e78103868b3b04f0c53398437513f7"
+    },
+    "B3": {
+      "branch": "astra/r29-a06-20261029",
+      "head": "cbfe853500c781bfeac6419ccc581843ea1bedce"
+    }
+  },
+  "releasedToB": [
+    "Packages/P04/**",
+    "Packages/P05/**",
+    "coordination/e06/stage_onehost.py",
+    "proposals/NOX-PACK01-50/native_bridge.py",
+    "coordination/astra/agents/A06/**"
+  ],
+  "handoff": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "restrictions": [
+    "No main/PR162 writes",
+    "No cross-owner merger",
+    "No GitLab changes/EXE/NSIS/release CI",
+    "No Astra-B files",
+    "No invented subagents",
+    "Only verified source tests as PASS"
+  ],
+  "previousPassesA": [
+    2,
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "productReadiness": "N/D",
+  "next": "A1 source-only ownership marker post-write verification; do not reuse already fixed FileWrite guard"
+}
