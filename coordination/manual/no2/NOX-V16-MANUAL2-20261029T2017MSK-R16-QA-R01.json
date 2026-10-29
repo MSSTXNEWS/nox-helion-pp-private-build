@@ -1,0 +1,148 @@
+{
+  "schema": "NOX_V16_MANUAL2_INDEPENDENT_QA_RECEIPT_R01",
+  "run_id": "NOX-V16-MANUAL2-20261029T2017MSK-R16-QA-R01",
+  "role": "manual #2 independent QA/source-only; no product writer",
+  "prestart_read_proof": {
+    "canon": {
+      "title": "NOX FIN ZAGR V16",
+      "file_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision_id": "58",
+      "relevant_sections": "1-33, 54-56, R29, latest FAST_CLOSEOUT; section 33 historical consolidated rules 01-56",
+      "verification": "CONTENT_READ"
+    },
+    "error_register": {
+      "path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+      "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+      "git_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "error_ids_read": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "closed": 2,
+      "history": "PARTIAL"
+    },
+    "journals": {
+      "master_revision": "340",
+      "e06_report_revision": "500",
+      "e06_lessons_revision": "391",
+      "coverage": "R22 latest append read; C34 current direct link not found"
+    },
+    "git": {
+      "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+      "pr_number": 162,
+      "pr_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+      "pre_head": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+      "pre_tree": "f508ceefaa1301e7b28f8a35ae4fd1efd35efadf",
+      "frozen": false
+    },
+    "rules": [
+      "NO_LOSS",
+      "729 originals preserved",
+      "P01-P05 fixed TaskID denominators",
+      "20/25/20/25/10 weighted only with verified total",
+      "SOURCE_PRESENT != QA_ACCEPTED",
+      "T06 sole source writer",
+      "T02 sole shared error-journal writer",
+      "exact SHA same-HEAD verification",
+      "T08 independent QA",
+      "STOP",
+      "ACL",
+      "native consent",
+      "SourceLock",
+      "HMAC/native source verifier",
+      "D02/WOW200",
+      "8 CoreID",
+      "5 Persona",
+      "only one existing WPF/WebView2 host",
+      "no EXE/NSIS/GitLab CI/E07/release before SOURCE_READY",
+      "no fake DONE/100%",
+      "checkpoint on unresolved hold"
+    ],
+    "toolkit": {
+      "name": "NOX_V16_R17_Execution_Toolkit.zip",
+      "status": "READ_BLOCKED_UNAVAILABLE_IN_CURRENT_SESSION; cannot assert toolkit code run"
+    },
+    "own_role_prompt": {
+      "status": "PARTIAL_FROM_CURRENT_OWNER_MESSAGE_AND_CANON; standalone prior full prompt not independently retrieved"
+    },
+    "gitlab": {
+      "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+      "status": "GITLAB_ACCESS_HOLD no authenticated GitLab connector; live HEAD, runners NOT VERIFIED"
+    }
+  },
+  "qa_megablock": {
+    "task_id": "ERR-SRC-004/P03-TRANSFER-PRIVACY",
+    "stage": "SOURCE_VERIFIED_STATIC_ONLY",
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "pre_blob": "3692811ac3234afb54e82958c7415b23619c1f0f",
+    "post_blob": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+    "focused_checks": {
+      "P03_no_raw_exception_message": true,
+      "P03_constant_error_contract": true,
+      "P03_durable_state_error_sanitized": true,
+      "P03_event_error_sanitized": true,
+      "P03_log_without_exception_message": true,
+      "P03_durable_STOP_precedence": true,
+      "P03_exception_during_cancel_becomes_CANCELLED": true,
+      "P03_external_STOP_monitor_preserved": true,
+      "P03_owner_worker_semaphore_preserved": true,
+      "P03_existing_queue_not_replaced": true,
+      "T08_fake_sha_shape_only": true,
+      "T08_fake_a_b_c_expected_DONE": true,
+      "Host50_legacy_map_known": true,
+      "Host50_map_vs_baseline_drift_remains": true,
+      "Host50_attestation_required": true,
+      "Host50_source_seal_required": true,
+      "Host50_verifier_required": true,
+      "Host50_native_consent_not_bypassed": true
+    },
+    "checks_passed": 18,
+    "checks_total": 18,
+    "verdict": {
+      "p03_privacy": "PASS_SOURCE_STATIC; pending .NET/native independent functional runtime on same frozen HEAD",
+      "t08_gate": "FAIL_CLOSURE_ASSURANCE; SHA-shaped strings can satisfy done; forged-SHA test expects DONE",
+      "host50": "SOURCE_RECONCILIATION_PRESENT; native signed 13/13 authorization NOT VERIFIED",
+      "no_loss": "NO_PRODUCT_CODE_EDIT"
+    },
+    "regression": "T08 must require Git GET by SHA for commit/tree/receipt, verify manifest bytes, actual owner acceptance; 40 hex characters are not proof",
+    "security": "FAIL_CLOSED; no E07/build, native ACL/STOP/consent bypass",
+    "new_product_taskids_accepted": 0
+  },
+  "self_improvement": {
+    "root_cause": "RUN_COMPLETED/HOLD/generic string-as-SHA interpreted as TASK_DONE; repeated HOLD without remediation",
+    "applied_lessons": [
+      "LATEST_HEAD_AND_READBACK_OVER_STALE_SHA",
+      "STATIC_SOURCE_PATCH_DOES_NOT_EQUAL_NATIVE_ACCEPTANCE",
+      "FORGED_HEX_SHA_MUST_NOT_PROVE_DONE"
+    ],
+    "prevention_for_all_roles": "Every run READ proof -> one owner-scoped physical output -> exact PRE/POST -> independent same-head focused test -> immutable Git receipt/readback; if x<n status INCOMPLETE, continue independent safe tasks, preserve STOP/ACL/consent and external access HOLD."
+  },
+  "status": {
+    "READ": "PASS_CORE_WITH_READ_BLOCKED_TOOLKIT_C34_ROLE_PROMPT_GITLAB",
+    "PHYSICAL": "PASS_INDEPENDENT_SOURCE_QA_ONLY",
+    "JOURNAL": "PENDING_T02_SHARED_CAS",
+    "SELF_IMPROVEMENT": "PASS_APPLIED_LESSON"
+  },
+  "percent": "N/D - unverified P01-P05 denominators",
+  "stages": {
+    "source_prepared": true,
+    "source_verified": true,
+    "integrated": "EXISTS_ON_PR162_SOURCE",
+    "qa_accepted": false
+  },
+  "checkpoint": "T06/Owner verify real native P03 failure and 13 Host50 same-head; T08 merge fail-closed evidence gate; T02 CAS register + Master/E06/Lessons, release only after frozen SOURCE_READY",
+  "no_exe_nsis_ci_e07": true,
+  "shared_journal_mutation": false,
+  "source_code_mutation": false
+}
