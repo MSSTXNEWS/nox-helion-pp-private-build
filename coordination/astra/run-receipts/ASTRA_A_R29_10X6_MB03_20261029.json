@@ -1,0 +1,43 @@
+{
+  "schema": "ASTRA_A_R29_MEGABLOCK_SOURCE_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB03",
+  "sourceOnly": true,
+  "branchResults": {
+    "A1": {
+      "commit": "fa889e4d337c5862a10f44ac41b90846b2c62612",
+      "blob": "ef6fbb53208f2aeab14da4e6ac060343c34737a2",
+      "fix": "NFC reject payload path"
+    },
+    "A2": {
+      "commit": "c3cb58a1f29121a121eb94f688856f0a830cbcb9",
+      "blob": "5eca50b708a6865c585cd767259dfd78a11f0fdc",
+      "fix": "size-bound uninstall manifest"
+    },
+    "A3": {
+      "commit": "7b7fbc1a856e1f324e68df999b348ee1a68d40a3",
+      "blob": "e87a34b488aae25d9838fd436ead5bb9cdda1356",
+      "fix": "reuse P02 duplicate JSON key parser at frame admission"
+    },
+    "A4": {
+      "commit": "be073e62b541398aac32bf750fb09e8ae1065934",
+      "blob": "74a0d1937513f89c7753209af812db23e3d4666c",
+      "fix": "revoke stored voice receipt if ACL lost during storage"
+    },
+    "A5": {
+      "commit": "7770291d6bfc89f62223279f8b6748742997cdbd",
+      "blob": "508bde5edef4d6659911a60b9a4c0601c2274dbb",
+      "fix": "STOP recheck before installed transition"
+    },
+    "A6": {
+      "commit": "bc925ba232488bfb7fd6a14938f178a4deb2a1f7",
+      "blob": "c808f05af6f8d44e87b1c15c18f10394ac7a5b7a",
+      "fix": "bounded nonreparse local model review template"
+    }
+  },
+  "checks": "6/6 current source file byte readbacks PASS",
+  "native": "NOT_RUN",
+  "verifiedPassesAdded": 0,
+  "lesson": "Persisted content/ACL and cancellation must be revalidated immediately before irreversible completion or data publication.",
+  "remainingQueueRounds": 7,
+  "noBuild": true
+}
