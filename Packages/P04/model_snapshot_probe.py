@@ -351,7 +351,11 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         if len({name.casefold() for name in names}) != len(names):
             raise ValueError("MODEL_SHARD_CASE_COLLISION")
+        reserved = {"CON", "PRN", "AUX", "NUL"} | {
+            f"{prefix}{n}" for prefix in ("COM", "LPT") for n in range(1, 10)}
         for name in names:
+            if name.split(".", 1)[0].upper() in reserved:
+                raise ValueError("MODEL_WINDOWS_DEVICE_FILENAME_UNSAFE")
             # Portable Windows basename policy: reject ADS, drive syntax, and
             # separators even when this preflight runs on another OS.
             if (not isinstance(name, str) or not name or
