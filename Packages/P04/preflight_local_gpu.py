@@ -120,6 +120,20 @@ def _validate_gpu_memory_snapshot(selected: dict, memory: dict) -> None:
         raise RuntimeError("GPU_INVENTORY_VRAM_TOTAL_MISMATCH")
 
 
+def _require_gpu_identity_stable(identity: tuple[str, str, str], original: dict, latest: list[dict]) -> None:
+    """Reject re-enumerated or mutated selected GPU before CUDA selection.
+
+    This is a second inventory observation, not an atomic hardware lock.
+    """
+    if not isinstance(latest, list) or not isinstance(original, dict):
+        raise RuntimeError("GPU_SELECTION_CHANGED_DURING_PREFLIGHT")
+    selected = [item for item in latest if isinstance(item, dict) and item.get("index") == identity[0]]
+    if (len(selected) != 1
+            or tuple(original.get(key) for key in ("index", "uuid", "memory_total_mib")) != identity
+            or tuple(selected[0].get(key) for key in ("index", "uuid", "memory_total_mib")) != identity):
+        raise RuntimeError("GPU_SELECTION_CHANGED_DURING_PREFLIGHT")
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
@@ -180,14 +194,21 @@ def inspect(profile: str, gpu_index: int) -> dict:
         selected = next((x for x in devices if int(x["index"]) == gpu_index), None)
         if not selected:
             raise RuntimeError("GPU_INDEX_NOT_FOUND")
-        temperature = train_qlora.gpu_temperature(exe, selected["uuid"])
-        if temperature is None:
-            raise RuntimeError("GPU_TEMPERATURE_UNAVAILABLE")
+        # Freeze the selected index/UUID/capacity BEFORE independent probes:
+        # a mutable inventory row may be replaced or re-enumerated mid-check.
+        identity = tuple(selected[key] for key in ("index", "uuid", "memory_total_mib"))
+        temperature = train_qlora.gpu_temperature(exe, identity[1])
         limit = {"ECO": 80, "BALANCED": 83, "INTENSIVE": 85}[profile]
+        if type(temperature) not in (int, float) or not 0 <= temperature:
+            raise RuntimeError("GPU_TEMPERATURE_UNAVAILABLE")
         if temperature >= limit:
             raise RuntimeError("GPU_THERMAL_HEADROOM_UNAVAILABLE")
-        memory = train_qlora.gpu_vram_headroom(exe, selected["uuid"], profile)
+        memory = train_qlora.gpu_vram_headroom(exe, identity[1], profile)
         _validate_gpu_memory_snapshot(selected, memory)
+        # nvidia-smi inventory and UUID-scoped telemetry are independent reads.
+        # A second inventory check detects hotplug/reindex and in-place mutation
+        # before reporting hardware readiness; it cannot lock future GPU state.
+        _require_gpu_identity_stable(identity, selected, train_qlora.gpu_inventory(exe))
         report["gpu"] = {
             "name": selected["name"], "uuid": selected["uuid"],
             "temperature_c": temperature, **memory
