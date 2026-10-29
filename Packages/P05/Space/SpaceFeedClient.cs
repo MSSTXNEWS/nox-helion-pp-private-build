@@ -26,12 +26,17 @@ public static class EvidenceProgress
     {
         // Exactly five product blocks; E06/E07 are gates, not weights.
         decimal[] weights = { .20m, .25m, .20m, .25m, .10m };
-        if (lanes.Count != 5) return null;
+        if (lanes is null || lanes.Count != 5) return null;
+        // Count distinct TaskIDs only. Caller must independently verify
+        // signed evidence: an arbitrary ReceiptId string proves nothing.
+        var seenTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         decimal result = 0;
         for (int i = 0; i < 5; i++)
         {
             var lane = lanes[i];
-            if (lane.Weight != weights[i] || lane.ConfirmedPercent is null ||
+            if (lane is null || string.IsNullOrWhiteSpace(lane.TaskId) ||
+                !seenTaskIds.Add(lane.TaskId.Trim()) ||
+                lane.Weight != weights[i] || lane.ConfirmedPercent is null ||
                 lane.ConfirmedPercent < 0 || lane.ConfirmedPercent > 100 ||
                 string.IsNullOrWhiteSpace(lane.ReceiptId) ||
                 lane.State != "ACCEPTED") return null;

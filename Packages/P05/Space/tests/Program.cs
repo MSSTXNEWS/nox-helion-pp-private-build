@@ -128,7 +128,29 @@ try {
     Console.WriteLine("PASS pre-canceled STOP: no cache success");
 }
 
-Console.WriteLine("13/13 semantic assertions PASS (when this project actually runs on .NET 8)");
+// Test fixtures only: these strings do NOT prove real accepted TaskIDs.
+var lanes = new[] {
+    new ProgressEvidence("P01", .20m, 100m, "test-r1", "ACCEPTED"),
+    new ProgressEvidence("P02", .25m, 100m, "test-r2", "ACCEPTED"),
+    new ProgressEvidence("P03", .20m, 100m, "test-r3", "ACCEPTED"),
+    new ProgressEvidence("P04", .25m, 100m, "test-r4", "ACCEPTED"),
+    new ProgressEvidence("P05", .10m, 100m, "test-r5", "ACCEPTED"),
+};
+Pass(EvidenceProgress.WeightedProduct(lanes) == 100m,
+    "five distinct TaskID test fixtures use exact weighted arithmetic");
+var duplicates = (ProgressEvidence[])lanes.Clone();
+duplicates[4] = duplicates[4] with { TaskId = "p01" };
+Pass(EvidenceProgress.WeightedProduct(duplicates) is null,
+    "case-insensitive duplicate TaskID cannot be double-counted");
+var blank = (ProgressEvidence[])lanes.Clone();
+blank[1] = blank[1] with { TaskId = "  " };
+Pass(EvidenceProgress.WeightedProduct(blank) is null,
+    "blank TaskID cannot be accepted");
+var unverified = (ProgressEvidence[])lanes.Clone();
+unverified[2] = unverified[2] with { State = "SOURCE_PREPARED" };
+Pass(EvidenceProgress.WeightedProduct(unverified) is null,
+    "source-only TaskID cannot count toward accepted progress");
+Console.WriteLine("17/17 semantic assertions PASS (when this project actually runs on .NET 8)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
