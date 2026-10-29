@@ -19,8 +19,9 @@ class G1BLiveCallbackCancellationR10(unittest.TestCase):
     def test_native_consent_stage_is_set_before_await(self):
         self.assertLess(MESSAGE.index("awaitingNativeConsent = true;"),
                         MESSAGE.index("await _confirmNativeConsent(routeId, requestLifetime.Token)"))
-        self.assertLess(MESSAGE.index("await _confirmNativeConsent(routeId, requestLifetime.Token)"),
-                        MESSAGE.index("awaitingNativeConsent = false;"))
+        consent_await = MESSAGE.index("await _confirmNativeConsent(routeId, requestLifetime.Token)")
+        self.assertLess(consent_await,
+                        MESSAGE.index("awaitingNativeConsent = false;", consent_await))
 
     def test_normal_denial_still_reports_rejected(self):
         self.assertIn('if (!consentGranted)', MESSAGE)
