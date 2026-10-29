@@ -320,5 +320,24 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                          "MODEL_SHARD_PATH_UNSAFE")
 
 
+
+    def test_rejects_pathologically_deep_model_config_json(self):
+        # Tiny-but-deep untrusted JSON must become HOLD, never an uncaught crash.
+        nested = "[" * 20000 + "0" + "]" * 20000
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","nested":' + nested + '}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_METADATA_INVALID")
+
+    def test_rejects_pathologically_deep_safetensors_header(self):
+        nested = "[" * 20000 + "0" + "]" * 20000
+        raw = ('{"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]},'
+               '"nested":' + nested + '}').encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(raw).to_bytes(8, "little") + raw + bytes(4)
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
 if __name__ == "__main__":
     unittest.main()
