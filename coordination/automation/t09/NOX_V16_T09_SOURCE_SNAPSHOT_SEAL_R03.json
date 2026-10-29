@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_V16_T09_SOURCE_SNAPSHOT_SEAL_R03_V1",
+  "runId": "NOX-V16-T09-MANUAL-SNAPSHOT-R03-20261029",
+  "scope": "Existing NOX HELION EXPRESS INTEGRATOR only",
+  "actualPinnedSourceCommitGitSha1": "2fcd72a001c084697e696d6a44dd1a47d7c8a0e0",
+  "actualPinnedSourceTreeGitSha1": "93f26c73a80695801405ea03ae398de7b1dde355",
+  "fullTreeManifestGitBlobSha1": "7296c2e22323d6656bbbb5b35e11a2c3ee5dc916",
+  "fullTreeManifestSha256": "41c900c5f14d0ef4cc0daf274d9f55a3e978d0a81d16d661a7a8b4bad9de1841",
+  "fullTreeManifestPath": "coordination/automation/t09/NOX_V16_T09_PINNED_SOURCE_TREE_970_BLOBS_R03.json",
+  "physicalOriginalZipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "physicalOriginalZipMembersSha256Verified": 729,
+  "gitTreeBlobCount": 970,
+  "sourceNoLoss": {
+    "unchanged": 968,
+    "modified": 1,
+    "added": 1,
+    "deleted": 0
+  },
+  "sourcePatch": {
+    "path": "Packages/P02/worker-python/p02_framed_worker.py",
+    "preGitBlob": "255dfb7ab330c825fcc362b619614189c4915e6c",
+    "postGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "owner": "G2-A",
+    "sourceTesting": "owner RED-GREEN saved",
+    "nativeE07": "NOT_RUN"
+  },
+  "frozenSnapshot": true,
+  "sourceReady": false,
+  "finalT09Acceptance": false,
+  "whyNotFinal": "T04 19 archival owner decisions and T05 12 unadmitted donor candidates are preserved; complete mandatory V16 integration to one approved tree not proved. Administrative HOLD override does not prove preserved full functionality.",
+  "futureOwnerDecision": "T06 sole integrator: approve pinned source tree and enumerate missing mandatory owner-code requirements or take safe owner fixes; do not overwrite/destroy archive.",
+  "recipients": [
+    "T02",
+    "T06",
+    "T07",
+    "T10",
+    "T11"
+  ],
+  "rule56": "Preserved 56 §33 functional requirements; E07 release testing is later separate stage",
+  "noBuild": true,
+  "noNSIS": true,
+  "noGitLabCI": true,
+  "noProductSourceChangeByT09": true,
+  "selfImprovement": "Use existing Git immutable commit and structural no-loss diff instead of repeated source rediscovery or creating new code; attach exact SHA256 physical SourceLock.",
+  "note": "Use exact pinned commit and tree, never mutable metadata receipt branch HEAD as product source identity."
+}
