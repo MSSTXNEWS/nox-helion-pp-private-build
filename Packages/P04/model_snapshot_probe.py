@@ -100,9 +100,17 @@ def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
         if not filename_tags & target:
             raise ValueError("WHEEL_TARGET_TAG_MISMATCH")
         with path.open("rb") as stream:
-            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            initial = os.fstat(stream.fileno())
+            if not stat.S_ISREG(initial.st_mode):
                 raise ValueError("WHEEL_NOT_REGULAR_FILE")
+            def stamp(info):
+                return (info.st_dev, info.st_ino, info.st_size,
+                        info.st_mtime_ns, info.st_ctime_ns)
+            def require_stable_artifact():
+                if stamp(os.fstat(stream.fileno())) != stamp(initial):
+                    raise ValueError("WHEEL_ARTIFACT_CHANGED_DURING_INSPECTION")
             report["sha256"] = _sha256_stream(stream)
+            require_stable_artifact()
             if report["sha256"] != expected_sha256.lower():
                 raise ValueError("WHEEL_SHA256_MISMATCH")
             stream.seek(0)
@@ -155,6 +163,9 @@ def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
                 report.update(name=str(name), version=str(version), license_field="License-Expression" if expression else "License",
                               declared_license=expression or legacy, target_python=str(python),
                               matching_tags=sorted(str(tag) for tag in filename_tags & target))
+            # One descriptor protects against rename, not in-place mutation.
+            # This binds metadata to the observed hash without rereading GBs.
+            require_stable_artifact()
         report["status"] = "ARTIFACT_CONTRACT_MATCH_ONLY"
     except (OSError, ValueError, TypeError, KeyError, zipfile.BadZipFile, RuntimeError) as exc:
         report["reason"] = str(exc)

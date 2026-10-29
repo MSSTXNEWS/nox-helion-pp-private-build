@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 from packaging.tags import parse_tag
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,20 @@ class WheelInventoryPreflight(unittest.TestCase):
         self.wheel()
         result = self.inspect("0" * 64)
         self.assertEqual(result["reason"], "WHEEL_SHA256_MISMATCH")
+
+    def test_same_inode_changed_after_hash_cannot_publish_old_sha_with_new_metadata(self):
+        digest = self.wheel()
+        inode = self.path.stat().st_ino
+        original_hash = probe._sha256_stream
+        def change_after_hash(stream):
+            actual = original_hash(stream)
+            self.wheel(license="MIT")
+            self.assertEqual(self.path.stat().st_ino, inode)
+            return actual
+        with patch.object(probe, "_sha256_stream", side_effect=change_after_hash):
+            result = self.inspect(digest, expected_license="MIT")
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "WHEEL_ARTIFACT_CHANGED_DURING_INSPECTION")
 
     def test_target_tags_and_python_are_caller_supplied_constraints(self):
         digest = self.wheel(python=">=3.12")

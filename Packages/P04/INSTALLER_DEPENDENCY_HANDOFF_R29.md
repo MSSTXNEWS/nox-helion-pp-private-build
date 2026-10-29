@@ -98,6 +98,12 @@ identity, METADATA identity, WHEEL tags/version, Requires-Python and the exact
 caller-supplied declared license must agree. Both SPDX-style License-Expression
 and the legacy License field can be compared without inferring legal approval.
 
+The open file's device/inode, size, nanosecond mtime and ctime must remain
+unchanged across hashing and metadata inspection; otherwise the result is HOLD.
+This is an observation-time check, not a promise that the path or bytes remain
+unchanged until a later installation. The existing offline install route must
+still perform its final expected-hash check when consuming the artifact.
+
 `ARTIFACT_CONTRACT_MATCH_ONLY` proves only these local comparisons.
 `rights_verified`, `hardware_verified` and `dependency_lock_verified` remain
 false. Caller-supplied tags are not proof of actual hardware; matching declared
