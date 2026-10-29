@@ -1,0 +1,134 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V12",
+  "runId": "R30-G1-B-20261029T1545MSK-R12",
+  "slot": "G1-B",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER P01 WPF/WebView2 bridge SOURCE ONLY",
+  "taskId": "G1B-P01-WEBVIEW2-DISPOSE-CANCEL-CALLBACK-EXCEPTION-SAFETY-R12",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "ownership": {
+    "lockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "previousR11LockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/",
+      "D02/WOW",
+      "P02-P05",
+      "PR162",
+      "main",
+      "shared R30",
+      "other owners"
+    ],
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T1545MSK-R12",
+    "otherOwnersModified": false,
+    "sharedGoogleDriveWriter": "Astra-C"
+  },
+  "sourceReads": {
+    "consolidated56Path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "consolidated56GitBlobSHA1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "consolidated56Read": true,
+    "historicalVerbatim56Verified": false,
+    "v16DocumentId": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "v16SectionsRead": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "masterErrorsDriveId": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "E06ReportDriveId": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06LessonsDriveId": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34DriveId": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "lastControllerDeltaSeen": "ASTRA-C-R30-20261029T1452MSK-10",
+    "previousOwnerR11Read": true,
+    "sharedDriveWritePerformed": false
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlobSHA1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexedFrozenRefs": 25,
+    "rootDirectoriesVerified": 25,
+    "individualSnapshotPhysicalSHA256Verified": false,
+    "historicalOverlappingCodePaths": 34,
+    "bridgeInHistoricalOverlapList": false,
+    "changed": 0
+  },
+  "base": {
+    "previousBranch": "automation/r30/g1b/R30-G1-B-20261029T1450MSK-R11",
+    "previousCommit": "6c935c21b1763b86d2e3966a5888c2a0e637b12d",
+    "sourceCommit": "ac51c93cad3905770dd2f88eed08f857ae6590b5",
+    "regressionTestCommit": "1d257e34b6e821c9b3de35aa51477130c94d9400"
+  },
+  "observedProblem": "The existing Dispose() invoked CancellationTokenSource.Cancel() without containing AggregateException. .NET cancellation can synchronously invoke native callback registrations; a throwing third-party registration could interrupt WPF host shutdown and skip _lifetime.Dispose(), _pending.Clear(), and _seenRequestIds.Clear(). This is a source-level defect hypothesis, not an observed native Windows crash.",
+  "actualFix": "In the existing P01WebView2NavigationBridge.Dispose(), guard _lifetime.Cancel() with try/catch (AggregateException) and put owned lifetime disposal and pending/replay cleanup in finally. Preserve the initial disposed gate and all six WebView2 handler unsubscriptions. Do not add a host or broaden permissions.",
+  "sourceChanges": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "c9c68bce1f1e1a6d074255f7150f2f04bc52179f",
+      "postGitBlobSHA1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "preSHA256": "0c586e5df3a92a32cd7ed65988bc63046a52a7a759563e5d0623b2e9e56d108b",
+      "postSHA256": "d3800c7fb6892140d3bb87431c90ea8b015be1de7c5251ab1b3386faa959b0ea",
+      "commit": "ac51c93cad3905770dd2f88eed08f857ae6590b5"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_shutdown_cancellation_safety_r12.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "35edce19360db21dd5193f55e1c8b0834a54490e",
+      "commit": "1d257e34b6e821c9b3de35aa51477130c94d9400"
+    }
+  ],
+  "targetedSourceTest": {
+    "engine": "V8 JavaScript structural source assertions against actual GitHub fetch_file bytes; not C#/.NET runtime",
+    "commandDescription": "Fetch R11 source, assert 14 shutdown/bridge invariants RED; patch and assert GREEN; fetch committed R12 bridge and unique Python test and rerun same 14 V8 assertions; compare exact R11..R12 changed filenames and blobs",
+    "preSourceAssertions": "11/14 PASS (3 shutdown exception containment conditions fail)",
+    "postSourceAssertions": "14/14 PASS (before commit and from GitHub readback)",
+    "uniquePythonRegressionTestCasesSaved": 11,
+    "proposedPythonCommand": "python -m unittest discover -s stage/proposals/P01/C09/QA/P01_E01_C09 -p test_g1b_shutdown_cancellation_safety_r12.py",
+    "pythonUnittestExecuted": false,
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "gitPreReceiptCompare": {
+      "status": "ahead",
+      "ahead": 2,
+      "behind": 0,
+      "changedSourceTestFiles": 2,
+      "ownerPathViolations": 0
+    },
+    "nativeHomeMenuCoreObserved": false,
+    "nativeButtonsObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorsObserved": false,
+    "nativeWindowsOriginObserved": false
+  },
+  "blocker": {
+    "status": "NATIVE_HOLD",
+    "reason": "Original C08 MainWindow.xaml.cs single-host hookup to this C09 bridge has not been independently verified. .NET cancellation callback throwing behavior and HOME/MENU/CORE, buttons, consent, errors, Windows virtual-origin navigation remain untested in native Windows/WebView2.",
+    "ownerRequest": "C08 original WPF host owner: wire the existing single CoreWebView2 host to C09 bridge on WPF UI thread only; run original HOME/MENU/CORE, buttons, granted/denied/cancelled native consent, popup/origin and error handling, and deliberately throwing cancellation callback on shutdown. Report evidence via own receipt/Astra-C; do not authorize G1-B to touch foreign host."
+  },
+  "lesson": {
+    "applied": "Used live ownership file before any edit and noticed its blob changed since R11; obey the currently assigned C09-only/Installer-forbidden scope. Used exact Git source and SHA preimage and independently fetched committed source before PASS.",
+    "new": "Cancellation callbacks are application-controlled yet can throw into CancellationTokenSource.Cancel(). Shutdown resource cleanup must be in finally and cancellation AggregateException contained; source RED->GREEN assertions do not prove WPF/.NET runtime or original host wiring.",
+    "sharedGoogleDriveStatus": "ASTRA_C_ONLY_COMMON_JOURNAL_WRITER"
+  },
+  "forbiddenWorkNotPerformed": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
