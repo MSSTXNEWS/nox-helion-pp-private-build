@@ -1,0 +1,187 @@
+{
+  "schema": "NOX_V16_T07_M3_NOLOSS_DELTA_EVIDENCE_V1",
+  "run_id": "NOX-V16-G4A-T07-20261030T005057MSK-R13-NOLOSS",
+  "role": "G4-A / M3 / historical T07",
+  "source_repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "observed_start_msk": "2026-10-30T00:50:57+03:00",
+  "source_pre_checkpoint": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "current_source_head": "79005fcb92dd540d00d82355203757bd367e2f20",
+  "current_source_tree": "c6602e45359e3311a5af5ab37863c62307dab444",
+  "source_head_mutated_by_T07": false,
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_characters": 218770,
+    "section33_rules": 56,
+    "active_error_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "error_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2,
+      "total": 11
+    },
+    "master_revision": "AHj4eMQJfPI1zFjcKDNuP9g5p7RhzHfm42pB2h4QGAsEUVHH5IGqmICx29vCOBhcqFu0P3mU4aJCr0EPsXzTxtJypdg6QEWjmwusEC3G-rk",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL-QXf0",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r26_policy_git_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15"
+  },
+  "historical_original_proof_reused": {
+    "status": "DONE_6_OF_6_UNCHANGED",
+    "original_receipt_blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+    "t09_physical_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "t07_accepted_commit": "a70ab3dc9c45e29afee737810d6be8f623b8f210",
+    "original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "historical_729_sha_crc": "PASS_PREVIOUS_ACCEPTED_NOT_REHASHED_NOW"
+  },
+  "new_git_physical_delta": {
+    "comparison_base": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "comparison_head": "79005fcb92dd540d00d82355203757bd367e2f20",
+    "behind": 0,
+    "ahead": 13,
+    "changed_paths": 12,
+    "modified_paths": 6,
+    "added_paths": 6,
+    "deleted_paths": 0,
+    "baseline_tree_entries": 1257,
+    "current_tree_entries": 1263,
+    "tree_truncated": false,
+    "original_part_git_metadata_unchanged": [
+      {
+        "path": "source_00.part",
+        "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "size": 20971520
+      },
+      {
+        "path": "source_01.part",
+        "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "size": 20971520
+      },
+      {
+        "path": "source_02.part",
+        "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "size": 18421306
+      }
+    ],
+    "exact_modified_source_blobs": {
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+      "Packages/P04/model_snapshot_probe.py": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "tests/P04/test_model_snapshot_probe.py": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+      "Packages/P05/Space/SpaceFeedClient.cs": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "Packages/P05/Space/tests/Program.cs": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "proposals/NOX-PACK01-50/registry.mjs": "f63b0139efaf11aa128d1b68435df3d056fcb3a5",
+      "proposals/NOX-PACK01-50/smoke.test.mjs": "d39122860f4052a9552f3ae13805d0c2e0616d22"
+    }
+  },
+  "targeted_source_only_corrob": {
+    "verified_current_native_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "verified_current_catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "exact_ui_native_policy_owner_risk": "50_OF_50_MATCH",
+    "exact_catalog_route_count": 50,
+    "UI_dangerous_requires_native_consent": true,
+    "UI_duplicate_route_task_guard": true,
+    "native_task_order_and_owner_risk_guard_present": true,
+    "p04_python_test_methods_retained": 37,
+    "native_webview_runtime": "NOT_RUN",
+    "node_full_suite": "NOT_RUN",
+    "dotnet_runtime": "NOT_RUN",
+    "security_note": "No native acceptance inferred from cross-language source map; previously noted native_bridge.py JSON serialization and consent ingress require owner/T08 runtime review."
+  },
+  "progress": {
+    "original_archive": "6/6 HISTORICAL_DONE",
+    "no_loss_source_guard": "2/4",
+    "before_percent": 50,
+    "after_percent": 50,
+    "delta_pp": 0,
+    "accepted_new_task_ids": 0,
+    "product_progress": "N/D_FULL_FROZEN_INVENTORY_MISSING",
+    "criteria": [
+      {
+        "n": 1,
+        "name": "reuse original physical ZIP proof",
+        "status": "DONE",
+        "evidence": "coordination/owner-decisions/NOX_V16_T07_ORIGINAL_729_PHYSICAL_PASS_R01.json"
+      },
+      {
+        "n": 2,
+        "name": "current T06 owner-accepted frozen HEAD",
+        "status": "HOLD",
+        "evidence": "Owner T06 R26 receipts show source integrated but QA_PENDING and prior owner 1/8; no accepted 8/8 same SHA."
+      },
+      {
+        "n": 3,
+        "name": "current source paths/blobs delta NO-LOSS guard",
+        "status": "DONE_DELTA_SCOPE",
+        "evidence": "13 ahead/0 behind, 6 modified/6 added/0 removed, original part Git sha unchanged, 50/50 route policy"
+      },
+      {
+        "n": 4,
+        "name": "T09 sealed same-HEAD freeze handoff",
+        "status": "HOLD",
+        "evidence": "No sealed current HEAD receipt; requires T06 8/8 and T08 independent same-SHA"
+      }
+    ]
+  },
+  "errors_and_lessons": {
+    "total_error_ids_read": 11,
+    "applicable_clusters": [
+      {
+        "ids": [
+          "ERR-SYS-001",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "action": "APPLY+DELEGATE",
+        "effect": "No false completion: 2/4 kept, T02 canonical journals only"
+      },
+      {
+        "ids": [
+          "ERR-SYS-002"
+        ],
+        "action": "APPLY",
+        "effect": "Fresh HEAD/tree + delta readback; never inherit old QA"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-SRC-004",
+          "ERR-SRC-005",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "action": "DELEGATE",
+        "effect": "Same-SHA T06→T08 native STOP/ACL/consent before freeze"
+      },
+      {
+        "ids": [
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "action": "DELEGATE",
+        "effect": "T09 freeze only owner 8/8 and T08 same-HEAD independent QA"
+      },
+      {
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "action": "ALREADY_FIXED",
+        "effect": "Preserve ZIP729 and T04 34/34; no repeat audits"
+      }
+    ],
+    "remaining_unresolved_external": "T06 accepted owner HEAD; T08 same-SHA QA; T09 seal"
+  },
+  "handoff": {
+    "manual1_T06": "Finish 8/8 owner source contracts with same HEAD/tree/manifest; resolve 11 Host50 source-unbound & 14 native pending with STOP/ACL/consent; no new host and no build; provide exact immutable owner receipt.",
+    "manual2_T08": "Independent targeted QA at current T06 accepted frozen HEAD, including 50 route owner/risk policy, safety, original no-loss mapping and native contracts; do not infer runtime from source check.",
+    "T09": "After same SHA T06 8/8 and T08 pass, produce sealed immutable HEAD/tree/manifest; only then ask T07 final freeze guard recheck.",
+    "T02": "Please index this scoped immutable T07 delta under ERR-SYS-002, ERR-SRC-004, and premature-stop incident with CAS/readback; T07 did not write shared Docs."
+  },
+  "prohibited": [
+    "EXE",
+    "NSIS_build",
+    "GitLab_CI",
+    "E07",
+    "RELEASE"
+  ],
+  "status": "INCOMPLETE_OWNER_8_OF_8_AND_T09_SEAL_PENDING"
+}
