@@ -331,8 +331,10 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // evidence of successful termination; quarantine rather than skip it.
     if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
         !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
-    if (!canonicalTerminal(e) || e.run_id!==runId ||
-        Date.parse(e.timestamp_utc)>nowMs) continue;
+    if (!canonicalTerminal(e) || e.run_id!==runId) continue;
+    // A future-dated authenticated failure must not silently disappear.
+    if (Date.parse(e.timestamp_utc)>nowMs)
+      return {state:'HOLD_FUTURE_TERMINAL',errors:null};
     // A schema-valid terminal with evidence_verified:false is only a report,
     // NOT proof that STOP completed or that the failure was authenticated.
     // It must not overwrite an actually verified error or STOP in this tile.
