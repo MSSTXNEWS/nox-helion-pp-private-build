@@ -29,6 +29,13 @@ const hasEvidence = m => !!(m && m.artifactVerified===true && m.exactTag && m.im
 const currentJob = () => state.activeJob && current() &&
   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
    state.activeJob.modelTag===current().id) ? state.activeJob : null;
+// STOP and Retry follow the actual host queue, regardless of selected card.
+const queueJobModel = () => {
+ const j=state.activeJob;if(!j)return null;
+ if(typeof j.modelId==='string')return state.models.find(m=>m.id===j.modelId)||null;
+ const matches=state.models.filter(m=>(m.exactTag&&m.exactTag===j.modelTag)||m.id===j.modelTag);
+ return matches.length===1?matches[0]:null;
+};
 function lineItem(k,v){const dt=el('dt','',k),dd=el('dd','',v);return [dt,dd];}
 
 /* One real action path for all 20 cards: the existing host pull route.
@@ -91,14 +98,18 @@ function renderHero(){const m=current();const j=currentJob();const verified=hasE
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
   $('transferNote').textContent=realPct===null?'Без достоверного процента':`Передано ${realPct}% · установка требует receipt`;
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
-  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running'].includes(j.state);
-  const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled'].includes(j.state);
+  const cap=state.capabilities||{};const queue=state.activeJob,queueModel=queueJobModel();
+  const canStop=state.hostReady&&cap.stop===true&&queue&&queueModel&&['Queued','Running'].includes(queue.state);
+  const canRetry=state.hostReady&&cap.retry===true&&queue&&queueModel&&['Failed','Cancelled'].includes(queue.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
   $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
   $('retryBtn').disabled=!(canRetry&&!state.pending.has('retry'));
   $('diagBtn').disabled=!(state.hostReady&&cap.diagnose===true&&!state.pending.has('diagnose'));
-  $('actionHint').textContent=state.hostReady?'Действия выполняются только после подтверждения Windows host.':'Без host доступен просмотр каталога; операции отключены.';
+  $('actionHint').textContent=!state.hostReady
+   ? 'Без host доступен просмотр каталога; операции отключены.'
+   : queue ? `STOP/Повтор управляют очередью ${safeText(queue.modelTag)} (${queue.state}), независимо от выбранной карточки. Host подтверждает операции.`
+   : 'Действия выполняются только после подтверждения Windows host.';
 }
 function renderDna(){const m=current();const dl=$('dnaList');dl.replaceChildren();if(!m)return;
   const verified=hasEvidence(m);
