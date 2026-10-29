@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T12_RELEASE_BUILD_GATE_R01",
+  "task_id": "T12",
+  "run_id": "NOX-V16-T12-20261029T164931MSK-R01-HOLD",
+  "scope": "ONLY existing Windows EXPRESS INTEGRATOR loader/installer; V16 §§1–33,54–56, R29, §33 all 56 rules",
+  "observed_start_msk": "2026-10-29T16:49:30+03:00",
+  "planned_schedule_msk": "2026-10-29T16:45:00+03:00",
+  "status": "HOLD_PRECONDITIONS_NOT_MET__NO_BUILD",
+  "source_candidate": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr_number": 162,
+    "head_sha": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "state": "DRAFT_NOT_FROZEN"
+  },
+  "acceptance_criteria": {
+    "total": 4,
+    "done": 0,
+    "remaining": 4,
+    "percent": 0,
+    "bar": "░░░░░░░░░░",
+    "definitions": [
+      "T09 one accepted immutable frozen HEAD/tree/manifest/SourceLock PASS",
+      "T10 independent SOURCE_READY PASS on exact frozen SHA",
+      "T11 current authenticated GitLab READY and same-SHA pipeline configuration",
+      "exactly one Windows EXE+NSIS build completed, with REAL Setup/EXE SHA256, BuildID, pipeline/job and handoff T13"
+    ]
+  },
+  "gates": {
+    "T09": {
+      "status": "HOLD",
+      "source_frozen": false,
+      "criteria": "0/6",
+      "latest_run_id": "NOX-V16-T09-20261029T164545MSK-R13-HOLD",
+      "receipt_commit": "a2070e7ec4a2f3cab27db16403f18b5f0d3aa8bb",
+      "receipt_blob": "f547d9f18f4fc0e98c0c95e93fa52ab08f0dc672",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/a2070e7ec4a2f3cab27db16403f18b5f0d3aa8bb/coordination/automation/t09/NOX-V16-T09-20261029T164545MSK-R13-HOLD.json"
+    },
+    "T10": {
+      "status": "HOLD",
+      "source_ready": false,
+      "criteria": "0/7",
+      "latest_run_id": "NOX-V16-T10-20261029T164206MSK-R13-HOLD",
+      "receipt_commit": "6625c1c37ed194077007f6f5bd38888506804e6c",
+      "receipt_blob": "875da2ae08b3fd1caec5ee189d34dbb5695acf21",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/6625c1c37ed194077007f6f5bd38888506804e6c/coordination/automation/t10/NOX-V16-T10-20261029T164206MSK-R13-HOLD.json"
+    },
+    "T11": {
+      "status": "NOT_CONFIRMED_ACCESS_HOLD",
+      "result_note": "latest scheduled run was in_progress at observation, older R12 GitLab access HOLD, no verified same-SHA current GitLab HEAD",
+      "latest_current_run_result_verified": false,
+      "older_receipt_commit": "3cef69137be12e740b739d8a070a463e8eb62182"
+    },
+    "T06": {
+      "owner_integrated_tree_accepted": false,
+      "latest_t09_handoff": "HOLD"
+    },
+    "T07": {
+      "original_member_sha256_verified": 0,
+      "original_member_total": 729,
+      "physical_sourcelock": "HOLD"
+    }
+  },
+  "executed": {
+    "gitlab_ci_triggered": false,
+    "windows_build_executed": false,
+    "nsis_compiled": false,
+    "exe_created": false,
+    "setup_sha256": null,
+    "exe_sha256": null,
+    "build_id": null,
+    "pipeline_id": null,
+    "job_id": null,
+    "t13_handoff": "BLOCKED_UNTIL_REAL_T12_BUILD"
+  },
+  "blocker": {
+    "owner": "T06/main integrator #1 → T07 → T09 → T10",
+    "reason": "T06 has not provided one owner-approved source HEAD/tree/manifest and T07 physical 729 member SourceLock. As a result, T09 freeze and T10 independent SOURCE_READY remain HOLD; T11 GitLab live readiness also unconfirmed.",
+    "resolution": "Obtain single owner-accepted full HEAD/tree/manifest and original 729-byte-level SourceLock; issue T09 frozen receipt, T10 same-SHA PASS, T11 authenticated GitLab READY; only then run one final Windows EXE+NSIS build."
+  },
+  "non_loss": {
+    "historical_done_preserved": true,
+    "original_3parts_729_files_untouched": true,
+    "baseline_968_git_blobs_untouched": true,
+    "product_code_mutations": 0,
+    "pr162_mutations": 0,
+    "shared_docs_mutations": 0
+  },
+  "applied_lesson": "Do not mistake a candidate PR SHA or Git receipt for a frozen source with independent PASS; never trigger any build before all three explicit gates pass.",
+  "handoff": {
+    "to": "T02 coordinator for append-only common journals",
+    "next": "T06/T07/T09/T10/T11 remove gates; T13 only receives actual installed EXE with same BuildID/SHA",
+    "terminal_status": "WAIT_GATES"
+  }
+}
