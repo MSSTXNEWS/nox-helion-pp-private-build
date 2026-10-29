@@ -61,6 +61,9 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     }
 
     private static bool IsReservedVirtualHost(string host) =>
+        // Reuse the EXISTING explicitly mapped NOX WebView2 virtual host.
+        // Never accept arbitrary .local LAN names or external hosts.
+        string.Equals(host, "nox.local", StringComparison.OrdinalIgnoreCase) ||
         host.EndsWith(".example", StringComparison.OrdinalIgnoreCase) ||
         host.EndsWith(".invalid", StringComparison.OrdinalIgnoreCase) ||
         host.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
