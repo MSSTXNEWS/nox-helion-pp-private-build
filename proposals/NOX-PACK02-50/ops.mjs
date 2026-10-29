@@ -123,7 +123,7 @@ export const OPS=Object.freeze({
 "dev.diff.lines":(s,o)=>{const a=ls(s),b=ls(txt(o.compare));return Array.from({length:Math.max(a.length,b.length)},(_,i)=>a[i]===b[i]?null:{line:i+1,before:a[i]??null,after:b[i]??null}).filter(Boolean)},
 "dev.json.compare":(s,o)=>{const a=flat(val(s)),b=flat(val(txt(o.compare)));return [...new Set([...keys(a),...keys(b)])].filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>({path:k,before:a[k]??null,after:b[k]??null,beforePresent:Object.prototype.hasOwnProperty.call(a,k),afterPresent:Object.prototype.hasOwnProperty.call(b,k)}))},
 "dev.json.validate":s=>{try{val(s);return {valid:true}}catch{return {valid:false,error:"INVALID_JSON"}}},
-"dev.url.inspect":s=>{if(/[\x00-\x1f\x7f\\]/.test(s))throw Error("URL_AMBIGUOUS_INPUT");const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");if(u.username||u.password)throw Error("URL_CREDENTIALS_FORBIDDEN");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
+"dev.url.inspect":s=>{if(/[\x00-\x1f\x7f\\]/.test(s))throw Error("URL_AMBIGUOUS_INPUT");/* URL() accepts malformed % escapes and lossy UTF-8 (including query replacements). */try{encodeURIComponent(s);decodeURIComponent(s)}catch{throw Error("INVALID_URL_ENCODING")}const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");if(u.username||u.password)throw Error("URL_CREDENTIALS_FORBIDDEN");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
 "dev.url.query_encode":s=>{
   const o=val(s);
   if(!o||typeof o!=="object"||Array.isArray(o))throw Error("OBJECT_REQUIRED");
