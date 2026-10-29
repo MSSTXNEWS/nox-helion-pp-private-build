@@ -1,0 +1,28 @@
+{
+  "schema": "NOX_ASTRA_B_SOURCE_RECEIPT_V1",
+  "runId": "ASTRA-B-B5-R29-OWNER-CALLBACK-02",
+  "taskId": "B5-NATIVE-OWNER-CALLBACK-CONSISTENCY",
+  "taskIdScope": "local candidate, no full product denominator",
+  "owner": "B5",
+  "parent": "be6d9f207a3fc1be7cd14c752dbfa951b8bc5ae3",
+  "releaseCommit": "5a0793926066ecbc50252ce139703165283fe8f4",
+  "sourceLock": {
+    "preimageGitBlob": "d977fcb629329e38773047da1eed921905144b8b",
+    "preimageSha256": "ab2fe38d65f01a55c4c4f8a798d9f4cd832493eabe152417e6a2c89f6d64a9e5",
+    "postSha256": "6d1a4b1109bc7d355fb28921c2c8c6f0cd35b03fbf318bc2382298b93b729234"
+  },
+  "test": {
+    "command": "python -B tests/e06/test_pack01_advertise_session_r29.py",
+    "result": "PASS",
+    "testMethods": 3,
+    "scenarios": 25,
+    "sha256": "18a08fce0e8d8da80e49dba165d53b6d4e380e378544f9409c6aa7f4e7f29031"
+  },
+  "change": "Reject readiness callback revocation/replacement of captured native owner ports before advertisement or execution; final pass prevents later callbacks revoking earlier advertised routes. Covers STOP without invoking real native STOP.",
+  "lesson": "Validate both session and current owner-port identity after native callbacks; check the whole result before publishing capabilities.",
+  "remaining": "Native atomicity against concurrent threads and Windows existing-client STOP ownership require owner/native end-to-end evidence, not proved by source callback guards.",
+  "nativeWindowsAcceptance": "NOT_RUN",
+  "finalIntegration": false,
+  "reportGate": "Shared journal reserved for root; Git receipt saved, Drive readback not claimed",
+  "completedApproachesThisRun": 2
+}

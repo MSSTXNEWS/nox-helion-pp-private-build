@@ -181,6 +181,7 @@ class NoxPackHost:
             if session_scope() != authorized_scope:
                 raise HostDenied("Native session changed during advertisement")
         out = {}
+        advertised_ports = {}
         for route, item in self.routes.items():
             port = self.ports.get(route)
             ready = False
@@ -189,13 +190,21 @@ class NoxPackHost:
                 except Exception:ready = False
                 # Check even when the probe raised after mutating the session.
                 require_unchanged_session()
+                if self.ports.get(route) is not port:
+                    raise HostHold("Native owner binding changed during advertisement")
             risk = item["risk"]
             scoped = ready and (risk == "safe" or route in session.private_approved)
             if risk == "dangerous":scoped = False
+            if scoped:
+                advertised_ports[route] = port
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
         require_unchanged_session()
+        # A later probe can also revoke an earlier advertised route.
+        if any(self.ports.get(route) is not port
+               for route, port in advertised_ports.items()):
+            raise HostHold("Native owner binding changed during advertisement")
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
@@ -240,6 +249,10 @@ class NoxPackHost:
         try:ready = port.available() is True
         except Exception:ready = False
         require_unchanged_session()
+        # A readiness callback may revoke or replace the native owner binding.
+        # Never call a stale captured port after its registry lease has changed.
+        if self.ports.get(route) is not port:
+            raise HostHold("Native owner binding changed during request admission")
         if not ready:raise HostHold("Owner backend unavailable")
         return port.call(session,frozen_payload)
 
