@@ -73,6 +73,33 @@ public sealed class SpaceFeedClient
         _ttl = ttl; _timeout = timeout;
     }
 
+    private static void ValidateUniqueJsonProperties(JsonElement root, CancellationToken stop)
+    {
+        var pending = new Stack<JsonElement>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            // STOP and timeout must win over a huge provider-supplied JSON tree.
+            stop.ThrowIfCancellationRequested();
+            var node = pending.Pop();
+            if (node.ValueKind == JsonValueKind.Object)
+            {
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var property in node.EnumerateObject())
+                {
+                    if (!names.Add(property.Name))
+                        throw new InvalidDataException("DUPLICATE_PROVIDER_JSON_KEY");
+                    pending.Push(property.Value);
+                }
+            }
+            else if (node.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var element in node.EnumerateArray())
+                    pending.Push(element);
+            }
+        }
+    }
+
     // ID examples: weather, nox-news, eur-usd, eur-rub, bitcoin, brent, finance-news.
     // Exact source and timestamp must be provided by the trusted adapter; never guessed.
     public async Task<FeedSnapshot> FetchAsync(
@@ -146,13 +173,16 @@ public sealed class SpaceFeedClient
             using var json = await JsonDocument.ParseAsync(bounded,
                 cancellationToken: timeout.Token).ConfigureAwait(false);
             var cloned = json.RootElement.Clone();
+            // Untrusted provider JSON must not use ambiguous duplicate keys.
+            // Check nested objects before any source-time adapter or cache write.
+            ValidateUniqueJsonProperties(cloned, timeout.Token);
             DateTimeOffset? observed;
             try
             {
                 observed = extractSourceTime(cloned);
             }
             catch (Exception ex) when (ex is FormatException or InvalidOperationException
-                                       or KeyNotFoundException)
+                                       or KeyNotFoundException or ArgumentException or OverflowException)
             {
                 // Provider-controlled malformed or missing timestamps may
                 // never abort SPACE or leak raw parser details to the UI.
@@ -185,6 +215,8 @@ public sealed class SpaceFeedClient
             string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
                 ex is OperationCanceledException ? "TIMEOUT" :
                 ex is JsonException ? "INVALID_JSON" :
+                ex is InvalidDataException && ex.Message == "DUPLICATE_PROVIDER_JSON_KEY"
+                    ? "INVALID_JSON" :
                 ex is InvalidDataException && ex.Message == "INVALID_PROVIDER_SOURCE_TIMESTAMP"
                     ? "INVALID_SOURCE_TIME" :
                 ex is HttpRequestException && ex.Message == "PROVIDER_ENDPOINT_CHANGED"
