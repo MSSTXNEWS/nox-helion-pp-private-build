@@ -7,7 +7,7 @@
   "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
   "source_head_at_creation": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
   "source_head_policy": "A snapshot, NEVER a permanent pin; every run must fetch current HEAD before attributing an error or closing a fix",
-  "latest_revision": "R02",
+  "latest_revision": "R03-DELTA-R20",
   "workflow": {
     "start": "BEFORE doing task work: fetch this Git register on branch (not a stale raw URL pinned to a commit); compare checkpoint with prior personal receipt; read ALL OPEN or FIX_APPLIED_UNVERIFIED entries affecting own paths plus each other owner's new/changed errors; check latest Master/E06/Lessons delta and upstream T01-T11 receipts; acknowledge each relevant error by ID and source HEAD in personal receipt.",
     "triage": "For each error, distinguish source CODE_DEFECT, MISSING_EVIDENCE, ACCESS_BLOCK, STALE_STATUS, PROCESS_DEFECT. Keep one fixed owner; route cross-owner errors instead of duplicating code. Do not treat a saved patch or HOLD as DONE.",
@@ -30,12 +30,13 @@
       "cause": "No canonical short error-action register, cross-agent read receipt or recurrence verification; errors were written in 2408/5241/1661 paragraph logs but not made mandatory preflight.",
       "evidence": [
         "Master, E06, Lessons last entries 2026-10-29",
-        "Current T01-T11 prompts used uncheckable 'read latest delta'"
+        "Current T01-T11 prompts used uncheckable 'read latest delta'",
+        "C R20 Master/E06/Lessons unique marker requiredRevisionId CAS+readback 3/3, current cumulative 11 IDs, 419 historical candidates preserved, issue177 incremental cursor through this checkpoint."
       ],
       "next_action": "T02 enforces indexed cross-run error read/ACK and double-checks next run receipts, reconciles duplicate stale HOLD and writes one verification event. ALL owners must reference checkpoint SHA in receipts.",
       "verification": "At least one completed run from T06,T08,T09 and coordinator C shows explicit ACK of this checkpoint and the same ERROR_ID with correct next action, and readback across Master/E06/Lessons.",
       "recurrence_count": 1,
-      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+      "latest_source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
     },
     {
       "error_id": "ERR-SYS-002",
@@ -47,12 +48,13 @@
       "cause": "Mutable source HEAD was copied into instructions and logs while T06 merged; old SHA interpreted as current.",
       "evidence": [
         "PR162 HEAD changed repeatedly after T06 merge",
-        "T09 and T10 previously examined 7f78... while live HEAD was e51b... and later 885b..."
+        "T09 and T10 previously examined 7f78... while live HEAD was e51b... and later 885b...",
+        "Exact source HEAD advanced while shared Docs CAS was in progress: 46e09f... -> e7b17bbaf670909a95189732bd990fa87bcdb16b; owner PRE/POST two P02 paths verified directly; do not assert older observed source SHA is still HEAD."
       ],
       "next_action": "Mandatory actual Git read on each run, monotonic run checkpoint and SHA compare; if HEAD changed invalidate only SHA-bound acceptance, never historic ZIP729 PASS.",
       "verification": "Next two source-run receipts explicitly include live HEAD matching Git at time of read and no claim of previous HEAD as frozen.",
       "recurrence_count": 2,
-      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+      "latest_source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b"
     },
     {
       "error_id": "ERR-SRC-003",
@@ -67,7 +69,8 @@
       "new_git_blob_observed": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
       "evidence": [
         "Git source on 2026-10-29 includes owner source_attestation, SHA-bound seal, native_source_verifier and explicit legacy BASE_TREE preservation",
-        "Current source code lines 282-329; historic BASE_TREE still present intentionally"
+        "Current source code lines 282-329; historic BASE_TREE still present intentionally",
+        "Owner Host50 admission.py current POST efd5af93853d04cf5c1748af41b13570fc49c0ad preserved through T06 e7b17b...; native 13 routes signed same SHA NOT_VERIFIED."
       ],
       "next_action": "T06 obtain same-HEAD source/native gate evidence for owner SHA-bound attestation and 13 Host50 native routes; T08 independently check relevant existing regression. Do not regress to unconditional tree replacement or classify historic constant alone as a current defect.",
       "verification": "Independent T08/T10 scoped source contract PASS for same current HEAD and verified native owner attestation; otherwise stay FIX_APPLIED_UNVERIFIED.",
@@ -84,12 +87,15 @@
       "cause": "Single merged source tree exists but full P01-P05/Host50 STOP/ACL/consent/Voice functional source acceptance is not evidenced, and 13 Host50 prior source holds remain unadmitted.",
       "evidence": [
         "T06 R09 1/8; PR162 current draft",
-        "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted"
+        "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted",
+        "Independent T10 physical receipt NOX-V16-T10-P01-PHYSICAL-20261029-R19 blob bec03aac158c4a0f7a1be8d14b8717b7706d6d74: approved original ZIP 729/729 zero .xaml/.xaml.cs, exact source tree 46e09f... 1001 blobs zero .xaml/.xaml.cs. Old instruction 'restore MainWindow from original ZIP' invalid; must find other authorized source/host contract.",
+        "T06 P02 PACK01 route mapping actually integrated sourcePre 46e09f... -> sourcePost e7b17bbaf670909a95189732bd990fa87bcdb16b; immutable owner receipt blob b07e4d6974e9ed67a5911deccc76c32c213d3a00. Two exact Git PRE/POST matches; tests NOT_RUN; T06 1/8 remains."
       ],
-      "next_action": "For each mandatory contract identify exact source path, existing owner method/port, PIN current PRE/POST source SHA, and close only verified fixed criteria. Deliver T06 same-head accept manifest to T08/T09/T10; no new project scope.",
+      "next_action": "T06/G1-B P01 supply approved existing byte-backed WPF host or exact compatible native host contract, not nonexistent original-ZIP XAML. T06 bind P01-P05+13 Host50 routes ACL/STOP/consent on accepted SHA; T09 freeze then T10 independent.",
       "verification": "T06 8/8 owner evidence on one exact HEAD, T08 source blocker disposition on that same SHA, then T09/T10 independent source QA.",
       "recurrence_count": 0,
-      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+      "latest_source_head": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+      "path": "Existing P01–P05 functional source contracts; latest subroot P01 WPF source provenance and P02 PACK01 route mapping"
     },
     {
       "error_id": "ERR-SRC-005",
@@ -105,7 +111,8 @@
       "commit": "e32b129219354712932157187241f2fc80842410",
       "evidence": [
         "GitHub exact POST readback",
-        "Isolated mocked RED→GREEN and py_compile PASS; full component suites NOT_RUN"
+        "Isolated mocked RED→GREEN and py_compile PASS; full component suites NOT_RUN",
+        "Runner 90274f85e414e6321b9a5c6eb82ec21a7811abd8 and guard 68662ebc7395465b10331b45c049c569939b33db read from T06 e7b17b...; source-only check, accepted 8/8 and native tests missing."
       ],
       "next_action": "T08 independently check same-head pinned fixture imports against actual source runner when source freeze approaches, do not repeat unrelated tests.",
       "verification": "Check import/fixture on exact current HEAD with focused existing runner, then mark VERIFIED_CLOSED; not E07.",
@@ -197,29 +204,33 @@
   ],
   "no_build": true,
   "history_coverage": {
-    "status": "DOCS_AND_ISSUE_OBSERVATIONS_INDEXED__ALL_HISTORICAL_RECEIPTS_PENDING",
+    "status": "PARTIAL_HISTORY__CANONICAL_DOCS_AND_NEW_ISSUE_DELTAS_READ__OLDER_OWNER_RECEIPTS_INCOMPLETE",
     "complete": false,
     "old_seed_records": 7,
     "explicit_index_records": 11,
     "docs_scanned": {
       "master": {
-        "revision": "AHj4eMSOztqNkx62K6CClwDRtbL8kBIJhwsauYWDGTEbfOxbNdmsXErTQHzNA5osCW-YSa2saF1zRdCvyCBtylxFMfegYPTZxDzkQXC88Kg",
-        "paragraphs": 2426
+        "revision": "AHj4eMSJ-HMkRIWvuGIRwYzjoZAREvlzp2St_5eQmFRUCnhFF0DfHXZ3PGwsTbKh6aRr9w-UGhW5pFx-yf1P7m59c9zkz1rgJHu0_M35z3I",
+        "paragraphs": "R20 CAS_READBACK",
+        "readback_pass": true
       },
       "e06": {
-        "revision": "AHj4eMTYRWoXsNvT2nk93ZhaW4jX9B0hbZ0F8ToIMO-4s4DO0nLkzFXlxVHHcNKsDFuz6qBrnZxY_vMQ3U2kji1iBIqvaLk3-JB-I8SSLwo",
-        "paragraphs": 5267
+        "revision": "AHj4eMQ26ET967ECI-krnS89c08HuXD2O15CXDtfCbYrvneoTxxvBNT0imHjOngADnFB8daAKxEzxZm9kHyt4jRyiQnYYCX6bcBxMVW4Exs",
+        "paragraphs": "R20 CAS_READBACK+EXACT T10",
+        "readback_pass": true
       },
       "lessons": {
-        "revision": "AHj4eMQ1PEoVa43ehB72QcjCdCGqsYH_7uA_c3PfQyoRLmGNH8J3bxbvPRgO98xUZdrYCujiYyRKAvsxazaywFHgyX-uqS-He5mq7DNg5Nc",
-        "paragraphs": 1686
+        "revision": "AHj4eMSFtSRgQ9CYJQf8Xvbr7spCyNLrmaIvAUlstega6SYRO_4QgLF21KCkzb-L36Z_oJUM-SF-MZhd-FjeY99efHvEMocFUiT43tGdKpI",
+        "paragraphs": "R20 CAS_READBACK",
+        "readback_pass": true
       },
       "c34": {
         "revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
-        "paragraphs": 343
+        "paragraphs": 343,
+        "unchanged_since_previous": true
       }
     },
-    "issue177_comment_count_seen": 271,
+    "issue177_comment_count_seen": 285,
     "latest_receipts_directly_read_for": [
       "T01",
       "T04",
@@ -237,12 +248,20 @@
     ],
     "historical_evidence_candidates_scanned": 448,
     "backfill_materialized_complete": false,
-    "reason": "Extensive archive contains many free-text root/path mentions without exact ERROR_ID. Full 448 candidate-provenance rows were NOT saved due connector guard; never claim 448 verified live defects. Google Docs read quota 429 during attempted persist, no document writes occurred.",
-    "next_action": "Resume only missing deterministic source/index materialization once writing/reading succeeds, then incremental revisions only.",
+    "reason": "419 source-hashed historical root/path observations are provenance only. Issue comment delta 271+ indexed independently. Still no exhaustive prior T02/T03/independent branch receipts; do not claim full history, nor reset historical owner DONE.",
+    "next_action": "Exhaust still-missing individual owner receipt sources T02/T03 and older T01-T11 branch cursors, not all-docs rescan; preserve original 419 observation index.",
     "materialized_document_issue_candidates": true,
     "materialized_distinct_key_count": 419,
     "observation_occurrences": 487,
-    "explanation": "All Master/E06/Lessons/C34 text paragraphs through saved 2026-10-29 revisions and issue #177 first 271 comments indexed as hashed provenance. T01–T11 personal immutable receipts across independent branches remain incompletely enumerated; 9 latest owner records read only. No full-history completeness assertion."
+    "explanation": "All Master/E06/Lessons/C34 text paragraphs through saved 2026-10-29 revisions and issue #177 first 271 comments indexed as hashed provenance. T01–T11 personal immutable receipts across independent branches remain incompletely enumerated; 9 latest owner records read only. No full-history completeness assertion.",
+    "latest_issue_delta": {
+      "from_index": 271,
+      "to_index": 284,
+      "reviewed_count": 14,
+      "all_ids_recorded": true,
+      "raw_fingerprints_historical_419_not_recomputed": true
+    },
+    "last_historical_materialized_issue_cursor": 271
   },
   "mega_block_protocol": {
     "priority": "NEW OPERATIONAL V16 RULE; supersedes old repeated 10x10, audit-only approaches, and 'read last journal delta only' but NEVER supersedes original V16 all 56 rules or Function Lock",
@@ -312,77 +331,154 @@
     "independent_new_run_evidence_required": true
   },
   "last_coordinator_checkpoint": {
-    "run_id": "NOX-V16-C-20261029T1805MSK-BACKFILL-CHECKPOINT-R19",
-    "source_head_last_observed": "46e09f6965160922e87a1ac889a32ad80323a3c8",
-    "source_freeze": "NOT_ACCEPTED",
-    "registry_pre_sha": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
-    "ack_queue": [
+    "run_id": "NOX-V16-C-20261029T181207MSK-DELTA-R20",
+    "task_id": "T02/C",
+    "history_index_status": "PARTIAL",
+    "historical_T02": "DONE 4/4",
+    "source_head_before_megablock": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "source_head_observed_in_run": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "source_head_after_save_probe": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "source_head_freeze": "NOT_ACCEPTED",
+    "registry_pre_sha": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+    "source_t06_owner_receipt": "b07e4d6974e9ed67a5911deccc76c32c213d3a00",
+    "t06_progress": "1/8",
+    "source_git_readback_pre_post": [
+      {
+        "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "pre": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+        "post": "4d02549071fa645c4dc6789f3be2e276a1f530f6",
+        "pass": true
+      },
+      {
+        "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+        "pre": "55086d3bf29b8c7f600346a9fe14729f93b440e4",
+        "post": "368c0da31cd99155c24b5d7672f64a7036ee4720",
+        "pass": true
+      }
+    ],
+    "source_safety_blobs": [
+      {
+        "path": "coordination/e06/t06_closeout_guard.py",
+        "sha": "68662ebc7395465b10331b45c049c569939b33db",
+        "pass": true
+      },
+      {
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "sha": "90274f85e414e6321b9a5c6eb82ec21a7811abd8",
+        "pass": true
+      },
+      {
+        "path": "coordination/e06_host50/admission.py",
+        "sha": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+        "pass": true
+      },
+      {
+        "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+        "sha": "56806fb744694b2dd146db88229597722953ddd9",
+        "pass": true
+      }
+    ],
+    "owner_ack_queue": [
       {
         "id": "ERR-SYS-001",
-        "action": "APPLY_CHECKPOINT",
-        "owner": "T02/C"
+        "owner": "T02/C",
+        "action": "FIX",
+        "reason": "C performed incremental index/Docs CAS; owner receipts history remains PARTIAL"
       },
       {
         "id": "ERR-SYS-002",
-        "action": "APPLY_CHECKPOINT",
-        "owner": "T02/C"
+        "owner": "T02/C",
+        "action": "FIX",
+        "reason": "C read exact source HEAD at delta and verified P02 two PRE/POST blob SHA"
       },
       {
         "id": "ERR-SRC-003",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T06/Host50"
+        "owner": "T06/Host50",
+        "action": "OWNER_HANDOFF",
+        "reason": "T06 native Host50 13 routes and T08 independent receipt required"
       },
       {
         "id": "ERR-SRC-004",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T06+P01-P05 functional owners"
+        "owner": "T06+P01-P05 functional owners",
+        "action": "OWNER_HANDOFF",
+        "reason": "T06/G1-B P01 WPF provenance; T06 P02 source M1 integrated not native PASS"
       },
       {
         "id": "ERR-SRC-005",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T06"
+        "owner": "T06",
+        "action": "OWNER_HANDOFF",
+        "reason": "T06/T08 current runner focused accepted same-SHA validation pending"
       },
       {
         "id": "ERR-SYS-006",
+        "owner": "T07/T09",
         "action": "ALREADY_VERIFIED",
-        "owner": "T07/T09"
+        "reason": "T07/T09 physical 729/729 archive, do not reopen"
       },
       {
         "id": "ERR-SYS-007",
+        "owner": "T04",
         "action": "ALREADY_VERIFIED",
-        "owner": "T04"
+        "reason": "T04 34/34 owner arbitration, do not reopen"
       },
       {
         "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T09"
+        "owner": "T09",
+        "action": "OWNER_HANDOFF",
+        "reason": "T09 freeze only after T06 8/8 accepted head, no premature DONE"
       },
       {
         "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "ALL_EXECUTORS"
+        "owner": "ALL_EXECUTORS",
+        "action": "OWNER_HANDOFF",
+        "reason": "All owners use actual physical receipt and same-SHA closeout, not report completion"
       },
       {
         "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T06"
+        "owner": "T06",
+        "action": "OWNER_HANDOFF",
+        "reason": "T06 guard source correct but 1/8, 5/5 focused not 8/8, continue"
       },
       {
         "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
-        "action": "OWNER_ACK_REQUESTED",
-        "owner": "T08"
+        "owner": "T08",
+        "action": "OWNER_HANDOFF",
+        "reason": "T08 independent chain must prove 13 native routes, 3/3 Docs alone not completion"
       }
     ],
-    "lesson": "Never promote free-text historical mentions to active P0/P1; record exact cursor and uncertainty. Do not repeat 7-only ledger as full history",
-    "source_writes": 0,
-    "docs_gate": "PASS_3_3_REVISION_CAS_AND_EXACT_RUNID_READBACK",
-    "coordination_gate": "0/4 under new criteria; historical T02 DONE 4/4 unchanged",
+    "docs_gate": "PASS_3_OF_3_CAS_REQUIRED_REVISION_BEGIN_END_READBACK",
     "docs_revisions": {
-      "MASTER": "AHj4eMS8eIJVikDY5EG156QtzvNEazVyJaZpGDZ628Fklvfcbm_0vTnRVFrPmW37YMc02dQK8Ubh6RQ_QctdnadTyhqqByiX1rgwNqmFf-Y",
-      "E06": "AHj4eMSq5s6Eseyo4OCWpsAiL3vfnwCjTE9PU6LWd4LgP8VO7jBDdkCklcNmlNWHDZV9hN0AbgsCZb0xWg3NxJ8OX3d1UETCve4okBDAwj4",
-      "LESSONS": "AHj4eMRHMBBH51d_frGUF7InRGVKh3akOJw8LxMwGEJfJMmt2Ptjnl1NU2a3i19XwGd4NVclEqxnMOK40Z3wUPZfGmwP-672l3KLzYRwP2E"
+      "MASTER": "AHj4eMSJ-HMkRIWvuGIRwYzjoZAREvlzp2St_5eQmFRUCnhFF0DfHXZ3PGwsTbKh6aRr9w-UGhW5pFx-yf1P7m59c9zkz1rgJHu0_M35z3I",
+      "E06": "AHj4eMQ26ET967ECI-krnS89c08HuXD2O15CXDtfCbYrvneoTxxvBNT0imHjOngADnFB8daAKxEzxZm9kHyt4jRyiQnYYCX6bcBxMVW4Exs",
+      "LESSONS": "AHj4eMSFtSRgQ9CYJQf8Xvbr7spCyNLrmaIvAUlstega6SYRO_4QgLF21KCkzb-L36Z_oJUM-SF-MZhd-FjeY99efHvEMocFUiT43tGdKpI"
     },
-    "source_head_latest_observed": "46e09f6965160922e87a1ac889a32ad80323a3c8"
+    "issue177_delta_cursor": {
+      "previous": 271,
+      "latest": 285,
+      "delta": 14
+    },
+    "verified_owner_ACK": "T06_11_OF_11;T11_OLD_7_OF_7",
+    "full_owner_ACK": "NOT_YET_ALL_11_OWNERS",
+    "error_counts": {
+      "OPEN": 4,
+      "FIX_APPLIED_UNVERIFIED": 5,
+      "VERIFIED_CLOSED": 2
+    },
+    "one_megablock": "Indexed new issue comments and T10 physical WPF provenance; acknowledged T06 newest 11-ID receipt; verified P02 exact PRE/POST after source advanced during CAS; append-only Docs 3/3",
+    "one_final_check": "PRE/POST T06 two P02 paths and four SHA/ACL/STOP-related guard/source files Git readback at e7b17b, not Python/Windows native execution",
+    "one_git_save": "Single update_file CAS existing register at original content_sha; immutable Git commit is self-contained owner checkpoint; Git readback required",
+    "applied_lesson": "Do not extract nonexistent WPF XAML from Python archive; a live source SHA can advance while CAS documents are being updated, recheck latest delta rather than repeat full review.",
+    "progress": {
+      "historical_t02": "4/4 100%",
+      "current_c": "0/4 0%",
+      "prior_percent": 0,
+      "current_percent": 0,
+      "delta_pp": 0,
+      "bar": "░░░░░░░░░░"
+    },
+    "remaining_blocker": "T06/P01 owner G1-B approved WPF source or compatible existing-host contract + native Host50 13 receipts; T09 freeze and T10 independent same SHA HOLD.",
+    "no_product_code_changes_by_c": true,
+    "no_exe_nsis_gitlab_ci_e07": true
   },
   "historical_observation_index": {
     "kind": "FULL_DOCS_ISSUE_PROVENANCE_FINGERPRINT_INDEX_V1",
@@ -3380,5 +3476,267 @@
         "I6500150459"
       ]
     ]
-  }
+  },
+  "incremental_issue_evidence": [
+    {
+      "issue_comment_id": 6500185572,
+      "seq": 271,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500185572",
+      "error_ids": [],
+      "run_ids": [
+        "NOX-V16-T11-20261029T1754MSK-R17-ERROR-GATE"
+      ],
+      "root_path_hint": "T11_PRIVATE_ACCESS",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500215411,
+      "seq": 272,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500215411",
+      "error_ids": [],
+      "run_ids": [],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500233502,
+      "seq": 273,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500233502",
+      "error_ids": [
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "ERR-SRC-003",
+        "ERR-SYS-001"
+      ],
+      "run_ids": [],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500290938,
+      "seq": 274,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500290938",
+      "error_ids": [
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+      ],
+      "run_ids": [],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500298632,
+      "seq": 275,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500298632",
+      "error_ids": [],
+      "run_ids": [
+        "NOX-V16-T10-MANUAL-T06-CLOSEOUT-CHAIN-20261029-R18"
+      ],
+      "root_path_hint": "P01_WPF_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500313765,
+      "seq": 276,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500313765",
+      "error_ids": [
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "run_ids": [
+        "NOX-V16-T06-20261029T174858MSK-R11"
+      ],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500320049,
+      "seq": 277,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500320049",
+      "error_ids": [
+        "ERR-SRC-003",
+        "ERR-SRC-005",
+        "ERR-SRC-004"
+      ],
+      "run_ids": [
+        "NOX-V16-T08-20261029T175448MSK-R18-AUTO"
+      ],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500385688,
+      "seq": 278,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500385688",
+      "error_ids": [
+        "ERR-SYS-001",
+        "ERR-SRC-003",
+        "ERR-SYS-006",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+      ],
+      "run_ids": [],
+      "root_path_hint": "CROSS_OWNER_PROCESS",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500448429,
+      "seq": 279,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500448429",
+      "error_ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "run_ids": [
+        "NOX-V16-C-20261029T1805MSK-BACKFILL-CHECKPOINT-R19",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500449165,
+      "seq": 280,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500449165",
+      "error_ids": [],
+      "run_ids": [
+        "NOX-V16-T10-P01-PHYSICAL-20261029-R19",
+        "NOX-V16-T10-R19-P01-ORIGINAL-WPF-PROVENANCE-20261029"
+      ],
+      "root_path_hint": "P01_WPF_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500450604,
+      "seq": 281,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500450604",
+      "error_ids": [
+        "ERR-SRC-003"
+      ],
+      "run_ids": [],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500452176,
+      "seq": 282,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500452176",
+      "error_ids": [
+        "ERR-SYS-001",
+        "ERR-SRC-003",
+        "ERR-SYS-006"
+      ],
+      "run_ids": [
+        "NOX-V16-T11-MANUAL-20261029T1807MSK-R03"
+      ],
+      "root_path_hint": "T11_PRIVATE_ACCESS",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500607947,
+      "seq": 283,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500607947",
+      "error_ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "run_ids": [],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    },
+    {
+      "issue_comment_id": 6500699264,
+      "seq": 284,
+      "issue_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500699264",
+      "error_ids": [
+        "ERR-SRC-004",
+        "ERR-SRC-003",
+        "ERR-SRC-005",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "ERR-SYS-006"
+      ],
+      "run_ids": [
+        "NOX-V16-T06-20261029T181631MSK-M1-R12",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "root_path_hint": "T06_PACK01_SOURCE",
+      "provenance_not_product_defect": true
+    }
+  ],
+  "owner_acknowledgments": [
+    {
+      "owner": "T06",
+      "run_id": "NOX-V16-T06-20261029T181631MSK-M1-R12",
+      "commit": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+      "receipt_blob": "b07e4d6974e9ed67a5911deccc76c32c213d3a00",
+      "error_registry_checkpoint_git_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+      "errors_read": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "errors_ack": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "ack_status": "OWNER_RECEIPT_ACK_11_OF_11_CURRENT_REGISTER__NO_INDEPENDENT_TESTS"
+    },
+    {
+      "owner": "T11",
+      "run_id": "NOX-V16-T11-MANUAL-20261029T1807MSK-R03",
+      "receipt_blob": "1b4f2ad4dde3d8384def90e8e1999552caf0941b",
+      "error_registry_checkpoint_git_blob": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+      "errors_read": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "errors_ack": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "ack_status": "OWNER_RECEIPT_ACK_OLD_7_OF_7_ONLY__NEW_11_ID_READBACK_REQUIRED",
+      "gitlab_live_status": "ACCESS_HOLD",
+      "owner_action": "Run existing GitLab read-only audit with authorized token locally; provide sanitized JSON without secrets, no pipeline."
+    }
+  ],
+  "runtime_failure_observations": [
+    {
+      "run_id": "ae1aa71a-b3c4-8322-92ee-dce26d5c60a7",
+      "owner": "T08",
+      "reported_via": "T09 issue #177 comment 6500385688",
+      "status": "REPORTED_FAILED",
+      "cause": "UNKNOWN_FAULT_DETAILS_UNAVAILABLE",
+      "active_error_id_added": false
+    }
+  ]
 }
