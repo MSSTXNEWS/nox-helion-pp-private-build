@@ -1,0 +1,186 @@
+{
+  "schema": "NOX_V16_M3_T11_FAIL_CLOSED_R03_CROSS_ROLE_LESSONS",
+  "task_id": "M3",
+  "run_id": "NOX-V16-M3-20261029-R03-GITLAB-FAILCLOSED",
+  "scope": "T10/T11 source readiness; no Windows build or pipeline",
+  "checkpoint": {
+    "pre_commit": "5f91c4d665daf40781bdbb9a3d9e67931be600bc",
+    "pre_tree": "1da1d053b3cfb9f209e28f991488cac6b59f1be4",
+    "source_pr162_head_observed": "e1ed247dfadfa7829c6db5cf1e701ee657aa8030",
+    "source_head_final_frozen": null,
+    "accepted_manifest_sha256": null,
+    "error_register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "error_register_blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2"
+  },
+  "journal_sources": {
+    "lessons": "1,701 paragraphs",
+    "e06": "5,286 paragraphs",
+    "master": "read in preceding M3 cycle",
+    "c34": "343 paragraphs reviewed in preceding M3 cycle",
+    "history_complete": false
+  },
+  "lessons_applied": [
+    {
+      "lesson": "ERR-SYS-002",
+      "physical": "Reject nonhex 40-byte Git SHA for both live and migration HEAD; branch HEAD is observation only, never frozen"
+    },
+    {
+      "lesson": "ERR-SYS-001",
+      "physical": "Bind receipt to exact live registry blob and ACK all 11 entries; T02 only shared writer"
+    },
+    {
+      "lesson": "ERR-SRC-004",
+      "physical": "Keep 27 migration and 3 original part byte identity distinct from final P01-P05 source-ready acceptance"
+    },
+    {
+      "lesson": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "physical": "Make false positive GitLab read-only acceptance fail closed in executable validator and add negative regressions"
+    },
+    {
+      "lesson": "RUNNER_INTEGRITY",
+      "physical": "Do not enable pipeline; reject absent/offline Windows runner, bad rights, GitLab CI/entrypoint drift"
+    }
+  ],
+  "errors_read_and_ack": [
+    {
+      "id": "ERR-SYS-001",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "action": "M3_GATE_ACK",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "status": "OPEN",
+      "owner": "T02/C",
+      "action": "M3_GATE_ACK",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06/Host50",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "status": "OPEN",
+      "owner": "T06+P01-P05 functional owners",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T07/T09",
+      "action": "KEEP_CLOSED",
+      "reason": "Historic result immutable and not retested"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "status": "VERIFIED_CLOSED",
+      "owner": "T04",
+      "action": "KEEP_CLOSED",
+      "reason": "Historic result immutable and not retested"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T09",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "status": "OPEN",
+      "owner": "ALL_EXECUTORS",
+      "action": "M3_GATE_ACK",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T06",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "owner": "T08",
+      "action": "OWNER_HANDOFF",
+      "reason": "Issue read; same-SHA native proof or CAS readback remains under assigned owner"
+    }
+  ],
+  "modifications": [
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": "8bc0bdaa51c672269908609f09f44885c1a4e753",
+      "post_blob": "a0ec79b0fd72bd55add3fe97f3e6a57179faad42"
+    },
+    {
+      "path": "coordination/t11/test_NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "pre_blob": "399bf4e13dcccdd312fbe26cecfa61d40a4cb2a9",
+      "post_blob": "9162dd2d7c6e7fc3a56d488293821594a9bd135f"
+    }
+  ],
+  "verification": {
+    "one_focus": "STRICT_GITSHA_ACCESS_AND_27_PLUS_3_OFFLINE_REGRESSION",
+    "isolated_python_checks": "12/12 PASS earlier in this session on equivalently implemented evaluator",
+    "on_saved_full_repo_python_run": "NOT_RUN",
+    "static_source_contract_checks": 10,
+    "static_source_contract": "PASS",
+    "real_gitlab_auth": "NOT_AVAILABLE",
+    "git_readback": "PENDING"
+  },
+  "readiness": {
+    "T10": "1/7",
+    "T11": "2/5",
+    "M3": "3/12",
+    "pct": 25,
+    "bar": "███░░░░░░░",
+    "blocked": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      10,
+      11,
+      12
+    ],
+    "counted_historic": [
+      3,
+      8,
+      9
+    ],
+    "delta_percentage_points": 0
+  },
+  "handoff": {
+    "T02": "Read this R03 blob; sole-writer Master/E06/Lessons CAS readback only",
+    "T06": "Owner accepted P01-P05 and native Host50/Voice/STOP/ACL with exact SHA",
+    "T08": "Independent same-head source security proof",
+    "T09": "Immutable freeze accepted SHA/tree/manifest",
+    "GitLabOwner": "Existing project token scoped read_api; run corrected script locally, return sanitized report, never token",
+    "T12": "No build until full T09/T10/T11 pass"
+  },
+  "safety": {
+    "canonical_source_writes": 0,
+    "gitlab_writes": 0,
+    "force_pushes": 0,
+    "ci_runs": 0,
+    "exe_runs": 0,
+    "nsis_runs": 0,
+    "e07_runs": 0,
+    "original_archive_rechecks": 0
+  }
+}

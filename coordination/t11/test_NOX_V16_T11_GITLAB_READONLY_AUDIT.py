@@ -62,5 +62,21 @@ class GateTests(unittest.TestCase):
         x=self.verify({"visibility":"public"},False)
         self.assertIn("PROJECT_PRIVACY_UNVERIFIED",x["evidence_errors"])
 
+    def test_nonhex_live_head_fails(self):
+        x=self.verify({"live_gitlab_head":"z"*40},False)
+        self.assertIn("LIVE_HEAD_UNVERIFIED",x["evidence_errors"])
+    def test_nonhex_migration_head_fails(self):
+        x=self.verify({"migration_live_head":"?"*40},False)
+        self.assertIn("MIGRATION_HEAD_UNVERIFIED",x["evidence_errors"])
+    def test_boolean_access_not_granted(self):
+        x=self.verify({"access_level":True},False)
+        self.assertIn("PROJECT_READ_PERMISSION_UNVERIFIED",x["evidence_errors"])
+    def test_boolean_file_count_not_27(self):
+        x=self.verify({"migration_unique_verified":True},False)
+        self.assertIn("MIGRATION_27_BLOB_MISMATCH",x["evidence_errors"])
+    def test_boolean_part_count_not_3(self):
+        x=self.verify({"original_parts_verified":True},False)
+        self.assertIn("ORIGINAL_3_PARTS_GIT_BLOB_MISMATCH",x["evidence_errors"])
+
 if __name__=="__main__":
     unittest.main()

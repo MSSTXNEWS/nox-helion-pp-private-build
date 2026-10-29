@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -39,6 +40,8 @@ def pages(path, token):
 def evaluate_live_evidence(result, handoff):
     """Independent fail-closed GitLab migration proof; never grants build consent."""
     problems = []
+    def git_sha1(value):
+        return type(value) is str and re.fullmatch(r"[0-9a-f]{40}", value) is not None
     def require(condition, code):
         if not condition:
             problems.append(code)
@@ -48,20 +51,20 @@ def evaluate_live_evidence(result, handoff):
     required_parts = history["original_source_part_blobs"]
     require(result.get("project_visible") is True, "PROJECT_NOT_AUTHENTICATED")
     require(result.get("visibility") == "private", "PROJECT_PRIVACY_UNVERIFIED")
-    require(isinstance(result.get("live_gitlab_head"), str) and
-            len(result["live_gitlab_head"]) == 40, "LIVE_HEAD_UNVERIFIED")
-    require(isinstance(result.get("migration_live_head"), str) and
-            len(result["migration_live_head"]) == 40, "MIGRATION_HEAD_UNVERIFIED")
-    require(isinstance(result.get("access_level"), int) and
+    require(git_sha1(result.get("live_gitlab_head")), "LIVE_HEAD_UNVERIFIED")
+    require(git_sha1(result.get("migration_live_head")), "MIGRATION_HEAD_UNVERIFIED")
+    require(type(result.get("access_level")) is int and
             result["access_level"] >= 20, "PROJECT_READ_PERMISSION_UNVERIFIED")
     require(result.get("migration_commit_preserved") is True,
             "HISTORIC_MIGRATION_COMMIT_MISSING")
     require(len({f["path"] for f in required_files}) == 27 and
             len(required_files) == 27, "HISTORIC_27_MANIFEST_INVALID")
-    require(result.get("migration_unique_verified") == len(required_files) and
+    require(type(result.get("migration_unique_verified")) is int and
+            result["migration_unique_verified"] == len(required_files) and
             not result.get("migration_unique_mismatches"),
             "MIGRATION_27_BLOB_MISMATCH")
-    require(result.get("original_parts_verified") == len(required_parts) and
+    require(type(result.get("original_parts_verified")) is int and
+            result["original_parts_verified"] == len(required_parts) and
             len(required_parts) == 3 and
             not result.get("original_parts_mismatches"),
             "ORIGINAL_3_PARTS_GIT_BLOB_MISMATCH")
