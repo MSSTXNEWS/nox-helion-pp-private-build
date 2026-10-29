@@ -1,0 +1,91 @@
+{
+  "schema": "NOX_V16_T08_COMPONENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261029-R32-FOCUSED-TEST-HEAD-ALIAS",
+  "role": "G4-B/T08 auxiliary independent exact-source QA",
+  "existing_task_id": "T08/same_head_disposition",
+  "related_errors": [
+    "ERR-SRC-004",
+    "ERR-SYS-002",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "current_error_register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "active_error_counts": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2
+  },
+  "source": {
+    "head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "tree": "52303e2c8a06281db7f16d49f938f1f99d883ce7",
+    "gate_path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+    "gate_blob": "73eac868c0e7cc43a263a733c771339632e9fe8e",
+    "focused_regression_path": "coordination/automation/t08/test_t08_head_alias_conflict_r22.py",
+    "focused_regression_blob": "5180d22068596e0ace1bdd67e38e9d5b4218ef1a",
+    "owner_fix_commit": "acb205078ab456fafe85b2f779b9e8d0e54f0880",
+    "owner_test_commit": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9"
+  },
+  "execution": {
+    "command": "python -m unittest discover -p test_t08_head_alias_conflict_r22.py -v",
+    "os": "Linux",
+    "python": "3.13.5",
+    "test_file_git_blob_byte_exact": true,
+    "gate_file_git_blob_byte_exact": true,
+    "passed": 9,
+    "failed": 0,
+    "errors": 0,
+    "exit_code": 0,
+    "log_sha256": "59de71426a28c7dc7c76b39ef6755348ecdb369b137a009bcf89728dad8897fa",
+    "result": "PASS_SOURCE_ONLY",
+    "coverage": [
+      "all HEAD aliases match",
+      "contradictory alias FAIL CLOSED",
+      "missing focused_test HEAD FAIL CLOSED",
+      "PATCH_APPLIED focused_test conflicting HEAD FAIL CLOSED",
+      "consistent exact SHA PASS"
+    ],
+    "note": "GitHub original source and test files were reconstructed offline and checked using git hash-object against authenticated GitHub blob SHAs; mocked Git proof fixtures do not prove real owner signed receipts."
+  },
+  "stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": true,
+    "INTEGRATED_ON_CURRENT_HEAD": true,
+    "OWNER_QA_ACCEPTED": false,
+    "SOURCE_READY": false
+  },
+  "accepted_task_id_delta": 0,
+  "role_progress": "historical T08 1/3 NOT_PROMOTED",
+  "overall_product": "N/D",
+  "gates": {
+    "A_FRESH_READ": "PASS",
+    "B_PHYSICAL": "PASS",
+    "C_PERSONAL_GIT_READBACK": "PENDING",
+    "C_T02_SHARED_JOURNAL": "PENDING_OWNER_T02",
+    "D_LESSONS": "APPLIED: verified fix for R31 contradictory PATCH_APPLIED focused receipt HEAD via exact-source negative tests"
+  },
+  "lessons": {
+    "processed_compact_error_ids": 11,
+    "relevant_clusters": [
+      "ERR-SYS-002",
+      "ERR-SRC-004",
+      "T08 alias source verification"
+    ],
+    "applied": 1,
+    "already_fixed": 1,
+    "delegated": 1,
+    "remaining": "Host50 native/owner T06 manifest, T02 journal CAS, final T08 same-head acceptance"
+  },
+  "not_run": [
+    "Windows native",
+    "Host50 13/13 native",
+    "actual STOP/ACL/native consent",
+    "P01-P05 end-to-end",
+    "GitLab CI",
+    "EXE",
+    "NSIS",
+    "E07"
+  ],
+  "next_owner": "Manual #2 final QA only after manual #1/T06 actual signed owner accepted HEAD/tree/manifest and native Host50; T02 shared journal CAS/readback",
+  "safety": "No product write, SourceLock/729 intact; no build authorization",
+  "checkpoint": "Use actual current HEAD; if drift compare only two dependency blobs before carrying PASS; QA_ACCEPTED remains false."
+}
