@@ -1,0 +1,211 @@
+{
+  "schema": "NOX_V16_G5B_T10_R18_SOURCE_ONLY_INDEPENDENT_HELPER_QA_V1",
+  "task_id": "T10",
+  "run_id": "NOX-V16-G5B-T10-20261029T205643MSK-R18-P01-PATHGUARD-QA",
+  "role": "G5-B coordination T10 handoff; NOT T10 authorized final SOURCE_READY signer",
+  "observed_start_msk": "2026-10-29T20:56:43+03:00",
+  "receipt_prepared_msk": "2026-10-29T21:02:22+03:00",
+  "planned_msk": "2026-10-29T20:55:00+03:00",
+  "prestart_read_proof": {
+    "canon_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "paragraphs_read": 684,
+    "rules_33": 56,
+    "register_path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_entries": 11,
+    "register_open": 5,
+    "register_fix_applied_unverified": 4,
+    "register_verified_closed": 2,
+    "master_rev": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_rev": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_rev": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_rev": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "r18_tests_blob": "f0f6282f065f1edb056dcf25451d93ff383ba89e",
+    "toolkit_execution": "TOOL_NOT_RUN; read-only source inspected, no claim of toolkit result",
+    "pr162_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "pr162_tree": "93d2ddcd01cf1f011a3cbc69584cd3909c757a6e",
+    "t09_latest_found_branch": "automation/v16/t09/NOX-V16-T09-20261029T174041MSK-R16-DELTA-HANDOFF",
+    "t09_latest_receipt_blob": "51170f031d1c724d093baccdf2859d3af2fbe651",
+    "t09_frozen_integrated_tuple": "HOLD (historical 7f78... freeze branch does not represent fresh accepted owner tree)"
+  },
+  "source_evidence": {
+    "owner": "T06/G3-C",
+    "owner_run_id": "NOX-V16-T06-20261029T175331Z-G3C-R21-P01",
+    "owner_receipt_blob": "e8093408509b6895f2e347e5559de60b555d3778",
+    "path": "coordination/e06/stage_p01.py",
+    "git_blob_sha1": "a56a9ccc369d584e6468bf7e41b8768e5672cbe2",
+    "test_path": "tests/e06/test_stage_p01_shared_zip_guard.py",
+    "test_blob_sha1": "d97775098b68492f52463b45e30828e7dca72137",
+    "source_pre_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "source_post_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "production_source_edits": 0,
+    "readback": "same GitHub HEAD and exact two file blobs observed before helper check; latest PR metadata re-read"
+  },
+  "new_physical_independent_evidence": {
+    "type": "LOCAL_EXTRACTED_HELPER_BEHAVIOR_PROBE",
+    "result": "15/15_PASS",
+    "execution": "local Python on Linux; exact helper bodies transcribed from fetched GitHub stage_p01.py; full module suite NOT_RUN",
+    "positive": [
+      "valid_posix_part"
+    ],
+    "negative": [
+      "empty",
+      "absolute",
+      "parent",
+      "embedded_parent",
+      "double_slash",
+      "embedded_dot",
+      "backslash",
+      "windows_drive",
+      "nul",
+      "unc",
+      "invalid_non_string",
+      "symlink_parent",
+      "symlink_leaf",
+      "direct_outside_target"
+    ],
+    "not_tested": [
+      "original GitHub test module 11 cases",
+      "actual 28-part donor bytes",
+      "Windows symlink/junction/reparse behavior",
+      "WPF native origin/consent/STOP/ACL end-to-end",
+      "T08 independent same-SHA QA"
+    ],
+    "static_source_readback": "source contains ancestor/leaf symlink and Windows junction check, unique no-overwrite for existing R11 and SourceLock, zip namespace validator and x-attr encrypted rejection",
+    "source_test_functions_found": 11,
+    "acceptance_semantics": "Helper-only pass supports targeted verification of changed P01 guard; not P01 full acceptance or SOURCE_READY"
+  },
+  "criteria_operational": {
+    "before": {
+      "done": 1,
+      "total": 7,
+      "percent": 14.3,
+      "bar": "█░░░░░░░░░"
+    },
+    "after": {
+      "done": 1,
+      "total": 7,
+      "percent": 14.3,
+      "delta_percentage_points": 0,
+      "remaining": 6
+    },
+    "criteria": [
+      {
+        "id": 1,
+        "status": "HOLD",
+        "reason": "No T09 signed frozen integrated PR162 HEAD/tree/manifest/SourceLock"
+      },
+      {
+        "id": 2,
+        "status": "HOLD",
+        "reason": "P01–P05 full accepted ledger absent on frozen SHA"
+      },
+      {
+        "id": 3,
+        "status": "DONE_HISTORIC",
+        "proof": "T07 729/729 3-part original ZIP owner receipt a70ab3dc9c45e29afee737810d6be8f623b8f210; T09 physical aab1154cf127ef0a216b19d06362343bbda4e152; not rehashed this run"
+      },
+      {
+        "id": 4,
+        "status": "HOLD",
+        "reason": "D02/WOW200/8 CoreID/5 Persona/PACK not all accepted on a frozen tree"
+      },
+      {
+        "id": 5,
+        "status": "HOLD",
+        "reason": "P01 native WPF plus 13 Host50 native routes/IPC/STOP/ACL/voice/RAG/GPU/SPACE owner contracts await same-SHA independent QA"
+      },
+      {
+        "id": 6,
+        "status": "HOLD",
+        "reason": "Unadmitted P0/P1 source contracts per ERR-SRC-004 and Host50"
+      },
+      {
+        "id": 7,
+        "status": "HOLD",
+        "reason": "Independent authorized SOURCE_READY signature prohibited pending 1,2,4,5,6"
+      }
+    ]
+  },
+  "product_progress": "N/D; no complete frozen P01–P05 TaskID inventory",
+  "four_stage_task_delta": {
+    "SOURCE_PATCH_PREPARED": "unchanged, T06 owner patch already saved",
+    "SOURCE_VERIFIED": "new helper excerpt 15/15 only; not full source package",
+    "INTEGRATED_ON_CURRENT_HEAD": "present before and after on PR162; no new merge",
+    "OWNER_QA_ACCEPTED": "HOLD; delta 0",
+    "new_unique_taskid_DONE": 0
+  },
+  "lesson_clusters": [
+    {
+      "ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "action": "APPLY",
+      "lesson": "fresh exact HEAD and honest 1/7; no run/receipt as product completion; keep owner T02 for shared logs"
+    },
+    {
+      "ids": [
+        "ERR-SRC-003",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "action": "DELEGATE",
+      "owner": "T06+T08",
+      "reason": "actual native signed 13 Host50 routes not verified same-SHA"
+    },
+    {
+      "ids": [
+        "ERR-SRC-004"
+      ],
+      "action": "APPLY_PARTIAL_AND_DELEGATE",
+      "owner": "T06+T08",
+      "reason": "new donor-path guard behavioral corroboration; WPF provenance and P01–P05 acceptance remain"
+    },
+    {
+      "ids": [
+        "ERR-SRC-005"
+      ],
+      "action": "DELEGATE",
+      "owner": "T08",
+      "reason": "fixture-runner source fix requires independent pinned-fixture execution"
+    },
+    {
+      "ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "action": "ALREADY_FIXED",
+      "reason": "historical ZIP 729/729 and T04 34/34 preserved; no repetitive audit"
+    }
+  ],
+  "mass_lessons": {
+    "errors_processed": 11,
+    "relevant_clusters": 5,
+    "clusters_applied_or_partially_applied": 2,
+    "clusters_delegated": 2,
+    "clusters_already_fixed": 1,
+    "unread_clusters_known": 0
+  },
+  "handoff": {
+    "T06": "Keep current P01 donor path guard, provide native WPF host byte provenance/owner signed P01-P05 ledger, and Host50 admission without weaker SourceLock; exact current source HEAD 22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+    "T08": "Execute source test file tests/e06/test_stage_p01_shared_zip_guard.py on pinned 22ea5406ebb3599b2830dc655274ffe3ac50b71d including negative traversal/symlink/no-overwrite plus required STOP/ACL/native consent; independently sign actual same-SHA results and 13 Host50 native contracts",
+    "T09": "After T06 8/8 and T08 same-head receipt, publish exact frozen HEAD/tree/manifest/SourceLock; do not reuse older 7f78 freeze ref",
+    "T02": "Append personal receipt RunID and existing ERR-SRC-004 source-only helper QA delta to shared ledgers via CAS+readback only; G5-B has not written shared Docs"
+  },
+  "restrictions": {
+    "exe": false,
+    "nsis_compilation": false,
+    "ci": false,
+    "gitlab": false,
+    "e07": false,
+    "release": false,
+    "source_product_write": false,
+    "no_loss": true
+  }
+}
