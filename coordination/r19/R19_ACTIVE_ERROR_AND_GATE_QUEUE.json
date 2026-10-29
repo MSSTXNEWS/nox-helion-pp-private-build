@@ -1,8 +1,8 @@
 {
-  "schema": "NOX_V16_R19_COORDINATION_QUEUE_SNAPSHOT_V1",
-  "kind": "NON_CANONICAL_DISPATCH_ONLY",
-  "head_at_snapshot": "b9076c62a7e9de67146ff5397ef6882250efad00",
-  "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "schema": "NOX_V16_R20_FIXED_DISPATCH_SNAPSHOT_V1",
+  "kind": "NON_CANONICAL_READ_ONLY_DEPENDENCY_REPAIR",
+  "head_at_snapshot": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
   "counts_at_snapshot": {
     "OPEN": 5,
     "FIX_APPLIED_UNVERIFIED": 4,
@@ -11,7 +11,7 @@
     "history_complete": false
   },
   "canonical_product_progress": "N/D",
-  "warning": "This queue is read-only coordination; not a product TaskID baseline, task lock, authenticated source owner receipt, QA PASS or build approval",
+  "warning": "Errors with FIX_APPLIED_UNVERIFIED are PATCHED not independently accepted; T06 action is not blocked by its own errors. All snapshots require live HEAD and authenticated owner evidence; no remote lock or CI.",
   "tasks": [
     {
       "id": "ERR-SYS-001",
@@ -65,7 +65,7 @@
       "id": "ERR-SRC-005",
       "package": "GATE",
       "owner": "T06",
-      "state": "VERIFIED",
+      "state": "PATCHED",
       "priority": 1,
       "depends_on": [],
       "source_error_status": "FIX_APPLIED_UNVERIFIED",
@@ -101,7 +101,7 @@
       "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
       "package": "GATE",
       "owner": "T09",
-      "state": "VERIFIED",
+      "state": "PATCHED",
       "priority": 1,
       "depends_on": [],
       "source_error_status": "FIX_APPLIED_UNVERIFIED",
@@ -125,7 +125,7 @@
       "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
       "package": "GATE",
       "owner": "T06",
-      "state": "VERIFIED",
+      "state": "PATCHED",
       "priority": 1,
       "depends_on": [],
       "source_error_status": "FIX_APPLIED_UNVERIFIED",
@@ -137,7 +137,7 @@
       "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
       "package": "GATE",
       "owner": "T08",
-      "state": "VERIFIED",
+      "state": "PATCHED",
       "priority": 1,
       "depends_on": [],
       "source_error_status": "FIX_APPLIED_UNVERIFIED",
@@ -151,11 +151,8 @@
       "owner": "T06",
       "state": "OPEN",
       "priority": 0,
-      "depends_on": [
-        "ERR-SRC-003",
-        "ERR-SRC-004"
-      ],
-      "note": "T06 1/8 source acceptance incomplete"
+      "depends_on": [],
+      "note": "T06 must fix ERR-SRC-003/004; its own errors cannot be prerequisites. T06 can integrate approved patches immediately on verified HEAD."
     },
     {
       "id": "T08",
