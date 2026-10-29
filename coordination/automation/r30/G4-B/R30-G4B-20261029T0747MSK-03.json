@@ -1,0 +1,129 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V3",
+  "run_id": "R30-G4B-20261029T0747MSK-03",
+  "slot": "G4-B",
+  "project": "NOX_HELION_EXPRESS_INTEGRATOR_FIN_ZAGR_V16_LOADER_ONLY_NOT_MAIN_NOX",
+  "mode": "SOURCE_ONLY_NO_EXE_NSIS_WINDOWS_CI_GITLAB_FINAL_INTEGRATION",
+  "status": "SOURCE_TEST_PASS_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "product_task_acceptance": "NOT_ACCEPTED",
+  "percent_complete": "N/D",
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T0747MSK-03",
+  "read_inputs": {
+    "ownership_journal": {
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "spec": "NOX FIN ZAGR V16 §§33,54,55,56 plus R29 loader-only override (Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc)",
+    "rules": "56/56 consolidated rules Git blob 46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "r30_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json @ Git blob c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_trees": {
+      "indexed_and_inspected": 25,
+      "non_truncated_tree_manifests": 25,
+      "root_tree_entry_range": [
+        1198,
+        1283
+      ],
+      "frozen_original_archive_git_blob_ids": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "full_snapshot_file_content_bytes_read": false,
+      "raw_original_729_sha256_verified": false
+    },
+    "shared_error_master": "Google Doc 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 read-only",
+    "shared_e06_report": "Google Doc 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 read-only",
+    "shared_e06_lessons": "Google Doc 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ read-only",
+    "historical_c34": "Google Doc 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU read-only",
+    "previous_owner_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T0645MSK-02.json"
+  },
+  "head": {
+    "pre_commit": "7ed197721a6a5171a1dd60b22751ae5e24f1b32c",
+    "owner_source_post_commit": "17f0cd25c06abb97f4d0673fdb5f3f21fc388ca9",
+    "code_commit": "a664ee0ae6a21605fdd219a4b6967ab4e8302c8d",
+    "test_commit": "17f0cd25c06abb97f4d0673fdb5f3f21fc388ca9",
+    "compare_pre_post": "ahead 2 commits, 2 modified owned paths, 0 removed, no other paths"
+  },
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "peer_G4A_source_untouched": true
+  },
+  "task_id": "G4B-R30-NATIVE-WINDOWS-GPU-WHEEL-PLATFORM-GATE-03",
+  "change_summary": "Strengthen installed PyPA WHEEL native-platform admission: torch and bitsandbytes must offer a current-interpreter compatible win_amd64 tag; universal-only py3-none-any metadata is rejected before NVIDIA telemetry. Preserve existing OS AMD64, Python bitness, version ranges, wheel tags, GPU UUID/VRAM/temperature and CUDA runtime guards. No wheel install, model download, training or integration.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_sha_pre": "7bbc9405ea33dc5247b649f4f3d4c8f26c16dfe1",
+      "git_blob_sha_post": "8bb1ca0d3cb7b877fec0b1ff4e0fa81d1ff0cca6",
+      "sha256_pre": "2629590b311a5f490401b9e483008f6d49164a8e9285529f7b2d5f1babb33aea",
+      "sha256_post": "977d5d2ca5eae6a889f44f7de6c7ab90d3e3a4e4055cdc4863997dd885149e31",
+      "commit": "a664ee0ae6a21605fdd219a4b6967ab4e8302c8d"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "git_blob_sha_pre": "fbe2b3a97b181a600cb5c228b20a120fffcef95d",
+      "git_blob_sha_post": "68685503f5a0a7e3328f1a030bd568f176c21e00",
+      "sha256_pre": "b7e8e48625dab3b3fc852254cb789781851737a921be0ad1ff4b9752806782c3",
+      "sha256_post": "85d6df04ed89a758074657ab91cd9f70c29caff312769e2e13bedfbb6366b09c",
+      "commit": "17f0cd25c06abb97f4d0673fdb5f3f21fc388ca9"
+    }
+  ],
+  "tests": {
+    "actual_command": "cd /mnt/data/g4b_r03 && PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/P04 -p test_local_gpu_preflight.py -v",
+    "result": "PASS 10/10 including new G4-B torch/bitsandbytes universal-only rejection subtests; 0 failures and errors",
+    "syntax_command": "PYTHONDONTWRITEBYTECODE=1 python -m py_compile Packages/P04/preflight_local_gpu.py tests/P04/test_local_gpu_preflight.py",
+    "syntax_result": "PASS",
+    "sha_proof": "git hash-object locally reproduced both EXACT GitHub post-source and post-test blobs 8bb1ca0d... and 68685503...; reverse patch reconstructed both exact pre Git blob and SHA256",
+    "environment": "Linux Python + PyPA packaging 25.0, synthetic Windows sys_tags and synthetic train_qlora module, synthetic GPU/CUDA; not a physical Windows/GPU test",
+    "tests_reuse": "Existing nine tests retained; G4-B-owned new method test_g4b_gpu_native_dependencies_reject_universal_only_metadata covers both torch and bitsandbytes."
+  },
+  "root_cause": "PyPA compatible wheel tags accepted universal-only py3-none-any for GPU-critical native binary distributions, creating false positive of installed Windows AMD64 GPU prerequisite compatibility.",
+  "previous_lesson_applied": "G4B_PYPA_ABI_VS_HASHED_LOCK_EVIDENCE_BOUNDARY: differentiate installed tag checks from a pinned transitive wheel hash/CUDA/runtime proof; add fail-closed regression before vendor calls.",
+  "self_improvement": {
+    "lesson_id": "G4B_NATIVE_BINARY_PLATFORM_TAG_EVIDENCE_BOUNDARY_R03",
+    "observed_error": "A universal-only wheel tag was technically compatible with sys_tags and therefore not sufficient to classify native GPU binary prerequisites.",
+    "applied_fix": "Require compatible win_amd64 tags specifically for installed torch/bitsandbytes; mock Windows sys_tags explicitly rather than accidentally depending on Linux test runner tags.",
+    "prevention": "Keep 'INSTALLED_ROOT_TAG_MATCH_ONLY' and HARDWARE_READY_ONLY separate from hashed wheel closure, CUDA/driver ABI, physical VRAM/temperature evidence, device-origin provenance and model/training receipts."
+  },
+  "holds": [
+    "No pinned exact target Windows CPython+CUDA wheel artifacts, SHA-256 hashes or transitive dependency closure verified",
+    "PyPA installed WHEEL tags are metadata and do not prove wheel files, DLL functionality or CUDA-specific torch/bitsandbytes availability",
+    "No actual Windows NVIDIA driver/CUDA/PyTorch GPU runtime, free VRAM, thermal sensor, CPU or user-machine origin measured",
+    "No full 25 snapshot file-body byte verification, no physical original 729 raw SHA256",
+    "No model/dataset license, rights, training checkpoints, eval or compatible merge verified",
+    "No SOURCE_CODE_COMPLETE/E06/E07/release acceptance"
+  ],
+  "untouched": {
+    "main": true,
+    "PR162": true,
+    "shared_R30": true,
+    "frozen_snapshots_25": true,
+    "original_archive_parts": true,
+    "other_owner_paths": true,
+    "model_snapshot_probe": true,
+    "GitLab": true,
+    "NSIS": true,
+    "EXE": true,
+    "final_integration": true,
+    "shared_google_drive_writes": true
+  },
+  "git_receipt_single_writer": "G4-B personal immutable receipt; Astra-C alone appends central Google Drive journals after collecting 14 owner receipts",
+  "accepted_new_product_DONE": 0
+}
