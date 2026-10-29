@@ -62,6 +62,21 @@ try {
     Console.WriteLine("PASS STOP during provider callback");
 }
 
+using var revokedOnHttpError = new CancellationTokenSource();
+var failedAfterStop = Client(() =>
+{
+    revokedOnHttpError.Cancel();
+    return new HttpResponseMessage(HttpStatusCode.BadGateway) {
+        Content = new ByteArrayContent(Encoding.UTF8.GetBytes(Json))
+    };
+});
+try {
+    await Fetch(failedAfterStop, revokedOnHttpError.Token);
+    throw new InvalidOperationException("FAIL HTTP-error cancellation returned cache");
+} catch (OperationCanceledException) {
+    Console.WriteLine("PASS STOP overrides concurrent HTTP error");
+}
+
 var announced = Client(() => {
     var r = Reply(new StreamContent(new GeneratedBody(Cap + 16)));
     r.Content.Headers.ContentLength = Cap + 16;
@@ -99,7 +114,7 @@ try {
     Console.WriteLine("PASS pre-canceled STOP: no cache success");
 }
 
-Console.WriteLine("10/10 semantic assertions PASS (when this project actually runs on .NET 8)");
+Console.WriteLine("11/11 semantic assertions PASS (when this project actually runs on .NET 8)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
