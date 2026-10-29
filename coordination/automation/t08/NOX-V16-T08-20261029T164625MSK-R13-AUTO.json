@@ -1,0 +1,157 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T08_FIXED_3_GATES_IMMUTABLE_HOLD_V1",
+  "task_id": "T08",
+  "run_id": "NOX-V16-T08-20261029T164625MSK-R13-AUTO",
+  "scope": "Windows loader NOX EXPRESS INTEGRATOR ONLY",
+  "status": "HOLD_NO_T06_OWNER_ACCEPTED_HEAD__CANDIDATE_NO_CODE_BLOCKERS",
+  "timing": {
+    "tz": "Europe/Moscow",
+    "planned_start": "2026-10-29T16:45:00+03:00",
+    "observed_start_from_runtime": "2026-10-29T16:46:25+03:00",
+    "receipt_created_msk": "2026-10-29T16:51:10.360+03:00",
+    "receipt_created_utc": "2026-10-29T13:51:10.360Z",
+    "elapsed_seconds_at_receipt": 285,
+    "end_after_readback": "NOT_YET_OBSERVED"
+  },
+  "controlling_sources": {
+    "V16_canon_document": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "canon_revision": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc",
+    "canon_rules": "§33 56 consolidated rules, §§1–33/54–56, R29",
+    "t02_master": "https://docs.google.com/document/d/1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50/edit",
+    "t02_fixed_ledger": [
+      "P0-01",
+      "P0-02",
+      "P0-03",
+      "P1-01",
+      "P1-02"
+    ],
+    "t02_master_latest_run": "NOX-V16-C-20261029T164239MSK-R13",
+    "t06_run": "NOX-V16-T06-20261029T164013MSK-R06",
+    "t06_receipt_sha1": "c4b96db77cffd309db0f920a485a7488e9d9d049",
+    "t06_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t06/NOX-V16-T06-20261029T164013MSK-R06/coordination/automation/t06/NOX-V16-T06-20261029T164013MSK-R06.json",
+    "t09_latest_run": "NOX-V16-T09-20261029T164545MSK-R13-HOLD",
+    "t09_receipt_blob_sha1": "f547d9f18f4fc0e98c0c95e93fa52ab08f0dc672",
+    "t10_latest_run": "NOX-V16-T10-20261029T164206MSK-R13-HOLD",
+    "t10_receipt_blob_sha1": "875da2ae08b3fd1caec5ee189d34dbb5695acf21",
+    "t08_prior_r12_run": "NOX-V16-T08-20261029T1630MSK-R12",
+    "t08_prior_r12_commit": "f070d27d54d0711448204dd081c6565fee79bb37",
+    "t08_prior_r12_receipt_blob_sha1": "da075aa0b2987a2463b99d40224f2be6282afe99",
+    "t08_manual_r14_blob_sha1": "e71f452f825df6267cde7fbf4cba4e6d4a134aee",
+    "pr162_head_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162",
+    "owner_head_accepted": null,
+    "owner_tree_accepted": null,
+    "t07_raw_joined_zip_sha256": null,
+    "t07_original_729_verified_sha256": 0
+  },
+  "fixed_ledger_disposition": [
+    {
+      "id": "P0-01",
+      "type": "evidence_hold",
+      "owner": "T07",
+      "source_code_reproduction": false
+    },
+    {
+      "id": "P0-02",
+      "type": "owner_one_head_freeze_hold",
+      "owner": "T06/owner#1/T09",
+      "source_code_reproduction": false
+    },
+    {
+      "id": "P0-03",
+      "type": "Host50_13_source_admission_hold",
+      "owner": "T05/T06/G6-B",
+      "source_code_reproduction": false
+    },
+    {
+      "id": "P1-01",
+      "type": "native_source_acceptance_evidence_hold",
+      "owner": "T10",
+      "source_code_reproduction": false
+    },
+    {
+      "id": "P1-02",
+      "type": "historical_automation_provenance_hold",
+      "owner": "T02",
+      "source_code_reproduction": false
+    }
+  ],
+  "candidate_disposition": "NO_CODE_BLOCKERS on only PR162 47a817f6; never extrapolate to future accepted T06 source",
+  "progress": {
+    "fixed_denominator": 3,
+    "previous_checkpoint_run": "NOX-V16-T08-20261029T1630MSK-R12",
+    "previous_percent_unset_in_prior_schema": true,
+    "restored_before_completed": 0,
+    "before_percent": 0,
+    "restored_from": "R12 source candidate not T06 accepted, no completed T08 source admissibility. R12 showed Git handoff text but no verifiable terminal delivery; manual R14 explicitly PENDING_GITHUB_ISSUE_COMMENT.",
+    "after_completed": 1,
+    "after_percent": 33.3,
+    "delta_percentage_points": 33.3,
+    "remaining": 2,
+    "bar": "███░░░░░░░",
+    "criteria": [
+      {
+        "id": 1,
+        "name": "T06 one owner-accepted HEAD and T02 fixed P0/P1 ledger",
+        "status": "HOLD",
+        "evidence": "T02 fixed ledger five documented; T06 R06 c4b96db77cffd309db0f920a485a7488e9d9d049 acceptedHead=null, explicit owner#1 CAS absent"
+      },
+      {
+        "id": 2,
+        "name": "Fix all reproduced P0/P1 OR prove NO_CODE_BLOCKERS on accepted T06 HEAD",
+        "status": "HOLD",
+        "evidence": "T02 5/5 fixed disposition NO_CODE_BLOCKERS_CANDIDATE_ONLY; T06 accepted HEAD absent; no code P0/P1 proved so no source edit/test"
+      },
+      {
+        "id": 3,
+        "name": "Immutable final current-state receipt handed off to T09 and T10",
+        "status": "DONE",
+        "evidence": {
+          "issue_comment": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6498485331",
+          "issue_comment_id": 6498485331,
+          "git_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t08/NOX-V16-T08-20261029T164625MSK-R13-AUTO/coordination/automation/t08/NOX-V16-T08-20261029T164625MSK-R13-AUTO.json",
+          "git_readback": "MANDATORY_POST_COMMIT"
+        }
+      }
+    ]
+  },
+  "handoff": {
+    "to": [
+      "T09",
+      "T10",
+      "T02 sole shared-doc writer"
+    ],
+    "permanent_communication": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6498485331",
+    "instruction_T09": "Do not freeze candidate PR162. Await T06 owner #1 accepted single tree/HEAD/manifest and T07 physical SHA.",
+    "instruction_T10": "Do not infer SOURCE_READY from no known code blocker on UNFROZEN candidate. Do not run E07/build.",
+    "instruction_T02": "Only T02 may append shared Master/E06/Lessons with CAS+readback; count 1/3 T08 progress solely as handoff, not source PASS."
+  },
+  "change_control": {
+    "product_pre_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "product_post_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "product_sha256": "N/A: no product byte mutation",
+    "code_patch": "NONE",
+    "source_tests": "NOT_RUN: no accepted T06 HEAD or reproduced source P0/P1",
+    "product_code_files_modified": 0,
+    "source_lock_files_modified": 0,
+    "main_modified": false,
+    "pr162_modified": false,
+    "shared_drive_documents_modified": false,
+    "gitlab_ci": false,
+    "exe": false,
+    "nsis": false,
+    "windows_tests": false,
+    "e07": false
+  },
+  "no_loss": "Historical DONE, 729/3 part, 968 Git blobs, D02/WOW001–200, CoreID8/Persona5, PACK01/02, 50+50, Voice/RAG/GPU/SPACE and user data/ACL untouched; not reverified",
+  "gates": {
+    "T08": "HOLD_1_OF_3",
+    "T09": "HOLD",
+    "T10": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "applied_lesson": "T05 showed 13 owner POST blobs but only 1 exact compatible preimage, so source candidate provenance or absence of repro bugs must never be counted as accepted unified source; status NO_CODE_BLOCKERS is HEAD-scoped. Preserve fixed denominators and report-only handoff without manufacturing source patches."
+}
