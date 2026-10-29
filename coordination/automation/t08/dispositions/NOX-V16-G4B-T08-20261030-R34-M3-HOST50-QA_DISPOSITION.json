@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_V16_T08_INDEPENDENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261030-R34-M3-HOST50-50ROUTES",
+  "existing_task_id": "T08",
+  "scope": "M3 INDEPENDENT HOST50 SOURCE CONTRACT / NIP01-01..50 (all existing IDs)",
+  "role": "AUTO G4-B assistant to manual #2, NO PRODUCT WRITE",
+  "source": {
+    "pr": 162,
+    "head": "c04ddef4f9ef2879fde50d323fc097f2137bc46c",
+    "tree": "8a3dc56dd62c85585c2656dd73ce356373c9e2d5",
+    "pre_head": "d9dfa486eae186ed0efac32bccecb7d6bac769f9",
+    "delta_3_files": [
+      "Packages/P04/model_snapshot_probe.py",
+      "Packages/P05/Space/SpaceFeedClient.cs",
+      "Packages/P05/Space/tests/Program.cs"
+    ],
+    "host50_dependency_changes": 0,
+    "unchanged_blobs": {
+      "proposals/NOX-PACK01-50/catalog.json": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+      "proposals/NOX-PACK01-50/owner-binding-map.json": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+      "proposals/NOX-PACK01-50/registry.mjs": "1e059650658ba806da1c087625dc34308822978c",
+      "proposals/NOX-PACK01-50/native_bridge.py": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+      "coordination/e06_host50/admission.py": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+      "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json": "21c9b4504ed89f0c59fd1a8178acef20958bb375"
+    }
+  },
+  "prestart_read_proof": {
+    "canon_rev": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "role_archive_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "r26_policy_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+    "r23_policy_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+    "active_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "active_errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "docs_read": [
+      "MASTER",
+      "E06",
+      "LESSONS",
+      "C34"
+    ],
+    "master_rev_prefix": "AHj4eMRH4s02",
+    "e06_rev_prefix": "AHj4eMTXHqFZ",
+    "lessons_rev_prefix": "AHj4eMRCqBU1",
+    "c34_rev_prefix": "AHj4eMTYjSL"
+  },
+  "independent_test": {
+    "type": "Executed exact-source registry.mjs in V8 + Git-blob-backed 50-route and 14-native-pending matrix; not Python/Windows host",
+    "results": {
+      "checks": 176,
+      "pass": 176,
+      "fail": 0
+    },
+    "command": "V8 source execution: new Function(Git-pinned registry.mjs without export keywords) + assert canonical catalog/map/ledger/admission/native_bridge owner/risk/task parity and negative capability fixtures",
+    "per_route": [
+      "50/50 exact taskId parity",
+      "50/50 risk/owner invariants across catalog, map, admission and native bridge",
+      "50/50 no false Windows acceptance"
+    ],
+    "other_checks": [
+      "39/39 mapped binding symbols statically evidenced",
+      "8/8 STOP/ACL/native consent/source attestation/ACK source guard markers",
+      "3/3 real registry.mjs capability cases",
+      "4/4 actual registry.mjs negative schema cases"
+    ],
+    "initial_harness_false_positive": "Initial method regex omitted whitespace between def and method and failed 1/180; corrected independent harness, 39/39 source symbols rechecked; final clean full suite 176/176 on exact newer HEAD.",
+    "windows_native": "NOT_RUN",
+    "native_callback": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "python_admission_unittest": "NOT_RUN",
+    "original_archive_rehash": "NOT_RUN (historical 729/729 preserved)"
+  },
+  "source_status": {
+    "catalogue_routes": 50,
+    "source_bound": 39,
+    "source_unbound": 11,
+    "native_pending": 14,
+    "exe_integrated": 0,
+    "release_accepted": 0,
+    "legacy_ledger_source_bound": 37,
+    "legacy_ledger_source_hold": 13,
+    "unbound_task_ids": [
+      "NIP01-26",
+      "NIP01-30",
+      "NIP01-36",
+      "NIP01-37",
+      "NIP01-38",
+      "NIP01-39",
+      "NIP01-40",
+      "NIP01-47",
+      "NIP01-48",
+      "NIP01-49",
+      "NIP01-50"
+    ],
+    "native_pending_task_ids": [
+      "NIP01-07",
+      "NIP01-08",
+      "NIP01-26",
+      "NIP01-30",
+      "NIP01-35",
+      "NIP01-36",
+      "NIP01-37",
+      "NIP01-38",
+      "NIP01-39",
+      "NIP01-40",
+      "NIP01-47",
+      "NIP01-48",
+      "NIP01-49",
+      "NIP01-50"
+    ],
+    "native_owner_groups": {
+      "1": 7,
+      "2": 3,
+      "4": 3,
+      "6": 1
+    }
+  },
+  "conditional_finding": {
+    "type": "UI_RISK_DOWNGRADE_IF_CATALOG_MUTABLE",
+    "source": "registry.mjs",
+    "route": "system.pc_control",
+    "negative_fixture": "Changing catalog action risk dangerous->safe was accepted by verifyCatalog and allowed normalizeCapabilities ENABLED with nativeConsent=false.",
+    "limitation": "Synthetic tampering with bundled catalog, not proof of attacker reachability or of native execution. Immutable admission.py policy remains separate fail-closed gate. No new ERROR_ID; T02 to triage under existing ERR-SRC-004."
+  },
+  "disposition": {
+    "source_route_matrix": "PASS",
+    "source_qualified": "SOURCE_VERIFIED_ONLY",
+    "integrated_source": "CANDIDATE_ONLY_NOT_LIVE_EXE",
+    "native_same_head": "NOT_RUN",
+    "stop_acl_native_consent": "NOT_RUN",
+    "component_QA_ACCEPTED": false,
+    "product_DONE_delta": 0,
+    "role_T08": "1/3 HISTORICAL_NOT_PROMOTED",
+    "product_percent": "N/D",
+    "source_ready": false
+  },
+  "lessons": [
+    {
+      "root": "STALE_HEAD",
+      "applied": "Git compare 3 paths, then re-run test against newer exact HEAD; only unchanged dependent blobs reused"
+    },
+    {
+      "root": "INCOMPLETE_NATIVE_BINDINGS",
+      "applied": "Separate source-bound 39/11, pending-native14, legacy37/13; never treat static route parity as native admission"
+    },
+    {
+      "root": "QA_HARNESS_FALSE_POSITIVE",
+      "applied": "Correct method regex and treat speak.translate/maestro as mode selectors, no fake product defect"
+    }
+  ],
+  "owner_handoff": {
+    "manual_1": "Complete owner-approved 11 unbound routes / 14 pending native host receipts on exact future SHA; preserve STOP/ACL/consent and SourceLock; one host, no simulated training or call.",
+    "manual_2": "Execute real same-head native route/negative STOP/ACL/consent tests and issue independent QA acceptance only after signatures/Windows evidence.",
+    "t02": "Only shared writer: attach receipt to ERR-SRC-003/004 and ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN; no VERIFIED_CLOSED before native proof."
+  },
+  "build": "NOT_AUTHORIZED",
+  "ci": "NOT_RUN",
+  "exe": "NOT_RUN",
+  "e07": "NOT_RUN",
+  "no_loss": true,
+  "created_at_utc": "2026-10-29T21:43:42.591Z"
+}
