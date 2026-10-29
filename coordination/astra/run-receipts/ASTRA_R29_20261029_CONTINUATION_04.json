@@ -1,0 +1,66 @@
+{
+  "run_id": "ASTRA-R29-20261029-CONTINUATION-04",
+  "scope": "NOX HELION EXPRESS INTEGRATOR source-only",
+  "parent": "4d8ed7c02011ed819a0fa74e2cb19773d5d2d7b0",
+  "owner_heads": {
+    "A01": "02c73bbd3da3e583eeb92e48529f14771d60e868",
+    "A02": "23fc3f054d94fb5ef3f94b5910ab99e91587e1f0",
+    "A03": "17b09c2ff0827b36f3ba554736e39f57ba93de80",
+    "A04": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
+    "A05": "856d225543e78103868b3b04f0c53398437513f7",
+    "A06": "cbfe853500c781bfeac6419ccc581843ea1bedce"
+  },
+  "continuation_verified": [
+    1,
+    2,
+    4,
+    1,
+    0,
+    1
+  ],
+  "continuation_total_verified": 9,
+  "additional_candidate": "A05 one connected C# Drive fix, 11 scenario groups NOT_RUN; A03 C# export also NOT_RUN within mixed tested Python block",
+  "prior_verified_total": 29,
+  "cumulative_verified_total": 38,
+  "progress_not_product_readiness": true,
+  "weighted_product_readiness": null,
+  "source_code_complete": "NOT_DECLARED",
+  "journal_readback": [
+    {
+      "name": "lesson",
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "revision": "AHj4eMTO51ItMzSGSTrXEgcGzrc0SUWpAmE6rWLzkkA4TcGavpbjEAjJUNIMntAUfkpbKUNwtkEffR2plTFwnwzmuhecJUfd9IBRYcuy-Qk",
+      "exact": true,
+      "occurrences": 1
+    },
+    {
+      "name": "master",
+      "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "revision": "AHj4eMTZyinr60gUAzmx7zdPsZKmgJNVDRWv1aeoarskhL5RN23jQGTLnlBMoW0BE_UKld42EtLaSktDgI91TFyl5tolSqPmRPDHmENFtwY",
+      "exact": true,
+      "occurrences": 1
+    },
+    {
+      "name": "report",
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "revision": "AHj4eMRLnCW5r-07v1MDkE2Qkc4OwhmNjfFXlB3Ez_auLOVGhAa0JQ9k0ta326eJ68Vt6Rap_bsGSu1tpqlGuknrKbDkEhSImWUNIUYA1UI",
+      "exact": true,
+      "occurrences": 1
+    }
+  ],
+  "journal_payloads": {
+    "master": "\n\n=== ASTRA-R29-20261029-CONTINUATION-04 ===\nR29 loader SOURCE ONLY; six actual workers /root/a01..a06 concurrently resumed. Previous DONE29 retained. Full56rules, fresh threeDocdelta and C34 read. Owner heads: {\"A01\":\"02c73bbd3da3e583eeb92e48529f14771d60e868\",\"A02\":\"23fc3f054d94fb5ef3f94b5910ab99e91587e1f0\",\"A03\":\"9a336a80c5d79d6d6d2f922500df027eaa409506\",\"A04\":\"995e1488bf0fac028dadabafad9c197d2ef3b1f7\",\"A05\":\"856d225543e78103868b3b04f0c53398437513f7\",\"A06\":\"cbfe853500c781bfeac6419ccc581843ea1bedce\"}.\nNew continuation test-backed blocks A01 1/10,A02 2/10,A03 4/10,A04 1/10,A05 0/10(+1 C# PATCH_CANDIDATE),A06 1/10:9 verified source blocks; cumulative38 across queues, NOT product TaskID acceptance. A02 prior10/10 retained separately. No inventedfiller60/60.\nA01 staleC09 verifier now checks actualC11 protections:9PASS1SKIP incl5removed-guard regressions; WindowsNOT_RUN. A02 original VoiceService/ASR/translator/SAPI adapter19tests; native original error codes/STOPprecedence6tests. Real originalclasses with externalworker/OS fixtures, no physicalaudio/outputfile claim. Native review/model/consent callbacks remain required. A03 native reviewedartifact export/snapshot11tests(nativeC#NOT_RUN), savedP03donor guards35tests, onehostcommandbinding8tests, boundedcatalog/readiness23tests. A04 actualwheel preflight PyPA/ZIP/SHA with stablefd identity/time guards9tests; sameblockTOCTOU correction countedonce. A05 Docs pinnedtab/body/revision+immutableapproveddestinations and formattransition guards:11HTTPscenario groups authored, C#NOT_RUN; notverified. A06 sharednative_dispatcher session identity/scope revalidation aftercallbacks10tests withoriginalE11;all50routes retained, noPCactions. Suites overlap, not product counts.\nReady originalservice/donor and officialPyPA/GoogleDocs contracts reused. No newvoice/downloader/trainingengine. R29nativetimeout/VoiceSession/WOW/parts/729 baseline preserved. All saved code exactremote readback reportedPASS. P01selfupdate trustedpackage/SHA/session provider, actualhost/provider bindings, targetABI/CUDA/wheels/modelrights/dataset inputs, nativeC#/PowerShell/Windows acceptance remain. BoundedDrive/tree/archive search found historical50-taskCSVreference but not actualFIN_ZAGR_V15_TASK_LEDGER.csv;100PACKroutes notweightedproductdenominator. P01–P05 20/25/20/25/10 readiness=N/D; SOURCE_CODE_COMPLETE NOT_DECLARED. NoEXE/NSISbuild/releaseCI/GitLabwrite/finalintegration/main/PR162 changes. Previous57.53% was scoped calculatedparallelcomparison only; no newtotalETA claimed.\nErrors fixed: staleverifier; originalvoice-result/error mismatch; mutablecallback/session trust; catalog/readiness inconsistency; hash/metadata race; falsecross-tab Docsreadback. Nativecandidates stayNOT_RUN.\n=== END ASTRA-R29-20261029-CONTINUATION-04 ===\n",
+    "report": "\n\n=== ASTRA-R29-20261029-CONTINUATION-04 ===\nR29 loader SOURCE ONLY; six actual workers /root/a01..a06 concurrently resumed. Previous DONE29 retained. Full56rules, fresh threeDocdelta and C34 read. Owner heads: {\"A01\":\"02c73bbd3da3e583eeb92e48529f14771d60e868\",\"A02\":\"23fc3f054d94fb5ef3f94b5910ab99e91587e1f0\",\"A03\":\"9a336a80c5d79d6d6d2f922500df027eaa409506\",\"A04\":\"995e1488bf0fac028dadabafad9c197d2ef3b1f7\",\"A05\":\"856d225543e78103868b3b04f0c53398437513f7\",\"A06\":\"cbfe853500c781bfeac6419ccc581843ea1bedce\"}.\nNew continuation test-backed blocks A01 1/10,A02 2/10,A03 4/10,A04 1/10,A05 0/10(+1 C# PATCH_CANDIDATE),A06 1/10:9 verified source blocks; cumulative38 across queues, NOT product TaskID acceptance. A02 prior10/10 retained separately. No inventedfiller60/60.\nA01 staleC09 verifier now checks actualC11 protections:9PASS1SKIP incl5removed-guard regressions; WindowsNOT_RUN. A02 original VoiceService/ASR/translator/SAPI adapter19tests; native original error codes/STOPprecedence6tests. Real originalclasses with externalworker/OS fixtures, no physicalaudio/outputfile claim. Native review/model/consent callbacks remain required. A03 native reviewedartifact export/snapshot11tests(nativeC#NOT_RUN), savedP03donor guards35tests, onehostcommandbinding8tests, boundedcatalog/readiness23tests. A04 actualwheel preflight PyPA/ZIP/SHA with stablefd identity/time guards9tests; sameblockTOCTOU correction countedonce. A05 Docs pinnedtab/body/revision+immutableapproveddestinations and formattransition guards:11HTTPscenario groups authored, C#NOT_RUN; notverified. A06 sharednative_dispatcher session identity/scope revalidation aftercallbacks10tests withoriginalE11;all50routes retained, noPCactions. Suites overlap, not product counts.\nReady originalservice/donor and officialPyPA/GoogleDocs contracts reused. No newvoice/downloader/trainingengine. R29nativetimeout/VoiceSession/WOW/parts/729 baseline preserved. All saved code exactremote readback reportedPASS. P01selfupdate trustedpackage/SHA/session provider, actualhost/provider bindings, targetABI/CUDA/wheels/modelrights/dataset inputs, nativeC#/PowerShell/Windows acceptance remain. BoundedDrive/tree/archive search found historical50-taskCSVreference but not actualFIN_ZAGR_V15_TASK_LEDGER.csv;100PACKroutes notweightedproductdenominator. P01–P05 20/25/20/25/10 readiness=N/D; SOURCE_CODE_COMPLETE NOT_DECLARED. NoEXE/NSISbuild/releaseCI/GitLabwrite/finalintegration/main/PR162 changes. Previous57.53% was scoped calculatedparallelcomparison only; no newtotalETA claimed.\nAll outputs remain independentowner sourcecandidates, rootmetadata only. Self-review corrections sameblock, no doublecredit.\n=== END ASTRA-R29-20261029-CONTINUATION-04 ===\n",
+    "lesson": "\n\n=== ASTRA-R29-20261029-CONTINUATION-04 ===\nLesson: match real originalservice result types and authority boundaries instead of weakening existingcontracts. Original SAPI gives subprocess completion, notstored/audibleaudio proof; preserve previewapproval and per-stage native/model checks. Pin identity and destinations across callbacks/awaits. Samefiledescriptor alone does not prove SHA and ZIPmetadata observedsamebytes: guard fileidentity/size/mtime/ctime while preserving finalinstallhashcheck. GoogleDocs readback mustpin thewritten body/tab and revision, neverjoin unrelatedtabs. Reuse existingdonors, count sameblockcorrectionsonce, and distinguish unexecutednativefixtures from source-testPASS. Fixedquotas are not product completion.\n=== END ASTRA-R29-20261029-CONTINUATION-04 ===\n"
+  },
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN",
+  "gitlab_write": "NOT_RUN",
+  "after_journal_fixture_only_followup": {
+    "owner": "A03",
+    "parent": "9a336a80c5d79d6d6d2f922500df027eaa409506",
+    "commit": "17b09c2ff0827b36f3ba554736e39f57ba93de80",
+    "change": "Two existing donor test fixtures aligned with immutable host registry plus receipt; no production source or extra pass",
+    "verification": "78/78 existing P03 onehost suite; exact3/3 readback"
+  }
+}
