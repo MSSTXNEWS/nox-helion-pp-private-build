@@ -1,0 +1,170 @@
+{
+  "schema": "NOX_V16_T09_CUMULATIVE_ERROR_PREFLIGHT_AND_ACTION_R01",
+  "run_id": "NOX-V16-T09-20261029-ERROR-AUTOFIX-PREFLIGHT-R01",
+  "task_id": "T09",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader V16 only",
+  "registry": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "git_blob_sha1": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+    "all_current_normalized_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "open_or_fix_applied_count": 9,
+    "closed_preserved": [
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "historical_coverage": "DOCS_AND_ISSUE_OBSERVATIONS_INDEXED__ALL_HISTORICAL_RECEIPTS_PENDING",
+    "historical_fingerprints": 419,
+    "doesNotClaimFullHistory": true
+  },
+  "preflight": {
+    "registry_readback": "PASS",
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "errors_ack": [
+      {
+        "error_id": "ERR-SYS-001",
+        "status_at_checkpoint": "OPEN",
+        "owner": "T02/C",
+        "action": "HANDOFF",
+        "reason": "T02 must verify each active agent read/ACKs latest register; T09 did real readback and reports exact blob",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "status_at_checkpoint": "OPEN",
+        "owner": "T02/C",
+        "action": "APPLY",
+        "reason": "Pinned newest PR162 source HEAD and tree explicitly; no stale freeze promotion",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "status_at_checkpoint": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06/Host50",
+        "action": "HANDOFF",
+        "reason": "T06/Host50 newer signed source tree attestation merged, native approval unverified",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "status_at_checkpoint": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "action": "HANDOFF",
+        "reason": "T06 sole canonical writer; 13 Host50 / P01–P05 unaccepted; no fake 6/6 freeze",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "status_at_checkpoint": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "HANDOFF",
+        "reason": "T06 source runner fix exists; T08 owner verifies same current source SHA",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status_at_checkpoint": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "action": "APPLY",
+        "reason": "This T09 run now consumes all cumulative IDs and writes exact preflight+ACK receipt, not only latest error",
+        "verified_closed": false
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status_at_checkpoint": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "action": "APPLY",
+        "reason": "All 11 active automation prompts amended/readback; run-completed != accepted task",
+        "verified_closed": false
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status_at_checkpoint": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "HANDOFF",
+        "reason": "T06 Git-backed closeout guard now wired; future real owner receipt still required",
+        "verified_closed": false
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status_at_checkpoint": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "action": "HANDOFF",
+        "reason": "T08 requires independent same-SHA verification and no T10→T09 backward dependency",
+        "verified_closed": false
+      }
+    ],
+    "new_errors": [],
+    "errors_fixed_in_source_by_t09": [],
+    "errors_independently_verified_closed": [],
+    "owner_scope": "T09 freeze and exact same-HEAD evidence; cannot author T06 canonical code or T02 shared register"
+  },
+  "physical_action": {
+    "action": "Installed cumulative latest-registry preflight on all 11 active automation prompts; verified 11/11 persisted; previously missing T09 premature closeout now canonical in Master/E06/Lessons and normalized Git register",
+    "scope": "Operational enforcement and handoff; not proof of source-functional completion"
+  },
+  "source_snapshot": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "exact_current_git_head": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "git_tree_sha1": "dfa7545a7e323b924ca2a4e7a7060af46002eac6",
+    "physical_original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "physical_original_files_verified": 729,
+    "notAcceptedFinalT06Source": true
+  },
+  "criteria": {
+    "total": 6,
+    "accepted": 1,
+    "accepted_item": "T07 original physical archive SourceLock",
+    "remaining": [
+      "T06 sole source owner accepted full HEAD/tree/manifest with native P01–P05/Host50 source contracts",
+      "same-head T08 P0/P1 disposition",
+      "all owner decisions bound to single accepted tree",
+      "final source head/tree/manifest+SourceLock immutable seal",
+      "identical final frozen tuple handoff T10/T11"
+    ],
+    "result": "T09_NOT_SOURCE_FROZEN"
+  },
+  "selfImprovement": "Mandatory full register read+all 9 live ID acknowledgments; single current SHA checkpoint, no stale T07 ACCESS_HOLD, no fake historical 419 errors, and scoped owner handoff",
+  "rollbackSafety": {
+    "mainUntouched": true,
+    "pr162Untouched": true,
+    "originalZipUntouched": true,
+    "noEXE": true,
+    "noNSIS": true,
+    "noGitLabCI": true,
+    "noE07": true,
+    "noRelease": true
+  },
+  "nextOwnerActions": {
+    "T02": "Verify all 11 scheduled next-run ACK receipts and finish missing historical T02/T03 personal receipt backfill",
+    "T06": "Owner-source 8/8 P01–P05/13 Host50 actual approved native contracts on current source, then final CAS HEAD/tree/manifest",
+    "T08": "Same final accepted HEAD P0/P1 proof",
+    "T09": "Freeze final owner accepted source to one permanent SHA, then handoff T10/T11",
+    "T11": "GitLab Free, later"
+  }
+}
