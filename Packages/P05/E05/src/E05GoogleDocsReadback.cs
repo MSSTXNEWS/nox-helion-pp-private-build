@@ -98,6 +98,9 @@ public sealed class GoogleDocsAppendReadback
             string? revAfter = ReadRevision(afterJson.RootElement);
             if (string.IsNullOrWhiteSpace(revAfter))
                 return new(runId, documentId, revision, null, "NO_READBACK_REVISION", entry.Length);
+            if (revAfter != acknowledgedRev.GetString())
+                return new(runId, documentId, revision, revAfter,
+                    "READBACK_REVISION_DIFFERS_FROM_WRITE", entry.Length);
             // A successful insert must produce a newer revision for readback.
             if (string.Equals(revision, revAfter, StringComparison.Ordinal))
                 return new(runId, documentId, revision, revAfter, "STALE_READBACK_REVISION", entry.Length);
