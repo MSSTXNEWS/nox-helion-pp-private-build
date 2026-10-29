@@ -26,12 +26,17 @@ public static class EvidenceProgress
     {
         // Exactly five product blocks; E06/E07 are gates, not weights.
         decimal[] weights = { .20m, .25m, .20m, .25m, .10m };
-        if (lanes.Count != 5) return null;
+        if (lanes is null || lanes.Count != 5) return null;
+        // Count distinct TaskIDs only. Caller must independently verify
+        // signed evidence: an arbitrary ReceiptId string proves nothing.
+        var seenTaskIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         decimal result = 0;
         for (int i = 0; i < 5; i++)
         {
             var lane = lanes[i];
-            if (lane.Weight != weights[i] || lane.ConfirmedPercent is null ||
+            if (lane is null || string.IsNullOrWhiteSpace(lane.TaskId) ||
+                !seenTaskIds.Add(lane.TaskId.Trim()) ||
+                lane.Weight != weights[i] || lane.ConfirmedPercent is null ||
                 lane.ConfirmedPercent < 0 || lane.ConfirmedPercent > 100 ||
                 string.IsNullOrWhiteSpace(lane.ReceiptId) ||
                 lane.State != "ACCEPTED") return null;
@@ -53,10 +58,18 @@ public sealed class SpaceFeedClient
     private readonly ConcurrentDictionary<CacheIdentity, FeedSnapshot> _cache = new();
     private readonly TimeSpan _ttl;
     private readonly TimeSpan _timeout;
-    public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout)
+    private readonly TimeSpan _maxSourceAge;
+    // Same existing E05 freshness policy, without a second feed client/bus.
+    // Existing 3-argument callers retain their signature and a conservative
+    // 24-hour default; approved providers may require a shorter age.
+    public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout,
+        TimeSpan? maxSourceAge = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         if (ttl <= TimeSpan.Zero || timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException();
+        _maxSourceAge = maxSourceAge ?? TimeSpan.FromHours(24);
+        if (_maxSourceAge <= TimeSpan.Zero || _maxSourceAge > TimeSpan.FromDays(365))
+            throw new ArgumentOutOfRangeException(nameof(maxSourceAge));
         _ttl = ttl; _timeout = timeout;
     }
 
@@ -80,7 +93,22 @@ public sealed class SpaceFeedClient
         // during an offline fallback from a different approved endpoint.
         if (_cache.TryGetValue(key, out var old) &&
             now >= old.FetchedAt && now - old.FetchedAt < _ttl)
-            return old with { Status = "CACHE" };
+            {
+                stop.ThrowIfCancellationRequested();
+                // Cache TTL only controls transport reuse; a formerly LIVE
+                // observation can become stale without another HTTP request.
+                if (old.Status is "LIVE" or "CACHE")
+                {
+                    if (old.SourceTimestamp is not { } sourceTime ||
+                        now - sourceTime > _maxSourceAge ||
+                        sourceTime > now.AddMinutes(5))
+                        return old with {
+                            Status = "STALE_SOURCE", ErrorCode = "SOURCE_STALE", IsStale = true
+                        };
+                    return old with { Status = "CACHE" };
+                }
+                return old;
+            }
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
         timeout.CancelAfter(_timeout);
         try
@@ -88,6 +116,13 @@ public sealed class SpaceFeedClient
             using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
             using var response = await _http.SendAsync(request,
                 HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            // The transport may follow a redirect; only approved endpoint bytes
+            // may enter the SPACE cache, regardless of the initial request URL.
+            var observedEndpoint = response.RequestMessage?.RequestUri;
+            if (observedEndpoint is null ||
+                Uri.Compare(endpoint, observedEndpoint, UriComponents.AbsoluteUri,
+                    UriFormat.SafeUnescaped, StringComparison.Ordinal) != 0)
+                throw new HttpRequestException("PROVIDER_ENDPOINT_CHANGED");
             response.EnsureSuccessStatusCode();
             // Content-Length is only an early rejection: chunked streams may omit
             // it, and an untrusted server may understate it. Always count bytes.
@@ -111,20 +146,49 @@ public sealed class SpaceFeedClient
             using var json = await JsonDocument.ParseAsync(bounded,
                 cancellationToken: timeout.Token).ConfigureAwait(false);
             var cloned = json.RootElement.Clone();
-            var observed = extractSourceTime(cloned);
+            DateTimeOffset? observed;
+            try
+            {
+                observed = extractSourceTime(cloned);
+            }
+            catch (Exception ex) when (ex is FormatException or InvalidOperationException
+                                       or KeyNotFoundException)
+            {
+                // Provider-controlled malformed or missing timestamps may
+                // never abort SPACE or leak raw parser details to the UI.
+                throw new InvalidDataException("INVALID_PROVIDER_SOURCE_TIMESTAMP", ex);
+            }
+            var checkedAt = DateTimeOffset.UtcNow;
+            // Provider timestamps are evidence, not authority. A timestamp
+            // far in the future must never be reported as LIVE or CACHE.
+            var futureTime = observed is not null && observed.Value > checkedAt.AddMinutes(5);
+            var staleTime = observed is not null && checkedAt - observed.Value > _maxSourceAge;
+            var sourceStatus = observed is null ? "UNVERIFIED_TIMESTAMP" :
+                futureTime ? "INVALID_SOURCE_TIME" :
+                staleTime ? "STALE_SOURCE" : "LIVE";
             var snapshot = new FeedSnapshot(id, provider, observed,
-                DateTimeOffset.UtcNow, cloned, observed is null ? "UNVERIFIED_TIMESTAMP" : "LIVE",
-                observed is null ? "SOURCE_TIME_MISSING" : null, false);
+                checkedAt, cloned, sourceStatus,
+                observed is null ? "SOURCE_TIME_MISSING" :
+                futureTime ? "FUTURE_SOURCE_TIME" :
+                staleTime ? "SOURCE_STALE" : null,
+                futureTime || staleTime || observed is null);
+            // STOP can arrive from the host during the source-time callback.
+            stop.ThrowIfCancellationRequested();
             _cache[key] = snapshot;
             return snapshot;
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or
-            JsonException or FeedResponseTooLargeException)
+            JsonException or InvalidDataException or FeedResponseTooLargeException)
         {
+            stop.ThrowIfCancellationRequested();
             string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
                 ex is OperationCanceledException ? "TIMEOUT" :
-                ex is JsonException ? "INVALID_JSON" : "NETWORK_ERROR";
+                ex is JsonException ? "INVALID_JSON" :
+                ex is InvalidDataException && ex.Message == "INVALID_PROVIDER_SOURCE_TIMESTAMP"
+                    ? "INVALID_SOURCE_TIME" :
+                ex is HttpRequestException && ex.Message == "PROVIDER_ENDPOINT_CHANGED"
+                    ? "PROVIDER_ENDPOINT_CHANGED" : "NETWORK_ERROR";
             if (old is not null)
                 return old with { Status = "OFFLINE_CACHE", ErrorCode = error, IsStale = true };
             return new FeedSnapshot(id, provider, null, DateTimeOffset.UtcNow,
