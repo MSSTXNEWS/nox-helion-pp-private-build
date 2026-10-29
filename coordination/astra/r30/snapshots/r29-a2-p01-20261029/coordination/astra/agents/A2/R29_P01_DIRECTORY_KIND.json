@@ -1,0 +1,51 @@
+{
+  "run_id": "ASTRA-A-A2-P01-DIRECTORY-KINDS-20261029",
+  "worker": "/root/a05",
+  "role": "Astra-A A2 P01",
+  "source_parent": "02c73bbd3da3e583eeb92e48529f14771d60e868",
+  "started_utc": "2026-10-29T01:55:13Z",
+  "saved_utc": "2026-10-29T01:57:16.417556+00:00",
+  "task": "Preflight must reject regular files in install/recovery target paths and existing directory ancestors before PathOnly succeeds",
+  "files": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "pre_blob_sha1": "ab76cd9fdcc46a31835e4fbca235d910ea819fb9",
+      "pre_sha256": "251df0dbfa794780f2fb8a36d21870e754d3918c275150c29512b967fd44a8ca",
+      "post_sha256": "11cdcfa4059e0562326eb1caa4f698c207e7bb0bf34d43cefb6bf286e2909592"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/test_directory_kind_contract.py",
+      "pre_blob_sha1": null,
+      "pre_sha256": null,
+      "post_sha256": "b29b4f61918f5d8050f1045754109ccd5d99b122338a7ad3939575ebe026be17"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Test-InstallDirectoryKinds.ps1",
+      "pre_blob_sha1": null,
+      "pre_sha256": null,
+      "post_sha256": "bbc82340dd19ac05c09fc690686683c94fa9e2cc24669286a636f82d1ad9e68d"
+    }
+  ],
+  "source_blocks": 1,
+  "source_tests": {
+    "baseline_new": "3/3 source contract tests FAIL",
+    "after": "6/6 source contract tests PASS, including3new and5 rejected guard mutations",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/Installer -p 'test_*contract.py' -v",
+    "kind": "Source structure/order/mutation checks; not PowerShell execution"
+  },
+  "native": {
+    "status": "NOT_RUN",
+    "reason": "Windows PowerShell unavailable",
+    "fixture": "Test-InstallDirectoryKinds.ps1 includes6 non-directory obstructions and2 valid directory cases"
+  },
+  "status": "SOURCE_PATCH_WITH_STATIC_REGRESSION_NATIVE_HOLD",
+  "lesson": "A reparse-point check does not establish directory type. Verify node type at each existing target and ancestor before granting rollback/path-only admission.",
+  "preserved": [
+    "Setup.nsi and marker-write fixture unchanged (A1 owner)",
+    "Existing ownership marker, reparse guards, PathOnly and WebView2 checks retained",
+    "P05 unchanged856d225 handed to Astra-B"
+  ],
+  "build": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_ready": null
+}

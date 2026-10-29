@@ -1,0 +1,44 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-CONT03",
+  "agent_id": "/root/a02",
+  "parent_commit": "23fc3f054d94fb5ef3f94b5910ab99e91587e1f0",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "previous_queue_completed": 10,
+  "previous_queue_planned": 10,
+  "continuation_completed": 3,
+  "continuation_planned": 10,
+  "task_mapping": "R29 A02 approach03/10; canonical product denominator N/D",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "pre_git_blob": "f043f041db2634a40242d10a462e816330062118",
+      "post_git_blob": "a7f462b11050bc2fba27081cf9e1325657314eb7",
+      "pre_sha256": "a094328d7b3f26d7c0bec88b1fe9f4d057fb6bb5a698aaa36e294f70c1dc0824",
+      "post_sha256": "596861d6cfe2295398484dfdda2f279ab38c2b6f04b93e992a3dfa76d62032e6"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_CONT03/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "2e6409ac1119ac317092200ee6ef7aeaab9c0f44",
+      "pre_sha256": null,
+      "post_sha256": "1c08fa19636ed13b270f02b4472a2781c962bb2c414bd5420e3ceaf5a8f155a6"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_frame_failure_latch_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "2c1827728ed62c36a8344ae90e7692547e5d2f4c",
+      "pre_sha256": null,
+      "post_sha256": "81f2131839200a7dcc1c5fa6395ee916d69dd4600c9b55837f093a1230ab340e"
+    }
+  ],
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "physical_providers": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "lesson": "Latch output delivery failure before releasing native admission; do not append another frame to a potentially corrupted stream.",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN",
+  "logical_role": "Astra-A/A3 IPC"
+}

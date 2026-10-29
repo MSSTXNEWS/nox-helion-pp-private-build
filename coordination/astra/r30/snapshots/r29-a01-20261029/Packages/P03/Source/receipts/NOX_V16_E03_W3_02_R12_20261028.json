@@ -1,0 +1,43 @@
+{
+  "schema": "NOX-V16-E03-W3-02-OWNER-RECEIPT-V1",
+  "runId": "NOX-V16-W3-02-20261028T1852MSK-R12",
+  "taskId": "V16.E03.P03.EXACT_OWNER_ROUTE_TYPE",
+  "baseBranch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expectedHead": "27f760c76731456b52b2a23b17daf9801c124859",
+  "baseTree": "c0c2f798685d2ac22c9e38486a8354be943bfbb0",
+  "historicOrigin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "summary": "Reject numeric alias 3.0/3+0j masquerading as integer owner 3; align P03 registration and legacy bind with strict P02 native ingress.",
+  "diffs": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "owner": "E03/P03",
+      "preSha256": "ef631c2033cf5b279b844233659ee07bc9eb33bb0c1701dc63f3bd0b094f56df",
+      "postSha256": "96e048313fb6384cc9fefb79bbbba275c415b29dcf0460d78a2fe38b4a6a5223",
+      "preBlobSha1": "1f82b26ec2129b1e21a670720509ca6de40e0789",
+      "postBlobSha1": "5f4d3bcb10b49d23d6522433de81d4aad7a1a66d",
+      "change": "type(owner) is int before register/_bind; no routes removed"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+      "owner": "E03/P03",
+      "preSha256": "99bdeed98b5bcfe9dd00ec98f008cac137fd10388c4884a6f1580c6d2a33759b",
+      "postSha256": "3095556a08b56aafc50518bff6ea1aa99d2ab0a7e46a8a922c5d8aaa446e016e",
+      "preBlobSha1": "3ced843d51b286dd3b2507940d5bcd18824f9da6",
+      "postBlobSha1": "44d03ba48c06ffe9297c40f0e211b2241ebe7798",
+      "change": "3 native-module regression methods"
+    }
+  ],
+  "tests": {
+    "isolatedOld": "8 tests / 1 RED",
+    "isolatedNew": "8 tests / 8 PASS (copied R11 register block only)",
+    "fullNativeModule": "SAVED_NOT_RUN",
+    "azureWindows": "NOT_RUN",
+    "installedE07": "0/10"
+  },
+  "downloadConsent": "NO_DOWNLOADS",
+  "sourceLock729": "HOLD",
+  "release": "HOLD",
+  "oneImprovement": "EXACT_INT_OWNER_BEFORE_ANY_ROUTE_BIND",
+  "previousDoneTaskIds": "RETAIN_NOT_RESET",
+  "weightedPercent": "N/D"
+}

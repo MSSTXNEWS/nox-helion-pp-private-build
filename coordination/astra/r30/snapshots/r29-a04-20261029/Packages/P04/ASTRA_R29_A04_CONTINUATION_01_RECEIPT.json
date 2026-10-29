@@ -1,0 +1,49 @@
+{
+  "run_id": "ASTRA_R29_A04_CONTINUATION_01_WHEEL_ARTIFACT",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-LOCAL-WHEEL-ARTIFACT-CONTRACT",
+  "prior_r29_verified_blocks": 6,
+  "continuation_block": 1,
+  "cumulative_r29_blocks": 7,
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "parent": "9ac1e0a0b34cf40b26223ab6631dce005c5bb2a7",
+  "local_commit": "5505b0fa67987ba1c1eb2bb4dd483ac6b1ad7284",
+  "files": [
+    {
+      "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+      "pre_blob": "e44d20ddd524e5a2dc737ea43b47ece92c5ca044",
+      "post_blob": "41ec6db02896d2b58ed3135bc5805e2281a98ce2",
+      "post_sha256": "6074ec44c685c0635912b1b22ee5652475a7843c6c77a70f6753bd84340d98b0"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "7a059d940ea004c8d13b25592ae3d80cf7e455c9",
+      "post_blob": "1cc4add22781d5a766b26c58f54744766f458787",
+      "post_sha256": "c50cc3b601f2930cc25f490c716b4e7a96c36aff3fad639d99ffbc4f0293e790"
+    },
+    {
+      "path": "tests/P04/test_wheel_inventory_preflight_r29.py",
+      "pre_blob": null,
+      "post_blob": "3031c6ba236e16db526a29662277e8631c599408",
+      "post_sha256": "8b0d629cba976462136d5b75d15d040b4e99da261c088b18971784abbbac7da4"
+    }
+  ],
+  "started_observed_utc": "2026-10-29T01:08:12Z",
+  "local_commit_observed_utc": "2026-10-29T01:12:23Z",
+  "red": "8 methods/15 AttributeErrors: previously no callable local wheel artifact gate (new capability, not claimed old runtime regression)",
+  "green": "8/8 tests/P04/test_wheel_inventory_preflight_r29.py; real tiny local ZIP wheel bytes, synthetic policies, no pip/GPU",
+  "implementation": "Existing model_snapshot_probe adds read-only inspect_wheel; reuses incremental SHA helper, PyPA filename/version/tag/specifier APIs and stdlib ZIP/email. Caller provides expected SHA, target tags/Python and declared license.",
+  "limits": [
+    "ARTIFACT_CONTRACT_MATCH_ONLY is not rights approval, CUDA compatibility, official origin proof or complete dependency lock",
+    "Pip report alone not accepted; real local wheel bytes needed",
+    "No extraction/install/download/training/build/CI/integration",
+    "Earlier6 blocks and A08 checkpoint donor preserved"
+  ],
+  "lesson": "Validate real artifact bytes and matching internal identity against explicit caller policy; candidate report metadata and target tags alone cannot establish installed ABI or approved rights.",
+  "prior_lesson_applied": "CONSOLIDATION03 reuse standard parsers and existing source helpers; separate source contracts from target decisions and native acceptance.",
+  "references": [
+    "https://packaging.pypa.io/en/stable/tags.html",
+    "https://packaging.python.org/en/latest/specifications/binary-distribution-format/",
+    "https://pip.pypa.io/en/latest/reference/installation-report/"
+  ]
+}

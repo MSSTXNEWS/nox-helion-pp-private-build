@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_V16_E02_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-W3-01-20261028T175014MSK-R12",
+  "task_id": "E02-W3-R12-01",
+  "owner": "E02/P02",
+  "status": "SOURCE_COMPONENT_LOCAL_VERIFIED_NOT_WINDOWS",
+  "pinned_pre_commit": "1eadfe09c8b4fd349a15511e6b816c983a114c99",
+  "historical_baseline_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "historical_baseline_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "reference_pr": 162,
+  "cause": "P02EventRelay JSON ensure_ascii=False may carry lone surrogate; serialized.encode('utf-8') raised uncaught UnicodeEncodeError before host publish",
+  "correction": "Validate UTF-8 encoding within the existing P02Error serialization boundary, retaining one host events.v3 bus and strict size enforcement",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "owner": "E02",
+      "pre_git_blob_sha1": "73022549b78f3360a026350e38aa64482207e2b6",
+      "pre_sha256": "357fac5f3fec3576772b0723e4061963c1c9431665d3858da60a416c86e01ac0",
+      "post_git_blob_sha1": "d024cdbb9a01e7de424b001bcacfec0d6d40968a",
+      "post_sha256": "a6b126b280fc678fd0ae08d2726811d696298a7f77713df4fc8f52b3a9daa501"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_utf8_event_gate_saved_r12.py",
+      "owner": "E02",
+      "pre": "ABSENT",
+      "post_git_blob_sha1": "9da399370a7d9594cfba38444414966adcd4b6dc",
+      "post_sha256": "91c3b26434e17383fada11249e2c86a3a99723fd315feb21c6049329ed5cfc8d"
+    }
+  ],
+  "tests": {
+    "baseline_new": "6 uncaught UnicodeEncodeError in 10 tests, 4 PASS",
+    "patched_new": "10/10 PASS",
+    "patched_with_legacy_R11": "16/16 PASS (4 new + 12 legacy)",
+    "extended_new_suite": "10/10 PASS (6 surrogates + 4 control)",
+    "python_compile": "PASS",
+    "method": "local exact owner source; native dependencies test shims; NO live Windows/Ollama"
+  },
+  "gates": {
+    "native_windows": "NOT_RUN",
+    "azure_ci": "CONFIG_SAVED_NOT_EXECUTED",
+    "source_lock_729": "HOLD",
+    "e07_same_binary": "0/10"
+  },
+  "self_improvement": "UTF8_ENCODE_INSIDE_EVENT_ADMISSION_EXCEPTION_GATE",
+  "no_loss": "Only two E02 paths updated atomically; D02/WOW/persona/data untouched",
+  "notes": "No new DB, LLM, host, downloader, or Windows CI. Exact diff and ZIP SHA external final manifest. No accepted EXE claimed."
+}

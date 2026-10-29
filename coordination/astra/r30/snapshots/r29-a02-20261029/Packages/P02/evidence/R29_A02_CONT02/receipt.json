@@ -1,0 +1,43 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-CONT02",
+  "agent_id": "/root/a02",
+  "parent_commit": "818bb8eca459ce5c0ca8745ac9cb7126527451b2",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "previous_queue_completed": 10,
+  "previous_queue_planned": 10,
+  "continuation_completed": 2,
+  "continuation_planned": 10,
+  "task_mapping": "R29 matrix A02 approach08; V16 26.4.8; canonical product TaskID denominator N/D",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "pre_git_blob": "ef8d16b52b767f460ea34312ac90f3716258592a",
+      "post_git_blob": "a0b7171b063d4c51832c0330b40261c0837941c1",
+      "pre_sha256": "8c92330b7db4ab9d79c7a957efb34392befc18fc481c4ebe98afb031dde202eb",
+      "post_sha256": "21444e465236a5940e3305cec4073b5da7b1f64544a8122b7a6d44cf799d5b83"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_CONT02/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "fda6cc1b6d98a113682715dee2afcdf88d587b4b",
+      "pre_sha256": null,
+      "post_sha256": "531efe54fb1c45abe9a7cc685c29f48d8b73c20c6122a948263d29ec0058fc9b"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_original_voice_outcomes_r29.py",
+      "pre_git_blob": null,
+      "post_git_blob": "2fbbc2fd8a74593f3a885c2a34777f3ff30dab7a",
+      "pre_sha256": null,
+      "post_sha256": "e39df4d0eb0057a906ca916d9466804d0597949b8d90f2557afb52ec0ff5f1ac"
+    }
+  ],
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "physical_providers": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "lesson": "Preserve original native preview/playback receipt semantics and per-stage authority; do not loosen byte-audio contract or fabricate approval/playback.",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

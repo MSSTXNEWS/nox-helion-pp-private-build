@@ -1,0 +1,51 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS10",
+  "agent_id": "/root/a02",
+  "parent_commit": "af4a7212594e701f54716b39ce521aaeece86269",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 10,
+  "planned_approaches": 10,
+  "task_ids": [
+    "R29-A02-APPROACH05-NATIVE-SQLITE-ADMISSION"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_git_blob": "9c3a7c43197efac03558304c838594e8dab4c11f",
+      "post_git_blob": "a76148c98bdbac20e77ae0b473485bf6175dfb34",
+      "pre_sha256": "8dd8d2c62beedc9c34b6be73da012d8b93c31b18f7cccb6387b5b22addc0dcac",
+      "post_sha256": "5072f9bd9abce188122ac1201e6ecc643dbf7f253c42194214b185011ca3ea11"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_runtime.py",
+      "pre_git_blob": "d893468674257b73b910bb80d1da138da0086802",
+      "post_git_blob": "f9209dcb9f9c3e74210443616ac12a18d6e17aec",
+      "pre_sha256": "f8403adbcbd5d6de3030646f9b544323ff2c49c582ecd3a01ee3e002495a159c",
+      "post_sha256": "08846475c1d106b1e0776e6fd9837f6bef39c1cef444541e07a3b55b2afeeb36"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_PASS10/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "1add4d05fab65d9d6528a143ab95e83dc4b1f493",
+      "pre_sha256": null,
+      "post_sha256": "31dca76b697335bfee4ae7f12e110476b8b4b1c5545dd89193d88cb6fc999f2e"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_sqlite_admission_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "996e034a48b069fbda7ef00de3e11f50edc39689",
+      "pre_sha256": null,
+      "post_sha256": "fb7de08fd4691290bf760c10521a69a2f6896646c68fef19692967decb1c91a2"
+    }
+  ],
+  "lesson": "Reuse exact global schema/native-proof checks; partial/composite constraints and truthy/parser-normalized authority are not sufficient.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

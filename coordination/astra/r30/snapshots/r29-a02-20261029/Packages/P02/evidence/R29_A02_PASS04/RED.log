@@ -1,0 +1,43 @@
+test_old_call_shape_was_hold_and_now_explicitly_holds_only_unbound_voice (test_p02_loader_existing_pack_r29.ExistingPackContract.test_old_call_shape_was_hold_and_now_explicitly_holds_only_unbound_voice) ... ERROR
+test_real_readonly_host_registry_accepts_owner_ports_without_mutation (test_p02_loader_existing_pack_r29.ExistingPackContract.test_real_readonly_host_registry_accepts_owner_ports_without_mutation) ... ERROR
+test_call_history_malformed_rejected (test_p02_owner_route_ports.RouteTests.test_call_history_malformed_rejected) ... ok
+test_call_history_sanitizes_provider_data (test_p02_owner_route_ports.RouteTests.test_call_history_sanitizes_provider_data) ... ok
+test_cross_tenant_call_history_blocked (test_p02_owner_route_ports.RouteTests.test_cross_tenant_call_history_blocked) ... ok
+test_limits_bool_rejected (test_p02_owner_route_ports.RouteTests.test_limits_bool_rejected) ... ok
+test_native_route_denial (test_p02_owner_route_ports.RouteTests.test_native_route_denial) ... ok
+test_native_stop_after_voice_run_does_not_publish_output (test_p02_owner_route_ports.RouteTests.test_native_stop_after_voice_run_does_not_publish_output) ... ok
+test_native_stop_before_capture_does_not_consume_one_use_audio (test_p02_owner_route_ports.RouteTests.test_native_stop_before_capture_does_not_consume_one_use_audio) ... ok
+test_rag_existing_index_and_sources (test_p02_owner_route_ports.RouteTests.test_rag_existing_index_and_sources) ... ok
+test_rag_rejects_unverified_source (test_p02_owner_route_ports.RouteTests.test_rag_rejects_unverified_source) ... ok
+test_requires_existing_host_chat_acl (test_p02_owner_route_ports.RouteTests.test_requires_existing_host_chat_acl) ... ok
+test_sid_mismatch_blocked (test_p02_owner_route_ports.RouteTests.test_sid_mismatch_blocked) ... ok
+test_unavailable_routes_hold (test_p02_owner_route_ports.RouteTests.test_unavailable_routes_hold) ... ok
+test_voice_capture_and_one_time_use (test_p02_owner_route_ports.RouteTests.test_voice_capture_and_one_time_use) ... ok
+test_voice_rejects_page_audio (test_p02_owner_route_ports.RouteTests.test_voice_rejects_page_audio) ... ok
+
+======================================================================
+ERROR: test_old_call_shape_was_hold_and_now_explicitly_holds_only_unbound_voice (test_p02_loader_existing_pack_r29.ExistingPackContract.test_old_call_shape_was_hold_and_now_explicitly_holds_only_unbound_voice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_existing_pack_r29.py", line 38, in test_old_call_shape_was_hold_and_now_explicitly_holds_only_unbound_voice
+    routes=register_with_existing_pack01(dispatcher,host.BoundPort,lambda _:self.scope,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 197, in register_with_existing_pack01
+    raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
+p02_owner_route_ports.RouteHold: EXISTING_PACK01_DISPATCHER_REQUIRED
+
+======================================================================
+ERROR: test_real_readonly_host_registry_accepts_owner_ports_without_mutation (test_p02_loader_existing_pack_r29.ExistingPackContract.test_real_readonly_host_registry_accepts_owner_ports_without_mutation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_loader_existing_pack_r29.py", line 24, in test_real_readonly_host_registry_accepts_owner_ports_without_mutation
+    routes=register_with_existing_pack01(dispatcher,host.BoundPort,lambda _:self.scope,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/p02_owner_route_ports.py", line 197, in register_with_existing_pack01
+    raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
+p02_owner_route_ports.RouteHold: EXISTING_PACK01_DISPATCHER_REQUIRED
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.014s
+
+FAILED (errors=2)

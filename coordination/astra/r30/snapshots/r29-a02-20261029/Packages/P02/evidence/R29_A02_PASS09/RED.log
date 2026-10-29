@@ -1,0 +1,104 @@
+test_fresh_quote_still_dials_only_once (test_p02_voice_sip_r27.SipExpiryTests.test_fresh_quote_still_dials_only_once) ... ok
+test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) ... 
+  test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=nan) ... FAIL
+  test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=inf) ... FAIL
+test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) ... FAIL
+test_quote_expiring_during_approval_never_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_approval_never_dials) ... FAIL
+test_quote_expiring_during_verification_never_prompts_or_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_verification_never_prompts_or_dials) ... FAIL
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=nan)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_sip_r27.py", line 58, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_sip_r27.py", line 58, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_sip_r27.py", line 60, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    self.assertEqual(self.called, [])
+AssertionError: Lists differ: [(Identity(tenant='tenant', principal='ali[529 chars]et>)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+(Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session'), CallQuote(number='+34123456789', purpose='appointment', max_cost=Decimal('1'), currency='EUR', quote_id='quote-1', expires_at=nan), <threading.Event at 0x7f21c94eb050: unset>)
+
+Diff is 847 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_quote_expiring_during_approval_never_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_approval_never_dials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_sip_r27.py", line 30, in test_quote_expiring_during_approval_never_dials
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_quote_expiring_during_verification_never_prompts_or_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_verification_never_prompts_or_dials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_voice_sip_r27.py", line 41, in test_quote_expiring_during_verification_never_prompts_or_dials
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.002s
+
+FAILED (failures=5)
+
+SIP STOP CALLBACK BOUNDARIES BEFORE DONOR
+test_stop_during_consent_never_dials_or_consumes_quote (test_p02_sip_stop_r29.SipStopBoundaries.test_stop_during_consent_never_dials_or_consumes_quote) ... FAIL
+test_stop_during_quote_verification_prevents_consent_prompt (test_p02_sip_stop_r29.SipStopBoundaries.test_stop_during_quote_verification_prevents_consent_prompt) ... FAIL
+
+======================================================================
+FAIL: test_stop_during_consent_never_dials_or_consumes_quote (test_p02_sip_stop_r29.SipStopBoundaries.test_stop_during_consent_never_dials_or_consumes_quote)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_sip_stop_r29.py", line 28, in test_stop_during_consent_never_dials_or_consumes_quote
+    self.assertNotIn(self.quote.quote_id, adapter._used)
+AssertionError: 'quote-1' unexpectedly found in {'quote-1'}
+
+======================================================================
+FAIL: test_stop_during_quote_verification_prevents_consent_prompt (test_p02_sip_stop_r29.SipStopBoundaries.test_stop_during_quote_verification_prevents_consent_prompt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_sip_stop_r29.py", line 18, in test_stop_during_quote_verification_prevents_consent_prompt
+    self.assertEqual(prompts, [])
+AssertionError: Lists differ: [(Identity(tenant='tenant', principal='ali[199 chars].0))] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+(Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session'), CallQuote(number='+34123456789', purpose='appointment', max_cost=Decimal('1'), currency='EUR', quote_id='quote-1', expires_at=110.0))
+
++ []
+- [(Identity(tenant='tenant',
+-            principal='alice',
+-            core_id='core-1',
+-            persona_id='persona-1',
+-            session_id='session'),
+-   CallQuote(number='+34123456789',
+-             purpose='appointment',
+-             max_cost=Decimal('1'),
+-             currency='EUR',
+-             quote_id='quote-1',
+-             expires_at=110.0))]
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+FAILED (failures=2)

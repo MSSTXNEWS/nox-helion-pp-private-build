@@ -1,0 +1,47 @@
+{
+  "run_id": "NOX-V16-W4-02-20261029T0007MSK-R17",
+  "owner": "W4-02 / E05 P05",
+  "task_id": "W4-02-R17-DEDUPE_IDENTICAL_MARKET_REPLAY",
+  "parent_commit": "9c13ee438cba11f0194b1b80f4142d533f1a3c0b",
+  "parent_tree": "c66bb21a92c8c38ea5186425f1d08581912c0d05",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "pr": 162,
+  "historical_origin": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_lock_729": "NOT_VERIFIED",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "4e4772246fcf82f0fead5636403da596d6789fc793d2155e5abffabd5d43dcae",
+      "post_sha256": "4b710e2d53ac83d92116c11a7afffb2d526d778a7faec9582ff7d495ceb029c0",
+      "pre_git_blob_sha1": "2b796d6771a9851c8fc7c6c55e193f871ba0a270",
+      "post_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceMarketReplayR17.test.mjs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "86fdf17a7efe44e4c6da3debef68cdb3b2225cd99e8c8deb75f809175ef51a6a",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "8e5cf143a36ad3e4fa9f694c228b0eaca3159827"
+    }
+  ],
+  "tests": {
+    "red": "3 failures of 7 on exact old source",
+    "green": "7/7 targeted; 125/125 legacy direct assertions; 26/26 targeted node:test; JS syntax PASS",
+    "environment": "Node 22 Linux, not installed Windows",
+    "dotnet": "R16 six source smoke checks NOT_RUN; no SDK"
+  },
+  "previous_lesson": {
+    "id": "BYTE_LIMIT_BEFORE_JSON_MATERIALIZATION",
+    "application": "N/A — this change is read-only JS projection, no HTTP parser; R16 8MiB C# SHA/blobs unchanged"
+  },
+  "one_new_lesson": "IDENTICAL_FEED_REPLAY_IS_NOT_INDEPENDENT_PRICE_SOURCE",
+  "lesson_record": {
+    "error": "Identical licensed market snapshot repeated via native cache/events was counted as two conflicting quotes",
+    "cause": "Raw market record count conflated delivery replay with distinct evidence",
+    "fix": "Deduplicate all-field canonical-equivalent licensed market snapshots before market conflict count, preserve HOLD for any distinct provider/price/date/receipt",
+    "regression": "R17 3 RED -> 7 GREEN; different value/provider/timestamp remains HOLD",
+    "prevention": "Keep replay and distinct-source cases in P05 regression gate before SOURCE_READY"
+  },
+  "no_loss": "D02/WOW001-200/8 CoreID/5 Persona/events.v3/LLM/native host/source ZIP/user data not touched",
+  "state": "SOURCE CODE PASS; E06 native host NOT_VERIFIED; SOURCE_READY HOLD; Windows E07 0/10 NOT_RUN"
+}

@@ -1,0 +1,26 @@
+{
+  "run_id": "ASTRA-R29-A1-B04-MARKER-WRITE-20261029",
+  "owner": "Astra-A/A1/P01",
+  "started_utc": "2026-10-29T01:54:17.861Z",
+  "tests_finished_utc": "2026-10-29T01:55:15.571Z",
+  "parent": "02c73bbd3da3e583eeb92e48529f14771d60e868",
+  "task": "P01 install/update ownership marker transaction",
+  "preimage": {
+    "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "git_blob_sha1": "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb"
+  },
+  "change": "Check FileWrite error immediately; close handle and explicitly abort before any application rename; isolate operation from stale error flags.",
+  "tests": {
+    "kind": "bounded source-flow model interpreting actual marker instructions, NOT NSIS or Windows execution",
+    "red": "4 cases: 1 pass, 3 failures (write failure reached activation; open failure lacked explicit error level; stale error contaminated valid operation)",
+    "green": "4 passed",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/Installer -p test_marker_write_flow.py -v",
+    "native": "NOT_RUN",
+    "build": "NOT_RUN; forbidden"
+  },
+  "reference": "https://nsis.sourceforge.io/Docs/Chapter4.html#filewrite",
+  "lesson": "Ownership is a transaction prerequisite: a successful handle open does not prove marker write succeeded; inspect write error before moving application directories.",
+  "cumulative_saved_blocks": 4,
+  "continuation_saved_blocks": 1,
+  "product_done": false
+}

@@ -1,0 +1,27 @@
+{
+  "runId": "ASTRA-R29-A03-CONTINUATION-CATALOG-READINESS-20261029",
+  "startedUtc": "2026-10-29T01:17:27Z",
+  "owner": "A03 P03",
+  "parentSha": "af78a31e3ec3dbb4f227753213d8edc86a33e499",
+  "branch": "astra/r29-a03-20261029",
+  "previousApproachesPreserved": 5,
+  "continuationApproachesSourceTested": 4,
+  "taskIds": ["P03-R29-BOUNDED-DISCOVERY-READ", "P03-R29-READINESS-INSTALLED-EVIDENCE-CONSISTENCY"],
+  "status": "SOURCE_TESTED_READY_CANDIDATE_REUSE",
+  "source": "Packages/P03/Source/python-host/p03_onehost_port.py",
+  "preGitBlob": "c04d5a56c9fc6547488386f3b4a3eefd9795efee",
+  "postGitBlob": "21d2db7c7916ccd54d926cff26044f7375a592c8",
+  "provenance": "Historical R27 A06/P03 unpublished local candidate preserved in agents/A06; reviewed narrow diff then executed regressions against current owner source. Not previously counted as completed/saved.",
+  "changes": ["Limit actual read to 100001 bytes after stat", "Non-finite float overflow and malformed/deep/oversized integer JSON HOLD", "Readiness and installed operation share exact bounded unique model-tag validation"],
+  "tests": {
+    "command": "python -m unittest test_p03_catalog_bounds_r27 test_p03_catalog_json_contract_r13 test_p03_command_binding_r27 -q",
+    "cwd": "Packages/P03/Source/python-host",
+    "red": "6 new tests: 6 failing subcases and 1 error on previous source",
+    "green": "23 PASS",
+    "scope": "Actual Python catalog parser/filesystem and existing-client readiness fixtures, plus previous command-binding regressions. No actual Ollama download."
+  },
+  "lesson": "Capability readiness must use the same validation as the advertised operation; a list-shaped invalid native response is not readiness. Bound actual bytes read, not only a preceding file-size observation.",
+  "remaining": ["Authenticated native registry/backend composition", "C# export execution and Windows acceptance", "Actual reviewed model artifact inputs"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

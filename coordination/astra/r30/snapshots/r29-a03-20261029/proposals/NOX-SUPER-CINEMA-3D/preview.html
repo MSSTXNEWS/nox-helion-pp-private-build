@@ -1,0 +1,52 @@
+<!doctype html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOX · SUPER CINEMA 3D</title>
+<style>
+:root{color-scheme:dark;font-family:Segoe UI,system-ui,Arial,sans-serif}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at center,#1a2935,#06090e 70%);color:#e9e5df}
+header{padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+h1{font-size:clamp(19px,3vw,30px);margin:0;letter-spacing:.16em}
+header small{color:#a8b6c2}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,select{background:#1b2b35;color:#eee4d9;border:1px solid #829ba255;border-radius:9px;min-height:44px;padding:9px 12px;font:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:2px solid #eab680;outline-offset:2px}
+main{max-width:1560px;margin:auto;padding:0 16px 20px}
+.stage{position:relative;height:min(74vh,820px);min-height:440px;border:1px solid #91a4ad33;border-radius:24px;overflow:hidden;background:radial-gradient(ellipse at 50% 50%,#13202b 0,#04070c 72%)}
+.nox-real3d-scene{position:absolute;inset:0;min-height:100%;overflow:hidden}
+.nox-real3d-canvas{width:100%;height:100%;display:block}
+.nox-real3d-status,.nox-real3d-fallback{position:absolute;left:14px;bottom:12px;padding:8px 12px;border-radius:8px;border:1px solid #dab18555;background:#090f17d9;color:#e7c4a4;font-size:12px}
+.corebar{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin-top:9px}
+.corebar button{font-size:11px;min-width:0;overflow-wrap:anywhere}
+footer{padding:12px 0;color:#a7bbc5;font-size:12px}
+@media(max-width:750px){.corebar{grid-template-columns:repeat(4,minmax(0,1fr))}.stage{min-height:390px;height:58vh}}
+@media(max-width:410px){.corebar{grid-template-columns:repeat(2,minmax(0,1fr))}.controls{width:100%}.stage{min-height:330px}}
+</style></head><body>
+<header><div><small>NOX HELION · NON-PRODUCTION / WEBGL</small><h1>SUPER CINEMA 3D</h1></div>
+<div class="controls"><label>Режим <select id="mode"><option>BALANCED</option><option>MAX</option><option>ECO</option><option>REDUCED</option></select></label>
+<label><input type="checkbox" id="training"> Идёт GPU-обучение (демо-ограничитель)</label><button type="button" id="record">Записать 8-секундный WebM</button><small id="record-status" aria-live="polite"></small></div></header>
+<main><div id="stage" data-nox-wow-slot="secondary" class="stage"></div><div id="cores" class="corebar"></div>
+<footer>Локальный демонстрационный WebGL-рендер. Оригинальный D02 HOME не заменён. Реальных показаний CPU/GPU или генерации изображений здесь нет. Для финального EXE требуется SourceLock и приёмка №7.</footer></main>
+<script src="./dist/nox-cinema3d.js"></script><script>
+(function(){
+const host=window.NOXSuperCinema3D;
+if(!host){document.getElementById("stage").textContent="Требуется локальная сборка npm run build";return}
+const view=host.mountCinema3D(document.getElementById("stage"));
+const controls=document.getElementById("cores");
+for(const id of host.CORE_IDS){let b=document.createElement("button");b.type="button";b.textContent=id;
+b.addEventListener("click",()=>view.selectCore(id));controls.append(b)}
+document.getElementById("mode").addEventListener("change",e=>view.setMode(e.target.value));
+document.getElementById("training").addEventListener("change",e=>view.setTrainingActive(e.target.checked));
+const recordButton=document.getElementById("record");
+recordButton.addEventListener("click",async()=>{
+ recordButton.disabled=true;
+ const status=document.getElementById("record-status");status.textContent="Запись по вашему запросу...";
+ try{
+  if(!view.ready||typeof view.recordClip!=="function")throw Error("WEBM_NOT_READY");
+  const clip=await view.recordClip({seconds:8,fps:24});
+  const url=URL.createObjectURL(clip.blob),a=document.createElement("a");
+  a.href=url;a.download="NOX_HELION_3D_DEMO.webm";document.body.append(a);a.click();a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),60000);
+  status.textContent="WebM создан локально · "+clip.size+" байт";
+ }catch(e){status.textContent="Запись недоступна: "+String(e?.message||"error").slice(0,80)}
+ finally{recordButton.disabled=false}
+});
+window.addEventListener("pagehide",()=>view.destroy(),{once:true});
+})();
+</script></body></html>

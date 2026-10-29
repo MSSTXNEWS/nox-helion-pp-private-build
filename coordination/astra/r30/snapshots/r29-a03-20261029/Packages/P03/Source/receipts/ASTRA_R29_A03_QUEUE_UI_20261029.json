@@ -1,0 +1,21 @@
+{
+  "runId": "ASTRA-R29-A03-QUEUE-UI-20261029",
+  "owner": "A03 P03",
+  "baseSha": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "branch": "astra/r29-a03-20261029",
+  "approachesCompleted": 1,
+  "approachesPlanned": 10,
+  "taskIds": ["P03-R29-QUEUE-UI-LIFECYCLE", "P03-R29-SNAPSHOT-ATOMIC-ADMISSION"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "preGitBlob": "12762f9f36b8813aaac22476495a59484aa9f22a",
+  "postGitBlob": "ff4a4445b8c776409130dbbc7483bc205985fb57",
+  "postSha256": "1db9cde92462a55cebf9ff28a31c911cefbe8bcb777249b67beed2b2ea3305b4",
+  "tests": {"command": "node --test Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs", "before": "6 FAIL, 2 PASS", "after": "8 PASS", "kind": "Execute original WebView JavaScript with inert DOM and host-event fixtures"},
+  "lesson": "Track asynchronous lifecycle by original queue job identity, independently of current UI selection. Validate the full snapshot before mutating catalog, consent or host capabilities.",
+  "priorLessonApplied": "BIND_P02_CITATIONS_TO_OWNER_RUN_EPOCH: preserve original operation identity across delayed events; unrelated job and model fixtures cannot complete active transfer.",
+  "nativeWindowsAcceptance": "HOLD: no Windows host or real Ollama download run",
+  "productDenominator": null,
+  "preserved": ["Existing downloader", "Existing native command routes", "30 discovery families", "20 quick actions", "Terminal states", "Prior A06 donor source commits"],
+  "noBuildNoIntegration": true
+}

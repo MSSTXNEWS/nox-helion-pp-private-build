@@ -1,0 +1,37 @@
+{
+  "run_id": "ASTRA_R29_A04_01",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-MODEL-SNAPSHOT-METADATA-HOLD",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "parent": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "local_commit": "b8c52d8f33f53b3ab11e8c7c8141a4f5388bf3d1",
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "post_blob": "01c89f5de71ea7f226e1e24185caf83fb45df46c",
+      "post_sha256": "8896b7147679f3c2287a1625c20456d87f0207dad87c91fdd67bf31a19ded8b1"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_blob": "2bad69047606a6b9a03ad93efc4561d492afabbf",
+      "post_blob": "79f05abade0094852d3f3cc8f2fc84cf1d4ebfa2",
+      "post_sha256": "a97b76ca7c83484a658759431cb1ec3546dcb294a6fc25e0c98619f58447930b"
+    }
+  ],
+  "red": "5 errors and 3 failed subcases in 10 test methods on exact preimage",
+  "green": "10/10 test_model_snapshot_probe.py local actual Python; tiny local safetensors fixtures",
+  "fix": "Validate tensor keys and shard value types before set/sort so malformed metadata returns structured HOLD to loader.",
+  "lesson": "Validate input types before generic collection operations; catching domain errors is ineffective if unvalidated JSON raises TypeError first.",
+  "prior_lesson_applied": "P02 SQLite/NDJSON boundary lesson: semantic completeness before trusting decoded external state.",
+  "scope": "Existing read-only installer model probe only; no model/training engine or new dependency.",
+  "preserved_donors": [
+    "astra/r27-a07-20261029@37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+    "astra/r27-a08-20261029@e2fd3c50190ffac04abc30d2bd1b46caf9dab454"
+  ],
+  "limits": [
+    "Windows/GPU/training not executed",
+    "Release wheel hash lock absent",
+    "Existing owner-port final integration deferred"
+  ]
+}

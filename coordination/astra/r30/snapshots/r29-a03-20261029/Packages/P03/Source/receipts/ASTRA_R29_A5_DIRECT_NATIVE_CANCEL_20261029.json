@@ -1,0 +1,30 @@
+{
+  "runId": "ASTRA-R29-A5-DIRECT-NATIVE-CANCEL-20261029",
+  "worker": "/root/a03",
+  "currentRole": "Astra-A A5 P03 queue/admission",
+  "previousApproachesPreserved": 9,
+  "currentWaveApproachesSourceTested": 1,
+  "implementationStartedUtc": "2026-10-29T01:55:06Z",
+  "journalPreflight": "Root confirmed fresh CONTINUATION04 Docs master/report/lesson read before edit; full56/R29supervisor/C34 read locally",
+  "parentSha": "17b09c2ff0827b36f3ba554736e39f57ba93de80",
+  "branch": "astra/r29-a03-20261029",
+  "taskIds": ["P03-R29-RUNNING-CANCELLED-NATIVE-ACK"],
+  "status": "SOURCE_TESTED",
+  "source": "Packages/P03/Admission/p03_modelcenter_gate.py",
+  "preGitBlob": "068f2217f3ce4b1cce2be930ff1453f42941efab",
+  "postGitBlob": "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17",
+  "postSha256": "fe69f0e1425d72005b08e3953e6db08323ffd4bc150bcfea10f64544f37b2867",
+  "originalProducer": "ModelDownloadQueueWorker.RunNextAsync cancellation catch persists Running or Cancelling directly to Cancelled; ModelDownloadQueueStore.UpdateAsync permits the edge",
+  "change": "Permit direct RUNNING to CANCELLED only through the existing trusted verifier, nativeCancelAttested and cancelAckReceiptSha256 guards; preserve identity, counters and terminal immutability",
+  "tests": {
+    "command": "python -m unittest discover -s Packages/P03/Admission -p 'test_p03_direct_native_cancel_r29.py' -q",
+    "red": "7 tests, 4 failing subcases on previous source",
+    "green": "7 PASS",
+    "scope": "Actual Python queue policy against synthetic native cancellation/receipt fixtures; direct cancel, new-job retry, missing ACK/verifier, identity/progress drift, unconfirmed STOP and immutable terminal state"
+  },
+  "lesson": "Mirror every real original-worker terminal edge, including cancellation from an external token. The absence of an intermediate UI state must not reject a valid native ACK, but never substitute request intent for that ACK.",
+  "nativeWindowsAcceptance": "HOLD_NOT_RUN",
+  "remaining": ["Authenticated original native provider composition", "Real model rights and immutable pins", "Native Windows and live transfer acceptance"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}

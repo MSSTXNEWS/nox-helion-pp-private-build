@@ -1,0 +1,27 @@
+{
+  "runId": "ASTRA-R29-A5-CANCEL-CTS-RETIREMENT-CANDIDATE-20261029",
+  "worker": "/root/a03",
+  "currentRole": "Astra-A A5 P03 queue/admission",
+  "parentSha": "dc6c56c861e0f961a5dd0676d2bf4348bcca6daf",
+  "branch": "astra/r29-a03-20261029",
+  "taskIds": ["P03-R29-CANCEL-CTS-RETIREMENT-RACE"],
+  "status": "SOURCE_CANDIDATE_NATIVE_NOT_RUN",
+  "currentWaveApproachesSourceTested": 1,
+  "additionalVerifiedApproach": false,
+  "source": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+  "preGitBlob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+  "postGitBlob": "cb48e90bf9ede51e96e3a706c6a77faf81d142c1",
+  "cause": "CancelAsync captures worker-owned CTS before awaiting durable Cancelling write. Worker can retire/dispose token while this await is in progress; subsequent Cancel throws after the intent was persisted.",
+  "change": "Reuse existing worker watcher try-Cancel/catch-ObjectDisposed pattern. Persist intent first, invoke callbacks without holding registration lock, retain request-only true result; no fabricated Cancelled terminal state.",
+  "nativeFixture": {
+    "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/CancelRetirementRaceFixture.cs",
+    "entry": "await CancelRetirementRaceFixture.RunAsync()",
+    "status": "AUTHORED_NOT_RUN",
+    "cases": ["retired captured CTS does not throw after persisted intent", "live token cancels", "callback on another thread can enter registration lock", "persisted state stays Cancelling, not invented terminal ACK"],
+    "limitations": "Reflection models retired captured reference deterministically; not a real timed native transfer. No dotnet/csc available. Existing smoke entrypoint owned by A6 not edited."
+  },
+  "lesson": "Cancellation signalling is a callback boundary, so do not hold owner locks while signalling. Treat only disposal of the worker-owned retired token as an expected race; preserve other callback failures and truthful persisted request state.",
+  "remaining": ["Run authored fixture on compatible native source toolchain after owner reconciliation", "Authenticated provider and rights/pin inputs", "Native Windows and real transfer acceptance"],
+  "productDenominator": null,
+  "noBuildNoIntegration": true
+}
