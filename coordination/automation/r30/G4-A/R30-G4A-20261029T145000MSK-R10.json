@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T145000MSK-R10",
+  "slot": "G4-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader V16 ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "task_id": "P04-G4A-R10-NATIVE-USIZE-NESTED-UNICODE-HEADER-GATE",
+  "branch": "automation/r30/g4a/20261029T145000MSK-R10",
+  "base_branch": "automation/r30/g4a/20261029T134536MSK-R09",
+  "base_head_commit": "2bd3a438f76ce6f05d44171a1c0274b57bed140b",
+  "source_commit": "4bc2480cb38c6406182e661a6c56d431804e4262",
+  "tests_commit": "cb529fa30978d7069a3c7ed63a9f94a0148c0998",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "cross_owner_writes": 0
+  },
+  "rules": {
+    "section33_consolidated_56_read": true,
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "original_verbatim_not_attested": true,
+    "sections54_55_56_read": true,
+    "r29_loader_only_override_applied": true,
+    "latest_drive_master_through": "ASTRA-C-R30-20261029T1430MSK-09",
+    "latest_drive_lessons_through": "ASTRA-C-R30-20261029T1430MSK-09"
+  },
+  "history": {
+    "donor_A04_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "donor_B1_git_blob": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+    "donor_B2_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "r30_conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "r30_snapshot_root_dirs_seen": 25,
+    "r30_snapshot_contents_fully_byte_verified": false,
+    "original_729_raw_sha256_verified": false,
+    "original_three_archives_changed": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob": "e72719fdc4edc04a75f1cc3571fbc809cd3d8275",
+      "post_git_blob": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+      "pre_sha256": "d5afcb6e9e4d1232e599083b0ca021d84f853063651fb0a24ba71d7a61c2dabb",
+      "post_sha256": "8438e88300f1f9320283a4e263e00fcac86205c921e2e24b40ef110165eb430b",
+      "change": "Check entire safetensors JSON object for lone UTF-16 surrogates, including unrecognized nested tensor members. Bound tensor shape dimensions by 64-bit Rust usize maximum to reject Python-only arbitrary precision when a zero dimension otherwise skips multiplication."
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob": "34dd158d2a4871110e8961a3babf2d03ce473e75",
+      "post_git_blob": "a90ee9821c80427d08d45357b8d3d25fcc6f02f1",
+      "pre_sha256": "b6b20d31b02a67ccdccf63072e1b30ef83367a472b64b04ac1084b0421f6c3a3",
+      "post_sha256": "7ee261cd2ca21e1b5da010e8835cb9c3896e05de19d0884d520fc99ce00869f0",
+      "change": "Four unique test_g4a_r10_* cases: invalid >u64 after zero dimension; nested ignored-member surrogate; valid max-u64 zero tensor; valid nested Unicode."
+    }
+  ],
+  "tests": {
+    "command": "python /tmp/g4a_r10_scoped_test.py",
+    "scope": "Local reconstructed byte-equivalent core parser logic plus installed native safetensors.safe_open; NOT direct import of full GitHub source module",
+    "scoped_green": "4/4",
+    "native_parser_oracle": "4/4 native ACCEPT/REJECT matched expectations",
+    "original_red_differences": "2 original Python accepts where native rejects",
+    "github_saved_source_blob_readback": true,
+    "github_saved_tests_blob_readback": true,
+    "regression_test_methods_saved": 4,
+    "full_repository_unittest": "NOT_RUN",
+    "recommended_command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -k g4a_r10 -v",
+    "windows": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "rights": "NOT_ATTESTED"
+  },
+  "before_receipt_compare": {
+    "base": "automation/r30/g4a/20261029T134536MSK-R09",
+    "head": "automation/r30/g4a/20261029T145000MSK-R10",
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "only_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ]
+  },
+  "errors_and_improvements": {
+    "root_cause": "CPython parses arbitrary-size ints in shape metadata; native Rust safetensors requires usize, so shape [0,2**64] could be accepted by the probe despite native rejection. Earlier Unicode guard walked selected names/metadata only, ignoring nested strings in unrecognized tensor members.",
+    "previous_lesson_applied": "R09 and Astra-C required differential Python/native checks, complete recursive Unicode review, and full-module regression next; native four-fixture differential was executed and four full-module tests committed, but their full-module execution remains unverified.",
+    "self_improvement_lesson": "Trust boundaries must validate the same native numeric widths and every decoded Unicode scalar, including ignored optional metadata. Keep both positive boundary controls (2**64-1, emoji) and negative controls (2**64, lone surrogate). Scoped reproducer is not full repository unittest evidence.",
+    "coordinator_request": "Astra-C only: append this immutable Git receipt to common Google Drive journals after collecting all 14 workers. Do not count source patch or scoped tests as product acceptance."
+  },
+  "safety": {
+    "no_main_write": true,
+    "no_pr162_write": true,
+    "no_shared_r30_write": true,
+    "no_foreign_owner_write": true,
+    "no_preflight_local_gpu_change": true,
+    "no_snapshots_change": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_run": true,
+    "no_final_integration": true,
+    "no_merge": true
+  },
+  "gates": {
+    "source_saved": true,
+    "github_blob_readback": true,
+    "full_p04_suite": false,
+    "source_code_complete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_task_accepted": false
+  }
+}
