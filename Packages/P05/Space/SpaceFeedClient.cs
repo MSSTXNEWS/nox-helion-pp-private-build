@@ -80,7 +80,9 @@ public sealed class SpaceFeedClient
         // during an offline fallback from a different approved endpoint.
         if (_cache.TryGetValue(key, out var old) &&
             now >= old.FetchedAt && now - old.FetchedAt < _ttl)
-            return old with { Status = "CACHE" };
+            return old with {
+                Status = old.Status is "LIVE" or "CACHE" ? "CACHE" : old.Status
+            };
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
         timeout.CancelAfter(_timeout);
         try
@@ -119,9 +121,16 @@ public sealed class SpaceFeedClient
                 cancellationToken: timeout.Token).ConfigureAwait(false);
             var cloned = json.RootElement.Clone();
             var observed = extractSourceTime(cloned);
+            var checkedAt = DateTimeOffset.UtcNow;
+            // Provider timestamps are evidence, not authority. A timestamp
+            // far in the future must never be reported as LIVE or CACHE.
+            var futureTime = observed is not null && observed.Value > checkedAt.AddMinutes(5);
+            var sourceStatus = observed is null ? "UNVERIFIED_TIMESTAMP" :
+                futureTime ? "INVALID_SOURCE_TIME" : "LIVE";
             var snapshot = new FeedSnapshot(id, provider, observed,
-                DateTimeOffset.UtcNow, cloned, observed is null ? "UNVERIFIED_TIMESTAMP" : "LIVE",
-                observed is null ? "SOURCE_TIME_MISSING" : null, false);
+                checkedAt, cloned, sourceStatus,
+                observed is null ? "SOURCE_TIME_MISSING" :
+                futureTime ? "FUTURE_SOURCE_TIME" : null, futureTime || observed is null);
             // STOP can arrive from the host during the source-time callback.
             stop.ThrowIfCancellationRequested();
             _cache[key] = snapshot;

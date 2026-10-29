@@ -19,8 +19,9 @@ static void Pass(bool ok, string description)
     if (!ok) throw new InvalidOperationException("FAIL " + description);
     Console.WriteLine("PASS " + description);
 }
-static SpaceFeedClient Client(Func<HttpResponseMessage> reply) =>
-    new(new HttpClient(new LocalOnlyHandler(reply)), TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(12));
+static SpaceFeedClient Client(Func<HttpResponseMessage> reply, TimeSpan? ttl = null) =>
+    new(new HttpClient(new LocalOnlyHandler(reply)),
+        ttl ?? TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(12));
 static Task<FeedSnapshot> Fetch(SpaceFeedClient c, CancellationToken ct = default) =>
     c.FetchAsync("brent", new Uri("https://example.invalid/brent"), "APPROVED_TEST_SOURCE", SourceAt, ct);
 
@@ -28,6 +29,18 @@ var valid = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json)
 var small = await Fetch(valid);
 Pass(small.Status == "LIVE" && small.Data is not null && small.SourceTimestamp is not null,
     "small valid JSON: LIVE with source timestamp");
+
+var futureBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new {
+    source_time = DateTimeOffset.UtcNow.AddDays(2)
+}));
+var future = Client(() => Reply(new ByteArrayContent(futureBytes)), TimeSpan.FromMinutes(1));
+var impossibleTime = await Fetch(future);
+Pass(impossibleTime.Status == "INVALID_SOURCE_TIME" &&
+     impossibleTime.ErrorCode == "FUTURE_SOURCE_TIME" && impossibleTime.IsStale,
+     "future source timestamp cannot be LIVE");
+var impossibleCached = await Fetch(future);
+Pass(impossibleCached.Status == "INVALID_SOURCE_TIME" && impossibleCached.IsStale,
+     "unverified future source cannot be promoted to CACHE");
 
 var redirected = Client(() => new HttpResponseMessage(HttpStatusCode.OK) {
     Content = new ByteArrayContent(Encoding.UTF8.GetBytes(Json)),
@@ -86,7 +99,7 @@ try {
     Console.WriteLine("PASS pre-canceled STOP: no cache success");
 }
 
-Console.WriteLine("8/8 semantic assertions PASS (when this project actually runs on .NET 8)");
+Console.WriteLine("10/10 semantic assertions PASS (when this project actually runs on .NET 8)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {

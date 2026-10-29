@@ -141,6 +141,15 @@ internal static class Program
                   boundedContext.Contains(smallText) &&
                   boundedContext.Contains("SHA256:" + Sha(smallText)),
                 "bounded context retains only complete SHA-verified passages");
+            // Public formatter must fail closed if the caller supplies a forged
+            // chunk identity, even if its shape and citation syntax look valid.
+            try
+            {
+                var tamperedCitation = smallCitation with { ChunkSha256 = Sha("wrong bytes") };
+                RagService.BuildContext(new[] { tamperedCitation }, 256);
+                throw new InvalidOperationException("RAG_FORGED_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
             using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
                 "no-model-test-double", Path.Combine(directory, "index.json")))
             {

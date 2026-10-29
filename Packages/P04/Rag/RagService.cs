@@ -272,6 +272,11 @@ public sealed class RagService : IDisposable
             // Skip oversized hits so smaller verified passages are still useful.
             if (context.Length + required > maxCharacters)
                 continue;
+            // BuildContext is public: never trust a supplied hash just because
+            // it was formatted like a retrieved, verified citation.
+            if (result.ChunkIndex < 0 ||
+                !string.Equals(result.ChunkSha256, Sha256(result.Text), StringComparison.Ordinal))
+                throw new InvalidDataException("RAG citation does not match the complete chunk.");
             context.Append(citation).Append('\n').Append(result.Text).Append("\n\n");
         }
         return context.ToString().TrimEnd();
