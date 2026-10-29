@@ -1,0 +1,19 @@
+--- a/Packages/P05/E05/src/E05SafeRunReports.cs
++++ b/Packages/P05/E05/src/E05SafeRunReports.cs
+@@ -32,8 +32,14 @@
+                 var result = await writer.AppendAsync(t.DocumentId, runId,
+                     purpose == "report" ? report : lesson, ct).ConfigureAwait(false);
+                 receipts.Add(result);
+-                if (result.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
+-                    string.IsNullOrWhiteSpace(result.RevisionAfter))
++                var expectedText = purpose == "report" ? report : lesson;
++                if (result.RunId != runId || result.DocumentId != t.DocumentId ||
++                    result.ExpectedChars != expectedText.Length ||
++                    string.IsNullOrWhiteSpace(result.RevisionBefore) ||
++                    string.IsNullOrWhiteSpace(result.RevisionAfter) ||
++                    (result.Status == "READBACK_PASS" && result.RevisionBefore == result.RevisionAfter) ||
++                    (result.Status == "ALREADY_PRESENT" && result.RevisionBefore != result.RevisionAfter) ||
++                    result.Status is not ("READBACK_PASS" or "ALREADY_PRESENT"))
+                     return new(runId, "HOLD_READBACK", receipts);
+             }
+             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
