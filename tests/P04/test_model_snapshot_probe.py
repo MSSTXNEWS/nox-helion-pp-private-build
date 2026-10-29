@@ -746,6 +746,85 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
 
 
+
+    def test_g4a_r11_index_membership_single_pass_with_twelve_real_shards(self):
+        # 36 tensors/12 shards: exercise the real header parser, SHA and
+        # weight_map. Count dict.items() calls to reject quadratic rescans.
+        mapping = {}
+        for shard_number in range(12):
+            name = f"model-{shard_number:03d}.safetensors"
+            header = {}
+            for tensor_number in range(3):
+                tensor = f"layer.{shard_number}.{tensor_number}"
+                offset = tensor_number * 4
+                header[tensor] = {"dtype": "F32", "shape": [1],
+                                  "data_offsets": [offset, offset + 4]}
+                mapping[tensor] = name
+            raw = json.dumps(header, separators=(",", ":")).encode("utf-8")
+            (self.root / name).write_bytes(
+                len(raw).to_bytes(8, "little") + raw + bytes(12)
+            )
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"metadata": {"total_size": 144}, "weight_map": mapping}),
+            encoding="utf-8"
+        )
+
+        class CountItems(dict):
+            def __init__(self, other):
+                super().__init__(other)
+                self.calls = 0
+
+            def items(self):
+                self.calls += 1
+                return super().items()
+
+        original_json_file = probe._json_file
+        observed = []
+
+        def instrument_index(path, *, return_sha=False):
+            value = original_json_file(path, return_sha=return_sha)
+            if path.name == "model.safetensors.index.json" and not observed:
+                metadata, digest = value
+                counted = CountItems(metadata["weight_map"])
+                metadata["weight_map"] = counted
+                observed.append(counted)
+                return metadata, digest
+            return value
+
+        with mock.patch.object(probe, "_json_file",
+                               side_effect=instrument_index):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 36)
+        self.assertEqual(len(result["weight_files"]), 12)
+        self.assertEqual(len(result["observed_snapshot_sha256"]), 64)
+        self.assertEqual(len(observed), 1)
+        self.assertEqual(observed[0].calls, 1)
+        self.assertFalse(result["snapshot_revision_attested"])
+
+    def test_g4a_r11_late_shard_map_mismatch_purges_partial_evidence(self):
+        # Optimization must not hide a failure after earlier shards hashed.
+        for name, tensor in (("model-01.safetensors", "a"),
+                             ("model-02.safetensors", "unexpected")):
+            raw = json.dumps({
+                tensor: {"dtype": "F32", "shape": [1],
+                         "data_offsets": [0, 4]}
+            }).encode("utf-8")
+            (self.root / name).write_bytes(
+                len(raw).to_bytes(8, "little") + raw + bytes(4)
+            )
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {
+                "a": "model-01.safetensors",
+                "b": "model-02.safetensors"}}),
+            encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
 
