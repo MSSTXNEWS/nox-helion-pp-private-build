@@ -1,0 +1,216 @@
+{
+  "schema": "NOX_V16_R19_COORDINATION_QUEUE_SNAPSHOT_V1",
+  "kind": "NON_CANONICAL_DISPATCH_ONLY",
+  "head_at_snapshot": "b9076c62a7e9de67146ff5397ef6882250efad00",
+  "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "counts_at_snapshot": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "total": 11,
+    "history_complete": false
+  },
+  "canonical_product_progress": "N/D",
+  "warning": "This queue is read-only coordination; not a product TaskID baseline, task lock, authenticated source owner receipt, QA PASS or build approval",
+  "tasks": [
+    {
+      "id": "ERR-SYS-001",
+      "package": "GATE",
+      "owner": "T02/C",
+      "state": "OPEN",
+      "priority": 0,
+      "depends_on": [],
+      "source_error_status": "OPEN",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "No canonical short error-action register, cross-agent read receipt or recurrence verification; errors were written in 2408/5241/1661 paragraph logs but not made mandatory preflight.",
+      "next_action": "Единый cross-run журнал: T02/C обязан собирать ACK всех owners, индексировать исторические receipts, фиксировать повтор HOLD."
+    },
+    {
+      "id": "ERR-SYS-002",
+      "package": "GATE",
+      "owner": "T02/C",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "OPEN",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Mutable source HEAD was copied into instructions and logs while T06 merged; old SHA interpreted as current.",
+      "next_action": "Новый HEAD требует проверки Git на старте; старые SHA-зависимые PASS нельзя переносить автоматически, 729 ZIP сохранять."
+    },
+    {
+      "id": "ERR-SRC-003",
+      "package": "GATE",
+      "owner": "T06/Host50",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "OPEN",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Host50Admission initially treated historic BASE_TREE as only allowed active_tree and raised WHOLE_TREE_SOURCELOCK_NOT_RECONCILED after integration.",
+      "next_action": "T06/Host50 sole source writer: reconcile owner-map historical sourceBaseCommit using owner-authorized exact-PRE 0b3a.. vs eb46.. safely; keep HMAC/native verifier, ACL, STOP, consent. T08 independently verify at SAME HEAD. 13 native routes HOLD."
+    },
+    {
+      "id": "ERR-SRC-004",
+      "package": "GATE",
+      "owner": "T06+P01-P05 functional owners",
+      "state": "OPEN",
+      "priority": 0,
+      "depends_on": [],
+      "source_error_status": "OPEN",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Single merged source tree exists but full P01-P05/Host50 STOP/ACL/consent/Voice functional source acceptance is not evidenced, and 13 Host50 prior source holds remain unadmitted.",
+      "next_action": "T06/P01-P05: native owner bindings, P01 host provenance, Voice/STOP/ACL/consent, 13 Host50; owner-accepted HEAD/tree/manifest."
+    },
+    {
+      "id": "ERR-SRC-005",
+      "package": "GATE",
+      "owner": "T06",
+      "state": "VERIFIED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "FIX_APPLIED_UNVERIFIED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Integration test runner read mutable checkout instead of verified copied P02/PACK01 fixtures.",
+      "next_action": "T08 подтвердить pinned fixture runner на точном HEAD; не повторять неотносящиеся тесты."
+    },
+    {
+      "id": "ERR-SYS-006",
+      "package": "GATE",
+      "owner": "T07/T09",
+      "state": "ACCEPTED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "VERIFIED_CLOSED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "GitHub API returned no raw original archive part bytes; outdated '0/729' HOLD propagated after T09 verified via Drive.",
+      "next_action": "Закрыто: ZIP 3 части/729 SHA+CRC PASS, не переоткрывать нулевой GitHub byte access."
+    },
+    {
+      "id": "ERR-SYS-007",
+      "package": "GATE",
+      "owner": "T04",
+      "state": "ACCEPTED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "VERIFIED_CLOSED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Historical overlap SKIP was based on incomplete subset of 25 snapshots",
+      "next_action": "Закрыто: T04 выбор 34/34, не повторять 25 архивных веток."
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "package": "GATE",
+      "owner": "T09",
+      "state": "VERIFIED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "FIX_APPLIED_UNVERIFIED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "No proof of independent closeout gate on the same accepted source SHA",
+      "next_action": "T09 принимать freeze только после T06 8/8 и same-head T08; T02 проверяет запись в Master/E06/Lessons."
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "package": "GATE",
+      "owner": "ALL_EXECUTORS",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "OPEN",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Repeated HOLD-only closeout without readback/physical correction",
+      "next_action": "T02/C: on every run collect independent per-role R12 CHECKPOINT proof and actual x/n; reject premature TASK_DONE; if physical output missing, require exact owner action and continue other safe work. Close only after independently proven adherence; never count prompt persistence as task completion."
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "package": "GATE",
+      "owner": "T06",
+      "state": "VERIFIED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "FIX_APPLIED_UNVERIFIED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Mechanical guard source/test added but no independent T06 8/8 accepted",
+      "next_action": "T06 closeout guard не должен требовать T10 заранее; проверить owner RunID/SHA и реальный hook, затем owner 8/8 отдельно."
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "package": "GATE",
+      "owner": "T08",
+      "state": "VERIFIED",
+      "priority": 1,
+      "depends_on": [],
+      "source_error_status": "FIX_APPLIED_UNVERIFIED",
+      "source_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+      "description": "Host50 exact tree admission source fix present; signed same-head native 13/13 unverified",
+      "next_action": "T08/Host50: source hook исправлен, но нужно native 13-route same-head acceptance; пока не закрывать."
+    },
+    {
+      "id": "T06",
+      "package": "GATE",
+      "owner": "T06",
+      "state": "OPEN",
+      "priority": 0,
+      "depends_on": [
+        "ERR-SRC-003",
+        "ERR-SRC-004"
+      ],
+      "note": "T06 1/8 source acceptance incomplete"
+    },
+    {
+      "id": "T08",
+      "package": "GATE",
+      "owner": "T08",
+      "state": "OPEN",
+      "priority": 0,
+      "depends_on": [
+        "T06"
+      ],
+      "note": "independent same-SHA P0/P1 acceptance"
+    },
+    {
+      "id": "T09",
+      "package": "GATE",
+      "owner": "T09",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [
+        "T08"
+      ],
+      "note": "frozen HEAD/tree/manifest after T06 and T08"
+    },
+    {
+      "id": "T10",
+      "package": "GATE",
+      "owner": "T10",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [
+        "T09"
+      ],
+      "note": "independent SOURCE_READY after frozen SHA"
+    },
+    {
+      "id": "T11-GITLAB-AUTH",
+      "package": "GATE",
+      "owner": "T11",
+      "state": "OPEN",
+      "priority": 0,
+      "depends_on": [],
+      "note": "GET-only authenticated GitLab HEAD and permission evidence; no token in logs"
+    },
+    {
+      "id": "T11",
+      "package": "GATE",
+      "owner": "T11",
+      "state": "OPEN",
+      "priority": 1,
+      "depends_on": [
+        "T10",
+        "T11-GITLAB-AUTH"
+      ],
+      "note": "GitLab READY; do not trigger CI"
+    }
+  ],
+  "expires_at": "on any change to source head or active error register; read back fresh before execution"
+}
