@@ -1,0 +1,38 @@
+{
+  "run_id": "ASTRA-A-R29-20261029-SPLIT-05",
+  "authority": "Explicit current user instruction: Astra-A P01/P02/P03, Astra-B P04/P05/E06; overrides old role mapping only.",
+  "primary_base": "3e0de0369dae5c6aebf8dea5825e038e9d1f6638",
+  "released_to_astra_b": [
+    {
+      "package": "P04",
+      "branch": "astra/r29-a04-20261029",
+      "sha": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
+      "candidate": "Validate index weight_map tensor names against actual shard headers",
+      "pending_edits": false
+    },
+    {
+      "package": "P05",
+      "branch": "astra/r29-a05-20261029",
+      "sha": "856d225543e78103868b3b04f0c53398437513f7",
+      "candidate": "Prevent rounded100 with positive HOLD/FAILED criterion",
+      "pending_edits": false
+    },
+    {
+      "package": "E06",
+      "branch": "astra/r29-a06-20261029",
+      "sha": "cbfe853500c781bfeac6419ccc581843ea1bedce",
+      "candidate": "Snapshot native session across advertise callbacks; transactional stage_onehost bridge/addon/receipt",
+      "pending_edits": false
+    }
+  ],
+  "astra_a_workers": {
+    "A1": "/root/a01 P01 installer",
+    "A2": "/root/a05 P01 separate rollback/UI files",
+    "A3": "/root/a02 P02 IPC",
+    "A4": "/root/a04 P02 original voice port",
+    "A5": "/root/a03 P03 queue",
+    "A6": "/root/a06 P03 catalog/artifacts"
+  },
+  "rules": "Disjoint files and separate branches for second worker in each package. Astra-A sole shared journal writer. No release builds/CI/GitLab/main/finalintegration. Preserve38 prior verified source blocks and native NOT_RUN candidates. Astra-B session execution not observed or claimed.",
+  "journals_read": "Fresh master/report/lesson CONTINUATION-04 plus historical C34 and all56rules."
+}
