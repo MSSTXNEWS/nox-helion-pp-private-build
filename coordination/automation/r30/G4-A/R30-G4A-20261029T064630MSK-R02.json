@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T064630MSK-R02",
+  "slot": "G4-A",
+  "area": "P04 model snapshot safetensors/weight_map",
+  "project": "NOX HELION EXPRESS INTEGRATOR LOADER ONLY",
+  "status": "HOLD",
+  "source_change": "COMMITTED_AND_GITHUB_READBACK_VERIFIED",
+  "release_status": "HOLD",
+  "source_ready": "NOT_CLAIMED",
+  "time_context": "2026-10-29 06:46 Europe/Moscow",
+  "branch": "automation/r30/g4a/20261029T064630MSK-R02",
+  "parent_branch": "automation/r30/g4a/20261029T055133MSK-R01",
+  "parent_commit_sha": "be28fbc7df365e6e94cbc0a3f6164492a20d2f60",
+  "common_collection_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "common_collection_head_at_start": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_first": true,
+    "assigned": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ]
+  },
+  "source_commit_sha": "707e3472998be108a063ddc64efe7ae335eb35d4",
+  "test_commit_sha": "6de75e5a72e3841bd22027cedb91363079924801",
+  "changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "2a9b35ec943613d308292329bd7c0a67ad6f8e4f",
+      "post_git_blob_sha1": "74eced107a05d02e2ba3e9c0679f5940ebd1404d",
+      "pre_sha256": "100c98a8cc12e3c5ad913b033d41e1949f8bd3c723f32fd919e4cbf92e5dec1f",
+      "post_sha256": "9c76ba6d8553c283ffd1261896fb3ec4b2998461d098acbf2cc0d27644446598"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "4357483d58491cbe84a9cb8de4690d8858008944",
+      "post_git_blob_sha1": "3eaffde8c45a11f2c58ac16181762663d837a33b",
+      "pre_sha256": "2d8070150df26c88ccf46811522747f5eb135ce9b5a2017ca761905242775556",
+      "post_sha256": "0241b7d86b4be420092204d0e5bc824f9e518b9f4218349e44cff0a6aa3db58c"
+    }
+  ],
+  "scope": "Reject JSON-escaped lone surrogate shard names and Windows reserved COM/LPT superscript numerals or device names padded before first dot; all shard names checked before any weight read/hash. Existing exact weight_map membership, same-handle SHA256, safetensors byte coverage, observed digest, license/training/revision HOLD semantics preserved.",
+  "original_result_reconciliation": {
+    "A04": {
+      "ref": "astra/r29-a04-20261029",
+      "probe_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "note": "earlier P04 parsing guards, not treated as accepted DONE"
+    },
+    "B1": {
+      "ref": "astra-b/r29-b1-20261029",
+      "probe_blob": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+      "note": "exact shard tensor mapping, same-handle hash, observed_snapshot_sha256 preserved from previous G4-A branch"
+    },
+    "B2": {
+      "ref": "astra-b/r29-b2-20261029",
+      "probe_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "note": "no distinct newer probe source compared with A04; prior index cardinality lesson retained; no duplicate DONE"
+    }
+  },
+  "snapshots": {
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_directories_verified": 25,
+    "root_entries_each": 27,
+    "three_original_parts_same_git_blobs_in_all_25": true,
+    "original_source_parts_git_blobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "deeper_content_audit": "NOT_PERFORMED; only all 25 snapshot roots and A04/B1/B2 P04 source blobs inspected",
+    "raw_archive_sha256_and_729_member_parity": "NOT_VERIFIED",
+    "originals_modified": false
+  },
+  "focused_tests": {
+    "baseline_unsafe_names": [
+      "COM¹.safetensors",
+      "LPT³.safetensors",
+      "CON .safetensors",
+      "\\ud800.safetensors"
+    ],
+    "baseline_behavior": "4/4 malformed names accepted by previous isolated helper before fix (negative RED)",
+    "command": "Python unittest.TextTestRunner on verbatim extracted _validate_windows_shard_names source (isolated test harness, not full GitHub module)",
+    "result": "6/6 PASS; rejected superscript COM/LPT, trim-before-dot DOS aliases, escaped lone surrogates, regular devices, casefold collision/non-string; accepted valid UTF-8 shard",
+    "repo_test_methods_added": 3,
+    "repo_test_methods": [
+      "test_g4a_r02_windows_device_aliases_hold_before_weight_io",
+      "test_g4a_r02_surrogate_shard_names_hold_without_encoding_exception",
+      "test_g4a_r02_valid_utf8_shard_preserves_observed_digest"
+    ],
+    "repo_test_suite_execution": "NOT_RUN; no private checkout to local Python; remote GitHub tests source readback verified",
+    "full_p04_suite": "NOT_RUN",
+    "Windows_native": "NOT_RUN",
+    "GPU_training": "NOT_RUN",
+    "license_attestation": "NOT_RUN",
+    "model_download": "NOT_RUN"
+  },
+  "scope_diff": {
+    "base_sha": "be28fbc7df365e6e94cbc0a3f6164492a20d2f60",
+    "head_after_code_sha": "6de75e5a72e3841bd22027cedb91363079924801",
+    "changed_paths_only": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "ahead_by": 2,
+    "forbidden_paths_unchanged": true
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_VALIDATE_UTF8_SURROGATE_AND_WIN32_DEVICE_CANONICAL_STEM_BEFORE_FILE_IO",
+    "previous_lesson_applied": "R01 validated full shard name set before file reads and preserved B1 same descriptor digest; R02 extends that same gate rather than repeating R01 DONE.",
+    "root_cause": "Python json.loads accepts escaped unpaired surrogates and Win32 reserves COM/LPT with superscript digits and space-padded stems; earlier path filter missed these cases, permitting UnicodeEncodeError outside inspect's HOLD exception boundary or Windows device ambiguity.",
+    "actual_fix": "Strict encode UTF-8 at shard admission and normalize DOS stem by trimming spaces before extension, reject COM/LPT ¹²³ and existing device aliases; negative isolated tests RED -> GREEN and repo regression source added.",
+    "next": "Run full tests/P04/test_model_snapshot_probe.py on pinned checked-out source in permitted non-build Python environment; verify native Windows filename semantics before owner promotion and E07; never treat local observation as revision, rights or installed model attestation."
+  },
+  "drive_policy": "G4-A does not edit common Docs; Astra-C alone aggregates worker receipts. No shared R30, PR162, main, E06, NSIS, EXE, Windows CI, GitLab writes or builds.",
+  "remaining_blockers": [
+    "full real-module P04 tests NOT_RUN",
+    "native Windows shard path behavior NOT_RUN",
+    "physical original archives SHA256/729 member SourceLock NOT_VERIFIED",
+    "license/model revision/dataset rights and GPU training NOT_ATTESTED",
+    "E07 same-SHA release acceptance NOT_RUN"
+  ],
+  "improvement_is_not_model_weight_training": true,
+  "project_progress": "N/D; denominator and independent acceptance unavailable; no 100% claim"
+}
