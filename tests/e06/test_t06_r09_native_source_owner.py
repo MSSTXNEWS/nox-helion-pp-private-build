@@ -4,14 +4,15 @@ Real local classes are imported; mocks never count as installed services.
 import unittest
 import json
 import sys
+import os
 import importlib.util
 from pathlib import Path
 from threading import RLock
 
 ROOT = Path(__file__).resolve().parents[2]
-PACK = ROOT / "proposals" / "NOX-PACK01-50"
-G2 = ROOT / "coordination" / "e06" / "adapters"
-WORKER = ROOT / "Packages" / "P02" / "worker-python"
+PACK = Path(os.environ.get("NOX_PINNED_PACK01_PATH", ROOT / "proposals" / "NOX-PACK01-50"))
+G2 = Path(os.environ.get("NOX_PINNED_G2_PATH", ROOT / "coordination" / "e06" / "adapters"))
+WORKER = Path(os.environ.get("NOX_PINNED_P02_PATH", ROOT / "Packages" / "P02" / "worker-python"))
 sys.path.insert(0, str(G2))
 sys.path.insert(0, str(WORKER))
 

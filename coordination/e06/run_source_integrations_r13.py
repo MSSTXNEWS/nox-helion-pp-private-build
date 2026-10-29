@@ -24,6 +24,8 @@ P03=ROOT/"Packages"/"P03"/"Source"/"python-host"
 PACK=ROOT/"proposals"/"NOX-PACK01-50"
 E06_TESTS=ROOT/"tests"/"e06"
 ADAPTER_TESTS=E06_TESTS/"adapters"
+G2_ADAPTERS=ROOT/"coordination"/"e06"/"adapters"
+P01_INSTALLER=ROOT/"stage"/"proposals"/"P01"/"C09"/"Installer"
 CREATIVE_TESTS=ROOT/"integrations"/"creative"/"tests"
 
 SUITES=(
@@ -31,6 +33,8 @@ SUITES=(
     ("PACK01 owner batch rollback",E06_TESTS,"test_pack01_owner_batch_r10.py"),
     ("Immutable P02/P03/E06 contracts",E06_TESTS,"test_immutable_routes_p03_e06_r11.py"),
     ("G2 source binder and rollback",E06_TESTS,"test_immutable_onehost_binder_r12.py"),
+    ("T06 one-host P02 duplicate-route native ACL regression",E06_TESTS,"test_t06_r09_native_source_owner.py"),
+    ("P01 NSIS-PowerShell source CLI contract; no compiler",E06_TESTS,"test_t06_p01_nsis_powershell_contract_r15.py"),
     ("WOW owner/runtime registry",E06_TESTS,"test_wow_owner_runtime_preflight_r06.py"),
     ("WOW exact 200 catalog IDs and compositions",E06_TESTS,"test_wow200_catalog_integrity_r02.py"),
     ("Creative verified worker STOP R19",E06_TESTS,"test_creative_stop_exit_attestation_r19.py"),
@@ -89,12 +93,16 @@ def main(*, closeout_receipt: Path | None = None)->int:
             "P02":snapshot_owner(P02,fixtures/"P02"),
             "P03":snapshot_owner(P03,fixtures/"P03"),
             "PACK01":snapshot_owner(PACK,fixtures/"PACK01"),
+            "G2_ADAPTERS":snapshot_owner(G2_ADAPTERS,fixtures/"G2"),
+            "P01_INSTALLER":snapshot_owner(P01_INSTALLER,fixtures/"P01Installer"),
         }
         env=os.environ.copy()
         env.update({
             "PYTHONDONTWRITEBYTECODE":"1",
             "NOX_PINNED_P02_PATH":str(fixtures/"P02"),
             "NOX_PINNED_PACK01_PATH":str(fixtures/"PACK01"),
+            "NOX_PINNED_G2_PATH":str(fixtures/"G2"),
+            "NOX_PINNED_P01_INSTALLER_PATH":str(fixtures/"P01Installer"),
             "NOX_G2_OWNER_FIXTURE_ROOT":str(fixtures),
         })
         print("R13 SOURCE FIXTURE SHA VERIFIED",copied,flush=True)
