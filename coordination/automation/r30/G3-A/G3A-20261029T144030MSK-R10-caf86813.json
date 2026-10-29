@@ -1,0 +1,113 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_EXCLUSIVE_G3A_RECEIPT_V1",
+  "run_id": "G3A-20261029T144030MSK-R10-caf86813",
+  "slot": "G3-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "source_only": true,
+  "no_merge": true,
+  "no_build": true,
+  "status": "SOURCE_SAVED_STATIC_PASS_RUNTIME_HOLD",
+  "evidence": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "immutable_base_commit": "caf86813e006921d246960e00e4cae1e796cb403",
+    "branch": "automation/r30/g3a/G3A-20261029T144030MSK-R10-caf86813",
+    "source_commit": "ec7cad6de04842a08e1a6a20e423dc0a2fd1b06e",
+    "test_commit": "d14ec4712a73862b5d4588c580fc6e53ffe4c075",
+    "owner_journal_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "owner_journal_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "historic_conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_root_directories_checked": 25,
+    "snapshots_body_per_file_sha256": "NOT_RUN",
+    "original_729_raw_bytes_sha256": "NOT_RUN",
+    "consolidated_rules_33": "56/56 READ; not proven verbatim oldest list",
+    "current_spec": "V16 §§54–56 plus R29 loader-only override READ",
+    "drive_latest_coordinator": "ASTRA-C-R30-20261029T1430MSK-09 READ",
+    "drive_c34": "READ_ONLY",
+    "last_self_improvement": "G3-A R09 zero-40-hex placeholder and coordinator R09 lesson READ"
+  },
+  "task_id": "P03-G3A-R30-R10-CATALOG-DIRECT-ENTRY-NATIVE-CONTRACT",
+  "flaw": "Public ModelCatalogEntry record accepted ArtifactVerified plus any nonblank ExactTag/ImmutableRevision and arbitrary https URIs through CanOfferOneClickPull without the stricter TryPromote predicates. Direct constructed record could signal one-click eligibility with qwen3:latest, wrong-family tag or unpinned revision, despite native registry rejecting them.",
+  "fix": "On original ModelCatalog.cs, require family-bound bounded non-latest tag, nonzero SHA-256 64hex immutable revision or sha256: digest as supported by native registry, and structurally checked HTTPS evidence URIs (absolute, default-port, no loopback/localhost/local/internal, no userinfo/fragment). Existing 30 family discovery records preserved.",
+  "changed_source": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "pre_git_blob": "02ce9b853c75d2407e80e6a654ab9fbaa1e05de5",
+      "post_git_blob": "0b94237d7861c021a7db3cfda56073939562d312",
+      "pre_sha256": "ce9879d89255e9522b70c9b2c83bd4b71389d35ab28c8522c80a67f29d30bd51",
+      "post_sha256": "b5e6850ce7e550c6a65d85ccddd1ae36bef52f4d9fc15404ebb88c77a64b53d7"
+    }
+  ],
+  "tests": [
+    {
+      "path": "Packages/P03/Admission/test_g3a_r30_r10_catalog_direct_entry_guard.py",
+      "git_blob": "b7dc3b2eaa3a2762294463b498a657101f08b949",
+      "scope": "Source contract plus preserved full Python module import for R09 zero revision when run in repository checkout",
+      "python_unittest": "NOT_RUN: authenticated GitHub private tree not mounted in Python runner",
+      "check_command": "python -m unittest discover -s Packages/P03/Admission -p 'test_g3a_r30_r10_*.py'"
+    },
+    {
+      "name": "GitHub readback source-contract assertions",
+      "checks_total": 22,
+      "pass": 22,
+      "fail": 0,
+      "result": "PASS, direct GitHub returned source/test content (not .NET execution)"
+    }
+  ],
+  "branch_compare": {
+    "base": "caf86813e006921d246960e00e4cae1e796cb403",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "changed_paths_before_receipt": 2
+  },
+  "owner_lock": {
+    "permitted": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "coordination/automation/r30/G3-A/"
+    ],
+    "forbidden_untouched": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "no_modifications_to": [
+      "main",
+      "PR162",
+      "astra/fin-zagr-v16-all-results-r30-20261029",
+      "coordination/astra/r30/snapshots/",
+      "other owner paths",
+      "Google Drive shared journals"
+    ]
+  },
+  "handoff_g3b": {
+    "owner": "G3-B",
+    "request": "Existing native transport must independently verify actual artifact/review receipt, source rights/license and session-bound SHA, disallow local/private IP, DNS rebinding, cross-host redirects, and enforce immutable snapshot at enqueue; only G3-B may change queue/transport/ui.js. C# catalog static guard is NOT network proof.",
+    "work_status": "REQUEST_ONLY_NOT_IMPLEMENTED_BY_G3A"
+  },
+  "self_improvement": {
+    "applied_from_previous": "R09/coordinator lesson: distinguish syntax-format pins from real immutable owner/review evidence and never equate 8 isolated copied-helper tests to full-module acceptance. R10 compared the public catalog property with the exact native owner TryPromote gate, fixed divergence in owned source, and checked Git source blob after commit.",
+    "new_lesson": "Audit every externally callable eligibility property, not only the canonical promotion function: public records bypass factory validation. Use precise Git object pre/post SHA and a separate full-module/native compilation HOLD until executable source tests are available; the next cycle should target a different remaining P03 failure, not repeat a completed fix."
+  },
+  "progress": {
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "verified_artifacts": 0,
+    "model_family_leads": 30,
+    "product_percent": "N/D"
+  },
+  "no_operations": [
+    "EXE",
+    "NSIS",
+    "Windows CI",
+    "GitLab pipeline",
+    "GitLab migration",
+    "PR162 merge",
+    "main write",
+    "shared Drive write",
+    "final integration"
+  ],
+  "coordinator_next": "Astra-C reads this immutable Git receipt and alone handles common Drive CAS/readback."
+}
