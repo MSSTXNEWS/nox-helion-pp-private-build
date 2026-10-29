@@ -321,7 +321,7 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
 
 export function projectCanonicalEvents(events, runId, nowMs) {
   if (!Array.isArray(events) || !validRunId(runId) || !Number.isFinite(nowMs))
-    return {state:'N_D',errors:0};
+    return {state:'N_D',errors:null};
   // Bounded fail-closed projection: never let a raw >64-event tail hide an
   // earlier terminal ERROR or an event_id collision. E06 owns the event log.
   if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
