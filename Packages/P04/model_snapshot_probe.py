@@ -13,6 +13,7 @@ import json
 import os
 import re
 import stat
+import unicodedata
 from pathlib import Path
 
 MAX_JSON_BYTES = 4 * 1024 * 1024
@@ -207,7 +208,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
                 expected_by_shard.setdefault(shard_name, set()).add(tensor_name)
             names = sorted(expected_by_shard)
-            if len({name.casefold() for name in names}) != len(names):
+            # Cross-platform shard admission: canonicalize Unicode before casefold
+            if len({unicodedata.normalize("NFC", name.casefold()) for name in names}) != len(names):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
         else:
             expected_by_shard = None

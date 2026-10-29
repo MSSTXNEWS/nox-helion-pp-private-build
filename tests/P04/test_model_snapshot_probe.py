@@ -305,5 +305,20 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["reason"],
                          "MODEL_SHARD_PATH_UNSAFE")
 
+
+    def test_rejects_unicode_normalization_colliding_shard_names(self):
+        # Composed and decomposed Unicode names may alias across filesystems.
+        composed = "part-\u00e9.safetensors"
+        decomposed = "part-e\u0301.safetensors"
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {
+                "q.weight": composed,
+                "v.weight": decomposed,
+            }}, ensure_ascii=True), encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_PATH_UNSAFE")
+
+
 if __name__ == "__main__":
     unittest.main()
