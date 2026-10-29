@@ -43,8 +43,7 @@ public sealed class GoogleDocsAppendReadback
         try
         {
             string token = await accessToken(stop).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(token) ||
-                token.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+            if (!ValidBearerToken(token))
                 return new(runId, documentId, null, null, "NO_AUTH", entry.Length);
             httpStage = "READ";
             using var before = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
@@ -163,6 +162,30 @@ public sealed class GoogleDocsAppendReadback
         }
         // Cancellation should propagate, not be interpreted as success.
     }
+    // RFC 6750 b64token: a nonempty ASCII bearer value with optional trailing
+    // '=' padding. Whitespace, controls, embedded '=' and oversized values
+    // must never reach AuthenticationHeaderValue or escape the AUTH receipt.
+    private static bool ValidBearerToken(string? token)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length > 16384) return false;
+        bool hasData = false;
+        bool inPadding = false;
+        foreach (char c in token)
+        {
+            if (c == '=')
+            {
+                if (!hasData) return false;
+                inPadding = true;
+                continue;
+            }
+            if (inPadding ||
+                !(char.IsAsciiLetterOrDigit(c) || c is '-' or '.' or '_' or '~' or '+' or '/'))
+                return false;
+            hasData = true;
+        }
+        return hasData;
+    }
+
     // Retryable transport responses are HOLD, never evidence of an append.
     // OAuth/ACL rejection and revision-CAS conflicts have their own diagnostics.
     private static bool IsTransientHttpStatus(System.Net.HttpStatusCode status) =>

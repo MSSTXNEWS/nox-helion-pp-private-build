@@ -1,0 +1,78 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_RECEIPT_V1",
+  "slot": "G5-B",
+  "run_id": "R30-G5B-20261029T1446MSK-10",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T1446MSK-10",
+  "status": "HOLD",
+  "task_id": "G5B-R30-OAUTH-BEARER-RFC6750-FAIL-CLOSED-R10",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY; SOURCE ONLY",
+  "parent_branch": "automation/r30/g5b/R30-G5B-20261029T1402MSK-09",
+  "base_commit": "5fff7cf771697787ea32ef4843bacb5bdacfaa74",
+  "base_tree": "3ce840c6f59995008b2f31c542143937bbc1001b",
+  "owner_lock_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+  "conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "rules": "§33 consolidated 56/56 and §§54–56 read; reconstructed original 56 verbatim not independently attested",
+  "snapshots": {
+    "snapshots": 25,
+    "git_tree_entries": 30363,
+    "truncated": 0,
+    "original_git_blob_part_shas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "identical_across_all_25": true,
+    "physical_729_sha256": "NOT_VERIFIED",
+    "original_snapshots_modified": false
+  },
+  "source_sha_before": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+    "Packages/P05/E05/src/E05DriveRunGate.cs": "acf7799db99c54b111e665cb9e80a8b95924db8e",
+    "Packages/P05/E05/src/E05SafeRunReports.cs": "b8adf8a229776fda202a53e506f2c3365274ad2f"
+  },
+  "source_sha_after": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "96bc6a90b57c58fa285a8733cd280c6beeff9100"
+  },
+  "modified_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "coordination/automation/r30/G5-B/R30-G5B-20261029T1446MSK-10.json"
+  ],
+  "code_fix": "Validate OAuth bearer token against RFC6750 b64token alphabet, trailing equals padding and bounded length before AuthenticationHeaderValue; malformed token => NO_AUTH before Docs HTTP, preserving AUTH/STOP/CAS/readback semantics.",
+  "targeted_test": {
+    "name": "G5-B-R10-OAUTH-BEARER-TOKEN68-SOURCE-STATIC",
+    "kind": "one inline JavaScript behavioral model plus C# source static assertions",
+    "cases_passed": 15,
+    "cases_total": 15,
+    "static_assertions_passed": 9,
+    "static_assertions_total": 9,
+    "old_red": "Previously embedded whitespace was not rejected by auth preflight",
+    "native_dotnet": "NOT_RUN",
+    "live_docs_http": "NOT_RUN"
+  },
+  "google_docs": {
+    "writer": "ASTRA-C_ONLY",
+    "shared_docs_modified": false,
+    "metadata_read": true,
+    "tab": "t.0",
+    "revision_read": true,
+    "owner_permission_metadata_seen": true,
+    "live_RunID_CAS_write_readback": "NOT_RUN_ASTRA_C_ONLY"
+  },
+  "prior_lesson": "G5-B R09 guarded OAuth token provider failures and blocked CR/LF but token with embedded ASCII whitespace/control remained unchecked.",
+  "new_lesson": "Validating only CR/LF is insufficient for Authorization headers: validate the entire RFC6750 bearer-token grammar and bound length BEFORE creating any HTTP request. Keep caller STOP and CAS untouched; source model tests do not prove .NET integration.",
+  "release": {
+    "source_code_complete": "HOLD",
+    "native_dotnet": "HOLD",
+    "docs_write": "HOLD_ASTRA_C_ONLY",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "product_percentage": "N/D"
+  },
+  "old_DONE_preserved": true,
+  "changed_main_or_PR162": false,
+  "ran_EXE": false,
+  "ran_NSIS": false,
+  "ran_GitLab_CI": false,
+  "final_integration": false
+}
