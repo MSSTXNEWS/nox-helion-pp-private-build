@@ -1,0 +1,45 @@
+{
+  "schema": "G1B_R25_MANIFEST_DUPKEY_PATCH_PROPOSAL_V1",
+  "run_id": "NOX-V16-G1B-20261030-R25-MANIFEST-DUPKEY-SOURCE",
+  "status": "SOURCE_PATCH_PREPARED_NOT_INTEGRATED",
+  "source_pr_head": "2bb94db2e9bf7328437e2bfacb2cb6008ff514a5",
+  "source_pr_tree": "5d8bb83458e31540c8564c233703cfb07bcda95f",
+  "source_files": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "pre_blob": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "proposed_post_blob": "e0d1e10b5cf14a85785c34035e251a8be57654e5",
+      "pre_line": 29
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "pre_blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "proposed_post_blob": "260fbb24f2e3f2ed61b222e456434ff036672df7",
+      "pre_line": 36
+    }
+  ],
+  "unaffected_nsis": {
+    "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "pre_blob": "87d901c3846359a91be3e8288f24302cc7060257"
+  },
+  "patch_blob": "a064b3cedcbcabe45f209dcf327624573bbcf30b",
+  "test_blob": "144377f72a46a2fba50f6d0a7807f3944d7616cc",
+  "existing_error_id": "ERR-SRC-004",
+  "root_cause": "Manifest duplicate member ambiguity before ConvertFrom-Json. Proposal rejects duplicate keys and escaped member names at every nested object scope.",
+  "checks": {
+    "v8_reference_vectors": "7/7 PASS, NOT POWERSHELL",
+    "native_ps51": "NOT_RUN",
+    "git_apply_check": "NOT_RUN",
+    "windows_install_rollback_uninstall": "NOT_RUN",
+    "stop_acl_consent_privacy_noloss": "not weakened; owner must test affected safety paths"
+  },
+  "owner": "G1-A P01 source; manual #1/T06 sole PR162 writer",
+  "next_owner": "G1-A review compatibility with prepared 3-file patch, then T06 exact CAS/readback, manual #2 independent same-HEAD QA, T02 shared journal",
+  "progress": {
+    "historical_T03": "DONE 5/5",
+    "g1b_operational": "1/4 unchanged",
+    "delta_qa_accepted": 0,
+    "product": "N/D"
+  },
+  "safety": "No product, user-data, original archive, SourceLock, CI, NSIS compiler, EXE, E07 or shared journal changes. Proposed full-file Git blobs are unreferenced and not integrated."
+}
