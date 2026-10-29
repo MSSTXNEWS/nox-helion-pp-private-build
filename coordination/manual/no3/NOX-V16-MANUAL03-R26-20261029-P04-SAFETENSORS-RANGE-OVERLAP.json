@@ -1,0 +1,18 @@
+{
+  "run_id": "NOX-V16-MANUAL03-R26-20261029-P04-SAFETENSORS-RANGE-OVERLAP",
+  "role": 3,
+  "task_id": "P04 model snapshot validation",
+  "pre_commit": "0aada5504c62b5443216f25f03cbc80e93e33a46",
+  "pre_tree": "46b18378bdf9cd451c4aa9a3f94893314ce33bdf",
+  "source_file": "Packages/P04/model_snapshot_probe.py",
+  "source_pre": "50abd8e9bb3dc0c73cb17183443de0c66dd7473a",
+  "source_post": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+  "test_file": "tests/P04/test_model_snapshot_probe.py",
+  "test_pre": "503b775c2e0459c12c6d0f538727fc6e383b91c4",
+  "test_post": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+  "fix": "Reject overlapping safetensors tensor offsets, preserve strict JSON safeguards.",
+  "tests": "Isolated extracted Python 4-case RED/GREEN PASS; full repository unittest NOT_RUN; native NOT_RUN.",
+  "security": "Original user data, source assets, rights and consent unchanged.",
+  "status": "SOURCE_PREPARED, QA_ACCEPTED 0",
+  "handoff": "T06 tests and CAS on exact head, T08 independent QA, T02 shared ledger only"
+}

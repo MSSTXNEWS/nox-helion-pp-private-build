@@ -107,6 +107,11 @@ def _weight_header(path: Path) -> frozenset[str]:
         for t in tensors
     ):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    # A header with individually in-bounds yet overlapping tensor spans is
+    # not an unambiguous local weight snapshot. Fail closed before SHA claims.
+    spans = sorted((t["data_offsets"][0], t["data_offsets"][1]) for t in tensors)
+    if any(spans[i][0] < spans[i - 1][1] for i in range(1, len(spans))):
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
     return frozenset(k for k in header if k != "__metadata__")
 
 
