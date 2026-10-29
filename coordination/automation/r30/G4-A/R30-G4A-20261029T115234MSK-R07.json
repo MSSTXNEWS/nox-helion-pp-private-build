@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T115234MSK-R07",
+  "slot": "G4-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "P04-G4A-R07-WINDOWS_CONSOLE_AND_UNICODE_CANONICAL_SHARD_PATH_GATE",
+  "status": "HOLD",
+  "release_status": "HOLD",
+  "product_task_accepted": false,
+  "source_ready": false,
+  "source_change": "COMMITTED_AND_GIT_READBACK_PASS",
+  "branch": "automation/r30/g4a/20261029T115234MSK-R07",
+  "parent_branch": "automation/r30/g4a/20261029T105911MSK-R06",
+  "parent_commit_sha": "82527c3e921177dc86ee03d5ea6008ee2ade046c",
+  "code_commits": [
+    "c10baafb67e9db1cafd38aadbfed3ee90d2f4e99",
+    "74e77d9040e4ec4db2c4d5ad78988263c4324cec"
+  ],
+  "code_head_commit_sha": "74e77d9040e4ec4db2c4d5ad78988263c4324cec",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_first": true,
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "only_owned_paths_modified": true,
+    "peer": "G4-B"
+  },
+  "rules": {
+    "section33_56_56_read": true,
+    "section33_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections_54_to_56_and_R29_loader_only_read": true,
+    "nuance": "Historical §33 consolidated 56 rules, not proven verbatim original ancient rule list; active R29 loader-only scope prevails."
+  },
+  "historical": {
+    "conflict_index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_refs_indexed": 25,
+    "all_snapshot_file_bodies_physically_verified": false,
+    "A04_probe_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "B1_probe_git_blob": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+    "B2_probe_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "original_729_raw_SHA256_verified": false,
+    "snapshots_modified": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "c71d7d10817f59c708122708175cb000801b1c32",
+      "post_git_blob_sha1": "d1a2c59427e60b586427135868dd1cedeeca0cbe",
+      "pre_sha256": "f7195f5e7db2f329ffd614791e9af5175cd4027a55e5de20659adae061581bf3",
+      "post_sha256": "1165a18799c8644b307fd030cd4d4f9ab6417e0ba54a4ef6bf6d80df07026755",
+      "commit": "c10baafb67e9db1cafd38aadbfed3ee90d2f4e99"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "43ef05d4b8364008c5ee1c264e31eb373af5e98a",
+      "post_git_blob_sha1": "9ae607029d375c6db6d5b7c5a46726b63c2d7e0a",
+      "pre_sha256": "750f88233e35e56462507b5aa41fca7165bf33e8993ce3fe29c0c3e53c76c90b",
+      "post_sha256": "bd337ac5e6e8caf08c38958d667b03ee37d62443d4557a13d626f4a378868eb1",
+      "commit": "74e77d9040e4ec4db2c4d5ad78988263c4324cec"
+    }
+  ],
+  "change": {
+    "root_cause": "Shard filenames CONIN$/CONOUT$ and canonical-equivalent NFC/NFD Unicode aliases passed the name validator, potentially making Windows device/normalization aliases ambiguous.",
+    "patch": "Block console pseudo-device stems and canonical-equivalent names before any shard I/O; preserve all existing safetensors/weight_map/total_size/digest/stat fences.",
+    "previous_R06_shard_stat_guard_retained": true
+  },
+  "targeted_tests": {
+    "red_before_patch": "3/3 unsafe cases accepted in isolated legacy validator",
+    "green_after_patch": "6/6 PASS isolated Python reproduction of exact patched validation branch; not repository import",
+    "execution_environment": "local Python helper copied from pre/post function source",
+    "repo_test_methods_saved": [
+      "test_g4a_r07_windows_console_device_aliases_hold_before_weight_io",
+      "test_g4a_r07_canonically_equivalent_shard_names_hold_before_io",
+      "test_g4a_r07_normal_distinct_shard_names_remain_admissible"
+    ],
+    "repository_test_methods_executed": false,
+    "full_repository_tests": "NOT_RUN",
+    "Windows_native": "NOT_RUN",
+    "GPU": "NOT_RUN",
+    "CI": "NOT_RUN",
+    "github_readback_source_and_test": "PASS",
+    "compare_base_to_code_head": {
+      "status": "ahead",
+      "files": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ]
+    },
+    "physical_safetensors_digest_attested": false
+  },
+  "google_drive": {
+    "read_only": true,
+    "master_error_growth_read": "through Astra-C 2026-10-29 11:33 MSK",
+    "E06_coordinator_report_read": true,
+    "E06_self_improvement_read": true,
+    "C34_historical_read": true,
+    "common_docs_written": false,
+    "coordinator": "Astra-C only"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_R07_PATH_POLICY_REQUIRES_CANONICAL_ALIAS_MODEL",
+    "previous_R06_applied": "Preserve read-only shard descriptor/stat consistency gate and refuse mixed-time shard reports.",
+    "error": "Filename validation lacked console pseudo-device stems and Unicode NFC/NFD aliases.",
+    "fix": "Use one pre-I/O normalized comparison key and reject CONIN$/CONOUT$ DOS device stems.",
+    "process_improvement": "Use RED before GREEN on extracted helper; do not count unexecuted repository tests or infer Windows acceptance.",
+    "next": "Run pinned full P04 Python test module on this exact branch before claiming source readiness; physically verify Windows file name semantics."
+  },
+  "scope_guards": {
+    "no_PR162": true,
+    "no_main": true,
+    "no_common_R30_write": true,
+    "no_other_owner_paths": true,
+    "no_preflight_local_gpu": true,
+    "no_original_25_snapshots_write": true,
+    "no_EXE": true,
+    "no_NSIS": true,
+    "no_Windows_CI": true,
+    "no_GitLab_execution": true,
+    "no_final_integration": true
+  },
+  "blockers": [
+    "Repository full P04 tests not run; scoped helper only",
+    "Native Windows filesystem semantics not tested",
+    "All 25 snapshot file bodies and original 729 raw ZIP SHA-256 not verified",
+    "Model/dataset rights, immutable revision, physical GPU and E07 not attested"
+  ],
+  "completed_product_task_count_this_run": 0,
+  "provisional_source_patch_count_this_run": 1,
+  "weighted_product_completion_percentage": "N/D"
+}
