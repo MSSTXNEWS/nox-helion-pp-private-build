@@ -38,7 +38,12 @@ export function mountApprovedHome(doc=document){
   }
   // Existing approved PR30 source owns the visual physics of these exact nine
   // elements. No trusted events are supplied until the native bridge is attested.
-  const scene=installNoxCinemaFX({root:stage,orbs,profile:chosenMode()});
+  // Decorate only already-existing, stage-contained controls/panels. Do not
+  // invent routes, orphan controls, new CoreIDs or fake native event sources.
+  const controls=[...stage.querySelectorAll(
+    'button:not(.nox-orbit-core), [role="button"]:not(.nox-orbit-core), input[type="button"], input[type="submit"]')];
+  const panels=[...stage.querySelectorAll('[data-nox-panel], .nox-panel, .nox-core-panel')];
+  const scene=installNoxCinemaFX({root:stage,orbs,controls,panels,profile:chosenMode()});
   let detachMotion=()=>{};
   // FX-owned DOM markers and observers form one rollback transaction.
   let disposed=false;
