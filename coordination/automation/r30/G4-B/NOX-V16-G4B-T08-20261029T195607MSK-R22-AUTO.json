@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_V16_R13_SOURCE_PATCH_HIERARCHICAL_OTCH1_V1",
+  "run_id": "NOX-V16-G4B-T08-20261029T195607MSK-R22-AUTO",
+  "role": "G4-B source owner, coordination M2/T08",
+  "user_scope": "NOX EXPRESS INTEGRATOR Windows loader SOURCE ONLY",
+  "canonical_ref": "integration/nox-v16-unified-candidate-20261028-r01",
+  "canonical_head_at_prestart": "a10e6820d374a049f51b5b80f41e2de33250b812",
+  "canonical_tree_at_prestart": "d161e787bd1b216b018cba94418f8a43a136735e",
+  "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+  "error_registry_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "error_registry_counts": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "total": 11
+  },
+  "scope": {
+    "only_assigned_path_changed": "tests/P04/test_local_gpu_preflight.py",
+    "no_model_snapshot_probe_edits": true,
+    "prohibited_builds_not_run": true,
+    "canonical_writer": "T06",
+    "shared_docs_writer": "T02"
+  },
+  "existing_task_id": "ERR-SRC-004 P04 synthetic CUDA isolated-probe test fixture regression (G1-C R12)",
+  "source_change": {
+    "path": "tests/P04/test_local_gpu_preflight.py",
+    "pre_blob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "post_blob": "2977f79608e93adf35011436d56f23a9e65531ca",
+    "probe_source_blob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "root_cause": "Parent sys.modules torch fake cannot reach python -I subprocess isolated CUDA probe",
+    "fix": "Replace only synthetic test parent module fake with exact probe._run_cuda_probe_isolated mock; preserve 3 preexisting tests and rights/no-training expectations",
+    "check": {
+      "PRE_GIT_BLOB_MATCH": true,
+      "POST_GIT_BLOB_MATCH": true,
+      "PY_COMPILE_LOCAL_PASS": true,
+      "FOCUSED_STATIC_INVARIANTS": "6/6 PASS",
+      "NEW_TESTS": 0,
+      "REAL_UNITTEST": "NOT_RUN",
+      "WINDOWS_GPU": "NOT_RUN",
+      "NATIVE_TRAINING": "NOT_RUN"
+    }
+  },
+  "t06_latest_delta": {
+    "head": "a10e6820d374a049f51b5b80f41e2de33250b812",
+    "owner_receipt": "NOX-V16-T06-20261029-M1-P04-ONEHOST-R16",
+    "P04_binder_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "P04_permission_before_and_after": "SOURCE_STATIC_ONLY",
+    "Host50_admission_blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "Host50_native_routes": "0/13 ACCEPTED",
+    "ERR_SRC_003": "FIX_APPLIED_UNVERIFIED owner T06",
+    "ERR_SRC_005": "FIX_APPLIED_UNVERIFIED runner 5fc83d43d5da248938c2e6bc76f7011536663330"
+  },
+  "t08_operational_scale": {
+    "fixed_criteria": 3,
+    "before_accepted": 1,
+    "after_accepted": 1,
+    "before_percent": 33.3,
+    "after_percent": 33.3,
+    "delta_pp": 0,
+    "bar": "███░░░░░░░",
+    "remaining": 2,
+    "criterion_1": "HOLD T06 full owner-approved SHA/tree/manifest + fixed P0/P1",
+    "criterion_2": "HOLD independently verified same-HEAD final code P0/P1",
+    "criterion_3": "DONE historical T09/T10 handoff preserved; current Git issue 177 comment 6503191051 readback"
+  },
+  "four_source_stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": "STATIC_SYNTAX_ONLY",
+    "INTEGRATED_ON_CURRENT_HEAD": false,
+    "OWNER_QA_ACCEPTED": false
+  },
+  "ack_active_errors": {
+    "ERR-SYS-001": "OWNER_HANDOFF T02",
+    "ERR-SYS-002": "APPLIED fresh HEAD/tree + exact blob",
+    "ERR-SRC-003": "OWNER_HANDOFF T06 signed native Host50 13 routes",
+    "ERR-SRC-004": "APPLIED G4B test fixture patch; P04 owner native remains T06",
+    "ERR-SRC-005": "ALREADY_FIXED_SOURCE / independent runtime not verified",
+    "ERR-SYS-006": "ALREADY_VERIFIED",
+    "ERR-SYS-007": "ALREADY_VERIFIED",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "OWNER_HANDOFF T09/T02",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED no task done from receipt",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "OWNER_HANDOFF T06",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "INCOMPLETE native same SHA"
+  },
+  "self_improvement": {
+    "read": 11,
+    "relevant": 5,
+    "dedup_clusters": 4,
+    "applied": 2,
+    "delegated": 2,
+    "already_verified": 2,
+    "not_applicable": 3,
+    "remaining": "T06 final owner acceptance, Host50 13 signed native, T08 same-head disposition",
+    "lesson": "Reuse production subprocess seam instead of fake torch import in parent process; tests must not claim native training or license/dataset acceptance"
+  },
+  "handoff_issue": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6503191051",
+  "next_checkpoint": "T06 exact PRE/blob review and optional cherry-pick ONLY after source owner approval; T08 inspect only subsequent owner code delta and fixed T02 P0/P1, then T09/T10 exact same-head handoff. No EXE/NSIS/CI/E07."
+}

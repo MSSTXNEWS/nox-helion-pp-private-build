@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 import unittest
 
@@ -36,8 +35,6 @@ class HardwarePreflightContracts(unittest.TestCase):
     def test_selected_uuid_and_sufficient_actual_free_memory_semantics(self):
         device = {"index": "1", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
                   "name": "Test NVIDIA", "memory_total_mib": "12288"}
-        cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1)
-        fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
             probe.metadata, "version", return_value="fixture"
         ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
@@ -45,7 +42,10 @@ class HardwarePreflightContracts(unittest.TestCase):
         ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
             probe.train_qlora, "gpu_vram_headroom",
             return_value={"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
-        ), patch.dict(sys.modules, {"torch": fake_torch}):
+        ), patch.object(
+            probe, "_run_cuda_probe_isolated",
+            return_value={"cuda_runtime": "12.1", "cuda_device_count": 1}
+        ):
             result = probe.inspect("BALANCED", 1)
         self.assertEqual(result["status"], "HARDWARE_READY_ONLY")
         self.assertFalse(result["model_license_verified"])
