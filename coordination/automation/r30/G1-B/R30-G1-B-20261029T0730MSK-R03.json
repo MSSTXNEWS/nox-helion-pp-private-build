@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V3",
+  "runId": "R30-G1-B-20261029T0730MSK-R03",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader only",
+  "status": "SOURCE_CANDIDATE_NATIVE_BINDING_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productPercent": null,
+  "branch": "automation/r30/g1b/R30-G1-B-20261029T0730MSK-R03",
+  "previousBranch": "automation/r30/g1b/R30-G1-B-20261029T0630MSK-R02",
+  "sourceCollectionHead": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "previousOwnerHead": "15ec7170992ecda7fbc16c7087f417dd17ab8cce",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": "stage/proposals/P01/C09/",
+    "forbidden": "stage/proposals/P01/C09/Installer/"
+  },
+  "conflictIndex": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "gitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozenSnapshotsIndexed": 25,
+    "allIndividualSnapshotBytesRead": false
+  },
+  "rulesAndJournals": {
+    "section33Rules56": true,
+    "section54to56": true,
+    "masterErrorsDrive": true,
+    "priorE06ReportDrive": true,
+    "priorSelfImprovementDrive": true,
+    "historicalC34Drive": true,
+    "driveWrites": "ASTRA_C_ONLY"
+  },
+  "taskID": "G1-B-P01-SAME-DOCUMENT-REPLAY-AND-RELOAD-R03",
+  "previousDonePreserved": true,
+  "rootCause": "Prior SourceChanged event cleared replay requestId cache for fragment/history transitions; canceled NavigationStarting could clear IDs in surviving document; repeat action was possible. Existing QA test used obsolete pending ID tuple.",
+  "fix": "Keep replay IDs during canceled navigation/same-document URL changes while invalidating pending async native ACK; reset IDs on IsNewDocument or CoreWebView2 ContentLoading, including same-URL reload. Repair stale QA assertion. No new host.",
+  "files": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "5a51a1339231d1c170f9669a4afd34f0809fae22",
+      "postGitBlobSHA1": "178467664d611dfc6b7993e7c6765d1359b60a82",
+      "preSHA256": "a93294a19cd14ca8e5a5e325a7690265a5e8518bd345d781fb908187f94ee240",
+      "postSHA256": "d45d0fba580b406d8d1a41213906de561fa9fca1a9a0e5298e95cbed10172003"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py",
+      "preGitBlobSHA1": "e2c582197bb4338cd9409dea21619eba8930904b",
+      "postGitBlobSHA1": "8221b3dbe1b1b43ea6cca5fdb616407c16aa0089",
+      "preSHA256": "9818c5e5e2c80400fa0485a61edb561bec1f6f04ba19ecf37c0b1459aa24123b",
+      "postSHA256": "c7a5b4cd90c381148d100e8a70cddd5e107661591c16970f15480426e16c2490"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_same_document_r03.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "1643ab0994447f1eae483ac4f19414ecb4c861bb"
+    }
+  ],
+  "tests": {
+    "executed": "V8 source-contract checks against saved GitHub readback",
+    "redBefore": 6,
+    "checks": [
+      {
+        "name": "existing WebView2 host",
+        "passed": true
+      },
+      {
+        "name": "new content-loading subscription",
+        "passed": true
+      },
+      {
+        "name": "new content-loading disposal",
+        "passed": true
+      },
+      {
+        "name": "navigation attempt invalidation",
+        "passed": true
+      },
+      {
+        "name": "same-document discrimination",
+        "passed": true
+      },
+      {
+        "name": "same-url reload discrimination",
+        "passed": true
+      },
+      {
+        "name": "conditional replay cache retirement",
+        "passed": true
+      },
+      {
+        "name": "no unconditional replay cache clearing",
+        "passed": true
+      },
+      {
+        "name": "per-document bounded replay IDs",
+        "passed": true
+      },
+      {
+        "name": "epoch pinned pending IDs",
+        "passed": true
+      },
+      {
+        "name": "origin exact source",
+        "passed": true
+      },
+      {
+        "name": "navigation HOME/MENU/CORE",
+        "passed": true
+      },
+      {
+        "name": "consent then native call",
+        "passed": true
+      },
+      {
+        "name": "fail-closed bridge errors",
+        "passed": true
+      },
+      {
+        "name": "existing stale Python guard repaired",
+        "passed": true
+      },
+      {
+        "name": "unique slot regression authored",
+        "passed": true
+      }
+    ],
+    "passes": 16,
+    "failures": 0,
+    "authoredPythonTests": 5,
+    "pythonExecuted": false,
+    "csharpCompiled": false,
+    "windowsNativeExecuted": false
+  },
+  "commits": {
+    "source": "079c5f12041261fbfdd703d13d5af45b73079fd3",
+    "existingTest": "b8b18ee76ee7fcf11921da1363716037e69f0dcb",
+    "newTest": "fe721112ce894f3c568d78ff1239cfbdf3b43b58"
+  },
+  "originalWriteAttempt": {
+    "firstNewTestCreate": "TOOL_SAFETY_BLOCKED",
+    "recovery": "reduced scope to five targeted Python assertions; GitHub create_file succeeded; prior source/test commits remain preserved"
+  },
+  "lessonApplied": "Same URL is not document identity; preserve epoch, exact origin, native consent and callback revalidation from R02.",
+  "newLesson": "Invalidate pending replies on navigation and hash changes; retire replay IDs only at a real new-document boundary. Re-run previously authored regression source assertions after changing tuple shapes; test code can stale independently of implementation.",
+  "hold": "Original WPF MainWindow.xaml.cs not independently editable in C09; live HOME/MENU/CORE buttons, native consent and Windows virtual-origin/runtime path not wired or tested. Requires owner-approved original-host source admission and independent native QA.",
+  "noWrites": {
+    "installer": true,
+    "D02WOW": true,
+    "P02toP05": true,
+    "sharedR30": true,
+    "main": true,
+    "PR162": true,
+    "Drive": true
+  },
+  "noExeNsisWindowsCIGitlabFinalIntegration": true
+}
