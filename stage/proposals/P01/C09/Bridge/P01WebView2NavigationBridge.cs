@@ -153,6 +153,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         string requestId = "";
         string routeId = "";
         bool reserved = false;
+        bool awaitingNativeConsent = false;
         CancellationTokenSource? requestLifetime = null;
         try
         {
@@ -205,7 +206,10 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             // Never accept JS-supplied approval, role, capability or executable arguments.
             if (kind == "action")
             {
-                if (!await _confirmNativeConsent(routeId, requestLifetime.Token))
+                awaitingNativeConsent = true;
+                var consentGranted = await _confirmNativeConsent(routeId, requestLifetime.Token);
+                awaitingNativeConsent = false;
+                if (!consentGranted)
                 {
                     ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_NATIVE_CONSENT_DENIED");
                     return;
@@ -219,7 +223,16 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
                 accepted ? "COMPLETED" : "HOLD", accepted ? "" : "P01_NATIVE_ACK_MISSING");
         }
-        catch (OperationCanceledException) { /* disposed host: no stale acknowledgement */ }
+        catch (OperationCanceledException)
+        {
+            // A native callback may cancel its own task while the document stays
+            // alive. Report that cancellation instead of leaving the UI waiting.
+            // A revoked document/host token must never receive a stale reply.
+            if (requestLifetime is not null && !requestLifetime.IsCancellationRequested)
+                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
+                    awaitingNativeConsent ? "REJECTED" : "HOLD",
+                    awaitingNativeConsent ? "P01_NATIVE_CONSENT_CANCELLED" : "P01_NATIVE_OPERATION_CANCELLED");
+        }
         catch (Exception)
         {
             // No exception, file path or native stack is returned to untrusted page JS.
