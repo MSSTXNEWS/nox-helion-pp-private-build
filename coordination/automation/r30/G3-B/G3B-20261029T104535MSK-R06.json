@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3B_SOURCE_RECEIPT_V6",
+  "run_id": "G3B-20261029T104535MSK-R06",
+  "slot": "G3-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "status": "SOURCE_PATCH_SAVED; V8_SOURCE_16_OF_16_PASS; NATIVE_HOLD; TEST_PATH_OWNER_HOLD",
+  "branch": "automation/r30/g3b/G3B-20261029T104535MSK-R06",
+  "base_ref": "automation/r30/g3b/G3B-20261029T094228MSK-R05",
+  "base_head_commit": "6c723cba7c9fa72afbbf31a3286f87c4179f1694",
+  "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "source_commit": "5f8a5a829d1408a6f809e07f5dbfaa21c73f9024",
+  "source_git_blob_before": "565db45528a805775f558699a0965ce50afeec7b",
+  "source_git_blob_after": "826a8e9239fe80a70b8b6bdf480ea4fe202ecb28",
+  "source_sha256_before": "a1836d0c4a98668f5b40bc9da327491aaee7e4e3f1538f6edcba2389bf8f886a",
+  "source_sha256_after": "276a1814d77bc4b8767b27e6976132e6daec97012b098da4b72fa3e8dd7daebb",
+  "task_ids": [
+    "G3B-R30-P03-BACKGROUND-PROGRESS-VISIBLE-WITH-JOB-TAG-R06"
+  ],
+  "previous_done_not_recredited": [
+    "G3B-P03-DURABLE-STOP-RACE",
+    "G3B-P03-UNPINNED-QUEUED-CANCEL-RACE",
+    "G3B-R30-P03-UNMERGED-CONSENT-IMMUTABLE-COMMAND-PORT",
+    "G3B-R30-P03-UI-BACKGROUND-ACTIVEJOB-EVENT-INGEST-R03",
+    "G3B-R30-P03-UI-DURABLE-STOP-OUT-OF-ORDER-EVENT-SNAPSHOT-R04",
+    "G3B-R30-P03-BACKGROUND-STOP-RETRY-PINNED-JOB-AND-NULL-SNAPSHOT-CANCEL-R05"
+  ],
+  "defect": "R05 STOP/Retry operated on state.activeJob regardless of selected catalog model, but renderHero still used currentJob(), which returns null on another selected catalog card. Consequently a real background Running/Cancelled queue could display no progress, no transfer and 'НЕТ ЗАГРУЗКИ' while STOP remained available.",
+  "fix": "Render telemetry and state from the actual state.activeJob; retain selected-card DNA, catalog, immutable evidence and existing host action binding. Prefix jobPhase/transferNote with the actual queue modelTag to distinguish it from the selected card; do not synthesize progress or native success.",
+  "test": {
+    "source_parse": "PASS new Function(full patched GitHub ui.js) in JS V8",
+    "mode": "Exact renderHero function extracted from full source and executed in JS V8 using isolated element/state test doubles; no external host or Ollama calls.",
+    "baseline": "R05 7/16 PASS; 9 regressions fail as expected for cross-selection telemetry",
+    "patched": "R06 16/16 PASS",
+    "scenarios": [
+      "background-job-visible",
+      "background-percent-visible",
+      "background-transfer-visible",
+      "background-tag-visible",
+      "background-transfer-note-tag",
+      "background-stop-allowed",
+      "background-retry-disallowed",
+      "background-stop-pending",
+      "selected-same-progress",
+      "cancel-visible",
+      "cancel-terminal-retry",
+      "failed-terminal-retry",
+      "completed-terminal-no-stop",
+      "unknown-transfer-not-invented",
+      "no-job-fallback",
+      "host-not-ready"
+    ],
+    "git_source_readback": "PASS exact bytes after commit, blob SHA agrees",
+    "native_ollama_pull": "NOT_RUN",
+    "native_ollama_cancel": "NOT_RUN",
+    "native_ollama_retry": "NOT_RUN",
+    "native_ollama_progress": "NOT_RUN",
+    "windows_webview2": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "test_file": "NOT_WRITTEN: exact test path not granted by manifest",
+    "owner_request": "Astra-C to grant owner test path tests/P03/g3b_r30_queue_telemetry_background_20261029_R06.cjs before adding persistent regression test; G3-B made no write to tests/P03."
+  },
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "forbidden_paths": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "receipt_dir": "coordination/automation/r30/G3-B/"
+  },
+  "rules": {
+    "section33": "56/56 read from coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "sections54_56": "READ latest V16 Doc",
+    "R29_loader_override": "READ"
+  },
+  "historical": {
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexed_snapshots": 25,
+    "root_snapshot_dirs_seen": 25,
+    "all_snapshot_contents_bytewise": "NOT_VERIFIED",
+    "original_729_sha256": "NOT_RUN"
+  },
+  "google_drive_read_ids": [
+    "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  ],
+  "previous_lesson_applied": "R05 pinned STOP/Retry to actual activeJob even when another model was selected; R06 tests the separate presentation path and discovers renderHero remained selection-bound.",
+  "new_self_improvement_lesson": "Treat command targeting, event ingestion, and telemetry rendering as three distinct projections of the same durable queue job; test all three after switching catalog cards. Host-reported bytes are not independent installed-model verification.",
+  "worker_drive_writes": false,
+  "central_drive_writer": "Astra-C only",
+  "native_status": "HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "accepted_product_delta": 0,
+  "product_percent": "N/D",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_pipeline": true,
+  "no_final_integration": true,
+  "no_main_write": true,
+  "no_pr162_write": true,
+  "no_shared_R30_write": true,
+  "no_other_owner_write": true
+}
