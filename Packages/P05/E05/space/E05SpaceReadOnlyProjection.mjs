@@ -348,6 +348,16 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   // Bounded fail-closed projection: never let a raw >64-event tail hide an
   // earlier terminal ERROR or an event_id collision. E06 owns the event log.
   if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
+  // An events.v3 event_id belongs to the entire append-only RunID journal,
+  // not just terminal events. A task.started/progress sharing a STOP event_id
+  // must HOLD independently of arrival order; never display a false STOPPED.
+  const nonterminalTypes = new Set(['task.started','task.progress',
+    'training.step','checkpoint.saved','task.completed','gpu.sample']);
+  const nonterminalIds = new Set();
+  for (const e of events) {
+    if (e?.run_id===runId && nonterminalTypes.has(e.event_type) &&
+        eventToken128(e.event_id)) nonterminalIds.add(e.event_id);
+  }
   const terminal=[];
   const seen=new Map();
   // A single TaskID journal sequence cannot identify two distinct terminal
@@ -369,6 +379,8 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     if (e?.run_id===runId && (e.event_type==='model.stopped' || e.event_type==='task.failed') &&
         !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId) continue;
+    if (nonterminalIds.has(e.event_id))
+      return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
     // Do not erase a future same-run failure behind a verified STOP.
     if (futureTerminalUtc(e.timestamp_utc, nowMs))
       return {state:'HOLD_FUTURE_TERMINAL',errors:null};
