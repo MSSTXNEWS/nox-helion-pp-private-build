@@ -1,0 +1,169 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T09_FIXED_6_CRITERIA_HOLD_R13",
+  "task_id": "T09",
+  "run_id": "NOX-V16-T09-20261029T164545MSK-R13-HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY; not main NOX",
+  "status": "HOLD_NO_OWNER_ACCEPTED_T06_HEAD_TREE_MANIFEST_SOURCELOCK",
+  "source_frozen": false,
+  "timing": {
+    "timezone": "Europe/Moscow",
+    "planned_start": "2026-10-29T16:45:00+03:00",
+    "first_observed": "2026-10-29T16:45:45+03:00",
+    "evidence_cutoff": "2026-10-29T16:46:32+03:00",
+    "observed_end": null,
+    "duration_seconds": null
+  },
+  "previous_checkpoint": {
+    "run_id": "NOX-V16-T09-20261029T162545MSK-R12-HOLD",
+    "git_receipt_blob_sha1": "46cfc7bf8870dc17c72be3b0b0b09f88dafbb6c2",
+    "completed": 0,
+    "total": 6,
+    "percent": 0,
+    "reason": "R12 immutable receipt explicitly recorded 0/6; no past DONE criterion reset"
+  },
+  "progress": {
+    "denominator_fixed": 6,
+    "before_completed": 0,
+    "after_completed": 0,
+    "before_percent": 0,
+    "after_percent": 0,
+    "delta_percentage_points": 0,
+    "remaining_criteria": 6,
+    "bar": "░░░░░░░░░░",
+    "method": "nearest 10-segment rounding; no credit from repeated verification"
+  },
+  "evidence": {
+    "T06": {
+      "run_id": "NOX-V16-T06-20261029T164013MSK-R06",
+      "receipt_blob_sha1": "c4b96db77cffd309db0f920a485a7488e9d9d049",
+      "receipt_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t06/NOX-V16-T06-20261029T164013MSK-R06/coordination/automation/t06/NOX-V16-T06-20261029T164013MSK-R06.json",
+      "gate": "HOLD_NO_OWNER1_AUTHORIZATION_NO_ACCEPTED_ONE_TREE",
+      "owner1_source_authority": false,
+      "source_pre_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "source_post_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "t06_criteria": "1/8 base candidate selected, no P01-P05 unified acceptance"
+    },
+    "T05": {
+      "run_id": "T05 final 13/13 disposition",
+      "commit_sha1": "d219d47dff1b02afadfd9abb921317bf1bd68f3e",
+      "manifest_blob_sha1": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+      "exact_compatible_with_PR162": 1,
+      "total_owner_variants": 13,
+      "unaccepted_variants": 12,
+      "integrated": 0
+    },
+    "T07": {
+      "run_id": "T07-20261029T164151MSK-ACCESSHOLD-03",
+      "receipt_blob_sha1": "c9419d9738b71bbe74665fcaf6317f0466082358",
+      "receipt_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/r30/g6a/T07-20261029T164151MSK-ACCESSHOLD-03/coordination/automation/r30/G6-A/T07-20261029T164151MSK-ACCESSHOLD-03.json",
+      "gate": "HOLD_RAW_BYTES_UNAVAILABLE",
+      "git_original_parts_identifiers": "3/3 HISTORICAL METADATA DONE, NOT PHYSICAL SHA",
+      "raw_3_part_SHA256_computed": false,
+      "assembled_zip_SHA256_expected_only": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "assembled_zip_SHA256_actual": null,
+      "raw_member_sha256_verified": 0,
+      "raw_member_count_expected": 729
+    },
+    "T08": {
+      "run_id": "NOX-V16-T08-MANUAL-R14-CORRECTION-20261029",
+      "receipt_blob_sha1": "e71f452f825df6267cde7fbf4cba4e6d4a134aee",
+      "receipt_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/coordination/t08-r14-20261029/coordination/automation/t08/NOX_V16_T08_MANUAL_R14_CORRECTED_RECEIPT_20261029.json",
+      "reported_fixed_ledger": "5/5",
+      "proven_fixable_code_P0P1": 0,
+      "technical_disposition": "NO_CODE_BLOCKERS only on checked PR162 source candidate",
+      "formal_report": "PENDING_T02_CAS_AND_READBACK",
+      "same_accepted_T06_unified_head": false
+    },
+    "PR162": {
+      "head_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "tree_sha1_prior_evidence": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+      "accepted_frozen": false,
+      "ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162"
+    },
+    "manifest": {
+      "actual_sha256": null,
+      "source_lock_sha256": null,
+      "pinned_source_tree_sha1": null,
+      "reason": "No owner accepted consolidated manifest and physical SHA256; PR162 tree is historical candidate only"
+    }
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "One owner-accepted T06 unified HEAD",
+      "status": "HOLD",
+      "proof": "T06 R06 receipt c4b96db77cffd309db0f920a485a7488e9d9d049: only PR162 base chosen, not unified accepted source HEAD"
+    },
+    {
+      "id": 2,
+      "name": "All selected owner patches and manifest accepted",
+      "status": "HOLD",
+      "proof": "T05 final manifest e1db8ff1f24b97041209eb162313fa4c8ab1d3a7: 13/13 dispositions, but 12 HOLD and 0 integrated according to T06 R06"
+    },
+    {
+      "id": 3,
+      "name": "T07 physical SourceLock PASS",
+      "status": "HOLD",
+      "proof": "T07 R03 c9419d9738b71bbe74665fcaf6317f0466082358: original Git part metadata 3/3, physical joined SHA256 unavailable, 0/729 member SHA256"
+    },
+    {
+      "id": 4,
+      "name": "T08 blockers eliminated or NO_CODE_BLOCKERS on same frozen tree",
+      "status": "HOLD",
+      "proof": "T08 R14 e71f452f825df6267cde7fbf4cba4e6d4a134aee reports no proven new code P0/P1 only for PR162 candidate; no T06 accepted unified tree; report CAS pending"
+    },
+    {
+      "id": 5,
+      "name": "One immutable HEAD/tree/manifest/SHA pinned",
+      "status": "HOLD",
+      "proof": "T06 R06 no owner-approved tree; assembled raw ZIP actual SHA256 and consolidated manifest SHA unavailable"
+    },
+    {
+      "id": 6,
+      "name": "Exact owner receipt SHAs and HEAD transmitted as frozen to T10/T11",
+      "status": "HOLD",
+      "proof": "No freeze; candidate SHA not authorized for T10/T11/T12 as frozen; HOLD handoff only"
+    }
+  ],
+  "one_precise_blocker": {
+    "id": "T09-BLOCK-T06-NO-OWNER-ACCEPTED-UNIFIED-TREE",
+    "owner": "T06 / sole manual source owner #1",
+    "evidence": "T06 R06 receipt Git blob c4b96db77cffd309db0f920a485a7488e9d9d049 states no delegated authority to change PR162 and no accepted unified HEAD/tree/manifest; T07 physical SourceLock is a mandatory missing input.",
+    "required_handoff": "Owner #1 publishes one actual owner-accepted source HEAD plus exact Git tree, immutable original manifest SHA and T07 physical 3-part/729 SourceLock SHA evidence with T08 disposition against same HEAD; T09 can then pin. Do not select PR162 or R30 as frozen by inference."
+  },
+  "handoff": {
+    "to": [
+      "T02 sole shared Docs writer",
+      "T06 owner #1",
+      "T10 independent SOURCE_READY",
+      "T11 GitLab PREP",
+      "T12 BUILD BLOCKED"
+    ],
+    "frozen_head_sha1": null,
+    "frozen_tree_sha1": null,
+    "frozen_manifest_sha256": null,
+    "transfer_status": "HOLD_ONLY_NO_FROZEN_SHA"
+  },
+  "gates": {
+    "SOURCE": "CANDIDATE",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "P01_P05_weighted": "N/D"
+  },
+  "readback": {
+    "one_targeted_source_test": "NOT_RUN_NO_SOURCE_CHANGES",
+    "git_readback": "PENDING",
+    "git_diff_scope": "OWN_RECEIPT_ONLY",
+    "product_code_changed": false,
+    "main_modified": false,
+    "PR162_modified": false,
+    "snapshots_modified": false,
+    "shared_google_docs_modified": false,
+    "EXE_NSIS_GitLab_CI_E07": "NOT_RUN"
+  },
+  "applied_lesson": "Preserve old metadata DONE and provisional NO_CODE_BLOCKERS only within their exact source ref; a T06 selected base HEAD is not an accepted unified tree, and expected ZIP SHA256 is not an observed SourceLock hash. Freeze only after same-head owner CAS and physical evidence."
+}
