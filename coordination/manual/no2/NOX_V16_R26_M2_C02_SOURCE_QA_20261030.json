@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_V16_R26_MANUAL2_INDEPENDENT_SOURCE_QA_CYCLE_V1",
+  "owner": "MANUAL_2",
+  "source_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_pr": 162,
+  "source_sha": "c04ddef4f9ef2879fde50d323fc097f2137bc46c",
+  "observed_post_sha": "4489cf46dbaa2e0bc543cade2afcc2e61532dfe8",
+  "utc": "2026-10-29T21:50:25.450Z",
+  "code_changed_by_qa": false,
+  "native_windows_not_run": true,
+  "source_ready": "HOLD",
+  "e07": "0/10 NOT_RUN",
+  "accepted_new": 0,
+  "task_done_delta": 0,
+  "product_percent": null,
+  "shared_journal": "T02_ONLY_PENDING",
+  "errors_reused": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "no_loss": "NO_PRODUCT_EDIT",
+  "run_id": "NOX-V16-M2-R26-20261030-C02-10",
+  "cycle": 2,
+  "approaches_done": 10,
+  "approaches": [
+    {
+      "n": 11,
+      "t": "P04 Windows shard guard+test parity",
+      "result": "DEFECT_FOUND_EARLIER_HEAD_NOW_SOURCE_FIXED_AT_POST_SHA",
+      "source": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "test_pre": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e",
+      "test_post": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+      "methods_at_post": 37,
+      "previous_methods_retained": 32,
+      "owner_methods_missing_at_post": 0,
+      "execution": "NOT_RUN_PYTHON"
+    },
+    {
+      "n": 12,
+      "t": "P04 Windows reserved names/casefold/tensor map",
+      "result": "SOURCE_GUARDS_PRESENT_RUNTIME_NOT_RUN",
+      "blob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598"
+    },
+    {
+      "n": 13,
+      "t": "P04 QLoRA rights/holdout/thermal checkpoint",
+      "result": "SOURCE_GUARDS_PRESENT_GPU_NOT_RUN",
+      "blob": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea"
+    },
+    {
+      "n": 14,
+      "t": "P02 Ollama loopback/STOP/timeout",
+      "result": "SOURCE_GUARDS_PRESENT_OLLAMA_NOT_RUN",
+      "blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a"
+    },
+    {
+      "n": 15,
+      "t": "P02 existing SQLite/ACL/origin",
+      "result": "SOURCE_GUARDS_PRESENT_NATIVE_NOT_RUN",
+      "blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a"
+    },
+    {
+      "n": 16,
+      "t": "P02 chat.rag/chat.voice/calls.history ports",
+      "result": "SOURCE_PORTS_PRESENT_NATIVE_WPF_NOT_RUN",
+      "blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c"
+    },
+    {
+      "n": 17,
+      "t": "PACK01/02 100 unique routeIds and TaskIDs",
+      "result": "SOURCE_CATALOGS_MATCH_NATIVE_NOT_RUN",
+      "blob1": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+      "blob2": "69e6925eec57291474c14a33c344665689561dd5",
+      "p01": 50,
+      "p02": 50,
+      "unique_route_id": 100,
+      "unique_task_id": 100
+    },
+    {
+      "n": 18,
+      "t": "T06 eight source closeout criteria",
+      "result": "SOURCE_GATE_PRESENT_OWNER_8_OF_8_NOT_VERIFIED",
+      "blob": "68662ebc7395465b10331b45c049c569939b33db"
+    },
+    {
+      "n": 19,
+      "t": "Original 729 in source_00/01/02.part",
+      "result": "GIT_BLOB_PINS_CONFIRMED_BYTES_NOT_REASSEMBLED_THIS_RUN",
+      "blobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ]
+    },
+    {
+      "n": 20,
+      "t": "Stage separation SOURCE/INTEGRATED/QA/E07",
+      "result": "SOURCE_STAGE_GATE_PRESENT_SOURCE_READY_HOLD",
+      "blob": "68662ebc7395465b10331b45c049c569939b33db"
+    }
+  ],
+  "next": "T06 8/8 owner receipts, P03 ACK, Host50 native binding; #2 independent verification after owner exact SHA; #3 P04/P05 runtime tests"
+}
