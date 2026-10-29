@@ -80,7 +80,12 @@ public static class ModelArtifactReviewRegistry
         var templateInfo = new FileInfo(path);
         if (templateInfo.Length is <= 0 or > 1048576)
             throw new InvalidDataException("REVIEW_TEMPLATE_SIZE_INVALID");
-        using var doc = JsonDocument.Parse(File.ReadAllText(path));
+        // Open once under a real file handle; do not preflight one file and
+        // parse a second path lookup if a concurrent writer replaces it.
+        using var input = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (input.Length is <= 0 or > 1048576)
+            throw new InvalidDataException("REVIEW_TEMPLATE_SIZE_CHANGED");
+        using var doc = JsonDocument.Parse(input);
         RequireUniqueTemplateKeys(doc.RootElement);
         if (!doc.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array ||
             items.GetArrayLength() < 15 || items.GetArrayLength() > 250)
