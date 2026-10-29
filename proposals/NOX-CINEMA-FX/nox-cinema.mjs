@@ -223,13 +223,37 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       for(let i=0;i<count&&particleCount<policy.maxParticles;i++)makeParticle(orb,now);
     }
   }
+  // G7-A R30 R08: tab, viewport and host-visibility pauses must not
+  // release stale particle deadlines on the first resumed animation frame.
+  // Initial mount is intentionally unchanged; validate all resumed bounds
+  // before touching any live D02 timer or restarting RAF.
+  let resumePending=false;
   function wake(){
     if(!disposed&&hostVisible&&intersectVisible&&!doc.hidden&&!preference&&mode!=="REDUCED"&&!raf){
+      if(resumePending){
+        let now;
+        try{now=time();}catch(_){return;}
+        if(!Number.isFinite(now)||now<0)return;
+        const policy=PROFILES[mode];
+        const bounds=each.map(orb=>{
+          const scale=orb.index===0?1:2.1;
+          return [now+policy.minimumBurstMs*scale,
+                  now+policy.maximumBurstMs*scale];
+        });
+        if(bounds.some(pair=>!pair.every(Number.isFinite)))return;
+        each.forEach((orb,index)=>{
+          const [earliest,latest]=bounds[index];
+          orb.nextBurst=Number.isFinite(orb.nextBurst)
+            ?Math.min(latest,Math.max(earliest,orb.nextBurst)):earliest;
+        });
+        resumePending=false;
+      }
       lastFrame=0;raf=win.requestAnimationFrame(loop);
     }
   }
   function sleep(){
     if(raf){win.cancelAnimationFrame(raf);raf=0;}
+    resumePending=true;
     clearParticles();
   }
   function onVisibility(){if(disposed)return;root.dataset.noxFxVisible=(!doc.hidden&&hostVisible&&intersectVisible)?"true":"false";if(doc.hidden)sleep();else wake();}
