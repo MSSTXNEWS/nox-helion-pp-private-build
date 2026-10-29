@@ -100,11 +100,21 @@ Section "NOX HELION application" SEC_MAIN
     DetailPrint "$CheckResult"
     Abort "Payload SHA-256 verification FAILED. No application files activated."
   ${EndIf}
+  ; Marker ownership is required by update, rollback and conservative uninstall.
+  ; A failed write must never reach either activation rename.
+  ClearErrors
   FileOpen $2 "$StageDir\nox-p01-owned.txt" w
-  IfErrors 0 +2
-    Abort "Could not write ownership marker."
+  IfErrors MarkerOpenFailed
   FileWrite $2 "NOXHELION.P01 V16$\r$\n"
+  IfErrors MarkerWriteFailed
   FileClose $2
+  Goto MarkerReady
+  MarkerWriteFailed:
+    FileClose $2
+  MarkerOpenFailed:
+    SetErrorLevel 2
+    Abort "Could not write ownership marker. No application directories moved."
+  MarkerReady:
   SetOutPath "$TEMP" ; release current working directory before Rename
   ; Preserve one backup for explicit rollback. Failed activation restores original.
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 ActivateNew
