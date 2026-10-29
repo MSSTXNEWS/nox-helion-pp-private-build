@@ -1,0 +1,156 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3_A_GIT_RECEIPT_V1",
+  "runId": "G3A-20261029T054610MSK-R01-316fd4e4",
+  "slot": "G3-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — LOADER ONLY",
+  "status": "SOURCE_SAVED_STATIC_TEST_PASS_RUNTIME_HOLD",
+  "privateBranch": "automation/r30/g3a/G3A-20261029T054610MSK-R01-316fd4e4",
+  "baseRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "baseHeadSha1": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "baseTreeSha1": "9b9ce6716f4f8936d33d8488ce2364f91eb6e389",
+  "sourceCommitSha1": "2ec543c9dbde893d0cf2e33f230fb196f1529019",
+  "sourceTreeSha1": "98c8fc637c8818d2a9862c4bb0e6df9772b92668",
+  "sourceUrl": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/2ec543c9dbde893d0cf2e33f230fb196f1529019",
+  "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+  "lockGitBlobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+  "historicalConflictsIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+  "historicalSnapshotsPreserved": 25,
+  "changedFiles": [
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "preSha256": "a80678e3d58c298ccf85292da089b271e0a78592851ad8f420a5c4c1272f3c7d",
+      "postSha256": "90f76729ad05e98abf36d67571f043e2f7b6482e1fdbee6b9a39514fce34e316",
+      "preGitBlobSha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+      "postGitBlobSha1": "31202bf7a0162b76550be06bdabd22402fd25bff",
+      "exactReadback": true,
+      "origin": "base source patch"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "preSha256": "37a8403b57d3db968617fe288cbc67d86c9ace539904924a2280105e83f570f6",
+      "postSha256": "ce9879d89255e9522b70c9b2c83bd4b71389d35ab28c8522c80a67f29d30bd51",
+      "preGitBlobSha1": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+      "postGitBlobSha1": "02ce9b853c75d2407e80e6a654ab9fbaa1e05de5",
+      "exactReadback": true,
+      "origin": "base source patch"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "preSha256": "be70bb51b14d2eca39517646d4adb90626676556b2eea881b9930f9dbf82e90a",
+      "postSha256": "f0730d72ebd4939f06fab53ae64260df11b4d510ee11b54fa6eb2628f78624ca",
+      "preGitBlobSha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "postGitBlobSha1": "b62d9539a418976eebaa42f3be95c5606129cd0b",
+      "exactReadback": true,
+      "origin": "base source patch"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "preSha256": null,
+      "postSha256": "6cdb14f6dc8bf255134e15e69c64f4c2d006de8ebae912a509759517bf8128d8",
+      "preGitBlobSha1": null,
+      "postGitBlobSha1": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0",
+      "exactReadback": true,
+      "origin": "new restored donor source"
+    },
+    {
+      "path": "Packages/P03/Admission/test_g3a_reviewed_artifact_r30_20261029.py",
+      "preSha256": null,
+      "postSha256": "cd8daa0bbc2fc6da8d7fc90e090f0b50c8f3d7ffe39393c682018c3dc69caf49",
+      "preGitBlobSha1": null,
+      "postGitBlobSha1": "a0f6c7627e8ef55c30557eeb4be066c59402e39a",
+      "exactReadback": true,
+      "origin": "new restored donor source"
+    }
+  ],
+  "tests": {
+    "staticSourceAssertionsPassed": 13,
+    "checks": [
+      {
+        "name": "only assigned G3-A code paths",
+        "status": "PASS"
+      },
+      {
+        "name": "existing source files meaningfully changed",
+        "status": "PASS"
+      },
+      {
+        "name": "30 official model families discovery only",
+        "status": "PASS"
+      },
+      {
+        "name": "C# reviewed adapter native schema match",
+        "status": "PASS"
+      },
+      {
+        "name": "review owner receipt required",
+        "status": "PASS"
+      },
+      {
+        "name": "prevent promotion via incomplete RAM/VRAM/disk",
+        "status": "PASS"
+      },
+      {
+        "name": "nonzero artifact + manifest SHA required",
+        "status": "PASS"
+      },
+      {
+        "name": "immutable revision helper matches actual C# registry",
+        "status": "PASS"
+      },
+      {
+        "name": "native callback mutation reverified",
+        "status": "PASS"
+      },
+      {
+        "name": "typed requiresGPU and Ollama for local GGUF",
+        "status": "PASS"
+      },
+      {
+        "name": "native reviewed adapter strict schema and source evidence",
+        "status": "PASS"
+      },
+      {
+        "name": "own unique test suite includes 14+ focused cases",
+        "status": "PASS"
+      },
+      {
+        "name": "preserved snapshots and forbidden paths untouched",
+        "status": "PASS"
+      }
+    ],
+    "pythonRuntime": "NOT_RUN_UNMOUNTED_PRIVATE_REPO",
+    "sourceRegressionCommand": "cd Packages/P03/Admission && python -m unittest -v test_g3a_reviewed_artifact_r30_20261029",
+    "dotnetRuntime": "NOT_RUN",
+    "nativeWindows": "NOT_RUN",
+    "download": "NOT_RUN",
+    "training": "NOT_RUN"
+  },
+  "modelCatalog": {
+    "officialDiscoveryFamilies": 30,
+    "verifiedImmutableArtifactDigests": 0,
+    "officialLicenseRightsAndHardwareAttestation": "HOLD"
+  },
+  "error": "C# registry accepted 64-hex review revision while Python C40 admitted only 40-hex; missing native reviewed adapter in collected root; absent resource budget/all-zero SHA guards and mutation-resistant E06 attestor evidence.",
+  "improvementLesson": "Reuse immutable R29 P03 source metadata export without launching another downloader. Fail closed on checksum, native owner receipt, measured resources, and on callback mutation of evidence before queue admission; static policy tests are not installed function acceptance.",
+  "handoffToG3B": {
+    "status": "HOLD_FOR_OWNER",
+    "scope": "Bind authenticated registry export/unchanged native consent+modelTag+digest snapshot to existing queue. Confirm rights receipt SourceLock and actual license before download; fix native callback mutation in own p03_onehost_port.py.",
+    "forbiddenPathsNotTouched": [
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "release": {
+    "sourceComplete": "HOLD",
+    "installed": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "productProgress": "N/D",
+    "newAcceptedProductTasks": 0,
+    "windowsBuildsTriggered": 0,
+    "GitLabPipelinesTriggered": 0
+  },
+  "sharedDriveDocs": "NOT_WRITTEN_SINGLE_WRITER_ASTRA_C",
+  "mainOrPR162Touched": false,
+  "all25SnapshotsUntouched": true
+}
