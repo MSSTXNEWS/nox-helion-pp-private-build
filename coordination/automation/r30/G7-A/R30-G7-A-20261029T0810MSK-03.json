@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T0810MSK-03",
+  "slot": "G7-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY",
+  "status": "SOURCE_PATCH_SAVED_TARGETED_V8_RED_TO_GREEN; SOURCE_READY_HOLD; RELEASE_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T0810MSK-03",
+  "base_ref": "automation/r30/g7a/R30-G7-A-20261029T0713MSK-02",
+  "base_commit": "9fe61a97200b78c85d5fc375b874c398f7d615f4",
+  "previous_done_receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T0713MSK-02.json",
+  "task": {
+    "TaskID": "G7A-R30-D02-ATOMIC-ECO-CLOCK-20261029-03",
+    "symptom": "A rejected MAX to ECO transition deletes live D02 particles even though setProfile returns false when clock returns NaN or throws.",
+    "observed_red": "With 10 live particles and invalid clock, setProfile('ECO') returned false but reduced the particle count to 3.",
+    "cause": "The old implementation trimmed the existing particle array to the ECO budget before validating the clock needed for delayed burst scheduling.",
+    "fix": "Validate the clock and finite next burst boundary before any live particle trimming or profile state mutation; only then apply budget and reschedule bursts.",
+    "scope": "Original D02 loader-scene decoration only; no new visual assets, controls, UI routes or backend claims."
+  },
+  "source": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "b3cdc08f6baaca942a84c5ddcd85dd17e9d4b9cf",
+    "post_blob_sha": "a4d67e278cfb2ecb0be67ebd9633e3a511c35306",
+    "commit_sha": "5cbe167379f79033639ff03b1eb2fd3b91c33df5"
+  },
+  "test": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.clock-atomic.test.mjs",
+    "blob_sha": "e26e74d295ea0b1c1f72711a355073e71c57def8",
+    "commit_sha": "26845b5d3c89a1f3351ed8c80c58a6bb69165490",
+    "case_count": 1,
+    "variants": [
+      "clock_NaN",
+      "clock_throws"
+    ],
+    "actual_execution": "V8 eval of exact stored Node test body against actual pre/post JavaScript module",
+    "red": "FAIL nan must not delete live particles",
+    "green": "PASS (both invalid-clock variants, valid ECO transition, teardown)",
+    "native_command_proposed": "node --test proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.clock-atomic.test.mjs",
+    "node_cli": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "ownership": {
+    "lock_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbidden_paths": [
+      "proposals/NOX-PACK02-50/",
+      "proposals/NOX-PACK01-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-A/",
+    "changes_only_owned_files": true
+  },
+  "provenance": {
+    "rules": "56/56 read from coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "sections": "V16 §§54-56 plus R29 loader-only correction",
+    "conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots": {
+      "immutable_count": 25,
+      "recursive_git_trees_checked": 25,
+      "all_snapshots_untruncated": true,
+      "all_file_bodies_read": false,
+      "scope": "Full recursive Git tree inventory for each saved snapshot; relevant D02 blob and historical divergent r27-a02 identified; no snapshot modified."
+    },
+    "drive_reads": {
+      "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "e06": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "c34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "spec": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc"
+    }
+  },
+  "safeguards": {
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "installer_untouched": true,
+    "pack01_untouched": true,
+    "pack02_untouched": true,
+    "r30_master_untouched": true,
+    "old_done_untouched": true,
+    "d02_9_orbs_preserved": true,
+    "personas_preserved": true,
+    "wow001_200_preserved": true,
+    "original_controls_preserved": true,
+    "eco_reduced_motion_preserved": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "no_final_integration": true,
+    "source_ready": "HOLD",
+    "release": "HOLD",
+    "product_task_completion_unverified": true
+  },
+  "self_improvement": {
+    "lesson": "Apply rejection preflight before any destructive or visible mutation in visual-state transitions. A false return must be observationally atomic: assert the complete state snapshot is unchanged before admitting the transition.",
+    "applied_here": "Reordered ECO clock validation before particle trimming; added a deterministic >ECO-budget fixture for both NaN and throwing clocks and actual RED→GREEN source evaluation.",
+    "forward_to": "Astra-C only: append this immutable worker Git receipt to shared Docs using CAS and exact RunID readback; G7-A made no shared Docs writes."
+  }
+}
