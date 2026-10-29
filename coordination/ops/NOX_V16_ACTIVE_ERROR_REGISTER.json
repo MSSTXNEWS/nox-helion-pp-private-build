@@ -144,6 +144,50 @@
       "verification": "34/34 decisions; 15 SKIP and 19 owner-selected source versions recorded; preserving all donor alternatives.",
       "recurrence_count": 1,
       "closed_scope": "HISTORICAL_ARCHIVE_SELECTION_ONLY"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "owner": "T09",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "type": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
+      "severity": "PROCESS_AND_SOURCE_GATES_ONLY",
+      "cause": "No proof of independent closeout gate on the same accepted source SHA",
+      "source": "T11 cross-executor incident index Git blob dba5a0230fe4dd73b68095431f426c3de7111a8f; Master/E06/Lessons recorded 2026-10-29",
+      "recurrence_count": 1,
+      "next_action": "Owner ACK exact active source SHA; independent verify if fixed; T02 does not alter product source"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "owner": "ALL_EXECUTORS",
+      "status": "OPEN",
+      "type": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
+      "severity": "PROCESS_AND_SOURCE_GATES_ONLY",
+      "cause": "Repeated HOLD-only closeout without readback/physical correction",
+      "source": "T11 cross-executor incident index Git blob dba5a0230fe4dd73b68095431f426c3de7111a8f; Master/E06/Lessons recorded 2026-10-29",
+      "recurrence_count": 1,
+      "next_action": "Owner ACK exact active source SHA; independent verify if fixed; T02 does not alter product source"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "owner": "T06",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "type": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
+      "severity": "PROCESS_AND_SOURCE_GATES_ONLY",
+      "cause": "Mechanical guard source/test added but no independent T06 8/8 accepted",
+      "source": "T11 cross-executor incident index Git blob dba5a0230fe4dd73b68095431f426c3de7111a8f; Master/E06/Lessons recorded 2026-10-29",
+      "recurrence_count": 1,
+      "next_action": "Owner ACK exact active source SHA; independent verify if fixed; T02 does not alter product source"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "owner": "T08",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "type": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
+      "severity": "PROCESS_AND_SOURCE_GATES_ONLY",
+      "cause": "Host50 exact tree admission source fix present; signed same-head native 13/13 unverified",
+      "source": "T11 cross-executor incident index Git blob dba5a0230fe4dd73b68095431f426c3de7111a8f; Master/E06/Lessons recorded 2026-10-29",
+      "recurrence_count": 1,
+      "next_action": "Owner ACK exact active source SHA; independent verify if fixed; T02 does not alter product source"
     }
   ],
   "process_notes": [
@@ -153,18 +197,48 @@
   ],
   "no_build": true,
   "history_coverage": {
-    "status": "BACKFILL_REQUIRED_NOT_CLAIMED_COMPLETE",
-    "known_records": 7,
-    "sources": [
-      "Master entire history",
-      "E06 entire history",
-      "Lessons entire history",
-      "GitHub issue #177 all 243+ comments including later pages",
-      "All T01-T11 personal Git receipts and historical R29/R30",
-      "T01–T11 latest automation run results"
+    "status": "BACKFILL_SCANNED_NOT_MATERIALIZED__RECEIPT_COVERAGE_INCOMPLETE",
+    "complete": false,
+    "old_seed_records": 7,
+    "explicit_index_records": 11,
+    "docs_scanned": {
+      "master": {
+        "revision": "AHj4eMSOztqNkx62K6CClwDRtbL8kBIJhwsauYWDGTEbfOxbNdmsXErTQHzNA5osCW-YSa2saF1zRdCvyCBtylxFMfegYPTZxDzkQXC88Kg",
+        "paragraphs": 2426
+      },
+      "e06": {
+        "revision": "AHj4eMTYRWoXsNvT2nk93ZhaW4jX9B0hbZ0F8ToIMO-4s4DO0nLkzFXlxVHHcNKsDFuz6qBrnZxY_vMQ3U2kji1iBIqvaLk3-JB-I8SSLwo",
+        "paragraphs": 5267
+      },
+      "lessons": {
+        "revision": "AHj4eMQ1PEoVa43ehB72QcjCdCGqsYH_7uA_c3PfQyoRLmGNH8J3bxbvPRgO98xUZdrYCujiYyRKAvsxazaywFHgyX-uqS-He5mq7DNg5Nc",
+        "paragraphs": 1686
+      },
+      "c34": {
+        "revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+        "paragraphs": 343
+      }
+    },
+    "issue177_comment_count_seen": 271,
+    "latest_receipts_directly_read_for": [
+      "T01",
+      "T04",
+      "T05",
+      "T06",
+      "T07",
+      "T08",
+      "T09",
+      "T10",
+      "T11"
     ],
-    "assigned_to": "T02/C coordinator",
-    "initial_action": "One-time deterministic inventory and dedup of all historical errors into THIS existing register, not new TaskIDs; include original error source RunID and source path, firstSeen, lastSeen, owner, current exact HEAD and proof. Read full history ONCE to close index gaps; subsequently use full open register plus new deltas. Do not claim all errors indexed until historical source coverage/checkpoint is written with evidence."
+    "missing_direct_owner_receipts": [
+      "T02",
+      "T03"
+    ],
+    "historical_evidence_candidates_scanned": 448,
+    "backfill_materialized_complete": false,
+    "reason": "Extensive archive contains many free-text root/path mentions without exact ERROR_ID. Full 448 candidate-provenance rows were NOT saved due connector guard; never claim 448 verified live defects. Google Docs read quota 429 during attempted persist, no document writes occurred.",
+    "next_action": "Resume only missing deterministic source/index materialization once writing/reading succeeds, then incremental revisions only."
   },
   "mega_block_protocol": {
     "priority": "NEW OPERATIONAL V16 RULE; supersedes old repeated 10x10, audit-only approaches, and 'read last journal delta only' but NEVER supersedes original V16 all 56 rules or Function Lock",
@@ -232,5 +306,72 @@
     "closed": 2,
     "first_update_phase": "POLICY_INSTALLED_NOT_YET_RUNTIME_PROVEN",
     "independent_new_run_evidence_required": true
+  },
+  "last_coordinator_checkpoint": {
+    "run_id": "NOX-V16-C-20261029T1805MSK-BACKFILL-CHECKPOINT-R19",
+    "source_head_last_observed": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "source_freeze": "NOT_ACCEPTED",
+    "registry_pre_sha": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+    "ack_queue": [
+      {
+        "id": "ERR-SYS-001",
+        "action": "APPLY_CHECKPOINT",
+        "owner": "T02/C"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "action": "APPLY_CHECKPOINT",
+        "owner": "T02/C"
+      },
+      {
+        "id": "ERR-SRC-003",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T06/Host50"
+      },
+      {
+        "id": "ERR-SRC-004",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T06+P01-P05 functional owners"
+      },
+      {
+        "id": "ERR-SRC-005",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T06"
+      },
+      {
+        "id": "ERR-SYS-006",
+        "action": "ALREADY_VERIFIED",
+        "owner": "T07/T09"
+      },
+      {
+        "id": "ERR-SYS-007",
+        "action": "ALREADY_VERIFIED",
+        "owner": "T04"
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T09"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "ALL_EXECUTORS"
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T06"
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "action": "OWNER_ACK_REQUESTED",
+        "owner": "T08"
+      }
+    ],
+    "lesson": "Never promote free-text historical mentions to active P0/P1; record exact cursor and uncertainty. Do not repeat 7-only ledger as full history",
+    "source_writes": 0,
+    "docs_gate": "DRIVE_WRITE_HOLD_RATE_LIMIT",
+    "coordination_gate": "0/4 under new criteria; historical T02 DONE 4/4 unchanged"
   }
 }
