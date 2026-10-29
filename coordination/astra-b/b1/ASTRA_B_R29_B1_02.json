@@ -1,0 +1,31 @@
+{
+  "run_id": "ASTRA-B-R29-B1-20261029-02",
+  "task_id": "B1-P04-SHARD-HEADER-HASH-CONSISTENCY",
+  "parent": "86b084a91e973d7ff6d6221f5063c4a00e3420c3",
+  "owner": "B1",
+  "source_lock": {
+    "release": "5a0793926066ecbc50252ce139703165283fe8f4",
+    "pre_blobs": {
+      "Packages/P04/model_snapshot_probe.py": "6b6a3c8074de1f3b4b7602608c0ad5b07bc3c9a3",
+      "tests/P04/test_model_snapshot_probe.py": "54646cb073579c1c491c946a0f0ed4c23439b860"
+    }
+  },
+  "changes": [
+    "Parse header and compute shard SHA on one file descriptor",
+    "Bind reported bytes to descriptor size",
+    "Reject inode replacement and in-place mutation using identity/size/mtime/ctime before accepting the artifact"
+  ],
+  "test": {
+    "command": "python -B tests/P04/test_model_snapshot_probe.py",
+    "count": 18,
+    "result": "PASS",
+    "scenarios": "Prior index/header/shard tests plus same-inode mutation and path replacement during hashing"
+  },
+  "lesson": "Reuse the wheel validator descriptor/stability pattern; separate header and SHA opens can describe different artifacts.",
+  "limits": [
+    "Not a trusted model revision or license attestation",
+    "No GPU/Windows execution",
+    "Mutation after returning still requires trusted host/install-time hash verification"
+  ],
+  "build": "NOT_RUN"
+}

@@ -179,31 +179,27 @@ def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
     return report
 
 
-def _weight_tensor_names(path: Path) -> frozenset[str]:
-    if not _regular(path):
-        raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
-    size = path.stat().st_size
-    with path.open("rb") as f:
-        prefix = f.read(8)
-        if len(prefix) != 8:
-            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-        length = int.from_bytes(prefix, "little")
-        if length < 2 or length > MAX_JSON_BYTES or size < length + 8:
-            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-        try:
-            def unique_pairs(pairs):
-                values = {}
-                for key, value in pairs:
-                    if key in values:
-                        raise ValueError("duplicate tensor metadata key")
-                    values[key] = value
-                return values
-            raw_header = f.read(length)
-            if not raw_header.startswith(b"{"):
-                raise ValueError("invalid safetensors header prefix")
-            header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs)
-        except (UnicodeError, ValueError, RecursionError) as exc:
-            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
+def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
+    prefix = f.read(8)
+    if len(prefix) != 8:
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    length = int.from_bytes(prefix, "little")
+    if length < 2 or length > MAX_JSON_BYTES or size < length + 8:
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    try:
+        def unique_pairs(pairs):
+            values = {}
+            for key, value in pairs:
+                if key in values:
+                    raise ValueError("duplicate tensor metadata key")
+                values[key] = value
+            return values
+        raw_header = f.read(length)
+        if not raw_header.startswith(b"{"):
+            raise ValueError("invalid safetensors header prefix")
+        header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs)
+    except (UnicodeError, ValueError, RecursionError) as exc:
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
     capacity = size - length - 8
     if not tensors or any(
@@ -229,6 +225,34 @@ def _weight_tensor_names(path: Path) -> frozenset[str]:
     if cursor != capacity:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
     return frozenset(k for k in header if k != "__metadata__")
+
+
+
+def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
+    if not _regular(path):
+        raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
+    with path.open("rb") as stream:
+        initial = os.fstat(stream.fileno())
+        if not stat.S_ISREG(initial.st_mode):
+            raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
+        def stamp(info):
+            return (info.st_dev, info.st_ino, info.st_size,
+                    info.st_mtime_ns, info.st_ctime_ns)
+        names = _parse_weight_tensor_names(stream, initial.st_size)
+        digest = None
+        if include_hash:
+            stream.seek(0)
+            digest = _sha256_stream(stream)
+        # A shared descriptor prevents rename mixing; timestamps catch writes
+        # through the same inode. The receipt names must still bind this file.
+        if (stamp(os.fstat(stream.fileno())) != stamp(initial) or
+                not _regular(path) or stamp(path.stat()) != stamp(initial)):
+            raise ValueError("MODEL_WEIGHTS_CHANGED_DURING_INSPECTION")
+        return {"names": names, "bytes": initial.st_size, "sha256": digest}
+
+
+def _weight_tensor_names(path: Path) -> frozenset[str]:
+    return _inspect_weight(path)["names"]
 
 
 def _weight_header(path: Path) -> int:
@@ -284,7 +308,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
-            tensor_names = _weight_tensor_names(file)
+            artifact = _inspect_weight(file, include_hash=True)
+            tensor_names = artifact["names"]
             if weights is not None:
                 expected_names = frozenset(tensor for tensor, shard in weights.items() if shard == name)
                 if tensor_names != expected_names:
@@ -292,8 +317,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             report["tensor_headers"] += len(tensor_names)
             report["weight_files"].append({
                 "name": name,
-                "bytes": file.stat().st_size,
-                "sha256": _sha256(file),
+                "bytes": artifact["bytes"],
+                "sha256": artifact["sha256"],
             })
         report["candidate_sha256"] = _sha256(base / "config.json")
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"

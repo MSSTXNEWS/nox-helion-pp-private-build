@@ -5,6 +5,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[2] / "Packages" / "P04" / "model_snapshot_probe.py"
@@ -176,6 +177,38 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
     def test_count_helper_contract_is_preserved(self):
         self.assertEqual(probe._weight_header(self.root / "model.safetensors"), 1)
+
+
+    def test_same_inode_change_between_validation_and_hash_is_hold(self):
+        original_hash = probe._sha256_stream
+        weight = self.root / "model.safetensors"
+        def mutate_then_hash(stream):
+            # Keep size valid, but mutate payload after the parser observed it.
+            with weight.open("r+b") as writer:
+                writer.seek(-1, 2)
+                writer.write(b"X")
+                writer.flush()
+            return original_hash(stream)
+        with mock.patch.object(probe, "_sha256_stream", side_effect=mutate_then_hash):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_WEIGHTS_CHANGED_DURING_INSPECTION")
+
+    def test_replaced_weight_path_cannot_inherit_old_header_result(self):
+        original_hash = probe._sha256_stream
+        weight = self.root / "model.safetensors"
+        replacement = self.root / "replacement.safetensors"
+        make_weights(replacement)
+        def replace_then_hash(stream):
+            try:
+                replacement.replace(weight)
+            except PermissionError:
+                self.skipTest("Platform forbids replacing an open file")
+            return original_hash(stream)
+        with mock.patch.object(probe, "_sha256_stream", side_effect=replace_then_hash):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_WEIGHTS_CHANGED_DURING_INSPECTION")
 
 
 if __name__ == "__main__":
