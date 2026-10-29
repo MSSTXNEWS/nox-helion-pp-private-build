@@ -10,9 +10,37 @@ const stamp=x=>{const m=/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/.exec(x);if(!m||+m
 const fmt=(v,sep=",")=>{const n=Math.max(0,Math.round(v)),s=Math.floor(n/1000);return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s/60)%60).padStart(2,"0")+":"+String(s%60).padStart(2,"0")+sep+String(n%1000).padStart(3,"0")};
 const cues=s=>txt(s).trim().replace(/^WEBVTT[^\n]*\n/i,"").split(/\n\s*\n/).filter(Boolean).map((b,i)=>{const a=ls(b),k=a.findIndex(x=>x.includes("-->"));if(k<0)throw Error("MISSING_TIMECODE");const m=/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}[,.]\d{3})/.exec(a[k]);if(!m)throw Error("INVALID_TIMECODE");const start=stamp(m[1]),end=stamp(m[2]);if(end<=start)throw Error("BAD_DURATION");return {n:i+1,start,end,text:a.slice(k+1).join("\n")}});
 const printCues=(a,vtt=false)=>(vtt?"WEBVTT\n\n":"")+a.map((c,i)=>(vtt?"":String(i+1)+"\n")+fmt(c.start,vtt?".":",")+" --> "+fmt(c.end,vtt?".":",")+"\n"+c.text).join("\n\n")+"\n";
-function csv(s){let rows=[],row=[],cell="",quote=false;const z=txt(s).replace(/\r\n?/g,"\n");for(let i=0;i<z.length;i++){const c=z[i];if(c==='"'){if(quote&&z[i+1]==='"'){cell+='"';i++}else quote=!quote}else if(c===","&&!quote){row.push(cell);cell=""}else if(c==="\n"&&!quote){row.push(cell);rows.push(row);row=[];cell=""}else cell+=c}if(quote)throw Error("BAD_CSV_QUOTE");if(cell||row.length){row.push(cell);rows.push(row)}if(!rows.length)return [];const h=rows.shift();if(h.some(x=>!x)||new Set(h).size!==h.length)throw Error("INVALID_CSV_HEADER");return rows.filter(r=>r.length!==1||r[0]!=="").map(r=>{if(r.length!==h.length)throw Error("CSV_WIDTH_MISMATCH");return Object.fromEntries(h.map((k,i)=>[k,r[i]]))})}
+function csv(s){
+ const rows=[],z=txt(s).replace(/\r\n?/g,"\n");
+ if(!z.length)return [];
+ let row=[],cell="",state="START";
+ const pushCell=()=>{row.push(cell);cell="";state="START"};
+ const pushRow=()=>{pushCell();rows.push(row);row=[]};
+ for(let i=0;i<z.length;i++){
+  const c=z[i];
+  if(state==="QUOTED"){
+   if(c==='"'){if(z[i+1]==='"'){cell+='"';i++}else state="AFTER_QUOTE"}
+   else cell+=c;
+   continue;
+  }
+  if(c===","){pushCell();continue;}
+  if(c==="\n"){pushRow();continue;}
+  if(state==="AFTER_QUOTE")throw Error("INVALID_CSV_TRAILING_CHAR");
+  if(c==='"'){if(state!=="START")throw Error("INVALID_CSV_QUOTE");state="QUOTED";continue;}
+  cell+=c;state="PLAIN";
+ }
+ if(state==="QUOTED")throw Error("BAD_CSV_QUOTE");
+ if(cell||row.length||state==="AFTER_QUOTE")pushRow();
+ if(!rows.length)return [];
+ const h=rows.shift();
+ if(h.some(x=>!x)||new Set(h).size!==h.length)throw Error("INVALID_CSV_HEADER");
+ return rows.filter(r=>r.length!==1||r[0]!=="").map(r=>{
+  if(r.length!==h.length)throw Error("CSV_WIDTH_MISMATCH");
+  return Object.fromEntries(h.map((k,i)=>[k,r[i]]))
+ })
+}
 function csvOut(a){if(!Array.isArray(a))throw Error("ARRAY_EXPECTED");if(!a.length)return "";const k=keys(a[0]),esc=v=>{const s=txt(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};return [k.map(esc).join(","),...a.map(r=>k.map(x=>esc(r[x])).join(","))].join("\n")}
-function flat(o,p="",out={},dep=0){if(dep>20)throw Error("JSON_DEPTH_LIMIT");if(o&&typeof o==="object")for(const [k,v] of Object.entries(o))flat(v,p?p+"."+k:k,out,dep+1);else if(!o||typeof o!=="object")out[p]=o;return out}
+function flat(o,p="",out=Object.create(null),dep=0){if(dep>20)throw Error("JSON_DEPTH_LIMIT");if(o&&typeof o==="object"){for(const [k,v] of Object.entries(o))flat(v,p?p+"."+k:k,out,dep+1)}else{if(Object.prototype.hasOwnProperty.call(out,p))throw Error("JSON_PATH_COLLISION");out[p]=o}return out}
 const tasklist=s=>ls(s).filter(x=>x.trim()).map((x,i)=>{const m=/^\s*(?:[-*]\s*)?(?:\[(x|X| )\]\s*)?(.*)$/.exec(x),a=m[2].split("|").map(y=>y.trim()),o=Object.fromEntries(a.slice(1).map(y=>y.split("=",2).map(z=>z.trim())).filter(z=>z.length===2));return {id:i+1,title:a[0],done:!!m[1]&&m[1].toLowerCase()==="x",owner:o.owner||"unassigned",status:o.status||"todo",weight:bounded(o.weight,0,10000,1),minutes:bounded(o.minutes,0,100000,0)}});
 const base64=s=>{const b=new TextEncoder().encode(s);return btoa(Array.from(b,x=>String.fromCharCode(x)).join(""))};
 const unbase=s=>new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(atob(s.trim()),x=>x.charCodeAt(0)));
@@ -52,7 +80,7 @@ export const OPS=Object.freeze({
 "dev.diff.lines":(s,o)=>{const a=ls(s),b=ls(txt(o.compare));return Array.from({length:Math.max(a.length,b.length)},(_,i)=>a[i]===b[i]?null:{line:i+1,before:a[i]??null,after:b[i]??null}).filter(Boolean)},
 "dev.json.compare":(s,o)=>{const a=flat(val(s)),b=flat(val(txt(o.compare)));return [...new Set([...keys(a),...keys(b)])].filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>({path:k,before:a[k]??null,after:b[k]??null}))},
 "dev.json.validate":s=>{try{val(s);return {valid:true}}catch{return {valid:false,error:"INVALID_JSON"}}},
-"dev.url.inspect":s=>{const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
+"dev.url.inspect":s=>{const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");if(u.username||u.password)throw Error("URL_CREDENTIALS_FORBIDDEN");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
 "dev.url.query_encode":s=>{const o=val(s);if(!o||typeof o!=="object"||Array.isArray(o))throw Error("OBJECT_REQUIRED");return new URLSearchParams(Object.entries(o).map(([k,v])=>[k,txt(v)])).toString()},
 "dev.url.query_decode":s=>Object.fromEntries(new URLSearchParams(s.trim().replace(/^\?/,""))),
 "dev.base64.encode":s=>base64(s),
