@@ -1,0 +1,102 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T07_FIXED_6_CRITERIA_CLOSEOUT_R05",
+  "taskId": "T07",
+  "runId": "T07-20261029T1714MSK-R05-COSIGN-CLOSEOUT",
+  "scope": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY, SOURCE ONLY",
+  "outcome": "DONE_T07_ORIGINAL_ARCHIVE_SOURCELOCK_ONLY",
+  "time": {
+    "timezone": "Europe/Moscow",
+    "plannedStart": "2026-10-29T17:15:00+03:00",
+    "observedRunStart": "2026-10-29T17:12:24+03:00",
+    "prewriteCheckpoint": "2026-10-29T17:14:28+03:00",
+    "endReadbackTime": "NOT_KNOWN_AT_PREWRITE",
+    "duration": "DETERMINABLE_AFTER_READBACK"
+  },
+  "progress": {
+    "fixedDenominator": 6,
+    "beforeCount": 5,
+    "afterCount": 6,
+    "previousPercent": 83.3,
+    "currentPercent": 100,
+    "deltaPercentagePoints": 16.7,
+    "remaining": 0,
+    "bar": "██████████",
+    "previousCheckpointRun": "T07-20261029T165934MSK-PHYSICAL-04"
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "status": "DONE",
+      "proof": "T07 original 3 git blob SHA1 and part Git SHA match; prior 509eef0d704de7d43461daace77953b01e66df44"
+    },
+    {
+      "id": 2,
+      "status": "DONE_HISTORICAL",
+      "proof": "T07 original receipt T07-20261029T160311MSK-PHYSICALHOLD-01; 25 snapshots, no rescan this run"
+    },
+    {
+      "id": 3,
+      "status": "DONE_HISTORICAL",
+      "proof": "T07 original receipt T07-20261029T160311MSK-PHYSICALHOLD-01; 968 baseline git blobs, no rescan this run"
+    },
+    {
+      "id": 4,
+      "status": "DONE",
+      "proof": "T07 physical raw SHA parts in 9412ec5f4add7cd960abeae700dc756890b19674; T09 coattestation fdf998625f8d582d313be2116a9e34ee6154fbd0"
+    },
+    {
+      "id": 5,
+      "status": "DONE",
+      "proof": "60,364,346 actual bytes, ZIP SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a; exact crosscheck in both receipts"
+    },
+    {
+      "id": 6,
+      "status": "DONE",
+      "proof": "729/729 physical member SHA256+CRC32+bytes exact crosscheck (0 mismatches); T09 immutable original-only signed owner-attestation committed at 5b0ae2efaf579b586d735f38a59ba760d2b1272d; not cryptographic private-key signature"
+    }
+  ],
+  "evidence": {
+    "T07_priorRunID": "T07-20261029T165934MSK-PHYSICAL-04",
+    "T07_priorCommit": "509eef0d704de7d43461daace77953b01e66df44",
+    "T07_priorReceiptBlob": "9412ec5f4add7cd960abeae700dc756890b19674",
+    "T09_runID": "NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK",
+    "T09_commit": "5b0ae2efaf579b586d735f38a59ba760d2b1272d",
+    "T09_receiptBlob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+    "T09_signType": "Immutable Git receipt/attestation; no cryptographic private-key signing claimed",
+    "T09_sourceStatus": "ORIGINAL_ARCHIVE_SOURCELOCK_SIGNED_FINAL_INTEGRATED_TREE_FREEZE_HOLD",
+    "shaCrossCheck": "729/729 exact member filename SHA256, crc32, size; 3/3 parts matching SHA256; ZIP SHA256 exact",
+    "originals": {
+      "parts": 3,
+      "rawBytes": 60364346,
+      "archiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "membersVerified": 729,
+      "mismatches": 0
+    }
+  },
+  "noLoss": "Historical 25 snapshots and 968 blob DONE preserved without rechecking; no product file, main, PR162, R30 shared summary, or shared Docs modification.",
+  "gate": {
+    "T07": "DONE_6_OF_6",
+    "T09_originalPhysical": "PASS",
+    "T09_finalIntegratedFreeze": "HOLD",
+    "T10_SOURCE_READY": "HOLD",
+    "T12_BUILD": "NOT_RUN",
+    "T13_E07": "NOT_RUN",
+    "GitLabCI": "NOT_RUN"
+  },
+  "singleRemainingExternalGate": {
+    "owner": "T06 / manual owner #1 (then T09 integrated HEAD and T10 independent gate)",
+    "problem": "No accepted owner-approved one integrated HEAD/tree with exact per-path CAS manifest. NOT a T07 archive defect."
+  },
+  "handoff": {
+    "T02": "Append immutable T07 closure SHA/RunID and T09 co-sign evidence to Master/E06/Lessons by CAS+readback; T07 does not write shared Docs.",
+    "T09": "Original-only archive SourceLock cosign is accepted as T07 sixth criterion; final integrated tree freeze remains separate HOLD.",
+    "T10": "Original 3part/729 condition DONE; do not declare SOURCE_READY until approved integrated frozen HEAD."
+  },
+  "appliedLesson": "Keep the original archive SourceLock and final integrated tree SourceLock as separate acceptance domains; accept T09's immutable Git owner co-sign without pretending it is a cryptographically signed Git commit or a frozen P01–P05 source tree.",
+  "noEXE": true,
+  "noNSIS": true,
+  "noBuild": true,
+  "noGitLabCI": true,
+  "noE07": true,
+  "noProductCodeChange": true
+}
