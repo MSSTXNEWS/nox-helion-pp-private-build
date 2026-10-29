@@ -1,0 +1,11 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C1",
+  "sourceBranch": "astra/r29-a2-p01-20261029",
+  "preimageGitBlobSha1": "3be0fa2d3a327be3c963a910ac165132bffad4b0",
+  "patchGitBlobSha1": "a030d33403ae45feca6c929bc6388a29b53cea9f",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "preimage check + patch adds parent traversal",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN"
+}
