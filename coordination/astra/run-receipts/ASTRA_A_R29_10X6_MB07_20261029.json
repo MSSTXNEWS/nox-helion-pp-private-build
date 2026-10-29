@@ -1,0 +1,23 @@
+{
+  "schema": "ASTRA_SOURCE_R29_MEGABLOCK",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB07",
+  "sourceFixes": {
+    "A3": {
+      "commit": "44570344a979fdd511df0eeee6049a0e91aab69d",
+      "blob": "aa58e4a9082a2fa8da0fa563ca56169389d1127b",
+      "detail": "NativeIngress rejects NFC/casefold duplicate JSON fields"
+    },
+    "A4": {
+      "commit": "3551707c13bc1b0b430a14bf1108e6bcdc1661e8",
+      "blob": "3d523bb152eabf2ecbb8a9b8afc816b87ac6dc3d",
+      "detail": "P02 voice rechecks native ACL after OS capture before ASR"
+    }
+  },
+  "otherLanes": "No fresh independently reproduced bug, not credited",
+  "test": "2/2 GitHub byte readback",
+  "native": "NOT_RUN",
+  "historicalVerifiedPassCredit": 0,
+  "remainingQueue": 3,
+  "noAstraBWrites": true,
+  "lesson": "Canonicalize authority object keys before parsing and check identity after each blocking native callback."
+}
