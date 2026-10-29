@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T10_INDEPENDENT_SOURCE_READY_GATE_V6",
+  "taskId": "T10",
+  "runId": "NOX-V16-T10-20261029T173652MSK-R16-AUTO-HOLD",
+  "scope": "ONLY NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16; source QA before build",
+  "decision": "SOURCE_READY_HOLD",
+  "independentPass": false,
+  "timing": {
+    "timeZone": "Europe/Moscow",
+    "plannedStart": "2026-10-29T17:40:00+03:00",
+    "firstObservedActivity": "2026-10-29T17:36:52+03:00",
+    "receiptCreatedAtUTC": "2026-10-29T14:41:48.251Z",
+    "observedEndAtReceipt": null
+  },
+  "previousCheckpoint": {
+    "runId": "NOX-V16-T10-MANUAL-20261029T172838MSK-R15-HOLD",
+    "receiptGitBlobSha1": "4ff071121c31099daec08d104ff4ddcfb4f33a1d",
+    "done": 1,
+    "total": 7,
+    "percentage": 14.3
+  },
+  "currentCheckpoint": {
+    "done": 1,
+    "total": 7,
+    "percentage": 14.3,
+    "previousPercentage": 14.3,
+    "deltaPercentagePoints": 0,
+    "remaining": 6,
+    "bar": "█░░░░░░░░░"
+  },
+  "sevenFixedCriteria": [
+    {
+      "id": 1,
+      "criterion": "One T09 owner-accepted frozen HEAD/tree/manifest",
+      "status": "HOLD",
+      "evidence": "T09 original archive co-sign R14 explicitly says FINAL_INTEGRATED_TREE_FREEZE_HOLD. T09 working freeze branch commit 7f78e15f51451b60ce4dc6cec7ccd9724639b04a (tree bd564152829af66e91c0216e6912591c0c64389b) has 17 later commits to observed integrated head 64d3d7169614ed04417f5c777cf484dc68e69b6c; no T09 signed final source freeze. Last T10 R15 cites T09 R15 HOLD."
+    },
+    {
+      "id": 2,
+      "criterion": "Complete owner-accepted P01–P05 source ledger on exactly same T09 SHA",
+      "status": "HOLD",
+      "evidence": "T06 R09 immutable Git blob 987cb3c997fb12330b0af3a86ed75ea318c53173 explicitly says 1/8 T06 criteria, accepted_final_head=null; later code is SOURCE candidate, not ledger PASS."
+    },
+    {
+      "id": 3,
+      "criterion": "Original 3-part 729 SourceLock physical integrity",
+      "status": "DONE",
+      "evidence": "T07 owner physical acceptance Git blob 8573ee3d062ad078268db66d9b68c582c2287a62 + T09 physical R14 blob fdf998625f8d582d313be2116a9e34ee6154fbd0; 729/729 original SHA+CRC, three parts, 60,364,346-byte ZIP SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a; source code integrated tree not implied. No repeat raw ZIP audit."
+    },
+    {
+      "id": 4,
+      "criterion": "D02/WOW001-200/8 CoreID/5 Persona/PACK01-02 preserved in T09 accepted tree",
+      "status": "HOLD",
+      "evidence": "Historical originals preserved and T04 34/34 source version arbitration retained; no same-T09-accepted-source tree NO-LOSS receipt across these required bindings."
+    },
+    {
+      "id": 5,
+      "criterion": "Host50, IPC/STOP, voice/RAG/GPU/SPACE, permissions/ACL source contracts reconciled",
+      "status": "HOLD",
+      "evidence": "Current HEAD Host50 admission.py Git blob efd5af93853d04cf5c1748af41b13570fc49c0ad has new fail-closed source_attestation/native_source_verifier path at lines 275-335; no verified actual same-tree native owner seal/capability for 13 SOURCE HOLD routes or P01-P05 all-on-one-HEAD signoff. T06 R09 lists P01/P02/P03/P04/P05 all HOLD."
+    },
+    {
+      "id": 6,
+      "criterion": "No evidenced mandatory source P0/P1 blockers remaining on frozen SHA",
+      "status": "HOLD",
+      "evidence": "T06 has not supplied complete authoritative source-sealed native owner attestations; old T08 NO_CODE_BLOCKERS belongs to older unfrozen SHA and cannot be transferred. No new distinct code regression asserted here."
+    },
+    {
+      "id": 7,
+      "criterion": "T10 independent SOURCE_READY PASS signed on exact T09 SHA",
+      "status": "HOLD",
+      "evidence": "Criteria 1,2,4,5,6 unproven; PASS would be fabricated."
+    }
+  ],
+  "pinAndDrift": {
+    "t09WorkingPinBranch": "freeze/nox-v16-t09-20261029-1712msk",
+    "t09WorkingCommitGitSha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "t09WorkingTreeGitSha1": "bd564152829af66e91c0216e6912591c0c64389b",
+    "t09FinalFrozenApprovedHead": null,
+    "t09FinalFrozenManifestSha256": null,
+    "unifiedBranch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "latestObservedUnifiedGitHead": "64d3d7169614ed04417f5c777cf484dc68e69b6c",
+    "latestObservedUnifiedGitTree": "42b31fc17a2be7eb4a45403372e94d83645e4978",
+    "commitsAheadOfWorkingPin": 17,
+    "commitsBehindWorkingPin": 0,
+    "latestCodeDelta": "T06 Host50 safety patch on current integrated candidate; immutable provenance preserved and owner sealed native validation required; no 13-route acceptance claimed.",
+    "sameHeadSourceReady": false,
+    "shaDomainWarning": "Git commit/tree SHA-1 and original archive ZIP SHA-256 have different proof domains."
+  },
+  "exactBlockingHandoff": {
+    "owner": "T06 / manual owner #1 with G6-B Host50; then T09 source freezer",
+    "sourceFile": "coordination/e06_host50/admission.py",
+    "codeGitBlobSha1": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "sourceContract": "Existing Host50Admission requires source_attestation with sourceHead/sourceTree/ownerReceiptSha256/ownerMapBaseCommit/ownerMapBaseTree/nativeApproved/seal and callable native_source_verifier, plus capability.frozen_tree matching source_tree; 13 historic routes may not be marked ready without owner receipts.",
+    "missingEvidence": "One T06 owner-accepted final P01-P05 ledger with approved per-path CAS/readback, native same-tree owner seal/capabilities and D02/WOW/PACK/ACL/STOP NO-LOSS on one exact head/tree/manifest; T09 must freeze that same SHA. Do not simply replace historical BASE_TREE or bypass native checks.",
+    "action": "T06 passes accepted same-SHA proof to T09, T09 signs final frozen head and manifest; T10 independently evaluates only that pin."
+  },
+  "lessonApplied": "From E06/Lessons coordinator R17: do not carry forward old Host50 BASE_TREE hard-HOLD after source patch; source code now admits a separately sealed new tree but stays fail-closed until real host attestation. Also do not promote old T08 PASS or original ZIP PASS to final source acceptance.",
+  "readEvidence": [
+    {
+      "kind": "GoogleDocs",
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "scope": "§§1–33,54–56, R29; 56 enumerated rules in §33"
+    },
+    {
+      "kind": "GoogleDocs",
+      "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "scope": "latest R17 delta"
+    },
+    {
+      "kind": "GoogleDocs",
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "scope": "latest R17 E06"
+    },
+    {
+      "kind": "GoogleDocs",
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "scope": "latest R17 lessons"
+    },
+    {
+      "kind": "GoogleDocs",
+      "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "scope": "historical C34"
+    },
+    {
+      "kind": "Git",
+      "ref": "automation/v16/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK",
+      "path": "coordination/automation/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK.json",
+      "blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0"
+    },
+    {
+      "kind": "Git",
+      "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+      "path": "coordination/automation/t06/NOX-V16-T06-20261029T172252MSK-R09.json",
+      "blob": "987cb3c997fb12330b0af3a86ed75ea318c53173"
+    },
+    {
+      "kind": "Git",
+      "ref": "64d3d7169614ed04417f5c777cf484dc68e69b6c",
+      "path": "coordination/e06_host50/admission.py",
+      "blob": "efd5af93853d04cf5c1748af41b13570fc49c0ad"
+    }
+  ],
+  "independence": {
+    "productionFilesChanged": 0,
+    "testsCreated": 0,
+    "sourceTestReruns": 0,
+    "staticReadback": true,
+    "originalArchiveReaudit": false,
+    "qaReceiptOnly": true,
+    "sharedGoogleDocsWritten": false,
+    "mainPR162Changed": false,
+    "windowsBuild": false,
+    "exe": false,
+    "nsis": false,
+    "gitlabCI": false,
+    "e07": false,
+    "release": false
+  },
+  "handoff": {
+    "coordinator": "T02 only shared Master/E06/Lessons writer with CAS/readback",
+    "status": "ready for T02 readback and source owners T06/T09",
+    "historicalDonePreserved": true
+  }
+}
