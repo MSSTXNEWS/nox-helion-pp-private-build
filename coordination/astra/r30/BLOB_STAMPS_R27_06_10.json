@@ -1,0 +1,699 @@
+{
+  "schema": "R30_GIT_BLOBS",
+  "out": [
+    {
+      "ref": "astra/r27-a06-20261029",
+      "head_sha": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+      "tree_sha": "c8e45457d52506c140e41c1123493c4f02789a7b",
+      "git_blob_count": 982,
+      "original_sha": [
+        {
+          "path": "source_00.part",
+          "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "size": 20971520
+        },
+        {
+          "path": "source_01.part",
+          "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+          "size": 20971520
+        },
+        {
+          "path": "source_02.part",
+          "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+          "size": 18421306
+        }
+      ],
+      "deltas": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "size": 9172
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "sha": "b8749db4d9b86897a748983f22bb335f6cf01528",
+          "size": 11808
+        },
+        {
+          "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+          "status": "modified",
+          "sha": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f",
+          "size": 27166
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_attestation_binding_r27.py",
+          "status": "added",
+          "sha": "0b92492146acdbb1eb677d0011a62d8848aa5ff7",
+          "size": 2313
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_native_types_r27.py",
+          "status": "added",
+          "sha": "387514a1ab194bcbf90af23d0668cf21af03b7b4",
+          "size": 2263
+        },
+        {
+          "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+          "status": "modified",
+          "sha": "c04d5a56c9fc6547488386f3b4a3eefd9795efee",
+          "size": 18754
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_command_binding_r27.py",
+          "status": "added",
+          "sha": "8c0c9d7976110db75b0a7e28044d79a5b442f19b",
+          "size": 4471
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+          "status": "modified",
+          "sha": "f8d55e09e694c460d0339d62a1946fe88f3672d9",
+          "size": 12881
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+          "status": "modified",
+          "sha": "ed47b2e0052203db184617d819650761b0937f5c",
+          "size": 12510
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "sha": "f174767f7e0ad7a94f28dfb14a6eb3c92e3f91fb",
+          "size": 16270
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "sha": "b5ce981bc0b827f601b5a8fac65b502180d96843",
+          "size": 9835
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "sha": "66b068d885194e48de234b2546186b81eff159d3",
+          "size": 8106
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "sha": "21f2a1084b21e2fd11c66682a98a3b21d6404821",
+          "size": 8370
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "sha": "8cb9f80fd20dd758c7b581cc9b1dd117504f718b",
+          "size": 37740
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "sha": "a4920bae31f0ccd3e92661973b351a7aa9c1386f",
+          "size": 41693
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "sha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+          "size": 189292
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+          "size": 5928
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "sha": "30f663e2293b4f0cdc2347a0389817488c709361",
+          "size": 16158
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "size": 3517
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "size": 4133
+        }
+      ],
+      "missing_delta_paths": []
+    },
+    {
+      "ref": "astra/r27-a07-20261029",
+      "head_sha": "37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+      "tree_sha": "037c561198cba876a28b51eb00bc1868e1713d37",
+      "git_blob_count": 981,
+      "original_sha": [
+        {
+          "path": "source_00.part",
+          "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "size": 20971520
+        },
+        {
+          "path": "source_01.part",
+          "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+          "size": 20971520
+        },
+        {
+          "path": "source_02.part",
+          "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+          "size": 18421306
+        }
+      ],
+      "deltas": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "size": 9172
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "sha": "b8749db4d9b86897a748983f22bb335f6cf01528",
+          "size": 11808
+        },
+        {
+          "path": "Packages/P04/rag_python_compat.py",
+          "status": "modified",
+          "sha": "b722d2e3580480a0b732711813669fd11d759202",
+          "size": 24856
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "sha": "f174767f7e0ad7a94f28dfb14a6eb3c92e3f91fb",
+          "size": 16270
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "sha": "b5ce981bc0b827f601b5a8fac65b502180d96843",
+          "size": 9835
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "sha": "66b068d885194e48de234b2546186b81eff159d3",
+          "size": 8106
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "sha": "21f2a1084b21e2fd11c66682a98a3b21d6404821",
+          "size": 8370
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "sha": "8cb9f80fd20dd758c7b581cc9b1dd117504f718b",
+          "size": 37740
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "sha": "a4920bae31f0ccd3e92661973b351a7aa9c1386f",
+          "size": 41693
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "sha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+          "size": 189292
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+          "size": 5928
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "sha": "30f663e2293b4f0cdc2347a0389817488c709361",
+          "size": 16158
+        },
+        {
+          "path": "coordination/astra/agents/A07/ASTRA_R27_A07_01_RECEIPT.json",
+          "status": "added",
+          "sha": "804987fc487f14d54bcae1bae1141bd565ac2eff",
+          "size": 2479
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "size": 3517
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "size": 4133
+        },
+        {
+          "path": "tests/P04/test_rag_delayed_admission_r27.py",
+          "status": "added",
+          "sha": "9dca646da7ae8d3f44af321e1dc9b2064ad5191f",
+          "size": 3966
+        },
+        {
+          "path": "tests/P04/test_rag_fd_path_consistency.py",
+          "status": "modified",
+          "sha": "1e0b7f6824f8a2117778f0fa8e6463589d2b18ff",
+          "size": 4616
+        }
+      ],
+      "missing_delta_paths": []
+    },
+    {
+      "ref": "astra/r27-a08-20261029",
+      "head_sha": "e2fd3c50190ffac04abc30d2bd1b46caf9dab454",
+      "tree_sha": "ee6aac3d822028ff2811204e1fe2f281d98cf59f",
+      "git_blob_count": 981,
+      "original_sha": [
+        {
+          "path": "source_00.part",
+          "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "size": 20971520
+        },
+        {
+          "path": "source_01.part",
+          "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+          "size": 20971520
+        },
+        {
+          "path": "source_02.part",
+          "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+          "size": 18421306
+        }
+      ],
+      "deltas": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "size": 9172
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "sha": "b8749db4d9b86897a748983f22bb335f6cf01528",
+          "size": 11808
+        },
+        {
+          "path": "Packages/P04/train_qlora.py",
+          "status": "modified",
+          "sha": "255142a3e997a86f7bfd4e8e9ee48f66788594cc",
+          "size": 62732
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "sha": "f174767f7e0ad7a94f28dfb14a6eb3c92e3f91fb",
+          "size": 16270
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "sha": "b5ce981bc0b827f601b5a8fac65b502180d96843",
+          "size": 9835
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "sha": "66b068d885194e48de234b2546186b81eff159d3",
+          "size": 8106
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "sha": "21f2a1084b21e2fd11c66682a98a3b21d6404821",
+          "size": 8370
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "sha": "8cb9f80fd20dd758c7b581cc9b1dd117504f718b",
+          "size": 37740
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "sha": "a4920bae31f0ccd3e92661973b351a7aa9c1386f",
+          "size": 41693
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "sha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+          "size": 189292
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+          "size": 5928
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "sha": "30f663e2293b4f0cdc2347a0389817488c709361",
+          "size": 16158
+        },
+        {
+          "path": "coordination/astra/agents/A08/R27_RECEIPT.json",
+          "status": "added",
+          "sha": "f6eef9aa876e35344da586bdbb91c82d7ea6b44f",
+          "size": 2123
+        },
+        {
+          "path": "coordination/astra/agents/A08/test_checkpoint_resume_r27.py",
+          "status": "added",
+          "sha": "aba643e6b6a5f3255f1c731ce8e096e5b952ca0b",
+          "size": 3235
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "size": 3517
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "size": 4133
+        }
+      ],
+      "missing_delta_paths": []
+    },
+    {
+      "ref": "astra/r27-a09-20261029",
+      "head_sha": "e953a5a9cbb914080697e2e810d2f5af66a8a14d",
+      "tree_sha": "45df04030fa4306a5d0acab312c583a5da365df1",
+      "git_blob_count": 984,
+      "original_sha": [
+        {
+          "path": "source_00.part",
+          "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "size": 20971520
+        },
+        {
+          "path": "source_01.part",
+          "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+          "size": 20971520
+        },
+        {
+          "path": "source_02.part",
+          "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+          "size": 18421306
+        }
+      ],
+      "deltas": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "size": 9172
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "sha": "b8749db4d9b86897a748983f22bb335f6cf01528",
+          "size": 11808
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "status": "modified",
+          "sha": "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc",
+          "size": 24159
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceRepollIdentityR19.test.mjs",
+          "status": "added",
+          "sha": "19b0f36445cef98fdec6c2271fd14fa807952c6f",
+          "size": 2843
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceTrustedQuorumR18.test.mjs",
+          "status": "added",
+          "sha": "77707184cbc28603ec41f0301aad807e4d378dcc",
+          "size": 2240
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "sha": "f174767f7e0ad7a94f28dfb14a6eb3c92e3f91fb",
+          "size": 16270
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "sha": "b5ce981bc0b827f601b5a8fac65b502180d96843",
+          "size": 9835
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "sha": "66b068d885194e48de234b2546186b81eff159d3",
+          "size": 8106
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "sha": "21f2a1084b21e2fd11c66682a98a3b21d6404821",
+          "size": 8370
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "sha": "8cb9f80fd20dd758c7b581cc9b1dd117504f718b",
+          "size": 37740
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "sha": "a4920bae31f0ccd3e92661973b351a7aa9c1386f",
+          "size": 41693
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "sha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+          "size": 189292
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+          "size": 5928
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "sha": "30f663e2293b4f0cdc2347a0389817488c709361",
+          "size": 16158
+        },
+        {
+          "path": "coordination/astra/agents/A09/R27_BLOCK_02.json",
+          "status": "added",
+          "sha": "8212e5c58458f5388e5f343ad542fef52e450365",
+          "size": 1206
+        },
+        {
+          "path": "coordination/astra/agents/A09/R27_RECEIPT.json",
+          "status": "added",
+          "sha": "d710b16ea1d6ce5ed38d94fed8127e09a1b2904e",
+          "size": 2590
+        },
+        {
+          "path": "coordination/astra/agents/A09/test_mobile_r27.py",
+          "status": "added",
+          "sha": "f7593b8ca6a65d5ff2ec2eac2a5436eb659869da",
+          "size": 5385
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "size": 3517
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "size": 4133
+        },
+        {
+          "path": "coordination/e06/adapters/g2_space_mobile.py",
+          "status": "modified",
+          "sha": "acf1c35610d6bb4d252d27a87e5a4899bb486233",
+          "size": 35062
+        },
+        {
+          "path": "tests/e06/adapters/test_g2_space_mobile.py",
+          "status": "modified",
+          "sha": "52b56560c03adb2bf87dc5c59ef123bea6466fbf",
+          "size": 52415
+        }
+      ],
+      "missing_delta_paths": []
+    },
+    {
+      "ref": "astra/r27-a10-20261029",
+      "head_sha": "b18db96810b37b8740dc143dd2ffb5e3aae9088b",
+      "tree_sha": "64df3f548f95f7e3f4e47eaf8e746613d73f56e1",
+      "git_blob_count": 984,
+      "original_sha": [
+        {
+          "path": "source_00.part",
+          "sha": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+          "size": 20971520
+        },
+        {
+          "path": "source_01.part",
+          "sha": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+          "size": 20971520
+        },
+        {
+          "path": "source_02.part",
+          "sha": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+          "size": 18421306
+        }
+      ],
+      "deltas": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "sha": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "size": 9172
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "sha": "b8749db4d9b86897a748983f22bb335f6cf01528",
+          "size": 11808
+        },
+        {
+          "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+          "status": "added",
+          "sha": "f174767f7e0ad7a94f28dfb14a6eb3c92e3f91fb",
+          "size": 16270
+        },
+        {
+          "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+          "status": "added",
+          "sha": "b5ce981bc0b827f601b5a8fac65b502180d96843",
+          "size": 9835
+        },
+        {
+          "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+          "status": "added",
+          "sha": "66b068d885194e48de234b2546186b81eff159d3",
+          "size": 8106
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+          "status": "added",
+          "sha": "21f2a1084b21e2fd11c66682a98a3b21d6404821",
+          "size": 8370
+        },
+        {
+          "path": "coordination/astra/ASTRA_R26_GITLAB_VS_ASTRA_SOURCE_DRIFT_20261029.json",
+          "status": "added",
+          "sha": "8cb9f80fd20dd758c7b581cc9b1dd117504f718b",
+          "size": 37740
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+          "status": "added",
+          "sha": "a4920bae31f0ccd3e92661973b351a7aa9c1386f",
+          "size": 41693
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+          "status": "added",
+          "sha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+          "size": 189292
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+          "status": "added",
+          "sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+          "size": 5928
+        },
+        {
+          "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+          "status": "added",
+          "sha": "30f663e2293b4f0cdc2347a0389817488c709361",
+          "size": 16158
+        },
+        {
+          "path": "coordination/astra/agents/A10/R27_PASS01_RECEIPT.json",
+          "status": "added",
+          "sha": "7d2e07dfafb573f20a9b07eb5746b151ca20d860",
+          "size": 2530
+        },
+        {
+          "path": "coordination/astra/agents/A10/R27_PASS02_RECEIPT.json",
+          "status": "added",
+          "sha": "e798492ed574b13bc1fcb122ad388363f12ce0c8",
+          "size": 2049
+        },
+        {
+          "path": "coordination/astra/agents/A10/test_theater_playback_r27.cjs",
+          "status": "added",
+          "sha": "9f5b2d81829f96bf73191dd9014041be12f36d17",
+          "size": 2901
+        },
+        {
+          "path": "coordination/astra/render_astra_progress_r24.py",
+          "status": "added",
+          "sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+          "size": 3517
+        },
+        {
+          "path": "coordination/astra/verify_astra_no_loss_r23.py",
+          "status": "added",
+          "sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+          "size": 4133
+        },
+        {
+          "path": "integrations/creative/web/theater.js",
+          "status": "modified",
+          "sha": "14b7dae704bf3478d6d93c296804f45d88094578",
+          "size": 6946
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/no_loss_r27.test.mjs",
+          "status": "added",
+          "sha": "54a37a0486fa39a3d2f892bffa6e396ebcf7422b",
+          "size": 1833
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/ops.mjs",
+          "status": "modified",
+          "sha": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6",
+          "size": 12184
+        },
+        {
+          "path": "proposals/NOX-PACK02-50/source_security_r22.test.mjs",
+          "status": "added",
+          "sha": "6ba29c3d298215dd44ce4cc0e5b136ffab1206be",
+          "size": 5138
+        }
+      ],
+      "missing_delta_paths": []
+    }
+  ]
+}
