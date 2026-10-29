@@ -1,0 +1,20 @@
+{
+  "schema": "ASTRA_A_R29_SOURCE_ONLY_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB11",
+  "type": "new_request_tenth_megablock",
+  "change": {
+    "owner": "A4",
+    "branch": "astra/r29-a04-voice-20261029",
+    "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+    "commit": "4bd43f1e5ed54cf023378d5bc6c093dab074e274",
+    "beforeBlob": "3d523bb152eabf2ecbb8a9b8afc816b87ac6dc3d",
+    "afterBlob": "b1a163b0598067f213815c8d837d516543490cdf",
+    "what": "After final native ACL callback, STOP revokes stored voice output instead of publishing an already cancelled result"
+  },
+  "otherLanes": "No new independently justified changes; do not fabricate pass credit",
+  "oneTest": "Source structural guard and exact GitHub readback PASS",
+  "runtime": "NOT_RUN",
+  "newWeightedTaskIdCredit": 0,
+  "allTenNewMegablocks": "MB02..MB11; MB01 belongs to preceding turn",
+  "nextTask": "Execute targeted Python P02 port tests on full owner checkout and independent Astra-B intake; no cross-owner merge before code complete."
+}
