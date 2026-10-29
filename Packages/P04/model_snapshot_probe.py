@@ -64,7 +64,10 @@ def _json_file(path: Path, *, return_sha: bool = False):
         if (len(raw) > MAX_JSON_BYTES or stamp(initial) != stamp(final) or
                 not _regular(path) or stamp(path.stat()) != stamp(initial)):
             raise ValueError("MODEL_METADATA_CHANGED_DURING_INSPECTION")
-        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
+        def reject_nonfinite(value):
+            raise ValueError("non-finite JSON token: " + value)
+        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
+                         parse_constant=reject_nonfinite)
     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
