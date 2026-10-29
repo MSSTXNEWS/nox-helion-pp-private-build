@@ -53,8 +53,29 @@ public static class ModelLocalAttestation
         RequireNoExistingReparsePoint(path);
     }
 
+    // Reject duplicate/NFC+case aliases before JsonElement.TryGetProperty,
+    // which otherwise selects the last matching key.
+    private static void RequireUnambiguousJson(JsonElement node, int depth = 0)
+    {
+        if (depth > 64) throw new InvalidDataException("MODEL_JSON_DEPTH_INVALID");
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in node.EnumerateObject())
+            {
+                if (!seen.Add(field.Name.Normalize(NormalizationForm.FormC)))
+                    throw new InvalidDataException("MODEL_JSON_AMBIGUOUS_KEYS");
+                RequireUnambiguousJson(field.Value, depth + 1);
+            }
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+            foreach (var child in node.EnumerateArray())
+                RequireUnambiguousJson(child, depth + 1);
+    }
+
     public static string? ParseUnambiguousModelDigest(JsonElement root, string model)
     {
+        RequireUnambiguousJson(root);
         if (string.IsNullOrWhiteSpace(model) || root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("models", out var items) || items.ValueKind != JsonValueKind.Array)
             throw new InvalidDataException("OLLAMA_TAGS_INVALID_SCHEMA");
@@ -135,6 +156,7 @@ public static class ModelLocalAttestation
         {
             using var doc = JsonDocument.Parse(line);
             var root = doc.RootElement;
+            RequireUnambiguousJson(root);
             if (root.ValueKind != JsonValueKind.Object)
                 throw new InvalidDataException("OLLAMA_STREAM_NONOBJECT_EVENT");
             var status = ReadString(root, "status", 512) ?? "unknown";
