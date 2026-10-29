@@ -1,0 +1,137 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V6",
+  "runId": "R30-G1-B-20261029T1027MSK-R06",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "taskId": "G1-B-P01-WEBVIEW2-NATIVE-ADMISSION-BACKPRESSURE-REPLAY-QUOTA-R06",
+  "ownership": {
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "exclusive": true,
+    "unownedPathsChanged": 0
+  },
+  "base": {
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T0927MSK-R05",
+    "headCommit": "8f5b79faae9d43ee70f5949438681ca33de28ec3",
+    "lastSourceTestCommit": "f8e08cda4ba59a1925dd389d5f5ce045436a07bb",
+    "privateBranch": "automation/r30/g1b/R30-G1-B-20261029T1027MSK-R06"
+  },
+  "rules": {
+    "section33Read56of56": true,
+    "section33GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections54to56Read": true,
+    "r29LoaderOnlyOverrideRead": true,
+    "masterErrorsGoogleDriveRead": true,
+    "E06LessonsGoogleDriveRead": true,
+    "priorR05ReceiptRead": true,
+    "googleDriveWritePerformed": false,
+    "soleSharedDocsWriter": "Astra-C"
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexedHistoricalSnapshots": 25,
+    "existingSnapshotRootsEnumerated": 25,
+    "allIndividualSnapshotFileContentsRead": false,
+    "untouched": true,
+    "conflictingHistoricalP01Paths": "C09/Installer/* only; outside G1-B ownership"
+  },
+  "observedProblem": "R05 permits as many as 1024 simultaneous WebView2-to-native consent/route requests; this may queue overlapping native dialogs and operations. At the 1024-request document quota, replaying a previously admitted requestId receives a new contradictory HOLD reply, rather than being silently suppressed. The original C09 source test also contained three obsolete R01 signatures incompatible with the correct R05 per-request cancellation token.",
+  "actualFix": "Added separate 8-in-flight native backpressure gate before requestId reservation/token creation; a busy request is not marked seen and receives P01_NATIVE_BUSY/HOLD for safe retry. Duplicate requestIds now return before quota rejection, avoiding contradictory terminal status. Updated three obsolete source regression expectations while preserving original test and existing host. Native consent, route tokens, HOME/MENU/CORE, origin gate, event revocation and post-ACK checks are kept.",
+  "source": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "c7987a15d485b8197d7a55a3f2547df6e53eb9c6",
+      "postGitBlobSHA1": "cb48561c5d4c2416281cfb3ae6fa685124e22d71",
+      "preSHA256": "70097486f99d4abdc84ae98265f30c7eb34d0a3eaad0c6e1975f64e180dd40ce",
+      "postSHA256": "b922ce6eb2220563ea8dc4e87e1df5774c6a3f4f08039d363e1b72280ea19354",
+      "commit": "c0fabbd7865bd0424dbbbc51cabb1cf596d4f4ed"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py",
+      "preGitBlobSHA1": "8221b3dbe1b1b43ea6cca5fdb616407c16aa0089",
+      "postGitBlobSHA1": "a60966da307368d44d84b735e51650ece98ba3e3",
+      "preSHA256": "c7a5b4cd90c381148d100e8a70cddd5e107661591c16970f15480426e16c2490",
+      "postSHA256": "06cbccd009f3f6ebd6fa9407be53e303c0e13b6f7d02b582f63d14b1c98e024b",
+      "commit": "f08d0f3831fb89adf47226b574e4b33dde9adb9a"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_admission_limits_r06.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "2afddec1b74a0eaffd320cabf07bc30c67a11cb9",
+      "postSHA256": "0b388148f8952b59787427ee374bbd089c9b818cb03f3d58b0b9dbee42a3c05b",
+      "commit": "f8e08cda4ba59a1925dd389d5f5ce045436a07bb"
+    }
+  ],
+  "targetedSourceTest": {
+    "runner": "V8 direct assertions against actual post-commit GitHub C# and Python source readback",
+    "redBefore": "Original bridge lacked MaxPendingNativeRequests and checked quota before duplicate ID; three original test expectations were stale",
+    "afterGitReadback": {
+      "passed": 15,
+      "total": 15
+    },
+    "savedPythonRegressionMethods": 9,
+    "pythonUnittestExecuted": false,
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "windowsOriginObserved": false,
+    "nativeHOME_MENU_COREObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorHandlingObserved": false,
+    "sourceSHA256RecomputedAndMatched": true
+  },
+  "gitProof": {
+    "compareBase": "8f5b79faae9d43ee70f5949438681ca33de28ec3",
+    "compareHead": "f8e08cda4ba59a1925dd389d5f5ce045436a07bb",
+    "aheadByBeforeReceipt": 3,
+    "behindBy": 0,
+    "changedFilesBeforeReceipt": [
+      "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_admission_limits_r06.py",
+      "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py"
+    ],
+    "forbiddenPathsChanged": 0
+  },
+  "limitations": [
+    "Native callbacks must cooperate with the epoch cancellation token; bounded admission does not undo irreversible side effects.",
+    "Original C08/MainWindow.xaml.cs and its mapping/consent/route wiring are outside the owned C09 source path and remain unverified; no second host created.",
+    "V8 checks are structural SOURCE tests, not execution of saved Python unittest, C# compile, WebView2 runtime or real Windows UI.",
+    "Not every file inside the 25 frozen snapshot directories was read or bytewise verified."
+  ],
+  "ownerHandoff": {
+    "status": "HOLD",
+    "target": "Owner of original WPF MainWindow/WebView2 host + E06 integrator",
+    "request": "Attach the existing C09 bridge to the real original MainWindow, verify actual mapped HTTPS virtual origin, HOME/MENU/CORE buttons, user-native consent and error handling; ensure native callbacks honor CancellationToken before irreversible effects. Do not edit G1-B owned paths or create a second host. Run saved Python regression and .NET/Windows acceptance only in their proper later phase."
+  },
+  "lesson": {
+    "previousApplied": "R05: epoch-linked cancellation is required to revoke stale native operations; callback cancellation remains cooperative.",
+    "new": "A document-wide replay cap is not an in-flight native operation cap. Check duplicate IDs BEFORE quota error; apply a separate pending-request ceiling BEFORE reserving ID and creating a native token so overload cannot launch unbounded consent UI and safe retries are possible. Keep original QA expectations aligned with actual source contracts.",
+    "sharedDriveHandoff": "Astra-C only; consume immutable Git receipt; no G1-B shared Google Drive writes."
+  },
+  "forbiddenActionsNotPerformed": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
