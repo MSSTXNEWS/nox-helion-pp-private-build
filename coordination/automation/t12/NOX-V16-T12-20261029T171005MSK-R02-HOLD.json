@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T12_GATED_ONE_BUILD_STATUS_R02",
+  "task_id": "T12",
+  "run_id": "NOX-V16-T12-20261029T171005MSK-R02-HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader/installer ONLY; not second NOX application",
+  "canon": {
+    "document": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "sections": "1-33 including all 56 consolidated rules in §33; §§54-56 and R29 FAST CLOSEOUT",
+    "read_revision": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc"
+  },
+  "clock": {
+    "timezone": "Europe/Moscow",
+    "scheduled_for": "2026-10-29T17:15:00+03:00",
+    "run_actual_started_at": "2026-10-29T17:10:05.748+03:00",
+    "observed_end": null,
+    "duration_seconds": null
+  },
+  "result": "HOLD_PRECONDITIONS_NOT_MET_NO_BUILD",
+  "acceptance": {
+    "total": 4,
+    "done": 0,
+    "remaining": 4,
+    "percent": 0,
+    "bar": "░░░░░░░░░░",
+    "conditions": [
+      "T09 frozen accepted same exact Git HEAD/tree/manifest and physical SourceLock",
+      "T10 independent SOURCE_READY PASS on same frozen HEAD",
+      "T11 authenticated GitLab Free READY with exact current HEAD and CI/Windows runner",
+      "One final Windows EXE plus NSIS Setup run; real BuildID, PipelineID, JobID and separate SHA-256 proofs delivered to T13"
+    ]
+  },
+  "source_observed": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pull_request": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_sha": "edc94ddc70e8eca7db47f5165c63a36740fbafef",
+    "updated_at_utc": "2026-10-29T14:12:52Z",
+    "status": "DRAFT_MOVING_NOT_FROZEN",
+    "earlier_head_sha_in_R01": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "accepted_final_head": null,
+    "accepted_final_tree": null,
+    "accepted_manifest_sha256": null
+  },
+  "gates": {
+    "T09": {
+      "run_id": "NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK",
+      "status": "ORIGINAL_3PART_729_SIGNED; FINAL_INTEGRATED_TREE_FREEZE_HOLD",
+      "done": 1,
+      "total": 6,
+      "receipt_commit": "5b0ae2efaf579b586d735f38a59ba760d2b1272d",
+      "receipt_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK/coordination/automation/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK.json"
+    },
+    "T10": {
+      "run_id": "NOX-V16-T10-20261029T164206MSK-R13-HOLD",
+      "status": "HOLD",
+      "source_ready_pass": false,
+      "done": 0,
+      "total": 7,
+      "receipt_commit": "6625c1c37ed194077007f6f5bd38888506804e6c",
+      "receipt_blob": "875da2ae08b3fd1caec5ee189d34dbb5695acf21"
+    },
+    "T11": {
+      "run_id": "NOX-V16-T11-20261029T165515MSK-R14-ACCESS-HOLD",
+      "status": "GITLAB_LIVE_ACCESS_HOLD",
+      "gitlab_ready": false,
+      "done": 2,
+      "total": 5,
+      "receipt_commit": "ccfd481cc43d2dedeb34a68ac88cb53b38a7a231",
+      "receipt_blob": "60c7cad7c829e9c0bb0ef5533f675ed867bd019e",
+      "live_head_sha": null,
+      "auth_access": false,
+      "runner_current_status": "UNVERIFIED"
+    },
+    "T07": {
+      "scope": "PHYSICAL ORIGINAL ZIP ONLY",
+      "parts_verified": 3,
+      "parts_total": 3,
+      "members_verified": 729,
+      "members_total": 729,
+      "archive_bytes": 60364346,
+      "archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "not_equivalent_to_final_frozen_tree": true
+    },
+    "T06": {
+      "status": "ONE_ACCEPTED_FINAL_TREE_NOT_PROVEN_TO_T09",
+      "owner": "main integrator #1",
+      "preimage_conflicts": "Need owner CAS decisions, especially voice owner overlap and remaining P01-P05 source acceptance"
+    }
+  },
+  "single_controlling_blocker": "No accepted frozen T09 same-SHA source: owner #1/T06 has not handed T09+T10 one integrated and independently accepted HEAD/tree/manifest; GitLab live authenticated readiness is additionally absent.",
+  "executed": {
+    "gitlab_pipeline_started": false,
+    "windows_exe_build_started": false,
+    "nsis_setup_compiled": false,
+    "exe_sha256": null,
+    "setup_sha256": null,
+    "build_id": null,
+    "pipeline_id": null,
+    "job_id": null,
+    "t13_handoff": "NOT_AVAILABLE"
+  },
+  "not_mutated": {
+    "pr162": true,
+    "main": true,
+    "source_729_original": true,
+    "three_archive_parts": true,
+    "product_code": true,
+    "shared_master_e06_lessons": true,
+    "gitlab_repository": true
+  },
+  "lesson_applied": "Replace stale 0/729 HOLD with proven ORIGINAL SourceLock 729/729, but never infer SOURCE_READY or frozen product tree; re-read moving PR162 HEAD and compare all gates before build.",
+  "handoff": {
+    "T02": "Append new precise T12 gate delta to shared Master/E06/Lessons ONLY by sole writer with CAS+readback",
+    "T09_T10": "Await immutable frozen approved SAME HEAD/tree/manifest then independent SOURCE_READY",
+    "T11": "Authenticated GitLab head/runner and CI entrypoint exact same SHA",
+    "T13": "Only receive real EXE/Setup artifact hashes after single gated build"
+  },
+  "no_intermediate_build": true,
+  "status_closure": "T12 NOT_DONE; no build receipt or accepted Release"
+}
