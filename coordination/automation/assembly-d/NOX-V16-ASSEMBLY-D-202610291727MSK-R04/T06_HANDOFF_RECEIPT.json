@@ -1,0 +1,135 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_D_OWNER_SAFE_PATCH_INTAKE_R04",
+  "taskId": "ASSEMBLY-D",
+  "runId": "NOX-V16-ASSEMBLY-D-202610291727MSK-R04",
+  "scope": "NOX HELION EXPRESS INTEGRATOR WINDOWS LOADER V16 ONLY",
+  "mode": "SOURCE_ONLY",
+  "plannedStartMsk": "2026-10-29T17:15:00+03:00",
+  "observedFirstWorkMsk": "2026-10-29T17:18:00+03:00",
+  "canonical": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "exactHead": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "T04VersionChoice": "34/34",
+    "T05HistoricalDone": "13/13",
+    "T05UnadmittedHold": 12
+  },
+  "patchSets": [
+    {
+      "scope": "P04",
+      "patch": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/P04_OWNER_SAFE.patch",
+      "paths": [
+        {
+          "slot": "G4-A",
+          "source_path": "Packages/P04/model_snapshot_probe.py",
+          "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G4-A/model_snapshot_probe.py",
+          "pre_git_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+          "post_git_blob": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+        },
+        {
+          "slot": "G4-B",
+          "source_path": "Packages/P04/preflight_local_gpu.py",
+          "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G4-B/preflight_local_gpu.py",
+          "pre_git_blob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+          "post_git_blob": "15d6807033040711ac54c4c9f63432c5653e62bd"
+        }
+      ],
+      "knownOwnerCauses": [
+        "G4-A_LINEAR_SHARD_TENSOR_MAP",
+        "G4-B_ISOLATED_CUDA_PROBE"
+      ],
+      "nativePythonTests": "NOT_RUN",
+      "existingTests": [
+        "tests/P04/test_model_snapshot_probe.py",
+        "tests/P04/test_local_gpu_preflight.py"
+      ]
+    },
+    {
+      "scope": "P05",
+      "patch": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/P05_OWNER_SAFE.patch",
+      "paths": [
+        {
+          "slot": "G5-A",
+          "source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G5-A/E05SpaceReadOnlyProjection.mjs",
+          "pre_git_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+          "post_git_blob": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+        },
+        {
+          "slot": "G5-B",
+          "source_path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+          "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G5-B/E05GoogleDocsReadback.cs",
+          "pre_git_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+          "post_git_blob": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+        }
+      ],
+      "knownOwnerCauses": [
+        "G5-A_EVENT_CROSS_TYPE_SEQUENCE",
+        "G5-B_OAUTH_BEARER_RFC6750"
+      ],
+      "focusedV8Model": "5/5 PASS",
+      "tokenGrammarModel": "9/9 PASS",
+      "nativeDotNetNode": "NOT_RUN",
+      "existingTests": [
+        "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs"
+      ]
+    }
+  ],
+  "ownerReceipts": {
+    "G4A": "d5857d4738b8f27e29820abdca1afd88f412af97",
+    "G4B": "81218683de7c17105e7cbef433a13f76ede25e53",
+    "G5A": "3f539af4fe9623981652c6b2d763bbd7f713d272",
+    "G5B": "0f5bb5fac02dd080eb73c76e367528b99ce14d14"
+  },
+  "patchBlobs": [
+    {
+      "path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/P04_OWNER_SAFE.patch",
+      "sha": "566dbb84a52504231fdd2cc806f0ca96da7a095f"
+    },
+    {
+      "path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/P05_OWNER_SAFE.patch",
+      "sha": "b0197731cf65fcbd18d27bcb44ed809c8a909214"
+    }
+  ],
+  "postimageBlobs": [
+    {
+      "slot": "G4-A",
+      "source_path": "Packages/P04/model_snapshot_probe.py",
+      "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G4-A/model_snapshot_probe.py",
+      "pre_git_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "post_git_blob": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+    },
+    {
+      "slot": "G4-B",
+      "source_path": "Packages/P04/preflight_local_gpu.py",
+      "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G4-B/preflight_local_gpu.py",
+      "pre_git_blob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "post_git_blob": "15d6807033040711ac54c4c9f63432c5653e62bd"
+    },
+    {
+      "slot": "G5-A",
+      "source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G5-A/E05SpaceReadOnlyProjection.mjs",
+      "pre_git_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "post_git_blob": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+    },
+    {
+      "slot": "G5-B",
+      "source_path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "archive_path": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/postimages/G5-B/E05GoogleDocsReadback.cs",
+      "pre_git_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "post_git_blob": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+    }
+  ],
+  "state": "ISOLATED_POSTIMAGES_STAGED; PRODUCT_NOT_INTEGRATED",
+  "t06Handoff": "T06-only, exact per-path Git blob CAS, independently verify patch+native existing tests, Git readback. If HEAD or path PRE differs, reject and request rebinding. Never merge this artifact branch wholesale.",
+  "constraints": {
+    "noSharedProductWrites": true,
+    "noPR162MainWrites": true,
+    "noGoogleDocsWrites": true,
+    "noArchiveSnapshotWrites": true,
+    "noEXENsisGitLabCI": true,
+    "noHost50Write": true
+  },
+  "lesson": "Read live T06 source HEAD: prior 7f78 advanced to e51b; Host50 was modified by T06 and remains outside D. Port only four known R30 owner causes on exact matching P04/P05 blobs; no wholesale donor replacement."
+}
