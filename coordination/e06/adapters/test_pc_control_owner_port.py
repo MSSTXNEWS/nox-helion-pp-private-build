@@ -99,4 +99,52 @@ class PcPortTests(unittest.TestCase):
             host.execute(ROUTE, {'op':'stop'}, self.session)
         self.assertEqual(self.service._pc_epoch,0)
 
+    def test_native_approval_cannot_rebind_authenticated_identity(self):
+        for field, value in (('tenant', 'other'), ('principal', 'other'),
+                             ('chat_id', 'other')):
+            with self.subTest(field=field):
+                self.service.pc_stop()
+                original = getattr(self.session, field)
+                def mutate(session, route, payload):
+                    object.__setattr__(session, field, value)
+                    return True
+                self.host.native_approve = mutate
+                try:
+                    with self.assertRaises(HostDenied):
+                        self.call({'op':'preview','action':'read-system-summary'})
+                    self.assertFalse(self.service._pc_preview)
+                finally:
+                    object.__setattr__(self.session, field, original)
+
+    def test_ready_callback_cannot_rebind_or_revoke_current_scope(self):
+        for field, value in (('principal', 'other'), ('allowed', frozenset()),
+                             ('private_approved', frozenset())):
+            with self.subTest(field=field):
+                self.service.pc_stop()
+                session = NativeSession('tenant','owner','chat',
+                    frozenset({ROUTE}),frozenset({ROUTE}))
+                host = NoxPackHost(json.loads((pack/'catalog.json').read_text()),
+                    native_approve=lambda *a:True)
+                def ready():
+                    object.__setattr__(session, field, value)
+                    return True
+                port = ExistingPcControlPort(owner_ready=ready,
+                    native_binding_from_session=lambda s:NativePcBinding(s,self.service,'project_one'))
+                port.register(host, receipt='R29-A06-SESSION-SNAPSHOT')
+                with self.assertRaises(HostDenied):
+                    host.execute(ROUTE, {'op':'preview','action':'read-system-summary'}, session)
+                self.assertFalse(self.service._pc_preview)
+
+    def test_native_approval_preserves_exact_authorized_session(self):
+        observed = []
+        def approve(session, route, payload):
+            observed.append(session)
+            payload['action'] = 'run-command'
+            return True
+        self.host.native_approve = approve
+        result = self.call({'op':'preview','action':'read-system-summary'})
+        self.assertIs(observed[0], self.session)
+        self.assertEqual(result['action'], 'read-system-summary')
+        self.assertEqual(result['execution'], 'NOT_AUTHORIZED')
+
 if __name__ == '__main__': unittest.main()

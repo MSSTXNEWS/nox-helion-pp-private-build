@@ -188,6 +188,17 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        # A frozen dataclass is a host contract, not protection against a native
+        # callback mutating it. Consent must remain bound to the exact identity
+        # and permission snapshot checked at entry, on the same session object.
+        def session_scope():
+            session.validate()
+            return (session.tenant, session.principal, session.chat_id,
+                    session.allowed, session.private_approved)
+        authorized_scope = session_scope()
+        def require_unchanged_session():
+            if session_scope() != authorized_scope:
+                raise HostDenied("Native session changed during request admission")
         if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
         if not isinstance(payload, dict):
@@ -201,6 +212,7 @@ class NoxPackHost:
         # Capture the exact JSON approved at this native boundary. Neither the
         # source caller nor a provider-ready check may change the execution data.
         frozen_payload = json.loads(raw)
+        require_unchanged_session()
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
@@ -208,10 +220,12 @@ class NoxPackHost:
             not callable(self.native_approve) or
             self.native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
+        require_unchanged_session()
         port = self.ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
+        require_unchanged_session()
         if not ready:raise HostHold("Owner backend unavailable")
         return port.call(session,frozen_payload)
 
