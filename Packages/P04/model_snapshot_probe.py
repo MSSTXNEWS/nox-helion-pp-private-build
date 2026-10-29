@@ -279,6 +279,7 @@ def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
             return (info.st_dev, info.st_ino, info.st_size,
                     info.st_mtime_ns, info.st_ctime_ns)
         names = _parse_weight_tensor_names(stream, initial.st_size)
+        payload_bytes = initial.st_size - stream.tell()
         digest = None
         if include_hash:
             stream.seek(0)
@@ -288,7 +289,8 @@ def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
         if (stamp(os.fstat(stream.fileno())) != stamp(initial) or
                 not _regular(path) or stamp(path.stat()) != stamp(initial)):
             raise ValueError("MODEL_WEIGHTS_CHANGED_DURING_INSPECTION")
-        return {"names": names, "bytes": initial.st_size, "sha256": digest}
+        return {"names": names, "bytes": initial.st_size,
+                "payload_bytes": payload_bytes, "sha256": digest}
 
 
 def _weight_tensor_names(path: Path) -> frozenset[str]:
@@ -328,6 +330,19 @@ def _validate_windows_shard_names(names: list[str]) -> None:
         folded.add(name.casefold())
 
 
+def _index_total_size(index_metadata: dict) -> int | None:
+    """Validate optional HF safetensors index payload size before weight I/O."""
+    meta = index_metadata.get("metadata", {})
+    if not isinstance(meta, dict):
+        raise ValueError("MODEL_SHARD_INDEX_METADATA_INVALID")
+    if "total_size" not in meta:
+        return None
+    total = meta["total_size"]
+    if type(total) is not int or total < 0:
+        raise ValueError("MODEL_SHARD_INDEX_METADATA_INVALID")
+    return total
+
+
 def inspect(root: Path, expected_revision: str | None) -> dict:
     report = {
         "schema": "NOX-P04-MODEL-SNAPSHOT-PROBE-v1",
@@ -352,12 +367,14 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
         index = base / "model.safetensors.index.json"
         weights = None
+        expected_total_bytes = None
         if index.exists() or index.is_symlink():
             metadata, index_sha256 = _json_file(index, return_sha=True)
             report["shard_index_sha256"] = index_sha256
             weights = metadata.get("weight_map")
             if not isinstance(weights, dict) or not weights:
                 raise ValueError("MODEL_SHARD_INDEX_INVALID")
+            expected_total_bytes = _index_total_size(metadata)
             # Validate decoded metadata before hashing/sorting: malformed shard
             # values must produce an installer HOLD report, not a TypeError.
             for tensor, shard in weights.items():
@@ -375,9 +392,11 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         _validate_windows_shard_names(names)
+        observed_total_bytes = 0
         for name in names:
             file = base / name
             artifact = _inspect_weight(file, include_hash=True)
+            observed_total_bytes += artifact["payload_bytes"]
             tensor_names = artifact["names"]
             if weights is not None:
                 expected_names = frozenset(tensor for tensor, shard in weights.items() if shard == name)
@@ -389,6 +408,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": artifact["bytes"],
                 "sha256": artifact["sha256"],
             })
+        if expected_total_bytes is not None and observed_total_bytes != expected_total_bytes:
+            raise ValueError("MODEL_SHARD_TOTAL_SIZE_MISMATCH")
         report["candidate_sha256"] = config_sha256
         # Observation-only fingerprint, not a trusted cross-file atomic lock.
         observed = {"config": config_sha256,
