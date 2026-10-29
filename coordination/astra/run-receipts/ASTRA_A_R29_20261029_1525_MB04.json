@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB04",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P03 recheck queued model tag, immutable SHA revision and HTTPS license before Running",
+  "sourceCommits": [
+    "de88dc4e40c3365afe31a02bb0be4b1498722309"
+  ],
+  "sourceTest": "Source gate exact preimage + tag/revision/license guards PASS",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub own-file CAS and SHA readbacks; source gates are not Windows E07",
+  "lesson": "Only confirmed source effects and immutable preimages count; no mock as native PASS."
+}
