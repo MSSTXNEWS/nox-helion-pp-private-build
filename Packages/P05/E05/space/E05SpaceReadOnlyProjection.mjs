@@ -354,9 +354,24 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   const nonterminalTypes = new Set(['task.started','task.progress',
     'training.step','checkpoint.saved','task.completed','gpu.sample']);
   const nonterminalIds = new Set();
+  const nonterminalSequences = new Map();
   for (const e of events) {
-    if (e?.run_id===runId && nonterminalTypes.has(e.event_type) &&
-        eventToken128(e.event_id)) nonterminalIds.add(e.event_id);
+    if (e?.run_id!==runId || !nonterminalTypes.has(e.event_type)) continue;
+    // A sequenced native task event reserves the same (TaskID, sequence)
+    // identity as a terminal. Missing/invalid identities must not let a
+    // later verified STOP appear authoritative.
+    if (!eventToken128(e.event_id)) return {state:'HOLD_MALFORMED_NONTERMINAL_ID',errors:null};
+    nonterminalIds.add(e.event_id);
+    if (e.event_sequence !== undefined) {
+      if (!eventToken128(e.task_id) || !Number.isSafeInteger(e.event_sequence) ||
+          e.event_sequence < 1)
+        return {state:'HOLD_MALFORMED_NONTERMINAL_SEQUENCE',errors:null};
+      const key=JSON.stringify([e.task_id,e.event_sequence]);
+      const previous=nonterminalSequences.get(key);
+      if (previous !== undefined && previous !== e.event_id)
+        return {state:'HOLD_EVENT_SEQUENCE_COLLISION',errors:null};
+      nonterminalSequences.set(key,e.event_id);
+    }
   }
   const terminal=[];
   const seen=new Map();
@@ -407,7 +422,9 @@ export function projectCanonicalEvents(events, runId, nowMs) {
       // independent native producers may safely use overlapping numbers.
       const sequenceKey=JSON.stringify([e.task_id,e.event_sequence]);
       const priorEventId=seenTerminalSequence.get(sequenceKey);
-      if (priorEventId !== undefined && priorEventId !== e.event_id)
+      const priorNonterminalId=nonterminalSequences.get(sequenceKey);
+      if ((priorEventId !== undefined && priorEventId !== e.event_id) ||
+          (priorNonterminalId !== undefined && priorNonterminalId !== e.event_id))
         return {state:'HOLD_EVENT_SEQUENCE_COLLISION',errors:null};
       seenTerminalSequence.set(sequenceKey,e.event_id);
     }
