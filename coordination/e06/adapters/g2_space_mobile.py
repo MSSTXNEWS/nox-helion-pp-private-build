@@ -484,11 +484,30 @@ class G2OneHostBinder:
                     raise G2Hold("Non-mapping native route descriptor")
             except Exception as exc:
                 raise G2Hold("Native route descriptors cannot be frozen") from exc
+            extra_p02_routes = frozenset()
+            if self.extra_p02_ports is not None:
+                try:
+                    extra_methods = self.extra_p02_ports.route_methods()
+                except Exception as exc:
+                    raise G2Hold("P02_EXTRA_ROUTE_MAP_MISSING") from exc
+                if (type(extra_methods) is not dict or not extra_methods
+                        or any(type(route) is not str
+                               or route not in frozen_routes
+                               or frozen_routes[route].get("owner") != 2
+                               or not callable(handler)
+                               for route, handler in extra_methods.items())):
+                    raise G2Hold("P02_EXTRA_OWNER_ROUTE_INVALID")
+                extra_p02_routes = frozenset(extra_methods)
             e05_routes = {route for route in P05_ROUTES
                           if self.e05.available(route)}
             voice_routes = {}
             if self.voice is not None:
                 for route, method in VOICE_METHODS.items():
+                    # One owner route can have only one writer/port. The native
+                    # additional P02 ports take precedence over legacy voice
+                    # adapters for matching routes; never double-register.
+                    if route in extra_p02_routes:
+                        continue
                     ready = getattr(self.voice, "available", None)
                     handler = getattr(self.voice, method, None)
                     if callable(ready) and callable(handler) and ready(route) is True:
@@ -518,6 +537,8 @@ class G2OneHostBinder:
                 if self.verify_preimages(self.source_lock, dict(self.receipts)) is not True:
                     raise G2Hold("Frozen original archive/preimage/owner conflict")
                 p2 = self.p02.register(self.host, receipt=self._receipt("P02"))
+                if set(p2) & extra_p02_routes:
+                    raise G2Hold("P02_BASE_EXTRA_OWNER_COLLISION")
                 if self.extra_p02_ports is not None:
                     # Reuse original P02 OwnerTwoPorts + PACK01 BoundPort only.
                     # No secondary host, SQLite, voice pipeline or route factory.
@@ -525,8 +546,8 @@ class G2OneHostBinder:
                     extra = register_with_existing_pack01(
                         self.host, self.port_type, self.native_scope_from_session,
                         self.extra_p02_ports, receipt=self._receipt("P02"))
-                    if set(p2) & set(extra):
-                        raise G2Hold("Duplicate base and additional P02 route")
+                    if set(extra) != extra_p02_routes:
+                        raise G2Hold("P02_EXTRA_ROUTE_SET_CHANGED")
                     p2 = frozenset(p2) | extra
                 p3 = self.p03.register(self.host, self.port_type,
                                       receipt=self._receipt("P03"))

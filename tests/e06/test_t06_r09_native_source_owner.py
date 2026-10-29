@@ -75,6 +75,33 @@ class T06NativeOwnerSource(unittest.TestCase):
             self.assertEqual(host.ports[route].owner, 2)
             self.assertFalse(host.ports[route].available())
 
+        # Regression: the legacy voice path and new OwnerTwoPorts can both
+        # advertise calls.history. Reuse exactly one route on the same host.
+        class LegacyVoice:
+            def available(self, route): return route == "calls.history"
+            def call_history(self, session, payload): return {"calls": []}
+
+        legacy = LegacyVoice()
+        dual_host = pack.NoxPackHost(catalog)
+        dual_options = dict(opts, existing_p02_voice=legacy)
+        dual_routes = g2.G2OneHostBinder(
+            dual_host, pack.BoundPort, owner2_additional_ports=extra,
+            native_scope_from_session=lambda session: session,
+            **dual_options).bind()
+        self.assertEqual(dual_routes, bound)
+        self.assertEqual(dual_host.ports["calls.history"].owner, 2)
+        self.assertEqual(len(dual_host.ports), len(dual_routes))
+        self.assertFalse(dual_host.ports["calls.history"].available())
+
+        # Backward compatibility: without OwnerTwoPorts, the original voice
+        # adapter still owns calls.history; no function is silently removed.
+        legacy_host = pack.NoxPackHost(catalog)
+        legacy_routes = g2.G2OneHostBinder(
+            legacy_host, pack.BoundPort, **dual_options).bind()
+        self.assertIn("calls.history", legacy_routes)
+        self.assertNotIn("chat.rag", legacy_routes)
+        self.assertTrue(legacy_host.ports["calls.history"].available())
+
 
 if __name__ == "__main__":
     unittest.main()
