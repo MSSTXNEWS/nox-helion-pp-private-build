@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T10_PHYSICAL_SOURCE_REPAIR_CHECKPOINT",
+  "runId": "NOX-V16-T10-MANUAL-T06-CLOSEOUT-CHAIN-20261029-R18",
+  "taskId": "T10",
+  "timeUTC": "2026-10-29T15:02:37.935Z",
+  "selectedSource": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headSha1": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+    "treeSha1": "4aed4b53e5f9af0ccba1811a2d8f39e17aa41f3e",
+    "sourceAccepted": false,
+    "strictFrozen": false
+  },
+  "realCodeWork": [
+    {
+      "owner": "T06",
+      "path": "coordination/e06/t06_closeout_guard.py",
+      "postBlobSha1": "422af16dfea51210b1c667cc5183ec5f0eb0bf63",
+      "effect": "Remove circular T10 prerequisite from T06 source-owner gate. T09 and T10 still later.",
+      "commit": "c8243c0306ef78dd1fd09ad02a0aea57ca502f4d"
+    },
+    {
+      "owner": "T06/T10 manual",
+      "path": "coordination/e06/test_t06_closeout_guard.py",
+      "preBlobSha1": "a15b54e4424928b38c1a0f4fadafa9062e392c07",
+      "postBlobSha1": "d7593b0e766f0a5505b2475293ed0d054dba81b4",
+      "effect": "Correct isolated negative test to supply mandatory T09 handoff before asserting sole bad owner receipt",
+      "commit": "f7a1a0709498187d2f1cf1ef54d4d685bca74996",
+      "localRegression": {
+        "before": "5 PASS 1 FAIL",
+        "after": "6 PASS 0 FAIL",
+        "scope": "Python unittest of reproduced owner guard and exact test source; no Windows/native"
+      }
+    },
+    {
+      "owner": "T09/T10 manual",
+      "path": "coordination/e06/run_source_integrations_r13.py",
+      "preBlobSha1": "d086fce7ec876c9851c2e81ffd5d38272cce60bb",
+      "postBlobSha1": "90274f85e414e6321b9a5c6eb82ec21a7811abd8",
+      "commit": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+      "effect": "Adopt T09 exact approved patch into sole PR162. Source runner now invokes current T06 gate with --closeout-receipt. Git SHA/readback exact POST. No WPF/EXE/CI."
+    }
+  ],
+  "processImprovement": {
+    "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "error": "T06 status implied DONE only after T10 QA -> deadlock; guard wasn't wired to source runner; T06 focused suite had wrong test fixture",
+    "fix": "source owner gate before T09 and T10; T06 runner hook physically present; corrected test saved",
+    "crossAgentControl": "T06 automation existing prompt updated with hook invocation and exact paths, readback PASS; 11/11 active source-task prompts have cross-owner incident gate per T11 evidence"
+  },
+  "check": {
+    "sourceCodeCommitReadback": "PASS",
+    "componentGuardLocalTests": "6/6 PASS",
+    "nativeWindows": "NOT_RUN",
+    "originalArchive729": "DONE previous receipts",
+    "T06OwnerAccepted": "HOLD",
+    "T09FrozenSha": "N/D",
+    "T10SourceReady": "HOLD",
+    "T10ChecklistDone": 1,
+    "T10ChecklistTotal": 7
+  },
+  "blockers": [
+    "P01 Original WPF MainWindow binding unavailable in extracted current Git direct paths; original 729 ZIP preserved but not re-integrated",
+    "13 Host50 routes lack native owner-approved binding/consent/ACL/STOP evidence, do not activate",
+    "Full P01-P05 owner acceptance and same-SHA T09 SourceLock missing"
+  ],
+  "handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6500215411",
+  "mutations": {
+    "noExe": true,
+    "noNsis": true,
+    "noGitLabCI": true,
+    "noE07": true,
+    "noAlternativeProductBranch": true,
+    "onlyExistingGitSource": true
+  }
+}
