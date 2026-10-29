@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_V16_MANUAL3_R19_PUBLIC_RAG_CITATION_OWNER_SCOPE",
+  "run_id": "NOX-V16-M3-R19-20261029",
+  "role": "Manual #3 isolated P04/P05 source owner",
+  "error_ids_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "source_branch": "manual/no3/p04-p05-trusted-evidence-r15-20261029",
+  "parent_git_sha1": "1ce8644440cec081a0b8d9e658ca5e061556f841",
+  "parent_tree_git_sha1": "38af861bae7ddf0260d205b9f71a065ad01f8876",
+  "owner_files": [
+    {
+      "path": "Packages/P04/Rag/RagService.cs",
+      "pre_git_blob": "1750ee9c699642ae80042dfbb7b9f01e0d4d5784",
+      "post_git_blob": "a98cf03da0ffeabe959faa9d7aa11608fdd04a21"
+    },
+    {
+      "path": "tests/P04/RagComponentHarness.cs",
+      "pre_git_blob": "ffc132bbcadcb1e0aac48299471bc5cd3560acc8",
+      "post_git_blob": "d470efdf691fc41f30256fca66ec46d37a0b7367"
+    }
+  ],
+  "root_cause": "Public RAG BuildContext checked cited text digest but accepted mixed OwnerSid and ConversationId records supplied through its public caller, risking cross-scope evidence in a composed context.",
+  "applied_fix": "Fail closed on missing/mixed SID or conversation; preserve SHA-256, full-chunk-only, bounded-length checks. Same existing RAG engine, no second database.",
+  "one_test": "7/7 exact saved-source contract assertions PASS; two new negative C# harness cases authored but NOT_RUN (dotnet unavailable).",
+  "lesson": "Complete same-root-cause protection at every real public/host-facing seam, not merely a report; never call SOURCE_PREPARED QA_ACCEPTED.",
+  "current_status": "SOURCE_PREPARED, not integrated",
+  "owner_handoff": "T06 sole writer of PR162; merge only after .NET targeted test and exact PRE SHA, T08 independent same-SHA QA, T09 freeze.",
+  "journal_handoff": "T02 sole writer shared register; associate with existing ERR-SRC-004 and premature-stop incident; no duplicate error ID.",
+  "product_progress": {
+    "P04": "25% weight; new QA accepted 0",
+    "P05": "10% weight; new QA accepted 0",
+    "overall": "N/D"
+  },
+  "safety": "Preserve original 729/729, T04 34/34, ACL, STOP, consent, D02/WOW, 8CoreID, 5Persona. No EXE/NSIS/GitLab CI/E07."
+}

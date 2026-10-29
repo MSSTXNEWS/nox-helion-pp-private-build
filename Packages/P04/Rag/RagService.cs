@@ -263,9 +263,22 @@ public sealed class RagService : IDisposable
             throw new ArgumentOutOfRangeException(nameof(maxCharacters));
 
         var context = new StringBuilder(Math.Min(maxCharacters, 4096));
+        string? onlyOwner = null;
+        string? onlyConversation = null;
         foreach (var result in results)
         {
             if (result is null || string.IsNullOrWhiteSpace(result.Text)) continue;
+            if (string.IsNullOrWhiteSpace(result.OwnerSid) ||
+                string.IsNullOrWhiteSpace(result.ConversationId))
+                throw new InvalidDataException("RAG citation scope missing.");
+            if (onlyOwner is null)
+            {
+                onlyOwner = result.OwnerSid;
+                onlyConversation = result.ConversationId;
+            }
+            else if (!string.Equals(onlyOwner, result.OwnerSid, StringComparison.Ordinal) ||
+                     !string.Equals(onlyConversation, result.ConversationId, StringComparison.Ordinal))
+                throw new InvalidDataException("RAG citation scope mismatch.");
             var citation = $"[SOURCE: {Uri.EscapeDataString(result.FileName)}#{result.ChunkIndex + 1}; SHA256:{result.ChunkSha256}]";
             var required = citation.Length + result.Text.Length + 2;
             // A SHA256 citation must refer to the complete, untruncated chunk.
