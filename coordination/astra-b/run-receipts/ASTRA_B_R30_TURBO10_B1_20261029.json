@@ -1,0 +1,33 @@
+{
+  "schema": "ASTRA_B_SOURCE_ONLY_10_PASS_RECEIPT_V1",
+  "run_id": "ASTRA-B-R30-TURBO10-20261029",
+  "worker_label": "B1",
+  "real_subagent_id": null,
+  "spawn_status": "NOT_AVAILABLE",
+  "source_branch": "astra-b/r29-b1-20261029",
+  "baseline_previous_saved_source_approaches": 5,
+  "new_source_commits": [
+    "067bbcf2684de8f9b4fa7771eb0d7f1d7732a391",
+    "d9e550671d8593af5576c54583a4eb82edb457df",
+    "576a04e4f9b2d2f9fc1daaf61d395576c46913ab",
+    "acce9c1239d2dcf28384b9d6b6396b4576ac4d69",
+    "cd790e0107c49ffd19f995a8549fb5bc63f27b39"
+  ],
+  "source_commits_saved_total_in_lane": 10,
+  "new_task_ids_local": [
+    "strict-header-JSON",
+    "surrogate-tensor-keys",
+    "Windows-casefold-shard-collision",
+    "Windows-reserved-basename",
+    "metadata-stability-rescan"
+  ],
+  "terminal_code_commit": "cd790e0107c49ffd19f995a8549fb5bc63f27b39",
+  "prepost_compare_readback": "PASS_ONLY_ASSIGNED_PATH",
+  "targeted_test": "five targeted source invariants PASS; Python runtime NOT_RUN",
+  "release_acceptance": "NOT_RUN",
+  "product_taskid_coverage": "N_D",
+  "original_archive_729_this_run": "NOT_REVERIFIED",
+  "lesson": "A source-assertion and GitHub SHA prove code text, not native installer behavior; preserve unresolved gates.",
+  "shared_docs_writer": "ASTRA_A_ONLY",
+  "source_complete": false
+}
