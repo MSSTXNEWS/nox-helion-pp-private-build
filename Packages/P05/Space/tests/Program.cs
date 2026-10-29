@@ -29,6 +29,26 @@ var small = await Fetch(valid);
 Pass(small.Status == "LIVE" && small.Data is not null && small.SourceTimestamp is not null,
     "small valid JSON: LIVE with source timestamp");
 
+var redirected = Client(() => new HttpResponseMessage(HttpStatusCode.OK) {
+    Content = new ByteArrayContent(Encoding.UTF8.GetBytes(Json)),
+    RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://other.invalid/brent")
+});
+var wrongOrigin = await Fetch(redirected);
+Pass(wrongOrigin.Status == "OFFLINE" && wrongOrigin.Data is null &&
+     wrongOrigin.ErrorCode == "PROVIDER_ENDPOINT_CHANGED",
+     "unapproved redirect endpoint rejected");
+
+using var revoke = new CancellationTokenSource();
+var cancelledAfterProvider = Client(() =>
+    Reply(new ByteArrayContent(Encoding.UTF8.GetBytes(Json))));
+try {
+    await cancelledAfterProvider.FetchAsync("brent", new Uri("https://example.invalid/brent"),
+        "APPROVED_TEST_SOURCE", value => { revoke.Cancel(); return SourceAt(value); }, revoke.Token);
+    throw new InvalidOperationException("FAIL STOP after callback ignored");
+} catch (OperationCanceledException) {
+    Console.WriteLine("PASS STOP during provider callback");
+}
+
 var announced = Client(() => {
     var r = Reply(new StreamContent(new GeneratedBody(Cap + 16)));
     r.Content.Headers.ContentLength = Cap + 16;
@@ -66,14 +86,16 @@ try {
     Console.WriteLine("PASS pre-canceled STOP: no cache success");
 }
 
-Console.WriteLine("6/6 semantic assertions PASS (when this project actually runs on .NET 8)");
+Console.WriteLine("8/8 semantic assertions PASS (when this project actually runs on .NET 8)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        return Task.FromResult(reply());
+        var result = reply();
+        result.RequestMessage ??= request;
+        return Task.FromResult(result);
     }
 }
 

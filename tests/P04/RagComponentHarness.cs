@@ -127,6 +127,20 @@ internal static class Program
             Check(hits.Count > 0 && hits[0].Text.Contains("alpha original"), "authorized search");
             Check(hits[0].ChunkSha256 == Sha(hits[0].Text), "citation hash");
             Check(RagService.BuildContext(hits).Contains("SHA256:"), "citation context");
+            // A full SHA citation must not be attached to a truncated chunk.
+            // If the first hit is too large, preserve a later valid small hit.
+            var hugeText = new string('Z', 600);
+            var smallText = "small verified passage";
+            var huge = new RagSearchResult(ownerA, conversation, "too-big",
+                "huge.md", Sha(hugeText), Sha(hugeText), 0, 0.9, hugeText);
+            var smallCitation = new RagSearchResult(ownerA, conversation, "fits",
+                "small.md", Sha(smallText), Sha(smallText), 0, 0.8, smallText);
+            var boundedContext = RagService.BuildContext(
+                new[] { huge, smallCitation }, 256);
+            Check(!boundedContext.Contains("huge.md") &&
+                  boundedContext.Contains(smallText) &&
+                  boundedContext.Contains("SHA256:" + Sha(smallText)),
+                "bounded context retains only complete SHA-verified passages");
             using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
                 "no-model-test-double", Path.Combine(directory, "index.json")))
             {

@@ -268,13 +268,10 @@ public sealed class RagService : IDisposable
             if (result is null || string.IsNullOrWhiteSpace(result.Text)) continue;
             var citation = $"[SOURCE: {Uri.EscapeDataString(result.FileName)}#{result.ChunkIndex + 1}; SHA256:{result.ChunkSha256}]";
             var required = citation.Length + result.Text.Length + 2;
+            // A SHA256 citation must refer to the complete, untruncated chunk.
+            // Skip oversized hits so smaller verified passages are still useful.
             if (context.Length + required > maxCharacters)
-            {
-                var available = maxCharacters - context.Length - citation.Length - 4;
-                if (available > 0)
-                    context.Append(citation).Append('\n').Append(result.Text.AsSpan(0, Math.Min(available, result.Text.Length))).Append("…\n\n");
-                break;
-            }
+                continue;
             context.Append(citation).Append('\n').Append(result.Text).Append("\n\n");
         }
         return context.ToString().TrimEnd();

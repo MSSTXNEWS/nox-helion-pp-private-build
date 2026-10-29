@@ -88,6 +88,13 @@ public sealed class SpaceFeedClient
             using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
             using var response = await _http.SendAsync(request,
                 HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false);
+            // The transport may follow a redirect; only approved endpoint bytes
+            // may enter the SPACE cache, regardless of the initial request URL.
+            var observedEndpoint = response.RequestMessage?.RequestUri;
+            if (observedEndpoint is null ||
+                Uri.Compare(endpoint, observedEndpoint, UriComponents.AbsoluteUri,
+                    UriFormat.SafeUnescaped, StringComparison.Ordinal) != 0)
+                throw new HttpRequestException("PROVIDER_ENDPOINT_CHANGED");
             response.EnsureSuccessStatusCode();
             // Content-Length is only an early rejection: chunked streams may omit
             // it, and an untrusted server may understate it. Always count bytes.
@@ -115,6 +122,8 @@ public sealed class SpaceFeedClient
             var snapshot = new FeedSnapshot(id, provider, observed,
                 DateTimeOffset.UtcNow, cloned, observed is null ? "UNVERIFIED_TIMESTAMP" : "LIVE",
                 observed is null ? "SOURCE_TIME_MISSING" : null, false);
+            // STOP can arrive from the host during the source-time callback.
+            stop.ThrowIfCancellationRequested();
             _cache[key] = snapshot;
             return snapshot;
         }
@@ -124,7 +133,9 @@ public sealed class SpaceFeedClient
         {
             string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
                 ex is OperationCanceledException ? "TIMEOUT" :
-                ex is JsonException ? "INVALID_JSON" : "NETWORK_ERROR";
+                ex is JsonException ? "INVALID_JSON" :
+                ex is HttpRequestException && ex.Message == "PROVIDER_ENDPOINT_CHANGED"
+                    ? "PROVIDER_ENDPOINT_CHANGED" : "NETWORK_ERROR";
             if (old is not null)
                 return old with { Status = "OFFLINE_CACHE", ErrorCode = error, IsStale = true };
             return new FeedSnapshot(id, provider, null, DateTimeOffset.UtcNow,

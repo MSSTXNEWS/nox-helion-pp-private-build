@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_V16_R15_MANUAL_03_P04_P05_SOURCE_RECEIPT",
+  "run_id": "NOX-V16-MANUAL-03-R15-20261029-P04-P05-TRUSTED-EVIDENCE",
+  "role": "Manual executor #3, isolated source owner P04 (25% weight) / P05 (10% weight)",
+  "status": "SOURCE_PATCH_SAVED_NOT_INTEGRATED_OR_NATIVE_ACCEPTED",
+  "prestart": {
+    "full_role_prompt": "NOX_V16_R15_MANUAL_03 CODE FINISHER",
+    "canon_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_rev": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "sections": "§§1–33,54–56,R29, 56 consolidated rules §33",
+    "registry_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "ledger_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_rev": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_rev": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_rev": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHh1P0qrcrEPXOBzSQwHi9LhZf4s9EEQe",
+    "c34_rev": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "parent_head": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+    "parent_tree": "f508ceefaa1301e7b28f8a35ae4fd1efd35efadf",
+    "source_pr162_not_modified": true
+  },
+  "fixed": [
+    {
+      "area": "P04",
+      "task_id": "E04.02 RAG citations",
+      "cause": "BuildContext truncated chunk text while retaining original complete-chunk SHA256 citation; also broke loop and discarded smaller valid passages",
+      "fix": "skip too-long chunk, keep fully SHA-cited later hits; existing ingestion, ACL/update/delete unchanged",
+      "evidence": "RagComponentHarness includes huge-first-small-second negative regression",
+      "owner": "Manual #3, T06 owner merge"
+    },
+    {
+      "area": "P05",
+      "task_id": "E05 SPACE trusted feed",
+      "cause": "HttpClient may return a 200 from a redirected/unreviewed endpoint; provider callback may revoke STOP after parsing but before cache",
+      "fix": "require actual response URI to match exact approved HTTPS endpoint; fail-closed typed error; recheck STOP before cache write",
+      "evidence": "SpaceFeedClientR16Smoke tests redirected 200 and revoke in provider time callback",
+      "owner": "Manual #3, T06 owner merge"
+    }
+  ],
+  "files": [
+    {
+      "path": "Packages/P04/Rag/RagService.cs",
+      "pre": "a6730cd630dc7c9adc335b6182940ca84c4107ca",
+      "post": "20679bc09c245846dcdf8d06f81405fc6b42d2eb",
+      "owner": "P04/E04.02"
+    },
+    {
+      "path": "tests/P04/RagComponentHarness.cs",
+      "pre": "3e7953439fd2686310624b598072307dcd74905c",
+      "post": "4e918500f0bc17458f6940529c2f65b93db95492",
+      "owner": "P04/E04.02"
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre": "78cb5cefac8a1aad3af9338dc42653eac94f5537",
+      "post": "e371d116ef1a96dc2a5b1cd47f6106c24011acb9",
+      "owner": "P05/SPACE"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre": "83800381c0adb0070f968590db2ff3e550810285",
+      "post": "9235a1960498f978ddf992089c5aa010400e3ea6",
+      "owner": "P05/SPACE"
+    }
+  ],
+  "one_test": {
+    "name": "exact source provenance and negative regression contract",
+    "result": "PASS 9/9 static assertions",
+    "dotnet_runtime": "NOT_RUN_NO_DOTNET_AVAILABLE",
+    "full_CSharp_component_tests": "AUTHORED_NOT_EXECUTED",
+    "real_GPU_training": "NOT_RUN",
+    "real_feed_provider": "NOT_RUN",
+    "host_QA": "NOT_RUN"
+  },
+  "self_improvement": {
+    "all_11_shared_errors_read": true,
+    "clusters": {
+      "P04_PROVENANCE": "APPLIED",
+      "P05_FEED_ORIGIN": "APPLIED",
+      "OWNER_FREEZE": "DELEGATED_TO_T06",
+      "PREMATURE_DONE": "INCOMPLETE_NOT_DONE",
+      "HISTORIC_SOURCELOCK": "VERIFIED_CLOSED_PRESERVED"
+    },
+    "new_errors_to_T02": [
+      "P04 citation integrity risk",
+      "P05 redirected provider response mismatch and late cancellation"
+    ],
+    "coverage": "all immediately applicable P04/P05 source clusters and 11 shared entries triaged; historical 419 fingerprints not equated to actual defects"
+  },
+  "report": {
+    "P04": {
+      "declared_weight": "25% product weight, not progress",
+      "known_fixed_work_tracks": 7,
+      "changed_taskids": [
+        "E04.02"
+      ],
+      "prepared": 1,
+      "verified_contracts": 1,
+      "integrated": 0,
+      "accepted": 0,
+      "other_taskids": "E04.01,E04.03-E04.07 not newly accepted; partial owner receipts do not establish total acceptance",
+      "percent": "N/D"
+    },
+    "P05": {
+      "declared_weight": "10% product weight, not progress",
+      "changed_area": "SPACE feed provenance/STOP",
+      "prepared": 1,
+      "verified_contracts": 1,
+      "integrated": 0,
+      "accepted": 0,
+      "complete_canonical_TaskID_denominator": "NOT_AVAILABLE",
+      "percent": "N/D"
+    },
+    "overall_product_percent": "N/D"
+  },
+  "handoff": {
+    "T06": "Only writer of source PR #162; adopt exact four PRE/POST blob SHAs into one accepted tree after owner CAS and targeted .NET regression, preserve E04/E05 and NO-LOSS",
+    "T02": "Only writer of shared error register/Master/E06/Lessons, ingest new source-level lessons after CAS+readback; no false acceptance"
+  },
+  "safety": {
+    "P04_P05_existing_engines_preserved": true,
+    "D02_WOW_8CoreID_5Persona_preserved": true,
+    "ZIP729_preserved": true,
+    "T04_34_preserved": true,
+    "ACL_STOP_consent_preserved": true,
+    "user_data_unmodified": true,
+    "no_exe_nsis_ci_e07": true,
+    "no_external_model_download": true
+  }
+}
