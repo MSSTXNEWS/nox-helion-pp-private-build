@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_FIN_ZAGR_R30_G1_A_SOURCE_RECEIPT_V1",
+  "runId": "R30-G1-A-20261029T0530MSK-TRUSTED-ROLLBACK-UNINSTALLER-01",
+  "worker": "G1-A",
+  "taskId": "P01/C09/ROLLBACK_TRUSTED_UNINSTALLER_SHA",
+  "status": "SOURCE_PATCHED_NATIVE_HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 (loader only)",
+  "branch": "astra/r30-g1-a-20261029t0530-uninstaller-sha-01",
+  "sourceBaseRef": "astra/r29-a01-20261029",
+  "sourceBaseCommit": "51fa2a849924d87e2302f90ebaa67b720fc723c7",
+  "prerequisitesRead": [
+    "V15 56/56 rules in ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "V16 §§54–56 latest R29 override",
+    "R30 ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "R30 r29-a01 and r29-a2-p01 installer snapshots",
+    "Google Drive E06 self-improvement and active master continuation"
+  ],
+  "preimageBlobs": {
+    "NOX-HELION-Setup.nsi": "19233446b6ee8b508106a548ff67eaffe13dbb82",
+    "Verify-Payload.ps1": "0e288740515daaea435ad07bbde7b56e1d59f547"
+  },
+  "observedDefect": "Rollback verified manifest payload and only structural size of previous Uninstall.exe, then reactivated that unauthenticated executable without verifying its actual bytes.",
+  "patch": "Prepare trusted setup-generated Uninstall.exe before moving application trees, copy into restored app after activation, SHA256 compare to generated source and re-verify payload before registry DisplayVersion write; on failure restore previous active app when possible without deleting recovery trees.",
+  "ownedPaths": [
+    "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+    "stage/proposals/P01/C09/Installer/test_rollback_trusted_uninstaller_r30.cjs"
+  ],
+  "sourceCommits": {
+    "nsis": "446b89875da813e6c5213baa8ea2ba5921ca0f47",
+    "verifier": "7e897e39365e363a2ca2d9be75484a67a2014c8f",
+    "testAndCodeHead": "9241cf32c0c197e0819912c7734811bf0ad572f7"
+  },
+  "verifiedGitBlobs": {
+    "NOX-HELION-Setup.nsi": "c94568922e98fd9fbf20eb47e8bc62b0f957d183",
+    "Verify-Payload.ps1": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+    "test_rollback_trusted_uninstaller_r30.cjs": "69aaed39d6d92619f0b4391b62c8baed2cc1dd26"
+  },
+  "tests": {
+    "baselineSourceRED": 12,
+    "sourceChecksPASS": 14,
+    "sourceChecksFAIL": 0,
+    "negativeMutationCasesPASS": 2,
+    "readbackExact": true,
+    "powershellRuntime": "NOT_RUN",
+    "nsisCompiler": "NOT_RUN",
+    "windowsRuntime": "NOT_RUN",
+    "exe": "NOT_BUILT",
+    "ci": "NOT_RUN"
+  },
+  "ruleApplied": "Verify same concrete trusted output after the rollback filesystem transition and before registry publication; do not trust a size-only legacy marker.",
+  "singleLesson": "R30_G1_A_GENERATED_EXECUTABLE_PROVENANCE_MUST_SURVIVE_ACTIVATION: A generated uninstaller is executable metadata, not an ordinary file. Prepare a trusted executable before destructive moves and recheck its SHA-256 after copying it to the live directory. On mismatch, retain both trees and fail closed rather than publish success.",
+  "conflictsAndHandoff": "R30 index identifies unmerged overlapping NSIS and Remove-InstalledPayload changes in r29-a01 and r29-a2-p01. This branch preserves r29-a01 marker readback and rollback version, does NOT cherry-pick r29-a2 exact uninstall marker patch. Astra-C must reconcile by blob, not blind merge.",
+  "holds": [
+    "Native NSIS CopyFiles/WriteUninstaller semantics and genuine PowerShell5.1 path/negative cases require future Windows E07.",
+    "Shared collection branch, main, PR162, GitLab remain untouched; no build.",
+    "This receipt does not certify SOURCE_READY or project completion."
+  ],
+  "googleDriveWrite": "NOT_ATTEMPTED_OWNER_ASTRA_C_SOLE_WRITER",
+  "receiptOwner": "G1-A"
+}
