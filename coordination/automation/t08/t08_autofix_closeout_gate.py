@@ -3,6 +3,7 @@
 This source-only gate does not run in the background or prove Windows runtime.
 """
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -17,6 +18,94 @@ def _sha(value, pattern=HEX40):
     return type(value) is str and pattern.fullmatch(value) is not None
 
 
+
+
+def _root_git():
+    import subprocess
+    root = next(parent for parent in Path(__file__).resolve().parents
+                if (parent / "coordination/e06/t06_closeout_guard.py").is_file())
+    def git(*argv):
+        result = subprocess.run(["git", "-C", str(root), *argv],
+                                capture_output=True, timeout=12, check=False)
+        if result.returncode:
+            raise ValueError("GIT_OBJECT_READBACK_FAILED")
+        return result.stdout
+    return root, git
+
+
+def _actual_json_blob(git, sha):
+    if not _sha(sha) or git("cat-file", "-t", sha).strip() != b"blob":
+        raise ValueError("GIT_RECEIPT_NOT_BLOB")
+    if not 2 <= int(git("cat-file", "-s", sha).strip()) <= 262144:
+        raise ValueError("GIT_RECEIPT_OUT_OF_BOUNDS")
+    obj = json.loads(git("cat-file", "blob", sha))
+    if type(obj) is not dict:
+        raise ValueError("GIT_RECEIPT_NOT_JSON")
+    return obj
+
+
+def _verified_git_proof(source, t06):
+    """Require Git HEAD/tree, manifest bytes and the existing T06 owner closeout guard."""
+    import importlib.util
+    import subprocess
+    try:
+        root, git = _root_git()
+        if git("rev-parse", "HEAD").decode().strip() != source.get("head"):
+            return False
+        if git("rev-parse", "HEAD^{tree}").decode().strip() != source.get("tree"):
+            return False
+        owner = _actual_json_blob(git, t06.get("owner_receipt_blob"))
+        if owner.get("head_sha") != source.get("head") or owner.get("tree_sha") != source.get("tree"):
+            return False
+        manifest_blob = owner.get("manifest_blob_sha")
+        if not _sha(manifest_blob) or git("cat-file", "-t", manifest_blob).strip() != b"blob":
+            return False
+        if hashlib.sha256(git("cat-file", "blob", manifest_blob)).hexdigest() != source.get("manifest_sha256"):
+            return False
+        path = root / "coordination/e06/t06_closeout_guard.py"
+        spec = importlib.util.spec_from_file_location("nox_t06_owner_gate", path)
+        if not spec or not spec.loader:
+            return False
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        verdict = guard.decide(owner, repo_root=root)
+        return (verdict.get("done") is True and verdict.get("source_owner_accepted") is True
+                and verdict.get("source_ready") is False)
+    except (OSError, ValueError, KeyError, TypeError, StopIteration,
+            ImportError, subprocess.TimeoutExpired, UnicodeError):
+        return False
+
+
+def _verified_downstream(source, p0, handoff, journal):
+    """Reject forged downstream hashes; T02 must separately verify native Drive revisions."""
+    import subprocess
+    try:
+        _, git = _root_git()
+        head = source.get("head")
+        if git("rev-parse", "HEAD").decode().strip() != head:
+            return False
+        for part in (p0, handoff):
+            proof = _actual_json_blob(git, part.get("receipt_blob"))
+            if not any(proof.get(k) == head for k in
+                       ("head", "head_sha", "source_head", "source_head_sha")):
+                return False
+        if p0.get("status") == "PATCH_APPLIED":
+            test = _actual_json_blob(git, p0.get("focused_test_blob"))
+            if test.get("status") != "PASS":
+                return False
+        for name in DOCS:
+            doc = journal[name]
+            proof = _actual_json_blob(git, doc.get("readback_receipt_blob"))
+            if (proof.get("doc") != name or
+                    proof.get("revision_id") != doc.get("revision_id") or
+                    proof.get("incident_id") != doc.get("incident_id") or
+                    proof.get("readback_pass") is not True):
+                return False
+        return git("rev-parse", "HEAD").decode().strip() == head
+    except (OSError, ValueError, KeyError, TypeError, StopIteration,
+            subprocess.TimeoutExpired, UnicodeError):
+        return False
+
 def decide(receipt):
     if type(receipt) is not dict or type(receipt.get("incident_id")) is not str:
         raise ValueError("UNIQUE_ERROR_INCIDENT_REQUIRED")
@@ -29,13 +118,15 @@ def decide(receipt):
     tree = source.get("tree") if type(source) is dict else None
     manifest = source.get("manifest_sha256") if type(source) is dict else None
     pinned = _sha(target) and _sha(tree) and _sha(manifest, HEX64)
-    ready = pinned and type(t06) is dict and (
+    ready = pinned and type(t06) is dict and _verified_git_proof(source, t06) and (
         t06.get("accepted") is True and t06.get("head") == target
         and t06.get("tree") == tree and t06.get("manifest_sha256") == manifest
         and _sha(t06.get("owner_receipt_blob"))
         and t06.get("p01_p05_accepted") is True
         and t06.get("host50_native_contracts_verified") is True)
-    disposition = ready and type(p0) is dict and (
+    downstream = (ready and type(p0) is dict and type(handoff) is dict
+                  and type(journal) is dict and _verified_downstream(source, p0, handoff, journal))
+    disposition = downstream and (
         p0.get("head") == target and p0.get("status") in
         ("NO_CODE_BLOCKERS", "PATCH_APPLIED") and _sha(p0.get("receipt_blob"))
         and (p0.get("status") != "PATCH_APPLIED" or _sha(p0.get("focused_test_blob"))))

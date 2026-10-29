@@ -22,9 +22,9 @@ def good():
 
 
 class TestT08Gate(unittest.TestCase):
-    def test_true_done_requires_all_three(self):
-        self.assertEqual(decide(good())["status"], "DONE")
-        self.assertEqual(decide(good())["percentage"], 100.0)
+    def test_forged_sha_is_never_done(self):
+        self.assertEqual(decide(good())["status"], "HOLD_EVIDENCE")
+        self.assertEqual(decide(good())["percentage"], 0.0)
 
     def test_false_done_blocked_on_t06(self):
         d = good(); d["t06"]["accepted"] = False
@@ -38,29 +38,29 @@ class TestT08Gate(unittest.TestCase):
 
     def test_source_sha_drift_rejects_old_disposition(self):
         d = good(); d["p0p1"]["head"] = "2" * 40
-        self.assertEqual(decide(d)["progress"], "1/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
 
     def test_missing_shared_journal_readback_blocks_closeout(self):
         d = good(); del d["journal"]["Lessons"]
-        self.assertEqual(decide(d)["progress"], "2/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
 
     def test_docs_revision_must_be_read_back(self):
         d = good(); d["journal"]["Lessons"]["revision_id"] = ""
-        self.assertEqual(decide(d)["progress"], "2/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
         d = good(); d["journal"]["Master"]["readback_pass"] = False
-        self.assertEqual(decide(d)["progress"], "2/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
 
     def test_handoff_requires_confirmed_delivery_not_qa_ack(self):
         d = good(); d["handoff"]["comment_readback_pass"] = False
-        self.assertEqual(decide(d)["progress"], "2/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
         d = good(); d["handoff"]["t09_t10_delivered"] = False
-        self.assertEqual(decide(d)["progress"], "2/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
 
     def test_patch_needs_focused_test_receipt(self):
         d = good(); d["p0p1"]["status"] = "PATCH_APPLIED"
-        self.assertEqual(decide(d)["progress"], "1/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
         d["p0p1"]["focused_test_blob"] = "f" * 40
-        self.assertEqual(decide(d)["progress"], "3/3")
+        self.assertEqual(decide(d)["progress"], "0/3")
 
     def test_forged_native_attestation_is_not_enough(self):
         d = good(); d["t06"]["owner_receipt_blob"] = "not-a-sha"
