@@ -1,0 +1,15 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-TURBO5-B6",
+  "worker": "B6",
+  "task_id": "E06-ROLLBACK-LEASE-RECHECK",
+  "source_commit": "24116fe8f3bb00131d8ad2e3dfd2fa524eacb160",
+  "source_only": true,
+  "actual_subagent_id": null,
+  "change": "Refuse rollback if staging lock has been stolen or replaced",
+  "test": "FOCUSED_SOURCE_ASSERT_PASS",
+  "native_test": "NOT_RUN",
+  "source_readback": "PASS",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "lesson": "Rollback is a write: require preserved owner lease, otherwise leave recovery HOLD.",
+  "complete_taskid": "N_D"
+}
