@@ -1,0 +1,24 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB01",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "Six owner fixes: P01 receipt no-clobber, P01 calls.dial consent, P02 nonce latch, voice re-consent, P03 bounded backup and family pin",
+  "sourceCommits": [
+    "5677e55c4895799fca2b85504ead554a1954f775",
+    "f33d54084de35ed148dc48a1561381b8c6336e15",
+    "979d98d59db401f318311b0ea2ba27944eddb67e",
+    "db72e0d6a979be6301103f6374fbe50f0bfab814",
+    "0ec7a4ac0b1f45fc8f6b095f8f8a9187fc7f4b3f",
+    "a8aaf8a58f4e61cf0a8f58b21a673256f38d95d0",
+    "6170d351408fb59d4684b75c0e15848a69fb121c"
+  ],
+  "sourceTest": "6/6 owner readback; corrected A3 nonce text-vs-reference equality after self-review",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub own-file CAS and SHA readbacks; source gates are not Windows E07",
+  "lesson": "Only confirmed source effects and immutable preimages count; no mock as native PASS."
+}
