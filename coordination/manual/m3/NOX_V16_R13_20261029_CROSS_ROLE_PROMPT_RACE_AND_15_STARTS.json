@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_V16_R13_CROSS_ROLE_INSTRUCTIONS_RACE_V1",
+  "run_id": "NOX-V16-M3-R13-20261029",
+  "owner": "M3/T10+T11; T02 sole shared-ledger writer",
+  "existing_incident_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+  "severity": "P0 process control",
+  "direct_new_error_count": 1,
+  "root_causes": [
+    "Existing incident recurrence: a completed RunID or HOLD-only answer was mistaken for completed fixed-denominator TASK; M3 still 3/12",
+    "Prompt configuration race: 15 of 15 active roles retained R12_EXIT_GATE_P0_20261029 in prompt content but the prefix was replaced with NOX_V16_R11_FAST_3_MANUAL_5x3_20261029 by concurrent updates. No reliable sole-writer / prompt CAS discipline.",
+    "Canonical register remained on 2c8e374ec17f66b1a435e386e496f8cc8662ca00; support-role G5-A run completion is not canonical T02 register CAS readback"
+  ],
+  "proof": {
+    "shared_register_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "shared_register_blob_sha1": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "incident_status": "OPEN",
+    "incident_recurrence_before": 2,
+    "active_role_count": 15,
+    "r12_present_anywhere": 15,
+    "r12_still_prefix": 0,
+    "roles_enabled": 15,
+    "urgent_run_requests_accepted": 15,
+    "urgent_run_execution_completed": "NOT_VERIFIED",
+    "manually_authorized_T02_write": "REQUIRES_T02_SOLE_WRITER",
+    "new_canonical_register_write": "NOT_PERFORMED"
+  },
+  "physical_actions": [
+    "Requested immediate run of all 15 existing enabled NOX V16 G1-G5 roles; 15/15 accepted, schedules not modified",
+    "Preserved prior verified R12 individual receipt and issue #177 handoff",
+    "Recorded exact prompt race recurrence in append-only M3 Git receipt for T02 intake"
+  ],
+  "prevention": {
+    "prompt_writer_owner": "Use single configuration coordinator for all 15 automation prompts; other executors must not overwrite or demote P0 R12 and role prompts. Require compare-and-re-read final prompt, and robust ordered priority gating.",
+    "exit_gate": "No TASK_DONE until independently accepted exact fixed denominator, one owner SHA, security controls, mandatory physical output, real Git CAS/readback. On partial, INCOMPLETE + exact checkpoint.",
+    "runtime_after_request": "Check each actual newly requested automation RunID source physical result, shared T02 CAS, and x/n; not task-completed simply because run finished.",
+    "registry_workflow": "T02 independently append or update existing incident recurrence, root cause and corrective actions via CAS and Master/E06/Lessons readback, do not duplicate ERROR_ID."
+  },
+  "ownership": {
+    "shared_error_ledger": "T02/C only",
+    "canonical_PR162_source": "T06 only",
+    "M3": "Independent SOURCE_READY and GitLab readiness",
+    "manual_roles": "Must read canonical R12 exit rule on activation; cannot be retrospectively altered"
+  },
+  "current": {
+    "M3": "3/12",
+    "progress_percent": 25,
+    "criterion_delta": 0,
+    "source_ready": false
+  },
+  "guardrails": "NOLOSS T04 34/34, ZIP 729/729; STOP, ACL, native consent, privacy, no build/NSIS/E07/GitLab CI before authorized full source completion."
+}
