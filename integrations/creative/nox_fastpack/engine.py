@@ -377,8 +377,17 @@ class Studio(CreativeExtensions):
         state=self.history(prompt_id)
         if state["status"] != "COMPLETE" or asset not in state["files"]:
             raise StudioError("Only completed, reported ComfyUI assets may be imported")
-        name=asset["filename"]
-        if not re.fullmatch(r"[^/\\]{1,220}",name):raise StudioError("Bad output filename")
+        name=asset.get("filename")
+        if (type(name) is not str or not re.fullmatch(r"[^/\\:]{1,220}",name)
+                or name in (".","..")):
+            raise StudioError("Bad output filename")
+        subfolder=asset.get("subfolder","")
+        if (type(subfolder) is not str or len(subfolder)>240 or
+                subfolder.startswith(("/","\\")) or "\\" in subfolder or ":" in subfolder or
+                (subfolder and any(part in ("",".","..") for part in subfolder.split("/")))):
+            raise StudioError("Unsafe ComfyUI output subfolder")
+        if asset.get("type","output") not in ("output","temp","input"):
+            raise StudioError("Unapproved ComfyUI media source type")
         folder=self._project(project_id)/"assets";folder.mkdir(parents=True,exist_ok=True)
         output=folder/(uuid.uuid4().hex[:8]+"_"+name)
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
