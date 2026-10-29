@@ -1,0 +1,184 @@
+{
+  "schema": "NOX_V16_G3B_R23_OWNER_SOURCE_CONTRACT_RECEIPT_V1",
+  "run_id": "G3B-20261029T232527MSK-R23-REVIEW-STOP-CURRENT-HEAD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows SOURCE ONLY",
+  "status": "INCOMPLETE_SOURCE_PREPARED_STATIC_EVIDENCE_NO_OWNER_INTEGRATION",
+  "role": "G3-B (P03 queue owner-scope, historical G7-B DONE retained)",
+  "role_gate": "A READ PASS; B PHYSICAL PASS(static contract evidence + new test file); C JOURNAL awaiting Git receipt readback; D LESSONS PASS for relevant deduplicated actions",
+  "read_proof": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_chars": 218770,
+    "canon_paragraphs": 705,
+    "section_33_rules": 56,
+    "sections": "§§1–33,54–56,R29",
+    "role_archive_blob": "61f8f722263d188f95fc44bd5090237fa6bf560c",
+    "r23_policy_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "error_register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "error_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "entries": 11
+    },
+    "master_revision": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "pr162_head": "d23956686fd9634225512f456b194fc723eda933",
+    "pr162_tree": "dd1e245a61767c0c47585d412fe18e763decb4e6"
+  },
+  "task": {
+    "existing_error_id": "ERR-SRC-004",
+    "existing_owner_area": "P03 queue reviewed artifact/STOP and privacy NO-LOSS",
+    "stage_before": "SOURCE_PREPARED",
+    "stage_after": "SOURCE_PREPARED_WITH_NEW_STATIC_REGRESSION_EVIDENCE",
+    "new_accepted_unique_taskids": 0,
+    "operational_criteria_before": "1/4",
+    "operational_criteria_after": "1/4",
+    "product_pct": "N/D"
+  },
+  "source_proof": {
+    "pr162_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "live_pr_blob": "d4f582552dad3906f9caa3b4e2dabb52ed89f52b",
+    "donor_R22_branch": "automation/r30/g3b/G3B-20261029T223056MSK-R22-GGUF-STOP-HASH-CAS",
+    "donor_commit": "952ed1b2351d27ecdce19a6a30e03de3e372bc12",
+    "donor_source_blob": "c8670e0fa63608c62a608c55d6c90ad165c1410e",
+    "old_R22_test_blob": "0053f4dd119b6252b42a966e6ea64e908973a91c",
+    "existing_donor_code_reused_not_rewritten": true,
+    "new_test_path": "coordination/automation/r30/G3-B/tests/G3B-20261029T232527MSK-R23-REVIEW-STOP-PR162-GATE.test.mjs",
+    "new_test_git_blob": "90e29c2d529f16612f27fbbf9fd28014d1bc3613",
+    "static_check_runtime": "authenticated GitHub bytes + inline V8 source-text checks",
+    "static_contract_count": 10,
+    "actual_live_pr_pass": 2,
+    "existing_donor_pass": 10,
+    "missing_live_gates": [
+      "license_https_review",
+      "rev_sha_hex_pin",
+      "gguf_expected_bytes_and_hash",
+      "gguf_rights_receipt",
+      "fail_closed_review_before_lease",
+      "after_import_cancel_barrier",
+      "gguf_sha_state_cas",
+      "gguf_sha_terminal_guard"
+    ],
+    "still_present_live": [
+      "stop_state_preserved",
+      "privacy_public_errors"
+    ],
+    "saved_node_test_run": "NOT_RUN",
+    "dotnet_native": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "source_code_patch_this_run": "NONE: previous donor exists; no duplicate code was authored"
+  },
+  "owner_permissions": {
+    "g3b_write_only": [
+      "coordination/automation/r30/G3-B/tests/",
+      "coordination/automation/r30/G3-B/"
+    ],
+    "pr162_writer": "T06 ONLY",
+    "shared_register_writer": "T02 ONLY",
+    "qa_signer": "T08/#2 ONLY",
+    "forbidden_unchanged": [
+      "main",
+      "PR162",
+      "PACK01/native_bridge",
+      "D02/WOW",
+      "original 729 / 3 ZIP"
+    ],
+    "no_build": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "no_e07": true
+  },
+  "errors": [
+    {
+      "error_id": "ERR-SYS-001",
+      "action": "DELEGATE",
+      "owner": "T02/C",
+      "reason": "Existing register maintained by T02; personal receipt only."
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "action": "APPLY",
+      "owner": "G3-B",
+      "reason": "Pinned live PR HEAD/tree plus exact per-path Git blob; no stale SHA promotion."
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "action": "DELEGATE",
+      "owner": "T06/Host50",
+      "reason": "SourceLock active tree/mapped owner remains T06/Host50-only; no unsafe native admission."
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "action": "APPLY",
+      "owner": "G3-B to T06",
+      "reason": "Verified missing reviewed-artifact and STOP/hash guards on exact PR source; newly persisted combined targeted regression."
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "action": "DELEGATE",
+      "owner": "T06",
+      "reason": "Follow exact owner-accepted HEAD; no new acceptance."
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "action": "ALREADY_FIXED",
+      "owner": "T07/T09",
+      "reason": "Historic verified closed; do not reopen."
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "action": "ALREADY_FIXED",
+      "owner": "T04",
+      "reason": "Historic 34/34 verified closed; do not re-audit."
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "DELEGATE",
+      "owner": "T09/T02",
+      "reason": "Task remains INCOMPLETE without independent same-SHA acceptance."
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLY",
+      "owner": "G3-B",
+      "reason": "Keep 1/4 operational status, 0 accepted delta, source candidate not product DONE."
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "DELEGATE",
+      "owner": "T06",
+      "reason": "Do not retry failed saved source write without SHA/idempotency."
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "DELEGATE",
+      "owner": "T08",
+      "reason": "QA must bind head/source_head to exact identical current SHA."
+    }
+  ],
+  "lesson": {
+    "root_cause": "Static source review previously treated an R22 donor source patch as if current PR162 had accepted it. Actual current PR source blob differs and lacks 8 targeted protections.",
+    "applied": "Compare live HEAD/source SHA before accepting historical PASS; exercise current PR RED / exact donor GREEN; add one dedicated regression test without reauthoring source.",
+    "recurrence": "On future exact PR HEAD verify 10/10 guards directly in integrated code; independently run targeted Node + .NET/STOP/privacy tests and owner T08 same-SHA QA; source candidate alone never marks DONE.",
+    "flow_r22": "TOOL_NOT_RUN; R20 READY snapshot stale; no auto-lease or auto-merge"
+  },
+  "self_improvement": {
+    "active_entries_discovered": 11,
+    "entries_triaged": 11,
+    "root_cause_clusters_deduplicated": "process/HEAD, acceptance/Host50, safety/STOP, QA/freeze, historic DONE; 5 clusters",
+    "applied_actions": 3,
+    "delegated_actions": 6,
+    "already_fixed": 2,
+    "remaining_product_acceptance": true
+  },
+  "handoff": {
+    "to": "T06/manual #1",
+    "action": "At fresh owner-read of PR162 (last observed head d23956686fd9634225512f456b194fc723eda933, P03 blob d4f582552dad3906f9caa3b4e2dabb52ed89f52b), integrate existing G3-B R22 donor c8670e0fa63608c62a608c55d6c90ad165c1410e with exact CAS and retain current privacy/STOP; run new targeted test and needed native security gates; never force and never duplicate already present changes.",
+    "to_qa": "T08 independent same-integrated-HEAD acceptance, never donor-only QA",
+    "to_journal": "T02 classify within existing ERR-SRC-004 + ERR-SYS-002; no duplicate TaskID or direct shared journal mutation",
+    "next_checkpoint": "T06 exact live PR source PRE and donor reconciliation -> targeted static/Node/.NET STOP/ACL/consent/privacy/NO-LOSS -> CAS/readback -> independent T08 same-SHA; PRODUCT N/D"
+  }
+}
