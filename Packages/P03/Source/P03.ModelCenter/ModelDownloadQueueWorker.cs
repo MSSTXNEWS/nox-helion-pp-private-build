@@ -15,12 +15,36 @@ public sealed class ModelDownloadQueueWorker(
         {
             var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued);
             if (job is null) return;
-            // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
-            if (job.Kind == ModelJobKind.OllamaPull &&
-                (job.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(job.ImmutableRevision)))
+            // Retain durable legacy jobs, but never start an unreviewed artifact.
+            // A queue record can survive old clients, corrupted JSON or revoked
+            // evidence; enforce the existing owner review contract before leasing.
+            var reviewedLicense = job.LicenseAcknowledged &&
+                Uri.TryCreate(job.LicenseSource, UriKind.Absolute, out var licenseEvidence) &&
+                licenseEvidence.Scheme == Uri.UriSchemeHttps &&
+                string.IsNullOrEmpty(licenseEvidence.UserInfo) &&
+                string.IsNullOrEmpty(licenseEvidence.Fragment);
+            var revision = job.ImmutableRevision;
+            var pinnedRevision = revision is { Length: 64 } && revision.All(Uri.IsHexDigit);
+            if (!pinnedRevision && revision is { Length: 71 } &&
+                revision.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+                pinnedRevision = revision[7..].All(Uri.IsHexDigit);
+            var hasReviewedEvidence = reviewedLicense && (job.Kind switch
             {
-                // The queued snapshot can be cancelled by another NOX window before
-                // this review gate is persisted. Never rewrite terminal Cancelled.
+                ModelJobKind.OllamaPull =>
+                    job.ExpectedOllamaDigest is { Length: 64 } &&
+                    job.ExpectedOllamaDigest.All(Uri.IsHexDigit) &&
+                    pinnedRevision,
+                ModelJobKind.GgufImport =>
+                    job.ExpectedLocalBytes is > 4 &&
+                    job.ExpectedLocalSha256 is { Length: 64 } &&
+                    job.ExpectedLocalSha256.All(Uri.IsHexDigit) &&
+                    !string.IsNullOrWhiteSpace(job.RightsReceiptId) &&
+                    !string.IsNullOrWhiteSpace(job.LocalPath),
+                _ => false
+            });
+            if (!hasReviewedEvidence)
+            {
+                // A second NOX window can cancel after the read. Never rewrite STOP.
                 await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Queued
                     ? j with { State = ModelJobState.Failed,
                         Status = "REVIEW_REQUIRED", Error = "UNPINNED_ARTIFACT" }

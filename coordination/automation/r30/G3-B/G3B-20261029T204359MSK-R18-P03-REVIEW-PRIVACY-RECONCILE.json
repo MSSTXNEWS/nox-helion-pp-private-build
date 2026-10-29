@@ -1,0 +1,147 @@
+{
+  "schema": "NOX_V16_G3B_R18_IMMUTABLE_SOURCE_CHECKPOINT_V1",
+  "run_id": "G3B-20261029T204359MSK-R18-P03-REVIEW-PRIVACY-RECONCILE",
+  "source_only": true,
+  "status": "INCOMPLETE_SOURCE_CANDIDATE_NOT_ACCEPTED",
+  "baseline": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_paragraphs_read": 684,
+    "register_sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "owner_ledger_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "pr162_base_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+    "pr162_base_tree": "c106dc08c61a3150aaa2b8808ce8bf2f678ed95a",
+    "role_archive": "G3-B_pre_r18",
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM"
+  },
+  "scope": {
+    "role": "G3-B",
+    "assigned_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "receipt_path": "coordination/automation/r30/G3-B/G3B-20261029T204359MSK-R18-P03-REVIEW-PRIVACY-RECONCILE.json",
+    "test_path": "coordination/automation/r30/G3-B/tests/G3B-20261029T204359MSK-R18-P03-REVIEW-PRIVACY-RECONCILE.test.py",
+    "owner": "G3-B isolated only",
+    "pr162_writer": "T06",
+    "journal_writer": "T02"
+  },
+  "physical": {
+    "action": "RECONCILE prior unmerged G3B R12 reviewed-evidence preflight with newest T06 progress-privacy HEAD; strengthen evidence URL and immutable revision validation",
+    "source_pre_blob": "d4f582552dad3906f9caa3b4e2dabb52ed89f52b",
+    "source_post_blob": "7c35a248271cfc8b4194247fa69eea6a03187b3c",
+    "from_prior_receipt": "e217f7e218f1fa996a6aadbd8674cf396a6aa346",
+    "one_host": true,
+    "ui_safety_and_stop_preserved": true
+  },
+  "targeted_test": {
+    "type": "JS static contract on exact source PRE/POST before Git save",
+    "checks": {
+      "allowlist credentials in evidence URL": true,
+      "evidence acknowledged and HTTPS": true,
+      "Ollama digest and immutable revision": true,
+      "GGUF bytes+digest+rights": true,
+      "STOP does not become Failed": true,
+      "T06 sanitized progress preserved": true,
+      "one OS queue lease": true,
+      "suffix/prefix unchanged": true
+    },
+    "passed": 8,
+    "total": 8,
+    "not_run": [
+      "C#/.NET native runtime",
+      "Windows EXE",
+      "NSIS",
+      "GitLab CI",
+      "E07"
+    ],
+    "test_file": "coordination/automation/r30/G3-B/tests/G3B-20261029T204359MSK-R18-P03-REVIEW-PRIVACY-RECONCILE.test.py",
+    "test_file_execution": "NOT_RUN"
+  },
+  "error_triage": [
+    {
+      "error_ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "action": "APPLY",
+      "effect": "fresh read, live HEAD, exact preimage and no premature DONE",
+      "owner": "T02 for shared registry"
+    },
+    {
+      "error_ids": [
+        "ERR-SRC-004"
+      ],
+      "action": "APPLY+DELEGATE",
+      "effect": "P03 review gate candidate; not owner-integrated/native accepted",
+      "owner": "T06"
+    },
+    {
+      "error_ids": [
+        "ERR-SRC-003",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "action": "DELEGATE",
+      "owner": "T06/T08",
+      "reason": "other owner Host50 attestation and 13 native routes"
+    },
+    {
+      "error_ids": [
+        "ERR-SRC-005"
+      ],
+      "action": "DELEGATE",
+      "owner": "T08",
+      "reason": "same-head fixture runner still unverified"
+    },
+    {
+      "error_ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "action": "ALREADY_FIXED",
+      "reason": "historical 729/729 ZIP and 34/34 arbitration retained"
+    },
+    {
+      "error_ids": [
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "action": "DELEGATE",
+      "owner": "T06/T09/T02",
+      "reason": "same SHA and 8/8 independent closeout outstanding"
+    }
+  ],
+  "progress": {
+    "scale": "G3-B operational equal-weight x/4, not product",
+    "before": "1/4",
+    "after": "1/4",
+    "delta_pp": 0,
+    "product": "N/D",
+    "accepted_new_TaskIDs": 0
+  },
+  "lessons": {
+    "applied": [
+      "R12 fixes cannot be cherry-picked over moving PR HEAD without preserving T06 privacy changes",
+      "User license evidence must be HTTPS free of URI credentials/fragment, immutable revision must be hash-pinned",
+      "No source candidate or local static check equals native acceptance"
+    ],
+    "remaining": [
+      "T06 current HEAD intake",
+      "T08 same-SHA evidence",
+      "T02 shared register readback"
+    ]
+  },
+  "handoff": {
+    "to": "T06+T02",
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "exact_pre_sha": "d4f582552dad3906f9caa3b4e2dabb52ed89f52b",
+    "exact_post_sha": "7c35a248271cfc8b4194247fa69eea6a03187b3c",
+    "request": "T06 CAS-admit G3B R12 review gate on same SHA while retaining R18 PublicProgressStatus/Digest. T02 record cross-run source/privacy delta only; no duplicate product TaskID."
+  },
+  "checkpoint": {
+    "owner": "T06",
+    "next_action": "Read latest PR162 SHA and exact worker PRE; reconcile candidate by CAS into PR162, independently verify P03 STOP/ACL/privacy/review, then T08 frozen SHA readback. Preserve prior DONE."
+  }
+}
