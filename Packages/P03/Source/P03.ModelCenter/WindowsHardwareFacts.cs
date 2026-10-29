@@ -21,12 +21,23 @@ public static class WindowsHardwareFacts
         if (OperatingSystem.IsWindows())
         {
             try { var status=new MemoryStatusEx {Length=(uint)Marshal.SizeOf<MemoryStatusEx>()};
-                if (GetMemoryStatus(ref status)) {total=checked((long)status.TotalPhysical); available=checked((long)status.AvailablePhysical);}
+                if (GetMemoryStatus(ref status) &&
+                    status.TotalPhysical > 0 && status.AvailablePhysical <= status.TotalPhysical)
+                {
+                    total=checked((long)status.TotalPhysical);
+                    available=checked((long)status.AvailablePhysical);
+                }
                 else error.Add("RAM_SENSOR_FAILED"); }
             catch(Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or OverflowException)
             {error.Add("RAM_SENSOR_UNAVAILABLE");}
             try {var root=Path.GetPathRoot(Environment.SystemDirectory);
-                if (!string.IsNullOrWhiteSpace(root)) {var drive=new DriveInfo(root);if(drive.IsReady)disk=drive.AvailableFreeSpace;}
+                if (!string.IsNullOrWhiteSpace(root))
+                {
+                    var drive=new DriveInfo(root);
+                    if (drive.IsReady) disk=drive.AvailableFreeSpace;
+                    else error.Add("SYSTEM_DISK_UNAVAILABLE");
+                }
+                else error.Add("SYSTEM_DISK_UNAVAILABLE");
             } catch(Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
             {error.Add("SYSTEM_DISK_UNAVAILABLE");}
         }
