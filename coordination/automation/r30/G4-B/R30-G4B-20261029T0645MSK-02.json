@@ -1,0 +1,128 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_G4B_SOURCE_RECEIPT_V2",
+  "run_id": "R30-G4B-20261029T0645MSK-02",
+  "slot": "G4-B",
+  "scope": "NOX_HELION_EXPRESS_INTEGRATOR_FIN_ZAGR_V16_LOADER_ONLY_NOT_MAIN_NOX_SOURCE_ONLY",
+  "status": "SOURCE_PATCH_TESTED_RUNTIME_HOLD",
+  "report_gate": "GIT_RECEIPT_READBACK_REQUIRED; SHARED_GOOGLE_DOCS_ONLY_ASTRA_C",
+  "product_task_status": "NOT_ACCEPTED",
+  "source_ready": false,
+  "release_ready": false,
+  "product_progress": "N/D",
+  "base_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "base_commit_sha": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "previous_owner_run": "R30-G4B-20261029T0550MSK-01",
+  "previous_owner_head_sha": "e4a0eb3fe96ae10a3e5ae2ff8eba4db336d5c529",
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T0645MSK-02",
+  "owner_branch_pre_receipt_head_sha": "1c04bd7c3f3fa1b75d7ece2d53b45f675a8e2966",
+  "ownership_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "G4B_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ]
+  },
+  "source_inputs": {
+    "v16_spec_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "rules_56_git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections_read": [
+      "33 / 56 consolidated rules",
+      "54",
+      "55",
+      "56 with latest R29 loader-only override"
+    ],
+    "shared_master_read": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historical_c34_read": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "latest_e06_report_read": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "latest_e06_lessons_read": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "conflict_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "historical_snapshot_directories_indexed": 25,
+      "full_snapshot_bytes_read": false,
+      "reason": "GitHub connector fetch_file rejects directories; no complete 25 snapshot byte-by-byte inspection claimed",
+      "donor_branches": [
+        "astra/r29-a04-20261029",
+        "astra-b/r29-b1-20261029",
+        "astra-b/r29-b2-20261029"
+      ],
+      "donor_merge": "NOT_PERFORMED"
+    }
+  },
+  "task_id": "G4B-R30-PYPA-INSTALLED-WHEEL-TAG-GATE-02",
+  "parent_planned_task": "G4B-R30-GPU-WHEEL-ABI-LOCK-01",
+  "parent_task_state": "HOLD: hashed target wheel closure, CUDA ABI and Windows runtime not certified",
+  "change_summary": "Preflight uses PyPA packaging to validate declared versions for all eight QLoRA root dependencies and installed WHEEL compatibility tags before NVIDIA vendor telemetry; disallows unavailable/ambiguous tags. No package install/download/network/GPU training.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_sha_pre": "b46d9b971918bdd70c2eb41d77fe1172ca991267",
+      "git_blob_sha_post": "7bbc9405ea33dc5247b649f4f3d4c8f26c16dfe1",
+      "sha256_pre": "3144c540f67aacb9379de59e40f526ebc17886ef6cd55a241fa60438a10df979",
+      "sha256_post": "2629590b311a5f490401b9e483008f6d49164a8e9285529f7b2d5f1babb33aea",
+      "commit_sha": "b7953f5321099a43320be0d8c622610b82b3879d"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "git_blob_sha_pre": "c77360d7f54ae3fb60535054ebbb30dad657dc0f",
+      "git_blob_sha_post": "fbe2b3a97b181a600cb5c228b20a120fffcef95d",
+      "sha256_pre": "2d03259ffd832d5b7f94ca3cc28ced567b0b80287f14e4a4086e01fe07472c47",
+      "sha256_post": "b7e8e48625dab3b3fc852254cb789781851737a921be0ad1ff4b9752806782c3",
+      "commit_sha": "1c04bd7c3f3fa1b75d7ece2d53b45f675a8e2966"
+    }
+  ],
+  "tests": {
+    "actual_command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s /mnt/data/g4btest/tests/P04 -p test_local_gpu_preflight.py -v",
+    "result": "PASS 9/9 (0.083s), zero failures/errors",
+    "syntax_command": "python -m py_compile /mnt/data/g4btest/Packages/P04/preflight_local_gpu.py /mnt/data/g4btest/tests/P04/test_local_gpu_preflight.py",
+    "syntax_result": "PASS",
+    "exact_remote_git_blobs_reproduced_in_isolated_test": [
+      "7bbc9405ea33dc5247b649f4f3d4c8f26c16dfe1",
+      "fbe2b3a97b181a600cb5c228b20a120fffcef95d"
+    ],
+    "environment": "Linux Python, packaging wheel parser, synthetic train_qlora/test torch fixture; no Windows/NVIDIA GPU/CUDA, no actual local target wheel testing",
+    "regressions_added": [
+      "out-of-range torch requirement before telemetry",
+      "incompatible WHEEL ABI tag before telemetry",
+      "missing/ambiguous WHEEL metadata before telemetry",
+      "compatible installed PyPA root tags still do not assert wheel hash lock/CUDA"
+    ]
+  },
+  "root_cause": "Previous preflight treated any installed Python package version as sufficient, enabling false NVIDIA hardware admission despite PyPA version-range or installed wheel ABI mismatch.",
+  "previous_lesson_applied": "G4B_ARCH_ABI_GUARD_BEFORE_VENDOR_YIELD: retain Windows CPU pointer-width gate before vendor calls; extend early fail-closed admission to installed PyPA roots and WHEEL tags.",
+  "self_improvement": {
+    "lesson_id": "G4B_PYPA_ABI_VS_HASHED_LOCK_EVIDENCE_BOUNDARY",
+    "error": "Installed package metadata presence was conflated with compatible root package range and wheel ABI.",
+    "correction": "Read-only local root version and WHEEL tag checks; synthetic negative/positive regression; require fixed preimages and exact Git blob readback.",
+    "prevention": "Keep statuses INSTALLED_ROOT_TAG_MATCH_ONLY distinct from a pinned wheel SHA-256 closure, CUDA runtime availability, model/dataset rights and any completed LoRA training."
+  },
+  "holds": [
+    "Pinned exact target Windows AMD64 Python/PyPA wheel hashes and full transitive dependency lock NOT_VERIFIED",
+    "CUDA runtime/driver/torch CUDA binary ABI on the target Windows GPU host NOT_RUN",
+    "Physical NVIDIA GPU/temperature/VRAM and CPU Windows tests NOT_RUN",
+    "Rights-approved model/dataset and LoRA optimizer/checkpoint/eval/merge NOT_RUN",
+    "Complete 25 full snapshot bytes, physical original 729 archive SHA NOT_VERIFIED",
+    "Independent SOURCE_CODE_COMPLETE, E06/E07 and final release acceptance HOLD"
+  ],
+  "untouched": {
+    "snapshots_25": true,
+    "original_archives": true,
+    "forbidden_paths": true,
+    "PR_162": true,
+    "main": true,
+    "shared_R30": true,
+    "other_owners": true,
+    "gitlab_ci": true,
+    "EXE_NSIS": true,
+    "final_integration": true
+  },
+  "files_changed_count_before_receipt": 2,
+  "new_product_done_taskids": 0,
+  "global_google_docs_write": "NOT_PERFORMED_ASTRA_C_SINGLE_WRITER_ONLY"
+}
