@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_V16_G5B_T10_R19_ISOLATED_QA_V1",
+  "run_id": "NOX-V16-G5B-T10-20261029T213428MSK-R19-CRASH-CONSISTENCY-QA",
+  "task_id": "T10",
+  "role": "G5-B/T10",
+  "status": "INCOMPLETE_SOURCE_READY_HOLD",
+  "actual_first_observed_msk": "2026-10-29T21:34:28+03:00",
+  "checkpoint_observed_msk": "2026-10-29T21:38:20+03:00",
+  "canon": {
+    "revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+    "paragraphs": 691,
+    "characters": 210417,
+    "rules_33": 56
+  },
+  "prestart": {
+    "R19_policy_blob": "df0c6c0017fb5ed8773630e261f00e54bbd172c0",
+    "R19_queue_blob": "7f01d550d06fde9a70edc1b065507178b08de44f",
+    "own_prompt_blobs": [
+      "e278e4031c5f3c1ccd8a3538dbde0723706deb4e",
+      "f25f582d974bc59609e1b0befc098d3eda459502",
+      "ab3bd919949b4737f481696d4262a577d9b28cfe",
+      "53efabcbff6380669e40eb6a6b5b418b2d475963",
+      "a1a079b51e455cf92e813680416fe4f991adf0f2"
+    ],
+    "error_register_blob": "fecf68671d30b0c879ae5f43fbaa210143e3c530",
+    "error_counts": {
+      "open": 5,
+      "fix_unverified": 4,
+      "verified_closed": 2,
+      "total": 11
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pre_head": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+    "post_head": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+    "tree_sha": "106c03a6a8b85700d1b2442f345bb43380436977",
+    "production_files_changed": 0,
+    "file": "coordination/e06/stage_p01.py",
+    "blob": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+    "existing_test": "tests/e06/test_stage_p01_shared_zip_guard.py",
+    "test_blob": "d67ec73b707526ecf6b878efe179254ec026f009"
+  },
+  "t09": {
+    "latest_read_receipt_blob": "f8a57a41cd9195368b8ddfeddcbb60dff31f4a65",
+    "latest_read_run": "NOX-V16-T09-20261029T204105MSK-R20-SECURITY-CONTRACT-HANDOFF",
+    "frozen_head": null,
+    "frozen_tree": null,
+    "accepted_manifest": null
+  },
+  "QA": {
+    "type": "ISOLATED_POSIX_PROCESS_EXIT_REPRO_AND_CURRENT_GIT_SOURCE_STATIC_CORROBORATION; NOT original Windows native execution",
+    "source_line_evidence": {
+      "lock_exists_preflight": 93,
+      "link_lock_before_R11": 192,
+      "rename_R11": 199,
+      "except_cleanup": 200
+    },
+    "test_line_evidence": {
+      "existing_exception_test": 197,
+      "link_collision_test": 201,
+      "promotion_OSError_test": 209,
+      "hard_exit_test": false
+    },
+    "reproduction": "In isolated temp workdir create pending/source_lock.json and pending/R11, child runs os.link(pending_lock,live_lock); os._exit(52); parent inspects live lock and R11.",
+    "observed": {
+      "exit_code": 52,
+      "lock_exists": true,
+      "R11_exists": false,
+      "inodes_match": true,
+      "retry_would_hold": true
+    },
+    "risk": "Crash between hardlink and R11 rename bypasses Python exception/finally cleanup, leaving orphan source_lock.json; existing retry preflight HOLD. Liveness/operational consistency gap, NOT proven user-data loss or Windows native failure.",
+    "owner_error": "ERR-SRC-004",
+    "new_product_task_id_created": false
+  },
+  "gates": {
+    "A_READ": "PASS",
+    "B_PHYSICAL": "PASS_ISOLATED_NEGATIVE_REPRO",
+    "C_JOURNAL": "GIT_SAVE_THEN_READBACK_REQUIRED",
+    "D_LESSONS": "READ_11_DEDUP_5_DELEGATED_ERR_SRC_004"
+  },
+  "progress": {
+    "before": 1,
+    "total": 7,
+    "after": 1,
+    "before_percent": 14.3,
+    "after_percent": 14.3,
+    "delta_pp": 0,
+    "bar": "█░░░░░░░░░",
+    "remaining": 6,
+    "only_done": "historical_original_ZIP729",
+    "product": "N/D",
+    "stages": {
+      "source_prepared": "P01 code already present",
+      "source_verified": "negative isolated QA only",
+      "integrated": "on current PR HEAD",
+      "owner_qa_accepted": "HOLD"
+    }
+  },
+  "handoff": {
+    "to": "T06/P01 source owner; T08 same-head QA; T09 freeze; T02 shared journal",
+    "action": "Design owner-checked crash recovery or atomic reconciliation for a dangling source_lock.json with no R11, without automatically deleting unknown receipts or user files.",
+    "required_regression": "Kill child immediately after link and before R11 rename; relaunch safely, verify owner receipt identity, no foreign-lock overwrite, no data loss, STOP/ACL/native consent retained; Windows negative test necessary.",
+    "source_sha": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+    "next_checkpoint": "T06 source fix PRE/POST + focused negative and security test; independent T08 exact same SHA; T09 signed freeze; only then T10 SOURCE_READY."
+  },
+  "lesson_coverage": {
+    "active_errors_read": 11,
+    "clusters": 5,
+    "physical_proofs": 1,
+    "delegated_clusters": 1,
+    "historical_closed_preserved": 2,
+    "product_done_delta": 0
+  },
+  "boundaries": {
+    "main_PR162_shared_write": false,
+    "T02_shared_docs_write": false,
+    "build_exe_nsis_ci_e07": false
+  }
+}
