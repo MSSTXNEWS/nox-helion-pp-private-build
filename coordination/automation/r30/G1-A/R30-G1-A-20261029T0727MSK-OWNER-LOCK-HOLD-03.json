@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1_A_OWNER_HOLD_RECEIPT_V1",
+  "runId": "R30-G1-A-20261029T0727MSK-OWNER-LOCK-HOLD-03",
+  "slot": "G1-A",
+  "status": "OWNER_HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — loader-installer ONLY, SOURCE ONLY",
+  "attempt": "Read-only validation and permission conflict detection; no source writes permitted",
+  "sourceBase": {
+    "branch": "automation/r30/g1a/R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+    "commit": "5ed48a5cdc119a5d7be4c74582c5ae66af6f9206"
+  },
+  "privateBranch": "automation/r30/g1a/R30-G1-A-20261029T0727MSK-OWNER-LOCK-HOLD-03",
+  "lock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "forbidden_paths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "collisionCount": 3,
+    "collisionProof": "Every exact assigned path starts with forbidden Installer/ prefix. Treat conflicting allow/deny as DENY until manifest corrected by sole coordinator."
+  },
+  "preimageGitBlobs": {
+    "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi": "969f8c11eaca20c69e9610422731862c7bd3ed62",
+    "stage/proposals/P01/C09/Installer/Verify-Payload.ps1": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+    "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+  },
+  "prerequisitesRead": [
+    "§33 all 56 consolidated rules, Git blob 46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "V16 §§54–56 and latest R29 loader-only override, Google Docs 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "R30 indexed 25 preserved snapshot directories; NO modification",
+    "R30 conflict index ALL_RESULTS_CONFLICT_INDEX_20261029.json, blob c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "Astra-C latest master/error journal and E06 report; C34 history",
+    "Google Drive latest E06 self-improvement: ASTRA-C-R30-20261029T0630MSK-01 explicitly requires G1-A OWNER_HOLD"
+  ],
+  "snapshotEvidence": {
+    "frozenSnapshotCount": 25,
+    "legacyNSISGitBlobR29A01": "19233446b6ee8b508106a548ff67eaffe13dbb82",
+    "legacyNSISGitBlobR29A2P01": "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb",
+    "collectionIndex": "Historic divergent NSIS/Remove-InstalledPayload candidate branches require explicit conflict-resolution; no blind merge."
+  },
+  "tests": {
+    "ownerLockGate": {
+      "execution": "Actual ECMAScript read-only prefix test over freshly fetched GitHub lock JSON",
+      "commandDescription": "G1A assigned_paths.filter(p => forbidden_paths.some(prefix => p.startsWith(prefix)))",
+      "result": "3/3 explicit owned source paths collide; sourceWriteAllowed=false; OWNER_HOLD"
+    },
+    "sourceRegression": "NOT_RUN — forbidden paths block modification and acceptance of an additional source patch",
+    "PowerShell51": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "CI": "NOT_RUN",
+    "WindowsEXE": "NOT_BUILT"
+  },
+  "codeChanges": [],
+  "receiptOnlyWrite": true,
+  "gitShaPreimage": "5ed48a5cdc119a5d7be4c74582c5ae66af6f9206",
+  "ownerRequestToAstraC": "Fix exclusive-owner lock in a separately approved coordinator revision: remove/adjust G1-A forbidden Installer/ prefix to exempt exactly its 3 assigned files, explicitly authorize uniquely named G1-A tests if desired; then publish and read back new lock SHA before any future G1-A source write. Do not let G1-A edit lock itself.",
+  "nextDefectCandidateOnly": "Known unclosed risk from previous G1-A receipt: post-attestation registry-write failure may leave inconsistent registration; DO NOT code while ownership denial remains; revalidate newer branches first.",
+  "singleLesson": "Ownership lists need a mechanical non-overlap gate before patching. An exact assigned file still conflicts with a broader forbidden prefix: fail closed, preserve existing blobs, publish immutable HOLD receipt rather than 'fix' under ambiguous authority. Do not re-run previous installer patch or pretend source tests ran.",
+  "driveWrite": "NOT_ATTEMPTED — Astra-C sole authorized Google Docs writer",
+  "sourceComplete": "HOLD",
+  "release": "HOLD",
+  "remarks": "No edits to shared branch/PR162, foreign files, 25 snapshots, GitLab, installer sources or tests."
+}
