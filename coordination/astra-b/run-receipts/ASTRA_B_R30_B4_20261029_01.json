@@ -1,0 +1,18 @@
+{
+  "schema": "ASTRA_B_R30_SOURCE_ONLY_V1",
+  "run_id": "ASTRA-B-R30-20261029-B4-01",
+  "label": "B4",
+  "actual_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "task_id": "P05-DRIVE-IDEMPOTENT-REVISION",
+  "owner_source_branch": "astra-b/r29-b4-20261029",
+  "code_commit": "aa76e4df92106686ba4c6e9dd273fe70c9d9c7b3",
+  "status": "SAVED_SOURCE_CANDIDATE",
+  "focused_check": "SOURCE_ASSERT_PASS; DOTNET_NOT_RUN",
+  "lesson": "ALREADY_PRESENT must refer to one unchanged document revision.",
+  "report_gate": "ASTRA_A_SHARED_DOCS_WRITER_ONLY",
+  "original_archive_729": "NOT_RUN",
+  "Windows_native": "NOT_RUN",
+  "finished_taskid_coverage": "N_D",
+  "release": "HOLD"
+}
