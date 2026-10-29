@@ -311,6 +311,7 @@ class ExistingP02Adapter:
         if model not in installed:raise HostHold("Selected model not installed")
         check_scope()
         conversation = self.store.history(scope[0],scope[1],scope[2],80)
+        check_scope()  # Owner SQLite history can execute native callbacks.
         conversation = conversation + [{"role":"user","content":message}]
         answer = []
         bytes_seen = 0
