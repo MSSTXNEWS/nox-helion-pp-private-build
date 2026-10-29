@@ -294,8 +294,29 @@ export function projectCanonicalEvents(events, runId, nowMs) {
   // Bounded fail-closed projection: never let a raw >64-event tail hide an
   // earlier terminal ERROR or an event_id collision. E06 owns the event log.
   if (events.length>4096) return {state:'HOLD_JOURNAL_OVERFLOW',errors:null};
+  // Previously reported R30 cross-type identity collision, same native RunID.
+  const nonterminalTypes=new Set(['task.started','task.progress','training.step',
+    'checkpoint.saved','task.completed','gpu.sample']);
+  const reservedIds=new Set(),reservedSequences=new Map();
+  for (const item of events) {
+    if (item?.run_id!==runId || !nonterminalTypes.has(item.event_type)) continue;
+    if (typeof item.event_id!=='string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(item.event_id))
+      return {state:'HOLD_MALFORMED_NONTERMINAL_ID',errors:null};
+    reservedIds.add(item.event_id);
+    if (item.event_sequence!==undefined) {
+      if (typeof item.task_id!=='string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(item.task_id) ||
+          !Number.isSafeInteger(item.event_sequence) || item.event_sequence<1)
+        return {state:'HOLD_MALFORMED_NONTERMINAL_SEQUENCE',errors:null};
+      const key=JSON.stringify([item.task_id,item.event_sequence]);
+      const prior=reservedSequences.get(key);
+      if (prior!==undefined && prior!==item.event_id)
+        return {state:'HOLD_EVENT_SEQUENCE_COLLISION',errors:null};
+      reservedSequences.set(key,item.event_id);
+    }
+  }
   const terminal=[];
   const seen=new Map();
+  const terminalSequences=new Map();
   // errors is the deduplicated, verified count for THIS bounded RunID journal,
   // not merely the most recent 30-second LIVE status window. An older native
   // failure must not silently turn into a false “0 errors” after it ages out.
@@ -321,13 +342,25 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // replayed native receipt, not an instruction to choose arrival order.
     const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,
       e.task_id,e.package_id,e.action_id,e.timestamp_utc,e.state,
-      e.source,e.message,e.evidence_verified]);
+      e.source,e.message,e.evidence_verified,e.event_sequence??null]);
+    if (reservedIds.has(e.event_id))
+      return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
     const previous=seen.get(e.event_id);
     if (previous!==undefined) {
       if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
       continue; // Identical replay, counted once.
     }
     seen.set(e.event_id,fingerprint);
+    if (e.event_sequence!==undefined) {
+      if (!Number.isSafeInteger(e.event_sequence) || e.event_sequence<1)
+        return {state:'HOLD_EVENT_SEQUENCE_INVALID',errors:null};
+      const key=JSON.stringify([e.task_id,e.event_sequence]);
+      const priorTerminal=terminalSequences.get(key),priorNonterminal=reservedSequences.get(key);
+      if ((priorTerminal!==undefined && priorTerminal!==e.event_id) ||
+          (priorNonterminal!==undefined && priorNonterminal!==e.event_id))
+        return {state:'HOLD_EVENT_SEQUENCE_COLLISION',errors:null};
+      terminalSequences.set(key,e.event_id);
+    }
     if (e.event_type==='task.failed') runErrorCount++;
     // Only recent terminals determine the current LIVE state; older verified
     // errors remain counted as history without becoming a current error tile.

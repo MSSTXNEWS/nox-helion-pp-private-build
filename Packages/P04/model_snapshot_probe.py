@@ -62,7 +62,7 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _weight_header(path: Path) -> int:
+def _weight_header(path: Path) -> frozenset[str]:
     if not _regular(path):
         raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
     size = path.stat().st_size
@@ -88,7 +88,7 @@ def _weight_header(path: Path) -> int:
         for t in tensors
     ):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    return len(tensors)
+    return frozenset(k for k in header if k != "__metadata__")
 
 
 def inspect(root: Path, expected_revision: str | None) -> dict:
@@ -117,8 +117,17 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             weights = metadata.get("weight_map")
             if not isinstance(weights, dict) or not weights:
                 raise ValueError("MODEL_SHARD_INDEX_INVALID")
-            names = sorted(set(weights.values()))
+            # Linear index-to-shard map; verify actual tensor membership per shard.
+            expected_by_shard: dict[str, set[str]] = {}
+            for tensor_name, shard_name in weights.items():
+                if not isinstance(tensor_name, str) or not tensor_name.strip():
+                    raise ValueError("MODEL_SHARD_INDEX_INVALID")
+                if not isinstance(shard_name, str) or not shard_name:
+                    raise ValueError("MODEL_SHARD_PATH_UNSAFE")
+                expected_by_shard.setdefault(shard_name, set()).add(tensor_name)
+            names = sorted(expected_by_shard)
         else:
+            expected_by_shard = None
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
@@ -127,8 +136,10 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
-            tensor_count = _weight_header(file)
-            report["tensor_headers"] += tensor_count
+            tensor_names = _weight_header(file)
+            if expected_by_shard is not None and tensor_names != expected_by_shard[name]:
+                raise ValueError("MODEL_SHARD_TENSOR_MAP_MISMATCH")
+            report["tensor_headers"] += len(tensor_names)
             report["weight_files"].append({
                 "name": name,
                 "bytes": file.stat().st_size,

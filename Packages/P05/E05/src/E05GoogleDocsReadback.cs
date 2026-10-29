@@ -39,7 +39,7 @@ public sealed class GoogleDocsAppendReadback
 
         string uri = "https://docs.googleapis.com/v1/documents/" + documentId;
         string token = await accessToken(stop).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(token))
+        if (!ValidBearerToken(token))
             return new(runId, documentId, null, null, "NO_AUTH", entry.Length);
 
         try
@@ -94,6 +94,27 @@ public sealed class GoogleDocsAppendReadback
         }
         // Cancellation should propagate, not be interpreted as success.
     }
+    // R30 owner fix: RFC6750 token68, ASCII only; '=' only trailing.
+    private static bool ValidBearerToken(string? token)
+    {
+        if (string.IsNullOrEmpty(token) || token.Length > 16384) return false;
+        bool hasData = false, padding = false;
+        foreach (char c in token)
+        {
+            if (c == '=')
+            {
+                if (!hasData) return false;
+                padding = true;
+                continue;
+            }
+            if (padding || !(char.IsAsciiLetterOrDigit(c) ||
+                c is '-' or '.' or '_' or '~' or '+' or '/'))
+                return false;
+            hasData = true;
+        }
+        return hasData;
+    }
+
     private static bool IsSafeRunId(string id)
     {
         foreach (char c in id)
