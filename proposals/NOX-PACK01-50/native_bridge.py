@@ -400,6 +400,22 @@ class NoxPackHost:
         pinned_available = port.available
         pinned_owner = port.owner
         pinned_receipt = port.evidence_id
+        # A callback on route A can alter a DIFFERENT frozen BoundPort with
+        # object.__setattr__. Pin the entire registry before authorization;
+        # guarding only route A would leave route B silently compromised.
+        pinned_port_state = {}
+        for bound_route, bound_port in pinned_ports.items():
+            if (bound_route not in pinned_routes or type(bound_port) is not BoundPort or
+                    type(bound_port.owner) is not int or
+                    bound_port.owner != pinned_routes[bound_route]["owner"] or
+                    type(bound_port.evidence_id) is not str or
+                    not bound_port.evidence_id.strip() or
+                    not callable(bound_port.call) or
+                    not callable(bound_port.available)):
+                raise HostHold("Invalid native owner registry during request")
+            pinned_port_state[bound_route] = (
+                bound_port, bound_port.call, bound_port.available,
+                bound_port.owner, bound_port.evidence_id)
         def require_same_port():
             if (self.ports.get(route) is not port or
                     port.call is not pinned_call or
@@ -407,6 +423,16 @@ class NoxPackHost:
                     port.owner != pinned_owner or
                     port.evidence_id != pinned_receipt):
                 raise HostHold("Native owner binding changed during authorization")
+            if len(pinned_ports) != len(pinned_port_state):
+                raise HostHold("Native owner registry size changed during request")
+            for bound_route, state in pinned_port_state.items():
+                bound_port, call, available, owner, receipt = state
+                if (pinned_ports.get(bound_route) is not bound_port or
+                        bound_port.call is not call or
+                        bound_port.available is not available or
+                        bound_port.owner != owner or
+                        bound_port.evidence_id != receipt):
+                    raise HostHold("Native owner registry changed during request")
         # Revalidate the actual SID-bound lease before and after ALL callbacks,
         # including fresh dangerous consent, readiness, STOP and owner output.
         def require_current_authority():
