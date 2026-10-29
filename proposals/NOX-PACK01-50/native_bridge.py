@@ -6,10 +6,15 @@ Unknown/unavailable actions always HOLD; never simulate completion.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+from contextvars import ContextVar
 from types import MappingProxyType
 from typing import Callable, Any
 import json
 import re
+
+# Host execution context is bound synchronously to its native owner call;
+# it is not supplied by WebView/page JSON and never grants a new capability.
+_ACTIVE_NATIVE_AUTHORITY = ContextVar("nox_pack01_active_native_authority", default=None)
 
 MAX_TEXT = 20000
 MAX_ANSWER = 60000
@@ -134,6 +139,14 @@ def _native_owner_scope(session: NativeSession):
     if type(session) is not NativeSession:
         raise HostDenied("Native owner session required")
     session.validate()
+    active_authority = _ACTIVE_NATIVE_AUTHORITY.get()
+    if active_authority is not None:
+        active_session, require_current_authority = active_authority
+        if session is not active_session:
+            raise HostDenied("Native owner callback crossed authenticated sessions")
+        # Reconsult the real Windows SID/lease revocation verifier at every
+        # adapter checkpoint, including immediately before owner side effects.
+        require_current_authority()
     return (session.tenant, session.principal, session.chat_id,
             session.allowed, session.private_approved,
             session.windows_sid, session.session_lease)
@@ -349,7 +362,14 @@ class NoxPackHost:
         if self.ports.get(route) is not port:
             raise HostHold("Native owner binding changed during request admission")
         if not ready:raise HostHold("Owner backend unavailable")
-        result = port.call(session,frozen_payload)
+        # Nested P02/E11 callbacks can outlive the initial request admission.
+        # Give their existing _native_owner_scope checkpoints the SAME pinned
+        # host authority guard, then restore context even if an owner raises.
+        authority_token = _ACTIVE_NATIVE_AUTHORITY.set((session, require_current_authority))
+        try:
+            result = port.call(session,frozen_payload)
+        finally:
+            _ACTIVE_NATIVE_AUTHORITY.reset(authority_token)
         # A native handler may return data after revoking caller identity/port.
         # Fail closed before publishing any cross-session owner result.
         require_current_authority()
