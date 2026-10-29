@@ -1,0 +1,218 @@
+{
+  "schema": "NOX_V16_T08_EXACT_SOURCE_BLOCKER_RECEIPT_R18",
+  "task_id": "T08",
+  "run_id": "NOX-V16-T08-20261029T175448MSK-R18-AUTO",
+  "product": "NOX EXPRESS INTEGRATOR Windows loader ONLY",
+  "planned_start_msk": "2026-10-29T17:40:00+03:00",
+  "actual_start_msk": "2026-10-29T17:54:48+03:00",
+  "saved_at_utc": "2026-10-29T15:03:24.716Z",
+  "canonical_source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_before": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+    "head_after": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+    "tree": "4aed4b53e5f9af0ccba1811a2d8f39e17aa41f3e",
+    "t06_owner_accepted_head_tree_manifest": false,
+    "manifest_sha256": null,
+    "source_patch_by_t08": false,
+    "no_canonical_write": true
+  },
+  "sources_read": {
+    "canon_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMSpfXmj-_deA8kkTmkPS8w834ZrnD5s6Qe-trrwvK0Hr8BFk0e08ywHvEVDZw3lSF5pb7SQWUnLSet1oRz261foi-WhTgB43W_AbM0",
+    "V16_sections": "1-33 and 54-56, R29, 56 historical rules",
+    "active_error_register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "active_error_register_blob": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+    "cross_error_index_branch": "manual/t11/gitlab-free-readonly-handoff-20261029-r01",
+    "cross_error_index_blob": "dba5a0230fe4dd73b68095431f426c3de7111a8f",
+    "journal_revisions": {
+      "Master": "AHj4eMSOztqNkx62K6CClwDRtbL8kBIJhwsauYWDGTEbfOxbNdmsXErTQHzNA5osCW-YSa2saF1zRdCvyCBtylxFMfegYPTZxDzkQXC88Kg",
+      "E06": "AHj4eMTYRWoXsNvT2nk93ZhaW4jX9B0hbZ0F8ToIMO-4s4DO0nLkzFXlxVHHcNKsDFuz6qBrnZxY_vMQ3U2kji1iBIqvaLk3-JB-I8SSLwo",
+      "Lessons": "AHj4eMQ1PEoVa43ehB72QcjCdCGqsYH_7uA_c3PfQyoRLmGNH8J3bxbvPRgO98xUZdrYCujiYyRKAvsxazaywFHgyX-uqS-He5mq7DNg5Nc",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "registry": {
+    "OPEN": 3,
+    "FIX_APPLIED_UNVERIFIED": 2,
+    "VERIFIED_CLOSED": 2,
+    "history_coverage": "BACKFILL_REQUIRED_NOT_CLAIMED_COMPLETE",
+    "ack": [
+      {
+        "error_id": "ERR-SYS-001",
+        "status": "OPEN",
+        "ack": "OWNER_HANDOFF",
+        "owner": "T02/C",
+        "reason": "Full cumulative registry blob read and acknowledged; coordinator must reconcile cross-run readback, cannot alter shared register from T08."
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "status": "OPEN",
+        "ack": "APPLIED",
+        "owner": "T02/C",
+        "reason": "Current Git branch HEAD/tree reread and source-locked to c1323dd.. in this run; historical 729 ZIP PASS preserved; process closure requires additional cross-run evidence."
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "ack": "OWNER_HANDOFF",
+        "owner": "T06/Host50",
+        "reason": "Existing owner Host50 admission PRE 9a3cdd...→POST efd5af... verified readback on current exact HEAD; native owner attestation/13 individual bindings and same-HEAD independent verification absent, cannot close."
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "status": "OPEN",
+        "ack": "OWNER_HANDOFF",
+        "owner": "T06 plus P01-P05",
+        "reason": "Full 8/8 integrated owner acceptance and mandatory 13 Host50 native contracts not demonstrated; gate rejects completion."
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "ack": "NO_IMPACT",
+        "owner": "T06",
+        "reason": "P2 fixture import fix not changed in observed delta and source not owner-accepted; no duplicate fixture tests performed or false VERIFIED_CLOSED."
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "ack": "ALREADY_VERIFIED",
+        "owner": "T07/T09",
+        "reason": "Original ZIP 60364346 bytes and 729/729 SHA/CRC PASS already attested; no re-open/no re-hash."
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "ack": "ALREADY_VERIFIED",
+        "owner": "T04",
+        "reason": "Existing 34/34 archive arbitration decisions preserved; no re-audit."
+      }
+    ]
+  },
+  "cross_owner_incident_ack": [
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "ack": "APPLIED",
+      "reason": "Do not conflate receipt, source owner acceptance, and independent QA. Ran exact-source T08 gate with real missing evidence."
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "ack": "APPLIED",
+      "reason": "Physical single source-only gate invocation, immutable receipt, and precise owner request instead of empty HOLD-only claim."
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ack": "OWNER_HANDOFF",
+      "reason": "T06 guard typed SHA patch and source runner hook now present on c1323dd, but cannot claim T06 8/8."
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "ack": "APPLIED",
+      "reason": "Exact existing T08 closeout gate executed on current one-tree SHA; HOLD_EVIDENCE preserved, no invented native assurance."
+    }
+  ],
+  "mega_block": {
+    "changed_product_paths_by_T08": [],
+    "changed_since_last_t08_checkpoint": {
+      "source_product_files": 0,
+      "coordination_paths": [
+        "coordination/automation/t08/t08_autofix_closeout_gate.py",
+        "coordination/automation/t08/test_t08_autofix_closeout_gate.py",
+        "coordination/e06/t06_closeout_guard.py",
+        "coordination/e06/test_t06_closeout_guard.py",
+        "coordination/e06/run_source_integrations_r13.py"
+      ],
+      "baseline_head": "7f8f022087e6653ef0dcea2ff4dfd68a80d76950",
+      "latest_head": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10"
+    },
+    "physical_sha_readback": {
+      "host50_admission": {
+        "path": "coordination/e06_host50/admission.py",
+        "pre_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+        "post_blob": "efd5af93853d04cf5c1748af41b13570fc49c0ad"
+      },
+      "t08_gate": {
+        "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+        "pre_blob": "7ed3692242f280ceb15732f13dd8e241abb74ed1",
+        "post_blob": "56806fb744694b2dd146db88229597722953ddd9"
+      },
+      "t06_closeout_guard": {
+        "path": "coordination/e06/t06_closeout_guard.py",
+        "post_blob": "422af16dfea51210b1c667cc5183ec5f0eb0bf63"
+      },
+      "t06_runner": {
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "post_blob": "90274f85e414e6321b9a5c6eb82ec21a7811abd8"
+      }
+    },
+    "scope_check": "Host50 source static markers present: source seal, owner/native verifier, origin, STOP targets, ACL/scopes and native_consent; this is not proof of behavior or native handler acceptance.",
+    "one_verification": {
+      "type": "EXECUTED_EXACT_GIT_BLOB_PYTHON_CLOSEOUT_GUARD",
+      "guard_blob": "56806fb744694b2dd146db88229597722953ddd9",
+      "sha1_blob_recomputed_locally": "56806fb744694b2dd146db88229597722953ddd9",
+      "source_head": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+      "source_tree": "4aed4b53e5f9af0ccba1811a2d8f39e17aa41f3e",
+      "input_sha256": "c44943bfdfe450fe01bd3b225583e56f5c4d80955d176ff3ee2f68b8a1b2c60e",
+      "output_sha256": "999fa0a78ecc905807a78cdc9858103aaafc6359db7387cc9e7312e73662c214",
+      "result": "HOLD_EVIDENCE",
+      "actual_gate_progress": "0/3",
+      "why": "No current T06 FULL owner acceptance/manifest; no same-head P0/P1 disposition; current-T09/T10 final delivered-and-readback evidence absent.",
+      "native_runtime": "NOT_RUN",
+      "full_test_suite": "NOT_RUN"
+    },
+    "no_code_blockers_claim": "NOT_FINAL_WITHOUT_T06_OWNER_ACCEPTED_EXACT_HEAD",
+    "new_source_patch_count": 0,
+    "new_defect_count": 0
+  },
+  "progress": {
+    "fixed_criteria_total": 3,
+    "previous_confirmed": 1,
+    "current_confirmed": 1,
+    "previous_pct": 33.3,
+    "current_pct": 33.3,
+    "delta_pp": 0,
+    "bar": "███░░░░░░░",
+    "remaining": 2,
+    "criterion1": {
+      "status": "HOLD",
+      "reason": "T06 FULL accepted exact HEAD/tree/manifest absent"
+    },
+    "criterion2": {
+      "status": "HOLD",
+      "reason": "Same accepted-head fixed P0/P1 disposition cannot be signed yet"
+    },
+    "criterion3": {
+      "status": "HISTORICAL_DONE_CARRIED",
+      "prior_receipt_commit": "9ba6c817727fe6fccf427aec0ff2f6023f8d7fd0",
+      "reason": "R17 handoff for earlier SHA completed; updated same-head handoff on current c1323dd still required after owner acceptance."
+    }
+  },
+  "lesson": {
+    "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+    "applied": "Reused the already merged owner Host50 fix, and ran byte-exact committed T08 gate on actual source tuple to reject premature DONE; did not duplicate code or 13 native verification.",
+    "prevents_recurrence": "Records one exact evidence gap and owner action rather than remitting same empty hold."
+  },
+  "handoff": {
+    "recipient": [
+      "T06",
+      "T09",
+      "T10",
+      "T02/C"
+    ],
+    "task": "T06 publish immutable FULL owner accepted HEAD/tree/manifest with P01-P05 and 13 native route consent/ACL/STOP receipts; then T08 one exact-SHA P0/P1 disposition, T09 freeze and T10 independent same-SHA QA; T02 CAS/readback incident linkage.",
+    "source_head": "c1323dd14a085868ffe40a990fbdf34a0ea6cb10",
+    "source_tree": "4aed4b53e5f9af0ccba1811a2d8f39e17aa41f3e",
+    "source_ready": "HOLD"
+  },
+  "safety": {
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_ci": true,
+    "no_e07": true,
+    "no_canonical_source_write": true,
+    "no_master_e06_lessons_write": true,
+    "no_native_pass_claim": true,
+    "no_release": true
+  }
+}
