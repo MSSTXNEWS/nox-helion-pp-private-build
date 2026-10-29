@@ -74,6 +74,9 @@ public sealed class ModelDownloadQueueWorker(
                     digest = "sha256:" + imported.Sha256;
                     await store.UpdateAsync(job.Id, j => j with { ComputedSha256 = imported.Sha256 }, ct);
                 }
+                // Ollama may finish while a native STOP is in flight; do not
+                // convert an already-cancelled transfer into Installed.
+                linked.Token.ThrowIfCancellationRequested();
                 var done = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
                     ? j with { State = ModelJobState.Completed, Status = "Installed",
                         ReceiptPath = ollama.ReceiptPathFor(j.Id) } : j, CancellationToken.None);
