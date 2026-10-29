@@ -4,6 +4,7 @@ Run only on an authorized isolated Windows CI runner. Never replace a source in
 the repository or claim E07 acceptance from a diagnostic EXE.
 """
 import hashlib
+import os
 import json
 import re
 import stat
@@ -177,13 +178,37 @@ def main():
                         "original_members":len(files),"uncompressed_bytes":uncompressed,
                         "source_unchanged":True,"diagnostic":True,"release_accepted":False,
                         "artifacts":files}
+                # Publish the complete SourceLock BEFORE R11. Never overwrite
+                # another owner's receipt; a collision leaves no orphan R11.
+                lock_out=WORK/"source_lock.json"
+                pending_lock=Path(scratch)/"source_lock.json"
+                with pending_lock.open("x",encoding="utf-8") as receipt:
+                    receipt.write(json.dumps(report,indent=2)+"\n")
+                    receipt.flush()
+                    os.fsync(receipt.fileno())
                 if R11.exists() or R11.is_symlink():
                     raise SystemExit("E06_R11_CONCURRENT_OWNER_HOLD")
-                (Path(scratch)/"R11").rename(R11)
-        lock_out=WORK/"source_lock.json"
-        # Do not overwrite a concurrent or historical SourceLock.
-        with lock_out.open("x",encoding="utf-8") as receipt:
-            receipt.write(json.dumps(report,indent=2)+"\n")
+                try:
+                    os.link(pending_lock,lock_out)
+                except FileExistsError as exc:
+                    raise SystemExit("E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE") from exc
+                try:
+                    # The exclusively published receipt is the owner lock.
+                    if R11.exists() or R11.is_symlink():
+                        raise SystemExit("E06_R11_CONCURRENT_OWNER_HOLD")
+                    (Path(scratch)/"R11").rename(R11)
+                except BaseException:
+                    # Remove ONLY the source-lock hardlink created by this run;
+                    # never unlink a replaced receipt or an existing user file.
+                    try:
+                        own=pending_lock.stat()
+                        live=lock_out.lstat()
+                        if (stat.S_ISREG(live.st_mode)
+                                and (own.st_dev,own.st_ino)==(live.st_dev,live.st_ino)):
+                            lock_out.unlink()
+                    except FileNotFoundError:
+                        pass
+                    raise
         print("E06_P01_DONOR_HASH_PASS",total.hexdigest())
         print("E06_P01_CANDIDATE_SOURCE_FILES",len(files))
     finally:

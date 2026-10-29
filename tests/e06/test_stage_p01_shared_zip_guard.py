@@ -194,6 +194,27 @@ class ReusedCanonicalZipGate(unittest.TestCase):
    STAGE.main()
   self.assertFalse((self.work/"R11").exists())
 
+ def test_source_lock_publish_failure_does_not_leave_orphan_r11(self):
+  names=NEEDED+[f"R11/QA/extra-{i:03}.txt" for i in range(75-len(NEEDED))]
+  self.create([(name,stat.S_IFREG) for name in names])
+  self.work.mkdir(parents=True,exist_ok=True)
+  with patch.object(STAGE.os,"link",side_effect=FileExistsError("SYNTHETIC_LOCK_COLLISION")):
+   with self.assertRaisesRegex(SystemExit,"E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE"):
+    STAGE.main()
+  self.assertFalse((self.work/"R11").exists())
+  self.assertFalse((self.work/"source_lock.json").exists())
+  old_rename=Path.rename
+  def fail_promotion(owner,target):
+   if owner.name=="R11":
+    raise OSError("SYNTHETIC_R11_PROMOTION_FAILURE")
+   return old_rename(owner,target)
+  with patch.object(Path,"rename",new=fail_promotion):
+   with self.assertRaisesRegex(OSError,"SYNTHETIC_R11_PROMOTION_FAILURE"):
+    STAGE.main()
+  self.assertFalse((self.work/"R11").exists())
+  self.assertFalse((self.work/"source_lock.json").exists())
+  self.assertFalse(list(self.work.glob(".nox-r11-pending-*")))
+
  def test_existing_r11_keeps_original_data(self):
   self.create([(name,stat.S_IFREG) for name in NEEDED])
   r11=self.work/"R11";r11.mkdir(parents=True)
