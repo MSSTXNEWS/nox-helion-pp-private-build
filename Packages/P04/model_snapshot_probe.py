@@ -172,7 +172,7 @@ def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
     return report
 
 
-def _weight_header(path: Path) -> int:
+def _weight_header(path: Path) -> set[str]:
     if not _regular(path):
         raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
     size = path.stat().st_size
@@ -221,7 +221,7 @@ def _weight_header(path: Path) -> int:
         cursor = end
     if cursor != capacity:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    return len(tensors)
+    return set(header) - {"__metadata__"}
 
 
 def inspect(root: Path, expected_revision: str | None) -> dict:
@@ -266,18 +266,26 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
+        observed_tensors = set()
         for name in names:
             if (not isinstance(name, str) or not name or name != Path(name).name or
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
-            tensor_count = _weight_header(file)
-            report["tensor_headers"] += tensor_count
+            tensor_names = _weight_header(file)
+            if observed_tensors.intersection(tensor_names):
+                raise ValueError("MODEL_DUPLICATE_TENSOR_ACROSS_SHARDS")
+            observed_tensors.update(tensor_names)
+            if 'weights' in locals() and any(weights.get(tensor) != name for tensor in tensor_names):
+                raise ValueError("MODEL_SHARD_WEIGHT_MAP_MISMATCH")
+            report["tensor_headers"] += len(tensor_names)
             report["weight_files"].append({
                 "name": name,
                 "bytes": file.stat().st_size,
                 "sha256": _sha256(file),
             })
+        if 'weights' in locals() and observed_tensors != set(weights):
+            raise ValueError("MODEL_SHARD_WEIGHT_MAP_MISMATCH")
         report["candidate_sha256"] = _sha256(base / "config.json")
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
