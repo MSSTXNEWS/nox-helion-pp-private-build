@@ -23,7 +23,17 @@ public sealed class ModelLifecyclePublisher(IModelLifecycleEventSink sink)
 {
     public async ValueTask PublishAsync(ModelLifecycleEvent e, CancellationToken ct)
     {
-        await sink.PublishToP01Async(e, ct);
-        await sink.PublishToP05Async(e, ct);
+        // A UI rendering failure must not suppress durable P05 event delivery.
+        // Report failures to the existing worker SafePublishAsync after both
+        // independent owner sinks have been attempted.
+        Exception? firstFailure = null;
+        try { await sink.PublishToP01Async(e, ct); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { firstFailure = ex; }
+        try { await sink.PublishToP05Async(e, ct); }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            if (firstFailure is null) firstFailure = ex;
+        }
+        if (firstFailure is not null) throw firstFailure;
     }
 }
