@@ -12,7 +12,8 @@ export function createP01ModeController(fx,wow,initial="BALANCED"){
      const before=current;
      try{
        if(fx.setProfile(next)!==true)return false;
-       wow?.setMode(next);
+       // Current WOW adapters return void on success; explicit false is HOLD.
+       if(wow && wow.setMode(next) === false) throw Error('WOW_MODE_REJECTED');
        current=next;return true;
      }catch{
        try{fx.setProfile(before);wow?.setMode(before);}catch{}
