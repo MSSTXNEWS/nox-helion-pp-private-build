@@ -144,9 +144,10 @@
       "kind": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
       "priority": "PROCESS_AND_SOURCE_GATES_ONLY",
       "issue": "Repeated HOLD-only closeout without readback/physical correction",
-      "next_action": "Для каждого HOLD: реальное действие/точная внешняя зависимость + исправление + проверка; отчёт и RunID не считаются DONE.",
+      "next_action": "T02/C: on every run collect independent per-role R12 CHECKPOINT proof and actual x/n; reject premature TASK_DONE; if physical output missing, require exact owner action and continue other safe work. Close only after independently proven adherence; never count prompt persistence as task completion.",
       "proof": [
-        "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID."
+        "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID.",
+        "R12 physical policy config: 25/25 automation prompts carry anti-premature-closeout (15 enabled G1-G5; 10 historical disabled); direct automation provider readback 2026-10-29. M3 immutable receipt commit 3cf974fa286e9fa826206ee09d79a42439e192a7, blob 47e8996d9a8ea84d408a2f98e118536581c621ec. M2 immutable Git R11 proof commit 5aeb94269a61233109f324510e08373d55688d6b; 3/3 central Docs R22 markers independently read back. Root cause: RUN_COMPLETED/HOLD/report/commit/test erroneously interpreted as TASK_DONE before fixed x/n same-SHA acceptance. Prevention mandatory for ALL roles: fresh canonical and full shared journal read, owner-scoped physical mega-block + minimum necessary test + atomic Git receipt/readback, TASK_DONE only with independent n/n same-SHA proof; otherwise INCOMPLETE + exact owner/path/PRE-SHA blocker + checkpoint and continue remaining safe work. No bypass of NO-LOSS/STOP/ACL/native consent/SourceLock; T06 source ownership and T02 journal coordination remain canonical. Future role-run adherence NOT VERIFIED; keep incident OPEN."
       ],
       "recurrence": 2,
       "last_seen": "2026-10-29"
