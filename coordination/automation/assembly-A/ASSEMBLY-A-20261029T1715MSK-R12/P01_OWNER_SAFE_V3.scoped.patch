@@ -1,0 +1,518 @@
+diff --git a/stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs b/stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..6338c56c509c31d8deee70afef6eb639603e1e2d
+--- /dev/null
++++ b/stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs
+@@ -0,0 +1,328 @@
++// NOX FIN ZAGR V16 / P01 C09. Adapter for the EXISTING WPF WebView2 host.
++// Source candidate: this is not a new MainWindow, web server or permission grant.
++using System;
++using System.Collections.Generic;
++using System.Text.Json;
++using System.Text.RegularExpressions;
++using System.Threading;
++using System.Threading.Tasks;
++using Microsoft.Web.WebView2.Core;
++
++namespace NoxP01;
++
++internal sealed class P01WebView2NavigationBridge : IDisposable
++{
++    private static readonly Regex RouteId = new(@"\A[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\z", RegexOptions.CultureInvariant);
++    private static readonly Regex RequestId = new(@"\A[A-Za-z0-9_-]{1,64}\z", RegexOptions.CultureInvariant);
++    private readonly CoreWebView2 _webView;
++    private readonly Uri _trustedVirtualOrigin;
++    private readonly Func<string, bool> _isNativeRouteAvailable;
++    private readonly Func<string, CancellationToken, Task<bool>> _confirmNativeConsent;
++    private readonly Func<string, CancellationToken, Task<bool>> _invokeExistingNativeRoute;
++    // A pending native callback owns a token linked to the existing host lifetime.
++    // Document transitions revoke cooperative native work before its next effect.
++    private readonly Dictionary<(long Epoch, string Id), CancellationTokenSource> _pending = new();
++    // Completed IDs are also remembered: replay after native ACK must not run twice.
++    private readonly HashSet<string> _seenRequestIds = new(StringComparer.Ordinal);
++    private const int MaxRequestsPerDocument = 1024;
++    // Prevent a page from opening unbounded native dialogs or route callbacks.
++    private const int MaxPendingNativeRequests = 8;
++    private long _documentEpoch;
++    // Cancelling a stale native token may synchronously re-enter WebView2.
++    private int _epochRevocationDepth;
++    private readonly CancellationTokenSource _lifetime = new();
++    private int _disposed;
++
++    // Call on the WPF UI thread after EnsureCoreWebView2Async, using the host's
++    // already mapped virtual origin and existing route/consent callbacks.
++    internal P01WebView2NavigationBridge(
++        CoreWebView2 existingWebView,
++        Uri trustedVirtualOrigin,
++        Func<string, bool> isNativeRouteAvailable,
++        Func<string, CancellationToken, Task<bool>> confirmNativeConsent,
++        Func<string, CancellationToken, Task<bool>> invokeExistingNativeRoute)
++    {
++        _webView = existingWebView ?? throw new ArgumentNullException(nameof(existingWebView));
++        _trustedVirtualOrigin = trustedVirtualOrigin ?? throw new ArgumentNullException(nameof(trustedVirtualOrigin));
++        if (_trustedVirtualOrigin.Scheme != Uri.UriSchemeHttps || !_trustedVirtualOrigin.IsDefaultPort ||
++            _trustedVirtualOrigin.UserInfo.Length != 0 || !IsReservedVirtualHost(_trustedVirtualOrigin.Host) ||
++            _trustedVirtualOrigin.AbsolutePath != "/" || _trustedVirtualOrigin.Query.Length != 0 ||
++            _trustedVirtualOrigin.Fragment.Length != 0)
++            throw new ArgumentException("P01_TRUSTED_WEBVIEW2_VIRTUAL_ORIGIN_REQUIRED", nameof(trustedVirtualOrigin));
++        _isNativeRouteAvailable = isNativeRouteAvailable ?? throw new ArgumentNullException(nameof(isNativeRouteAvailable));
++        _confirmNativeConsent = confirmNativeConsent ?? throw new ArgumentNullException(nameof(confirmNativeConsent));
++        _invokeExistingNativeRoute = invokeExistingNativeRoute ?? throw new ArgumentNullException(nameof(invokeExistingNativeRoute));
++        _webView.NavigationStarting += OnNavigationStarting;
++        _webView.NewWindowRequested += OnNewWindowRequested;
++        _webView.SourceChanged += OnSourceChanged;
++        _webView.ContentLoading += OnContentLoading;
++        _webView.ProcessFailed += OnProcessFailed;
++        _webView.WebMessageReceived += OnWebMessageReceived;
++    }
++
++    private static bool IsReservedVirtualHost(string host) =>
++        host.EndsWith(".example", StringComparison.OrdinalIgnoreCase) ||
++        host.EndsWith(".invalid", StringComparison.OrdinalIgnoreCase) ||
++        host.EndsWith(".test", StringComparison.OrdinalIgnoreCase);
++
++    private bool IsTrustedSource(string source)
++    {
++        if (!Uri.TryCreate(source, UriKind.Absolute, out var uri)) return false;
++        return uri.Scheme == Uri.UriSchemeHttps && uri.UserInfo.Length == 0 &&
++               uri.Port == _trustedVirtualOrigin.Port &&
++               string.Equals(uri.Host, _trustedVirtualOrigin.Host, StringComparison.OrdinalIgnoreCase);
++    }
++
++    private static bool TryString(JsonElement root, string key, out string value)
++    {
++        value = "";
++        if (!root.TryGetProperty(key, out var property) || property.ValueKind != JsonValueKind.String) return false;
++        value = property.GetString() ?? "";
++        return true;
++    }
++
++    private static bool IsNavigation(string routeId) =>
++        routeId == "HOME" || routeId == "MENU" || routeId == "CORE";
++
++    // A URL is NOT a document identity: reload, away-and-back and history updates
++    // may restore identical URLs while an action is awaiting native consent.
++    // Starting a navigation revokes any in-flight native ACK. The old page may
++    // survive when the navigation is canceled, so its replay IDs stay reserved.
++    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs args)
++    {
++        // WebView2 must stay on the pre-mapped local HTTPS virtual origin.
++        // External documents belong to native host routing, never this bridge.
++        // Revoke pending native work even when an unsafe navigation is cancelled.
++        AdvanceDocumentEpoch(newDocument: false);
++        if (!IsTrustedSource(args.Uri))
++            args.Cancel = true;
++    }
++
++    // Fragment/history changes invalidate in-flight replies but do not create
++    // a fresh document. Clearing replay IDs here would allow action replay.
++    // NewWindowRequested is independent of NavigationStarting. Without a handler,
++    // window.open() and target=_blank may create a popup outside the pinned origin
++    // gate. This loader has ONE existing WPF WebView2 host: never supply NewWindow
++    // or silently launch a browser. Approved external links belong to the owner host.
++    private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs args)
++    {
++        args.Handled = true;
++    }
++
++    private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)
++        => AdvanceDocumentEpoch(newDocument: args.IsNewDocument);
++
++    // Same-URL reloads can skip SourceChanged. ContentLoading is the document
++    // boundary at which a new page may legitimately reuse request IDs.
++    private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs args)
++        => AdvanceDocumentEpoch(newDocument: true);
++
++    // WebView2 process failure may leave Source unchanged while native consent
++    // or a route callback is awaiting. Fail closed: invalidate its document
++    // epoch without releasing request IDs belonging to a surviving page.
++    private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs args)
++        => AdvanceDocumentEpoch(newDocument: false);
++
++    private void AdvanceDocumentEpoch(bool newDocument)
++    {
++        if (Volatile.Read(ref _disposed) != 0) return;
++        Interlocked.Increment(ref _epochRevocationDepth);
++        try
++        {
++            Interlocked.Increment(ref _documentEpoch);
++            // Clear before cancelling: callbacks may synchronously re-enter WPF.
++            var stale = new List<CancellationTokenSource>(_pending.Values);
++            _pending.Clear();
++            foreach (var source in stale)
++            {
++                try { source.Cancel(); }
++                catch (Exception) { /* third-party callbacks cannot revive stale authority */ }
++            }
++            if (newDocument) _seenRequestIds.Clear();
++        }
++        finally { Interlocked.Decrement(ref _epochRevocationDepth); }
++    }
++
++    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
++    {
++        if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
++            !IsTrustedSource(args.Source)) return;
++        // Bind this request to the exact source document, not a later same-origin navigation.
++        var documentSource = args.Source;
++        var documentEpoch = Interlocked.Read(ref _documentEpoch);
++        string requestId = "";
++        string routeId = "";
++        bool reserved = false;
++        bool awaitingNativeConsent = false;
++        CancellationTokenSource? requestLifetime = null;
++        try
++        {
++            var raw = args.WebMessageAsJson;
++            if (raw.Length > 2048) return;
++            using var json = JsonDocument.Parse(raw, new JsonDocumentOptions { MaxDepth = 5 });
++            var root = json.RootElement;
++            // Extract requestId before validating other fields. A malformed replay
++            // of a reserved ID must not emit REJECTED while its native operation
++            // can still finish with COMPLETED; keep exactly one reply authority.
++            if (root.ValueKind == JsonValueKind.Object)
++            {
++                // JSON permits repeated keys; different parsers may select different
++                // command fields. Never authorize or ACK an ambiguous UI request.
++                int requestIdKeys = 0;
++                int kindKeys = 0;
++                int routeIdKeys = 0;
++                foreach (var property in root.EnumerateObject())
++                {
++                    if (property.NameEquals("requestId")) requestIdKeys++;
++                    else if (property.NameEquals("kind")) kindKeys++;
++                    else if (property.NameEquals("routeId")) routeIdKeys++;
++                }
++                // A duplicate requestId has no uniquely addressable reply channel.
++                if (requestIdKeys > 1) return;
++                TryString(root, "requestId", out requestId);
++                if (RequestId.IsMatch(requestId) && _seenRequestIds.Contains(requestId)) return;
++                // A unique, fresh requestId can receive a terminal schema rejection.
++                // Neither malformed path reserves an ID or invokes native callbacks.
++                if (kindKeys > 1 || routeIdKeys > 1)
++                {
++                    ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
++                        "REJECTED", "P01_BAD_MESSAGE");
++                    return;
++                }
++            }
++            if (root.ValueKind != JsonValueKind.Object ||
++                !TryString(root, "kind", out var kind) ||
++                !TryString(root, "routeId", out routeId) ||
++                !RouteId.IsMatch(routeId) || !RequestId.IsMatch(requestId) ||
++                (kind != "navigate" && kind != "action") ||
++                (kind == "navigate" && !IsNavigation(routeId)))
++            {
++                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_BAD_MESSAGE");
++                return;
++            }
++            // A completed or in-flight request must never receive a contradictory HOLD
++            // simply because the document quota was reached after its original ACK.
++            if (_seenRequestIds.Count >= MaxRequestsPerDocument)
++            {
++                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_DOCUMENT_REQUEST_LIMIT");
++                return;
++            }
++            // Bound concurrent native confirmations and callbacks. A busy request
++            // is not reserved and can safely retry with the same request ID.
++            if (_pending.Count >= MaxPendingNativeRequests)
++            {
++                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_BUSY");
++                return;
++            }
++            if (!_seenRequestIds.Add(requestId)) return;
++            requestLifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
++            if (!_pending.TryAdd((documentEpoch, requestId), requestLifetime)) return;
++            reserved = true;
++            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId))
++            {
++                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_ROUTE_UNAVAILABLE");
++                return;
++            }
++            // Any non-navigation button action must receive NEW consent in native WPF.
++            // Never accept JS-supplied approval, role, capability or executable arguments.
++            if (kind == "action")
++            {
++                awaitingNativeConsent = true;
++                var consentGranted = await _confirmNativeConsent(routeId, requestLifetime.Token);
++                awaitingNativeConsent = false;
++                if (!consentGranted)
++                {
++                    ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_NATIVE_CONSENT_DENIED");
++                    return;
++                }
++                // Consent dialogs can navigate the page or change native capabilities.
++                if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
++            }
++            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
++            var accepted = await _invokeExistingNativeRoute(routeId, requestLifetime.Token);
++            if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
++            ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
++                accepted ? "COMPLETED" : "HOLD", accepted ? "" : "P01_NATIVE_ACK_MISSING");
++        }
++        catch (OperationCanceledException)
++        {
++            // A native callback may cancel its own task while the document stays
++            // alive. Report that cancellation instead of leaving the UI waiting.
++            // A revoked document/host token must never receive a stale reply.
++            if (requestLifetime is not null && !requestLifetime.IsCancellationRequested)
++                ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
++                    awaitingNativeConsent ? "REJECTED" : "HOLD",
++                    awaitingNativeConsent ? "P01_NATIVE_CONSENT_CANCELLED" : "P01_NATIVE_OPERATION_CANCELLED");
++        }
++        catch (Exception)
++        {
++            // No exception, file path or native stack is returned to untrusted page JS.
++            ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "HOLD", "P01_NATIVE_BRIDGE_ERROR");
++        }
++        finally
++        {
++            if (reserved) _pending.Remove((documentEpoch, requestId));
++            requestLifetime?.Dispose();
++        }
++    }
++
++    private bool IsCurrent(string documentSource, long documentEpoch)
++    {
++        if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
++            _lifetime.IsCancellationRequested) return false;
++        try
++        {
++            var current = _webView.Source;
++            return Interlocked.Read(ref _documentEpoch) == documentEpoch && IsTrustedSource(current) &&
++                   string.Equals(current, documentSource, StringComparison.Ordinal);
++        }
++        catch (Exception) { return false; /* WebView2 may be closing or disposed */ }
++    }
++
++    private void ReplyIfCurrent(string documentSource, long documentEpoch, string requestId, string routeId, string status, string error)
++    {
++        if (!IsCurrent(documentSource, documentEpoch) || !RequestId.IsMatch(requestId)) return;
++        try
++        {
++            _webView.PostWebMessageAsJson(JsonSerializer.Serialize(new
++            {
++                kind = "p01Result", requestId, routeId, status, error,
++                nativeAcknowledged = status == "COMPLETED"
++            }));
++        }
++        catch (Exception) { /* destroying/closing WebView2 must not crash WPF */ }
++    }
++
++    public void Dispose()
++    {
++        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
++        try
++        {
++            _webView.WebMessageReceived -= OnWebMessageReceived;
++            _webView.NavigationStarting -= OnNavigationStarting;
++            _webView.NewWindowRequested -= OnNewWindowRequested;
++            _webView.SourceChanged -= OnSourceChanged;
++            _webView.ContentLoading -= OnContentLoading;
++            _webView.ProcessFailed -= OnProcessFailed;
++        }
++        catch (Exception) { /* native WebView2 may already be disposed */ }
++        // Linked native route callbacks may throw while Cancel invokes them.
++        // The existing host is already closed to new messages; cleanup must
++        // complete even when a third-party cancellation callback fails.
++        try
++        {
++            _lifetime.Cancel();
++        }
++        catch (AggregateException)
++        {
++            // CancellationTokenSource.Cancel wraps callback failures.
++            // Never allow that exception to tear down the WPF host shutdown.
++        }
++        finally
++        {
++            _lifetime.Dispose();
++            _pending.Clear();
++            _seenRequestIds.Clear();
++        }
++    }
++}
+diff --git a/integrations/wow200/runtime/loader.mjs b/integrations/wow200/runtime/loader.mjs
+index 5882140fb5ad63366e48fb4849ecb240aeaf885a..1fa3adcfd7aa6c1305e9406402a40e3236bd55ca 100644
+--- a/integrations/wow200/runtime/loader.mjs
++++ b/integrations/wow200/runtime/loader.mjs
+@@ -1,87 +1,90 @@
+-/* NOX Creative secondary WOW 001–200 entrypoint: originals PR44/PR38, one layered visual scene.
+- * No host event spoofing; preview is explicitly marked DEMO, never LIVE/100%.
+- * D02 HOME untouched; animation source supplied by owner-approved original donor files.
+- */
+-import {mountUnifiedCinema,reviewWowScopes} from '../proposals/NOX-WOW-UNIFIED-1-150/gate.mjs';
+-import {CUES} from '../proposals/NOX-WOW51-100/catalog.mjs';
+-import {SHOTS} from '../proposals/NOX-WOW101-150/catalog.mjs';
+-import {COMPOSITIONS} from '../proposals/NOX-WOW151-200/catalog.mjs';
+-import {mountCinematic} from '../proposals/NOX-PACK01-50/cinema50.mjs';
+-
+-const $=id=>document.getElementById(id);
+-const validModes=new Set(['ECO','BALANCED','MAX','REDUCED']);
+-const detail=new Map([...CUES,...SHOTS,...COMPOSITIONS].map(x=>[x.id,x.name||x.title]));
+-let scene=null,pack=null;
+-export const ownerAudit=()=>Object.freeze({
+-  first50:pack!==null?50:0,secondary51to100:CUES.length,
+-  secondary101to150:SHOTS.length,secondary151to200:COMPOSITIONS.length,
+-  noxApprovedHomeUnmodified:true,mode:scene?.current().active||'IDLE',
+-  releaseAccepted:false,sourceOnly:true
+-});
+-const mode=()=>document.body.classList.contains('mode-eco')?'ECO':document.body.classList.contains('mode-max')?'MAX':document.body.classList.contains('mode-reduce')?'REDUCED':'BALANCED';
+-// The OS Reduced Motion preference outranks user and preview animation modes.
+-const safeMode=(requested,motion)=>motion?.matches===true?'REDUCED':validModes.has(requested)?requested:'BALANCED';
+-const note=(x)=>{const e=$('nox-wow200-state');if(e)e.textContent=x};
+-function create(){
+-  const parent=$('screen-immersive');
+-  if(!parent || parent.id==='home' || parent.closest('[data-nox-page="home"]'))return;
+-  if($('nox-wow200-panel'))return;
+-  const card=document.createElement('div');card.id='nox-wow200-panel';card.className='nox-w200-ui';
+-  const head=document.createElement('h3');head.textContent='WOW 001–200 · кинематографические эффекты NOX';
+-  const expl=document.createElement('p');expl.textContent='Сохранены исходные эффекты и анимации. Предпросмотр — художественная сцена, а не обучение ИИ или подтверждение готового EXE.';
+-  const controls=document.createElement('div');controls.className='nox-w200-controls';
+-  const label=document.createElement('label');label.textContent='Выбрать эффект 51–200';
+-  const select=document.createElement('select');select.id='nox-wow200-id';
+-  for(let id=51;id<=200;id++){const o=document.createElement('option');o.value=String(id);o.textContent=`${id} · ${detail.get(id)||'WOW NOX'}`;select.append(o)}
+-  label.append(select);
+-  const modLabel=document.createElement('label');modLabel.textContent='Производительность';
+-  const mod=document.createElement('select');mod.id='nox-wow200-mode';
+-  for(const v of validModes){const o=document.createElement('option');o.value=v;o.textContent=v;mod.append(o)}mod.value=mode();modLabel.append(mod);
+-  const btn=document.createElement('button');btn.type='button';btn.id='nox-wow200-preview';btn.textContent='Показать эффект';
+-  controls.append(label,modLabel,btn);
+-  const preview=document.createElement('div');preview.className='nox-w200-cinema';
+-  const root=document.createElement('div');root.id='nox-wow200-stage';root.dataset.noxWowSlot='secondary';root.className='nox-w200-stage';preview.append(root);
+-  const report=document.createElement('p');report.id='nox-wow200-state';report.className='nox-w200-note';report.textContent='SOURCE · готов к предпросмотру';
+-  const title=document.createElement('h3');title.textContent='WOW 001–050 · реальные маршруты / материалы';
+-  const routes=document.createElement('div');routes.id='nox-wow200-routes';routes.className='nox-w200-pack01 nox-pack01';routes.dataset.noxWowSlot='secondary';
+-  card.append(head,expl,controls,preview,report,title,routes);parent.append(card);
+-  const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)')??null;
+-  const effective=()=>safeMode(mod.value,motion);
+-  const applyMode=()=>{const current=effective();scene?.setMode(current);pack?.setMode(current.toLowerCase());return current;};
+-  try{
+-    reviewWowScopes();
+-    scene=mountUnifiedCinema(root,{mode:effective(),reducedMotion:motion?.matches===true});
+-    btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
+-      const current=applyMode();const cue=scene.preview(id);
+-      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+current+' · не подтверждение работы GPU');};
+-    mod.onchange=applyMode;
+-    if(typeof motion?.addEventListener==='function')motion.addEventListener('change',applyMode);
+-    else if(typeof motion?.addListener==='function')motion.addListener(applyMode);
+-  }catch(e){note('HOLD визуального движка: '+e.message)}
+-  // First 50 actual route presets are read from the original single P01 catalog.
+-  // We do not dispatch privileged routes on a visual preview click.
+-  fetch('wow200/pack01-catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('P01 catalog unavailable');return r.json()}).then(catalog=>{
+-    if(catalog?.version!=='NOX-INTEGRATION-PACK-01'||!Array.isArray(catalog.actions)||catalog.actions.length!==50||
+-       new Set(catalog.actions.map(x=>x?.routeId)).size!==50||
+-       catalog.actions.some((x,i)=>!x||x.taskId!=='NIP01-'+String(i+1).padStart(2,'0')||
+-         !/^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$/.test(x.routeId)||
+-         !['chat','models','learning','voice','space'].includes(x.category)||
+-         !Number.isInteger(x.owner)||x.owner<1||x.owner>6))
+-      throw Error('P01 original catalog identity or routes incomplete');
+-    for(const action of catalog.actions){const button=document.createElement('button');button.className='nox-pack01__tile';button.type='button';button.dataset.routeId=action.routeId;button.dataset.state='HOLD';button.textContent=action.title||action.routeId;
+-      const description=document.createElement('span');description.textContent='FX preview / без вызова действия';button.append(description);
+-      button.onclick=()=>{
+-        // UI gesture opens the real existing P01 function panel. Never auto-execute
+-        // privileged actions or simulate a successful backend operation.
+-        if(window.parent===window){note('HOLD · основной NOX не подключён к маршруту '+action.routeId);return;}
+-        try{
+-          window.parent.postMessage({type:'nox.creative.navigate.v1',routeId:action.routeId},window.location.origin);
+-          note('REQUESTED · '+action.routeId+' · ожидается подтверждение основного NOX, действие ещё не выполнено');
+-        }catch{note('HOLD · нет доступного канала к основной функции '+action.routeId);}
+-
+-      };
+-      routes.append(button)}
+-    pack=mountCinematic(routes,catalog);pack.decorate();pack.setMode(effective().toLowerCase());
+-  }).catch(e=>{routes.textContent='WOW 001–050: исходный маршрутный каталог недоступен · HOLD · '+e.message});
+-}
+-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',create,{once:true});else create();
+\ No newline at end of file
++/* NOX Creative secondary WOW 001–200 entrypoint: originals PR44/PR38, one layered visual scene.
++ * No host event spoofing; preview is explicitly marked DEMO, never LIVE/100%.
++ * D02 HOME untouched; animation source supplied by owner-approved original donor files.
++ */
++import {mountUnifiedCinema,reviewWowScopes} from '../proposals/NOX-WOW-UNIFIED-1-150/gate.mjs';
++import {CUES} from '../proposals/NOX-WOW51-100/catalog.mjs';
++import {SHOTS} from '../proposals/NOX-WOW101-150/catalog.mjs';
++import {COMPOSITIONS} from '../proposals/NOX-WOW151-200/catalog.mjs';
++import {mountCinematic} from '../proposals/NOX-PACK01-50/cinema50.mjs';
++
++const $=id=>document.getElementById(id);
++const validModes=new Set(['ECO','BALANCED','MAX','REDUCED']);
++const detail=new Map([...CUES,...SHOTS,...COMPOSITIONS].map(x=>[x.id,x.name||x.title]));
++let scene=null,pack=null;
++export const ownerAudit=()=>Object.freeze({
++  first50:pack!==null?50:0,secondary51to100:CUES.length,
++  secondary101to150:SHOTS.length,secondary151to200:COMPOSITIONS.length,
++  noxApprovedHomeUnmodified:true,mode:scene?.current().active||'IDLE',
++  releaseAccepted:false,sourceOnly:true
++});
++const mode=()=>document.body.classList.contains('mode-eco')?'ECO':document.body.classList.contains('mode-max')?'MAX':document.body.classList.contains('mode-reduce')?'REDUCED':'BALANCED';
++const note=(x)=>{const e=$('nox-wow200-state');if(e)e.textContent=x};
++function create(){
++  const parent=$('screen-immersive');
++  if(!parent || parent.id==='home' || parent.closest('[data-nox-page="home"]'))return;
++  if($('nox-wow200-panel'))return;
++  const card=document.createElement('div');card.id='nox-wow200-panel';card.className='nox-w200-ui';
++  const head=document.createElement('h3');head.textContent='WOW 001–200 · кинематографические эффекты NOX';
++  const expl=document.createElement('p');expl.textContent='Сохранены исходные эффекты и анимации. Предпросмотр — художественная сцена, а не обучение ИИ или подтверждение готового EXE.';
++  const controls=document.createElement('div');controls.className='nox-w200-controls';
++  const label=document.createElement('label');label.textContent='Выбрать эффект 51–200';
++  const select=document.createElement('select');select.id='nox-wow200-id';
++  for(let id=51;id<=200;id++){const o=document.createElement('option');o.value=String(id);o.textContent=`${id} · ${detail.get(id)||'WOW NOX'}`;select.append(o)}
++  label.append(select);
++  const modLabel=document.createElement('label');modLabel.textContent='Производительность';
++  const mod=document.createElement('select');mod.id='nox-wow200-mode';
++  for(const v of validModes){const o=document.createElement('option');o.value=v;o.textContent=v;mod.append(o)}mod.value=mode();modLabel.append(mod);
++  const btn=document.createElement('button');btn.type='button';btn.id='nox-wow200-preview';btn.textContent='Показать эффект';
++  controls.append(label,modLabel,btn);
++  const preview=document.createElement('div');preview.className='nox-w200-cinema';
++  const root=document.createElement('div');root.id='nox-wow200-stage';root.dataset.noxWowSlot='secondary';root.className='nox-w200-stage';preview.append(root);
++  const report=document.createElement('p');report.id='nox-wow200-state';report.className='nox-w200-note';report.textContent='SOURCE · готов к предпросмотру';
++  const title=document.createElement('h3');title.textContent='WOW 001–050 · реальные маршруты / материалы';
++  const routes=document.createElement('div');routes.id='nox-wow200-routes';routes.className='nox-w200-pack01 nox-pack01';routes.dataset.noxWowSlot='secondary';
++  card.append(head,expl,controls,preview,report,title,routes);parent.append(card);
++  try{
++    reviewWowScopes();
++    const mr=window.matchMedia?.('(prefers-reduced-motion: reduce)');
++    const effectiveMode=()=>mr?.matches?'REDUCED':mod.value;
++    const applyMode=()=>{
++      const actual=effectiveMode();
++      scene?.setMode(actual);
++      pack?.setMode(actual.toLowerCase());
++      return actual;
++    };
++    scene=mountUnifiedCinema(root,{mode:effectiveMode(),reducedMotion:!!mr?.matches});
++    btn.onclick=()=>{const id=Number(select.value);if(!Number.isInteger(id)||id<51||id>200)return;
++      const actual=applyMode();const cue=scene.preview(id);
++      note('DEMO · '+id+' · '+(cue.name||cue.title||'киноэффект')+' · режим '+actual+' · не подтверждение работы GPU');};
++    mod.onchange=applyMode;
++    mr?.addEventListener?.('change',applyMode);
++  }catch(e){note('HOLD визуального движка: '+e.message)}
++  // First 50 actual route presets are read from the original single P01 catalog.
++  // We do not dispatch privileged routes on a visual preview click.
++  fetch('wow200/pack01-catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('P01 catalog unavailable');return r.json()}).then(catalog=>{
++    if(catalog?.version!=='NOX-INTEGRATION-PACK-01'||!Array.isArray(catalog.actions)||catalog.actions.length!==50||
++       new Set(catalog.actions.map(x=>x?.routeId)).size!==50||
++       catalog.actions.some((x,i)=>!x||x.taskId!=='NIP01-'+String(i+1).padStart(2,'0')||
++         !/^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$/.test(x.routeId)||
++         !['chat','models','learning','voice','space'].includes(x.category)||
++         !Number.isInteger(x.owner)||x.owner<1||x.owner>6))
++      throw Error('P01 original catalog identity or routes incomplete');
++    for(const action of catalog.actions){const button=document.createElement('button');button.className='nox-pack01__tile';button.type='button';button.dataset.routeId=action.routeId;button.dataset.state='HOLD';button.textContent=action.title||action.routeId;
++      const description=document.createElement('span');description.textContent='FX preview / без вызова действия';button.append(description);
++      button.onclick=()=>{
++        // UI gesture opens the real existing P01 function panel. Never auto-execute
++        // privileged actions or simulate a successful backend operation.
++        if(window.parent===window){note('HOLD · основной NOX не подключён к маршруту '+action.routeId);return;}
++        try{
++          window.parent.postMessage({type:'nox.creative.navigate.v1',routeId:action.routeId},window.location.origin);
++          note('REQUESTED · '+action.routeId+' · ожидается подтверждение основного NOX, действие ещё не выполнено');
++        }catch{note('HOLD · нет доступного канала к основной функции '+action.routeId);}
++
++      };
++      routes.append(button)}
++    pack=mountCinematic(routes,catalog);pack.decorate();
++    pack.setMode((window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'REDUCED':mod.value).toLowerCase());
++  }).catch(e=>{routes.textContent='WOW 001–050: исходный маршрутный каталог недоступен · HOLD · '+e.message});
++}
++if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',create,{once:true});else create();
+\ No newline at end of file
