@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import stat
@@ -19,6 +20,33 @@ from pathlib import Path
 MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_WEIGHT_FILES = 512
 REVISION_RE = re.compile(r"[0-9a-fA-F]{40}")
+
+
+def _json_finite_float(token: str) -> float:
+    """Reject JSON numeric overflow, which parse_constant does not intercept."""
+    result = float(token)
+    if not math.isfinite(result):
+        raise ValueError("non-finite JSON numeric value")
+    return result
+
+
+def _json_scalar_unicode(obj) -> None:
+    """Reject escaped lone UTF-16 surrogates anywhere in model JSON metadata.
+
+    CPython accepts these escapes; native Rust JSON readers reject them.
+    Walk iteratively to avoid adding a separate recursion limit to the parser.
+    """
+    pending = [obj]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            item.encode("utf-8", errors="strict")
+        elif isinstance(item, dict):
+            for key, value in item.items():
+                pending.append(key)
+                pending.append(value)
+        elif isinstance(item, list):
+            pending.extend(item)
 
 
 def _regular(path: Path, directory: bool = False) -> bool:
@@ -68,7 +96,9 @@ def _json_file(path: Path, *, return_sha: bool = False):
         def reject_nonfinite(value):
             raise ValueError("non-finite JSON token: " + value)
         obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs,
-                         parse_constant=reject_nonfinite)
+                         parse_constant=reject_nonfinite,
+                         parse_float=_json_finite_float)
+        _json_scalar_unicode(obj)
     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
@@ -216,7 +246,8 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
             raise ValueError("non-finite safetensors header token")
         header = json.loads(raw_header.decode("utf-8"),
                             object_pairs_hook=unique_pairs,
-                            parse_constant=reject_nonfinite)
+                            parse_constant=reject_nonfinite,
+                            parse_float=_json_finite_float)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
