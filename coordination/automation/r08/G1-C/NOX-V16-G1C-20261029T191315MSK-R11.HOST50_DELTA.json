@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_V16_G1C_R11_POSTCHECK_HOST50_OWNER_DELTA",
+  "runId": "NOX-V16-G1C-20261029T191315MSK-R11",
+  "observedUTC": "2026-10-29T16:20:24.280Z",
+  "owner": "G1-C_READONLY_TRIAGE",
+  "sourceHead": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+  "ownerCommit": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+  "ownerT06Receipt": "coordination/automation/t06/NOX-V16-T06-20261029-R09-M1-HOST50-ONEHOST.json",
+  "ownerReceiptBlob": "668e98215bf57bbbd893e0d33199ec0d06e6aaa0",
+  "sourceDelta": {
+    "path": "coordination/e06_host50/admission.py",
+    "priorRegisteredBlob": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "currentBlob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "ownerMapProvenance": "approved two historical owner map commits; current source tree requires separately signed native attestation",
+    "testPath": "tests/e06/test_t06_r09_native_source_owner.py",
+    "testBlob": "b3709e2e6a818c41f3853b520cfb179d0b28ca91"
+  },
+  "testEvidence": "T06 owner 9/9 STATIC reported; native same-head 13/13 NOT_RUN, not independently accepted",
+  "errorId": "ERR-SRC-003",
+  "newStatusRecommendation": "FIX_APPLIED_UNVERIFIED, pending T08 independent same-HEAD native 13-route check; register remains OPEN until T02 CAS",
+  "correction": "prior G1C receipt grouped this issue as only stale mismatch; T06 subsequently observed source patch now exists, do not claim OLD-HOLD unchanged",
+  "sourceTreeSha": "NOT_INDEPENDENTLY_RETRIEVABLE",
+  "sharedDocWriter": "T02_ONLY",
+  "productCodeChangedByG1C": false,
+  "scope": "NOX EXPRESS INTEGRATOR LOADER SOURCE ONLY",
+  "next": "T02 process new owner evidence with CAS/readback; T08 focused same-head Host50 native checks; T06 provide current Git tree SHA"
+}
