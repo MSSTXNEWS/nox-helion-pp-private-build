@@ -71,8 +71,15 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
         if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
             raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
         with write_lock:
-            writer.write(_HEADER.pack(len(payload)))
-            writer.write(payload)
+            # BinaryIO.write may legally return a partial byte count. Never
+            # emit the next frame segment until every byte has been written.
+            for segment in (_HEADER.pack(len(payload)), payload):
+                remaining = memoryview(segment)
+                while remaining:
+                    written = writer.write(remaining)
+                    if type(written) is not int or not 0 < written <= len(remaining):
+                        raise ProtocolHold("NATIVE_FRAME_WRITE_STALLED")
+                    remaining = remaining[written:]
             writer.flush()
 
     def dispatch(data: bytes, nonce: str | None) -> None:
