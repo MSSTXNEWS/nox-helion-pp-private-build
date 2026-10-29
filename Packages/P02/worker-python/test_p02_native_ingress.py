@@ -182,6 +182,52 @@ class IngressTests(unittest.TestCase):
             ingress.handle(packet(30, "models.catalog"))
         self.assertFalse(self.provider.seen)
 
+    def test_immutable_native_modelcenter_routes_are_admitted_only_with_opt_in(self):
+        from types import MappingProxyType
+        self.provider.routes = MappingProxyType({
+            "models.catalog": MappingProxyType({"owner": 3})})
+        self.provider.ports = {"models.catalog": type("Port", (), {
+            "owner": 3, "evidence_id": "OWNER3_PINNED_SOURCE_UNIT",
+            "call": staticmethod(lambda session, args: {"models": []}),
+            "available": staticmethod(lambda: True)})()}
+        with self.assertRaisesRegex(ProtocolHold, "ROUTE_OR_PAYLOAD"):
+            self.router.handle(packet(101, "models.catalog"))
+        enabled = NativeIngress(self.provider, lambda: self.trusted,
+            expected_run_id=R, allow_modelcenter_reads=True)
+        answer = json.loads(enabled.handle(packet(102, "models.catalog")))
+        self.assertEqual(answer["result"]["route"], "models.catalog")
+        self.assertEqual(len(self.provider.seen), 1)
+
+    def test_native_modelcenter_owner_type_must_be_exact_integer(self):
+        from types import MappingProxyType
+        self.provider.routes = MappingProxyType({
+            "models.catalog": MappingProxyType({"owner": 3})})
+        enabled = NativeIngress(self.provider, lambda: self.trusted,
+            expected_run_id=R, allow_modelcenter_reads=True)
+        for i, fake_owner in enumerate((3.0, "3", True), 111):
+            self.provider.ports = {"models.catalog": type("Port", (), {
+                "owner": fake_owner, "evidence_id": "OWNER3_SOURCE_UNIT",
+                "call": staticmethod(lambda s,p: {"bad": True}),
+                "available": staticmethod(lambda: True)})()}
+            with self.subTest(owner=fake_owner):
+                with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+                    enabled.handle(packet(i, "models.catalog"))
+        self.assertEqual(self.provider.seen, [])
+
+    def test_modelcenter_read_with_immutable_route_wrong_owner_stays_denied(self):
+        from types import MappingProxyType
+        self.provider.routes = MappingProxyType({
+            "models.installed": MappingProxyType({"owner": 2})})
+        self.provider.ports = {"models.installed": type("Port", (), {
+            "owner": 3, "evidence_id": "OWNER3_SOURCE_UNIT",
+            "call": staticmethod(lambda s,p: {"bad": True}),
+            "available": staticmethod(lambda: True)})()}
+        enabled = NativeIngress(self.provider, lambda: self.trusted,
+            expected_run_id=R, allow_modelcenter_reads=True)
+        with self.assertRaisesRegex(ProtocolHold, "OWNER_NOT_BOUND"):
+            enabled.handle(packet(117, "models.installed"))
+        self.assertEqual(self.provider.seen, [])
+
     def test_missing_session_fails_closed(self):
         ingress = NativeIngress(self.provider, lambda: None, expected_run_id=R)
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
