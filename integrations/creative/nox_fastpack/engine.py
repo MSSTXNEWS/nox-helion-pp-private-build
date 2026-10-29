@@ -258,8 +258,16 @@ class Studio(CreativeExtensions):
         if not model:
             try: tags=_get(self.ollama+"/api/tags",timeout=3).get("models",[])
             except (OSError,URLError,ValueError) as exc:raise StudioError("Ollama offline") from exc
-            if not tags:raise StudioError("Select/download an Ollama chat model")
-            model=tags[0].get("name","")
+            if type(tags) is not list:
+                raise StudioError("Ollama model catalog is malformed")
+            names=[row.get("name") for row in tags if type(row) is dict
+                   and type(row.get("name")) is str and 0<len(row["name"])<=200]
+            if not names:
+                raise StudioError("Select/download an Ollama chat model")
+            model=names[0]
+        if type(model) is not str or not 0<len(model)<=200 or any(
+                ord(c)<33 or ord(c)==127 for c in model):
+            raise StudioError("Invalid local Ollama model identity")
         try:
             result=_get(self.ollama+"/api/generate",{"model":model,"prompt":prompt,"stream":False,
                  **({"format":"json"} if format_json else {})},timeout=300)
