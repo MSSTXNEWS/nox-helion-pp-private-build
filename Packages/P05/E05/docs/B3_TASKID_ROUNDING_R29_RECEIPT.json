@@ -1,0 +1,46 @@
+{
+  "run_id": "ASTRA-B-R29-B3-20261029-01",
+  "task_id": "B3-P05-TASKID-ROUNDING",
+  "task_id_scope": "local repair identifier; not a claim of recovered canonical product ledger",
+  "owner": "B3",
+  "base_owner_commit": "856d225543e78103868b3b04f0c53398437513f7",
+  "release_commit": "5a0793926066ecbc50252ce139703165283fe8f4",
+  "branch": "astra-b/r29-b3-20261029",
+  "source_only": true,
+  "source_lock": {
+    "base_tree": "ecaba690b0b68231de3c3da89ef6d55e82b60a73",
+    "projection_locked_baseline": "0b3a7d435be735148d64171deb9027093a89646e",
+    "existing_locks": "unchanged",
+    "archive_729_validation": "NOT_RUN"
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_blob": "fd956f5b2c314b50eba080f721ca2c9b435f9339",
+      "post_sha256": "4c21ff06684374b320084614f5e639b2a16b9b92393f812182f93ad268a8f7ab"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05Progress.cs",
+      "pre_blob": "e1c06667e7f923d3232a98c5ed3fe8f048dc95a1",
+      "post_sha256": "b8c36793883fd50ad340835a3267dafeacdff0dcd6402c5906cab955b3a92505"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05TaskIdRoundingB3.test.mjs",
+      "pre_blob": null,
+      "post_sha256": "e3730e90c463884aadc0699e01823167631a1f7b0ea7c7df3507f6a88b2f277d"
+    }
+  ],
+  "fix": "TaskID completion drives 100%; cap unfinished lanes and weighted overall at99.99; preserve all existing partial-lane behavior.",
+  "tests": {
+    "focused_node": "7 PASS",
+    "existing_projection_node": "125 PASS",
+    "original_vs_patch": "5 original failures become PASS;2 controls remain PASS",
+    "csharp": "NOT_RUN: dotnet absent",
+    "windows": "NOT_RUN"
+  },
+  "lesson": "Track pending TaskID states, not only accepted weight sums: floating point can discard a tiny pending weight, and weighted aggregation can round99.99 back to100.",
+  "product_readiness": "NOT_DECLARED",
+  "drive_journal": "controller-owned; no shared journal writes",
+  "verification_protocol": "Remote tree preserves untouched base entries; publish own branch with expected_sha CAS, then exact readback against candidate contents. Outcome reported separately after commit.",
+  "local_checkout": "isolated materialized source snapshot via connector; not a full Git clone"
+}

@@ -35,6 +35,7 @@ const derivedLaneProgress = b => {
   if (!Number.isInteger(b.total_tasks) || b.total_tasks < 1 || b.total_tasks > 5000 ||
       !Array.isArray(b.task_ledger) || b.task_ledger.length !== b.total_tasks) return null;
   let denominator = 0, accepted = 0;
+  let allAccepted = true;
   const seen = new Set();
   for (const task of b.task_ledger) {
     if (!task || !validRunId(task.task_id) || seen.has(task.task_id) ||
@@ -46,10 +47,14 @@ const derivedLaneProgress = b => {
     if (task.status === 'COMPONENT_VERIFIED') {
       if (!sha(task.receipt_sha256)) return null;
       accepted += task.weight;
-    } else if (task.receipt_sha256 != null) return null; // reject claiming a receipt for pending work
+    } else {
+      allAccepted = false;
+      if (task.receipt_sha256 != null) return null; // reject claiming a receipt for pending work
+    }
   }
   if (Math.abs(denominator - 100) > 0.000001) return null;
-  return round2(accepted);
+  // 100 is a TaskID completion claim, not a rounded approximation.
+  return allAccepted ? 100 : Math.min(99.99, round2(accepted));
 };
 
 
@@ -96,7 +101,9 @@ export function projectReadiness(readiness, runId, nowMs) {
     validRunId(stage7.build_id) && stage7.build_id===readiness.build_id &&
     stage7.exe_sha256===readiness.exe_sha256;
   bars[6].stage=windowsAccepted?'WINDOWS_ACCEPTED':'NOT_RUN';
-  const overall = Math.round(five.reduce((v,x,i)=>v+x*weights[i],0)*100)/100;
+  const roundedOverall = round2(five.reduce((v,x,i)=>v+x*weights[i],0));
+  // Even a 99.99 lane can round back to 100 after product weighting.
+  const overall = five.every(value=>value===100) ? 100 : Math.min(99.99, roundedOverall);
   return {bars, overall: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? overall:null,
     reason: pct(readiness.overall) && Math.abs(readiness.overall-overall)<0.005 ? 'E06_OWNER_PROJECTED':'WEIGHTED_MISMATCH'};
 }

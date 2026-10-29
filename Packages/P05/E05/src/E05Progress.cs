@@ -21,6 +21,7 @@ public static class ProgressMath
         if (lane is null || string.IsNullOrWhiteSpace(lane.ManifestReceipt) ||
             lane.Criteria is null || lane.Criteria.Count == 0) return null;
         decimal total = 0, done = 0;
+        bool allAccepted = true;
         var unique = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in lane.Criteria)
         {
@@ -32,23 +33,30 @@ public static class ProgressMath
                 if (string.IsNullOrWhiteSpace(item.ReceiptId)) return null;
                 done += item.Weight;
             }
-            else if (item.Status is not ("OPEN" or "HOLD" or "FAILED")) return null;
+            else
+            {
+                allAccepted = false;
+                if (item.Status is not ("OPEN" or "HOLD" or "FAILED")) return null;
+            }
         }
-        return total > 0 ? decimal.Round(100 * done / total, 2) : null;
+        // Completion is determined by TaskID states, never rounding alone.
+        return allAccepted ? 100m : Math.Min(99.99m, decimal.Round(100 * done / total, 2));
     }
     // E06/E07 are gates, not numerical product weights.
     public static decimal? Overall(IReadOnlyList<LaneProof>? lanes)
     {
         if (lanes is null || lanes.Count != 5) return null;
         decimal result = 0;
+        bool allAccepted = true;
         for (int i = 0; i < 5; i++)
         {
             if (lanes[i].LaneId != i + 1) return null;
             decimal? pct = LanePercent(lanes[i]);
             if (!pct.HasValue) return null;
+            allAccepted &= pct.Value == 100m;
             result += pct.Value * ProductWeights[i];
         }
-        return decimal.Round(result, 2);
+        return allAccepted ? 100m : Math.Min(99.99m, decimal.Round(result, 2));
     }
     // The eight orbit scores are not project readiness percentages.
     public static double? CoreAverage(IReadOnlyList<CoreProof>? cores)
