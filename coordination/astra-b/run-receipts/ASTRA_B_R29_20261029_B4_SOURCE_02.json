@@ -1,0 +1,12 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-B4-02",
+  "task_id": "B4-P05-DRIVE-RECEIPT-IDENTITY",
+  "owner": "B4",
+  "source_sha": "173796dc3d57836d24355e87cf746a922a1ae603",
+  "source_only": true,
+  "source_readback": "PASS",
+  "targeted_check": "SOURCE_INVARIANT_PASS",
+  "native_execution": "NOT_RUN",
+  "source_complete": false,
+  "report_writer": "ASTRA_A"
+}
