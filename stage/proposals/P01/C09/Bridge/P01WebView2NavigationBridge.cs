@@ -53,6 +53,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         _confirmNativeConsent = confirmNativeConsent ?? throw new ArgumentNullException(nameof(confirmNativeConsent));
         _invokeExistingNativeRoute = invokeExistingNativeRoute ?? throw new ArgumentNullException(nameof(invokeExistingNativeRoute));
         _webView.NavigationStarting += OnNavigationStarting;
+        _webView.NewWindowRequested += OnNewWindowRequested;
         _webView.SourceChanged += OnSourceChanged;
         _webView.ContentLoading += OnContentLoading;
         _webView.ProcessFailed += OnProcessFailed;
@@ -99,6 +100,15 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
 
     // Fragment/history changes invalidate in-flight replies but do not create
     // a fresh document. Clearing replay IDs here would allow action replay.
+    // NewWindowRequested is independent of NavigationStarting. Without a handler,
+    // window.open() and target=_blank may create a popup outside the pinned origin
+    // gate. This loader has ONE existing WPF WebView2 host: never supply NewWindow
+    // or silently launch a browser. Approved external links belong to the owner host.
+    private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs args)
+    {
+        args.Handled = true;
+    }
+
     private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs args)
         => AdvanceDocumentEpoch(newDocument: args.IsNewDocument);
 
@@ -250,6 +260,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         {
             _webView.WebMessageReceived -= OnWebMessageReceived;
             _webView.NavigationStarting -= OnNavigationStarting;
+            _webView.NewWindowRequested -= OnNewWindowRequested;
             _webView.SourceChanged -= OnSourceChanged;
             _webView.ContentLoading -= OnContentLoading;
             _webView.ProcessFailed -= OnProcessFailed;
