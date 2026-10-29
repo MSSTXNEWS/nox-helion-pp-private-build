@@ -16,6 +16,32 @@ public sealed record ModelArtifactReviewCandidate(
 
 public static class ModelArtifactReviewRegistry
 {
+    /// <summary>Owner-side snapshot for the existing native/Python boundary.
+    /// Caller supplies authenticated owner receipt verification; page JSON must
+    /// never set it. Export is metadata, not a queue permission or install receipt.
+    /// </summary>
+    public static bool TryExportReviewedArtifact(ModelArtifactReviewCandidate? candidate,
+        bool ownerReceiptVerified, out string? json)
+    {
+        json = null;
+        if (!TryPromote(candidate, ownerReceiptVerified, out var model) || model is null)
+            return false;
+        json = JsonSerializer.Serialize(new {
+            schema = "NOX_P03_NATIVE_REVIEWED_ARTIFACT_V1",
+            familyId = model.Id, exactTag = model.ExactTag, version = model.Version,
+            licenseId = model.License, licenseEvidenceUrl = model.LicenseEvidenceUri!.AbsoluteUri,
+            artifactBytes = model.ArtifactBytes, requiredDiskBytes = model.RequiredDiskBytes,
+            recommendedRamBytes = model.RecommendedRamBytes,
+            requiredVramBytes = model.RecommendedVramBytes,
+            artifactSha256 = model.ExpectedSha256!.ToLowerInvariant(),
+            manifestSha256 = model.ExpectedManifestDigestSha256!.ToLowerInvariant(),
+            immutableRevision = model.ImmutableRevision,
+            compatibilityEvidenceUrl = model.CompatibilityEvidenceUri!.AbsoluteUri,
+            reviewerReceiptId = candidate!.ReviewerReceiptId
+        });
+        return true;
+    }
+
     private static readonly Regex TagPattern = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$", RegexOptions.Compiled);
     private static bool Sha(string? x) => x is { Length: 64 } && x.All(Uri.IsHexDigit);
     private static bool Https(string? x, out Uri? uri) =>
