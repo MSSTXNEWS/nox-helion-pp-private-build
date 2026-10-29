@@ -17,7 +17,13 @@ const files = names.map(name => {
     // On C12, NSIS .nsi and native transaction test are newly introduced; no preimage.
     if (!["NOX-HELION-Setup.nsi","Test-NSIS-Windows.ps1"].includes(name)) throw e;
   }
+  const localEntry=fs.lstatSync(file);
+  if (!localEntry.isFile() || localEntry.isSymbolicLink())
+    throw new Error("P01_C11_NONREGULAR_SOURCE:"+file);
   const after=fs.readFileSync(file);
+  // A working-tree edit is not a Git-pinned HEAD source receipt.
+  const committed=GIT(["show","HEAD:"+file]);
+  if (!committed.equals(after)) throw new Error("P01_C11_WORKTREE_DRIFT:"+file);
   if (before && before.equals(after)) throw new Error("NO_CHANGE:"+file);
   const patch=GIT(["diff","--binary",BASE,"HEAD","--",file]);
   if (!patch.length) throw new Error("MISSING_DIFF:"+file);
