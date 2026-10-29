@@ -413,11 +413,23 @@ def _trusted_queue_receipt_errors(
     """
     if not callable(trusted_queue_verifier):
         return ("NATIVE_QUEUE_VERIFIER_MISSING",)
+    # The verifier must authenticate exactly the immutable event pair admitted
+    # by local policy, not mutate a shared UI/native dictionary during callback.
     try:
-        if trusted_queue_verifier(previous, update) is not True:
-            return ("NATIVE_QUEUE_RECEIPT_REJECTED",)
+        before = _evidence_snapshot(previous, update)
+    except Exception:
+        return ("NATIVE_QUEUE_EVIDENCE_INVALID",)
+    try:
+        verified = trusted_queue_verifier(previous, update) is True
     except Exception:
         return ("NATIVE_QUEUE_VERIFIER_ERROR",)
+    try:
+        if _evidence_snapshot(previous, update) != before:
+            return ("NATIVE_QUEUE_VERIFIER_EVIDENCE_CHANGED",)
+    except Exception:
+        return ("NATIVE_QUEUE_VERIFIER_EVIDENCE_CHANGED",)
+    if not verified:
+        return ("NATIVE_QUEUE_RECEIPT_REJECTED",)
     return ()
 
 
@@ -432,8 +444,8 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
     """
     if not isinstance(previous, Mapping) or not isinstance(update, Mapping):
         return Decision("HOLD", ("INVALID_QUEUE_EVENT_SHAPE",))
+    # Reject invalid replay, cross-job or terminal transitions before native I/O.
     reasons = _queue_identity_errors(previous, update)
-    reasons.extend(_trusted_queue_receipt_errors(previous, update, trusted_queue_verifier))
     before, after = previous.get("state"), update.get("state")
     if not isinstance(before, str) or before not in _QUEUE_STATES:
         reasons.append("UNKNOWN_PREVIOUS_QUEUE_STATE")
@@ -492,6 +504,9 @@ def progress_gate(previous: Mapping[str, Any], update: Mapping[str, Any],
             reasons.append("DOWNLOADED_ARTIFACT_SHA_MISMATCH")
     if reasons:
         return Decision("HOLD", tuple(dict.fromkeys(reasons)))
+    native_errors = _trusted_queue_receipt_errors(previous, update, trusted_queue_verifier)
+    if native_errors:
+        return Decision("HOLD", native_errors)
     # This means the transition is source-policy-admissible, NOT model installed.
     return Decision("PASS_FOR_EXISTING_QUEUE", ())
 
@@ -506,7 +521,8 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
     """
     if not isinstance(previous, Mapping) or not isinstance(new_job, Mapping):
         return Decision("HOLD", ("INVALID_QUEUE_EVENT_SHAPE",))
-    reasons = list(_trusted_queue_receipt_errors(previous, new_job, trusted_queue_verifier))
+    # Native verifier is consulted only once retry consent/identity/reset pass.
+    reasons: list[str] = []
     if not isinstance(previous.get("state"), str) or previous.get("state") not in {"FAILED", "CANCELLED"}:
         reasons.append("RETRY_REQUIRES_CONFIRMED_TERMINAL_STATE")
     elif previous.get("state") == "FAILED" and not (
@@ -554,4 +570,7 @@ def retry_gate(previous: Mapping[str, Any], new_job: Mapping[str, Any],
         reasons.append("RETRY_NATIVE_ATTESTATION_REQUIRED")
     if reasons:
         return Decision("HOLD", tuple(dict.fromkeys(reasons)))
+    native_errors = _trusted_queue_receipt_errors(previous, new_job, trusted_queue_verifier)
+    if native_errors:
+        return Decision("HOLD", native_errors)
     return Decision("PASS_FOR_EXISTING_QUEUE", ())
