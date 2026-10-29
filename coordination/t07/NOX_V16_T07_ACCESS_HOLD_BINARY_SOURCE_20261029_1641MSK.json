@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_V16_T07_PHYSICAL_SOURCELOCK_ACCESS_HOLD_V2",
+  "task_id": "T07-ORIGINAL-SOURCELOCK-729",
+  "run_id": "T07-20261029T1641MSK-BINARY-ACCESS-HOLD-R02",
+  "project": "NOX HELION EXPRESS INTEGRATOR V16 loader-only",
+  "status": "ACCESS_HOLD",
+  "observed_at_moscow": "2026-10-29T16:41:28+03:00",
+  "base_pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "previous_immutable_receipt_git_blob_sha1": "fc50d785cb14f348b6d3070556790d6133a36104",
+  "historical_verification_not_repeated": {
+    "git_trees": "25/25 INHERITED",
+    "source_parts_git_blobs": "75/75 INHERITED",
+    "base_git_entries": "968 INHERITED"
+  },
+  "six_fixed_gate_status": [
+    {
+      "criterion": "C1 25 snapshot Git trees (historical metadata)",
+      "status": "PRIOR_PASS_NOT_REEXECUTED"
+    },
+    {
+      "criterion": "C2 75 source part Git blobs (historical metadata)",
+      "status": "PRIOR_PASS_NOT_REEXECUTED"
+    },
+    {
+      "criterion": "C3 968 base Git files (historical metadata)",
+      "status": "PRIOR_PASS_NOT_REEXECUTED"
+    },
+    {
+      "criterion": "C4 actual binary reading of all three original parts",
+      "status": "ACCESS_HOLD"
+    },
+    {
+      "criterion": "C5 real reassembled ZIP size and SHA256",
+      "status": "NOT_RUN"
+    },
+    {
+      "criterion": "C6 physical 729-file manifest and member SHA256",
+      "status": "NOT_RUN"
+    }
+  ],
+  "six_criteria_credit": "3/6 PRIOR METADATA ONLY (no new DONE)",
+  "physical_progress": "0/3, zero source bytes obtained; 0/729 members; ZIP actual SHA256 NULL",
+  "originals": [
+    {
+      "path": "source_00.part",
+      "expected_bytes": 20971520,
+      "git_blob_sha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "actual_sha256": null
+    },
+    {
+      "path": "source_01.part",
+      "expected_bytes": 20971520,
+      "git_blob_sha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "actual_sha256": null
+    },
+    {
+      "path": "source_02.part",
+      "expected_bytes": 18421306,
+      "git_blob_sha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "actual_sha256": null
+    }
+  ],
+  "expected_archive_bytes": 60364346,
+  "expected_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "actual_archive_bytes": null,
+  "actual_archive_sha256": null,
+  "physically_read_archive_members": 0,
+  "verified_member_sha256": 0,
+  "manifest_729": null,
+  "single_blocker": {
+    "code": "BINARY_SAFE_ORIGINAL_PARTS_NOT_ACCESSIBLE",
+    "owner": "T07 source owner / authorized binary source provider",
+    "evidence": [
+      "GitHub connector UTF-8-only fetch of private source_00.part returned INVALID_ARGUMENT HTTP 400: accepts only UTF-8 text.",
+      "GitHub fetch_file source_02.part encoding=base64 gave correct Git blob SHA1 but content was empty, not binary bytes.",
+      "Container /mnt/data has no source_00/01/02.part and cannot DNS-resolve raw.githubusercontent.com; no authenticated binary stream.",
+      "Library exact-name search for all source_00/01/02.part returned no matching raw parts, and no standalone 60,364,346-byte ZIP was present in size-ranked large files.",
+      "Read-only ZIP central-directory checks: NOX_E06_ORIGINAL_PYTHON_WINDOWS_DIAGNOSTIC_40609239316.zip (9 members), NOX_V16_E06_TWO_WINDOWS_BUILDS_AND_R08_ROLLBACK_20261028.zip (5 members with 123-entry nested owner package), NOX_R08_DIAGNOSTIC_WITH_ORIGINAL_D02_NOT_RELEASE.zip (488 members) contain no original source_00/01/02.part, not acceptable alternatives."
+    ],
+    "unblock": "Provide byte-preserving authenticated download of exact three source_00/01/02.part blobs from private GitHub into a read-only local directory or upload the three raw parts to the user's Library; then run existing coordination/e06/verify_original_729_source.py --parts-dir <readonly-dir> --out <unique-receipt.json> --run-id <new-run-id>, compare real 60,364,346 bytes, SHA256 and all 729 member digests against approved manifest. Never copy expected hashes into measured fields."
+  },
+  "lesson_applied": "Prior E06 lesson: distinguish Git blob SHA1, declared archive SHA256, and actually computed bytes. Search only an alternate binary-safe transport, keep actual SHA fields null and 0/729 until data arrives; avoid broad historical re-audits.",
+  "journal_delta": "T07 same physical ACCESS_HOLD, alternate Library archive paths checked and rejected as source; no new product bug. T02 owns CAS/readback of Master/E06/Lessons, C34 read-only.",
+  "handoff": [
+    "T02",
+    "T09",
+    "T10"
+  ],
+  "no_loss": true,
+  "changed_product_files": 0,
+  "additional_task_done": 0,
+  "forbidden_executions": {
+    "exe": false,
+    "nsis": false,
+    "e07": false,
+    "windows_ci": false,
+    "merge": false
+  },
+  "source_ready": "HOLD",
+  "release": "HOLD"
+}
