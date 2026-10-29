@@ -1,0 +1,236 @@
+{
+  "schema": "NOX_V16_MANUAL2_T08_T10_ONE_APPROACH_SOURCE_QA_RECEIPT_V1",
+  "runId": "NOX-V16-M2-T08T10-ONEPASS-20261030T0242MSK",
+  "role": "MANUAL_2_INDEPENDENT_QA_READ_ONLY",
+  "taskIds": [
+    "T08",
+    "T10"
+  ],
+  "checkedAtUtc": "2026-10-29T23:41:59Z",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "pr": 162,
+  "headPre": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+  "headPostAtFinalCheck": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+  "treeGitSha1": "bff2619b8cbef0c4f946a5ef3a4b9dcb5a8cf9d4",
+  "headFrozenByT09": false,
+  "prDraft": true,
+  "mergePerformed": false,
+  "productCodeChangedByManual2": false,
+  "previousCheckpoint": "NOX-V16-M2-R36-THREE-BLOCKS-20261030",
+  "deltaFromPrevious": {
+    "commits": 7,
+    "changedPaths": [
+      "integrations/creative/bridge/CreativeHostBridge.cs",
+      "integrations/creative/tests/test_p01_media_owner_reuse_r36.py",
+      "proposals/NOX-PACK01-50/p04_comfy_image_owner_port.py",
+      "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "proposals/NOX-PACK01-50/test_p04_comfy_image_owner_port.py",
+      "proposals/NOX-PACK01-50/test_p04_owner_training_port.py"
+    ]
+  },
+  "sourceStages": {
+    "sourceVerified": "PARTIAL",
+    "integrated": "PARTIAL_NOT_SEALED",
+    "qaAccepted": "HOLD",
+    "sourceReady": "HOLD",
+    "windowsVerified": "NOT_RUN",
+    "e07": "NOT_RUN",
+    "buildAuthorized": false,
+    "deltaAcceptedDone": 0,
+    "productPercent": "N/D"
+  },
+  "oneApproachStatus": "COMPLETED_FINITE_AVAILABLE_SCOPE_WITH_FAILS_AND_DEPENDENCY_HOLDS",
+  "checks": {
+    "actualV8": {
+      "type": "exact GitHub-retrieved JavaScript executed inside isolated V8 with mocked host interactions; not installed native app",
+      "P01": {
+        "pass": 10,
+        "total": 10,
+        "gitBlobSha1": "f4eb000843bc78af116e4015ed06528b032ee991",
+        "path": "proposals/P01/WOW-MAX10/route-dispatch.mjs"
+      },
+      "P03": {
+        "pass": 13,
+        "total": 13,
+        "gitBlobSha1": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+        "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+      },
+      "PACK02": {
+        "pass": 3,
+        "total": 5,
+        "gitBlobSha1": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+        "path": "proposals/NOX-PACK02-50/ops.mjs",
+        "failed": [
+          "CSV select unknown field accepted as OK",
+          "CSV header-only stats returns columns=[]"
+        ]
+      },
+      "totalPass": 26,
+      "totalExecuted": 28,
+      "failed": 2
+    },
+    "pythonReproduction": {
+      "kind": "standalone executable reproducer copied from P04 parsing logic, not complete canonical module",
+      "positiveControlsPassed": 2,
+      "expectedNegativeDenialsMissing": 3,
+      "observations": [
+        "1e9999 -> +Infinity accepted by json.loads without finite parse_float",
+        "escaped lone surrogate survives decoded JSON parser",
+        "[0,2**64] zero-sized tensor bypasses dimension bound"
+      ]
+    },
+    "sourceInventory": {
+      "R13DeclaredTestSuites": 19,
+      "runnerBlob": "2e7bb6a7158d9b8119f104d4ddc8a044fb998855",
+      "PACK01Catalog": {
+        "routes": 50,
+        "uniqueRouteIds": 50,
+        "blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "stage": "SOURCE_CANDIDATE_NOT_INTEGRATED"
+      },
+      "PACK02Catalog": {
+        "actions": 50,
+        "uniqueRouteIds": 50,
+        "blob": "69e6925eec57291474c14a33c344665689561dd5d",
+        "stage": "SOURCE_COMPONENT_ONLY",
+        "collisionWithPACK01": 0
+      },
+      "Host50LegacyLedger": {
+        "sourceBound": 37,
+        "sourceHold": 13,
+        "integrated": 0,
+        "windowsAccepted": 0,
+        "blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375"
+      },
+      "latestOwnerReceiptBeforeFrozen": {
+        "sourceBoundClaim": 39,
+        "sourceUnboundClaim": 11,
+        "nativePending": 14,
+        "notIndependentNativeAcceptance": true,
+        "ownerReceiptBlob": "ca0ed1b8a639343f26887ed07c9826faa9311983"
+      }
+    },
+    "runtimeAttempts": {
+      "workspace": "/mnt/data contained no repository checkout",
+      "gitRemoteAccess": "github.com DNS resolution failed from execution container",
+      "R13": {
+        "attempted": true,
+        "result": "NOT_RUN_SOURCE_MISSING",
+        "shellExitCode": 2,
+        "stderr": "python3: can't open file //coordination/e06/run_source_integrations_r13.py"
+      },
+      "NodeP03": {
+        "attempted": true,
+        "result": "NOT_RUN_SOURCE_MISSING",
+        "shellExitCode": 1
+      },
+      "DotnetP04P05": {
+        "attempted": true,
+        "result": "NOT_RUN_DOTNET_NOT_INSTALLED",
+        "shellExitCode": 127
+      },
+      "PowerShellWindows": "NOT_INSTALLED",
+      "realGpu": "NOT_RUN",
+      "E07": "NOT_RUN"
+    }
+  },
+  "blockers": [
+    {
+      "id": "ERR-SRC-004",
+      "domain": "P01",
+      "state": "FAIL_SOURCE_FIXTURE",
+      "sourcePath": "tests/e06/test_theater_webview2_routes_r13.py",
+      "sourceBlobGitSha1": "fe296a4dc6ba21d8c33972a510349f71d2002cda",
+      "dependencyBlob": "5a43dc50c1c5afe31b3a6636c319da3779aaad0d",
+      "rootCause": "test falsely requires direct Navigate literal while actual WPF host sets theaterUrl and calls Navigate(theaterUrl)",
+      "owner": "MANUAL_1_T06",
+      "ownerAction": "CAS-update ONLY test fixture to assert assignment + call with variable; run canonical Python unittest; then T08 readback",
+      "native": "NOT_RUN"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "domain": "P04",
+      "state": "FAIL_SOURCE_GUARD",
+      "sourcePath": "Packages/P04/model_snapshot_probe.py",
+      "sourceBlobGitSha1": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "rootCause": "parse_float finite check missing for 1e9999, escaped surrogates need validation, zero-sized tensor dimension may exceed uint64",
+      "owner": "MANUAL_3_P04_THEN_MANUAL_1_T06",
+      "ownerAction": "owner-approved compatible finite parser, Unicode and dimension bound; run 5 saved negative/positive QA tests",
+      "qaFixtureGitBlobSha1": "a17ca01f7ddce3893fd460e65509e96727577938",
+      "testStatus": "NOT_RUN_WITH_CANONICAL_SOURCE"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "domain": "P04",
+      "state": "FAIL_SOURCE_CONTRACT",
+      "sourcePath": "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "sourceBlobGitSha1": "f403927f9fb99591af6edeaa20bb25620137527e",
+      "dependencyBlob": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "rootCause": "owner port accepts MAX but original train_qlora.py supports INTENSIVE. Preserve approved MAX UI via trusted MAX-to-INTENSIVE mapping, not deletion of function",
+      "owner": "MANUAL_3_P04_THEN_MANUAL_1_T06",
+      "qaFixtureGitBlobSha1": "6b3b180786ac37b5a033005a78cc579c6aa8c67e",
+      "testStatus": "NOT_RUN_WITH_CANONICAL_SOURCE"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "domain": "PACK02",
+      "state": "FAIL_SOURCE_BEHAVIOR",
+      "sourcePath": "proposals/NOX-PACK02-50/ops.mjs",
+      "sourceBlobGitSha1": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+      "rootCause": "unknown CSV field silently accepted; header-only schema lost",
+      "owner": "PACK02_OWNER_THEN_MANUAL_1_T06",
+      "ownerAction": "reuse existing verified G7-B donor patch with strict field and header preservation, one owner PRE/CAS; T08 then independent tests",
+      "testStatus": "2_FAIL_3_PASS_IN_V8"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "domain": "Host50",
+      "state": "HOLD_INTEGRATION_AND_NATIVE",
+      "sourcePath": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+      "sourceBlobGitSha1": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+      "rootCause": "source ledger historical; new 39/11 owner report without same-full-HEAD verification and 14 native pending; do not mix with legacy 13 holds or PACK02 offline50",
+      "owner": "MANUAL_1_T06",
+      "ownerAction": "pin current 50 route owner receipts and signed capability/consent/ACL/STOP; T09 freeze and independent T10 QA"
+    },
+    {
+      "id": "ERR-SYS-001/002",
+      "domain": "SOURCE_READY",
+      "state": "HOLD_EXTERNAL_PRECONDITION",
+      "rootCause": "no accepted T06 owner 8/8 closeout, no T09 frozen HEAD, no trusted whole-tree SourceLock receipt and Windows runtime; journal T02 CAS/readback pending",
+      "owner": "MANUAL_1_T06_T09_THEN_MANUAL_2_T10_AND_T02",
+      "ownerAction": "perform one source closeout, independent fixed SHA QA, T02 readback; no GitLab build/E07 before authorization"
+    }
+  ],
+  "additionalSourceChecks": {
+    "P02": "Loopback-only Ollama, native SID scope, ACL/STOP/revocation guards observed; real host not executed",
+    "P03": "Source STOP/ACK isolated mock 13/13; real model downloader/.NET not executed",
+    "P04": "existing PEFT/Transformers worker source, RAG, thermal, checkpoints observed; authorized GPU training not executed",
+    "P05": "events.v3 telem LIVE + 30 second freshness; E05VerifiedReadiness and Drive run readback require receipts; .NET host not executed",
+    "D02_WOW200": "catalog source present; design/graphics installed native acceptance not executed",
+    "CoreAndPersona": "C# source requires 8 exact CoreIDs and 5 Persona, no installed visualization acceptance",
+    "NOLOSS": "original 729/3 historical digest preserved, new whole tree not independently rehashed"
+  },
+  "preserved": [
+    "historical DONE",
+    "TaskID",
+    "SourceLock 729/3",
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02",
+    "STOP",
+    "ACL",
+    "consent",
+    "NO-LOSS"
+  ],
+  "journal": {
+    "sharedMasterWrite": "NOT_ATTEMPTED_BY_MANUAL2",
+    "sharedE06Write": "NOT_ATTEMPTED_BY_MANUAL2",
+    "sharedLessonsWrite": "NOT_ATTEMPTED_BY_MANUAL2",
+    "sharedErrorRegisterWrite": "NOT_ATTEMPTED_BY_MANUAL2",
+    "T02Handoff": "PENDING",
+    "sharedCASReadback": "PENDING_T02",
+    "noDuplicateErrorId": true
+  },
+  "nextCheckpoint": "owners T06/P04/PACK02 source fixes -> T09 frozen SHA + owner 8/8 -> one T08/T10 independent regression on that exact SHA -> T02 shared CAS/readback -> SOURCE_READY; ONLY THEN GitLab Windows build and E07"
+}
