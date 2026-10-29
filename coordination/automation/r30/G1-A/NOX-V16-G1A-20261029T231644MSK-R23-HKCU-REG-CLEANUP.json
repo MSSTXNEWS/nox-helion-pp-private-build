@@ -1,0 +1,165 @@
+{
+  "schema": "NOX_V16_G1A_R23_P01_INSTALLER_FAIL_CLOSED_REGISTRY_CLEANUP_V1",
+  "run_id": "NOX-V16-G1A-20261029T231644MSK-R23-HKCU-REG-CLEANUP",
+  "role": "G1-A",
+  "scope": "EXPRESS_INTEGRATOR_SOURCE_ONLY",
+  "status": "ISOLATED_SOURCE_PATCH_STATIC_VERIFIED_OWNER_ADMISSION_PENDING",
+  "prestart": {
+    "canon_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "rules_33": 56,
+    "source_head": "229f4dc7569c7f3792322b62885dc41c08b66fc5",
+    "source_tree": "0a373b7fed1337a7a103716423328c7d192ad60d",
+    "register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "master_revision": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r23_policy_blob": "9d43c95332ec13d7f62478ddb02486aee11270ed"
+  },
+  "owner": {
+    "allowed_source_path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "receipt_path": "coordination/automation/r30/G1-A/NOX-V16-G1A-20261029T231644MSK-R23-HKCU-REG-CLEANUP.json",
+    "source_writer": "G1-A isolated branch ONLY",
+    "shared_writer": "T06/#1",
+    "shared_journal_writer": "T02"
+  },
+  "change": {
+    "existing_task_id": "P01-C09",
+    "affected_error_id": "ERR-SRC-004",
+    "root_cause": "Existing isolated R21 fail-closed NSIS installer could restore/retain failed staged app yet leave own fresh HKCU Apps-and-Features metadata behind when shortcut/registry writes failed; no app is activated but registration ghost remained.",
+    "baseline_pr162_pre_blob": "87d901c3846359a91be3e8288f24302cc7060257",
+    "r21_donor_pre_blob": "5a42310568368927c00d9d0fd766fbb6d99d0325",
+    "new_post_blob": "4878356e6be23bdbd6a21cca4bfbb23ae13777b3",
+    "behavior": "On fresh-registration failure delete ONLY five installer-owned HKCU value names; preserve entire key, unknown HKCU values, user data, and preexisting installer-owned prior registry metadata when a previous owned backup exists. Existing recovery remains fail closed.",
+    "dependency": "T06 batch-admit R21 existing Verify-Payload and Remove-InstalledPayload together with this newer NSIS POST, exact per-path CAS; do not rewrite already prepared source; owner native verification and T08 QA still pending.",
+    "not_product_integrated": true
+  },
+  "tests": {
+    "kind": "TARGETED_STATIC_GIT_BYTES_CHECKS_NOT_NATIVE",
+    "passed": 10,
+    "total": 10,
+    "items": [
+      "base_pinned_unchanged",
+      "donor_pinned",
+      "missing_reg_cleanup_before",
+      "five_known_values_only",
+      "preserve_owned_prior_tree",
+      "no_full_key_delete_in_failure",
+      "still_fail_closed",
+      "new_condition_only",
+      "unchanged_p02_p03_scope",
+      "no_build_executed"
+    ],
+    "windows_nsis_not_run": true,
+    "stop_acl_native_consent_source_unchanged": true,
+    "no_recursive_user_data_delete": true
+  },
+  "lessons": {
+    "total_discovered": 11,
+    "relevant_to_lane": 9,
+    "deduplicated_clusters": 6,
+    "applied": 1,
+    "already_fixed": 2,
+    "delegated": 7,
+    "not_applicable": 0,
+    "blocked": 0,
+    "remaining_owner_dependencies": 7,
+    "issue_actions": [
+      {
+        "cluster": "REGISTRY_GHOST_AND_NO_LOSS",
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "action": "APPLY",
+        "owner": "G1-A",
+        "recurrence": "fresh installer registry write/shortcut failure must not leave app-owned registration; preserve unknown values; Windows negative test still outstanding"
+      },
+      {
+        "cluster": "HEAD_AND_RECEIPT_DRIFT",
+        "ids": [
+          "ERR-SYS-002"
+        ],
+        "action": "APPLY",
+        "owner": "G1-A",
+        "recurrence": "exact PRE/POST SHA, isolated branch, no PR162 write"
+      },
+      {
+        "cluster": "SHARED_JOURNAL",
+        "ids": [
+          "ERR-SYS-001"
+        ],
+        "action": "DELEGATE",
+        "owner": "T02",
+        "recurrence": "CAS/readback only by T02"
+      },
+      {
+        "cluster": "SOURCE_HOST50",
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-SRC-005",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "action": "DELEGATE",
+        "owner": "T06/T08",
+        "recurrence": "signed same-SHA native admission"
+      },
+      {
+        "cluster": "STOP_PREMATURE_CLAIM",
+        "ids": [
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "action": "DELEGATE",
+        "owner": "T06/T09/T02",
+        "recurrence": "no acceptance without independent same-SHA evidence"
+      },
+      {
+        "cluster": "ALREADY_CLOSED",
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "action": "ALREADY_FIXED",
+        "owner": "T04/T07/T09",
+        "recurrence": "preserve history 34/34 and ZIP 729/729"
+      }
+    ]
+  },
+  "status_progress": {
+    "historical_t01": "100/100 DONE HISTORICAL UNCHANGED",
+    "G1A_before": "1/4",
+    "G1A_after": "1/4",
+    "accepted_task_ids_delta": 0,
+    "product": "N/D",
+    "stage": "SOURCE_PREPARED_STATIC_CHECKED_NOT_INTEGRATED",
+    "r22_tool": "TOOL_NOT_RUN_NO_DISPATCH_USED",
+    "r20_queue": "STALE_DUE_TO_CURRENT_HEAD_AND_REGISTER"
+  },
+  "next_checkpoint": {
+    "owner": "T06/#1",
+    "action": "Read exact live PR162 current HEAD then source PRE 87d901c38463, Verify PRE 6c178c0495, Remove PRE 81fbe7dfeb; if unchanged, admit new NSIS POST 4878356e6be23bdbd6a21cca4bfbb23ae13777b3 plus pre-existing R21 Verify POST e448f8266ba15e809c13bff669924fa825fd4bc1 / Remove POST 9975f9c1802040d0bb5f30b9563060a1ebd8c44b on one tree, run required targeted+security checks then T08 same-SHA",
+    "source_pr162_ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "do_not_build": true
+  }
+}
