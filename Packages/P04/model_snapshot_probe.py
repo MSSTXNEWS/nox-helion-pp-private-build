@@ -53,7 +53,17 @@ def _json_file(path: Path, *, return_sha: bool = False):
                     raise ValueError("duplicate model metadata key")
                 values[key] = value
             return values
-        raw = path.read_bytes()
+        with path.open("rb") as stream:
+            initial = os.fstat(stream.fileno())
+            if not stat.S_ISREG(initial.st_mode) or initial.st_size > MAX_JSON_BYTES:
+                raise ValueError("MODEL_METADATA_INVALID")
+            raw = stream.read(MAX_JSON_BYTES + 1)
+            final = os.fstat(stream.fileno())
+        def stamp(s):
+            return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+        if (len(raw) > MAX_JSON_BYTES or stamp(initial) != stamp(final) or
+                not _regular(path) or stamp(path.stat()) != stamp(initial)):
+            raise ValueError("MODEL_METADATA_CHANGED_DURING_INSPECTION")
         obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
