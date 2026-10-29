@@ -8,21 +8,33 @@
       "branch": "astra/r29-a04-20261029",
       "sha": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
       "candidate": "Validate index weight_map tensor names against actual shard headers",
-      "pending_edits": false
+      "pending_edits": false,
+      "released_paths": [
+        "Packages/P04/**"
+      ]
     },
     {
       "package": "P05",
       "branch": "astra/r29-a05-20261029",
       "sha": "856d225543e78103868b3b04f0c53398437513f7",
       "candidate": "Prevent rounded100 with positive HOLD/FAILED criterion",
-      "pending_edits": false
+      "pending_edits": false,
+      "released_paths": [
+        "Packages/P05/**"
+      ]
     },
     {
       "package": "E06",
       "branch": "astra/r29-a06-20261029",
       "sha": "cbfe853500c781bfeac6419ccc581843ea1bedce",
       "candidate": "Snapshot native session across advertise callbacks; transactional stage_onehost bridge/addon/receipt",
-      "pending_edits": false
+      "pending_edits": false,
+      "released_paths": [
+        "coordination/e06/stage_onehost.py",
+        "proposals/NOX-PACK01-50/native_bridge.py",
+        "coordination/astra/agents/A06/**"
+      ],
+      "test_scope": "New uniquely named E06 tests/receipts in Astra-B checkout; fixture-pack01 is local test material, not production owner path."
     }
   ],
   "astra_a_workers": {
@@ -34,5 +46,6 @@
     "A6": "/root/a06 P03 catalog/artifacts"
   },
   "rules": "Disjoint files and separate branches for second worker in each package. Astra-A sole shared journal writer. No release builds/CI/GitLab/main/finalintegration. Preserve38 prior verified source blocks and native NOT_RUN candidates. Astra-B session execution not observed or claimed.",
-  "journals_read": "Fresh master/report/lesson CONTINUATION-04 plus historical C34 and all56rules."
+  "journals_read": "Fresh master/report/lesson CONTINUATION-04 plus historical C34 and all56rules.",
+  "release_status": "RELEASED: all three former owners explicitly acknowledged no pending production edits; Astra-A will not write these paths. Astra-B may proceed on its isolated branches."
 }
