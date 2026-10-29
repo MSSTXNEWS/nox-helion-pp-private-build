@@ -10,6 +10,7 @@ if ($root -ine $expected) { throw 'P01_INSTALL_ROOT_INVALID' }
 foreach ($path in @($root, "$root.__p01_stage", "$root.__p01_previous", "$root.__p01_rollback_saved")) {
   if (Test-Path -LiteralPath $path) {
     $item = Get-Item -LiteralPath $path -Force
+    if (-not $item.PSIsContainer) { throw "P01_INSTALL_NOT_DIRECTORY:$path" }
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "P01_INSTALL_REPARSE_POINT:$path" }
   }
 }
@@ -20,6 +21,7 @@ foreach ($target in @($root, "$root.__p01_stage", "$root.__p01_previous", "$root
   while ($cursor -and ($cursor -ieq $localRoot -or $cursor.StartsWith($localRoot+'\', [StringComparison]::OrdinalIgnoreCase))) {
     if (Test-Path -LiteralPath $cursor) {
       $node = Get-Item -LiteralPath $cursor -Force
+      if (-not $node.PSIsContainer) { throw "P01_INSTALL_NOT_DIRECTORY:$cursor" }
       if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "P01_INSTALL_REPARSE_ANCESTOR:$cursor" }
     }
     if ($cursor -ieq $localRoot) { break }
