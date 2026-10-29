@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_V16_T11_PERSONAL_OTCH1_GITLAB_INFRA_READINESS_R01",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-MANUAL-GITLAB-READINESS-20261029-R01",
+  "product": "NOX HELION EXPRESS INTEGRATOR V16 WINDOWS LOADER ONLY",
+  "timezone": "Europe/Moscow",
+  "start_utc": "2026-10-29T14:30:13.233Z",
+  "end_checkpoint_utc": "2026-10-29T14:31:13.204Z",
+  "start_msk": "2026-10-29 17:30:13",
+  "end_checkpoint_msk": "2026-10-29 17:31:13",
+  "duration_from_first_exact_checkpoint_seconds": 60,
+  "first_actual_source_read_start_utc": "NOT_CAPTURED",
+  "full_execution_duration_seconds": null,
+  "progress": "████░░░░░░ — 2/5 confirmed (40%)",
+  "prior_checkpoint": {
+    "run_id": "NOX-V16-T11-20261029T1715MSK-R15-ACCESS-HOLD",
+    "done": 2,
+    "total": 5,
+    "percent": 40
+  },
+  "new_checkpoint": {
+    "done": 2,
+    "total": 5,
+    "percent": 40,
+    "delta_pp": 0,
+    "remaining": 3
+  },
+  "confirmed_steps": [
+    {
+      "id": 1,
+      "status": "DONE",
+      "desc": "Historical GitLab migration branch, repo and CI/PowerShell entrypoint pinned",
+      "sha": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862"
+    },
+    {
+      "id": 2,
+      "status": "DONE",
+      "desc": "All 27 migration-only paths verified by exact Git blobs, 43 diverged paths and 21 historical commits retained",
+      "sha": "f259f0269cb3f8a89250c44c0643ccd67b0a6f18"
+    }
+  ],
+  "pending_steps": [
+    {
+      "id": 3,
+      "status": "GITLAB_ACCESS_HOLD",
+      "desc": "Authenticated private GitLab live HEAD, protection, runner tags and permission read required"
+    },
+    {
+      "id": 4,
+      "status": "WAIT_T09_FROZEN_SOURCE_SHA",
+      "desc": "CI and Windows entrypoint must be aligned to final frozen SHA and protected ref without running pipeline"
+    },
+    {
+      "id": 5,
+      "status": "WAIT_T10_AND_SAME_SHA",
+      "desc": "T12 handoff needs independent SOURCE_READY and GitLab live same-SHA validation"
+    }
+  ],
+  "source_git_sha": {
+    "candidate_github_HEAD": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "migration_HEAD": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "windows_entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+    "hand_off_blob": "f259f0269cb3f8a89250c44c0643ccd67b0a6f18",
+    "original_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "produced_git_artefacts": [
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_FREE_NONDESTRUCTIVE_HANDOFF_R01.json",
+      "blob": "f259f0269cb3f8a89250c44c0643ccd67b0a6f18",
+      "branch": "manual/t11/gitlab-free-readonly-handoff-20261029-r01"
+    },
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "blob": "0b57108e02b9cac5630ade54dacbbcbf6a709c4f",
+      "branch": "manual/t11/gitlab-free-readonly-handoff-20261029-r01"
+    }
+  ],
+  "sole_action_required": "Project owner runs saved read-only audit from an authenticated local environment and shares ONLY sanitized JSON output, never credentials; T09 and T10 separately supply future immutable source gate.",
+  "applied_lesson": {
+    "error": "Past T11 automation repeatedly rechecked GitHub migration and held with no operator-ready bridge for live GitLab.",
+    "root_cause": "No authenticated GitLab session and misidentification of fixed historical migration CI ref as approved future frozen ref.",
+    "actual_measure": "Verify 27/27 unique Git blobs once by immutable Git tree, reuse 43-path conflict index, prepare offline read-only GitLab attestation helper, and pin CI's four authorizable gates without starting pipeline.",
+    "prevention": "Compare actual private GitLab refs and runner tags before any migration; prepare SHA variable/ref gating before final freeze; fail closed if SHA changes."
+  },
+  "non_destructive_confirmations": {
+    "GitLab_project_recreated": false,
+    "GitLab_remote_pushed": false,
+    "GitLab_import_or_force_push": false,
+    "PR162_edited": false,
+    "GitLab_pipeline_started": false,
+    "Windows_EXE_started": false,
+    "NSIS_started": false,
+    "E07_started": false,
+    "history_deleted": false
+  },
+  "upstream_dependency_not_T11_done": "No source freeze from T09/T10; cannot mark remaining CI gates PASS despite static hosted Windows support.",
+  "T02_shared_docs_append_request": {
+    "only_T02_writer": true,
+    "central_master_e06_lessons_readback_status": "PENDING",
+    "request": "Append this one unique RunID, actual 2/5, exact blocker and lesson to Master/E06/Lessons using CAS and readback; do not change statuses to 100%."
+  }
+}
