@@ -1,0 +1,115 @@
+{
+  "schema": "NOX_V16_R30_G2C_G3B_OWNER_RECEIPT_V1",
+  "run_id": "G2C-G3B-20261029T221642Z-R17",
+  "status": "SOURCE_VERIFIED_IN_OWNER_ISOLATED_BRANCH_NOT_QA_ACCEPTED",
+  "product": "NOX HELION EXPRESS INTEGRATOR V16 loader only",
+  "role": "G2-C / historical G3-B P03 Queue",
+  "owner": "G3-B owned ui.js; manual #1/T06 sole PR162 writer",
+  "time_utc": "2026-10-29T22:16:48.909Z",
+  "prestart_read_proof": {
+    "canon_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs_read": 705,
+    "section33_rules": "56/56",
+    "sections": "54-56/R29",
+    "ownership_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "error_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "error_open": 5,
+    "error_fixed_unverified": 4,
+    "error_closed": 2,
+    "master_e06_lessons": "current revisions fetched, separate docs read"
+  },
+  "source": {
+    "pr_number": 162,
+    "pr_head_pre": "f973a1118ea3a0cfc587fc4b5b5b38583d29dcc3",
+    "pr_tree_pre": "6ca7202cecd77dfba361b554f87a7cc36732f837",
+    "pr_head_post": "UNCHANGED_BY_G2C",
+    "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "pre_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+    "post_blob": "1c8056c8d6f1c0f5e59608ff8eb31626c16cc7a6",
+    "change": "optional jobId/modelTag ACK must match pending queue job before clearing lock; preserve widened license/metadata consent invalidation",
+    "r16_donor_commit": "8ac474da750d540e68a16566b69be276e247d358",
+    "r16_donor_blob": "d6c790f755d462bf1a266262d8dd1af1da723cff",
+    "test_reused_path": "tests/P03/test_G2C_G3B_R16_queue_ack_binding.cjs",
+    "test_blob": "3651a606ca168c19ea7351f38bab0c3d06fd619e"
+  },
+  "tests": {
+    "execution": "actual fetched browser handlers executed in V8 with simulated DOM and host messages",
+    "baseline": "9/12",
+    "post": "12/12",
+    "baseline_failures": [
+      "foreign_job_hold",
+      "foreign_tag_hold",
+      "null_job_hold"
+    ],
+    "existing_r16_test": [
+      "G2-C / G3-B R16 queue ACK target binding: 13/13 PASS (source-only)"
+    ],
+    "node_cli": "NOT_RUN",
+    "windows_ollama": "NOT_RUN",
+    "safety": [
+      "GGUF STOP/Retry preserve jobId",
+      "foreign ACK job/tag rejected before pending release",
+      "legacy ACK compatibility",
+      "metadata evidence changed revokes license consent",
+      "host controls remain unchanged"
+    ]
+  },
+  "lessons": [
+    {
+      "error_ids": [
+        "ERR-SRC-004"
+      ],
+      "cause": "R16 isolated candidate built on an earlier preimage, copying donor whole would lose R15 consent metadata guards",
+      "action": "rebase only ACK conditional on current PR162 content; V8 RED/GREEN verifies both",
+      "recurrence": "test ACK binding and consent metadata drift together on same source"
+    },
+    {
+      "error_ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "cause": "source patch/receipt != final QA acceptance",
+      "action": "keep QA_ACCEPTED false pending T06+independent T08",
+      "recurrence": "head-specific acceptance gate"
+    }
+  ],
+  "handoff": {
+    "to": [
+      "manual #1/T06",
+      "manual #2/T08",
+      "T02"
+    ],
+    "task_id": "existing P03 Queue/GGUF STOP/Retry acceptance; no new TaskID",
+    "next_action": "T06 apply minimal exact preimage ACK guard + existing R16 test to fresh PR162 HEAD with CAS; preserve R15 consent, run Node tests ACK+consent; T08 verify same HEAD independently; T02 reconcile ERR-SRC-004 after readback"
+  },
+  "stage": {
+    "prepared": true,
+    "source_verified": true,
+    "integrated_on_pr162": false,
+    "qa_accepted": false
+  },
+  "new_accepted_task_ids": 0,
+  "product_percent": "N/D",
+  "build_ci_exe_e07": "NOT_RUN",
+  "no_loss": [
+    "original 729/3 untouched",
+    "STOP",
+    "ACL",
+    "consent",
+    "privacy",
+    "D02/WOW",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02"
+  ],
+  "r21_r22_flow": "TOOL_NOT_RUN",
+  "next_checkpoint": {
+    "last_good_head": "f973a1118ea3a0cfc587fc4b5b5b38583d29dcc3",
+    "pre_path_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+    "required_post_blob": "1c8056c8d6f1c0f5e59608ff8eb31626c16cc7a6",
+    "owner": "manual #1/T06",
+    "qa": "manual #2/T08"
+  }
+}

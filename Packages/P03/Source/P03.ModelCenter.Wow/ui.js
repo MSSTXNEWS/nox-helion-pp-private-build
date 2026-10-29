@@ -272,6 +272,11 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
  }else if(data.type==='p03.command.ack.v1'){
   if(!['pull','importGguf','stop','retry','diagnose'].includes(data.action)||typeof data.commandId!=='string'||typeof data.accepted!=='boolean')return;
   const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
+  // Bind optional host ACK identity to the pending GGUF queue command.
+  // Keep legacy ACKs (without jobId/modelTag) compatible; never release a foreign job.
+  if(['stop','retry'].includes(data.action)&&
+     ((data.jobId!==undefined&&data.jobId!==pending.jobId)||
+      (data.modelTag!==undefined&&data.modelTag!==pending.jobTag)))return;
   if(pending.timer!==null)clearTimeout(pending.timer);
   state.pending.delete(data.action);renderHero();renderQuick20();
   const isQueue=['stop','retry'].includes(data.action),m=isQueue?queueJobModel():current();
