@@ -1,0 +1,146 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_IMMUTABLE_SOURCE_RECEIPT_R05",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY",
+  "slot": "G6-B",
+  "run_id": "R30-G6B-20261029T1001MSK-05",
+  "run_context_local": "2026-10-29 10:01:57 Europe/Moscow (provided run start reference; completion exact timestamp not asserted)",
+  "status": "SOURCE_CANDIDATE_INTEGRATION_HOLD",
+  "stage": "SOURCE_ONLY",
+  "source_task": {
+    "id": "G6B-R30-REVOCATION-DEFERRED-EFFECT-GATE-R05",
+    "provenance": "Astra-C 2026-10-29 09:27 MSK NEXT_PLAN_ONLY",
+    "this_run": "One owner-source change committed",
+    "product_TaskID_accepted": false
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "new_unique_branch": "automation/r30/g6b/R30-G6B-20261029T1001MSK-05",
+    "parent_branch": "automation/r30/g6b/R30-G6B-20261029T0909MSK-04",
+    "changed_assigned_path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "other_owned_path_unchanged": "coordination/e06/adapters/pc_control_owner_port.py",
+    "preimage_git_blob": "7a656242c1fed9fc8fe1d3d333065c7e39d8c180",
+    "postimage_git_blob": "15144b98b4e3a519d46a7e42028d6ba68128557d",
+    "unchanged_adapter_blob": "5f567effc336ca6611757e581841710450287a29",
+    "source_commit": "144d48cf92eaa7142f53e3c5b3997f7af61deac6",
+    "compare_before_receipt": {
+      "ahead_by": 1,
+      "behind_by": 0,
+      "changed_paths": [
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "additions": 9,
+      "deletions": 0
+    },
+    "readback": "PASS exact postimage"
+  },
+  "inputs": {
+    "ownership_lock": {
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+      "read_first": true
+    },
+    "rules_56": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "historical_literal_56_unverified": true
+    },
+    "V16_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc; sections 54,55,56 plus R29 loader-only clarification read",
+    "conflicts_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "frozen_branches": 25,
+      "original_overlap_paths": [
+        "proposals/NOX-PACK01-50/native_bridge.py",
+        "coordination/e06/adapters/pc_control_owner_port.py"
+      ]
+    },
+    "snapshots": {
+      "total_root_directories_read": 25,
+      "each_root_entries": 27,
+      "source_part_git_blobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "all_25_root_archives_same_git_blobs": true,
+      "full_recursive_snapshot_content_read": false,
+      "raw_zip_and_729_physical_SHA256": "NOT_VERIFIED"
+    },
+    "canonical_e06_host50_admission_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+    "google_drive_read_only": {
+      "master_errors": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "historical_C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "latest_coordinator_run": "ASTRA-C-R30-20261029T0927MSK-04"
+    }
+  },
+  "finding": {
+    "cause": "NoxPackHost.execute reset the native context before returning owner results; a generator, async generator, iterator, or awaitable returned by a generic owner could defer actual effects until AFTER the SID/lease revocation and consent boundary was no longer active.",
+    "source_fix": "Reject top-level deferred owner results fail-closed after execution, registry identity checks and live session recheck, before returning to caller. Do not invoke/await/iterate deferred work. Preserve synchronous P02 chat streaming internally.",
+    "route_compatibility": "Exact ordered 50 route/owner/risk policy tuples match canonical E06 admission; STOP and native dangerous consent retained.",
+    "residual_risk": "Potential deferred nested objects inside returned dict/list or owner-internal delayed side effects are not verified; actual Windows host/token, SIP/STOP and every owner effect boundary remain owner QA/HOLD."
+  },
+  "targeted_test": {
+    "method": "One isolated Python executable contract microtest, no full native_bridge import, no Windows actions",
+    "command": "python /tmp/g6b_r05_deferred_gate_test.py",
+    "result": "PASS",
+    "cases_passed": 6,
+    "cases_total": 6,
+    "cases": "sync dictionary response accepted; bytes response accepted; iterator/generator/async-generator/coroutine deferred result rejected",
+    "post_git_static_contract": {
+      "result": "PASS",
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "policy": "50/50 ordered tuples equal canonical admission.py; SID, lease, immutable scopes, native dangerous consent, STOP and source readback"
+    },
+    "full_module_test": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "actual_PC_or_SIP_operation": "NOT_RUN",
+    "build_exe_nsis_gitlab_ci": "NOT_RUN",
+    "unassigned_test_file_written": false
+  },
+  "new_lesson": {
+    "id": "G6B_R05_DEFERRED_RETURN_IS_NOT_AN_AUTHORIZED_OWNER_EFFECT",
+    "previous_applied": "R04 pinned live SID/lease verification at synchronous owner adapter checkpoints; R05 extends fail-closed behavior to deferred return types.",
+    "observation": "The host cannot rely on post-return SID/lease verification if a callback returns an unevaluated iterator/coroutine that a different caller can execute later.",
+    "improvement": "At the native synchronous boundary, reject deferred top-level objects until a separately approved async protocol can reauthorize every effect. Never mark async owners as connected merely because their function was called.",
+    "prevention": "Include Windows-native session revocation and actual owner pre-effect checks in future E07; add exact G6-B imported-module regression only after owner-assigned test path is authorized."
+  },
+  "owner_proposals": [
+    {
+      "owner": "Astra-C/ownership manifest",
+      "request": "Assign exact unique test path for imported full native_bridge.py G6-B regression; assigned_paths currently only two production source files, so no new Git test file was written."
+    },
+    {
+      "owner": "G6-A/Windows host",
+      "request": "Provide native SID/token binding, live lease revocation, and runtime evidence for same-SHA Host50; do not require G6-B writes to stage_onehost.py or verify_original_729_source.py."
+    },
+    {
+      "owner": "Original P02/E11/other route owners",
+      "request": "Review owner-internal async/deferred effects and nested lazy return values; supply pre-effect authorization and STOP proofs without asking G6-B to change foreign files."
+    }
+  ],
+  "integrity": {
+    "forbidden_paths_changed": 0,
+    "foreign_paths_changed": 0,
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "frozen_snapshots_modified": false,
+    "historical_DONE_preserved": true,
+    "shared_google_docs_modified": false,
+    "google_docs_writer": "Astra-C only; Git receipt to be collected, no unauthorized shared Docs readback claim",
+    "no_merge": true,
+    "no_build": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "product_percent": "N/D"
+  }
+}
