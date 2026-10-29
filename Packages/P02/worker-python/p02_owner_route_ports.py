@@ -108,6 +108,9 @@ class OwnerTwoPorts:
         if type(topk) is not int or not 1 <= topk <= 20:
             raise ValueError("top_k must be 1..20")
         output = self.rag.context(scope.windows_sid, scope.conversation_id, query, topk)
+        # RAG index callbacks may wait on storage; re-evaluate host ACL before
+        # any private citation/context returns to the UI.
+        self._session(scope, "chat.rag")
         context, citations = ChatBridge._rag_evidence(output)
         return {"context": context, "sources": citations}
 
