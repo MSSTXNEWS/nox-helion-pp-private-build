@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB02",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 symlinked evidence folder HOLD; P03 backup restore blocks another session's active model transfer",
+  "sourceCommits": [
+    "bf96e84665a344b0dc97d9a0dd5c1c9b3ad92051",
+    "94ef49cd07348bebde8251a0d0a9b9368b9d58e6"
+  ],
+  "sourceTest": "2/2 Git readback; native race NOT_RUN",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub own-file CAS and SHA readbacks; source gates are not Windows E07",
+  "lesson": "Only confirmed source effects and immutable preimages count; no mock as native PASS."
+}
