@@ -293,6 +293,48 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(len(result["weight_files"][0]["sha256"]), 64)
         self.assertIs(result["snapshot_revision_attested"], False)
 
+    def test_g4a_r03_nonfinite_header_is_hold_before_weight_hash(self):
+        for token in ("NaN", "Infinity", "-Infinity"):
+            with self.subTest(token=token):
+                header = ('{"q.weight":{"dtype":"F32","shape":[1],'
+                          '"data_offsets":[0,4],"extra":' + token + '}}').encode("utf-8")
+                (self.root / "model.safetensors").write_bytes(
+                    len(header).to_bytes(8, "little") + header + bytes(4))
+                with mock.patch.object(probe, "_sha256_stream",
+                                       side_effect=AssertionError("invalid header hashed")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+                self.assertEqual(result["weight_files"], [])
+                self.assertEqual(result["tensor_headers"], 0)
+
+    def test_g4a_r03_late_missing_shard_drops_partial_evidence(self):
+        first, second = "model-1.safetensors", "model-2.safetensors"
+        make_weights(self.root / first)
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": first, "r.weight": second}}),
+            encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_WEIGHTS_NOT_REGULAR")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
+    def test_g4a_r03_late_tensor_map_mismatch_drops_partial_evidence(self):
+        first, second = "model-1.safetensors", "model-2.safetensors"
+        make_weights(self.root / first)
+        make_weights(self.root / second)
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": first, "r.weight": second}}),
+            encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
 
 if __name__ == "__main__":
     unittest.main()
