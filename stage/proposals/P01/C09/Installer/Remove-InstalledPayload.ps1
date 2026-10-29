@@ -38,6 +38,9 @@ if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MA
 # Validate all nested members before any install activation or file operations.
 function Assert-P01UniqueManifestMembers([string]$Path) {
   Add-Type -AssemblyName System.Runtime.Serialization -ErrorAction Stop
+  $boundedInfo=Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if ($boundedInfo.PSIsContainer -or $boundedInfo.Length -lt 2 -or
+      $boundedInfo.Length -gt 16777216) { throw 'P01_MANIFEST_PRE_READ_SIZE_HOLD' }
   $bytes = [IO.File]::ReadAllBytes($Path)
   if ($bytes.Length -lt 2 -or $bytes.Length -gt 16777216) { throw 'P01_UNINSTALL_MANIFEST_LENGTH_HOLD' }
   $quotas = New-Object System.Xml.XmlDictionaryReaderQuotas
