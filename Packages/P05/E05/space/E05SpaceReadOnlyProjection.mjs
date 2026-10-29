@@ -344,7 +344,8 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // harmless nonterminal. Quarantine it, or a malformed error can disappear
     // behind a later clean STOP. Foreign runs and nonterminals stay ignored.
     if (e?.run_id===runId &&
-        (e.event_type==='model.stopped' || e.event_type==='task.failed' || e.state==='ERROR') &&
+        (e.event_type==='model.stopped' || e.event_type==='task.failed' || e.state==='ERROR' ||
+         (e.package_id==='P04' && e.state==='STOPPED')) &&
         !canonicalTerminal(e)) return {state:'HOLD_MALFORMED_TERMINAL',errors:null};
     // A terminal failure with a missing, impossible or non-UTC timestamp may
     // otherwise vanish behind a later verified STOP. Missing time is not
