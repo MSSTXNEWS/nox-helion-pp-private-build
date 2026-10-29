@@ -1,6 +1,32 @@
 /* Owner E01 · native-only route dispatcher. Never equate a click to a host ACK. */
 const ROUTE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SENSITIVE = /^(?:system\.(?:update|backup|pc_control|restart|uninstall|clean|delete)|(?:sip|phone)\.|calls\.dial|files\.delete|models\.remove)/i;
+// UX consent preflight mirrors the current E06 native 50-route risk floor.
+// This NEVER grants authority: the immutable native dispatcher still validates
+// owner/ACL/consent independently for every privileged operation.
+const NATIVE_RISK_ROUTES = new Set([
+  'browser.open',
+  'calls.dial',
+  'calls.history',
+  'chat.attach',
+  'chat.history',
+  'chat.voice',
+  'images.generate',
+  'media.player',
+  'memory.manage',
+  'mobile.connect',
+  'models.gguf.import',
+  'models.pull',
+  'models.retry',
+  'rag.import',
+  'system.backup',
+  'system.pc_control',
+  'system.update',
+  'training.checkpoints',
+  'training.resume',
+  'training.start',
+  'translate.ru_es',
+]);
 const denied = reason => Object.freeze({ok:false,reason});
 export function createP01RouteDispatcher(port) {
   if (!port || typeof port.isAvailable !== 'function' || typeof port.invokeRoute !== 'function')
@@ -19,7 +45,7 @@ export function createP01RouteDispatcher(port) {
         try { enabled = port.isAvailable(routeId) === true; }
         catch { return denied('CAPABILITY_CHECK_FAILED'); }
         if (!enabled) return denied('NATIVE_CAPABILITY_HOLD');
-        if (SENSITIVE.test(routeId)) {
+        if (NATIVE_RISK_ROUTES.has(routeId) || SENSITIVE.test(routeId)) {
           // Only the trusted E06 host may supply this callback. Never manufacture approval in JS.
           if (typeof port.authorizeSensitive !== 'function') return denied('NATIVE_CONSENT_REQUIRED');
           let approved;
