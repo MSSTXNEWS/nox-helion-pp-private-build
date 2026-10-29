@@ -47,6 +47,11 @@ function csv(s){
     return Object.fromEntries(header.map((key,i)=>[key,r[i]]));
   });
 }
+// CSV field operations must use declared own columns, not Object.prototype aliases.
+const csvColumn=(rows,field)=>{
+  if(rows.length&&(typeof field!=="string"||!Object.prototype.hasOwnProperty.call(rows[0],field)))throw Error("CSV_UNKNOWN_FIELD");
+  return field;
+};
 function csvOut(a){
   if(!Array.isArray(a))throw Error("ARRAY_EXPECTED");
   if(!a.length)return "";
@@ -113,8 +118,8 @@ export const OPS=Object.freeze({
 "data.csv.parse":s=>csv(s),
 "data.csv.stringify":s=>csvOut(val(s)),
 "data.csv.select":(s,o)=>{const k=txt(o.fields).split(",").map(x=>x.trim()).filter(Boolean),rows=csv(s);if(rows.length&&k.some(key=>!Object.prototype.hasOwnProperty.call(rows[0],key)))throw Error("CSV_UNKNOWN_FIELD");return rows.map(r=>Object.fromEntries(k.map(x=>[x,r[x]])))},
-"data.csv.filter":(s,o)=>csv(s).filter(r=>txt(r[o.field]).toLocaleLowerCase().includes(txt(o.term).toLocaleLowerCase())),
-"data.csv.sort":(s,o)=>csv(s).sort((a,b)=>txt(a[o.field]).localeCompare(txt(b[o.field]),"ru",{numeric:true})*(o.desc?-1:1)),
+"data.csv.filter":(s,o)=>{const rows=csv(s),field=csvColumn(rows,o.field);return rows.filter(r=>txt(r[field]).toLocaleLowerCase().includes(txt(o.term).toLocaleLowerCase()))},
+"data.csv.sort":(s,o)=>{const rows=csv(s),field=csvColumn(rows,o.field);return rows.sort((a,b)=>txt(a[field]).localeCompare(txt(b[field]),"ru",{numeric:true})*(o.desc?-1:1))},
 "data.csv.dedupe":s=>[...new Map(csv(s).map(x=>[JSON.stringify(x),x])).values()],
 "data.csv.stats":s=>{const a=csv(s);return {rows:a.length,columns:keys(a[0]),emptyCells:a.reduce((n,r)=>n+Object.values(r).filter(x=>x==="").length,0)}},
 "data.json.pretty":s=>JSON.stringify(val(s),null,2),
