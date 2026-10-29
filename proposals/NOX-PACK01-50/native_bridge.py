@@ -355,16 +355,39 @@ class NoxPackHost:
             raise HostDenied("Route not allowed for current principal")
         # The consent category is fixed BEFORE any native callbacks run.
         risk = pinned_routes[route]["risk"]
+        # An owner binding is a security dependency, not merely a dict key.
+        # A frozen BoundPort still has a mutable __dict__ via trusted callbacks:
+        # pin its concrete functions and owner receipt BEFORE native consent,
+        # session-live probes, and readiness checks can run.
+        port = pinned_ports.get(route)
+        if (type(port) is not BoundPort or
+                type(port.owner) is not int or port.owner != pinned_routes[route]["owner"] or
+                not callable(port.call) or not callable(port.available) or
+                type(port.evidence_id) is not str or not port.evidence_id.strip()):
+            raise HostHold("Exact approved native owner binding required")
+        pinned_call = port.call
+        pinned_available = port.available
+        pinned_owner = port.owner
+        pinned_receipt = port.evidence_id
+        def require_same_port():
+            if (self.ports.get(route) is not port or
+                    port.call is not pinned_call or
+                    port.available is not pinned_available or
+                    port.owner != pinned_owner or
+                    port.evidence_id != pinned_receipt):
+                raise HostHold("Native owner binding changed during authorization")
         # Revalidate the actual SID-bound lease before and after ALL callbacks,
         # including fresh dangerous consent, readiness, STOP and owner output.
         def require_current_authority():
             require_unchanged_session()
+            require_same_port()
             if (self.routes is not pinned_routes or self.ports is not pinned_ports or
                     self.native_session_live is not pinned_live_probe or
                     self.native_approve is not pinned_native_approve):
                 raise HostDenied("Native host authority or registry changed during request")
             self._require_live_session(session)
             require_unchanged_session()
+            require_same_port()
             if (self.routes is not pinned_routes or self.ports is not pinned_ports or
                     self.native_session_live is not pinned_live_probe or
                     self.native_approve is not pinned_native_approve):
@@ -389,9 +412,8 @@ class NoxPackHost:
             pinned_native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
         require_current_authority()
-        port = pinned_ports.get(route)
-        if not port:raise HostHold("Actual owner backend unbound")
-        try:ready = port.available() is True
+        require_same_port()
+        try:ready = pinned_available() is True
         except Exception:ready = False
         require_current_authority()
         # A readiness callback may revoke or replace the native owner binding.
@@ -404,7 +426,7 @@ class NoxPackHost:
         # host authority guard, then restore context even if an owner raises.
         authority_token = _ACTIVE_NATIVE_AUTHORITY.set((session, require_current_authority))
         try:
-            result = port.call(session,frozen_payload)
+            result = pinned_call(session,frozen_payload)
         finally:
             _ACTIVE_NATIVE_AUTHORITY.reset(authority_token)
         # A native handler may return data after revoking caller identity/port.
