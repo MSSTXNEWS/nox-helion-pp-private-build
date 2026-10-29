@@ -1,0 +1,196 @@
+{
+  "schema": "NOX_V16_G5A_R12_OWNER_SAFE_INDEPENDENT_SOURCE_EVIDENCE_V1",
+  "run_id": "NOX-V16-G5A-20261029T1938MSK-R12-P03-PRIVACY-OWNER-HANDOFF",
+  "role": "G5-A supporting T02/C, no permission to write shared Docs/register or PR162",
+  "status": "INCOMPLETE",
+  "historical_T02": {
+    "completed": "4/4 100%",
+    "untouched": true
+  },
+  "current_C": {
+    "accepted": "0/4",
+    "percent_before": 0,
+    "percent_after": 0,
+    "delta_percentage_points": 0,
+    "bar": "░░░░░░░░░░",
+    "criteria": [
+      "full historical error index + ACK all owners",
+      "addressed handoffs accepted",
+      "T06 one owner-accepted HEAD",
+      "T09/T10 same-SHA SourceLock + SOURCE_READY"
+    ],
+    "new_accepted_criteria": 0
+  },
+  "prestart_read_proof": {
+    "canon_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_characters": 205078,
+    "section33_required_rules": "56",
+    "register_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "register_open": 5,
+    "register_fix_applied_unverified": 4,
+    "register_verified_closed": 2,
+    "register_entries": 11,
+    "all_error_ids_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "PR162_head": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "tree_sha": "200e2520a5fca30e7a723ef796fe617cf3da0b51",
+    "tree_provenance": "R22 source prior receipt; not freshly obtained via connector; do not treat as fresh tree acceptance",
+    "current_pr_draft": true
+  },
+  "physical_result": {
+    "type": "new independent read-only same-HEAD source and owner-donor patch comparison",
+    "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "canonical_head": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "canonical_pre_blob": "3692811ac3234afb54e82958c7415b23619c1f0f",
+    "canonical_pre_match": true,
+    "observed_leak": [
+      "durable queue Error = ex.Message",
+      "UI lifecycle failed event sends ex.Message"
+    ],
+    "donor_branch_commit": "819dff21ed009afc888385c8bcae7fdd3738d407",
+    "donor_post_blob": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+    "donor_readback": {
+      "no_raw_ex_message_storage": true,
+      "no_raw_failed_event_exception_message": true,
+      "uses_constant": "P03_TRANSFER_FAILED",
+      "keeps_stop_cancelling_precedence": true,
+      "logs_exception_type_only": true
+    },
+    "test": "read-only independent static comparison PASS, native/.NET/windows NOT_RUN",
+    "source_merged": false,
+    "source_changed_by_this_role": false,
+    "root_cause": "Untrusted adapter exception text potentially includes local paths, URLs or tokens and propagates to durable queue Error and failed UI event.",
+    "owner": "T06 sole PR162 writer",
+    "independent_acceptance_owner": "T08",
+    "action": "At same PRE blob, cherry-pick/reconcile donor fix; rerun scoped privacy/STOP regression and independent same-HEAD review; do not expose data or bypass consent."
+  },
+  "error_actions": [
+    {
+      "id": "ERR-SYS-001",
+      "action": "OWNER_HANDOFF",
+      "owner": "T02/C",
+      "why": "R12 prompt proof pending shared registry CAS and ACK coverage"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "APPLY",
+      "owner": "G5-A",
+      "why": "Fresh PR162 HEAD and exact P03 PRE blob fetched before source comparison"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "action": "OWNER_HANDOFF",
+      "owner": "T06/T08",
+      "why": "Host50 latest owner patch only source-level; 13 native routes require independent same-SHA"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "action": "OWNER_HANDOFF",
+      "owner": "T06/T08",
+      "why": "P03 privacy source finding and P01-P05 Host50 owner acceptance pending"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "action": "OWNER_HANDOFF",
+      "owner": "T08",
+      "why": "Pinned fixture independent same-HEAD check pending"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "action": "ALREADY_VERIFIED",
+      "owner": "T07/T09",
+      "why": "Original ZIP 729/729; not reopened"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "action": "ALREADY_VERIFIED",
+      "owner": "T04",
+      "why": "Historical 34/34; not reopened"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "OWNER_HANDOFF",
+      "owner": "T09/T02",
+      "why": "Finish only after T06 accepted HEAD and independent SourceLock"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLY",
+      "owner": "G5-A",
+      "why": "Run remains INCOMPLETE despite read-only source proof; no fake DONE"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "OWNER_HANDOFF",
+      "owner": "T06",
+      "why": "Guard source does not equal T06 8/8 acceptance"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "OWNER_HANDOFF",
+      "owner": "T08",
+      "why": "Same-SHA native 13/13 and Docs evidence required"
+    }
+  ],
+  "new_owner_receipts": [
+    {
+      "run_id": "G3B-20261029T193606MSK-M1-R11-QUEUE-ERROR-REDACTION",
+      "commit": "819dff21ed009afc888385c8bcae7fdd3738d407",
+      "status": "source_patch_handoff_unmerged"
+    },
+    {
+      "run_id": "NOX-V16-M3-20261029-R12-GLOBAL",
+      "commit": "3cf974fa286e9fa826206ee09d79a42439e192a7",
+      "blob": "47e8996d9a8ea84d408a2f98e118536581c621ec",
+      "status": "prompts 15/15 readback; runtime enforcement pending"
+    }
+  ],
+  "self_improvement": {
+    "total_discovered_active": 11,
+    "all_active_entries_triaged": 11,
+    "clusters_deduplicated": 5,
+    "applied": "pin live SHA & independently verify privacy leak and donor fail-safe redaction",
+    "delegated": "source merge to T06; native review T08; canonical register CAS T02",
+    "already_verified": "ZIP 729/729, T04 34/34",
+    "history_backfill": "PARTIAL without rereading 419 archived fingerprints"
+  },
+  "owner_handoff": {
+    "to": [
+      "T02/C",
+      "T06",
+      "T08"
+    ],
+    "new_evidence": "P03 canonical PRE+unsafe paths verified, donor POST+STOP-preserving patch verified; R12 M3 prompt proof not yet journaled; readback SHA exact",
+    "shared_docs_modified": false
+  },
+  "restrictions": {
+    "no_product_code_modified": true,
+    "no_shared_docs_modified": true,
+    "no_shared_register_modified": true,
+    "no_pr162_write": true,
+    "no_exe_nsis_ci_e07": true,
+    "stop_acl_consent_unchanged": true,
+    "no_loss": true
+  },
+  "next_exact_action": "T02/C dedup-ingest G3-B P03 privacy proof and M3 R12 prompt proof with CAS+readback; T06 sole writer reconcile same-PRE P03 donor; T08 independent same-head privacy/STOP native review; T09/T10 after T06 accepted HEAD."
+}
