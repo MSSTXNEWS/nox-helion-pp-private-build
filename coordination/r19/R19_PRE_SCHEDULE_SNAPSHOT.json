@@ -1,0 +1,127 @@
+{
+  "schema": "NOX_V16_R19_PRE_RESCHEDULE_SNAPSHOT",
+  "recorded": "2026-10-29",
+  "notes": "Original schedule/prompt metadata only; full prompt histories preserved in pre-R18 and pre-R19 archive",
+  "tasks": [
+    {
+      "id": "6ae2aef78ba881919e6022c1103959a2",
+      "title": "NOX V16 G3-C T06 интегратор",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T183500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 7458,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2aefe3c248191a7131fc9876611e6",
+      "title": "NOX V16 G2-C P03 Queue",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T193000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+      "prompt_characters": 6395,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "title": "NOX V16 G5-C T11 GitLab READY",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T185500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6457,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2aef4bbc081918693b0552743bd0d",
+      "title": "NOX V16 G5-B T10 SOURCE_READY",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T185500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 36141,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af4f6c448191932f01b35fa364c1",
+      "title": "NOX V16 G5-A T02 журнал",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T185500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 37822,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af2f84088191ba04843861edf73b",
+      "title": "NOX V16 G4-C T09 freeze",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T184500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6387,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "title": "NOX V16 G4-B T08 блокеры",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T184500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6468,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "title": "NOX V16 G4-A T07 NOLOSS",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T184500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6356,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af347fbc81918ddafed356511243",
+      "title": "NOX V16 G3-B PACK02",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T183500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6333,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af008eac8191a03526f290b801c6",
+      "title": "NOX V16 G3-A P04 GPU/RAG",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T183500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6353,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+      "title": "NOX V16 G2-B P02 Voice",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T193000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+      "prompt_characters": 6422,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af31f2988191902bae4aaec2635e",
+      "title": "NOX V16 G2-A Host50",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T193000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+      "prompt_characters": 6584,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2aecc59f88191a10a9342f8a1930c",
+      "title": "NOX V16 G1-B NSIS source",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T193000\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=30;BYSECOND=0\nEND:VEVENT",
+      "prompt_characters": 34393,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2af28e4b8819192bbf6bb3857cc84",
+      "title": "NOX V16 G1-A P01–P03",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T181500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6502,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    },
+    {
+      "id": "6ae2aefbde94819183730a2ed3cad78c",
+      "title": "NOX V16 G1-C P04–P05",
+      "is_enabled": true,
+      "schedule": "BEGIN:VEVENT\nDTSTART:20261029T181500\nRRULE:FREQ=HOURLY\nEND:VEVENT",
+      "prompt_characters": 6493,
+      "prompt_prefix": "R18 VERIFIED GIT SOURCES (READ FROM CURRENT BRANCH SHA BEFORE USING): policy https://github.com/MSSTXNEWS/nox-helion-pp-private-bu"
+    }
+  ]
+}
