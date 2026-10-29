@@ -87,8 +87,8 @@ class HardwarePreflightContracts(unittest.TestCase):
     def test_selected_uuid_and_sufficient_actual_free_memory_semantics(self):
         device = {"index": "1", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
                   "name": "Test NVIDIA", "memory_total_mib": "12288"}
-        cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1)
-        fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
+        cuda = SimpleNamespace(is_initialized=lambda: False, is_available=lambda: True, device_count=lambda: 1)
+        fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="12.4"))
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
             probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
             probe.train_qlora, "gpu_inventory", return_value=[device]
@@ -160,6 +160,42 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertFalse(result["wheel_artifact_sha256_verified"])
         self.assertFalse(result["runtime_training_verified"])
         self.assertIn("NVIDIA_TELEMETRY_UNAVAILABLE", result["errors"])
+
+
+    def test_g4b_preinitialized_or_unknown_cuda_context_holds_before_vendor_probe(self):
+        for cuda in (SimpleNamespace(is_initialized=lambda: True),
+                     SimpleNamespace(),
+                     SimpleNamespace(is_initialized=lambda: (_ for _ in ()).throw(RuntimeError("broken")))):
+            fake_torch = SimpleNamespace(cuda=cuda)
+            with self.subTest(cuda=cuda), patch.object(
+                probe.platform, "system", return_value="Windows"
+            ), patch.object(probe.platform, "machine", return_value="AMD64"), patch.dict(
+                sys.modules, {"torch": fake_torch}
+            ), patch.object(probe.train_qlora, "nvidia_smi",
+                            side_effect=AssertionError("must not probe after CUDA context")):
+                result = probe.inspect("BALANCED", 0)
+            self.assertEqual(result["status"], "HOLD")
+            self.assertIn("CUDA_CONTEXT_PREINITIALIZED_OR_UNVERIFIABLE", result["errors"])
+            self.assertFalse(result["runtime_training_verified"])
+
+    def test_g4b_cpu_only_torch_cuda_build_cannot_claim_hardware_ready(self):
+        device = {"index": "0", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
+                  "name": "Synthetic NVIDIA", "memory_total_mib": "12288"}
+        cuda = SimpleNamespace(is_initialized=lambda: False,
+                               is_available=lambda: True, device_count=lambda: 1)
+        fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda=None))
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.platform, "machine", return_value="AMD64"
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
+            probe.train_qlora, "gpu_inventory", return_value=[device]
+        ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64), patch.object(
+            probe.train_qlora, "gpu_vram_headroom",
+            return_value={"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
+        ), patch.dict(sys.modules, {"torch": fake_torch}):
+            result = probe.inspect("ECO", 0)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertIn("TORCH_CUDA_BUILD_NOT_CONFIRMED", result["errors"])
+        self.assertFalse(result["runtime_training_verified"])
 
 if __name__ == "__main__":
     unittest.main()
