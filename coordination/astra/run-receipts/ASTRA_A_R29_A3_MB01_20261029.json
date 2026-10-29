@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A3-MB01-20261029",
+  "owner": "A3",
+  "branch": "astra/r29-a02-20261029",
+  "taskId": "P02 IPC rejects queued write if output transport fault-closed",
+  "prePostGitBlobs": [
+    {
+      "path": "Packages/P02/worker-chat/NativePythonPipe.cs",
+      "pre": "711644bf4d2052d812bf71a0b679d8531a3ca76e",
+      "post": "ca9f5d5843bf167bc9802942a66f4656c5060287",
+      "commit": "a1cddd3a188b914d5fb93b65c30bcaf6e6f23aac"
+    }
+  ],
+  "sourceStaticAssertions": "3/3 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 1,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "1/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
