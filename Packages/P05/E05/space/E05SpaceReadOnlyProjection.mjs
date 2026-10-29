@@ -244,7 +244,7 @@ export function projectFeeds(feeds, nowMs) {
   // cannot turn an otherwise valid quote into HOLD_DUPLICATE_FEED.
   // Identical native feed replays are one observation; distinct prices HOLD.
   // All source fields affect identity: license, timestamp, provider, quote.
-  const snapshotIdentity=f=>JSON.stringify(Object.keys(f).sort().map(k=>[k,f[k]]));
+  const snapshotIdentity=f=>{ try { return JSON.stringify(Object.keys(f).sort().map(k=>[k,f[k]])); } catch { return null; } };
   const uniqueLicensed=[];
   const distinctMarkets=new Map();
   for (const f of licensed) {
@@ -254,7 +254,7 @@ export function projectFeeds(feeds, nowMs) {
     const signature=snapshotIdentity(f);
     if (signatures.has(signature)) continue;
     signatures.add(signature);
-    uniqueLicensed.push(f);
+    uniqueLicensed.push(signature===null?{...f,status:'INVALID'}:f);
   }
   const marketCounts=new Map([...distinctMarkets].map(([id,signatures])=>[id,signatures.size]));
   const emittedMarkets=new Set();
