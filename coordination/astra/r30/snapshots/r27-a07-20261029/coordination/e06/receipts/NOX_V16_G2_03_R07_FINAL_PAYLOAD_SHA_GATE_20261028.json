@@ -1,0 +1,85 @@
+{
+  "schema": "NOX_V16_E06_G2_03_R07_FINAL_PAYLOAD_ADMISSION_V1",
+  "run_id": "NOX-V16-E06-G2-03-20261028T1206MSK-R07",
+  "owner": "E06",
+  "status": "ISOLATED_SOURCE_CANDIDATE_WINDOWS_HOLD",
+  "immutable_common": {
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_compare": "IDENTICAL",
+    "inventory_pr": 66,
+    "original_source_729_sha256": "UNVERIFIED_HOLD"
+  },
+  "parent": {
+    "commit": "b5e72d02f7a489407a77486fd378a756ad701b6d",
+    "tree": "6216d2f09404ffb3d1bd5cbbed2e1ffc24c7cfbe",
+    "pr": 116,
+    "branch_divergence": "HOLD_RECONCILIATION"
+  },
+  "files": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "owner": "E06",
+      "pre_commit": "b5e72d02f7a489407a77486fd378a756ad701b6d",
+      "pre_sha256": "520d5f5e160ea4aa77d800300aa25a86c07cbfdccb6c2004688743a24bff5f63",
+      "post_sha256": "67c32ccf5e9b77210d9f0cc102a1ada5d49e5c64512e0d3ae102284f420bec89",
+      "pre_git_blob_sha1": "66e4fa6937008b6aefc5eeb5224750cac8aa6bb5",
+      "post_git_blob_sha1": "0b1581f81fc9d6626ff968c2e00c47188e29a965",
+      "diff": "Snapshot SHA256 of accepted payload manifest and re-run original P01 payload verifier immediately before makensis, after prior P01-script byte pin, with no reparse directory/root/manifest allowed."
+    },
+    {
+      "path": "coordination/e06/tests/onehost_builder_contract.test.mjs",
+      "owner": "E06",
+      "pre_commit": "b5e72d02f7a489407a77486fd378a756ad701b6d",
+      "pre_sha256": "f9eb07f4d0e4e45ca8a5e245ede1c0f74a087082bb8382c89a466ef4a694e963",
+      "post_sha256": "43cfcef256f036a7f694663383aa2c728faf8c90526771c39b698d14fa241b3b",
+      "pre_git_blob_sha1": "7f6c750a623b10412be5481ebe4670c49e6ab2fe",
+      "post_git_blob_sha1": "2f7c3c0e820fb1c5ca7ce8c4d780bd281a245e66",
+      "diff": "Fixed matcher to assert precisely two original Verify-Payload invocations; no changes to original host/NSIS/creative assets."
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_G2_03_R07_FINAL_PAYLOAD_SHA_GATE_20261028.json",
+      "owner": "E06",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "READBACK_OUT_OF_BAND",
+      "post_git_blob_sha1": "READBACK_OUT_OF_BAND",
+      "diff": "new evidence receipt; self-hash intentionally external"
+    }
+  ],
+  "checks": {
+    "local_V8_static_assertions": "9/9 PASS",
+    "actual_Node": "NOT_RUN",
+    "PowerShell": "NOT_RUN_LINUX",
+    "Windows_NSIS": "NOT_RUN_LINUX",
+    "native_install_update_rollback": "HOLD",
+    "E07_one_BuildID": "HOLD",
+    "adapted_V8": "9/9 PASS; theater SHA crypto test NOT_RUN in V8",
+    "original_Node": "NOT_RUN_LINUX_NODE_AVAILABLE_BUT_REPO_PRIVATE_FILES_NOT_MATERIALIZED",
+    "exact_r07_test": "9 adapted V8 assertions PASS, 1 crypto-specific NOT_RUN; native Node/Windows NOT_RUN",
+    "saved_node_contract_callbacks_V8_adapted": "10/10 PASS (UTF8 SHA256 reference implementation; offline V8 adaptation)",
+    "theater_sha_verified": {
+      "theater.html": "59823e151104200c6ba64d2b56ff6ea1a4a1f72a97bcf12f75b749fc05468f11",
+      "theater.js": "62562ac81c5ff565e5e9c584c9201a26809bb390155a23b6c5cfee0948da6b42"
+    },
+    "release_gate": "HOLD, no native Windows run"
+  },
+  "taskIDs": [
+    "E06-R07-01 PRE_READ_V16_MASTER_E06_LESSONS",
+    "E06-R07-02 BASELINE_MATCH",
+    "E06-R07-03 OWNER_SCOPE_E06_ONLY",
+    "E06-R07-04 PR116_PREIMAGE_HASH_PASS",
+    "E06-R07-05 LATE_MANIFEST_IDENTITY_SOURCE_PATCH",
+    "E06-R07-06 FINAL_P01_PAYLOAD_VERIFIER_SOURCE_PATCH",
+    "E06-R07-07 NO_REPARSE_PAYLOAD_DIR_SOURCE_PATCH",
+    "E06-R07-08 NEGATIVE_REGRESSION_AUTHORED",
+    "E06-R07-09 NATIVE_WINDOWS_E07_HOLD",
+    "E06-R07-10 RECEIPT_REPORT_LESSON_READBACK_PENDING"
+  ],
+  "weighted_progress_formula": "0.20*P01+0.25*P02+0.20*P03+0.25*P04+0.10*P05",
+  "weighted_progress": "N/D",
+  "source_loss": 0,
+  "foreign_owner_code_edits": 0,
+  "one_practical_lesson": "REVERIFY_THE_STAGED_BYTESET_AT_LAST_MILE: admitted P01 manifest and payload must be checked again after tool installation and before compiler; matching owner NSIS script SHA alone is not enough.",
+  "receipt_previous_git_blob_sha1": "cf2bf78fabf1cc8cf2ed3f00a20606164533cacf",
+  "receipt_self_external_sha256_before_update": "64ee14d6b189b42858a7c4e75e695738d6f80afbaf0c58831d397d1a9e9a1f36"
+}

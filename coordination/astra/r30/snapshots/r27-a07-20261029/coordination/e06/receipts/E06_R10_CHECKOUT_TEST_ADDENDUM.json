@@ -1,0 +1,15 @@
+{
+  "schema": "NOX_V16_E06_R10_CHECKOUT_TEST_PATH_ADDENDUM_V1",
+  "runId": "NOX-V16-E06-HOST50-20261028T1512MSK-R10",
+  "reason": "Initial synthetic regression passed in a flat workspace but unittest discovery from actual repository checkout failed ModuleNotFoundError; corrected only E06 test import path.",
+  "owner": "E06",
+  "target": "tests/e06/test_original_archive_receipt_r10.py",
+  "preSha256": "0ff2dbdc3a8c6a8617bf55f843ca45b0d19ccb4fc8b524d564863bbeedbdef43",
+  "preGitBlobSha1": "892c316e15394585171714888e5c170f734e5a6f",
+  "postSha256": "6dc22e02bc6d43516a0bbfa6cb4c54adee9a0347f065e0ff8864ffa10b544691",
+  "postGitBlobSha1": "32a3c92bbc9ed53f8142b32d065fd842e506b10a",
+  "sourceGitBlobUnchanged": "dfa3b42b000c6f9f44370b2cc4e0ce4c51eadb1a",
+  "checkoutRegression": "RED 1 module import ERROR before correction; GREEN 8/8 PASS after correction via python -m unittest discover -s tests/e06 -p test_original_archive_receipt_r10.py",
+  "status": "SOURCE_LOCAL_TEST_PASS; GITHUB_READBACK_PENDING; 729_ARCHIVE_HOLD; WINDOWS_NOT_RUN; RELEASE_HOLD",
+  "priorReceipt": "coordination/e06/receipts/E06_R10_SOURCE_MANIFEST_RECEIPT.json immutable retained"
+}

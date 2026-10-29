@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_V16_E03_G1_03_TYPED_OWNER_RECEIPT_V1",
+  "runId": "NOX-V16-E03-G1-03-20261028T0651MSK-R02",
+  "owner": 3,
+  "worker": "G1·03 / ModelCenter C40",
+  "immutableSharedMain": {
+    "commitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "treeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "extractedSourceLockSha256": "HOLD_NOT_PROVEN_729"
+  },
+  "pinnedOriginalP03": {
+    "pr": 17,
+    "headGitSha1": "8657491117f4221c053a0ea5111f68a61f5ad06a",
+    "parentMismatchWithMain": true,
+    "readOnly": true
+  },
+  "gitBranch": "owner3/nox-v16-g1-03-admission-20261028-r02",
+  "sourceHeadBeforeReceipt": "e5db6fdd0641fe9f3a4048ba1fbcb42d0d3dac53",
+  "pullRequest": 78,
+  "sourceOnly": true,
+  "integrated": false,
+  "windowsAccepted": false,
+  "downloadsStarted": 0,
+  "secondDownloaderCount": 0,
+  "paths": [
+    {
+      "path": ".github/workflows/e03-g1-03-admission.yml",
+      "owner": 3,
+      "runId": "NOX-V16-E03-G1-03-20261028T0651MSK-R02",
+      "preSha256": "ABSENT_VERIFIED_AT_FROZEN_BASELINE",
+      "postSha256": "02c3576920e27ccf2b29efc4d306cafbd1fa3ffbf68f186b301474022e6eaa7d",
+      "gitBlobSha1": "8da97bb1987fefcac9dd562d22aae31e54b779ec",
+      "diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/78/files",
+      "status": "ADDED",
+      "deletions": 0,
+      "patchSha256": "N/D_NOT_CALCULATED"
+    },
+    {
+      "path": "Packages/P03/Admission/G1_03_E06_HANDOFF.md",
+      "owner": 3,
+      "runId": "NOX-V16-E03-G1-03-20261028T0651MSK-R02",
+      "preSha256": "ABSENT_VERIFIED_AT_FROZEN_BASELINE",
+      "postSha256": "66fa6bf26ac349e2c324be0dfca214d43fbbf941db40f368ed7e52436f2f861b",
+      "gitBlobSha1": "e737c4298c643392664b85cf98f33fd01324dc45",
+      "diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/78/files",
+      "status": "ADDED",
+      "deletions": 0,
+      "patchSha256": "N/D_NOT_CALCULATED"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "owner": 3,
+      "runId": "NOX-V16-E03-G1-03-20261028T0651MSK-R02",
+      "preSha256": "ABSENT_VERIFIED_AT_FROZEN_BASELINE",
+      "postSha256": "93546609e85b1a2ea42247ff05e9e2da18ccb26cf6e7ef8ecf80c913133b20e1",
+      "gitBlobSha1": "bd1102508da82fa90d471cd6653cf15cc66e3c84",
+      "diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/78/files",
+      "status": "ADDED",
+      "deletions": 0,
+      "patchSha256": "N/D_NOT_CALCULATED"
+    },
+    {
+      "path": "Packages/P03/Admission/test_p03_modelcenter_gate.py",
+      "owner": 3,
+      "runId": "NOX-V16-E03-G1-03-20261028T0651MSK-R02",
+      "preSha256": "ABSENT_VERIFIED_AT_FROZEN_BASELINE",
+      "postSha256": "d5ccbde873bcd68cded367bac876446d4b644a7ec6997158b043974a6019b204",
+      "gitBlobSha1": "2b43e360ef0e3c05b2386fb9e5c7d30e570d6b1c",
+      "diff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/78/files",
+      "status": "ADDED",
+      "deletions": 0,
+      "patchSha256": "N/D_NOT_CALCULATED"
+    }
+  ],
+  "localStagedTests": {
+    "count": 32,
+    "passed": 32,
+    "scope": "LOCAL_STAGED_OFFLINE_CODE_MATCH_NOT_PROVEN_EXACT_REMOTE_HEAD"
+  },
+  "githubCurrentHeadCI": {
+    "run": 40629638581,
+    "os": [
+      "Windows",
+      "Ubuntu"
+    ],
+    "conclusion": "failure",
+    "executedSteps": 0,
+    "classification": "TEST_NOT_RUN_PRE_JOB_FAILURE_CAUSE_UNVERIFIED"
+  },
+  "catalog": {
+    "exactOllamaTagLeads": 25,
+    "independentlyApprovedImmutablePins": 0,
+    "multimodalExternalLeads": 17,
+    "externalTransportVerified": 0
+  },
+  "readback": "PENDING",
+  "handoffOwner6": "PENDING",
+  "guarantee": "No edits/removals to frozen baseline files; original D02/WOW/EXE/archive untouched. This receipt is a candidate, not E06 or E07 acceptance."
+}

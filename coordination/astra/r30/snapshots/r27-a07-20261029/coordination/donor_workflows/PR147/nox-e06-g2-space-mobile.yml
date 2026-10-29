@@ -1,0 +1,104 @@
+name: NOX E06 G2 SPACE Mobile pinned-owner Windows component
+
+on:
+  push:
+    branches:
+      - e06/v16-g2-05-space-mobile-20261028-c01
+      - e06/v16-g2-05-provenance-20261028-r04
+      - e06/v16-g2-05-runtime-no-loss-20261028-r05
+      - e06/v16-g2-05-atomic-event-20261028-r06
+      - e06/v16-g2-05-evidence-type-20261028-r07
+      - e06/v16-g2-05-gpu-provenance-20261028-r08
+    paths:
+      - "coordination/e06/adapters/**"
+      - "tests/e06/adapters/**"
+      - ".github/workflows/nox-e06-g2-space-mobile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nox-e06-g2-space-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-pinned-component:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true # private same-repository owner commit fetch; read-only GITHUB_TOKEN
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Reuse owner2/3/PACK01 exact commits, not alternate implementations
+        shell: pwsh
+        env:
+          NOX_P02_SHA: 4939c92342e170a41dfca101b6a82c82c180041c
+          NOX_P03_SHA: 8657491117f4221c053a0ea5111f68a61f5ad06a
+          NOX_PACK01_SHA: 33774d985dd7f05e413f1830f74392f49645fe29
+          NOX_P05_SHA: 1610523ccdd0e25ab22a1d2ed1b5ea5a118de28e
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:NOX_G2_OWNER_FIXTURE_ROOT = Join-Path $env:RUNNER_TEMP "nox-g2-owner"
+          @'
+          import hashlib, os, pathlib, subprocess
+          root = pathlib.Path(os.environ["NOX_G2_OWNER_FIXTURE_ROOT"])
+          mapping = {
+              "PACK01": (os.environ["NOX_PACK01_SHA"], {
+                  "native_bridge.py": "proposals/NOX-PACK01-50/native_bridge.py",
+                  "catalog.json": "proposals/NOX-PACK01-50/catalog.json",
+              }),
+              "P02": (os.environ["NOX_P02_SHA"], {
+                  "p02_runtime.py": "Packages/P02/worker-python/p02_runtime.py",
+                  "p02_capabilities.py": "Packages/P02/worker-python/p02_capabilities.py",
+              }),
+              "P03": (os.environ["NOX_P03_SHA"], {
+                  "p03_onehost_port.py": "Packages/P03/Source/python-host/p03_onehost_port.py",
+                  "catalog30.discovery.json": "Packages/P03/Source/python-host/catalog30.discovery.json",
+              }),
+          }
+          pins = list(dict.fromkeys(x[0] for x in mapping.values()))
+          pins.append(os.environ["NOX_P05_SHA"])
+          for sha in pins:
+              subprocess.run(["git", "fetch", "--no-tags", "origin", sha], check=True)
+              subprocess.run(["git", "cat-file", "-e", sha + "^{commit}"], check=True)
+          for name, (sha, paths) in mapping.items():
+              dest = root / name
+              dest.mkdir(parents=True, exist_ok=True)
+              for filename, path in paths.items():
+                  spec = sha + ":" + path
+                  raw = subprocess.check_output(["git", "show", spec])
+                  (dest / filename).write_bytes(raw)
+                  blob = subprocess.check_output(["git", "rev-parse", spec]).decode().strip()
+                  print(name, path, "Git blob SHA-1", blob,
+                        "SHA-256", hashlib.sha256(raw).hexdigest())
+          '@ | python -
+      - name: Execute 105 defined in-process tests with genuine owner modules on Windows
+        shell: pwsh
+        run: |
+          $env:NOX_G2_OWNER_FIXTURE_ROOT = Join-Path $env:RUNNER_TEMP "nox-g2-owner"
+          python -m compileall -q coordination/e06/adapters tests/e06/adapters
+          python -m unittest discover -s tests/e06/adapters -p "test_*.py" -v
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Run pinned E05 Windows .NET component checks (not original EXE)
+        shell: pwsh
+        env:
+          NOX_P05_SHA: 1610523ccdd0e25ab22a1d2ed1b5ea5a118de28e
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $p05 = Join-Path $env:RUNNER_TEMP "nox-g2-e05-pinned"
+          git worktree add --detach $p05 $env:NOX_P05_SHA
+          dotnet run --project (Join-Path $p05 "Packages/P05/E05/checks/E05Checks.csproj") --configuration Release
+      - name: Report component-only scope and missing runtime gate
+        shell: pwsh
+        run: |
+          Write-Output "E06 G2 pinned-source Windows COMPONENT_ONLY"
+          Write-Output "Original source app SourceLock: HOLD; installed EXE bridge: NOT_RUN"
+          Write-Output "No HTTP/Tailscale endpoint, paid call, GPU trainer or model installation started."
+          Write-Output "E07 same-EXE acceptance: NOT_RUN"

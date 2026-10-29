@@ -1,0 +1,38 @@
+name: NOX E05 to E06 owner binding compatibility
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "Packages/P05/E05/**"
+      - ".github/workflows/e05-owner-compatibility.yml"
+permissions:
+  contents: read
+jobs:
+  owner-compatibility:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read-only checkout E06 Pack01 binding candidate
+        uses: actions/checkout@v4
+        with:
+          repository: MSSTXNEWS/nox-helion-pp-private-build
+          ref: refs/pull/22/head
+          path: e06-candidate
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Compile E06 E05OwnerPack against CURRENT E05 (temporary CI copy only)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src='e06-candidate/proposals/NOX-PACK01-50'
+          $owner='Packages/P05/E05'
+          Copy-Item "$src/E05OwnerPack.cs" "$owner/src/E05OwnerPack.cs"
+          $test = "$owner/crosscheck"
+          New-Item -ItemType Directory -Force -Path $test | Out-Null
+          Copy-Item "$src/E05Smoke/Program.cs" "$test/Program.cs"
+          $csproj = Get-Content "$src/E05Smoke/E05Smoke.csproj" -Raw
+          $csproj = $csproj.Replace('../../../owner-p05/Packages/P05/E05/src/NoxHelion.E05.csproj', '../src/NoxHelion.E05.csproj')
+          Set-Content -Path "$test/E05Smoke.csproj" -Value $csproj -Encoding UTF8
+          dotnet run --project "$test/E05Smoke.csproj" --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw 'E05_E06_CROSS_OWNER_BINDING_FAILED' }

@@ -1,0 +1,32 @@
+{
+  "schema": "NOX_E02_NATIVE_INGRESS_RECEIPT_V1",
+  "run_id": "NOX-V16-E02-NATIVE-INGRESS-20261028",
+  "owner": 2,
+  "paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "preimage": "ABSENT",
+      "sha256": "6191a811ca5ab9e7809dcec486f2793a6295a9f1edc3fa06ebf4c03a41996191",
+      "bytes": 5498
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "preimage": "ABSENT",
+      "sha256": "18d6ac4511ae8cf3cd8d06a54d7c77b1fa284d8f3ccb538e6c673c915e1d406c",
+      "bytes": 3420
+    },
+    {
+      "path": "Packages/P02/worker-python/NATIVE_INGRESS_HANDOFF.md",
+      "preimage": "ABSENT",
+      "sha256": "43b377be1d1841fbe441aa16d80ce35ed197feadace8354aec0bbf5d19b10829",
+      "bytes": 2730
+    }
+  ],
+  "local_tests": {
+    "result": "PASS",
+    "count": 6,
+    "python": "3.13.5"
+  },
+  "windows_host_integrated": false,
+  "release_accepted": false
+}

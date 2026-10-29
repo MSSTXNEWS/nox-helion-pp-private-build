@@ -1,0 +1,104 @@
+{
+  "schema": "NOX_V16_E06_W2_02_CODE_RECEIPT_V1",
+  "runId": "NOX-V16-W2-02-20261029T0045MSK-R17-ANCESTOR-GUARD",
+  "owner": "W2.02 E06 P01 host integration",
+  "pr": 162,
+  "head": "78deff01fae11b2649472b18e4e2b900ebb1e012",
+  "tree": "8d3ca0e68122c718531533898c4e733495981394",
+  "immutableBaseline": "0b3a7d435be735148d64171deb9027093a89646e",
+  "sourceLock729": "NOT_VERIFIED",
+  "status": "SOURCE_CANDIDATE_NOT_INTEGRATED_WINDOWS_HOLD",
+  "taskIds": [
+    "R17.01 source ancestor",
+    "R17.02 Python original ancestor",
+    "R17.03 NSIS owner and WPF project ancestor",
+    "R17.04 output parent preflight/recheck",
+    "R17.05 optional D02/WOW/persona inputs"
+  ],
+  "files": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "preSha256": "17c42efa2a33882bb128f05898df9e8d748fee9753a6bba9738935f68886de27",
+      "postSha256": "9136f2257cb1e6bac4a3eacbd0674b9a8707b8463900096f2461b678c961bc08",
+      "preGitBlobSha1": "edaa83131cbb8beeb9e47a7c121feafca87793f8",
+      "postGitBlobSha1": "ca8ce5d046452d8f2ad0730293171da3f9797f85"
+    },
+    {
+      "path": "tests/e06/test_onehost_reparse_ancestors_r17.py",
+      "preSha256": "ABSENT",
+      "postSha256": "5e99c4a7033b6778ba8b63ccd6d5f3a2305a439fd964cf17f0700b8896f10c0b",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "e513f24a9e6a8191c197d25665912656a3f6d693"
+    }
+  ],
+  "diff": "Add one fail-closed ancestor guard and calls before Resolve-Path/source-lock read/output creation and before publish; no UI/host/NSIS binary construction in this run",
+  "tests": {
+    "sourceStructural": [
+      {
+        "test": "path_guard",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "input_source",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "input_python",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "output_parent_before_write",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "recheck_before_publish",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "owner_nsis_project",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "staged_visual_lock",
+        "pre": false,
+        "post": true
+      },
+      {
+        "test": "preserve_existing_build",
+        "pre": true,
+        "post": true
+      }
+    ],
+    "red": "7/8 old negative or absent; preserved build contract old=PASS",
+    "green": "8/8 patched source checks PASS",
+    "pythonRegression": "SAVED_NOT_RUN",
+    "nativeWindows": "NOT_RUN",
+    "binaryBuild": "PROHIBITED_UNTIL_SOURCE_READY"
+  },
+  "previousLesson": {
+    "id": "CAPTION_SELECTION_INVALIDATES_PREVIOUS_TRACK_BEFORE_ASYNC_READ",
+    "applied": "N/A",
+    "reason": "Existing theater.js untouched; new source-only installer-path security scope"
+  },
+  "newLesson": {
+    "id": "CHECK_ALL_EXISTING_PATH_ANCESTORS_BEFORE_FIRST_WRITE",
+    "error": "A safe leaf SHA does not prevent input/output ancestor reparse redirection",
+    "rootCause": "No pre-resolve/output-root ancestor preflight in existing E06 builder",
+    "fix": "Apply one reusable FileAttributes.ReparsePoint ancestry gate and post-create recheck",
+    "regression": "8/8 structural source checks; native junction test pending",
+    "prevention": "Require P01 authorizer native negative reparse fixture before SOURCE_READY"
+  },
+  "hold": [
+    "Original 729 physical ZIP/member SHA",
+    "Native PowerShell reparse tests",
+    "CODE_COMPLETE",
+    "Independent SOURCE_READY=PASS",
+    "Windows installed E07"
+  ]
+}

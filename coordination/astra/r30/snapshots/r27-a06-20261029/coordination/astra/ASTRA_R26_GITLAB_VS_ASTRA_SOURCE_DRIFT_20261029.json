@@ -1,0 +1,1005 @@
+{
+  "schema": "NOX_AST_RA_R26_GITLAB_MIGRATION_VS_ASTRA_SOURCE_GIT_DRIFT_V1",
+  "date": "2026-10-29",
+  "fact_boundary": "This compares TWO GITHUB branches, not the private LIVE GitLab project; live GitLab current SHA and imported source tree unverified via available connector",
+  "github_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "historical_migration_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+  "github_migration_branch_commit": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+  "current_astra_branch": "astra/v16-code-complete-source-only-20261029",
+  "source_code_initial_commit": "817bb4146db0a2c79407d249d54fdeeb22261bb6",
+  "divergence": {
+    "status": "diverged",
+    "commits_ahead_of_migration": 106,
+    "commits_only_on_migration": 21,
+    "merge_base": "8e0f22b407611cb3e3c80cfdbcf34b4041f129f3"
+  },
+  "tree": {
+    "migration_blobs": 882,
+    "astra_blobs": 978,
+    "shared": 855,
+    "only_migration": 27,
+    "only_astra": 123,
+    "changed_shared": 41
+  },
+  "migration_only_files": [
+    {
+      "path": ".gitlab-ci.yml",
+      "git_blob_sha1": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+      "size": 993
+    },
+    {
+      "path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+      "git_blob_sha1": "a330977156c49aab0c433978b0d924549c5e2421",
+      "size": 10455
+    },
+    {
+      "path": "coordination/migration/GITLAB_FREE_MIGRATION_NOLOSS_20261028.md",
+      "git_blob_sha1": "cb19790dd5291672d7a86fc2e2930a71698d26a3",
+      "size": 7351
+    },
+    {
+      "path": "coordination/migration/NOX_V16_MASTER_PR162_SYNC_20261028_C3.json",
+      "git_blob_sha1": "d885106aab3e976847d0229174691008cf7ef7c2",
+      "size": 3499
+    },
+    {
+      "path": "coordination/migration/pr180-source/.github/workflows/nox-express-wow-r12.yml",
+      "git_blob_sha1": "47c0314651f014bd4b86fe73c00b2005b0948392",
+      "size": 2745
+    },
+    {
+      "path": "coordination/migration/pr180-source/DONOR_MANIFEST.json",
+      "git_blob_sha1": "c877a5a98efc620c858ea0aeed3d5340375b81fc",
+      "size": 3893
+    },
+    {
+      "path": "coordination/migration/pr180-source/coordination/e06/build_onehost_installer.ps1",
+      "git_blob_sha1": "f5c019a66712272ed14f3f5b50610f2dea52e787",
+      "size": 17311
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/FINAL_APPLY_AND_BUILD.ps1",
+      "git_blob_sha1": "adc48b5a5816528f649356433672498d8247fc4c",
+      "size": 6822
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+      "git_blob_sha1": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+      "size": 425
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/bridge/CreativeHostBridge.cs",
+      "git_blob_sha1": "e6262e8a0bfd9f52c82894a43ece89b83ff63fdc",
+      "size": 16654
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/stage_creative.py",
+      "git_blob_sha1": "9d6b22198bd57362477afa1a7132c982793c1a64",
+      "size": 5367
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/stage_persona_media.py",
+      "git_blob_sha1": "5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",
+      "size": 4406
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/tests/test_persona_media.py",
+      "git_blob_sha1": "98bb074f98622aec9f431fde69214e624ae0b2b6",
+      "size": 4314
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/tests/test_projector_contract.py",
+      "git_blob_sha1": "59a3b35549b1bb0ec5551f96a684d90ae98de52a",
+      "size": 2010
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/entry.js",
+      "git_blob_sha1": "34032ba9cb41bc3d71afcdbe57f690e15fd76755",
+      "size": 4540
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/persona-media.css",
+      "git_blob_sha1": "e3b89165ebd3bb3436e2b1a51ff39a2c67b9aa91",
+      "size": 990
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/persona-media.js",
+      "git_blob_sha1": "2b2d0f55b75eb7c94d0c27441726ec0e595558d0",
+      "size": 4622
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/studio.html",
+      "git_blob_sha1": "b90322fc4a69205f0eaf68b66ee8f30ad272eb7f",
+      "size": 13260
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/studio.js",
+      "git_blob_sha1": "cbbec5b6bc69051c7725abcdab8e8c1aa0f43f78",
+      "size": 16091
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/theater.html",
+      "git_blob_sha1": "8218097b981d9fb0cb9965da92acac59ed4ae765",
+      "size": 1789
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/creative/web/theater.js",
+      "git_blob_sha1": "04b05a20644aad580bfcb30322acba5fe7bbf77c",
+      "size": 2749
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/express-wow/README_RU.md",
+      "git_blob_sha1": "ded74d9891d098e1c111cb5b212b6ef3c03399c0",
+      "size": 917
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/express-wow/apply_express.py",
+      "git_blob_sha1": "72d799090f9f258beaf00c0a91773f27f57ef8f0",
+      "size": 5918
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/express-wow/tests/test_one_shot_order.py",
+      "git_blob_sha1": "f219d706e62f67e59ee44848374f71fd89d6db8e",
+      "size": 5932
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/express-wow/tests/test_utf8_bridge_limit.py",
+      "git_blob_sha1": "12fd9c7235b2b190f1195584d808282c4e1ad90a",
+      "size": 984
+    },
+    {
+      "path": "coordination/migration/pr180-source/integrations/wow200/tests/test_home_scene.mjs",
+      "git_blob_sha1": "694bbb26dc0abb91693e726e24b941435a02754b",
+      "size": 3025
+    },
+    {
+      "path": "tests/e06/test_gitlab_free_source_gate.py",
+      "git_blob_sha1": "88d84097d752d5dfb53329215677dccf5454ed34",
+      "size": 3402
+    }
+  ],
+  "astra_only_files": [
+    {
+      "path": "Packages/P02/evidence/NOX_V16_W3_01_R14_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "294c2f490de05270fc07a9d267b50656c5791bb3",
+      "size": 2945
+    },
+    {
+      "path": "Packages/P02/evidence/NOX_V16_W3_01_R15_CITATION_LABEL_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "21c49c7754fec6d1a99c4755e4f7af3e7d74134e",
+      "size": 2701
+    },
+    {
+      "path": "Packages/P02/evidence/NOX_V16_W3_01_R16_SERIAL_PUBLISH_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "547e13ed356fff9f01be4cd380e889fad2a0b9ca",
+      "size": 2296
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_citation_label_gate_ci_r15_min.py",
+      "git_blob_sha1": "c8b5e1f83963b3c7673b27b8756606502eb24271",
+      "size": 2389
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_event_payload_snapshot_ci_r14.py",
+      "git_blob_sha1": "93478eed33ed3aabbaed1997c841f74c3872cd45",
+      "size": 2459
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_serial_publish_admission_r16.py",
+      "git_blob_sha1": "818c5b6c3e32797030851e5d22c86e5f432631c8",
+      "size": 3437
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_catalog_json_contract_r13.py",
+      "git_blob_sha1": "e511b6c2d57fb52895efd8a6587cab2aa7b59212",
+      "size": 2829
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_digest_strict_r16.py",
+      "git_blob_sha1": "078a6f34d035c12151dfbcd544728f905aaca3d0",
+      "size": 2841
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R13_20261028.json",
+      "git_blob_sha1": "afa8293dc3dfc9e19457c281dd77c3724049946d",
+      "size": 2007
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R14_20261028.json",
+      "git_blob_sha1": "28cf6cace5ccd4bdcbb8ab0008e79a31c2d296dc",
+      "size": 2365
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R15_20261029.json",
+      "git_blob_sha1": "de7a03fd64fdd1ca26562a0c04885d5d17f83a13",
+      "size": 1958
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R16_20261029.json",
+      "git_blob_sha1": "1d6aa6f8574ff44208eb5fc0262a6389381b7763",
+      "size": 2592
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceMarketReplayR17.test.mjs",
+      "git_blob_sha1": "8e5cf143a36ad3e4fa9f694c228b0eaca3159827",
+      "size": 2166
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceRunErrorHistoryR15.test.mjs",
+      "git_blob_sha1": "e2ecd3519bce70a9aa25074e7548c9fbc443fb67",
+      "size": 1909
+    },
+    {
+      "path": "Packages/P05/E05/space/E05_SPACE_R15_OWNER_RECEIPT.json",
+      "git_blob_sha1": "b47cc11b7dfb707d708c63e5e1a7b32c5be959c8",
+      "size": 1964
+    },
+    {
+      "path": "Packages/P05/E05/space/E05_SPACE_R16_OWNER_RECEIPT.json",
+      "git_blob_sha1": "9ed7415646330d808ec76b4e5ae330e64d3c8cc8",
+      "size": 2248
+    },
+    {
+      "path": "Packages/P05/E05/space/E05_SPACE_R17_OWNER_RECEIPT.json",
+      "git_blob_sha1": "aa2cce569966fb6e858a4722c99e0b484dde8bbe",
+      "size": 2562
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "git_blob_sha1": "83800381c0adb0070f968590db2ff3e550810285",
+      "size": 4807
+    },
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj",
+      "git_blob_sha1": "ea9d613588364b3f6b1b8d3d1ac015322a373b58",
+      "size": 442
+    },
+    {
+      "path": "coordination/astra/ASTRA_R23_SUPERVISOR_10X10_START_NOW.md",
+      "git_blob_sha1": "6cad4d5de22931f6da0befb054ca5e580276577d",
+      "size": 16045
+    },
+    {
+      "path": "coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md",
+      "git_blob_sha1": "b35a3c6a4810ac54299b295d19f535352cdc176c",
+      "size": 9764
+    },
+    {
+      "path": "coordination/astra/ASTRA_R25_MINI_ACTIVATE.md",
+      "git_blob_sha1": "56dcb53ef69c51336139532d0f422a34d73e59eb",
+      "size": 5076
+    },
+    {
+      "path": "coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md",
+      "git_blob_sha1": "97e6f4447dc55a71f45a15c5903b28ae49d05a4e",
+      "size": 7769
+    },
+    {
+      "path": "coordination/astra/ASTRA_V16_R23_10_AGENTS_X_10_APPROACHES.json",
+      "git_blob_sha1": "a3337c7dc760f4bd7f931d7adaebd28c708add98",
+      "size": 40628
+    },
+    {
+      "path": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+      "git_blob_sha1": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+      "size": 189292
+    },
+    {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "size": 5928
+    },
+    {
+      "path": "coordination/astra/ASTRA_V16_SOLO_CODE_COMPLETE_HANDOFF_20261029.md",
+      "git_blob_sha1": "2b8ab3d91f934bf875e7e1a5f1efc93403913d2a",
+      "size": 16004
+    },
+    {
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "git_blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00",
+      "size": 3517
+    },
+    {
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "git_blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+      "size": 4133
+    },
+    {
+      "path": "coordination/e04/receipts/NOX_V16_W4_01_E04_20261028_R15_THERMAL.json",
+      "git_blob_sha1": "2ad6bc56f9be85be960102ac9e9cf950f6820159",
+      "size": 1867
+    },
+    {
+      "path": "coordination/e04/receipts/NOX_V16_W4_01_E04_20261028_R16_MODEL_LOCK.json",
+      "git_blob_sha1": "26f33095c62b4dbba809ccb8ee15b7d16c77f1ca",
+      "size": 3511
+    },
+    {
+      "path": "coordination/e04/receipts/NOX_V16_W4_01_E04_20261029_R17_JSON_KEY_PARITY.json",
+      "git_blob_sha1": "437e73e0604578191cff026310addeb74ca4ae27",
+      "size": 2261
+    },
+    {
+      "path": "coordination/e06/receipts/E06_W4_R14_P05_SNAPSHOT_REVOCATION_20261028.json",
+      "git_blob_sha1": "bb9832f41de63f0c9e27440b1dd79d35d533531f",
+      "size": 2843
+    },
+    {
+      "path": "coordination/e06/receipts/E06_W4_R15_MOBILE_FINAL_GATEWAY_RECHECK_20261028.json",
+      "git_blob_sha1": "c6ead4927b3e7ab3cec4f0c69b69730f78310ed7",
+      "size": 4583
+    },
+    {
+      "path": "coordination/e06/receipts/E06_W4_R16_MOBILE_ACL_EPOCH_20261029.json",
+      "git_blob_sha1": "cfde2b17f04f83003f193b91225c0b711d31e1db",
+      "size": 2727
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_E06_R18_D02_OWNER_PIN_GRAPH_20261028.json",
+      "git_blob_sha1": "39cff0f4057f2da38c00a4e8695c4c8135fa59d0",
+      "size": 1658
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_FINAL_L1_C2_P02_EVENT_URL_POLICY_20261028.json",
+      "git_blob_sha1": "2a2b50923ea18313fda1c31f12f6383407abe0d3",
+      "size": 2172
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_HOST50_WOW_PR208_R22_20261028.json",
+      "git_blob_sha1": "dffbc866d27106bef8662aa68d7b656a2d4e535a",
+      "size": 1353
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_CREATIVE_BOUNDED_STDIO_R18.json",
+      "git_blob_sha1": "e83339aee401a2c5270ab2d5cae669e15da6a5c2",
+      "size": 1456
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_E06_OUTPUT_PARENT_R17.json",
+      "git_blob_sha1": "31b63b959b9916f05d7f92f54f071f8975440940",
+      "size": 1167
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_P01_CREATIVE_IMPORT_R18.json",
+      "git_blob_sha1": "97a712ce0c00c42771bbb86793cb44937aefe23c",
+      "size": 1497
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_P02_FRAMED_DEPTH_R17.json",
+      "git_blob_sha1": "d0524768ecd5870c7b4f2a03ddfc6497a972be65",
+      "size": 1116
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_P02_PACK01_ATOMIC_BIND_R16.json",
+      "git_blob_sha1": "2edf484ff61fa32d6bce56d8968cf417dc96fd06",
+      "size": 1696
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_P02_VOICE_STOP_R16.json",
+      "git_blob_sha1": "ab3a9a2102791d9960d8426aeced0b3110c9f1a2",
+      "size": 1606
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_P03_QUEUE_CLAIM_R16.json",
+      "git_blob_sha1": "7e4aac9b705eb5d150e00fb81f0e61e409c4429f",
+      "size": 1278
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_R23B_P02_HISTORY_EXPECTEDFAILURE_20261029.json",
+      "git_blob_sha1": "968cdd519aff9f9b56ee49aca28837b731547b9f",
+      "size": 1471
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_R23_PACK01_IMMUTABLE_RISK_POLICY_20261029.json",
+      "git_blob_sha1": "87d3c286b90f9caa822b45f92ba8f7de7d488bdf",
+      "size": 3956
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_M1_R26_P01_SOURCE_CLOSURE_20261029.json",
+      "git_blob_sha1": "a2a57a978392fe31f418b532528e5d5c0e0d6206",
+      "size": 4424
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_R24_VOICE_P04_FULL_PROVENANCE_20261029.json",
+      "git_blob_sha1": "4723676a01634dccc25367973eda848a46d0f6ad",
+      "size": 3334
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_MANUAL1_R25_P03_E06_MAPPING_20261029.json",
+      "git_blob_sha1": "c01041520bab5662c1afeba8d79f35aecfd7e0d2",
+      "size": 2584
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W2_02_R14_THEATER_SUBTITLE_LIFECYCLE_20261028.json",
+      "git_blob_sha1": "8a7f8306ffb2acd8808baf8381adb8b3116cb330",
+      "size": 2696
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W2_02_R15_THEATER_MEDIA_ERROR_20261028.json",
+      "git_blob_sha1": "bc2adcc6b1ee26f38cdc229982d2f1ae1904000d",
+      "size": 3361
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W2_02_R16_SUBTITLE_SELECTION_20261028.json",
+      "git_blob_sha1": "fe96f21655632c3dfe02c0f58cd353974cd7c51d",
+      "size": 2865
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W2_02_R17_REPARSE_ANCESTORS_20261029.json",
+      "git_blob_sha1": "4f9f96be8bb7677e6fe5fca8a903ec157f0d0986",
+      "size": 3577
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W3_03_R14_ABORTABLE_STREAM_20261028.json",
+      "git_blob_sha1": "d621d98b5dcbaad74cc8cf4974c72ed03d298142",
+      "size": 3220
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W3_03_R15_OWNER_CLOSE_ONCE_20261028.json",
+      "git_blob_sha1": "6f49a36c6811a5e95b2e2658a0b40426e9f2d069",
+      "size": 3328
+    },
+    {
+      "path": "coordination/e06/receipts/NOX_V16_W3_03_R16_PROVENANCE_PARITY_20261029.json",
+      "git_blob_sha1": "2d788296a15dee922db3e73b1df82e669da27902",
+      "size": 3575
+    },
+    {
+      "path": "coordination/e06_host50/E06_R17_NATIVE_CALLBACK_ACCEPTANCE.json",
+      "git_blob_sha1": "e79efd9f50da4281f72c719f60fddcf527187e2f",
+      "size": 1255
+    },
+    {
+      "path": "coordination/e06_host50/test_native_callback_failclosed_r14.py",
+      "git_blob_sha1": "5c921ee948cbcfcc5c17a962b8912d27957ac97e",
+      "size": 3136
+    },
+    {
+      "path": "coordination/e06_host50/test_untrusted_wire_recursion_r15.py",
+      "git_blob_sha1": "772be7e185635cd5e6e9c9ee85b8404fe5d59856",
+      "size": 2783
+    },
+    {
+      "path": "coordination/final-manual3/receipts/NOX_V16_M3_P04_P05_R02_INTEGRITY_CACHE_20261028.json",
+      "git_blob_sha1": "bc03b758b4c024815274a97c01d08c077d863cb4",
+      "size": 3201
+    },
+    {
+      "path": "coordination/final-manual3/receipts/NOX_V16_M3_P04_RAG_INDEX_JSON_R01_20261028.json",
+      "git_blob_sha1": "b81dffab13c8dd06aba48db6f6159af99313f6b8",
+      "size": 2559
+    },
+    {
+      "path": "coordination/governance/NOX_V16_COMPACT_10_RULES_PLUS_FULL_HISTORICAL_55_80_20261028.md",
+      "git_blob_sha1": "1622f47f0047fa96b1156d0db11e53a62bd2fe7d",
+      "size": 3172
+    },
+    {
+      "path": "coordination/manual_roles/NOX_V16_FINAL_TWO_MANUAL_PROMPTS_20261028.md",
+      "git_blob_sha1": "9cbb988c7130d50b4fb2e28959ececf760acc09d",
+      "size": 4428
+    },
+    {
+      "path": "coordination/release/NOX_V16_46_THREE_MANUAL_FIFTEEN_AUTO_SOURCE_FIRST_20261028.md",
+      "git_blob_sha1": "4a87dd7f62786cf5fd8c72056762a7447cf983b3",
+      "size": 10531
+    },
+    {
+      "path": "coordination/release/NOX_V16_R20_SOURCE_ONLY_FASTPATH_20261029.md",
+      "git_blob_sha1": "7b586c80b28cfc30bbc78cd672281873e3dba6f0",
+      "size": 5680
+    },
+    {
+      "path": "coordination/release/NOX_V16_SOURCE_FINISH_2_TRACKS_PLUS_INDEPENDENT_QA_NO_BUILD_20261028.md",
+      "git_blob_sha1": "991c582749924ae3f86fb1b9c3f269505459dfa5",
+      "size": 7097
+    },
+    {
+      "path": "coordination/task-archive/NOX_V16_PRE_ACCELERATION_V15_V16_17_EXECUTORS_20261029.json",
+      "git_blob_sha1": "f8692ea5e048d86c26253afc464f6a466288239d",
+      "size": 106578
+    },
+    {
+      "path": "coordination/task-archive/NOX_V16_R20_PRE_SOURCE_ONLY_COMPACT_17_FULL_PROMPTS_20261029.json",
+      "git_blob_sha1": "2ce3bb9ab0a9e854ee0c8b1a0d910b6a9073cefa",
+      "size": 153816
+    },
+    {
+      "path": "integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+      "git_blob_sha1": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+      "size": 425
+    },
+    {
+      "path": "integrations/creative/stage_persona_media.py",
+      "git_blob_sha1": "5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",
+      "size": 4406
+    },
+    {
+      "path": "integrations/creative/tests/test_persona_media.py",
+      "git_blob_sha1": "98bb074f98622aec9f431fde69214e624ae0b2b6",
+      "size": 4314
+    },
+    {
+      "path": "integrations/creative/web/persona-media.css",
+      "git_blob_sha1": "e3b89165ebd3bb3436e2b1a51ff39a2c67b9aa91",
+      "size": 990
+    },
+    {
+      "path": "integrations/creative/web/persona-media.js",
+      "git_blob_sha1": "2b2d0f55b75eb7c94d0c27441726ec0e595558d0",
+      "size": 4622
+    },
+    {
+      "path": "integrations/express-wow/README_RU.md",
+      "git_blob_sha1": "ded74d9891d098e1c111cb5b212b6ef3c03399c0",
+      "size": 917
+    },
+    {
+      "path": "integrations/express-wow/apply_express.py",
+      "git_blob_sha1": "72d799090f9f258beaf00c0a91773f27f57ef8f0",
+      "size": 5918
+    },
+    {
+      "path": "integrations/express-wow/tests/test_one_shot_order.py",
+      "git_blob_sha1": "f219d706e62f67e59ee44848374f71fd89d6db8e",
+      "size": 5932
+    },
+    {
+      "path": "integrations/express-wow/tests/test_utf8_bridge_limit.py",
+      "git_blob_sha1": "12fd9c7235b2b190f1195584d808282c4e1ad90a",
+      "size": 984
+    },
+    {
+      "path": "integrations/wow200/runtime/E01_W2_R17_LIFECYCLE_OWNER_RECEIPT_20261029.json",
+      "git_blob_sha1": "1711051d72e950cadcd5cf7b7bed185cf74a1c11",
+      "size": 4184
+    },
+    {
+      "path": "integrations/wow200/runtime/E01_W2_TURBO10_R14_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "02d738752a07a39bfb0fd233736c92d43f99d074",
+      "size": 2504
+    },
+    {
+      "path": "integrations/wow200/runtime/home-scene.lifecycle.r17.test.mjs",
+      "git_blob_sha1": "512d5a24471e1d05a40873bc7db6e4c0cca0212d",
+      "size": 3743
+    },
+    {
+      "path": "integrations/wow200/runtime/loader.reduced-motion.test.mjs",
+      "git_blob_sha1": "4a377699cfa55344b7c778af0112aead96b0ce19",
+      "size": 4654
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/E01_W2_TURBO10_R15_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "a9c59c761858fae51bc6875368df76b504e9e7ee",
+      "size": 3536
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/E01_W2_TURBO10_R16_OWNER_RECEIPT_20261028.json",
+      "git_blob_sha1": "d37217497c6111d9f5b1090606bcd5cd3eb62414",
+      "size": 2305
+    },
+    {
+      "path": "proposals/NOX-VOICE-LAB/voice-lab.test.cjs",
+      "git_blob_sha1": "4948e0a1ed7755f3e2ff0f8db64a39247a9f3700",
+      "size": 5913
+    },
+    {
+      "path": "qa/G3-03/tests/nox-cinema-css-truth-r16.test.mjs",
+      "git_blob_sha1": "4776d6512b96e4cf2c0743b665da82acae46b23c",
+      "size": 5597
+    },
+    {
+      "path": "qa/G3-03/tests/nox-d02-owner-pin-parity-r17.test.mjs",
+      "git_blob_sha1": "ccf6db84ecf0c87f3161cd3e0e4b5614f9fc70c4",
+      "size": 3442
+    },
+    {
+      "path": "qa/G3-03/tests/nox-w2-03-active-ui-source-r18.test.mjs",
+      "git_blob_sha1": "cac74eead2508eeeef63f208c814bbb6028361f1",
+      "size": 4890
+    },
+    {
+      "path": "qa/e07/P04NativeIndexDuplicateR10/P04NativeIndexDuplicateR10.csproj",
+      "git_blob_sha1": "f6c9b47b75d65de7eb47472cb503de88ca72d05a",
+      "size": 439
+    },
+    {
+      "path": "qa/e07/P04NativeIndexDuplicateR10/Program.cs",
+      "git_blob_sha1": "1f02d12248c5e42567c683a4d75e8e2de11d8ca0",
+      "size": 3998
+    },
+    {
+      "path": "qa/e07/P04NativeIndexDuplicateR10/README_RU.md",
+      "git_blob_sha1": "8d9aee02900e8a4ad9a74c6ada2504f05d4d22ac",
+      "size": 1986
+    },
+    {
+      "path": "tests/P04/test_e04_model_lock_identity_r16.py",
+      "git_blob_sha1": "93435dd9cf5f376a48cbf2089ff46b15419c2244",
+      "size": 3554
+    },
+    {
+      "path": "tests/P04/test_e04_nfc_casefold_json_keys_r17.py",
+      "git_blob_sha1": "03b447d4a5a11ee22c94ea5c611d18f2701e1d90",
+      "size": 3727
+    },
+    {
+      "path": "tests/P04/test_e04_temperature_single_row_r15.py",
+      "git_blob_sha1": "db1d1216f1d47160de951fa0ef76e802bde0469b",
+      "size": 2343
+    },
+    {
+      "path": "tests/P04/test_pinned_tree_special_nodes_r02.py",
+      "git_blob_sha1": "2cdea3f94ba59ab06c2989fedffebf5a4101888d",
+      "size": 2774
+    },
+    {
+      "path": "tests/P04/test_rag_index_strict_json_r01.py",
+      "git_blob_sha1": "95ef54017cb630f81af0f683c10656509f7788c0",
+      "size": 4747
+    },
+    {
+      "path": "tests/P05/SpaceFeedCacheScopeHarness.cs",
+      "git_blob_sha1": "9e452ad3ca4825d47841267922ae81fcd2dcadce",
+      "size": 6090
+    },
+    {
+      "path": "tests/P05/SpaceFeedCacheScopeHarness.csproj",
+      "git_blob_sha1": "195210d4dc865885a07e1021f4e4a6bfb2497eaf",
+      "size": 547
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_mobile_acl_epoch_r16.py",
+      "git_blob_sha1": "347ed32fb7de5bbeb9ee98448bcfad0b885b57a6",
+      "size": 5648
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_mobile_final_attestation_r15.py",
+      "git_blob_sha1": "b546834c6d8dc20f825abc9cc45fdeab26944e65",
+      "size": 5018
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_p05_snapshot_revocation_r14.py",
+      "git_blob_sha1": "2797c502d6bfbeadb20874fb1802e7cf311aeceb",
+      "size": 3472
+    },
+    {
+      "path": "tests/e06/test_creative_import_reparse_r16.py",
+      "git_blob_sha1": "64509384deb315940414d01b4039e5ce891f6a43",
+      "size": 3402
+    },
+    {
+      "path": "tests/e06/test_creative_request_replay_r17.py",
+      "git_blob_sha1": "a3cd600e2924e90479abeb2665fd05012795aed5",
+      "size": 1958
+    },
+    {
+      "path": "tests/e06/test_creative_stdio_bounded_reader_r15.py",
+      "git_blob_sha1": "9b041fc9ec49d50ca142cfed3ade9295f1542c25",
+      "size": 3295
+    },
+    {
+      "path": "tests/e06/test_creative_stop_ack_r19.py",
+      "git_blob_sha1": "ca1fbe078447b4fa2f7d2dfe9d30eef460fa079d",
+      "size": 5492
+    },
+    {
+      "path": "tests/e06/test_immutable_routes_p03_e06_r11.py",
+      "git_blob_sha1": "8a6cd88321e4544d5783beea1851ac7f2a0d5bdc",
+      "size": 3976
+    },
+    {
+      "path": "tests/e06/test_onehost_abortable_stream_r14.py",
+      "git_blob_sha1": "6e5c299c75e78f3a03d25a507f0544fe91be728c",
+      "size": 3219
+    },
+    {
+      "path": "tests/e06/test_onehost_close_once_r15.py",
+      "git_blob_sha1": "fdcb53ede17ff88d119e96b00d334c22a06965b2",
+      "size": 3046
+    },
+    {
+      "path": "tests/e06/test_onehost_nested_provenance_r16.py",
+      "git_blob_sha1": "46f1a587ba11a7decc769bb5bdb07c3cc1899788",
+      "size": 3532
+    },
+    {
+      "path": "tests/e06/test_onehost_reparse_ancestors_r17.py",
+      "git_blob_sha1": "e513f24a9e6a8191c197d25665912656a3f6d693",
+      "size": 2620
+    },
+    {
+      "path": "tests/e06/test_original_729_output_parent_r17.py",
+      "git_blob_sha1": "a15b6b588314f070f7c66e88caf279271dba4b52",
+      "size": 2582
+    },
+    {
+      "path": "tests/e06/test_p02_framed_json_depth_r16.py",
+      "git_blob_sha1": "94a46430e070e406f256fc562bb95345ffeb92fb",
+      "size": 3909
+    },
+    {
+      "path": "tests/e06/test_p02_pack01_atomic_bind_r16.py",
+      "git_blob_sha1": "2c4f529d440843702665e48b0fe19fcb7bcb7068",
+      "size": 4921
+    },
+    {
+      "path": "tests/e06/test_p03_queue_claim_cleanup_r16.py",
+      "git_blob_sha1": "1adb018ac484cb74fb25b508cd16a8f4c45ee35a",
+      "size": 1274
+    },
+    {
+      "path": "tests/e06/test_pack01_native_utf8_boundary_r03.py",
+      "git_blob_sha1": "45cd0c150da3f6f75dd54fbb8fff45d0f8b1e36a",
+      "size": 13744
+    },
+    {
+      "path": "tests/e06/test_r17_nfc_namespace_gate.py",
+      "git_blob_sha1": "4696ce5c5bc6ad080a5a1727f110fffc1111e470",
+      "size": 2488
+    },
+    {
+      "path": "tests/e06/test_theater_media_error_r15.cjs",
+      "git_blob_sha1": "d652a45bb7b36648779699c8ae3853e2ae869c3e",
+      "size": 4150
+    },
+    {
+      "path": "tests/e06/test_theater_subtitle_lifecycle_r14.cjs",
+      "git_blob_sha1": "a202396cb1239cc85a0decfbc37c0757c18416c7",
+      "size": 3825
+    },
+    {
+      "path": "tests/e06/test_theater_subtitle_selection_r16.cjs",
+      "git_blob_sha1": "04e13bebc197cb5f23f045d399cf10052314eed5",
+      "size": 3350
+    },
+    {
+      "path": "tests/e06/test_wow200_catalog_integrity_r02.py",
+      "git_blob_sha1": "ad659818be3c5bf2542b11be265ca9b2d675ed6b",
+      "size": 3229
+    },
+    {
+      "path": "tests/e06/test_wow_owner_runtime_preflight_r06.py",
+      "git_blob_sha1": "0c48430afb6b2857e989cca0ce0df9b0e0a73b46",
+      "size": 3458
+    },
+    {
+      "path": "tests/e06/test_wow_persona_source_contract_r01.py",
+      "git_blob_sha1": "aba8cbb27affd9df029c59977744db817d5435a9",
+      "size": 4866
+    },
+    {
+      "path": "tests/e07/test_p04_eventwriter_history_r18.py",
+      "git_blob_sha1": "dffd629d86b4e8ab2373c8d65c98b0ed86c48c17",
+      "size": 2975
+    }
+  ],
+  "differing_shared_files": [
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "migration_blob_sha1": "d65279cd166fdf4bda503f5b02e39d6ab2f5eaee",
+      "astra_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "migration_blob_sha1": "d024cdbb9a01e7de424b001bcacfec0d6d40968a",
+      "astra_blob_sha1": "055a315575f2d0d740bb066771b8c59f426d2c92"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "migration_blob_sha1": "c5abaaec07dd711994f669996ace0e7da9b34373",
+      "astra_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_admission.py",
+      "migration_blob_sha1": "e6644a4983b566e78e5a866879e09a4d1b0f5d3f",
+      "astra_blob_sha1": "f3256dcd16eb5118f138bd3eade2a131ee97c14d"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "migration_blob_sha1": "23bdf43bbcd2bf43ed6b105d00a100fa337b4a9d",
+      "astra_blob_sha1": "55086d3bf29b8c7f600346a9fe14729f93b440e4"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "migration_blob_sha1": "a2528be4d4045f39e6b884e3f5188bd3c1ab7d75",
+      "astra_blob_sha1": "8cf2f867d353be837e29c7c517a89dafe5c53e29"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "migration_blob_sha1": "5f4d3bcb10b49d23d6522433de81d4aad7a1a66d",
+      "astra_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+      "migration_blob_sha1": "44d03ba48c06ffe9297c40f0e211b2241ebe7798",
+      "astra_blob_sha1": "b9bde7aeb502e86adb9cb2aa0781d40306c48199"
+    },
+    {
+      "path": "Packages/P04/Rag/RagService.cs",
+      "migration_blob_sha1": "35dcaffad780ce5b0501422a2bc406ec52e12b26",
+      "astra_blob_sha1": "a6730cd630dc7c9adc335b6182940ca84c4107ca"
+    },
+    {
+      "path": "Packages/P04/rag_python_compat.py",
+      "migration_blob_sha1": "77cae9dacfcd36ad2b5199268654a55a71ee03b2",
+      "astra_blob_sha1": "58af025bd05f0e99a445b56c307e12d600b8f19f"
+    },
+    {
+      "path": "Packages/P04/train_qlora.py",
+      "migration_blob_sha1": "a42db68117e7b4eec606fe7ae1a27988c3f977fa",
+      "astra_blob_sha1": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "migration_blob_sha1": "16076d4b3bcd41677164d4c3ad531caed408b80b",
+      "astra_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf"
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "migration_blob_sha1": "1709e7d36b49846930159e1c3dc6c5c9b0b8936b",
+      "astra_blob_sha1": "78cb5cefac8a1aad3af9338dc42653eac94f5537"
+    },
+    {
+      "path": "azure-pipelines-nox-v16.yml",
+      "migration_blob_sha1": "fa4a5eda0da9482f20c472647736805f2ea5b2a9",
+      "astra_blob_sha1": "489e44902bf3911505fdf768b492538a2772c170"
+    },
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "migration_blob_sha1": "e521129c3cd2ca39100682eee8cde5bf971f258a",
+      "astra_blob_sha1": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283"
+    },
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "migration_blob_sha1": "9315c2d7d3fe753dbeb5850bea70493bb1ca1dec",
+      "astra_blob_sha1": "ca8ce5d046452d8f2ad0730293171da3f9797f85"
+    },
+    {
+      "path": "coordination/e06/onehost_p02_p04.py",
+      "migration_blob_sha1": "d0adf0a7adc6814cffb25d038370e1e379208b53",
+      "astra_blob_sha1": "acf09d1daaae4ee98a95f55a092b9c92abbc8673"
+    },
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "migration_blob_sha1": "49c83214f3fcfcccc915d55212a52551411028ef",
+      "astra_blob_sha1": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8"
+    },
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "migration_blob_sha1": "01a2e56d3d0e0347da79306635ea4c3892425631",
+      "astra_blob_sha1": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f"
+    },
+    {
+      "path": "coordination/release/NOX_V16_FINAL_TWO_MANUAL_EXECUTORS_20261028.md",
+      "migration_blob_sha1": "cd220116622322023553799d1c3470577e659d72",
+      "astra_blob_sha1": "73d42b845d3fb3d54de105be81290b1251da5c84"
+    },
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "migration_blob_sha1": "bcb76d738b863433c03a9c67907884f615557298",
+      "astra_blob_sha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e"
+    },
+    {
+      "path": "integrations/creative/bridge/CreativeHostBridge.cs",
+      "migration_blob_sha1": "c63ac4c61cc27edbbada7e5267c209015ccc95b3",
+      "astra_blob_sha1": "2e70b68b85f2c968a3a46b7d6befd4611a789d89"
+    },
+    {
+      "path": "integrations/creative/stage_creative.py",
+      "migration_blob_sha1": "d89911ccf3260e0ad7fe82f954a1d4adf560372c",
+      "astra_blob_sha1": "9d6b22198bd57362477afa1a7132c982793c1a64"
+    },
+    {
+      "path": "integrations/creative/web/entry.js",
+      "migration_blob_sha1": "caf6b00e4517ad6232c6ca1a7283fef749b8f8f4",
+      "astra_blob_sha1": "34032ba9cb41bc3d71afcdbe57f690e15fd76755"
+    },
+    {
+      "path": "integrations/creative/web/studio.html",
+      "migration_blob_sha1": "929f9c81a9a07e1ba2a9cc7806be40c0509daf85",
+      "astra_blob_sha1": "b90322fc4a69205f0eaf68b66ee8f30ad272eb7f"
+    },
+    {
+      "path": "integrations/creative/web/studio.js",
+      "migration_blob_sha1": "0e75803162a850da2d8acc58d278c0ee27706588",
+      "astra_blob_sha1": "0ba9ce6ae7d95ed455cbc43f5a00f4ce98358b0e"
+    },
+    {
+      "path": "integrations/creative/web/theater.js",
+      "migration_blob_sha1": "e191673d5dc25546f8d9108fee24504ab63f64ff",
+      "astra_blob_sha1": "bf8b4919b1b02462d733e6a5636f418f809b953c"
+    },
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "migration_blob_sha1": "e78d2c9e538c24cd8be9431ce9d8f460809f9225",
+      "astra_blob_sha1": "da4a4e26d913636649bf22901ef4a07d37fdb718"
+    },
+    {
+      "path": "integrations/wow200/runtime/loader.mjs",
+      "migration_blob_sha1": "81c4761c19825111675ed0f055854eb2d138b749",
+      "astra_blob_sha1": "5882140fb5ad63366e48fb4849ecb240aeaf885a"
+    },
+    {
+      "path": "integrations/wow200/stage_wow200.py",
+      "migration_blob_sha1": "393b47edf1c9b6f92716b6dea44a02f7797fb5b4",
+      "astra_blob_sha1": "a3b25309edd4e86962d2fb4687f96b887d4dca87"
+    },
+    {
+      "path": "integrations/wow200/tests/test_home_scene.mjs",
+      "migration_blob_sha1": "2918e88f69d18ed36f1d00de5b0abe0375a5d8ab",
+      "astra_blob_sha1": "694bbb26dc0abb91693e726e24b941435a02754b"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "migration_blob_sha1": "a0bc34add0990b3f70bdbfd94fe52615193a4c08",
+      "astra_blob_sha1": "7e4acf43c287b3578e38e0acab0266e0343132e3"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.test.mjs",
+      "migration_blob_sha1": "63c82e25cb6fbad99580685d0e67ddcb1fd56ae3",
+      "astra_blob_sha1": "fde93f66644c1a607ba2eff83143d53073177249"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "migration_blob_sha1": "486e4d29a2f4d859a2923122706657915da011aa",
+      "astra_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_native_bridge.py",
+      "migration_blob_sha1": "390166ffa297ce45759b307aacd9d0bc1324df9f",
+      "astra_blob_sha1": "ff7fcc956b120b654e83d470abca4f963aa962d1"
+    },
+    {
+      "path": "proposals/NOX-VOICE-LAB/voice-lab.js",
+      "migration_blob_sha1": "28aeb64d6e9f0bce4ee919c80827aee0bdaf3a47",
+      "astra_blob_sha1": "e4856334c8680e107661c8908cd14d7178d48999"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "migration_blob_sha1": "75ce8a88bfbcf5d79dccab677bc2fbe6c82bb042",
+      "astra_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Test-NSIS-Windows.ps1",
+      "migration_blob_sha1": "accb9d3f22dc08654fe30f0acbb65b2428fd33d8",
+      "astra_blob_sha1": "436551ddb9192ad54db99aa0efeadc113f6bf6b4"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "migration_blob_sha1": "5023e556b2370b65513dd5f0093b290ceb4346ea",
+      "astra_blob_sha1": "6c178c04957d7397c0c081e3b123940637abc6e9"
+    },
+    {
+      "path": "tests/e06/test_creative_worker_stdout_admission_r14.py",
+      "migration_blob_sha1": "152373eb2cd4c354905e1b8bb26cffc21b568f3b",
+      "astra_blob_sha1": "bce08f4d51ac02f411852b735232afa189f7584a"
+    },
+    {
+      "path": "tests/e06/test_onehost_manifest_contract.py",
+      "migration_blob_sha1": "60e0d9ef1a9bb6664c692760b0db25cf30629e16",
+      "astra_blob_sha1": "a5b6c4f209198e96db1fb1120085f6c471e1659f"
+    }
+  ],
+  "original_parts": [
+    {
+      "path": "source_00.part",
+      "sameGitBlob": true,
+      "gitBlob": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+    },
+    {
+      "path": "source_01.part",
+      "sameGitBlob": true,
+      "gitBlob": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+    },
+    {
+      "path": "source_02.part",
+      "sameGitBlob": true,
+      "gitBlob": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    }
+  ],
+  "protected_policy": "Do not overwrite Astra newer P02/P04/WOW with historical migration. Do not delete 27 migration-only Git files, especially .gitlab-ci.yml and coordination/e06/gitlab_windows_entrypoint.ps1; preserve them for later single source-freeze integrator. Do not claim live GitLab tree equals GitHub migration; verify via authenticated GitLab project when authorized.",
+  "release": "BUILD_HOLD",
+  "execution": "SOURCE_CODE_ONLY_REPORT"
+}
