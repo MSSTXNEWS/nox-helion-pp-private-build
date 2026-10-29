@@ -13,6 +13,7 @@ import json
 import os
 import platform
 import re
+import subprocess
 import sys
 from pathlib import Path
 import train_qlora
@@ -149,6 +150,84 @@ def _require_cuda_parent_selection_compatible(chosen_uuid: str) -> None:
         raise RuntimeError("CUDA_PARENT_DEVICE_ORDER_CONFLICT")
 
 
+
+# A CUDA check must not leave imported torch/CUDA state in the loader process.
+# The child is one-shot, shell-free, and receives only a copied CUDA selection.
+_CUDA_PROBE_CHILD = """
+import json
+import re
+try:
+    import torch
+    cuda_build = getattr(getattr(torch, "version", None), "cuda", None)
+    if not isinstance(cuda_build, str) or not re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", cuda_build):
+        result = {"error": "TORCH_CUDA_BUILD_NOT_CONFIRMED"}
+    elif not torch.cuda.is_available():
+        result = {"error": "TORCH_CUDA_RUNTIME_UNAVAILABLE"}
+    else:
+        count = torch.cuda.device_count()
+        if type(count) is not int or count != 1:
+            result = {"error": "CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE"}
+        else:
+            result = {"cuda_runtime": cuda_build, "cuda_device_count": 1}
+except Exception:
+    result = {"error": "TORCH_CUDA_RUNTIME_UNAVAILABLE"}
+print(json.dumps(result, separators=(",", ":")))
+"""
+
+
+def _run_cuda_probe_isolated(uuid: str) -> dict:
+    """Inspect a UUID-scoped CUDA device in a fresh, short-lived interpreter.
+
+    This is runtime telemetry only, not real training, model rights or wheel SHA.
+    The loader process does not import torch or edit its own CUDA variables.
+    """
+    if not isinstance(uuid, str) or re.fullmatch(
+        r"GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", uuid
+    ) is None:
+        raise RuntimeError("GPU_UUID_INVALID")
+    _require_cuda_parent_selection_compatible(uuid)
+    child_env = os.environ.copy()
+    # Check the actual copy, not only the earlier mutable parent snapshot.
+    if child_env.get("CUDA_VISIBLE_DEVICES") not in (None, uuid):
+        raise RuntimeError("CUDA_PARENT_VISIBLE_DEVICES_CONFLICT")
+    if child_env.get("CUDA_DEVICE_ORDER") not in (None, "PCI_BUS_ID"):
+        raise RuntimeError("CUDA_PARENT_DEVICE_ORDER_CONFLICT")
+    child_env["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    child_env["CUDA_VISIBLE_DEVICES"] = uuid
+    try:
+        result = subprocess.run(
+            [sys.executable, "-I", "-c", _CUDA_PROBE_CHILD],
+            env=child_env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            encoding="utf-8", errors="strict", timeout=20, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired, UnicodeError):
+        raise RuntimeError("TORCH_CUDA_ISOLATED_PROCESS_FAILED") from None
+    if (type(result.returncode) is not int or result.returncode != 0
+            or not isinstance(result.stdout, str) or not 0 < len(result.stdout) <= 4096):
+        raise RuntimeError("TORCH_CUDA_ISOLATED_PROCESS_FAILED")
+    try:
+        payload = json.loads(result.stdout)
+    except (ValueError, TypeError):
+        raise RuntimeError("TORCH_CUDA_ISOLATED_RESPONSE_INVALID") from None
+    known_errors = {
+        "TORCH_CUDA_BUILD_NOT_CONFIRMED",
+        "TORCH_CUDA_RUNTIME_UNAVAILABLE",
+        "CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE",
+    }
+    if not isinstance(payload, dict):
+        raise RuntimeError("TORCH_CUDA_ISOLATED_RESPONSE_INVALID")
+    if set(payload) == {"error"} and payload["error"] in known_errors:
+        raise RuntimeError(payload["error"])
+    if (set(payload) != {"cuda_runtime", "cuda_device_count"}
+            or not isinstance(payload["cuda_runtime"], str)
+            or re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", payload["cuda_runtime"]) is None
+            or type(payload["cuda_device_count"]) is not int
+            or payload["cuda_device_count"] != 1):
+        raise RuntimeError("TORCH_CUDA_ISOLATED_RESPONSE_INVALID")
+    return payload
+
+
 @contextmanager
 def _temporary_cuda_selection(uuid: str):
     """Scope CUDA selector edits to this probe, not future worker tasks.
@@ -255,25 +334,11 @@ def inspect(profile: str, gpu_index: int) -> dict:
         report["errors"].append(str(exc))
         return report
 
-    if not any(x.startswith("PACKAGE_NOT_INSTALLED") for x in report["errors"]):
-        # This proves local package installations, not CUDA runtime functionality.
-        try:
-            # Match training's single approved UUID before importing CUDA.
-            with _temporary_cuda_selection(selected["uuid"]):
-                import torch
-                cuda_build = getattr(getattr(torch, "version", None), "cuda", None)
-                if not isinstance(cuda_build, str) or not re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", cuda_build):
-                    report["errors"].append("TORCH_CUDA_BUILD_NOT_CONFIRMED")
-                elif not torch.cuda.is_available():
-                    report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
-                else:
-                    report["gpu"]["cuda_runtime"] = cuda_build
-                    device_count = torch.cuda.device_count()
-                    report["gpu"]["cuda_device_count"] = device_count
-                    if device_count != 1:
-                        report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
-        except Exception:
-            report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
+    # CUDA import and context creation happen only in a one-shot child.
+    try:
+        report["gpu"].update(_run_cuda_probe_isolated(selected["uuid"]))
+    except RuntimeError as exc:
+        report["errors"].append(str(exc))
     report["status"] = "HARDWARE_READY_ONLY" if not report["errors"] else "HOLD"
     return report
 
