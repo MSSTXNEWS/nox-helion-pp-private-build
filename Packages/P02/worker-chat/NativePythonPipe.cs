@@ -38,6 +38,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
     private readonly Task _reader;
     private int _count;
     private int _busy;
+    private string? _regularNonce;
     private int _closed;
 
     public NativePythonPipe(Stream pythonStdout, Stream pythonStdin, string hostRunId)
@@ -95,6 +96,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 throw new NativePipeHold("NATIVE_FRAME_TOO_LARGE_OR_EMPTY");
             inserted = _pending.TryAdd(nonce, completion);
             if (!inserted) throw new NativePipeHold("NATIVE_NONCE_COLLISION");
+            if (regular) Interlocked.Exchange(ref _regularNonce, nonce);
             // Only the short framed WRITE is serialized; STOP can overtake an active response.
             await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
             try
@@ -125,7 +127,11 @@ public sealed class NativePythonPipe : IAsyncDisposable
             // Busy means one request may be active, not just one caller waiting.
             // It is released by the reader upon receiving that request's reply.
             if (!wrote && inserted) _pending.TryRemove(nonce, out _);
-            if (!wrote && regular) Interlocked.Exchange(ref _busy, 0);
+            if (!wrote && regular)
+            {
+                Interlocked.CompareExchange(ref _regularNonce, null, nonce);
+                Interlocked.Exchange(ref _busy, 0);
+            }
         }
     }
 
@@ -188,8 +194,10 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 if (!_pending.TryRemove(nonce, out var waiter))
                     throw new NativePipeHold("NATIVE_RESPONSE_NONCE_MISMATCH");
                 waiter.TrySetResult(outcome);
-                // Peer may return STOP before a chat; never release chat on STOP.
-                if (_pending.IsEmpty) Interlocked.Exchange(ref _busy, 0);
+                // Only the regular response releases its busy latch.
+                // A delayed STOP reply must not block a completed chat.
+                if (Interlocked.CompareExchange(ref _regularNonce, null, nonce) == nonce)
+                    Interlocked.Exchange(ref _busy, 0);
             }
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
@@ -199,6 +207,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
     private void FaultAll(string code)
     {
         Interlocked.Exchange(ref _closed, 1);
+        Interlocked.Exchange(ref _regularNonce, null);
         foreach (var kv in _pending)
             if (_pending.TryRemove(kv.Key, out var task)) task.TrySetException(new NativePipeHold(code));
         Interlocked.Exchange(ref _busy, 0);
