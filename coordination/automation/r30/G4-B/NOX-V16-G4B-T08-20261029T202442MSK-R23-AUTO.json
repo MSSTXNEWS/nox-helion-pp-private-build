@@ -1,0 +1,69 @@
+{
+  "schema": "NOX_V16_T08_R23_OWNER_SAFE_SOURCE_PATCH_RECEIPT_V1",
+  "run_id": "NOX-V16-G4B-T08-20261029T202442MSK-R23-AUTO",
+  "task_id": "T08",
+  "existing_error_id": "ERR-SRC-004",
+  "defect_cluster": "P01_STAGING_REPARSE_PARENT",
+  "scope": "NOX EXPRESS INTEGRATOR existing E06 P01 stage only; no new host/backend/TaskID",
+  "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "canonical_head_at_read": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+  "canonical_tree_at_read": "4918c5009b084b9b02dcc36642c86731b572b9df",
+  "immutable_patch_branch": "automation/g4b/t08-r23-stage-ancestor-reparse-20261029",
+  "source_writer": "T06 ONLY",
+  "shared_journal_writer": "T02 ONLY",
+  "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+  "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "evidence": {
+    "source_file": "coordination/e06/stage_p01.py",
+    "source_pre_blob": "3283b9d53a4cc691666951dbf24cd06d326fafaf",
+    "source_post_blob": "9dd6c28413963c037738418103172418ee08d121",
+    "test_file": "tests/e06/test_stage_p01_shared_zip_guard.py",
+    "test_pre_blob": "cc49957d37ad4ebc4994438d47af78ffaeb76d36",
+    "test_post_blob": "c97bf15c56f53617ea09b6c4ac0d770d746dc4ed",
+    "reproduction": "Linux isolated path semantics: ancestor symlink root/work -> outside; WORK.mkdir and WORK.is_symlink()==False; creating donor temp outside succeeds (old guard FAIL). Equivalent new guard detects symlink before mkdir, leaves outside empty.",
+    "reproduction_result": "old_guard=false,outside_file=true; patched_guard=E06_STAGE_REPARSE_ROOT_HOLD,outside_empty=true",
+    "focused_new_regression_added": true,
+    "real_full_unittest": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "source_paths_changed": 2,
+    "original_archive_729": "UNCHANGED",
+    "data_rights": "UNCHANGED",
+    "source_security_checks": [
+      "Root/ancestor reparse before mkdir",
+      "Root/ancestor reparse after mkdir",
+      "Existing SourceLock unchanged",
+      "No output files created before rejection"
+    ]
+  },
+  "four_source_stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": "FOCUSED_SEMANTICS_ONLY",
+    "INTEGRATED_ON_CURRENT_HEAD": false,
+    "OWNER_QA_ACCEPTED": false
+  },
+  "t08_fixed_criteria": {
+    "before": 1,
+    "after": 1,
+    "total": 3,
+    "percent": 33.3,
+    "remaining": 2,
+    "criterion_1": "HOLD T06 owner-accepted exact SHA/tree/manifest",
+    "criterion_2": "HOLD final same-head P0/P1 disposition",
+    "criterion_3": "DONE historic T09/T10 handoff; new patch owner handoff pending"
+  },
+  "error_ack": {
+    "ERR-SYS-001": "HANDOFF T02 historical register incomplete",
+    "ERR-SYS-002": "APPLIED current HEAD pin",
+    "ERR-SRC-003": "ALREADY_FIXED_SOURCE admission blob d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4, native 13 HOLD",
+    "ERR-SRC-004": "OWNER_PATCH T06 stage parent reparse candidate",
+    "ERR-SRC-005": "ALREADY_FIXED_SOURCE runner blob 303194331b1387690f8ac935bdcc968f8312143b, independent runtime pending",
+    "ERR-SYS-006": "ALREADY_VERIFIED historical 729 originals",
+    "ERR-SYS-007": "ALREADY_VERIFIED historical T04 34/34",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09/T02",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY no TASK_DONE from receipt",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 owner 8/8",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "BLOCKED signed same-head native proof"
+  },
+  "applied_lesson": "Use bounded PRE/POST and reject ancestor symlinks or Windows junctions before mkdir, not only final WORK.is_symlink; immutable owner-safe branch, never canonical T06 overwrite",
+  "next_action": "T06 inspect and cherry-pick only same-preimage P01 path patch + focused regression under exact current HEAD CAS; T08 independent same-head verify, preserve STOP/ACL/consent, T09/T10 handoff; no EXE/NSIS/CI/E07."
+}
