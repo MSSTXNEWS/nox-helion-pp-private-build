@@ -88,7 +88,14 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     // Starting a navigation revokes any in-flight native ACK. The old page may
     // survive when the navigation is canceled, so its replay IDs stay reserved.
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs args)
-        => AdvanceDocumentEpoch(newDocument: false);
+    {
+        // WebView2 must stay on the pre-mapped local HTTPS virtual origin.
+        // External documents belong to native host routing, never this bridge.
+        // Revoke pending native work even when an unsafe navigation is cancelled.
+        AdvanceDocumentEpoch(newDocument: false);
+        if (!IsTrustedSource(args.Uri))
+            args.Cancel = true;
+    }
 
     // Fragment/history changes invalidate in-flight replies but do not create
     // a fresh document. Clearing replay IDs here would allow action replay.
