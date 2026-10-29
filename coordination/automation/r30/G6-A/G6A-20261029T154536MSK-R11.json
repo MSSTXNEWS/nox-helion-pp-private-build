@@ -1,0 +1,95 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V11",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T154536MSK-R11",
+  "status": "HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY",
+  "scope": "SOURCE_ONLY_NO_EXE_NO_NSIS_NO_GITLAB_CI_NO_FINAL_INTEGRATION",
+  "branch": "automation/r30/g6a/G6A-20261029T154536MSK-R11",
+  "parentCommit": "af4d50161cec440893218ac4c82c3e97b2de54cc",
+  "parentTreeSha": "67dcbd400896389a8ea3c113946cd0b4c6b64b22",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blobSha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPaths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "uniqueReceiptDir": "coordination/automation/r30/G6-A/"
+  },
+  "readOnlyInputs": {
+    "exact56RulesSha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "latestSections54to56": "READ_WITH_R29_LOADER_ONLY_OVERRIDE",
+    "conflictIndexSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "googleDocs": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ],
+    "driveWrite": "FORBIDDEN_ASTRA_C_SINGLE_WRITER",
+    "driveReadback": "NOT_APPLICABLE_NO_SHARED_DOC_WRITE"
+  },
+  "source": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "preimageGitBlobSha1": "972f7e14746a6b4e633adcfce248322d69590499",
+    "postGitBlobSha1": "5ba6f3eaf9e142b21c530c49dc28a27d9ccb4dd5",
+    "function": "verify_original",
+    "defect": "R10 final gate checks dev/inode/size/mtime_ns but not bytes. An uncooperative writer can mutate the same inode in place and restore mtime; metadata remains identical while the current source part differs from the hash-verified original bytes.",
+    "fix": "Save first-pass SHA256 of each source part and re-open/re-hash all three original paths after the complete ZIP member scan; verify pre-open, descriptor and post-read identities and final SHA256, fail-closed on drift.",
+    "limitations": "No filesystem-level immutable snapshot; a foreign writer can race AFTER the final gate. This does not verify physical 729 source files without the original ZIP bytes."
+  },
+  "targetedTest": {
+    "id": "G6A-R11-SAME-INODE-SAME-MTIME-FINAL-SHA",
+    "command": "python /mnt/data/g6a_r11_same_inode_content_rehash_test.py",
+    "result": "1/1_PASS_ISOLATED_ONLY",
+    "testFileSha256": "185799adf16b636f91ab48f041033e9caff0563a7c258da37bce6f26858e3c3e",
+    "observations": [
+      "R10 metadata-only final gate falsely accepts same-inode same-size restored-mtime byte mutation",
+      "R11 final SHA rehash rejects mutated bytes",
+      "Stable original content is accepted"
+    ],
+    "committed": false,
+    "reason": "No tests/e06 directory authorization in current G6-A assigned_paths; tested locally only",
+    "fullSourceModuleTest": "NOT_RUN",
+    "nativeWindowsTest": "NOT_RUN"
+  },
+  "preservation": {
+    "r30Snapshots": "25/25 FULL RECURSIVE GIT TREE METADATA READ, NO TRUNCATION",
+    "originalZipPartGitBlobShaMatches": "75/75 across snapshot trees",
+    "originalZipPartsSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozen968ManifestGitSha1": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "parentBaselineGitPathsPresent": "968/968",
+    "parentBaselineGitBlobsUnchanged": 963,
+    "parentBaselineGitBlobsAlreadyChanged": 5,
+    "parentTreeTruncated": false,
+    "original729ZipInnerSha256": "NOT_VERIFIED_RAW_BINARY_UNAVAILABLE",
+    "snapshotFileBodies": "NOT_READ; recursive Git metadata was checked",
+    "gitBlobSHAversusRawSHA": "NOT_EQUIVALENT"
+  },
+  "priorLesson": "R10 reassesses path identities after ZIP scan, but inode/size/mtime metadata do not prove the content of those paths at the final gate.",
+  "newLesson": "A SourceLock receipt must tie each final pathname to its verified bytes, not merely to inode+size+restorable mtime. Repeat SHA256 over every source part at the final evidence gate, verify descriptor/path identity on both sides, and disclose residual post-check races.",
+  "permissionRequest": "Astra-C: assign unique tests/e06/test_g6a_r11_same_inode_content_rehash.py (or another exclusive G6-A test path) in the owner journal; do not commit test to a path currently absent from assigned_paths.",
+  "priorDonePreserved": true,
+  "mainAndPr162Untouched": true,
+  "otherOwnerPathsUntouched": true,
+  "snapshotsUntouched": true,
+  "statusGates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "ZIP_729_INNER_SHA256": "HOLD",
+    "FULL_MODULE_TEST": "NOT_RUN"
+  }
+}

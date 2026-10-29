@@ -133,7 +133,8 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
             parts_receipts.append({"path": name, "bytes": size, "sha256": own.hexdigest(),
                                    "gitBlobSha1": git.hexdigest()})
             original_part_paths.append((candidate, name, (
-                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)))
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns),
+                own.hexdigest()))
         observed = digest.hexdigest()
         if observed != archive_sha:
             raise SourceHold("RECONSTRUCTED_ZIP_SHA256_MISMATCH")
@@ -193,16 +194,36 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
     # Re-check ALL three input path identities after the full ZIP/member scan.
     # A later part read or member scan can outlive an earlier identity check.
     # This does not claim an immutable filesystem snapshot after return.
-    for candidate, name, identity in original_part_paths:
+    for candidate, name, identity, sha256_pin in original_part_paths:
+        # Metadata alone is not a content lock: a writer can overwrite bytes
+        # in-place and restore mtime, retaining dev/inode/size/mtime_ns.
+        # Re-read and hash all three paths at the final evidence gate.
         try:
             current = candidate.lstat()
+            if (not stat.S_ISREG(current.st_mode) or
+                    (getattr(current, "st_file_attributes", 0) &
+                     getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or
+                    (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns)
+                    != identity):
+                raise SourceHold("SOURCE_PART_CHANGED_BEFORE_FINAL_GATE:" + name)
+            final_sha = hashlib.sha256()
+            with candidate.open("rb") as stream:
+                opened = os.fstat(stream.fileno())
+                if (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns) != identity:
+                    raise SourceHold("SOURCE_PART_CHANGED_BEFORE_FINAL_GATE:" + name)
+                while block := stream.read(CHUNK):
+                    final_sha.update(block)
+                read_end = os.fstat(stream.fileno())
+            final_path = candidate.lstat()
         except OSError as exc:
             raise SourceHold("SOURCE_PART_PATH_UNAVAILABLE_AT_FINAL_GATE:" + name) from exc
-        if (not stat.S_ISREG(current.st_mode) or
-                (getattr(current, "st_file_attributes", 0) &
+        if (not stat.S_ISREG(final_path.st_mode) or
+                (getattr(final_path, "st_file_attributes", 0) &
                  getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or
-                (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns)
-                != identity):
+                (read_end.st_dev, read_end.st_ino, read_end.st_size, read_end.st_mtime_ns)
+                != identity or
+                (final_path.st_dev, final_path.st_ino, final_path.st_size, final_path.st_mtime_ns)
+                != identity or final_sha.hexdigest() != sha256_pin):
             raise SourceHold("SOURCE_PART_CHANGED_BEFORE_FINAL_GATE:" + name)
     return {
         "schema": "NOX_V16_ORIGINAL_729_INNER_SHA256_SOURCELOCK_V1",
