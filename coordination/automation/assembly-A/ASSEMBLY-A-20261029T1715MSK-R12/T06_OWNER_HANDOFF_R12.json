@@ -1,0 +1,117 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R12_SCOPED_DELTA",
+  "runId": "ASSEMBLY-A-20261029T1715MSK-R12",
+  "product": "EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "observedTarget": {
+    "pr": 162,
+    "headGitSha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "ownerAcceptedFinalHead": false
+  },
+  "baseline": "P01_R11_V2",
+  "sourceOnly": true,
+  "kind": "T06_OWNER_HANDOFF_WORKER_ATTESTED_NOT_OWNER_SIGNED",
+  "createdUtc": "2026-10-29T14:16:40.806Z",
+  "historicalT01Done": {
+    "criterion": 100,
+    "total": 100,
+    "commit": "9bcf1e8ce035424592ebcb3c9619a7bdf795b451",
+    "reopened": false
+  },
+  "ownerLockGitBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "ownerChoiceGitBlob": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+  "latestT04R03GitBlob": "563f4fad54973eb2be3457414025066e460fa8e1",
+  "sourceFiles": [
+    {
+      "scope": "P01",
+      "file": "P01_OWNER_SAFE_V3.scoped.patch",
+      "owner": [
+        "G1-B",
+        "G7-A"
+      ],
+      "changes": [
+        {
+          "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+          "preGitBlob": null,
+          "postGitBlob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+          "condition": "CREATE_ONLY_IF_ABSENT"
+        },
+        {
+          "path": "integrations/wow200/runtime/loader.mjs",
+          "preGitBlob": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+          "postGitBlob": "1fa3adcfd7aa6c1305e9406402a40e3236bd55ca",
+          "condition": "EXACT_PRE_CAS"
+        }
+      ],
+      "excludedConflictingPath": "proposals/NOX-PACK01-50/native_bridge.py",
+      "conflictReason": "T04/owner#1 explicitly KEEP baseline 805ade..., so old P01 v2 Host50 native donor must NOT apply",
+      "status": "OWNER_HOLD"
+    },
+    {
+      "scope": "P02",
+      "file": "P02_ALREADY_APPLIED_NOOP.json",
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "preGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "postGitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "status": "NOOP_ALREADY_PRESENT",
+      "productAccepted": false
+    },
+    {
+      "scope": "P03",
+      "file": "P03_OWNER_REBASE_HOLD.json",
+      "paths": [
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+          "currentPreGitBlob": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+          "donorPreGitBlob": "0b94237d7861c021a7db3cfda56073939562d312",
+          "donorPostGitBlob": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf"
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+          "currentPreGitBlob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+          "donorPreGitBlob": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+          "donorPostGitBlob": "3692811ac3234afb54e82958c7415b23619c1f0f"
+        }
+      ],
+      "status": "DONOR_PRE_MISMATCH_OWNER_HOLD"
+    }
+  ],
+  "host50": {
+    "sourceCandidates": 37,
+    "sourceHold": 13,
+    "acceptedNew": 0,
+    "originalDone": "PRESERVED"
+  },
+  "T04voice": {
+    "position": 30,
+    "status": "OWNER_HOLD",
+    "rule": "R03 supersedes R02, original helion_voice preserved in original 729 ZIP; no blind file copy"
+  },
+  "staticCAS": {
+    "checks": 6,
+    "passed": 6,
+    "kind": "GIT_BLOB_READBACK_AND_DIFF_SCOPE_ONLY",
+    "runtimeTests": 0
+  },
+  "assemblyScale": {
+    "before": "1/4",
+    "after": "1/4",
+    "beforePercent": 25,
+    "afterPercent": 25,
+    "deltaPercentPoints": 0,
+    "bar": "███░░░░░░░",
+    "unmet": [
+      "P01 owner admission",
+      "P03 owner rebase",
+      "T06 signed handoff"
+    ]
+  },
+  "ownerSignature": null,
+  "productMergeDone": false,
+  "noBuilds": {
+    "EXE": false,
+    "NSIS": false,
+    "GitLabCI": false,
+    "E07": false
+  },
+  "lesson": "Recheck PR162 HEAD on each attempt: prior P02 patch is already present, so reapplying would duplicate; remove P01 native bridge hunk because owner chose KEEP original, and do not promote R02 voice selection after R03 OWNER_HOLD."
+}
