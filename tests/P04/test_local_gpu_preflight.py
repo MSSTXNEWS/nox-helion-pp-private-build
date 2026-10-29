@@ -225,5 +225,57 @@ class HardwarePreflightContracts(unittest.TestCase):
             self.assertIsNone(result["gpu"])
             self.assertFalse(result["runtime_training_verified"])
 
+
+    def test_g4b_reenumerated_or_mutated_selected_gpu_holds_before_cuda(self):
+        for scenario in ("new_uuid_on_second_inventory", "same_object_mutated_during_vram"):
+            with self.subTest(scenario=scenario):
+                device = {"index": "0", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
+                          "name": "Synthetic NVIDIA", "memory_total_mib": "12288"}
+                changed = {**device, "uuid": "GPU-99999999-9999-9999-9999-999999999999"}
+                good = {"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
+                inventories = [device] if scenario == "same_object_mutated_during_vram" else [device, changed]
+
+                def read_inventory(_):
+                    if scenario == "same_object_mutated_during_vram":
+                        return [device]
+                    return [inventories.pop(0)]
+
+                def read_memory(*_):
+                    if scenario == "same_object_mutated_during_vram":
+                        device["uuid"] = changed["uuid"]
+                    return good
+
+                fake_torch = SimpleNamespace(cuda=SimpleNamespace(is_initialized=lambda: False))
+                with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+                    probe.platform, "machine", return_value="AMD64"
+                ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
+                    probe.train_qlora, "gpu_inventory", side_effect=read_inventory
+                ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
+                    probe.train_qlora, "gpu_vram_headroom", side_effect=read_memory
+                ), patch.dict(sys.modules, {"torch": fake_torch}):
+                    result = probe.inspect("BALANCED", 0)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertIn("GPU_SELECTION_CHANGED_DURING_PREFLIGHT", result["errors"])
+                self.assertIsNone(result["gpu"])
+                self.assertFalse(result["runtime_training_verified"])
+
+    def test_g4b_invalid_thermal_sensor_values_hold_before_vram(self):
+        device = {"index": "0", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
+                  "name": "Synthetic NVIDIA", "memory_total_mib": "12288"}
+        for temperature in (float("nan"), float("inf"), -1, True, "64"):
+            with self.subTest(temperature=temperature), patch.object(
+                probe.platform, "system", return_value="Windows"
+            ), patch.object(probe.platform, "machine", return_value="AMD64"), patch.object(
+                probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"
+            ), patch.object(probe.train_qlora, "gpu_inventory", return_value=[device]), patch.object(
+                probe.train_qlora, "gpu_temperature", return_value=temperature
+            ), patch.object(probe.train_qlora, "gpu_vram_headroom",
+                            side_effect=AssertionError("thermal HOLD must not read VRAM")):
+                result = probe.inspect("BALANCED", 0)
+            self.assertEqual(result["status"], "HOLD")
+            self.assertTrue(any(x in result["errors"] for x in
+                                ("GPU_TEMPERATURE_UNAVAILABLE", "GPU_THERMAL_HEADROOM_UNAVAILABLE")))
+            self.assertIsNone(result["gpu"])
+
 if __name__ == "__main__":
     unittest.main()
