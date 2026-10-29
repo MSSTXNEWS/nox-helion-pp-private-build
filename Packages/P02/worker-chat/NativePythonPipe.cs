@@ -4,6 +4,7 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -121,6 +122,28 @@ public sealed class NativePythonPipe : IAsyncDisposable
         }
     }
 
+    // Reject duplicate or NFC/case-equivalent JSON keys before relying on
+    // TryGetProperty (which otherwise returns the last duplicate).
+    private static void RequireUniqueReplyProperties(JsonElement value, int depth = 0)
+    {
+        if (depth > 64) throw new NativePipeHold("NATIVE_REPLY_DEPTH_DENIED");
+        if (value.ValueKind == JsonValueKind.Object)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in value.EnumerateObject())
+            {
+                if (!seen.Add(property.Name.Normalize(NormalizationForm.FormC)))
+                    throw new NativePipeHold("NATIVE_REPLY_AMBIGUOUS_JSON_KEYS");
+                RequireUniqueReplyProperties(property.Value, depth + 1);
+            }
+        }
+        else if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+                RequireUniqueReplyProperties(item, depth + 1);
+        }
+    }
+
     private async Task ReadPumpAsync()
     {
         try
@@ -135,6 +158,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 await _input.ReadExactlyAsync(reply, _lifetime.Token).ConfigureAwait(false);
                 using var doc = JsonDocument.Parse(reply);
                 var root = doc.RootElement;
+                RequireUniqueReplyProperties(root);
                 if (root.ValueKind != JsonValueKind.Object ||
                     !root.TryGetProperty("protocol", out var p) || p.GetString() != "NOX-P02-NATIVE-v1" ||
                     !root.TryGetProperty("runId", out var r) || r.GetString() != _runId ||
