@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_V16_REPEAT_FAILURE_AUTO_CORRECTION_INCIDENT_V1",
+  "incidentId": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+  "severity": "OPERATIONAL_P1",
+  "scope": "NOX HELION EXPRESS INTEGRATOR V16; T09 and multi-agent T02/T06/T08/T10 handoff",
+  "firstRecorded": "2026-10-29",
+  "status": "OPEN_CORRECTIVE_ACTIONS",
+  "userInstruction": "Do not stop before the block is physically complete 100%; remove obsolete administrative holds, optimize, reuse existing patches, self-improve by journal, no cosmetic report-only loops.",
+  "observedFailure": "T09 repeatedly ended manual answers/automation runs with HOLD after reporting immutable source snapshots, without completing acceptance or enforcing an explicit safe retry/owner action loop. Previous assistant repeatedly promised self-improvement but did not record this recurring operational failure as a distinct canonical incident or verify central-journal CAS/readback.",
+  "examples": [
+    {
+      "runId": "NOX-V16-T09-20261029T162545MSK-R12-HOLD",
+      "outcome": "SOURCE_FROZEN=false"
+    },
+    {
+      "runId": "NOX-V16-T09-20261029T164545MSK-R13-HOLD",
+      "outcome": "SOURCE_FROZEN=false"
+    },
+    {
+      "runId": "NOX-V16-T09-20261029T171541MSK-R15-HOLD",
+      "outcome": "1/6; source hold; repeated status reporting"
+    },
+    {
+      "runId": "NOX-V16-T09-MANUAL-20261029T163551MSK-R01",
+      "outcome": "OWN GIT receipt created while final gate HOLD"
+    }
+  ],
+  "evidence": {
+    "currentCanonicalSourceHeadLastSeen": "0cdeb101848e97088f9c464f502a68dc28049b7b",
+    "currentCanonicalTreeLastSeen": "dc9475da552253e6d8ac564c14934238564fd643",
+    "T09MostRecentOwnPinnedSourceManifest": "coordination/automation/t09/NOX_V16_T09_MERGED_SOURCE_992_BLOBS_R07.json",
+    "originalArchivePhysicalProofCommit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "T06FunctionalSourceGate": "P01-P05 and 13 Host50 native routes still not independently accepted; not equivalent to admin hold",
+    "T02SharedDocsLastConfirmed": {
+      "master": "NOX-V16-C-20261029T171632MSK-R16",
+      "e06": "NOX-V16-C-20261029T173351MSK-R17",
+      "lessons": "NOX-V16-C-20261029T173351MSK-R17",
+      "thisDistinctIncidentPresent": false
+    }
+  },
+  "rootCauses": [
+    "TEXT_ONLY_LESSON: lessons and report were not wired to next-run entry/exit criteria",
+    "JOURNAL_WRITE_GAP: T09 own Git/issue receipts were not propagated as a named incident into all three T02-owned shared logs with CAS/readback",
+    "TASK_ISOLATION: one agent changing its own prompt does not mutate other agents' saved automation prompts or synchronize their run states",
+    "UNSAFE_COMPLETION_SEMANTICS: scheduling/orchestration marks an execution completed even if underlying T09 task outcome is HOLD; run-completed!=TaskID-DONE",
+    "STALE_STATE_REUSE: repeated source versions and old T07 ACCESS_HOLD sometimes replaced current exact HEAD/source acceptance check"
+  ],
+  "correctivePolicy": [
+    {
+      "id": "CTRL-01",
+      "rule": "At T09 start, read this incident and current T06/T08/T07 receipts. Freeze exactly one same-head tuple, no new product trees or unapproved donor overwrites."
+    },
+    {
+      "id": "CTRL-02",
+      "rule": "If a mandatory source precondition is absent, execute one concrete authorized corrective step or an exact evidence handoff to the responsible owner with Git readback. Do not write another generic HOLD-only report without new evidence."
+    },
+    {
+      "id": "CTRL-03",
+      "rule": "Before declaring T09 DONE, require ALL six fixed freeze criteria PASS, owner-accepted T06 HEAD/tree/manifest, same-SHA T08 disposition, physical original SourceLock, Git CAS/readback, same tuple sent to T10/T11."
+    },
+    {
+      "id": "CTRL-04",
+      "rule": "If criteria cannot be met because another active owner has not committed evidence, leave T09 status BLOCKED_BY_EXTERNAL_DEPENDENCY (not DONE), preserve the already scheduled source workflow and explicit owner check; do not claim a tool can remain executing indefinitely or auto-complete independently."
+    },
+    {
+      "id": "CTRL-05",
+      "rule": "T02 alone writes incident into Master/E06/Lessons via CAS with explicit unique incidentId and immediate full readback 3/3. Do not substitute personal Git receipt for central-journal confirmation."
+    },
+    {
+      "id": "CTRL-06",
+      "rule": "Deduplicate across all other executors: recognize TaskID run completion vs source acceptance; do not turn source pin or test count into 100% product; no EXE/NSIS/GitLab CI/E07 until mandated gates."
+    }
+  ],
+  "ownerAssignments": {
+    "incidentAndT09": "T09",
+    "canonicalDocsWriter": "T02 only",
+    "sourceCodeAndFinalAcceptance": "T06/sole source owner #1",
+    "sameShaP0P1": "T08",
+    "independentSourceReady": "T10",
+    "gitlabPreparation": "T11"
+  },
+  "selfCorrectionActuallyApplied": {
+    "proof": "This incident JSON is written as a separate immutable Git receipt and cross-agent handoff, not merely discussed. T02 and T09 prompt amendments required and readback checked separately.",
+    "technicalHost50Bug": "Fixed BASE_TREE provenance vs active source acceptance is a separate T06 defect; do not confuse with premature-closeout operational incident."
+  },
+  "hardBoundaries": {
+    "noProductCodeEditsByT09": true,
+    "noForcedOwnerCodeOverwrite": true,
+    "noEXE": true,
+    "noNSIS": true,
+    "noGitLabCI": true,
+    "noE07": true,
+    "sourceFrozenNotDeclaredWithoutProof": true
+  },
+  "closureCriteria": [
+    "Immutable incident Git readback PASS",
+    "Shared Master CAS+readback shows incidentId",
+    "Shared E06 CAS+readback shows incidentId",
+    "Shared Lessons CAS+readback shows incidentId",
+    "T09 + T02 saved prompts include corrective controls, verified readback",
+    "Next T09 run shows concrete action or accepted 6/6, not a repeated generic HOLD"
+  ]
+}
