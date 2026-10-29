@@ -124,7 +124,20 @@ export const OPS=Object.freeze({
 "dev.json.compare":(s,o)=>{const a=flat(val(s)),b=flat(val(txt(o.compare)));return [...new Set([...keys(a),...keys(b)])].filter(k=>JSON.stringify(a[k])!==JSON.stringify(b[k])).map(k=>({path:k,before:a[k]??null,after:b[k]??null}))},
 "dev.json.validate":s=>{try{val(s);return {valid:true}}catch{return {valid:false,error:"INVALID_JSON"}}},
 "dev.url.inspect":s=>{if(/[\x00-\x1f\x7f\\]/.test(s))throw Error("URL_AMBIGUOUS_INPUT");const u=new URL(s.trim());if(!["https:","http:"].includes(u.protocol))throw Error("HTTP_ONLY");if(u.username||u.password)throw Error("URL_CREDENTIALS_FORBIDDEN");return {scheme:u.protocol,host:u.hostname,path:u.pathname,query:[...u.searchParams],fragment:u.hash}},
-"dev.url.query_encode":s=>{const o=val(s);if(!o||typeof o!=="object"||Array.isArray(o))throw Error("OBJECT_REQUIRED");return new URLSearchParams(Object.entries(o).map(([k,v])=>[k,txt(v)])).toString()},
+"dev.url.query_encode":s=>{
+  const o=val(s);
+  if(!o||typeof o!=="object"||Array.isArray(o))throw Error("OBJECT_REQUIRED");
+  // Match query_decode's canonical-key rule before serializing: avoid encoding data that cannot be decoded without alias collisions.
+  const seen=new Set(),pairs=[];
+  for(const [key,value] of Object.entries(o)){
+    const canonical=key.normalize("NFC").toLocaleLowerCase("en-US");
+    if(seen.has(canonical))throw Error("DUPLICATE_QUERY_KEY");
+    if(value!==null&&typeof value==="object")throw Error("QUERY_SCALAR_REQUIRED");
+    seen.add(canonical);
+    pairs.push([key,txt(value)]);
+  }
+  return new URLSearchParams(pairs).toString();
+},
 "dev.url.query_decode":s=>{
   const pairs=new URLSearchParams(s.trim().replace(/^\?/,"")),seen=new Set();
   const result={};
