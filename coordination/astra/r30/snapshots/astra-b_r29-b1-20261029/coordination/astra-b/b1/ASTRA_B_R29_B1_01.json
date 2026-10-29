@@ -1,0 +1,36 @@
+{
+  "run_id": "ASTRA-B-R29-B1-20261029-01",
+  "task_id": "B1-P04-WEIGHT-MAP-SHARD-BINDING",
+  "task_id_scope": "local corrective task; no product-ledger completion claim",
+  "owner": "B1",
+  "parent": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
+  "source_lock": {
+    "handoff_commit": "5a0793926066ecbc50252ce139703165283fe8f4",
+    "handoff_blob": "e50b6afca7a135a5407b257bc1ae0575b4e47ccd",
+    "released_package": "P04",
+    "owned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "pre_blobs": {
+      "Packages/P04/model_snapshot_probe.py": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "tests/P04/test_model_snapshot_probe.py": "197bda6b8f4fb4abb18b9ee64ccf6d210600baea"
+    }
+  },
+  "changes": [
+    "Bind exact indexed tensor name set to each actual shard header",
+    "Reject duplicate metadata JSON keys",
+    "Preserve count-only helper and correct formerly false-positive fixture"
+  ],
+  "validation": {
+    "command": "python -B tests/P04/test_model_snapshot_probe.py",
+    "tests": 16,
+    "result": "PASS",
+    "differential": "Original accepts four invalid cases; candidate rejects all four. Seven in-memory scenarios PASS."
+  },
+  "lesson": "Read latest owner head rather than root metadata branch; matching file existence is insufficient without exact per-shard tensor membership.",
+  "build": "NOT_RUN",
+  "gpu": "NOT_RUN",
+  "source_complete": "NOT_DECLARED",
+  "journal_writer": "Astra-A only"
+}

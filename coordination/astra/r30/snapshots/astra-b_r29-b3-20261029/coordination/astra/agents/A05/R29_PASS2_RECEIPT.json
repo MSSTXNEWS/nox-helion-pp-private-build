@@ -1,0 +1,29 @@
+{
+  "run_id": "ASTRA-R29-A05-2",
+  "owner": "A05/P05",
+  "source_parent": "88871779a7d7813552048909e94842ec516a6a9d",
+  "approaches_completed": 2,
+  "approaches_planned": 10,
+  "task": "fix(p05): retain failed criteria in the verified progress denominator",
+  "test": "3 focused tests: 2 RED -> 3 GREEN; complete SPACE suite34/34 Node runner units PASS. FAILED contributes zero while retaining full denominator; fabricated receipts rejected.",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "f427374ba29c2248e9f77f492b1fc5f9baab349a21f2d6813525f2ecb40b3572",
+      "post_sha256": "645d8f6032d7bc9e59997fc36aee5a668604e9bb9e02669b3196d6b633d4503f"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05FailedCriterionR29.test.mjs",
+      "pre_sha256": null,
+      "post_sha256": "5153af8e0fb31a3c3cecaa0d2265247f9962883387e023e4535190ccc3063536"
+    },
+    {
+      "path": "coordination/astra/agents/A05/R29_PASS1_PREIMAGE_CORRECTION.json",
+      "pre_sha256": null,
+      "post_sha256": "8bba93ad7e47176ae8a163eae302fabf3b4f86173498ea0e8a6076e37671a107"
+    }
+  ],
+  "windows": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_percent": null
+}

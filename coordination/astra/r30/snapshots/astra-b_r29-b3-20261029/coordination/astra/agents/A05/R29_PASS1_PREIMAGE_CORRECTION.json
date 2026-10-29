@@ -1,0 +1,19 @@
+{
+  "run_id": "ASTRA-R29-A05-1-PREIMAGE-CORRECTION",
+  "corrects_receipt_commit": "88871779a7d7813552048909e94842ec516a6a9d",
+  "source_parent": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "cause": "Branch creation retry incorrectly sampled local HEAD as remote preimage; original receipt remains preserved.",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "pre_sha256": "4b710e2d53ac83d92116c11a7afffb2d526d778a7faec9582ff7d495ceb029c0",
+      "post_sha256": "f427374ba29c2248e9f77f492b1fc5f9baab349a21f2d6813525f2ecb40b3572"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05PartialReadinessR29.test.mjs",
+      "pre_sha256": null,
+      "post_sha256": "a0de88de12403ea9fca80c3adab5090973189d829760f76f1939943eb0f8dc5c"
+    }
+  ]
+}

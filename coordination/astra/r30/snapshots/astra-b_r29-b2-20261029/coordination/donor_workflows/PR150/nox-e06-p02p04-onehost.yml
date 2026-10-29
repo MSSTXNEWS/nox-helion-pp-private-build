@@ -1,0 +1,59 @@
+name: NOX E06 P02-P04 one-host source contract (NOT release)
+on:
+  push:
+    branches:
+      - 'e06/v16-g2-04-p02p04-onehost-*'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-owner-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - name: E06 immutable integration proposal
+        uses: actions/checkout@v4
+        with:
+          path: e06
+          persist-credentials: false
+      - name: P02 owner original pinned commit (no merge)
+        uses: actions/checkout@v4
+        with:
+          ref: 4939c92342e170a41dfca101b6a82c82c180041c
+          path: owners/p02
+          persist-credentials: false
+      - name: P04 owner original pinned commit (no merge)
+        uses: actions/checkout@v4
+        with:
+          ref: 9ffc97beb1e3db1c869c18ffccff89104bece81b
+          path: owners/p04
+          persist-credentials: false
+      - name: Python 3.11 stdlib environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read exact owner module blob and E06 source syntax
+        shell: bash
+        run: |
+          test "$(git -C owners/p02 rev-parse HEAD)" = "4939c92342e170a41dfca101b6a82c82c180041c"
+          test "$(git -C owners/p04 rev-parse HEAD)" = "9ffc97beb1e3db1c869c18ffccff89104bece81b"
+          test "$(git -C owners/p02 hash-object Packages/P02/worker-python/p02_chat_bridge.py)" = "5108c0fa2da02f588c9235a2050d777479a0aca8"
+          test "$(git -C owners/p02 hash-object Packages/P02/worker-python/p02_runtime.py)" = "bd34282956678b2674573a452e4f7bd4adc781a8"
+          test "$(git -C owners/p04 hash-object Packages/P04/rag_python_compat.py)" = "b6d9e320194b2164f02cedfc6a1724a8a10a6079"
+          python -m py_compile e06/coordination/e06/onehost_p02_p04.py e06/tests/e06/test_onehost_p02_p04.py
+      - name: Real P02/P04 owner Python modules (offline Ollama/GPU fixtures only)
+        shell: bash
+        env:
+          NOX_P02_SOURCE: ${{ github.workspace }}/owners/p02/Packages/P02/worker-python
+          NOX_P04_SOURCE: ${{ github.workspace }}/owners/p04/Packages/P04
+        run: python -m unittest discover -s e06/tests/e06 -p test_onehost_p02_p04.py -v
+      - name: Hard evidence boundary
+        shell: bash
+        run: |
+          echo "COMPONENT_VERIFIED only if tests above PASS on this exact workflow SHA."
+          echo "No native WPF+WebView2 IPC, no installed Ollama, no actual GPU LoRA/QLoRA."
+          echo "No E07 same-BuildID/EXE-SHA acceptance. RELEASE=HOLD."

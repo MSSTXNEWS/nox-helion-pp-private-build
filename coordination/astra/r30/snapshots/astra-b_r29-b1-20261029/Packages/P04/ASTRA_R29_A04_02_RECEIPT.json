@@ -1,0 +1,32 @@
+{
+  "run_id": "ASTRA_R29_A04_02",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-GPU-PREFLIGHT-STRUCTURED-STATUS",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "parent": "bb7de8f578c25cc34b78165b2c676079469d1c7b",
+  "local_commit": "54338add66a970e56205601dea7618bd91598c85",
+  "files": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "pre_blob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "post_blob": "7da14569d8e92b09b2aa04348f368e3a2e3dc2aa",
+      "post_sha256": "439c8c27f4e1ae7e69d819d1c9c8542cb338b61cba88613f30f4d11aecd91488"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "pre_blob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+      "post_blob": "acd7dba19b003e2c388c694a489b7fb018f28f02",
+      "post_sha256": "01db7bcb642c6e81a6e2450e0f3b2c1dd2e5ca87163572b229d161bbe3c46b30"
+    }
+  ],
+  "red": "10 failed subcases and 1 error across 6 test methods on exact preimage",
+  "green": "6/6 test_local_gpu_preflight.py local Python, synthetic hardware contracts only",
+  "fix": "Direct host calls reject invalid profile/index before discovery. Missing/broken package version metadata emits MISSING/INVALID with HOLD and skips CUDA probe.",
+  "lesson": "CLI parsing does not validate direct installer entrypoints; missing package metadata is not installed capability.",
+  "prior_lesson_applied": "Validate decoded types before downstream discovery; preserve machine-readable HOLD instead of exceptions.",
+  "limits": [
+    "Package version presence is not a compatibility/hash lock",
+    "No actual Windows/CUDA test",
+    "Existing RAG/training donors unchanged, no build/download/integration"
+  ]
+}

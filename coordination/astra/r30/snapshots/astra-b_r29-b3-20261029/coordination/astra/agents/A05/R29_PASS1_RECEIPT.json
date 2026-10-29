@@ -1,0 +1,24 @@
+{
+  "run_id": "ASTRA-R29-A05-1",
+  "owner": "A05/P05",
+  "source_parent": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "approaches_completed": 1,
+  "approaches_planned": 10,
+  "task": "fix(p05): preserve independently verified progress when one lane is unknown",
+  "test": "4 focused tests: 3 RED -> 4 GREEN; complete SPACE Node suite 31/31 test runner units PASS including existing inline assertions.",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "f427374ba29c2248e9f77f492b1fc5f9baab349a21f2d6813525f2ecb40b3572",
+      "post_sha256": "f427374ba29c2248e9f77f492b1fc5f9baab349a21f2d6813525f2ecb40b3572"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05PartialReadinessR29.test.mjs",
+      "pre_sha256": "a0de88de12403ea9fca80c3adab5090973189d829760f76f1939943eb0f8dc5c",
+      "post_sha256": "a0de88de12403ea9fca80c3adab5090973189d829760f76f1939943eb0f8dc5c"
+    }
+  ],
+  "windows": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_percent": null
+}

@@ -1,0 +1,36 @@
+{
+  "run_id": "ASTRA_R29_A04_CONTINUATION_01_CORRECTION",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-LOCAL-WHEEL-ARTIFACT-CONTRACT",
+  "corrects": "57059165fd4dc50f32eb3d5108d90b595581f10c",
+  "additional_pass_credit": 0,
+  "continuation_block": 1,
+  "cumulative_r29_blocks": 7,
+  "local_commit": "17f5232d0ec4c0924fbd5e570e0023d56ce82a90",
+  "files": [
+    {
+      "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+      "pre_blob": "41ec6db02896d2b58ed3135bc5805e2281a98ce2",
+      "post_blob": "0080765d4d98aebfea1b4a0a3c48b7f1bd360e10",
+      "post_sha256": "06c16381c93d81fce6c6a8b0fa77e3bf2e3781530607e46361fb6ca12a79e19d"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "1cc4add22781d5a766b26c58f54744766f458787",
+      "post_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "post_sha256": "705d3d10c1183416c2a35c8ee20699a7ab96d33e1a0c94942892e9bd79c5b3ca"
+    },
+    {
+      "path": "tests/P04/test_wheel_inventory_preflight_r29.py",
+      "pre_blob": "3031c6ba236e16db526a29662277e8631c599408",
+      "post_blob": "e4940d5150b0e434dfbf4b78660f8967e5bfdfed",
+      "post_sha256": "e5699aa620c2852cb64b7f201893a24ca2f12460a9a084fd4d0cd9b7feaa5d51"
+    }
+  ],
+  "red": "1/9 failure: hash helper rewrites same inode after hashing, old SHA incorrectly accepted with new metadata",
+  "green": "9/9 test_wheel_inventory_preflight_r29.py",
+  "fix": "Compare fstat device/inode/size/mtime_ns/ctime_ns before hashing, after hashing and after ZIP metadata inspection. Mutation returns WHEEL_ARTIFACT_CHANGED_DURING_INSPECTION without second full wheel hash.",
+  "lesson": "An open descriptor fixes object identity across renames but does not freeze mutable contents. Bind hash and metadata to a stable observed file state.",
+  "limits": "Observation-time only; final offline install must still verify expected hash. No promise against later writes, no rights/target/hardware/lock upgrade.",
+  "no_install_build_integration": true
+}

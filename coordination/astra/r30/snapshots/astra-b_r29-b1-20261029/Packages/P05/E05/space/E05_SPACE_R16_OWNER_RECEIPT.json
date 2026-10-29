@@ -1,0 +1,44 @@
+{
+  "run_id": "NOX-V16-W4-02-20261028T230243MSK-R16",
+  "owner": "E05/P05 W4-02",
+  "task_id": "W4-02-R16-BOUND_UNTRUSTED_FEED_BYTES",
+  "pr": 162,
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "expected_parent_head": "f34ac6c54f686be6caa70aec283bef891e7a30bc",
+  "expected_parent_tree_sha1": "02126cb9c182e149f61578240d1667bfb2db652c",
+  "historical_origin_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+  "original_729_source_lock": "NOT_VERIFIED",
+  "files": [
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre_sha256": "7ff8b512147e0107c32537d98b097744a81d71119af0a69bb004dd63b27c0738",
+      "post_sha256": "50a30ef152e1fab5484b9a04f5900ea95819436a0a9b651e3788cc2cc6e84644",
+      "pre_git_blob_sha1": "6349d0f4f8a33f0fda7c12243ea07c5734810289",
+      "post_git_blob_sha1": "78cb5cefac8a1aad3af9338dc42653eac94f5537"
+    },
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "46dd592674e07b1e1ce9c39437a59cabb374bbe007111e07874f60bfa5e7801a",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "ea9d613588364b3f6b1b8d3d1ac015322a373b58"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "530cb10f8dc2d125f8e262179a7952c55930c9ea171e6ea93bf0432c1ddf0bdd",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "83800381c0adb0070f968590db2ff3e550810285"
+    }
+  ],
+  "change": "Bound provider HTTP response to <=8MiB by announced-length and counted streaming before JSON parse; stable RESPONSE_TOO_LARGE; never persist untrusted oversize as LIVE or create second HTTP client.",
+  "tests": {
+    "static_negative": "original source 0/4 RED; candidate 4/4 GREEN source structural checks",
+    "node_js_unchanged_legacy": "125/125 PASS; R12-R15 19/19 PASS",
+    "csharp_net8_behavior": "6 smoke assertions SOURCE_ADDED_NOT_RUN (.NET SDK unavailable)",
+    "windows_e07": "0/10 NOT_RUN"
+  },
+  "single_improvement": "BYTE_LIMIT_BEFORE_JSON_MATERIALIZATION",
+  "no_loss": "No original D02/WOW001-200/8 CoreID/5 Persona/events.v3/native hardware source/archives/main deleted or edited",
+  "readback": "PENDING_GITHUB_AND_DRIVE"
+}

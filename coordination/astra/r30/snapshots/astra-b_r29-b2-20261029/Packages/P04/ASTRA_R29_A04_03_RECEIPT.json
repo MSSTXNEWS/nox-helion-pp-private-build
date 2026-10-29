@@ -1,0 +1,35 @@
+{
+  "run_id": "ASTRA_R29_A04_03",
+  "owner": "A04/P04",
+  "task_id": "P04-INSTALL-LOCAL-WEIGHTS-HEADER-ADMISSION",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "parent": "cfb72d9dbbfe7098f15f83836a967873b8ec4586",
+  "local_commit": "0c756c01f2c3a9e5b4adba257c3a9f450f45bc13",
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "01c89f5de71ea7f226e1e24185caf83fb45df46c",
+      "post_blob": "7a059d940ea004c8d13b25592ae3d80cf7e455c9",
+      "post_sha256": "f0b70bd0a880d6fa640ed945a4316f93eac156615b7f1499bbafb85032652b3f"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_blob": "79f05abade0094852d3f3cc8f2fc84cf1d4ebfa2",
+      "post_blob": "197bda6b8f4fb4abb18b9ee64ccf6d210600baea",
+      "post_sha256": "65c1f7553220950d475eac7b24fa873b60b10d71e9a39bbc60fd7924b5bf40e7"
+    }
+  ],
+  "red": "8 failed subcases across 13 methods on exact prior owner source",
+  "green": "13/13 test_model_snapshot_probe.py Python; tiny local real files, no installed model/GPU",
+  "fix": "Reject duplicate header keys, invalid tensor shape fields, non-string metadata, overlapping/gapped/incomplete data offsets; retain empty tensor and scalar semantics.",
+  "lesson": "Installer format presence must enforce supported structural invariants before presenting a local model candidate; preserve valid edge formats in regression.",
+  "prior_lesson_applied": "Structured HOLD on malformed decoded input; previous malformed shard-map regressions included in targeted suite.",
+  "reference": "https://github.com/safetensors/safetensors/blob/main/README.md#format",
+  "dependency_change": false,
+  "limits": [
+    "Header probe is not the safetensors loader or full model compatibility attestation",
+    "No GPU/training/licensing runtime verification",
+    "No download/build/final integration",
+    "Prior RAG/checkpoint donor files untouched"
+  ]
+}

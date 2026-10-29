@@ -1,0 +1,110 @@
+<!doctype html>
+<!-- Visual-QA fixture only. Production MUST retain original approved D02 images and DOM.
+     Demo surfaces are synthetic. No CPU/GPU/learning telemetry is simulated. -->
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOX V16 · D02 Cinema FX · Visual QA</title>
+<link rel="stylesheet" href="./nox-cinema.css">
+<style>
+:root{color-scheme:dark;font-family:Segoe UI,Inter,Arial,sans-serif;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0;color:#eaf5f5;background:radial-gradient(ellipse at 50% 40%,#16242a 0,#05090e 55%,#020509 100%);min-height:100dvh}
+body:before{position:fixed;inset:0;content:"";pointer-events:none;background:
+ linear-gradient(0deg,#0005,transparent 30%,transparent 70%,#0008),
+ repeating-linear-gradient(90deg,transparent 0 99px,#9bcdd505 100px);
+ opacity:.5}
+main{max-width:1360px;margin:auto;padding:16px;position:relative}
+h1{font-size:clamp(16px,2vw,22px);letter-spacing:.18em;margin:4px 0 10px}
+.subtitle{font-size:11px;color:#a6c4c7;letter-spacing:.12em;text-transform:uppercase}
+.headerline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.nox-stage{min-height:clamp(340px,57vw,710px);display:grid;place-items:center;position:relative}
+.nox-orbits{position:relative;width:min(90vw,680px);aspect-ratio:1;isolation:isolate}
+.nox-orbits::before{content:"";position:absolute;inset:7%;border:1px solid #a3d7df10;border-radius:50%;box-shadow:0 0 45px #99e9ee12,inset 0 0 40px #8bcbcf0d}
+.nox-orbits::after{content:"";position:absolute;inset:22%;border:1px solid #bc90540d;border-radius:50%}
+.sphere{position:absolute;left:50%;top:50%;width:13%;aspect-ratio:1;border-radius:50%;
+ border:0;display:grid;place-items:center;transform:translate(-50%,-50%);cursor:pointer;
+ background:radial-gradient(circle at 30% 24%,#787b7b55,transparent 21%),
+ conic-gradient(from 23deg,#080d13 0,#322921 10%,#100e12 24%,#301916 40%,#0b0d11 57%,#2b2724 75%,#080b10);
+ box-shadow:inset -10px -12px 23px #000c,inset 2px 3px 8px #ffffff13,0 0 18px #d56b3f24;
+ color:#dae7e8;text-align:center;font-size:clamp(7px,1vw,10px);font-weight:600;letter-spacing:.08em}
+.sphere span{position:relative;z-index:5;pointer-events:none;text-shadow:0 1px 4px #000}
+.sphere:focus-visible{outline:2px solid #bdfaff;outline-offset:6px}
+.sphere:hover{box-shadow:inset -8px -12px 25px #000b,0 0 26px #e8a75e57}
+.sphere[data-core="HELION"]{width:36%;left:50%;top:50%;font-size:clamp(13px,2.3vw,24px);letter-spacing:.19em;z-index:3;
+ background:radial-gradient(ellipse at 36% 21%,#4953596c,transparent 24%),radial-gradient(ellipse at 60% 67%,#6a2a1e5d,transparent 40%),conic-gradient(from 20deg,#04080c,#201d1b,#080b12,#2b1a16,#04070c);
+ box-shadow:inset -26px -29px 45px #000b,inset 11px 9px 24px #b6c2c21a,0 0 45px #ed874737,0 0 110px #e47b2715}
+.sphere[data-core="CORE_1"]{left:50%;top:8%}
+.sphere[data-core="CORE_2"]{left:79.7%;top:20.3%}
+.sphere[data-core="CORE_3"]{left:92%;top:50%}
+.sphere[data-core="CORE_4"]{left:79.7%;top:79.7%}
+.sphere[data-core="CORE_5"]{left:50%;top:92%}
+.sphere[data-core="CORE_6"]{left:20.3%;top:79.7%}
+.sphere[data-core="CORE_7"]{left:8%;top:50%}
+.sphere[data-core="CORE_8"]{left:20.3%;top:20.3%}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.controls button{font:inherit;font-size:12px;letter-spacing:.03em;padding:10px 15px;min-height:44px}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.status .stat{padding:12px;font-size:13px;min-height:70px}
+.stat strong{display:block;margin-bottom:4px}
+.stat small{color:#9ebbbf}
+.note{font-size:11px;color:#94abb3;margin-top:14px}
+footer{margin:8px 0 16px;color:#95a5ad;font-size:11px}
+@media(max-width:680px){.nox-stage{min-height:350px}.nox-orbits{width:min(92vw,470px)}.sphere{width:14%}.controls button{flex:1 1 30%}}
+</style>
+</head>
+<body><main id="trusted-preview">
+<div class="headerline"><div><div class="subtitle">Cinematic materials · Nine CoreIDs</div><h1>NOX HELION // D02 FX TEST</h1></div><div class="subtitle">Local browser preview · No network</div></div>
+<section class="nox-stage" aria-label="Визуальная сцена девяти ядер">
+<div class="nox-orbits" id="orbit-space">
+<button class="sphere" data-core="HELION"><span>HELION</span></button>
+<button class="sphere" data-core="CORE_1"><span>01</span></button>
+<button class="sphere" data-core="CORE_2"><span>02</span></button>
+<button class="sphere" data-core="CORE_3"><span>03</span></button>
+<button class="sphere" data-core="CORE_4"><span>04</span></button>
+<button class="sphere" data-core="CORE_5"><span>05</span></button>
+<button class="sphere" data-core="CORE_6"><span>06</span></button>
+<button class="sphere" data-core="CORE_7"><span>07</span></button>
+<button class="sphere" data-core="CORE_8"><span>08</span></button>
+</div></section>
+<section class="nox-cinema-panel" id="diagnostic">
+<div class="controls">
+<button type="button" data-action="ECO" data-nox-float="true">ECO</button>
+<button type="button" data-action="BALANCED" data-nox-float="true">BALANCED</button>
+<button type="button" data-action="MAX" data-nox-float="true">MAX</button>
+<button type="button" data-action="REDUCED" data-nox-float="true">REDUCED</button>
+<button type="button" data-action="PAUSE" data-nox-float="true">PAUSE FX</button>
+</div>
+<div class="status">
+<div class="stat"><strong>Current mode</strong><small id="mode">BALANCED</small></div>
+<div class="stat"><strong>Particles</strong><small id="particles">0</small></div>
+<div class="stat"><strong>Training/AI</strong><small>N/D · no fake telemetry</small></div>
+<div class="stat"><strong>Core selection</strong><small id="selected">HELION</small></div>
+</div>
+<div class="note">QA fixture only: backgrounds are temporary CSS gradients. Production overlays preserve original approved images, personas and handlers.</div>
+</section>
+<footer>NOX V16 · additive FX module · Offline / no models / no personal data / no file changes</footer></main>
+<script type="module">
+import {installNoxCinemaFX} from "./nox-cinema.mjs";
+const root=document.querySelector("#trusted-preview");
+const buttons=[...root.querySelectorAll(".controls button")];
+const orbs=[...root.querySelectorAll(".sphere")].map(e=>({id:e.dataset.core,element:e}));
+const cinema=installNoxCinemaFX({root,orbs,controls:buttons,panels:[]});
+let paused=false;
+for(const e of buttons){
+  e.addEventListener("click",()=>{
+    const mode=e.dataset.action;
+    if(mode==="PAUSE"){paused=!paused;cinema.setVisible(!paused);e.textContent=paused?"RESUME FX":"PAUSE FX";}
+    else cinema.setProfile(mode);
+  });
+}
+for(const e of root.querySelectorAll(".sphere")){
+  e.addEventListener("click",()=>{root.querySelector("#selected").textContent=e.dataset.core;});
+}
+function stats(){
+  const sample=cinema.snapshot();
+  root.querySelector("#mode").textContent=sample.profile;
+  root.querySelector("#particles").textContent=String(sample.particles);
+  requestAnimationFrame(stats);
+}
+requestAnimationFrame(stats);
+window.addEventListener("pagehide",()=>cinema.destroy(),{once:true});
+</script></body></html>

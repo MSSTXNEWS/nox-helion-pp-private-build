@@ -1,0 +1,29 @@
+{
+  "run_id": "ASTRA-R29-A05-3",
+  "owner": "A05/P05",
+  "source_parent": "a33bdf9a7ef51aa2ca1da59dee14d3b0b7e6ae22",
+  "approaches_completed": 2,
+  "approaches_planned": 10,
+  "task": "fix(p05): quarantine cross-lane TaskID collisions in native progress admission",
+  "test": "PATCH_CANDIDATE: 7 native offline fixture assertions added to existing E05VerifiedProjectionChecks.Run. NATIVE_TEST_EXECUTION=NOT_RUN (dotnet/csc/mcs unavailable); no native PASS. git diff --check PASS is formatting only. Two earlier JS approaches verified; this third source block pending native execution. No new bus or backend.",
+  "files": [
+    {
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "pre_sha256": "57fcc6d6f4cbdfadb812f7340b5b7f48000611df4bf571dc2ecbb1b73a7d4eef",
+      "post_sha256": "49a4cbad531410be2a9d8d3fe1f0125ad229f2d6daafc9b2e7a8516b9906bdae"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "pre_sha256": "46db60b9d3b88f0d61294a9d13057353c97260bbdf8e4d685db7cc4fed940839",
+      "post_sha256": "683bd4c54cecf90e9c989ee67a47d67f370c72e514124a3722400a3cc56cf429"
+    },
+    {
+      "path": "Packages/P05/E05/checks/E05VerifiedProjectionChecks.cs",
+      "pre_sha256": "c590f70886eaba1b810e138ac7d4f07177dc10fedc556b6762333b47386f1e77",
+      "post_sha256": "6bca9541bd63caccb9386bfdb4d431361497a4c9dcece2e63f8cfd340274ebeb"
+    }
+  ],
+  "windows": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_percent": null
+}

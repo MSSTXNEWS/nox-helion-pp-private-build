@@ -1,0 +1,705 @@
+{
+  "schema": "NOX_V16_E06_HOST50_R06_ATOMIC_CONCURRENCY_RECEIPT_V1",
+  "runId": "NOX-V16-E06-G2-02-20261028T1105MSK-R06",
+  "owner": "E06_INTEGRATOR_6",
+  "stage": "SOURCE_COMPONENT_VERIFIED_RELEASE_HOLD",
+  "reason": "Source-only atomic native ACK pending state and strict integer owner guards; no native bindings activated",
+  "frozenBaseline": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "status": "FROZEN_MAIN_VERIFIED"
+  },
+  "sourceLock": {
+    "fullArchivePartsSha256": "NOT_VERIFIED",
+    "rawExtracted729Sha256": "NOT_VERIFIED",
+    "reconciledOwnerReceipts": "HOLD",
+    "inventoryPR": 66,
+    "inventoryOnly": true
+  },
+  "parent": {
+    "pr": 106,
+    "head": "7162fa630be43035aaf76f8788fefad421454aee",
+    "tree": "b58ccb66edb97889ed021813494ff7f55af4fbc4",
+    "oldSourceMapHead": "be1fe05d88443e41b0d196617840508d9dd39b7d",
+    "sourceMapBase": "eb46b49fb8a022cefa679afb8606877016808db1",
+    "drift": true
+  },
+  "changedFiles": [
+    {
+      "path": "coordination/e06_host50/admission.py",
+      "owner": "E06",
+      "preSha256": "3b3bfbc76d45a535cac3264dcdf6f179d2c44cfb173bda09f6bc00150de6040e",
+      "postSha256": "0c2049215ae40192e40b598780a013e27efb6384f87003b019dcb259a2bd9d24",
+      "preGitBlobSha1": "cf256629b9807980017e9a4d7170a5480278fdab",
+      "postGitBlobSha1": "8bdb8d5f3ad8ac66ff6662e5519f4c2cf8f88e99",
+      "diffSha256": "f08e4963204bf78ae2d04e3438d7f2ca6ec71376f4454daf11e300ed846c96ac",
+      "description": "RLock guarding pending capacity reservation and one-time native ACK consumption; strict type owner integer"
+    },
+    {
+      "path": "coordination/e06_host50/test_admission.py",
+      "owner": "E06",
+      "preSha256": "19bd62b8a57728d76f3d76de4bc27f91d73c9607d5e7d8d975244c796e28fd96",
+      "postSha256": "41e5d2d1334c96174c2dd55a20fb56c88c121671b8754a9379f73e38e27ff024",
+      "preGitBlobSha1": "5c5b25402bd964fd7b18c5d967013d7e1cea82dc",
+      "postGitBlobSha1": "0d5e7663bbf53c4abf2a8e779de21346bcfb69e4",
+      "diffSha256": "b09128fad1757e604c706886b2aaf4d0a8a7d209892bb522843d550705f60681",
+      "description": "4 new negative race, pending-limit, forged-owner-capability and signed owner-bool tests"
+    },
+    {
+      "path": "coordination/e06_host50/E06_HOST50_R06_ATOMIC_ACK_RECEIPT_20261028.json",
+      "owner": "E06",
+      "preSha256": "ABSENT",
+      "postSha256": "SEE_EXTERNAL_PR_RECEIPT_TO_AVOID_SELF_HASH",
+      "preGitBlobSha1": "ABSENT",
+      "postGitBlobSha1": "SEE_GITHUB_BLOB_AFTER_COMMIT",
+      "description": "new independent add-only receipt with 50 TaskID ledger"
+    }
+  ],
+  "failureReproduction": {
+    "parentR05": "4/4 NEGATIVE TESTS FAIL as expected",
+    "details": [
+      "Owner 1 native capability True accepted as owner=1",
+      "Signed native ACK owner True accepted as owner=1",
+      "Two concurrent finish attempts return ACK and KeyError, not ACK and DENIED",
+      "Concurrent admit overflowed MAX_PENDING to 257"
+    ]
+  },
+  "localSourceTests": {
+    "total": "33/33 PASS",
+    "existing": "29/29 PASS",
+    "new": "4/4 PASS",
+    "pythonCompile": "PASS",
+    "realWindowsCI": "NOT_RUN",
+    "hostNativeProof": "NOT_VERIFIED",
+    "installedExe": "NOT_RUN"
+  },
+  "protectedContracts": {
+    "auth": "PRESERVED",
+    "origin": "PRESERVED",
+    "stop": "PRESERVED",
+    "devicePermissions": "PRESERVED",
+    "nativeFilePicker": "PRESERVED",
+    "ACK": "NOW_ATOMIC_ONCE",
+    "uniqueHost": true,
+    "duplicateDB": false,
+    "duplicateLLM": false,
+    "duplicateTrainer": false,
+    "webToWindowsDirect": false,
+    "mainModified": false,
+    "wowOrD02Modified": false
+  },
+  "routeLedger": [
+    {
+      "taskId": "NIP01-01",
+      "routeId": "helion.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-02",
+      "routeId": "core.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-03",
+      "routeId": "persona.chat",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-04",
+      "routeId": "chat.model",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-05",
+      "routeId": "chat.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-06",
+      "routeId": "chat.attach",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-07",
+      "routeId": "chat.rag",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-09",
+      "routeId": "chat.stop",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-10",
+      "routeId": "chat.commands",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-11",
+      "routeId": "models.catalog",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-12",
+      "routeId": "models.installed",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-13",
+      "routeId": "models.pull",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-14",
+      "routeId": "models.gguf.import",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-15",
+      "routeId": "models.queue",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-16",
+      "routeId": "models.cancel",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-17",
+      "routeId": "models.retry",
+      "owner": 3,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-18",
+      "routeId": "models.digest",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-19",
+      "routeId": "models.preflight",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-20",
+      "routeId": "models.licenses",
+      "owner": 3,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-21",
+      "routeId": "rag.import",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-22",
+      "routeId": "rag.search",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-23",
+      "routeId": "memory.manage",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-24",
+      "routeId": "datasets.review",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-25",
+      "routeId": "gpu.preflight",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-27",
+      "routeId": "training.pause",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-28",
+      "routeId": "training.resume",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-29",
+      "routeId": "training.checkpoints",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-31",
+      "routeId": "translate.ru_es",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-32",
+      "routeId": "maestro.spanish",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-33",
+      "routeId": "voice.settings",
+      "owner": 2,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-34",
+      "routeId": "calls.dial",
+      "owner": 2,
+      "risk": "dangerous",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "risk": "safe",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-41",
+      "routeId": "space.news",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-42",
+      "routeId": "space.weather",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-43",
+      "routeId": "space.fx",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-44",
+      "routeId": "space.bitcoin",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-45",
+      "routeId": "space.brent",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-46",
+      "routeId": "system.telemetry",
+      "owner": 5,
+      "risk": "safe",
+      "sourceHandler": "PR27_BINDING_MAP_DESCRIPTOR_ONLY",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "risk": "dangerous",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "risk": "sensitive",
+      "sourceHandler": "UNBOUND",
+      "nativeCapability": "NOT_VERIFIED",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN"
+    }
+  ],
+  "coverage": {
+    "tasks": 50,
+    "sourceDescriptors": 37,
+    "unbound": 13,
+    "nativeCapabilitiesConfirmed": 0,
+    "integrated": 0,
+    "windowsAccepted": 0
+  },
+  "tenTechnicalGates": [
+    "V16 §§26-30 + §36 latest re-read and peer lessons",
+    "immutable main and parent E06 SourceLock preimage verification",
+    "owner file paths/PR106 Git blob preimage checked",
+    "50 source TaskID route-risk-owner matching and 37/13 split",
+    "native capability evidence 0 => fail closed",
+    "auth and exact origin regression",
+    "STOP target run scope and replay regression",
+    "native picker/lease and signed file receipt regression",
+    "atomic native ACK and bounded pending queue 4 new negative tests",
+    "one isolated Git patch + Drive append/readback + handoff E07"
+  ],
+  "sevenIndicators": [
+    {
+      "executor": "E01",
+      "taskIds": "V16.26.3/P01; NIP01-36..39,47..49",
+      "source": "PR101/R06 SOURCE",
+      "component": "PARTIAL_SYNTHETIC",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E02",
+      "taskIds": "V16.26.4/P02; NIP01-01..10,31..35",
+      "source": "PR110 SOURCE",
+      "component": "19/19 OFFLINE MOCK; NATIVE N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E03",
+      "taskIds": "V16.26.5/P03; NIP01-11..20",
+      "source": "PR112 SOURCE",
+      "component": "106/106 OFFLINE; NATIVE N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E04",
+      "taskIds": "V16.26.6/P04; NIP01-21..30,40",
+      "source": "PR99 SOURCE",
+      "component": "GPU TRAINER NOT_RUN",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E05",
+      "taskIds": "V16.26.7/P05; NIP01-41..46",
+      "source": "PR111 SOURCE",
+      "component": "77/77 OFFLINE NODE; PROVIDERS N/D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E06",
+      "taskIds": "V16.26.8; NIP01-01..50",
+      "source": "R06 ATOMIC OWNER PATCH CANDIDATE",
+      "component": "33/33 LOCAL PASS; 4/4 PREIMAGE NEGATIVE",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    },
+    {
+      "executor": "E07",
+      "taskIds": "QA01..QA10/one BuildID+EXE SHA",
+      "source": "HISTORICAL QA SOURCE",
+      "component": "FINAL EXE NOT_RUN",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": "N/D"
+    }
+  ],
+  "weighted": {
+    "formula": "0.20*P01 + 0.25*P02 + 0.20*P03 + 0.25*P04 + 0.10*P05",
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "overall": "N/D",
+    "gateE06": "HOLD",
+    "gateE07": "NOT_RUN"
+  },
+  "holds": [
+    "ORIGINAL_SOURCE_00_01_02_ARCHIVE_PARTS_AND_729_FILES_UNVERIFIED",
+    "PR27_MAP_ON_OLD_BASELINE",
+    "NATIVE_OWNER_CAPABILITIES_0_OF_50",
+    "13_ROUTES_UNBOUND",
+    "WINDOWS_INSTALLED_SINGLE_BUILDID_EXE_SHA_NOT_RUN"
+  ],
+  "onePracticalLesson": "PENDING_LOCK_AND_EXACT_OWNER_TYPES: protect pending queue capacity and single-use native ACK with one in-process RLock; reject bool owner because Python True equals integer 1; add adversarial concurrency tests before claiming a receipt.",
+  "errors": [
+    "CONFIRMED: concurrent finish race caused KeyError/double acceptance possibility; two threads were not serialised",
+    "CONFIRMED: concurrent admit exceeded MAX_PENDING=256 (observed 257)",
+    "CONFIRMED: Python bool owner was accepted in Capability/ACK for owner 1"
+  ],
+  "fix": "One RLock around final admission reservation and signed ACK consume; owner type checked with `type(value) is int`.",
+  "result": "RELEASE HOLD - SOURCE PATCH ONLY. No trained GPU, installed Ollama, file access, Windows EXE or E07 acceptance proven."
+}
