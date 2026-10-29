@@ -37,16 +37,16 @@ public sealed class GoogleDocsAppendReadback
         stop.ThrowIfCancellationRequested();
 
         string uri = "https://docs.googleapis.com/v1/documents/" + documentId;
-        string token = await accessToken(stop).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(token))
-            return new(runId, documentId, null, null, "NO_AUTH", entry.Length);
-
-        // A failed transport must yield a stage-specific HOLD receipt.
-        // Preserve the initial CAS revision when a later HTTP operation fails.
-        string httpStage = "READ";
+        // Token acquisition is I/O and must be guarded before reading Docs.
+        string httpStage = "AUTH";
         string? knownRevision = null;
         try
         {
+            string token = await accessToken(stop).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(token) ||
+                token.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+                return new(runId, documentId, null, null, "NO_AUTH", entry.Length);
+            httpStage = "READ";
             using var before = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
                 token, null, stop).ConfigureAwait(false);
             if (!before.IsSuccessStatusCode)
@@ -135,10 +135,18 @@ public sealed class GoogleDocsAppendReadback
         {
             return new(runId, documentId, knownRevision, null, "INVALID_GOOGLE_RESPONSE", entry.Length);
         }
-        catch (HttpRequestException) when (!stop.IsCancellationRequested)
+        catch (UnauthorizedAccessException) when (!stop.IsCancellationRequested)
         {
             return new(runId, documentId, knownRevision, null,
-                httpStage + "_TRANSPORT_HOLD", entry.Length);
+                httpStage + "_PERMISSION_DENIED", entry.Length);
+        }
+        catch (HttpRequestException ex) when (!stop.IsCancellationRequested)
+        {
+            return new(runId, documentId, knownRevision, null,
+                ex.StatusCode is System.Net.HttpStatusCode.Unauthorized or
+                    System.Net.HttpStatusCode.Forbidden
+                    ? httpStage + "_PERMISSION_DENIED"
+                    : httpStage + "_TRANSPORT_HOLD", entry.Length);
         }
         catch (IOException) when (!stop.IsCancellationRequested)
         {
