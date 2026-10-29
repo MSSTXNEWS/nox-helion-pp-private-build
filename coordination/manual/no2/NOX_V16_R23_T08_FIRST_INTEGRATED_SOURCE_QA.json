@@ -1,0 +1,67 @@
+{
+  "schema": "NOX_V16_MANUAL2_R23_INDEPENDENT_CURRENT_HEAD_DELTA",
+  "run_id": "NOX-V16-MANUAL2-20261029-R23-T08-FIRST_INTEGRATED_PATCH",
+  "role": "manual 2 independent QA; no production code write",
+  "existing_task_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "canonical_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "pr_number": 162,
+  "exact_pr_head": "5a335a3db05e3cf31685fb708065ba96adf50449",
+  "pr_head_at_qa": "5a335a3db05e3cf31685fb708065ba96adf50449",
+  "actual_source_changes": {
+    "gate": {
+      "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+      "pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+      "post_blob": "d8396f6c91a68eb292602a9563f4eb9743572f85"
+    },
+    "test": {
+      "path": "coordination/automation/t08/test_t08_head_alias_conflict_r22.py",
+      "post_blob": "e7557a7922389085eb053932e6fdc14201f2a641"
+    },
+    "owner_receipt": {
+      "path": "coordination/automation/t06/NOX-V16-T06-20261029-R22-QA-BRIDGE.json",
+      "git_blob": "482cfe55c08545aef3fe1dd691979ef18033151a"
+    }
+  },
+  "independent_check": {
+    "kind": "exact GitHub source bytes readback + targeted static invariant inspection",
+    "cases_passed": 5,
+    "total_cases": 5,
+    "checks": [
+      "new helper rejects contradictory present alias values",
+      "requires at least one present HEAD alias",
+      "requires valid SHA shape for all presented aliases",
+      "_verified_downstream now uses strict helper",
+      "old any(proof.get(k)==head) removed"
+    ],
+    "targeted_owner_regression_test_count": 6,
+    "targeted_owner_regression_test_execution": "OWNER REPORTED 13 positive/negative cases + isolated 1/1; manual2 exact integrated Python execution NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "same_head_all_P01_P05": "NOT_VERIFIED",
+    "host50_13_vs_14_native": "NOT_VERIFIED"
+  },
+  "result": "SOURCE_INTEGRATED + INDEPENDENT STATIC VERIFIED. QA_ACCEPTED not yet authorized for full T08 TaskID",
+  "additional_defect_unintegrated": {
+    "description": "Focused test receipt status PASS is still accepted without proof that its HEAD matches the pinned current source",
+    "found_in": "_verified_downstream when p0.status == PATCH_APPLIED",
+    "existing_ready_owner_candidate": "coordination/manual/no2/T08_R25_CUMULATIVE_CANDIDATE.py",
+    "candidate_blob": "d4cd3a2d7bc830f7158d7e73aabdc63ddb723e63",
+    "owner_action": "T06 apply ONLY missing test receipt HEAD check after fresh preimage; do not revert already integrated alias fix"
+  },
+  "process_root_cause_correction": "T06 Git create_tree policy failure did not mean all GitHub writes blocked; Contents API per-file staging with readback produced persisted integration in PR162",
+  "journal_owner": "T02",
+  "journal_pre_git_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "new_error_id_created": false,
+  "security_preserved": [
+    "SourceLock",
+    "ACL",
+    "STOP",
+    "native consent",
+    "NO-LOSS",
+    "729 preserved original sources"
+  ],
+  "no_build": true,
+  "no_exe": true,
+  "no_nsis": true,
+  "no_e07": true,
+  "next": "T06 apply missing focused-test same-head check and execute focused gate tests, T08 independently execute exact new source against frozen SHA, T02 update existing error after evidence; T09/T10 later"
+}
