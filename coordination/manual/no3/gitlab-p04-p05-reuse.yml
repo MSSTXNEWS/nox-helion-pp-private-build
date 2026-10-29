@@ -27,10 +27,11 @@ nox_p04_p05_source_reuse:
     - 'if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw "HOLD_DOTNET8_UNAVAILABLE" }'
     - '$head = (& git rev-parse HEAD | Out-String).Trim().ToLowerInvariant()'
     - 'if ($LASTEXITCODE -ne 0 -or $head -cne $env:CI_COMMIT_SHA.ToLowerInvariant()) { throw "EXACT_SOURCE_HEAD_DRIFT" }'
-    - '& .\Packages\P04\verify_components.ps1'
-    - 'if ($LASTEXITCODE -ne 0) { throw "P04_ORIGINAL_COMPONENTS_FAILED" }'
-    - '& dotnet run --project Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj -c Release'
-    - 'if ($LASTEXITCODE -ne 0) { throw "P05_ORIGINAL_FEED_FAILED" }'
-    - '& dotnet run --project Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj -c Release'
-    - 'if ($LASTEXITCODE -ne 0) { throw "P05_ORIGINAL_FRESHNESS_FAILED" }'
+    - '& python .\coordination\manual\no3\verify_p04_p05_components.py --expected-head $env:CI_COMMIT_SHA --repo-root $env:CI_PROJECT_DIR --evidence work/gitlab-artifacts/P04_P05_COMPONENTS.json'
+    - 'if ($LASTEXITCODE -ne 0) { throw "P04_P05_ORIGINAL_COMPONENTS_NOT_PASS" }'
     - 'Write-Output "P04_P05_EXISTING_COMPONENTS_PASS_ONLY; HOST_GPU_EXE_E07_NOT_VERIFIED"'
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - work/gitlab-artifacts/P04_P05_COMPONENTS.json
