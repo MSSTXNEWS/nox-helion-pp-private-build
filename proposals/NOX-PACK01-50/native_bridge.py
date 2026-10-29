@@ -190,12 +190,17 @@ class NoxPackHost:
             raise HostDenied("Native Windows SID required")
         if re.fullmatch(r"[A-Za-z0-9_-]{24,128}", session.session_lease) is None:
             raise HostDenied("Native session lease required")
-        if not callable(self.native_session_live):
+        # A native callback must not be able to replace the authority probe
+        # while it is being consulted, even if the replacement returns True.
+        probe = self.native_session_live
+        if not callable(probe):
             raise HostHold("Trusted native SID-bound revocation probe not bound")
         try:
-            live = self.native_session_live(session)
+            live = probe(session)
         except Exception as exc:
             raise HostDenied("Trusted native session verification failed") from exc
+        if self.native_session_live is not probe:
+            raise HostDenied("Native session verifier changed during callback")
         if live is not True:
             raise HostDenied("Native Windows session revoked or mismatched")
 
@@ -214,6 +219,9 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        pinned_routes = self.routes
+        pinned_ports = self.ports
+        pinned_live_probe = self.native_session_live
         # Availability probes are native callbacks too. Keep the advertised
         # capabilities bound to the same identity and permission snapshot;
         # never return a partial list assembled across different sessions.
@@ -226,6 +234,9 @@ class NoxPackHost:
         def require_unchanged_session():
             if session_scope() != authorized_scope:
                 raise HostDenied("Native session changed during advertisement")
+            if (self.routes is not pinned_routes or self.ports is not pinned_ports or
+                    self.native_session_live is not pinned_live_probe):
+                raise HostDenied("Native authority or registry changed during advertisement")
         out = {}
         advertised_ports = {}
         for route, item in self.routes.items():
@@ -274,6 +285,10 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        pinned_routes = self.routes
+        pinned_ports = self.ports
+        pinned_live_probe = self.native_session_live
+        pinned_native_approve = self.native_approve
         # A frozen dataclass is a host contract, not protection against a native
         # callback mutating it. Consent must remain bound to the exact identity
         # and permission snapshot checked at entry, on the same session object.
@@ -286,14 +301,24 @@ class NoxPackHost:
         def require_unchanged_session():
             if session_scope() != authorized_scope:
                 raise HostDenied("Native session changed during request admission")
-        if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
+        if type(route) is not str or route not in pinned_routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
+        # The consent category is fixed BEFORE any native callbacks run.
+        risk = pinned_routes[route]["risk"]
         # Revalidate the actual SID-bound lease before and after ALL callbacks,
         # including fresh dangerous consent, readiness, STOP and owner output.
         def require_current_authority():
             require_unchanged_session()
+            if (self.routes is not pinned_routes or self.ports is not pinned_ports or
+                    self.native_session_live is not pinned_live_probe or
+                    self.native_approve is not pinned_native_approve):
+                raise HostDenied("Native host authority or registry changed during request")
             self._require_live_session(session)
             require_unchanged_session()
+            if (self.routes is not pinned_routes or self.ports is not pinned_ports or
+                    self.native_session_live is not pinned_live_probe or
+                    self.native_approve is not pinned_native_approve):
+                raise HostDenied("Native host authority or registry changed during request")
         require_current_authority()
         if not isinstance(payload, dict):
             raise HostDenied("Missing/oversize request")
@@ -307,15 +332,14 @@ class NoxPackHost:
         # source caller nor a provider-ready check may change the execution data.
         frozen_payload = json.loads(raw)
         require_current_authority()
-        risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
         if risk == "dangerous" and (
-            not callable(self.native_approve) or
-            self.native_approve(session,route,json.loads(raw)) is not True):
+            not callable(pinned_native_approve) or
+            pinned_native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
         require_current_authority()
-        port = self.ports.get(route)
+        port = pinned_ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
