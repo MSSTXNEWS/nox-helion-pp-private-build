@@ -1,0 +1,155 @@
+{
+  "schema": "NOX_V16_R25_MANUAL_FIRST_OTCH1_V1",
+  "snapshot_type": "HISTORICAL_EVIDENCE_BASELINE_NOT_LIVE_DASHBOARD",
+  "source": "GitHub PR162 and issue #177 / original T02 report",
+  "head": "d23956686fd9634225512f456b194fc723eda933",
+  "head_updated_at": "2026-10-29T20:26:57Z",
+  "product_percent": null,
+  "source_ready": false,
+  "release_ready": false,
+  "snapshot_basis": "User requested an OTCH-1 baseline. Manual k/10 unknown until each existing chat executes R25; do not interpret N/D as zero work.",
+  "manually_audited_count": 3,
+  "manuals": [
+    {
+      "role": "1",
+      "role_name": "source_integrator",
+      "run_id": "NOX-V16-T06-20261029T2024Z-R23-M1-P04P05",
+      "run_status": "INTEGRATED_SOURCE_QA_PENDING",
+      "proof_ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/d23956686fd9634225512f456b194fc723eda933",
+      "approaches_logged": false,
+      "approaches": [],
+      "gates": {
+        "A": {
+          "status": "PARTIAL",
+          "proof": "Prior reports include source reads but no R25 complete read proof"
+        },
+        "B": {
+          "status": "PASS",
+          "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/d23956686fd9634225512f456b194fc723eda933"
+        },
+        "C": {
+          "status": "PARTIAL",
+          "proof": "T02 shared journal not synchronized in every destination"
+        },
+        "D": {
+          "status": "PARTIAL",
+          "proof": "Relevant lessons not full same-cycle readback"
+        },
+        "E": {
+          "status": "PARTIAL",
+          "proof": "Legacy manual #1 source receipt stored; no R25 bar"
+        }
+      },
+      "frozen_denominator": null,
+      "tasks": [
+        {
+          "task_id": "P04/RAG",
+          "stage": "INTEGRATED",
+          "source_head": "636f2f2436dc3854305416e711245c681dd5baa4",
+          "note": "Historical source integration, not current HEAD independent QA; no acceptance credit"
+        }
+      ]
+    },
+    {
+      "role": "3",
+      "role_name": "P04_P05_owner_developer",
+      "run_id": "MANUAL3_P05_TEST_COMMENT_FIX",
+      "run_status": "SOURCE_PREPARED_QA_PENDING",
+      "proof_ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507515762",
+      "approaches_logged": false,
+      "approaches": [],
+      "gates": {
+        "A": {
+          "status": "PARTIAL",
+          "proof": "Prior reports include source reads but no R25 complete read proof"
+        },
+        "B": {
+          "status": "PASS",
+          "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507515762"
+        },
+        "C": {
+          "status": "PARTIAL",
+          "proof": "T02 shared journal not synchronized in every destination"
+        },
+        "D": {
+          "status": "PARTIAL",
+          "proof": "Relevant lessons not full same-cycle readback"
+        },
+        "E": {
+          "status": "PARTIAL",
+          "proof": "Legacy issue evidence only"
+        }
+      },
+      "frozen_denominator": null,
+      "tasks": [
+        {
+          "task_id": "P05/Space smoke test correction",
+          "stage": "SOURCE_PREPARED",
+          "source_head": "92d738a775f0b74bd5615ad8d7897762ddf790f0",
+          "note": "Prepared in existing owner Git branch; not same-HEAD QA_ACCEPTED"
+        }
+      ]
+    },
+    {
+      "role": "2",
+      "role_name": "independent_source_qa",
+      "run_id": "MANUAL2_P04_SOURCE_QA_FINDING",
+      "run_status": "INDEPENDENT_QA_FAIL_AND_HANDOFF",
+      "proof_ref": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507077537",
+      "approaches_logged": false,
+      "approaches": [],
+      "gates": {
+        "A": {
+          "status": "PARTIAL",
+          "proof": "Prior reports include source reads but no R25 complete read proof"
+        },
+        "B": {
+          "status": "PASS",
+          "proof": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507077537"
+        },
+        "C": {
+          "status": "PARTIAL",
+          "proof": "T02 shared journal not synchronized in every destination"
+        },
+        "D": {
+          "status": "PARTIAL",
+          "proof": "Relevant lessons not full same-cycle readback"
+        },
+        "E": {
+          "status": "PARTIAL",
+          "proof": "Legacy independent QA finding, not current HEAD acceptance"
+        }
+      },
+      "frozen_denominator": null,
+      "tasks": []
+    }
+  ],
+  "error_register": {
+    "blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "total": 11,
+    "history_complete": false
+  },
+  "journal": {
+    "Git": "PASS_REPORTED_BY_T02",
+    "Master": "PASS_REPORTED_BY_T02",
+    "E06": "BLOCKED_FAILED_PRECONDITION",
+    "Lessons": "PASS_REPORTED_BY_T02",
+    "note": "Statuses are last known T02 report, not reverified live Google Docs in this snapshot"
+  },
+  "automation_watchdog": {
+    "enabled_last_seen": 14,
+    "total_primary_supporting": 15,
+    "disabled": [
+      "NOX V16 G3-C T06 интегратор"
+    ],
+    "note": "Automation failure does not erase source commit; updates may change these counts"
+  },
+  "old_prebuild_stage": {
+    "done": 6,
+    "total": 29,
+    "status": "STALE_NOT_RECHECKED_ON_CURRENT_HEAD"
+  }
+}
