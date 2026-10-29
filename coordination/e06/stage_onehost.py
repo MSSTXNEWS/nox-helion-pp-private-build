@@ -67,11 +67,15 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
     that an incomplete transaction succeeded.
     """
     lock = trusted_path(original.parent / ".e06-stage.lock")
+    lock_bytes = (str(os.getpid()) + "\n").encode("ascii")
     with lock.open("xb") as guard:
-        guard.write((str(os.getpid()) + "\n").encode("ascii"))
+        guard.write(lock_bytes)
         guard.flush()
         os.fsync(guard.fileno())
     lock_identity = _identity(lock)
+    def require_lock_owned():
+        if not _owned(lock, lock_identity, lock_bytes):
+            raise RuntimeError("OWNER6_STAGE_LOCK_LOST_HOLD")
     prepared = []
     published = []
     installed_identity = None
@@ -92,15 +96,18 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         published.append((dest, _identity(prepared[1]), extra))
         if not _owned(original, before_identity, before):
             raise RuntimeError("OWNER6_WPF_PREIMAGE_SHA_HOLD")
+        require_lock_owned()
         installed_identity = _identity(prepared[0])
         os.replace(prepared[0], trusted_path(original))
         if not _owned(original, installed_identity, patched) or dest.read_bytes() != extra:
             raise RuntimeError("OWNER6_SOURCE_READBACK_HOLD")
-        # Receipt is the final commit marker; no partially written receipt is exposed.
+        # Receipt is the final commit marker; refuse a lost/foreign owner lease.
+        require_lock_owned()
         os.link(prepared[2], trusted_path(out))
         published.append((out, _identity(prepared[2]), receipt_bytes))
         if any(not _owned(path, identity, raw) for path, identity, raw in published):
             raise RuntimeError("OWNER6_RECEIPT_READBACK_HOLD")
+        require_lock_owned()
     except BaseException as cause:
         conflicts = []
         # Source replacement may fail before rename: distinguish original preimage.
@@ -129,7 +136,7 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         if not keep_recovery:
             for temporary in prepared:
                 temporary.unlink(missing_ok=True)
-            if _identity(lock) == lock_identity:
+            if _owned(lock, lock_identity, lock_bytes):
                 lock.unlink()
 
 
