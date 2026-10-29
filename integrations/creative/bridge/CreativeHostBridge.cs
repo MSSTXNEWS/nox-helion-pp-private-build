@@ -358,6 +358,44 @@ public partial class MainWindow
         }
     }
 
+    // Reuse the EXISTING WebView2 cinema projector and its local subtitle picker.
+    // Caller: trusted WPF/native owner after ACL; this method is NOT a JS endpoint.
+    // Opening a window never proves playback or subtitle import.
+    private async Task<string> OpenOwnerMediaRouteAsync(
+        string routeId, Func<string, bool> nativeConsent, CancellationToken stop)
+    {
+        if (routeId is not ("media.player" or "media.subtitles"))
+            throw new ArgumentOutOfRangeException(nameof(routeId));
+        if (nativeConsent is null) throw new ArgumentNullException(nameof(nativeConsent));
+        stop.ThrowIfCancellationRequested();
+        if (nativeConsent(routeId) != true)
+            throw new UnauthorizedAccessException("Native media consent required");
+        stop.ThrowIfCancellationRequested();
+        if (_creativeProjector is not { IsVisible: true })
+            await OpenCreativeProjectorAsync();
+        stop.ThrowIfCancellationRequested();
+        if (_creativeProjector is not { IsVisible: true } projector ||
+            projector.Content is not Microsoft.Web.WebView2.Wpf.WebView2 viewer ||
+            viewer.CoreWebView2 is null)
+            return "MEDIA_OWNER_UI_NOT_READY";
+        // Existing theater navigations stay under the original exact mapped
+        // nox.local origin. WebMessage stays disabled on its viewing instance.
+        if (routeId == "media.subtitles")
+        {
+            var found = await viewer.CoreWebView2.ExecuteScriptAsync(
+                "Boolean(document.getElementById('subtitles'))");
+            stop.ThrowIfCancellationRequested();
+            if (!string.Equals(found, "true", StringComparison.Ordinal))
+                return "SUBTITLES_FILE_INPUT_NOT_READY";
+            await viewer.CoreWebView2.ExecuteScriptAsync(
+                "document.getElementById('subtitles').focus();");
+            stop.ThrowIfCancellationRequested();
+            return "SUBTITLE_PICKER_READY_NOT_IMPORTED";
+        }
+        projector.Activate();
+        return "MEDIA_PLAYER_UI_OPEN_NOT_PLAYING";
+    }
+
     private async Task OpenCreativeProjectorAsync(string? requestedProjectId = null)
     {
         try
