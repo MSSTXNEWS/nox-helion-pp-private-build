@@ -6,6 +6,7 @@ Unknown/unavailable actions always HOLD; never simulate completion.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Callable, Any
 import json
@@ -318,21 +319,67 @@ class ExistingP02Adapter:
 def bind_owner_methods(dispatcher:NoxPackHost, owner:int, provider:object,
                        methods:dict[str,str], *, receipt:str,
                        probe:Callable[[],bool]):
-    """Wire other owners' real methods without copying or inventing their implementations.
+    """Bind existing native-owner methods as a fail-closed batch.
 
-    Method names are supplied by trusted integrator, never selected from page input.
-    A missing method is HOLD, not a no-op success.
+    The trusted integrator supplies the already-verified provider, receipt and
+    native host lock. This is NOT a new host or an implementation of a missing
+    provider. Stage all seven P01 routes (or another owner's approved subset)
+    before any writes, and restore original ports if any bind fails.
     """
-    if not callable(probe):raise ValueError("Owner-native health check required")
-    wired = []
-    for route,method in methods.items():
-        if route not in dispatcher.routes or dispatcher.routes[route]["owner"] != owner:
-            raise HostDenied("Route owner mismatch")
-        fn = getattr(provider, method, None)
-        if not callable(fn):raise HostHold("No real native method for "+route)
-        dispatcher.bind(route,BoundPort(fn,probe,receipt,owner))
-        wired.append(route)
-    return frozenset(wired)
+    if type(owner) is not int or not 1 <= owner <= 6:
+        raise HostDenied("Exact native owner identity required")
+    if type(methods) is not dict or not methods or not callable(probe):
+        raise HostHold("Native method map and health probe required")
+    if type(receipt) is not str or not re.fullmatch(r"[0-9a-f]{64}", receipt):
+        raise HostHold("SHA-256 owner source receipt required")
+    if not isinstance(dispatcher, NoxPackHost):
+        raise HostDenied("Existing single native host required")
+
+    # Preflight everything without touching dispatcher.ports; a late missing
+    # method must never leave earlier route cards spuriously connected.
+    before = dict(dispatcher.ports)
+    planned = []
+    for route, method in methods.items():
+        if type(route) is not str or type(method) is not str or not method.isidentifier():
+            raise HostDenied("Trusted literal route-to-method mapping required")
+        item = dispatcher.routes.get(route)
+        if (not isinstance(item, Mapping) or type(item.get("owner")) is not int
+                or item["owner"] != owner):
+            raise HostDenied("Native route owner mismatch")
+        if route in before:
+            raise HostDenied("Existing handler collision")
+        if item.get("risk") == "dangerous" and not callable(dispatcher.native_approve):
+            raise HostHold("Native dangerous-action consent is not installed")
+        try:
+            fn = getattr(provider, method)
+        except Exception as exc:
+            raise HostHold("Native owner implementation missing: "+route) from exc
+        if not callable(fn):
+            raise HostHold("Native owner implementation missing: "+route)
+        planned.append((route, BoundPort(fn, probe, receipt, owner)))
+
+    if (len(before) != len(dispatcher.ports)
+            or any(dispatcher.ports.get(key) is not value for key, value in before.items())
+            or any(route in dispatcher.ports for route, _ in planned)):
+        raise HostHold("Native port registry changed during source preflight")
+    try:
+        for route, port in planned:
+            dispatcher.bind(route, port)
+    except Exception:
+        # Undo ONLY writes owned by this batch. A broad clear/update would also
+        # destroy another owner's independent registration if the native caller
+        # accidentally failed to serialize an overlapping operation.
+        for route, _port in planned:
+            # The caller holds the EXISTING native host mutation lock.
+            # Any port at a planned route did not exist before this batch,
+            # including one injected by a failing bind callback: remove it.
+            if route not in before:
+                dispatcher.ports.pop(route, None)
+        for route, old_port in before.items():
+            if dispatcher.ports.get(route) is not old_port:
+                dispatcher.ports[route] = old_port
+        raise
+    return frozenset(route for route, _ in planned)
 
 
 class ExistingP02VoiceAdapter:
