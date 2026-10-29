@@ -1,0 +1,18 @@
+{
+  "schema": "ASTRA_B_R30_SOURCE_ONLY_V1",
+  "run_id": "ASTRA-B-R30-20261029-B3-01",
+  "label": "B3",
+  "actual_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "task_id": "P05-MARKET-TILE-PRIORITY",
+  "owner_source_branch": "astra-b/r29-b3-20261029",
+  "code_commit": "746af11167afc11f94d9a8d4ec89528c86d3c2c7",
+  "status": "SOURCE_TEST_PASS",
+  "focused_check": "JS_RUNTIME_FOCUSED_PASS",
+  "lesson": "Put relevant market metrics ahead of a long news feed without suppressing duplicate-conflict HOLD.",
+  "report_gate": "ASTRA_A_SHARED_DOCS_WRITER_ONLY",
+  "original_archive_729": "NOT_RUN",
+  "Windows_native": "NOT_RUN",
+  "finished_taskid_coverage": "N_D",
+  "release": "HOLD"
+}
