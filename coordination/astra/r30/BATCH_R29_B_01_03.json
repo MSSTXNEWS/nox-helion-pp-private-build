@@ -1,0 +1,430 @@
+{
+  "schema": "ASTRA_R30_R29_B",
+  "rows": [
+    {
+      "ref": "astra-b/r29-b1-20261029",
+      "head_sha": "1d4207118a756449ffa564745bcde68a0bbb61f3",
+      "at": "2026-10-29T02:01:39Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 10,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_02_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_03_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_04_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 34,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_05_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_06_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 52,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_CORRECTION_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 49,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+          "status": "added",
+          "previous": null,
+          "added": 151,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 212,
+          "deleted": 25
+        },
+        {
+          "path": "Packages/P04/preflight_local_gpu.py",
+          "status": "modified",
+          "previous": null,
+          "added": 127,
+          "deleted": 1
+        },
+        {
+          "path": "coordination/astra-b/b1/ASTRA_B_R29_B1_01.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra-b/b1/ASTRA_B_R29_B1_02.json",
+          "status": "added",
+          "previous": null,
+          "added": 31,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_local_gpu_preflight.py",
+          "status": "modified",
+          "previous": null,
+          "added": 180,
+          "deleted": 3
+        },
+        {
+          "path": "tests/P04/test_model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 129,
+          "deleted": 1
+        },
+        {
+          "path": "tests/P04/test_wheel_inventory_preflight_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 106,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra-b/r29-b2-20261029",
+      "head_sha": "3d7df5c1fdfc069c82a88722756b0215d76bb6ca",
+      "at": "2026-10-29T01:59:45Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 9,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_02_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_03_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_04_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 34,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_05_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_06_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 52,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_CORRECTION_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 49,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+          "status": "added",
+          "previous": null,
+          "added": 151,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 150,
+          "deleted": 5
+        },
+        {
+          "path": "Packages/P04/preflight_local_gpu.py",
+          "status": "modified",
+          "previous": null,
+          "added": 133,
+          "deleted": 1
+        },
+        {
+          "path": "coordination/astra-b/b2/ASTRA-B-B2-20261029-01.json",
+          "status": "added",
+          "previous": null,
+          "added": 27,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_local_gpu_preflight.py",
+          "status": "modified",
+          "previous": null,
+          "added": 194,
+          "deleted": 3
+        },
+        {
+          "path": "tests/P04/test_model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 57,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_wheel_inventory_preflight_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 106,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra-b/r29-b3-20261029",
+      "head_sha": "99253b61e6b4825420245bfe9336dadc1cd40ac1",
+      "at": "2026-10-29T02:01:07Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 7,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P05/E05/checks/E05DriveAdmissionR29Checks.cs",
+          "status": "added",
+          "previous": null,
+          "added": 174,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/checks/E05VerifiedProjectionChecks.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 39,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/checks/Program.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/docs/B3_TASKID_ROUNDING_R29_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 46,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05CanonicalTerminalR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05FailedCriterionR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 21,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05PartialReadinessR29.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 31,
+          "deleted": 14
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/space/E05SpaceRunErrorHistoryR15.test.mjs",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/space/E05TaskIdRoundingB3.test.mjs",
+          "status": "added",
+          "previous": null,
+          "added": 23,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 5,
+          "deleted": 3
+        },
+        {
+          "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 24,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 6,
+          "deleted": 4
+        },
+        {
+          "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 79,
+          "deleted": 13
+        },
+        {
+          "path": "Packages/P05/E05/src/E05Progress.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 3
+        },
+        {
+          "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 8,
+          "deleted": 6
+        },
+        {
+          "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 4,
+          "deleted": 2
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_CONT01_FOLLOWUP.json",
+          "status": "added",
+          "previous": null,
+          "added": 22,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_CONT01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS1_PREIMAGE_CORRECTION.json",
+          "status": "added",
+          "previous": null,
+          "added": 19,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS1_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 24,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS2_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS3_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 29,
+          "deleted": 0
+        },
+        {
+          "path": "coordination/astra/agents/A05/R29_PASS4_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        }
+      ]
+    }
+  ]
+}
