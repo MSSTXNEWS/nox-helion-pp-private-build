@@ -102,6 +102,41 @@ class HostHold(RuntimeError):
 class HostDenied(PermissionError):
     """Native host refused permission, consent or session."""
 
+
+def _reject_deferred_owner_result(result):
+    """Do not let nested lazy work escape the synchronous SID/consent boundary.
+
+    Inspect only inert built-in containers; do not iterate user-defined objects.
+    Bound the scan to avoid untrusted owner output exhausting host resources.
+    """
+    pending = [(result, 0)]
+    seen = set()
+    scanned = 0
+    while pending:
+        value, depth = pending.pop()
+        scanned += 1
+        if scanned > 16384:
+            raise HostHold("Native owner result exceeds bounded inspection")
+        if inspect.isawaitable(value) or isinstance(value, (Iterator, AsyncIterator)):
+            raise HostHold("Deferred native owner result requires synchronous authorization")
+        if type(value) in (dict, list, tuple, set, frozenset):
+            if id(value) in seen:
+                raise HostHold("Cyclic/shared native owner result container")
+            seen.add(id(value))
+            if depth >= 32:
+                raise HostHold("Native owner result nesting exceeds limit")
+            count = len(value) * (2 if type(value) is dict else 1)
+            if count + scanned + len(pending) > 16384:
+                raise HostHold("Native owner result exceeds bounded inspection")
+            if type(value) is dict:
+                for key, item in value.items():
+                    pending.append((key, depth + 1))
+                    pending.append((item, depth + 1))
+            else:
+                for item in value:
+                    pending.append((item, depth + 1))
+
+
 @dataclass(frozen=True)
 class NativeSession:
     """Constructed ONLY by authenticated native Windows host, never from page JSON."""
@@ -382,8 +417,7 @@ class NoxPackHost:
         # been reset. A later caller could otherwise execute owner effects
         # outside this SID/lease and native-consent admission boundary.
         # Original P02 streaming is already consumed synchronously by chat().
-        if inspect.isawaitable(result) or isinstance(result, (Iterator, AsyncIterator)):
-            raise HostHold("Deferred native owner result requires a verified synchronous owner boundary")
+        _reject_deferred_owner_result(result)
         return result
 
 
