@@ -1,0 +1,102 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-MANUAL-SOURCE-02",
+  "source_only": true,
+  "base_head_at_check": "d5c00f294d82d81cd6ed0ba7a7c21f7ea88b4c5b",
+  "spawn": {
+    "requested": 6,
+    "actual_new": 0,
+    "status": "SUBAGENT_SPAWN_UNAVAILABLE",
+    "worker_labels": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5",
+      "B6"
+    ]
+  },
+  "new_source_code_commits": 9,
+  "workers": [
+    {
+      "id": "B1",
+      "task_ids": [
+        "P04-CONFIG-SAME-BYTES",
+        "P04-METADATA-STABLE-READ"
+      ],
+      "commits": [
+        "ea00c2cc4cbd03fc9e232d7d584131acb3fb3261",
+        "ae44a96e6d7cf5cf42989f2c37a359f74a21ca56"
+      ],
+      "test": "SOURCE_INVARIANT_PASS; Python NOT_RUN"
+    },
+    {
+      "id": "B2",
+      "task_ids": [
+        "P04-REQUIRED-EXTRAS-HOLD"
+      ],
+      "commits": [
+        "5f013d1c75cbb8109138ba4dd178353de46a6d4a"
+      ],
+      "test": "SOURCE_INVARIANT_PASS; Python NOT_RUN",
+      "individual_receipt": "GITHUB_WRITE_HOLD"
+    },
+    {
+      "id": "B3",
+      "task_ids": [
+        "P05-CORE-ROUNDING",
+        "P05-FUTURE-TERMINAL",
+        "P05-EMPTY-RUN-ERRORS"
+      ],
+      "commits": [
+        "40d189a846aadb1804f54fd508332f705feb21d3",
+        "89ca00184e45fad5c866c9906341737ab8472962",
+        "558f15f0b563c2c6e335b5905814d2298b44e39e"
+      ],
+      "test": "JS_RUNTIME_PASS 3+3+3 scenarios"
+    },
+    {
+      "id": "B4",
+      "task_ids": [
+        "P05-DRIVE-RECEIPT-RUN-IDENTITY"
+      ],
+      "commits": [
+        "173796dc3d57836d24355e87cf746a922a1ae603"
+      ],
+      "test": "SOURCE_INVARIANT_PASS; C# NOT_RUN"
+    },
+    {
+      "id": "B5",
+      "task_ids": [
+        "E06-POSTCALL-SESSION-AND-PORT-CHECK"
+      ],
+      "commits": [
+        "58d57cbe52b4311b2a42745f49b17215c728f6c3"
+      ],
+      "test": "SOURCE_INVARIANT_PASS; Python NOT_RUN"
+    },
+    {
+      "id": "B6",
+      "task_ids": [
+        "E06-STAGING-LOCK-CHECK"
+      ],
+      "commits": [
+        "6cdf43b93e25db229818a68839de0165a8e3c578"
+      ],
+      "test": "SOURCE_INVARIANT_PASS; Python and NTFS NOT_RUN"
+    }
+  ],
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "forbidden_writes": "P01/P02/P03/main/PR162/GitLab/CI/EXE/NSIS/final integration untouched",
+  "original_729_verified_this_run": false,
+  "product_taskid_readiness": "N_D",
+  "shared_docs_writer": "ASTRA_A_ONLY",
+  "drive_source_read": "PASS",
+  "drive_write": "NOT_ATTEMPTED_SHARED_WRITER_ONLY",
+  "lessons": [
+    "Do not accept 100 after aggregate rounding with partial source percent",
+    "Do not accept future-dated terminal as zero errors",
+    "Guard identity after owner callback and before data publication",
+    "Use one metadata byte stream for hash and validation",
+    "Fail closed on dependency extras whose closure is unverified"
+  ]
+}
