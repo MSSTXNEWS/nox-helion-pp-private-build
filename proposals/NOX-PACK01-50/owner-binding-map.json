@@ -5,25 +5,26 @@
   "sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
   "counts": {
     "catalogue": 50,
-    "sourceOwnerMethodBound": 36,
-    "p02": 12,
+    "sourceOwnerMethodBound": 39,
+    "p02": 15,
     "p03": 10,
     "p04": 8,
     "e05": 6,
-    "unbound": 14,
+    "unbound": 11,
     "exeIntegrated": 0,
     "releaseAccepted": 0
   },
   "notes": [
-    "36 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
+    "39 methods are source-wiring proposals only; 0 accepted in native Windows EXE.",
     "User's original 729-file source is integrity verified but still not unified with this proposal.",
-    "Remaining 14 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
+    "Remaining 11 require actual existing native original host handlers, owner receipts, provider/rights/consent and focused Windows verification.",
     "Windows CI evidence for the four most recent method bindings must be read back before promotion from SOURCE_CANDIDATE.",
     "Voice settings require installed approved voices, do not claim free weights installed.",
     "Model license view lists REVIEW_REQUIRED for unverified catalog families, never marks them legally approved.",
     "Dataset rights and checkpoint functions call exact owner methods; real GPU training/merged LoRA/phone call NOT RUN.",
     "P02 history same-second ordering regression still tracked, not resolved by candidate routes.",
-    "Original WOW 10+10+10, 8 CoreID, Persona/D02 and source archived files untouched."
+    "Original WOW 10+10+10, 8 CoreID, Persona/D02 and source archived files untouched.",
+    "P02 OwnerTwoPorts: three source route method descriptors linked; native owner services/STOP/SID/consent unverified, all 14 original native-blocker rows preserved."
   ],
   "routes": [
     {
@@ -96,23 +97,23 @@
       "taskId": "NIP01-07",
       "routeId": "chat.rag",
       "owner": 2,
-      "sourceBinding": null,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.rag_context",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-08",
       "routeId": "chat.voice",
       "owner": 2,
-      "sourceBinding": null,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-09",
@@ -404,12 +405,12 @@
       "taskId": "NIP01-35",
       "routeId": "calls.history",
       "owner": 2,
-      "sourceBinding": null,
+      "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
       "componentCI": "NOT_RUN",
       "exeIntegrated": false,
       "hardwareAccepted": false,
       "releaseAccepted": false,
-      "blocker": "OWNER_NATIVE_METHOD_NOT_BOUND"
+      "blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED"
     },
     {
       "taskId": "NIP01-36",
