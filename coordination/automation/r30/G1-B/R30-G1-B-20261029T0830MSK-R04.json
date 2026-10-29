@@ -1,0 +1,129 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V4",
+  "runId": "R30-G1-B-20261029T0830MSK-R04",
+  "slot": "G1-B",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader only",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "productReadinessPercent": null,
+  "releaseAccepted": false,
+  "ownership": {
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockGitBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "exclusiveWriter": true,
+    "otherSlotsUntouched": true
+  },
+  "base": {
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T0730MSK-R03",
+    "commit": "6244a022ef663457cce4f703b7625be1314fec40",
+    "sourceCollectionHead": "316fd4e48c21c69d90258886082442e2d9c76489"
+  },
+  "rules": {
+    "section33All56Read": true,
+    "section54to56Read": true,
+    "exactGitRuleCopyGitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "activeMasterDriveId": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "priorE06ReportDriveId": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "priorLessonsDriveId": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalErrorC34DriveId": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "readOnlyDrive": true,
+    "sharedDriveWriter": "ASTRA-C"
+  },
+  "historicSnapshots": {
+    "indexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "indexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexedBranches": 25,
+    "verifiedDirectoriesPresent": 25,
+    "individualSnapshotBytesRead": false,
+    "physicalOriginal729SHA256Verified": false,
+    "frozenSnapshotsUntouched": true
+  },
+  "taskId": "G1-B-P01-WEBVIEW2-PROCESS-FAILURE-EPOCH-FAIL-CLOSED-R04",
+  "priorDonePreserved": true,
+  "error": {
+    "rootCause": "Original bridge invalidated pending native consent/routes on NavigationStarting, SourceChanged and ContentLoading but not CoreWebView2.ProcessFailed. Renderer/process failure can leave Source unchanged, permitting a stale current-document check to pass after an asynchronous native consent callback.",
+    "correction": "Existing CoreWebView2 host only: subscribe to ProcessFailed, invalidate document epoch without clearing old request IDs, clear inert pending keys on any epoch transition, unsubscribe on Dispose. No additional host.",
+    "limit": "SOURCE contract only, actual renderer process death and native callbacks not tested."
+  },
+  "code": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "178467664d611dfc6b7993e7c6765d1359b60a82",
+      "postGitBlobSHA1": "a9b43387096b5dceec16989afd8c63414e0efc17",
+      "preSHA256": "d45d0fba580b406d8d1a41213906de561fa9fca1a9a0e5298e95cbed10172003",
+      "postSHA256": "fb96f9417dc96e8e1f3929cb80cc2cf53a3403e1dc5103c267dded24593e5fc0",
+      "sourceCommit": "d4f4f20209d57f65dbe0c9c902141ce2c0e7bc2f"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_process_failure_r04.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "364f0bda411d14b05a6d724cfc753cb25599a365",
+      "testCommit": "69d294a7a56ffe790be9251715274ac37747f924"
+    }
+  ],
+  "targetedSourceTest": {
+    "runner": "V8 source-contract assertions against GitHub source (not C# or Python runtime)",
+    "redBefore": {
+      "missingProcessFailedHook": true
+    },
+    "preWrite": {
+      "passed": 14,
+      "total": 14
+    },
+    "postReadback": {
+      "passed": 22,
+      "total": 22
+    },
+    "pythonRegressionAuthored": 5,
+    "pythonRegressionExecuted": false,
+    "csharpCompiled": false,
+    "webview2WindowsNativeRun": false,
+    "navigationHomeMenuCoreSourcePresent": true,
+    "consentAndAsyncAckSourcePresent": true,
+    "httpsVirtualOriginSourcePresent": true,
+    "processFailedSourceGuardPresent": true,
+    "exactWebView2HostBindingVerified": false
+  },
+  "existingHost": {
+    "state": "HOLD",
+    "reason": "The original editable MainWindow.xaml.cs is not present under G1-B owned C09 location. No native host binding or live HOME/MENU/CORE button, consent, error or Windows-origin E2E evidence.",
+    "requestToOwningIntegrator": "Admit/pin existing WPF MainWindow source and its virtual host mapping under proper owner, bind the C09 bridge using existing route/consent callbacks, and run independent native checks when builds are permitted. Do not create a second host or give G1-B write access to other paths."
+  },
+  "lesson": {
+    "priorApplied": "R03: same URL is not document identity; change epoch on navigation/document boundary but only reset replay IDs on true new-document events.",
+    "new": "WebView2 ProcessFailed can keep Source unchanged. Every async native authority gate must also be pinned to renderer/process health; invalidate epoch and retire pending keys on process fault, keep surviving-document replay IDs reserved. Test event subscriptions AND disposal in source-only gates.",
+    "handoff": "ASTRA-C sole Google Drive journal writer should consume this immutable receipt; no G1-B shared journal writes."
+  },
+  "gitVerify": {
+    "sourceCodePathsOwnedOnly": true,
+    "beforeReceiptCompare": {
+      "base": "6244a022ef663457cce4f703b7625be1314fec40",
+      "aheadBy": 2,
+      "changedCodePaths": 2,
+      "unownedPaths": 0
+    },
+    "noMerge": true
+  },
+  "forbiddenActionsNotPerformed": {
+    "Installer": true,
+    "D02WOW": true,
+    "P02P03P04P05": true,
+    "PR162": true,
+    "main": true,
+    "sharedR30": true,
+    "sharedGoogleDrive": true,
+    "original25Snapshots": true,
+    "executable": true,
+    "nsisBuild": true,
+    "windowsCI": true,
+    "gitlabCI": true,
+    "finalIntegration": true
+  }
+}
