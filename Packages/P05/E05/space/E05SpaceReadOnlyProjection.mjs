@@ -10,8 +10,10 @@ const sha = v => typeof v === 'string' && /^[a-f0-9]{64}$/i.test(v);
 const pct = v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100;
 // Date.parse silently normalizes impossible dates (e.g. February 30). Verify
 // calendar fields before a source timestamp may be displayed as authoritative.
+// RFC3339 UTC wire timestamps may use +00:00 and subsecond precision
+// beyond JS milliseconds (notably seven-digit .NET ticks). Keep UTC-only.
 const isoUtc = v => {
-  if (typeof v !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(v)) return false;
+  if (typeof v !== 'string' || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?(?:Z|\+00:00)$/.test(v)) return false;
   const ms=Date.parse(v);
   if (!Number.isFinite(ms)) return false;
   const d=new Date(ms);
