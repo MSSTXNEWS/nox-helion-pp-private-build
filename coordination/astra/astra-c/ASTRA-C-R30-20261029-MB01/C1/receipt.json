@@ -1,0 +1,21 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C1",
+  "sourceBranch": "astra/r29-a2-p01-20261029",
+  "preimageGitBlobSha1": "3be0fa2d3a327be3c963a910ac165132bffad4b0",
+  "patchGitBlobSha1": "a030d33403ae45feca6c929bc6388a29b53cea9f",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "preimage check + patch adds parent traversal",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN",
+  "taskId": "P01-PREREQUISITE-ANCESTOR-REPARSE",
+  "owner": "Astra-A/P01",
+  "originalPath": "stage/proposals/P01/C09/Installer/Get-P01Prerequisites.ps1",
+  "patchPath": "coordination/astra/astra-c/ASTRA-C-R30-20261029-MB01/C1/prereq-ancestor.patch",
+  "defect": "Read-only prereq probe only checks final exe reparse bit; an executable beneath a junction/reparse directory is advertised as an ordinary trusted PATH prerequisite.",
+  "fixStatus": "SAVED_PATCH_CANDIDATE",
+  "applicability": "Owner must compare exact preimage and run target native/code test before acceptance",
+  "limitations": "PowerShell 5.1, Windows junction tests NOT_RUN",
+  "patchCommit": "a030d33403ae45feca6c929bc6388a29b53cea9f",
+  "modelProofOnly": true
+}
