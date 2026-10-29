@@ -1,0 +1,15 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-TURBO5-B5",
+  "worker": "B5",
+  "task_id": "E06-NATIVE-IDENTITY-INPUT",
+  "source_commit": "3ee3af5339682b33a33ef4ea7ea04663d13929d2",
+  "source_only": true,
+  "actual_subagent_id": null,
+  "change": "Reject leading/trailing whitespace and control characters from native principal fields",
+  "test": "FOCUSED_SOURCE_ASSERT_PASS",
+  "native_test": "NOT_RUN",
+  "source_readback": "PASS",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "lesson": "Prevalidate native identity canonical strings before ACL/storage/session checks.",
+  "complete_taskid": "N_D"
+}
