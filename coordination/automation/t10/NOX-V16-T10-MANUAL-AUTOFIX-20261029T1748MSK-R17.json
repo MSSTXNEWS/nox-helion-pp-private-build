@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_V16_T10_AUTOFIX_ORCHESTRATION_RECEIPT_V1",
+  "taskId": "T10",
+  "runId": "NOX-V16-T10-MANUAL-AUTOFIX-20261029T1748MSK-R17",
+  "checkedAtUTC": "2026-10-29T14:49:01.008Z",
+  "scope": "V16/R29 Windows EXPRESS INTEGRATOR source-only, no EXE/NSIS/GitLab CI/E07",
+  "decision": "PROCESS_AUTOFIX_APPLIED; SOURCE_READY_HOLD",
+  "frozenSource": {
+    "acceptedFrozenHead": null,
+    "acceptedFrozenTree": null,
+    "acceptedFrozenManifest": null
+  },
+  "liveCandidate": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+    "gitTree": "534612db9e496d1688c0116b7a214b3129baaa32",
+    "headIsFrozen": false
+  },
+  "code": {
+    "owner": "T06",
+    "path": "coordination/e06_host50/admission.py",
+    "gitBlobBefore": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+    "gitBlobAfter": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "sourceCommit": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+    "run": "NOX-V16-T06-20261029T173423MSK-R10",
+    "testsByOwner": "9/9 isolated Python checks reported; full original module/Windows/native NOT_RUN",
+    "compatibility": "base historical provenance separated from current native-approved tree"
+  },
+  "originalArchive": {
+    "status": "DONE_PREVIOUS_RECEIPTS",
+    "members": 729,
+    "parts": 3,
+    "zipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "processIncident": {
+    "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "lesson": "Repeated HOLD reports cannot count as self-correction; remedy must bind owner SHA/CAS, focused proof, immutable receipt, handoff and readback",
+    "docs": {
+      "c34": {
+        "write": "PASS",
+        "readback": "PASS"
+      },
+      "e06": {
+        "write": "PASS",
+        "readback": "PASS"
+      },
+      "lessons": {
+        "write": "PASS",
+        "readback": "PASS"
+      },
+      "master": {
+        "textAppend": "FAILED_PRECONDITION",
+        "commentReadback": "PASS",
+        "commentId": "doco.Knzy8rHSBwC6LXkrVx0utQ",
+        "note": "Do not claim Master body 3/3"
+      }
+    },
+    "automation": {
+      "ids": [
+        "T06",
+        "T08",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "promptsReadback": "5/5 contain mandatory incident controls, enabled 5/5",
+      "t06ImmediateRun": "REQUEST_ACCEPTED_NOT_EXECUTION_CONFIRMED"
+    },
+    "handoffIssue": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6499899388"
+  },
+  "t10Checklist": {
+    "done": 1,
+    "total": 7,
+    "percent": 14.3,
+    "remaining": 6,
+    "baselineDone": 1,
+    "sourceReady": false
+  },
+  "actualMissingProof": {
+    "owner": "T06/G6-B and native route owners P01/P02/P04/P06; then T08/T09",
+    "required": "Exact current owner-approved full P01–P05 /13 Host50 native handler+ACL/STOP/consent evidence at stable HEAD/tree/manifest; current code fix not sufficient; T09 frozen and T08 same-SHA proof needed"
+  },
+  "prohibited": {
+    "noFakePASS": true,
+    "noNewProductBranch": true,
+    "noNativeE07": true,
+    "noCI": true
+  },
+  "saves": {
+    "sourceRepoTouched": false,
+    "onlyOwnQaReceipt": true,
+    "masterOverwrite": false
+  }
+}
