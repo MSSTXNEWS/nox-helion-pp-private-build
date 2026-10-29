@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B1",
+  "worker_label": "B1",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b1-20261029",
+  "code_commits": [
+    "092f92263a5db6aaf79ce16e40b11d9a2d161039",
+    "2f0e493e063792dc7ae22874b73ea2e43a64bdbd",
+    "49f347a653ff6a1ef31f38c98e9f992f54a0e65c",
+    "ef6c17d6c2416ef6d5ebb39bb4c5d6a2557916c3"
+  ],
+  "change_summary": "Shape/dtype, NTFS basename, index SHA, observed snapshot fingerprint",
+  "focused_tests": "Source assertions; safetensors independent geometry fixture; private Python runtime NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "Hashes must describe exact checked bytes; reject malformed shard geometry.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
