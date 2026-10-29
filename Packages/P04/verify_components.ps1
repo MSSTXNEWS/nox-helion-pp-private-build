@@ -16,7 +16,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 }
 & dotnet build $project -c Release --nologo
 if ($LASTEXITCODE -ne 0) { Write-Error "P04_DOTNET_BUILD_FAILED"; exit 1 }
-& dotnet run --project $harness -c Release --no-restore
+& dotnet run --project $harness -c Release --nologo
 if ($LASTEXITCODE -ne 0) { Write-Error "P04_RAG_FIXTURE_FAILED"; exit 1 }
 if ($P02SourceDir) {
     # Do not accept arbitrary webpage paths: #6 must provide an approved local
