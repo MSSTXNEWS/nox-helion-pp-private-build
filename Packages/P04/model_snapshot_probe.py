@@ -211,7 +211,11 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
         raw_header = f.read(length)
         if not raw_header.startswith(b"{"):
             raise ValueError("invalid safetensors header prefix")
-        header = json.loads(raw_header.decode("utf-8"), object_pairs_hook=unique_pairs)
+        def reject_nonfinite(_token):
+            raise ValueError("non-finite safetensors header token")
+        header = json.loads(raw_header.decode("utf-8"),
+                            object_pairs_hook=unique_pairs,
+                            parse_constant=reject_nonfinite)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
@@ -396,6 +400,9 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
     except (ValueError, OSError) as exc:
+        # Partial shard evidence must never look like a verified complete set.
+        report["weight_files"].clear()
+        report["tensor_headers"] = 0
         report["reason"] = str(exc)
     return report
 
