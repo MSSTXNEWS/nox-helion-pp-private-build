@@ -272,10 +272,29 @@ def admit_for_existing_downloader(
     # probe bound to this exact E06 host/session.
     if type(evidence.get("requiresGPU")) is not bool:
         reasons.append("GPU_REQUIREMENT_FLAG_UNVERIFIED")
+    # Exact reviewed model memory fields are requirements, never UI sensors.
+    # A GPU-only record may omit recommended RAM; a CPU-only record must
+    # declare RAM. When RAM is declared, an attested host reading is required.
+    recommended_ram = evidence.get("recommendedRamBytes")
+    required_vram = evidence.get("requiredVramBytes")
+    if recommended_ram is not None and not _positive(recommended_ram):
+        reasons.append("RAM_REQUIREMENT_INVALID")
+    if evidence.get("requiresGPU") is False:
+        if required_vram is not None:
+            reasons.append("GPU_FLAG_AND_VRAM_REQUIREMENT_MISMATCH")
+        if not _positive(recommended_ram):
+            reasons.append("MODEL_MEMORY_REQUIREMENTS_UNVERIFIED")
+    elif evidence.get("requiresGPU") is True and not (_positive(recommended_ram) or _positive(required_vram)):
+        reasons.append("MODEL_MEMORY_REQUIREMENTS_UNVERIFIED")
     native = context.get("nativeMeasuredHardware")
     if not isinstance(native, Mapping) or native.get("attested") is not True:
         reasons.append("NATIVE_HARDWARE_NOT_ATTESTED")
     else:
+        if _positive(recommended_ram):
+            if not _positive(native.get("availableRamBytes")):
+                reasons.append("NATIVE_RAM_SENSOR_MISSING")
+            elif native["availableRamBytes"] < recommended_ram:
+                reasons.append("INSUFFICIENT_REAL_RAM")
         if not _positive(native.get("freeDiskBytes")):
             reasons.append("REAL_DISK_SENSOR_MISSING")
         elif _positive(evidence.get("requiredDiskBytes")) and native["freeDiskBytes"] < evidence["requiredDiskBytes"]:
