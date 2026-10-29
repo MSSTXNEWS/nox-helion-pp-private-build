@@ -1,0 +1,134 @@
+{
+  "schema": "NOX_V16_T11_5_CRITERIA_R14",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T165515MSK-R14-ACCESS-HOLD",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "state": "ACCESS_HOLD",
+  "times": {
+    "planned_start_msk": "2026-10-29 16:45:00",
+    "observed_start_msk": "2026-10-29 16:55:15",
+    "receipt_write_time_utc": "2026-10-29T13:57:52.878Z",
+    "receipt_write_time_msk": "2026-10-29 16:57:52",
+    "actual_end_msk": null,
+    "duration_seconds": null,
+    "reason": "End time not yet observable when writing immutable receipt"
+  },
+  "previous_checkpoint": {
+    "run_id": "NOX-V16-T11-20261029T164500MSK-R13-ACCESS-HOLD",
+    "commit_sha": "98631d5cea6f037466428a9c93e7aed3c81e5118",
+    "done": 2,
+    "remaining": 3,
+    "percent": 40
+  },
+  "progress": {
+    "before": {
+      "done": 2,
+      "total": 5,
+      "percent": 40
+    },
+    "after": {
+      "done": 2,
+      "total": 5,
+      "percent": 40
+    },
+    "delta_percentage_points": 0,
+    "remaining": 3,
+    "bar": "████░░░░░░"
+  },
+  "criteria": [
+    {
+      "criterion": 1,
+      "status": "DONE",
+      "evidence": {
+        "migration_sha": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+        "receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+      }
+    },
+    {
+      "criterion": 2,
+      "status": "DONE",
+      "evidence": {
+        "migration_only_paths": 27,
+        "distinct_historical_commits": 21,
+        "full_manifest_and_T12_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+      }
+    },
+    {
+      "criterion": 3,
+      "status": "HOLD",
+      "diagnostic": "GITLAB_LIVE_ACCESS_HOLD",
+      "evidence": {
+        "gitlab_url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "live_authenticated_head": null,
+        "owner": "GitLab private project owner"
+      }
+    },
+    {
+      "criterion": 4,
+      "status": "HOLD",
+      "diagnostic": "NO_ACCEPTED_T09_FROZEN_SHA",
+      "evidence": {
+        "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "windows_entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+        "hardcoded_migration_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+        "accepted_frozen_sha": null,
+        "owner": "T09 and T12"
+      }
+    },
+    {
+      "criterion": 5,
+      "status": "HOLD",
+      "diagnostic": "NO_READY_SAME_SHA_HANDOFF",
+      "evidence": {
+        "single_existing_conditional_T12_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+        "source_ready_pass": false,
+        "gitlab_ready_pass": false,
+        "owner": "T12"
+      }
+    }
+  ],
+  "new_delta": {
+    "T09_physical_original_archive": {
+      "git_receipt_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/coordination/t09-manual-gate-20261029-r01/coordination/automation/t09/NOX_V16_T09_PHYSICAL_SOURCELOCK_ACTUAL_20261029_R02.json",
+      "git_receipt_blob": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+      "reported_joined_bytes": 60364346,
+      "reported_joined_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "reported_hashed_members": 729,
+      "reported_zip_crc": "PASS",
+      "T11_independent_binary_rehash": false,
+      "final_integrated_tree_frozen": false
+    },
+    "T06_draft_only": {
+      "PR": 214,
+      "commit": "4927fa8e96fb36f9c72df739a636f96dff438753",
+      "source_approval": false
+    }
+  },
+  "handoff": {
+    "one_T12_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+    "status": "CONDITIONAL_NOT_GITLAB_READY",
+    "same_sha": null,
+    "no_new_handoff": true,
+    "required": "Authenticated GitLab live HEAD + T06 accepted source + T09 immutable frozen SHA + T10 independent same-SHA SOURCE_READY; no force-push/reimport; owner-reviewed CI ref alignment before one later authorized build"
+  },
+  "blocker": {
+    "primary": "GITLAB_LIVE_ACCESS_HOLD",
+    "owner": "authorized GitLab private-project owner",
+    "also": "T06 owner#1 approved tree absent; T09 frozen HEAD HOLD; T10 SOURCE_READY HOLD"
+  },
+  "lesson_applied": "The new physical original ZIP 729/729 hash receipt supersedes old raw-access HOLD, but original-archive verification is NOT final frozen integrated source SHA or GitLab live HEAD.",
+  "safety": {
+    "source_edits": 0,
+    "shared_docs_writes": 0,
+    "gitlab_push": 0,
+    "force_push": 0,
+    "reimport": 0,
+    "exe": 0,
+    "nsis": 0,
+    "gitlab_ci": 0,
+    "e07": 0,
+    "main_modified": false,
+    "pr162_modified": false,
+    "old_DONE_preserved": true
+  }
+}
