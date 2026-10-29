@@ -1,0 +1,144 @@
+{
+  "schema": "NOX_V16_CROSS_EXECUTOR_ERROR_INDEX_R01",
+  "run_id": "NOX-V16-CROSS-OWNER-ERROR-INDEX-20261029-R01",
+  "created_utc": "2026-10-29T14:51:55.984Z",
+  "purpose": "Seed an explicit cross-executor index for all ACTIVE NOX V16 operators. These are the currently identifiable recent immutable incident IDs; this is NOT claimed to be an exhaustive catalog of every historical error.",
+  "canonical_sources": [
+    {
+      "kind": "Master",
+      "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50"
+    },
+    {
+      "kind": "E06",
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4"
+    },
+    {
+      "kind": "Lessons",
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    },
+    {
+      "kind": "C34",
+      "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    }
+  ],
+  "recent_verified_incident_count": 4,
+  "incidents": [
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "owner": "T09",
+      "kind": "PROCESS_CLOSEOUT",
+      "shared_sources": [
+        "Master",
+        "E06",
+        "Lessons",
+        "C34"
+      ],
+      "state": "REGISTERED_IN_ALL_FOUR",
+      "required_lesson": "Before T09 closeout require actual accepted final T06 source identity and journal readback; do not label source HOLD as DONE."
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "owner": "ALL_EXECUTORS",
+      "kind": "SYSTEMIC_PREMATURE_STOP",
+      "shared_sources": [
+        "Master",
+        "E06",
+        "Lessons",
+        "C34"
+      ],
+      "state": "REGISTERED_IN_ALL_FOUR",
+      "required_lesson": "Do not treat issue handoff/automation request/report as completion; apply a concrete correction, verify artifact and journal readback."
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "owner": "T06",
+      "kind": "PROCESS_GATE",
+      "shared_sources": [
+        "Master",
+        "E06",
+        "Lessons"
+      ],
+      "state": "REGISTERED_3_OF_3",
+      "required_lesson": "Mechanical closeout gate checks evidence, but 5 unit tests of guard do not make P01-P05 and native SourceReady 8/8."
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "owner": "T08",
+      "kind": "SOURCE_AUTOFIX_HANDOFF",
+      "shared_sources": [
+        "Master",
+        "E06",
+        "Lessons"
+      ],
+      "state": "REGISTERED_3_OF_3",
+      "required_lesson": "Git source patch and handoff are not 13 native Host50 route tests. Check owner PRE/POST and signed same-tree provenance."
+    }
+  ],
+  "owners": [
+    {
+      "owner": "T01",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T02",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T03",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T04",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T05",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T06",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T07",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T08",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T09",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T10",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    },
+    {
+      "owner": "T11",
+      "history_coverage": "NOT_ASSERTED",
+      "current_cursor_required": true
+    }
+  ],
+  "new_run_contract": [
+    "Before acting: READ V16 §§1-33,54-56,R29+§33 56 consolidated; read Master/E06/Lessons/C34 deltas since last attested revision, not only own latest receipt.",
+    "Read ALL newly registered cross-owner incident IDs in that range; acknowledge each as APPLIED, NOT_APPLICABLE_WITH_REASON, or EXACT_EXTERNAL_BLOCKER.",
+    "Select one relevant error from any executor, state root cause and concrete code/process correction, actual SHA and measured focused check; never pretend this updates LLM weights.",
+    "Before DONE: assert fixed x/n, own immutable receipt Git SHA readback, any mandatory T02 CAS/readback, no external auth or release safety bypass.",
+    "T02 sole shared document writer; append one idempotent error ID + actual lesson and ensure Master/E06/Lessons 3/3 readback.",
+    "On new errors: append a unique incidentId to source journals, notify T02, update this index append-only via new version; no rewriting old incidents."
+  ],
+  "noted_gap": "Historical errors use inconsistent free-text formats; the four explicit recent incident IDs are NOT all historical errors. T02 must normalize unindexed incident IDs by scanning full journal deltas each cycle.",
+  "safety": "Function Lock, original source, histories, owner scopes and current build ban unchanged"
+}
