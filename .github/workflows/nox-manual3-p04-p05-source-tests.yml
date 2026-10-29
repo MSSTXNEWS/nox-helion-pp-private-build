@@ -1,0 +1,42 @@
+name: NOX Manual3 P04 P05 exact-source components
+on:
+  push:
+    branches:
+      - manual/no3/r26-p04-p05-no-loss-handoff-20261030
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-components:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: P04 Python source tests
+        env:
+          NOX_P02_SOURCE_DIR: ${{ github.workspace }}/Packages/P02/worker-python
+        run: python -m unittest discover -s tests/P04 -p 'test_*.py' -v
+      - name: P04 dotnet build and RAG harness
+        run: |
+          dotnet build Packages/P04/NoxP04.csproj -c Release --nologo
+          dotnet run --project tests/P04/RagComponentHarness.csproj -c Release
+      - name: P04 GPU receipt fixture (not GPU training)
+        run: dotnet run --project tests/P04/GpuWorkerReceiptHarness.csproj -c Release
+      - name: P05 feed and source freshness fixtures
+        run: |
+          dotnet run --project Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj -c Release
+          dotnet run --project Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj -c Release
+      - name: Source-only boundary
+        run: echo "These are offline source/component checks only; no installed EXE, real GPU, licensed data, authorized model or E07 QA attested."
