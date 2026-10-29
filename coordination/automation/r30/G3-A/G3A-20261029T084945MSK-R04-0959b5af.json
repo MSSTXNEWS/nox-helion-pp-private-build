@@ -1,0 +1,105 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3A_OWNER_RECEIPT_V2",
+  "runId": "G3A-20261029T084945MSK-R04-0959b5af",
+  "slot": "G3-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "sourceStatus": "SOURCE_SAVED_STATIC_VERIFIED",
+  "runtimeStatus": "NOT_RUN",
+  "sourceCodeComplete": "HOLD",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "forbidden": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "history": {
+    "snapshots": 25,
+    "unchanged": true,
+    "conflictIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "previousRunId": "G3A-20261029T074054MSK-R03-b9f33b40",
+    "previousFinding": "Model admission lacked trusted native RAM budget preflight; prior source patch denied, five offline RED tests saved.",
+    "previousReceipt": "coordination/automation/r30/G3-A/G3A-20261029T074054MSK-R03-b9f33b40.json"
+  },
+  "source": {
+    "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+    "preBlobSha1": "b3fe9f7a10a8b83452dc4494b88fe989309d1422",
+    "postBlobSha1": "f697cf316f5be2a1f71c8c93addda1cf07051205",
+    "preSha256": "ff38b017f14cd6b5b51fc81c62346c63a3212d8462474b0df3c176f12c880f54",
+    "postSha256": "8ac49497045623918cbf07125e861326e998e0e9ee64c1e53b794109fb247faa",
+    "commit": "b44d5507c27f59b0bb037c4ffb75757a6a2a2f79",
+    "readbackExact": true,
+    "change": "Require valid recommendedRamBytes when declared and reject unmeasured/insufficient host-attested availableRamBytes before native attestor. CPU-only requires real RAM budget, contradictory CPU+VRAM field HOLD. GPU-only legacy VRAM pathway preserved."
+  },
+  "test": {
+    "path": "Packages/P03/Admission/test_g3a_r30_r04_ram_acceptance.py",
+    "commit": "e4f03b4a7b1d0e46245719805708089266aec063",
+    "gitBlobSha1": "8f4d1deead177bafc867ce82d0e109e6f511da29",
+    "newTests": 6,
+    "priorRedTests": 5,
+    "staticStructuralChecks": {
+      "passed": 7,
+      "total": 7
+    },
+    "hashFunctionSelfTest": {
+      "sha256Empty": "PASS",
+      "sha256Abc": "PASS"
+    },
+    "pythonUnittest": {
+      "command": "cd Packages/P03/Admission && python -m unittest test_g3a_r30_r03_memory_budget_red test_g3a_r30_r04_ram_acceptance",
+      "status": "NOT_RUN",
+      "reason": "Private repository not mounted into isolated Python runtime; no Windows CI/GitLab permitted."
+    },
+    "commitReadbackExact": true
+  },
+  "git": {
+    "baseBranch": "automation/r30/g3a/G3A-20261029T074054MSK-R03-b9f33b40",
+    "baseHead": "0959b5afe848407242e543204f63e0e61943bc83",
+    "privateBranch": "automation/r30/g3a/G3A-20261029T084945MSK-R04-0959b5af",
+    "headAfterSourceAndTest": "e4f03b4a7b1d0e46245719805708089266aec063",
+    "aheadCommitsBeforeReceipt": 2,
+    "comparedChangedPaths": [
+      "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "Packages/P03/Admission/test_g3a_r30_r04_ram_acceptance.py"
+    ],
+    "outOfOwnerPaths": []
+  },
+  "modelStatus": {
+    "familyRecords": 30,
+    "verifiedDownloadableArtifacts": 0,
+    "licenseRightsArtifactShaHardwareRuntime": "HOLD"
+  },
+  "handoffG3B": {
+    "required": "Bind nativeMeasuredHardware.availableRamBytes to real host-measured free physical RAM in the existing E06 session, never UI-provided. Existing P03 queue/transport/ui remain exclusively G3-B owned.",
+    "filesModifiedByG3A": []
+  },
+  "lessons": {
+    "read": "R03 write guard denied original source; R04 exact preimage Git blob read and isolated owner branch permitted legitimate write. Historical master warns stale SourceLock/merges and misleading test activity.",
+    "applied": "Bound one exact owner source patch to fresh Git blob preimage, ran seven local JS source-structure assertions + two SHA256 test vectors, verified exact remote code readback, added six unique synthetic Python regressions; did not count committed tests as executed.",
+    "next": "Run existing five RED + six new acceptance Python tests in authorized source-only environment; require G3-B native RAM sensor/attestation readback before integration. Coordinator Astra-C alone appends common Drive journals."
+  },
+  "prohibitedActions": {
+    "main": false,
+    "pr162": false,
+    "sharedR30": false,
+    "snapshots": false,
+    "otherOwnerPaths": false,
+    "exe": false,
+    "nsis": false,
+    "windowsCI": false,
+    "gitlab": false,
+    "merge": false
+  },
+  "driveWriteByWorker": false,
+  "coordinator": "Astra-C"
+}
