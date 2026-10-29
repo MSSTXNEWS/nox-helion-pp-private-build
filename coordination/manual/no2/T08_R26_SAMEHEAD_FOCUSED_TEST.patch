@@ -1,0 +1,7 @@
+--- a/coordination/automation/t08/t08_autofix_closeout_gate.py
++++ b/coordination/automation/t08/t08_autofix_closeout_gate.py
+@@ -101,2 +101,3 @@
+-            if test.get("status") != "PASS":
++            if (test.get("status") != "PASS" or
++                    not _consistent_source_heads(test, head)):
+                 return False
