@@ -1,0 +1,209 @@
+{
+  "schema": "NOX_V16_R16_G1A_OWNER_P01_NSIS_SOURCE_PATCH_RECEIPT_V1",
+  "run_id": "NOX-V16-G1A-20261029202930MSK-R16-NSIS-REGISTRY-GUARD",
+  "scope": "ONLY existing Windows EXPRESS INTEGRATOR loader, SOURCE ONLY",
+  "owner": "G1-A owner C09 Installer, not T06 PR162",
+  "started_at_utc": "2026-10-29T17:24:40.743Z",
+  "receipt_prepared_at_utc": "2026-10-29T17:29:33.500Z",
+  "planned_msk": "2026-10-29T20:15:00+03:00",
+  "duration_minutes": null,
+  "gates": {
+    "A": "PASS_FULL_CANON_REGISTER_AND_CURRENT_OWNERS_READ",
+    "B": "PASS_OWNER_PATCH_WITH_TARGETED_STATIC_TEST",
+    "C": "PENDING_ATOMIC_REF_CAS_GIT_READBACK",
+    "D": "APPLIED_NEW_REGISTRY_FAILURE_GATES_AND_CLASSIFIED_ACTIVE_ERRORS"
+  },
+  "prestart": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "rules_33": 56,
+    "sections": "1-33,54-56,R29",
+    "registry_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "errors_total": 11,
+    "open": 5,
+    "fix_applied_unverified": 4,
+    "verified_closed": 2,
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "ownership_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "docs_revisions": {
+      "master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "e06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0"
+    },
+    "one_tree_pr162_head": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "one_tree_sha": "4918c5009b084b9b02dcc36642c86731b572b9df",
+    "old_G1A_run": "G1A-20261029T195056MSK-HOST-R15"
+  },
+  "product_source": {
+    "paths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "pre_blobs": [
+      "87d901c3846359a91be3e8288f24302cc7060257",
+      "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    ],
+    "donor_blobs": [
+      "c54ca1b6ca6b7566b46a89740da7aa1e7ade6b80",
+      "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    ],
+    "prepared_post_blobs": [
+      "bc1ab71e6e57ac865fd1f98665ca6fb9919d6138",
+      "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    ],
+    "changes_in_PR162": 0,
+    "branch": "automation/r30/g1a/NOX-V16-G1A-20261029202930MSK-R16-NSIS-REGISTRY-GUARD",
+    "source_stage": "ISOLATED_OWNER_PATCH_NOT_T06_MERGED",
+    "t04_keeper_override": "T06_OWNER_APPROVAL_PENDING"
+  },
+  "defect": {
+    "parent_error_id": "ERR-SRC-004",
+    "root_cause": "Existing R10 isolated donor has five post-activation HKCU writes and shortcut with zero immediate ClearErrors/IfErrors; incomplete uninstall registration can be reported as installed.",
+    "security_priority": "P1_LOADER_CONSISTENCY",
+    "repair": "Add fail-closed checks for five HKCU mutations and shortcut; capture old DisplayVersion; on failure best-effort restore old version, preserve new/backup trees and user state; no unsafe registry deletion",
+    "limitation": "Source-only static check: Windows HKCU, NSIS and rollback native behavior NOT_EXECUTED; if prior registry restoration fails manual operator recovery remains, no false clean-state claim."
+  },
+  "targeted_check": {
+    "kind": "V8_STATIC_SOURCE_CONTRACT_POSITIVE_NEGATIVE",
+    "passed": 10,
+    "failed": 0,
+    "assertions": {
+      "RED_donor_without_5_HKCU_error_gates": true,
+      "GREEN_all_5_HKCU_errors_fail_closed": true,
+      "GREEN_shortcut_failure_fail_closed": true,
+      "GREEN_old_HKCU_version_snapshot": true,
+      "GREEN_rollback_on_registration_failure": true,
+      "GREEN_prior_app_backup_remains": true,
+      "GREEN_crossfile_CLI": true,
+      "GREEN_no_unknown_HKCU_deletion_in_recovery": true,
+      "GREEN_required_P01_verified_payload_contract": true,
+      "GREEN_no_second_host_or_new_backend": true
+    },
+    "native_windows": "NOT_RUN",
+    "nsis_compiler": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "lessons": {
+    "active_entries_read": 11,
+    "archive_419_fingerprints": "ARCHIVED_NOT_LIVE",
+    "processed": 11,
+    "applied": 2,
+    "already_fixed": 2,
+    "delegated": 7,
+    "remaining_native_or_owner": 7,
+    "cluster_note": "owner-safe registry failure and HEAD CAS are applied; other owners T02/T06/T08/T09 responsible for independent acceptance",
+    "cases": [
+      {
+        "error_id": "ERR-SYS-001",
+        "action": "DELEGATE_T02_OR_T09",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "action": "APPLY_FRESH_SHA_CAS",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "action": "DELEGATE_EXACT_OWNER",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "action": "APPLY_OWNER_NSIS_SOURCE",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "action": "DELEGATE_EXACT_OWNER",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "action": "ALREADY_CLOSED",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "action": "ALREADY_CLOSED",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "action": "DELEGATE_T02_OR_T09",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "action": "APPLY_ANTI_PREMATURE_CLOSEOUT",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "action": "DELEGATE_EXACT_OWNER",
+        "status": "NO_RECLASSIFICATION"
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "action": "DELEGATE_EXACT_OWNER",
+        "status": "NO_RECLASSIFICATION"
+      }
+    ],
+    "recurrence_test": "Five HKCU writes + shortcut must each have immediate error guard and safe recovery, tested negative donor vs positive patch."
+  },
+  "progress": {
+    "hierarchy": "G1-A > P01/Host C09, P02 Voice/IPC, P03 ModelCenter/Queue, T06 signed handoff",
+    "operational_fixed_denominator": 4,
+    "accepted_before": 1,
+    "accepted_after": 1,
+    "percent_before": 25,
+    "percent_after": 25,
+    "delta_percentage_points": 0,
+    "bar": "███░░░░░░░",
+    "product_percent": "N/D",
+    "historic_T01": "100/100 DONE UNCHANGED",
+    "source_patch_prepared_paths": 3,
+    "new_independent_product_TaskID_DONE": 0,
+    "remaining": [
+      "P01 original WPF host provenance and owner-accepted NSIS integration",
+      "P03 independent owner QA current HEAD",
+      "T06 signed same SHA handoff"
+    ]
+  },
+  "no_loss": {
+    "original_729": "PRESERVED_UNMODIFIED",
+    "historical_T04": "34/34 preserved",
+    "original_3ZIP": "UNCHANGED",
+    "host50_prior_13_source_HOLD": "UNCHANGED",
+    "stop_acl_consent_privacy": "NO_CHANGE",
+    "P02_P03": "NO_DUPLICATE",
+    "no_force_push": true
+  },
+  "handoff": {
+    "T06": "Owner #1 re-read CURRENT PR162 head and the three exact PRE Git blobs, review G1-A NSIS patch incl HKCU rollback, T04 keeper override, CAS merge, independent T08 same-SHA native/security acceptance; do not compile EXE",
+    "T02": "Append ERR-SRC-004 new guard proof only after shared CAS/readback; G1-A did not write shared Google Docs",
+    "G1B": "R10 three-file candidate absorbed with new error guard; no foreign file writes"
+  },
+  "next_checkpoint": {
+    "expected_pr162_source_head_at_preparation": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "owner": "T06/№1",
+    "specific_action": "Verify owner-selected existing WPF MainWindow provenance (not in ZIP729), authorize NSIS 3-path preimage and apply scoped patch to single PR162 HEAD; run targeted cross-file+registry failure tests; T08 same HEAD QA.",
+    "product_ready": false
+  }
+}
