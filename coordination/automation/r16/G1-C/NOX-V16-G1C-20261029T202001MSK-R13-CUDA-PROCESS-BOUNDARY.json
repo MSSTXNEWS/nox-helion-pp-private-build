@@ -1,0 +1,227 @@
+{
+  "schema": "NOX_V16_G1C_R16_SINGLE_RUN_OWNER_SAFE_READBACK_V1",
+  "runId": "NOX-V16-G1C-20261029T202001MSK-R13-CUDA-PROCESS-BOUNDARY",
+  "taskId": "G1-C-P04-P05",
+  "observedStart": "2026-10-29T20:20:01+03:00",
+  "observedReceiptPreparation": "2026-10-29T17:25:38.044Z",
+  "plannedStart": "2026-10-29T20:15:00+03:00",
+  "scope": "NOX HELION V16 EXPRESS INTEGRATOR SOURCE ONLY",
+  "status": "INCOMPLETE",
+  "prestart_read_proof": {
+    "canonicalDoc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "paragraphsRead": 679,
+    "approximateCharactersRead": 205078,
+    "originalRulesSection33": 56,
+    "sections": "1-33,54-56 and R29 full current document received and traversed",
+    "registerRef": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registerPath": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "registerGitBlob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "registerCount": 11,
+    "registerOpen": 5,
+    "registerFixAppliedUnverified": 4,
+    "registerVerifiedClosed": 2,
+    "activeErrorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "pr162HeadAtPreflight": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+    "pr162TreeAtPreflight": "f508ceefaa1301e7b28f8a35ae4fd1efd35efadf",
+    "pr162HeadAfterDrift": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pr162TreeAfterDrift": "4918c5009b084b9b02dcc36642c86731b572b9df",
+    "driftSingleCommitParent": "13bec5a637c56972e38a1bd04c6ae896d75c0c4e",
+    "driftChangedPaths": [
+      "coordination/automation/t06/NOX-V16-T06-20261029-R17-APPLY-TO-PR162.json",
+      "coordination/e06/run_source_integrations_r13.py",
+      "coordination/e06/stage_p01.py",
+      "tests/e06/test_stage_p01_shared_zip_guard.py"
+    ],
+    "currentOwnerT06RunId": "NOX-V16-T06-20261029-R17-APPLY-TO-PR162",
+    "currentOwnerT06ReceiptGitBlob": "b3da5da969eac289e9247a99a54954901fad00e8",
+    "currentOwnerT06AcceptedCriteria": "1/8",
+    "lastG1CCheckpointReceiptBlob": "90b9a0f94c514fe61c993f1bf172aac96d565f01",
+    "originalOwnershipMapBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "masterRevision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06Revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessonsRevision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34Revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "source_binding": {
+    "pinnedPrHead": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pinnedTree": "4918c5009b084b9b02dcc36642c86731b572b9df",
+    "entries": [
+      {
+        "block": "P04 snapshot",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "gitBlob": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+        "status": "UNCHANGED_BOUND_SOURCE_ONLY"
+      },
+      {
+        "block": "P04 GPU",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "gitBlob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+        "status": "UNCHANGED_BOUND_SOURCE_ONLY"
+      },
+      {
+        "block": "P05 events",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "gitBlob": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+        "status": "UNCHANGED_BOUND_SOURCE_ONLY"
+      },
+      {
+        "block": "P05 Drive",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "gitBlob": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd",
+        "status": "UNCHANGED_BOUND_SOURCE_ONLY"
+      }
+    ],
+    "operationalFrozenEqualWeightBinding": {
+      "before": "4/4",
+      "after": "4/4",
+      "delta_pp": 0,
+      "pct": 100
+    },
+    "productFunctionalTaskIds": {
+      "frozenCompleteInventory": false,
+      "accepted": "N/D",
+      "percent": "N/D"
+    },
+    "otherFourAutoCoordinationCells": "N/D: missing frozen owner criterion ledgers; never infer from P04/P05 blobs"
+  },
+  "physical_result_proof": {
+    "kind": "NEW EXECUTED isolated-process negative regression of exactly the active P04 CUDA probe boundary",
+    "sourcePreGitBlob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "sourcePostGitBlob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "existingGpuTestPreGitBlob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "existingGpuTestPostGitBlob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "previousUnmergedFixtureCandidatePostGitBlob": "126ef658ab72564aa8f58758bd1739c7ab717151",
+    "scriptLocalArtifact": "nox_g1c_cuda_process_boundary_20261029.py",
+    "scriptSha256": "834a27efe27ac1509f3802e722fff1536802744df694639fa7dfdf92b1b1e0b8",
+    "executableTestRecipe": "Parent injects fake torch into sys.modules, starts a fresh subprocess.run([sys.executable,'-I','-c', child],capture_output=True,text=True,timeout=10,check=True); child checks that parent 'torch' injection is absent, isolation flag equals 1; no GPU probe/download/network.",
+    "stdoutJson": {
+      "cuda_device": null,
+      "isolated": true,
+      "mock_in_child": false
+    },
+    "childStdoutSha256": "0a4c2840deab55d47e2d058ac1c7d56eb8d3053e25f32adc2db4eee11f79224e",
+    "assertionsPassed": 4,
+    "assertionsTotal": 4,
+    "independentOfPriorStaticR12": true,
+    "limitation": "Focused Python process-boundary proof ONLY; actual tests/P04/test_local_gpu_preflight.py NOT_RUN, CUDA/Windows NOT_RUN, no product source mutation, no accepted TaskID.",
+    "newAcceptedTaskIDs": 0,
+    "fixtureOwner": "G4-B",
+    "nextOwnerAction": "G4-B must re-read tests/P04/test_local_gpu_preflight.py exact PRE 4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051, apply previously prepared 3 replacements only on its approved isolated scope, run existing focused Python unittest and security fail-closed checks, publish POST receipt; T06 sole writer CAS integrates into PR162; T08 same-SHA QA."
+  },
+  "mass_lessons": {
+    "activeRegisterEntriesRead": 11,
+    "historical419FingerprintRows": "NOT_RECAST_AS_ACTIVE",
+    "dedupRule": "ERROR_ID and root-cause; historical DONE preserved",
+    "currentScopeClusters": 7,
+    "fullyHistoricalCoverage": "NOT_CLAIMED",
+    "records": [
+      {
+        "ids": [
+          "ERR-SYS-001"
+        ],
+        "owner": "T02",
+        "action": "DELEGATE",
+        "root": "cross-run receipts not reliably indexed",
+        "recurrence": "T02 records owner receipt SHA and readback, not issue-only"
+      },
+      {
+        "ids": [
+          "ERR-SYS-002"
+        ],
+        "owner": "G1-C",
+        "action": "APPLY_PROCESS_CONTROL",
+        "root": "moving PR HEAD invalidated historical preimages",
+        "recurrence": "actual preflight 13bec and drift refresh 3b94; no recheck unrelated paths"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "owner": "T06/T08",
+        "action": "DELEGATE",
+        "root": "Host50 source patch exists but native 13/13 same-HEAD proof pending",
+        "recurrence": "verify signed native routes at one pinned HEAD"
+      },
+      {
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "owner": "G4-B/T06",
+        "action": "APPLY_EXECUTED_NEGATIVE_BOUNDARY_AND_DELEGATE",
+        "root": "old fixture mocks torch in parent but current source probes child Python -I",
+        "recurrence": "G4-B real unittest after exact fixture seam patch, owner receipt and independent QA"
+      },
+      {
+        "ids": [
+          "ERR-SRC-005"
+        ],
+        "owner": "T06/T08",
+        "action": "DELEGATE",
+        "root": "runner pinning post source not independently executed",
+        "recurrence": "T08 focused fixture runner test on current HEAD"
+      },
+      {
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "owner": "T07/T09 and T04",
+        "action": "ALREADY_FIXED",
+        "root": "archive byte access and historical arbitration settled",
+        "recurrence": "preserve 729/729 ZIP and 34/34 choices; no broad repeat QA"
+      },
+      {
+        "ids": [
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "owner": "T02/T06/T09",
+        "action": "DELEGATE_WITH_G1C_INCOMPLETE_CHECKPOINT",
+        "root": "report or Git receipt confused with accepted Task DONE",
+        "recurrence": "current run status INCOMPLETE, 0 new accepted, T06 owner 1/8"
+      }
+    ],
+    "appliedExecutableChecks": 1,
+    "alreadyFixedActiveEntries": 2,
+    "delegatedOwnerClusters": 4,
+    "remainingOwnerActionCount": 1,
+    "appliedLesson": "Actual Python -I child cannot inherit mock parent sys.modules. Preserve fail-closed runtime boundary and update synthetic fixture seam; a 4/4 execution of this boundary is NOT CUDA/Windows runtime PASS."
+  },
+  "gates": {
+    "A": "PASS_READ_PROOF",
+    "B": "PASS_NEW_EXECUTED_4_OF_4_PROCESS_BOUNDARY",
+    "C": "PENDING_GIT_READBACK",
+    "D": "PARTIAL_ALL_11_ACTIVE_ENTRIES_TRIAGED_BUT_FULL_HISTORICAL_LESSON_COVERAGE_NOT_CLAIMED"
+  },
+  "restrictions": {
+    "noPR162Write": true,
+    "noMasterE06LessonsWrite": true,
+    "noCommonErrorRegisterWrite": true,
+    "noMainWrite": true,
+    "noEXE": true,
+    "noNSIS": true,
+    "noGitLabCI": true,
+    "noE07": true
+  },
+  "checkpoint": {
+    "status": "INCOMPLETE",
+    "acceptedTaskIDDelta": 0,
+    "owner": "G4-B/T06",
+    "nextExactAction": "G4-B apply previously proposed patch to current GPU fixture SHA 4c3df879... only after source-owner approval; run existing unittest; T06 exact-CAS integrated test; T08 pin same HEAD and independently accept. T02 alone append lesson by CAS+readback."
+  }
+}
