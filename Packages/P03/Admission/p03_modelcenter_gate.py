@@ -268,21 +268,6 @@ def admit_for_existing_downloader(
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")
-    if not callable(trusted_attestor):
-        reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
-    else:
-        try:
-            # A native callback must not mutate previously authorized rights,
-            # artifact SHA, SourceLock, consent or measured hardware.
-            pre_attestation = _evidence_snapshot(evidence, context)
-            accepted = trusted_attestor(evidence, context) is True
-            if _evidence_snapshot(evidence, context) != pre_attestation:
-                reasons.append("OWNER_ATTESTATION_EVIDENCE_CHANGED")
-            if not accepted:
-                reasons.append("OWNER_ATTESTATION_REJECTED")
-        except Exception:
-            reasons.append("OWNER_ATTESTATION_ERROR")
-
     # Never trust editable UI VRAM or disk. Require a measured, attested native
     # probe bound to this exact E06 host/session.
     if type(evidence.get("requiresGPU")) is not bool:
@@ -332,6 +317,22 @@ def admit_for_existing_downloader(
         role = dict(EXTERNAL_LEADS).get(evidence.get("leadId"), "EXTERNAL") if isinstance(evidence.get("leadId"), str) else "EXTERNAL"
     prereqs = context.get("verifiedPrerequisites")
     reasons.extend(prerequisite_gates(prereqs if isinstance(prereqs, Mapping) else {}, role))
+    # A malformed candidate must never reach the trusted native callback.
+    # Finish local consent/rights/SourceLock/route/hardware validation first.
+    if reasons:
+        return Decision("HOLD", tuple(dict.fromkeys(reasons)))
+    if not callable(trusted_attestor):
+        return Decision("HOLD", ("TRUSTED_OWNER_ATTESTOR_MISSING",))
+    try:
+        # Recheck immutable input snapshots after the only native callback.
+        pre_attestation = _evidence_snapshot(evidence, context)
+        accepted = trusted_attestor(evidence, context) is True
+        if _evidence_snapshot(evidence, context) != pre_attestation:
+            reasons.append("OWNER_ATTESTATION_EVIDENCE_CHANGED")
+        if not accepted:
+            reasons.append("OWNER_ATTESTATION_REJECTED")
+    except Exception:
+        reasons.append("OWNER_ATTESTATION_ERROR")
     if reasons:
         return Decision("HOLD", tuple(dict.fromkeys(reasons)))
     return Decision("PASS_FOR_EXISTING_QUEUE", (), evidence["existingRoute"])
