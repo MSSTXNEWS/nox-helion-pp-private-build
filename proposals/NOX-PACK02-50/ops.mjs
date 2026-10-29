@@ -133,13 +133,18 @@ export const OPS=Object.freeze({
     const canonical=key.normalize("NFC").toLocaleLowerCase("en-US");
     if(seen.has(canonical))throw Error("DUPLICATE_QUERY_KEY");
     if(value!==null&&typeof value==="object")throw Error("QUERY_SCALAR_REQUIRED");
+    // URLSearchParams silently replaces unpaired surrogates; never corrupt input data.
+    try{encodeURIComponent(key);encodeURIComponent(txt(value))}catch{throw Error("INVALID_QUERY_ENCODING")}
     seen.add(canonical);
     pairs.push([key,txt(value)]);
   }
   return new URLSearchParams(pairs).toString();
 },
 "dev.url.query_decode":s=>{
-  const pairs=new URLSearchParams(s.trim().replace(/^\?/,"")),seen=new Set();
+  const raw=s.trim().replace(/^\?/,"");
+  // URLSearchParams accepts malformed % escapes and invalid UTF-8 with replacement characters.
+  try{encodeURIComponent(raw);decodeURIComponent(raw.replace(/\+/g,"%20"))}catch{throw Error("INVALID_QUERY_ENCODING")}
+  const pairs=new URLSearchParams(raw),seen=new Set();
   const result={};
   for(const [key,value] of pairs){
     const canonical=key.normalize("NFC").toLocaleLowerCase("en-US");
