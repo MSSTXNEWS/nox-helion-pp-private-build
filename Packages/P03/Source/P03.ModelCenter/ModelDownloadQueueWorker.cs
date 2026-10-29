@@ -53,9 +53,16 @@ public sealed class ModelDownloadQueueWorker(
                 var current = started;
                 async ValueTask OnProgress(OllamaStreamUpdate u, CancellationToken token)
                 {
-                    await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
+                    var persisted = await store.UpdateAsync(job.Id, j => j.State == ModelJobState.Running
                         ? j with { Status = u.Status, CompletedBytes = u.Completed, TotalBytes = u.Total }
                         : j, token);
+                    // STOP may win the queue race while an HTTP progress callback
+                    // is inflight. Do not publish a fake RUNNING event after STOP.
+                    if (persisted?.State != ModelJobState.Running || linked.IsCancellationRequested)
+                    {
+                        linked.Cancel();
+                        return;
+                    }
                     await SafePublishAsync(job, "progress", u.Status, u.Completed, u.Total, u.Digest, null, token);
                 }
                 string? digest;
