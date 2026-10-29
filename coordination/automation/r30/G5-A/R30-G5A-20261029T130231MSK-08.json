@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T130231MSK-08",
+  "slot": "G5-A",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "decision": "G5-A sole writer of assigned E05 SPACE source, G5-B Drive* / SafeRunReports forbidden and untouched."
+  },
+  "rules": {
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "count": 56,
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 LOADER ONLY"
+    ]
+  },
+  "history": {
+    "previous_owner_branch": "automation/r30/g5a/20261029T120000MSK-07",
+    "previous_head": "37a826df881fbd08b4eb730911d8ece9e9ccc762",
+    "contract_blob": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "master_drive_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_drive_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_drive_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historical_c34_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "latest_coordinator_delta": "ASTRA-C-R30-20261029T1226MSK-07",
+    "previous_lesson_applied": "Cross-check events.v3 date-time rendering across .NET native 7-digit UTC ticks and JS Date.parse without asserting native E2E."
+  },
+  "snapshots": {
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_dirs": 25,
+    "complete_recursive_git_tree_manifest": "9b9ce6716f4f8936d33d8488ce2364f91eb6e389",
+    "git_tree_truncated": false,
+    "recursive_snapshot_entries": 30388,
+    "recursive_snapshot_file_blobs": 24876,
+    "p05_relevant_snapshot_file_records": 125,
+    "original_snapshot_file_bytes_exhaustively_read": false,
+    "original_729_physical_sha256_verified": false,
+    "snapshot_mutations": 0
+  },
+  "task": {
+    "id": "G5A-R30-P05-EVENTS-V3-FUTURE-SUBMILLISECOND-TERMINAL-GUARD-R08",
+    "outcome": "SOURCE_PATCH_ONLY",
+    "new_product_taskids_accepted": 0,
+    "product_percent": "N/D"
+  },
+  "branch": "automation/r30/g5a/20261029T130231MSK-08",
+  "source_change": {
+    "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_blob": "e2f537bf3edaea070702efb44af7a3cc2e10c8be",
+    "postimage_blob": "16b69e400a5699d8a33d2efc87111904ae6a374f",
+    "source_commit": "b7b28256e1577b2b44d01bc5e0710c662bb09552",
+    "root_cause": "JS Date.parse truncates .NET tick/nanosecond fractional UTC precision to milliseconds. A future native event within the SAME millisecond was wrongly displayed as STOPPED.",
+    "fix": "New futureTerminalUtc rejects a parsed timestamp later than nowMs and also nonzero sub-millisecond residue when parsed millisecond equals the current millisecond. Retains valid +00:00 and 7-9-digit timestamps.",
+    "git_source_readback": "PASS"
+  },
+  "test": {
+    "kind": "One targeted exact-source V8 RED->GREEN regression (10 fixtures)",
+    "execution": "GitHub fetch_file -> remove export keyword in-memory -> new Function -> invoke actual projectCanonicalEvents on 10 events.v3 terminal fixtures",
+    "runtime": "V8 JavaScript isolate",
+    "preimage_failures_reproduced": 4,
+    "preimage_total": 10,
+    "postimage_passed": 10,
+    "postimage_total": 10,
+    "persisted_git_postimage_passed": 10,
+    "persisted_git_postimage_total": 10,
+    "case_names": [
+      "future_100ns",
+      "future_1ns",
+      "future_9digit",
+      "future_offset_100ns",
+      "exact_zero_fraction",
+      "exact_tick_boundary",
+      "legitimate_past_100ns",
+      "legitimate_prior_ms",
+      "regular_ms_future",
+      "regular_ms_current"
+    ],
+    "csharp_compilation": "NOT_RUN_NO_DOTNET_SDK",
+    "node_full_suite": "NOT_RUN",
+    "windows_exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "new_test_file": "NOT_WRITTEN_TEST_PATH_NOT_EXPLICITLY_ASSIGNED"
+  },
+  "ownership": {
+    "changed_owned_source_paths": [
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "receipt_dir": "coordination/automation/r30/G5-A/",
+    "other_owner_paths_changed": [],
+    "shared_main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "old_done_preserved": true
+  },
+  "self_improvement": {
+    "new_lesson_id": "G5A-R08-SUBMILLISECOND-TIMESTAMP-PRECISION-IS-A-GATE",
+    "cause": "Native C# DateTimeOffset serializes submillisecond ticks but JS Date.parse drops them, allowing future STOPPED within the same 1ms display bucket.",
+    "action": "When cross-runtime temporal admission drives STOP/HOLD, test exact UTC fractional precision at both sides of millisecond boundaries rather than relying on Date.parse alone. Always test native +00:00 and Z representations.",
+    "next_action": "Run actual .NET/native event serialization plus V8/Node parity tests on approved Windows/SDK runner before product acceptance; do not infer product % from source checks."
+  },
+  "gates": {
+    "product": "HOLD",
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "report_gate": "DRIVE_CENTRAL_READBACK_PENDING_C_ONLY",
+    "drive_writes_by_g5a": 0
+  },
+  "readback": {
+    "source_blob": "PASS",
+    "owner_receipt": "VERIFY_POST_COMMIT"
+  }
+}
