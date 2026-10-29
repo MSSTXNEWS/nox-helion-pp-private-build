@@ -1,13 +1,12 @@
 --- a/Packages/P02/worker-python/p02_framed_worker.py
 +++ b/Packages/P02/worker-python/p02_framed_worker.py
-@@
-             if route == "chat.stop":
-                 try:
-                     send(ingress.handle(data))
+@@ -164,6 +164,9 @@
                  except ProtocolHold as exc:
                      code = str(exc)
                      send(_encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD"))
 +                except Exception:
-+                    # Preserve the authenticated pipe if native STOP provider fails.
++                    # Never close the authenticated pipe on a STOP provider fault.
 +                    send(_encode_status(ingress, nonce, "NATIVE_PROVIDER_HOLD"))
                  continue
+             with active_lock:
+                 require_output_transport()
