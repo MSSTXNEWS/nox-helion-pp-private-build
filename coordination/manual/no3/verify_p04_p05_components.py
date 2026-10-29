@@ -108,6 +108,14 @@ def probe(args: argparse.Namespace) -> tuple[int, dict]:
         if final_git.returncode or final_git.stdout.strip() != args.expected_head:
             report["reason"] = "HEAD_DRIFT_DURING_TESTS"
             return 3, report
+        # Verify tracked bytes again: HEAD alone misses test-induced file changes.
+        final_dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=root, text=True, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=15)
+        if final_dirty.returncode or final_dirty.stdout.strip():
+            report["reason"] = "WORKTREE_DIRTY_AFTER_TESTS"
+            return 3, report
         report["status"] = "COMPONENT_PASS_ONLY"
         report["reason"] = "INDEPENDENT_WINDOWS_GPU_AND_HOST_QA_PENDING"
         return 0, report
