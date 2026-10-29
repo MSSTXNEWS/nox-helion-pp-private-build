@@ -44,19 +44,30 @@ def _prepare(path, content):
     """Prepare complete bytes beside their destination; never truncate a live file."""
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".e06-", dir=path.parent)
     temporary = Path(name)
+    # mkstemp creates an owned inode, not an owned pathname forever. A foreign
+    # replacement must never be unlinked merely because readback failed.
+    created_identity = None
     try:
         with os.fdopen(fd, "wb") as target:
+            info = os.fstat(target.fileno())
+            created_identity = (info.st_dev, info.st_ino)
             if target.write(content) != len(content):
                 raise OSError("OWNER6_SHORT_WRITE_HOLD")
             target.flush()
             os.fsync(target.fileno())
-        if temporary.read_bytes() != content:
+        if (_identity(temporary) != created_identity or
+                temporary.read_bytes() != content or
+                _identity(temporary) != created_identity):
             raise OSError("OWNER6_TEMP_READBACK_HOLD")
         return temporary
     except BaseException:
-        temporary.unlink(missing_ok=True)
+        if created_identity is not None:
+            try:
+                if _identity(temporary) == created_identity:
+                    temporary.unlink()
+            except FileNotFoundError:
+                pass
         raise
-
 
 def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
     """Exception-safe staging under the released owner lease.

@@ -1,0 +1,118 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V7",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T120133MSK-R07",
+  "status": "HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 installer-loader ONLY",
+  "taskId": "G6A-E06-TEMP-PREPARE-FOREIGN-INODE-DELETION-R07",
+  "branch": "automation/r30/g6a/G6A-20261029T120133MSK-R07",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T110525MSK-R06",
+  "parentCommit": "554a22f75866d2ab55c0038f8390491e97e26bb6",
+  "parentTreeSha": "13169f18fc74ae39b076799e11b7bb34a65a19a1",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPathsUnchanged": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ]
+  },
+  "source": {
+    "path": "coordination/e06/stage_onehost.py",
+    "preimageGitBlobSHA1": "ea9d3527e7febcbd1119565e971a4cb6fd7abb0c",
+    "postGitBlobSHA1": "036229a7a9cbfb374d956a3a2c699e5faef7f9d3",
+    "modifiedFunction": "_prepare",
+    "fix": "Pin mkstemp fd dev+inode; verify same inode before and after readback; on any fault unlink only matching owned temporary, never a foreign replacement.",
+    "defect": "Old _prepare cleaned a borrowed pathname unconditionally after fsync/readback failure; a concurrent replacement at the same scratch path could be deleted despite foreign ownership.",
+    "scope": "single existing owner-assigned Python source file"
+  },
+  "targetedTest": {
+    "testId": "G6A-R07-TEMP-FOREIGN-REPLACEMENT-PRESERVE",
+    "command": "python /tmp/g6a_r07_prepare_ownership_test.py",
+    "result": "PASS_ISOLATED_ONLY",
+    "count": 1,
+    "variants": [
+      "Old function RED: injected scratch-path substitution at fsync; old unconditionally deleted foreign replacement",
+      "Patched function GREEN: same injected substitution triggers OWNER6_TEMP_READBACK_HOLD; foreign replacement remains",
+      "Patched normal prepare returns exact staged bytes; fsync exception removes own temp"
+    ],
+    "method": "Isolated Python copy of the exact _prepare control flow, not full GitHub module",
+    "testFileCommitted": false,
+    "testFileOwnerBlocker": "R30 assigned_paths contains only three exact source files, no test path; test executed locally but not committed",
+    "nativeWindowsTest": "NOT_RUN",
+    "fullModulePython": "NOT_RUN"
+  },
+  "inputVerification": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rulesGitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "latestSpecSections": "V16 §§54-56 and loader-only R29 override, read-only Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "conflicts": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictsGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen968Manifest": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+    "manifestGitBlob": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "observedParentTree": "13169f18fc74ae39b076799e11b7bb34a65a19a1",
+    "recursiveTreeTruncated": false,
+    "baselinePathsPresent": 968,
+    "baselinePathsMissing": 0,
+    "unchangedBaselineGitBlobs": 963,
+    "modifiedBaselineGitBlobs": 5,
+    "donorSnapshotDirectoriesReadByGitTree": 25,
+    "donorSnapshotPartsWithMatchingGitShaAndSize": 25,
+    "originalPartGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+    ],
+    "thirdOriginalPartGitBlob": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+    "originalArchiveCombinedExpectedSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "original729InnerSHA256": "NOT_VERIFIED_BINARY_BYTES_NOT_AVAILABLE",
+    "snapshotSourceBytesRehashed": false
+  },
+  "journalsReadOnly": {
+    "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "commonDocsModified": false,
+    "sharedWriter": "Astra-C only",
+    "readback": "NOT_APPLICABLE_TO_G6A"
+  },
+  "appliedLesson": "R06 nested cleanup preserves lock release; R07 extends inode-ownership discipline to early _prepare exception cleanup, not just final rollback.",
+  "newLesson": "A temporary filename can change owners after mkstemp returns. The original cleanup's unconditional unlink converted an integrity HOLD into deletion of a foreign file. Pin the opened descriptor inode, fence readback against replacement, and delete only matching inodes on failure. An injected substitution during fsync must be a regression case; never infer ownership from a filename.",
+  "ownerRequest": {
+    "kind": "TEST_PATH_OWNERSHIP",
+    "desiredPath": "tests/e06/test_g6a_r07_prepare_ownership.py",
+    "proposalOnly": true,
+    "proposal": "Astra-C may ask manifest owner to grant an exact G6-A unique test path for future committed regression; no unauthorized test path was written."
+  },
+  "preservation": {
+    "priorDonePreserved": true,
+    "mainModified": false,
+    "pr162Modified": false,
+    "centralR30Modified": false,
+    "original25SnapshotsModified": false,
+    "forbiddenFilesModified": false,
+    "exe": false,
+    "nsis": false,
+    "gitlabCI": false,
+    "finalIntegration": false
+  },
+  "gates": {
+    "sourceCodeComplete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "nativeWindowsRollback": "NOT_RUN",
+    "original729RawSHA": "NOT_VERIFIED",
+    "productPercent": "N/D"
+  },
+  "changedPaths": [
+    "coordination/e06/stage_onehost.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T120133MSK-R07.json"
+  ]
+}
