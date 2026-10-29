@@ -1,0 +1,194 @@
+{
+  "schema": "NOX_V16_R34_FREE_UPSTREAM_CATALOG_V1",
+  "policy": {
+    "default_install": "NEVER",
+    "network_download": "EXPLICIT_USER_AND_OWNER_APPROVAL_ONLY",
+    "active_host": "ONEHOST_EXISTING_WPF_PYTHON",
+    "app_code_license_cost_eur": 0,
+    "model_weights_licenses": "VERIFY_EACH",
+    "nonzero_infra_costs": "POSSIBLE",
+    "gpu_memory_preflight": "REQUIRED",
+    "no_new_task_ids": true
+  },
+  "existing_first": [
+    {
+      "id": "p02_voice",
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "purpose": "Single LocalVoicePipeline, no second voice engine"
+    },
+    {
+      "id": "ollama_client",
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "purpose": "Existing loopback-only Ollama client; no replacement server"
+    },
+    {
+      "id": "pack02_subtitles",
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "purpose": "Existing SRT/VTT parse, shift, search and conversion (offline)"
+    },
+    {
+      "id": "train_qlora",
+      "path": "Packages/P04/train_qlora.py",
+      "purpose": "Original dataset rights, GPU, holdout and checkpoint gates"
+    },
+    {
+      "id": "webview2_boundary",
+      "path": "Packages/P02/worker-chat/SpaceBrowserBoundary.cs",
+      "purpose": "Existing trusted Windows WebView2 origin boundary"
+    }
+  ],
+  "upstream": [
+    {
+      "id": "faster-whisper",
+      "github": "https://github.com/SYSTRAN/faster-whisper",
+      "license": "MIT",
+      "capability": "Local ASR RU/ES",
+      "priority": 1,
+      "owner": "P02",
+      "install": "pip install faster-whisper",
+      "adapter": "free_local_backends_r34.py:bind_faster_whisper_asr",
+      "status": "SOURCE_ADAPTER_12_UNIT_TESTS_MOCK_VENDOR_NO_MODEL_RUN",
+      "weights": "OWNER_SHA_AND_MODEL_LICENSE_REQUIRED"
+    },
+    {
+      "id": "argos-translate",
+      "github": "https://github.com/argosopentech/argos-translate",
+      "license": "MIT_OR_CC0",
+      "capability": "Offline translation RU/ES when exact installed language pair is approved",
+      "priority": 1,
+      "owner": "P02",
+      "install": "pip install argostranslate",
+      "adapter": "free_local_backends_r34.py:bind_installed_argos_translation",
+      "status": "SOURCE_ADAPTER_12_UNIT_TESTS_MOCK_VENDOR_NO_MODEL_RUN",
+      "weights": "EACH_ARGOSMODEL_LICENSE_AND_SHA_REQUIRED"
+    },
+    {
+      "id": "silero-vad",
+      "github": "https://github.com/snakers4/silero-vad",
+      "license": "MIT",
+      "capability": "Voice activity detection to reduce empty ASR work",
+      "priority": 2,
+      "owner": "P02",
+      "install": "pip install silero-vad",
+      "adapter": "faster-whisper supports vad_filter only after actual installed rights/compatibility",
+      "status": "NOT_INTEGRATED_NOT_INSTALLED",
+      "weights": "MODEL_CARD_AND_SHA_REQUIRED"
+    },
+    {
+      "id": "pysubs2",
+      "github": "https://github.com/tkarabela/pysubs2",
+      "license": "MIT",
+      "capability": "ASS/TTML/SRT/VTT conversions only where existing PACK02 format support is insufficient",
+      "priority": 1,
+      "owner": "P01",
+      "install": "pip install pysubs2",
+      "adapter": "re-use existing PACK02 ops.mjs first, add optional installed Python library only after owner source-bound native callbacks",
+      "status": "NOT_INTEGRATED_NOT_INSTALLED",
+      "weights": "NO_WEIGHTS"
+    },
+    {
+      "id": "ollama",
+      "github": "https://github.com/ollama/ollama",
+      "license": "MIT",
+      "capability": "Local model runtime, already used through P02 loopback",
+      "priority": 1,
+      "owner": "P02",
+      "install": "EXISTING_LOCAL_RUNTIME",
+      "adapter": "Packages/P02/worker-python/p02_runtime.py:OllamaClient",
+      "status": "EXISTING_SOURCE_ONLY_NATIVE_NOT_ACCEPTED",
+      "weights": "MODEL_LICENSE_SHA_AND_TAG_REQUIRED"
+    },
+    {
+      "id": "CTranslate2",
+      "github": "https://github.com/OpenNMT/CTranslate2",
+      "license": "MIT",
+      "capability": "Efficient ASR/translation inference back end used by faster-whisper/Argos",
+      "priority": 2,
+      "owner": "P02",
+      "install": "DEPENDENCY_OF_APPROVED_PROVIDER",
+      "adapter": "NO_DIRECT_SECOND_BACKEND",
+      "status": "NOT_DIRECTLY_INTEGRATED",
+      "weights": "EACH_MODEL_SEPARATE"
+    },
+    {
+      "id": "whisper.cpp",
+      "github": "https://github.com/ggml-org/whisper.cpp",
+      "license": "MIT",
+      "capability": "Alternative offline C++ ASR for smaller installations",
+      "priority": 3,
+      "owner": "P02",
+      "install": "OPTIONAL_BUILD_AFTER_OWNER_APPROVAL",
+      "adapter": "EXCLUSIVE_ALTERNATIVE_TO_FASTER_WHISPER",
+      "status": "NOT_INTEGRATED",
+      "weights": "GGML_MODEL_LICENSE_AND_SHA_REQUIRED"
+    },
+    {
+      "id": "llama.cpp",
+      "github": "https://github.com/ggml-org/llama.cpp",
+      "license": "MIT",
+      "capability": "GGUF local model inference in existing ModelCenter",
+      "priority": 2,
+      "owner": "P03",
+      "install": "OPTIONAL_WINDOWS_BINARY_AFTER_OWNER_APPROVAL",
+      "adapter": "MODEL_CENTER_ONEHOST_ONLY",
+      "status": "NOT_INTEGRATED",
+      "weights": "GGUF_MODEL_LICENSE_AND_SHA_REQUIRED"
+    },
+    {
+      "id": "diffusers",
+      "github": "https://github.com/huggingface/diffusers",
+      "license": "Apache-2.0",
+      "capability": "Optional local image generation with approved weights",
+      "priority": 2,
+      "owner": "P04",
+      "install": "pip install diffusers",
+      "adapter": "EXISTING_NATIVE_IMAGES_GENERATE_OWNER_REQUIRED",
+      "status": "NOT_INTEGRATED_NOT_INSTALLED",
+      "weights": "EACH_PIPELINE_AND_MODEL_LICENSE_SHA_VRAM_REQUIRED"
+    },
+    {
+      "id": "vosk-api",
+      "github": "https://github.com/alphacep/vosk-api",
+      "license": "Apache-2.0",
+      "capability": "Alternative lightweight offline ASR",
+      "priority": 3,
+      "owner": "P02",
+      "install": "pip install vosk",
+      "adapter": "EXCLUSIVE_ALTERNATIVE_TO_FASTER_WHISPER",
+      "status": "NOT_INTEGRATED",
+      "weights": "MODEL_CARD_SHA_REQUIRED"
+    },
+    {
+      "id": "ComfyUI",
+      "github": "https://github.com/Comfy-Org/ComfyUI",
+      "license": "GPL-3.0",
+      "capability": "Optional local image-graph server",
+      "priority": 4,
+      "owner": "P04",
+      "install": "NO_AUTO_INSTALL",
+      "adapter": "REQUIRES_INDEPENDENT_PROCESS_AND_REDISTRIBUTION_LICENSE_REVIEW",
+      "status": "HOLD_LICENSE_AND_HOST_COMPLEXITY",
+      "weights": "MODEL_LICENSE_SHA_REQUIRED"
+    },
+    {
+      "id": "Piper_current",
+      "github": "https://github.com/OHF-Voice/piper1-gpl",
+      "license": "GPL-3.0",
+      "capability": "Optional offline TTS engine; current maintained fork license differs from old archived MIT repo",
+      "priority": 4,
+      "owner": "P02",
+      "install": "NO_AUTO_INSTALL",
+      "adapter": "ONLY_IF_OWNER_ACCEPTS_GPL_AND_VOICE_MODEL_CARD",
+      "status": "HOLD_GPL_AND_VOICE_RIGHTS",
+      "weights": "VOICE_LICENSE_SHA_REQUIRED"
+    }
+  ],
+  "acceptance": {
+    "source_catalog_verification": "CAN_VERIFY_STANDALONE",
+    "real_gpu_asr_tts": "NOT_RUN",
+    "native_wpf": "NOT_RUN",
+    "native_stop_acl_consent": "REQUIRES_OWNER_RECEIPTS",
+    "source_ready": false,
+    "e07_pass": 0
+  }
+}
