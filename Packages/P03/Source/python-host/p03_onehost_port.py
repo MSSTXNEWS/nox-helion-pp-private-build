@@ -33,6 +33,48 @@ class P03PortDenied(PermissionError):
     """Caller is not a trusted native principal or lacks out-of-band consent."""
 
 class P03OneHostPort:
+    @staticmethod
+    def _command_json(args: dict) -> str:
+        """Pin bounded JSON content, without coercing keys or arbitrary objects."""
+        if type(args) is not dict:
+            raise P03PortDenied("Bounded JSON owner3 command required")
+        pending = [(args, 0)]
+        count = 0
+        while pending:
+            value, depth = pending.pop()
+            count += 1
+            if depth > 32 or count > 4096:
+                raise P03PortDenied("Owner3 command nesting/size limit")
+            if type(value) is dict:
+                if len(value) > 4096 or any(type(k) is not str or len(k) > 65536 for k in value):
+                    raise P03PortDenied("Owner3 JSON object keys required")
+                pending.extend((v, depth + 1) for v in value.values())
+            elif type(value) is list:
+                if len(value) > 4096:
+                    raise P03PortDenied("Owner3 command size limit")
+                pending.extend((v, depth + 1) for v in value)
+            elif type(value) is str:
+                if len(value) > 65536:
+                    raise P03PortDenied("Owner3 command size limit")
+            elif value is not None and type(value) not in (bool, int, float):
+                raise P03PortDenied("JSON owner3 command values required")
+        try:
+            encoded = json.dumps(args, ensure_ascii=False, sort_keys=True,
+                                 separators=(",", ":"), allow_nan=False)
+            if len(encoded.encode("utf-8")) > 65536:
+                raise ValueError("command size")
+        except (TypeError, ValueError, UnicodeError, RecursionError):
+            raise P03PortDenied("Bounded finite JSON owner3 command required") from None
+        return encoded
+
+    @staticmethod
+    def _scope_token(session: object) -> tuple:
+        # Copy mutable route sets so a callback cannot revoke/switch identity
+        # after authorization but before the original queue receives a command.
+        return tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")) + tuple(
+            frozenset(value) if isinstance(value, (set, frozenset)) else None
+            for value in (getattr(session, "allowed", None), getattr(session, "private_approved", None)))
+
     def __init__(self, existing_p02_ollama: object, *,
                  owner3_backend: object | None = None,
                  native_approve: Callable[[object, str, dict], bool] | None = None,
@@ -217,7 +259,12 @@ class P03OneHostPort:
         }
 
     def execute_backend(self, session: object, route: str, args: dict) -> Any:
+        command_json = self._command_json(args)
+        args = json.loads(command_json)  # detach caller-owned nested payloads
+        scope = self._scope_token(session)
         self._ensure_native_scope(session, route, args)
+        if self._command_json(args) != command_json or self._scope_token(session) != scope:
+            raise P03PortDenied("Native consent command or identity changed")
         method_name = OWNER_ROUTES.get(route)
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
@@ -236,10 +283,14 @@ class P03OneHostPort:
             raise
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
+        if self._command_json(args) != command_json or self._scope_token(session) != scope:
+            raise P03PortDenied("Native consent command or identity changed")
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
-            return func(session, args)
+            # No reference retained by approval/health callbacks is handed to
+            # the queue; execute exactly the command whose consent was checked.
+            return func(session, json.loads(command_json))
         except (P03PortDenied, P03PortHold):
             raise
         except Exception:
