@@ -1,0 +1,27 @@
+{
+  "schema": "ASTRA_R29_SOURCE_ONLY_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB04",
+  "status": "SIX_OWNER_SOURCE_CANDIDATES",
+  "targets": {
+    "A1": "Bound P01 payload manifest before JSON allocation",
+    "A2": "Bound ownership marker before ReadAllBytes",
+    "A3": "Reject P02 non-object OK result",
+    "A4": "Recheck ACL after RAG storage callback",
+    "A5": "Preserve persisted STOP when CTS callback throws AggregateException",
+    "A6": "Reject nested alias JSON keys in model review template"
+  },
+  "commits": {
+    "A1": "ebe775c252b409af0844963f907e94c24c9242e3",
+    "A2": "270ad04d0b668393b85de1cd8fea7771b5468e59",
+    "A3": "7a8e1ef5c326e18df0693195683a3a86ded54263",
+    "A4": "f9e93a9bf2b61a7109608e4de55b49709decfad6",
+    "A5": "9adcfb10fc8d700c607fb3229419ed62cc948ed0",
+    "A6": "f612a2daec062085d0efd0964b9ca9b04cc2d5ac"
+  },
+  "check": "6/6 exact source Git readback PASS",
+  "native": "NOT_RUN",
+  "newProductDone": 0,
+  "remainingRequestedMegablocks": 6,
+  "lesson": "Check externally observed state, metadata size and trust before publishing OK, never infer successful release from a callback request.",
+  "nonInterference": "No changes to main, PR162, P04, P05, E06, GitLab or binary builds"
+}
