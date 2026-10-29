@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_V16_G1B_P01_MANIFEST_DUPLICATE_KEY_SOURCE_NEGATIVE_R24",
+  "run_id": "NOX-V16-G1B-20261030T0016MSK-R24-JSON-DUPKEY",
+  "existing_task_id": "ERR-SRC-004/P01-NSIS-existing",
+  "role": "G1-B auxiliary source security, not G1-A/T06/independent-QA owner",
+  "observed_start_at_msk": "2026-10-30T00:16:16+03:00",
+  "planned_at_msk": "2026-10-30T00:13:00+03:00",
+  "canon": {
+    "revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "paragraphs": 705,
+    "rule_count": 56,
+    "sections": "1-33,54-56/R29"
+  },
+  "source": {
+    "PR162_head_at_read": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+    "tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+    "three_original_pre": [
+      [
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "87d901c3846359a91be3e8288f24302cc7060257"
+      ],
+      [
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "6c178c04957d7397c0c081e3b123940637abc6e9"
+      ],
+      [
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+      ]
+    ],
+    "existing_owner_candidate_post": [
+      "bc1ab71e6e57ac865fd1f98665ca6fb9919d6138",
+      "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    ],
+    "unmodified_source": true
+  },
+  "error_register": {
+    "blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "total": 11,
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "history_complete": false
+  },
+  "docs": {
+    "Master": "AHj4eMRH4s02CnscyxLfXvbnCpYVof0vTbD_eicB_A5BxLpF4iU9F-I89O1S4q6BI4VoCfsWUwHL5QNuR788S6tdIMCbU1fqVQH8odcggoU",
+    "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "Lessons": "AHj4eMRCqBU1PeuHIsbSn2ZbS0FHMAGPdsKUQkVxIcFCusLXEMJ7RGNs01dNHfDY9ezkQ_yBo9hbfhlFMJhIR8JGspcIgOvikriTjzsWeU4",
+    "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "finding": {
+    "root_cause": "Both canonical and G1-A candidate scripts pipe raw payload.sha256.json directly to Windows PowerShell 5.1 ConvertFrom-Json without an explicit duplicate-property rejection before parsing.",
+    "proof": "Git full source read both files; 2/2 use ConvertFrom-Json and 0/2 contain apparent duplicate-member guard; two ambiguous JSON fixtures parsed with last-value-wins by JavaScript V8. Microsoft PowerShell 5.1 docs explicitly document last-key-wins (no native PowerShell test performed).",
+    "powershell_documentation": "https://github.com/MicrosoftDocs/PowerShell-Docs/blob/main/reference/5.1/Microsoft.PowerShell.Utility/ConvertFrom-Json.md",
+    "proof_class": "SOURCE_STATIC_NEGATIVE_AND_DOCUMENTED_PARSER_SEMANTICS_NOT_NATIVE_QA",
+    "severity": "P1 AMBIGUOUS_MANIFEST_INTEGRITY",
+    "escaped_fixture_1": "{\"schema\":\"UNTRUSTED\",\"schema\":\"NOX_P01_PAYLOAD_SHA256_V1\"}",
+    "escaped_fixture_2": "{\"files\":[],\"files\":[{\"path\":\"NOX.P01.Shell.exe\"}]}",
+    "original_regex_false_positive_guard": false,
+    "runtime_PowerShell_5_1": "NOT_RUN",
+    "runtime_NSIS": "NOT_RUN",
+    "CI": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "ready_to_claim_exploit": false,
+    "owner_patch_authorized": false,
+    "tests": [
+      "2/2 exact current source found plain ConvertFrom-Json; 2/2 owner post likewise; 2/2 V8 duplicate fixture last-wins, not PowerShell runtime"
+    ],
+    "recurrence_prevention": "Reject duplicate JSON object member names before ConvertFrom-Json, with full JSON-aware lexical validation rather than raw regex; run a temporary LOCALAPPDATA sandbox test with duplicate schema and files, ensure no payload removal, unique valid manifest remains accepted; T08 independent exact-head acceptance."
+  },
+  "lessons": {
+    "clusters": [
+      {
+        "ids": [
+          "ERR-SYS-001",
+          "ERR-SYS-002"
+        ],
+        "disposition": "APPLY live read proof, no stale SHA"
+      },
+      {
+        "ids": [
+          "ERR-SRC-004"
+        ],
+        "disposition": "HANDOFF newly evidenced manifest parser ambiguity to G1-A/T06"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-SRC-005",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "disposition": "DELEGATE unchanged to respective T06/T08 owners, no duplicate work"
+      },
+      {
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "disposition": "ALREADY_FIXED original 729 and T04 34/34, unchanged"
+      },
+      {
+        "ids": [
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "disposition": "BLOCKED pending upstream same-head owner/QA; no false task DONE"
+      }
+    ],
+    "active_entries_considered": 11,
+    "discovered_clusters": 5,
+    "full_archival_coverage": false
+  },
+  "handoff": {
+    "next_owner": "G1-A for P01 three-file owner patch; T06/manual #1 sole PR162 CAS; T08/manual #2 independent exact-head QA; T02 sole shared journal writer",
+    "next_action": "G1-A inspect exact existing PRE/POST, add Windows PowerShell 5.1-compatible strict duplicate-member parser guard to Verify-Payload.ps1 AND Remove-InstalledPayload.ps1 without replacing security features; native PS5.1 temp LOCALAPPDATA negative test; T06/CAS only after approved candidate + git apply --check --index + targeted STOP/ACL/consent/privacy/NO-LOSS; T02 index under existing ERR-SRC-004 via CAS+readback.",
+    "shared_journal_written": false
+  },
+  "progress": {
+    "historic_T03": "DONE 5/5 unchanged",
+    "operational_before": "1/4",
+    "operational_after": "1/4",
+    "accepted_delta": 0,
+    "product": "N/D",
+    "SOURCE_PREPARED": true,
+    "INTEGRATED": false,
+    "QA_ACCEPTED": false
+  },
+  "checkpoint": {
+    "prior_personal_commit": "897c676a3a90785c17c2ef266bd0cf2fe5aa8d70",
+    "committed_files_expected": [
+      "coordination/automation/r30/G1-B/G1B_R24_P01_DuplicateManifestKeys.test.mjs",
+      "coordination/automation/r30/G1-B/NOX-V16-G1B-20261030T0016MSK-R24-JSON-DUPKEY.json"
+    ],
+    "next_owner": "G1-A/T06",
+    "pending_exact_3file_source_adoption": true,
+    "production_source_writes": 0,
+    "no_build": true
+  }
+}
