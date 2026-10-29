@@ -32,6 +32,7 @@ MODEL_CATALOG = [
     ("kokoro-82m", "Kokoro 82M TTS", "voice", "hexgrad/Kokoro-82M", "varies"),
 ]
 KINDS = ("movie", "cartoon2d", "cartoon3d", "anime", "adult18", "video", "photo", "3d", "voice", "sound", "slides", "site", "code", "memory", "learning")
+MAX_CREATIVE_IMPORT_BYTES = 256 * 1024 * 1024  # Existing WPF native import budget
 TERMS = {"фильм":"movie", "кино":"movie", "мультик":"cartoon2d", "мультфильм":"cartoon2d", "аниме":"anime", "хентай":"adult18", "18+":"adult18", "видео":"video", "ролик":"video", "фото":"photo", "изображен":"photo", "картинк":"photo", "3д":"3d", "3d":"3d", "озвуч":"voice", "музык":"sound", "презентац":"slides", "сайт":"site", "код":"code", "программ":"code", "памят":"memory", "обучен":"learning"}
 
 class StudioError(Exception):
@@ -367,7 +368,7 @@ class Studio(CreativeExtensions):
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
         # Never stream an unlimited remote response into the NOX user disk.
         # Stage a bounded file and publish it only after successful EOF.
-        limit=256*1024*1024
+        limit=MAX_CREATIVE_IMPORT_BYTES
         temporary=folder/("."+uuid.uuid4().hex+".download")
         received=0
         try:
