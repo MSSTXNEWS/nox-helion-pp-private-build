@@ -281,15 +281,21 @@ export function projectFeeds(feeds, nowMs) {
 // The original R11 events.v3 has a strict envelope, not just an event_type.
 // This view is deliberately not an event writer, journal or second bus.
 const eventPackages = new Set(['P01','P02','P03','P04','P05','E06','E07']);
+const eventId = value => validRunId(value) && value.length<=128;
+// Canonical required counters are explicit null/null when no metric exists.
+// Match native admission: a measured pair is integral, bounded and nonzero-total.
+const terminalCounters = e => (e.numerator===null && e.denominator===null) ||
+  (Number.isSafeInteger(e.numerator) && Number.isSafeInteger(e.denominator) &&
+   e.numerator>=0 && e.denominator>0 && e.numerator<=e.denominator);
 const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
-  validRunId(e.run_id) && validRunId(e.event_id) && validRunId(e.task_id) &&
-  validRunId(e.action_id) && eventPackages.has(e.package_id) &&
+  eventId(e.run_id) && eventId(e.event_id) && eventId(e.task_id) &&
+  eventId(e.action_id) && eventPackages.has(e.package_id) && terminalCounters(e) &&
   typeof e.source==='string' && e.source.length>0 && e.source.length<=120 &&
   !/[\x00-\x1f\x7f]/.test(e.source) &&
   typeof e.message==='string' && e.message.length<=240 &&
   !/[\x00-\x1f\x7f]/.test(e.message) &&
   typeof e.evidence_verified==='boolean' &&
-  ((e.event_type==='model.stopped' && e.state==='STOPPED') ||
+  ((e.event_type==='model.stopped' && e.package_id==='P04' && e.state==='STOPPED') ||
    (e.event_type==='task.failed' && e.state==='ERROR'));
 
 export function projectCanonicalEvents(events, runId, nowMs) {
@@ -325,7 +331,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     // replayed native receipt, not an instruction to choose arrival order.
     const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,
       e.task_id,e.package_id,e.action_id,e.timestamp_utc,e.state,
-      e.source,e.message,e.evidence_verified]);
+      e.source,e.message,e.evidence_verified,e.numerator,e.denominator]);
     const previous=seen.get(e.event_id);
     if (previous!==undefined) {
       if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};

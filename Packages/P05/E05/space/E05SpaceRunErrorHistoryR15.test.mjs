@@ -6,9 +6,9 @@ const RUN='NOX-V16-W4-02-R15';
 const NOW=Date.parse('2026-10-28T19:05:00Z');
 const make=(event_id,event_type,state,timestamp_utc)=>({
   schema:EVENT_SCHEMA,run_id:RUN,event_id,task_id:'P05-STOP-01',
-  event_type,package_id:'P05',action_id:'host-stop',
+  event_type,package_id:event_type==='model.stopped'?'P04':'P05',action_id:'host-stop',
   timestamp_utc,state,source:'P05.Host',message:'Verified native terminal',
-  evidence_verified:true
+  numerator:null,denominator:null,evidence_verified:true
 });
 const oldError=make('err-old','task.failed','ERROR','2026-10-28T19:03:00Z');
 const recentStop=make('stop-new','model.stopped','STOPPED','2026-10-28T19:04:58Z');

@@ -48,10 +48,12 @@ public static class E05CanonicalEventFactory
     {
         if (e is null || e.Schema != Schema || !Allowed.Contains(e.EventType) ||
             !States.Contains(e.State) || e.TimestampUtc.Offset != TimeSpan.Zero ||
-            string.IsNullOrWhiteSpace(e.RunId) || string.IsNullOrWhiteSpace(e.EventId) ||
-            string.IsNullOrWhiteSpace(e.TaskId) ||
+            string.IsNullOrWhiteSpace(e.RunId) || e.RunId.Length > 128 ||
+            string.IsNullOrWhiteSpace(e.EventId) || e.EventId.Length > 128 ||
+            string.IsNullOrWhiteSpace(e.TaskId) || e.TaskId.Length > 128 ||
             e.PackageId is not ("P01" or "P02" or "P03" or "P04" or "P05" or "E06" or "E07") ||
-            string.IsNullOrWhiteSpace(e.ActionId) || string.IsNullOrWhiteSpace(e.Source) ||
+            string.IsNullOrWhiteSpace(e.ActionId) || e.ActionId.Length > 128 ||
+            string.IsNullOrWhiteSpace(e.Source) ||
             e.Source.Length > 120 || e.Message is null || e.Message.Length > 240 ||
             e.Message.Any(c => char.IsControl(c)) ||
             e.Source.Any(c => char.IsControl(c))) return false;

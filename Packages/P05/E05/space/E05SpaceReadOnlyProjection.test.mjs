@@ -11,8 +11,8 @@ const readiness={run_id:RUN,source_commit:LOCKED_BASELINE,at_utc:'2026-10-28T03:
   native_attestation:'E06_OWNER_VERIFIED',bars:[1,2,3,4,5].map(bar).concat([
     {executor:6,stage:'HOLD',percent:null},{executor:7,stage:'NOT_RUN',percent:null}]),overall:28};
 const terminalEvent=(type,state)=>({schema:EVENT_SCHEMA,run_id:RUN,event_id:'evt-001',
-  event_type:type,task_id:'G1-05-09',package_id:'P05',action_id:'stop',
-  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',evidence_verified:true});
+  event_type:type,task_id:'G1-05-09',package_id:type==='model.stopped'?'P04':'P05',action_id:'stop',
+  timestamp_utc:'2026-10-28T03:44:58Z',state,source:'P05.Host',message:'Recorded terminal',numerator:null,denominator:null,evidence_verified:true});
 const feed={id:'weather',provider:'approved',license_status:'APPROVED',license_receipt_sha256:H,
   status:'LIVE',source_at_utc:'2026-10-28T03:44:00Z',fetched_at_utc:'2026-10-28T03:44:50Z',
   ttl_ms:60000,parsed_by_owner:true,value:14};

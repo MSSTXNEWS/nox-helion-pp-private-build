@@ -137,6 +137,16 @@ var evt = E05CanonicalEventFactory.GpuUtilization("RUN-E05-TEST", liveGpu, nowV3
 Check(evt is not null && evt.EventType == "gpu.sample" && evt.Numerator == 5265 &&
     evt.Denominator == 10000 && !evt.EvidenceVerified &&
     E05CanonicalEventFactory.IsCanonical(evt), "T10-01: legacy events.v3 GPU payload only");
+// R29 canonical schema ID limits. Fixture execution remains a native gate.
+Check(!E05CanonicalEventFactory.IsCanonical(evt! with { RunId = new string('r', 129) }) &&
+    !E05CanonicalEventFactory.IsCanonical(evt! with { EventId = new string('e', 129) }) &&
+    !E05CanonicalEventFactory.IsCanonical(evt! with { TaskId = new string('t', 129) }) &&
+    !E05CanonicalEventFactory.IsCanonical(evt! with { ActionId = new string('a', 129) }),
+    "R29 canonical identities reject overlength schema fields");
+Check(E05CanonicalEventFactory.IsCanonical(evt! with {
+    PackageId = "P04", Source = "P04.Worker", RunId = new string('r', 128),
+    EventId = new string('e', 128), TaskId = new string('t', 128), ActionId = new string('a', 128) }),
+    "R29 canonical identities retain allowed 128-character boundary");
 Check(evt is not null && evt.PackageId == "P05" &&
     evt.ActionId == "gpu_utilization" && !evt.EvidenceVerified,
     "T10-01b: P05 live GPU sensor is unverified P05 telemetry, not P04 trainer");
