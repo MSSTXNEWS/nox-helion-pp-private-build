@@ -15,9 +15,26 @@ public sealed class ModelDownloadQueueWorker(
         {
             var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued);
             if (job is null) return;
-            // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
-            if (job.Kind == ModelJobKind.OllamaPull &&
-                (job.ExpectedOllamaDigest is not { Length: 64 } || string.IsNullOrWhiteSpace(job.ImmutableRevision)))
+            // Durable legacy jobs stay intact, but cannot acquire the worker
+            // lease without reviewed license and immutable artifact evidence.
+            var reviewedLicense = job.LicenseAcknowledged &&
+                Uri.TryCreate(job.LicenseSource, UriKind.Absolute, out var evidenceUri) &&
+                evidenceUri.Scheme == Uri.UriSchemeHttps;
+            var hasReviewedEvidence = reviewedLicense && (job.Kind switch
+            {
+                ModelJobKind.OllamaPull =>
+                    job.ExpectedOllamaDigest is { Length: 64 } &&
+                    job.ExpectedOllamaDigest.All(Uri.IsHexDigit) &&
+                    !string.IsNullOrWhiteSpace(job.ImmutableRevision),
+                ModelJobKind.GgufImport =>
+                    job.ExpectedLocalBytes is > 4 &&
+                    job.ExpectedLocalSha256 is { Length: 64 } &&
+                    job.ExpectedLocalSha256.All(Uri.IsHexDigit) &&
+                    !string.IsNullOrWhiteSpace(job.RightsReceiptId) &&
+                    !string.IsNullOrWhiteSpace(job.LocalPath),
+                _ => false
+            });
+            if (!hasReviewedEvidence)
             {
                 // The queued snapshot can be cancelled by another NOX window before
                 // this review gate is persisted. Never rewrite terminal Cancelled.
