@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_V16_T11_G5C_R21_AUTHENTICATED_HEAD_GATE_IMMUTABLE",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-G5C-20261029-R21-AUTH-HEAD-GATE",
+  "scope": "Windows EXPRESS INTEGRATOR GitLab readiness audit only; NO PRODUCT SOURCE",
+  "start_msk": "2026-10-29T21:02:25+03:00",
+  "plan_msk": "2026-10-29T20:55:00+03:00",
+  "canonical_document_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+  "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "register_active": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2
+  },
+  "active_error_ids": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "source_PR162_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+  "source_PR162_tree": "93d2ddcd01cf1f011a3cbc69584cd3909c757a6e",
+  "isolated_base_branch": "manual/t11/gitlab-free-readonly-handoff-20261029-r01",
+  "isolated_parent_head": "788692caf529d9d990daec6b95ceb836f88b3486",
+  "physical": {
+    "why": "Existing GET-only audit could report LIVE_INSPECTED_NOT_BUILD_READY without an authenticated principal, verified project rights, or both 40-hex live branch HEADs.",
+    "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+    "pre_blob": "0b57108e02b9cac5630ade54dacbbcbf6a709c4f",
+    "post_blob": "7af08f35e02a1a64485784b0dab9d6ba1e8243f6",
+    "test_path": "tests/t11/test_g5c_authenticated_gitlab_head_r21.py",
+    "local_classifier_test": "7/7 PASS (exact standalone pure-function extraction); full GitLab HTTP test NOT_RUN",
+    "source_paths_changed_PR162": 0,
+    "test_blob": "adfe6d2371c440b99afa91198083f1cff7bc98c6"
+  },
+  "fixed_criteria": {
+    "accepted": 2,
+    "total": 5,
+    "percentage_before": 40,
+    "percentage_after": 40,
+    "delta_pp": 0,
+    "bar": "████░░░░░░",
+    "T11_C1": "DONE_HISTORICAL",
+    "T11_C2": "DONE_HISTORICAL",
+    "T11_C3": "ACCESS_HOLD_NOT_PASS",
+    "T11_C4": "HOLD_T09_FROZEN_SHA",
+    "T11_C5": "HOLD_T09_T10_AUTH_LIVE"
+  },
+  "gate_note": "Local T11 audit is still not authorized GitLab proof or source READY; no CI/build.",
+  "lesson_applied": "Fail closed if GitLab API 200 on project but HEAD/identity/role absent. A local script's terminal status cannot substitute authenticated permission+same-SHA readback.",
+  "cross_owner_ack": "T02 shared register owner; T06/T08/T09/T10 own source acceptance; ERR-SYS-006 and ERR-SYS-007 remain historically closed.",
+  "access_owner_action": "GitLab admin s-grouptwet: run corrected GET-only audit in authenticated environment with read_api token kept local; return sanitized JSON containing actual branch SHAs and effective access level. No push or pipeline.",
+  "handoff": "Existing sole conditional T12 handoff R12 remains; final same-SHA T12 only after T09 freeze and T10 independent PASS.",
+  "forbidden_executed": {
+    "exe": false,
+    "nsis": false,
+    "gitlab_ci": false,
+    "e07": false,
+    "force_push": false,
+    "reimport": false,
+    "shared_google_docs_write": false
+  },
+  "validation": {
+    "static_invariants": 10,
+    "static_total": 10,
+    "full_python_script_not_executed": true,
+    "gitlab_not_contacted": true
+  }
+}

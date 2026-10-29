@@ -36,6 +36,17 @@ def pages(path, token):
             return records
     raise ValueError("GitLab pagination cap hit; not verified complete")
 
+def evidence_readback_valid(result):
+    """Only authenticated, permission-proven live GitLab HEADs pass this read-only gate."""
+    def sha1(value):
+        return isinstance(value, str) and len(value) == 40 and all(c in '0123456789abcdef' for c in value)
+    return (result.get('authenticated_identity_verified') is True
+            and result.get('project_visible') is True
+            and result.get('project_path') == EXPECTED_PROJECT
+            and result.get('effective_access_level') in (10, 15, 20, 25, 30, 40, 50)
+            and sha1(result.get('live_gitlab_head'))
+            and sha1(result.get('migration_live_head')))
+
 def main():
     parser = argparse.ArgumentParser(description="GitLab T11 read-only audit")
     parser.add_argument("--handoff", required=True, type=pathlib.Path)
@@ -54,6 +65,10 @@ def main():
         "project_path": project_path,
         "status": "GITLAB_ACCESS_HOLD",
         "project_visible": False,
+        "authenticated_identity_verified": False,
+        "effective_access_level": None,
+        "permissions_readback": "NOT_VERIFIED",
+        "gitlab_ready": False,
         "live_gitlab_head": None,
         "migration_live_head": None,
         "migration_commit_preserved": False,
@@ -68,6 +83,10 @@ def main():
         "pipeline_started": False
     }
     try:
+        principal = get("user", token)
+        if not isinstance(principal, dict) or not isinstance(principal.get("id"), int):
+            raise ValueError("Authenticated GitLab identity not verified")
+        result["authenticated_identity_verified"] = True
         info = get("projects/" + project_id, token)
         if info.get("path_with_namespace") != project_path:
             raise ValueError("GitLab project namespace mismatch")
@@ -75,6 +94,21 @@ def main():
         result["visibility"] = info.get("visibility")
         result["default_branch"] = info.get("default_branch")
         pid = str(info["id"])
+        permissions = info.get("permissions") or {}
+        levels = [(permissions.get(kind) or {}).get("access_level")
+                  for kind in ("project_access", "group_access")]
+        levels = [level for level in levels if type(level) is int]
+        if not levels:
+            try:
+                member = get("projects/" + pid + "/members/all/" + str(principal["id"]), token)
+                if type(member.get("access_level")) is int:
+                    levels.append(member["access_level"])
+            except urllib.error.HTTPError as ex:
+                result["permissions_read_error"] = "HTTP_" + str(ex.code)
+        if levels:
+            result["effective_access_level"] = max(levels)
+            result["permissions_readback"] = "VERIFIED_LEVEL"
+        # Do not emit the principal identity, access token, or API exception content.
         branches = pages("projects/" + pid + "/repository/branches", token)
         result["branches"] = [
             {"name": b.get("name"), "sha": (b.get("commit") or {}).get("id"),
@@ -132,7 +166,11 @@ def main():
                 for r in result["runners"])
         except urllib.error.HTTPError as ex:
             result["runners_error"] = "HTTP_" + str(ex.code)
-        result["status"] = "LIVE_INSPECTED_NOT_BUILD_READY"
+        if evidence_readback_valid(result):
+            result["status"] = "LIVE_INSPECTED_NOT_BUILD_READY"
+        else:
+            result["status"] = "GITLAB_ACCESS_HOLD"
+            result["hold_reason"] = "AUTHENTICATED_HEAD_OR_PROJECT_RIGHTS_NOT_VERIFIED"
     except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError) as ex:
         result["read_error_type"] = type(ex).__name__
         result["status"] = "GITLAB_ACCESS_HOLD"
