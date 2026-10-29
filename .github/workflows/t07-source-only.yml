@@ -1,0 +1,34 @@
+name: NOX V16 T07 original SourceLock (read-only)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/t07-source-only.yml'
+      - 'coordination/t07/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: t07-source-physical-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  physical-source-only:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 't07-source-integrity-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Read original sources, no build steps
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Physically hash three parts, joined ZIP and 729 source members
+        shell: bash
+        run: python3 -B coordination/t07/t07_verify.py
+      - name: Preserve T07 byte receipts and generated 729-file manifest
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: t07-physical-source-${{ github.run_id }}
+          path: t07-evidence/*.json
+          if-no-files-found: warn
+          retention-days: 30
