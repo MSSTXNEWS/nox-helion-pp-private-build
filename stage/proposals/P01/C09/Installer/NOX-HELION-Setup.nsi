@@ -108,7 +108,21 @@ Section "NOX HELION application" SEC_MAIN
   FileWrite $2 "NOXHELION.P01 V16$\r$\n"
   IfErrors MarkerWriteFailed
   FileClose $2
-  Goto MarkerReady
+  ; FileWrite success alone does not prove persisted exact marker contents.
+  ; Reopen/read back before FIRST rename; never accept partial/empty metadata.
+  ClearErrors
+  FileOpen $2 "$StageDir\nox-p01-owned.txt" r
+  IfErrors MarkerReadbackFailed
+  ClearErrors
+  FileRead $2 $3
+  IfErrors MarkerReadFailed
+  FileClose $2
+  StrCmp $3 "NOXHELION.P01 V16$\r$\n" MarkerReady MarkerReadbackFailed
+  MarkerReadFailed:
+    FileClose $2
+  MarkerReadbackFailed:
+    SetErrorLevel 2
+    Abort "Ownership marker readback failed; no application directories moved."
   MarkerWriteFailed:
     FileClose $2
   MarkerOpenFailed:
