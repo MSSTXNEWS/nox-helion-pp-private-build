@@ -1,0 +1,270 @@
+{
+  "schema": "NOX_V16_R18_G2_A_HOST50_SECURITY_PROOF_R14_V1",
+  "run_id": "NOX-V16-G2A-HOST50-20261029T212549MSK-R14",
+  "task_id": "NIP01-50",
+  "role": "G2-A Host50 independent source analysis (NOT T06/T02/T08 QA authority)",
+  "status": "INCOMPLETE_SOURCE_PREVIEW_NEGATIVE_TEST_REQUIRED",
+  "run_started_msk": "2026-10-29T21:25:49+03:00",
+  "checkpoint_observed_msk": "2026-10-29T21:30:40+03:00",
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pr_head_at_last_observation": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+    "pr_tree_at_last_observation": "106c03a6a8b85700d1b2442f345bb43380436977",
+    "isolated_branch_base": "632bc1464a2f927087e77d394d5248890fad4912",
+    "source_code_change": false,
+    "mobile_path": "coordination/e06/adapters/g2_space_mobile.py",
+    "mobile_pre_and_unchanged_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "owner_map_path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+    "owner_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "admission_path": "coordination/e06_host50/admission.py",
+    "admission_blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f"
+  },
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+    "canon_section33_rule_ids": "01-56 verified contiguous",
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDAUh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "error_count": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "all_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ]
+  },
+  "host50": {
+    "fixed_denominator": 13,
+    "accepted_before": 0,
+    "accepted_after": 0,
+    "delta_accepted": 0,
+    "percent_before": 0,
+    "percent_after": 0,
+    "delta_percentage_points": 0,
+    "bar": "░░░░░░░░░░",
+    "remaining": 13,
+    "bound_candidate_count": 2,
+    "unbound_count": 11,
+    "acceptance_rule": "Native owner method + STOP/ACL/consent/origin/current SourceLock + independent same-SHA receipt; sourceBinding candidate alone is not accepted.",
+    "tasks": [
+      {
+        "task_id": "NIP01-08",
+        "route": "chat.voice",
+        "owner": 2,
+        "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-26",
+        "route": "training.start",
+        "owner": 4,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-30",
+        "route": "training.evaluate",
+        "owner": 4,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-35",
+        "route": "calls.history",
+        "owner": 2,
+        "sourceBinding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-36",
+        "route": "media.player",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-37",
+        "route": "media.subtitles",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-38",
+        "route": "browser.open",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-39",
+        "route": "browser.bookmarks",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-40",
+        "route": "images.generate",
+        "owner": 4,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-47",
+        "route": "system.update",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-48",
+        "route": "system.backup",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-49",
+        "route": "system.pc_control",
+        "owner": 1,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      },
+      {
+        "task_id": "NIP01-50",
+        "route": "mobile.connect",
+        "owner": 6,
+        "sourceBinding": null,
+        "accepted": false,
+        "status": "HOLD"
+      }
+    ],
+    "historical_t04": "34/34 DONE previously owner-adjudicated, NOT rerun",
+    "original_zip": "729/729 physical hash/CRC historical DONE, NOT rerun",
+    "product_progress": "N/D; full frozen accepted P01-P05 TaskID inventory not established"
+  },
+  "new_physical_independent_static_evidence": {
+    "type": "SOURCE_CONTROL_FLOW_NEGATIVE_SECURITY_PROOF",
+    "scope": "NIP01-50 mobile.connect, existing original PrivateMobileContract only",
+    "owner": "T06 source owner, E06 mobile owner #6, T08 independent QA",
+    "path": "coordination/e06/adapters/g2_space_mobile.py",
+    "preimage_blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "inspected_lines": "231-329",
+    "existing_behavior": "connect() performs first and second attest(); then calls host.advertise(session) again at line 318, but from that final external/native callback until return at lines 327-329 no subsequent attest() or native identity/consent/CSRF epoch check. It only checks gateway availability and unchanged advertised capability labels.",
+    "candidate_risk": "If second host.advertise mutates consent, CSRF or native session while returning the same enabled routes, connect may still return PRIVATE_NATIVE_ATTESTED. This is a static TOCTOU candidate, not a claimed live exploit.",
+    "proof_checks": {
+      "exact_file_blob_verified": true,
+      "post_final_native_attest_present": false,
+      "post_final_gateway_availability_check_present": true,
+      "post_final_route_capability_comparison_present": true,
+      "entire_native_method_guarded_by_host_lock": false
+    },
+    "negative_repro_for_owner": [
+      "Mock real trusted peer proof with native_session_approved=True, private HTTPS origin and matching CSRF, valid expiry, host.gateway_ready=True; host.advertise returns enabled chat.stop in both calls.",
+      "During SECOND host.advertise callback revoke native_session_approved or rotate native CSRF WITHOUT changing enabled chat.stop; native P02 policy would now deny.",
+      "Call PrivateMobileContract.connect with want=['chat.stop']; require G2Denied/G2Hold and NO PRIVATE_NATIVE_ATTESTED return after revocation.",
+      "Control: unchanged native permission and origin should still allow only the safe advertised route. Repeat consent revoke / CSRF rotate with STOP/ACL guards preserved."
+    ],
+    "required_owner_safe_remedy": "Owner #6/T06 must preserve existing private gateway and host; attest final permission epoch atomically with native host capability publication (use existing native host mutation/authorization epoch lock or trusted immutable version). Do not add a second gateway/router. Exact PRE blob required; deliver owner-owned POST and targeted negative result to T08.",
+    "execution": "STATIC_SOURCE_CHECK_ONLY. Python/Windows/native negative regression NOT_RUN; no test PASS, no source patch or SHA promotion."
+  },
+  "self_improvement": {
+    "discovered_error_ids": 11,
+    "clusters": [
+      {
+        "id": "PROCESS_PREMATURE_STOP_SHA",
+        "action": "APPLY_ON_REPORT",
+        "errors": [
+          "ERR-SYS-001",
+          "ERR-SYS-002",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "lesson": "A receipt or a mutable HEAD does not close TaskID. Recheck live source SHA; no DONE at 0/13."
+      },
+      {
+        "id": "HOST50_SOURCE_ATTESTATION",
+        "action": "DELEGATE",
+        "errors": [
+          "ERR-SRC-003",
+          "ERR-SRC-004",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "owner": "T06/T08",
+        "lesson": "A source binding or admission patch is not native accepted; require origin/ACL/consent/STOP and independent same-SHA proof."
+      },
+      {
+        "id": "PINNED_TEST_RUNNER",
+        "action": "DELEGATE",
+        "errors": [
+          "ERR-SRC-005"
+        ],
+        "owner": "T06/T08",
+        "lesson": "Accept pinned-fixture test only with independent same-SHA result."
+      },
+      {
+        "id": "GUARD_CLOSEOUT",
+        "action": "DELEGATE",
+        "errors": [
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "owner": "T06/T08",
+        "lesson": "Source guard added is FIX_APPLIED_UNVERIFIED, never owner 8/8."
+      },
+      {
+        "id": "HISTORICAL_NOLOSS",
+        "action": "ALREADY_FIXED",
+        "errors": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "owner": "T04/T07/T09",
+        "lesson": "Preserve 729/729 and archive 34/34; do not repeat."
+      }
+    ],
+    "deduplicated_clusters": 5,
+    "applied_to_this_source_review": 1,
+    "delegated": 3,
+    "already_fixed": 1,
+    "remaining_runtime_verify": 4,
+    "new_candidate_requires_T02_triage": true
+  },
+  "gates": {
+    "A": "PASS_REAL_READ",
+    "B": "STATIC_SECURITY_PROOF_NEW; NOT_NATIVE_VERIFIED",
+    "C": "PENDING_GIT_CAS_READBACK",
+    "D": "PARTIAL_REAL_TRIAGE"
+  },
+  "next_checkpoint": "T06/E06 #6: negative reproduce final-advertisement consent/CSRF revocation on source blob e1f14ea0; supply existing host epoch-safe patch exact PRE/POST and targeted test; T08 independent same HEAD; T02 register only after evidence. Keep G2-A open 0/13.",
+  "restrictions": "No PR162/main/source modifications, no GitLab/EXE/NSIS/CI/E07, no foreign owner writes, no secrets."
+}
