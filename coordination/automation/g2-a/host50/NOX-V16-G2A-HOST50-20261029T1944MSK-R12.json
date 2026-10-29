@@ -1,0 +1,302 @@
+{
+  "schema": "NOX_V16_G2A_HOST50_R12_INDEPENDENT_SOURCE_CONTRACT_EVIDENCE_V1",
+  "run_id": "NOX-V16-G2A-HOST50-20261029T1944MSK-R12",
+  "role": "G2-A independent Host50 source contract validation; not T06/T02/T08 authority",
+  "status": "INCOMPLETE_CHECKPOINT",
+  "utc_completed": "2026-10-29T16:48:02.529Z",
+  "prestart_read_proof": {
+    "canon_doc_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_chars": 205078,
+    "section33_rules": 56,
+    "error_register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "all": 11
+    },
+    "owner_docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "source_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "source_tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "source_delta_since_R11": {
+      "from": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+      "ahead_commits": 1,
+      "changed_files": [
+        "coordination/automation/t06/NOX-V16-T06-20261029T1933MSK-G3C-R15.json",
+        "coordination/e06/run_source_integrations_r13.py",
+        "tests/e06/test_t06_p01_nsis_powershell_contract_r15.py",
+        "tests/e06/test_t06_r09_native_source_owner.py"
+      ],
+      "none_of_13_binding_map_or_two_owner_port_files_changed": true
+    }
+  },
+  "historical_gates": {
+    "archival_T04": "34/34 DONE unchanged",
+    "original_ZIP": "729/729 previously proved; not rerun"
+  },
+  "fixed_denominator": 13,
+  "accepted_before": 0,
+  "accepted_after": 0,
+  "delta_accepted": 0,
+  "percent_before": 0,
+  "percent_after": 0,
+  "delta_pp": 0,
+  "bar": "░░░░░░░░░░",
+  "hierarchy": {
+    "role": "G2-A",
+    "mega_block": "Host50 original Windows native bindings",
+    "blocks": [
+      {
+        "block": "P01 seven routes",
+        "accepted": 0,
+        "fixed": 7
+      },
+      {
+        "block": "P02 two routes",
+        "accepted": 0,
+        "fixed": 2
+      },
+      {
+        "block": "P04 three routes",
+        "accepted": 0,
+        "fixed": 3
+      },
+      {
+        "block": "E06 mobile route",
+        "accepted": 0,
+        "fixed": 1
+      }
+    ],
+    "weighting": "operational/equal-weight by immutable NIP01 TaskIDs",
+    "role_progress_pct": 0,
+    "product_progress": "N/D; full P01–P05 accepted inventory unknown",
+    "coordination_cells": {
+      "G1-A": "N/D owner-specific immutable TaskID ledger not retrieved",
+      "G2-A": "0/13 scoped Host50 operational",
+      "G3-A": "N/D owner-specific immutable TaskID ledger not retrieved",
+      "G4-A": "N/D owner-specific immutable TaskID ledger not retrieved",
+      "G5-A": "N/D owner-specific immutable TaskID ledger not retrieved"
+    }
+  },
+  "immutable_sources": {
+    "proposals/NOX-PACK01-50/owner-binding-map.json": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "Packages/P02/worker-python/p02_owner_route_ports.py": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+    "coordination/e06/adapters/g2_space_mobile.py": "c8b937172eb431310229111945971bb11cd8ff90",
+    "coordination/e06_host50/admission.py": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "proposals/NOX-PACK01-50/P04OwnerPack.cs": "e970213f263681ae70b2a990d59be9b65496662f",
+    "Packages/P04/train_qlora.py": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea"
+  },
+  "focused_source_checks": {
+    "map_exact_13_and_unique": true,
+    "p02_bound_exactly_2": true,
+    "p02_targets_are_existing_methods": true,
+    "p02_session_acl_and_stop": true,
+    "mobile_existing_owner_method_but_unbound": true,
+    "mobile_existing_host_gate_fail_closed": true,
+    "source_attestation_not_just_historic_base": true,
+    "p04_does_not_offer_start_evaluate_as_direct_route": true,
+    "no_premature_native_acceptance": true,
+    "current_13_owner_inventory": true
+  },
+  "proof_class": "STATIC_SOURCE_ONLY; NOT Python/.NET/native/Windows/E07 execution",
+  "new_distinct_evidence": {
+    "route": "mobile.connect",
+    "task_id": "NIP01-50",
+    "owner": 6,
+    "existing_method": "coordination/e06/adapters/g2_space_mobile.py:PrivateMobileContract.connect",
+    "existing_method_blob": "c8b937172eb431310229111945971bb11cd8ff90",
+    "owner_binding_map_sha": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "finding": "Existing owner #6 private mobile handler and conditional one-host registration are present, but binding map sourceBinding=null. Defect is admission/attestation and live gateway readiness, not absence of a handler. Do NOT synthesize a gateway.",
+    "necessary_owner_proof": "T06: exact PRE map blob 3a5071a10e3d94057b5b19562a371f30811aaca5 and source HEAD 23c1557c0347fa0b66a7cd8d92a4a76637861402; attest existing private gateway readiness, native private peer identity/origin/TLS/CSRF/consent and E06 SHA256 receipt; source route selection under canonical native lock. T08 independently verify same HEAD before SOURCE_BOUND_READY."
+  },
+  "contract_rows": [
+    {
+      "task_id": "NIP01-08",
+      "route": "chat.voice",
+      "owner": 2,
+      "source_binding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.captured_voice",
+      "status": "HOLD_UNVERIFIED",
+      "reason": "EXISTING_SOURCE_BINDING_NOT_NATIVE_ATTESTED"
+    },
+    {
+      "task_id": "NIP01-26",
+      "route": "training.start",
+      "owner": 4,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-30",
+      "route": "training.evaluate",
+      "owner": 4,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-35",
+      "route": "calls.history",
+      "owner": 2,
+      "source_binding": "Packages/P02/worker-python/p02_owner_route_ports.py:OwnerTwoPorts.calls_history",
+      "status": "HOLD_UNVERIFIED",
+      "reason": "EXISTING_SOURCE_BINDING_NOT_NATIVE_ATTESTED"
+    },
+    {
+      "task_id": "NIP01-36",
+      "route": "media.player",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-37",
+      "route": "media.subtitles",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-38",
+      "route": "browser.open",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-39",
+      "route": "browser.bookmarks",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-40",
+      "route": "images.generate",
+      "owner": 4,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-47",
+      "route": "system.update",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-48",
+      "route": "system.backup",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-49",
+      "route": "system.pc_control",
+      "owner": 1,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    },
+    {
+      "task_id": "NIP01-50",
+      "route": "mobile.connect",
+      "owner": 6,
+      "source_binding": null,
+      "status": "HOLD_UNVERIFIED",
+      "reason": "NO_APPROVED_NATIVE_SOURCE_BINDING"
+    }
+  ],
+  "error_ack": [
+    {
+      "ids": [
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "cluster": "native-owner-source-lock",
+      "action": "DELEGATE_T06_AND_T08",
+      "proof": "admission d8d8e898...; map 3a5071a1...; HMAC/source verifier source guards present; native proof missing"
+    },
+    {
+      "ids": [
+        "ERR-SYS-002",
+        "ERR-SRC-005"
+      ],
+      "cluster": "stale-head-and-test-pinning",
+      "action": "READBACK_THIS_HEAD_ONLY",
+      "proof": "PR162 23c1557c; one delta source-runner commit; no affected Host50 route source-map changes"
+    },
+    {
+      "ids": [
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "cluster": "premature-done",
+      "action": "APPLY_PROGRESS_GUARD",
+      "proof": "0/13 remains INCOMPLETE; no same-SHA native signed evidence"
+    },
+    {
+      "ids": [
+        "ERR-SYS-001"
+      ],
+      "cluster": "journal-single-writer",
+      "action": "DELEGATE_T02",
+      "proof": "G2-A writes only personal receipt; no shared docs or register writes"
+    },
+    {
+      "ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "cluster": "historical-closed",
+      "action": "ALREADY_FIXED_NO_REAUDIT",
+      "proof": "T04 34/34, ZIP 729/729 historical accepted"
+    }
+  ],
+  "self_improvement_coverage": {
+    "active_entries_seen": 11,
+    "open_or_unverified": 9,
+    "verified_closed": 2,
+    "deduplicated_clusters": 5,
+    "clusters_classified": 5,
+    "owner_safe_source_fixes_applied": 0,
+    "independent_source_checks_new": 1,
+    "owner_handoffs": 2,
+    "unclassified_clusters": 0,
+    "remaining_native_contracts": 13
+  },
+  "gates": {
+    "A": "PASS FRESH DOC + GIT READ",
+    "B": "INDEPENDENT_STATIC_PROOF_SAVED_PENDING_GIT_READBACK",
+    "C": "RECEIPT_PENDING_GIT_READBACK; T02 COMMON JOURNAL NOT_WRITTEN",
+    "D": "PARTIAL classified root causes; no native fix"
+  },
+  "handoffs": {
+    "T06": {
+      "next_action": "On same current HEAD use existing PrivateMobileContract.connect with native gateway-ready and E06 receipt; choose only owner-safe source route binding; no new router, no overwrite of other owners; verify all 13 native routes."
+    },
+    "T02": {
+      "next_action": "Ingest this immutable G2-A receipt without claiming new TaskID DONE or 13/13; ACK 11 entries; if no new confirmed defect do not duplicate common journal."
+    },
+    "T08": {
+      "next_action": "Independently verify native installed capabilities and security at same accepted HEAD; static route binding descriptors insufficient."
+    }
+  },
+  "safety": "No product source modification; no main/PR162/common Docs change; no EXE/NSIS/GitLabCI/E07."
+}
