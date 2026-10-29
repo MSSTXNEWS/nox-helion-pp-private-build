@@ -1,0 +1,68 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_RECEIPT_V1",
+  "slot": "G5-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "run_id": "R30-G5B-20261029T0900MSK-04",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T0900MSK-04",
+  "base_commit_sha1": "1f16762e26165781b7a74376f112342931d43a1d",
+  "base_tree_sha1": "673516ed97a18d02ecc77bc71b61379fccb08fbd",
+  "ownership_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+  },
+  "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "preimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "1751b4d4a7982fb498bbc853618ba007f1c8beee"
+  },
+  "postimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "20827618ea24843559abccc093a10e33e3538da5"
+  },
+  "modified_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "coordination/automation/r30/G5-B/R30-G5B-20261029T0900MSK-04.json"
+  ],
+  "forbidden_paths_touched": [],
+  "task_id": "G5B-R30-GOOGLE-DOCS-NONBODY-RUNID-COLLISION-R04",
+  "change": "Fail closed on same exact RunID in headers/footers/footnotes of any root/nested tab as well as body of other tab, both before write and at readback. No cross-tab content combined to fabricate success.",
+  "targeted_test": {
+    "name": "G5-B-R04-google-docs-segment-collision-source-model",
+    "execution": "JS semantic fixture model + C# source-presence static check",
+    "model_scenarios_passed": 8,
+    "model_scenarios_total": 8,
+    "source_predicates": 6,
+    "status": "PASS_SOURCE_MODEL_ONLY",
+    "native_dotnet": "NOT_RUN",
+    "live_http_fixture": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "snapshots": {
+    "tree_count": 25,
+    "entries_including_directories": 30363,
+    "all_recursive_trees_untruncated": true,
+    "source_parts_git_blob_sha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "physical_original_729_sha256": "NOT_VERIFIED"
+  },
+  "google_docs": {
+    "single_writer": "Astra-C",
+    "write_by_g5b": "NOT_ATTEMPTED",
+    "read_permission": "READ_SUCCESSFUL",
+    "three_targets_tab": "t.0",
+    "revision_and_access_metadata": "READ_SUCCESSFUL",
+    "new_run_id_readback": "NOT_APPLICABLE_NO_WRITE"
+  },
+  "lesson": "An immutable RunID can exist in Google Docs non-body segments. Readback must prove content in the approved body only, while uniqueness checks must cover all document text-bearing segments; source-model PASS is not native C# validation.",
+  "status": "SOURCE_PATCH_SAVED_NATIVE_HOLD",
+  "source_complete": "HOLD",
+  "release": "HOLD",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_gitlab_ci": true,
+  "no_final_integration": true,
+  "no_main_pr162_change": true,
+  "old_done_preserved": true
+}

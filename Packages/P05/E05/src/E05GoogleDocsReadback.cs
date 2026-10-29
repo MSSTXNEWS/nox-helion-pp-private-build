@@ -188,20 +188,36 @@ public sealed class GoogleDocsAppendReadback
                 properties.TryGetProperty("tabId", out var id) &&
                 id.ValueKind == JsonValueKind.String &&
                 string.Equals(id.GetString(), approvedTab, StringComparison.Ordinal);
-            if (!isApproved && tab.TryGetProperty("documentTab", out var documentTab) &&
-                documentTab.ValueKind == JsonValueKind.Object &&
-                documentTab.TryGetProperty("body", out var body) &&
-                body.ValueKind == JsonValueKind.Object)
+            if (tab.TryGetProperty("documentTab", out var documentTab) &&
+                documentTab.ValueKind == JsonValueKind.Object)
             {
-                var text = new StringBuilder();
-                GatherText(body, text);
-                if (ContainsExactRunId(text.ToString(), runId)) return true;
+                // A RunID in another tab's body or in any tab's
+                // header/footer/footnote is not an approved-body receipt.
+                if (!isApproved && SegmentContainsRunId(documentTab, "body", runId))
+                    return true;
+                if (SegmentContainsRunId(documentTab, "headers", runId) ||
+                    SegmentContainsRunId(documentTab, "footers", runId) ||
+                    SegmentContainsRunId(documentTab, "footnotes", runId))
+                    return true;
             }
             if (tab.TryGetProperty("childTabs", out var children) &&
                 children.ValueKind == JsonValueKind.Array &&
                 HasRunIdOnOtherTab(children, approvedTab, runId)) return true;
         }
         return false;
+    }
+
+    // Scan only explicit text-bearing segments. Do not treat these segments
+    // as proof of a successful append: a receipt must match the approved body.
+    private static bool SegmentContainsRunId(JsonElement documentTab, string name,
+        string runId)
+    {
+        if (!documentTab.TryGetProperty(name, out var segment) ||
+            segment.ValueKind is not (JsonValueKind.Object or JsonValueKind.Array))
+            return false;
+        var text = new StringBuilder();
+        GatherText(segment, text);
+        return ContainsExactRunId(text.ToString(), runId);
     }
 
     // Google Docs includeTabsContent=true returns bodies under document.tabs.
