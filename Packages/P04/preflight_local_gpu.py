@@ -231,6 +231,12 @@ def inspect(profile: str, gpu_index: int) -> dict:
                     total = getattr(props, "total_memory", None)
                     if type(total) is not int or total <= 0:
                         report["errors"].append("TORCH_GPU_MEMORY_METADATA_INVALID")
+                    else:
+                        mib = total // (1024 * 1024)
+                        nvidia_mib = report["gpu"]["total_mib"]
+                        # A wildly different adapter size invalidates the UUID pin.
+                        if abs(mib - nvidia_mib) > max(256, nvidia_mib // 20):
+                            report["errors"].append("TORCH_SELECTED_GPU_MISMATCH")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
         finally:
