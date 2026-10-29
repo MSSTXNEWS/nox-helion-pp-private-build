@@ -26,7 +26,9 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
         self.assertIn("uri.Scheme == Uri.UriSchemeHttps", TEXT)
         self.assertIn("_trustedVirtualOrigin.Host", TEXT)
         self.assertIn("IsReservedVirtualHost", TEXT)
-        self.assertIn("string.Equals(_webView.Source, documentSource", TEXT)
+        self.assertIn("var current = _webView.Source;", TEXT)
+        self.assertIn("string.Equals(current, documentSource", TEXT)
+        self.assertIn("catch (Exception) { return false; /* WebView2 may be closing or disposed */ }", TEXT)
         self.assertIn("if (!IsCurrent(documentSource) || !_isNativeRouteAvailable(routeId)) return", TEXT)
 
     def test_native_consent_cannot_be_supplied_by_page(self):
