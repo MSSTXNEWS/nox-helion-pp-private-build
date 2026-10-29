@@ -1,0 +1,155 @@
+{
+  "schema": "NOX_V16_SHARED_ERROR_REPAIR_LOOP_V1",
+  "product": "Only NOX HELION EXPRESS INTEGRATOR V16 Windows loader; not main NOX",
+  "policy_version": "2026-10-29-R01",
+  "owner": "T02/C — single shared error-register and Master/E06/Lessons writer via Git CAS/readback",
+  "invariant": "All NOX V16 56 rules §33 and Function Lock/NO-LOSS apply intact; source acceptance cannot be forged; no EXE/NSIS/GitLab CI/E07 until separate authorization",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_head_at_creation": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+  "source_head_policy": "A snapshot, NEVER a permanent pin; every run must fetch current HEAD before attributing an error or closing a fix",
+  "latest_revision": "R01",
+  "workflow": {
+    "start": "BEFORE doing task work: fetch this Git register on branch (not a stale raw URL pinned to a commit); compare checkpoint with prior personal receipt; read ALL OPEN or FIX_APPLIED_UNVERIFIED entries affecting own paths plus each other owner's new/changed errors; check latest Master/E06/Lessons delta and upstream T01-T11 receipts; acknowledge each relevant error by ID and source HEAD in personal receipt.",
+    "triage": "For each error, distinguish source CODE_DEFECT, MISSING_EVIDENCE, ACCESS_BLOCK, STALE_STATUS, PROCESS_DEFECT. Keep one fixed owner; route cross-owner errors instead of duplicating code. Do not treat a saved patch or HOLD as DONE.",
+    "implement": "Same source/branch HEAD PRE SHA + exact file/owner CAS, one targeted existing test if required, readback POST SHA, record source commit and link.",
+    "verify": "An error is VERIFIED_CLOSED ONLY after a verifier different from fixer checks expected result on the same SHA or reports an explicit scoped source contract verification. A commit or isolated fixture pass alone is FIX_APPLIED_UNVERIFIED.",
+    "recurrence": "Compare ERROR_ID+root_cause+path+sha before/after. If same failure recurs, increment recurrence_count, reopen with evidence, update prevention rule and document the applied change, not simply the lesson text.",
+    "journal": "Worker writes immutable personal Git receipt with run_id, checkpoint_read_sha, errors_read[], errors_ack[], error_opened[], error_fixed[], error_verified[], current_head, exact evidence, % before/after and one applied improvement. Only T02 appends and reconciles shared error register and Master/E06/Lessons using revision/CAS and readback.",
+    "no_access": "If register or source unavailable, report ERROR_REGISTER_READ_BLOCKED with tool evidence; no fabricated ACK, no false DONE. Can still preserve already-completed source work in a personal receipt, but not declare cross-agent preflight PASS.",
+    "handoff": "At each run end send exact ERROR_ID and new Git SHA to T02 and owner, not just general HOLD. Next run must inspect this receipt and say applied/irrelevant/still-blocked with evidence.",
+    "progress": "Count fixed task criterion % 0..100, plus shared error ledger OPEN/FIX_APPLIED_UNVERIFIED/VERIFIED_CLOSED and recurrence count, no double-credit for reports."
+  },
+  "entries": [
+    {
+      "error_id": "ERR-SYS-001",
+      "type": "PROCESS_DEFECT",
+      "status": "OPEN",
+      "severity": "P0_PROCESS",
+      "owner": "T02/C",
+      "discovered_by": "User repeated reports + independent source review",
+      "cause": "No canonical short error-action register, cross-agent read receipt or recurrence verification; errors were written in 2408/5241/1661 paragraph logs but not made mandatory preflight.",
+      "evidence": [
+        "Master, E06, Lessons last entries 2026-10-29",
+        "Current T01-T11 prompts used uncheckable 'read latest delta'"
+      ],
+      "next_action": "T02 enforces indexed cross-run error read/ACK and double-checks next run receipts, reconciles duplicate stale HOLD and writes one verification event. ALL owners must reference checkpoint SHA in receipts.",
+      "verification": "At least one completed run from T06,T08,T09 and coordinator C shows explicit ACK of this checkpoint and the same ERROR_ID with correct next action, and readback across Master/E06/Lessons.",
+      "recurrence_count": 1,
+      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "type": "PROCESS_DEFECT",
+      "status": "OPEN",
+      "severity": "P1_PROCESS",
+      "owner": "T02/C",
+      "discovered_by": "Recurrent T09/T10 stale-HEAD HOLD",
+      "cause": "Mutable source HEAD was copied into instructions and logs while T06 merged; old SHA interpreted as current.",
+      "evidence": [
+        "PR162 HEAD changed repeatedly after T06 merge",
+        "T09 and T10 previously examined 7f78... while live HEAD was e51b... and later 885b..."
+      ],
+      "next_action": "Mandatory actual Git read on each run, monotonic run checkpoint and SHA compare; if HEAD changed invalidate only SHA-bound acceptance, never historic ZIP729 PASS.",
+      "verification": "Next two source-run receipts explicitly include live HEAD matching Git at time of read and no claim of previous HEAD as frozen.",
+      "recurrence_count": 2,
+      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "type": "SOURCE_CONTRACT",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "severity": "P1_SOURCE",
+      "owner": "T06/Host50",
+      "discovered_by": "T02/C E06 R17",
+      "cause": "Host50Admission initially treated historic BASE_TREE as only allowed active_tree and raised WHOLE_TREE_SOURCELOCK_NOT_RECONCILED after integration.",
+      "path": "coordination/e06_host50/admission.py",
+      "old_git_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+      "new_git_blob_observed": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+      "evidence": [
+        "Git source on 2026-10-29 includes owner source_attestation, SHA-bound seal, native_source_verifier and explicit legacy BASE_TREE preservation",
+        "Current source code lines 282-329; historic BASE_TREE still present intentionally"
+      ],
+      "next_action": "T06 obtain same-HEAD source/native gate evidence for owner SHA-bound attestation and 13 Host50 native routes; T08 independently check relevant existing regression. Do not regress to unconditional tree replacement or classify historic constant alone as a current defect.",
+      "verification": "Independent T08/T10 scoped source contract PASS for same current HEAD and verified native owner attestation; otherwise stay FIX_APPLIED_UNVERIFIED.",
+      "recurrence_count": 1,
+      "latest_source_head": "7f8f022087e6653ef0dcea2ff4dfd68a80d76950"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "type": "MISSING_ACCEPTANCE",
+      "status": "OPEN",
+      "severity": "P0_SOURCE",
+      "owner": "T06+P01-P05 functional owners",
+      "discovered_by": "T06 R09 and T10 R15",
+      "cause": "Single merged source tree exists but full P01-P05/Host50 STOP/ACL/consent/Voice functional source acceptance is not evidenced, and 13 Host50 prior source holds remain unadmitted.",
+      "evidence": [
+        "T06 R09 1/8; PR162 current draft",
+        "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted"
+      ],
+      "next_action": "For each mandatory contract identify exact source path, existing owner method/port, PIN current PRE/POST source SHA, and close only verified fixed criteria. Deliver T06 same-head accept manifest to T08/T09/T10; no new project scope.",
+      "verification": "T06 8/8 owner evidence on one exact HEAD, T08 source blocker disposition on that same SHA, then T09/T10 independent source QA.",
+      "recurrence_count": 0,
+      "latest_source_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "type": "FIXED_SOURCE_CHANGE",
+      "status": "FIX_APPLIED_UNVERIFIED",
+      "severity": "P2_SOURCE",
+      "owner": "T06",
+      "discovered_by": "T06 R09",
+      "cause": "Integration test runner read mutable checkout instead of verified copied P02/PACK01 fixtures.",
+      "path": "coordination/e06/run_source_integrations_r13.py",
+      "before": "c2b249ea5572e111222962bec87cae2d73db73e1",
+      "after": "d086fce7ec876c9851c2e81ffd5d38272cce60bb",
+      "commit": "e32b129219354712932157187241f2fc80842410",
+      "evidence": [
+        "GitHub exact POST readback",
+        "Isolated mocked RED→GREEN and py_compile PASS; full component suites NOT_RUN"
+      ],
+      "next_action": "T08 independently check same-head pinned fixture imports against actual source runner when source freeze approaches, do not repeat unrelated tests.",
+      "verification": "Check import/fixture on exact current HEAD with focused existing runner, then mark VERIFIED_CLOSED; not E07.",
+      "recurrence_count": 0
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "type": "PROCESS_DEFECT",
+      "status": "VERIFIED_CLOSED",
+      "severity": "P1_PROCESS",
+      "owner": "T07/T09",
+      "discovered_by": "Earlier T07 original 729 zero-byte GitHub fetch",
+      "cause": "GitHub API returned no raw original archive part bytes; outdated '0/729' HOLD propagated after T09 verified via Drive.",
+      "evidence": [
+        "T09 original archive physical receipt aab1154cf127ef0a216b19d06362343bbda4e152",
+        "T07 729/729 independent final receipt a70ab3dc9c45e29afee737810d6be8f623b8f210"
+      ],
+      "next_action": "Do not reopen original ZIP access HOLD; maintain separate final patched source SHA gate.",
+      "verification": "3/3 part bytes and archive SHA-256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a and 729/729 members matched. Scope only original archive.",
+      "recurrence_count": 3,
+      "closed_scope": "ORIGINAL_ARCHIVE_ONLY"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "type": "PROCESS_DEFECT",
+      "status": "VERIFIED_CLOSED",
+      "severity": "P1_PROCESS",
+      "owner": "T04",
+      "discovered_by": "T04 R12 false SKIP 2 paths",
+      "cause": "Historical overlap SKIP was based on incomplete subset of 25 snapshots",
+      "evidence": [
+        "T04 R14 34/34 final version arbitration",
+        "R02 owner decision in canonical branch and Git readback"
+      ],
+      "next_action": "Do not re-run 34-path archival source arbitration unless an actual changed source SHA merits revisiting that exact path.",
+      "verification": "34/34 decisions; 15 SKIP and 19 owner-selected source versions recorded; preserving all donor alternatives.",
+      "recurrence_count": 1,
+      "closed_scope": "HISTORICAL_ARCHIVE_SELECTION_ONLY"
+    }
+  ],
+  "process_notes": [
+    "This register does NOT create a new product TaskID, a second canonical source tree, or a new release task.",
+    "A note in old docs is not itself a current instruction: check live Git and status on each run.",
+    "Never mark P01-P05 accepted or SOURCE_READY merely by adding this register or a Git receipt."
+  ],
+  "no_build": true
+}
