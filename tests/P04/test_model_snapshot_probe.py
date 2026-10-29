@@ -538,8 +538,8 @@ class ModelSnapshotProbeTests(unittest.TestCase):
     def test_g4a_r07_canonically_equivalent_shard_names_hold_before_io(self):
         (self.root / "model.safetensors.index.json").write_text(
             json.dumps({"weight_map": {
-                "q.weight": "Caf\\u00e9.safetensors",
-                "r.weight": "Cafe\\u0301.safetensors"
+                "q.weight": "Caf" + chr(0xE9) + ".safetensors",
+                "r.weight": "Cafe" + chr(0x301) + ".safetensors"
             }}), encoding="utf-8")
         with mock.patch.object(probe, "_inspect_weight",
                                side_effect=AssertionError("shard I/O before alias gate")):
