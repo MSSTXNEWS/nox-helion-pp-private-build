@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B3",
+  "worker_label": "B3",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b3-20261029",
+  "code_commits": [
+    "bcfce919e70b980a0466026a34618cacfce71190",
+    "6ecf1f786e47420d21ea7350ac899f8983e499d2",
+    "4f6cde81f39cb88ebb88e1392bdf635cfd82753c",
+    "41b779d2d2419c4523be38bfc61185d5e581eae7"
+  ],
+  "change_summary": "Canonical events evidence, market conflict priority, absent data N/D, malformed ERROR HOLD",
+  "focused_tests": "4 focused JavaScript runtime checks in V8: PASS; native UI NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "Zero errors requires verified evidence; a conflict must not disappear beyond UI cap.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
