@@ -1,0 +1,93 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1_A_OWNER_HOLD_RECEIPT_V1",
+  "runId": "R30-G1-A-20261029T1447MSK-OWNER-LOCK-HOLD-04",
+  "slot": "G1-A",
+  "status": "OWNER_HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — Windows installer only, SOURCE ONLY",
+  "timestampMoscow": "2026-10-29 14:47",
+  "branch": "automation/r30/g1a/R30-G1-A-20261029T1447MSK-OWNER-LOCK-HOLD-04",
+  "sourceBase": {
+    "ref": "automation/r30/g1a/R30-G1-A-20261029T0727MSK-OWNER-LOCK-HOLD-03",
+    "commitSha": "d7b8c0df3ca6104667a8b041f6517975e693cd5f"
+  },
+  "preimageGitBlobs": {
+    "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi": "969f8c11eaca20c69e9610422731862c7bd3ed62",
+    "stage/proposals/P01/C09/Installer/Verify-Payload.ps1": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+    "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+  },
+  "ownerJournal": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+  },
+  "conflictIndex": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "gitBlobSha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozenSnapshotCount": 25,
+    "actualIndexedSnapshots": 25,
+    "snapshotsReadOnly": true
+  },
+  "readEvidence": {
+    "rules56GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "specificationDocument": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "specSections": "V16 §33 all 56 consolidated; §§54–56; R29 loader-only override",
+    "lastCoordinatorLessonDocument": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "lastCoordinatorRunId": "ASTRA-C-R30-20261029T1430MSK-09",
+    "lastLesson": "Keep G1-A OWNER_HOLD until exact assigned Installer paths vs forbidden Installer prefix is resolved by authorized owner. No override implied."
+  },
+  "permissionGate": {
+    "lockShape": "PASS",
+    "assignedCount": 3,
+    "forbiddenPrefixes": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "collisionCount": 3,
+    "collisions": [
+      {
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "matched": [
+          "stage/proposals/P01/C09/Installer/"
+        ]
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "matched": [
+          "stage/proposals/P01/C09/Installer/"
+        ]
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "matched": [
+          "stage/proposals/P01/C09/Installer/"
+        ]
+      }
+    ],
+    "sourceWriteAllowed": false,
+    "priorPreimageUnchanged": true,
+    "indexFrozenBranches": 25,
+    "indexActualEntries": 25
+  },
+  "sourceChange": [],
+  "testChange": [],
+  "tests": {
+    "ownerLockGate": "PASS (detection): 3/3 assigned paths also forbidden; DENY three writes",
+    "gitPreimageCheck": "PASS (previous receipt SHA unchanged; 3 exact source blob SHAs retained)",
+    "snapshotIndexCheck": "PASS (25 indexed, no snapshot writes)",
+    "sourceRegression": "NOT_RUN — owner lock prohibits source edits",
+    "PowerShell51": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLabCI": "NOT_RUN",
+    "EXE": "NOT_BUILT"
+  },
+  "nextDefectCandidateOnly": {
+    "scope": "NSIS registry + shortcut post-attestation failure handling, no code written",
+    "evidence": "NOX-HELION-Setup.nsi lines 172-179 WriteRegStr/WriteRegDWORD/CreateShortcut without per-operation IfErrors or recovery before success",
+    "caveat": "source inspection only; not a proven runtime failure; must reassess after resolving owner lock"
+  },
+  "ownerRequestToAstraC": "Authorized maintainer must remove/reconcile G1-A forbidden prefix stage/proposals/P01/C09/Installer/ to permit ONLY three exact assigned files; explicitly allocate G1-A-named test paths and publish new immutable owner-journal Git blob SHA. Do not broaden G1-B privileges, overwrite 25 frozen snapshots or edit shared PR162.",
+  "singleLesson": "Detect authorization contradictions before reading a code defect as a mandate to patch; deny takes precedence over exact allow when a forbidden prefix covers the same path. Record one immutable receipt and avoid repeated patches or fictional test PASS.",
+  "driveWrite": "NOT_ATTEMPTED — Astra-C sole writer after collecting 14 receipts",
+  "release": "HOLD",
+  "finalBuild": "FORBIDDEN",
+  "noForeignWrites": true
+}
