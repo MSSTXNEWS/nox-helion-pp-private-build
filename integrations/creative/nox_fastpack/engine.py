@@ -33,6 +33,7 @@ MODEL_CATALOG = [
 ]
 KINDS = ("movie", "cartoon2d", "cartoon3d", "anime", "adult18", "video", "photo", "3d", "voice", "sound", "slides", "site", "code", "memory", "learning")
 MAX_CREATIVE_IMPORT_BYTES = 256 * 1024 * 1024  # Existing WPF native import budget
+MAX_CREATIVE_WORKFLOW_BYTES = 2_000_000  # Bounded local ComfyUI graph
 TERMS = {"фильм":"movie", "кино":"movie", "мультик":"cartoon2d", "мультфильм":"cartoon2d", "аниме":"anime", "хентай":"adult18", "18+":"adult18", "видео":"video", "ролик":"video", "фото":"photo", "изображен":"photo", "картинк":"photo", "3д":"3d", "3d":"3d", "озвуч":"voice", "музык":"sound", "презентац":"slides", "сайт":"site", "код":"code", "программ":"code", "памят":"memory", "обучен":"learning"}
 
 class StudioError(Exception):
@@ -336,16 +337,26 @@ class Studio(CreativeExtensions):
 
     def workflow(self,workflow_name,node_id,prompt):
         if not re.fullmatch(r"[a-zA-Z0-9_.-]{1,100}\.json",workflow_name):raise StudioError("Unsafe workflow name")
-        path=self._within(self.workflows,self.workflows/workflow_name)
-        if not path.is_file():raise StudioError("Install a ComfyUI API-format workflow first")
-        graph=json.loads(path.read_text(encoding="utf-8"))
+        candidate=self.workflows/workflow_name
+        if candidate.is_symlink():
+            raise StudioError("ComfyUI workflow symlink is not approved")
+        path=self._within(self.workflows,candidate)
+        if (not path.is_file() or not 0<path.stat().st_size<=MAX_CREATIVE_WORKFLOW_BYTES):
+            raise StudioError("Missing/oversized local ComfyUI API workflow")
+        try: graph=json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError,UnicodeError) as exc:
+            raise StudioError("Invalid local ComfyUI API workflow") from exc
+        if type(graph) is not dict:
+            raise StudioError("ComfyUI API workflow must be an object")
         node=graph.get(str(node_id))
         if not isinstance(node,dict) or not isinstance(node.get("inputs"),dict) or "text" not in node["inputs"]:
             raise StudioError("Explicit text node ID required")
         node["inputs"]["text"]=str(prompt)[:5000]
         try: data=_get(self.comfy+"/prompt",payload={"prompt":graph,"client_id":"nox_helion"},timeout=30)
         except (URLError,OSError,ValueError) as exc:raise StudioError("ComfyUI unavailable/rejected: "+str(exc)) from exc
-        if not data.get("prompt_id"):raise StudioError("ComfyUI did not queue a job")
+        if (type(data.get("prompt_id")) is not str or
+                not re.fullmatch(r"[a-fA-F0-9-]{10,64}",data["prompt_id"])):
+            raise StudioError("ComfyUI returned an invalid queue receipt")
         return {"status":"QUEUED","prompt_id":data["prompt_id"],"workflow":workflow_name}
 
     def history(self,prompt_id):
