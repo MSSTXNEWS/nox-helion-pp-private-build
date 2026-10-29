@@ -60,3 +60,12 @@ class P04ComfyOwnerPort:
             raise ImageHold("LOCAL_COMFY_DID_NOT_QUEUE")
         return {"status": "QUEUED_NOT_RENDERED", "prompt_id": result["prompt_id"],
                 "accepted": False}
+
+    def register(self, existing_host: object, *, receipt: str) -> frozenset[str]:
+        """Reuse original local Comfy owner port, keeping offline host HOLD."""
+        if not self.available():
+            raise ImageHold("LOCAL_COMFY_BACKEND_OR_STOP_HOLD")
+        from native_bridge import bind_owner_methods
+        return bind_owner_methods(
+            existing_host, 4, self, {"images.generate": "generate"},
+            receipt=receipt, probe=self.available)

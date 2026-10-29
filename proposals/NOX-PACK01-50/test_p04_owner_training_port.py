@@ -64,4 +64,27 @@ class Tests(unittest.TestCase):
         result=self.port.evaluate('session',{})
         self.assertFalse(result['improved']);self.assertFalse(result['accepted'])
 
+
+    def test_register_exact_onehost_native_and_receipt_not_accepted(self):
+        import native_bridge as bridge
+        catalog=json.loads((Path(__file__).with_name("catalog.json")).read_text("utf-8"))
+        host=bridge.NoxPackHost(catalog,native_approve=lambda *_:True)
+        routes=self.port.register(host,receipt="a"*64)
+        self.assertEqual(routes,frozenset(("training.start","training.evaluate")))
+        self.assertEqual(set(host.ports),set(routes))
+        session=bridge.NativeSession("t","p","c",allowed=routes,private_approved=routes)
+        result=host.execute("training.evaluate",{},session)
+        self.assertEqual(result["status"],"VALID")
+        self.assertIs(result["accepted"],False)
+        with self.assertRaises(bridge.HostDenied):
+            self.port.register(host,receipt="a"*64)
+
+    def test_register_no_native_approve_fails_atomically(self):
+        import native_bridge as bridge
+        catalog=json.loads((Path(__file__).with_name("catalog.json")).read_text("utf-8"))
+        host=bridge.NoxPackHost(catalog)
+        with self.assertRaises(bridge.HostHold):
+            self.port.register(host,receipt="a"*64)
+        self.assertEqual(host.ports,{})
+
 if __name__=='__main__':unittest.main()

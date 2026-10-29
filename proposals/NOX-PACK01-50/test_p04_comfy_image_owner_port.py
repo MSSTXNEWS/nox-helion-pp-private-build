@@ -52,4 +52,30 @@ class Tests(unittest.TestCase):
         with self.assertRaises(m.ImageDenied):self.port.generate('native-session',{})
         self.assertEqual(self.fake.calls,[])
 
+
+    def test_register_existing_onehost_source_not_rendered(self):
+        import json
+        from pathlib import Path
+        import native_bridge as bridge
+        catalog=json.loads((Path(__file__).with_name("catalog.json")).read_text("utf-8"))
+        host=bridge.NoxPackHost(catalog)
+        self.assertEqual(self.port.register(host,receipt="b"*64),frozenset(("images.generate",)))
+        session=bridge.NativeSession("t","p","c",
+            allowed=frozenset(("images.generate",)),
+            private_approved=frozenset(("images.generate",)))
+        result=host.execute("images.generate",{},session)
+        self.assertEqual(result["status"],"QUEUED_NOT_RENDERED")
+        self.assertIs(result["accepted"],False)
+
+    def test_register_backend_missing_fails_closed(self):
+        import json
+        from pathlib import Path
+        import native_bridge as bridge
+        catalog=json.loads((Path(__file__).with_name("catalog.json")).read_text("utf-8"))
+        host=bridge.NoxPackHost(catalog)
+        self.backend=False
+        with self.assertRaises(m.ImageHold):
+            self.port.register(host,receipt="b"*64)
+        self.assertEqual(host.ports,{})
+
 if __name__=='__main__':unittest.main()

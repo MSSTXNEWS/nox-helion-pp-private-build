@@ -152,3 +152,13 @@ class P04OriginalTrainingPorts:
         return {"status": item.get("evaluation_status", "HOLD_UNVERIFIED"),
                 "baseline_eval_loss": a, "adapter_eval_loss": b,
                 "improved": b < a, "accepted": False}
+
+    def register(self, existing_host: object, *, receipt: str) -> frozenset[str]:
+        """Reuse native PACK01 host; no independent trainer or permission grant."""
+        if self._stop() is not False:
+            raise P04Hold("NATIVE_TRAINING_STOP_HOLD")
+        from native_bridge import bind_owner_methods
+        return bind_owner_methods(
+            existing_host, 4, self,
+            {"training.start": "start", "training.evaluate": "evaluate"},
+            receipt=receipt, probe=self.available)
