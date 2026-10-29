@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_V16_R18_G1A_OWNER_STAGE_OUTDIR_FAILCLOSED_V1",
+  "run_id": "NOX-V16-G1A-20261029T212436MSK-R18-OUTDIR-GUARD",
+  "created_utc": "2026-10-29T18:24:36.810Z",
+  "mode": "SOURCE_ONLY",
+  "product": "NOX_HELION_EXPRESS_INTEGRATOR_WINDOWS",
+  "role": "G1-A owner only stage/proposals/P01/C09/Installer",
+  "allowed_receipt_dir": "coordination/automation/r30/G1-A/",
+  "owner_journal_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "prestart": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_33_rules_read": 56,
+    "canon_original_warning": "The 56 numbered rules in §33 are consolidated; canon itself does not certify verbatim V15 original.",
+    "active_error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "active_register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "current_pr162_head_at_preflight": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "current_pr162_pre_blob": "87d901c3846359a91be3e8288f24302cc7060257",
+    "docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "r18_toolkit_exec": "TOOL_NOT_RUN; source read only; no claim of toolkit execution"
+  },
+  "exact_patch": {
+    "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "base_owner_commit": "b63b193f739bef21b406667cefff74635e1dc301",
+    "base_owner_tree": "77fa6a32b267d6de6a86adb7ce7a0e9577c275a0",
+    "pre_blob": "bc1ab71e6e57ac865fd1f98665ca6fb9919d6138",
+    "post_blob": "5a42310568368927c00d9d0fd766fbb6d99d0325",
+    "pr162_expected_current_blob": "87d901c3846359a91be3e8288f24302cc7060257",
+    "previous_owner_R16_pre_blob": "87d901c3846359a91be3e8288f24302cc7060257",
+    "source_changes": "Insert CreateDirectory/SetOutPath/OUTDIR exact fail-closed gates before File /r in existing R16 source; no new backend/host/feature",
+    "delta_insertion_only": true,
+    "owner": "G1-A",
+    "integration_writer": "T06 ONLY"
+  },
+  "checks": {
+    "category": "focused real-source V8 structural negative/positive",
+    "cases": {
+      "RED_missing_mkdir_guard": true,
+      "RED_missing_setout_guard": true,
+      "RED_missing_outdir_guard": true,
+      "GREEN_mkdir_fail_closed": true,
+      "GREEN_setout_fail_closed": true,
+      "GREEN_outdir_fail_closed": true,
+      "GREEN_clear_before_extraction": true,
+      "GREEN_payload_sha_gate_unchanged": true,
+      "GREEN_rollback_preserved": true,
+      "GREEN_uninstall_no_recursive_delete": true,
+      "GREEN_HKCU_guards_preserved": true,
+      "GREEN_only_expected_insertion": true
+    },
+    "pass": true,
+    "passed": 12,
+    "windows_runtime": "NOT_RUN",
+    "nsis_compile": "PROHIBITED_NOT_RUN",
+    "exe": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "native_stopped_acl_consent": "NO_DIFF_UNCHANGED_SOURCE_ONLY_NOT_NATIVE_VERIFIED"
+  },
+  "lessons": {
+    "relevant_ids": 11,
+    "groups_deduplicated": 6,
+    "actions": {
+      "ERR-SYS-001": "DELEGATE T02 current run receipt",
+      "ERR-SYS-002": "APPLY fresh PR HEAD/blob and owner-only CAS",
+      "ERR-SRC-003": "DELEGATE T06/T08 Host50 native 13-route",
+      "ERR-SRC-004": "APPLY P01 stage output fail-closed; source only",
+      "ERR-SRC-005": "DELEGATE T08 pinned fixture test",
+      "ERR-SYS-006": "ALREADY_VERIFIED_CLOSED original ZIP729",
+      "ERR-SYS-007": "ALREADY_VERIFIED_CLOSED T04 34/34",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09 independent frozen-head gate",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLY no false DONE, checkpoint 1/4",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 owner 8/8",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08 same-head 13-route"
+    },
+    "applied_note": "Avoid writing File /r through stale $OUTDIR after failed staging; verify mkdir/SetOutPath/path before payload extraction. Never equate owner patch with T06 integration.",
+    "archived_fingerprints_419": "NOT_ACTIVE_ERRORS"
+  },
+  "progress": {
+    "fixed_operational_denominator": 4,
+    "previous_accepted": 1,
+    "current_accepted": 1,
+    "delta_accepted": 0,
+    "product_progress": "N/D",
+    "historical_T01": "DONE_100_100_UNCHANGED",
+    "P01": "PATCHED_OWNER_ONLY_NOT_INTEGRATED",
+    "P02": "PREVIOUS_OWNER_ACCEPTED_DO_NOT_REPEAT",
+    "P03": "CURRENT_OWNER_SOURCE_PRESENT_T06_QA_PENDING",
+    "T06_handoff": "OWNER_SIGNATURE_PENDING"
+  },
+  "gates": {
+    "A": "PASS_CURRENT_READ",
+    "B": "PASS_OWNER_SOURCE_PATCH_AND_FOCUSED_CHECK",
+    "C": "PENDING_GIT_CAS_READBACK",
+    "D": "PARTIAL_REAL_STAGE_GUARD_APPLIED_DELEGATE_OTHER_OWNERS"
+  },
+  "next_checkpoint": {
+    "owner": "T06/manual #1",
+    "action": "Check current PR162 blob at stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi == 87d901c3846359a91be3e8288f24302cc7060257; review R16->R18 cumulative no-loss replacement POST 5a42310568368927c00d9d0fd766fbb6d99d0325 and approve or reject for one-tree CAS; T08 check on same SHA. Separately verify WPF C07 MainWindow bridge activation without creating second host.",
+    "no_pr162_write": true,
+    "no_shared_docs_write": true
+  }
+}

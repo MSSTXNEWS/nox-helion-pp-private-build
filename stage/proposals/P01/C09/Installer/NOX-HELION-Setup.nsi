@@ -90,7 +90,21 @@ Section "NOX HELION application" SEC_MAIN
     Abort "Path or WebView2 runtime preflight failed. No changes made."
   ${EndIf}
   StagePayload:
+  ; Prevent stale $OUTDIR extraction if stage mkdir / SetOutPath fails.
+  ClearErrors
+  CreateDirectory "$StageDir"
+  IfErrors 0 +3
+    SetErrorLevel 2
+    Abort "Unable to create staged directory; no payload extracted."
+  ClearErrors
   SetOutPath "$StageDir"
+  IfErrors 0 +3
+    SetErrorLevel 2
+    Abort "Unable to select staged output directory; no payload extracted."
+  StrCmp $OUTDIR "$StageDir" +3 0
+    SetErrorLevel 2
+    Abort "Staged output path mismatch; no payload extracted."
+  ClearErrors
   File /r "${PAYLOAD_DIR}\*.*"
   IfErrors 0 +2
     Abort "Failed extracting staged payload."
