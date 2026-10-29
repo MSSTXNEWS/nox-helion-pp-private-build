@@ -1,0 +1,59 @@
+{
+  "schema": "NOX-V16-E05-OWNER-SOURCE-CANDIDATE-RECEIPT-v3",
+  "run_id": "NOX-V16-G1-05-20261028T0750MSK-R03",
+  "owner": "E05/P05 executor #5",
+  "immutable_common_baseline": {
+    "commit_sha1": "0b3a7d435be735148d64171deb9027093a89646e",
+    "tree_sha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "main_verified": "2026-10-28T04:50Z",
+    "pr66_inventory_only": true
+  },
+  "candidate": {
+    "pr": 75,
+    "branch": "e05/v16-g1-05-space-readonly-20261028-r02",
+    "source_parent_precommit": "ef726310d72ac25736d79d8bf1e3e0af3df10bf3",
+    "previous_owner_run": "NOX-V16-G1-05-20261028-R02",
+    "conflicts_with_owner9_59_61": false,
+    "preserves_main": true
+  },
+  "validation_scope": "READ_ONLY_OWNED_SPACE_PROJECTION",
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "99bae2721e38f50d3f9c32bae6b97269ca57b798dae405e950cae126bdb67fbd",
+      "post_sha256": "13ccd3230ece1ea8071cf667988ec831115f212d036b08f650322c2eab7a0339",
+      "pre_git_blob_sha1": "3694471a550e68eda7a1c2a830b4de4b8d90639d",
+      "post_git_blob_sha1": "d2e404c39e3f845a64819fcc8be66a14a4d80aae",
+      "preimage_source": "PR75 immutable head ef726310d72ac25736d79d8bf1e3e0af3df10bf3",
+      "tests": "40 Node isolated cases",
+      "diff": "E05_R03_SOURCE.patch"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "owner": "E05/P05",
+      "pre_sha256": "97465d48d0731fd38a958a3c024278db6210deff21faf8ad451b3ee2f226579d",
+      "post_sha256": "efe8209175a3723accd4cb98b9f78b4d9433200dec6389ade019dfd32426d751",
+      "pre_git_blob_sha1": "8a5fc39833a6df976f5faf70558108ed0579ae2d",
+      "post_git_blob_sha1": "7f4b71bfd8759174d080be67e6190ce42ad1e0f6",
+      "preimage_source": "PR75 immutable head ef726310d72ac25736d79d8bf1e3e0af3df10bf3",
+      "tests": "40 Node isolated cases",
+      "diff": "E05_R03_SOURCE.patch"
+    }
+  ],
+  "tests": {
+    "runtime": "Node.js v22.16.0 Linux",
+    "component": {
+      "passed": 40,
+      "total": 40
+    },
+    "native_windows": "NOT_RUN",
+    "host_binding": "HOLD"
+  },
+  "original_d02": "UNMODIFIED",
+  "readback_app_side_google_oauth": "HOLD",
+  "extracted_original_source_sha256": "N/D",
+  "seven_progress": "N/D",
+  "release": "BLOCKED",
+  "diff_patch_sha256": "d60d3eddc2318af2993cc341c2340a65b94611a22966720f6ddfff290ba7f270"
+}

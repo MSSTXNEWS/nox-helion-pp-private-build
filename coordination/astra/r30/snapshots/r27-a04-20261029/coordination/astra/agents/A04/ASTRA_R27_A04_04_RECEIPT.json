@@ -1,0 +1,26 @@
+{
+  "block": 4,
+  "TaskID": "P02-OLLAMA-BOUNDED-STRICT-NDJSON",
+  "agent_id": "/root/a04",
+  "parent_commit": "0c8e705c5e79ccd4f98149772268f8fa9ea7c8fe",
+  "local_commit": "50e24fded20866ad5a8009bc8149067dbf816d33",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_blob": "d1e17c94d8456bcd3caa0a304e675745c45edaa1",
+      "post_blob": "1908f8c41c4c86da0b9772b61356a63316c45158",
+      "post_sha256": "8ae37864e0c760f2454adb7ac7d5b9d712473dfffa2ce5bba175ca3d056545ac"
+    },
+    {
+      "path": "coordination/astra/agents/A04/test_ollama_protocol_r27.py",
+      "pre_blob": null,
+      "post_blob": "5f93ba4b79e62df7bad09b6e14cb9fc39088c78e",
+      "post_sha256": "8b42f61f938dd9f301b681bbece3104a2ef570918d519ad98b10ccfb9c9a375d"
+    }
+  ],
+  "red": "5 test methods, 8 failing cases: unbounded line read, duplicate keys, nonfinite numbers, invalid Unicode/encoding, registry duplicate",
+  "green": "targeted protocol+terminal+runtime suite 22/22 PASS",
+  "lesson": "Limit socket-line bytes before allocation; strict JSON must cover registry and stream with equivalent duplicate/finite/Unicode semantics.",
+  "prior_lesson_applied": "Validated terminal source cannot be overwritten by ambiguous duplicate done fields; actual HTTP 200 midstream error still fails.",
+  "scope": "SOURCE_ONLY; real installed Ollama/Windows/EXE/CI NOT_RUN"
+}

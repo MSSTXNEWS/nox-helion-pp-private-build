@@ -1,0 +1,54 @@
+{
+  "schema": "NOX_E03_OWNER_RECEIPT_V16_R10",
+  "run_id": "NOX-V16-W3-02-20261028T1655MSK-R10",
+  "owner": "E03/P03",
+  "task_id": "W3-02-R10-SCOPE-SHAPE-GATE",
+  "source_commit": "d194667d069b8d9db7b325fc0cfac6b74df403c0",
+  "source_tree": "b0a63ead6c216b3e42447498909d5d3d8c3b938f",
+  "source_lock": "PR162_SOURCE_STAGING_ONLY_729_ZIP_HOLD",
+  "timestamp_utc": "2026-10-28T14:01:16.233Z",
+  "scope": "One real trust-boundary defect in existing P03 Python one-host adapter; no second downloader",
+  "old_behavior": "String/dict session.allowed and session.private_approved can match route via substring/key, None/int can TypeError.",
+  "new_behavior": "Native route/consent must be sets of strings; malformed shape DENIED before membership; existing approved sets continue.",
+  "files": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre_sha256": "7ea601987d591596550188917fd8ab3eae15beb20c4e5d02b61136a9fb5bc74d",
+      "post_sha256": "e28148672f15e32329d7998b2c9fe4c8ccb4fb0d7d703979543845fd57e3d8e6",
+      "pre_git_blob_sha1": "8b2bf0cb3f691cfede278df29d634f60a508fd69",
+      "post_git_blob_sha1": "READBACK_PENDING",
+      "kind": "MODIFIED"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "e1e1f3a25b50daadca3c58df926265410f70fc8eb4e71b61e027ac4cb4d6f454",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "READBACK_PENDING",
+      "kind": "ADDED"
+    },
+    {
+      "path": ".github/workflows/p03-c40-component.yml",
+      "pre_sha256": "ce5590d7fb1b7daac49b5fda5245370e7fa3b9584471ea71436e7fe7be68c1bb",
+      "post_sha256": "9ec4d0b7f653761b5f582c473383878ee1e606e32964d6193a6b5766df126c1a",
+      "pre_git_blob_sha1": "a44b6f1971753572f74cedf3e1d570efb1ec6fc5",
+      "post_git_blob_sha1": "READBACK_PENDING",
+      "kind": "MODIFIED"
+    }
+  ],
+  "tests": {
+    "method_isolated_python_before": "7 tests: 4 assertion failures, 4 errors",
+    "method_isolated_python_after": "7/7 PASS with exact replacement method in isolated fixture",
+    "repository_python_runtime": "NOT_RUN awaiting exact-source CI",
+    "github_windows_ci": "NOT_RUN/zero-step infrastructure unverified",
+    "weights_download": "NOT_RUN_NO_PERMISSION"
+  },
+  "external_holds": [
+    "Original ZIP 729 SourceLock unresolved",
+    "Concrete immutable artifacts+rights receipts 0 verified",
+    "Windows EXE E07 same SHA not accepted",
+    "E06 CAS owner receipt acceptance pending"
+  ],
+  "no_loss": "No file deletion. D02/WOW/EXE/archives/other owners unchanged.",
+  "lesson": "STRICT_NATIVE_SCOPE_SET_GATE: validate native route/consent collection shape and element types before membership."
+}

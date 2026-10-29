@@ -1,0 +1,44 @@
+{
+  "run_id": "ASTRA-R27-A04-20261029-01",
+  "agent_id": "/root/a04",
+  "task_id": "P02-NATIVE-QUEUED-SESSION-REVOCATION",
+  "baseline_commit": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "local_code_commit": "c400652fa9dcd2935d96e371bd9ce50e0ff99fdd",
+  "scope": "SOURCE_ONLY",
+  "approaches_completed": 1,
+  "approaches_planned": 10,
+  "prior_commits_verified": [
+    "614882078cc1c07f3fd6d2b50e7d12a2c56ef943",
+    "b8680093c727ac59338aa132fa2f43364f6b960f"
+  ],
+  "tests": {
+    "baseline": "python -m unittest -v test_p02_native_ingress: 18/18 PASS",
+    "red": "queued revocation regression: FAIL (returned OK after session revoked)",
+    "green": "python -m unittest -v test_p02_native_ingress: 19/19 PASS",
+    "regression": "python -m unittest -q test_p02_runtime test_p02_stream_lifecycle_r05 test_p02_chat_stop_gates: 31/31 PASS; local HTTP fake Ollama, real Python SQLite, no installed model"
+  },
+  "root_cause": "Native identity resolved before waiting on serial lock; queued call retained session after native resolver revoked it.",
+  "fix": "Resolve native session immediately within serial admission; STOP retains bypass and immediate resolver.",
+  "lesson": "Resolve mutable native authorization at execution admission after blocking queue waits; test revocation inside wait using deterministic gates.",
+  "new_product_accepted_done": 0,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "remaining": [
+    "Native installed host/SID revocation proof",
+    "Other A04 matrix coverage and original full TaskID denominator"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "pre_blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0",
+      "post_blob_sha1": "4efa3fec8ac7484d977e1a480dc37c00acb35805",
+      "post_sha256": "7e10175b18d2c6cfccd7bd052dcedf8db58165f73822c83dd808afbfae9218a6"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "pre_blob_sha1": "b8749db4d9b86897a748983f22bb335f6cf01528",
+      "post_blob_sha1": "b6cfaf70bc0e0ef07f9f4420b52c3e17fac7a59a",
+      "post_sha256": "9a8f58d1e73e343d1049cb7d7afadc8c915d41085189fc1d5b59c12ffab7270b"
+    }
+  ]
+}

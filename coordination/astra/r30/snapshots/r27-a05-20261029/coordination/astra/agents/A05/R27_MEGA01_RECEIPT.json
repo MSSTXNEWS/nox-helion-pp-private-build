@@ -1,0 +1,51 @@
+{
+  "run_id": "ASTRA-R27-A05-20261029-01",
+  "agent": "/root/a05",
+  "approaches_completed": 1,
+  "planned_approaches": 10,
+  "base_commit": "8ab6a114907a85d8b23702ee42b48e20a1532f5c",
+  "task_ids": [
+    "P02-SIP-QUOTE-EXPIRY-CALLBACK-BOUNDARY",
+    "P02-VOICE-LATE-STOP-NATIVE-REVOKE",
+    "P02-OWNER-IMMUTABLE-ROUTE-R22-REUSE"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_git_blob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+      "post_git_blob": "65b959c0bafc48c6293fc16b1388a6618a864e69",
+      "pre_sha256": "8a0c06bd9d44a156997bb8cce9609504ea4f1adcf3ac828c8f0ae7a1f8bd80ec",
+      "post_sha256": "31a0b726cb4554dbf4dbe93594a5250589c2415aef9766d12f15e7e60966912d"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "post_git_blob": "c7dd6c464719447030eae320d3255931c1d3da7c",
+      "pre_sha256": "094ec8369033ffaf95b08d5955b19c79ef2e11483d19822132d56034792fb1ed",
+      "post_sha256": "149fee24b762e6246507bcde68bfe8d78ae1e97f1690287628fd0635216b1236"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_sip_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "261857f6a2810fcb9d50f30faf555e5a6fa8537a",
+      "pre_sha256": null,
+      "post_sha256": "f4721154e320ae349c293888dec934f28cf3ca4be0f9dae8b29f99899500ae95"
+    }
+  ],
+  "tests": {
+    "command": "PYTHONPATH=Packages/P02/worker-python python -m unittest discover -s Packages/P02/worker-python -p test_p02*.py -v",
+    "baseline_focused": "10 cases; 10 failures including subtests and 1 error; exit 1",
+    "candidate": "40 test executions PASS; includes existing suite inherited tests, not 40 product TaskIDs",
+    "native_microphone_sip_windows": "NOT_RUN"
+  },
+  "donors": [
+    "92d71603359c9334355a231fc073272ade954968",
+    "feature/nox-v16-p02-three-native-ports-immutable-r22-20261029"
+  ],
+  "lesson": "Callback authorization and cancellation must be rechecked after blocking native calls; revoke only through authenticated owner callback and require exact true ACK. Preserve fetched trailing-newline byte identity before preimage assertions.",
+  "holds": [
+    "Native host must supply and prove discard_output_audio callback; absent or failed callback returns CLEANUP_HOLD.",
+    "Microphone-consent-specific donor R17 not yet admitted; ASR/TTS hardware and live SIP not tested."
+  ],
+  "product_complete": false
+}

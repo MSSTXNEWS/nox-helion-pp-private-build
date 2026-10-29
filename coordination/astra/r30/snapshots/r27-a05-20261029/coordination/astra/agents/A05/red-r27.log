@@ -1,0 +1,126 @@
+test_fresh_quote_still_dials_only_once (test_p02_voice_sip_r27.SipExpiryTests.test_fresh_quote_still_dials_only_once) ... ok
+test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) ... 
+  test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=nan) ... FAIL
+  test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=inf) ... FAIL
+test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) ... FAIL
+test_quote_expiring_during_approval_never_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_approval_never_dials) ... FAIL
+test_quote_expiring_during_verification_never_prompts_or_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_verification_never_prompts_or_dials) ... FAIL
+test_cleanup_exception_is_wrapped_as_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_exception_is_wrapped_as_hold) ... FAIL
+test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) ... 
+  test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) (callback=<function VoiceOutputTests.test_cleanup_failure_never_claims_revocation.<locals>.<lambda> at 0x7ff3040d6480>) ... FAIL
+  test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) (callback=<function VoiceOutputTests.test_cleanup_failure_never_claims_revocation.<locals>.<lambda> at 0x7ff3040d6700>) ... FAIL
+test_immutable_three_port_registry_accepts_r22_donor_contract (test_p02_voice_sip_r27.VoiceOutputTests.test_immutable_three_port_registry_accepts_r22_donor_contract) ... ERROR
+test_stop_during_output_revokes_native_receipt_without_success (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_during_output_revokes_native_receipt_without_success) ... FAIL
+test_stop_without_cleanup_callback_is_explicit_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_without_cleanup_callback_is_explicit_hold) ... FAIL
+test_successful_output_is_not_discarded (test_p02_voice_sip_r27.VoiceOutputTests.test_successful_output_is_not_discarded) ... ok
+
+======================================================================
+ERROR: test_immutable_three_port_registry_accepts_r22_donor_contract (test_p02_voice_sip_r27.VoiceOutputTests.test_immutable_three_port_registry_accepts_r22_donor_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 127, in test_immutable_three_port_registry_accepts_r22_donor_contract
+    bound = register_with_existing_pack01(dispatcher, BoundPort,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/tmpsp76h1z3/p02_owner_route_ports.py", line 194, in register_with_existing_pack01
+    raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
+p02_owner_route_ports.RouteHold: EXISTING_PACK01_DISPATCHER_REQUIRED
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=nan)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 58, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider) (expiry=inf)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 58, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_nonfinite_or_boolean_quote_never_reaches_provider (test_p02_voice_sip_r27.SipExpiryTests.test_nonfinite_or_boolean_quote_never_reaches_provider)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 60, in test_nonfinite_or_boolean_quote_never_reaches_provider
+    self.assertEqual(self.called, [])
+AssertionError: Lists differ: [(Identity(tenant='tenant', principal='ali[529 chars]et>)] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+(Identity(tenant='tenant', principal='alice', core_id='core-1', persona_id='persona-1', session_id='session'), CallQuote(number='+34123456789', purpose='appointment', max_cost=Decimal('1'), currency='EUR', quote_id='quote-1', expires_at=nan), <threading.Event at 0x7ff30409d0d0: unset>)
+
+Diff is 847 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_quote_expiring_during_approval_never_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_approval_never_dials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 30, in test_quote_expiring_during_approval_never_dials
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_quote_expiring_during_verification_never_prompts_or_dials (test_p02_voice_sip_r27.SipExpiryTests.test_quote_expiring_during_verification_never_prompts_or_dials)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 41, in test_quote_expiring_during_verification_never_prompts_or_dials
+    with self.assertRaisesRegex(PermissionError, 'Expired SIP quote'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: PermissionError not raised
+
+======================================================================
+FAIL: test_cleanup_exception_is_wrapped_as_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_exception_is_wrapped_as_hold)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 102, in test_cleanup_exception_is_wrapped_as_hold
+    with self.assertRaisesRegex(RouteHold, 'CLEANUP_HOLD'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) (callback=<function VoiceOutputTests.test_cleanup_failure_never_claims_revocation.<locals>.<lambda> at 0x7ff3040d6480>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 95, in test_cleanup_failure_never_claims_revocation
+    with self.assertRaisesRegex(RouteHold, 'CLEANUP_HOLD'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_cleanup_failure_never_claims_revocation (test_p02_voice_sip_r27.VoiceOutputTests.test_cleanup_failure_never_claims_revocation) (callback=<function VoiceOutputTests.test_cleanup_failure_never_claims_revocation.<locals>.<lambda> at 0x7ff3040d6700>)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 95, in test_cleanup_failure_never_claims_revocation
+    with self.assertRaisesRegex(RouteHold, 'CLEANUP_HOLD'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_stop_during_output_revokes_native_receipt_without_success (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_during_output_revokes_native_receipt_without_success)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 81, in test_stop_during_output_revokes_native_receipt_without_success
+    with self.assertRaisesRegex(RouteHold, 'PERSISTENCE$'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+======================================================================
+FAIL: test_stop_without_cleanup_callback_is_explicit_hold (test_p02_voice_sip_r27.VoiceOutputTests.test_stop_without_cleanup_callback_is_explicit_hold)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/tmpsp76h1z3/test_p02_voice_sip_r27.py", line 86, in test_stop_without_cleanup_callback_is_explicit_hold
+    with self.assertRaisesRegex(RouteHold, 'CLEANUP_HOLD'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: RouteHold not raised
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.011s
+
+FAILED (failures=10, errors=1)

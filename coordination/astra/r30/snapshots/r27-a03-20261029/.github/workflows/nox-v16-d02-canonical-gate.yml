@@ -1,0 +1,34 @@
+name: NOX V16 D02 canonical loader + legacy preservation
+on:
+  push:
+    branches:
+      - 'integration/nox-v16-d02-canonical-pinned-20261028'
+  pull_request:
+    paths:
+      - 'integrations/wow200/stage_wow200.py'
+      - 'integrations/wow200/tests/test_stage_wow200.py'
+      - '.github/workflows/nox-v16-d02-canonical-gate.yml'
+  workflow_dispatch:
+jobs:
+  owner1-d02-stage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python 3 setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Stage unit/negative source SHA/NO-LOSS tests
+        run: python -m unittest discover -s integrations/wow200/tests -p 'test_stage_wow200.py' -v
+      - name: HOME nine-orb regression
+        run: node --test integrations/wow200/tests/test_home_scene.mjs
+      - name: Freeze owner1 and legacy exact Git blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = a0bc34add0990b3f70bdbfd94fe52615193a4c08
+          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.css)" = 77417160147607f2d7350209b865d86bfe49abd0
+          test "$(git hash-object integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = f7724e99b37ccbc84f1756dc797980267d58ec4e
+          test "$(git hash-object integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css)" = 95b2562e8b6f5c07b785d3a381661d0dbfe5de83

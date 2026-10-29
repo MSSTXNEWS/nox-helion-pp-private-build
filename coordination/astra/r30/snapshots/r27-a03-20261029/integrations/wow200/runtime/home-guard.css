@@ -1,0 +1,14 @@
+/* Prevent PR30 visuals from moving/changing hitboxes of owner-approved D02. */
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb {
+  position:absolute; left:var(--x);top:var(--y);
+  transform:translate(-50%,-50%);
+}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb {position:relative;}
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > strong,
+.nox-orbit-stage .nox-eclipse.nox-cinema-orb > span,
+.nox-orbit-stage .nox-orbit-core.nox-cinema-orb > div {position:relative;z-index:4;}
+.nox-orbit-stage .nox-cinema-orb__layers,
+.nox-orbit-stage .nox-cinema-orb__layers * {pointer-events:none!important;}
+@media(prefers-reduced-motion:reduce){
+  .nox-orbit-stage .nox-cinema-orb__layers * {animation:none!important;}
+}

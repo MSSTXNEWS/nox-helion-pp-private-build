@@ -1,0 +1,237 @@
+TAP version 13
+# Subtest: source-only catalogs cover 51–150 and leave 1–50 separate
+ok 1 - source-only catalogs cover 51–150 and leave 1–50 separate
+  ---
+  duration_ms: 3.275369
+  type: 'test'
+  ...
+# Subtest: exact documented canonical events map only to truthful WOW semantics
+ok 2 - exact documented canonical events map only to truthful WOW semantics
+  ---
+  duration_ms: 0.770157
+  type: 'test'
+  ...
+# Subtest: 150 secondary visual scenes are selectable without replacing HOME art
+ok 3 - 150 secondary visual scenes are selectable without replacing HOME art
+  ---
+  duration_ms: 4.044734
+  type: 'test'
+  ...
+# Subtest: real events require trusted port and monotonic sequence, never fake speech
+ok 4 - real events require trusted port and monotonic sequence, never fake speech
+  ---
+  duration_ms: 1.108124
+  type: 'test'
+  ...
+# Subtest: host denial does not switch to approved director cue
+ok 5 - host denial does not switch to approved director cue
+  ---
+  duration_ms: 2.243088
+  type: 'test'
+  ...
+# Subtest: mount failures are reversible; no duplicate roots or D02 entry
+ok 6 - mount failures are reversible; no duplicate roots or D02 entry
+  ---
+  duration_ms: 1.290828
+  type: 'test'
+  ...
+# Subtest: CSS has one active scene, no new networking, GPU or native host
+ok 7 - CSS has one active scene, no new networking, GPU or native host
+  ---
+  duration_ms: 0.641553
+  type: 'test'
+  ...
+# Subtest: 151-200 use same optics/director, native composition approval only
+ok 8 - 151-200 use same optics/director, native composition approval only
+  ---
+  duration_ms: 0.85911
+  type: 'test'
+  ...
+# Subtest: composition action denied without native authorized callback
+ok 9 - composition action denied without native authorized callback
+  ---
+  duration_ms: 0.49239
+  type: 'test'
+  ...
+# Subtest: never start two compositors on one secondary stage
+ok 10 - never start two compositors on one secondary stage
+  ---
+  duration_ms: 0.707753
+  type: 'test'
+  ...
+# Subtest: verified training visual expires and frees the scene, never loops as fake training
+ok 11 - verified training visual expires and frees the scene, never loops as fake training
+  ---
+  duration_ms: 0.37261
+  type: 'test'
+  ...
+# Subtest: R27 OS reduction can release the explicit startup override in real engines
+ok 12 - R27 OS reduction can release the explicit startup override in real engines
+  ---
+  duration_ms: 0.363396
+  type: 'test'
+  ...
+# Subtest: R27 every composition starts three actual tracks after a cue preview
+ok 13 - R27 every composition starts three actual tracks after a cue preview
+  ---
+  duration_ms: 1.767524
+  type: 'test'
+  ...
+# Subtest: R27 failed unified subscription revokes captured callback before cleanup
+ok 14 - R27 failed unified subscription revokes captured callback before cleanup
+  ---
+  duration_ms: 0.315423
+  type: 'test'
+  ...
+# Subtest: R27 authorization cannot resurrect a scene destroyed by the host callback
+not ok 15 - R27 authorization cannot resurrect a scene destroyed by the host callback
+  ---
+  duration_ms: 1.166351
+  type: 'test'
+  location: '/workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:243:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'director'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'director'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:248:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: R27 unified cleanup completes when a child DOM cleanup throws
+not ok 16 - R27 unified cleanup completes when a child DOM cleanup throws
+  ---
+  duration_ms: 0.376705
+  type: 'test'
+  location: '/workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:252:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'none'
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual: 'none'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:258:9)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: R27 cue subscription failures rollback DOM/listeners and revoke callbacks
+not ok 17 - R27 cue subscription failures rollback DOM/listeners and revoke callbacks
+  ---
+  duration_ms: 2.788758
+  type: 'test'
+  location: '/workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:12:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:16:43)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# Subtest: R27 cue unsubscribe failure still frees both listeners and remount identity
+not ok 18 - R27 cue unsubscribe failure still frees both listeners and remount identity
+  ---
+  duration_ms: 0.545619
+  type: 'test'
+  location: '/workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:21:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    0 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 0
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:23:62)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: R27 queued media/visibility callbacks are inert after both engine disposals
+not ok 19 - R27 queued media/visibility callbacks are inert after both engine disposals
+  ---
+  duration_ms: 1.642677
+  type: 'test'
+  location: '/workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      {
+        cue: '',
+    +   hidden: 'true',
+    +   mode: 'REDUCED'
+    -   hidden: 'false',
+    -   mode: 'BALANCED'
+      }
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    cue: ''
+    mode: 'BALANCED'
+    hidden: 'false'
+  actual:
+    cue: ''
+    mode: 'REDUCED'
+    hidden: 'true'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs:30:64)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 14
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 124.085329

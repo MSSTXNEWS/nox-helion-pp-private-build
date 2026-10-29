@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_V16_E06_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-W4-03-20261029T0005MSK-R16-NATIVE-ACL",
+  "owner": "E06/W4-03",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "pr": 162,
+  "start_actual_utc": "2026-10-28T21:01:28Z",
+  "compiled_at_utc": "2026-10-28T21:06:58.811Z",
+  "parent_commit": "40a1d76e1b60b41a262656c706aeb10534e831fe",
+  "parent_tree": "96a259df5dd02c771438b91d63a195a056045f22",
+  "historical_main": "0b3a7d435be735148d64171deb9027093a89646e",
+  "source_729": "NOT_PHYSICALLY_VERIFIED",
+  "previous_lesson": "RECHECK_PRIVATE_GATEWAY_AFTER_FINAL_NATIVE_AUTH_CALLBACK",
+  "previous_lesson_applied": "YES: final gateway_ready recheck after second native host advertisement; regression test provided",
+  "finding": "Native approval policy can erroneously return True for bad peer/CSRF/origin; last policy callback can change host.advertised capabilities after the first advertisement; old bridge could report stale privilege.",
+  "change": "E06 validates native peer/origin/CSRF invariants, snapshots owner capabilities before second attestation, and re-advertises via the same existing host after attestation. Drift/second error/gateway revoke => HOLD.",
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "bdde1e75e865c9695c89b579efd145df84607e8750b11426bded9665b16dffc5",
+      "post_sha256": "6a90171ebb39e3a04e56d21dd3d2e8d56e6864359c0703c378c77324bb61b033",
+      "pre_git_blob_sha1": "6c0eda8cac35376346a8b1e1e5299f0335c17725",
+      "post_git_blob_sha1": "1046c4b2e754ad3e3e9f07afc7be43af16269700"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_mobile_acl_epoch_r16.py",
+      "owner": "E06/W4-03",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "b923366ea543219aa96f32d99a00e8c1c4b942cd7ffa51b9492b31cb56c20cc2",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "347ed32fb7de5bbeb9ee98448bcfad0b885b57a6"
+    }
+  ],
+  "exact_diff": {
+    "imports": "import hmac; from urllib.parse import urlsplit",
+    "mobile_contract": "add local private proof invariants, pin initial_allowed; final same-host advertise under gateway recheck; deny ACL epoch drift; keep remote calls and voice denied"
+  },
+  "test_evidence": {
+    "source_derived_isolated": "RED 7/8 (seven failures); GREEN 8/8 PASS in local minimal source-derived harness (not complete GitHub module)",
+    "real_module": "11 actual-module regression tests authored, NOT_RUN",
+    "windows_component": "NOT_RUN",
+    "installed_e07": "0/10 NOT_RUN"
+  },
+  "new_lesson": "PIN_NATIVE_CAPABILITIES_ACROSS_LAST_AUTH_ATTESTATION",
+  "release": "HOLD_NOT_BUILT",
+  "run_status": "SOURCE_CANDIDATE_EXPECTED_HEAD_CAS"
+}

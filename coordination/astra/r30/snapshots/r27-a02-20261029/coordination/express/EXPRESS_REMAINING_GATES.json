@@ -1,0 +1,41 @@
+{
+  "run_id": "NOX-V16-E03-EXPRESS-R01-20261028",
+  "verified_product_percent": null,
+  "gates": [
+    {
+      "id": "E03-X01",
+      "name": "Preserve P03 donor files",
+      "status": "SOURCE_STAGED"
+    },
+    {
+      "id": "E03-X02",
+      "name": "Full original 729 SHA SourceLock",
+      "status": "CI_PENDING"
+    },
+    {
+      "id": "E03-X03",
+      "name": "Canonical Queue and UI compile",
+      "status": "CI_PENDING"
+    },
+    {
+      "id": "E03-X04",
+      "name": "Licensed model artifact evidence",
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "id": "E03-X05",
+      "name": "Real Pull/GGUF install receipt",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "E03-X06",
+      "name": "One host and NSIS installed runtime",
+      "status": "OWNER6_HOLD"
+    },
+    {
+      "id": "E03-X07",
+      "name": "Independent E07 same SHA",
+      "status": "NOT_RUN"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "run_id": "ASTRA_R27_A04_05",
+  "task_id": "P02-SQLITE-STARTUP-CONSTRAINT-ADMISSION",
+  "approach": 5,
+  "status": "SOURCE_FIX_VERIFIED",
+  "parent_remote_commit": "a27320b456a7a553530675c4dacf86be45976d48",
+  "local_commit": "6616b04a4576dee0021a6825885a50e374dd4b3e",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_blob": "1908f8c41c4c86da0b9772b61356a63316c45158",
+      "post_blob": "dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd",
+      "post_sha256": "1adde93c93a70a14bf6169574125ff217ff4b55ab44649b5a67d780e184c5deb"
+    },
+    {
+      "path": "coordination/astra/agents/A04/test_sqlite_admission_r27.py",
+      "pre_blob": null,
+      "post_blob": "6fd2980d51b81d37ba2d3543c28b00b9fd097d9d",
+      "post_sha256": "208786317d4dc5ce10ad6ae3bd9f96212c044f3ef70f425e0efd7c0707c9c1ee"
+    }
+  ],
+  "red": "2/3 fail: composite id primary key and approved partial unique storage incorrectly admitted",
+  "green": "17/17: 3 SQLite admission + 14 runtime tests, Python local",
+  "lesson": "Startup schema admission must validate whole relational constraints, not first key ordinal or partial uniqueness flag.",
+  "applied_prior_lesson": "Validate semantic completeness before accepting externally persisted state.",
+  "installer_scope": "Existing P02 DB admission; rejects drift without schema repair/data changes.",
+  "limitations": "No Windows host/install/Ollama hardware execution; source-only, no build or integration."
+}

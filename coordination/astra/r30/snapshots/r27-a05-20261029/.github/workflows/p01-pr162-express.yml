@@ -1,0 +1,62 @@
+name: NOX P01 EXPRESS · canonical D02 + verified native buttons
+on:
+  pull_request:
+    paths:
+      - 'proposals/P01/WOW-MAX10/**'
+      - '.github/workflows/p01-pr162-express.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  p01-source-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect exact original owner source paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD
+          git diff --name-only 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD | while IFS= read -r file; do
+            case "$file" in
+              proposals/P01/WOW-MAX10/*|.github/workflows/p01-pr162-express.yml) ;;
+              *) echo "CROSS_OWNER_CHANGE:$file"; exit 1;;
+            esac
+          done
+          if test -n "$(git diff --diff-filter=D --name-only 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD)"; then
+            echo 'NO_LOSS_PATH_DELETION_FAIL'; exit 1
+          fi
+      - name: Node syntax and focused P01 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in proposals/P01/WOW-MAX10/*.mjs; do node --check "$file"; done
+          node --test proposals/P01/WOW-MAX10/*.test.mjs
+      - name: Keep original D02 gravity and WOW unified source regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test proposals/NOX-CINEMA-FX/nox-cinema.test.mjs
+          node --test proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs
+      - name: Emit actual code hash receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence
+          { git rev-parse HEAD; git rev-parse HEAD^{tree};
+            find proposals/P01/WOW-MAX10 -type f -print0 | sort -z | xargs -0 sha256sum;
+          } > ci-evidence/P01_PR162_EXPRESS_SHA256.txt
+          cat ci-evidence/P01_PR162_EXPRESS_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p01-pr162-express-source-receipts
+          path: ci-evidence/P01_PR162_EXPRESS_SHA256.txt
+          retention-days: 30
+          if-no-files-found: error

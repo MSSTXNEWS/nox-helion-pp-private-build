@@ -1,0 +1,85 @@
+✔ source-only catalogs cover 51–150 and leave 1–50 separate (1.663708ms)
+✔ exact documented canonical events map only to truthful WOW semantics (0.745029ms)
+✔ 150 secondary visual scenes are selectable without replacing HOME art (3.032424ms)
+✔ real events require trusted port and monotonic sequence, never fake speech (0.787613ms)
+✔ host denial does not switch to approved director cue (1.003447ms)
+✔ mount failures are reversible; no duplicate roots or D02 entry (2.236458ms)
+✔ CSS has one active scene, no new networking, GPU or native host (0.577037ms)
+✔ 151-200 use same optics/director, native composition approval only (0.676456ms)
+✔ composition action denied without native authorized callback (0.42565ms)
+✔ never start two compositors on one secondary stage (0.591628ms)
+✔ verified training visual expires and frees the scene, never loops as fake training (0.329225ms)
+✖ R27 OS reduction can release the explicit startup override in real engines (0.324367ms)
+✖ R27 every composition starts three actual tracks after a cue preview (1.047333ms)
+✔ E01-W2-R14-01 initial scene forced REDUCED by OS (3.885204ms)
+✔ E01-W2-R14-02 delayed PACK01 forced reduced by OS (1.872302ms)
+✔ E01-W2-R14-03 MAX selector cannot override reduced scene (1.196677ms)
+✔ E01-W2-R14-04 MAX selector cannot override reduced PACK01 (2.376649ms)
+✔ E01-W2-R14-05 preview protects and truthfully labels reduced mode (1.407224ms)
+✔ E01-W2-R14-06 OS reduces OFF restores chosen MAX in both engines (1.181785ms)
+✔ E01-W2-R14-07 OS reduces ON disables both engines (3.741619ms)
+✔ E01-W2-R14-08 ordinary ECO selector synchronizes scene and PACK01 (1.286862ms)
+✔ E01-W2-R14-09 untrusted selector falls back BALANCED (1.45833ms)
+✔ E01-W2-R14-10 missing and legacy matchMedia remain safe (2.35744ms)
+✖ R27 loader releases the explicit startup reduced override (1.730539ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 21
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 125.754044
+
+✖ failing tests:
+
+test at integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:217:1
+✖ R27 OS reduction can release the explicit startup override in real engines (0.324367ms)
+  TypeError [Error]: ui.setReducedMotion is not a function
+      at TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:219:5)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:228:1
+✖ R27 every composition starts three actual tracks after a cue preview (1.047333ms)
+  AssertionError [ERR_ASSERTION]: preview 151
+  
+  0 !== 3
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs:231:40)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at integrations/wow200/runtime/loader.reduced-motion.test.mjs:35:1
+✖ R27 loader releases the explicit startup reduced override (1.730539ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/d06a942f0895/agents/A02/integrations/wow200/runtime/loader.reduced-motion.test.mjs:35:148)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

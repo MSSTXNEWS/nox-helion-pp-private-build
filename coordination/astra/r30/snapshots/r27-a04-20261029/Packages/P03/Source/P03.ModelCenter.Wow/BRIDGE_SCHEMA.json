@@ -1,0 +1,41 @@
+{
+  "schema": "NOX_P03_MICROWOW_V1",
+  "trusted_local_origin_required": true,
+  "host_to_ui": [
+    "p03.snapshot.v1",
+    "p03.event.v1",
+    "p03.command.ack.v1"
+  ],
+  "ui_to_host": "p03.command.v1",
+  "actions": [
+    "pull",
+    "importGguf",
+    "stop",
+    "retry",
+    "diagnose"
+  ],
+  "must_check": [
+    "trusted_origin",
+    "user_acl",
+    "host_capability",
+    "job_state",
+    "job_owner",
+    "source_lock"
+  ],
+  "readonly_ui_only": [
+    "model_dna",
+    "filters",
+    "comparison",
+    "hardware_check",
+    "preflight",
+    "event_pulse"
+  ],
+  "source_of_truth": "existing P03 queue/catalog and lifecycle events",
+  "transport": "CoreWebView2.PostWebMessageAsJson",
+  "unknown_metadata": "REVIEW_REQUIRED",
+  "external_dependencies": [],
+  "ack_echo_command_id": true,
+  "late_ack_pin_guard": true,
+  "pending_timeout_ms": 45000,
+  "transfer_percent_is_install_receipt": false
+}

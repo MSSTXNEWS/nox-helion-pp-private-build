@@ -1,0 +1,59 @@
+{
+  "run_id": "ASTRA-R27-A02-20261029-PASS03",
+  "agent_id": "/root/a02",
+  "parent_commit": "24959a17c01aab2d43111498ee30c1abd6f421e6",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 3,
+  "planned_approaches": 10,
+  "task_ids": [
+    "P01-WOW-LIFECYCLE-ROLLBACK",
+    "P01-WOW-HOST-REENTRANT-DISPOSE"
+  ],
+  "files": [
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.mjs",
+      "pre_git_blob": "0a510d5095582624306a951ecee583986ccfcb77",
+      "post_git_blob": "10f3b150cc3c83e3caa2c1bc011f44b7d21cbe97",
+      "pre_sha256": "e0a31c2ab5abcea42d8d7199a2ca7e01a16a86b6fa13b925d688516cca551d06",
+      "post_sha256": "8dca431f9a60652bb8e0ae9496cfcc8b9bbfa47fe5ffbb05136205700a07d7cf"
+    },
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/gate.test.mjs",
+      "pre_git_blob": "40d497485a5953a38cb8c2eafa1fd36812ff3727",
+      "post_git_blob": "a718a41e7c790b2076ea0dd650734c53b831edf5",
+      "pre_sha256": "f0ee137545765c1bccf4097cee5cb2300c89b2744a600417a9b73286cbb2fbc6",
+      "post_sha256": "6ed33393c73a03309d8445e3172830a5c90c142862fa030cba0fdb0f1fbf7eb4"
+    },
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW101-150/director.mjs",
+      "pre_git_blob": "9bc7ad86dbea4f0f91a1448906f0f17d721d2e0c",
+      "post_git_blob": "4077cb2e2f19e47a4bdda49b8fd6debf17479bb1",
+      "pre_sha256": "8f38fd0a87404cf4c9c2ee002a6eba659f1731340383e6db615c0583db8e846a",
+      "post_sha256": "2a53338f862d80c88073a72e36a4aa253491a9024202b7b001b93b4ca227ee6d"
+    },
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW51-100/wow51-100.mjs",
+      "pre_git_blob": "ba1b6b91ef337731d155c5f9d759465110c11e24",
+      "post_git_blob": "52fb8cccf49360e7b4e90bd276d539d1ee3f76da",
+      "pre_sha256": "0a19db40a2c0cc38b9560f872e20b3bf5ac5bf7af9820a21fe95e82ef24ca71e",
+      "post_sha256": "8cacd91b89b5d40e2fa640ab887e5fe4c664dbf9e27895936341ca2d6b234402"
+    },
+    {
+      "path": "integrations/wow200/proposals/NOX-WOW-UNIFIED-1-150/lifecycle.r27.test.mjs",
+      "pre_git_blob": null,
+      "post_git_blob": "cf3aa2d2a60d946466b28e0f26a4591747401ade",
+      "pre_sha256": null,
+      "post_sha256": "cfebb428c21d9fa855e9f6e492a758554301e155aac91c4f7692b2f2ca8f63a8"
+    }
+  ],
+  "lesson": "Dispose before invoking external cleanup, revoke captured callbacks even when mounting fails, and recheck lifecycle after native authorization callbacks.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Deterministic Node source fixtures; no real browser/GPU/Windows visual acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

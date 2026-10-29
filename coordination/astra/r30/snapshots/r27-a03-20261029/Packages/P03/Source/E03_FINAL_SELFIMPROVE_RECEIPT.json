@@ -1,0 +1,58 @@
+{
+  "schema": "NOX_V16_E03_FINAL_CI_SOURCE_RECEIPT_v1",
+  "run_id": "NOX-V16-E03-FINAL-SELFIMPROVE-20261028",
+  "owner": 3,
+  "source_ci_commit": "28634be2c55af32d06339f944708c9b6d6cb0d79",
+  "windows_ci_run": 40604790513,
+  "windows_ci_conclusion": "SUCCESS",
+  "actions_artifact_id": 12780865711,
+  "source_zip_sha256": "04bf258bfd27743ef9ce903a25ff85a6009c9a9231cefb9d1feab895b0ce1569",
+  "pre_source_zip_sha256": "30ebc1aa0ab94344523efdf9962d4ce3aabc1e0fad00a5ea7070b5d0911c1441",
+  "patch_sha256": "111412cc61faf9b6913d0006094bc4a5b01d7e7242ae9d95293cc2fabce807b3",
+  "paths": [
+    {
+      "path": "Source/OWNER6_INTEGRATION_HANDOFF.md",
+      "owner": 3,
+      "preimage_sha256": null,
+      "postimage_sha256": "dea319ab94816d32552d9e5ee719a3ffe42547572c32fd63680671b4dc5876a6"
+    },
+    {
+      "path": "Source/P03.ModelCenter.HardeningSmoke/Program.cs",
+      "owner": 3,
+      "preimage_sha256": "47292be5067afce5de70e1b6fb6a7742545cda255dc96482f67ddaca8dbf3f44",
+      "postimage_sha256": "fc11e043f38476d40c29c2b78794856950c47f1cd3edfa035058919bba4d154e"
+    },
+    {
+      "path": "Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
+      "owner": 3,
+      "preimage_sha256": "c0d427ab9efcab2bfd90e700bc60b555cb2284323efb77018c1fab9ef32109f4",
+      "postimage_sha256": "5bc554445b82c3a290b4bc054f76ea8bb42a1f56fed6b8e91997ac13061a31ad"
+    },
+    {
+      "path": "Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs",
+      "owner": 3,
+      "preimage_sha256": null,
+      "postimage_sha256": "ea534faefbd0e6b560c8d381bd77def7b8e30e132d6caff06b2a2afe6996442f"
+    }
+  ],
+  "preservation": {
+    "old_files": 29,
+    "new_files": 31,
+    "deleted": 0,
+    "modified": 2,
+    "added": 2,
+    "unchanged": 27
+  },
+  "drive": {
+    "source": "https://drive.google.com/file/d/1ex4nZZUeWOEopNIWSjCqrTQuO4DIhHqX/view",
+    "receipt": "https://drive.google.com/file/d/1hRMZamGWOUt7FvLOUyhmB84HyokkP6LX/view",
+    "patch": "https://drive.google.com/file/d/1tkMZU3_HhqwbrtC1LvvbB7iiNibMacz2/view"
+  },
+  "limits": [
+    "offline synthetic component CI only",
+    "no canonical original Python host merge",
+    "no real installed Ollama/weights/GPU hardware",
+    "license/VRAM artifact attestations pending",
+    "E07 same EXE SHA acceptance pending"
+  ]
+}

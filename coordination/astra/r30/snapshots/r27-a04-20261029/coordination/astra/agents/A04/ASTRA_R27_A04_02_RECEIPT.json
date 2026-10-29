@@ -1,0 +1,29 @@
+{
+  "agent_id": "/root/a04",
+  "block": 2,
+  "TaskID": "P02-NATIVE-WEBVIEW-STRICT-PROOF",
+  "parent_remote_commit": "9df05f9cdf6e4009ffba611e502c42f3939207dd",
+  "local_commit": "d403d226c59412b24854b10fe3dd3d8bd6c4ae57",
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "pre_blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "post_blob": "fb7476d27e06aa7555342a0797d8a30cb9f699b2",
+      "pre_sha256": "443fb1d793d3767adda07463c0e9d814086a9d166a7345ed3dd9605a1004aba2",
+      "post_sha256": "d8908545c5950b719b45d1e0ce9aae75b12704b653c4c7474654321beeb6145c"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_runtime.py",
+      "pre_blob": "d893468674257b73b910bb80d1da138da0086802",
+      "post_blob": "f9209dcb9f9c3e74210443616ac12a18d6e17aec",
+      "pre_sha256": "f8403adbcbd5d6de3030646f9b544323ff2c49c582ecd3a01ee3e002495a159c",
+      "post_sha256": "08846475c1d106b1e0776e6fd9837f6bef39c1cef444541e07a3b55b2afeeb36"
+    }
+  ],
+  "red": "2 regression methods: 10 failing subcases before patch",
+  "green": "python -m unittest -q test_p02_runtime: 14/14 PASS",
+  "fix": "Native proof flags require exact bool; reject raw control/whitespace normalization and any userinfo even empty.",
+  "prior_lesson_applied": "Validate native authority at admission; do not accept stale/coerced proof.",
+  "lesson": "Type annotations do not enforce native consent; require actual booleans and reject URI ambiguity before parsing.",
+  "scope": "SOURCE_ONLY; Windows/EXE/CI/installed-provider NOT_RUN"
+}

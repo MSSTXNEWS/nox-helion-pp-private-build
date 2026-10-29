@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {bindCoreActivity,setWowEnabled} from '../assets/nox-wow2.mjs';
+const now = Date.parse('2026-10-28T12:00:00Z');
+const sample=(activity,stamp='2026-10-28T11:59:30Z')=>({activity,runId:'real-run-1',source:'events.v3',timestamp:stamp});
+test('default fails to idle without event',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,null,now),false);assert.equal(el.dataset.noxWowActivity,'idle');});
+test('fresh approved working activity applies',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,sample('working'),now),true);assert.equal(el.dataset.noxWowActivity,'working');});
+test('training is valid only from supplied event',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,sample('training'),now),true);assert.equal(el.dataset.noxWowActivity,'training');});
+test('stale activity is removed',()=>{const el={dataset:{noxWowActivity:'training'}};assert.equal(bindCoreActivity(el,sample('training','2026-10-28T11:00:00Z'),now),false);assert.equal(el.dataset.noxWowActivity,'idle');});
+test('future timestamp is rejected',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,sample('working','2026-10-28T12:02:00Z'),now),false);});
+test('missing run id rejected',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,{...sample('working'),runId:''},now),false);});
+test('unknown activity never glows',()=>{const el={dataset:{}};assert.equal(bindCoreActivity(el,sample('magic'),now),false);});
+test('feature flag disabled unless opted into',()=>{const root={dataset:{}};setWowEnabled(root,false);assert.equal(root.dataset.noxWow,'off');setWowEnabled(root,true);assert.equal(root.dataset.noxWow,'on');});
