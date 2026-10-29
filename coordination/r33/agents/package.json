@@ -1,0 +1,17 @@
+{
+  "name": "nox-helion-control-agent-r33",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Protected NOX read-only observer; optional OpenAI Agents SDK with tracing/guardrails",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node test_agents.cjs",
+    "test:security": "node test_agents.cjs"
+  },
+  "dependencies": {
+    "@openai/agents": "0.21.0",
+    "zod": "4.1.12"
+  }
+}
