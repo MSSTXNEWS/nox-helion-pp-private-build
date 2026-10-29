@@ -351,6 +351,20 @@ public sealed class ModelDownloadQueueStore
         try
         {
             using var lease = await AcquireFileLeaseAsync(ct);
+            // A restore must not replace a queue while another NOX instance
+            // owns a live model transfer. The OS-held per-job lease is proof.
+            var restoreLeases = new List<FileStream>();
+            try
+            {
+                var currentJobs = await ReadCoreAsync(ct);
+                foreach (var active in currentJobs.Where(j =>
+                             j.State is ModelJobState.Running or ModelJobState.Cancelling))
+                {
+                    var activeLease = TryAcquireExecutionLease(active.Id);
+                    if (activeLease is null)
+                        throw new InvalidOperationException("P03_RESTORE_ACTIVE_TRANSFER_HOLD");
+                    restoreLeases.Add(activeLease);
+                }
             var backup = _path + ".bak";
             ModelLocalAttestation.RequireNoExistingReparsePoint(backup);
             ModelLocalAttestation.RequireNoExistingReparsePoint(_path);
@@ -380,6 +394,11 @@ public sealed class ModelDownloadQueueStore
                 File.Move(temp, _path, overwrite: true);
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
+            }
+            finally
+            {
+                foreach (var activeLease in restoreLeases) activeLease.Dispose();
+            }
         }
         finally { _gate.Release(); }
     }
