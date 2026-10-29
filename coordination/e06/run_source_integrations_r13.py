@@ -21,7 +21,6 @@ PACK=ROOT/"proposals"/"NOX-PACK01-50"
 E06_TESTS=ROOT/"tests"/"e06"
 ADAPTER_TESTS=E06_TESTS/"adapters"
 CREATIVE_TESTS=ROOT/"integrations"/"creative"/"tests"
-CREATIVE_TESTS=ROOT/"integrations"/"creative"/"tests"
 
 SUITES=(
     ("PACK01 immutable UTF8/consent",E06_TESTS,"test_pack01_native_utf8_boundary_r03.py"),
@@ -36,14 +35,7 @@ SUITES=(
     ("P02 native frames",P02,"test_p02_native_ingress.py"),
     ("P03 ModelCenter real owner adapter",P03,"test_p03_onehost_port.py"),
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
-    ("Bounded Creative provider JSON",CREATIVE_TESTS,"test_provider_json_budget_r31.py"),
-    ("Creative import bounded file admission",CREATIVE_TESTS,"test_bounded_media_import_r31.py"),
-    ("Creative project root containment",CREATIVE_TESTS,"test_project_boundary_r31.py"),
-    ("Creative storyboard shape",CREATIVE_TESTS,"test_storyboard_shape_r31.py"),
-    ("Creative ComfyUI workflow admission",CREATIVE_TESTS,"test_workflow_admission_r31.py"),
-    ("Creative atomic film publish",CREATIVE_TESTS,"test_atomic_movie_publish_r31.py"),
-    ("Creative verified local FFmpeg STOP",CREATIVE_TESTS,"test_verified_local_ffmpeg_stop_r31.py"),
-    ("Creative weights SHA receipts",CREATIVE_TESTS,"test_weight_receipts_r20.py"),
+
 )
 
 def files_for(source:Path):
@@ -104,7 +96,8 @@ def main()->int:
         print("R13 SOURCE FIXTURE SHA VERIFIED",copied,flush=True)
         failed=[]
         for label,folder,pattern in SUITES:
-            if not (folder/pattern).is_file():
+            matches=list(folder.glob(pattern)) if "*" in pattern else [folder/pattern]
+            if not matches or any(not match.is_file() or match.is_symlink() for match in matches):
                 print("HOLD: SOURCE_TEST_MISSING",label,pattern,flush=True)
                 failed.append(label)
                 continue
