@@ -13,9 +13,22 @@ sys.path.insert(0, str(ROOT))
 spec = importlib.util.spec_from_file_location("p04_host_gpu_probe", ROOT / "preflight_local_gpu.py")
 probe = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(probe)
+VERSIONS = {"torch": "2.4.0+cu124", "transformers": "4.51.0", "peft": "0.15.0",
+            "trl": "0.19.0", "accelerate": "1.6.0", "datasets": "3.6.0",
+            "bitsandbytes": "0.45.0", "safetensors": "0.5.0"}
 
 
 class HardwarePreflightContracts(unittest.TestCase):
+    def setUp(self):
+        # Synthetic universal WHEEL metadata tests the PyPA contract parser,
+        # not target Windows CUDA binary compatibility or original wheel SHA.
+        installed = SimpleNamespace(read_text=lambda name: "Wheel-Version: 1.0\nTag: py3-none-any\n")
+        for name, replacement in (("version", VERSIONS.__getitem__),
+                                  ("distribution", lambda _: installed)):
+            patcher = patch.object(probe.metadata, name, side_effect=replacement)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
     def test_non_windows_is_hold_without_running_gpu(self):
         with patch.object(probe.platform, "system", return_value="Linux"), patch.object(
             probe.train_qlora, "nvidia_smi", side_effect=AssertionError("must not launch vendor process")
@@ -45,8 +58,7 @@ class HardwarePreflightContracts(unittest.TestCase):
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
             probe.platform, "machine", return_value="AMD64"
         ), patch.object(probe.sys, "maxsize", (1 << 63) - 1), patch.object(
-            probe.metadata, "version", return_value="fixture"
-        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            probe.train_qlora, "nvidia_smi", return_value=None):
             result = probe.inspect("BALANCED", 0)
         self.assertNotIn("WINDOWS_AMD64_64BIT_PYTHON_REQUIRED", result["errors"])
         self.assertIn("NVIDIA_TELEMETRY_UNAVAILABLE", result["errors"])
@@ -54,8 +66,7 @@ class HardwarePreflightContracts(unittest.TestCase):
 
     def test_missing_vendor_probe_holds_even_with_local_packages(self):
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
-            probe.metadata, "version", return_value="1.0"
-        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            probe.train_qlora, "nvidia_smi", return_value=None):
             result = probe.inspect("BALANCED", 0)
         self.assertEqual(result["status"], "HOLD")
         self.assertIn("NVIDIA_TELEMETRY_UNAVAILABLE", result["errors"])
@@ -66,8 +77,7 @@ class HardwarePreflightContracts(unittest.TestCase):
         cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1)
         fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda="fixture"))
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
-            probe.metadata, "version", return_value="fixture"
-        ), patch.object(probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
+            probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"), patch.object(
             probe.train_qlora, "gpu_inventory", return_value=[device]
         ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
             probe.train_qlora, "gpu_vram_headroom",
@@ -77,9 +87,50 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertEqual(result["status"], "HARDWARE_READY_ONLY")
         self.assertFalse(result["model_license_verified"])
         self.assertFalse(result["dataset_rights_verified"])
+        self.assertFalse(result["dependency_lock_verified"])
+        self.assertFalse(result["wheel_artifact_sha256_verified"])
+        self.assertEqual(result["wheel_abi_status"], "INSTALLED_ROOT_TAG_MATCH_ONLY")
         self.assertEqual(result["gpu"]["free_mib"], 11000)
         self.assertFalse(result["runtime_training_verified"])
 
+
+    def test_g4b_pypa_version_outside_declared_range_blocks_telemetry(self):
+        versions = {**VERSIONS, "torch": "2.3.0"}
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "version", side_effect=versions.__getitem__
+        ), patch.object(probe.train_qlora, "nvidia_smi", side_effect=AssertionError("must hold")):
+            result = probe.inspect("BALANCED", 0)
+        self.assertIn("PACKAGE_VERSION_OUT_OF_RANGE:torch", result["errors"])
+        self.assertEqual(result["wheel_abi_status"], "HOLD")
+
+    def test_g4b_incompatible_wheel_tag_blocks_telemetry(self):
+        installed = SimpleNamespace(read_text=lambda name: "Wheel-Version: 1.0\nTag: cp310-cp310-win_amd64\n")
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.metadata, "distribution", return_value=installed
+        ), patch.object(probe.train_qlora, "nvidia_smi", side_effect=AssertionError("must hold")):
+            result = probe.inspect("BALANCED", 0)
+        self.assertIn("WHEEL_ABI_TAG_MISMATCH:torch", result["errors"])
+        self.assertEqual(result["status"], "HOLD")
+
+    def test_g4b_missing_or_ambiguous_wheel_metadata_blocks_telemetry(self):
+        for text in (None, "Wheel-Version: 1.0\nWheel-Version: 1.0\nTag: py3-none-any\n",
+                     "Wheel-Version: 1.0\n"):
+            installed = SimpleNamespace(read_text=lambda name: text)
+            with self.subTest(text=text), patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+                probe.metadata, "distribution", return_value=installed
+            ), patch.object(probe.train_qlora, "nvidia_smi", side_effect=AssertionError("must hold")):
+                result = probe.inspect("BALANCED", 0)
+            self.assertIn("WHEEL_METADATA_INVALID:torch", result["errors"])
+
+    def test_g4b_compatible_installed_wheel_does_not_claim_cuda_or_hash_proof(self):
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.train_qlora, "nvidia_smi", return_value=None):
+            result = probe.inspect("ECO", 0)
+        self.assertEqual(result["wheel_abi_status"], "INSTALLED_ROOT_TAG_MATCH_ONLY")
+        self.assertFalse(result["dependency_lock_verified"])
+        self.assertFalse(result["wheel_artifact_sha256_verified"])
+        self.assertFalse(result["runtime_training_verified"])
+        self.assertIn("NVIDIA_TELEMETRY_UNAVAILABLE", result["errors"])
 
 if __name__ == "__main__":
     unittest.main()
