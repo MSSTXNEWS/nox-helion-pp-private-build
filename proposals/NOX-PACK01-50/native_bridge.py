@@ -327,6 +327,9 @@ class ExistingP02Adapter:
     def attach_native_selected(self,session,args):
         if not callable(self.native_selected_file):
             raise HostHold("Trusted native file picker not bound")
+        session.validate()
+        initial_scope=(session.tenant,session.principal,session.chat_id,
+                       session.allowed,session.private_approved)
         selected = self.native_selected_file(session)
         if not isinstance(selected,tuple) or len(selected)!=2:
             raise HostHold("Native file picker returned no approved file")
@@ -334,9 +337,13 @@ class ExistingP02Adapter:
         if not isinstance(mime,str) or not callable(getattr(stream,"read",None)):
             raise HostDenied("Native file selection invalid")
         try:
-            # Existing P02 handles MIME/signature/size/SHA, SQLite ACL and stored ID.
-            result=self.store.store_file(session.tenant,session.principal,
-                session.chat_id,mime,stream)
+            session.validate()
+            if (session.tenant,session.principal,session.chat_id,
+                    session.allowed,session.private_approved)!=initial_scope:
+                raise HostDenied("Native file picker changed authenticated scope")
+            # Existing P02 handles MIME/signature/size/SHA and SQLite ACL.
+            result=self.store.store_file(initial_scope[0],initial_scope[1],
+                initial_scope[2],mime,stream)
             return {"storedAttachment":result}
         finally:
             if callable(getattr(stream,"close",None)):stream.close()
