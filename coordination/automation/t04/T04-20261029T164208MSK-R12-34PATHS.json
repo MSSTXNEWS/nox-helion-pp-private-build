@@ -1,0 +1,1029 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T04_FIXED34_DECISIONS_PROGRESS_RECEIPT_V2",
+  "task_id": "T04",
+  "run_id": "T04-20261029T164208MSK-R12-34PATHS",
+  "scope": "EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "status": "PARTIAL_OWNER_HOLD",
+  "supersedes_for_decision_purposes": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/707a308736b4035f25fe159e9574f16e27372c7e/coordination/automation/t04/T04-20261029T1626MSK-R11-34CONFLICTS.json",
+  "previous_manifest_is_immutable": true,
+  "planned_start_msk": "2026-10-29T16:45:00+03:00",
+  "observed_start_msk": "2026-10-29T16:42:08+03:00",
+  "receipt_created_at_msk": "2026-10-29T16:48:28.220+03:00",
+  "actual_end_msk": "NOT_DETERMINED_UNTIL_GITHUB_READBACK",
+  "duration_seconds": "NOT_DETERMINED_UNTIL_GITHUB_READBACK",
+  "previous_checkpoint": {
+    "run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+    "done_claimed": 17,
+    "total": 34,
+    "percent_claimed": 50,
+    "hold": 17,
+    "reason": "Historical R11 manifest: 17 SKIP, 17 owner HOLD; original proof did not check all archive refs for two skipped paths."
+  },
+  "current_checkpoint": {
+    "done": 15,
+    "total": 34,
+    "percent": 44.1,
+    "remaining": 19,
+    "hold": 19,
+    "delta_percentage_points": -5.9,
+    "progress_bar": "████░░░░░░",
+    "rollback_explanation": "R11 false-positive SKIP #16 and #26 invalidated by live Git blob reads; 15 other historical DONE preserved. This is an evidence correction, not a product/source regression."
+  },
+  "evidence_scope": {
+    "archived_branches_in_index": 25,
+    "fixed_overlapping_paths": 34,
+    "archived_ref_path_blobs_directly_read_this_run": 59,
+    "originally_skipped_paths_reviewed": 17,
+    "identical_skip_paths_confirmed": 15,
+    "newly_contradicted_skip_paths": [
+      16,
+      26
+    ],
+    "previous_17_divergent_owner_holds_unchanged": true,
+    "owner_approved_divergent_accepts": 0,
+    "owner_journal_git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "original_manifest_git_blob": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+    "original_manifest_git_commit": "707a308736b4035f25fe159e9574f16e27372c7e",
+    "pr162_ref_head_checked": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "n16_target_source_and_pr162_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+    "n26_target_source_and_pr162_blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+    "source_patch_files": 0,
+    "new_tests": 0,
+    "nsis_exe_gitlab_final_integration": "NOT_RUN"
+  },
+  "decisions": [
+    {
+      "n": 1,
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G2-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 12,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a01-20261029",
+            "sha": "d17270551ed924b6be4715f1d5383339568d51f0"
+          },
+          {
+            "ref": "astra/r27-a04-20261029",
+            "sha": "4efa3fec8ac7484d977e1a480dc37c00acb35805"
+          },
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "144523b0227a5824b14bec678deaa5ea449059bc"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/f0090d5ccc2df4f29a878b595bd6689c69215290/Packages/P02/worker-python/p02_native_ingress.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "d17270551ed924b6be4715f1d5383339568d51f0",
+          "pr162": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 2,
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 10,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "cc407695882a1a3223699e24cb7d90cff813cf00",
+        "checked_all_archive_refs": [
+          "astra/r27-a01-20261029",
+          "astra/r27-a02-20261029",
+          "astra/r27-a03-20261029",
+          "astra/r27-a04-20261029",
+          "astra/r27-a05-20261029",
+          "astra/r27-a06-20261029",
+          "astra/r27-a07-20261029",
+          "astra/r27-a08-20261029",
+          "astra/r27-a09-20261029",
+          "astra/r27-a10-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/f0090d5ccc2df4f29a878b595bd6689c69215290/coordination/astra/render_astra_progress_r24.py"
+      }
+    },
+    {
+      "n": 3,
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 10,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+        "checked_all_archive_refs": [
+          "astra/r27-a01-20261029",
+          "astra/r27-a02-20261029",
+          "astra/r27-a03-20261029",
+          "astra/r27-a04-20261029",
+          "astra/r27-a05-20261029",
+          "astra/r27-a06-20261029",
+          "astra/r27-a07-20261029",
+          "astra/r27-a08-20261029",
+          "astra/r27-a09-20261029",
+          "astra/r27-a10-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/f0090d5ccc2df4f29a878b595bd6689c69215290/coordination/astra/verify_astra_no_loss_r23.py"
+      }
+    },
+    {
+      "n": 4,
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G5-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 4,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a09-20261029",
+            "sha": "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc"
+          },
+          {
+            "ref": "astra/r29-a05-20261029",
+            "sha": "fd956f5b2c314b50eba080f721ca2c9b435f9339"
+          },
+          {
+            "ref": "astra-b/r29-b3-20261029",
+            "sha": "f1dc819173c113c731d09325534cd0e2eb8ef4cc"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e953a5a9cbb914080697e2e810d2f5af66a8a14d/Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "target_preimages_recorded_R11": {
+          "astra_source": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+          "pr162": "a1f1ca5a72388a43be2dc035150487405820ffcf"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 5,
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "UNASSIGNED",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a04-20261029",
+            "sha": "19632f3a0d2abbd94a58dfa2af86db299347b87e"
+          },
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "ddf27032f81fb70c121c3729f7df75b44df40f64"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5ed25389bbe553e39c5293e417bc184909d53bf8/Packages/P02/worker-python/p02_chat_bridge.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+          "pr162": "65eeb35f2d333e522db92988ef7afa26617a31fa"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 6,
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G2-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a04-20261029",
+            "sha": "dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd"
+          },
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "a76148c98bdbac20e77ae0b473485bf6175dfb34"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5ed25389bbe553e39c5293e417bc184909d53bf8/Packages/P02/worker-python/p02_runtime.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+          "pr162": "124517fdb5f99c96840596cd14b0ff496bc5c14a"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 7,
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G2-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "d721cd9608d62052060ae2c7ff6db240b281802f",
+        "checked_all_archive_refs": [
+          "astra/r27-a05-20261029",
+          "astra/r29-a02-20261029",
+          "astra/r29-a04-voice-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/62a3e682a45b1ea34a85aa446828bd8cb76ecf19/Packages/P02/worker-python/p02_capabilities.py"
+      }
+    },
+    {
+      "n": 8,
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G2-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a05-20261029",
+            "sha": "dcef668c010b9b215131e610eab960a3d864ec14"
+          },
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/62a3e682a45b1ea34a85aa446828bd8cb76ecf19/Packages/P02/worker-python/p02_owner_route_ports.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+          "pr162": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 9,
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G3-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a06-20261029",
+            "sha": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f"
+          },
+          {
+            "ref": "astra/r29-a03-20261029",
+            "sha": "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17"
+          },
+          {
+            "ref": "astra/r29-a6-p03-catalog-20261029",
+            "sha": "068f2217f3ce4b1cce2be930ff1453f42941efab"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e96ff6a87d0ab089029b3218ecea36759897e8bf/Packages/P03/Admission/p03_modelcenter_gate.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+          "pr162": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 10,
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G3-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r27-a06-20261029",
+            "sha": "c04d5a56c9fc6547488386f3b4a3eefd9795efee"
+          },
+          {
+            "ref": "astra/r29-a03-20261029",
+            "sha": "21d2db7c7916ccd54d926cff26044f7375a592c8"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/e96ff6a87d0ab089029b3218ecea36759897e8bf/Packages/P03/Source/python-host/p03_onehost_port.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+          "pr162": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 11,
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G4-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a04-20261029",
+            "sha": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+          },
+          {
+            "ref": "astra-b/r29-b1-20261029",
+            "sha": "733a3a498419c7963d244335e8b109e0bb1b2359"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/995e1488bf0fac028dadabafad9c197d2ef3b1f7/Packages/P04/model_snapshot_probe.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+          "pr162": "7815e7356b538166cb6c068d8eaafd098f3f42c9"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 12,
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G4-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a04-20261029",
+            "sha": "d261a4b1256a82562f13161986ed6db46ded2636"
+          },
+          {
+            "ref": "astra-b/r29-b2-20261029",
+            "sha": "df7567599fc3317adc607b42f687ba01c77f780c"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/995e1488bf0fac028dadabafad9c197d2ef3b1f7/Packages/P04/preflight_local_gpu.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+          "pr162": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 13,
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G5-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "8c20156bee3db953f74b34f62bc5e57709d30c6a",
+        "checked_all_archive_refs": [
+          "astra/r29-a05-20261029",
+          "astra-b/r29-b3-20261029",
+          "astra-b/r29-b4-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05CanonicalEvents.cs"
+      }
+    },
+    {
+      "n": 14,
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G5-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+        "checked_all_archive_refs": [
+          "astra/r29-a05-20261029",
+          "astra-b/r29-b3-20261029",
+          "astra-b/r29-b4-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05CriterionSeal.cs"
+      }
+    },
+    {
+      "n": 15,
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G5-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a05-20261029",
+            "sha": "4390085208078e9f5bf21c16155e1b046301cd13"
+          },
+          {
+            "ref": "astra-b/r29-b4-20261029",
+            "sha": "259206f4622919d54100d4c2cc22c1881af6c129"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05DriveRunGate.cs",
+        "target_preimages_recorded_R11": {
+          "astra_source": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+          "pr162": "a1c6e8c109c180d4c1ec0af6804e02a988256f96"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 16,
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "status": "HOLD",
+      "decision": "PREVIOUS_SKIPPED_ARCHIVE_BLOBS_ARE_DIFFERENT_OWNER_REVIEW_REQUIRED",
+      "owner": "G5-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a05-20261029",
+            "sha": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+          },
+          {
+            "ref": "astra-b/r29-b3-20261029",
+            "sha": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+          },
+          {
+            "ref": "astra-b/r29-b4-20261029",
+            "sha": "a32f9bab740a7694049c7f3cc1b36cd990f3d51e"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "target_preimages_recorded_R11": {
+          "astra_source": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+          "pr162": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": true,
+        "new_20261029_git_blob_discrepancy": true
+      }
+    },
+    {
+      "n": 17,
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G5-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+        "checked_all_archive_refs": [
+          "astra/r29-a05-20261029",
+          "astra-b/r29-b3-20261029",
+          "astra-b/r29-b4-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05SafeRunReports.cs"
+      }
+    },
+    {
+      "n": 18,
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G5-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "2187ee5ecae18179a5daa7c60859cad06f275b81",
+        "checked_all_archive_refs": [
+          "astra/r29-a05-20261029",
+          "astra-b/r29-b3-20261029",
+          "astra-b/r29-b4-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/856d225543e78103868b3b04f0c53398437513f7/Packages/P05/E05/src/E05VerifiedReadiness.cs"
+      }
+    },
+    {
+      "n": 19,
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G6-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "005866951edbd17a4ab120feecc177c8fd414c8e",
+        "checked_all_archive_refs": [
+          "astra/r29-a06-20261029",
+          "astra-b/r29-b5-20261029",
+          "astra-b/r29-b6-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/cbfe853500c781bfeac6419ccc581843ea1bedce/coordination/e06/adapters/pc_control_owner_port.py"
+      }
+    },
+    {
+      "n": 20,
+      "path": "coordination/e06/source_deep_inventory.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G6-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c",
+        "checked_all_archive_refs": [
+          "astra/r29-a06-20261029",
+          "astra-b/r29-b5-20261029",
+          "astra-b/r29-b6-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/cbfe853500c781bfeac6419ccc581843ea1bedce/coordination/e06/source_deep_inventory.py"
+      }
+    },
+    {
+      "n": 21,
+      "path": "coordination/e06/stage_onehost.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G6-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a06-20261029",
+            "sha": "8ae8523d83e175cb83a32ca497bb2c15f08948ca"
+          },
+          {
+            "ref": "astra-b/r29-b6-20261029",
+            "sha": "4136ae420ed953ad5715b5c4416834327c5fd096"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/cbfe853500c781bfeac6419ccc581843ea1bedce/coordination/e06/stage_onehost.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+          "pr162": "88649c375a3ba6ffeb943bcc8d405fcd324427cd"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 22,
+      "path": "coordination/e06/verify_original_729_source.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G6-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a",
+        "checked_all_archive_refs": [
+          "astra/r29-a06-20261029",
+          "astra-b/r29-b5-20261029",
+          "astra-b/r29-b6-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/cbfe853500c781bfeac6419ccc581843ea1bedce/coordination/e06/verify_original_729_source.py"
+      }
+    },
+    {
+      "n": 23,
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G6-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 3,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a06-20261029",
+            "sha": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+          },
+          {
+            "ref": "astra-b/r29-b5-20261029",
+            "sha": "164c7c0027c98c5bf201977d4cf23591dc1562a0"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/cbfe853500c781bfeac6419ccc581843ea1bedce/proposals/NOX-PACK01-50/native_bridge.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "805ade553b3fd102f8995a54632d0ad904316c9c",
+          "pr162": "805ade553b3fd102f8995a54632d0ad904316c9c"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 24,
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G1-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a01-20261029",
+            "sha": "19233446b6ee8b508106a548ff67eaffe13dbb82"
+          },
+          {
+            "ref": "astra/r29-a2-p01-20261029",
+            "sha": "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/51fa2a849924d87e2302f90ebaa67b720fc723c7/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "target_preimages_recorded_R11": {
+          "astra_source": "87d901c3846359a91be3e8288f24302cc7060257",
+          "pr162": "87d901c3846359a91be3e8288f24302cc7060257"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 25,
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "UNASSIGNED",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a01-20261029",
+            "sha": "ab76cd9fdcc46a31835e4fbca235d910ea819fb9"
+          },
+          {
+            "ref": "astra/r29-a2-p01-20261029",
+            "sha": "25eb2bc57a0feaf472490dff30f68d2a31cdf1ee"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/51fa2a849924d87e2302f90ebaa67b720fc723c7/stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+        "target_preimages_recorded_R11": {
+          "astra_source": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+          "pr162": "eb45add5a929eee99bc09ef87f2db3735556b78b"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 26,
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "status": "HOLD",
+      "decision": "PREVIOUS_SKIPPED_ARCHIVE_BLOBS_ARE_DIFFERENT_OWNER_REVIEW_REQUIRED",
+      "owner": "G1-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a01-20261029",
+            "sha": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+          },
+          {
+            "ref": "astra/r29-a2-p01-20261029",
+            "sha": "5eca50b708a6865c585cd767259dfd78a11f0fdc"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/51fa2a849924d87e2302f90ebaa67b720fc723c7/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "target_preimages_recorded_R11": {
+          "astra_source": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+          "pr162": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": true,
+        "new_20261029_git_blob_discrepancy": true
+      }
+    },
+    {
+      "n": 27,
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d",
+        "checked_all_archive_refs": [
+          "astra/r29-a02-20261029",
+          "astra/r29-a04-voice-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c/Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py"
+      }
+    },
+    {
+      "n": 28,
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G2-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "a7f462b11050bc2fba27081cf9e1325657314eb7"
+          },
+          {
+            "ref": "astra/r29-a04-voice-20261029",
+            "sha": "f043f041db2634a40242d10a462e816330062118"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c/Packages/P02/worker-python/p02_framed_worker.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": "255dfb7ab330c825fcc362b619614189c4915e6c",
+          "pr162": "255dfb7ab330c825fcc362b619614189c4915e6c"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 29,
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G2-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+        "checked_all_archive_refs": [
+          "astra/r29-a02-20261029",
+          "astra/r29-a04-voice-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c/Packages/P02/worker-python/p02_host_admission.py"
+      }
+    },
+    {
+      "n": 30,
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G2-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a02-20261029",
+            "sha": "a0b7171b063d4c51832c0330b40261c0837941c1"
+          },
+          {
+            "ref": "astra/r29-a04-voice-20261029",
+            "sha": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c/Packages/P02/worker-python/p02_original_voice_port.py",
+        "target_preimages_recorded_R11": {
+          "astra_source": null,
+          "pr162": null
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    },
+    {
+      "n": 31,
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G3-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0",
+        "checked_all_archive_refs": [
+          "astra/r29-a03-20261029",
+          "astra/r29-a6-p03-catalog-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/99b28cbfc0b618129564964297d5df5c6e2a9b3e/Packages/P03/Admission/p03_reviewed_artifact_adapter.py"
+      }
+    },
+    {
+      "n": 32,
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "e4fc503d37bf96d8894104078ee4c9198abd0834",
+        "checked_all_archive_refs": [
+          "astra/r29-a03-20261029",
+          "astra/r29-a6-p03-catalog-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/99b28cbfc0b618129564964297d5df5c6e2a9b3e/Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs"
+      }
+    },
+    {
+      "n": 33,
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "status": "DONE",
+      "decision": "SKIP_IDENTICAL_ARCHIVED_BLOBS_ONLY",
+      "owner": "G3-B",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "git_blob_sha": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb",
+        "checked_all_archive_refs": [
+          "astra/r29-a03-20261029",
+          "astra/r29-a6-p03-catalog-20261029"
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/99b28cbfc0b618129564964297d5df5c6e2a9b3e/Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+      }
+    },
+    {
+      "n": 34,
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "status": "HOLD",
+      "decision": "DIVERGENT_BLOBS_OWNER_DECISION_HOLD",
+      "owner": "G3-A",
+      "evidence": {
+        "prior_manifest_sha": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+        "prior_run_id": "T04-20261029T1626MSK-R11-34CONFLICTS",
+        "archive_ref_count": 2,
+        "index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+        "owner_journal_sha": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+        "index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+        "competing_blobs": [
+          {
+            "ref": "astra/r29-a03-20261029",
+            "sha": "a5a6bb768f2820567053af55a48cd68919813ed9"
+          },
+          {
+            "ref": "astra/r29-a6-p03-catalog-20261029",
+            "sha": "f32c250613ba7750f09b9a8fa14ce28cb9e8b7bd"
+          }
+        ],
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/99b28cbfc0b618129564964297d5df5c6e2a9b3e/Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+        "target_preimages_recorded_R11": {
+          "astra_source": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+          "pr162": "c057fea02f9e53121ba21110b12b12f2128a8fb2"
+        },
+        "owner_approved_receipt": "NOT_AVAILABLE",
+        "latest_target_preimage_rechecked": false
+      }
+    }
+  ],
+  "single_blocker_and_owner": "19 divergent donor paths lack a single explicit owner-approved SHA selection bound to current target PRE. In particular #16 G5-B and #26 G1-A were falsely marked SKIP; #5 and #25 lack unambiguous owner assignment in current R30 file-lock. Owner lanes must decide; T05/T06 must not adopt or merge any unresolved variant.",
+  "handoff_T05_T06": "Take the 15 evidenced SKIPs as archive dedupes only (not code acceptance). Treat all other 19 as HOLD; resolve #16 and #26 explicitly, assign owners for #5/#25 by authorized owner-map revision, require exact PRE/POST SHA and owner immutable receipt, then hand approved candidates to T05 and single-tree T06. Do not change PR162, main, R30, D02, installer, packs or product code.",
+  "applied_prior_lesson": "Archive path overlap is not a semantic conflict: same Git blob may be SKIP only on exact identity; owner/preimage are required before accepting different variants.",
+  "new_self_improvement_lesson": "Never mark a multi-branch overlap SKIP by checking only a subset of donor refs or by copying a prior manifest conclusion. Compare EVERY archive ref for that path; a single differing Git blob invalidates the SKIP, and a correction must identify the exact path/refs while preserving unrelated proven DONE.",
+  "T02_common_docs_policy": "READ_ONLY; T02 is sole CAS+readback writer of Master/E06/Lessons/C34. Send this immutable Git receipt to T02; no Google Doc mutations by T04.",
+  "no_loss": "Original snapshots, historical DONE receipts, ZIP 3 parts, 729 original files, 968 Git blobs, D02/WOW001-200, 8 CoreID, 5 Persona, PACK01/02, Voice/RAG/GPU/SPACE/Host50 and user data were NOT changed.",
+  "git_readback": "PENDING_WRITE"
+}
