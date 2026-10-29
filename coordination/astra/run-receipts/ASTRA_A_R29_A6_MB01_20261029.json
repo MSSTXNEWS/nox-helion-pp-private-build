@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A6-MB01-20261029",
+  "owner": "A6",
+  "branch": "astra/r29-a6-p03-catalog-20261029",
+  "taskId": "P03 reject invalid RAM sensor and unavailable system disk",
+  "prePostGitBlobs": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs",
+      "pre": "401f2cf9b318575542fce77db6571dd3ce2ee8f4",
+      "post": "d2063f619a8b580ca4f3b8dc6767fe1eeff0bf1c",
+      "commit": "bd81b8bc5d135dfdeed776605cd27fec5ec5e32a"
+    }
+  ],
+  "sourceStaticAssertions": "3/3 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 0,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "0/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
