@@ -166,7 +166,7 @@ def _nonblank_license_id(value: Any) -> bool:
 
 # This is lexical screening only; the ORIGINAL P03 native GGUF queue must still
 # resolve real paths, ACLs, reparse points, file identity and SHA-256 itself.
-_WIN_DEVICE_STEM = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])$", re.I)
+_WIN_DEVICE_STEM = re.compile(r"^(?:CON|CONIN\$|CONOUT\$|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])$", re.I)
 _WIN_INVALID_CHARS = frozenset('<>:"|?*')
 
 
