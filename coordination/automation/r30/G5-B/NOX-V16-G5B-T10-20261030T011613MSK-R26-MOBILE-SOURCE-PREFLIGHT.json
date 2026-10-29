@@ -1,0 +1,125 @@
+{
+  "schema": "NOX_V16_T10_R26_INDEPENDENT_PRE_FREEZE_QA_V1",
+  "run_id": "NOX-V16-G5B-T10-20261030T011613MSK-R26-MOBILE-SOURCE-PREFLIGHT",
+  "task_id": "T10",
+  "role": "G5-B auxiliary independent source gate",
+  "planned_msk": "2026-10-30T01:15:00+03:00",
+  "started_msk": "2026-10-30T01:16:13+03:00",
+  "saved_utc": "2026-10-29T22:26:13.153Z",
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "rules_33": 56,
+  "register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+  "register_counts": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2
+  },
+  "r26_policy_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+  "docs_revisions": {
+    "Master": "AHj4eMQJfPI1zFjcKDNuP9g5p7RhzHfm42pB2h4QGAsEUVHH5IGqmICx29vCOBhcqFu0P3mU4aJCr0EPsXzTxtJypdg6QEWjmwusEC3G-rk",
+    "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "Lessons": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL-QXf0E",
+    "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "qa_source_head": "2bb94db2e9bf7328437e2bfacb2cb6008ff514a5",
+  "qa_source_tree": "5d8bb83458e31540c8564c233703cfb07bcda95f",
+  "live_source_head_at_save": "bdedd09861d7015bf4d15d82a8c12c354f904964",
+  "drift_paths": [
+    "proposals/P01/WOW-MAX10/route-dispatch.mjs",
+    "proposals/P01/WOW-MAX10/route-dispatch.test.mjs"
+  ],
+  "dependency_paths_unchanged": true,
+  "owner_map": {
+    "prior_T08_R35_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "current_blob": "6e3436821a975b1986261791de060a1020de7079",
+    "changed_task_id": "NIP01-50",
+    "route": "mobile.connect",
+    "owner": 6,
+    "source_bound_before": 39,
+    "source_bound_after": 40,
+    "unbound_before": 11,
+    "unbound_after": 10,
+    "native_pending": 14,
+    "legacy_source_holds": 13
+  },
+  "owner_port": {
+    "path": "coordination/e06/adapters/g2_space_mobile.py",
+    "blob": "e1f14ea075e9a384346757d7fd23c9a61745200c",
+    "symbol": "PrivateMobileContract.connect",
+    "registry_blob": "f63b0139efaf11aa128d1b68435df3d056fcb3a5",
+    "test_blob": "6f3d0e58d8977c8649a952d3449dba1dd5e2a8"
+  },
+  "physical": {
+    "static_source_checks_pass": 12,
+    "static_source_checks_total": 12,
+    "checks": "unique 50 IDs, 40/10 counts, one exact task delta, owner port exists, gateway fail-closed, native consent+CSRF+TOCTOU guards, 0 EXE acceptance",
+    "python_unit": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "independent_runtime_QA": false
+  },
+  "P04_current_test": {
+    "path": "tests/P04/test_model_snapshot_probe.py",
+    "blob": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+    "same_as_T08_R35": true,
+    "T08_original_suite": "36/37; one byte-identical JSON fixture expects a different SHA",
+    "owner_fix_prepared_not_integrated": true
+  },
+  "freeze_evidence": {
+    "T09_R22_commit": "f7c0123e1da20ef0542cbb086f7a96388f59d2f8",
+    "T09_receipt_blob": "464b3e6a58a739a0b1f7cfb1b09772ea4b81c299",
+    "T09_frozen_head": null,
+    "T08_R35_commit": "5092f77a7444bc070b3eb98768ce708bea15bab4",
+    "T08_pinned_head": "79005fcb92dd540d00d82355203757bd367e2f20",
+    "T06_8_of_8": "NOT_EVIDENCED"
+  },
+  "residual_unbound": [
+    "NIP01-26",
+    "NIP01-30",
+    "NIP01-36",
+    "NIP01-37",
+    "NIP01-38",
+    "NIP01-39",
+    "NIP01-40",
+    "NIP01-47",
+    "NIP01-48",
+    "NIP01-49"
+  ],
+  "t10": {
+    "accepted_before": 1,
+    "accepted_after": 1,
+    "total": 7,
+    "percent": 14.3,
+    "delta": 0,
+    "historical_zip_729": "DONE",
+    "remaining_criteria": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7
+    ],
+    "SOURCE_READY": false,
+    "PRODUCT": "N/D"
+  },
+  "errors": {
+    "ERR-SYS-002": "APPLY_SHA_DRIFT_CHECK",
+    "ERR-SRC-004": "DELEGATE_T06_AND_T08",
+    "ERR-SRC-003": "DELEGATE_T06",
+    "ERR-SRC-005": "DELEGATE_T08",
+    "ERR-SYS-006": "HISTORICAL_DONE",
+    "ERR-SYS-007": "HISTORICAL_DONE",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "NO_FALSE_TASK_DONE"
+  },
+  "next": {
+    "T06": "Use existing T08 one-line P04 test fixture fix; complete 10 bound-missing owner routes with real host callbacks and manifest; preserve consent/STOP/ACL.",
+    "T08": "Independent Python/Windows 50 route acceptance and mobile.connect source+native on exact post-HEAD; original P04 37 tests after owner fix.",
+    "T09": "Freeze only after T06 8/8 and T08 same-SHA independent acceptance.",
+    "T02": "Update common journals only by T02 CAS/readback; receipt is handoff, not common write."
+  },
+  "build": "FORBIDDEN",
+  "EXE": "NOT_RUN",
+  "CI": "NOT_RUN",
+  "E07": "NOT_RUN",
+  "status": "INCOMPLETE_SOURCE_ONLY_PRE_FREEZE"
+}
