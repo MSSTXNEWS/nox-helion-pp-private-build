@@ -1,0 +1,167 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3A_OWNER_RECEIPT_V2",
+  "runId": "G3A-20261029T104739MSK-R06-61709f0e",
+  "slot": "G3-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "sourceStatus": "SOURCE_SAVED_STATIC_PASS",
+  "runtimeStatus": "NOT_RUN",
+  "sourceCodeComplete": "HOLD",
+  "e06": "HOLD",
+  "e07": "NOT_RUN",
+  "release": "HOLD",
+  "taskId": "G3A-R30-P03-STRICT-RETRY-EVENT-SEQUENCE-TYPE-R06",
+  "taskIdStage": "SOURCE_PATCH_SAVED_NOT_PRODUCT_ACCEPTED",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "forbidden": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "conflictAlgorithm": "one writer per exact path; no owner crossover; Git SHA preimage check"
+  },
+  "prior": {
+    "runId": "G3A-20261029T094231MSK-R05-a54ed7fc",
+    "branch": "automation/r30/g3a/G3A-20261029T094231MSK-R05-a54ed7fc",
+    "head": "61709f0e1434a4957a82736f1d7cbcf04b7dc4ab",
+    "lesson": "Run a complete callback boundary audit; progress/retry guard preflight before native; do not conflate static readback and Python execution.",
+    "latestDriveCoordinatorRunId": "ASTRA-C-R30-20261029T1034MSK-05",
+    "latestDriveLesson": "Explicit unique SOURCE TaskID, owner-path tests and reproducible full-module test, not percent completion. Worker Git receipts only.",
+    "historicalC34": "READ_ONLY"
+  },
+  "source": {
+    "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+    "preBlobSha1": "bb5ec85b27d6bf6b1e61d1a77ceae40c7fb53f59",
+    "postBlobSha1": "45d4544625a721f2704cdf8abf7697df27be8680",
+    "preSha256": "ea253c62b18525b3363dec2a91e9b03757d99c53458848b58e27e91041801e51",
+    "postSha256": "9f5c91631c80b1b8dc095a918cfd7cd9b100737efdcd8c87d353f5dd067faeed",
+    "commit": "def4a07ff778c1857d070e5579308ea82dd60695",
+    "readbackExactGitBlob": true,
+    "change": "Retry eventSequence == 1 previously admitted bool True, float 1.0 and integer subclass as numeric aliases. Enforce type(x) is int before the trusted native verifier and retain strict _positive(previous eventSequence). Source-only policy; no queue execution."
+  },
+  "finding": {
+    "rootCause": "Python bool True == 1 and float 1.0 == 1; retry reset used equality without exact int type checking. Prior frozen P03 snapshots already have the strict guard, but R05 live gate omitted it, a no-loss regression.",
+    "historicalFrozenP03SourceEvidence": [
+      {
+        "snapshot": "r27-a06-20261029",
+        "gitBlobSha1": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f"
+      },
+      {
+        "snapshot": "r29-a03-20261029",
+        "gitBlobSha1": "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17"
+      },
+      {
+        "snapshot": "r29-a6-p03-catalog-20261029",
+        "gitBlobSha1": "068f2217f3ce4b1cce2be930ff1453f42941efab"
+      }
+    ],
+    "restoredStrictTypeInvariant": true
+  },
+  "test": {
+    "path": "Packages/P03/Admission/test_g3a_r30_r06_retry_sequence_type.py",
+    "gitBlobSha1": "87c81b3bbee5c5bef06b302ae20295461f997fbb",
+    "sha256": "52a995029d0675d9257ac33a63746cedd09a9b5083c63b555347f255ab7eb4ad",
+    "commit": "6d21d2a9758c265d83cc75d97a1d3539f0dd87c4",
+    "createdTestMethods": 9,
+    "negativeVariants": [
+      "True",
+      "1.0",
+      "Decimal('1')",
+      "int subclass(1)",
+      "'1'",
+      "None",
+      "False",
+      "0",
+      "2",
+      "-1",
+      "2.0",
+      "[]",
+      "{}",
+      "previousSequence=True/0/-1/1.0/'1'"
+    ],
+    "positiveControl": "exact builtin int 1 passes synthetic trusted verifier once; absence of verifier always HOLD",
+    "structuralReadback": {
+      "command": "GitHub fetch_file exact source/test + JavaScript SHA-256 recomputation + 14 static source and fixture assertions",
+      "passed": 14,
+      "total": 14,
+      "status": "PASS"
+    },
+    "python": {
+      "command": "cd Packages/P03/Admission && python -m unittest -v test_g3a_r30_r06_retry_sequence_type",
+      "status": "NOT_RUN",
+      "reason": "Connected private Git source was not mounted into local Python runtime; source-only Python test saved for authorized checkout, no claim of executing it."
+    },
+    "nativeE06": {
+      "status": "NOT_RUN",
+      "reason": "Real Windows/E06 queue verifier, SourceLock and Ollama not executed."
+    }
+  },
+  "git": {
+    "baseBranch": "automation/r30/g3a/G3A-20261029T094231MSK-R05-a54ed7fc",
+    "baseHead": "61709f0e1434a4957a82736f1d7cbcf04b7dc4ab",
+    "privateBranch": "automation/r30/g3a/G3A-20261029T104739MSK-R06-61709f0e",
+    "headAfterSourceAndTest": "6d21d2a9758c265d83cc75d97a1d3539f0dd87c4",
+    "commitsSourceAndTest": [
+      "def4a07ff778c1857d070e5579308ea82dd60695",
+      "6d21d2a9758c265d83cc75d97a1d3539f0dd87c4"
+    ],
+    "comparedChangedPaths": [
+      "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "Packages/P03/Admission/test_g3a_r30_r06_retry_sequence_type.py"
+    ],
+    "outOfOwnerPaths": [],
+    "snapshotChanges": []
+  },
+  "frozen": {
+    "conflictIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "historicalSnapshotDirectoriesPresent": 25,
+    "historicalSnapshotDirectoriesIndexed": 25,
+    "p03FrozenSourceFilesInspected": 3,
+    "allSnapshotFileBytesIndividuallyVerified": false,
+    "physicalOriginal729ShaVerified": false
+  },
+  "modelStatus": {
+    "familyRecords": 30,
+    "verifiedDownloadableArtifacts": 0,
+    "rightsLicenseSourceArtifactShaRamVramRuntime": "HOLD"
+  },
+  "handoffG3B": {
+    "request": "Open from R04/R05: in G3-B exclusive queue/transport code bind live E06 trusted queue verifier and current measured availableRamBytes to same native owner session; do not treat synthetic test callbacks as native evidence. New R06 strict retry numeric sequence needs no G3-B code change.",
+    "modifiedByG3A": false,
+    "targetOwnedByPeer": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "selfImprovement": {
+    "observed": "A safety invariant present in three frozen P03 donor snapshots disappeared from the working R05 gate. Snapshot existence alone does not protect behavior.",
+    "applied": "Read newest Astra-C lesson before modifying; verify exact pre SHA256, compare 3 archived P03 source blobs, restore missing strict-int guard, save 9 targeted cases, independently re-read and hash source/test. No repeat of R05 callback-boundary work.",
+    "next": "Execute Python regression in authorized source-only checkout; compare historical P03 invariants systematically against owner HEAD, preserve missing tests and handoffs in own receipt. Never mark SOURCE_CODE_COMPLETE on JS-only static checks."
+  },
+  "prohibitedActions": {
+    "main": false,
+    "pr162": false,
+    "sharedR30": false,
+    "otherOwnerPaths": false,
+    "originalSnapshots": false,
+    "exe": false,
+    "nsis": false,
+    "windowsCI": false,
+    "gitlab": false,
+    "merge": false
+  },
+  "driveWriteByWorker": false,
+  "coordinator": "Astra-C",
+  "receiptPath": "coordination/automation/r30/G3-A/G3A-20261029T104739MSK-R06-61709f0e.json"
+}
