@@ -31,6 +31,9 @@ if ($manifestItem.PSIsContainer -or (($manifestItem.Attributes -band [IO.FileAtt
 # Validate all nested members before any install activation or file operations.
 function Assert-P01UniqueManifestMembers([string]$Path) {
   Add-Type -AssemblyName System.Runtime.Serialization -ErrorAction Stop
+  $boundedInfo=Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+  if ($boundedInfo.PSIsContainer -or $boundedInfo.Length -lt 2 -or
+      $boundedInfo.Length -gt 16777216) { throw 'P01_MANIFEST_PRE_READ_SIZE_HOLD' }
   $bytes = [IO.File]::ReadAllBytes($Path)
   if ($bytes.Length -lt 2 -or $bytes.Length -gt 16777216) { Fail 'manifest too large or empty' }
   $quotas = New-Object System.Xml.XmlDictionaryReaderQuotas
