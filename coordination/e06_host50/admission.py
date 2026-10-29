@@ -24,6 +24,11 @@ from urllib.parse import urlsplit
 
 BASE_COMMIT = "0b3a7d435be735148d64171deb9027093a89646e"
 BASE_TREE = "f108d604c444f718b32aaecfd07b90b8f91b9a6f"
+# Validated historical PACK01 owner-map commit/tree; NOT a current-source seal.
+HISTORICAL_OWNER_MAP_COMMIT = "eb46b49fb8a022cefa679afb8606877016808db1"
+HISTORICAL_OWNER_MAP_TREE = "bedea674b77d14d94028ba86251d8f4d690353c1"
+OWNER_MAP_PROVENANCE = {BASE_COMMIT: BASE_TREE,
+                        HISTORICAL_OWNER_MAP_COMMIT: HISTORICAL_OWNER_MAP_TREE}
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 GIT_SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 ROUTE = re.compile(r"[a-z][a-z0-9]*(?:[._][a-z0-9]+)*\Z")
@@ -283,7 +288,13 @@ class Host50Admission:
         # NOT the accepted tree of the current integrated loader source.
         # Preserve legacy baseline-only tests, but never admit a different
         # tree without a separately sealed native/owner source attestation.
-        if self.audit["baselineDrift"]:
+        owner_map_commit = self.audit["ownerMapBaseCommit"]
+        if owner_map_commit not in OWNER_MAP_PROVENANCE:
+            raise Hold("UNKNOWN_OWNER_MAP_PROVENANCE")
+        # Historical owner-map identity alone cannot authorize the active
+        # tree: even the approved legacy map requires an independently signed
+        # current SourceLock receipt and native owner verification.
+        if self.audit["baselineDrift"] and source_attestation is None:
             raise Hold("WHOLE_TREE_SOURCELOCK_NOT_RECONCILED")
         if active_tree == BASE_TREE and source_attestation is None:
             self.source_tree = BASE_TREE
@@ -302,8 +313,8 @@ class Host50Admission:
                 proof["sourceTree"] != active_tree or
                 type(proof["ownerReceiptSha256"]) is not str or
                 not SHA256.fullmatch(proof["ownerReceiptSha256"]) or
-                proof["ownerMapBaseCommit"] != BASE_COMMIT or
-                proof["ownerMapBaseTree"] != BASE_TREE or
+                proof["ownerMapBaseCommit"] != owner_map_commit or
+                proof["ownerMapBaseTree"] != OWNER_MAP_PROVENANCE[owner_map_commit] or
                 proof["nativeApproved"] is not True):
                 raise Hold("NATIVE_SOURCE_ATTESTATION_MISMATCH")
             # A Git receipt hash alone is not proof of owner approval.

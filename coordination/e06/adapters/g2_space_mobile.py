@@ -430,7 +430,9 @@ class G2OneHostBinder:
                  source_lock_sha256: str | None,
                  owner_receipts_sha256: dict[str, str],
                  verify_original_preimages: Callable,
-                 existing_host_mutation_lock: object):
+                 existing_host_mutation_lock: object,
+                 owner2_additional_ports: object | None = None,
+                 native_scope_from_session: Callable | None = None):
         self.host, self.port_type = host, bound_port_type
         self.p02, self.p03, self.e05, self.mobile, self.voice = (
             existing_p02, existing_p03, e05, mobile, existing_p02_voice)
@@ -439,6 +441,12 @@ class G2OneHostBinder:
         self.source_lock, self.receipts = source_lock_sha256, dict(owner_receipts_sha256)
         self.verify_preimages, self.lock = (
             verify_original_preimages, existing_host_mutation_lock)
+        if ((owner2_additional_ports is None) != (native_scope_from_session is None)
+                or (native_scope_from_session is not None
+                    and not callable(native_scope_from_session))):
+            raise G2Hold("P02 additional ports require a matching trusted native scope resolver")
+        self.extra_p02_ports = owner2_additional_ports
+        self.native_scope_from_session = native_scope_from_session
 
     def _receipt(self, owner: str) -> str:
         digest = self.receipts.get(owner)
@@ -494,6 +502,9 @@ class G2OneHostBinder:
                     voice_routes["calls.dial"] = dial
             mobile_routes = {"mobile.connect"} if (self.mobile is not None and
                     self.mobile.available()) else set()
+            if mobile_routes:
+                # Owner 6 cannot borrow P02's receipt to publish a mobile port.
+                self._receipt("E06")
             intended = set(e05_routes) | set(voice_routes) | mobile_routes
             for route in intended:
                 owner = 5 if route in e05_routes else 6 if route in mobile_routes else 2
@@ -507,6 +518,16 @@ class G2OneHostBinder:
                 if self.verify_preimages(self.source_lock, dict(self.receipts)) is not True:
                     raise G2Hold("Frozen original archive/preimage/owner conflict")
                 p2 = self.p02.register(self.host, receipt=self._receipt("P02"))
+                if self.extra_p02_ports is not None:
+                    # Reuse original P02 OwnerTwoPorts + PACK01 BoundPort only.
+                    # No secondary host, SQLite, voice pipeline or route factory.
+                    from p02_owner_route_ports import register_with_existing_pack01
+                    extra = register_with_existing_pack01(
+                        self.host, self.port_type, self.native_scope_from_session,
+                        self.extra_p02_ports, receipt=self._receipt("P02"))
+                    if set(p2) & set(extra):
+                        raise G2Hold("Duplicate base and additional P02 route")
+                    p2 = frozenset(p2) | extra
                 p3 = self.p03.register(self.host, self.port_type,
                                       receipt=self._receipt("P03"))
                 # Registration reports alone are not evidence of installed ports.
@@ -550,7 +571,7 @@ class G2OneHostBinder:
                 if "mobile.connect" in mobile_routes:
                     self.host.bind("mobile.connect", self.port_type(
                         self.mobile.connect, self.mobile.available,
-                        self._receipt("P02"), 6))
+                        self._receipt("E06"), 6))
                 # An owner can revoke preimage readiness while registering.
                 # Reject changed source trees and modified pre-existing ports.
                 if (self.verify_preimages(self.source_lock, dict(self.receipts)) is not True
