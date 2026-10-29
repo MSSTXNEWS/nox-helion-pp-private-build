@@ -1,0 +1,31 @@
+{
+  "schema": "ASTRA_B_SOURCE_ONLY_10_PASS_RECEIPT_V1",
+  "run_id": "ASTRA-B-R30-TURBO10-20261029",
+  "worker_label": "B2",
+  "real_subagent_id": null,
+  "spawn_status": "NOT_AVAILABLE",
+  "source_branch": "astra-b/r29-b2-20261029",
+  "baseline_previous_saved_source_approaches": 6,
+  "new_source_commits": [
+    "7d284aee084f12c313f59aecd3d0bbfd0aaa82b9",
+    "186321532bcc228b1b9c7571438a148e43b4dc0e",
+    "4ad7fe776de896f6dd1537d7fc2ef615ded3ab88",
+    "b1fe0c1daa8ca56cef2b31f9544854348711dd8c"
+  ],
+  "source_commits_saved_total_in_lane": 10,
+  "new_task_ids_local": [
+    "nf4-compute-capability",
+    "finite-temperature",
+    "torch-version-binding",
+    "ambiguous-gpu-index"
+  ],
+  "terminal_code_commit": "b1fe0c1daa8ca56cef2b31f9544854348711dd8c",
+  "prepost_compare_readback": "PASS_ONLY_ASSIGNED_PATH",
+  "targeted_test": "four targeted source invariants PASS; GPU native NOT_RUN",
+  "release_acceptance": "NOT_RUN",
+  "product_taskid_coverage": "N_D",
+  "original_archive_729_this_run": "NOT_REVERIFIED",
+  "lesson": "A source-assertion and GitHub SHA prove code text, not native installer behavior; preserve unresolved gates.",
+  "shared_docs_writer": "ASTRA_A_ONLY",
+  "source_complete": false
+}
