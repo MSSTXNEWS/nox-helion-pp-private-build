@@ -1,0 +1,116 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G2B_SOURCE_OWNER_RECEIPT_V2",
+  "run_id": "R30-G2-B-20261029T0640MSK-R02",
+  "slot": "G2-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader ONLY",
+  "status": "SOURCE_PATCHED_NATIVE_HOLD",
+  "policy": "SOURCE_ONLY; NO_EXE_NO_NSIS_NO_WINDOWS_CI_NO_GITLAB_RUN_NO_FINAL_INTEGRATION",
+  "branch": "automation/r30/g2b/20261029T0640MSK-r02",
+  "source_base_from_own_previous_run": {
+    "base_head": "51f04b7351e1e2bab7ebdcbc8fb8c836ed17900f",
+    "previously_finished_receipt": "coordination/automation/r30/G2-B/R30-G2-B-20261029T0540MSK-R01.json",
+    "new_diffs_relative_to_base": 2,
+    "source_commit": "d39cc024217978cc4f2487eb914a1d99ba25356f",
+    "test_commit": "d07adb233466003985233911ed46024ee765ebeb"
+  },
+  "reference_read": {
+    "owner_lock_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "owner_lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "owner_lock_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "owner_slot_assigned": [
+      "Packages/P02/worker-python/p02_capabilities.py",
+      "Packages/P02/worker-python/p02_original_voice_port.py",
+      "Packages/P02/worker-python/p02_owner_route_ports.py"
+    ],
+    "forbidden_peers": [
+      "Packages/P02/worker-python/p02_runtime.py",
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/p02_framed_worker.py",
+      "Packages/P02/worker-python/p02_host_admission.py"
+    ],
+    "indexed_snapshot_count": 25,
+    "immutable_snapshot_inventory": "coordination/astra/r30/snapshots/",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "overlap_review": "Three legacy source paths (capabilities, owner_route_ports, original_voice_port) overlap earlier frozen donors; current new delta touches owner-exclusive capabilities only; no snapshot writes",
+    "r30_collection_head_seen": "316fd4e48c21c69d90258886082442e2d9c76489",
+    "section33": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "v16_sections": [
+      "33",
+      "54",
+      "55",
+      "56",
+      "R29 final scope override"
+    ],
+    "google_drive_read_only": {
+      "master_continuation": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "e06_run_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "e06_self_improvement": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "c34_history": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "writing_owner": "Astra-C only",
+      "writes_performed": 0
+    }
+  },
+  "source_changes": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_git_blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f",
+      "post_git_blob_sha1": "da8d42570d5732e5fe009f86caf02b45d935edc9",
+      "pre_sha256": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+      "post_sha256": "143d170331d1184cf618cffbbeb9f517b4f381cd54d37b99e6c368aa1c9e69b0",
+      "actual_change": "SIP native provider, quote-verifier and consent hooks pinned per invocation; recheck post-verifier, post-consent and pre-dial; bind native scope and exact quote fields across callbacks; use originally authorized dialer rather than mutable self.provider."
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_g2b_r30_0640_sip_authority.py",
+      "pre_git_blob_sha1": "ABSENT",
+      "post_git_blob_sha1": "f7e17d984358620f82ba80bc0de0fc9d21f83387",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "edf0b2abf281f36cc01df580a19cba50555b805d5faaf45792926b030755446f",
+      "actual_change": "Six focused unittest scenarios: verifier swaps approver, approver swaps dialer, quote mutation, native principal mutation, authorized one-use dial, STOP during approval."
+    }
+  ],
+  "targeted_source_test": {
+    "executed": "JS deterministic structural assertions on fresh GitHub file readback",
+    "assertions_pass": 15,
+    "assertions_total": 15,
+    "test_sha256_vector_pass": true,
+    "test_command_for_python": "cd Packages/P02/worker-python && python -m unittest -v test_p02_g2b_r30_0640_sip_authority",
+    "python_unittest": "NOT_RUN (private repository no authenticated local checkout)",
+    "python_scenarios_authored": 6,
+    "Windows_native": "NOT_RUN",
+    "real_SIP": "NOT_RUN",
+    "real_microphone": "NOT_RUN",
+    "changed_paths_compare": "2 changed from base: 1 modified owner code, 1 new slot-exclusive regression; 0 peer paths, 0 snapshots, 0 deletions",
+    "saved_code_readback_blob_match": true
+  },
+  "prior_lesson_applied": "R29/R30: validate actual native authority and STOP at observable callback boundaries, preserve original provider, never claim native PASS based on text assertions.",
+  "new_lesson": {
+    "id": "G2B_R30_R02_PIN_SIP_AUTHORITY_PER_CALL",
+    "root_cause": "Earlier SIP checked quote expiry and STOP after callbacks but dereferenced self.user_approval and self.provider dynamically. A reentrant quote verifier could replace native consent, or a native approval callback could replace the dialer, inheriting old authorization.",
+    "implemented_prevention": "Pin the three existing SIP owner callables and original native scope/quote fields, reject mid-operation replacement after each callback and immediately before dialing, invoke pinned provider only.",
+    "limits": "Cannot prove provider's physical SIP authorization, atomic cancellation, fresh tariff, real Windows consent, or system-time behavior without native provider tests."
+  },
+  "requested_to_G2_A": {
+    "forbidden_path_writes": 0,
+    "status": "PROPOSAL_ONLY_NO_G2A_SOURCE_EDIT",
+    "files_to_review": [
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/p02_runtime.py"
+    ],
+    "request": "At any existing native SIP entrypoint, bind current authenticated session STOP token to ConsentGatedSip.place. If missing, fail closed instead of relying on the adapter's optional fallback Event. Preserve VoiceSession native identity/STOP retirement across callbacks; demonstrate with targeted session tests. If no SIP ingress exists, mark this route NATIVE_HOLD, not ready."
+  },
+  "completion": {
+    "newly_accepted_product_TaskID": 0,
+    "source_patch_files": 1,
+    "source_test_files_added": 1,
+    "done_not_repeated": true,
+    "original_25_snapshots_modified": 0,
+    "common_R30_modified": false,
+    "main_PR162_modified": false,
+    "code_complete": "HOLD",
+    "source_ready": "HOLD",
+    "release": "HOLD",
+    "weighted_progress": "N/D"
+  },
+  "reporting_gate": "HOLD_UNTIL_ASTRA_C_READBACK",
+  "immutable_receipt": true
+}
