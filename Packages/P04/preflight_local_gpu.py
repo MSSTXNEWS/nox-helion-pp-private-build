@@ -153,7 +153,7 @@ def _require_cuda_parent_selection_compatible(chosen_uuid: str) -> None:
 
 # A CUDA check must not leave imported torch/CUDA state in the loader process.
 # The child is one-shot, shell-free, and receives only a copied CUDA selection.
-_CUDA_PROBE_CHILD = """
+_CUDA_PROBE_CHILD = r"""
 import json
 import re
 try:
