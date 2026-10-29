@@ -1,0 +1,21 @@
+--- a/Packages/P04/model_snapshot_probe.py
++++ b/Packages/P04/model_snapshot_probe.py
+@@ -137,6 +137,18 @@
+             stream.seek(0)
+             with zipfile.ZipFile(stream) as wheel:
+                 names = wheel.namelist()
++                canonical_members = []
++                for raw_name in names:
++                    member = raw_name.rstrip("/")
++                    parts = member.split("/")
++                    if (not member or member.startswith("/") or "\\" in member
++                            or ":" in member or any(
++                                p in ("", ".", "..") or p.endswith((" ", "."))
++                                for p in parts)):
++                        raise ValueError("WHEEL_MEMBER_PATH_UNSAFE")
++                    canonical_members.append(member.casefold())
++                if len(canonical_members) != len(set(canonical_members)):
++                    raise ValueError("WHEEL_MEMBER_WINDOWS_ALIAS")
+                 metadata_names = [n for n in names if n.endswith(".dist-info/METADATA")]
+                 if len(names) != len(set(names)) or len(metadata_names) != 1:
+                     raise ValueError("WHEEL_METADATA_AMBIGUOUS")
