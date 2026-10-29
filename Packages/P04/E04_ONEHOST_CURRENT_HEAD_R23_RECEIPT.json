@@ -1,0 +1,76 @@
+{
+  "schema": "NOX_E04_ONEHOST_PINNED_CURRENT_TREE_SOURCE_RECEIPT_R23",
+  "run_id": "NOX-V16-MANUAL03-R28-20261029-E04-ONEHOST-RECONCILIATION",
+  "task_id": "P04 existing OneHost source/owner receipts reconciliation",
+  "owner": "manual_no3_P04_P05",
+  "source_repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "source_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+  "source_tree": "b1fd5ef45a1045c828a152cd3d7e32aeda50e1ab",
+  "historical_receipt": {
+    "path": "Packages/P04/E04_ONEHOST_BRIDGE_RECEIPTS.json",
+    "blob_sha": "6375a87e825a7f7946e106a7d4a5319009113582",
+    "preserve_immutable": true
+  },
+  "files": [
+    {
+      "path": "Packages/P04/rag_python_compat.py",
+      "post_git_blob_sha1": "58af025bd05f0e99a445b56c307e12d600b8f19f",
+      "historical_post_git_blob_sha1": "5556534de3ea36d634df68813c6906007181c606",
+      "status": "CURRENT_SOURCE_EVOLVED_REVIEW_REQUIRED"
+    },
+    {
+      "path": "tests/P04/test_python_host_rag_compat.py",
+      "post_git_blob_sha1": "63369984040a34081def379a0394931562c56f18",
+      "historical_post_git_blob_sha1": "63369984040a34081def379a0394931562c56f18",
+      "status": "EXACT_HISTORICAL_MATCH"
+    },
+    {
+      "path": "tests/P04/test_p02_bridge_integration.py",
+      "post_git_blob_sha1": "bf06623b68b22eec13624b42229bc301de6eb385",
+      "historical_post_git_blob_sha1": "bf06623b68b22eec13624b42229bc301de6eb385",
+      "status": "EXACT_HISTORICAL_MATCH"
+    },
+    {
+      "path": "Packages/P04/PYTHON_HOST_INTEGRATION.md",
+      "post_git_blob_sha1": "cc74411b5a7471f9af10dffda0f3ded0ea3a71e6",
+      "historical_post_git_blob_sha1": "cc74411b5a7471f9af10dffda0f3ded0ea3a71e6",
+      "status": "EXACT_HISTORICAL_MATCH"
+    }
+  ],
+  "historical_workflow": {
+    "path": ".github/workflows/nox-p04-candidate-ci.yml",
+    "historical_git_blob_sha1": "462b8bab02ffa9badce5b9aa6cba5ae7c6887d29",
+    "current_path_exists": false,
+    "role": "HISTORICAL_ISOLATED_CI_ONLY",
+    "integrate_into_product": false
+  },
+  "source_evidence": {
+    "active_paths_checked": 4,
+    "actual_blob_verified_by_live_git_tree": 4,
+    "matched_unchanged": 3,
+    "source_evolved": 1,
+    "archived_workflows_not_counted_as_current": 1,
+    "evolved_source_path": "Packages/P04/rag_python_compat.py",
+    "evolved_source_blob": "58af025bd05f0e99a445b56c307e12d600b8f19f"
+  },
+  "constraints": {
+    "source_presence_verified": true,
+    "functional_source_verified": false,
+    "same_head_native_windows": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "build_authorized": false
+  },
+  "lessons": [
+    "Historic E04 receipt remains intact; do not silently rewrite its blob SHA",
+    "For current tree admission use exact observed immutable HEAD and path Git blobs",
+    "Exclude archived isolated CI workflow from runtime source path count, not from historical preservation",
+    "Changed RAG source still requires target tests and independent same-head QA"
+  ],
+  "handoff": {
+    "T06": "Sole writer of PR162: verify this receipt against exact source HEAD, run P04 real source and safety regression, authorize accepted-current source receipt under existing owner path. Do not replace historic receipt, and do not classify archived CI workflow as product missing source.",
+    "T08": "Independently check actual source contract and owner SHA on SAME accepted T06 HEAD. Presence receipt not native acceptance.",
+    "T02": "Only writer common Master/E06/Lessons/error register, link reconciliation to existing ERR-SRC-004, no new ERROR_ID."
+  },
+  "no_loss": "729 original sources, SourceLock, D02/WOW200, 8 CoreID, 5 Persona, PACK01/02, ACL, STOP, consent, user data, historical DONE and owner locks preserved. No EXE/NSIS/CI/E07."
+}

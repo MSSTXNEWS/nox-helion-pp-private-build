@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_V16_MANUAL3_R23_PRESTART_AND_P04_SOURCE_RECONCILIATION",
+  "run_id": "NOX-V16-MANUAL03-R28-20261029-E04-ONEHOST-RECONCILIATION",
+  "role": "manual_3_existing_P04_P05",
+  "task_id": "P04 existing OneHost source/owner receipts reconciliation",
+  "prestart_read_proof": {
+    "canon_document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_sections": [
+      "1-33",
+      "33:56 rules",
+      "54-56",
+      "R18",
+      "R19",
+      "R23",
+      "R29"
+    ],
+    "r23_policy_blob": "ed7bf81059a1807eaaab82547d64d82e1549bd64",
+    "role_instruction_blob": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+    "shared_error_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMSqxXTbS8hogjyN5cjHUFhyFwD0f8jKqFgh3EUc_GSztbEWttqpsPSlTiJ5lsPSXKrotPw3jmhBIQ1MKaST1arCHLJw16U94suo7wo",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "source_pinned_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+  "source_pinned_tree": "b1fd5ef45a1045c828a152cd3d7e32aeda50e1ab",
+  "owner_pre_head": "5c0e15d2e15590483273dd4ded762e401389be48",
+  "owner_pre_tree": "4b0e26abd6c869fe9da69a1dbcc91e07287ca811",
+  "new_files": [
+    {
+      "path": "Packages/P04/E04_ONEHOST_CURRENT_HEAD_R23_RECEIPT.json",
+      "pre": "ABSENT",
+      "post_git_blob": "3c65cd7f2f5d857d1ef4e5c649ad5d38fbdbcbd9"
+    },
+    {
+      "path": "tests/P04/test_e04_onehost_current_receipt_r23.py",
+      "pre": "ABSENT",
+      "post_git_blob": "ddae696b39a73bc39a7fce09ebdd56ee4e3a2d36"
+    }
+  ],
+  "historical_evidence": {
+    "path": "Packages/P04/E04_ONEHOST_BRIDGE_RECEIPTS.json",
+    "blob": "6375a87e825a7f7946e106a7d4a5319009113582",
+    "unchanged": true
+  },
+  "root_cause": "T06 owner source gate read original 2026-10-28 legacy P04 receipt as a live HEAD acceptance receipt. Exactly 3 of 5 paths remain byte-identical; evolved RAG source has a different Git blob; old CI workflow was intentionally excluded from product tree. This is stale provenance evidence, not proof of missing 2 product files.",
+  "fix": "Create immutable HEAD-pinned source presence receipt with 4 actual current source/test/doc paths and one explicitly archived workflow. Keep original receipt untouched. Add exact Git-tree regression that rejects tampered blob or falsely active archived workflow; never promote source presence to native/QA acceptance.",
+  "verification": {
+    "actual_github_immutable_tree_check": "4/4 path blob checks MATCH",
+    "historical_equivalence": "3 exact / 1 evolved / 1 archived workflow",
+    "manifest_in_memory_assertions": "8/8 PASS",
+    "python_unittest_persisted": "AUTHORED_NOT_EXECUTED_ON_REPO",
+    "native_windows": "NOT_RUN",
+    "new_qa_accepted": 0,
+    "overall_product": "N/D"
+  },
+  "handoff": {
+    "T06": "Sole PR162 writer: read current pinned reconciliation, verify P04 test/owner provenance on exact HEAD, adopt new receipt if compatible via CAS, change owner gate only under own authority, leave historical receipt unchanged. For evolved RAG code run focused actual tests and require T08 independent same-HEAD QA.",
+    "T08": "Verify source evidence and changed P04 contracts independently; this receipt is NOT native SourceReady.",
+    "T02": "Sole shared writer; dedupe under ERR-SRC-004 / ERR-SYS-002 / premature-stop incident; CAS+readback only, no new ERROR_ID."
+  },
+  "safety": "No source runtime, owner locks, private user data, ZIP729/3 parts, SourceLock, D02/WOW200, Core8, Persona5, PACK01/02, STOP/ACL/native consent changed; no EXE/NSIS/GitLabCI/E07/release."
+}
