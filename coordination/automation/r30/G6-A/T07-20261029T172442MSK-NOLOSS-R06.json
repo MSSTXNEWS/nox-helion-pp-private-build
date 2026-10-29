@@ -1,0 +1,138 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T07_ONE_TREE_NOLOSS_GUARD_R06",
+  "taskId": "T07",
+  "runId": "T07-20261029T172442MSK-NOLOSS-R06",
+  "scope": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY; source-only",
+  "reportedUTC": "2026-10-29T14:24:42.396Z",
+  "outcome": "PARTIAL_T06_FINAL_OWNER_ACCEPTANCE_AND_T09_FREEZE_HOLD",
+  "historicalOriginal": {
+    "status": "DONE_6_OF_6_UNCHANGED",
+    "zipBytes": 60364346,
+    "zipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "membersShaCrc": "729/729 PASS (reused)",
+    "physicalT09Commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "t07AcceptedCommit": "a70ab3dc9c45e29afee737810d6be8f623b8f210",
+    "readRawAgain": false
+  },
+  "sourceHead": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "observedCommit": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+    "observedTree": "5d07e1b04f531d9774f0747be89f5c1cee2700d5",
+    "ownerMergedT06": true,
+    "T06R04Blob": "91d6868654b145b76eef060c1c459c3fe925f43b",
+    "T06R04FinalOwnerAcceptance": "PENDING",
+    "finalAcceptedHead": "NOT_ATTESTED"
+  },
+  "newFixedChecklist": {
+    "denominator": 4,
+    "previous": {
+      "accepted": 1,
+      "percent": 25,
+      "from": "T07 historical original-only 6/6, criterion 1 only; independent current-tree checks not previously counted"
+    },
+    "current": {
+      "accepted": 2,
+      "percent": 50,
+      "deltaPercentagePoints": 25,
+      "remaining": 2,
+      "bar": "█████░░░░░"
+    },
+    "criteria": [
+      {
+        "id": 1,
+        "status": "DONE",
+        "description": "original 3 part physical ZIP/729 SHA and T07 accepted immutable receipt",
+        "evidence": [
+          "aab1154cf127ef0a216b19d06362343bbda4e152",
+          "a70ab3dc9c45e29afee737810d6be8f623b8f210"
+        ]
+      },
+      {
+        "id": 2,
+        "status": "HOLD",
+        "description": "current live T06 HEAD matches FINAL accepted owner HEAD/tree",
+        "observedCommit": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+        "observedTree": "5d07e1b04f531d9774f0747be89f5c1cee2700d5",
+        "evidence": "T06 latest R04 blob 91d6868... gates.finalOwnerAcceptance=PENDING; live source branch is not same as accepted final frozen source."
+      },
+      {
+        "id": 3,
+        "status": "DONE_SOURCE_MAPPING_ONLY",
+        "description": "Git no-deletion and 34 T04 version variants on current HEAD",
+        "evidence": "base PR162 Git tree vs 7f78e15... 969/969 paths retained; 7f78e15 to e51b2b delta 0 deleted; T06 R04 34/34 selected variants match exact HEAD SHA or intentionally absent",
+        "notClaimed": "Product feature runtime/rights/rollback acceptance"
+      },
+      {
+        "id": 4,
+        "status": "HOLD",
+        "description": "T09 immutable FINAL integrated frozen HEAD/tree/manifest receipt",
+        "evidence": "T09 aab1154... is original archive only; no T09 final same-head seal yet"
+      }
+    ]
+  },
+  "sourceContinuity": {
+    "baseCommit": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "baseGitBlobs": 969,
+    "liveGitBlobs": 992,
+    "baselinePathsRetained": 969,
+    "deleted": 0,
+    "changedFromBaseline": 9,
+    "addedFromBaseline": 23,
+    "unchangedShaFromBaseline": 960,
+    "historicalProtected968": "PRIOR DONE preserved; 969 Git blob entries is this exact source-ref comparator, not a change of protected 968 denominator",
+    "parts": [
+      {
+        "path": "source_00.part",
+        "size": 20971520,
+        "blob": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      },
+      {
+        "path": "source_01.part",
+        "size": 20971520,
+        "blob": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      },
+      {
+        "path": "source_02.part",
+        "size": 18421306,
+        "blob": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      }
+    ],
+    "T06R04": {
+      "t04SelectionCount": 34,
+      "actualCurrentTreeMatched": 34,
+      "mismatches": [],
+      "t05OwnerPatchesIncluded": 2,
+      "host50SourceHolds": 13
+    },
+    "notableP02": {
+      "framedWorker": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "nativeIngress": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+      "nativeTest": "b606aaba1a7e82eb294a87d64fde6a8c399c605d"
+    },
+    "importantT06Delta": {
+      "oldHead": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+      "newHead": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+      "aheadCommits": 9,
+      "deleted": 0,
+      "modified": 6,
+      "added": 18,
+      "nonLossCaveat": "PACK01 native_bridge modified to 1cd8f2d49a440775401e4ad0a3721d2ef36c8b62; older T04 R02 selects obsolete 805ade... but new T06 R04 resolves all 34 source-version selections. Functional contract and owner source rights require final acceptance."
+    }
+  },
+  "T09ExactGuard": {
+    "identity": "T06 must supply final approved source commit+tree+CAS-bound full manifest; T09 accepts ONLY identical fresh HEAD/tree and records Git-readback immutable receipt. If HEAD advances, recalculate delta and block stale seal.",
+    "original": "Reuse physical T09 aab1154 3 parts, 60364346 bytes, combined SHA256 ff8e..., 729/729 member SHA+CRC and T07 6/6; do not rehash old GitHub base64.",
+    "variant": "Require zero deleted original source paths; preserve 968 protected baseline, 3 parts, 34/34 owner selections, verify nine changed/23 new against per-path pre/post and owner. Never overwrite stale selected blob from old T04 R02.",
+    "functionality": "Require T06 explicit source-binding/rights for D02, WOW001-200, 8 CoreIDs, 5 Personas, PACK01/02, Host50 50+50, voice/RAG/GPU/SPACE/SQLite, rollback and user data. Exact path SHA continuity alone does not certify function.",
+    "handoff": "After owner evidence, T09 create one immutable source-freeze receipt at SAME accepted HEAD/tree; T10 independently confirm SOURCE_READY against same SHA; no build until gates PASS."
+  },
+  "appliedLesson": "Latest Master/E06/Lessons C R16: owner-selected one-tree choice ≠ final owner acceptance; when T06 moves HEAD mid-run, fail closed and recompute only changed delta. Old T04 selection should be superseded by exact T06 R04 map on fresh HEAD.",
+  "writer": "G6-A isolated immutable receipt only; T02 sole common Docs writer",
+  "sourceCodeModified": false,
+  "sharedDocsModified": false,
+  "build": "NOT_RUN",
+  "EXE": "NOT_RUN",
+  "NSIS": "NOT_RUN",
+  "GitLabCI": "NOT_RUN",
+  "E07": "NOT_RUN"
+}
