@@ -26,6 +26,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private readonly HashSet<string> _seenRequestIds = new(StringComparer.Ordinal);
     private const int MaxRequestsPerDocument = 1024;
     private long _documentEpoch;
+    // Cancelling a stale native token may synchronously re-enter WebView2.
+    private int _epochRevocationDepth;
     private readonly CancellationTokenSource _lifetime = new();
     private int _disposed;
 
@@ -105,21 +107,27 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private void AdvanceDocumentEpoch(bool newDocument)
     {
         if (Volatile.Read(ref _disposed) != 0) return;
-        Interlocked.Increment(ref _documentEpoch);
-        // Clear before cancelling: callbacks may synchronously re-enter WPF.
-        var stale = new List<CancellationTokenSource>(_pending.Values);
-        _pending.Clear();
-        foreach (var source in stale)
+        Interlocked.Increment(ref _epochRevocationDepth);
+        try
         {
-            try { source.Cancel(); }
-            catch (Exception) { /* third-party callbacks cannot revive stale authority */ }
+            Interlocked.Increment(ref _documentEpoch);
+            // Clear before cancelling: callbacks may synchronously re-enter WPF.
+            var stale = new List<CancellationTokenSource>(_pending.Values);
+            _pending.Clear();
+            foreach (var source in stale)
+            {
+                try { source.Cancel(); }
+                catch (Exception) { /* third-party callbacks cannot revive stale authority */ }
+            }
+            if (newDocument) _seenRequestIds.Clear();
         }
-        if (newDocument) _seenRequestIds.Clear();
+        finally { Interlocked.Decrement(ref _epochRevocationDepth); }
     }
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
     {
-        if (Volatile.Read(ref _disposed) != 0 || !IsTrustedSource(args.Source)) return;
+        if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
+            !IsTrustedSource(args.Source)) return;
         // Bind this request to the exact source document, not a later same-origin navigation.
         var documentSource = args.Source;
         var documentEpoch = Interlocked.Read(ref _documentEpoch);
@@ -192,7 +200,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
 
     private bool IsCurrent(string documentSource, long documentEpoch)
     {
-        if (Volatile.Read(ref _disposed) != 0 || _lifetime.IsCancellationRequested) return false;
+        if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
+            _lifetime.IsCancellationRequested) return false;
         try
         {
             var current = _webView.Source;
