@@ -1,6 +1,12 @@
 --- a/coordination/e06/verify_integration.py
 +++ b/coordination/e06/verify_integration.py
-@@
+@@ -86,7 +86,8 @@
+     ) and all(H64.fullmatch(row["declared_sha256"]) and row["drive_id"] for row in donor_manifest) else "HOLD"
+     outcomes[GATES[7]] = "PASS" if data.get("sourcelock") == "VERIFIED" and data.get("host_merge") is True and data.get("events_bridge_test") == "PASS" else "HOLD"
+     lanes = data["lanes"]
 -    outcomes[GATES[8]] = "PASS" if len(lanes) == 7 and sorted(x["owner"] for x in lanes) == list(range(1,8)) and all(
-+    # Release uses lanes[:5]: order must bind owner IDs to their slots.
++    # Release uses lanes[:5]: owner identity must match its product slot.
 +    outcomes[GATES[8]] = "PASS" if len(lanes) == 7 and [x["owner"] for x in lanes] == list(range(1,8)) and all(
+         x["progress"] is None or (type(x["progress"]) in (float,int) and 0 <= x["progress"] <= 100)
+         for x in lanes
+     ) else "HOLD"
