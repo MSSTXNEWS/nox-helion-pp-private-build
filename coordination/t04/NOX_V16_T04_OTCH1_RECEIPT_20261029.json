@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V16_T04_OTCH1_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-T04-20261029T162910MSK-R01",
+  "task_id": "T04",
+  "time_msk": {
+    "start_marker": "2026-10-29T16:29:10+03:00",
+    "readback_marker": "2026-10-29T16:31:07+03:00",
+    "duration_seconds_since_start_marker": 117,
+    "full_session_duration": "N/D; no reliable end-to-end start clock"
+  },
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "isolated_branch": "t04/v16-conflict-resolution-20261029-1629msk",
+  "source_immutable_commit_sha1": "f0064948119c55001601e1bae1cd3755826605ed",
+  "frozen_collection_commit_sha1": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+  "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "owner_lock_git_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "manifest_path": "coordination/t04/NOX_V16_T04_CONFLICT_RESOLUTION_MANIFEST_20261029.json",
+  "manifest_git_blob_sha1": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6",
+  "manifest_writer_commit_sha1": "bd35fbaf3dc26fa06fee5157f4f7432e6625de80",
+  "manifest_readback": {
+    "pass": true,
+    "unique_positions": 34,
+    "all_source_blobs_40hex": true,
+    "total_historic_changed_path_instances": 115
+  },
+  "results": {
+    "frozen_source_branches": 25,
+    "fully_classified": 34,
+    "skip_identical": 17,
+    "accept": 0,
+    "owner_hold": 17,
+    "resolved_final": 17,
+    "remaining_conflicts": 17,
+    "unassigned_owner_paths": 6
+  },
+  "progress": "█████░░░░░ — 17/34 (50% final resolution, 34/34 classified)",
+  "closed_path_ids": [
+    2,
+    3,
+    7,
+    13,
+    14,
+    16,
+    17,
+    18,
+    19,
+    20,
+    22,
+    26,
+    27,
+    29,
+    31,
+    32,
+    33
+  ],
+  "blocked_path_ids": [
+    1,
+    4,
+    5,
+    6,
+    8,
+    9,
+    10,
+    11,
+    12,
+    15,
+    21,
+    23,
+    24,
+    25,
+    28,
+    30,
+    34
+  ],
+  "owner_hold_gate": "Need one signed owner candidate receipt, matching exact current preimage, and compatibility evidence. Do not auto-accept latest historical SHA.",
+  "no_loss": "Code not modified; 3 archive parts, 729 source, historic DONE, D02, WOW200 unchanged; no EXE/NSIS/CI/E07/merge.",
+  "applied_self_improvement": "Single recursive frozen 25-snapshot Git tree read and full 40-char SHA grouping avoided re-inventory of unchanged paths. Identical donors now SKIP before owner-preimage checks.",
+  "handoff": {
+    "T05": "Inspect 17 OWNER_HOLD records in manifest; accept only if existing approved owner+preimage match, else preserve holds. No new patch creation.",
+    "T06": "Do not merge 17 holds. Skip 17 byte-identical historical groups. Use manifest's exact preimage+donor SHA before any source version decision.",
+    "T02": "Common Master/E06/Lessons remain untouched. One-writer T02 should read this receipt and perform CAS append + readback if authorized. No acceptance claim."
+  },
+  "report_gate": {
+    "personal_git_receipt": "PENDING_WRITE",
+    "central_google_docs": "NOT_WRITTEN_BY_T04_T02_ONLY",
+    "central_readback": "PENDING_T02"
+  }
+}
