@@ -1,0 +1,126 @@
+{
+  "schema": "NOX_V16_R22_AUTOMATIONS_BEFORE",
+  "count": 15,
+  "items": [
+    {
+      "id": "6ae2af4f6c448191932f01b35fa364c1",
+      "title": "NOX V16 G5-A T02 журнал",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T233900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 8881,
+      "prefix": "NOX_V16_R22_ACCEPTANCE_THROUGHPUT_FIX_2026102"
+    },
+    {
+      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "title": "NOX V16 G4-B T08 блокеры",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T225100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=51;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 7756,
+      "prefix": "NOX_V16_R22_ACCEPTANCE_THROUGHPUT_FIX_2026102"
+    },
+    {
+      "id": "6ae2aef78ba881919e6022c1103959a2",
+      "title": "NOX V16 G3-C T06 интегратор",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T223900\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=39;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 11219,
+      "prefix": "NOX_V16_R22_ACCEPTANCE_THROUGHPUT_FIX_2026102"
+    },
+    {
+      "id": "6ae2af28e4b8819192bbf6bb3857cc84",
+      "title": "NOX V16 G1-A P01–P03",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 4484,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2aefbde94819183730a2ed3cad78c",
+      "title": "NOX V16 G1-C P04–P05",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T220100\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=1;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6615,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2aecc59f88191a10a9342f8a1930c",
+      "title": "NOX V16 G1-B NSIS source",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6571,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af31f2988191902bae4aaec2635e",
+      "title": "NOX V16 G2-A Host50",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6733,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+      "title": "NOX V16 G2-B P02 Voice",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6559,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af008eac8191a03526f290b801c6",
+      "title": "NOX V16 G3-A P04 GPU/RAG",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6510,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af347fbc81918ddafed356511243",
+      "title": "NOX V16 G3-B PACK02",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T222600\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=26;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6460,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "title": "NOX V16 G4-A T07 NOLOSS",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T224800\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=48;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6506,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af2f84088191ba04843861edf73b",
+      "title": "NOX V16 G4-C T09 freeze",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T230300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=3;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6543,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2aef4bbc081918693b0552743bd0d",
+      "title": "NOX V16 G5-B T10 SOURCE_READY",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T231500\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=15;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6639,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "title": "NOX V16 G5-C T11 GitLab READY",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T232700\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=27;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6636,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    },
+    {
+      "id": "6ae2aefe3c248191a7131fc9876611e6",
+      "title": "NOX V16 G2-C P03 Queue",
+      "schedule": "BEGIN:VEVENT\nDTSTART;TZID=Europe/Moscow:20261029T221300\nRRULE:FREQ=HOURLY;INTERVAL=1;BYMINUTE=13;BYSECOND=0\nEND:VEVENT",
+      "is_enabled": true,
+      "prompt_len": 6524,
+      "prefix": "NOX_V16_R21_QUEUE_COMPAT_20261029 · ОБЯЗАТЕЛЬ"
+    }
+  ]
+}
