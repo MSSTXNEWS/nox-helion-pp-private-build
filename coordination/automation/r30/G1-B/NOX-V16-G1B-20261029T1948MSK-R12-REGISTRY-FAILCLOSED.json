@@ -1,0 +1,163 @@
+{
+  "schema": "NOX_V16_G1B_R12_INDEPENDENT_REGISTRY_FAILURE_SOURCE_PROOF_V1",
+  "runId": "NOX-V16-G1B-20261029T1948MSK-R12-REGISTRY-FAILCLOSED",
+  "taskId": "G1-B existing P01/NSIS SOURCE verification (no new product TaskID)",
+  "status": "INCOMPLETE",
+  "plannedMoscow": "2026-10-29T19:30:00+03:00",
+  "observedFirstConnectedReadMoscow": "2026-10-29T19:44:18+03:00",
+  "receiptPreparedUTC": "2026-10-29T16:49:11.751Z",
+  "scope": "Only NOX HELION EXPRESS INTEGRATOR Windows loader P01 source; G1-B cannot edit Installer; T06 sole PR162 source writer; T02 sole register/Master/E06/Lessons writer",
+  "gates": {
+    "A": "PASS full canonical document 679 paragraphs/204400 chars, §33 consolidated 56/56 (document caveat: reconstruction rather than verbatim V15), §§1-33,54-56 and R29, all 11 register entries and new T06 R15; current source/owner readback",
+    "B": "PASS new independent SOURCE-ONLY negative security regression proof; candidate R10 fails desired fail-closed contract (5/5 HKCU uninstall registry writes unguarded); no runtime Windows failure asserted; no source criterion accepted",
+    "C": "PENDING until immutable Git commit+readback and owner/T02 handoff",
+    "D": "PARTIAL relevant active 11/11 triaged into 4 prior deduplicated categories plus 1 P01 registry missing-guard subcluster; historical 419 archive fingerprints not reaudited; no false full coverage"
+  },
+  "freshReadProof": {
+    "canonRevision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canonParagraphs": 679,
+    "canonChars": 204400,
+    "section33RulesChecked": 56,
+    "registerRef": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registerBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-SRC-005",
+        "ERR-SYS-006",
+        "ERR-SYS-007",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ]
+    },
+    "pr162Head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "pr162Tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "ownerJournalBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "docs": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "specificChangeSincePreviousRun": {
+    "T06R15Commit": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "T06R15TestPath": "tests/e06/test_t06_p01_nsis_powershell_contract_r15.py",
+    "T06R15TestBlob": "10786b314eb1fc20ae66c539132c50da7daf1852",
+    "T06R15ReceiptBlob": "7c4a708280d694907aef8c53297c2fa7bb8a1747",
+    "description": "new T06 caller/callee test covers 4 calls and unsupported flags but not post-activation registry error paths; G1-B provides complementary independent source-only negative regression"
+  },
+  "verifiedSource": {
+    "pathPRE": [
+      {
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "blob": "87d901c3846359a91be3e8288f24302cc7060257"
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "blob": "6c178c04957d7397c0c081e3b123940637abc6e9"
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+      }
+    ],
+    "pathPOST": "unchanged; no G1-B Installer write; no T06 merge",
+    "R10CandidatePatchBlob": "fe346fb50e29b62cedcb5125618fae215219109f",
+    "R10CandidatePost": [
+      {
+        "path": "NOX-HELION-Setup.nsi",
+        "blob": "c54ca1b6ca6b7566b46a89740da7aa1e7ade6b80"
+      },
+      {
+        "path": "Verify-Payload.ps1",
+        "blob": "e448f8266ba15e809c13bff669924fa825fd4bc1"
+      },
+      {
+        "path": "Remove-InstalledPayload.ps1",
+        "blob": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+      }
+    ]
+  },
+  "newPhysicalResult": {
+    "kind": "independent negative SOURCE test plus Git-immutable reproduction",
+    "reproSource": "R10 patch install section between post-activation integrity verification and SetOutPath/shortcut",
+    "actual": "WriteRegStr x4 + WriteRegDWORD x1; none is immediately ClearErrors/IfErrors guarded. Rollback DisplayVersion separately guarded (positive control).",
+    "counts": {
+      "candidateInstallWrites": 5,
+      "unguarded": 5,
+      "rollbackWriteGuarded": 1
+    },
+    "result": "DESIRED_SOURCE_SECURITY_CONTRACT_RED; deterministic structural gap, no assertion of Windows runtime failure",
+    "testFile": "coordination/automation/r30/G1-B/G1B_R12_RegistryFailureGate.test.mjs",
+    "testCondition": "Run against G1-A-generated NSIS candidate, expected nonzero P01_INSTALL_REGISTRY_WRITE_UNGUARDED:5/5 until approved fix. Do not count RED as product PASS.",
+    "acceptanceEffect": "0 new accepted P01 source files; x/4 unchanged",
+    "ownerAction": "G1-A must add per-write error detection and safe update/fresh-install registry state restoration in Installer-owned NSIS candidate; verify no false successful uninstall registration and no deletion of user data, then approve exact PRE/POST. T06 sole CAS writer must compare all 3 current PRE blobs; do not merge R10 blindly.",
+    "errorParent": "ERR-SRC-004",
+    "recurrence": "R10 candidate and unchanged live NSIS both have same unguarded 5-write sequence. Source gap documented before runtime.",
+    "safety": "No changes to protected archives, three source files, HKCU registry, user data, rollback, STOP, ACL, native consent. EXE/NSIS compiler/CI/E07 NOT_RUN."
+  },
+  "progress": {
+    "hierarchy": "Role G1-B > MegaBlock P01 NSIS Sources > 4 frozen operational equal-weight slots > (NSI accepted, Verify accepted, Remove accepted, T06 immutable handoff)",
+    "knownSourceSlots": {
+      "NSI": false,
+      "Verify": false,
+      "Remove": false,
+      "T06Handoff": true
+    },
+    "before": {
+      "accepted": 1,
+      "total": 4,
+      "percent": 25
+    },
+    "after": {
+      "accepted": 1,
+      "total": 4,
+      "percent": 25
+    },
+    "deltaPp": 0,
+    "bar": "███░░░░░░░",
+    "uniqueProductTaskIdLedger": "NOT_PROVEN/FULL_DENOMINATOR_MISSING",
+    "PRODUCT": "N/D",
+    "stage": {
+      "SOURCE": "INCOMPLETE",
+      "INTEGRATED": "INCOMPLETE",
+      "E06": "NOT_ACCEPTED",
+      "SOURCE_READY": "NOT_ACCEPTED",
+      "BUILD": "NOT_RUN",
+      "E07": "NOT_RUN"
+    }
+  },
+  "lesson": {
+    "learnedFrom": "T06 R15 focused CLI contract covers caller/callee, but a source-safety failure path can stay outside its scope.",
+    "applied": "Created complementary fail-closed regression targeting registry write error handling; do not double-count overlapping proof or preempt single-writer source ownership.",
+    "coverage": {
+      "activeRead": 11,
+      "priorClusterCount": 4,
+      "newP01Subcluster": 1,
+      "appliedIndependentCheck": 1,
+      "delegatedTo": [
+        "G1-A",
+        "T06",
+        "T02"
+      ],
+      "historic419": "not counted as live defects",
+      "historicalCoverage": "PARTIAL"
+    }
+  },
+  "checkpoint": {
+    "owner": "G1-A P01/C09 Installer exact three files; T06 integration; T02 shared journals; T08 independent same-SHA",
+    "next": "G1-A approve or reject R10 with registry-failure atomicity fix and exact 3 PRE/POST; T06 CAS source merge; independent same-SHA check. Next G1-B run read only new owner receipts, latest three SHA and test delta; do not repeat unchanged patch proof.",
+    "blocker": "No approved safe 3-file R10+registry-error variant accepted into live T06 HEAD; current NSIS source has unhandled registry-write error paths",
+    "historicalT03": "DONE 5/5 unchanged"
+  }
+}
