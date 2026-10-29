@@ -39,6 +39,10 @@ if ($markerActual.Length -ne $markerExpected.Length -or
     [Convert]::ToBase64String($markerActual) -cne [Convert]::ToBase64String($markerExpected)) {
   throw 'P01_UNINSTALL_INVALID_OWNER_MARKER'
 }
+# A user-writable manifest cannot demand unbounded RAM during uninstall.
+if ((Get-Item -LiteralPath $manifestPath -Force).Length -gt 16MB) {
+  throw 'P01_UNINSTALL_MANIFEST_TOO_LARGE'
+}
 $m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
 if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
