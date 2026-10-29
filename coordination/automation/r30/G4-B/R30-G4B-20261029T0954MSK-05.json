@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V5",
+  "run_id": "R30-G4B-20261029T0954MSK-05",
+  "slot": "G4-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY NOT MAIN NOX",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_GIT_READBACK_PASS_ISOLATED_HELPER_7_7_FULL_MODULE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T0954MSK-05",
+  "pre_commit": "74bfe3dcd1c422e8a09c1eb5501b8028aa76cfe3",
+  "code_commit": "9395a5e98ba5591ee9137f29dff95b19816781a8",
+  "test_commit": "58d1d35a7f53f5d5c88e12b4e44d4563091d3370",
+  "task_id": "G4B-R30-P04-VRAM-CROSS-SENSOR-INVARIANT-R05",
+  "read_inputs": {
+    "lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md#§33, 56/56 read; Git blob 46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "spec": "Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§54–56, R29 override",
+    "errors": "Google Doc 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 latest Astra-C R04 09:27",
+    "lessons": "Google Doc 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ latest Astra-C R04 09:27",
+    "e06": "Google Doc 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 latest Astra-C R04",
+    "historical_c34": "Google Doc 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU read-only",
+    "conflict_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "frozen_snapshots": {
+      "indexed": 25,
+      "directories_present": 25,
+      "bodies_fully_rehashed": false,
+      "raw_729_sha256_verified": false
+    },
+    "preceding_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T0900MSK-04.json"
+  },
+  "cause": "Separate nvidia-smi calls for GPU inventory and UUID VRAM headroom could disagree on total memory yet still produce HARDWARE_READY_ONLY. A malformed helper response could also bypass independent contract checks.",
+  "fix": "Verify integer-only memory values, free/reserved headroom, and exact inventory-to-VRAM total consistency immediately after selected-UUID telemetry, before setting report.gpu or importing CUDA.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_pre": "a079c4376355d61b4178348d830d90169e353cbd",
+      "sha256_pre": "c85d8cb9831ec1c302d7e0e72f7d931afae7a4747b211e325685edaf59e6d629",
+      "sha256_post": "b6b048d0a468162f7a528f9d5992b0fb4fd854abb6ae845de618451f3d33c5c2",
+      "git_blob_post": "cfcc532d0386538d14fd371e072b591b33f9064c"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "git_blob_pre": "b29f9f8c9dced04ec6d93ea3e229e65bce8f94d3",
+      "sha256_pre": "7ea54fddb8f81be28711091ecda18bc825e29e80e55fb95473fe400d9195cf2d",
+      "sha256_post": "e2165259acb0c1e5e4a030d7629d037d6fcf3f961ccdf9449a1c439af4a0b222",
+      "git_blob_post": "df737f8513a3dbd10979c47dd42f86631be58c49"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "other_owner_paths_untouched": true,
+    "unique_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T0954MSK-05.json",
+    "original_snapshots_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "central_drive_untouched": true
+  },
+  "tests": {
+    "isolated_command": "Python unittest SnapshotTests on exact pure _validate_gpu_memory_snapshot logic reconstructed locally without private checkout",
+    "isolated_python_result": "PASS 7/7: valid, cross-read mismatch, insufficient reserve, bool, missing total, invalid inventory, negative free",
+    "new_regression": "One owned test method with four synthetic subtests added to tests/P04/test_local_gpu_preflight.py; NOT_RUN as full module due to private Git checkout unmounted",
+    "source_model_checks": {
+      "helper_defined": true,
+      "snapshot_checked_before_ready": true,
+      "new_test_present": true,
+      "old_cuda_guards_preserved": true,
+      "native_setup_untouched": true
+    },
+    "source_readback": {
+      "Packages/P04/preflight_local_gpu.py": {
+        "sha256_match": true,
+        "blob_match": true
+      },
+      "tests/P04/test_local_gpu_preflight.py": {
+        "sha256_match": true,
+        "blob_match": true
+      }
+    },
+    "full_python_suite": "NOT_RUN",
+    "Windows_CUDA": "NOT_RUN",
+    "real_vram": "NOT_MEASURED",
+    "LoRA_QLoRA": "NOT_RUN",
+    "wheel_transitive_SHA256": "NOT_VERIFIED"
+  },
+  "previous_lesson_applied": "R04 UUID/context and CUDA-build source gates stay intact; this patch prevents inconsistency across earlier GPU UUID inventory and later independent VRAM query.",
+  "self_improvement": {
+    "lesson_id": "G4B_R05_VRAM_CROSS_QUERY_SNAPSHOT_CONSISTENCY",
+    "observed_error": "Successful nvidia-smi inventory plus free VRAM query does not automatically imply both query results refer to the same stable physical GPU snapshot.",
+    "root_cause": "Independent reads were trusted separately, without cross-read equality or type contract verification.",
+    "applied_fix": "Fail-closed snapshot contract helper and owner-path synthetic negative regressions before CUDA import.",
+    "regression": "7/7 isolated pure-helper tests PASS; added four cases to official owned test file, full suite pending.",
+    "prevention": "Correlate independent hardware telemetry reads; do not upgrade source checks to native Windows/GPU readiness or training proof."
+  },
+  "holds": [
+    "Windows CUDA/driver/wheel DLL and real GPU identity not executed",
+    "Full original preflight Python suite not executed against checked-out private repo",
+    "PyPA transitive hashed Windows/CUDA wheels not locked and verified",
+    "Physical VRAM/CPU/OS/temperature not measured, no LoRA/QLoRA training",
+    "Original archive 729 SHA-256 and full 25 snapshot bodies not rehashed",
+    "SOURCE_CODE_COMPLETE/E06/E07/RELEASE remain HOLD; no percent claimed"
+  ],
+  "no_build": true,
+  "no_nsis": true,
+  "no_exe": true,
+  "no_windows_ci": true,
+  "no_gitlab_run": true,
+  "no_final_integration": true,
+  "drive_single_writer": "Astra-C only; G4-B writes only immutable personal Git receipt"
+}
