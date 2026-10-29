@@ -120,6 +120,8 @@ export function projectHardware(sensors, nowMs, polledUtc=null) {
     const s=found.length===1?found[0]:null;
     const valid=s?.status==='LIVE' && s.unit===unit && typeof s.source==='string' && s.source.trim() &&
       typeof s.value==='number' && Number.isFinite(s.value) && s.value>=0 && s.value<=max &&
+      (!key.endsWith('.used_bytes') && !key.endsWith('.total_bytes') ||
+        Number.isSafeInteger(s.value)) &&
       ago(s.observed_at_utc,nowMs,30000) &&
       // Optional native sample ID must be bounded and unambiguous if supplied.
       (!key.startsWith('gpu.') || s.sample_id===undefined || validRunId(s.sample_id)) &&
