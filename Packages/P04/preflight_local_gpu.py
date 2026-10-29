@@ -7,6 +7,7 @@ A green preflight NEVER means training/checkpoint/eval/merge was completed.
 """
 from __future__ import annotations
 import argparse
+from contextlib import contextmanager
 from importlib import metadata
 import json
 import os
@@ -148,6 +149,26 @@ def _require_cuda_parent_selection_compatible(chosen_uuid: str) -> None:
         raise RuntimeError("CUDA_PARENT_DEVICE_ORDER_CONFLICT")
 
 
+@contextmanager
+def _temporary_cuda_selection(uuid: str):
+    """Scope CUDA selector edits to this probe, not future worker tasks.
+
+    This cannot reset CUDA contexts already initialized by native libraries.
+    """
+    keys = ("CUDA_DEVICE_ORDER", "CUDA_VISIBLE_DEVICES")
+    before = {key: os.environ.get(key) for key in keys}
+    try:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = uuid
+        yield
+    finally:
+        for key, previous in before.items():
+            if previous is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = previous
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
@@ -238,20 +259,19 @@ def inspect(profile: str, gpu_index: int) -> dict:
         # This proves local package installations, not CUDA runtime functionality.
         try:
             # Match training's single approved UUID before importing CUDA.
-            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
-            import torch
-            cuda_build = getattr(getattr(torch, "version", None), "cuda", None)
-            if not isinstance(cuda_build, str) or not re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", cuda_build):
-                report["errors"].append("TORCH_CUDA_BUILD_NOT_CONFIRMED")
-            elif not torch.cuda.is_available():
-                report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
-            else:
-                report["gpu"]["cuda_runtime"] = cuda_build
-                device_count = torch.cuda.device_count()
-                report["gpu"]["cuda_device_count"] = device_count
-                if device_count != 1:
-                    report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
+            with _temporary_cuda_selection(selected["uuid"]):
+                import torch
+                cuda_build = getattr(getattr(torch, "version", None), "cuda", None)
+                if not isinstance(cuda_build, str) or not re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", cuda_build):
+                    report["errors"].append("TORCH_CUDA_BUILD_NOT_CONFIRMED")
+                elif not torch.cuda.is_available():
+                    report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
+                else:
+                    report["gpu"]["cuda_runtime"] = cuda_build
+                    device_count = torch.cuda.device_count()
+                    report["gpu"]["cuda_device_count"] = device_count
+                    if device_count != 1:
+                        report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
     report["status"] = "HARDWARE_READY_ONLY" if not report["errors"] else "HOLD"
