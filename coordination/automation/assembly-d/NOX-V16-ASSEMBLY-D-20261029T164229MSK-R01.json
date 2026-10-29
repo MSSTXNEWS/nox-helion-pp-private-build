@@ -1,0 +1,144 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASSEMBLY_D_PINNED_OWNER_DISPOSITION_HANDOFF_V1",
+  "run_id": "NOX-V16-ASSEMBLY-D-20261029T164229MSK-R01",
+  "executor_role": "D / P04-P05-HOST50 isolated rebase preparer",
+  "task_scope": "existing T04/T06 handoff; T05 historical DONE 13/13 preserved; no additional product TaskID",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "source_only": true,
+  "planned_msk": "2026-10-29T16:45:00+03:00",
+  "observed_start_msk": "2026-10-29T16:42:29+03:00",
+  "receipt_written_msk": "2026-10-29 16:47:30",
+  "status": "SCOPED_DISPOSITIONS_PREPARED__PRODUCT_PATCH_HOLD__T06_OWNER_APPROVAL_HOLD",
+  "source_target": {
+    "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "astra_candidate_head": "f0064948119c55001601e1bae1cd3755826605ed",
+    "r30_snapshot_head": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "t06_r05_receipt_blob": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "t06_r06_branch": "automation/v16/t06/NOX-V16-T06-20261029T164013MSK-R06",
+    "t06_r06_status_at_read": "same PR162 head, ahead 0, no accepted source; T06 R05 explicitly lacks owner #1 code-write delegation",
+    "accepted_frozen_unified_t06_head": null
+  },
+  "provenance": {
+    "spec_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§1-33,54-56,R29 (56 reconstructed consolidated rules historical caveat kept)",
+    "ownership_lock_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "t04_manifest_blob_sha1": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+    "t05_r12_manifest_blob_sha1": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+    "t05_r12_commit": "d219d47dff1b02afadfd9abb921317bf1bd68f3e",
+    "t05_historical": "DONE 13/13 triaged; 1 P02 conditional, 12 source HOLD; not re-opened",
+    "t04_historical": "17 archived identity dedupe; 17 owner decision HOLD; neither equals product defect"
+  },
+  "p04": {
+    "disposition": "BLOCKED_OWNER_APPROVAL_AND_EXACT_PREIMAGE",
+    "owner_paths_distinct": true,
+    "items": [
+      {
+        "owner": "G4-A",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "target_git_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "donor_required_pre_git_blob_sha1": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+        "donor_post_git_blob_sha1": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+        "owner_test_git_blob_sha1": "3b321a141a433e82e66a2a539c255cf7e7fe1af5",
+        "existing_canonical_test_path": "tests/P04/test_model_snapshot_probe.py",
+        "existing_canonical_test_git_blob_sha1": "2bad69047606a6b9a03ad93efc4561d492afabbf",
+        "test_run_by_D": "NOT_RUN; owner evidence only",
+        "decision": "HOLD do not replace target; owner must provide rebased exact PRE + approval"
+      },
+      {
+        "owner": "G4-B",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "target_git_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "donor_required_pre_git_blob_sha1": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+        "donor_post_git_blob_sha1": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+        "owner_test_git_blob_sha1": "6ad08fe51cc20a5bcec186e4473cc9cb5653610f",
+        "existing_canonical_test_path": "tests/P04/test_local_gpu_preflight.py",
+        "existing_canonical_test_git_blob_sha1": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+        "test_run_by_D": "NOT_RUN; owner evidence only",
+        "decision": "HOLD do not replace target; owner must provide rebased exact PRE + approval"
+      }
+    ],
+    "archive_variants_held": "T04 indexes P04 model_snapshot_probe (2) and preflight_local_gpu (2), different from canonical, no owner-approved winner"
+  },
+  "p05": {
+    "disposition": "BLOCKED_OWNER_APPROVAL_AND_EXACT_PREIMAGE",
+    "owner_paths_distinct": true,
+    "items": [
+      {
+        "owner": "G5-A",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "target_git_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "donor_required_pre_git_blob_sha1": "a6d723190213feb10091ab6dd699d56c46a00c46",
+        "donor_post_git_blob_sha1": "ae3c3a9f9471193a88046306fc91717df6360520",
+        "owner_test_git_blob_sha1": null,
+        "decision": "HOLD no durable focused owner test; no raw overwrite"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "target_git_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "donor_required_pre_git_blob_sha1": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+        "donor_post_git_blob_sha1": "96bc6a90b57c58fa285a8733cd280c6beeff9100",
+        "owner_test_git_blob_sha1": null,
+        "decision": "HOLD no durable focused owner test; no raw overwrite"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "target_git_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "archive_variant_git_blob_sha1": [
+          "4390085208078e9f5bf21c16155e1b046301cd13",
+          "259206f4622919d54100d4c2cc22c1881af6c129"
+        ],
+        "decision": "HOLD T04 archived conflict requires owner choice"
+      },
+      {
+        "owner": "G5-A/G5-B",
+        "paths": [
+          "Packages/P05/E05/src/E05CanonicalEvents.cs",
+          "Packages/P05/E05/src/E05CriterionSeal.cs",
+          "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+          "Packages/P05/E05/src/E05SafeRunReports.cs"
+        ],
+        "decision": "SKIP archive-identical variants; preserve current working originals; not new DONE"
+      }
+    ]
+  },
+  "host50": {
+    "disposition": "BLOCKED_OWNER_APPROVAL_AND_EXACT_PREIMAGE",
+    "owner": "G6-B",
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "target_git_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "donor_required_pre_git_blob_sha1": "0010d0dececebdcc7d6677a03c63bbf1e5993deb",
+    "donor_post_git_blob_sha1": "2a4fc9c96d9cb7d5ba39399f6e9ba0be869358ae",
+    "pr207_donor_git_blob_sha1": "c60d4ef3983e56c8991370efb58839bd1216cd2d",
+    "pr207_status": "OPEN_NOT_MERGED",
+    "durable_focused_owner_test": "NOT_FOUND_IN_T05_R12",
+    "host50_route_evidence": "37 source candidates, 13 source HOLD from T02; not 50 integrated",
+    "decision": "HOLD PR207 and R30 donors both diverge from current target; require owner #1 + G6-B decision, no parallel native host"
+  },
+  "requirements_for_t06": [
+    "Authoritative T06/owner #1 select one immutable unified target commit SHA/tree and explicitly authorize each path; T06 R05 says permission absent.",
+    "For G4-A/G4-B/G5-A/G5-B/G6-B require owner APPROVED receipt specifying exact current PRE Git blob, linked post Git blob + source SHA256 and one existing focused regression for distinct root cause; retain unresolved T04 variants as HOLD.",
+    "Apply only per-path compare-and-swap to approved unified source HEAD; read back new file Git blob and independent SOURCE SHA256; do not overwrite originals or revive DONE.",
+    "Preserve original 3 parts/729/968 Git blobs, P01-P05/D02/WOW200/CoreID/Persona/50+50/voice/RAG/GPU/SPACE/SQLite, rights/security/user data.",
+    "T02 alone may append common Google Docs using CAS+readback; this receipt is immutable and does not write Docs."
+  ],
+  "acceptance": {
+    "p04_scoped_disposition": "BLOCKED_WITH_EXACT_EVIDENCE",
+    "p05_scoped_disposition": "BLOCKED_WITH_EXACT_EVIDENCE",
+    "t06_handoff": "GIT_RECEIPT_PENDING_VERIFIED_GIT_COMMIT",
+    "product_patch_accepted": 0,
+    "integrated": 0,
+    "source_ready": "HOLD",
+    "source_lock": "HOLD",
+    "build": "NOT_RUN",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "weighted_product_progress": "N/D"
+  },
+  "applied_lesson": "T05/T02 confirmed Git POST blob and a test file do not imply patch admission. Exact CURRENT shared-source PRE and owner authorization win over historical path-overlap or stale receipts; 17 held owner decisions are not 17 confirmed bugs.",
+  "no_product_code_modified": true,
+  "no_merge": true,
+  "no_exe_nsis_compiler_gitlab_pipeline_e07": true,
+  "no_shared_google_docs_write": true
+}
