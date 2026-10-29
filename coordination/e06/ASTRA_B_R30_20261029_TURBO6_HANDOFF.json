@@ -1,0 +1,93 @@
+{
+  "schema": "ASTRA_B_R30_TURBO6_SOURCE_ONLY_HANDOFF",
+  "run_id": "ASTRA-B-R30-20261029-TURBO6",
+  "origin": "Astra-B six independent queues within one interactive session",
+  "actual_subagent_ids": [],
+  "subagent_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "source_base_at_start": "e02ee60dc2a71b5f2cf27c51d6e6acaf4b1f4b7c",
+  "owner_release": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "source_code_commits_this_run": 5,
+  "lanes": [
+    {
+      "lane": "B1",
+      "task_id": "P04-SAFETENSORS-STRICT-JSON",
+      "status": "WRITE_HOLD",
+      "code_commit": null,
+      "receipt": "coordination/astra-b/run-receipts/ASTRA_B_R30_B1_20261029_01.json",
+      "test": "NOT_RUN"
+    },
+    {
+      "lane": "B2",
+      "task_id": "P04-CUDA-VISIBLE-COUNT-SNAPSHOT",
+      "status": "SOURCE_CANDIDATE",
+      "code_commit": "bf2899ec789d7f6cdc81d2609a64339aae4f2cae",
+      "receipt": "GITHUB_FALLBACK_THIS_HANDOFF",
+      "test": "SOURCE_ASSERT_PASS; NATIVE_NOT_RUN"
+    },
+    {
+      "lane": "B3",
+      "task_id": "P05-MARKET-TILE-PRIORITY",
+      "status": "JS_FOCUSED_PASS",
+      "code_commit": "746af11167afc11f94d9a8d4ec89528c86d3c2c7",
+      "receipt": "coordination/astra-b/run-receipts/ASTRA_B_R30_B3_20261029_01.json",
+      "test": "JS_RUNTIME_SOURCE_FUNCTION_FOCUSED_PASS"
+    },
+    {
+      "lane": "B4",
+      "task_id": "P05-DRIVE-IDEMPOTENT-REVISION",
+      "status": "SOURCE_CANDIDATE",
+      "code_commit": "aa76e4df92106686ba4c6e9dd273fe70c9d9c7b3",
+      "receipt": "coordination/astra-b/run-receipts/ASTRA_B_R30_B4_20261029_01.json",
+      "test": "SOURCE_ASSERT_PASS; CSHARP_NOT_RUN"
+    },
+    {
+      "lane": "B5",
+      "task_id": "E06-OLLAMA-POST-DONE-STREAM",
+      "status": "SOURCE_CANDIDATE",
+      "code_commit": "d7b437e61b34b35a8c0915c2f78b1efc94da7fa6",
+      "receipt": "coordination/astra-b/run-receipts/ASTRA_B_R30_B5_20261029_01.json",
+      "test": "SOURCE_ASSERT_PASS; PYTHON_NOT_RUN"
+    },
+    {
+      "lane": "B6",
+      "task_id": "E06-TEMP-FOREIGN-MODIFICATION-PRESERVATION",
+      "status": "SOURCE_CANDIDATE",
+      "code_commit": "e06f99741fd4ea6c82bc24244f254d492bf527cf",
+      "receipt": "coordination/astra-b/run-receipts/ASTRA_B_R30_B6_20261029_01.json",
+      "test": "SOURCE_ASSERT_PASS; PYTHON_NTFS_NOT_RUN"
+    }
+  ],
+  "new_source_pass_candidates": 5,
+  "previous_turbo5_saved": {
+    "B1": 5,
+    "B2": 5,
+    "B3": 4,
+    "B4": 4,
+    "B5": 5,
+    "B6": 5
+  },
+  "cumulative_saved_code_patch_counts": {
+    "B1": 5,
+    "B2": 6,
+    "B3": 5,
+    "B4": 5,
+    "B5": 6,
+    "B6": 6
+  },
+  "note": "Saved code-patch counts are not canonical TaskID acceptance, not six spawned agents, not native pass.",
+  "verification": "GitHub exact commit/file blob readback",
+  "new_external_code_copied": false,
+  "official_reference_contracts": [
+    "safetensors format README",
+    "Python Packaging Core Metadata",
+    "bitsandbytes hardware guide"
+  ],
+  "shared_google_docs_read": "PASS",
+  "shared_google_docs_write": "ASTRA_A_ONLY_NOT_WRITTEN_BY_B",
+  "product_taskid_denominator": "N_D",
+  "source_complete": "HOLD",
+  "release": "HOLD",
+  "gitlab_build": "PROHIBITED",
+  "instructions_to_astra_a": "Reconcile only owner-specific hunks into current source; original archive 729 not reverified, native Windows/NTFS/.NET/CUDA NOT_RUN. Append RunID to master/E06/lesson only via sole writer CAS/readback.",
+  "source_b1_unsaved": "Nonfinite safetensors JSON protection still pending."
+}
