@@ -32,7 +32,7 @@ CREATIVE_TESTS=ROOT/"integrations"/"creative"/"tests"
 SUITES=(
     ("PACK01 immutable UTF8/consent",E06_TESTS,"test_pack01_native_utf8_boundary_r03.py"),
     ("PACK01 owner batch rollback",E06_TESTS,"test_pack01_owner_batch_r10.py"),
-    ("P01 restic BSD-2-Clause native backup/restore source-only 11 cases",PACK,"test_p01_restic_backup_port.py"),
+    ("P01 restic BSD-2-Clause native backup/restore source-only 13 cases",PACK,"test_p01_restic_backup_port.py"),
     ("Immutable P02/P03/E06 contracts",E06_TESTS,"test_immutable_routes_p03_e06_r11.py"),
     ("G2 source binder and rollback",E06_TESTS,"test_immutable_onehost_binder_r12.py"),
     ("T06 one-host P02 duplicate-route native ACL regression",E06_TESTS,"test_t06_r09_native_source_owner.py"),
