@@ -1,0 +1,136 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V7",
+  "run_id": "G7-B-20261029T1210MSK-PACK02-URL-INSPECT-STRICT-V7",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY; not main NOX",
+  "mode": "SOURCE_ONLY_NO_BUILD_NO_INTEGRATION",
+  "status": "HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T1210MSK-PACK02-URL-INSPECT-STRICT-V7",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T1108MSK-PACK02-JSON-PRESENCE-V6",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-B/",
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "one_writer_per_path": true
+  },
+  "reviewed": {
+    "rules_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rules": "56/56 consolidated (historic verbatim list not independently attested)",
+    "V16_Google_Doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "V16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only clarification"
+    ],
+    "errors_master_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "old_C34_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "R30_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "R30_snapshots_recursive_git_tree_count": 25,
+    "R30_snapshots_truncated": 0,
+    "R30_snapshot_full_raw_bytes_SHA256": "NOT_VERIFIED",
+    "original_729_physical_SHA256": "NOT_VERIFIED",
+    "r27_a10_PACK02_donor_git_blob_sha": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6"
+  },
+  "task_ids_source_only": [
+    "G7B-PACK02-URL-INSPECT-PERCENT-UTF8-GUARD-20261029-07"
+  ],
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "applied_previous_lesson": "R06 requires honest separation between exact source-model checks, isolated native Node checks, and actual full-module Node execution; avoid promoting synthetic checks to release evidence.",
+  "bug": {
+    "code_path": "proposals/NOX-PACK02-50/ops.mjs",
+    "route": "dev.url.inspect",
+    "observed_before": "Native WHATWG URL() silently accepted malformed % sequences and replaced invalid UTF-8 with U+FFFD in parsed query. Thus dev.url.inspect reported corrupted values although existing query_decode rejects them.",
+    "root_cause": "Inspector only rejected raw ASCII controls/backslashes, but did not validate percent encoding, UTF-8 or unpaired UTF-16 before URL() normalization.",
+    "fix": "Validate original raw URL using encodeURIComponent(s) and decodeURIComponent(s) in a narrow try/catch; reject malformed percent, invalid UTF-8 and unpaired surrogates with INVALID_URL_ENCODING before invoking URL(). Retain protocol, credentials and backslash guards.",
+    "source_git_blob_before": "0cc8708ba87f39fba83845f3097ceb6c43ccce11",
+    "source_git_blob_after": "2b7d4315f7e4da6e5e7b0ecc2bccb8c35b07443d",
+    "source_commit_sha": "98e80785cfbe11f54cb692a5e115aadc83b51b68",
+    "routes_preserved": 50,
+    "new_routes": 0,
+    "prior_DONE_retained": true
+  },
+  "targeted_test": {
+    "file": "proposals/NOX-PACK02-50/g7b-r30-url-inspect-encoding.test.mjs",
+    "git_blob_sha": "b6af826e6b12a9183834ef05c2b363fa5f37b99a",
+    "commit_sha": "18f0d164ec974b9c0e56152d3b14482ec568d988",
+    "full_authored_Node_command": "node --test proposals/NOX-PACK02-50/g7b-r30-url-inspect-encoding.test.mjs",
+    "full_authored_Node_run": "NOT_RUN (exact full module unavailable to local Node runtime)",
+    "isolated_native_Node_route": "PASS: 11 assertions, 7 malformed URL cases, 2 valid cases, credential and backslash guards; handler transcribed from committed route",
+    "exact_Git_source_V8": "PASS RED 5/5 before, GREEN 5/5 after, 50 existing routes, 2 valid-call smokes with URL stub",
+    "limitations": "V8 used synthetic URL stub, NOT native WHATWG URL; isolated Node did not import full committed ops.mjs; no E06/E07 Windows execution."
+  },
+  "git_readback": {
+    "source_sha_verified": true,
+    "test_sha_verified": true,
+    "comparison": {
+      "status": "ahead",
+      "ahead_by": 2,
+      "behind_by": 0,
+      "changed_files": [
+        "proposals/NOX-PACK02-50/ops.mjs",
+        "proposals/NOX-PACK02-50/g7b-r30-url-inspect-encoding.test.mjs"
+      ]
+    },
+    "receipt_readback": "PENDING_WRITE"
+  },
+  "self_improvement": {
+    "lesson_id": "R30_G7B_VALIDATE_RAW_URL_BEFORE_WHATWG_LOSSY_NORMALIZATION",
+    "observed_error": "Native URL() admits malformed percent escapes and replaces invalid UTF-8 in searchParams, so parsing can silently change inspected data.",
+    "root_cause": "Trusting successful construction of a WHATWG URL as proof the original source string was lossless.",
+    "implemented_fix": "Reject malformed raw URL encoding before URL() while preserving all 50 route IDs and existing credential/protocol guards; RED→GREEN V8 and isolated Node checks.",
+    "future_prevention": "For parsed URLs compare raw percent/UTF-8 admission with URLSearchParams and query_decode; write one own-slot regression using exact module; explicitly distinguish an unrun full Node import from isolated native helper checks."
+  },
+  "owner_transfer": {
+    "to": "G6-B original Host50 owner",
+    "request": "License, provenance and permission-gated internet adapters can only enter through original Host50; G7-B did not alter PACK01/native_bridge. Separate owner approval remains required.",
+    "status": "HOLD_OWNER_APPROVAL",
+    "cross_owner_code_written": false
+  },
+  "open_conflicts": [
+    "r27-a10 frozen PACK02 escaped dotted-key JSON semantics diverge from current JSON_PATH_COLLISION fail-closed choice; preserve both until owner decision.",
+    "Full authored Node module test NOT_RUN; isolated native Node and V8 are narrower evidence.",
+    "Original Host50 internet adapter approval and licensing missing.",
+    "Original 729 physical files raw SHA256 and Windows E06/E07 NOT_VERIFIED."
+  ],
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "Host50": "HOLD",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_DOCS_CAS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "safety": {
+    "PR162_modified": false,
+    "main_modified": false,
+    "shared_R30_modified": false,
+    "snapshots_modified": false,
+    "original_three_parts_modified": false,
+    "PACK01_native_bridge_modified": false,
+    "D02_WOW_modified": false,
+    "other_owner_paths_modified": false,
+    "Google_Docs_modified": false,
+    "historic_DONE_deleted": false,
+    "EXE_run": false,
+    "NSIS_run": false,
+    "GitLab_CI_run": false,
+    "final_integration_run": false
+  },
+  "Astra_C_instruction": "Only Astra-C appends G7-B R07 receipt findings and new lesson to shared Google Docs using CAS+RunID readback; owner worker never writes there."
+}
