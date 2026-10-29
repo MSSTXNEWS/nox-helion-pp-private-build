@@ -1,0 +1,90 @@
+{
+  "schema": "NOX_V16_R26_MANUAL2_INDEPENDENT_COMPONENT_QA_V1",
+  "run_id": "NOX-V16-M2-R26-20261030-C04-10",
+  "role": "manual2-independent-source-QA",
+  "task_id_existing": "Host50/PACK01",
+  "error_id": "ERR-SRC-004",
+  "created_at_utc": "2026-10-29T21:53:43.862Z",
+  "source_pr": 162,
+  "head": "79005fcb92dd540d00d82355203757bd367e2f20",
+  "source_blob": "f63b0139efaf11aa128d1b68435df3d056fcb3a5",
+  "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+  "before_blob": "1e059650658ba806da1c087625dc34308822978c",
+  "before_negative": "dangerous training.start risk→safe allowed by UI verifyCatalog (source-only)",
+  "after_negative": "all fifty risk/owner/routeId/taskId tamper cases fail closed; no claim of native ACL proof",
+  "execution": "V8 exact integrated registry functions with cloned original private GitHub catalog, no browser/native host",
+  "approaches_done": 10,
+  "assertions_total": 313,
+  "assertions_pass": 313,
+  "assertions_fail": 0,
+  "groups": [
+    {
+      "n": 1,
+      "name": "risk downgrade across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 2,
+      "name": "risk upgrade across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 3,
+      "name": "owner change across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 4,
+      "name": "routeId change across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 5,
+      "name": "TaskID change across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 6,
+      "name": "baseline 50 catalogue",
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "n": 7,
+      "name": "dangerous without nativeConsent disabled",
+      "passed": 5,
+      "total": 5
+    },
+    {
+      "n": 8,
+      "name": "dangerous with nativeConsent UI projection permitted",
+      "passed": 5,
+      "total": 5
+    },
+    {
+      "n": 9,
+      "name": "AVAILABLE state stays disabled across 50",
+      "passed": 50,
+      "total": 50
+    },
+    {
+      "n": 10,
+      "name": "duplicate task/route mutation rejects",
+      "passed": 2,
+      "total": 2
+    }
+  ],
+  "status": "SOURCE_COMPONENT_REGRESSION_VERIFIED_NOT_NATIVE_ACCEPTANCE",
+  "owner_integrated_receipt_blob": "337fad04dead7de52982788601f80715db6600a2",
+  "qa_accepted_taskid_delta": 0,
+  "product_pct": null,
+  "source_ready": "HOLD",
+  "e07": "0/10 NOT_RUN",
+  "shared_journal": "T02_CAS_PENDING",
+  "next": "T06 bind Host50 11 currently source-unbound and 14 native-pending. T08/Manual2 only accept signed native permissions on exact frozen SHA. Avoid old UI risk regressions; no repeat donor patch."
+}
