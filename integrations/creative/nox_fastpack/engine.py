@@ -365,8 +365,26 @@ class Studio(CreativeExtensions):
         folder=self._project(project_id)/"assets";folder.mkdir(parents=True,exist_ok=True)
         output=folder/(uuid.uuid4().hex[:8]+"_"+name)
         params=urlencode({"filename":name,"subfolder":asset["subfolder"],"type":asset["type"]})
-        with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,output.open("wb") as out:shutil.copyfileobj(inp,out)
-        return {"status":"IMPORTED","file":str(output),"bytes":output.stat().st_size}
+        # Never stream an unlimited remote response into the NOX user disk.
+        # Stage a bounded file and publish it only after successful EOF.
+        limit=256*1024*1024
+        temporary=folder/("."+uuid.uuid4().hex+".download")
+        received=0
+        try:
+            with urlopen(self.comfy+"/view?"+params,timeout=60) as inp,temporary.open("xb") as out:
+                while True:
+                    chunk=inp.read(min(1024*1024,limit-received+1))
+                    if not chunk:break
+                    received+=len(chunk)
+                    if received>limit:
+                        raise StudioError("ComfyUI asset exceeds local 256 MiB import limit")
+                    out.write(chunk)
+            if received<=0:
+                raise StudioError("ComfyUI returned an empty asset")
+            temporary.replace(output)
+        finally:
+            if temporary.exists():temporary.unlink()
+        return {"status":"IMPORTED","file":str(output),"bytes":received}
 
     def assemble(self,project_id,clips,soundtrack="",subtitle_file=""):
         with self._assemble_lock:
