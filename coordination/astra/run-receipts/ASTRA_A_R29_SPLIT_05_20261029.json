@@ -1,0 +1,77 @@
+{
+  "run_id": "ASTRA-A-R29-20261029-SPLIT-05",
+  "primary_parent": "3322a52b529a1351a0f6a9453dadb5c074131f0f",
+  "handoff_path": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "owner_heads": [
+    {
+      "branch": "astra/r29-a01-20261029",
+      "data": {
+        "sha": "78860a6dbc5c1eb5e55ebc1fbb8bb1bf65dda55d",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/78860a6dbc5c1eb5e55ebc1fbb8bb1bf65dda55d"
+      }
+    },
+    {
+      "branch": "astra/r29-a2-p01-20261029",
+      "data": {
+        "sha": "98916abf2a3ce6e7d3e88696340b2399fb5b1081",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/98916abf2a3ce6e7d3e88696340b2399fb5b1081"
+      }
+    },
+    {
+      "branch": "astra/r29-a02-20261029",
+      "data": {
+        "sha": "5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c"
+      }
+    },
+    {
+      "branch": "astra/r29-a04-voice-20261029",
+      "data": {
+        "sha": "cc79314e361655fa4230b0f4583fefafe8635960",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/cc79314e361655fa4230b0f4583fefafe8635960"
+      }
+    },
+    {
+      "branch": "astra/r29-a03-20261029",
+      "data": {
+        "sha": "99b28cbfc0b618129564964297d5df5c6e2a9b3e",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/dc6c56c861e0f961a5dd0676d2bf4348bcca6daf"
+      }
+    },
+    {
+      "branch": "astra/r29-a6-p03-catalog-20261029",
+      "data": {
+        "sha": "7bc1cec5ac5fd411f673c2847e6e0106986ae86b",
+        "type": "commit",
+        "url": "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/git/commits/7bc1cec5ac5fd411f673c2847e6e0106986ae86b"
+      }
+    }
+  ],
+  "source_tested_blocks_this_wave": [
+    2,
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "native_only_candidates": {
+    "A5": 1,
+    "A6": 1
+  },
+  "prior_verified_blocks_preserved": 38,
+  "total_source_tested_blocks": 44,
+  "product_readiness": "N/D",
+  "report": "ASTRA-A loader SOURCE ONLY, user-authorized split: Astra-A P01/P02/P03, Astra-B P04/P05/E06. Six actual concurrently active identities: A1=/root/a01, A2=/root/a05, A3=/root/a02, A4=/root/a04, A5=/root/a03, A6=/root/a06. Role labels changed, old DONE not relabelled or discarded.\nFresh GitHub primary3e0de036 and master/report/lesson CONTINUATION04+C34+all56rules read. Explicit clean owner release saved3322a52b529a1351a0f6a9453dadb5c074131f0f: P04 995e1488, P05 856d225, E06 cbfe853; exact released paths in coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json. Astra-B execution/commits not independently verified; user screenshot shows separate six agents waiting, release supplied.\nNew source-test-backed blocks: A1 two (ownership marker write before activation0850cc4; rollback DisplayVersion from verified backup78860a6d), 4+4 boundedsource-flow tests, NOT native execution. A2 one directory-kind preflight98916abf,6source contract checks, nativePowerShell fixtureNOT_RUN. A3 one fail-latched IPC transport5f5cfb2c,13Python/subprocess tests preventing admissions/writes afteroutputfailure. A4 one originalvoice finalcallback STOP/session recheckcc79314e,4targeted+16existing contracts, physicalaudioNOT_RUN. A5 one originalworker directRunning-to-Cancelled gate dc6c56c,7Pythonpolicy tests withnativeACK guard. A6 catalog resource consistency7bc1cec5 is C# SOURCE_CANDIDATE only, nativeNOT_RUN.\nInitial requested P02 commits614882078cc1c07f3fd6d2b50e7d12a2c56ef943/b8680093c727ac59338aa132fa2f43364f6b960f inspected; current ingress19/19 PASS, no newblock.\nCurrent verified approach indicators: A1 2/10, A2 1/10, A3 1/10, A4 1/10, A5 1/10, A6 0/10 +nativecandidate. Six additional source-test-backed blocks; previous38 preserved =44 across all priorqueues, not TaskID acceptance. P01/P02/P03/P04/P05 weighted20/25/20/25/10=N/D, no fixed current product denominator. No sourcecomplete or productETA claim.\nNo EXE/NSIS build, Windows releaseCI, GitLab write, finalintegration, main/PR162 change. One targeted suite per coherent block; source-model tests clearly distinguished from native tests. Actual original contracts reused, no decorative graphics replacement or speculative new libraries.\n\nA5 additional native cancellation-retirement race candidate saved99b28cbfc0b618129564964297d5df5c6e2a9b3e after dc6c56c. Reuses existing ObjectDisposedException handling without holding registry lock during cancellation callbacks. Authored C# fixture NOT_RUN; no additional verified approach. Total this wave: six source-test-backed blocks plus two native-only candidates. All owner source saves CAS/exactreadback confirmed.\nEfficiency lesson transmitted: remove root-delta waiting, direct one-time fresh journal read, explicit clean ownership release, precise donor/preimage handoff, no broad repeat scans or filler. No quantified acceleration claimed. Shared journals remain sole-writer Astra-A; await Astra-B actual receipts before reporting their completion.\n",
+  "lesson": "\n\n=== ASTRA-A-R29-20261029-SPLIT-05 ===\nRelease ownership explicitly and durably before adding a second parallel team; six workers may be reassigned without duplicating writes or erasing old progress. Shared journal is not a coding gate when current delta can be read directly. Apply operation-boundary checks: successful open is not successful write; restored files need matching verified version metadata; failed framed output forbids later admissions; final native callbacks may change STOP/session state. Preserve genuine native lifecycle edges while retaining acknowledgement guards. C# or PowerShell fixtures without runtime remain NOT_RUN, not source completion.\nEFFICIENCY CORRECTION requested by owner: several workers waited for root's promised journal delta despite already having read-only Docs access. Future workers read latest master/report/lesson directly once per launch, then proceed within assigned files; unavailable Drive uses explicit HOLD plus Git fallback, never stops safe source work. Root publishes exact owner release paths/SHA before second-team intake. Avoid broad rescans and speculative quota filler. One coherent functional change, one focused suite, one saved commit/readback; rerun only when changed behavior or a failure justifies it. Do not claim exact percentage acceleration from these process changes without comparable timing.\n=== END ASTRA-A-R29-20261029-SPLIT-05 ===\n",
+  "journal_readbacks": {
+    "master": true,
+    "report": true,
+    "lesson": true
+  }
+}
