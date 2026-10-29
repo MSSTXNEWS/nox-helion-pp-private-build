@@ -134,6 +134,20 @@ def _require_gpu_identity_stable(identity: tuple[str, str, str], original: dict,
         raise RuntimeError("GPU_SELECTION_CHANGED_DURING_PREFLIGHT")
 
 
+def _require_cuda_parent_selection_compatible(chosen_uuid: str) -> None:
+    """Inherited CUDA device selection must not silently select another GPU.
+
+    Source-only preflight may choose a UUID only if no conflicting parent
+    CUDA mask/order was already installed; it does not attest real GPU binding.
+    """
+    inherited_visibility = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if inherited_visibility is not None and inherited_visibility != chosen_uuid:
+        raise RuntimeError("CUDA_PARENT_VISIBLE_DEVICES_CONFLICT")
+    inherited_order = os.environ.get("CUDA_DEVICE_ORDER")
+    if inherited_order is not None and inherited_order != "PCI_BUS_ID":
+        raise RuntimeError("CUDA_PARENT_DEVICE_ORDER_CONFLICT")
+
+
 def inspect(profile: str, gpu_index: int) -> dict:
     report = {
         "schema": "NOX-P04-LOCAL-GPU-PREFLIGHT-v1",
@@ -209,6 +223,9 @@ def inspect(profile: str, gpu_index: int) -> dict:
         # A second inventory check detects hotplug/reindex and in-place mutation
         # before reporting hardware readiness; it cannot lock future GPU state.
         _require_gpu_identity_stable(identity, selected, train_qlora.gpu_inventory(exe))
+        # Parent CUDA visibility may have been pinned by the host/other worker;
+        # silently replacing it could select a different physical device.
+        _require_cuda_parent_selection_compatible(identity[1])
         report["gpu"] = {
             "name": selected["name"], "uuid": selected["uuid"],
             "temperature_c": temperature, **memory
