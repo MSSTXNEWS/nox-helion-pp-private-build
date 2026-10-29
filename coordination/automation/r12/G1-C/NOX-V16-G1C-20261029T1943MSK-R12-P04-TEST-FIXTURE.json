@@ -1,0 +1,188 @@
+{
+  "schema": "NOX_V16_G1C_R12_OWNER_SAFE_TEST_FIXTURE_DRIFT_PROOF_V1",
+  "taskId": "G1-C-P04-P05",
+  "runId": "NOX-V16-G1C-20261029T1943MSK-R12-P04-TEST-FIXTURE",
+  "observedStartUtc": "2026-10-29T16:49:12.922Z",
+  "scope": "EXPRESS INTEGRATOR V16 SOURCE ONLY",
+  "prestart": {
+    "canonRevision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canonParagraphs": 679,
+    "rules33": "56/56 read",
+    "errorRegisterBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "errorCount": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "pr162Head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "pr162Tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "ownerMapBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+  },
+  "sourceContract": {
+    "path": "Packages/P04/preflight_local_gpu.py",
+    "gitBlob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "owner": "G4-B",
+    "status": "UNCHANGED_REQUIRED_SOURCE_BINDING"
+  },
+  "detected": {
+    "existingErrorId": "ERR-SRC-004",
+    "classification": "TARGETED_EXISTING_TEST_FIXTURE_DRIFT_NOT_EXECUTED_FAILURE",
+    "rootCause": "P04 preflight now invokes fresh isolated Python -I subprocess for CUDA, but existing test mocks torch only in parent sys.modules and expects HARDWARE_READY_ONLY; parent mock does not cross child process boundary.",
+    "oneChangedContract": "GPU isolated-child mock seam",
+    "impact": "synthetic happy-path test not deterministic; native Windows GPU remains unverified; do not treat as product code regression"
+  },
+  "ownerOnlyProposedPatch": {
+    "owner": "G4-B",
+    "handoff": "T06 for exact CAS after G4-B approval; T08 independently tests",
+    "path": "tests/P04/test_local_gpu_preflight.py",
+    "preGitBlob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "proposedPostGitBlob": "126ef658ab72564aa8f58758bd1739c7ab717151",
+    "transformations": [
+      {
+        "before": "from types import SimpleNamespace\n",
+        "after": ""
+      },
+      {
+        "before": "        cuda = SimpleNamespace(is_available=lambda: True, device_count=lambda: 1)\n        fake_torch = SimpleNamespace(cuda=cuda, version=SimpleNamespace(cuda=\"fixture\"))\n",
+        "after": ""
+      },
+      {
+        "before": "        ), patch.dict(sys.modules, {\"torch\": fake_torch}):",
+        "after": "        ), patch.object(\n            probe, \"_run_cuda_probe_isolated\",\n            return_value={\"cuda_runtime\": \"12.4\", \"cuda_device_count\": 1}\n        ):"
+      }
+    ],
+    "sourceFileChange": false,
+    "patchNotApplied": true,
+    "postContentSourceDerivedAndHashVerified": true
+  },
+  "verification": {
+    "mode": "NEW exact-source cross-file static negative fixture seam check; NO native test execution",
+    "preChecks": [
+      {
+        "name": "fixture old SHA independently recalculated",
+        "pass": true
+      },
+      {
+        "name": "P04 source new isolated child invoked",
+        "pass": true
+      },
+      {
+        "name": "child process uses isolated Python -I",
+        "pass": true
+      },
+      {
+        "name": "child runs fail-closed with timeout",
+        "pass": true
+      },
+      {
+        "name": "legacy fixture patches only parent sys.modules",
+        "pass": true
+      },
+      {
+        "name": "legacy fixture lacks active child mock",
+        "pass": true
+      },
+      {
+        "name": "three replacement preimages occur exactly once",
+        "pass": true
+      },
+      {
+        "name": "existing independent P04 3 tests preserved",
+        "pass": true
+      }
+    ],
+    "postChecks": [
+      {
+        "name": "post source test removes impossible parent torch fixture",
+        "pass": true
+      },
+      {
+        "name": "post mocks actual isolated seam",
+        "pass": true
+      },
+      {
+        "name": "post keeps three original cases",
+        "pass": true
+      },
+      {
+        "name": "post preserves fail-closed source untouched",
+        "pass": true
+      }
+    ],
+    "passed": 12,
+    "total": 12,
+    "sourceSha": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "fixturePre": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "fixtureCandidatePost": "126ef658ab72564aa8f58758bd1739c7ab717151",
+    "pythonUnittest": "NOT_RUN",
+    "windowsCuda": "NOT_RUN"
+  },
+  "hierarchy": {
+    "role": "G1-C",
+    "megaBlock": "M1_P04_P05_SOURCE_BINDING",
+    "blocks": [
+      {
+        "id": "P04_model_snapshot_probe",
+        "status": "SOURCE_BLOB_BOUND_NONRUNTIME"
+      },
+      {
+        "id": "P04_preflight_local_gpu",
+        "status": "SOURCE_BLOB_BOUND_TEST_FIXTURE_OWNER_HANDOFF"
+      },
+      {
+        "id": "P05_E05SpaceReadOnlyProjection",
+        "status": "SOURCE_BLOB_BOUND_NONRUNTIME"
+      },
+      {
+        "id": "P05_E05GoogleDocsReadback",
+        "status": "SOURCE_BLOB_BOUND_NONRUNTIME"
+      }
+    ],
+    "operationalEqualWeightSourceBinding": "4/4",
+    "functionalAcceptance": "N/D_unfrozen_taskids",
+    "product": "N/D"
+  },
+  "deltaAcceptedTaskIds": 0,
+  "selfImprovement": {
+    "activeErrorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "activeRead": 11,
+    "activeReviewed": 11,
+    "clusters": 7,
+    "applied": 1,
+    "alreadyFixed": 2,
+    "delegated": 4,
+    "blocked": 0,
+    "historical419NotActive": true,
+    "olderReceiptsFullCoverage": "NOT_CLAIMED",
+    "lesson": "When production moves hardware probing to isolated subprocess, mocks of parent process imports are stale; stub the exact trusted child boundary in the existing synthetic fixture, never bypass product CUDA/ACL/STOP/consent checks."
+  },
+  "ownership": {
+    "noPR162Write": true,
+    "noSharedGoogleDocsWrite": true,
+    "patchOwner": "G4-B",
+    "sharedJournalOwner": "T02",
+    "sourceIntegrator": "T06",
+    "independentQA": "T08/Manual2"
+  },
+  "nextExactAction": "G4-B apply 3 exact replacements to tests/P04/test_local_gpu_preflight.py only after verifying PRE blob; run existing python -m unittest tests/P04/test_local_gpu_preflight.py; confirm candidate POST SHA; T06 CAS source owner approval, then T08 same-HEAD source acceptance; T02 ingest existing ERR-SRC-004 new test-evidence via CAS; no EXE/NSIS/CI/E07.",
+  "gates": {
+    "A": "PASS_FRESH_CANON_REGISTER_SOURCE_TREE",
+    "B": "NEW_STATIC_FIXTURE_PROOF_12_OF_12_AND_OWNER_PATCH_PREPARED",
+    "C": "PENDING_IMMUTABLE_RECEIPT_READBACK",
+    "D": "PARTIAL_11_OF_11_ACTIVE_OLDER_RECEIPTS_PENDING"
+  },
+  "status": "INCOMPLETE",
+  "noEXE_NSIS_GitLabCI_E07": true
+}
