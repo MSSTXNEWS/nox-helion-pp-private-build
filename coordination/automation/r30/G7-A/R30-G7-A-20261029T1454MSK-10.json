@@ -1,0 +1,111 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "slot": "G7-A",
+  "runId": "R30-G7-A-20261029T1454MSK-10",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T1454MSK-10",
+  "status": "SOURCE_PATCH_SAVED_SOURCE_READY_HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader original D02 scene ONLY; SOURCE ONLY",
+  "ancestry": {
+    "baseRef": "automation/r30/g7a/R30-G7-A-20261029T1413MSK-09",
+    "baseCommit": "0d09893bb20d4b1209eb85b6c79ee1e313bb7b0d",
+    "baseTree": "2b4bf597d0451418ea3d9c7282bb2857b87d8852"
+  },
+  "ownership": {
+    "lockRef": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbiddenPaths": [
+      "proposals/NOX-PACK02-50/",
+      "proposals/NOX-PACK01-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T1454MSK-10.json"
+  },
+  "inputEvidence": {
+    "rules56GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rulesStatus": "56 consolidated V16 §33, historical verbatim unverified",
+    "sections": [
+      "33",
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "specDrive": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "conflictIndexBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots": {
+      "indexed": 25,
+      "rootDirectoriesVerified": 25,
+      "fullPerFileContentsRead": false,
+      "modified": false
+    },
+    "driveReadOnly": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ]
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-STALE-CANCELLED-RAF-CALLBACK-R10",
+    "sourcePath": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "preimageGitBlob": "027382303a9a286ab8deea1b167abb20920bc0ba",
+    "newGitBlob": "2b7acac6d4ac3f4eb1246562307a2e79a0bd7862",
+    "defect": "A cancelled RAF callback delivered late can run after a new RAF has been scheduled and create a second live animation chain.",
+    "patch": "Use a monotonically increasing RAF epoch for scheduled callbacks; invalidate before cancelling and ignore retired callbacks. Preserve valid RAF ID zero."
+  },
+  "regression": {
+    "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.stale-raf.test.mjs",
+    "gitBlob": "7e8d99e461f7e4e5ba55e5ba2328f568495f8b6e",
+    "newTestCount": 1,
+    "before": {
+      "pass": false,
+      "count": 1,
+      "error": "Error: late cancelled callback may not queue a second frame: \"1,2\" !== \"1\""
+    },
+    "after": {
+      "pass": true,
+      "count": 1
+    },
+    "executor": "V8 dynamic evaluation of exact saved module content and authored node:test-style fixture (imports adapted only in harness)",
+    "nodeCLI": "NOT_RUN",
+    "windowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "changedPaths": [
+      "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.stale-raf.test.mjs",
+      "coordination/automation/r30/G7-A/R30-G7-A-20261029T1454MSK-10.json"
+    ],
+    "deletedPaths": [],
+    "original9D02": "PRESERVED_IN_ISOLATED_TEST",
+    "olderDone": "PRESERVED_BY_PARENT_TREE",
+    "historicalSnapshots": "UNCHANGED",
+    "mainPR162": "UNCHANGED",
+    "installerPack01Pack02": "UNCHANGED",
+    "sharedR30AndGoogleDocs": "UNCHANGED"
+  },
+  "selfImprovement": {
+    "appliedEarlier": "Treat RAF zero as valid identifier; prefer explicit null sentinel.",
+    "newLesson": "Canceling a frame does not itself defend against stale or already queued callbacks. Invalidate each generation before cancellation and prove a late callback cannot fork a new RAF chain."
+  },
+  "coordinator": {
+    "onlyCommonGoogleDocsWriter": "Astra-C",
+    "ownDocsWrites": "NONE",
+    "request": "Collect immutable G7-A receipt; append new lesson to central Docs via CAS and readback",
+    "driveCommonWrite": "PENDING_ASTRA_C"
+  },
+  "release": {
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "finalIntegration": "NOT_RUN",
+    "progressPercentage": "N/D"
+  }
+}

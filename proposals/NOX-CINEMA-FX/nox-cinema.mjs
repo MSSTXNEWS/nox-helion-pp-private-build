@@ -110,7 +110,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
   let preference=!!motion?.matches;
   let mode=profile;
-  let disposed=false,hostVisible=true,intersectVisible=true,raf=null,lastFrame=0,frameCount=0;
+  let disposed=false,hostVisible=true,intersectVisible=true,raf=null,rafEpoch=0,lastFrame=0,frameCount=0;
   let state="idle",stateRunId=null,emissions=0,particleCount=0;
   let ownerRoot=false;
   const decorated=[];
@@ -197,6 +197,14 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       rotation:unitRandom()*360};
     particles.push(p);particleCount++;emissions++;
   }
+  // G7-A R30 R10: a cancelled RAF callback must not restart a live frame chain.
+  function scheduleFrame(){
+    const epoch=++rafEpoch;
+    raf=win.requestAnimationFrame(timestamp=>{
+      if(disposed||epoch!==rafEpoch)return;
+      loop(timestamp);
+    });
+  }
   function loop(now){
     raf=null;
     // Browser clocks may be malformed; fail closed without emitting SVG NaN.
@@ -204,7 +212,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     if(disposed||!hostVisible||!intersectVisible||doc.hidden)return;
     const policy=profileFor(mode,preference);
     if(policy.fps===0){clearParticles();return;}
-    raf=win.requestAnimationFrame(loop);
+    scheduleFrame();
     if(now-lastFrame<1000/policy.fps)return;
     lastFrame=now;frameCount++;
     for(let i=particles.length-1;i>=0;i--){
@@ -248,10 +256,11 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
         });
         resumePending=false;
       }
-      lastFrame=0;raf=win.requestAnimationFrame(loop);
+      lastFrame=0;scheduleFrame();
     }
   }
   function sleep(){
+    ++rafEpoch;
     if(raf!==null){win.cancelAnimationFrame(raf);raf=null;}
     resumePending=true;
     clearParticles();
