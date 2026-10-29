@@ -144,12 +144,42 @@
       "kind": "CROSS_OWNER_PROCESS_OR_SOURCE_EVIDENCE",
       "priority": "PROCESS_AND_SOURCE_GATES_ONLY",
       "issue": "Repeated HOLD-only closeout without readback/physical correction",
-      "next_action": "Для каждого HOLD: реальное действие/точная внешняя зависимость + исправление + проверка; отчёт и RunID не считаются DONE.",
+      "next_action": "T02/C ONLY: perform CAS of this proposed incident addendum into canonical ledger and 3/3 Master/E06/Lessons readback, verify R12 gate priority at every future configuration write, then audit actual next 15 runs and record unclosed TaskIDs; keep OPEN until verified. T06 sole PR162 writer; no EXE/NSIS/GitLab CI/E07.",
       "proof": [
-        "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID."
+        "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID.",
+        "R12 rule saved Git commit 3cf974fa286e9fa826206ee09d79a42439e192a7, blob 47e8996d9a8ea84d408a2f98e118536581c621ec; R12 was present in 15/15 active role prompts.",
+        "R13 physical prompt-race proof commit 2f91b059a29c5d1fbc0117a026e9899e5f328e95, blob 3ad4cb66966ed422cf814b29994abd77352d49f2; later 0/15 R12-first while 15/15 R12-present.",
+        "T02 support G5-A run completed with source QA receipt but canonical register stayed Git blob 2c8e374ec17f66b1a435e386e496f8cc8662ca00; G5-A is not T02/C sole writer.",
+        "GitHub issue #177 exact intake comment 6502748308; all 15 immediate automation run requests were accepted; compliance with true product TASK_DONE unverified."
       ],
-      "recurrence": 2,
-      "last_seen": "2026-10-29"
+      "recurrence": 3,
+      "last_seen": "2026-10-29",
+      "root_cause_clusters": [
+        {
+          "id": "RUN_COMPLETE_MISCLASSIFIED_AS_TASK_DONE",
+          "cause": "Session or automation completed, HOLD, or immutable personal receipt mistaken for product accepted 100%.",
+          "prevention": "Only independently accepted exact x/n=n/n on one immutable SHA permits TASK_DONE; otherwise INCOMPLETE + exact checkpoint."
+        },
+        {
+          "id": "PROMPT_CONFIGURATION_WRITE_RACE",
+          "cause": "Parallel prompt updates displaced R12 P0 exit gate from the beginning of 15 role prompts without removing its text.",
+          "prevention": "Single prompt configuration coordinator or guarded CAS equivalent; after any write assert priority and role text 15/15 and verify actual next-run behavior."
+        },
+        {
+          "id": "SHARED_JOURNAL_WRITER_ROUTING",
+          "cause": "G5-A is T02 support, not the sole T02/C journal writer; completed support automation and Git comment do not perform canonical CAS.",
+          "prevention": "Only T02/C commits this register and Master/E06/Lessons by CAS and independent readback; intake proposals and personal receipts are not canonical journal updates."
+        }
+      ],
+      "preventative_exit_contract": {
+        "gate_A": "Fresh canon, owned role, full current error ledger SHA, owner source HEAD/tree, evidence and acknowledged ErrorIDs",
+        "gate_B": "Physical product code correction or independently accepted new source proof, mandatory scoped ACL/STOP/consent check",
+        "gate_C": "One immutable Git commit with exact PRE/POST SHA and readback; sole T02/C performs central journal CAS",
+        "gate_D": "All relevant, deduplicated cross-role root causes triaged/applied or delegated, exact remaining gates and owner",
+        "completion": "TASK_DONE only for fully accepted fixed x/n; NEVER for RunID completed, report-only, HOLD-only or personal receipt alone",
+        "incomplete": "Current run ends INCOMPLETE only with physical checkpoint and specific external dependency; never falsely claim 100% or promise unbounded background execution",
+        "recurrence_monitor": "Next runs require own receipts with x/n, actual SHA, physical result, and no repeated HOLD without remedy"
+      }
     },
     {
       "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
