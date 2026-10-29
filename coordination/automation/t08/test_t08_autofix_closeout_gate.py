@@ -14,10 +14,11 @@ def good():
                     "p01_p05_accepted": True, "host50_native_contracts_verified": True},
             "p0p1": {"head": h, "status": "NO_CODE_BLOCKERS",
                      "receipt_blob": "e" * 40},
-            "journal": {x: {"incident_id": incident, "readback_blob": "f" * 40}
+            "journal": {x: {"incident_id": incident, "revision_id": "AHj4eMT_revision_valid",
+                                  "readback_pass": True}
                         for x in ("Master", "E06", "Lessons")},
-            "handoff": {"head": h, "t09_ack": True, "t10_ack": True,
-                        "receipt_blob": "1" * 40}}
+            "handoff": {"head": h, "t09_t10_delivered": True,
+                        "comment_readback_pass": True, "receipt_blob": "1" * 40}}
 
 
 class TestT08Gate(unittest.TestCase):
@@ -41,6 +42,18 @@ class TestT08Gate(unittest.TestCase):
 
     def test_missing_shared_journal_readback_blocks_closeout(self):
         d = good(); del d["journal"]["Lessons"]
+        self.assertEqual(decide(d)["progress"], "2/3")
+
+    def test_docs_revision_must_be_read_back(self):
+        d = good(); d["journal"]["Lessons"]["revision_id"] = ""
+        self.assertEqual(decide(d)["progress"], "2/3")
+        d = good(); d["journal"]["Master"]["readback_pass"] = False
+        self.assertEqual(decide(d)["progress"], "2/3")
+
+    def test_handoff_requires_confirmed_delivery_not_qa_ack(self):
+        d = good(); d["handoff"]["comment_readback_pass"] = False
+        self.assertEqual(decide(d)["progress"], "2/3")
+        d = good(); d["handoff"]["t09_t10_delivered"] = False
         self.assertEqual(decide(d)["progress"], "2/3")
 
     def test_patch_needs_focused_test_receipt(self):

@@ -42,10 +42,14 @@ def decide(receipt):
     docs = (type(journal) is dict and all(
         type(journal.get(name)) is dict and
         journal[name].get("incident_id") == receipt["incident_id"] and
-        _sha(journal[name].get("readback_blob")) for name in DOCS))
+        type(journal[name].get("revision_id")) is str and
+        len(journal[name]["revision_id"]) >= 8 and
+        journal[name].get("readback_pass") is True for name in DOCS))
     delivered = disposition and docs and type(handoff) is dict and (
-        handoff.get("head") == target and handoff.get("t09_ack") is True
-        and handoff.get("t10_ack") is True and _sha(handoff.get("receipt_blob")))
+        handoff.get("head") == target and
+        handoff.get("t09_t10_delivered") is True and
+        handoff.get("comment_readback_pass") is True and
+        _sha(handoff.get("receipt_blob")))
     values = (bool(ready), bool(disposition), bool(delivered))
     count = sum(values)
     return {"schema": "NOX_V16_T08_AUTOFIX_CLOSEOUT_GATE_V1",
