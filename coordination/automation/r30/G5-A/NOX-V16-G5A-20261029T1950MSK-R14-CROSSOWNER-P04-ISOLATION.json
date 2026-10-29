@@ -1,0 +1,213 @@
+{
+  "schema": "NOX_V16_G5A_R14_CROSS_OWNER_DELTA_INTAKE_AND_ISOLATION_PROOF_V1",
+  "run_id": "NOX-V16-G5A-20261029T1950MSK-R14-CROSSOWNER-P04-ISOLATION",
+  "created_at_msk": "2026-10-29 19:53",
+  "status": "INCOMPLETE",
+  "scope": "G5-A owner-safe read-only cross-owner intake/support to T02; NO shared-journal write, NO PR162 product write, NO T08/T10 QA signature",
+  "historical_t02": "DONE 4/4 unchanged",
+  "prestart_read_proof": {
+    "canonical_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canonical_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "paragraphs": 679,
+    "section33_consolidated_rule_count": 56,
+    "source_scope": "§§1–33,54–56,R29; historical 56-rule text includes original reconstruction caveat",
+    "active_registry_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "all_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "history_complete": false,
+    "archive_fingerprints_not_reopened": 419,
+    "docs_revisions": {
+      "Master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "E06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "Lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "canonical_PR162": {
+      "head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+      "tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+      "pr_number": 162,
+      "state": "draft/open, NOT T06 accepted",
+      "readback": "Git PR HEAD and Git commit tree SHA read independently"
+    }
+  },
+  "cross_owner_delta_intake": {
+    "G1-A": {
+      "receipt_blob": "10a3442d6f3d441dc111a85e1247c5960fb48438",
+      "direct_git_readback": true,
+      "root": "ERR-SRC-004/P01-host",
+      "finding": "existing C09 WebView2 adapter requires absent NOX.P01.Shell.csproj/MainWindow; original ZIP729 must NOT be re-opened",
+      "owner": "T06/M1",
+      "action": "source provenance from genuine preserved WPF host or accurate external source HOLD, no fabrication"
+    },
+    "G1-B": {
+      "receipt_blob": "e918fe7246d6fa880b105e9446a6e0c4b5dae0b2",
+      "direct_git_readback": true,
+      "root": "ERR-SRC-004/P01-NSIS-registry",
+      "finding": "R10 donor only: 5 HKCU uninstall registration writes without fail-closed per-write result checks; donor UNMERGED, not live regression",
+      "owner": "G1-A then T06",
+      "action": "extend donor with each registry write error gate and update rollback semantics; owner approval & exact PRE CAS"
+    },
+    "G1-C": {
+      "receipt_blob": "90b9a0f94c514fe61c993f1bf172aac96d565f01",
+      "direct_git_readback": true,
+      "root": "ERR-SRC-004/P04-test-fixture",
+      "finding": "P04 production CUDA probe isolated subprocess -I; test patches parent sys.modules['torch']; fake cannot propagate",
+      "owner": "G4-B then T06",
+      "action": "fix existing test fixture to patch _run_cuda_probe_isolated without changing production hardware preflight"
+    },
+    "G2-A": {
+      "receipt_blob": "7f6f09bb204bf85f22aba14bdda456862f98ee53",
+      "direct_git_readback": true,
+      "root": "ERR-SRC-004/Host50-native-consent",
+      "finding": "mobile.connect callable exists but owner-map native sourceBinding null; 13 route native verified 0/13",
+      "owner": "T06/Host50",
+      "action": "owner native attestation and ACL/STOP/consent before route admission"
+    },
+    "G4-C/T09": {
+      "receipt_blob": "f9a0b79261a685a29aca214b2de34b64072b07f8",
+      "direct_git_readback": true,
+      "root": "ERR-SRC-004/T09",
+      "finding": "PR162 current HEAD not frozen; T09 1/6; original 729 unchanged",
+      "owner": "T06 then T08/T09",
+      "action": "T06 8/8 single accepted head, T08 same SHA, then T09 freeze"
+    },
+    "G5-C/T11": {
+      "receipt_blob": "ce9c7e759b441e7ccebfc0456a98bb19e1baea3d",
+      "direct_git_readback": true,
+      "root": "ERR-SYS-002/T11",
+      "finding": "GitLab authenticated live head/ACL still unverified; T11 2/5 source-only",
+      "owner": "GitLab admin + T11",
+      "action": "read-only signed GitLab API audit after owner credentials, NO CI/build"
+    }
+  },
+  "actual_new_targeted_proof": {
+    "path_prod": "Packages/P04/preflight_local_gpu.py",
+    "sha_prod": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "path_test": "tests/P04/test_local_gpu_preflight.py",
+    "sha_test": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+    "direct_source_compatibility": "production calls _run_cuda_probe_isolated() with fresh Python -I child; existing test uses patch.dict(sys.modules, {'torch': fake_torch}) only in parent",
+    "new_executed_isolation_test": "PASS 1/1; with fake torch in parent sys.modules, fresh Python -I subprocess prints {'parent_patch_visible':false,'isolated':1}; parent fake does not reach child; Python process semantics independent proof ONLY, not running product P04 unit test, not Windows GPU acceptance",
+    "expected_fixture_fix": "G4-B owner-approved exact-PRE patch with G1-C candidate POST 126ef658ab72564aa8f58758bd1739c7ab717151; replace parent fake torch patch with patch.object(probe,'_run_cuda_probe_isolated',return_value={'cuda_runtime':'12.4','cuda_device_count':1}); T06 sole source writer; run targeted unit test and T08 same HEAD independent verification",
+    "product_modified_paths": 0,
+    "product_new_accepted_taskids": 0,
+    "acl_stop_consent_no_loss": "no modified paths; no relaxation; no native claims"
+  },
+  "error_actions": [
+    {
+      "error_id": "ERR-SYS-001",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "ack": "APPLIED_LOCAL_FRESH_SHA_CHECK",
+      "reason": "live PR HEAD/tree directly re-read; old HEAD not promoted"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "ack": "OWNER_HANDOFF",
+      "reason": "six new owner receipts attached and P04 Python isolation proof provided"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "ack": "ALREADY_VERIFIED",
+      "reason": "historical DONE 729/729 and T04 34/34; no reopen"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "ack": "ALREADY_VERIFIED",
+      "reason": "historical DONE 729/729 and T04 34/34; no reopen"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "ack": "OWNER_HANDOFF",
+      "reason": "outside G5-A writer scope; exact existing owner required; kept status OPEN/UNVERIFIED"
+    }
+  ],
+  "hierarchical_progress": {
+    "G5_A_owner_fixed_taskid_inventory": "N/D - no frozen complete TaskID denominator",
+    "C_operational_fixed": "0/4,0% -> 0/4,0%, delta 0 pp",
+    "product": "N/D: incomplete frozen P01-P05 TaskID ledgers",
+    "T06": "owner receipt 1/8=12.5% operational only, not source acceptance",
+    "T09": "1/6 operational only",
+    "T11": "2/5 operational only",
+    "new_accepted_taskids": 0
+  },
+  "self_improvement": {
+    "discovered_active_errors": 11,
+    "new_external_receipts_direct_readback": 6,
+    "root_clusters_processed": [
+      "RUN_NOT_TASK",
+      "SOURCE_HEAD_DRIFT",
+      "P01_HOST_PROVENANCE",
+      "P01_NSIS_UNMERGED_REGISTRY",
+      "P03_PRIVACY_UNMERGED",
+      "P04_GPU_TEST_PROCESS_BOUNDARY",
+      "HOST50_NATIVE_ROUTE_ATTESTATION",
+      "T09_FREEZE",
+      "T11_GITLAB_ACCESS"
+    ],
+    "root_clusters_processed_count": 9,
+    "physically_applied": 1,
+    "delegated": 7,
+    "already_verified": 1,
+    "remaining_for_this_intake": 0,
+    "global_historical_backfill": "PARTIAL; no 419 fingerprint rescan",
+    "lesson": "An isolated child Python -I cannot observe parent sys.modules fixtures; identify process boundary before declaring GPU test success/failure; do not alter product preflight to satisfy faulty test"
+  },
+  "gates": {
+    "A": "PASS actual fresh canon/register/owner receipts/HEAD read",
+    "B": "PASS independent focused Python isolated-process behavior 1/1, NOT native/product test",
+    "C": "PENDING own immutable Git receipt until readback; shared Docs writer T02 only",
+    "D": "PARTIAL: nine observed clusters triaged, one executable semantic test; source owner fix unmerged"
+  },
+  "next_checkpoint": {
+    "owner": "G4-B / T06 / T02",
+    "action": "G4-B approve G1-C P04 fixture patch exact PRE 4c3df...; T06 CAS integrate source tree; T02 ingest six owner receipt deltas and independent isolation proof under existing ERR-SRC-004 without duplicate ERROR_ID; only T02 writes shared register/3 Docs",
+    "source_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "status": "INCOMPLETE"
+  },
+  "exclusions": "NO EXE, NSIS compile, GitLab CI, E07, release; no force push, source product edit, no shared Google Docs write"
+}
