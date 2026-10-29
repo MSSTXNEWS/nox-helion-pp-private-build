@@ -1,0 +1,1120 @@
+{
+  "schema": "NOX_V16_T04_EXACT_CONFLICT_RESOLUTION_MANIFEST_V2",
+  "task_id": "T04",
+  "run_id": "T04-MANUAL-20261029-EXACT34-R01",
+  "observed_at_msk": "2026-10-29T16:43:14.587+03:00",
+  "source_scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer; source-only",
+  "decision_policy": "One decision per exact historical overlap path. SKIP archives with one identical Git blob, OWNER_HOLD all divergent blobs without explicit owner approval and matched preimage. ACCEPT only after owner decision; not implicit.",
+  "references": {
+    "canon": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "r30_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "r30_head": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "owner_lock_git_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "astra_source_head": "f0064948119c55001601e1bae1cd3755826605ed",
+    "astra_source_tree": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+    "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "previous_T04_manifest_git_blob_sha1": "78861bb9512acaf7e14d253263aa5fd3331a1eee",
+    "previous_T04_branch_head": "707a308736b4035f25fe159e9574f16e27372c7e"
+  },
+  "evidence": {
+    "snapshot_branches": 25,
+    "source_tree_entries": 1230,
+    "pr162_tree_entries": 1184,
+    "r30_tree_entries": 31607,
+    "trees_untruncated": true,
+    "validation_errors": [],
+    "common_merge": false,
+    "source_file_changes": 0,
+    "tests_run": 0
+  },
+  "summary": {
+    "path_dispositions_complete": 34,
+    "archive_duplicate_groups_skipped": 17,
+    "divergent_owner_holds": 17,
+    "owner_unassigned_paths": [
+      "coordination/astra/render_astra_progress_r24.py",
+      "coordination/astra/verify_astra_no_loss_r23.py",
+      "Packages/P02/worker-python/p02_chat_bridge.py",
+      "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs"
+    ],
+    "owner_approved_accepts": 0,
+    "physical_conflicts_resolved": 17,
+    "open_owner_decisions": 17,
+    "disposition_progress": "34/34",
+    "resolved_progress": "17/34"
+  },
+  "exact_paths": [
+    {
+      "id": 1,
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G2-A",
+      "current_preimage": {
+        "astra_blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0",
+        "pr162_blob_sha1": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47"
+      },
+      "archive_appearance_count": 12,
+      "unique_archive_blob_sha1s": [
+        "d17270551ed924b6be4715f1d5383339568d51f0",
+        "4efa3fec8ac7484d977e1a480dc37c00acb35805",
+        "144523b0227a5824b14bec678deaa5ea449059bc"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a01-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a02-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a03-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a04-20261029",
+          "blob_sha1": "4efa3fec8ac7484d977e1a480dc37c00acb35805"
+        },
+        {
+          "branch": "astra/r27-a05-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a06-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a07-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a08-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a09-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r27-a10-20261029",
+          "blob_sha1": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "144523b0227a5824b14bec678deaa5ea449059bc"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "144523b0227a5824b14bec678deaa5ea449059bc"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 2,
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "decision": "SKIP",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": "fc34d92a926aae9bec71a49cb4e370987e3f3677",
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 10,
+      "unique_archive_blob_sha1s": [
+        "cc407695882a1a3223699e24cb7d90cff813cf00"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a01-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a02-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a03-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a04-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a05-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a06-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a07-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a08-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a09-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        },
+        {
+          "branch": "astra/r27-a10-20261029",
+          "blob_sha1": "cc407695882a1a3223699e24cb7d90cff813cf00"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 3,
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "decision": "SKIP",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 10,
+      "unique_archive_blob_sha1s": [
+        "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a01-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a02-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a03-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a04-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a05-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a06-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a07-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a08-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a09-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        },
+        {
+          "branch": "astra/r27-a10-20261029",
+          "blob_sha1": "1e7799ff800cd2a27633c0298ad78e8cd147e907"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 4,
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "decision": "OWNER_HOLD",
+      "owner": "G5-A",
+      "current_preimage": {
+        "astra_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "pr162_blob_sha1": "a1f1ca5a72388a43be2dc035150487405820ffcf"
+      },
+      "archive_appearance_count": 4,
+      "unique_archive_blob_sha1s": [
+        "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc",
+        "fd956f5b2c314b50eba080f721ca2c9b435f9339",
+        "f1dc819173c113c731d09325534cd0e2eb8ef4cc"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a09-20261029",
+          "blob_sha1": "0150fb7ba1c076707c2f8c2f9ba97a925e6fa8dc"
+        },
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "fd956f5b2c314b50eba080f721ca2c9b435f9339"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "f1dc819173c113c731d09325534cd0e2eb8ef4cc"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "fd956f5b2c314b50eba080f721ca2c9b435f9339"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 5,
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "decision": "OWNER_HOLD",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+        "pr162_blob_sha1": "65eeb35f2d333e522db92988ef7afa26617a31fa"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "19632f3a0d2abbd94a58dfa2af86db299347b87e",
+        "ddf27032f81fb70c121c3729f7df75b44df40f64"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a04-20261029",
+          "blob_sha1": "19632f3a0d2abbd94a58dfa2af86db299347b87e"
+        },
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "ddf27032f81fb70c121c3729f7df75b44df40f64"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "ddf27032f81fb70c121c3729f7df75b44df40f64"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 6,
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G2-A",
+      "current_preimage": {
+        "astra_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+        "pr162_blob_sha1": "124517fdb5f99c96840596cd14b0ff496bc5c14a"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd",
+        "a76148c98bdbac20e77ae0b473485bf6175dfb34"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a04-20261029",
+          "blob_sha1": "dde0caf8fe8d0a56a9ec7d0b985a95ba2aec05fd"
+        },
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "a76148c98bdbac20e77ae0b473485bf6175dfb34"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "a76148c98bdbac20e77ae0b473485bf6175dfb34"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 7,
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "decision": "SKIP",
+      "owner": "G2-B",
+      "current_preimage": {
+        "astra_blob_sha1": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+        "pr162_blob_sha1": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "d721cd9608d62052060ae2c7ff6db240b281802f"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a05-20261029",
+          "blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f"
+        },
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 8,
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G2-B",
+      "current_preimage": {
+        "astra_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+        "pr162_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "dcef668c010b9b215131e610eab960a3d864ec14",
+        "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a05-20261029",
+          "blob_sha1": "dcef668c010b9b215131e610eab960a3d864ec14"
+        },
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 9,
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G3-A",
+      "current_preimage": {
+        "astra_blob_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+        "pr162_blob_sha1": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "b5d7ecd1c3581ac496da8a03d45d03ce299c073f",
+        "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17",
+        "068f2217f3ce4b1cce2be930ff1453f42941efab"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a06-20261029",
+          "blob_sha1": "b5d7ecd1c3581ac496da8a03d45d03ce299c073f"
+        },
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "7293ef8d9f7b982f090da9e8db3cbb2b2020ce17"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "068f2217f3ce4b1cce2be930ff1453f42941efab"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 10,
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G3-B",
+      "current_preimage": {
+        "astra_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+        "pr162_blob_sha1": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "c04d5a56c9fc6547488386f3b4a3eefd9795efee",
+        "21d2db7c7916ccd54d926cff26044f7375a592c8"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r27-a06-20261029",
+          "blob_sha1": "c04d5a56c9fc6547488386f3b4a3eefd9795efee"
+        },
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "21d2db7c7916ccd54d926cff26044f7375a592c8"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "21d2db7c7916ccd54d926cff26044f7375a592c8"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 11,
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G4-A",
+      "current_preimage": {
+        "astra_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "pr162_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+        "733a3a498419c7963d244335e8b109e0bb1b2359"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a04-20261029",
+          "blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+        },
+        {
+          "branch": "astra-b/r29-b1-20261029",
+          "blob_sha1": "733a3a498419c7963d244335e8b109e0bb1b2359"
+        },
+        {
+          "branch": "astra-b/r29-b2-20261029",
+          "blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 12,
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G4-B",
+      "current_preimage": {
+        "astra_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "pr162_blob_sha1": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "d261a4b1256a82562f13161986ed6db46ded2636",
+        "df7567599fc3317adc607b42f687ba01c77f780c"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a04-20261029",
+          "blob_sha1": "d261a4b1256a82562f13161986ed6db46ded2636"
+        },
+        {
+          "branch": "astra-b/r29-b1-20261029",
+          "blob_sha1": "d261a4b1256a82562f13161986ed6db46ded2636"
+        },
+        {
+          "branch": "astra-b/r29-b2-20261029",
+          "blob_sha1": "df7567599fc3317adc607b42f687ba01c77f780c"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 13,
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "decision": "SKIP",
+      "owner": "G5-A",
+      "current_preimage": {
+        "astra_blob_sha1": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+        "pr162_blob_sha1": "0bdaa2effa766bb798443ee5057c8116acbf25fe"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "8c20156bee3db953f74b34f62bc5e57709d30c6a"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "8c20156bee3db953f74b34f62bc5e57709d30c6a"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "8c20156bee3db953f74b34f62bc5e57709d30c6a"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "8c20156bee3db953f74b34f62bc5e57709d30c6a"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 14,
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "decision": "SKIP",
+      "owner": "G5-A",
+      "current_preimage": {
+        "astra_blob_sha1": "b1be2beaf849089a2fddc76219af37cbea926940",
+        "pr162_blob_sha1": "b1be2beaf849089a2fddc76219af37cbea926940"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "3015fa132ee3fa83ccae335cda40f595aaca77cb"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 15,
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "decision": "OWNER_HOLD",
+      "owner": "G5-B",
+      "current_preimage": {
+        "astra_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "pr162_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "4390085208078e9f5bf21c16155e1b046301cd13",
+        "259206f4622919d54100d4c2cc22c1881af6c129"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "4390085208078e9f5bf21c16155e1b046301cd13"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "4390085208078e9f5bf21c16155e1b046301cd13"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "259206f4622919d54100d4c2cc22c1881af6c129"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 16,
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "decision": "SKIP",
+      "owner": "G5-B",
+      "current_preimage": {
+        "astra_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "pr162_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "37b70dc61102a666d0325aa5889deb3b8a54de46"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "37b70dc61102a666d0325aa5889deb3b8a54de46"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 17,
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "decision": "SKIP",
+      "owner": "G5-B",
+      "current_preimage": {
+        "astra_blob_sha1": "9315534a691d9a2040b48daffd3543c1b66e373e",
+        "pr162_blob_sha1": "9315534a691d9a2040b48daffd3543c1b66e373e"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "88aff5db7dbf54b8db1ea0657f175f6a3597c622"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 18,
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "decision": "SKIP",
+      "owner": "G5-A",
+      "current_preimage": {
+        "astra_blob_sha1": "71b623cb114667c3b37b26103ec220f99233c398",
+        "pr162_blob_sha1": "71b623cb114667c3b37b26103ec220f99233c398"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "2187ee5ecae18179a5daa7c60859cad06f275b81"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a05-20261029",
+          "blob_sha1": "2187ee5ecae18179a5daa7c60859cad06f275b81"
+        },
+        {
+          "branch": "astra-b/r29-b3-20261029",
+          "blob_sha1": "2187ee5ecae18179a5daa7c60859cad06f275b81"
+        },
+        {
+          "branch": "astra-b/r29-b4-20261029",
+          "blob_sha1": "2187ee5ecae18179a5daa7c60859cad06f275b81"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 19,
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "decision": "SKIP",
+      "owner": "G6-B",
+      "current_preimage": {
+        "astra_blob_sha1": null,
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "005866951edbd17a4ab120feecc177c8fd414c8e"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a06-20261029",
+          "blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e"
+        },
+        {
+          "branch": "astra-b/r29-b5-20261029",
+          "blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e"
+        },
+        {
+          "branch": "astra-b/r29-b6-20261029",
+          "blob_sha1": "005866951edbd17a4ab120feecc177c8fd414c8e"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 20,
+      "path": "coordination/e06/source_deep_inventory.py",
+      "decision": "SKIP",
+      "owner": "G6-A",
+      "current_preimage": {
+        "astra_blob_sha1": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65",
+        "pr162_blob_sha1": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a06-20261029",
+          "blob_sha1": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+        },
+        {
+          "branch": "astra-b/r29-b5-20261029",
+          "blob_sha1": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+        },
+        {
+          "branch": "astra-b/r29-b6-20261029",
+          "blob_sha1": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 21,
+      "path": "coordination/e06/stage_onehost.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G6-A",
+      "current_preimage": {
+        "astra_blob_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+        "pr162_blob_sha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "8ae8523d83e175cb83a32ca497bb2c15f08948ca",
+        "4136ae420ed953ad5715b5c4416834327c5fd096"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a06-20261029",
+          "blob_sha1": "8ae8523d83e175cb83a32ca497bb2c15f08948ca"
+        },
+        {
+          "branch": "astra-b/r29-b5-20261029",
+          "blob_sha1": "8ae8523d83e175cb83a32ca497bb2c15f08948ca"
+        },
+        {
+          "branch": "astra-b/r29-b6-20261029",
+          "blob_sha1": "4136ae420ed953ad5715b5c4416834327c5fd096"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 22,
+      "path": "coordination/e06/verify_original_729_source.py",
+      "decision": "SKIP",
+      "owner": "G6-A",
+      "current_preimage": {
+        "astra_blob_sha1": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+        "pr162_blob_sha1": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a06-20261029",
+          "blob_sha1": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+        },
+        {
+          "branch": "astra-b/r29-b5-20261029",
+          "blob_sha1": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+        },
+        {
+          "branch": "astra-b/r29-b6-20261029",
+          "blob_sha1": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 23,
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G6-B",
+      "current_preimage": {
+        "astra_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+        "pr162_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c"
+      },
+      "archive_appearance_count": 3,
+      "unique_archive_blob_sha1s": [
+        "ed2bc0f16dce327fa4e51400da684a29e4758089",
+        "164c7c0027c98c5bf201977d4cf23591dc1562a0"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a06-20261029",
+          "blob_sha1": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+        },
+        {
+          "branch": "astra-b/r29-b5-20261029",
+          "blob_sha1": "164c7c0027c98c5bf201977d4cf23591dc1562a0"
+        },
+        {
+          "branch": "astra-b/r29-b6-20261029",
+          "blob_sha1": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 24,
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "decision": "OWNER_HOLD",
+      "owner": "G1-A",
+      "current_preimage": {
+        "astra_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257",
+        "pr162_blob_sha1": "87d901c3846359a91be3e8288f24302cc7060257"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "19233446b6ee8b508106a548ff67eaffe13dbb82",
+        "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a01-20261029",
+          "blob_sha1": "19233446b6ee8b508106a548ff67eaffe13dbb82"
+        },
+        {
+          "branch": "astra/r29-a2-p01-20261029",
+          "blob_sha1": "7f04df5fbf568eeeaf43537c897ba5f5b6430fdb"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 25,
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "decision": "OWNER_HOLD",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+        "pr162_blob_sha1": "eb45add5a929eee99bc09ef87f2db3735556b78b"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "ab76cd9fdcc46a31835e4fbca235d910ea819fb9",
+        "25eb2bc57a0feaf472490dff30f68d2a31cdf1ee"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a01-20261029",
+          "blob_sha1": "ab76cd9fdcc46a31835e4fbca235d910ea819fb9"
+        },
+        {
+          "branch": "astra/r29-a2-p01-20261029",
+          "blob_sha1": "25eb2bc57a0feaf472490dff30f68d2a31cdf1ee"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 26,
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "decision": "SKIP",
+      "owner": "G1-A",
+      "current_preimage": {
+        "astra_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "pr162_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a01-20261029",
+          "blob_sha1": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+        },
+        {
+          "branch": "astra/r29-a2-p01-20261029",
+          "blob_sha1": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 27,
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "decision": "SKIP",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": null,
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "4d4a47beebb4373f3556a0ef6f623e80a9a4131d"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 28,
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G2-A",
+      "current_preimage": {
+        "astra_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+        "pr162_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "a7f462b11050bc2fba27081cf9e1325657314eb7",
+        "f043f041db2634a40242d10a462e816330062118"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "a7f462b11050bc2fba27081cf9e1325657314eb7"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "f043f041db2634a40242d10a462e816330062118"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 29,
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "decision": "SKIP",
+      "owner": "G2-A",
+      "current_preimage": {
+        "astra_blob_sha1": "055a315575f2d0d740bb066771b8c59f426d2c92",
+        "pr162_blob_sha1": "055a315575f2d0d740bb066771b8c59f426d2c92"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "bd4e3da6771242c2eb2b903411ed654885b1fddd"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "bd4e3da6771242c2eb2b903411ed654885b1fddd"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "bd4e3da6771242c2eb2b903411ed654885b1fddd"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 30,
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "decision": "OWNER_HOLD",
+      "owner": "G2-B",
+      "current_preimage": {
+        "astra_blob_sha1": null,
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "a0b7171b063d4c51832c0330b40261c0837941c1",
+        "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a02-20261029",
+          "blob_sha1": "a0b7171b063d4c51832c0330b40261c0837941c1"
+        },
+        {
+          "branch": "astra/r29-a04-voice-20261029",
+          "blob_sha1": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    },
+    {
+      "id": 31,
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "decision": "SKIP",
+      "owner": "G3-A",
+      "current_preimage": {
+        "astra_blob_sha1": null,
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 32,
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "decision": "SKIP",
+      "owner": "OWNER_UNASSIGNED",
+      "current_preimage": {
+        "astra_blob_sha1": null,
+        "pr162_blob_sha1": null
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "e4fc503d37bf96d8894104078ee4c9198abd0834"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "e4fc503d37bf96d8894104078ee4c9198abd0834"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "e4fc503d37bf96d8894104078ee4c9198abd0834"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 33,
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "decision": "SKIP",
+      "owner": "G3-B",
+      "current_preimage": {
+        "astra_blob_sha1": "12762f9f36b8813aaac22476495a59484aa9f22a",
+        "pr162_blob_sha1": "12762f9f36b8813aaac22476495a59484aa9f22a"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "e3959d561fcb5142fc09271fd674e6f7dc58e3eb"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb"
+        }
+      ],
+      "reason": "All saved archive Git blobs identical; skip duplicate archive variants only; target integration not implied."
+    },
+    {
+      "id": 34,
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "decision": "OWNER_HOLD",
+      "owner": "G3-A",
+      "current_preimage": {
+        "astra_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+        "pr162_blob_sha1": "c057fea02f9e53121ba21110b12b12f2128a8fb2"
+      },
+      "archive_appearance_count": 2,
+      "unique_archive_blob_sha1s": [
+        "a5a6bb768f2820567053af55a48cd68919813ed9",
+        "f32c250613ba7750f09b9a8fa14ce28cb9e8b7bd"
+      ],
+      "archive_branch_variants": [
+        {
+          "branch": "astra/r29-a03-20261029",
+          "blob_sha1": "a5a6bb768f2820567053af55a48cd68919813ed9"
+        },
+        {
+          "branch": "astra/r29-a6-p03-catalog-20261029",
+          "blob_sha1": "f32c250613ba7750f09b9a8fa14ce28cb9e8b7bd"
+        }
+      ],
+      "reason": "Archive Git blobs differ. No accepted winner without owner-bound SHA, target preimage and receipt; retain current source unchanged."
+    }
+  ],
+  "handoff": {
+    "T05": "Treat 17 SKIP rows as no archive action. Do not admit 17 OWNER_HOLD entries unless exact owner approval, selected git blob SHA, current target preimage and receipt exist.",
+    "T06": "Retain current source blobs for held rows, do not merge archive variants, use exact preimages and owner lock.",
+    "T02": "Consume this immutable personal receipt via CAS/readback; record T04 34/34 classifications and 17/34 physically cleared, 17 owner-HOLD. Do not mark 100% resolved."
+  },
+  "self_improvement": {
+    "applied": "One-pass indexed path→blob SHA matching on the frozen 25-snapshot tree, and owner prefix/forbidden match before any donor selection",
+    "effect": "34/34 rows, 0 mismatches, no repeated 968-blob inventory, 0 source writes"
+  },
+  "forbid": "No EXE, GitLab CI, E07, tests, cross-owner changes, direct source merge or replacement"
+}
