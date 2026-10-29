@@ -1,0 +1,142 @@
+{
+  "schema": "NOX_V16_T09_6_CRITERIA_FREEZE_CHECKPOINT_V2",
+  "task_id": "T09",
+  "run_id": "NOX-V16-T09-20261029T174041MSK-R16-DELTA-HANDOFF",
+  "scope": "ONLY NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16/R29 Windows loader; SOURCE ONLY",
+  "msk": {
+    "planned_start": "2026-10-29T17:40:00+03:00",
+    "observed_first": "2026-10-29T17:40:41+03:00",
+    "receipt_prepared": "2026-10-29T17:43:36+03:00",
+    "actual_end": "N/D until postwrite readback"
+  },
+  "source": {
+    "pr": 162,
+    "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "observed_head": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+    "observed_tree": "534612db9e496d1688c0116b7a214b3129baaa32",
+    "head_observed_via": "GitHub PR metadata",
+    "tree_observed_via": "GitHub /git/commits HEAD",
+    "owner_accepted": false,
+    "final_frozen": false
+  },
+  "actual_delta": {
+    "from_user_prior_head": "d77c4cdb1ae80c326e938d1a160d75c4c0716f58",
+    "to_intermediate": "64d3d7169614ed04417f5c777cf484dc68e69b6c",
+    "compare_first": "ahead 15/behind 0; no removed paths in compare",
+    "compare_second": "64d3d716 -> 5b42260b ahead 3/behind 0; only T06 coordination/guard/receipt changes",
+    "full_no_loss_independently_reproven": false
+  },
+  "t06": {
+    "run_id": "NOX-V16-T06-20261029T173423MSK-R10",
+    "receipt_blob_sha1": "021081ac6cfb0f0b4cb4470bf289d23df5da02cf",
+    "progress": "1/8; SOURCE_READY HOLD",
+    "latest_host50_admission_blob_sha1": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "fix_commit": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+    "remaining": "owner attestation for current tree, 13 native Hold routes, P01-P05 functional source acceptance"
+  },
+  "historical": {
+    "T04": "34/34 archival version decisions preserved, NOT functional acceptance",
+    "T05": "13/13 historical source-candidate triage preserved",
+    "T07_original": {
+      "status": "PHYSICAL PASS ORIGINAL ONLY",
+      "parts": "3/3",
+      "members": "729/729 SHA256+CRC by prior receipts",
+      "zip_bytes": 60364346,
+      "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "T07_owner_blob_sha1": "8573ee3d062ad078268db66d9b68c582c2287a62",
+      "T09_cosign_blob_sha1": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+      "rehash_this_run": false
+    },
+    "T08": {
+      "last_run": "T08 R16",
+      "receipt_blob_sha1": "77c89da21365ff4a946662e622d69c9c4f2fa4aa",
+      "old_sha_scope": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+      "same_head_signoff": false
+    }
+  },
+  "progress": {
+    "before": {
+      "done": 1,
+      "total": 6,
+      "pct": 16.7
+    },
+    "after": {
+      "done": 1,
+      "total": 6,
+      "pct": 16.7,
+      "bar": "██░░░░░░░░",
+      "remaining": 5
+    },
+    "delta_pp": 0,
+    "criteria": [
+      {
+        "id": 1,
+        "name": "ONE_OWNER_ACCEPTED_T06_HEAD",
+        "status": "HOLD",
+        "evidence": "T06 R10 blob 021081ac6cfb0f0b4cb4470bf289d23df5da02cf; 1/8 owner gates"
+      },
+      {
+        "id": 2,
+        "name": "SELECTED_PATCHES_AND_MANIFEST_ACCEPTED",
+        "status": "HOLD",
+        "evidence": "T04 34/34 version decisions; T05 13/13 candidate triage; T06 full P01-P05/Host50 approval not accepted"
+      },
+      {
+        "id": 3,
+        "name": "T07_PHYSICAL_ORIGINAL_SOURCELOCK",
+        "status": "DONE",
+        "evidence": "T07 owner blob 8573ee3d062ad078268db66d9b68c582c2287a62; T09 original cosign commit 5b0ae2efaf579b586d735f38a59ba760d2b1272d blob fdf998625f8d582d313be2116a9e34ee6154fbd0"
+      },
+      {
+        "id": 4,
+        "name": "T08_SAME_HEAD_P0P1_DISPOSITION",
+        "status": "HOLD",
+        "evidence": "T08 R16 blob 77c89da21365ff4a946662e622d69c9c4f2fa4aa covered e51b2b0199feca59dded179d2d5a2edadeef312c, not new HEAD"
+      },
+      {
+        "id": 5,
+        "name": "FINAL_PINNED_HEAD_TREE_MANIFEST_SHA",
+        "status": "HOLD",
+        "evidence": "Candidate HEAD and tree observed; final T06 accepted manifest SHA/source attestation absent"
+      },
+      {
+        "id": 6,
+        "name": "HANDOFF_FROZEN_TO_T10_T11",
+        "status": "HOLD",
+        "evidence": "Only original physical archive and non-frozen candidate identifiable; no frozen integrated tuple"
+      }
+    ]
+  },
+  "frozen_integrated_tuple": {
+    "status": "HOLD",
+    "head_sha": null,
+    "tree_sha": null,
+    "manifest_sha256": null,
+    "source_lock_sha256": null
+  },
+  "sole_actionable_blocker": {
+    "id": "T09-T06-OWNER-SIGNED-CURRENT-TREE-13-HOST50",
+    "owner": "T06/manual owner #1; native receipt dependencies G6-B and route owners",
+    "action": "For exact current PR162 source SHA, provide one signed owner-approved HEAD/tree/manifest SourceLock with per-path CAS/P01-P05 Voice-STOP-ACL contracts and 13 Host50 owner native binding/explicit fail-closed dispositions; T08 then sign fixed P0/P1 same SHA. No automated activation of unbound routes."
+  },
+  "change_control": {
+    "product_code": false,
+    "PR162": false,
+    "main": false,
+    "shared_google_docs": false,
+    "exe": false,
+    "nsis": false,
+    "gitlab_ci": false,
+    "e07": false
+  },
+  "master_incident_cas_readback": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS PRESENT in Master/E06/Lessons 3/3; T09 did not write them",
+  "lesson_applied": "Prior Host50 BASE_TREE provenance-versus-live-tree defect was fixed in T06 commit 244d2c6c but independent signed native source attestation is still required; do not conflate code correction with acceptance.",
+  "handoff_to": [
+    "T06",
+    "T08",
+    "T02 (only Docs CAS writer)",
+    "T10",
+    "T11",
+    "T12 (not frozen/no build)"
+  ]
+}
