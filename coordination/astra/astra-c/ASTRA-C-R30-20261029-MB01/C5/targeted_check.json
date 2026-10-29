@@ -1,0 +1,11 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C5",
+  "sourceBranch": "astra-b/r29-b3-20261029",
+  "preimageGitBlobSha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+  "patchGitBlobSha1": "ca7503d5fe4a5a90bf408d1d64a28a0bd442d498",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "Decimal half-even numeric reproduction 1/1 PASS; separate exact preimage replacement source test PASS",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN"
+}
