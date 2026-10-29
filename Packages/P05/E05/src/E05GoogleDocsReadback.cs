@@ -68,16 +68,30 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, revision, revision, "RUNID_OTHER_TAB_COLLISION", entry.Length)
                     { VerifiedTabId = tabId };
             if (current.Contains(entry, StringComparison.Ordinal))
+            {
+                // Substring equality alone can match a RunID fused to old text.
+                // Never credit an ambiguous retry as an idempotent append.
+                if (!ContainsVerifiedEntry(current, entry, runId))
+                    return new(runId, documentId, revision, revision, "RUNID_BOUNDARY_HOLD", entry.Length)
+                        { VerifiedTabId = tabId };
                 return new(runId, documentId, revision, revision, "ALREADY_PRESENT", entry.Length)
                     { VerifiedTabId = tabId };
+            }
             if (ContainsExactRunId(current, runId))
                 return new(runId, documentId, revision, revision, "RUNID_COLLISION", entry.Length);
 
+            // Docs inserts at endOfSegmentLocation BEFORE its final newline.
+            // Separate a new report from existing text so RunID remains a token.
+            string beforeFinalNewline = current.EndsWith("\n", StringComparison.Ordinal)
+                ? current[..^1] : current;
+            string insertText = beforeFinalNewline.Length == 0 ||
+                char.IsWhiteSpace(beforeFinalNewline[^1]) || char.IsWhiteSpace(entry[0])
+                ? entry : "\n" + entry;
             var location = new Dictionary<string, string>();
             if (tabId is not null) location["tabId"] = tabId;
             string payload = JsonSerializer.Serialize(new {
                 requests = new object[] { new { insertText = new {
-                    endOfSegmentLocation = location, text = entry } } },
+                    endOfSegmentLocation = location, text = insertText } } },
                 writeControl = new { requiredRevisionId = revision }
             });
             httpStage = "WRITE";
@@ -122,7 +136,7 @@ public sealed class GoogleDocsAppendReadback
             var buffer = new StringBuilder();
             GatherText(afterBody, buffer);
             return new(runId, documentId, revision, revAfter,
-                buffer.ToString().Contains(entry, StringComparison.Ordinal) ? "READBACK_PASS" :
+                ContainsVerifiedEntry(buffer.ToString(), entry, runId) ? "READBACK_PASS" :
                     "READBACK_MISMATCH", entry.Length)
                 { VerifiedTabId = tabId };
         }
@@ -234,6 +248,32 @@ public sealed class GoogleDocsAppendReadback
                 (end == text.Length || !IsRunIdPart(text[end])))
                 return true;
             offset = index + 1;
+        }
+        return false;
+    }
+
+    // Confirm the exact entry AND token boundaries at the same occurrence.
+    // An unrelated matching RunID elsewhere must not make a fused entry PASS.
+    private static bool ContainsVerifiedEntry(string body, string entry, string runId)
+    {
+        int searchFrom = 0;
+        while (searchFrom < body.Length)
+        {
+            int entryAt = body.IndexOf(entry, searchFrom, StringComparison.Ordinal);
+            if (entryAt < 0) return false;
+            int tokenFrom = 0;
+            while (tokenFrom < entry.Length)
+            {
+                int runAt = entry.IndexOf(runId, tokenFrom, StringComparison.Ordinal);
+                if (runAt < 0) break;
+                int at = entryAt + runAt;
+                int after = at + runId.Length;
+                if ((at == 0 || !IsRunIdPart(body[at - 1])) &&
+                    (after == body.Length || !IsRunIdPart(body[after])))
+                    return true;
+                tokenFrom = runAt + 1;
+            }
+            searchFrom = entryAt + 1;
         }
         return false;
     }
