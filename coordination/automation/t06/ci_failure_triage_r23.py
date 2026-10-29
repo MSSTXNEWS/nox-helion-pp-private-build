@@ -12,8 +12,6 @@ import urllib.error
 import urllib.request
 
 API = "https://api.github.com"
-DEFAULT_RUNS = [40943104074, 40943103909, 40943104187,
-                40943104004, 40943104031, 40943104073]
 
 
 def api_get(path, token):
@@ -62,7 +60,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default="MSSTXNEWS/nox-helion-pp-private-build")
     parser.add_argument("--head", required=True, help="Exact frozen commit SHA")
-    parser.add_argument("--runs", type=int, nargs="+", default=DEFAULT_RUNS)
+    parser.add_argument("--runs", type=int, nargs="+", required=True,
+                        help="Run IDs verified for the exact --head; no stale defaults")
     a = parser.parse_args()
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
