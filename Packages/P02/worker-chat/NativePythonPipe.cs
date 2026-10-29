@@ -196,8 +196,13 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 waiter.TrySetResult(outcome);
                 // Only the regular response releases its busy latch.
                 // A delayed STOP reply must not block a completed chat.
-                if (Interlocked.CompareExchange(ref _regularNonce, null, nonce) == nonce)
+                // The reply nonce is deserialized into a new string instance;
+                // Interlocked.CompareExchange compares object identity, not text.
+                if (string.Equals(Volatile.Read(ref _regularNonce), nonce, StringComparison.Ordinal))
+                {
+                    Interlocked.Exchange(ref _regularNonce, null);
                     Interlocked.Exchange(ref _busy, 0);
+                }
             }
         }
         catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
