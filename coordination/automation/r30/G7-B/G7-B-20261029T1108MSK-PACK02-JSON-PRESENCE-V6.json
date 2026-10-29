@@ -1,0 +1,146 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V6",
+  "run_id": "G7-B-20261029T1108MSK-PACK02-JSON-PRESENCE-V6",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY (not main NOX)",
+  "status": "HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T1108MSK-PACK02-JSON-PRESENCE-V6",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T1007MSK-PACK02-QUERY-UTF8-STRICT-V5",
+  "mode": "SOURCE_ONLY_NO_BUILD_NO_INTEGRATION",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-B/",
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "one_writer_per_path": true
+  },
+  "reviewed": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rules_items": "01-56 consolidated; earlier unlocated historic verbatim list not certified",
+    "V16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only owner clarification"
+    ],
+    "V16_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "errors_master_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "old_C34_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "R30_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "R30_conflict_index_git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "R30_snapshots_recursive_git_trees_read": 25,
+    "R30_snapshots_truncated": 0,
+    "R30_snapshots_file_byte_hashes": "NOT_VERIFIED",
+    "three_original_parts_modified": false,
+    "raw_729_SHA256": "NOT_VERIFIED"
+  },
+  "task_ids_source_only": [
+    "G7B-PACK02-JSON-DIFF-PRESENCE-20261029-06"
+  ],
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "applied_previous_lesson": "R05 strict UTF-8 tests showed extracted helpers are not a substitute for exact source. In R06 validate the entire saved ops.mjs module with seven V8 checks; retain frozen r27-a10 alternate dotted-path semantics as HOLD, do not overwrite it.",
+  "bug": {
+    "observed_before": "dev.json.compare for {} -> {x:null} returned [{path:x,before:null,after:null}], making missing and explicit null indistinguishable to consumers even though a difference was reported.",
+    "root_cause": "The reporting layer used nullish coalescing (a[k] ?? null) for both missing properties and actual JSON null.",
+    "change": "Keep legacy before/after shape and add beforePresent/afterPresent boolean own-property markers to every changed path; same 50 route IDs.",
+    "code_path": "proposals/NOX-PACK02-50/ops.mjs",
+    "old_git_blob_sha": "34d291bf7590011a689620c7feaa1e068c656dc8",
+    "new_git_blob_sha": "0cc8708ba87f39fba83845f3097ceb6c43ccce11",
+    "source_commit_sha": "c9a0dea58e9c6c421a528faa46acdf7c28a71fcc",
+    "changed_routes": [
+      "dev.json.compare"
+    ],
+    "routes_preserved": 50,
+    "new_routes": 0,
+    "prior_DONE_retained": true
+  },
+  "targeted_test": {
+    "file": "proposals/NOX-PACK02-50/g7b-r30-json-compare-presence.test.mjs",
+    "test_git_blob_sha": "26b8c864e889a05db33e0bf523432784debfc950",
+    "test_commit_sha": "c28a349200105cac5474e970d6c233184295187f",
+    "full_authored_Node_command": "node --test proposals/NOX-PACK02-50/g7b-r30-json-compare-presence.test.mjs",
+    "full_authored_Node_run": "NOT_RUN",
+    "exact_committed_source_V8_execution": "PASS 7/7, Function-loaded exact fetched module contents with exports adapted to V8; Node-specific runtime not exercised",
+    "V8_cases": [
+      "missing→null",
+      "null→missing",
+      "unchanged null",
+      "0→null",
+      "nested empty→child null",
+      "50 distinct routes preserved",
+      "dotted-path collision remains fail closed"
+    ],
+    "native_Windows_host_test": "NOT_RUN"
+  },
+  "git_readback": {
+    "source_sha_verified": true,
+    "test_sha_verified": true,
+    "compare_to_previous": {
+      "status": "ahead",
+      "ahead_by": 2,
+      "behind_by": 0,
+      "changed_files": [
+        "proposals/NOX-PACK02-50/ops.mjs",
+        "proposals/NOX-PACK02-50/g7b-r30-json-compare-presence.test.mjs"
+      ]
+    },
+    "receipt_readback": "PENDING_WRITE"
+  },
+  "self_improvement": {
+    "lesson_id": "R30_G7B_MISSING_AND_NULL_MUST_BE_SEPARATE_DIFF_FACTS",
+    "observed_error": "The compare API visibly shows before:null and after:null for a real absent→null change, which can mislead downstream reconciliation.",
+    "root_cause": "Conflating absence and null using ?? null in a change envelope.",
+    "implemented_fix": "Add own-property flags with unchanged before/after keys and untouched 50 route catalogue; validate RED old response and seven GREEN cases on exact Git source.",
+    "future_prevention": "Regression tests must cover absence/null separately; avoid silent schema rewrite; exact Git blob readback and owner-slot test name required. Unexecuted Node test remains NOT_RUN until explicitly executed."
+  },
+  "owner_transfer": {
+    "to": "G6-B Host50 original owner",
+    "request": "Approve and license any internet adapters through original Host50 only; G7-B has no authority to edit PACK01/native_bridge.",
+    "cross_owner_code_written": false,
+    "status": "HOLD_OWNER_APPROVAL"
+  },
+  "open_conflicts": [
+    "r27-a10 frozen donor escaped dotted-key JSON semantics conflict with current JSON_PATH_COLLISION; preserve both and request explicit decision.",
+    "Full authored Node module test NOT_RUN; V8 exact Git source is narrower evidence.",
+    "Licensed internet adapters not admitted through original Host50.",
+    "Original physical 729 SHA256 and native Windows E06/E07 not checked."
+  ],
+  "safety": {
+    "PR162_modified": false,
+    "main_modified": false,
+    "shared_R30_modified": false,
+    "snapshots_modified": false,
+    "original_three_parts_modified": false,
+    "PACK01_native_bridge_modified": false,
+    "D02_WOW_modified": false,
+    "other_owner_paths_modified": false,
+    "Google_Docs_modified": false,
+    "historic_DONE_deleted": false,
+    "EXE_run": false,
+    "NSIS_run": false,
+    "GitLab_CI_run": false,
+    "final_integration_run": false
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "Host50": "HOLD",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_DOCS_CAS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "Astra_C_instruction": "Only Astra-C writes actual G7-B R06 error, source evidence, new lesson to shared Google Docs via revision/CAS+RunID readback; workers must not write there."
+}
