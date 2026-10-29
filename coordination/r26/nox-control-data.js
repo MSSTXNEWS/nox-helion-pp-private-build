@@ -301,5 +301,65 @@ window.NOX_CONTROL_DATA={
     "Количество ручных и AUTO выводится из данных, а не зашито в интерфейсе.",
     "Общий процент продукта Н/Д: нет полного доказанного frozen TaskID ledger.",
     "Прежние gate x/n исторические, не подтверждены на текущем HEAD."
-  ]
+  ],
+  "tasks": [
+    {
+      "id": "P01/safe_path",
+      "block": "P01",
+      "owner": "1",
+      "qa": "2",
+      "stage": "INTEGRATED_UNVERIFIED",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177",
+      "note": "Критерий приёмки остаётся открытым"
+    },
+    {
+      "id": "P03/ModelCenter",
+      "block": "P03",
+      "owner": "1",
+      "qa": "2",
+      "stage": "SOURCE_WORK_IN_PROGRESS",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177",
+      "note": "Нет подтверждённого полного frozen ledger"
+    },
+    {
+      "id": "P04/model_snapshot",
+      "block": "P04",
+      "owner": "3",
+      "integrator": "1",
+      "qa": "2",
+      "stage": "INTEGRATED_UNVERIFIED",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507257673",
+      "note": "Исторический source receipt; новый HEAD требует same-SHA QA"
+    },
+    {
+      "id": "P04/RAG",
+      "block": "P04",
+      "owner": "3",
+      "integrator": "1",
+      "qa": "2",
+      "stage": "INTEGRATED_UNVERIFIED",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/d23956686fd9634225512f456b194fc723eda933",
+      "note": "Исходники интегрированы, независимая QA не засчитана"
+    },
+    {
+      "id": "P05/SPACE",
+      "block": "P05",
+      "owner": "3",
+      "integrator": "1",
+      "qa": "2",
+      "stage": "INTEGRATED_UNVERIFIED",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/d23956686fd9634225512f456b194fc723eda933",
+      "note": "Есть изменения исходников, но приёмка не доказана"
+    },
+    {
+      "id": "P05/smoke",
+      "block": "P05",
+      "owner": "3",
+      "qa": "2",
+      "stage": "SOURCE_PREPARED",
+      "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507515762",
+      "note": "Исправление теста подготовлено в отдельной ветке"
+    }
+  ],
+  "tasks_are_full_ledger": false
 };
