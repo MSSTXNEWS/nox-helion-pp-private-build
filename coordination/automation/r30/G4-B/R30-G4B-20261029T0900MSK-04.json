@@ -1,0 +1,143 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V4",
+  "run_id": "R30-G4B-20261029T0900MSK-04",
+  "slot": "G4-B",
+  "project": "NOX_HELION_EXPRESS_INTEGRATOR_FIN_ZAGR_V16_LOADER_ONLY_NOT_MAIN_NOX",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_MODEL_TEST_PASS_FULL_PYTHON_SUITE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T0900MSK-04",
+  "read_inputs": {
+    "owner_lock": {
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rule_56": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "scope": "all 56 consolidated §33 items read; source is consolidated, not asserted verbatim V15 original"
+    },
+    "spec": {
+      "google_drive_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "sections": "§§54-56 and later R29 loader-only override; read-only"
+    },
+    "last_errors": {
+      "google_drive_doc_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "last_delta": "ASTRA-C-R30-20261029T0831MSK-03; source tests not native; accepted DONE=0; native gates HOLD"
+    },
+    "last_lesson": {
+      "google_drive_doc_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "last_delta": "G4-B R03 universal WHEEL tag != native DLL/CUDA proof"
+    },
+    "source_report": {
+      "google_drive_doc_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "read_only": true
+    },
+    "conflict_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "frozen_snapshots": {
+      "root": "coordination/astra/r30/snapshots/",
+      "count": 25,
+      "nontruncated_full_git_tree_manifest": true,
+      "archived_path_count_range": [
+        1198,
+        1283
+      ],
+      "original_contents_rehashed": false,
+      "raw_729_sha256_verified": false,
+      "relevant_P04_preflight_variants_git_blob_count": 3
+    },
+    "previous_owner_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T0747MSK-03.json"
+  },
+  "task_id": "G4B-R30-CUDA-PREINITIALIZED-CONTEXT-AND-BUILD-GATE-04",
+  "root_cause": "An already initialized CUDA context can ignore a later CUDA_VISIBLE_DEVICES UUID rebind; the previous preflight also recorded any torch.version.cuda value without validating a CUDA build identity, potentially reporting HARDWARE_READY_ONLY from inconsistent or test-mocked CUDA state.",
+  "change_summary": "Fail closed before vendor telemetry if a preloaded torch CUDA context reports initialized or its initialization state is unknown; require a recognized torch.version.cuda major.minor string and one CUDA-visible device before HARDWARE_READY_ONLY; preserve existing PyPA root ranges, WHEEL ABI, Windows AMD64, VRAM/thermal and runtime-training/rights HOLD flags.",
+  "pre_commit": "a2817923c84c4e4b899319d5df3997950a0ce2a0",
+  "code_commit": "9b4e0c7d6c5988d33633085bc2babc6e2b82c395",
+  "test_commit": "37b5e146f6ffb43a9f081a91712d9a6e574d0e3e",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_pre": "8bb1ca0d3cb7b877fec0b1ff4e0fa81d1ff0cca6",
+      "git_blob_post": "a079c4376355d61b4178348d830d90169e353cbd",
+      "sha256_pre": "977d5d2ca5eae6a889f44f7de6c7ab90d3e3a4e4055cdc4863997dd885149e31",
+      "sha256_post": "c85d8cb9831ec1c302d7e0e72f7d931afae7a4747b211e325685edaf59e6d629"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "git_blob_pre": "68685503f5a0a7e3328f1a030bd568f176c21e00",
+      "git_blob_post": "b29f9f8c9dced04ec6d93ea3e229e65bce8f94d3",
+      "sha256_pre": "85d6df04ed89a758074657ab91cd9f70c29caff312769e2e13bedfbb6366b09c",
+      "sha256_post": "7ea54fddb8f81be28711091ecda18bc825e29e80e55fb95473fe400d9195cf2d"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "other_owner_paths_untouched": true,
+    "receipt_path": "coordination/automation/r30/G4-B/R30-G4B-20261029T0900MSK-04.json",
+    "common_R30_untouched": true
+  },
+  "tests": {
+    "isolated_python_command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest -v /mnt/data/g4b_r04/test_cuda_context_isolated.py",
+    "isolated_python_result": "PASS 5/5; local extracted exact R04 context/build branch logic with mocked preloaded torch; not a complete preflight module test",
+    "isolated_py_compile": "PASS for extracted regression script only",
+    "github_source_checks": "PASS 5/5 precommit source model assertions; postcommit check: guard before telemetry, CUDA build before cuda.is_available, single device_count, two test methods present",
+    "owned_regression_tests": "2 new methods authored in existing tests/P04/test_local_gpu_preflight.py; 12 test methods total; full original Python unittest suite NOT_RUN in this environment (private GitHub repo cannot be mounted as a directly executable checkout via current connector)",
+    "source_readback": "GitHub fetched post blobs match update_file returns exactly",
+    "compare": "Git compare previous R03 HEAD to test_commit: ahead 2, modified owned source+test paths only, 0 deletions",
+    "windows_cuda": "NOT_RUN",
+    "wheel_artifact_hash_closure": "NOT_VERIFIED",
+    "physical_CPU_OS_VRAM": "NOT_MEASURED",
+    "LoRA_QLoRA_training": "NOT_RUN"
+  },
+  "previous_lesson_applied": "R03 separation of installed-wheel tags from true CUDA runtime readiness; R04 further avoids device identity false-positive when CUDA initialization predates UUID selection.",
+  "self_improvement": {
+    "lesson_id": "G4B_PRELOADED_CUDA_UUID_BINDING_R04",
+    "observed_error": "A successful PyPA wheel gate and one visible CUDA device do not prove it is the selected UUID if CUDA was initialized before CUDA_VISIBLE_DEVICES rebinding.",
+    "applied_fix": "Pre-vendor fail-closed is_initialized() guard for preloaded torch and explicit cuda-build shape requirement, with two new synthetic regression tests.",
+    "future_prevention": "Keep metadata and source-model checks separate from actual Windows GPU UUID, CUDA wheel/bitsandbytes DLL, VRAM and native host verification. Never promote HARDWARE_READY_ONLY to trained/model-ready/release."
+  },
+  "holds": [
+    "Full 12-case Python test suite not executed on an actual checkout; only 5 isolated extracted tests and source assertions executed",
+    "No immutable transitive PyPA Windows/CUDA wheel closure with SHA-256",
+    "No actual Windows NVIDIA CUDA driver/torch runtime or selected UUID origin verified",
+    "Physical CPU/OS/VRAM/temperature unmeasured",
+    "Original 729 files raw SHA-256 and all 25 snapshot bodies not fully rehashed",
+    "No model and dataset rights, real LoRA/QLoRA checkpoints or evaluation",
+    "SOURCE_CODE_COMPLETE and E06/E07/release not accepted"
+  ],
+  "untouched": {
+    "main": true,
+    "PR162": true,
+    "shared_R30": true,
+    "other_owner_source": true,
+    "model_snapshot_probe": true,
+    "frozen_snapshots": true,
+    "shared_google_drive_writes": true,
+    "GitLab_CI": true,
+    "NSIS": true,
+    "EXE": true,
+    "final_integration": true
+  },
+  "git_receipt_single_writer": "G4-B immutable own receipt; Astra-C only writer of shared Google Drive journals after 14 workers; no Google Drive write from G4-B."
+}
