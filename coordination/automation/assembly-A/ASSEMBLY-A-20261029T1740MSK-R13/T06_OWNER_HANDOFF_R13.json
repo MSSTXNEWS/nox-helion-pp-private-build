@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R13_HANDOFF",
+  "runId": "ASSEMBLY-A-20261029T1740MSK-R13",
+  "product": "EXISTING_EXPRESS_INTEGRATOR_WINDOWS_LOADER_ONLY",
+  "t01Historical": {
+    "done": "100/100",
+    "commit": "9bcf1e8ce035424592ebcb3c9619a7bdf795b451",
+    "reopened": false
+  },
+  "pr": 162,
+  "targetBranch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "pinnedT06Base": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+  "treeBlobEntries": 1218,
+  "treeTruncated": false,
+  "ownScopeOnly": "coordination/automation/assembly-A",
+  "patchSets": {
+    "P01": {
+      "manifest": "P01_HOST_WOW_SCOPED.json",
+      "decision": "NOOP_KEEP_STRONGER_CURRENT_WOW_AND_ALREADY_STAGED_C09_BRIDGE",
+      "sourceChangesProposed": 0,
+      "mainWindowFound": false,
+      "ownerAcceptance": "HOLD"
+    },
+    "P02": {
+      "manifest": "P02_VOICE_IPC_SCOPED.json",
+      "decision": "NOOP_ALREADY_ADMITTED_SOURCE_NOT_E2E",
+      "sourceChangesProposed": 0,
+      "ownerAcceptance": "SOURCE_PRESENT_NOT_PRODUCT_ACCEPTANCE"
+    },
+    "P03": {
+      "decision": "SCOPED_REBASED_CANDIDATES_FOR_EXACT_OWNER_CAS",
+      "patches": [
+        {
+          "file": "P03_G3A_ModelCatalog.scoped.patch",
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+          "owner": "G3-A",
+          "preGitBlob": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+          "postGitBlob": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+          "hunks": 1,
+          "added": 54,
+          "removed": 5,
+          "sourceRoundtrip": true,
+          "oldNewline": false,
+          "newNewline": false
+        },
+        {
+          "file": "P03_G3B_QueueStop.scoped.patch",
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+          "owner": "G3-B",
+          "preGitBlob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+          "postGitBlob": "3692811ac3234afb54e82958c7415b23619c1f0f",
+          "hunks": 6,
+          "added": 71,
+          "removed": 11,
+          "sourceRoundtrip": true,
+          "oldNewline": false,
+          "newNewline": true
+        }
+      ],
+      "ownerAcceptance": "HOLD G3-A/G3-B"
+    }
+  },
+  "host50": {
+    "historicalSourceHOLD": 13,
+    "acceptedNew": 0
+  },
+  "assemblyScore": {
+    "previous": "1/4",
+    "current": "1/4",
+    "percentPrevious": 25,
+    "percentCurrent": 25,
+    "deltaPoints": 0,
+    "bar": "███░░░░░░░",
+    "criteria": {
+      "P01": "HOLD_MAINWINDOW",
+      "P02": "PASS_ALREADY_IN_SOURCE",
+      "P03": "HOLD_OWNER_APPROVAL",
+      "T06": "HOLD_SIGNED_SAME_SHA_READBACK"
+    }
+  },
+  "sourceCodeChanged": 0,
+  "ownerSignature": null,
+  "integrated": false,
+  "sourceReady": false,
+  "exeNsisCiE07": "NOT_RUN",
+  "oneBlocker": "MainWindow original WPF host absent from pinned Git source tree; T06/#1 must sign true host wiring and owner-CAS for P03 before one-tree acceptance.",
+  "lesson": "The previous P01 R12 patch was not just stale; its WOW donor regressed Reduced Motion. Compare content semantics and current Git blob before applying, keep stronger current source and produce only owner-scoped P03 CAS.",
+  "reportGate": "PERSONAL_GIT_RECEIPT_ONLY_T02_SHARED_DOCS"
+}
