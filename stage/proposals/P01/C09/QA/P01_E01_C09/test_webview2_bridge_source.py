@@ -49,7 +49,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
         self.assertNotIn("exc.ToString()", TEXT)
 
     def test_duplicate_ids_cancellation_and_detach(self):
-        self.assertIn("if (!_pending.Add(requestId))", TEXT)
+        self.assertIn("if (!_pending.Add((documentEpoch, requestId)))", TEXT)
         self.assertIn("_pending.Remove((documentEpoch, requestId))", TEXT)
         self.assertIn("Interlocked.Exchange(ref _disposed, 1)", TEXT)
         self.assertIn("_webView.WebMessageReceived -= OnWebMessageReceived", TEXT)
