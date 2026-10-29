@@ -1,0 +1,87 @@
+{
+  "schema": "NOX_V16_R33_MANUAL2_LESSONS_APPLIED_V1",
+  "run_id": "NOX-V16-MANUAL2-R33-DRIVE-LESSONS-FINITE-REUSE-20261030",
+  "role": "manual2-independent-source-QA",
+  "source_pr": 162,
+  "source_head": "0b30916551c34381b3a0905eeafa5e30050aacea",
+  "source_status": "DRAFT_NOT_SOURCE_READY",
+  "other_pr": {
+    "number": 223,
+    "head": "2660916b489d2d16c3e39ac55977fe591a3c25f9",
+    "state": "READY_FOR_OWNER_REVIEW_NOT_MERGED"
+  },
+  "drive_sources": [
+    {
+      "title": "NOX FIN ZAGR V16 Canon",
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "lesson": "Later R24 §55 ended historical 10×10 quota; progress is fixed criteria only"
+    },
+    {
+      "title": "NOX_GROWTH_JOURNAL_MASTER",
+      "id": "1evk2XhCAT_zY97MmMunTCCHXViSlnTshf2EzfKYWR98",
+      "lesson": "Repeat reports and source changes cannot be equivalent to native or accepted TaskID"
+    },
+    {
+      "title": "E06 Coordinator Report",
+      "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "lesson": "Stale HEAD, ownership preimage, T06 single writer and stage-specific attestations"
+    },
+    {
+      "title": "E06 Lessons",
+      "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "lesson": "T02-only CAS, duplicate errors, 729/3 NOLOSS, no false sourceReady"
+    }
+  ],
+  "applied": [
+    {
+      "change": "Executable finite evidence gate",
+      "path": "coordination/manual/no2/finite_acceptance_r33.mjs",
+      "blob": "33b425e0523b71c34d734ce7ab0731fd9b21fce1",
+      "run": "V8 8/8 negative/normal checks PASS"
+    },
+    {
+      "change": "Nine permanent regression test bodies",
+      "path": "coordination/manual/no2/finite_acceptance_r33.test.mjs",
+      "blob": "a9995f57a6f57545a71552022fa3ea964c52e7e3",
+      "run": "V8 exact Git-file 9/9 PASS; Node actual runner NOT_RUN"
+    },
+    {
+      "change": "Reuse-first real owner source map for all 10 unresolved Host50 routes",
+      "path": "coordination/manual/no2/NOX_V16_R33_REUSE_FIRST_HOST50_PLAN.md",
+      "blob": "c2185a3470df3c441f8dd4e1d806ea74341c3186",
+      "run": "Git source path match and exact readback"
+    },
+    {
+      "change": "Existing T08 automation updated IN PLACE, not new task",
+      "automation_id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "run": "scheduler prompt readback PASS, enabled schedule unchanged"
+    }
+  ],
+  "current_criteria": {
+    "t06_verified_8": "NOT_PROVEN",
+    "host50": {
+      "total": 50,
+      "source_bound": 40,
+      "unbound": 10,
+      "native_pending": 14,
+      "exe_accepted": 0
+    },
+    "original_source_archive_files": 729,
+    "source_ready": "HOLD",
+    "e07_native_installed": "0/10 NOT_RUN",
+    "product_percent": null,
+    "independent_accepted_delta": 0
+  },
+  "lessons": [
+    "Proof never equals plan; check Git readback and dependency SHA",
+    "If no meaningful source/evidence delta: WAITING_OWNER_SOURCE_CHANGE, do not count cycles",
+    "Separate published source, owner-integrated, independently accepted and E07",
+    "Do not rewrite integrated donor or historical DONE",
+    "GitLab Free does not replace Windows 10/10 E2E",
+    "One exact owner source branch, only T02 shared ledger writes",
+    "Reuse original QLoRA, PACK02 subtitle tools, existing WebView2 and Windows API before adding any library"
+  ],
+  "scope": "NO_PRODUCT_CODE_CHANGED_BY_MANUAL2_IN_THIS_RUN",
+  "next": "T06/manual1 integrate only missing PR223 compatible fixes with exact PRE and runtime proof; owner source of 10 Host50 callbacks; T08/manual2 independent same-head QA; T09/T10 then permitted GitLab and E07",
+  "status": "PROCESS_IMPROVEMENT_SAVED_PRODUCT_HOLD"
+}
