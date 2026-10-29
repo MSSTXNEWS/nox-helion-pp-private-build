@@ -1,0 +1,110 @@
+{
+  "schema": "NOX_V16_T15_IMMUTABLE_RELEASE_GATE_RECEIPT_V1",
+  "task_id": "T15",
+  "run_id": "NOX-V16-T15-20261029T1645MSK-R01-HOLD",
+  "scope": "Windows EXPRESS INTEGRATOR ONLY",
+  "planned_start_msk": "2026-10-29T16:45:00+03:00",
+  "observed_started_msk": "2026-10-29T16:45:14.462494+03:00",
+  "observed_completion_msk": null,
+  "elapsed_seconds": null,
+  "status": "RELEASE_HOLD",
+  "published": false,
+  "publication_url": null,
+  "setup_exe_url": null,
+  "build_id": null,
+  "exe_sha256": null,
+  "setup_sha256": null,
+  "progress": {
+    "previous_accepted_gates": 0,
+    "accepted_gates": 0,
+    "total_release_gates": 3,
+    "percent": 0,
+    "delta_percentage_points": 0,
+    "bar": "░░░░░░░░░░"
+  },
+  "criteria": [
+    {
+      "criterion": "T12 actual Windows Setup/EXE + immutable BuildID and matching SHA-256",
+      "status": "NOT_RUN",
+      "accepted": false,
+      "evidence": "T12 automation has never started; no T12 artifact or receipt to verify"
+    },
+    {
+      "criterion": "T13 independent installed EXE E07 10/10 ACCEPT on exactly the T12 BuildID/SHA-256",
+      "status": "NOT_RUN",
+      "accepted": false,
+      "evidence": "T13 NOX-V16-T13-20261029T164324MSK-R02-NOT_RUN; E07=0/10"
+    },
+    {
+      "criterion": "T14 no confirmed release P0/P1 blocker at same accepted BuildID/SHA",
+      "status": "HOLD_UNTESTED",
+      "accepted": false,
+      "evidence": "T14 NO_BLOCKERS means no known findings from not-yet-run E07, not positive release clearance"
+    }
+  ],
+  "verified_upstream": [
+    {
+      "task": "T09",
+      "status": "LATEST_CONFIRMED_HOLD_AND_CURRENT_RUN_IN_PROGRESS",
+      "evidence": "T09 R12 SOURCE_FREEZE HOLD; no approved immutable HEAD"
+    },
+    {
+      "task": "T10",
+      "status": "SOURCE_READY_HOLD",
+      "evidence": "NOX-V16-T10-20261029T164206MSK-R13-HOLD, 0/7; Git commit 6625c1c37ed194077007f6f5bd38888506804e6c"
+    },
+    {
+      "task": "T11",
+      "status": "GITLAB_ACCESS_HOLD",
+      "evidence": "T11 R12 handoff saved, live GitLab HEAD not accepted"
+    },
+    {
+      "task": "T12",
+      "status": "NOT_RUN",
+      "evidence": "Automations peek: last_run=null, latest_result=null"
+    },
+    {
+      "task": "T13",
+      "status": "NOT_RUN",
+      "evidence": "R02 NOT_RUN, 0/10; Git commit 258cadb7159091a8f535f2c58814872fb6631e37"
+    },
+    {
+      "task": "T14",
+      "status": "NO_CONFIRMED_RELEASE_P0P1__UNTIL_TESTED",
+      "evidence": "T14 last completed 2026-10-29T16:43:48+03:00; no installed build defect claims"
+    }
+  ],
+  "pinned_nonfrozen_github_source": {
+    "pull_request": 162,
+    "head_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "draft": true,
+    "merged": false,
+    "source_frozen": false
+  },
+  "e07": {
+    "accepted": 0,
+    "total": 10,
+    "executed": 0,
+    "status": "NOT_RUN",
+    "same_sha_accept": false
+  },
+  "single_blocker": {
+    "owner": "T12",
+    "code": "REAL_SETUP_EXE_BUILDID_SHA_MISSING",
+    "action": "After T09/T10 PASS, T12 must supply actual Windows Setup/EXE bytes, BuildID, SHA256 and accessible proof; T13 then independently installs and runs E07 10/10 on exactly same SHA."
+  },
+  "self_improvement": {
+    "lesson": "Release requires physical artifact and independent same-SHA E07 acceptance; a NO_BLOCKERS statement before testing is not evidence of release readiness.",
+    "applied": true
+  },
+  "safety": {
+    "no_exe_fabricated": true,
+    "no_release_link_fabricated": true,
+    "no_gitlab_pipeline_launched": true,
+    "no_product_code_write": true,
+    "no_shared_docs_write": true,
+    "no_feature_or_taskid_added": true,
+    "historical_done_preserved": true,
+    "source_lock_729_unverified": true
+  }
+}
