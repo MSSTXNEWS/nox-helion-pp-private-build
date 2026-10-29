@@ -112,7 +112,7 @@ export const OPS=Object.freeze({
 "docs.text.chunks":(s,o)=>{let a=[],n=bounded(o.size,100,4000,400),parts=Array.from(s);for(let i=0;i<parts.length;i+=n)a.push(parts.slice(i,i+n).join(""));return a},
 "data.csv.parse":s=>csv(s),
 "data.csv.stringify":s=>csvOut(val(s)),
-"data.csv.select":(s,o)=>{let k=txt(o.fields).split(",").map(x=>x.trim()).filter(Boolean);return csv(s).map(r=>Object.fromEntries(k.map(x=>[x,r[x]??""])))},
+"data.csv.select":(s,o)=>{const k=txt(o.fields).split(",").map(x=>x.trim()).filter(Boolean),rows=csv(s);if(rows.length&&k.some(key=>!Object.prototype.hasOwnProperty.call(rows[0],key)))throw Error("CSV_UNKNOWN_FIELD");return rows.map(r=>Object.fromEntries(k.map(x=>[x,r[x]])))},
 "data.csv.filter":(s,o)=>csv(s).filter(r=>txt(r[o.field]).toLocaleLowerCase().includes(txt(o.term).toLocaleLowerCase())),
 "data.csv.sort":(s,o)=>csv(s).sort((a,b)=>txt(a[o.field]).localeCompare(txt(b[o.field]),"ru",{numeric:true})*(o.desc?-1:1)),
 "data.csv.dedupe":s=>[...new Map(csv(s).map(x=>[JSON.stringify(x),x])).values()],
