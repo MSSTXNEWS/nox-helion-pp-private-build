@@ -142,5 +142,74 @@ autoGroups.forEach((g,i)=>nodeBox(nodes,"group",g.name,g.name+" · "+g.workers.l
 if(selectedNode)nodes.querySelectorAll(".node").forEach(n=>{const a=n.getAttribute("aria-label")||"";if((selectedNode.type==="manual"&&a.startsWith("№"+selectedNode.id+" ·"))||(selectedNode.type==="block"&&a.startsWith(selectedNode.id+" ·"))||(selectedNode.type==="group"&&a.startsWith(selectedNode.id+" ·")))n.classList.add("selected")});
 }
 q("reset-network").addEventListener("click",()=>{selectedNode=null;selectedBlock=null;renderBlocks();q("inspector").innerHTML="<h3>Визуальная архитектура</h3><p>Выберите исполнителя, мегаблок или группу AUTO.</p>";drawGraph()});
+
+function renderReports(){
+const gateLetters=["A","B","C","D","E"];
+q("manual-reports").innerHTML=manuals.map(m=>{
+ const count=Number.isInteger(m.approaches?.done)?m.approaches.done:null;
+ const dots=Array.from({length:10},(_,i)=>'<span class="'+(count!==null&&i<count?"done":"")+'"></span>').join("");
+ const gates=m.gates&&typeof m.gates==="object"?m.gates:{};
+ const cells=gateLetters.map(k=>{const v=gates[k];return '<span title="'+esc(k+" "+(v?.status||"NOT_REPORTED"))+'">'+k+'</span>'}).join("");
+ return '<article class="glass report-card"><div class="eyebrow">PRIMARY MANUAL №'+esc(m.id)+'</div><h3>'+esc(m.name)+'</h3><div class="manual-row"><span>Содержательные подходы</span><b>'+label(count,10)+'</b></div><div class="approach-cells" aria-label="Подходы, десять сегментов">'+dots+'</div><div class="manual-row"><span>Гейты A–E</span><b>'+label(m.gate?.done,m.gate?.total)+'</b></div><div class="gate-cells">'+cells+'</div><p class="meta" style="margin-top:13px">'+esc(m.phase||"NOT_REPORTED")+' · Полные доказательства: '+esc(m.report_sha||"Н/Д")+'</p></article>';
+}).join("")||'<div class="empty">Нет подтверждённых данных о ручных исполнителях.</div>';
+q("report-provenance").innerHTML=[
+["SOURCE HEAD",data.head?data.head.slice(0,16)+"…":"Н/Д","Последний экспорт, не гарантия текущего HEAD"],
+["AUTO DEFINITIONS",autos.length,autos.filter(a=>a.enabled).length+" включены · экспорт перечня"],
+["ERRORS",data.errors?.total??"Н/Д","T02 REGISTER · "+(data.errors?.history_complete?"FULL":"BACKFILL REQUIRED")],
+["QA_ACCEPTED","Н/Д","До самостоятельной same-HEAD проверки №2"]
+].map(v=>'<article class="glass evidence-card"><div class="eyebrow">'+esc(v[0])+'</div><b class="mono">'+esc(v[1])+'</b><p>'+esc(v[2])+'</p></article>').join("");
+}
+renderReports();
+let liveRequest=null;
+function liveStatus(message,online){
+const el=q("live-status");if(!el)return;el.replaceChildren();
+const dot=document.createElement("span");dot.className="dot"+(online?"":" red");
+el.append(dot,document.createTextNode(message));
+}
+function normalizeLiveEvents(payload){
+const d=payload&&typeof payload==="object"?payload:{};
+const candidates=[d.events,d.recentEvents,d.latestEvents,d.data?.events,d.data?.recentEvents,d.result?.events,d.snapshot?.events,d.history];
+const values=candidates.find(Array.isArray);
+return values?values.filter(e=>e&&typeof e==="object").slice(-70).reverse():[];
+}
+function showLiveEvents(events){
+const el=q("live-events");q("event-count").textContent=events.length+" событий из API";
+if(!events.length){el.innerHTML='<div class="empty">API ответил, но подтверждённый список событий не найден. Не считаем это нулём выполненных задач.</div>';return;}
+el.innerHTML=events.slice(0,30).map(event=>{
+const role=String(event.role??event.owner??event.executor??"Н/Д");
+const status=String(event.status??event.stage??"NOT_REPORTED");
+const run=String(event.run_id??event.runId??event.id??"Н/Д");
+const ts=String(event.timestamp??event.time??event.created_at??"Н/Д");
+return '<div class="event-row"><div><b>'+esc(role)+' · '+esc(status)+'</b><br><small class="mono">'+esc(run)+'</small></div><small>'+esc(ts)+'</small></div>';
+}).join("");
+}
+async function refreshOnline(){
+if(location.protocol==="file:"){liveStatus("Локальный HTML · встроенный снимок, не онлайн",false);return;}
+if(liveRequest)return liveRequest;
+liveStatus("Проверяю защищённое соединение…",false);
+const controller=new AbortController();
+const timeout=setTimeout(()=>controller.abort(),12000);
+liveRequest=(async()=>{
+try{
+ const r=await fetch("/api/snapshot",{method:"GET",cache:"no-store",credentials:"same-origin",headers:{"Accept":"application/json"},signal:controller.signal});
+ if(!r.ok)throw Error("API_HTTP_"+r.status);
+ const payload=await r.json();
+ if(!payload||typeof payload!=="object"||payload.error)throw Error("API_INVALID_RESULT");
+ const events=normalizeLiveEvents(payload);
+ showLiveEvents(events);
+ const now=new Date().toLocaleTimeString("ru-RU");
+ liveStatus("API отвечает · "+now+" · "+events.length+" событий; GitHub SHA проверяется отдельно",true);
+}catch(e){
+ liveStatus("Онлайн недоступен ("+String(e.message||"API ERROR").slice(0,50)+") · резервный снимок",false);
+ q("event-count").textContent="Н/Д";
+ q("live-events").innerHTML='<div class="empty">Не удалось подтвердить свежие события. Старые SHA и QA не повышаются автоматически.</div>';
+}finally{clearTimeout(timeout);liveRequest=null;}
+})();
+return liveRequest;
+}
+q("live-refresh").addEventListener("click",refreshOnline);
+if(location.protocol==="https:"||location.protocol==="http:"){refreshOnline();document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshOnline()});setInterval(()=>{if(!document.hidden)refreshOnline()},90000)}
+else liveStatus("Локальный автономный снимок · для live нужен защищённый Vercel API",false);
+
 })();
 </script></body></html>
