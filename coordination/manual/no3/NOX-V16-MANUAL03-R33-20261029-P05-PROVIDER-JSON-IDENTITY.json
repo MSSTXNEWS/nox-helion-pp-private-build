@@ -1,0 +1,41 @@
+{
+  "run_id": "NOX-V16-MANUAL03-R33-20261029-P05-PROVIDER-JSON-IDENTITY",
+  "role": "manual3",
+  "existing_task_id": "P05 SPACE/provider source freshness",
+  "pre_commit": "8db2127d50b0d1264afc293a834c96b1de5a45fd",
+  "pre_tree": "605a0296320d8539e12ca4cda344e468a52dd953",
+  "source": {
+    "path": "Packages/P05/Space/SpaceFeedClient.cs",
+    "before": "f39e3e573d7507e02a1acc5950940f799871e32a",
+    "after": "4437f9f111bd206c975f4af30d7b8fa95213af75"
+  },
+  "test": {
+    "path": "Packages/P05/Space/tests/Program.cs",
+    "before": "cd052132a583bed91cd21b1d9a132b9a89db4df4",
+    "after": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa"
+  },
+  "root_cause": "Provider-controlled JSON with duplicate source_time or case-alias nested keys was parsed and potentially cached without ambiguous-key rejection.",
+  "fix": "Iterative case-insensitive JSON property uniqueness guard before source-time extraction and caching, cancellation-aware, map ambiguous JSON to INVALID_JSON. Two local-only negative regressions; preserve STOP and existing provider limits.",
+  "verification": {
+    "structural_source": 14,
+    "smoke_checks_authored": 23,
+    "full_dotnet": "NOT_RUN_NO_DOTNET_SDK",
+    "independent_QA": "PENDING",
+    "git_readback": "PENDING"
+  },
+  "source_pr162_last_observed": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "r23_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+  "register_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+  "related_error_ids": [
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "handoff": {
+    "T06": "Sole writer PR162: run .NET 8 local-only smoke and R20 freshness, exact source PRE and owner CAS, then independent T08.",
+    "T08": "Independently QA accepted same-head source+STOP/ACL/consent, never static/native conflation.",
+    "T02": "Sole shared journal writer, deduplicate related ERROR_ID with CAS/readback."
+  },
+  "stage": "SOURCE_PREPARED; INTEGRATED_NO; QA_ACCEPTED_NO; new accepted delta 0",
+  "no_loss": "Original 729/ZIP, D02/WOW200, Core8/Persona5, PACK01/02, STOP, ACL, native consent, user data and old DONE unmodified; no EXE/NSIS/CI/E07/release"
+}

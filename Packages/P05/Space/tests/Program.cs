@@ -147,6 +147,29 @@ Pass(overflowDateResult.Status == "OFFLINE" &&
      overflowDateResult.ErrorCode == "INVALID_SOURCE_TIME" &&
      overflowDateResult.IsStale, "provider OverflowException maps to typed invalid timestamp");
 
+// Duplicate provider keys are ambiguous provenance, even in nested metadata.
+var sourceTimeJson = JsonSerializer.Serialize(new { source_time = DateTimeOffset.UtcNow });
+var duplicateRootJson = sourceTimeJson[..^1] + "," + sourceTimeJson[1..];
+var duplicateRoot = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes(duplicateRootJson))));
+var duplicateRootResult = await Fetch(duplicateRoot);
+Pass(duplicateRootResult.Status == "OFFLINE" &&
+     duplicateRootResult.ErrorCode == "INVALID_JSON" &&
+     duplicateRootResult.Data is null && duplicateRootResult.IsStale,
+    "duplicate provider source-time key rejected before LIVE cache");
+
+var duplicateNestedJson = JsonSerializer.Serialize(new {
+    source_time = DateTimeOffset.UtcNow,
+    metadata = new { license = 1, LICENSE = 2 }
+});
+var duplicateNested = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes(duplicateNestedJson))));
+var duplicateNestedResult = await Fetch(duplicateNested);
+Pass(duplicateNestedResult.Status == "OFFLINE" &&
+     duplicateNestedResult.ErrorCode == "INVALID_JSON" &&
+     duplicateNestedResult.Data is null && duplicateNestedResult.IsStale,
+    "case-insensitive nested duplicate provider key rejected");
+
 var badJson = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes("{"))));
 var invalid = await Fetch(badJson);
 Pass(invalid.Status == "OFFLINE" && invalid.ErrorCode == "INVALID_JSON",
@@ -183,7 +206,7 @@ var unverified = (ProgressEvidence[])lanes.Clone();
 unverified[2] = unverified[2] with { State = "SOURCE_PREPARED" };
 Pass(EvidenceProgress.WeightedProduct(unverified) is null,
     "source-only TaskID cannot count toward accepted progress");
-Console.WriteLine("P05 R16 smoke: 21 semantic assertions PASS (only after this .NET 8 program actually runs)");
+Console.WriteLine("P05 R16 smoke: 23 semantic assertions PASS (only after this .NET 8 program actually runs)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
