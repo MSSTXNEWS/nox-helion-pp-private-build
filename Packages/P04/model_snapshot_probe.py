@@ -55,11 +55,110 @@ def _json_file(path: Path) -> dict:
 
 
 def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
     with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
+        return _sha256_stream(f)
+
+
+def _sha256_stream(stream) -> str:
+    h = hashlib.sha256()
+    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        h.update(chunk)
     return h.hexdigest()
+
+
+def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
+                  target_python: str, expected_license: str) -> dict:
+    """Compare local wheel bytes with caller-supplied artifact/target policy.
+
+    No install, resolution, download or rights approval. Target tags must come
+    from the intended worker (PyPA sys_tags), not an assumed CUDA/build profile.
+    """
+    import zipfile
+    from email.parser import Parser
+    report = {"status": "HOLD", "reason": None, "sha256": None,
+              "rights_verified": False, "hardware_verified": False,
+              "dependency_lock_verified": False}
+    try:
+        from packaging.tags import Tag, parse_tag
+        from packaging.utils import canonicalize_name, parse_wheel_filename
+        from packaging.version import Version
+        from packaging.specifiers import SpecifierSet
+    except ImportError:
+        report["reason"] = "WHEEL_PYPA_PARSER_UNAVAILABLE"
+        return report
+    try:
+        if (not isinstance(expected_sha256, str) or
+                not re.fullmatch(r"[0-9a-fA-F]{64}", expected_sha256) or
+                not isinstance(target_python, str) or
+                not isinstance(expected_license, str) or not expected_license.strip()):
+            raise ValueError("WHEEL_TARGET_CONTRACT_INVALID")
+        target = set(target_tags)
+        if not target or any(not isinstance(tag, Tag) for tag in target):
+            raise ValueError("WHEEL_TARGET_CONTRACT_INVALID")
+        python = Version(target_python)
+        name, version, _, filename_tags = parse_wheel_filename(path.name)
+        if not filename_tags & target:
+            raise ValueError("WHEEL_TARGET_TAG_MISMATCH")
+        with path.open("rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise ValueError("WHEEL_NOT_REGULAR_FILE")
+            report["sha256"] = _sha256_stream(stream)
+            if report["sha256"] != expected_sha256.lower():
+                raise ValueError("WHEEL_SHA256_MISMATCH")
+            stream.seek(0)
+            with zipfile.ZipFile(stream) as wheel:
+                names = wheel.namelist()
+                metadata_names = [n for n in names if n.endswith(".dist-info/METADATA")]
+                if len(names) != len(set(names)) or len(metadata_names) != 1:
+                    raise ValueError("WHEEL_METADATA_AMBIGUOUS")
+                folder = metadata_names[0].rsplit("/", 1)[0]
+                if "/" in folder or "\\" in folder:
+                    raise ValueError("WHEEL_METADATA_IDENTITY_MISMATCH")
+                folder_name, folder_version = folder[:-10].rsplit("-", 1)
+                if canonicalize_name(folder_name) != name or Version(folder_version) != version:
+                    raise ValueError("WHEEL_METADATA_IDENTITY_MISMATCH")
+
+                def metadata_file(member):
+                    info = wheel.getinfo(member)
+                    if info.file_size < 1 or info.file_size > MAX_JSON_BYTES // 4:
+                        raise ValueError("WHEEL_METADATA_SIZE_INVALID")
+                    # ZIP read verifies CRC. Only bounded metadata is inflated;
+                    # the large wheel payload was hashed incrementally above.
+                    return Parser().parsestr(wheel.read(info).decode("utf-8"))
+
+                def field(message, key, required=True):
+                    values = message.get_all(key, [])
+                    if len(values) > 1 or (required and (not values or not values[0].strip())):
+                        raise ValueError("WHEEL_METADATA_FIELDS_INVALID")
+                    return values[0].strip() if values else None
+
+                meta = metadata_file(metadata_names[0])
+                wheel_meta = metadata_file(folder + "/WHEEL")
+                if canonicalize_name(field(meta, "Name")) != name or Version(field(meta, "Version")) != version:
+                    raise ValueError("WHEEL_METADATA_IDENTITY_MISMATCH")
+                if field(wheel_meta, "Wheel-Version") != "1.0":
+                    raise ValueError("WHEEL_VERSION_UNSUPPORTED")
+                metadata_tags = set()
+                for tag in wheel_meta.get_all("Tag", []):
+                    metadata_tags.update(parse_tag(tag))
+                if metadata_tags != filename_tags:
+                    raise ValueError("WHEEL_TAG_METADATA_MISMATCH")
+                requires_python = field(meta, "Requires-Python", required=False)
+                if requires_python and not SpecifierSet(requires_python).contains(python):
+                    raise ValueError("WHEEL_TARGET_PYTHON_MISMATCH")
+                expression = field(meta, "License-Expression", required=False)
+                legacy = field(meta, "License", required=False)
+                if expression and legacy:
+                    raise ValueError("WHEEL_METADATA_FIELDS_INVALID")
+                if (expression or legacy) != expected_license:
+                    raise ValueError("WHEEL_DECLARED_LICENSE_MISMATCH")
+                report.update(name=str(name), version=str(version), license_field="License-Expression" if expression else "License",
+                              declared_license=expression or legacy, target_python=str(python),
+                              matching_tags=sorted(str(tag) for tag in filename_tags & target))
+        report["status"] = "ARTIFACT_CONTRACT_MATCH_ONLY"
+    except (OSError, ValueError, TypeError, KeyError, zipfile.BadZipFile, RuntimeError) as exc:
+        report["reason"] = str(exc)
+    return report
 
 
 def _weight_header(path: Path) -> int:

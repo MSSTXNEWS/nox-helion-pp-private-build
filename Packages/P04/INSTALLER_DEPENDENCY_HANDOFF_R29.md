@@ -81,6 +81,33 @@ Real Windows GPU execution is a later verification phase, not a request to
 write another training implementation. Final packaging/host integration stays
 with the independent integrator.
 
+### Read-only local wheel gate
+
+`model_snapshot_probe.inspect_wheel(path, expected_sha256=..., target_tags=...,
+target_python=..., expected_license=...)` now supplies executable preparation
+for the wheel-closure item. Reuse PyPA `parse_wheel_filename`, `parse_tag`,
+`Tag`, `Version`, and `SpecifierSet`; pass tags collected from the intended
+worker using `packaging.tags.sys_tags()` or an independently confirmed target
+profile. The function does not guess the target, resolve dependencies or run
+pip. Existing private_build hash/offline-install utilities stay unchanged.
+
+The gate hashes the local artifact in 1 MiB blocks, then reads the same open
+file as ZIP without extraction. It rejects duplicate/ambiguous metadata and
+limits each inflated METADATA/WHEEL entry to 1 MiB. Filename identity, dist-info
+identity, METADATA identity, WHEEL tags/version, Requires-Python and the exact
+caller-supplied declared license must agree. Both SPDX-style License-Expression
+and the legacy License field can be compared without inferring legal approval.
+
+`ARTIFACT_CONTRACT_MATCH_ONLY` proves only these local comparisons.
+`rights_verified`, `hardware_verified` and `dependency_lock_verified` remain
+false. Caller-supplied tags are not proof of actual hardware; matching declared
+license text is not an independent rights attestation. This gate does not
+attest the official origin of a caller-supplied hash or a complete package graph.
+An official pip installation report v1 can supply candidate metadata, but is
+not a lockfile and may omit artifact hashes. A report alone cannot pass this
+gate: real local wheel bytes and an independently supplied expected SHA are
+required. No weights, wheel packages or dependencies were installed/downloaded.
+
 Finite remaining handoff items for this inspected P04 installer contract
 (not a complete product TaskID denominator):
 
@@ -105,6 +132,9 @@ without a failing test.
 - https://packaging.pypa.io/en/stable/specifiers.html
 - https://packaging.pypa.io/en/stable/markers.html
 - https://docs.python.org/3.12/library/importlib.metadata.html
+- https://packaging.pypa.io/en/stable/tags.html
+- https://packaging.python.org/en/latest/specifications/binary-distribution-format/
+- https://pip.pypa.io/en/latest/reference/installation-report/
 - https://github.com/pypa/packaging/blob/main/LICENSE
 - https://github.com/huggingface/transformers/blob/main/src/transformers/dependency_versions_table.py
 - https://pytorch.org/get-started/locally/
