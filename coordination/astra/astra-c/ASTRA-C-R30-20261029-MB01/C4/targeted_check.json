@@ -1,0 +1,11 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C4",
+  "sourceBranch": "astra-b/r29-b1-20261029",
+  "preimageGitBlobSha1": "9c2e44039c744940a221f4ea235bd6a1b40a7a07",
+  "patchGitBlobSha1": "4990a731af69351ffeff678774bf12ed7732ac95",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "Python stdlib isolated malformed JSON cases 3/3 PASS",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN"
+}
