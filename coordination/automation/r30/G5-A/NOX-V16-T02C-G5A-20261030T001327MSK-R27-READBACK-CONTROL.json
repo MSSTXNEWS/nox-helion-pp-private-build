@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_V16_T02_CAS_RUN_RECEIPT_R27",
+  "run_id": "NOX-V16-T02C-G5A-20261030T001327MSK-R27-READBACK-CONTROL",
+  "role": "T02/C shared journal writer",
+  "prestart": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "role_part_blobs": [
+      "e278e4031c5f3c1ccd8a3538dbde0723706deb4e",
+      "f25f582d974bc59609e1b0befc098d3eda459502",
+      "56d7738ca90734203ed1dcba6a700a5bfb61a26f",
+      "7f335877fa43d4704cac46448f66a5a2fa0f3cb2",
+      "268c102d4a895af0cf357b32f7b6e23502f3be9b",
+      "360b1e390b3c0b5c01938ffe23eb427f1ea192de"
+    ],
+    "error_register_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "source_head": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+    "source_tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+    "master_revision": "AHj4eMTb0gnJFJVyiGiFmlCL6Xe1ppue6gWCiUVDgl0KUWZS3RoHKQQsp3CuA2PwvjN6mxvV789xdxOS_18e779jCqt96ejGilGfIfU9WJE",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc"
+  },
+  "delta": {
+    "run_id": "NOX-V16-T02C-G5A-20261030T001327MSK-R27-READBACK-CONTROL",
+    "date": "2026-10-30",
+    "owner": "T02/C G5-A",
+    "source_head": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+    "source_tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+    "register_pre_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "evidence_mode": "VERIFIED_SOURCE_READBACK_NOT_QA_ACCEPTANCE",
+    "source_deltas": {
+      "P03/ModelCenter": {
+        "error_id": "ERR-SRC-004",
+        "source_blob": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+        "stage": "INTEGRATED_SOURCE_ONLY",
+        "note": "reviewedTag typeof-id guard live; separate consent snapshot invalidation donor remains unconfirmed",
+        "qa_accepted": false,
+        "owner": "manual #1/T06",
+        "next": "Verify exact P03 consent invalidation on current HEAD, minimal owner CAS only if absent, then manual #2 exact-head QA",
+        "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/dbfd22340427e35440242f144aa1730833661695"
+      },
+      "P01/safe_path": {
+        "error_id": "ERR-SRC-004",
+        "source_blob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+        "stage": "INTEGRATED_EXISTING_UNSAFE_SOURCE",
+        "qa_accepted": false,
+        "owner": "manual #1/T06",
+        "next": "Apply existing colon/isprintable guard on exact preimage and run negative regression; T08 independent",
+        "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508082490"
+      },
+      "P04/model_snapshot": {
+        "error_id": "ERR-SRC-004",
+        "source_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+        "stage": "INTEGRATED_SOURCE_ONLY",
+        "qa_accepted": false,
+        "owner": "manual #2/T08",
+        "next": "Independent exact-current-HEAD security/native/rights QA",
+        "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507642105"
+      },
+      "P05/SPACE": {
+        "error_id": "ERR-SRC-004",
+        "donor_pr221_head": "93b0507e5bf89a6d115d04bcd4a5e378932283bd",
+        "stage": "SOURCE_PREPARED_DONOR",
+        "qa_accepted": false,
+        "owner": "manual #3 donor then manual #1 integrator",
+        "next": "Exact-PRE 4-file P05 integration and .NET smoke; T08 independent",
+        "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508215492"
+      }
+    },
+    "gate_evidence": {
+      "t08_gate_blob": "73eac868c0e7cc43a263a733c771339632e9fe8e",
+      "component_tests": "37/37 independent Python source checks reported; 9/9 head-alias tests; NO native owner PASS",
+      "qa_accepted": false
+    },
+    "errors_changed": [],
+    "error_ids_added": [],
+    "stats_unchanged": true,
+    "history_complete": false,
+    "host50": {
+      "historical_source_hold": 13,
+      "source_unbound": 11,
+      "native_pending": 14
+    },
+    "accepted_delta": 0,
+    "product": "N/D",
+    "lessons": {
+      "clusters": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-SRC-004",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "disposition": "ALREADY_APPLIED_SOURCE_GUARD / DELEGATE_P0_OWNER_FIX / INVALIDATE_OLD_HEAD_QA / NO_DUPLICATE_IDS"
+    },
+    "docs": {
+      "master": "PENDING_CAS",
+      "e06": "BLOCKED_PRIOR_FAILED_PRECONDITION",
+      "lessons": "PENDING_CAS"
+    },
+    "control_center": "SNAPSHOT_UPDATE_PENDING",
+    "build": "NOT_AUTHORIZED"
+  },
+  "git": {
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "expected_head": "9f24d758065ce5888d0f585ceaf04cd5b3fb5502",
+    "expected_tree": "1fe815352ebfa2ed8b79d8d84b1342f86ffa599c",
+    "register_pre_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "receipt_path": "coordination/automation/r30/G5-A/NOX-V16-T02C-G5A-20261030T001327MSK-R27-READBACK-CONTROL.json"
+  },
+  "security": {
+    "stop_acl_consent_no_loss": "UNCHANGED_NOT_NATIVE_VERIFIED",
+    "release": "NOT_AUTHORIZED"
+  },
+  "results": {
+    "new_qa_accepted": 0,
+    "product": "N/D",
+    "done": false
+  },
+  "next": "manual #1 exact P01 safety + P03 consent, manual #2 exact HEAD QA; T02 Docs E06 conflict no blind retries"
+}

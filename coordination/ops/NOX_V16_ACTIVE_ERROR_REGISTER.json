@@ -568,122 +568,202 @@
       "next_owner": "T06 exact current PRE/CAS for unintegrated P04 after focused tests; T08 same-HEAD independent QA; T02 E06/Lessons CAS"
     },
     {
-        "run_id": "NOX-V16-T02C-G5A-20261029T234717MSK-R26-MANUAL-FIRST-WATCHDOG-JOURNAL",
-        "observed_date": "2026-10-29",
-        "source_head_at_check": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
-        "register_pre_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
-        "register_pre_branch_head": "87e28c6cc14852ee1aa85da4ebcf572a7ad1580b",
-        "role": "G5-A / T02-C sole shared writer",
-        "manual_first": true,
-        "role_evidence": {
-            "1": {
-                "owner": "manual #1 / T06",
-                "source_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
-                "physical": "T06 latest platform FAILED; last verified source patch not re-run",
-                "stage": "INTEGRATED_EXISTING_ONLY",
-                "qa_accepted": false,
-                "approaches": "N/D",
-                "gates": "N/D"
-            },
-            "2": {
-                "owner": "manual #2 / T08",
-                "source_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
-                "task_id": "P03/ModelCenter",
-                "stage": "SOURCE_VERIFIED_NEGATIVE_ON_DONOR_ONLY",
-                "qa_accepted": false,
-                "approaches": "N/D",
-                "gates": "N/D",
-                "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508012946"
-            },
-            "3": {
-                "owner": "manual #3",
-                "pr221_head_last_receipt": "8db2127d50b0d1264afc293a834c96b1de5a45fd",
-                "task_id": "P05/Space",
-                "source_blob": "f39e3e573d7507e02a1acc5950940f799871e32a",
-                "stage": "SOURCE_PREPARED_DONOR_ONLY",
-                "qa_accepted": false,
-                "approaches": "N/D",
-                "gates": "N/D",
-                "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507935980"
-            }
+      "run_id": "NOX-V16-T02C-G5A-20261029T234717MSK-R26-MANUAL-FIRST-WATCHDOG-JOURNAL",
+      "observed_date": "2026-10-29",
+      "source_head_at_check": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+      "register_pre_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+      "register_pre_branch_head": "87e28c6cc14852ee1aa85da4ebcf572a7ad1580b",
+      "role": "G5-A / T02-C sole shared writer",
+      "manual_first": true,
+      "role_evidence": {
+        "1": {
+          "owner": "manual #1 / T06",
+          "source_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+          "physical": "T06 latest platform FAILED; last verified source patch not re-run",
+          "stage": "INTEGRATED_EXISTING_ONLY",
+          "qa_accepted": false,
+          "approaches": "N/D",
+          "gates": "N/D"
         },
-        "watchdog": {
-            "target_count": 15,
-            "enabled_after": 15,
-            "changed_automation": "G3-C/T06",
-            "automation_id": "6ae2aef78ba881919e6022c1103959a2",
-            "previous_enabled": false,
-            "previous_last_run": "eb6d7a18-ab00-8324-a47f-e4e14e5716f2",
-            "previous_recorded_status": "failed",
-            "new_enabled": true,
-            "write_replayed": false,
-            "run_now": false,
-            "schedule_unchanged": true,
-            "prompt_unchanged": true,
-            "readback": "PASS",
-            "system_failure_root": "GIT_WRITE_POLICY_DENIED, platform recorded FAILED; defect root not fixed",
-            "next_run_result": "NOT_YET_OBSERVED"
+        "2": {
+          "owner": "manual #2 / T08",
+          "source_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+          "task_id": "P03/ModelCenter",
+          "stage": "SOURCE_VERIFIED_NEGATIVE_ON_DONOR_ONLY",
+          "qa_accepted": false,
+          "approaches": "N/D",
+          "gates": "N/D",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508012946"
         },
-        "exact_source_status": {
-            "T06/P01": {
-                "error_id": "ERR-SRC-004",
-                "source_path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
-                "blob_at_current_head": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
-                "finding": "unsafe Windows colon/ADS + control/format path; independent RED 7; source candidate da993ba1... only isolated",
-                "stage": "SOURCE_PREPARED_DONOR",
-                "qa_accepted": false,
-                "next_owner": "T06 exact PRE+CAS; T08 independent same HEAD"
-            },
-            "P03/ModelCenter": {
-                "error_id": "ERR-SRC-004",
-                "source_blob_at_current_head": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
-                "isolated_candidate": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6",
-                "finding": "reviewedTag id.toLowerCase non-string crashes; manual #2 V8 RED6/GREEN14 patch is not integrated",
-                "qa_accepted": false,
-                "next_owner": "P03 owner fix candidate then T06 CAS; T08 independent"
-            },
-            "P04/model_snapshot": {
-                "error_id": "ERR-SRC-004",
-                "source_blob_at_current_head": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
-                "stage": "INTEGRATED_SOURCE_ONLY",
-                "qa_accepted": false,
-                "next_owner": "T08 complete full-module/native/rights QA"
-            },
-            "P05/Space": {
-                "error_id": "ERR-SRC-004",
-                "source_blob_at_current_head": "682a33faf4ff5d0db955619b2b2ab9de4c168aaa",
-                "stage": "INTEGRATED_EXISTING_SMOKE_FIX",
-                "qa_accepted": false,
-                "next_owner": "T06 independent dotnet smoke and donor delta; T08 same SHA QA"
-            }
+        "3": {
+          "owner": "manual #3",
+          "pr221_head_last_receipt": "8db2127d50b0d1264afc293a834c96b1de5a45fd",
+          "task_id": "P05/Space",
+          "source_blob": "f39e3e573d7507e02a1acc5950940f799871e32a",
+          "stage": "SOURCE_PREPARED_DONOR_ONLY",
+          "qa_accepted": false,
+          "approaches": "N/D",
+          "gates": "N/D",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507935980"
+        }
+      },
+      "watchdog": {
+        "target_count": 15,
+        "enabled_after": 15,
+        "changed_automation": "G3-C/T06",
+        "automation_id": "6ae2aef78ba881919e6022c1103959a2",
+        "previous_enabled": false,
+        "previous_last_run": "eb6d7a18-ab00-8324-a47f-e4e14e5716f2",
+        "previous_recorded_status": "failed",
+        "new_enabled": true,
+        "write_replayed": false,
+        "run_now": false,
+        "schedule_unchanged": true,
+        "prompt_unchanged": true,
+        "readback": "PASS",
+        "system_failure_root": "GIT_WRITE_POLICY_DENIED, platform recorded FAILED; defect root not fixed",
+        "next_run_result": "NOT_YET_OBSERVED"
+      },
+      "exact_source_status": {
+        "T06/P01": {
+          "error_id": "ERR-SRC-004",
+          "source_path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+          "blob_at_current_head": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+          "finding": "unsafe Windows colon/ADS + control/format path; independent RED 7; source candidate da993ba1... only isolated",
+          "stage": "SOURCE_PREPARED_DONOR",
+          "qa_accepted": false,
+          "next_owner": "T06 exact PRE+CAS; T08 independent same HEAD"
         },
-        "lessons": {
-            "processed_clusters": 3,
-            "dispositions": {
-                "ERR-SYS-001": "APPLY enabled-state watchdog readback and keep historical receipt coverage OPEN",
-                "ERR-SYS-002": "APPLY source SHA refresh; prior stale HEAD invalidated",
-                "ERR-SRC-004": "DELEGATE actual owner source fixes to T06; independent QA T08; no premature close"
-            },
-            "remaining": "owner integration + independent exact HEAD QA + E06/Lessons Docs",
-            "accepted_delta": 0
+        "P03/ModelCenter": {
+          "error_id": "ERR-SRC-004",
+          "source_blob_at_current_head": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+          "isolated_candidate": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6",
+          "finding": "reviewedTag id.toLowerCase non-string crashes; manual #2 V8 RED6/GREEN14 patch is not integrated",
+          "qa_accepted": false,
+          "next_owner": "P03 owner fix candidate then T06 CAS; T08 independent"
         },
-        "host50": {
-            "legacy_source_hold": 13,
-            "owner_map_unbound": 11,
-            "owner_map_native_pending": 14
+        "P04/model_snapshot": {
+          "error_id": "ERR-SRC-004",
+          "source_blob_at_current_head": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+          "stage": "INTEGRATED_SOURCE_ONLY",
+          "qa_accepted": false,
+          "next_owner": "T08 complete full-module/native/rights QA"
         },
-        "source_pre_post": [
-            "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
-            "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9"
+        "P05/Space": {
+          "error_id": "ERR-SRC-004",
+          "source_blob_at_current_head": "682a33faf4ff5d0db955619b2b2ab9de4c168aaa",
+          "stage": "INTEGRATED_EXISTING_SMOKE_FIX",
+          "qa_accepted": false,
+          "next_owner": "T06 independent dotnet smoke and donor delta; T08 same SHA QA"
+        }
+      },
+      "lessons": {
+        "processed_clusters": 3,
+        "dispositions": {
+          "ERR-SYS-001": "APPLY enabled-state watchdog readback and keep historical receipt coverage OPEN",
+          "ERR-SYS-002": "APPLY source SHA refresh; prior stale HEAD invalidated",
+          "ERR-SRC-004": "DELEGATE actual owner source fixes to T06; independent QA T08; no premature close"
+        },
+        "remaining": "owner integration + independent exact HEAD QA + E06/Lessons Docs",
+        "accepted_delta": 0
+      },
+      "host50": {
+        "legacy_source_hold": 13,
+        "owner_map_unbound": 11,
+        "owner_map_native_pending": 14
+      },
+      "source_pre_post": [
+        "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+        "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9"
+      ],
+      "task_id_new": 0,
+      "qa_accepted_new": 0,
+      "product": "N/D",
+      "error_ids_preserved": 11,
+      "original_source_729_preserved": true,
+      "history_done_unchanged": true,
+      "build": "NOT_RUN",
+      "next": "T06 accepted source P01 security + P03 candidate; T08 per TaskID exact HEAD acceptance; T02 E06/Lessons CAS only after successful safe doc preimage check; then T09/T10/T11"
+    },
+    {
+      "run_id": "NOX-V16-T02C-G5A-20261030T001327MSK-R27-READBACK-CONTROL",
+      "date": "2026-10-30",
+      "owner": "T02/C G5-A",
+      "source_head": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+      "source_tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+      "register_pre_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+      "evidence_mode": "VERIFIED_SOURCE_READBACK_NOT_QA_ACCEPTANCE",
+      "source_deltas": {
+        "P03/ModelCenter": {
+          "error_id": "ERR-SRC-004",
+          "source_blob": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+          "stage": "INTEGRATED_SOURCE_ONLY",
+          "note": "reviewedTag typeof-id guard live; separate consent snapshot invalidation donor remains unconfirmed",
+          "qa_accepted": false,
+          "owner": "manual #1/T06",
+          "next": "Verify exact P03 consent invalidation on current HEAD, minimal owner CAS only if absent, then manual #2 exact-head QA",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/dbfd22340427e35440242f144aa1730833661695"
+        },
+        "P01/safe_path": {
+          "error_id": "ERR-SRC-004",
+          "source_blob": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+          "stage": "INTEGRATED_EXISTING_UNSAFE_SOURCE",
+          "qa_accepted": false,
+          "owner": "manual #1/T06",
+          "next": "Apply existing colon/isprintable guard on exact preimage and run negative regression; T08 independent",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508082490"
+        },
+        "P04/model_snapshot": {
+          "error_id": "ERR-SRC-004",
+          "source_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+          "stage": "INTEGRATED_SOURCE_ONLY",
+          "qa_accepted": false,
+          "owner": "manual #2/T08",
+          "next": "Independent exact-current-HEAD security/native/rights QA",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6507642105"
+        },
+        "P05/SPACE": {
+          "error_id": "ERR-SRC-004",
+          "donor_pr221_head": "93b0507e5bf89a6d115d04bcd4a5e378932283bd",
+          "stage": "SOURCE_PREPARED_DONOR",
+          "qa_accepted": false,
+          "owner": "manual #3 donor then manual #1 integrator",
+          "next": "Exact-PRE 4-file P05 integration and .NET smoke; T08 independent",
+          "evidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6508215492"
+        }
+      },
+      "gate_evidence": {
+        "t08_gate_blob": "73eac868c0e7cc43a263a733c771339632e9fe8e",
+        "component_tests": "37/37 independent Python source checks reported; 9/9 head-alias tests; NO native owner PASS",
+        "qa_accepted": false
+      },
+      "errors_changed": [],
+      "error_ids_added": [],
+      "stats_unchanged": true,
+      "history_complete": false,
+      "host50": {
+        "historical_source_hold": 13,
+        "source_unbound": 11,
+        "native_pending": 14
+      },
+      "accepted_delta": 0,
+      "product": "N/D",
+      "lessons": {
+        "clusters": [
+          "ERR-SYS-001",
+          "ERR-SYS-002",
+          "ERR-SRC-004",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
         ],
-        "task_id_new": 0,
-        "qa_accepted_new": 0,
-        "product": "N/D",
-        "error_ids_preserved": 11,
-        "original_source_729_preserved": true,
-        "history_done_unchanged": true,
-        "build": "NOT_RUN",
-        "next": "T06 accepted source P01 security + P03 candidate; T08 per TaskID exact HEAD acceptance; T02 E06/Lessons CAS only after successful safe doc preimage check; then T09/T10/T11"
+        "disposition": "ALREADY_APPLIED_SOURCE_GUARD / DELEGATE_P0_OWNER_FIX / INVALIDATE_OLD_HEAD_QA / NO_DUPLICATE_IDS"
+      },
+      "docs": {
+        "master": "PENDING_CAS",
+        "e06": "BLOCKED_PRIOR_FAILED_PRECONDITION",
+        "lessons": "PENDING_CAS"
+      },
+      "control_center": "SNAPSHOT_UPDATE_PENDING",
+      "build": "NOT_AUTHORIZED"
     }
   ]
 }
