@@ -1,6 +1,6 @@
 /* Owner E01 · native-only route dispatcher. Never equate a click to a host ACK. */
 const ROUTE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-const SENSITIVE = /^(?:system\.(?:update|backup|pc_control|restart|uninstall|clean|delete)|(?:sip|phone)\.|files\.delete|models\.remove)/i;
+const SENSITIVE = /^(?:system\.(?:update|backup|pc_control|restart|uninstall|clean|delete)|(?:sip|phone)\.|calls\.dial|files\.delete|models\.remove)/i;
 const denied = reason => Object.freeze({ok:false,reason});
 export function createP01RouteDispatcher(port) {
   if (!port || typeof port.isAvailable !== 'function' || typeof port.invokeRoute !== 'function')
