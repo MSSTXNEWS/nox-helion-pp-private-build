@@ -1,0 +1,11 @@
+{
+  "always": ["no_loss_source_lock", "stop_acl_consent_privacy"],
+  "rules": [
+    {"prefix":"Packages/P02", "tests":["p02_voice_stop_ipc"]},
+    {"prefix":"Packages/P03", "tests":["p03_queue_cancel_retry"]},
+    {"prefix":"Packages/P04", "tests":["p04_rag_rights_checkpoint"]},
+    {"prefix":"Packages/P05", "tests":["p05_events_provenance"]},
+    {"prefix":"stage/proposals/P01", "tests":["p01_wpf_webview2_source"]},
+    {"prefix":"coordination/e06_host50", "tests":["host50_native_contracts"]}
+  ]
+}
