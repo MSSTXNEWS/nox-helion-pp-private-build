@@ -553,6 +553,66 @@ class ModelSnapshotProbeTests(unittest.TestCase):
             ["model-00001.safetensors", "model-00002.safetensors"]))
 
 
+    def _g4a_r08_write_header(self, tensor_name="q.weight", metadata=None):
+        tensor = {"dtype": "F32", "shape": [1], "data_offsets": [0, 4]}
+        header = {tensor_name: tensor}
+        if metadata is not None:
+            header["__metadata__"] = metadata
+        # Ensure that the file contains literal JSON \\uXXXX escape bytes.
+        raw = json.dumps(header, ensure_ascii=True, separators=(",", ":")).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(raw).to_bytes(8, "little") + raw + bytes(4)
+        )
+
+    def test_g4a_r08_unpaired_surrogate_tensor_names_hold_before_hash(self):
+        for codepoint in (0xD800, 0xDFFF):
+            with self.subTest(codepoint=hex(codepoint)):
+                self._g4a_r08_write_header(chr(codepoint))
+                with mock.patch.object(
+                    probe, "_sha256_stream",
+                    side_effect=AssertionError("malformed safetensors hashed")
+                ):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+                self.assertEqual(result["weight_files"], [])
+                self.assertEqual(result["tensor_headers"], 0)
+
+    def test_g4a_r08_unpaired_surrogate_metadata_hold_before_hash(self):
+        for metadata in ({"owner": chr(0xD800)}, {chr(0xDFFF): "owner"}):
+            with self.subTest(metadata=repr(metadata)):
+                self._g4a_r08_write_header(metadata=metadata)
+                with mock.patch.object(
+                    probe, "_sha256_stream",
+                    side_effect=AssertionError("malformed metadata hashed")
+                ):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r08_valid_utf8_and_surrogate_pair_model_still_hash(self):
+        # A *paired* escaped UTF-16 sequence decodes to a valid Unicode scalar.
+        for tensor_name in ("café.weight", "smile-" + chr(0x1F600) + ".weight"):
+            with self.subTest(tensor_name=tensor_name):
+                self._g4a_r08_write_header(
+                    tensor_name, {"owner": "equipo-" + chr(0x1F600)}
+                )
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"metadata": {"total_size": 4},
+                                "weight_map": {tensor_name: "model.safetensors"}}),
+                    encoding="utf-8"
+                )
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+                self.assertEqual(result["tensor_headers"], 1)
+                self.assertEqual(result["weight_files"][0]["sha256"],
+                                 hashlib.sha256(
+                                     (self.root / "model.safetensors").read_bytes()
+                                 ).hexdigest())
+                self.assertIs(result["snapshot_revision_attested"], False)
+
+
 if __name__ == "__main__":
     unittest.main()
 
