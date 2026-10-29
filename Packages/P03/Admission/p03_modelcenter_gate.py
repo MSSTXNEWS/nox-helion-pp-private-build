@@ -107,6 +107,12 @@ def _https_url(s: Any) -> bool:
             return ipaddress.ip_address(hostname).is_global
         except ValueError:
             labels = hostname.split(".")
+            # Legacy IPv4 shorthand, octal and hexadecimal forms can resolve
+            # to a private/loopback IP even though ipaddress rejects the spelling.
+            # Do not misclassify numeric address aliases as DNS names.
+            if all(re.fullmatch(r"(?:0[xX][0-9a-fA-F]+|[0-9]+)", label)
+                   for label in labels):
+                return False
             return len(labels) >= 2 and all(
                 re.fullmatch(r"(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])", label)
                 for label in labels
