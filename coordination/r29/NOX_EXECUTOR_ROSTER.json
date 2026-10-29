@@ -1,0 +1,164 @@
+{
+  "schema": "NOX_R29_EXECUTOR_ROSTER_V1",
+  "policy": "Owner-approved role membership; scheduler is authoritative for existence/enabled/last-run; T02 journal is authoritative for evidence. No hardcoded counts.",
+  "valid_for_product": "NOX V16 EXPRESS INTEGRATOR",
+  "owner_manual_roles": [
+    {
+      "id": "1",
+      "role": "SOURCE INTEGRATOR",
+      "scope": "current",
+      "primary": true,
+      "write_rights": "source_shared_PR162"
+    },
+    {
+      "id": "3",
+      "role": "P04/P05 DEVELOPER",
+      "scope": "current",
+      "primary": true,
+      "write_rights": "isolated_P04_P05"
+    },
+    {
+      "id": "2",
+      "role": "INDEPENDENT QA",
+      "scope": "current",
+      "primary": true,
+      "write_rights": "independent_QA_only"
+    }
+  ],
+  "automation_roles": [
+    {
+      "id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G5-C T11 GitLab READY"
+    },
+    {
+      "id": "6ae2aef4bbc081918693b0552743bd0d",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G5-B T10 SOURCE_READY"
+    },
+    {
+      "id": "6ae2af4f6c448191932f01b35fa364c1",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G5-A T02 журнал"
+    },
+    {
+      "id": "6ae2af2f84088191ba04843861edf73b",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G4-C T09 freeze"
+    },
+    {
+      "id": "6ae2af03ddd88191b39ad44b379cc3dc",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G4-B T08 блокеры"
+    },
+    {
+      "id": "6ae2af2d4f8c81919951564c5eb2ddf6",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G4-A T07 NOLOSS"
+    },
+    {
+      "id": "6ae2aef78ba881919e6022c1103959a2",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G3-C T06 интегратор"
+    },
+    {
+      "id": "6ae2af347fbc81918ddafed356511243",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G3-B PACK02"
+    },
+    {
+      "id": "6ae2af008eac8191a03526f290b801c6",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G3-A P04 GPU/RAG"
+    },
+    {
+      "id": "6ae2aefe3c248191a7131fc9876611e6",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G2-C P03 Queue"
+    },
+    {
+      "id": "6ae2aef9c3fc81918fd4c4b0041207ef",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G2-B P02 Voice"
+    },
+    {
+      "id": "6ae2af31f2988191902bae4aaec2635e",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G2-A Host50"
+    },
+    {
+      "id": "6ae2aefbde94819183730a2ed3cad78c",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G1-C P04–P05"
+    },
+    {
+      "id": "6ae2aecc59f88191a10a9342f8a1930c",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G1-B NSIS source"
+    },
+    {
+      "id": "6ae2af28e4b8819192bbf6bb3857cc84",
+      "scope": "current",
+      "title_at_roster": "NOX V16 G1-A P01–P03"
+    },
+    {
+      "id": "6ae342e4a0248191954f95217ebee33b",
+      "scope": "historical",
+      "title_at_roster": "NOX V16 T13 E07 PAUSED"
+    },
+    {
+      "id": "6ae342df73788191b8d8fb6b179dad46",
+      "scope": "historical",
+      "title_at_roster": "NOX V16 T12 BUILD PAUSED"
+    },
+    {
+      "id": "6ae342e74028819197da844e6468b640",
+      "scope": "historical",
+      "title_at_roster": "NOX V16 T14 RELEASE FIX PAUSED"
+    },
+    {
+      "id": "6ae342ea03d48191ad25ba7bcf4e5c8a",
+      "scope": "historical",
+      "title_at_roster": "NOX V16 T15 RELEASE PAUSED"
+    },
+    {
+      "id": "6ae16157f7388191a5d0634fb13d3d01",
+      "scope": "historical",
+      "title_at_roster": "NOX W4·02 P05 Events SPACE"
+    },
+    {
+      "id": "6ae1618c11908191b891c76f2ffa4238",
+      "scope": "historical",
+      "title_at_roster": "NOX W4·03 SPACE Mobile Bridge"
+    },
+    {
+      "id": "6ae161819d9481919f3dbb52cbfd9e62",
+      "scope": "historical",
+      "title_at_roster": "NOX W1·01 SourceLock 729"
+    },
+    {
+      "id": "6ae161b0c5f88191ada31d0e3b12364d",
+      "scope": "historical",
+      "title_at_roster": "NOX W1·03 Security NO-LOSS"
+    },
+    {
+      "id": "6ae1618459288191b6be333b6af9c89b",
+      "scope": "historical",
+      "title_at_roster": "NOX W1·02 Native Host50"
+    },
+    {
+      "id": "6ae1614c140881918783372458d52f29",
+      "scope": "historical",
+      "title_at_roster": "NOX W2·01 D02 WOW E01"
+    }
+  ],
+  "unassigned_policy": "New scheduler ID appears as unassigned, never auto-granted product ownership until explicit owner roster amendment.",
+  "source": "NOX CONTROL CENTER R26 verified Automations ID list + owner R26 3 manual/15 source support",
+  "last_verified_scheduler_snapshot_ref": "coordination/r26/nox-schedule-r29.js",
+  "notes": [
+    "Do not infer CURRENT from enabled alone.",
+    "Manual role is not an automation TaskID. Keep manual count independent.",
+    "Do not infer QA_ACCEPTED from a completed run, tests or commit.",
+    "Preserve archived jobs and all historic DONE/TaskID."
+  ]
+}
