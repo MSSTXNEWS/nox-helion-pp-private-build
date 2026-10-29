@@ -11,7 +11,11 @@ export function createP01ModeController(fx,wow,initial="BALANCED"){
      if(next===current)return true;
      const before=current;
      try{
-       if(fx.setProfile(next)!==true)return false;
+       if(fx.setProfile(next)!==true){
+         // A rejected renderer may still have changed state before returning.
+         try{fx.setProfile(before);}catch{}
+         return false;
+       }
        // Current WOW adapters return void on success; explicit false is HOLD.
        if(wow && wow.setMode(next) === false) throw Error('WOW_MODE_REJECTED');
        current=next;return true;
