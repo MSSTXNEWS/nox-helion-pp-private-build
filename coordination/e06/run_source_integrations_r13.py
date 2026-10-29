@@ -89,20 +89,23 @@ def main()->int:
         env=os.environ.copy()
         env.update({
             "PYTHONDONTWRITEBYTECODE":"1",
-            "NOX_PINNED_P02_PATH":str(P02),
-            "NOX_PINNED_PACK01_PATH":str(PACK),
+            "NOX_PINNED_P02_PATH":str(fixtures/"P02"),
+            "NOX_PINNED_PACK01_PATH":str(fixtures/"PACK01"),
             "NOX_G2_OWNER_FIXTURE_ROOT":str(fixtures),
         })
         print("R13 SOURCE FIXTURE SHA VERIFIED",copied,flush=True)
         failed=[]
         for label,folder,pattern in SUITES:
-            matches=list(folder.glob(pattern)) if "*" in pattern else [folder/pattern]
+            # Owner tests must import the SHA-verified copies, not mutable live paths.
+            source_folder = (fixtures/"P02" if folder == P02 else
+                             fixtures/"P03" if folder == P03 else folder)
+            matches=list(source_folder.glob(pattern)) if "*" in pattern else [source_folder/pattern]
             if not matches or any(not match.is_file() or match.is_symlink() for match in matches):
                 print("HOLD: SOURCE_TEST_MISSING",label,pattern,flush=True)
                 failed.append(label)
                 continue
             cmd=[sys.executable,"-m","unittest","discover",
-                 "-s",str(folder),"-p",pattern,"-v"]
+                 "-s",str(source_folder),"-p",pattern,"-v"]
             print("R13 START",label,flush=True)
             check=subprocess.run(cmd,cwd=ROOT,env=env,check=False)
             print("R13 RESULT",label,"PASS" if check.returncode==0 else "HOLD",
