@@ -27,6 +27,7 @@ class GateTests(unittest.TestCase):
             "project_visible":True, "visibility":"private",
             "live_gitlab_head":"a"*40,
             "migration_live_head":"b"*40,
+            "migration_head_stable":True,
             "access_level":30, "migration_commit_preserved":True,
             "migration_unique_verified":27,"migration_unique_mismatches":[],
             "original_parts_verified":3,"original_parts_mismatches":[],
@@ -78,6 +79,14 @@ class GateTests(unittest.TestCase):
     def test_boolean_part_count_not_3(self):
         x=self.verify({"original_parts_verified":True},False)
         self.assertIn("ORIGINAL_3_PARTS_GIT_BLOB_MISMATCH",x["evidence_errors"])
+
+    def test_moving_migration_head_fails(self):
+        self.verify({"migration_head_stable":False},False)
+    def test_pinned_ref_rejects_branch(self):
+        with self.assertRaises(ValueError):
+            MODULE.pinned_ref("migration/nox-v16-gitlab-free-20261028-r01")
+    def test_pinned_ref_accepts_sha(self):
+        self.assertEqual(MODULE.pinned_ref("a"*40),"a"*40)
 
 if __name__=="__main__":
     unittest.main()

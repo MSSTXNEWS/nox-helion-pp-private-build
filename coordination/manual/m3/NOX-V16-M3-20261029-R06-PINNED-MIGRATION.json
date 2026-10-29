@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_V16_M3_T11_R06_ONE_MEGABLOCK",
+  "run_id": "NOX-V16-M3-20261029-R06-PINNED",
+  "task_id": "M3",
+  "scope": "T10/T11 source-only; NO Windows build",
+  "parent_commit": "37ad9cc95cfe52edd29e0f58700830b95d3b0248",
+  "parent_tree": "f8fc2c9070872943655208a5ab41c734011dd438",
+  "error_register_blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+  "errors_ack": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "change": "All 27 migration files and 3 archive parts checked against pinned GitLab commit SHA rather than mutable branch; read-only audit rejects migration branch HEAD drift",
+  "source_file": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+  "source_pre_blob": "5cecbb361c47d69bd4ed03bdee4e7ae31ce807cf",
+  "source_post_blob": "33120bce05a5e5cb3a12eb8016a1a2c19ed98442",
+  "test_file": "coordination/t11/test_NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+  "test_pre_blob": "177eec89e0ccc183459e780bec690099a051e8dd",
+  "test_post_blob": "ab5f0f75b43b1995a6d2e1e5a6bee224dede351d",
+  "one_test": "Static exact saved-source contract check PASS 8/8; 15 Python tests saved but not executed",
+  "one_save": "Atomic Git tree+commit and subsequent exact readback",
+  "historical_done": "T07/T09 original archive 729/729; T04 archival choices 34/34; T11 historical migration 27/27 verified on GitHub",
+  "pending": "T09 owner-accepted immutable source freeze and authenticated GitLab live HEAD/permissions",
+  "progress": {
+    "T10": "1/7",
+    "T11": "2/5",
+    "M3": "3/12",
+    "percentage": 25
+  },
+  "safety": {
+    "source_pr162_unchanged": true,
+    "gitlab_unchanged": true,
+    "ci_run": false,
+    "exe": false,
+    "nsis": false,
+    "e07": false
+  }
+}

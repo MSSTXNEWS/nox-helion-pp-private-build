@@ -37,6 +37,11 @@ def pages(path, token):
             return records
     raise ValueError("GitLab pagination cap hit; not verified complete")
 
+def pinned_ref(sha):
+    if type(sha) is not str or re.fullmatch(r"[0-9a-f]{40}",sha) is None:
+        raise ValueError("UNPINNED_GITLAB_SOURCE_REF")
+    return urllib.parse.quote(sha,safe="")
+
 def evaluate_live_evidence(result, handoff):
     """Independent fail-closed GitLab migration proof; never grants build consent."""
     problems = []
@@ -57,6 +62,8 @@ def evaluate_live_evidence(result, handoff):
             result["access_level"] >= 20, "PROJECT_READ_PERMISSION_UNVERIFIED")
     require(result.get("migration_commit_preserved") is True,
             "HISTORIC_MIGRATION_COMMIT_MISSING")
+    require(result.get("migration_head_stable") is True,
+            "MIGRATION_HEAD_CHANGED_DURING_AUDIT")
     require(len({f["path"] for f in required_files}) == 27 and
             len(required_files) == 27, "HISTORIC_27_MANIFEST_INVALID")
     require(type(result.get("migration_unique_verified")) is int and
@@ -104,6 +111,7 @@ def main():
         "live_gitlab_head": None,
         "migration_live_head": None,
         "migration_commit_preserved": False,
+        "migration_head_stable": False,
         "migration_unique_verified": 0,
         "migration_unique_total": len(handoff["history"]["migration_only_files"]),
         "migration_unique_mismatches": [],
@@ -159,7 +167,7 @@ def main():
         if result["migration_live_head"]:
             for f in handoff["history"]["migration_only_files"]:
                 code = urllib.parse.quote(f["path"], safe="")
-                query = urllib.parse.quote(migration_ref, safe="")
+                query = pinned_ref(result["migration_live_head"])
                 try:
                     remote = get("projects/" + pid + "/repository/files/" + code +
                                  "?ref=" + query, token)
@@ -175,7 +183,7 @@ def main():
                     })
             def observed_blob(path):
                 p = urllib.parse.quote(path, safe="")
-                q = urllib.parse.quote(migration_ref, safe="")
+                q = pinned_ref(result["migration_live_head"])
                 try:
                     return get("projects/" + pid + "/repository/files/" + p +
                                "?ref=" + q, token).get("blob_id")
@@ -206,6 +214,12 @@ def main():
                 for r in result["runners"])
         except urllib.error.HTTPError as ex:
             result["runners_error"] = "HTTP_" + str(ex.code)
+        if result["migration_live_head"]:
+            tip = get("projects/" + pid + "/repository/branches/" +
+                      urllib.parse.quote(migration_ref, safe=""), token)
+            result["migration_head_stable"] = (
+                (tip.get("commit") or {}).get("id") ==
+                result["migration_live_head"])
         evaluate_live_evidence(result, handoff)
     except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError) as ex:
         result["read_error_type"] = type(ex).__name__
