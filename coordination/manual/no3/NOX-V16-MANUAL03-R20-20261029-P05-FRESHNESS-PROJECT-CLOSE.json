@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V16_R20_MANUAL3_P04P05_OWNER_IMMUTABLE_RECEIPT",
+  "run_id": "NOX-V16-MANUAL03-R20-20261029-P05-FRESHNESS-PROJECT-CLOSE",
+  "role": "manual_no3",
+  "source_only": true,
+  "prestart_read_proof": {
+    "canon_url": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "canon_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+    "canon_scopes": [
+      "1-33",
+      "54-56",
+      "R29",
+      "33:01-56"
+    ],
+    "ledger_path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "ledger_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "ledger_blob_sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "ledger_count": 11,
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_document_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "source_pr162_pre_head": "dde1be7f03cd512a22f30046c6ba2d5de3582353",
+    "source_pr162_pre_tree": "106c03a6a8b85700d1b2442f345bb43380436977",
+    "owner_pr221_pre_head": "3fc017ad0006fd414c0f2eaae058143880f6e3cc",
+    "owner_pr221_pre_tree": "8e6fb4b9f9ae1b9a7d5bf9c87b3c97a9ded2cbe9"
+  },
+  "task_id": "P05 SPACE source-freshness source project test",
+  "error_link": "ERR-SRC-004",
+  "root_cause": "PR221 already tracked SpaceFeedSourceFreshnessR20.csproj but Compile Include pointed at a nonexistent .cs file; T06 could not run targeted P05 .NET project; an existing unattached candidate blob was preserved without creating a replacement engine.",
+  "physical_fix": {
+    "operation": "attach_existing_verified_git_blob_to_existing_owner_pr221",
+    "path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.cs",
+    "git_blob_sha": "cbdd3d27d2eeb31f94edadc1263c13e31f0431ea",
+    "pre_path_status": "ABSENT",
+    "csproj_blob_sha": "b7c3414404bfcef04d186b0d3a95fc1bc003e9dd",
+    "project_path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj"
+  },
+  "tests": {
+    "static_source_assertions": 14,
+    "static_source_assertions_passed": 14,
+    "details": {
+      "projectReferencesMissingExactFile": true,
+      "projectReferencesExistingOwnerSource": true,
+      "candidateFromGitImmutableBlob": true,
+      "localOnlyHandler": true,
+      "freshSourceAssertion": true,
+      "freshCacheAssertion": true,
+      "staleSourceAssertion": true,
+      "staleCacheAssertion": true,
+      "futureSourceAssertion": true,
+      "zeroMaxAgeAssertion": true,
+      "cancelledCacheAssertion": true,
+      "noNetworkLiteral": true,
+      "noDuplicateEngine": true,
+      "noExecutableInstaller": true
+    },
+    "dotnet_native": "NOT_RUN_NO_DOTNET_AVAILABLE",
+    "provider_calls": "NONE",
+    "verified_product_acceptance": 0
+  },
+  "lesson_applied": [
+    "Reuse existing unattached owner candidate Git object rather than rewriting a source-only fixture",
+    "Missing compile references are real source blockers; repair at exact owning path and check project mapping",
+    "Do not promote static proof to QA_ACCEPTED; T06 .NET targeted test + T08 same-HEAD independent QA required",
+    "Retain T02 sole shared register writer, avoid duplicate ERROR_ID, preserve all prior DONE"
+  ],
+  "handoff": {
+    "T06": "Confirm candidate missing file on PR221 now attached, execute dotnet run --project Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj and legacy R16 smoke, inspect same-head P04/P05 owner PRE/POST; CAS integrate only after source approval",
+    "T08": "Independent same-HEAD source/STOP/ACL/consent negative verification after T06",
+    "T02": "Deduplicate this source fixture correction under ERR-SRC-004 and premature-stop incident; sole CAS shared log writer"
+  },
+  "remaining": "No .NET SDK in execution environment; no verified P04/P05 complete denominator, native GPU/RAG/SPACE not accepted; SOURCE_READY remains HOLD",
+  "safety": "NO-LOSS 729 sources, D02/WOW200, Core8, Persona5, SourceLock, ACL, STOP, native consent, user data preserved; no EXE/NSIS/GitLabCI/E07 or release; PR162 untouched"
+}
