@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V16_T10_P03_PRIVACY_SOURCE_PREIMAGE_NEGATIVE_RECEIPT",
+  "run_id": "NOX-V16-M3-20261029-R15-P03-SAMEHEAD",
+  "role": "M3 / independent T10 source checker",
+  "source": {
+    "pr_number": 162,
+    "head": "a10e6820d374a049f51b5b80f41e2de33250b812",
+    "file": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+    "pre_git_blob": "3692811ac3234afb54e82958c7415b23619c1f0f",
+    "owner_ready_post_blob": "6dc8d0a3a3875359f1aca6f7729e52e6adc98c44",
+    "post_integrated": false
+  },
+  "one_targeted_source_check": {
+    "pre_exact": true,
+    "old_raw_exception_leaks": 2,
+    "post_raw_exception_leaks": 0,
+    "stop_and_cancel_guard_preserved": true,
+    "post_durable_error_is_publicError": true,
+    "post_event_error_is_publicError": true,
+    "post_public_code": "P03_TRANSFER_FAILED",
+    "actual_dotnet_runtime": "NOT_RUN",
+    "pass": "SCOPED_STATIC_CONTRACT_PASS_NOT_INTEGRATED"
+  },
+  "minimal_delta": [
+    {
+      "old_line": 117,
+      "action": "add bounded publicError and diagnostic exception type only"
+    },
+    {
+      "old_line": 131,
+      "new_line": 136,
+      "action": "replace persisted ex.Message with publicError"
+    },
+    {
+      "old_line": 139,
+      "new_line": 144,
+      "action": "replace event ex.Message with publicError"
+    }
+  ],
+  "owner_handoff": {
+    "T06": "If exact same PRE remains on current PR162 HEAD, apply ready post blob owner-safe; one targeted P03 privacy+STOP regression and Git CAS; do not blindly overwrite if HEAD drifts",
+    "T08": "independent same-head negative test after T06 merges",
+    "T02": "Append confirmed new evidence to ERR-SRC-004 and existing NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01 only via sole-writer shared CAS/readback"
+  },
+  "shared_error_register_last_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+  "historical_preservation": [
+    "T04 34/34",
+    "original ZIP 729/729",
+    "NO-LOSS",
+    "ACL",
+    "STOP",
+    "native consent"
+  ],
+  "metrics": {
+    "M3_before": "3/12",
+    "M3_after": "3/12",
+    "percent_before": 25,
+    "percent_after": 25,
+    "delta_pp": 0
+  },
+  "gates": {
+    "A": "FRESH_SHA_AND_REGISTER_READ",
+    "B": "INDEPENDENT_STATIC_NEGATIVE_PROOF_NOT_PRODUCT_FIX",
+    "C": "PENDING_GIT_RECEIPT_READBACK",
+    "D": "RISKY_RAW_EXCEPTION_PERSISTENCE_REPLACED_IN_EXISTING_OWNER_DONOR_ONLY"
+  },
+  "no_source_PR162_write": true,
+  "no_exe": true,
+  "no_nsis": true,
+  "no_ci": true,
+  "no_release": true,
+  "incomplete_cause": "T06 T08 T09 and authenticated GitLab external proofs remain unsatisfied; never call task DONE"
+}
