@@ -294,13 +294,22 @@ class ExistingP02Adapter:
         return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
 
     def chat(self, session, args):
+        session.validate()
+        scope=(session.tenant,session.principal,session.chat_id,
+               session.allowed,session.private_approved)
+        def check_scope():
+            session.validate()
+            if (session.tenant,session.principal,session.chat_id,
+                    session.allowed,session.private_approved)!=scope:
+                raise HostDenied("Native chat callback changed authenticated scope")
         message = args.get("text")
         model = args.get("model")
         if not isinstance(message,str) or not 0 < len(message) <= MAX_TEXT:
             raise HostDenied("Bounded nonempty chat text required")
         installed = self.client.models()
         if model not in installed:raise HostHold("Selected model not installed")
-        conversation = self.store.history(session.tenant,session.principal,session.chat_id,80)
+        check_scope()
+        conversation = self.store.history(scope[0],scope[1],scope[2],80)
         conversation = conversation + [{"role":"user","content":message}]
         answer = []
         bytes_seen = 0
@@ -316,12 +325,14 @@ class ExistingP02Adapter:
             answer.append(delta)
             if self.event_sink:
                 self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
+            check_scope()
             if chunk.get("done") is True:done = True
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
-        # Persist messages only after real terminal success.
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"user",message)
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
+        # Persist only for the exact authenticated scope from chat admission.
+        check_scope()
+        self.store.add_message(scope[0],scope[1],scope[2],"user",message)
+        self.store.add_message(scope[0],scope[1],scope[2],"assistant",text)
         return {"answer":text,"done":True}
 
     def attach_native_selected(self,session,args):
