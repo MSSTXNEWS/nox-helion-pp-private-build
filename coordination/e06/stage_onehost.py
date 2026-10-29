@@ -68,11 +68,26 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
     """
     lock = trusted_path(original.parent / ".e06-stage.lock")
     lock_bytes = (str(os.getpid()) + "\n").encode("ascii")
-    with lock.open("xb") as guard:
-        guard.write(lock_bytes)
-        guard.flush()
-        os.fsync(guard.fileno())
-    lock_identity = _identity(lock)
+    # The exclusive lock itself is a side effect.  Acquisition errors must
+    # release our *own* new inode even when write/flush/fsync is incomplete.
+    lock_identity = None
+    try:
+        with lock.open("xb") as guard:
+            info = os.fstat(guard.fileno())
+            lock_identity = (info.st_dev, info.st_ino)
+            if guard.write(lock_bytes) != len(lock_bytes):
+                raise OSError("OWNER6_STAGE_LOCK_SHORT_WRITE_HOLD")
+            guard.flush()
+            os.fsync(guard.fileno())
+    except BaseException:
+        if lock_identity is not None:
+            try:
+                # Never unlink a foreign replacement lock, or an unknown inode.
+                if _identity(lock) == lock_identity:
+                    lock.unlink()
+            except OSError:
+                pass
+        raise
     def require_lock_owned():
         if not _owned(lock, lock_identity, lock_bytes):
             raise RuntimeError("OWNER6_STAGE_LOCK_LOST_HOLD")
