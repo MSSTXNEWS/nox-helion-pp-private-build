@@ -321,7 +321,10 @@ class NoxPackHost:
             port = self.ports.get(route)
             ready = False
             # Dangerous actions are never probed merely to draw UI buttons.
-            if port and route in session.allowed and item["risk"] != "dangerous":
+            # Sensitive owner readiness may consult private services or devices.
+            # Never probe it before the session holds the route's private scope.
+            if (port and route in session.allowed and item["risk"] != "dangerous" and
+                    (item["risk"] == "safe" or route in session.private_approved)):
                 try:
                     self._require_live_session(session)
                     ready = port.available() is True
