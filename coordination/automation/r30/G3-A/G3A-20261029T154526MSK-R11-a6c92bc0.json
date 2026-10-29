@@ -1,0 +1,104 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_EXCLUSIVE_G3A_RECEIPT_V1",
+  "run_id": "G3A-20261029T154526MSK-R11-a6c92bc0",
+  "slot": "G3-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader V16 ONLY",
+  "source_only": true,
+  "no_merge": true,
+  "no_build": true,
+  "status": "SOURCE_SAVED_STATIC_PASS_PYTHON_NOT_RUN_RUNTIME_HOLD",
+  "task_id": "P03-G3A-R30-R11-CATALOG-DIRECT-ENTRY-OFFICIAL-ORIGIN",
+  "evidence": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "parent_head": "a6c92bc03a864b4bd6f2c55e079f24cf0ab84c95",
+    "branch": "automation/r30/g3a/G3A-20261029T154526MSK-R11-a6c92bc0",
+    "source_commit": "9d33f044009339136de5caeb6b8d3b9648e6b9c4",
+    "test_commit": "f330891d33a8029d27a63f5cfe723a388b0351d7",
+    "source_path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+    "source_pre_git_blob": "0b94237d7861c021a7db3cfda56073939562d312",
+    "source_post_git_blob": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+    "source_pre_sha256": "b5e6850ce7e550c6a65d85ccddd1ae36bef52f4d9fc15404ebb88c77a64b53d7",
+    "source_post_sha256": "55ba008fc9012a4edf7fdd455137f6eca7844e2faf19e2d60825a694e4dcbb79",
+    "test_path": "Packages/P03/Admission/test_g3a_r30_r11_catalog_official_origin.py",
+    "test_git_blob": "0650f8d927d3abc65b92cdd58b3057335ad547b2",
+    "test_sha256": "b86f75c06478f09a6a59582d6062c586fad7acee89285047617f4b96770a2d60",
+    "owner_journal_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "owner_journal_git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "rules_56_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "google_docs": "Current V16 sections 54-56 plus R29 override READ; master, E06 coordinator R10 and self improvement READ; C34 historical READ_ONLY",
+    "historical_snapshots": "25 frozen snapshot references in conflict index checked; 25 full bodies not rehashed",
+    "original_729_sha256": "NOT_RUN"
+  },
+  "flaw": "Public ModelCatalogEntry can be constructed directly, bypassing TryPromote. R10 checked tag, revision and evidence URL syntax but allowed unknown family IDs and a forged/noncanonical OfficialLibraryPage while still reporting CanOfferOneClickPull.",
+  "fix": "Eligibility now requires model family present in canonical 30-family OfficialFamilies index AND official absolute HTTPS https://ollama.com/library/<exact-family> page with default port, no credentials, query or fragment. Existing pin/rights/disc/RAM/VRAM resource gates retained; no network request is made.",
+  "tests": {
+    "source_readback": "PASS",
+    "red_preimage": "PASS: prior C# eligibility lacked official-family provenance check",
+    "green_after": "12/12 independent GitHub source-contract assertions PASS",
+    "committed_python_test": "8 unit-style source-contract assertions in owned test path",
+    "python_execution": "NOT_RUN; no authenticated full repo checkout in Python runner",
+    "dotnet_compile": "NOT_RUN; SOURCE ONLY",
+    "command": "python -m unittest discover -s Packages/P03/Admission -p 'test_g3a_r30_r11_*.py'",
+    "github_compare_before_receipt": {
+      "ahead_by": 2,
+      "behind_by": 0,
+      "changed_paths": [
+        "Packages/P03/Admission/test_g3a_r30_r11_catalog_official_origin.py",
+        "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs"
+      ]
+    }
+  },
+  "owner_lock": {
+    "assigned_paths": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "receipt_path": "coordination/automation/r30/G3-A/G3A-20261029T154526MSK-R11-a6c92bc0.json",
+    "forbidden_unchanged": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "not_changed": [
+      "main",
+      "PR162",
+      "astra/fin-zagr-v16-all-results-r30-20261029",
+      "coordination/astra/r30/snapshots/",
+      "Google Drive shared journals",
+      "other owner's code"
+    ]
+  },
+  "handoff_g3b": {
+    "owner": "G3-B",
+    "request": "Do not treat C# catalog CanOfferOneClickPull as transport authorization: existing native queue must independently bind authenticated reviewer/rights/SourceLock/model SHA/manifest and session to the pull. If queue/UI needs an additional canonical-origin guard, implement in G3-B owned code only.",
+    "status": "REQUEST_ONLY_NO_FOREIGN_PATH_WRITES"
+  },
+  "self_improvement": {
+    "applied_from_previous": "Coordinator R10 lesson: public eligibility property may diverge from native owner factory. Compared catalog public record and TryPromote directly, then identified a NEW residual origin/family bypass rather than repeating completed R10 tag/revision checks.",
+    "new_lesson": "For public immutable records, validate provenance of constructor-supplied source fields as well as digest-shaped fields; native authenticated rights cannot be inferred from well-formed records. Keep static source assertions separate from actual .NET behavioral tests and never elevate to E06 PASS."
+  },
+  "progress": {
+    "model_family_leads": 30,
+    "verified_artifacts": 0,
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "product_percent": "N/D"
+  },
+  "no_operations": [
+    "EXE",
+    "NSIS",
+    "Windows CI",
+    "GitLab pipeline",
+    "GitLab migration",
+    "final integration",
+    "model download",
+    "PR162 merge",
+    "main write",
+    "Google Drive shared write"
+  ],
+  "coordinator_next": "Astra-C only reads immutable Git owner receipts and owns common Google Drive journal append+CAS/readback after 14 workers."
+}
