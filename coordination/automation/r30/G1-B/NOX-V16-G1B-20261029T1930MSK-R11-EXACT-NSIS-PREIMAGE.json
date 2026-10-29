@@ -1,0 +1,180 @@
+{
+  "schema": "NOX_V16_G1B_R11_STRICT_NSIS_SOURCE_PREIMAGE_INDEPENDENT_PROOF_V1",
+  "runId": "NOX-V16-G1B-20261029T1930MSK-R11-EXACT-NSIS-PREIMAGE",
+  "task": "NOX V16 EXPRESS INTEGRATOR / NSIS source B",
+  "role": "G1-B non-owner source verifier and exact handoff; NOT Installer owner",
+  "timestamp": {
+    "plannedMoscow": "2026-10-29T19:30:00+03:00",
+    "observedWindow": "2026-10-29T19:31:12+03:00 onward, exact first tool time not instrumented",
+    "receiptPreparedUtc": "2026-10-29T16:38:00.410Z",
+    "actualEndAndDuration": "unknown until Git readback"
+  },
+  "status": "INCOMPLETE",
+  "gates": {
+    "A": "PASS: connected Google Docs full current canon, 56 section 33 items, shared register 11, Git head and owner",
+    "B": "PASS: new independent exact live-HEAD in-memory patch application and adversarial changed-hunk rejection (same source SHA), no code integration",
+    "C": "PENDING personal immutable Git receipt readback, T02 shared journal append not asserted",
+    "D": "PARTIAL: 11 active entries inspected and triaged; 419 historical fingerprints are archival, older receipt coverage incomplete"
+  },
+  "prestartReadProof": {
+    "canonDocId": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canonRevision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canonParagraphs": 679,
+    "canonChars": 204400,
+    "section33": "56 numbered consolidated items, exact source note says reconstructed not verbatim V15; R29 and §§1–33,54–56 read",
+    "registerRef": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registerPath": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+    "registerBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "registerCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "activeErrorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "PR162Head": "0132da889ed0de42fc05098a61ddf9dc71b16ec8",
+    "PR162Tree": "200e2520a5fca30e7a723ef796fe617cf3da0b51",
+    "ownerJournalBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "ownerMap": "G1-A owns all 3 Installer files; G1-B forbidden from Installer source; T06 sole integration writer",
+    "t04ArbitrationBlob": "f723d37b39cb82425c873b51545f720d90af778d",
+    "docsRevisions": {
+      "Master": "AHj4eMT3n_0BFdRUjEoiJnu0g1irPPwMj-nmlaxDKXh4dGvAmvak75x0gngXdht7bLU9touLIjW6JFIpTmPfgxII6PBEdN4uXH-g-UbP1aI",
+      "E06": "AHj4eMQY6ZGiLg_zLOvJMhWkQvZ8a4uNJKTt3fYN-kS1-o2NEYkcJKRQ5VvoVYaJ3KO-3vSt_gY4jIuf0gAy914WZs9NBoN-9cYFNLXBQPs",
+      "Lessons": "AHj4eMRaSImHlTzD5b-jbMy5_gXQwxOK0vyg-EFBLdXLHnPgOlRnGae2uiMn34FD-t8YvRGPa6uYh1P0qrcrEPXOBzSQwHi9LhZf4s9EEQY",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "sourceEvidence": {
+    "kind": "R10 EXISTING PATCH, independently proved against live PR162 immutable HEAD",
+    "patchRef": "automation/v16/nsis-b/NOX-V16-ASSEMBLY-B-20261029T191437MSK-R10-CROSSFILE-CLI",
+    "patchPath": "coordination/automation/nsis-source-b/NOX-V16-ASSEMBLY-B-20261029T191437MSK-R10.patch",
+    "patchBlob": "fe346fb50e29b62cedcb5125618fae215219109f",
+    "verifiedFiles": [
+      {
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "PRE": "87d901c3846359a91be3e8288f24302cc7060257",
+        "candidatePOST": "c54ca1b6ca6b7566b46a89740da7aa1e7ade6b80",
+        "hunks": 5,
+        "strictApplyMatchesPostBlob": true,
+        "mutatedHunkLine100Rejected": true
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "PRE": "6c178c04957d7397c0c081e3b123940637abc6e9",
+        "candidatePOST": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+        "hunks": 3,
+        "strictApplyMatchesPostBlob": true,
+        "mutatedHunkLine3Rejected": true
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "PRE": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "candidatePOST": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+        "hunks": 1,
+        "strictApplyMatchesPostBlob": true,
+        "mutatedHunkLine86Rejected": true
+      }
+    ],
+    "test": "V8 strict unified diff apply 3/3 exact Git POST byte equality; 3/3 context/preimage negative mutation FAIL CLOSED; no native/PowerShell/NSIS/CI",
+    "testPassCount": "6/6 focused source evidence",
+    "preimageValidationRule": "T06 must compare all three entire Git PRE blobs at latest HEAD before CAS; hunk match alone is insufficient",
+    "native": "NOT_RUN",
+    "integratedSourcePaths": 0
+  },
+  "progress": {
+    "historicalT03": "DONE 5/5 unchanged",
+    "nsisSourcesBefore": "1/4 25%",
+    "nsisSourcesAfter": "1/4 25%",
+    "deltaPercentagePoints": 0,
+    "bar": "███░░░░░░░",
+    "criteria": {
+      "nsiIntegrated": false,
+      "verifyIntegrated": false,
+      "removeIntegrated": false,
+      "T06Handoff": true
+    }
+  },
+  "selfImprovement": {
+    "activeRecordsRead": 11,
+    "clusters": [
+      {
+        "id": "HEAD_AND_EVIDENCE_RECURRENCE",
+        "members": [
+          "ERR-SYS-001",
+          "ERR-SYS-002",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "priority": "P1",
+        "action": "APPLY exact current SHA and negative preimage test; T02 handles shared register"
+      },
+      {
+        "id": "SOURCE_CONTRACT_PROVENANCE",
+        "members": [
+          "ERR-SRC-003",
+          "ERR-SRC-004",
+          "ERR-SRC-005",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "priority": "P1",
+        "action": "DELEGATE Host50/P02/P03 to T06/T08; independently verify Installer patch to current source"
+      },
+      {
+        "id": "PREMATURE_FREEZE_AND_SELF_REPORT",
+        "members": [
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "priority": "P1",
+        "action": "DELEGATE owners T09/T06; do not credit receipts as integration"
+      },
+      {
+        "id": "CLOSED_HISTORY",
+        "members": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "action": "ALREADY_FIXED; preserve DONE"
+      }
+    ],
+    "totalActive": 11,
+    "deduplicatedActiveClusters": 4,
+    "appliedRelevant": 1,
+    "delegatedRelevant": 2,
+    "historicalAlreadyClosed": 2,
+    "historical419": "not active entries, not re-audited",
+    "historicalCoverage": "PARTIAL",
+    "lesson": "A passing donor test does not prove compatibility on current HEAD. Use exact 3-file PRE SHA, independent post-blob comparison, mutated-in-hunk negative case and T06-only CAS/READBACK before incrementing x/4."
+  },
+  "requiredOwners": {
+    "installer": "G1-A",
+    "integrator": "T06",
+    "sharedJournals": "T02",
+    "independentSameSha": "T08"
+  },
+  "blocker": {
+    "errorId": "ERR-SRC-004",
+    "cause": "No new G1-A signature and no T06 merged NSIS three-file CAS on live PR162 HEAD; T04 KEEP_TARGET remains until accepted explicit override",
+    "requiredOwnerAction": "G1-A approve exact R10 PRE/POST, T06 choose and CAS apply exact patch on refreshed HEAD then Git readback 3 POST, independent T08 acceptance. No force-push.",
+    "nextRunAction": "Read new T06/G1-A owner receipts + latest only three installer blobs. On approved exact PRE/POST, provide validation of real T06 merged commit; otherwise continue independent source-level contract proof without repeating old QA.",
+    "sourceReady": false
+  },
+  "safety": {
+    "foreignSourceWrites": 0,
+    "sourceBranchesTouched": 0,
+    "originalArchiveAndUserDataUntouched": true,
+    "rollbackAndUninstallNoRuntimeExecution": true,
+    "EXE_NSIS_CI_E07_RELEASE": "PROHIBITED_NOT_RUN"
+  }
+}
