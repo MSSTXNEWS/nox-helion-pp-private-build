@@ -53,7 +53,7 @@ def files_for(source:Path):
                 raise RuntimeError("OWNER_SOURCE_REPARSE_HOLD:"+str(part))
         for name in files:
             part=Path(base)/name
-            if part.is_file() and "__pycache__" not in part.parts:
+            if part.is_file() and "__pycache__" not in part.parts and part.suffix != ".pyc":
                 result.append(part)
     return sorted(result)
 
