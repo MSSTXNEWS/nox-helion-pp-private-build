@@ -439,14 +439,20 @@ class P02Store:
                                    'p02_attachments': 'id', 'p02_gc': 'storage',
                                    'p02_meta': 'key'}
                     info = list(self.db.execute(f'PRAGMA table_info({table})'))
-                    if not any(row[1] == key_columns[table] and row[5] == 1 for row in info):
+                    # pk is an ordinal, not a boolean. A composite key whose
+                    # first field is id does not make id globally unique.
+                    primary_key = [row[1] for row in sorted(info, key=lambda r: r[5])
+                                   if row[5] > 0]
+                    if primary_key != [key_columns[table]]:
                         raise P02Error('P02_SCHEMA_PRIMARY_KEY_DRIFT; restore verified backup')
                 # A forged attachment table with matching column names but no
                 # storage uniqueness could bind one physical blob to several chats.
                 indices = list(self.db.execute('PRAGMA index_list(p02_attachments)'))
                 found_storage_unique = False
                 for index_row in indices:
-                    if index_row[2] != 1:  # unique = 1
+                    # Partial UNIQUE indices protect only matching rows; blob
+                    # ownership requires storage uniqueness across every chat.
+                    if index_row[2] != 1 or index_row[4] != 0:
                         continue
                     index_name = str(index_row[1]).replace('"', '""')
                     keys = [row[2] for row in self.db.execute(
@@ -736,10 +742,18 @@ class P02Store:
 
 def authorized_app_message(source_uri: str, operation: str, main_frame: bool, user_confirmed: bool) -> bool:
     """Policy only: #6 must use browser-reported source and enforce in native WebView2 events."""
+    # Native proof flags must be booleans, not truthy page strings/numbers.
+    # urlsplit strips some controls before parsing; reject them in the raw URI.
+    if (type(main_frame) is not bool or type(user_confirmed) is not bool
+            or not isinstance(source_uri, str) or not isinstance(operation, str)
+            or source_uri != source_uri.strip()
+            or any(ord(c) < 32 or ord(c) == 127 for c in source_uri)):
+        return False
     try:
         origin = urllib.parse.urlsplit(source_uri)
         if (origin.scheme != "https" or origin.hostname != "nox.invalid" or
-                origin.port is not None or origin.username or origin.password or not main_frame):
+                origin.port is not None or origin.username is not None
+                or origin.password is not None or not main_frame):
             return False
     except ValueError:
         return False

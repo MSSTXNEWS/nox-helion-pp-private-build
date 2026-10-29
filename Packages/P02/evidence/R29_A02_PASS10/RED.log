@@ -1,0 +1,122 @@
+test_composite_message_primary_key_is_not_unique_message_id (test_sqlite_admission_r27.SchemaAdmissionTests.test_composite_message_primary_key_is_not_unique_message_id) ... FAIL
+test_original_global_constraints_remain_accepted (test_sqlite_admission_r27.SchemaAdmissionTests.test_original_global_constraints_remain_accepted) ... ok
+test_partial_unique_storage_is_not_global_blob_ownership (test_sqlite_admission_r27.SchemaAdmissionTests.test_partial_unique_storage_is_not_global_blob_ownership) ... FAIL
+test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) ... 
+  test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='str') ... FAIL
+  test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='str') ... FAIL
+  test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='int') ... FAIL
+  test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='list') ... FAIL
+  test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='object') ... FAIL
+test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) ... 
+  test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://@nox.invalid/app') ... FAIL
+  test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://:@nox.invalid/app') ... FAIL
+  test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri=' https://nox.invalid/app') ... FAIL
+  test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='\nhttps://nox.invalid/app') ... FAIL
+  test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://nox.\ninvalid/app') ... FAIL
+
+======================================================================
+FAIL: test_composite_message_primary_key_is_not_unique_message_id (test_sqlite_admission_r27.SchemaAdmissionTests.test_composite_message_primary_key_is_not_unique_message_id)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_sqlite_admission_r27.py", line 47, in test_composite_message_primary_key_is_not_unique_message_id
+    self.assert_rejected_without_repair('PRIMARY_KEY_DRIFT')
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_sqlite_admission_r27.py", line 24, in assert_rejected_without_repair
+    with self.assertRaisesRegex(P02Error, code): self.store.initialize()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_partial_unique_storage_is_not_global_blob_ownership (test_sqlite_admission_r27.SchemaAdmissionTests.test_partial_unique_storage_is_not_global_blob_ownership)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_sqlite_admission_r27.py", line 38, in test_partial_unique_storage_is_not_global_blob_ownership
+    self.assert_rejected_without_repair('STORAGE_UNIQUENESS')
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_sqlite_admission_r27.py", line 24, in assert_rejected_without_repair
+    with self.assertRaisesRegex(P02Error, code): self.store.initialize()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: P02Error not raised
+
+======================================================================
+FAIL: test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='str')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 111, in test_native_webview_flags_require_exact_booleans
+    self.assertIs(authorized_app_message(
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='str')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 111, in test_native_webview_flags_require_exact_booleans
+    self.assertIs(authorized_app_message(
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='int')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 111, in test_native_webview_flags_require_exact_booleans
+    self.assertIs(authorized_app_message(
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='list')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 113, in test_native_webview_flags_require_exact_booleans
+    self.assertIs(authorized_app_message(
+AssertionError: [] is not False
+
+======================================================================
+FAIL: test_native_webview_flags_require_exact_booleans (test_p02_runtime.P02ExtendedTests.test_native_webview_flags_require_exact_booleans) (flag='object')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 111, in test_native_webview_flags_require_exact_booleans
+    self.assertIs(authorized_app_message(
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://@nox.invalid/app')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 123, in test_native_webview_origin_rejects_parser_normalization_and_userinfo
+    self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://:@nox.invalid/app')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 123, in test_native_webview_origin_rejects_parser_normalization_and_userinfo
+    self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri=' https://nox.invalid/app')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 123, in test_native_webview_origin_rejects_parser_normalization_and_userinfo
+    self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='\nhttps://nox.invalid/app')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 123, in test_native_webview_origin_rejects_parser_normalization_and_userinfo
+    self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+AssertionError: True is not False
+
+======================================================================
+FAIL: test_native_webview_origin_rejects_parser_normalization_and_userinfo (test_p02_runtime.P02ExtendedTests.test_native_webview_origin_rejects_parser_normalization_and_userinfo) (uri='https://nox.\ninvalid/app')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_runtime.py", line 123, in test_native_webview_origin_rejects_parser_normalization_and_userinfo
+    self.assertIs(authorized_app_message(uri, 'chat.send', True, False), False)
+AssertionError: True is not False
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+FAILED (failures=12)
