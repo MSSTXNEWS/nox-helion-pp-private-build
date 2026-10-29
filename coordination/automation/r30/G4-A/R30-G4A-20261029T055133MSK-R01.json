@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T055133MSK-R01",
+  "slot": "G4-A",
+  "area": "P04 model shard probe",
+  "project": "NOX HELION EXPRESS INTEGRATOR LOADER ONLY",
+  "status": "HOLD",
+  "source_change": "COMMITTED_AND_REMOTE_READBACK_VERIFIED",
+  "source_complete": "NOT_CLAIMED",
+  "project_ready": "HOLD",
+  "release": "HOLD",
+  "time_context": "2026-10-29 05:51 Europe/Moscow",
+  "branch": "automation/r30/g4a/20261029T055133MSK-R01",
+  "base_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "base_commit_sha": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "source_commit_sha": "c6083d15a58e5bee1df59de3e84d8607c6f4146f",
+  "test_commit_sha": "de15d90d06faf451cb69d313cf739594035099c1",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_first": true
+  },
+  "conflict_index": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "listed_immutable_snapshots": 25,
+    "all_snapshot_contents_deep_scanned": false,
+    "snapshots_modified": false
+  },
+  "assigned_paths": [
+    "Packages/P04/model_snapshot_probe.py",
+    "tests/P04/test_model_snapshot_probe.py"
+  ],
+  "forbidden_paths_untouched": [
+    "Packages/P04/preflight_local_gpu.py",
+    "tests/P04/test_local_gpu_preflight.py",
+    "tests/P04/test_wheel_inventory_preflight_r29.py"
+  ],
+  "modified_files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "post_git_blob_sha1": "2a9b35ec943613d308292329bd7c0a67ad6f8e4f",
+      "donor_ref": "astra-b/r29-b1-20261029",
+      "donor_read_git_blob_sha1": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "2bad69047606a6b9a03ad93efc4561d492afabbf",
+      "post_git_blob_sha1": "4357483d58491cbe84a9cb8de4690d8858008944",
+      "donor_ref": "astra-b/r29-b1-20261029",
+      "donor_read_git_blob_sha1": "1f6eaac4228cca455ae888ae26d6f146a5fc61bc"
+    }
+  ],
+  "previous_work_reused": {
+    "A04": "safetensors validation and PyPA wheel source preserved",
+    "B1": "exact index tensor membership, same descriptor SHA-256, metadata duplicate protection, observed_snapshot_sha256 retained",
+    "B2": "index-cardinality prior lesson preserved; no false duplicate DONE"
+  },
+  "newly_closed_scope": "Windows reserved DOS device names CON/PRN/AUX/NUL/COM1-9/LPT1-9 and casefold-colliding shard names are rejected before any shard I/O",
+  "integrity_semantics": "observed_snapshot_sha256 binds locally observed config/index/shard digests, not an attested immutable revision. candidate_sha256 remains config-only. Every shard includes reported SHA-256 for checked local file bytes.",
+  "security_guards": "No model execution, downloads, installs, rights approval, GPU training, or out-of-scope file writes.",
+  "tests": {
+    "targeted_command": "python -m unittest -v /tmp/g4a_probe_targeted.py",
+    "targeted_result": "PASS 5 tests (focused isolated Windows filename helper and local-byte digest behaviors), 0 failures, 0 errors",
+    "new_repo_regressions": "two test_g4a_* methods added to existing P04 test suite, remote readback exact SHA verified; not executed against complete repo during this run",
+    "full_p04_suite": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "build": "NOT_RUN",
+    "gpu_training": "NOT_RUN",
+    "license_attestation": "NOT_RUN"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_VALIDATE_OBSERVED_BYTES_AND_WINDOWS_NAMESPACE_BEFORE_SHARD_IO",
+    "previous_applied": "B1 validate same descriptor throughout header/hash; B2 validate mapping before sorting. Reuse B1 already completed digest, don't independently create a second digest.",
+    "root_cause": "Unix-valid shard names may alias/refer to Windows devices or collapse on Windows case-insensitive filesystem; hashing must not start until all indexed names pass portable validation.",
+    "fix": "one pre-I/O validator checks the entire shard name set for reserved Windows basenames and casefold alias collisions; source unit regression covers both; leaves original digest and documented HOLD semantics unchanged.",
+    "next": "On next run read own prior receipt first; test on checked-out exact head with full source test suite, then check other unclosed source behaviors without redoing B1 DONE."
+  },
+  "journal_policy": "Only Astra-C may consolidate common Drive master/E06 reports/lessons from this Git receipt. G4-A did not mutate Drive journals.",
+  "omissions": "Entire 25-snapshot deep audit and source full-suite execution not achieved in this run; no claim of E07, runtime, rights, or 100% readiness."
+}
