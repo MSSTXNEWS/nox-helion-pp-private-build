@@ -19,8 +19,9 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private readonly Func<string, bool> _isNativeRouteAvailable;
     private readonly Func<string, CancellationToken, Task<bool>> _confirmNativeConsent;
     private readonly Func<string, CancellationToken, Task<bool>> _invokeExistingNativeRoute;
-    // Pending keys include the page epoch; a new document may reuse its own IDs.
-    private readonly HashSet<(long Epoch, string Id)> _pending = new();
+    // A pending native callback owns a token linked to the existing host lifetime.
+    // Document transitions revoke cooperative native work before its next effect.
+    private readonly Dictionary<(long Epoch, string Id), CancellationTokenSource> _pending = new();
     // Completed IDs are also remembered: replay after native ACK must not run twice.
     private readonly HashSet<string> _seenRequestIds = new(StringComparer.Ordinal);
     private const int MaxRequestsPerDocument = 1024;
@@ -105,8 +106,14 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     {
         if (Volatile.Read(ref _disposed) != 0) return;
         Interlocked.Increment(ref _documentEpoch);
-        // Old-epoch callbacks are inert; do not retain stale pending keys.
+        // Clear before cancelling: callbacks may synchronously re-enter WPF.
+        var stale = new List<CancellationTokenSource>(_pending.Values);
         _pending.Clear();
+        foreach (var source in stale)
+        {
+            try { source.Cancel(); }
+            catch (Exception) { /* third-party callbacks cannot revive stale authority */ }
+        }
         if (newDocument) _seenRequestIds.Clear();
     }
 
@@ -119,6 +126,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         string requestId = "";
         string routeId = "";
         bool reserved = false;
+        CancellationTokenSource? requestLifetime = null;
         try
         {
             var raw = args.WebMessageAsJson;
@@ -143,7 +151,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
                 return;
             }
             if (!_seenRequestIds.Add(requestId)) return;
-            if (!_pending.Add((documentEpoch, requestId))) return;
+            requestLifetime = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+            if (!_pending.TryAdd((documentEpoch, requestId), requestLifetime)) return;
             reserved = true;
             if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId))
             {
@@ -154,7 +163,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             // Never accept JS-supplied approval, role, capability or executable arguments.
             if (kind == "action")
             {
-                if (!await _confirmNativeConsent(routeId, _lifetime.Token))
+                if (!await _confirmNativeConsent(routeId, requestLifetime.Token))
                 {
                     ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId, "REJECTED", "P01_NATIVE_CONSENT_DENIED");
                     return;
@@ -163,7 +172,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
                 if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
             }
             if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
-            var accepted = await _invokeExistingNativeRoute(routeId, _lifetime.Token);
+            var accepted = await _invokeExistingNativeRoute(routeId, requestLifetime.Token);
             if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return;
             ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
                 accepted ? "COMPLETED" : "HOLD", accepted ? "" : "P01_NATIVE_ACK_MISSING");
@@ -177,6 +186,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         finally
         {
             if (reserved) _pending.Remove((documentEpoch, requestId));
+            requestLifetime?.Dispose();
         }
     }
 
