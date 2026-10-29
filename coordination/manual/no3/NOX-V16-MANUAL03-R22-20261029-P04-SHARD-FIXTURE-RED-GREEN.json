@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_V16_MANUAL03_R22_P04_SOURCE_TEST_FIXTURE_CORRECTION",
+  "run_id": "NOX-V16-MANUAL03-R22-20261029-P04-SHARD-FIXTURE-RED-GREEN",
+  "role": "manual_3",
+  "task_id": "P04 model snapshot strict local weights metadata admission",
+  "relevant_error_ids": [
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "canon_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+  "ledger_sha": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "error_ids_acknowledged": 11,
+  "pre_parent_commit": "1a16577cef8a522eb152e7e18d429736cec1bec2",
+  "pre_parent_tree": "b8ddb4664d38a2703f247c9ea11414ff353cf6a4",
+  "pr162_last_seen": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "owner_scope": "existing manual #3 branch / P04",
+  "change": {
+    "path": "tests/P04/test_model_snapshot_probe.py",
+    "pre_blob": "7e3a54b1cb44efd838335563988a437229566030",
+    "post_blob": "503b775c2e0459c12c6d0f538727fc6e383b91c4",
+    "unchanged_product_source_blob": "50abd8e9bb3dc0c73cb17183443de0c66dd7473a"
+  },
+  "root_cause": "Existing positive unit-test test_indexed_shard_valid incorrectly expected shard index tensor 'a' while generated safetensors contains 'q.weight'. Test was unsatisfiable with correctly enforced model-shard equality.",
+  "fix": "Match positive fixture weight_map key to real header q.weight; retain original wrong-name mapping as a new negative test asserting MODEL_SHARD_TENSOR_MAP_MISMATCH.",
+  "executed_test": {
+    "mode": "isolated real Python tempfile fixture RED/GREEN pre/post mapping",
+    "result": "PASS",
+    "old_mapping": "a != q.weight",
+    "corrected_mapping": "q.weight == q.weight",
+    "full_repository_test": "NOT_RUN, independent owner test pending"
+  },
+  "source_checks": {
+    "currentFixtureWasBroken": true,
+    "positiveNowMatchesActualHeader": true,
+    "negativeRetainsMismatchCase": true,
+    "preexistingFailureTestsRetained": true,
+    "noProductSourceEdited": true
+  },
+  "lesson": "When security checks reject previously expected positive samples, verify fixture correctness and retain negative regression; never disable the provenance constraint to make tests green.",
+  "stage": "SOURCE_PREPARED; isolated fixture RED/GREEN verified; integrated NO; QA_ACCEPTED NO",
+  "T06": "Run python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py on exact donor PR221 head, then accept source/test via CAS to PR162 only if compatible",
+  "T08": "Independent same-HEAD source+security QA only after T06",
+  "T02": "Sole shared journals writer; this replaces a false test gate under existing ERR-SRC-004, no new ERROR_ID",
+  "preservation": "No original 729/3-part, D02/WOW, Core8, Persona5, STOP/ACL, native consent, source-lock, data, executable or PR162 edit."
+}

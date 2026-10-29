@@ -189,10 +189,19 @@ public sealed class RagIngestionService
         var included = new List<RagSearchResult>(hits.Count);
         foreach (var hit in hits)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            // Only the authenticated SID+chat and byte-exact chunk may be
+            // published; protect this host-facing seam against bad adapters.
+            if (!string.Equals(hit.OwnerSid, ownerSid, StringComparison.Ordinal) ||
+                !string.Equals(hit.ConversationId, conversationId, StringComparison.Ordinal) ||
+                !string.Equals(hit.ChunkSha256,
+                    Sha256(StrictUtf8.GetBytes(hit.Text)), StringComparison.Ordinal))
+                throw new InvalidDataException("RAG citation scope or chunk SHA mismatch.");
             var citation = $"[SOURCE: {Uri.EscapeDataString(hit.FileName)}#{hit.ChunkIndex + 1}; SHA256:{hit.ChunkSha256}]\n";
             var needed = citation.Length + hit.Text.Length + (context.Length == 0 ? 0 : 2);
+            // A long hit must not hide a smaller valid cited passage.
             if (needed > MaximumContextCharacters - context.Length)
-                break;
+                continue;
             if (context.Length > 0) context.Append("\n\n");
             context.Append(citation).Append(hit.Text);
             included.Add(hit);

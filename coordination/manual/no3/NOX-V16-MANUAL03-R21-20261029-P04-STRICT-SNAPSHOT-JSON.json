@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_V16_MANUAL03_P04_OWNER_PATCH_RECEIPT_R21",
+  "run_id": "NOX-V16-MANUAL03-R21-20261029-P04-STRICT-SNAPSHOT-JSON",
+  "role": "manual_3_p04_p05_owner",
+  "prestart_read_proof": {
+    "canonical_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+    "canon_sections": [
+      "1-33",
+      "33:56 consolidated rules",
+      "54-56",
+      "R18",
+      "R19",
+      "R29"
+    ],
+    "r20_manual_sha": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+    "r19_policy_sha": "df0c6c0017fb5ed8773630e261f00e54bbd172c0",
+    "r20_queue_sha": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+    "register_sha": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "error_ids_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTsBH9C9JHyQ5ggj6NWJizOJpSYqnt--9sAnQZJ4m_4CmxLB3HciyyBrrQq2fiI1WhDSJPn4r4EIsx36HZBgVaX4_Evs_uXEN6q8No",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "pr162_pre_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "owner_pre_commit": "ba9df2b35243aa7a5f9a316db9a9c1df640738a1",
+    "owner_pre_tree": "dcf1b2cf24660bca69e3b3fefe01a1e39e3f4852"
+  },
+  "task_id": "P04 model snapshot strict local weights metadata admission",
+  "related_error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "root_cause": "json.loads allowed duplicate JSON object keys in model config, shard index and safetensors header; last-key-wins can hide conflicting model/shard/tensor metadata during pre-training snapshot inspection.",
+  "code_fix": "One existing P04 model_snapshot_probe strict object loader with recursive duplicate-key and NaN/Infinity rejection; reused for metadata and binary header; four negative cases appended to existing test module. No model/host/trainer/queue duplication.",
+  "source_changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+      "post_blob": "50abd8e9bb3dc0c73cb17183443de0c66dd7473a"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_blob": "2bad69047606a6b9a03ad93efc4561d492afabbf",
+      "post_blob": "7e3a54b1cb44efd838335563988a437229566030"
+    }
+  ],
+  "verification": {
+    "focused_offline_helper_runtime": "8/8 PASS isolated Python helper test; matches implementation but NOT the imported full repository module",
+    "source_structural_check": 11,
+    "source_structural_pass": 11,
+    "production_suite": "NOT_RUN",
+    "native_windows_dotnet_gpu": "NOT_RUN",
+    "security": "fail-closed duplicate and nonfinite metadata, no user data or external calls",
+    "new_accepted_product_criteria": 0
+  },
+  "self_improvement": [
+    "Reuse owner existing model_snapshot_probe and historical test fixtures, never add a second model download engine",
+    "Treat parser ambiguity as source provenance/rights security issue; reject rather than silently choose final duplicate key",
+    "Separate real helper execution from full-module regression and independent same-HEAD source acceptance"
+  ],
+  "handoff": {
+    "T06": "Read exact current PR221 code and tests, run python -m unittest tests/P04/test_model_snapshot_probe.py on owner-provided source, pin new PRE/POST blobs and only accept via owner-controlled CAS into shared PR162; preserve §54-56 gates.",
+    "T08": "Independent tests on exact T06 adopted HEAD incl duplicate metadata and no-false GPU/license attestation.",
+    "T02": "Sole shared register+Master/E06/Lessons writer, deduplicate under ERR-SRC-004 and existing premature-stop incident; no duplicate ERROR_ID."
+  },
+  "status": "SOURCE_PREPARED, local isolated helper verification 8/8; full owner source/native acceptance pending",
+  "safety": "Preserved original 729 assets / SourceLock / D02 / WOW200 / 8 CoreID / 5 Persona / PACK01/02 / ACL / STOP / consent / user data / old DONE; no PR162 write; no EXE/NSIS/GitLabCI/E07/release"
+}

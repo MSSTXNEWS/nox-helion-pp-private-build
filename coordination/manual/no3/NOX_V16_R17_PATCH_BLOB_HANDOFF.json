@@ -1,0 +1,73 @@
+{
+  "schema": "NOX_V16_MANUAL3_R17_SOURCE_CHECKPOINT",
+  "run_id": "NOX-V16-MANUAL3-R17-20261029-P04-P05-SOURCE-STOP",
+  "role": "manual #3 isolated P04/P05, code finisher",
+  "incident": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+  "source_pre_commit": "8c70f2eb27bd8de9119d5a037b250e5a64d1b404",
+  "source_current_branch": "manual/no3/p04-p05-trusted-evidence-r15-20261029",
+  "source_commit_at_readback": "ebaa5fc2fff74b874d62379a3ceb00ccc5fb17f2",
+  "pr162_unchanged_by_m3": true,
+  "scope": "One owner-safe P05 source fix plus regression; existing P04 R16 preserved, unmerged proposed new P04 scope guard reverted because source code write was blocked.",
+  "source_fixes": [
+    {
+      "task": "P05 SPACE",
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre": "fe90bdbca0393eb3d56eb411e2320121cb0962ed",
+      "post": "175acd336ecc0acadc042037614452463760b657",
+      "fix": "STOP before returning TTL-cache and STOP before fallback error cache"
+    },
+    {
+      "task": "P05 SPACE test",
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre": "af8e42f0f05890dcde8ade6f8f8ed6e757f494c5",
+      "post": "a78afc223a60a3892ab43e92acf619de0bb5b773",
+      "fix": "Negative test cancellation racing HTTP failure"
+    },
+    {
+      "task": "P04 QA safety rollback",
+      "path": "tests/P04/RagComponentHarness.cs",
+      "pre": "df5b44a682045e8b0cee19e6a12cba14562a8d3f",
+      "post": "64ee1e0cb18b10e08754f535e0b9788656b00a01",
+      "fix": "Restore last matching test until source implementation approved; unexecuted mixed-scope test not allowed to silently fail draft PR"
+    }
+  ],
+  "preserved_p04_source": {
+    "path": "Packages/P04/Rag/RagService.cs",
+    "git_blob": "1750ee9c699642ae80042dfbb7b9f01e0d4d5784",
+    "reason": "P04 new scope enforcement source write explicitly BLOCKED. Existing SHA citation integrity stays accepted source-only R16."
+  },
+  "targeted_contract": {
+    "status": "12/12 saved-blob contract PASS on pre-publication code; final after rollback exact four source/test blobs match current branch",
+    "real_dotnet_test": "NOT_RUN",
+    "real_native_gpu": "NOT_RUN",
+    "upstream_documentation": "Microsoft Learn CancellationToken.ThrowIfCancellationRequested and HttpClient cancellation"
+  },
+  "journal": {
+    "register_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "last_read_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "relevant_error_ids": [
+      "ERR-SRC-004",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "ERR-SYS-002"
+    ],
+    "shared_writer": "T02/C only"
+  },
+  "next_owner": {
+    "T06": "Review draft PR #221 source-only, merge with exact CAS onto current PR162 after scoped .NET regression; do not bypass STOP",
+    "T08": "Independent same-head tests after merge",
+    "T02": "Append new proven status and lesson without double counting ERROR_ID"
+  },
+  "progress": {
+    "P04": "weight 25%; source prepared, integrated=0, accepted=0; full TaskID denominator N/D",
+    "P05": "weight 10%; source prepared, integrated=0, accepted=0; full TaskID denominator N/D",
+    "product": "N/D"
+  },
+  "result": "INCOMPLETE_T06_T08_T09_DEPENDENT",
+  "code_mutations_in_canonical_PR162": 0,
+  "builds_runs": {
+    "EXE": 0,
+    "NSIS": 0,
+    "GitLab_CI": 0,
+    "E07": 0
+  }
+}

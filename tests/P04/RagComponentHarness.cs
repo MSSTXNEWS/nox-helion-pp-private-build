@@ -127,6 +127,49 @@ internal static class Program
             Check(hits.Count > 0 && hits[0].Text.Contains("alpha original"), "authorized search");
             Check(hits[0].ChunkSha256 == Sha(hits[0].Text), "citation hash");
             Check(RagService.BuildContext(hits).Contains("SHA256:"), "citation context");
+            // A full SHA citation must not be attached to a truncated chunk.
+            // If the first hit is too large, preserve a later valid small hit.
+            var hugeText = new string('Z', 600);
+            var smallText = "small verified passage";
+            var huge = new RagSearchResult(ownerA, conversation, "too-big",
+                "huge.md", Sha(hugeText), Sha(hugeText), 0, 0.9, hugeText);
+            var smallCitation = new RagSearchResult(ownerA, conversation, "fits",
+                "small.md", Sha(smallText), Sha(smallText), 0, 0.8, smallText);
+            var boundedContext = RagService.BuildContext(
+                new[] { huge, smallCitation }, 256);
+            Check(!boundedContext.Contains("huge.md") &&
+                  boundedContext.Contains(smallText) &&
+                  boundedContext.Contains("SHA256:" + Sha(smallText)),
+                "bounded context retains only complete SHA-verified passages");
+            // Public formatter must fail closed if the caller supplies a forged
+            // chunk identity, even if its shape and citation syntax look valid.
+            try
+            {
+                var tamperedCitation = smallCitation with { ChunkSha256 = Sha("wrong bytes") };
+                RagService.BuildContext(new[] { tamperedCitation }, 256);
+                throw new InvalidOperationException("RAG_FORGED_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
+            try
+            {
+                RagService.BuildContext(new[]
+                {
+                    smallCitation,
+                    smallCitation with { OwnerSid = ownerB }
+                }, 512);
+                throw new InvalidOperationException("RAG_FOREIGN_OWNER_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
+            try
+            {
+                RagService.BuildContext(new[]
+                {
+                    smallCitation,
+                    smallCitation with { ConversationId = "foreign-chat" }
+                }, 512);
+                throw new InvalidOperationException("RAG_FOREIGN_CHAT_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
             using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
                 "no-model-test-double", Path.Combine(directory, "index.json")))
             {
@@ -164,6 +207,21 @@ internal static class Program
                 Check((await reopened.SearchAsync(ownerA, conversation, "alpha")).Count == 0,
                     "deleted conversation stays deleted across service restart");
             }
+            // 19 full long chunks overflow the bounded host context; the
+            // final short verified passage must still appear after skipping.
+            for (var seq = 0; seq < 19; seq++)
+                await ingest.IngestTextAsync(ownerA, conversation, "long-" + seq,
+                    "long-" + seq + ".md", "alpha " + new string('q', 1170));
+            await ingest.IngestTextAsync(ownerA, conversation, "short-last",
+                "short.md", "alpha short verified passage");
+            var hostContext = await ingest.BuildContextAsync(ownerA, conversation, "alpha", 20);
+            Check(hostContext.Sources.Any(hit => hit.SourceId == "short-last"),
+                "host context skips oversized hit instead of hiding later small evidence");
+            Check(hostContext.Sources.All(hit =>
+                    hit.OwnerSid == ownerA && hit.ConversationId == conversation &&
+                    hit.ChunkSha256 == Sha(hit.Text)),
+                "host context preserves owner scope and full chunk digest");
+            await ingest.DeleteConversationAsync(ownerA, conversation);
             var indexPath = Path.Combine(directory, "index.json");
             using (var oversized = new FileStream(indexPath, FileMode.Create, FileAccess.Write, FileShare.None))
                 oversized.SetLength(256L * 1024 * 1024 + 1);

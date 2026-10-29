@@ -1,0 +1,24 @@
+{
+  "run_id": "NOX-V16-MANUAL03-R27-20261029-SAFETENSORS-FULL-BUFFER",
+  "role": "manual_3",
+  "task_id": "P04 model snapshot validation",
+  "base_owner_commit": "74fca01fd1dab883f87ffdf07a9f1dd47dde0300",
+  "base_owner_tree": "0bbdc52160e4bc5935c8915f84c5430ad51398ba",
+  "source_path": "Packages/P04/model_snapshot_probe.py",
+  "source_pre": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+  "source_post": "ca028a0c249f28aabc4e285d365da90c988b9435",
+  "test_path": "tests/P04/test_model_snapshot_probe.py",
+  "test_pre": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+  "test_post": "33457771cccc0b8194e279a4eaa5407ce6430710",
+  "root_cause": "Previously validated safetensors tensor byte offsets individually and for overlap, but gaps and extra trailing bytes were accepted as local weight candidate.",
+  "fix": "Require sorted offsets to cover exactly the full buffer, while keeping valid zero-length tensors.",
+  "checks": "Five focused executable Python cases PASS; nine exact source/test structural assertions PASS; full repo and native tests not run.",
+  "source": "https://github.com/safetensors/safetensors/blob/main/README.md",
+  "status": "SOURCE_PREPARED; SOURCE_VERIFIED native pending; INTEGRATED NO; QA_ACCEPTED NO",
+  "owners": {
+    "T06": "Execute existing focused P04 tests against donor HEAD and adopt source+tests to canonical PR162 with own CAS, preserving other paths.",
+    "T08": "Independent exact HEAD security and source acceptance.",
+    "T02": "Single writer of shared error register and Master/E06/Lessons; deduplicate under ERR-SRC-004."
+  },
+  "safety": "NOLOSS originals729 SourceLock, D02/WOW200, 8CoreID 5Persona, native consent ACL STOP, previous DONE, data and old TaskIDs preserved. EXE/NSIS/CI/E07 not run."
+}

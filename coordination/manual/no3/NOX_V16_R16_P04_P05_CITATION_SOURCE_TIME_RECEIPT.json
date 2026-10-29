@@ -1,0 +1,212 @@
+{
+  "schema": "NOX_V16_MANUAL03_R16_P04_P05_SOURCE_EVIDENCE",
+  "run_id": "NOX-V16-MANUAL-03-R16-20261029-EXACT-CITATIONS-SOURCE-TIME",
+  "role": "Manual executor #3 P04/P05 source-only isolated writer",
+  "prestart": {
+    "canon": "NOX FIN ZAGR V16 §§1-33,54-56,R29; 56 §33 rules",
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "latest_pr162_head_observed": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pr162_draft": true,
+    "ledger_sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "error_ids_read": [
+      {
+        "error_id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "action": "P04_P05_ISOLATED_SOURCE_PATCH_HANDOFF"
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "action": "PRESERVE"
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "action": "PRESERVE"
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "NO_CHANGE_OWNER"
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "action": "NO_CHANGE_OWNER"
+      }
+    ],
+    "owner_branch": "manual/no3/p04-p05-trusted-evidence-r15-20261029",
+    "parent_head": "4f62ba9deefb140b41fe3abee3964574dfe25ea9",
+    "parent_tree": "c50ddb892613170a87358ba2f4f653bc1862ca5b",
+    "prior_r15_receipt": "0d5456505b346a231b63256ec387eaea70863b88"
+  },
+  "physical": {
+    "P04": {
+      "task_id": "E04.02",
+      "root_cause": "BuildContext is public and previously used caller supplied ChunkSha256 without comparing it with full citation text",
+      "fix": "reject forged SHA256 and negative chunk indexes while preserving R15 full-chunk-only rule and ACL-scoped retrieval",
+      "new_negative_regression": "RAG_FORGED_CITATION_ACCEPTED"
+    },
+    "P05": {
+      "task": "P05/SPACE feed source time",
+      "root_cause": "Future-dated provider timestamps were marked LIVE and unverified cached replies were promoted to CACHE",
+      "fix": "future timestamp >5min marks INVALID_SOURCE_TIME with FUTURE_SOURCE_TIME, stale flag; retain unverified cache status and STOP-before-cache",
+      "regressions": [
+        "future source timestamp cannot be LIVE",
+        "unverified future source cannot be promoted to CACHE"
+      ]
+    },
+    "files": [
+      {
+        "path": "Packages/P04/Rag/RagService.cs",
+        "pre": "20679bc09c245846dcdf8d06f81405fc6b42d2eb",
+        "post": "1750ee9c699642ae80042dfbb7b9f01e0d4d5784"
+      },
+      {
+        "path": "tests/P04/RagComponentHarness.cs",
+        "pre": "4e918500f0bc17458f6940529c2f65b93db95492",
+        "post": "64ee1e0cb18b10e08754f535e0b9788656b00a01"
+      },
+      {
+        "path": "Packages/P05/Space/SpaceFeedClient.cs",
+        "pre": "e371d116ef1a96dc2a5b1cd47f6106c24011acb9",
+        "post": "fe90bdbca0393eb3d56eb411e2320121cb0962ed"
+      },
+      {
+        "path": "Packages/P05/Space/tests/Program.cs",
+        "pre": "9235a1960498f978ddf992089c5aa010400e3ea6",
+        "post": "af8e42f0f05890dcde8ade6f8f8ed6e757f494c5"
+      }
+    ]
+  },
+  "targeted_check": {
+    "static_contracts_passed": 12,
+    "static_contracts_total": 12,
+    "checked_saved_git_blobs": true,
+    "actual_dotnet_runtime_tests": "NOT_RUN_NO_DOTNET",
+    "real_gpu_lora_qlora": "NOT_RUN",
+    "real_internet_feed": "NOT_RUN",
+    "no_false_runtime_claim": true
+  },
+  "lessons": {
+    "primary_existing_incident": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "source_owner_issue": "ERR-SRC-004",
+    "classes": [
+      {
+        "id": "P04_CITATION_PROVENANCE",
+        "status": "PATCH_APPLIED_NOT_NATIVE_ACCEPTED"
+      },
+      {
+        "id": "P05_SOURCE_TIME_CACHE_TRUST",
+        "status": "PATCH_APPLIED_NOT_NATIVE_ACCEPTED"
+      },
+      {
+        "id": "HISTORIC_SOURCELOCK",
+        "status": "PREVIOUS_VERIFIED_CLOSED_PRESERVED"
+      },
+      {
+        "id": "FOREIGN_OWNER_SOURCE",
+        "status": "HANDOFF_T06_ONLY"
+      },
+      {
+        "id": "RUN_COMPLETED_NOT_TASK_DONE",
+        "status": "INCOMPLETE"
+      }
+    ]
+  },
+  "TaskID_progress": {
+    "P01": {
+      "weight": 20,
+      "changed_by_role3": false,
+      "accepted": "N/D"
+    },
+    "P02": {
+      "weight": 25,
+      "changed_by_role3": false,
+      "accepted": "N/D"
+    },
+    "P03": {
+      "weight": 20,
+      "changed_by_role3": false,
+      "accepted": "N/D"
+    },
+    "P04": {
+      "weight": 25,
+      "known_tracks": 7,
+      "source_patches_in_this_run": 1,
+      "tests_authored": 1,
+      "integrated": 0,
+      "QA_accepted": 0,
+      "denominator_complete": false,
+      "percent": "N/D"
+    },
+    "P05": {
+      "weight": 10,
+      "source_patches_in_this_run": 1,
+      "tests_authored": 1,
+      "integrated": 0,
+      "QA_accepted": 0,
+      "denominator_complete": false,
+      "percent": "N/D"
+    },
+    "total_product_percent": "N/D"
+  },
+  "handoff": {
+    "T06": "Admit four exact-PRE/POST source and regressions on one canonical PR162 source tree with owner CAS; run .NET targeted tests before owner claim; follow T08 then T09 frozen",
+    "T02": "Read immutable receipt and ingest applicable new lessons to common register and Master/E06/Lessons through sole-writer CAS/readback; do not create new TaskID",
+    "T08": "Independently validate citation spoof and SPACE future date/cache on exact integrated SHA"
+  },
+  "safety": {
+    "PR162_unmodified": true,
+    "no_second_RAG": true,
+    "no_second_EVENT_BUS": true,
+    "no_second_GPU_training": true,
+    "NOLOSS_729_originals_preserved": true,
+    "D02_WOW200_8CoreID_5Persona_unchanged": true,
+    "ACL_STOP_native_consent_preserved": true,
+    "EXE_NSIS_GITLAB_CI_E07_release_not_run": true
+  },
+  "status": "SOURCE_PREPARED_STATIC_CHECK_PASS_NOT_INTEGRATED",
+  "readback": "PENDING"
+}
