@@ -1,0 +1,154 @@
+{
+  "schema": "NOX_V16_T11_MANUAL_PERSONAL_RECEIPT_V3",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-MANUAL-20261029T1807MSK-R03",
+  "observed_start_msk": "2026-10-29 18:01 (request context)",
+  "checkpoint_msk": "2026-10-29 18:07:53 MSK",
+  "end_msk": null,
+  "duration_seconds": null,
+  "product": "NOX HELION EXPRESS INTEGRATOR V16 Windows loader ONLY",
+  "canon": "V16 sections 1-33,54-56,R29; final megablock/error-ledger instructions; 56 rules Section 33; Function Lock",
+  "scope": "NONDESTRUCTIVE GITLAB FREE PREPARATION ONLY",
+  "source": {
+    "github_project": "MSSTXNEWS/nox-helion-pp-private-build",
+    "candidate_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "candidate_head_observed": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "candidate_head_is_frozen": false,
+    "t09_accepted_frozen_head": null,
+    "t09_tree": null,
+    "t09_manifest_sha256": null,
+    "t10_same_sha_ready": null,
+    "gitlab_live_head": null,
+    "gitlab_live_head_verified": false
+  },
+  "historical": {
+    "migration_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+    "github_migration_head": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "github_migration_27_unique_paths": 27,
+    "shared_changed_github_branch_paths_r26": 41,
+    "legacy_t11_report_says_changed_paths": 43,
+    "shared_count_status": "VERSIONED_SNAPSHOTS_NOT_INDEPENDENTLY_RECONCILED",
+    "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+    "original_archive_729_sha256_from_prior_receipts": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "error_register": {
+    "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "blob": "6cb3a261216eaac8a88600b2962b6bcef711ea30",
+    "counts": {
+      "OPEN": 3,
+      "FIX_APPLIED_UNVERIFIED": 2,
+      "VERIFIED_CLOSED": 2
+    },
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "actions": {
+      "ERR-SYS-001": "ACK and T02/C handoff, no false closure",
+      "ERR-SYS-002": "APPLIED: new observed source HEAD; do not reuse past frozen SHA",
+      "ERR-SRC-003": "ACK: T06/T08 independent native source verification, not T11 code",
+      "ERR-SRC-004": "ACK: T06 source P01-P05 acceptance prior to T09/T10",
+      "ERR-SRC-005": "ACK: T08 focused existing check required",
+      "ERR-SYS-006": "VERIFIED historical original archive, not reopened",
+      "ERR-SYS-007": "VERIFIED historical T04 34/34, not reopened"
+    }
+  },
+  "historical_cross_executor_incidents": [
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "actual_megablock": {
+    "reused_existing_t11_branch": "manual/t11/gitlab-free-readonly-handoff-20261029-r01",
+    "reused_files": [
+      {
+        "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+        "blob": "0b57108e02b9cac5630ade54dacbbcbf6a709c4f"
+      },
+      {
+        "path": "coordination/t11/NOX_V16_PINNED_GITLAB_CI_CANDIDATE.yml",
+        "blob": "a8cc88a39f5d8e431c5dc4fe1522b1fa13257642"
+      },
+      {
+        "path": "coordination/t11/NOX_V16_PINNED_SOURCE_PREFLIGHT.ps1",
+        "blob": "f51a5c3471be4f03cc28e50507e042fce2078ee3"
+      },
+      {
+        "path": "coordination/t11/NOX_V16_T11_GITLAB_FREE_NONDESTRUCTIVE_HANDOFF_R01.json",
+        "blob": "f259f0269cb3f8a89250c44c0643ccd67b0a6f18"
+      }
+    ],
+    "new_local_sanitized_audit_sha256": "ae6cbc37e244e5fa807fd5c09b63a759a494c25e6894e98d4a61a441025c410b",
+    "new_local_patch_note_sha256": "eaec73ddef385207c240d305125382f74f648e85aff7393b0721f930a1424802",
+    "one_focused_check": "Python helper py_compile PASS; no-token path returns sanitized GITLAB_ACCESS_HOLD. This is not an authenticated GitLab audit.",
+    "one_save": "This immutable GitHub personal receipt; no source CI/config write"
+  },
+  "gitlab": {
+    "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "plugin_search": "No GitLab plugin available",
+    "unauthed_sandbox_api": "DNS name resolution failed",
+    "public_web": "Private GitLab project unavailable via public fetch",
+    "real_head": null,
+    "runner_live": null,
+    "permissions_live": null,
+    "project_private_live": null,
+    "CI_at_frozen_sha": null,
+    "status": "GITLAB_ACCESS_HOLD",
+    "one_external_action": "Owner uses existing coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py in authorized environment with NOX_GITLAB_READ_API_TOKEN from local protected environment, provides sanitized JSON ONLY, no token to ChatGPT. Use existing NOX_V16_T11_GITLAB_FREE_NONDESTRUCTIVE_HANDOFF_R01.json as --handoff. No pipeline."
+  },
+  "ci_safety": {
+    "existing_workflow": "web/api + explicit NOX_APPROVE_WINDOWS_BUILD=YES; push blocked by workflow rules",
+    "historical_entrypoint_branch_hardcode": true,
+    "existing_conditional_ci_template_prepared": true,
+    "proposed_future_patch": "Use exact T09 frozen SHA/ref and existing pinned source preflight only after approved same-SHA tree and actual GitLab readback; do not alter active historical CI or start pipeline",
+    "existing_project_preserved": true,
+    "source_modified": false,
+    "gitlab_pipeline_started": false,
+    "EXE": false,
+    "NSIS": false,
+    "E07": false,
+    "force_push": false,
+    "reimport": false,
+    "history_deleted": false
+  },
+  "progress": {
+    "criteria_total": 5,
+    "prior_confirmed": 2,
+    "current_confirmed": 2,
+    "prior_percent": 40,
+    "current_percent": 40,
+    "delta_pp": 0,
+    "bar": "████░░░░░░",
+    "remaining": [
+      3,
+      4,
+      5
+    ],
+    "criteria": [
+      "DONE historical migration and GitLab CI scaffold",
+      "DONE historical GitHub 27 unique migration file preservation",
+      "HOLD live authenticated private GitLab HEAD/runner/permissions",
+      "HOLD T09 owner-accepted frozen HEAD and CI pinned admission",
+      "HOLD final same-SHA GitLab T10 handoff and independent evidence"
+    ],
+    "state": "GITLAB_ACCESS_HOLD"
+  },
+  "lesson": {
+    "error": "Repeated T11 HOLD reports and redundant T11 audit script creation",
+    "root_cause": "Available canonical helper and pinned CI candidate had not been inventoried before new preparation.",
+    "applied": "Discovered existing T11 branch, reused exact four artifacts and independent R17 receipt; no duplicate branch/project or active CI/source rewrite; created only delta receipt with all seven ERROR_ID ACKs.",
+    "prevention": "Each T11 run must first read exact existing tool/receipt paths, then apply only verified source/ref delta; GitHub is not live private GitLab."
+  },
+  "t02_handoff": {
+    "target": "T02/C sole writer Master/E06/Lessons and active register",
+    "message": "Read this exact personal receipt RunID and Git blob; append only new T11 access evidence and applied lesson using requiredRevisionId CAS and exact 3/3 readback; do not mark GITLAB_READY. Preserve backfill-required and prior DONE.",
+    "shared_docs_modified_by_t11": false,
+    "shared_docs_readback_by_t02": "PENDING"
+  }
+}
