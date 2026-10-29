@@ -1,0 +1,12 @@
+{
+  "schema": "NOX_V16_R11_GLOBAL_CLOSEOUT_RECEIPT",
+  "run_id": "NOX-V16-M2-20261029-R11-PREVENT-PREMATURE-STOP",
+  "incident_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+  "config_readback": "25/25 prompts",
+  "enabled": 15,
+  "disabled": 10,
+  "shared_journal": "T02 ONLY; CAS/readback pending",
+  "handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6502356538",
+  "closeout_rule": "x/n incomplete => status INCOMPLETE, checkpoint, no task SUCCESS; same-SHA independent evidence required",
+  "T02_run_now": "REQUESTED_NOT_CONFIRMED_COMPLETED"
+}
