@@ -206,15 +206,19 @@
         updateMode();
       },
       setCallProvider(x){
-        const nextReady=x?.ready===true && typeof x?.priceLabel==='string'&&x.priceLabel.length>0;
-        const nextQuote=nextReady?x.priceLabel.slice(0,80):null;
+        const label=typeof x?.priceLabel==='string'?x.priceLabel.trim():'';
+        // Do not truncate an offered call tariff: a truncated quote is not
+        // the full price the user was asked to approve.
+        const validQuote=label.length>0&&label.length<=80&&!/[\x00-\x1f\x7f]/.test(label);
+        const nextReady=x?.ready===true&&validQuote;
+        const nextQuote=nextReady?label:null;
         // Provider quote changes require a fresh explicit user confirmation.
         if(nextQuote!==callPrice||nextReady!==providerReady)consent.checked=false;
         providerReady=nextReady;callPrice=nextQuote;
         cost.textContent=callPrice||'Тариф не определён';
       },
       setResponse(e){
-        if(!e||typeof e!=='object')return;
+        if(disposed||!e||typeof e!=='object')return;
         if(typeof e.text==='string')output.textContent=e.text.slice(0,12000);
         if(typeof e.status==='string')setStatus(e.status.slice(0,120));
         activeOperation=typeof e.operationId==='string'?e.operationId:null;
