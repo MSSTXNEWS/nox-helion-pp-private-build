@@ -13,7 +13,7 @@
  const iso=s=>typeof s==="string"&&Number.isFinite(Date.parse(s));
  const sha=s=>typeof s==="string"&&SHA.test(s);
  const id=s=>typeof s==="string"&&ID.test(s);
- const validProof=p=>p&&typeof p==="object"&&sha(p.blob)&&
+ const validProof=p=>p&&typeof p==="object"&&sha(p.blob)&&sha(p.head)&&
    typeof p.url==="string"&&/^https:\/\/github\.com\/MSSTXNEWS\/nox-helion-pp-private-build\/(blob\/[a-f0-9]{40}\/|issues\/177#issuecomment-)/.test(p.url)&&
    p.readback===true;
  const states=["completed","failed","in_progress","no_update"];
@@ -48,6 +48,7 @@
    receiptMap.set(fingerprint,r);
   }
   const maxDelay=Number.isFinite(opts.grace_minutes)&&opts.grace_minutes>=0?opts.grace_minutes:30;
+  const receiptCoverageComplete=input.receipt_index_complete===true;
   const workers=[...byWorker.values()].map(t=>{
    const run=t.last_run||null, rr=run?receiptMap.get(t.id+"::"+run.id):null;
    const last=run?.completed_at||run?.started_at||null;
@@ -61,6 +62,8 @@
      status="REPORTED_UNVERIFIED";reason="Report exists but immutable proof has not been read back";
     }else if(run.status==="in_progress"){
      status="RUN_IN_PROGRESS";reason="In progress; receipt not yet due";
+    }else if(!receiptCoverageComplete){
+     status="RECEIPT_INDEX_INCOMPLETE";reason="Coverage is not independently complete; missing receipt is not proven";
     }else if(!iso(last)){
      status="NOT_OBSERVED";reason="Run lacks factual completion timestamp";
     }else if((now-Date.parse(last))/60000>=maxDelay){
@@ -83,6 +86,7 @@
    in_progress:count("RUN_IN_PROGRESS"),
    awaiting:count("AWAITING_RECEIPT"),
    not_observed:count("NOT_OBSERVED"),
+   index_incomplete:count("RECEIPT_INDEX_INCOMPLETE"),
    error_count:errors.length,
    reliable:false
   };
