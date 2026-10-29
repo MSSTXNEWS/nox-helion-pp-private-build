@@ -57,6 +57,22 @@ class OriginalVoicePort:
             return False
 
     def call(self, native_session, args):
+        from helion_voice.control import VoiceCancelled, VoiceTimeout, VoicePermissionDenied
+        from p02_native_ingress import ProtocolHold
+        try:
+            return self._call_original(native_session, args)
+        except VoiceCancelled as exc:
+            raise ProtocolHold('NATIVE_VOICE_STOPPED') from exc
+        except VoiceTimeout as exc:
+            # STOP is the active native operation's state, not inferred from
+            # an arbitrary provider message. A late timeout must not replace it.
+            voice = self.ingress.voice_session_from_native(native_session)
+            code = 'NATIVE_VOICE_STOPPED' if voice.stopped else 'NATIVE_VOICE_TIMEOUT'
+            raise ProtocolHold(code) from exc
+        except VoicePermissionDenied as exc:
+            raise ProtocolHold('NATIVE_PERMISSION_DENIED') from exc
+
+    def _call_original(self, native_session, args):
         from helion_voice.safety import Direction
         from helion_voice.service import TranslationPreview
         if type(args) is not dict or not set(args) <= {'capture_id','source','target','speak'}:

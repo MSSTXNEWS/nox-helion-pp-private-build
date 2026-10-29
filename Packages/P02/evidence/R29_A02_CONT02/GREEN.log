@@ -1,0 +1,11 @@
+test_actual_stop_wins_over_late_original_timeout (test_p02_original_voice_outcomes_r29.OriginalVoiceOutcomes.test_actual_stop_wins_over_late_original_timeout) ... ok
+test_original_permission_and_cancel_types_have_distinct_static_codes (test_p02_original_voice_outcomes_r29.OriginalVoiceOutcomes.test_original_permission_and_cancel_types_have_distinct_static_codes) ... ok
+test_original_timeouts_at_each_stage_remain_timeout (test_p02_original_voice_outcomes_r29.OriginalVoiceOutcomes.test_original_timeouts_at_each_stage_remain_timeout) ... ok
+test_original_preview_never_autoplays_or_invents_audio_storage (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_preview_never_autoplays_or_invents_audio_storage) ... ok
+test_original_sapi_dict_is_native_receipt_after_bound_native_review (test_p02_original_voice_port_r29.OriginalVoiceContract.test_original_sapi_dict_is_native_receipt_after_bound_native_review) ... ok
+test_stop_in_native_review_cancels_original_session_before_sapi (test_p02_original_voice_port_r29.OriginalVoiceContract.test_stop_in_native_review_cancels_original_session_before_sapi) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.027s
+
+OK
