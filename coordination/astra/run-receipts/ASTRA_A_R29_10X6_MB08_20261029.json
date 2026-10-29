@@ -1,0 +1,27 @@
+{
+  "schema": "ASTRA_A_R29_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB08",
+  "owner": "A2 P01 shell/WOW source",
+  "ownerAssignmentCommit": "049c8362bd8ba7f871f1d648508b841874ba365d",
+  "changes": [
+    {
+      "path": "integrations/wow200/runtime/home-scene.mjs",
+      "commit": "1c01190c3850b79542fa664670ae5edc8fab4b37",
+      "blob": "d2e582d217d015cedaed4e31cb5fef4b7a0e5337",
+      "effect": "Pass only existing stage-contained controls/panels into approved renderer"
+    },
+    {
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.css",
+      "commit": "66ea73cd1ed90e31d500509465ad4a5ddd52caea",
+      "blob": "4ad0d2ac85d09c7abe269733ebc13d9e83813cac",
+      "effect": "Restore ECO minimum 10-second float after nth-child CSS overrides"
+    }
+  ],
+  "otherLanes": "No new proven defects, not counted DONE",
+  "test": "1 source contract set PASS, 2/2 Git readbacks PASS",
+  "actualVisualWindows": "NOT_RUN",
+  "wow200RuntimeAccepted": "NOT_PROVEN",
+  "noNewOrbsPersonaOrRoutes": true,
+  "queuedRoundsRemaining": 2,
+  "lesson": "Decorate existing functional DOM without inventing controls or altering original click handlers; CSS cascade must preserve ECO performance contracts."
+}
