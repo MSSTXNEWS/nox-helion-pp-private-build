@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_V16_MANUAL03_P05_SOURCE_TEST_R32",
+  "run_id": "NOX-V16-MANUAL03-R32-20261029-P05-TIMESTAMP-VALIDATION",
+  "role": "manual3",
+  "task_id": "P05 SPACE existing source freshness / STOP",
+  "prestart_read": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "r23_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+    "error_register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "error_ids_ack": 11,
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM"
+  },
+  "pre_owner_head": "3434f21904910f579c4175f961c84db5f4e2dfd9",
+  "pre_tree": "634b951e2be6e2987632ac348598b9599cc9685a",
+  "source": {
+    "path": "Packages/P05/Space/SpaceFeedClient.cs",
+    "pre": "dd04965a5f38e1809d1804b37a51aee08c7f5d8b",
+    "post": "f39e3e573d7507e02a1acc5950940f799871e32a"
+  },
+  "test": {
+    "path": "Packages/P05/Space/tests/Program.cs",
+    "pre": "16cf9bf1182244622e316e6f42a2de324a1e6f18",
+    "prepared_R31_base": "3fb5cea7707f1001cf91ce3ef64d61bc82b94144",
+    "post": "cd052132a583bed91cd21b1d9a132b9a89db4df4"
+  },
+  "error_ids": [
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "root_cause": "Injected source-time adapters may throw ArgumentException/OverflowException; existing typed timestamp filter did not catch them. Existing R16 smoke also had a literal backslash-n in a line comment, hiding Json declaration.",
+  "fix": "Existing SPACE client catches two additional data-validation exception types as INVALID_SOURCE_TIME. Existing smoke test now uses real line break, includes missing-time cache protections and two additional regression assertions, with no new backend/transport/event bus.",
+  "verification": {
+    "focused_static": "13/13",
+    "CSharp_runtime": "NOT_RUN_NO_SDK",
+    "existing_prior_smoke_count": 17,
+    "source_candidate_smoke_assertions": 21,
+    "actual_accepted": 0
+  },
+  "handoff": {
+    "T06": "sole PR162 writer, verify exact PRE live source and R16 test, run .NET 8 smoke on actual adopted code, then owner CAS/readback and provide exact accepted HEAD.",
+    "T08": "independent source/native STOP ACL consent and timestamp QA on accepted HEAD.",
+    "T02": "sole shared journal writer, dedupe into existing ERR-SRC-004 and existing premature-stop incident, no new product TaskID."
+  },
+  "status": "SOURCE_PREPARED, not INTEGRATED, not QA_ACCEPTED",
+  "no_loss": "P01-P05 weights/729 archives/SourceLock/8 CoreID/5 Persona/D02/WOW/STOP/ACL/consent/data/history unchanged, no EXE/NSIS/CI/E07/release."
+}

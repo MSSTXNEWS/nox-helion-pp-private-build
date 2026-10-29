@@ -152,7 +152,7 @@ public sealed class SpaceFeedClient
                 observed = extractSourceTime(cloned);
             }
             catch (Exception ex) when (ex is FormatException or InvalidOperationException
-                                       or KeyNotFoundException)
+                                       or KeyNotFoundException or ArgumentException or OverflowException)
             {
                 // Provider-controlled malformed or missing timestamps may
                 // never abort SPACE or leak raw parser details to the UI.
