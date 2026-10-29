@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_V16_R26_MANUAL2_EXPRESS_QA_RECEIPT_V1",
+  "run_id": "NOX-V16-MANUAL02-R26-EXPRESS-20261030-R02",
+  "created_at_utc": "2026-10-29T21:37:36.310Z",
+  "role": "manual2-independent-qa",
+  "product": "NOX HELION EXPRESS INTEGRATOR",
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "head_checked": "d9dfa486eae186ed0efac32bccecb7d6bac769f9",
+    "head_at_receipt": "d9dfa486eae186ed0efac32bccecb7d6bac769f9",
+    "head_match": true,
+    "head_frozen": false
+  },
+  "policy": "Express critical path: existing manual1 sole integrator PR162, manual3 P04/P05 owner, manual2 independent source/E07 QA, T02 sole shared journal writer; retain 15 auto IDs and historical DONE",
+  "physical": {
+    "committed_consent_test": {
+      "path": "tests/P03/test_g2c_g3b_consent_snapshot_r24.cjs",
+      "blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+      "ui_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+      "executed": "V8 fake DOM host with URL fixture adapter",
+      "passed": 12,
+      "total": 12,
+      "stage": "SOURCE_DYNAMIC_ONLY"
+    },
+    "existing_ack_test": {
+      "path": "tests/P03/test_G2C_G3B_R16_queue_ack_binding.cjs",
+      "blob": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+      "executed": "V8 compiled exact existing test source, mocked node fs/path/assert, real application JS loaded by GitHub connector",
+      "canonical": {
+        "ui_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+        "result": "FAIL",
+        "first_failure": "other job ACK must not unlock STOP",
+        "assertions_through_failure": 4
+      },
+      "donor": {
+        "commit": "8ac474da750d540e68a16566b69be276e247d358",
+        "ui_blob": "d6c790f755d462bf1a266262d8dd1af1da723cff",
+        "result": "PASS",
+        "passed": 13,
+        "total": 13
+      },
+      "stage": "SOURCE_DYNAMIC_ONLY",
+      "critical": "existing P03_QUEUE_GGUF_STOP_RETRY ERR-SRC-004"
+    },
+    "p01_manifest_source": {
+      "files": [
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+      ],
+      "blobs": [
+        "6c178c04957d7397c0c081e3b123940637abc6e9",
+        "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+      ],
+      "finding": "ConvertFrom-Json used without strict duplicate object-key rejection; source-only P1 ambiguity, native PowerShell NOT_RUN",
+      "error_id": "ERR-SRC-004"
+    },
+    "p04_latest_donor": {
+      "pr": 221,
+      "head": "d62117b218f8cf435d267d5b518470f1a18595a1",
+      "source_blob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "canonical_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+      "status": "PREPARED_NOT_INTEGRATED_SOURCE_ONLY",
+      "runtime": "NOT_RUN"
+    }
+  },
+  "gates": {
+    "A": "PASS_READ_HEAD_AND_EXISTING_TASKS",
+    "B": "PARTIAL_REPRODUCED_P03_SOURCE_FAIL",
+    "C": "T02_SHARED_CAS_PENDING",
+    "D": "PASS_REUSED_EXISTING_DONOR_TEST_NO_DUPLICATE_FIX",
+    "E": "RECEIPT_READBACK_PENDING"
+  },
+  "provenance": {
+    "plan_branch": "qa/manual2-r26-20261030-sourceqa-r01",
+    "plan_path": "coordination/manual/no2/NOX_V16_R26_EXPRESS_CRITICAL_PATH_QA_20261030.md",
+    "plan_git_commit": "68973cabfb1f49d9574ddef61f266b32a72aaab3",
+    "plan_git_blob": "c7b0d8e3bf5a519a5bee4c09e7bad2ff9408a074"
+  },
+  "errors": {
+    "existing_ids": [
+      "ERR-SRC-004",
+      "ERR-SYS-002"
+    ],
+    "new_error_ids": [],
+    "last_read_register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "register_total": 11,
+    "open": 5,
+    "fix_applied_unverified": 4,
+    "verified_closed": 2
+  },
+  "progress": {
+    "p01_p05_product_pct": null,
+    "independent_qa_accepted_delta": 0,
+    "new_done_taskid": 0,
+    "source_ready": "HOLD",
+    "frozen_head": null,
+    "gitlab_build": "NOT_AUTHORIZED",
+    "e07_native_scenarios_completed": 0,
+    "e07_native_scenarios_required": 10,
+    "release": "HOLD"
+  },
+  "next": {
+    "manual1": "Integrate donor P03 R16 optional ACK binding with exact current PRE, preserve R15 consent and run existing R16+R15 targeted tests; fix P01 path/json guards",
+    "manual3": "Finish P04/P05 owned donors with concrete source tests and SHA",
+    "manual2": "Independent exact post-head QA; no source acceptance before complete signed owner receipt",
+    "T02": "Ingest this isolated receipt once with sole-writer common journal CAS+readback; no new TaskID or premature VERIFIED_CLOSED"
+  }
+}
