@@ -17,7 +17,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
 
     def test_real_home_menu_core_native_ack_not_visual_click(self):
         self.assertIn('routeId == "HOME" || routeId == "MENU" || routeId == "CORE"', TEXT)
-        self.assertIn("_invokeExistingNativeRoute(routeId, _lifetime.Token)", TEXT)
+        self.assertIn("_invokeExistingNativeRoute(routeId, requestLifetime.Token)", TEXT)
         self.assertIn('accepted ? "COMPLETED" : "HOLD"', TEXT)
         self.assertIn('nativeAcknowledged = status == "COMPLETED"', TEXT)
 
@@ -33,7 +33,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
 
     def test_native_consent_cannot_be_supplied_by_page(self):
         self.assertIn('if (kind == "action")', TEXT)
-        self.assertIn("await _confirmNativeConsent(routeId, _lifetime.Token)", TEXT)
+        self.assertIn("await _confirmNativeConsent(routeId, requestLifetime.Token)", TEXT)
         self.assertIn("P01_NATIVE_CONSENT_DENIED", TEXT)
         self.assertIn("_isNativeRouteAvailable(routeId)", TEXT)
         self.assertNotIn('TryString(root, "approved"', TEXT)
@@ -49,7 +49,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
         self.assertNotIn("exc.ToString()", TEXT)
 
     def test_duplicate_ids_cancellation_and_detach(self):
-        self.assertIn("if (!_pending.Add((documentEpoch, requestId)))", TEXT)
+        self.assertIn("if (!_pending.TryAdd((documentEpoch, requestId), requestLifetime))", TEXT)
         self.assertIn("_pending.Remove((documentEpoch, requestId))", TEXT)
         self.assertIn("Interlocked.Exchange(ref _disposed, 1)", TEXT)
         self.assertIn("_webView.WebMessageReceived -= OnWebMessageReceived", TEXT)
