@@ -1,0 +1,227 @@
+{
+  "schema": "NOX_V16_G4A_T07_R12_INDEPENDENT_NOLOSS_SOURCE_GUARD_V1",
+  "run_id": "NOX-V16-G4A-T07-20261029T194401MSK-R08-NOLOSS-DELTA",
+  "task_id": "T07",
+  "role": "G4-A / M2 independent NO-LOSS evidence support",
+  "scope": "NOX HELION EXPRESS INTEGRATOR V16 Windows loader SOURCE ONLY",
+  "planned_start_msk": "2026-10-29T19:45:00+03:00",
+  "first_observed_runtime_msk": "2026-10-29T19:44:01+03:00",
+  "status": "INCOMPLETE_2_OF_4; historical original T07 6/6 DONE preserved",
+  "hierarchy": {
+    "role": "G4-A",
+    "mega_block": "T07_NOLOSS_FRESH_TREE",
+    "block": "SOURCELOCK_TO_T09_HANDOFF",
+    "fixed_task_id": "T07",
+    "fixed_criteria_count": 4,
+    "weighting": "operational/equal-weight",
+    "product_percent": "N/D - full P01-P05 TaskID inventory and acceptance unavailable"
+  },
+  "prestart_read_proof": {
+    "canon_doc_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_all_56_rules": "§33 read via native Docs API, no function omissions authorized",
+    "sections": "§§1-33,54-56; R29",
+    "active_error_register_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "docs_fresh_delta": "Master/E06/Lessons R22 2026-10-29T1933MSK; C34 incident; shared writer T02",
+    "t06_receipt_run_id": "NOX-V16-T06-20261029T1933MSK-G3C-R15",
+    "t06_receipt_blob": "7c4a708280d694907aef8c53297c2fa7bb8a1747",
+    "t09_latest_read_run_id": "NOX-V16-T09-20261029T174041MSK-R16-DELTA-HANDOFF",
+    "t09_latest_read_blob": "51170f031d1c724d093baccdf2859d3af2fbe651",
+    "t09_head_scope": "5b42260bdf6adef2eee78dc665f85041270fe4fb"
+  },
+  "original_physical_source_reused": {
+    "status": "DONE_6_OF_6_HISTORICAL_NOT_REHASHED",
+    "t09_original_physical_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "t07_accepted_commit": "a70ab3dc9c45e29afee737810d6be8f623b8f210",
+    "size_bytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "member_sha_crc": "729/729 PASS HISTORICAL",
+    "baseline_git_blobs": "968 historical preservation evidence reused, NOT rescanned"
+  },
+  "source_delta": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pre_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+    "post_head_observed": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "current_tree": "NOT_EXPOSED_BY_GITHUB_FETCH_COMMIT; owner-attested tree still HOLD",
+    "commits_ahead": 4,
+    "changes": {
+      "modified": 4,
+      "added": 5,
+      "removed": 0
+    },
+    "all_four_modified": [
+      {
+        "path": "coordination/e06/adapters/g2_space_mobile.py",
+        "pre": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283",
+        "post": "c8b937172eb431310229111945971bb11cd8ff90"
+      },
+      {
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "pre": "e124a33066d25736851e3860c6292dd13d0ff71b",
+        "post": "5fc83d43d5da248938c2e6bc76f7011536663330"
+      },
+      {
+        "path": "coordination/e06_host50/admission.py",
+        "pre": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+        "post": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4"
+      },
+      {
+        "path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+        "pre": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "post": "3a5071a10e3d94057b5b19562a371f30811aaca5"
+      }
+    ],
+    "T04_owner_choices_34_of_34": "reused; no selected T04 path was modified in this delta",
+    "three_native_blockers": {
+      "task_ids": [
+        "NIP01-07",
+        "NIP01-08",
+        "NIP01-35"
+      ],
+      "pre": "OWNER_NATIVE_METHOD_NOT_BOUND",
+      "post": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED",
+      "native_pass": false
+    },
+    "original_zip_parts_modified_in_delta": false
+  },
+  "physical_check": {
+    "type": "Git-blob-backed READ_ONLY STATIC DELTA CONTRACT CHECK; not Windows native test",
+    "pass_count": 9,
+    "total": 9,
+    "assertions": {
+      "SAME_50_IMMUTABLE_TASKIDS": true,
+      "EXACT_THREE_OWNER_ROUTE_BINDINGS": true,
+      "NATIVE_ACCEPTANCE_NEVER_ELEVATED": true,
+      "CHANGED_BLOCKERS_REMAIN_EXPLICIT_HOLD": true,
+      "ALL_OTHER_NATIVE_BLOCKERS_UNCHANGED": true,
+      "T04_ARB_PATHS_DISJOINT_FROM_DELTA": true,
+      "ADMISSION_HISTORY_PROVENANCE_NOT_LIVE_SEAL": true,
+      "CONSENT_ACL_STOP_NOT_REMOVED": true,
+      "PINNED_FIXTURE_RUNNER_AND_SOURCE_TESTS": true
+    },
+    "no_exe_nsis_gitlab_ci_e07": true
+  },
+  "task_gate": {
+    "before": "2/4=50.0%",
+    "after": "2/4=50.0%",
+    "delta_pp": 0,
+    "accepted": [
+      "original_physical_proof_reused",
+      "current_HEAD_NOLOSS_delta_variant_mapping"
+    ],
+    "hold": [
+      "T06_owner_accepted_current_HEAD_and_manifest_not_8_of_8",
+      "T09_sealed_integrated_same_SHA_handoff_missing"
+    ],
+    "bar": "█████░░░░░",
+    "remaining": 2,
+    "new_accepted_taskids": 0
+  },
+  "stage_gates": {
+    "SOURCE": "candidate code exists; not complete",
+    "INTEGRATED": "NOT_ACCEPTED",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "PRODUCT": "N/D"
+  },
+  "error_actions": [
+    {
+      "id": "ERR-SYS-001",
+      "action": "DELEGATE T02",
+      "why": "shared register/CAS historical backfill only T02"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "APPLIED",
+      "why": "new HEAD pinned after exact 4-commit SHA delta; did not reuse stale T09 acceptance"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "action": "OWNER_PATCH_RECOGNIZED_DELEGATE T08",
+      "why": "Host50 provenance source now patched, 13/13 signed native proof missing"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "action": "DELEGATE T06",
+      "why": "current owner receipt still 1/8 functional source gates"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "action": "DELEGATE T08",
+      "why": "runner pinned P01/G2; independent runtime/native regression absent"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "action": "ALREADY_FIXED",
+      "why": "original 729 PASS historical; 0-byte GitHub API not retried"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "action": "ALREADY_FIXED",
+      "why": "T04 34/34 unchanged no snapshot rescan"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "DELEGATE T09/T02",
+      "why": "T09 R16 from earlier HEAD; no final integrated freeze"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLIED",
+      "why": "no partial receipt promoted to TASK DONE; critical 2/4 remains HOLD"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "DELEGATE T06",
+      "why": "not owner of T06 closeout 1/8"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "DELEGATE T08",
+      "why": "source fix != independent 13 native routes PASS"
+    }
+  ],
+  "new_external_delta": {
+    "id": "ERR-T06-20261029-DUPLICATE-P02-OWNER-ROUTE",
+    "parent": "ERR-SRC-004",
+    "owner": "T02 journal ingestion; T06/T08 native acceptance",
+    "evidence": "Master/E06/Lessons R22: g2 owner POST c8b937...; test POST 73ce76d...; 12/12 static only"
+  },
+  "mass_self_improvement": {
+    "active_entries_read": 11,
+    "archival_419_not_reopened": true,
+    "lesson_applied": "Maintain 3 changed native blockers as NOT_VERIFIED while allowing sourceBinding, do not count source route binding as native acceptance",
+    "effect": "all 50 route IDs unchanged, 3 scoped changes correctly fail-closed; no premature T09 freeze",
+    "remaining": "T06 acceptance 7/8, T08 same-SHA native 13/13, T09 freeze"
+  },
+  "owner_handoff": {
+    "to": [
+      "T06",
+      "T08",
+      "T09",
+      "T02",
+      "T10"
+    ],
+    "exact_action": "For candidate HEAD 23c1557c... obtain T06 owner-accepted HEAD/tree/manifest 8/8, independent T08 same-head signed native 13-route STOP/ACL/consent verdict and fixed 50 route mapping; T09 seal same tuple, T02 CAS append own dedup delta, T10 SOURCE_READY only after handoff."
+  },
+  "write_scope": "Personal T07 immutable JSON only, own isolated branch; no source, no PR162, no common Docs",
+  "change_control": {
+    "product_code": false,
+    "main": false,
+    "PR162": false,
+    "shared_Google_Docs": false,
+    "snapshots": false,
+    "EXE": false,
+    "NSIS": false,
+    "GitLabCI": false,
+    "E07": false
+  }
+}
