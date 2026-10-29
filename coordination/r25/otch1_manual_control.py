@@ -46,7 +46,7 @@ def validate_snapshot(snapshot, expected_head=None):
     if type(reports) is not list or len(reports) != 3:
         return errors + ["EXACTLY_THREE_MANUALS_REQUIRED"]
     role_ids = [r.get("role") for r in reports if isinstance(r, dict)]
-    if sorted(role_ids) != sorted(ROLES):
+    if len(role_ids) != 3 or any(type(v) is not str for v in role_ids) or sorted(role_ids) != sorted(ROLES):
         errors.append("MANUAL_ROLES_MISSING_OR_DUPLICATED")
     for r in reports:
         if not isinstance(r, dict):
@@ -111,12 +111,17 @@ def render(snapshot, issues):
             continue
         r = matches[0]
         gates = r.get("gates", {})
+        if type(gates) is not dict:
+            gates = {}
         pass_count = sum(proof_gate(gates.get(k)) for k in GATES)
         approaches = r.get("approaches", []) if isinstance(r.get("approaches"), list) else []
         complete = sum(isinstance(a, dict) and a.get("status") == "DONE" and
                        isinstance(a.get("proof"), str) and len(a["proof"].strip()) >= 12
                        for a in approaches)
         tasks = r.get("tasks", [])
+        if type(tasks) is not list:
+            tasks = []
+        tasks = [t for t in tasks if isinstance(t, dict)]
         prepared = sum(t.get("stage") == "SOURCE_PREPARED" for t in tasks)
         verified = sum(t.get("stage") == "SOURCE_VERIFIED" for t in tasks)
         integrated = sum(t.get("stage") == "INTEGRATED" for t in tasks)
