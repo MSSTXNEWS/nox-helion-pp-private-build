@@ -127,9 +127,13 @@ class OriginalVoicePort:
             owner._session(resolved, 'chat.voice')
             voice_session.check()
             after = scope_resolver(native_session)
+            # The final native resolver can re-enter STOP or replace the active
+            # request. Recheck before invoking consent/review/provider effects.
+            voice_session.check()
             if (not bindings_stable() or type(after) is not NativeScope
                     or astuple(after) != pinned_scope or astuple(resolved) != pinned_scope
-                    or astuple(scope) != pinned_scope):
+                    or astuple(scope) != pinned_scope
+                    or ingress.voice_session_from_native(native_session) is not voice_session):
                 raise RouteHold('ORIGINAL_VOICE_BINDING_CHANGED')
             return resolved
         current()
