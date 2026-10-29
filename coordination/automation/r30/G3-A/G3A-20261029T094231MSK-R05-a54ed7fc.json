@@ -1,0 +1,124 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3A_OWNER_RECEIPT_V2",
+  "runId": "G3A-20261029T094231MSK-R05-a54ed7fc",
+  "slot": "G3-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "sourceStatus": "SOURCE_SAVED_STATIC_PASS",
+  "runtimeStatus": "NOT_RUN",
+  "sourceCodeComplete": "HOLD",
+  "release": "HOLD",
+  "taskId": "G3A-R30-P03-QUEUE-VERIFIER-IMMUTABLE-EVIDENCE-R05",
+  "taskIdStage": "SOURCE_PATCH_SAVED_NOT_PRODUCT_ACCEPTED",
+  "ownerLock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ],
+    "forbidden": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ]
+  },
+  "prior": {
+    "runId": "G3A-20261029T084945MSK-R04-0959b5af",
+    "branch": "automation/r30/g3a/G3A-20261029T084945MSK-R04-0959b5af",
+    "head": "a54ed7fc7b60aeb4788797916d49ceab5e94ae90",
+    "lesson": "R04 fail-closed hardware RAM preflight before trusted attestor; Python tests not run and G3-B native RAM measurement pending",
+    "latestDriveCoordinatorRunId": "ASTRA-C-R30-20261029T0927MSK-04",
+    "latestDriveLesson": "Pin native verifier identity and evaluate locally safe evidence before callbacks; Git source saved is not E06/E07 acceptance",
+    "historicalC34": "READ_ONLY"
+  },
+  "frozen": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshotDirectoriesIndexed": 25,
+    "snapshotDirectoriesPresent": 25,
+    "allSnapshotContentsIndividuallyVerified": false,
+    "physicalOriginal729ShaVerified": false,
+    "snapshotsModified": false
+  },
+  "finding": "progress_gate and retry_gate invoked trusted native queue verifier BEFORE local identity, consent and transition validations; callback could mutate mutable native event dictionaries and return True, with no immutable before/after check. This permitted verifier work on rejected requests and event-evidence drift after callback.",
+  "source": {
+    "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+    "preBlobSha1": "f697cf316f5be2a1f71c8c93addda1cf07051205",
+    "postBlobSha1": "bb5ec85b27d6bf6b1e61d1a77ceae40c7fb53f59",
+    "preSha256": "8ac49497045623918cbf07125e861326e998e0e9ee64c1e53b794109fb247faa",
+    "postSha256": "ea253c62b18525b3363dec2a91e9b03757d99c53458848b58e27e91041801e51",
+    "commit": "855aaf8e63bb274b2fa9c3a7a95a913eff655d8b",
+    "readbackExactGitBlob": true,
+    "change": "Progress and retry require local fail-closed preflight before invoking native verifier. Verifier now freezes canonical bounded JSON evidence snapshot before callback and rejects invalid/mutated snapshots even if callback returns bool True; prior success/denial/error semantics preserved."
+  },
+  "test": {
+    "path": "Packages/P03/Admission/test_g3a_r30_r05_queue_verifier_boundary.py",
+    "gitBlobSha1": "30c80e9f725f70eb9a6df89e9e878ae23eb3b66f",
+    "commit": "6fddda7b9ce63285efa314c0c36243fe358de39b",
+    "createdCases": 13,
+    "structuralSourceReadback": {
+      "command": "GitHub fetch_file + JavaScript assertions over exact fetched source and Git compare",
+      "passed": 16,
+      "total": 16,
+      "status": "PASS"
+    },
+    "python": {
+      "command": "cd Packages/P03/Admission && python -m unittest -v test_g3a_r30_r05_queue_verifier_boundary",
+      "status": "NOT_RUN",
+      "reason": "Private repository source cannot be mounted in isolated local Python runtime; no Windows/GitLab CI allowed."
+    },
+    "nativeE06": {
+      "status": "NOT_RUN",
+      "reason": "Real P03 queue verifier, Windows/Ollama, SourceLock and E06 host not tested."
+    }
+  },
+  "git": {
+    "baseBranch": "automation/r30/g3a/G3A-20261029T084945MSK-R04-0959b5af",
+    "baseHead": "a54ed7fc7b60aeb4788797916d49ceab5e94ae90",
+    "privateBranch": "automation/r30/g3a/G3A-20261029T094231MSK-R05-a54ed7fc",
+    "headAfterSourceAndTest": "6fddda7b9ce63285efa314c0c36243fe358de39b",
+    "aheadCommitsBeforeReceipt": 2,
+    "comparedChangedPaths": [
+      "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "Packages/P03/Admission/test_g3a_r30_r05_queue_verifier_boundary.py"
+    ],
+    "outOfOwnerPaths": []
+  },
+  "modelStatus": {
+    "familyRecords": 30,
+    "verifiedDownloadableArtifacts": 0,
+    "licenseRightsArtifactShaHardwareRuntime": "HOLD"
+  },
+  "handoffG3B": {
+    "request": "In G3-B's OWN queue/transport files, bind the single E06 verified native queue receipt verifier to frozen job identity + bytes + receipt SHA and prevent callback mutation/reentrant owner session swaps. Provide nativeMeasuredHardware.availableRamBytes from current measured E06 host session for R04 RAM gate. No G3-A writes to queue/transport/ui.",
+    "targetOwnedByPeer": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "modifiedByG3A": false
+  },
+  "selfImprovement": {
+    "observed": "R04 lesson guarded download attestor but progress/retry were overlooked; review every callback boundary in owned source, not only initial admission.",
+    "applied": "Read immutable owner lock first and last Astra-C Drive delta; use preceding private HEAD exact Git preimage, one focused patch, Git post-readback and 16 structural assertions; isolate next 13 regression cases and record NOT_RUN honestly.",
+    "next": "Execute 13 committed Python cases in authorized source-only checkout, then independently test actual E06 native queue callback invariants and RAM sensor with G3-B. Coordinator Astra-C alone may update common Drive journals."
+  },
+  "prohibitedActions": {
+    "main": false,
+    "pr162": false,
+    "sharedR30": false,
+    "otherOwnerPaths": false,
+    "originalSnapshots": false,
+    "exe": false,
+    "nsis": false,
+    "windowsCI": false,
+    "gitlab": false,
+    "merge": false
+  },
+  "driveWriteByWorker": false,
+  "coordinator": "Astra-C"
+}
