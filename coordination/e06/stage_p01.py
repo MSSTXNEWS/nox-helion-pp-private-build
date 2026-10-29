@@ -69,6 +69,31 @@ def main():
                 canonical.validate_members(archive.infolist())
             except ValueError as exc:
                 raise SystemExit("E06_CANONICAL_ZIP_NAMESPACE_HOLD:"+str(exc)) from exc
+            # Preflight the COMPLETE WPF donor before extracting even one
+            # file. The historical 729-member archive is a different source;
+            # the P01_C07 donor must contain its real XAML, not just codebehind.
+            required={"R11/MainWindow.xaml", "R11/MainWindow.xaml.cs",
+                      "R11/App.xaml", "R11/NOX.P01.Shell.csproj",
+                      "R11/Assets/index.html",
+                      "R11/Installer/NOX-HELION-Setup.nsi",
+                      "R11/Contracts/EventV3Bridge.cs",
+                      "R11/Packages/P04/train_qlora.py"}
+            planned=set();preflight_bytes=0
+            for candidate in archive.infolist():
+                candidate_name=safe(candidate.filename,candidate).as_posix()
+                if candidate.is_dir():continue
+                if candidate.flag_bits & 1:
+                    raise SystemExit("P01_ENCRYPTED_DONOR_MEMBER_HOLD")
+                preflight_bytes+=candidate.file_size
+                if (preflight_bytes>200*1024*1024
+                        or candidate.file_size>64*1024*1024):
+                    raise SystemExit("ARCHIVE_SIZE_CAP")
+                if candidate_name.startswith("R11/"):
+                    planned.add(candidate_name)
+            if len(planned)<75:
+                raise SystemExit("R11_ORIGINAL_MISSING_FILES")
+            if not required.issubset(planned):
+                raise SystemExit("P01_REQUIRED_ASSETS_MISSING:"+repr(required-planned))
             seen=set();files=[];uncompressed=0
             for inf in archive.infolist():
                 name=safe(inf.filename,inf).as_posix()
@@ -97,9 +122,7 @@ def main():
                     files.append({"path":name,"bytes":inf.file_size,"sha256":b.hexdigest()})
             if len(files)<75:raise SystemExit("R11_ORIGINAL_MISSING_FILES")
             names={x["path"] for x in files}
-            required={"R11/MainWindow.xaml.cs","R11/NOX.P01.Shell.csproj","R11/Assets/index.html",
-                      "R11/Installer/NOX-HELION-Setup.nsi","R11/Contracts/EventV3Bridge.cs",
-                      "R11/Packages/P04/train_qlora.py"}
+            # Required P01 donor assets were checked before extraction.
             if not required<=names:raise SystemExit("P01_REQUIRED_ASSETS_MISSING:"+repr(required-names))
             report={"schema":"NOX-E06-P01-WINDOWS-DIAGNOSTIC-SOURCE-v1","run_id":RUN,
                     "source_origin":"NOX_V16_E01_TURBO10_C07_HANDOFF.zip","donor_zip_sha256":total.hexdigest(),
