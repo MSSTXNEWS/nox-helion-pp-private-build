@@ -50,6 +50,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         _webView.NavigationStarting += OnNavigationStarting;
         _webView.SourceChanged += OnSourceChanged;
         _webView.ContentLoading += OnContentLoading;
+        _webView.ProcessFailed += OnProcessFailed;
         _webView.WebMessageReceived += OnWebMessageReceived;
     }
 
@@ -94,10 +95,18 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs args)
         => AdvanceDocumentEpoch(newDocument: true);
 
+    // WebView2 process failure may leave Source unchanged while native consent
+    // or a route callback is awaiting. Fail closed: invalidate its document
+    // epoch without releasing request IDs belonging to a surviving page.
+    private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs args)
+        => AdvanceDocumentEpoch(newDocument: false);
+
     private void AdvanceDocumentEpoch(bool newDocument)
     {
         if (Volatile.Read(ref _disposed) != 0) return;
         Interlocked.Increment(ref _documentEpoch);
+        // Old-epoch callbacks are inert; do not retain stale pending keys.
+        _pending.Clear();
         if (newDocument) _seenRequestIds.Clear();
     }
 
@@ -206,6 +215,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             _webView.NavigationStarting -= OnNavigationStarting;
             _webView.SourceChanged -= OnSourceChanged;
             _webView.ContentLoading -= OnContentLoading;
+            _webView.ProcessFailed -= OnProcessFailed;
         }
         catch (Exception) { /* native WebView2 may already be disposed */ }
         _lifetime.Cancel();
