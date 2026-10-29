@@ -325,11 +325,23 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       const newPolicy=profileFor(next,preference);
       const nextMin=PROFILES[next].minimumBurstMs;
       const oldMin=PROFILES[mode].minimumBurstMs;
-      let rebaseNow=null;
-      if(Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity)){
+      const faster=Number.isFinite(nextMin)&&nextMin<oldMin&&oldMin!==Infinity;
+      const slower=Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity);
+      let rebaseNow=null,fastBounds=null;
+      if(faster||slower){
         try{rebaseNow=time();}catch(_){return false;}
         if(!Number.isFinite(rebaseNow)||rebaseNow<0||
            !Number.isFinite(rebaseNow+nextMin))return false;
+        // ECO -> MAX/BALANCED must not inherit ECO's long dormant timers.
+        // Validate every orbit bound before touching particles or live mode.
+        if(faster){
+          fastBounds=each.map(orb=>{
+            const scale=orb.index===0?1:2.1;
+            return [rebaseNow+newPolicy.minimumBurstMs*scale,
+                    rebaseNow+newPolicy.maximumBurstMs*scale];
+          });
+          if(fastBounds.some(bounds=>!bounds.every(Number.isFinite)))return false;
+        }
       }
       // Only a validated profile transition may trim the live ejecta budget.
       while(particles.length>newPolicy.maxParticles){
@@ -337,7 +349,14 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       }
       particleCount=particles.length;
       if(rebaseNow!==null)
-        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,rebaseNow+nextMin);
+        each.forEach((orb,index)=>{
+          if(faster){
+            const [earliest,latest]=fastBounds[index];
+            orb.nextBurst=Math.max(earliest,Math.min(orb.nextBurst,latest));
+          }else{
+            orb.nextBurst=Math.max(orb.nextBurst,rebaseNow+nextMin);
+          }
+        });
       mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },
