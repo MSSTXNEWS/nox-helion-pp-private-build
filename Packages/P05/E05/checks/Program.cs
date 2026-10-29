@@ -297,6 +297,7 @@ Check(SpaceParsers.ParseRss(safeNews, "fixture").Count == 1,
 await E05HostTelemetryChecks.RunAsync();
 E05VerifiedProjectionChecks.Run();
 await E05FinishChecks.RunAsync();
+await E05DriveAdmissionR29Checks.RunAsync();
 Console.WriteLine("ALL E05 mocked/offline checks passed (no real hardware/network)");
 
 sealed class DocsFixtureHandler : HttpMessageHandler

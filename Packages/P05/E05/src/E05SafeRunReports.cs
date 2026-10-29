@@ -10,21 +10,23 @@ public static class E05SafeRunReports
         GoogleDocsAppendReadback writer, string runId, string report, string lesson,
         IReadOnlyList<E05DriveTarget> targets, CancellationToken ct)
     {
+        var snapshot = targets?.ToArray();
         if (writer is null || string.IsNullOrWhiteSpace(runId) ||
             string.IsNullOrWhiteSpace(report) || string.IsNullOrWhiteSpace(lesson) ||
             !report.Contains(runId, StringComparison.Ordinal) ||
             !lesson.Contains(runId, StringComparison.Ordinal) ||
-            targets is null || targets.Count != 2 ||
-            targets.Any(x => x is null || string.IsNullOrWhiteSpace(x.DocumentId)) ||
-            targets.Count(x => x.Purpose == "report") != 1 ||
-            targets.Count(x => x.Purpose == "lessons") != 1 ||
-            targets[0].DocumentId == targets[1].DocumentId)
+            snapshot is null || snapshot.Length != 2 ||
+            snapshot.Any(x => x is null || !GoogleDocsAppendReadback.ValidInput(x.DocumentId, runId,
+                x.Purpose == "report" ? report : lesson)) ||
+            snapshot.Count(x => x.Purpose == "report") != 1 ||
+            snapshot.Count(x => x.Purpose == "lessons") != 1 ||
+            snapshot[0].DocumentId == snapshot[1].DocumentId)
             return new(runId ?? "", "HOLD_CONTRACT", Array.Empty<DriveAppendReceipt>());
         var receipts = new List<DriveAppendReceipt>();
         foreach (string purpose in new[] { "report", "lessons" })
         {
             ct.ThrowIfCancellationRequested();
-            var t = targets.Single(x => x.Purpose == purpose);
+            var t = snapshot.Single(x => x.Purpose == purpose);
             try
             {
                 var result = await writer.AppendAsync(t.DocumentId, runId,
