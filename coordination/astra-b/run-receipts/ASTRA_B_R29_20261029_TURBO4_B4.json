@@ -1,0 +1,26 @@
+{
+  "schema": "ASTRA_B_TURBO4_SOURCE_RUN_V1",
+  "run_id": "ASTRA-B-R29-20261029-TURBO4-B4",
+  "worker_label": "B4",
+  "actual_subagent_spawn_id": null,
+  "parallel_operations": true,
+  "source_only": true,
+  "approaches_saved_this_run": 4,
+  "approaches_verified_native_this_run": 0,
+  "branch": "astra-b/r29-b4-20261029",
+  "code_commits": [
+    "c2962da43b840cbc757519782a27b9c67d4300ac",
+    "07e30dccd003085a0d1f06347d37f02af67805ab",
+    "bd66efe0f639463938d97e13e2adf9fec5a051c9",
+    "f06b2f05c08b5d6e2d7634c15da2ed37eb952a63"
+  ],
+  "change_summary": "Revision monotonicity, bounded Drive doc ID, expected chars, receipt before/after revision",
+  "focused_tests": "C# focused source checks; dotnet native NOT_RUN",
+  "source_lock": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "native_windows": "NOT_RUN",
+  "original_archive_729_bytes": "NOT_REVERIFIED",
+  "lesson": "A readback must be from exactly the requested document, run, length and fresh revision.",
+  "product_taskid_readiness": "N_D",
+  "drive_write": "ASTRA_A_SOLE_WRITER",
+  "gitlab_build": "PROHIBITED"
+}
