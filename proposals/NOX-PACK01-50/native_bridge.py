@@ -124,6 +124,21 @@ class NativeSession:
                 type(self.session_lease) is not str or len(self.session_lease) > 128):
             raise HostDenied("Malformed native Windows SID/session lease")
 
+
+def _native_owner_scope(session: NativeSession):
+    """Pin exact host identity across nested owner callbacks, including SID/lease.
+
+    This is a mutation guard, not a substitute for NoxPackHost's live Windows
+    revocation verifier or the original owner's pre-effect authorization.
+    """
+    if type(session) is not NativeSession:
+        raise HostDenied("Native owner session required")
+    session.validate()
+    return (session.tenant, session.principal, session.chat_id,
+            session.allowed, session.private_approved,
+            session.windows_sid, session.session_lease)
+
+
 @dataclass(frozen=True)
 class BoundPort:
     call: Callable[[NativeSession, dict], Any]
@@ -350,13 +365,9 @@ class ExistingP02Adapter:
         return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
 
     def chat(self, session, args):
-        session.validate()
-        scope=(session.tenant,session.principal,session.chat_id,
-               session.allowed,session.private_approved)
+        scope = _native_owner_scope(session)
         def check_scope():
-            session.validate()
-            if (session.tenant,session.principal,session.chat_id,
-                    session.allowed,session.private_approved)!=scope:
+            if _native_owner_scope(session) != scope:
                 raise HostDenied("Native chat callback changed authenticated scope")
         message = args.get("text")
         model = args.get("model")
@@ -366,11 +377,13 @@ class ExistingP02Adapter:
         if model not in installed:raise HostHold("Selected model not installed")
         check_scope()
         conversation = self.store.history(scope[0],scope[1],scope[2],80)
+        check_scope()  # SQLite history is an owner callback.
         conversation = conversation + [{"role":"user","content":message}]
         answer = []
         bytes_seen = 0
         done = False
         for chunk in self.client.stream(model,conversation):
+            check_scope()  # The streaming callback may rotate SID/lease.
             if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
                 raise HostHold("Invalid Ollama chunk")
             delta = chunk["delta"]
@@ -379,6 +392,7 @@ class ExistingP02Adapter:
                 self.client.stop()
                 raise HostHold("Answer too large")
             answer.append(delta)
+            check_scope()  # Never emit into a stale native Windows session.
             if self.event_sink:
                 self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
             check_scope()
@@ -388,15 +402,14 @@ class ExistingP02Adapter:
         # Persist only for the exact authenticated scope from chat admission.
         check_scope()
         self.store.add_message(scope[0],scope[1],scope[2],"user",message)
+        check_scope()  # Stop a second write if the first owner call changes identity.
         self.store.add_message(scope[0],scope[1],scope[2],"assistant",text)
         return {"answer":text,"done":True}
 
     def attach_native_selected(self,session,args):
         if not callable(self.native_selected_file):
             raise HostHold("Trusted native file picker not bound")
-        session.validate()
-        initial_scope=(session.tenant,session.principal,session.chat_id,
-                       session.allowed,session.private_approved)
+        initial_scope = _native_owner_scope(session)
         selected = self.native_selected_file(session)
         if not isinstance(selected,tuple) or len(selected)!=2:
             raise HostHold("Native file picker returned no approved file")
@@ -404,13 +417,13 @@ class ExistingP02Adapter:
         if not isinstance(mime,str) or not callable(getattr(stream,"read",None)):
             raise HostDenied("Native file selection invalid")
         try:
-            session.validate()
-            if (session.tenant,session.principal,session.chat_id,
-                    session.allowed,session.private_approved)!=initial_scope:
+            if _native_owner_scope(session) != initial_scope:
                 raise HostDenied("Native file picker changed authenticated scope")
             # Existing P02 handles MIME/signature/size/SHA and SQLite ACL.
             result=self.store.store_file(initial_scope[0],initial_scope[1],
                 initial_scope[2],mime,stream)
+            if _native_owner_scope(session) != initial_scope:
+                raise HostDenied("Native file store changed authenticated scope")
             return {"storedAttachment":result}
         finally:
             if callable(getattr(stream,"close",None)):stream.close()
@@ -488,14 +501,12 @@ class ExistingP02VoiceAdapter:
 
     def speak(self,session,args, *,mode):
         if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
-        session.validate()
-        expected_scope=(session.tenant,session.principal,session.chat_id,
-                        session.allowed,session.private_approved)
+        expected_scope = _native_owner_scope(session)
         identity=self.native_identity(session)
+        if _native_owner_scope(session) != expected_scope:
+            raise HostDenied("Native identity changed before microphone capture")
         captured=self.native_audio(session)
-        session.validate()
-        if (session.tenant,session.principal,session.chat_id,
-                session.allowed,session.private_approved)!=expected_scope:
+        if _native_owner_scope(session) != expected_scope:
             raise HostDenied("Native microphone callback changed session scope")
         if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
             raise HostDenied("No trusted bounded microphone capture")
@@ -509,6 +520,8 @@ class ExistingP02VoiceAdapter:
         # Native Windows permission for the microphone happens before returning bytes.
         response=self.voice.run(identity,captured,source=source,target=target,
             voice=voice,mode=mode,level=level,microphone_consent=True)
+        if _native_owner_scope(session) != expected_scope:
+            raise HostDenied("Native voice owner changed authenticated scope")
         return {"transcript":response.transcript,"answer":response.response,
                 "audio":response.audio,"source":response.source_lang,
                 "target":response.target_lang,"mode":response.mode}
@@ -523,17 +536,18 @@ class ExistingP02VoiceAdapter:
 
     def dial(self,session,args):
         if not self.sip_ready():raise HostHold("SIP provider, quote verification or consent not configured")
-        session.validate()
-        expected_scope=(session.tenant,session.principal,session.chat_id,
-                        session.allowed,session.private_approved)
+        expected_scope = _native_owner_scope(session)
         identity=self.native_identity(session)
+        if _native_owner_scope(session) != expected_scope:
+            raise HostDenied("Native identity changed before SIP quote")
         quote=self.native_quote(session)  # NEVER generated from client price or number.
-        session.validate()
-        if (session.tenant,session.principal,session.chat_id,
-                session.allowed,session.private_approved)!=expected_scope:
+        if _native_owner_scope(session) != expected_scope:
             raise HostDenied("Native SIP quote changed authenticated scope")
         if quote is None:raise HostHold("No live quote approved by SIP provider")
-        return self.sip.place(identity,quote)
+        result = self.sip.place(identity,quote)
+        if _native_owner_scope(session) != expected_scope:
+            raise HostDenied("Native SIP owner changed authenticated scope")
+        return result
 
     def register(self,dispatcher:NoxPackHost,*,receipt:str):
         entries={
