@@ -190,6 +190,37 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
     }
 
 
+
+def _publish_receipt_exclusive(output: Path, receipt: dict) -> bytes:
+    """Publish only fully fsynced bytes; preserve earlier receipts on failure.
+
+    The canonical SourceLock publisher prepares in the same directory, uses
+    os.link(O_EXCL-like) rather than a replacing rename, and deletes temps on
+    exceptions. This is an output-only gate, never another ZIP validator.
+    """
+    if not CANONICAL_VALIDATOR.is_file() or CANONICAL_VALIDATOR.is_symlink():
+        raise SourceHold("CANONICAL_RECEIPT_PUBLISHER_UNAVAILABLE")
+    spec = importlib.util.spec_from_file_location(
+        "nox_original_receipt_publisher", CANONICAL_VALIDATOR)
+    if spec is None or spec.loader is None:
+        raise SourceHold("CANONICAL_RECEIPT_PUBLISHER_INVALID")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    publisher = getattr(module, "publish_manifest_exclusive", None)
+    if not callable(publisher):
+        raise SourceHold("CANONICAL_RECEIPT_PUBLISHER_MISSING")
+    _trusted_output_parent(output)
+    publisher(output, receipt)
+    encoded = output.read_bytes()
+    try:
+        readback = json.loads(encoded)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceHold("SOURCELOCK_RECEIPT_READBACK_INVALID") from exc
+    if readback != receipt:
+        raise SourceHold("SOURCELOCK_RECEIPT_READBACK_MISMATCH")
+    return encoded
+
+
 def _trusted_output_parent(output: Path) -> None:
     """Reject redirected receipt ancestors before any write to owner output."""
     parent = output.absolute().parent
@@ -215,13 +246,9 @@ def main() -> int:
             raise SourceHold("OUTPUT_ALREADY_EXISTS_OR_UNSAFE")
         _trusted_output_parent(args.out)
         receipt = verify_original(args.parts_dir, run_id=args.run_id)
-        encoded = (json.dumps(receipt, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-        # Exclusive create: never overwrite an existing receipt or owner file.
-        _trusted_output_parent(args.out)
-        with args.out.open("xb") as target:
-            target.write(encoded)
-            target.flush()
-            os.fsync(target.fileno())
+        # A failed fsync must not leave a partial yet discoverable SourceLock.
+        # Reuse the canonical sibling-temp + exclusive-hardlink publisher.
+        encoded = _publish_receipt_exclusive(args.out, receipt)
         print("ORIGINAL_729_SOURCELOCK_INNER_SHA_PASS", hashlib.sha256(encoded).hexdigest())
         return 0
     except (SourceHold, OSError, ValueError) as exc:

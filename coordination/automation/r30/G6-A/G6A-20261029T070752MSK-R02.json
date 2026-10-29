@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V2",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T070752MSK-R02",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY",
+  "branch": "automation/r30/g6a/G6A-20261029T070752MSK-R02",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T060610MSK-R01",
+  "parentCommit": "c2565c02af0bc8055204f4384ad574b23869ea93",
+  "status": "HOLD",
+  "sourceState": "SOURCE_PATCH_SAVED_NOT_SOURCE_READY",
+  "taskId": "G6A-E06-SOURCELOCK-ATOMIC-RECEIPT-PUBLISH-01",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "slot": "G6-A",
+    "exclusivePaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPathsUntouched": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ]
+  },
+  "preimage": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "gitBlobSha1": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8"
+  },
+  "postimage": {
+    "path": "coordination/e06/verify_original_729_source.py",
+    "gitBlobSha1": "9f1a615bfcec7f6a89554572205680e917ff887e"
+  },
+  "test": {
+    "path": "coordination/automation/r30/G6-A/tests/test_e06_receipt_atomic_g6a.py",
+    "gitBlobSha1": "492270e0c63105bea6f6b702f796507ccb9d5736",
+    "command": "python -m unittest discover -s coordination/automation/r30/G6-A/tests -p test_e06_receipt_atomic_g6a.py -v",
+    "execution": "NOT_RUN_NO_AUTHENTICATED_LOCAL_REPOSITORY_CHECKOUT",
+    "claim": "Fixture authored only, not a Python PASS",
+    "testBehavior": "Inject os.fsync failure and require no partially published SourceLock JSON and no orphaned private temp"
+  },
+  "actualSourceReview": {
+    "type": "V8 connector-returned text invariant checks, not Python execution",
+    "count": 6,
+    "passed": 6,
+    "checks": [
+      "helper definition present",
+      "canonical exclusive publisher reused",
+      "old direct xb publication removed",
+      "exclusive G6-A path",
+      "unique own-slot regression file",
+      "fsync fault injected"
+    ]
+  },
+  "defect": "SourceLock main() previously opened the final receipt with xb and wrote its JSON before fsync; disk-full/fsync fault could leave an incomplete visible receipt that another consumer might misinterpret as verified.",
+  "fix": "Prepare and fsync private same-directory receipt bytes, publish by exclusive hard link through canonical source-lock/verify_original_archive.py publisher, read back and compare exact JSON; keep old receipts untouched and remove failed private temp.",
+  "reuse": "coordination/source-lock/verify_original_archive.py publish_manifest_exclusive; no duplicate ZIP validator or modified canonical source.",
+  "protection": {
+    "snapshotsEnumerated": 25,
+    "untruncatedGitSnapshotTreesChecked": 25,
+    "originalThreePartBlobShasIdenticalAcross25": true,
+    "originalThreePartGitBlobShas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozenBaselineGitBlobs": 968,
+    "baselinePathsStillPresent": 968,
+    "baselinePathsMissing": 0,
+    "baselineBlobsChangedBeforeThisPatch": 3,
+    "raw729ZIPMemberSHA256": "NOT_RUN_NO_ORIGINAL_PART_BYTES",
+    "nativeWindowsRollback": "NOT_RUN",
+    "sourcePartsModified": false
+  },
+  "errorJournalRead": {
+    "latestMaster": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+  },
+  "newLesson": "Never expose a SourceLock receipt until its complete bytes have been fsynced; reuse a canonical no-clobber private-temp publisher and check exact readback. A Git blob or saved ZIP inventory is not physical archive SHA256 proof.",
+  "changedPaths": [
+    "coordination/e06/verify_original_729_source.py",
+    "coordination/automation/r30/G6-A/tests/test_e06_receipt_atomic_g6a.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T070752MSK-R02.json"
+  ],
+  "otherOwnersModified": false,
+  "oldDonePreserved": true,
+  "original25SnapshotsModified": false,
+  "mainModified": false,
+  "pr162Modified": false,
+  "aggregateR30Modified": false,
+  "gitlabTouched": false,
+  "exeNsisCiRun": false,
+  "finalIntegrationRun": false,
+  "journal": "Only Astra-C may append these Git receipt lessons to shared Google Docs with CAS+RunID readback; G6-A did not write shared Docs.",
+  "remainingHolds": [
+    "Execute authored Python regression in authentic checkout",
+    "Physically verify three-part combined archive SHA256 and all 729 inner ZIP SHA256",
+    "Confirm Windows/NTFS rollback and independently accept E07 after source-ready, not in this run"
+  ]
+}
