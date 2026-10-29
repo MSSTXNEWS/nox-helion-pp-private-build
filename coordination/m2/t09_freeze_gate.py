@@ -87,11 +87,21 @@ def evaluate(repo: str | Path, evidence: dict) -> dict:
         guard_path = root / "coordination/e06/t06_closeout_guard.py"
         if not guard_path.is_file() or guard_path.is_symlink():
             return hold("OFFICIAL_T06_SOURCE_GATE_MISSING")
-        spec = importlib.util.spec_from_file_location("nox_m2_official_t06", guard_path)
-        if spec is None or spec.loader is None:
-            return hold("T06_GATE_IMPORT_FAILED")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        # Import exactly the Git-tracked bytes; never execute an altered working
+        # tree file or a stale/poisoned __pycache__ instead of the accepted HEAD.
+        guard_rel = "coordination/e06/t06_closeout_guard.py"
+        guard_bytes = guard_path.read_bytes()
+        expected = _git(root, "rev-parse", "HEAD:" + guard_rel).decode().strip()
+        current = subprocess.run(
+            ["git", "-C", str(root), "hash-object", "--path", guard_rel, "--stdin"],
+            input=guard_bytes, capture_output=True, check=False, timeout=12,
+        )
+        if current.returncode or current.stdout.decode().strip() != expected:
+            return hold("T06_GUARD_WORKTREE_DRIFT")
+        import types
+        mod = types.ModuleType("nox_m2_official_t06")
+        mod.__file__ = str(guard_path)
+        exec(compile(guard_bytes, str(guard_path), "exec"), mod.__dict__)
         t06_result = mod.decide(t06, repo_root=root)
         if t06_result.get("done") is not True or t06_result.get("source_owner_accepted") is not True:
             return hold("T06_OWNER_GATE_NOT_8_OF_8")

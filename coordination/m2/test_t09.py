@@ -16,6 +16,15 @@ class TestT09SourceFreeze(unittest.TestCase):
         (self.repo / "README").write_text("local source-only fixture\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(self.repo), "add", "README"], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(self.repo), "commit", "-qm", "initial"], check=True, capture_output=True)
+        guard = self.repo / "coordination/e06/t06_closeout_guard.py"
+        guard.parent.mkdir(parents=True, exist_ok=True)
+        guard.write_text("def decide(receipt, repo_root=None):\n"
+                         "    return {'done': True, 'source_owner_accepted': True}\n",
+                         encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "."],
+                       check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.repo), "commit", "-qm", "pin synthetic guard"],
+                       check=True, capture_output=True)
         self.head = self.git("rev-parse", "HEAD")
         self.tree = self.git("rev-parse", "HEAD^{tree}")
         self.manifest = self.add_blob(json.dumps({"head_sha": self.head,
@@ -51,5 +60,27 @@ class TestT09SourceFreeze(unittest.TestCase):
         x=dict(self.evidence,original_729_lock_pass=True,owner_patches_accepted=True,
                t06_accepted_head=self.head,t08_same_head=self.head)
         self.assertEqual(evaluate(self.repo,x)["status"],"FREEZE_HOLD")
+
+    def test_dirty_t06_guard_refused_even_with_git_owner_blob(self):
+        owner = {"head_sha": self.head, "tree_sha": self.tree,
+                 "manifest_blob_sha": self.manifest, "owner_acceptance": True,
+                 "source_no_loss_attested": True,
+                 "criteria": {str(i): {} for i in range(8)}}
+        self.evidence["t06_receipt_blob"] = self.add_blob(json.dumps(owner))
+        guard = self.repo / "coordination/e06/t06_closeout_guard.py"
+        guard.write_text("def decide(*args, **kwargs):\n"
+                         "    return {'done': True, 'source_owner_accepted': True}\n",
+                         encoding="utf-8")
+        self.assertEqual(evaluate(self.repo, self.evidence)["reason"],
+                         "T06_GUARD_WORKTREE_DRIFT")
+
+    def test_clean_pinned_guard_still_requires_t08_proof(self):
+        owner = {"head_sha": self.head, "tree_sha": self.tree,
+                 "manifest_blob_sha": self.manifest, "owner_acceptance": True,
+                 "source_no_loss_attested": True,
+                 "criteria": {str(i): {} for i in range(8)}}
+        self.evidence["t06_receipt_blob"] = self.add_blob(json.dumps(owner))
+        self.assertEqual(evaluate(self.repo, self.evidence)["reason"],
+                         "GIT_OR_OWNER_RECEIPT_READBACK_FAILED")
 
 if __name__ == '__main__': unittest.main()
