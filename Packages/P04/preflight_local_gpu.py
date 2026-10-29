@@ -183,9 +183,10 @@ def inspect(profile: str, gpu_index: int) -> dict:
         return report
     try:
         devices = train_qlora.gpu_inventory(exe)
-        selected = next((x for x in devices if int(x["index"]) == gpu_index), None)
-        if not selected:
-            raise RuntimeError("GPU_INDEX_NOT_FOUND")
+        matching = [x for x in devices if int(x["index"]) == gpu_index]
+        if len(matching) != 1:
+            raise RuntimeError("GPU_INDEX_AMBIGUOUS_OR_NOT_FOUND")
+        selected = matching[0]
         temperature = train_qlora.gpu_temperature(exe, selected["uuid"])
         if (type(temperature) not in (int, float) or
                 not math.isfinite(temperature) or temperature < -50 or temperature > 150):
