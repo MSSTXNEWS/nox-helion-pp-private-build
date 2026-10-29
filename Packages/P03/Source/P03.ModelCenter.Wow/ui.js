@@ -175,7 +175,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     if(old&&old.jobId===next.jobId&&old.modelTag===next.modelTag){
       if(['Completed','Cancelled','Failed'].includes(old.state)&&next.state!==old.state)next={...old};
       else{
-        if(old.state==='Cancelling'&&['Queued','Running'].includes(next.state))next.state='Cancelling';
+        // Durable STOP wins over stale completion, failure and transfer snapshots.
+        // Preserve the complete Cancelling record until host confirms Cancelled.
+        if(old.state==='Cancelling'&&next.state!=='Cancelled')next={...old};
         if(['Running','Cancelling'].includes(old.state)&&next.state==='Queued')next.state=old.state;
         if(numeric(old.completedBytes)!==null&&
            (next.completedBytes===null||next.completedBytes<old.completedBytes)){
@@ -201,12 +203,17 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
   const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
-  state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
-  // Queue ownership is independent of the card currently being inspected.
-  // Preserve background completion/STOP so returning to its card is truthful.
+  // The active queue job is independent of the selected catalog card.
   const job=state.activeJob;
-  if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
-     !['Completed','Failed','Cancelled'].includes(job.state)){
+  const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
+  // Out-of-order host messages must neither erase durable STOP nor display
+  // a false "Installed"/"Failed"/"Starting" in the lifecycle event feed.
+  if(sameJob&&(
+     ['Completed','Failed','Cancelled'].includes(job.state)||
+     (job.state==='Cancelling'&&evt.phase!=='cancelled')||
+     (evt.phase==='started'&&job.state!=='Queued')))return;
+  state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
+  if(sameJob){
     if(typeof evt.status==='string')job.status=evt.status;
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
