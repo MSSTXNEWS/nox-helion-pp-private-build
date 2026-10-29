@@ -80,9 +80,12 @@ public sealed class SpaceFeedClient
         // during an offline fallback from a different approved endpoint.
         if (_cache.TryGetValue(key, out var old) &&
             now >= old.FetchedAt && now - old.FetchedAt < _ttl)
-            return old with {
-                Status = old.Status is "LIVE" or "CACHE" ? "CACHE" : old.Status
-            };
+            {
+                stop.ThrowIfCancellationRequested();
+                return old with {
+                    Status = old.Status is "LIVE" or "CACHE" ? "CACHE" : old.Status
+                };
+            }
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
         timeout.CancelAfter(_timeout);
         try
@@ -140,6 +143,7 @@ public sealed class SpaceFeedClient
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or
             JsonException or FeedResponseTooLargeException)
         {
+            stop.ThrowIfCancellationRequested();
             string error = ex is FeedResponseTooLargeException ? "RESPONSE_TOO_LARGE" :
                 ex is OperationCanceledException ? "TIMEOUT" :
                 ex is JsonException ? "INVALID_JSON" :
