@@ -1,0 +1,15 @@
+test_child_timeout_fails_closed (test_gpu_guards_additional.IsolatedCudaSafety.test_child_timeout_fails_closed) ... ok
+test_cuda_child_refuses_bool_device_count (test_gpu_guards_additional.IsolatedCudaSafety.test_cuda_child_refuses_bool_device_count) ... ok
+test_parent_environment_unchanged_and_child_isolated (test_gpu_guards_additional.IsolatedCudaSafety.test_parent_environment_unchanged_and_child_isolated) ... ok
+test_refuses_parent_device_order_mismatch (test_gpu_guards_additional.IsolatedCudaSafety.test_refuses_parent_device_order_mismatch) ... ok
+test_refuses_parent_gpu_visibility_mismatch (test_gpu_guards_additional.IsolatedCudaSafety.test_refuses_parent_gpu_visibility_mismatch) ... ok
+test_rejects_invalid_uuid_before_child (test_gpu_guards_additional.IsolatedCudaSafety.test_rejects_invalid_uuid_before_child) ... ok
+test_unknown_child_fields_fail_closed (test_gpu_guards_additional.IsolatedCudaSafety.test_unknown_child_fields_fail_closed) ... ok
+test_missing_vendor_probe_holds_even_with_local_packages (test_local_gpu_preflight.HardwarePreflightContracts.test_missing_vendor_probe_holds_even_with_local_packages) ... ok
+test_non_windows_is_hold_without_running_gpu (test_local_gpu_preflight.HardwarePreflightContracts.test_non_windows_is_hold_without_running_gpu) ... ok
+test_selected_uuid_and_sufficient_actual_free_memory_semantics (test_local_gpu_preflight.HardwarePreflightContracts.test_selected_uuid_and_sufficient_actual_free_memory_semantics) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.015s
+
+OK

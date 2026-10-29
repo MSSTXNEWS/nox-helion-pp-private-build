@@ -1,0 +1,148 @@
+{
+  "schema": "NOX_V16_R18_G1C_RUNTIME_PYTHON_TARGETED_EVIDENCE_V1",
+  "run_id": "NOX-V16-G1C-20261029T211443MSK-R15-P04-UNIT",
+  "task_id": "G1-C-P04-P05",
+  "scope": "EXPRESS_INTEGRATOR_SOURCE_ONLY",
+  "owner": "G1-C",
+  "stage": "TARGETED_RUNTIME_SYNTHETIC_CHECK_ONLY",
+  "start_msk": "2026-10-29T21:14:43+03:00",
+  "prestart_read_proof": {
+    "canon_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "59",
+    "canon_modified_utc": "2026-10-29T17:32:24.318Z",
+    "canon_bytes_chars": 209373,
+    "rules_33": "56/56",
+    "r18_controls_head": "21da5946133c81bac0b303de5560c91f6c5c8562",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "r18_tests_blob": "f0f6282f065f1edb056dcf25451d93ff383ba89e",
+    "r18_matrix_blob": "6775e071f872c432d4cbdd12b0b920fffbbca397",
+    "r18_roles_blob": "31fba12cee825226cc9dff60560550b178da8bc9",
+    "own_prompt_blob": "757e64e3c012d064561bd3331d50b87a2858e06b",
+    "error_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "error_count": 11,
+    "error_status": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "active_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "docs_latest_read": [
+      "Master",
+      "E06",
+      "Lessons",
+      "C34"
+    ]
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_pre": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "head_tree_pre": "60e4d3a1b7d18082efac38d72fecf3f0881c343b",
+    "tracked": [
+      {
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "sha": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+      },
+      {
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "sha": "15d6807033040711ac54c4c9f63432c5653e62bd"
+      },
+      {
+        "path": "tests/P04/test_local_gpu_preflight.py",
+        "sha": "2977f79608e93adf35011436d56f23a9e65531ca"
+      },
+      {
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "sha": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+      },
+      {
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "sha": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+      }
+    ],
+    "product_source_files_modified": 0
+  },
+  "test": {
+    "execution": "Python 3, local sandbox Linux, offline",
+    "command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests/P04 -p 'test_*.py' -v",
+    "original_repo_python_testcases_pass": 3,
+    "new_owner_independent_negative_cases_pass": 7,
+    "passed": 10,
+    "total": 10,
+    "original_source_git_hash_matched": true,
+    "original_test_git_hash_matched": true,
+    "production_train_qlora_imported": false,
+    "dependency": "NARROW TEST-ONLY STUB; no native QLoRA/Windows/CUDA or independent final QA",
+    "unittest_log_sha256": "4897add4a15b7accfc6f1614eb41b117575b5e6c2c12216f4a5e609512240f14",
+    "negative_test_script_sha256": "7aa3816972b5a538e858e046168c2aa6f7f2c656a851553d70679506d6f1d2af",
+    "gpu_hardware_test": "NOT_RUN",
+    "windows_native_test": "NOT_RUN",
+    "stop_acl_consent_privacy": "ONLY LOCAL CUDA CHILD GUARDS; full app security NOT_RUN"
+  },
+  "progress": {
+    "source_binding_before": "4/4",
+    "source_binding_after": "4/4",
+    "new_unique_owner_qa_accepted_task_ids": 0,
+    "product_percent": "N/D",
+    "accepted_delta_pp": 0,
+    "source_only_verification_added": "PYTHON_LOCAL_SYNTHETIC_10_OF_10",
+    "success_claim": false
+  },
+  "gates": {
+    "A": "PASS_WITH_CURRENT_CANON_AND_CURRENT_PINNED_HEAD",
+    "B": "PASS_NEW_TARGETED_PYTHON_TEST_PROOF_WITH_DEPENDENCY_STUB",
+    "C": "PENDING_RECEIPT_GIT_READBACK",
+    "D": "PARTIAL_ALL_11_ACTIVE_TRIAGED_WITH_OWNER_DELEGATIONS_HISTORY_NOT_EXHAUSTIVE"
+  },
+  "self_improvement": {
+    "reviewed_active_error_ids": 11,
+    "archived_fingerprints_not_active": 419,
+    "applied": [
+      "ERR-SYS-002",
+      "ERR-SRC-004",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ],
+    "already_fixed": [
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "delegated": [
+      "ERR-SYS-001",
+      "ERR-SRC-003",
+      "ERR-SRC-005",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "remaining": "Owner actual train_qlora dependency and native Windows CUDA/GPU, T08 independent same-SHA; historic cross-owner receipts incomplete.",
+    "lesson": "After CUDA moved behind a child-process boundary, use real Python execution of the exact pinned preflight/test files with child-boundary and fail-closed negatives, not solely static checks; disclose substitution of heavyweight dependency."
+  },
+  "handoff": {
+    "to": [
+      "T06",
+      "G4-B",
+      "T08",
+      "T02"
+    ],
+    "issue": 177,
+    "required_action": "T06/G4-B rerun tests/P04/test_local_gpu_preflight.py with ORIGINAL train_qlora.py on pinned owner target/Windows and obtain T08 independent QA. T02 ingest evidence as ERR-SRC-004 progress, not new ERROR_ID nor ACCEPTED TaskID.",
+    "source_ready": "HOLD",
+    "build": "NOT_RUN",
+    "gitlab": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "receipt_readback_status": "MUST_VERIFY_POST_COMMIT"
+}
