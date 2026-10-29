@@ -77,6 +77,7 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         if not _owned(lock, lock_identity, lock_bytes):
             raise RuntimeError("OWNER6_STAGE_LOCK_LOST_HOLD")
     prepared = []
+    prepared_ids = {}
     published = []
     installed_identity = None
     before_identity = None
@@ -89,7 +90,9 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             raise RuntimeError("OWNER6_OUTPUT_CONFLICT_HOLD")
         for path, raw in ((original, patched), (dest, extra), (out, receipt_bytes),
                           (original, before)):
-            prepared.append(_prepare(trusted_path(path), raw))
+            temporary = _prepare(trusted_path(path), raw)
+            prepared.append(temporary)
+            prepared_ids[temporary] = _identity(temporary)
         backup = prepared[3]
         # Hard-link publication is atomic and refuses an existing destination.
         os.link(prepared[1], trusted_path(dest))
@@ -135,7 +138,11 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
     finally:
         if not keep_recovery:
             for temporary in prepared:
-                temporary.unlink(missing_ok=True)
+                try:
+                    if _identity(temporary) == prepared_ids[temporary]:
+                        temporary.unlink()
+                except FileNotFoundError:
+                    pass
             if _owned(lock, lock_identity, lock_bytes):
                 lock.unlink()
 
