@@ -1,0 +1,21 @@
+{
+  "task": "T08",
+  "runId": "NOX-V16-T08-20261029T173658MSK-R17-AUTO",
+  "sourceHead": "244d2c6c7ffd1cddbf6282839eb6f7ad9d036a8d",
+  "status": "HOLD_T06_OWNER_ACCEPTANCE",
+  "progress": "1/3=33.3%",
+  "previousProgress": "1/3=33.3%",
+  "deltaPP": 0,
+  "changes": [
+    "P04 model 7815e735 -> 34c09ced",
+    "P04 gpu 5a2a0940 -> 15d68070",
+    "P05 space a1f1ca5a -> 1dcf0df6",
+    "P05 Docs 90f78a41 -> ba4d72c2",
+    "Host50 admission 9a3cdd17 -> efd5af93"
+  ],
+  "testsRun": 0,
+  "sourceEditsByT08": 0,
+  "oldDonePreserved": true,
+  "handoff": "T09/T10/T02: T06 full accepted same HEAD/tree/manifest still absent; source and runtime HOLD.",
+  "lesson": "Source changes are not full native owner acceptance; no E07."
+}
