@@ -168,6 +168,8 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       typeof incoming.modelTag!=='string'||incoming.modelTag.length>160||
       !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
   let next=incoming?{...incoming}:null;
+  // An absent/null job is not confirmation of the durable STOP request.
+  if(next===null&&old?.state==='Cancelling')next={...old};
   if(next){
     const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
     if(done!==null&&total!==null&&done>total)return;
