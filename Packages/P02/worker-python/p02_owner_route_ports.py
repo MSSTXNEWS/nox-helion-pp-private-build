@@ -88,6 +88,7 @@ class OwnerTwoPorts:
                                          and callable(self.take_audio)
                                          and callable(self.mic_consent)
                                          and callable(self.store_output_audio)
+                                         and callable(self.discard_output_audio)
                                          and self.voice.approved_models is True,
                            "calls.history": callable(self.call_history)}
         try:
@@ -134,45 +135,91 @@ class OwnerTwoPorts:
         # STOP before consumption must preserve the one-use native capture.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
+        # Pin actual native authorities: a callback must never replace the
+        # consent check, capture, audio store/discard, or ACL owner mid-flight.
+        pinned_mic_consent = self.mic_consent
+        pinned_take_audio = self.take_audio
+        pinned_audio_store = self.store_output_audio
+        pinned_audio_discard = self.discard_output_audio
+        pinned_voice = self.voice
+        pinned_authorize = self.authorize
+        pinned_ready = self.owner_ready
+        def require_stable_voice_hooks():
+            if (self.mic_consent is not pinned_mic_consent
+                    or self.take_audio is not pinned_take_audio
+                    or self.store_output_audio is not pinned_audio_store
+                    or self.discard_output_audio is not pinned_audio_discard
+                    or self.voice is not pinned_voice
+                    or self.authorize is not pinned_authorize
+                    or self.owner_ready is not pinned_ready):
+                raise RouteHold("NATIVE_VOICE_HOOK_REBOUND_HOLD")
         try:
-            consented = self.mic_consent(scope, cap_id) is True
+            consented = pinned_mic_consent(scope, cap_id) is True
         except Exception as exc:
             raise RouteHold("NATIVE_MIC_PERMISSION_CHECK_HOLD") from exc
+        require_stable_voice_hooks()
         if not consented:
             raise PermissionError("NATIVE_MIC_CONSENT_REQUIRED")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
         # Native host consumes capture exactly once; a second lookup MUST fail.
         try:
-            audio = self.take_audio(scope, cap_id)
+            audio = pinned_take_audio(scope, cap_id)
         except (KeyError, FileNotFoundError) as exc:
             raise RouteHold("NATIVE_CAPTURE_EXPIRED_OR_CONSUMED") from exc
         if not isinstance(audio, bytes) or not 0 < len(audio) <= 16*1024*1024:
             raise RouteHold("NATIVE_AUDIO_CAPTURE_UNAVAILABLE")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
-        result = self.voice.run(
+        require_stable_voice_hooks()
+        result = pinned_voice.run(
             scope.identity, audio, source=source, target=target, voice=voice,
             mode=mode, level=level, microphone_consent=consented, stop=stop)
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         LocalVoicePipeline.validate_result(result, source=source, target=target, mode=mode)
-        # Native host owns the temporary output bytes; no raw audio to page JSON.
-        output_id = self.store_output_audio(scope, result.audio)
-        # Reuse R18's post-persistence STOP boundary, then revoke the exact
-        # native receipt. Only the authenticated host may delete its audio.
-        if stop is not None and stop.is_set():
+        # Consent or ACL revoked while the real ASR/LLM/TTS was running must
+        # prevent storage; STOP alone is not proof of active microphone consent.
+        require_stable_voice_hooks()
+        try:
+            live_consent = pinned_mic_consent(scope, cap_id) is True
+        except Exception as exc:
+            raise RouteHold("NATIVE_MIC_CONSENT_RECHECK_HOLD") from exc
+        require_stable_voice_hooks()
+        if not live_consent:
+            raise PermissionError("NATIVE_MIC_CONSENT_REVOKED_BEFORE_OUTPUT")
+        self._session(scope, "chat.voice")
+        require_stable_voice_hooks()
+        if stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
+        # The existing native audio owner must return a discardable receipt.
+        # Never return raw audio bytes or add another persistence layer.
+        output_id = pinned_audio_store(scope, result.audio)
+        revoked = False
+        try:
+            require_stable_voice_hooks()
+            if pinned_mic_consent(scope, cap_id) is not True:
+                revoked = True
+            require_stable_voice_hooks()
+            self._session(scope, "chat.voice")
+            require_stable_voice_hooks()
+        except Exception:
+            revoked = True
+        stopped = stop.is_set()
+        if stopped or revoked:
             if (not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id)
-                    or not callable(self.discard_output_audio)):
+                    or not callable(pinned_audio_discard)):
                 raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
             try:
-                discarded = self.discard_output_audio(scope, output_id)
+                discarded = pinned_audio_discard(scope, output_id)
             except Exception as exc:
                 raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD") from exc
             if discarded is not True:
                 raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
-            raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
+            if stopped:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
+            raise RouteHold("NATIVE_VOICE_CONSENT_OR_ACL_REVOKED_DURING_OUTPUT")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
         return {"transcript": result.transcript, "response": result.response,
@@ -189,7 +236,30 @@ class OwnerTwoPorts:
         limit = args.get("limit", 30)
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("Call history limit 1..100")
-        rows = self.call_history(scope, limit)
+        # The native provider may revoke ACLs or rebound routes while loading.
+        # Reauthorize on the same original bindings before disclosing any rows.
+        pinned_provider = self.call_history
+        pinned_authorize = self.authorize
+        pinned_owner_ready = self.owner_ready
+        pinned_store = self.store
+        def scope_identity():
+            i = scope.identity
+            return (scope.tenant, scope.principal, scope.conversation_id,
+                    scope.windows_sid, scope.session_id, i.tenant, i.principal,
+                    i.core_id, i.persona_id, i.session_id)
+        pinned_scope = scope_identity()
+        def stable_history_binding():
+            return (self.call_history is pinned_provider
+                    and self.authorize is pinned_authorize
+                    and self.owner_ready is pinned_owner_ready
+                    and self.store is pinned_store
+                    and scope_identity() == pinned_scope)
+        rows = pinned_provider(scope, limit)
+        if not stable_history_binding():
+            raise RouteHold("CALL_HISTORY_NATIVE_BINDING_CHANGED_HOLD")
+        self._session(scope, "calls.history")
+        if not stable_history_binding() or not self.available("calls.history"):
+            raise RouteHold("CALL_HISTORY_NATIVE_BINDING_CHANGED_HOLD")
         if not isinstance(rows, list) or len(rows) > limit:
             raise RouteHold("CALL_HISTORY_PROVIDER_INVALID")
         safe = []

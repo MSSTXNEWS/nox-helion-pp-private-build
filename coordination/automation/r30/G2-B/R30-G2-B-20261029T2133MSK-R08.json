@@ -1,0 +1,120 @@
+{
+  "schema": "G2B_R30_R18_OWNER_RECEIPT_V1",
+  "run_id": "R30-G2-B-20261029T2133MSK-R08",
+  "status": "INCOMPLETE",
+  "component": "NOX HELION EXPRESS INTEGRATOR loader SOURCE ONLY",
+  "owner": "G2-B",
+  "started_at": "2026-10-29T21:26:26+03:00",
+  "local_test_file_syntax": "AST_PARSE_PASS_9_TESTS",
+  "source_module_runtime_test": "NOT_RUN",
+  "prestart_read_proof": {
+    "canonical_revision": "AHj4eMScUF8yh0HXgo7AxSGHsU6kPx-jr_Z4Go-2Ts5twLvrevOOY4YmISU_JDPz5y9fPuEVmjXV-03-0XTynlMmMynp8LkBXKDMvvGHBeU",
+    "rules_checked": "56/56",
+    "canon_note": "R19 arrived during this RunID; reread changed tail",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "active_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "ERR-SRC-005",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "r18_controls_head": "31f15feaa3d2cd8e85e7a14bfc698cce651593f1",
+    "PR162_head_at_preflight": "632bc1464a2f927087e77d394d5248890fad4912",
+    "PR162_tree_at_preflight": "e21e35795884a0cf832d730836f5751c999f257f",
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "previous_g2b_receipt_blob": "318c91b1e132cb855b6cb5b6b9e6541a21442172"
+  },
+  "unique_task_id": "G2-B/M1/P02 Voice+STOP/ACL and calls.history source subcriteria (existing x/4; NOT a new product TaskID)",
+  "source_change": {
+    "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+    "pre_blob": "185ecca5e004aecb10e10b9bc89ec969c39946f3",
+    "post_blob": "d122c1c1236cbae9da8f3ed5b1375eedabe4aca8",
+    "source_parent_commit": "16e78396f8332485164de253c292f379ed533c7c",
+    "source_parent_tree": "b47682c5f87a49d30abd87c36cea9fae0bc4900a",
+    "changes": [
+      "VOICE_CONSENT_REREAD_POST_ASR",
+      "VOICE_CONSENT_ACL_STOP_POST_PERSISTENCE_DISCARD",
+      "AUDIO_DISCARD_HOOK_REQUIRED_BEFORE_CAPTURE",
+      "PINNED_NATIVE_VOICE_HOOKS",
+      "CALL_HISTORY_ACL_AND_OWNER_RECHECK_AFTER_PROVIDER"
+    ],
+    "test_path": "Packages/P02/worker-python/test_p02_g2b_r18_r08_native_acl_revocation.py",
+    "test_blob": "dbde4f38e9adf025b656660984f24ce4ad1f40b6"
+  },
+  "stage_before": "SOURCE_PATCH_PREPARED/ISOLATED_ONLY",
+  "stage_after": "SOURCE_PATCH_PREPARED/NOT_FULLY_VERIFIED",
+  "security_contract": {
+    "STOP": "checked before capture and after persistence with explicit receipt discard",
+    "ACL": "calls.history rechecked after provider before returning rows",
+    "consent": "post-ASR and post-persistence native checks",
+    "privacy": "no new storage/logged bytes",
+    "native": "NOT_TESTED",
+    "source_lock": "unchanged owner-only file + narrow test"
+  },
+  "tests": {
+    "python_test_syntax": "LOCAL AST_PARSE PASS 9 definitions; only test syntax, NOT test execution against repository",
+    "python_original_module": "NOT_RUN_NO_LOCAL_PRIVATE_REPO",
+    "static_checks": "candidate exact preimage/guard strings in connector JS",
+    "r18_toolkit": "TOOL_NOT_RUN"
+  },
+  "lessons": {
+    "read_register": 11,
+    "relevant_open_or_unverified": 9,
+    "clusters": 5,
+    "applied": 1,
+    "already_fixed_pending_same_sha_QA": 1,
+    "delegated": 3,
+    "remaining_unproven": 5,
+    "archived_fingerprints": 419,
+    "archive_full_coverage": "N/D",
+    "notes": [
+      "Do not infer native consent from an earlier callback after ASR/TTS",
+      "Reauthorize calls.history after provider to prevent revocation TOCTOU",
+      "A Git receipt is not independent owner QA"
+    ],
+    "error_ids": [
+      "ERR-SRC-004",
+      "ERR-SYS-002",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ]
+  },
+  "role_progress": {
+    "fixed_operational_denominator": 4,
+    "accepted_before": 0,
+    "accepted_after": 0,
+    "accepted_delta": 0,
+    "PRODUCT": "N/D",
+    "task_done": false
+  },
+  "handoff": {
+    "T06": "CAS cherry-pick/code-port p02_owner_route_ports.py exact PRE 11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c on CURRENT PR162; path requires careful delta transfer because donor PRE is 185ecca5...; run 9 regression tests in REAL original module, STOP/ACL/consent regression; keep G2-A files untouched.",
+    "G2A": "Native host must atomically invalidate active capture+output receipt on consent revocation, bind STOP and ACL to same Windows session, and ensure actual deletion if callbacks fail; changes to p02_runtime/native_ingress only by G2-A.",
+    "T02": "Ingest this immutable receipt with ERROR_ID ERR-SRC-004 and process incident as FIX_APPLIED_UNVERIFIED; do not mark TaskID DONE or claim common Docs append without T02 CAS readback."
+  },
+  "gate": {
+    "A": "PASS_GIT_DOCS_REAL_READ",
+    "B": "PATCH_CREATED_IN_ISOLATED_BRANCH_TEST_RUNTIME_NOT_RUN",
+    "C": "PENDING_GIT_CAS_READBACK",
+    "D": "PARTIAL_ROOT_CAUSE_PATCH_NO_FULL_LESSONS_COVERAGE"
+  },
+  "checkpoint": {
+    "next": "Verify branch HEAD/blob+test in Git; T06 CAS port into PR162 and actual Python tests; #2 independent same-SHA acceptance; retain HOLD for native STOP/ACL consent and calls.history provider integration",
+    "status": "INCOMPLETE"
+  }
+}
