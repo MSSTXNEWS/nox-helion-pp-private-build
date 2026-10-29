@@ -95,7 +95,7 @@ class HardwarePreflightContracts(unittest.TestCase):
         ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64.0), patch.object(
             probe.train_qlora, "gpu_vram_headroom",
             return_value={"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
-        ), patch.dict(sys.modules, {"torch": fake_torch}):
+        ), patch.object(probe, "_run_cuda_probe_isolated", return_value={"cuda_runtime": "12.4", "cuda_device_count": 1}), patch.dict(sys.modules, {"torch": fake_torch}):
             result = probe.inspect("BALANCED", 1)
         self.assertEqual(result["status"], "HARDWARE_READY_ONLY")
         self.assertFalse(result["model_license_verified"])
@@ -191,7 +191,7 @@ class HardwarePreflightContracts(unittest.TestCase):
         ), patch.object(probe.train_qlora, "gpu_temperature", return_value=64), patch.object(
             probe.train_qlora, "gpu_vram_headroom",
             return_value={"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
-        ), patch.dict(sys.modules, {"torch": fake_torch}):
+        ), patch.object(probe, "_run_cuda_probe_isolated", side_effect=RuntimeError("TORCH_CUDA_BUILD_NOT_CONFIRMED")), patch.dict(sys.modules, {"torch": fake_torch}):
             result = probe.inspect("ECO", 0)
         self.assertEqual(result["status"], "HOLD")
         self.assertIn("TORCH_CUDA_BUILD_NOT_CONFIRMED", result["errors"])
@@ -335,7 +335,7 @@ class HardwarePreflightContracts(unittest.TestCase):
             probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"
         ), patch.object(probe.train_qlora, "gpu_inventory", return_value=[device]), patch.object(
             probe.train_qlora, "gpu_temperature", return_value=62.0
-        ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=memory), patch.dict(
+        ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=memory), patch.object(probe, "_run_cuda_probe_isolated", return_value={"cuda_runtime": "12.4", "cuda_device_count": 1}), patch.dict(
             sys.modules, {"torch": fake_torch}
         ):
             report = probe.inspect("BALANCED", 0)
@@ -359,7 +359,7 @@ class HardwarePreflightContracts(unittest.TestCase):
             probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"
         ), patch.object(probe.train_qlora, "gpu_inventory", return_value=[device]), patch.object(
             probe.train_qlora, "gpu_temperature", return_value=62.0
-        ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=memory), patch.dict(
+        ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=memory), patch.object(probe, "_run_cuda_probe_isolated", side_effect=RuntimeError("TORCH_CUDA_RUNTIME_UNAVAILABLE")), patch.dict(
             sys.modules, {"torch": fake_torch}
         ):
             report = probe.inspect("BALANCED", 0)
@@ -367,6 +367,63 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertEqual(report["status"], "HOLD")
         self.assertIn("TORCH_CUDA_RUNTIME_UNAVAILABLE", report["errors"])
         self.assertFalse(report["runtime_training_verified"])
+
+
+
+    def test_g4b_r09_child_only_cuda_selection_never_mutates_parent(self):
+        uuid = "GPU-12345678-1234-1234-1234-123456789012"
+        completed = SimpleNamespace(returncode=0,
+                                    stdout='{"cuda_runtime":"12.4","cuda_device_count":1}\n')
+        with patch.dict(probe.os.environ, {"CUDA_DEVICE_ORDER": "PCI_BUS_ID"}, clear=True):
+            parent = dict(probe.os.environ)
+            with patch.object(probe.subprocess, "run", return_value=completed) as run:
+                found = probe._run_cuda_probe_isolated(uuid)
+            self.assertEqual(dict(probe.os.environ), parent)
+        self.assertEqual(found, {"cuda_runtime": "12.4", "cuda_device_count": 1})
+        (cmd,) = run.call_args.args
+        self.assertEqual(cmd[:3], [sys.executable, "-I", "-c"])
+        self.assertIn("import torch", cmd[3])
+        self.assertEqual(run.call_args.kwargs["env"]["CUDA_VISIBLE_DEVICES"], uuid)
+        self.assertEqual(run.call_args.kwargs["env"]["CUDA_DEVICE_ORDER"], "PCI_BUS_ID")
+        self.assertNotIn("shell", run.call_args.kwargs)
+        self.assertEqual(run.call_args.kwargs["timeout"], 20)
+
+    def test_g4b_r09_isolated_child_rejects_timeout_and_malformed_reply(self):
+        uuid = "GPU-12345678-1234-1234-1234-123456789012"
+        bad = (
+            (SimpleNamespace(returncode=1, stdout=""), "TORCH_CUDA_ISOLATED_PROCESS_FAILED"),
+            (SimpleNamespace(returncode=0, stdout="garbage"), "TORCH_CUDA_ISOLATED_RESPONSE_INVALID"),
+            (SimpleNamespace(returncode=0, stdout='{"cuda_runtime":"12.4","cuda_device_count":2}'),
+             "TORCH_CUDA_ISOLATED_RESPONSE_INVALID"),
+            (SimpleNamespace(returncode=0, stdout='{"cuda_runtime":"12.4","cuda_device_count":true}'),
+             "TORCH_CUDA_ISOLATED_RESPONSE_INVALID"),
+            (SimpleNamespace(returncode=0, stdout='{"error":"CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE"}'),
+             "CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE"),
+        )
+        with patch.dict(probe.os.environ, {}, clear=True):
+            for response, error in bad:
+                with self.subTest(response=response), patch.object(
+                    probe.subprocess, "run", return_value=response
+                ):
+                    with self.assertRaisesRegex(RuntimeError, error):
+                        probe._run_cuda_probe_isolated(uuid)
+            with patch.object(probe.subprocess, "run", side_effect=probe.subprocess.TimeoutExpired("python", 20)):
+                with self.assertRaisesRegex(RuntimeError, "TORCH_CUDA_ISOLATED_PROCESS_FAILED"):
+                    probe._run_cuda_probe_isolated(uuid)
+
+    def test_g4b_r09_invalid_gpu_uuid_and_parent_mask_never_spawn_child(self):
+        good = "GPU-12345678-1234-1234-1234-123456789012"
+        with patch.dict(probe.os.environ, {}, clear=True), patch.object(
+            probe.subprocess, "run", side_effect=AssertionError("must never spawn")
+        ):
+            for invalid in ("", "0", "0,1", "GPU-123", True):
+                with self.subTest(invalid=invalid), self.assertRaisesRegex(RuntimeError, "GPU_UUID_INVALID"):
+                    probe._run_cuda_probe_isolated(invalid)
+        with patch.dict(probe.os.environ, {"CUDA_VISIBLE_DEVICES": "0"}, clear=True), patch.object(
+            probe.subprocess, "run", side_effect=AssertionError("must never spawn")
+        ):
+            with self.assertRaisesRegex(RuntimeError, "CUDA_PARENT_VISIBLE_DEVICES_CONFLICT"):
+                probe._run_cuda_probe_isolated(good)
 
 
 
