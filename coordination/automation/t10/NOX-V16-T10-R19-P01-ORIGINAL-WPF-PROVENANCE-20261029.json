@@ -1,0 +1,51 @@
+{
+  "schema": "NOX_V16_T10_P01_NOLOSS_SOURCE_PROVENANCE_R19",
+  "runId": "NOX-V16-T10-P01-PHYSICAL-20261029-R19",
+  "timeUTC": "2026-10-29T15:07:39.212Z",
+  "status": "PHYSICAL_SOURCE_CHECK_PASS / P01_WPF_SOURCE_HOLD",
+  "rawSource": {
+    "driveFileId": "14SWJzNFgBSuLdSTdPmM2O1ckQ4D4DnDn",
+    "name": "NOX_G42_PEFILE_CONFIG_CANONICAL_SOURCE.zip",
+    "sizeBytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "sha256Match": true,
+    "zipMemberCount": 729,
+    "zipCRC": "PASS",
+    "memberSuffixCounts": {
+      ".xaml": 0,
+      ".xaml.cs": 0,
+      ".csproj": 0
+    },
+    "pythonFiles": 646
+  },
+  "canonicalSource": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "headObserved": "46e09f6965160922e87a1ac889a32ad80323a3c8",
+    "treeObserved": "dfa7545a7e323b924ca2a4e7a7060af46002eac6",
+    "treeTruncated": false,
+    "blobCount": 1001,
+    "xamlFiles": 0,
+    "xamlCodebehindFiles": 0,
+    "projectFilesOtherPackages": true
+  },
+  "correction": "Previous automation instruction to extract original WPF MainWindow.xaml(.cs) from the 729-member ZIP is physically impossible: archive contains only Python/PowerShell/assets and NO XAML/C# WPF sources. Do not invent or duplicate a new shell. Need another byte-identical and owner-approved WPF source; PR40/PR41 are build workflow candidates, not proof of XAML source presence.",
+  "possibleExistingDesktop": {
+    "example": "helion/e08_desktop_ui.py",
+    "type": "Python original UI; NOT equivalent to the required WPF MainWindow"
+  },
+  "priorDonePreserved": [
+    "T07 original raw source integrity 6/6",
+    "T04 archival version choices 34/34",
+    "T06 closeout guard source fix R11"
+  ],
+  "independentResult": "SOURCE_READY HOLD until exact functional P01–P05 and 13 Host50/native source bindings on frozen HEAD, not E07 or installed EXE gate",
+  "ownerAction": "T06 / P01 owner G1-B: identify approved WPF source from other actual saved artifacts/branch or formally resolve contract against existing original UI without new duplicate host; no fake MainWindow restoration",
+  "safety": {
+    "noCodeChanged": true,
+    "noExe": true,
+    "noNSIS": true,
+    "noGitlabCI": true,
+    "noE07": true
+  }
+}
