@@ -1,0 +1,98 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T08_MANUAL_CORRECTED_RECEIPT_V1",
+  "run_id": "NOX-V16-T08-MANUAL-R14-CORRECTION-20261029",
+  "task_id": "T08",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16",
+  "recorded_at_msk": "2026-10-29T16:41:51+03:00",
+  "purpose": "Repair reporting/handoff defect of manual R13; NO NEW QA OR PRODUCT CODE",
+  "root_cause": "R13 followed source triage 5/5 but did not persist its own immutable Git receipt because the Git write was blocked; assistant stopped and conflated technical NO_CODE_BLOCKERS with full report-gate completion.",
+  "correction": "Use existing R12 and exact current T02 ledger/T06 R05 SHA; do one immutable own Git receipt and readback, handoff T02 as sole writer; leave Master/E06/Lessons unchanged by T08.",
+  "source_ledger": {
+    "fixed_entry_count": 5,
+    "proven_code_p0p1": 0,
+    "proof_basis": "T02 20261029T155718MSK-R11 fixed five entries; T06 20261029T162028MSK-R05 not owner-accepted; T08 R12 verified Git blob",
+    "dispositions": [
+      {
+        "id": "P0-01",
+        "status": "HOLD_EVIDENCE",
+        "cause": "physical joined 3-part 729 member SHA256 not proved",
+        "owner": "T07"
+      },
+      {
+        "id": "P0-02",
+        "status": "HOLD_OWNERSHIP",
+        "cause": "no one accepted immutable T06 unified source HEAD; donor differences not code defects",
+        "owner": "T04/T06/T09"
+      },
+      {
+        "id": "P0-03",
+        "status": "HOLD_SOURCE_ADMISSION",
+        "cause": "13 Host50 routes not admitted; no demonstrated new runtime code defect",
+        "owner": "T06/G6-B"
+      },
+      {
+        "id": "P1-01",
+        "status": "HOLD_NATIVE_EVIDENCE",
+        "cause": "native .NET/Windows validation not run; cannot call it a code defect",
+        "owner": "T10"
+      },
+      {
+        "id": "P1-02",
+        "status": "HOLD_PROVENANCE",
+        "cause": "automation_id reused across roles, T02 coordinates",
+        "owner": "T02"
+      }
+    ]
+  },
+  "progress": {
+    "fixed_entry_dispositions": {
+      "complete": 5,
+      "total": 5,
+      "percentage": 100
+    },
+    "proven_fixable_p0p1": 0,
+    "fix_completion_percent": "N/D (denominator zero)",
+    "overall_product_percent": "N/D",
+    "formal_report_gate": "PENDING_T02_CAS_AND_READBACK"
+  },
+  "sources": {
+    "pr162_commit_git_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "t06_run": "NOX-V16-T06-20261029T162028MSK-R05",
+    "t06_receipt_blob_git_sha1": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "t08_r12_receipt_blob_git_sha1": "da075aa0b2987a2463b99d40224f2be6282afe99",
+    "t09_receipt_blob_git_sha1": "46cfc7bf8870dc17c72be3b0b0b09f88dafbb6c2",
+    "previous_local_r13_sha256": "131cacad92418dfab1542cc75eca09ee547ad9b0e2038dd98301866386367f05"
+  },
+  "code": {
+    "before_git_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "after_git_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "code_patch": "NONE",
+    "files_changed": 0,
+    "source_sha256": "NOT_APPLICABLE_NO_SOURCE_EDIT",
+    "tests_repeated": 0
+  },
+  "applied_lesson": {
+    "from": "Master, E06, Lessons, C34",
+    "error": "Mistook content DONE for reporting DONE; stopped on Git-write failure.",
+    "change": "Separate 5/5 technical disposition from external report-gate, retry a non-destructive isolated receipt once, require Git readback before claiming delivery.",
+    "check": "Own receipt stored on a dedicated branch; verify its Git blob SHA, compare only added receipt file; transfer to T02 through verifiable issue comment."
+  },
+  "no_loss": {
+    "originals_729_and_3parts": "UNALTERED",
+    "D02_WOW200_CoreID8_Persona5": "UNALTERED",
+    "historical_done": "PRESERVED",
+    "product_files": "UNCHANGED",
+    "no_exe_nsis_gitlab_e07": true
+  },
+  "handoff": {
+    "to": "T02 (sole writer of Master/E06/Lessons)",
+    "targets": [
+      "T09",
+      "T10"
+    ],
+    "gate": "NO_CODE_BLOCKERS on only checked PR162 HEAD; T09 frozen and T10 SOURCE_READY remain HOLD",
+    "shared_docs_write_by_t08": "NO",
+    "T02_cas_readback": "PENDING",
+    "report_delivery": "PENDING_GITHUB_ISSUE_COMMENT"
+  }
+}
