@@ -1,0 +1,157 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T1450MSK-10",
+  "slot": "G5-A",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "created_utc": "2026-10-29T11:53:59.196Z",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "slot": "G5-A",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "decision": "Exclusive ownership confirmed; updated only assigned E05SpaceReadOnlyProjection.mjs and own receipt."
+  },
+  "rules": {
+    "section33_consolidated_56_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "items_read": 56,
+    "sections_read": [
+      "54",
+      "55",
+      "56",
+      "R29 LOADER ONLY"
+    ],
+    "historical_verbatim_original_verified": false
+  },
+  "history": {
+    "previous_run": "R30-G5A-20261029T140324MSK-09",
+    "previous_branch": "automation/r30/g5a/20261029T140324MSK-09",
+    "previous_head": "131e5ced68857a04188a32b79e60b78b6b84ad56",
+    "previous_receipt_blob": "ecaa28ff9d237da673288950e7e53408d9427be9",
+    "applied_prior_lesson": "R09 advised checking event_sequence identity for all recognized nonterminal types across each RunID, and both delivery orders; implemented and tested."
+  },
+  "evidence_sources": {
+    "v16_spec_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_drive_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_drive_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_drive_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historical_c34_drive_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "last_coordinator_delta_read": "ASTRA-C-R30-20261029T1430MSK-09"
+  },
+  "snapshots": {
+    "conflict_index_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexed_donor_branches": 25,
+    "index_read": true,
+    "full_25_recursive_contents_re_read_this_run": false,
+    "reason": "GitHub connector fetch_file cannot read directories as files; verified index plus previous immutable R09 receipt (25 root directories / nontruncated tree stated there) but did not claim current per-file recheck.",
+    "prior_receipt_recursive_tree_sha": "34350552e847909e5945c8d1418cc3cc282796b4",
+    "physical_original_729_file_sha256_verified": false,
+    "original_snapshot_files_modified": 0
+  },
+  "task": {
+    "id": "G5A-R30-P05-EVENT-SEQUENCE-CROSS-TYPE-COLLISION-R10",
+    "outcome": "SOURCE_PATCH_ONLY",
+    "new_product_taskids_independently_accepted": 0,
+    "product_percent": "N/D",
+    "root_cause": "events.v3 projector enforced (TaskID,event_sequence) uniqueness only for terminal events. A same-run task.progress/started/completed and model.stopped could reuse the sequence with distinct event_id and incorrectly display STOPPED; invalid sequenced nonterminal envelopes could also be ignored.",
+    "fix": "Prescan recognized same-run nonterminal events for bounded valid event_id, TaskID and optional positive safe integer event_sequence; reject conflicting (TaskID,sequence) pairs among nonterminals and against terminal sequences, including reversed arrival. Preserve absent sequence and distinct TaskIDs."
+  },
+  "branch": "automation/r30/g5a/20261029T1450MSK-10",
+  "source_change": {
+    "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_blob": "a6d723190213feb10091ab6dd699d56c46a00c46",
+    "postimage_blob": "ae3c3a9f9471193a88046306fc91717df6360520",
+    "source_commit": "6187e419fb765e17e3b65014df693ca9a6375a6a",
+    "git_postimage_readback": "PASS"
+  },
+  "test": {
+    "kind": "One exact-source V8 targeted events.v3 regression (14 fixtures), before and persisted after",
+    "execution": "GitHub fetch_file exact code => remove ES export declarations for in-memory V8 evaluation => projectCanonicalEvents fixtures; repeat after GitHub readback",
+    "preimage_passed": 8,
+    "preimage_cases": 14,
+    "preimage_defects_reproduced": 6,
+    "postimage_passed": 14,
+    "postimage_cases": 14,
+    "persisted_git_passed": 14,
+    "persisted_git_cases": 14,
+    "case_names": [
+      "progress_before_stop",
+      "stop_before_progress",
+      "started_vs_progress_same_sequence",
+      "completed_vs_stop_same_sequence",
+      "sequences_differ",
+      "taskids_differ",
+      "optional_sequence",
+      "foreign_run",
+      "identical_nonterminal_replay",
+      "malformed_nonterminal_sequence",
+      "malformed_nonterminal_event_id",
+      "duplicate_terminal_sequence",
+      "terminal_nonterminal_event_id",
+      "normal_stop"
+    ],
+    "new_test_file": "NOT_WRITTEN_TEST_PATH_NOT_EXPLICITLY_ASSIGNED",
+    "csharp_compilation": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "node_full_suite": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "final_integration": "NOT_RUN"
+  },
+  "diff_before_receipt": {
+    "relative_base": "automation/r30/g5a/20261029T140324MSK-09",
+    "compare_status": "ahead",
+    "ahead_by": 1,
+    "behind_by": 0,
+    "changed_paths": [
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ]
+  },
+  "ownership": {
+    "changed_owned_source_paths": [
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "other_owner_paths_changed": [],
+    "forbidden_paths_changed": [],
+    "main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "old_done_preserved": true
+  },
+  "self_improvement": {
+    "lesson_id": "G5A-R10-EVENT-SEQUENCE-IDENTITY-MUST-BE-CROSS-TYPE",
+    "error": "Verified STOPPED could use a sequence already claimed by a nonterminal TaskID event.",
+    "cause": "Separate terminal-only sequence map and nonterminal event_id pre-scan did not model the shared native append-only sequence namespace.",
+    "action": "Use a single per-TaskID sequence admission concept across recognized same-RunID event types and validate optional sequence before trusting terminal STOP/ERROR.",
+    "regression": "14 focused V8 fixtures include two arrival orders, absent sequence, foreign RunID, different TaskID, duplicate terminal and malformed nonterminal; 6 preimage failures corrected, 14/14 persisted PASS.",
+    "prevention": "Whenever expanding event identity rules, explicitly test cross-event-type collision and stable replay rather than only terminal-terminal duplicates.",
+    "next_action": "Independent E06 host native stream verification and .NET/Node parity required; no product acceptance from V8."
+  },
+  "gates": {
+    "source_code_complete": "HOLD",
+    "product": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "report_gate": "CENTRAL_DRIVE_READBACK_PENDING_C_ONLY",
+    "drive_writes_by_g5a": 0
+  },
+  "readback": {
+    "source_blob": "PASS",
+    "owner_receipt": "VERIFY_POST_COMMIT"
+  }
+}
