@@ -171,14 +171,24 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         raise
     finally:
         if not keep_recovery:
-            for temporary in prepared:
-                try:
-                    if _identity(temporary) == prepared_ids[temporary]:
-                        temporary.unlink()
-                except FileNotFoundError:
-                    pass
-            if _owned(lock, lock_identity, lock_bytes):
-                lock.unlink()
+            try:
+                for temporary in prepared:
+                    # If _identity failed before the pin was recorded, never
+                    # unlink a pathname whose inode we cannot prove we own.
+                    identity = prepared_ids.get(temporary)
+                    if identity is None:
+                        continue
+                    try:
+                        if _identity(temporary) == identity:
+                            temporary.unlink()
+                    except FileNotFoundError:
+                        pass
+            finally:
+                # A temporary cleanup error must not orphan our stage lease.
+                # Preserve the original error but always attempt owner-only
+                # lock release after successful rollback or source staging.
+                if _owned(lock, lock_identity, lock_bytes):
+                    lock.unlink()
 
 
 def main():

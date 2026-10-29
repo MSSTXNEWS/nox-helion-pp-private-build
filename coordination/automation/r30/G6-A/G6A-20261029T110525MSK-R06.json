@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V6",
+  "slot": "G6-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "runId": "G6A-20261029T110525MSK-R06",
+  "status": "HOLD",
+  "gate": "SOURCE_PATCH_STAGED_FOR_OWNER_REVIEW_NOT_SOURCE_READY",
+  "taskId": "G6A-E06-TEMP-CLEANUP-EXCEPTION-STRANDS-OWNER-LOCK-R06",
+  "branch": "automation/r30/g6a/G6A-20261029T110525MSK-R06",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T100905MSK-R05",
+  "parentCommit": "6530489c4c9f2aaf8a251bbaece4c91c2a9db4b1",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPathsUntouched": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ]
+  },
+  "source": {
+    "path": "coordination/e06/stage_onehost.py",
+    "preimageGitBlobSha1": "07311424a1217b6f78e69780bd4501711a7b0d13",
+    "postGitBlobSha1": "ea9d3527e7febcbd1119565e971a4cb6fd7abb0c",
+    "modifiedFunction": "commit_stage",
+    "anchorOccurrences": 1,
+    "fix": "Nested try/finally guarantees owner-only lock release after successful commit/rollback even if temporary inode cleanup raises. Prepared-path cleanup now skips an inode whose ownership pin was never recorded, instead of masking the original failure with KeyError."
+  },
+  "defect": "Before R06 a failure in _identity(temporary) or missing prepared_ids[temporary] during commit_stage.finally aborted the cleanup loop before owner-lock unlink; subsequent source-only staging was blocked by orphan .e06-stage.lock. Unknown temp pathname must not be unlinked blindly.",
+  "targetedTest": {
+    "testId": "G6A-R06-TEMP-CLEANUP-OWNER-LOCK-RELEASE",
+    "command": "python /tmp/g6a_r06_cleanup_regression.py",
+    "scope": "ISOLATED_PYTHON_REPRODUCTION_OF_EXACT_CLEANUP_CONTROL_FLOW_NOT_FULL_GITHUB_MODULE",
+    "observed": "missing_pin and injected lstat_fault: old cleanup leaves lock; patched cleanup releases own lock, original preimage unchanged",
+    "result": "PASS_ISOLATED_ONLY",
+    "testCount": 1,
+    "injectedVariants": 2,
+    "fullRepoPythonTest": "NOT_RUN",
+    "nativeWindowsRollback": "NOT_RUN",
+    "testFileCommitted": false,
+    "reason": "No unique test path in R30 G6-A assigned_paths"
+  },
+  "inputs": {
+    "rules56": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rulesBlobSha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "latestSections": "V16 §§54–56 and R29 loader-only, Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "conflictIndex": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexBlobSha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "originalSnapshotTreesMetadataRead": 25,
+    "snapshotsUntruncated": true,
+    "sourcePartsGitBlobPinsMatchAcross25": true,
+    "protectedPartGitBlobShas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozenGitManifest": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+    "frozenManifestBlobSha": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "baseline968PathsPresent": 968,
+    "baseline968Missing": 0,
+    "unchangedBaselineBlobs": 963,
+    "modifiedBaselineBlobs": 5,
+    "modifiedBaselinePaths": [
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py",
+      "coordination/e06/verify_original_729_source.py"
+    ],
+    "physical729InnerSha256": "NOT_RUN_BINARY_SOURCE_PART_BYTES_UNAVAILABLE",
+    "combinedArchiveExpectedSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+  },
+  "googleDriveReadOnly": {
+    "spec": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "writer": "Astra-C ONLY",
+    "sharedDocsWritten": false,
+    "writeReadback": "NOT_APPLICABLE_WRITER_RESTRICTION"
+  },
+  "priorLessonApplied": "R05: treat owner lock creation as a side effect and never delete foreign inode. R06: release own lock in a finally independent from fallible temp-file cleanup; unknown temp identity is not ownership proof.",
+  "newLesson": "ROOT CAUSE: cleanup steps in a single linear finally form a chain—an error in early temp cleanup stops the critical lock release, producing a false busy state. FIX: nested finally reserves the lock-release attempt for every safe commit/rollback exit, while unpinned temps are never deleted. PROOF: injected missing-pin and PermissionError cases RED for original and GREEN in isolated Python model. PREVENTION: prioritize exclusive resource-release ordering; introduce a full-module owned-path regression only after the owner lock explicitly allows its path.",
+  "testOwnership": {
+    "newRepoTestCommitted": false,
+    "request": "Astra-C: if authorized, add an explicitly unique path tests/e06/test_g6a_r06_stage_cleanup.py to G6-A assigned_paths. No test file written outside assigned_paths."
+  },
+  "preservation": {
+    "oldDonePreserved": true,
+    "originalSnapshotsModified": false,
+    "mainModified": false,
+    "PR162Modified": false,
+    "centralR30Modified": false,
+    "forbiddenFilesModified": false,
+    "exeBuilt": false,
+    "nsisBuilt": false,
+    "gitlabCIStarted": false,
+    "finalIntegration": false
+  },
+  "gates": {
+    "sourceCodeComplete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "rawOriginal729": "HOLD",
+    "nativeWindows": "NOT_RUN",
+    "release": "HOLD",
+    "productProgressPercent": "N/D"
+  },
+  "changedPaths": [
+    "coordination/e06/stage_onehost.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T110525MSK-R06.json"
+  ]
+}
