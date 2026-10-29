@@ -197,5 +197,33 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertIn("TORCH_CUDA_BUILD_NOT_CONFIRMED", result["errors"])
         self.assertFalse(result["runtime_training_verified"])
 
+
+    def test_g4b_vram_snapshot_consistency_blocks_cuda_on_mismatch(self):
+        device = {"index": "0", "uuid": "GPU-12345678-1234-1234-1234-123456789012",
+                  "name": "Test NVIDIA", "memory_total_mib": "12288"}
+        good = {"free_mib": 11000, "total_mib": 12288, "gui_reserve_mib": 2458}
+        cases = (
+            ({**good, "total_mib": 12200}, "GPU_INVENTORY_VRAM_TOTAL_MISMATCH"),
+            ({**good, "free_mib": 2500}, "GPU_VRAM_TELEMETRY_CONTRACT_INVALID"),
+            ({**good, "free_mib": True}, "GPU_VRAM_TELEMETRY_CONTRACT_INVALID"),
+            ({"free_mib": 11000, "gui_reserve_mib": 2458}, "GPU_VRAM_TELEMETRY_CONTRACT_INVALID"),
+        )
+        fake_torch = SimpleNamespace(cuda=SimpleNamespace(is_initialized=lambda: False))
+        for snapshot, expected_error in cases:
+            with self.subTest(snapshot=snapshot), patch.object(
+                probe.platform, "system", return_value="Windows"
+            ), patch.object(probe.platform, "machine", return_value="AMD64"), patch.object(
+                probe.train_qlora, "nvidia_smi", return_value="nvidia-smi"
+            ), patch.object(probe.train_qlora, "gpu_inventory", return_value=[device]), patch.object(
+                probe.train_qlora, "gpu_temperature", return_value=64.0
+            ), patch.object(probe.train_qlora, "gpu_vram_headroom", return_value=snapshot), patch.dict(
+                sys.modules, {"torch": fake_torch}
+            ):
+                result = probe.inspect("BALANCED", 0)
+            self.assertEqual(result["status"], "HOLD")
+            self.assertIn(expected_error, result["errors"])
+            self.assertIsNone(result["gpu"])
+            self.assertFalse(result["runtime_training_verified"])
+
 if __name__ == "__main__":
     unittest.main()
