@@ -1,0 +1,112 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G2A_IMMUTABLE_SOURCE_OWNER_RECEIPT_V1",
+  "run_id": "G2A_R30_20261029T054004_MSK_01",
+  "slot": "G2-A",
+  "run_started_local": "2026-10-29T05:40:04+03:00",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY_NO_BUILD_NO_MERGE",
+  "issue_task_id": "G2A-P02-HOST-EVENT-ERROR-CODE-ADMISSION-20261029-01",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_code": "Packages/P02/worker-python/p02_host_admission.py",
+    "test_path_unique_to_slot": "Packages/P02/worker-python/test_p02_chat_error_code_r30_g2a.py",
+    "forbidden_paths_modified": []
+  },
+  "historical_index": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_trees_indexed": 25,
+    "source_overlaps_checked_by_blob_sha": true,
+    "snapshot_files_modified": 0
+  },
+  "current_collection_preflight": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "commit": "316fd4e48c21c69d90258886082442e2d9c76489"
+  },
+  "private_branch": "automation/r30/g2a/G2A_R30_20261029T054004_MSK_01",
+  "source_change": {
+    "path": "Packages/P02/worker-python/p02_host_admission.py",
+    "collection_preimage_git_blob_sha1": "055a315575f2d0d740bb066771b8c59f426d2c92",
+    "vetted_donor_ref": "astra/r29-a02-20261029",
+    "vetted_donor_git_blob_pre_sha1": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+    "vetted_donor_content_pre_sha256": "08e18d0f9d0ff2fb057a3b6d5296ccc85a387e1780e7a3b1b705a2280ddef255",
+    "post_git_blob_sha1": "471af16cea3dff48e30ea94fcab4b8d9ca2585e0",
+    "post_content_sha256": "e23572df5435fc6bd3da91392019c544b87de94242b4416c078e4f1868fbe19d",
+    "code_commit": "b5f2408d488d08e65df804d1109fa48d10c19627",
+    "reused_existing_fixes": [
+      "native route_map detached at admission",
+      "immutable verified events.v3 payload deep snapshot",
+      "native publish serialization and strict session proof"
+    ],
+    "novel_fix": "Reject native chat.error.code unless exact ASCII token [A-Z][A-Z0-9_]{0,31}, preventing newline, NUL, carriage return, bidi, lowercase and ambiguous error identifiers from crossing host events.v3.",
+    "actual_producer_codes_checked": [
+      "STOP",
+      "TIMEOUT",
+      "OLLAMA_ERROR"
+    ],
+    "no_new_host_or_db": true
+  },
+  "test": {
+    "path": "Packages/P02/worker-python/test_p02_chat_error_code_r30_g2a.py",
+    "test_git_blob_sha1": "bc95672583e0251c3c056b6a97038a125db7934b",
+    "test_content_sha256": "b663ec2869b68f2234e65a96a162f6b4016ca32418b331f472480abb1b3f73dc",
+    "test_commit": "15984601876e507857602f404cbee0a33fd85725",
+    "environment": "Isolated Python 3.13.5, copied source and committed regression file; both SHA-256 matched exact GitHub readback; stubbed host dependencies; NO Windows/native/audio/provider.",
+    "command": "cd /mnt/data/r30_g2a && python -m unittest -v test_p02_chat_error_code_r30_g2a",
+    "red_preimage": "EXPECTED_FAILED: 8 subtest failures for escaped/control/bidi/ambiguous codes with exact R29 donor preimage; unittest exit=1",
+    "green_postimage": "PASS: 3 test methods, exit=0; 9 rejected inputs, 4 valid original machine codes/boundary values, and immutable route-map test",
+    "static_exact_remote_source_checks": "PASS: 8/8",
+    "git_diff_verified": {
+      "base": "316fd4e48c21c69d90258886082442e2d9c76489",
+      "head": "15984601876e507857602f404cbee0a33fd85725",
+      "commits_ahead": 2,
+      "behind": 0,
+      "files_changed_only": [
+        "Packages/P02/worker-python/p02_host_admission.py",
+        "Packages/P02/worker-python/test_p02_chat_error_code_r30_g2a.py"
+      ]
+    },
+    "broader_existing_suite": "NOT_RUN",
+    "native_windows_e2e": "NOT_RUN"
+  },
+  "prior_lesson_used": {
+    "id": "R29_OBSERVABLE_BOUNDARY_WITH_DISJOINT_OWNERS",
+    "applied": "Validated actual object at native host publication boundary; retained R29 verified detached event and route snapshots instead of reimplementing prior DONE."
+  },
+  "self_improvement_lesson": {
+    "id": "G2A_R30_ERROR_CODE_IS_AN_AUTHORITY_BOUNDARY_20261029_01",
+    "previous_error": "Admission checked that chat.error.code was a nonempty string <=32 chars but allowed control and bidi code points.",
+    "root_cause": "Treating machine-readable code as freeform text at the native event/log boundary; earlier output and map protections did not cover the code token.",
+    "actual_correction": "Use re.fullmatch ASCII uppercase token and preserve reviewed route/map and payload snapshot implementation from latest P02 owner donor.",
+    "regression": "Exact original code fails eight adversarial fixture subtests; patched source passes all three actual Python test methods with SHA256 matching GitHub files.",
+    "prevention": "Every host-bound identifier/error-code must have an explicit wire alphabet, byte limits and negative control/bidi fixtures, checked before publish."
+  },
+  "owner_scope": {
+    "shared_drive_journals_modified": false,
+    "shared_r30_modified": false,
+    "original_25_snapshots_modified": false,
+    "main_modified": false,
+    "PR162_modified": false,
+    "forbidden_voice_or_capability_modified": false,
+    "GitLab_pipeline_run": false,
+    "EXE_or_NSIS_run": false,
+    "Windows_CI_run": false,
+    "final_integration_run": false
+  },
+  "status": "OWNER_SOURCE_PATCH_TEST_PASS",
+  "source_code_complete": "HOLD_NO_COMPLETE_P01_P05_TASKID_MATRIX",
+  "cross_owner_integration": "NOT_DONE",
+  "independent_E07": "NOT_RUN",
+  "release": "HOLD",
+  "drive_handoff": {
+    "single_writer": "Astra-C",
+    "shared_google_docs_write_by_G2A": "FORBIDDEN_NOT_ATTEMPTED",
+    "master_doc_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "E06_doc_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_doc_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "report_gate": "PENDING_ASTRA_C_REVISION_CAS_AND_READBACK",
+    "request": "Astra-C: collect this immutable Git receipt and append one owner report plus the actual self-improvement lesson via single-writer Google Docs CAS with RunID readback; do not upgrade CODE_COMPLETE."
+  }
+}
