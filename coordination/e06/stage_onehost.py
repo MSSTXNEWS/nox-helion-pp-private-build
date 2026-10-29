@@ -87,6 +87,13 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
     back over. A crash leaves the lock/backups for inspection rather than guessing
     that an incomplete transaction succeeded.
     """
+    original = trusted_path(original)
+    dest = trusted_path(dest)
+    out = trusted_path(out)
+    if not original.is_file() or original.is_symlink():
+        raise RuntimeError("OWNER6_STAGING_SOURCE_NOT_REGULAR")
+    if not original.parent.is_dir() or not dest.parent.is_dir() or not out.parent.is_dir():
+        raise RuntimeError("OWNER6_STAGING_PARENT_UNAVAILABLE")
     lock = trusted_path(original.parent / ".e06-stage.lock")
     lock_bytes = (str(os.getpid()) + "\n").encode("ascii")
     with lock.open("xb") as guard:
