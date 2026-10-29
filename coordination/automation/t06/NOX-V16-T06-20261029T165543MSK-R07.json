@@ -1,0 +1,215 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T06_FIXED8_OWNER_HANDOFF_R07",
+  "task_id": "T06",
+  "run_id": "NOX-V16-T06-20261029T165543MSK-R07",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY; SOURCE ONLY",
+  "status": "HOLD_OWNER1_EXPLICIT_CAS_FINAL_UNIFIED_SOURCE_NOT_ACCEPTED",
+  "time": {
+    "timezone": "Europe/Moscow",
+    "planned_start": "2026-10-29T16:45:00+03:00",
+    "observed_start": "2026-10-29T16:55:43+03:00",
+    "receipt_creation_utc": "2026-10-29T13:59:05.066Z",
+    "observed_end": "NOT_YET_OBSERVED_AT_RECEIPT_WRITE",
+    "duration_seconds": null
+  },
+  "canonical": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "base_head_git_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "base_tree_git_sha1": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "official_base_selected": true,
+    "owner1_approval_to_write_PR162": false,
+    "accepted_integrated_head": null,
+    "accepted_integrated_tree": null,
+    "product_source_modified_by_this_run": false
+  },
+  "historical_checkpoint": {
+    "run_id": "NOX-V16-T06-20261029T164013MSK-R06",
+    "receipt_commit": "8e5bb89c548f667d6bef9170f1934ee791234721",
+    "receipt_blob": "c4b96db77cffd309db0f920a485a7488e9d9d049",
+    "accepted": 1,
+    "denominator": 8,
+    "percent": 12.5,
+    "justification": "R05/R06 pinned PR162 as official BASE; no reset or double count."
+  },
+  "progress": {
+    "denominator_fixed": 8,
+    "before_done": 1,
+    "after_done": 1,
+    "before_percent": 12.5,
+    "after_percent": 12.5,
+    "delta_percentage_points": 0,
+    "remaining": 7,
+    "bar": "█░░░░░░░░░",
+    "rule": "Only source accepted into one owner-signed unified HEAD counts; staged draft/handoff does not."
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "Official base HEAD selected",
+      "status": "DONE",
+      "evidence": {
+        "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+        "pr162_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/162",
+        "historic_run": "NOX-V16-T06-20261029T162028MSK-R05"
+      }
+    },
+    {
+      "id": 2,
+      "name": "P01 accepted in unified tree",
+      "status": "HOLD",
+      "evidence": {
+        "assemblyA_correction_blob": "e127699dde4f794cef8434a331d92bc41c655382",
+        "G1B_bridge": "ABSENT in PR162; owner C09/Host50 acceptance required",
+        "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6498604441"
+      }
+    },
+    {
+      "id": 3,
+      "name": "P02 accepted in unified tree",
+      "status": "HOLD",
+      "evidence": {
+        "staging_pr": 214,
+        "staging_head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+        "source_pre_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+        "staged_post_git_blob_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "test_git_blob_sha1": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+        "reason": "P02 single fix staged in DRAFT PR214, NOT merged/owner-accepted as entire P02 source."
+      }
+    },
+    {
+      "id": 4,
+      "name": "P03 accepted in unified tree",
+      "status": "HOLD",
+      "evidence": {
+        "t05_manifest": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+        "reason": "Catalog and Queue owner donor PRE mismatch; Assembly-A P03 v2 DO NOT APPLY pending exact owner CAS."
+      }
+    },
+    {
+      "id": 5,
+      "name": "P04 accepted in unified tree",
+      "status": "HOLD",
+      "evidence": {
+        "t05_manifest": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+        "assemblyD": "358dc30f5216aa4c1cb309e61e6007e0c912bb86",
+        "reason": "G4-A/G4-B donor PRE mismatch; owner consent absent."
+      }
+    },
+    {
+      "id": 6,
+      "name": "P05 accepted in unified tree",
+      "status": "HOLD",
+      "evidence": {
+        "t05_manifest": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+        "assemblyD": "358dc30f5216aa4c1cb309e61e6007e0c912bb86",
+        "reason": "G5-A/G5-B donor PRE mismatch, focused test evidence missing for some candidates."
+      }
+    },
+    {
+      "id": 7,
+      "name": "D02/WOW/Host50/E06 and NO-LOSS verified together",
+      "status": "HOLD",
+      "evidence": {
+        "t04_manifest": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6",
+        "t09_original_zip_proof": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+        "actual_zip_bytes_reported": 60364346,
+        "actual_joined_zip_sha256_reported": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+        "actual_original_729_members_reported": "729/729 PASS by T09, independently received T06 as readback of receipt only",
+        "host50": "37 source candidates / 13 source HOLD, accepted integrated 0",
+        "reason": "Original archive proof now exists, but full final integrated source tree/host contracts NO-LOSS not accepted."
+      }
+    },
+    {
+      "id": 8,
+      "name": "One accepted unified HEAD/tree/manifest/owner receipts → T09",
+      "status": "HOLD",
+      "evidence": {
+        "pr214": "DRAFT, no merge",
+        "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+        "accepted_head": null,
+        "accepted_manifest": null,
+        "t09_freeze": "HOLD"
+      }
+    }
+  ],
+  "delta_verified": {
+    "pr162_head_still": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr214": {
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/214",
+      "state": "OPEN DRAFT",
+      "base_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+      "tree": "cb98ae1eaf4739a3e3653112d33f7f82d4d1303b",
+      "compare_ahead": 3,
+      "compare_behind": 0,
+      "changed_paths": [
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+        "coordination/automation/t06/NOX-V16-T06-20261029T1643MSK-R02.json"
+      ],
+      "deletions": 0,
+      "pre_and_post_git_blob_readback": "PASS",
+      "canonical_acceptance": "NOT_YET"
+    },
+    "original_729": {
+      "t09_git_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/aab1154cf127ef0a216b19d06362343bbda4e152/coordination/automation/t09/NOX_V16_T09_PHYSICAL_SOURCELOCK_ACTUAL_20261029_R02.json",
+      "git_blob": "e159da6cbab131a6257f0f4d9f25a798a9a5403b",
+      "physical_archive_hash": "reported_verified_by_T09_not_recomputed_T06",
+      "caution": "T07 historical ACCESS_HOLD superseded as evidence available, T09 final integrated tree freeze still HOLD"
+    },
+    "t04": {
+      "manifest_blob": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6",
+      "historical_overlap_paths": 34,
+      "byte_identical_SKIP": 17,
+      "owner_HOLD": 17,
+      "accepted": 0
+    },
+    "t05": {
+      "manifest_blob": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+      "classified": 13,
+      "exact_matching_PRE": 1,
+      "owner_hold": 12
+    },
+    "other_t06_branch_warning": {
+      "ref": "integration/t06-v16-unified-source-candidate-20261029-r03",
+      "compare_to_PR162_ahead": 60,
+      "behind": 2,
+      "changed_file_count": 25,
+      "gate": "CANNOT_CAS_FAST_FORWARD_TO_PR162; do not treat branch name as accepted T06 head without owner adjudication and preimage reconciliation"
+    }
+  },
+  "owner_handoff": {
+    "owner": "Manual source owner #1, sole source integrator and sole PR162 product-code writer",
+    "required_decisions": [
+      "On current PR162 HEAD, approve/merge only exact P02 candidate PR214 after owner per-path CAS/readback and focused contract check; do not count entire P02 DONE from one staged file.",
+      "Use T04 17 OWNER_HOLD and T05 12 nonmatching donors as a combined owner-winner selection set; skip byte-identical variants; require exact target PRE SHA and legitimate owner receipts.",
+      "Resolve P01 C09 bridge / Host50 13 HOLD and P03/P04/P05 accepted source paths; preserve D02/WOW200, 8 CoreID/5 Persona, PACK01/02, Voice/RAG/GPU/SPACE, data, rights, 3 original ZIP parts and 729 original files.",
+      "Publish one final owner-accepted source HEAD + tree SHA + no-loss manifest + owner CAS receipts, handoff to T09 for SOURCE_FREEZE, T10 independent SOURCE_READY, T11 only preparation."
+    ],
+    "recipients": [
+      "T02 (sole shared Google Docs writer)",
+      "manual owner #1",
+      "T09",
+      "T10",
+      "T11"
+    ],
+    "blocker": "OWNER1_EXPLICIT_ACCEPTED_UNIFIED_TREE_AND_PER_PATH_CAS_NOT_AVAILABLE",
+    "lesson_applied": "Use fresh immutable T09 physical ZIP proof rather than stale T07 0/729 assertion; distinguish physically STAGED PR214 vs accepted canonical PR162 and never count stage/handoff as one-tree integration."
+  },
+  "operations": {
+    "new_product_code_commits": 0,
+    "new_source_tests": 0,
+    "new_shared_docs_writes": 0,
+    "source_tree_changes_by_T06_this_run": 0,
+    "only_new_t06_receipt": true,
+    "main_modified": false,
+    "pr162_modified": false,
+    "original_snapshots_modified": false,
+    "exe": false,
+    "nsis": false,
+    "windows_ci": false,
+    "gitlab": false,
+    "e07": false
+  }
+}
