@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_SOURCE_BUNDLE_MB01_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-SOURCE-MB01",
+  "controllerBranch": "astra/v16-code-complete-source-only-20261029",
+  "sourceOwnerMatrix": "coordination/astra/ASTRA_A_R29_OWNER_MATRIX_06_20261029.json",
+  "ownerMatrixGitBlob": "56dd24796ab6dc1644c90b76d466b072104b0ecd",
+  "spawn": {
+    "actualNewSubagents": 0,
+    "reason": "SUBAGENT_SPAWN_UNAVAILABLE",
+    "historicalWorkerLabelsOnly": [
+      "/root/a01",
+      "/root/a05",
+      "/root/a02",
+      "/root/a04",
+      "/root/a03",
+      "/root/a06"
+    ],
+    "runtimeNotIndependentlyVerified": true
+  },
+  "queue": {
+    "requestedRounds": 10,
+    "realMegablocksThisTurn": 6,
+    "oneDistinctSourceCandidatePerLane": true,
+    "remainingRoundsNotClaimedDone": 9,
+    "noFiller": true
+  },
+  "lanes": [
+    {
+      "id": "A1",
+      "role": "P01 installation/marker",
+      "branch": "astra/r29-a01-20261029",
+      "sourceCommit": "51fa2a849924d87e2302f90ebaa67b720fc723c7",
+      "receiptCommit": "7fe18d96886af862e6692d592b11600a044d1e3c",
+      "historicalVerified": "2/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "8/8 STATIC_PASS"
+    },
+    {
+      "id": "A2",
+      "role": "P01 preflight/uninstall",
+      "branch": "astra/r29-a2-p01-20261029",
+      "sourceCommits": [
+        "7b7da27adbae8091e4e3d45528b23f7a98ce147f",
+        "b8a0776e3c4a1c2e1b7c0d50d704ee2ee806861f"
+      ],
+      "receiptCommit": "574fa47b5b3d007f852b7a57721e205e90b2713d",
+      "historicalVerified": "1/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "6/6 STATIC_PASS"
+    },
+    {
+      "id": "A3",
+      "role": "P02 IPC/STOP",
+      "branch": "astra/r29-a02-20261029",
+      "sourceCommit": "a1cddd3a188b914d5fb93b65c30bcaf6e6f23aac",
+      "receiptCommit": "dbef7f328a550cd6c319060a466611fe8c9176e8",
+      "historicalVerified": "1/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "3/3 STATIC_PASS"
+    },
+    {
+      "id": "A4",
+      "role": "P02 voice/SIP native ACL",
+      "branch": "astra/r29-a04-voice-20261029",
+      "sourceCommit": "30aa4f0d5d2e9445dad3a97577cd4470d1e05307",
+      "receiptCommit": "51ddd31eeaa0cef872e48d58e6346a5bbbedbff0",
+      "historicalVerified": "1/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "3/3 STATIC_PASS"
+    },
+    {
+      "id": "A5",
+      "role": "P03 queue/cancel/progress",
+      "branch": "astra/r29-a03-20261029",
+      "sourceCommit": "0ddf3e867ac9fe5d74900d59b3015bb106091796",
+      "receiptCommit": "52fad40a51c8f5e477b8da8e456b309b77f9f490",
+      "historicalVerified": "1/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "3/3 STATIC_PASS"
+    },
+    {
+      "id": "A6",
+      "role": "P03 RAM/disk sensing",
+      "branch": "astra/r29-a6-p03-catalog-20261029",
+      "sourceCommit": "bd81b8bc5d135dfdeed776605cd27fec5ec5e32a",
+      "receiptCommit": "1b761a111f50cd1d0ae1d185b31b5d47038f8391",
+      "historicalVerified": "0/10",
+      "thisRound": "SOURCE_CANDIDATE",
+      "checks": "3/3 STATIC_PASS"
+    }
+  ],
+  "assertions": {
+    "sourceStatic": "26/26 PASS",
+    "gitReadback": "6 CODE + 6 RECEIPT PASSED",
+    "nativeExecution": "NOT_RUN",
+    "dotnetPowershell": "NOT_RUN",
+    "oneWindowsExe": "NOT_BUILT",
+    "sourceComplete": "HOLD",
+    "weightedProductReadiness": "N/D"
+  },
+  "noLoss": {
+    "baselineOriginalGitBlobs": 968,
+    "missing": 0,
+    "unchanged": 966,
+    "modifiedHistorical": 2,
+    "raw729MemberSha256": "NOT_RUN",
+    "originalPartGitSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ]
+  },
+  "astraB": {
+    "handoff": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+    "B1ToB6": "Existing independently recorded ASTRA-B-R29-20261029-CONSOLIDATED-01, not new work by this run",
+    "ownerCodeFilesUntouched": true
+  },
+  "lesson": "One source change + one focused static admission + exact blob readback; never credit a native pass without executed native tests. Native session/queue/marker must be validated again at operation boundary.",
+  "prohibitions": "No main, PR162, GitLab, force merges, original 729 manipulation, build, E07 or P04/P05/E06 edits.",
+  "next": "Execute actual component tests on owner checkouts; inspect next proven TaskID per lane. Leave all 9 requested queue rounds unclaimed until real work."
+}
