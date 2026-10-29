@@ -1,0 +1,128 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G2A_IMMUTABLE_SOURCE_OWNER_RECEIPT_V1",
+  "run_id": "G2A_R30_20261029T154652_MSK_04",
+  "slot": "G2-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR / Windows LOADER ONLY (not main NOX)",
+  "status": "OWNER_SOURCE_COMMITTED_TARGETED_PYTHON_REGRESSION_PASS",
+  "task_id": "G2A-P02-NATIVE-BINARY-FRAME-SHORT-WRITE-20261029-04",
+  "mode": "SOURCE_ONLY_NO_EXE_NSIS_WINDOWS_CI_GITLAB_NO_MERGE",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "slot": "G2-A",
+    "assigned_paths": [
+      "Packages/P02/worker-python/p02_runtime.py",
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/p02_framed_worker.py",
+      "Packages/P02/worker-python/p02_host_admission.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P02/worker-python/p02_capabilities.py",
+      "Packages/P02/worker-python/p02_original_voice_port.py",
+      "Packages/P02/worker-python/p02_owner_route_ports.py"
+    ],
+    "regression_test_new_unique_slot": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+    "owner_collisions": "NONE for exact modified production file"
+  },
+  "source_policy": {
+    "historic_56_consolidated_rules": "READ §33; historical verbatim-original wording NOT independently proved",
+    "latest_V16": "§54, §55, §56 and R29 loader-only scope READ",
+    "drive_error_master_last_read": "ASTRA-C-R30-20261029T1452MSK-10",
+    "drive_self_improvement_last_read": "ASTRA-C-R30-20261029T1452MSK-10",
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "indexed_25_snapshot_branch_roots": true,
+      "full_snapshot_byte_scan": "NOT_RUN",
+      "original_snapshots_modified": 0
+    },
+    "prior_own_receipt": "G2A_R30_20261029T145347_MSK_03.json",
+    "prior_own_task_id": "G2A-P02-NATIVE-EVENTS-V3-MODEL-TAG-UNICODE-ADMISSION-20261029-03",
+    "unique_new_task_no_repeat_DONE": true
+  },
+  "provenance": {
+    "base_ref": "automation/r30/g2a/G2A_R30_20261029T145347_MSK_03",
+    "base_commit": "5fe9d45490aa4f9d3eebc9854c63883d04811202",
+    "current_common_collection_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "common_collection_HEAD_read": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "private_branch": "automation/r30/g2a/G2A_R30_20261029T154652_MSK_04",
+    "no_shared_branch_write": true
+  },
+  "source_patch": {
+    "path": "Packages/P02/worker-python/p02_framed_worker.py",
+    "pre_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+    "post_git_blob_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "pre_content_sha256": "4cb7c92cd405bfcdd7639148b7cd2da23b7d6e9954948926a8e9b34a5f51cada",
+    "post_content_sha256": "d519f14a7b7af8339d973856da2c5b95d75e064517a0dfb1c221a434e8db0b5c",
+    "code_commit": "4686e323cf3f64b85b933cb0fdc2f1db612439fc",
+    "exact_change": "Under existing single writer lock, finish both length prefix and payload using memoryview loop honoring positive integer BinaryIO.write return counts. Reject zero, None, bool, negative or oversized counts as NATIVE_FRAME_WRITE_STALLED; preserve flush, STOP fast-path, dispatcher and one existing host.",
+    "prior_own_changes_preserved": [
+      "machine-readable ASCII chat.error.code",
+      "model ID Cc/Cf/Cs admission"
+    ]
+  },
+  "targeted_source_test": {
+    "path": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+    "git_blob_sha1": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+    "content_sha256": "f2897a12c371bc0e236aa3875066fd06dface95d88e810cbcd04717d66bfdaa5",
+    "test_commit": "6650e28ff7fbbf3d4420c19d39ef2b733b6881a5",
+    "source_provenance": "Python 3.13.5, actual same-directory full p02_framed_worker.py copied from latest own GitHub blob; byte identity verified by Git blob SHA pre=255df.. post=8af..; in-memory stub only p02_native_ingress native boundary.",
+    "red_command": "cd /mnt/data/r30_g2a_04 && python -m unittest -v test_p02_framed_partial_write_r30_g2a (preimage)",
+    "red_status": "EXPECTED_FAIL, exit 1, 4 methods / 7 failures: header/payload truncated, STOP-fragment count wrong, five invalid return counts accepted.",
+    "green_command": "cd /mnt/data/r30_g2a_04 && python -m unittest -q test_p02_framed_partial_write_r30_g2a (postimage)",
+    "green_status": "PASS exit 0, four methods, five invalid count subtests all rejected; short and full byte frame exact; STOP fast-path preserved",
+    "py_compile": "PASS for source and regression test",
+    "repository_source_and_test_readback": "PASS exact Git blob for both files",
+    "windows_native": "NOT_RUN",
+    "actual_P02_real_host_or_network": "NOT_RUN",
+    "full_repository_suite": "NOT_RUN"
+  },
+  "previous_error_and_lesson": {
+    "prior_read_lesson": "Astra-C R10: branch existence or local tests alone are not durable evidence; require changed source Git blobs plus immutable own receipt; do not conflate isolated Python and native admission.",
+    "observed_root_cause": "Existing framed sender discarded BinaryIO.write return count; a valid short write produced truncated 4-byte prefix and/or truncated JSON payload on the native pipe, including priority chat.stop replies.",
+    "applied_fix": "Match exact remote source preimage, require RED test failure first, preserve all prior own work, patch only exact owned file, add unique slot test, commit and Git readback, then immutable receipt.",
+    "new_self_improvement_lesson_id": "G2A-R30-R04-PIPE-WRITE-COUNTS-ARE-PART-OF-FRAME-VALIDITY",
+    "new_self_improvement_lesson": "For any framed host IPC, output success requires completed byte counts for BOTH header and body under the same lock. BinaryIO.write() is not guaranteed to consume the whole buffer. Zero/invalid counts must fail closed. Test single-byte writes, full writes, STOP priority and invalid writers on exact Git blobs, while keeping native Windows E2E HOLD.",
+    "next_PLAN_ONLY": "G2A-R30-R05-IPC-STOP-FULL-HOST-REPLY-ORDER-NATIVE-REGRESSION (requires authorized native Windows host; no speculative DONE)"
+  },
+  "git_compare_before_receipt": {
+    "base": "5fe9d45490aa4f9d3eebc9854c63883d04811202",
+    "head_after_test_commit": "6650e28ff7fbbf3d4420c19d39ef2b733b6881a5",
+    "ahead": 2,
+    "behind": 0,
+    "files": [
+      "Packages/P02/worker-python/p02_framed_worker.py",
+      "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py"
+    ]
+  },
+  "report_gate": {
+    "single_drive_writer": "Astra-C",
+    "own_git_receipt": true,
+    "worker_modified_shared_google_docs": false,
+    "drive_ingestion": "PENDING_ASTRA_C",
+    "next": "Astra-C read own receipt and append in common Docs only via CAS+RunID readback"
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "product_percent": "N/D"
+  },
+  "forbidden_changes": {
+    "PR162": false,
+    "main": false,
+    "common_R30": false,
+    "other_owners": false,
+    "voice": false,
+    "capabilities": false,
+    "owner_route_ports": false,
+    "original_25_snapshots": false,
+    "EXE": false,
+    "NSIS": false,
+    "Windows_CI": false,
+    "GitLab": false,
+    "final_integration": false
+  }
+}
