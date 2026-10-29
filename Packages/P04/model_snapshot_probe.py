@@ -297,16 +297,28 @@ def _weight_header(path: Path) -> int:
 
 
 def _validate_windows_shard_names(names: list[str]) -> None:
-    """Reject portable Windows device names and casefold aliases before I/O."""
+    """Reject DOS device aliases, invalid Unicode and casefold aliases before I/O."""
     reserved = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
     folded = set()
     for name in names:
-        if (not isinstance(name, str) or not name or
+        if not isinstance(name, str):
+            raise ValueError("MODEL_SHARD_PATH_UNSAFE")
+        # JSON allows escaped lone surrogates; passing them to Path.lstat()
+        # can raise UnicodeEncodeError outside inspect()'s HOLD boundary.
+        try:
+            name.encode("utf-8", errors="strict")
+        except UnicodeError as exc:
+            raise ValueError("MODEL_SHARD_PATH_UNSAFE") from exc
+        # Win32 treats trailing spaces before the first extension as aliases.
+        # Superscript digits ¹²³ are also reserved by COM/LPT device names.
+        stem = name.split(".", 1)[0].rstrip(" .").upper()
+        if (not name or
                 re.search(r'[<>:"/\\|?*\x00-\x1f]', name) or
                 name != Path(name).name or
                 not name.endswith(".safetensors") or
                 name in {".", ".."} or
-                name.split(".", 1)[0].upper() in reserved or
+                stem in reserved or
+                re.fullmatch(r"(?:COM|LPT)[¹²³]", stem) is not None or
                 name.casefold() in folded):
             raise ValueError("MODEL_SHARD_PATH_UNSAFE")
         folded.add(name.casefold())
