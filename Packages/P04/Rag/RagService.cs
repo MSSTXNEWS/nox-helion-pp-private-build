@@ -263,18 +263,33 @@ public sealed class RagService : IDisposable
             throw new ArgumentOutOfRangeException(nameof(maxCharacters));
 
         var context = new StringBuilder(Math.Min(maxCharacters, 4096));
+        string? onlyOwner = null;
+        string? onlyConversation = null;
         foreach (var result in results)
         {
             if (result is null || string.IsNullOrWhiteSpace(result.Text)) continue;
+            if (string.IsNullOrWhiteSpace(result.OwnerSid) ||
+                string.IsNullOrWhiteSpace(result.ConversationId))
+                throw new InvalidDataException("RAG citation scope missing.");
+            if (onlyOwner is null)
+            {
+                onlyOwner = result.OwnerSid;
+                onlyConversation = result.ConversationId;
+            }
+            else if (!string.Equals(onlyOwner, result.OwnerSid, StringComparison.Ordinal) ||
+                     !string.Equals(onlyConversation, result.ConversationId, StringComparison.Ordinal))
+                throw new InvalidDataException("RAG citation scope mismatch.");
             var citation = $"[SOURCE: {Uri.EscapeDataString(result.FileName)}#{result.ChunkIndex + 1}; SHA256:{result.ChunkSha256}]";
             var required = citation.Length + result.Text.Length + 2;
+            // A SHA256 citation must refer to the complete, untruncated chunk.
+            // Skip oversized hits so smaller verified passages are still useful.
             if (context.Length + required > maxCharacters)
-            {
-                var available = maxCharacters - context.Length - citation.Length - 4;
-                if (available > 0)
-                    context.Append(citation).Append('\n').Append(result.Text.AsSpan(0, Math.Min(available, result.Text.Length))).Append("…\n\n");
-                break;
-            }
+                continue;
+            // BuildContext is public: never trust a supplied hash just because
+            // it was formatted like a retrieved, verified citation.
+            if (result.ChunkIndex < 0 ||
+                !string.Equals(result.ChunkSha256, Sha256(result.Text), StringComparison.Ordinal))
+                throw new InvalidDataException("RAG citation does not match the complete chunk.");
             context.Append(citation).Append('\n').Append(result.Text).Append("\n\n");
         }
         return context.ToString().TrimEnd();
