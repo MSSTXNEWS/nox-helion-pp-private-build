@@ -1,0 +1,269 @@
+# NOX V16 ASSEMBLY B · exact owner-authored G1-A candidate; NOT APPLIED.
+# T06 MUST verify target HEAD and all 3 Git blob PRE SHA, obtain G1-A owner consent, run git apply --check --index, and read back POST SHA. T04 KEEP_TARGET requires explicit T06 selection.
+# RunID NOX-V16-ASSEMBLY-B-20261029T1740MSK-R09; target HEAD snapshot 5b42260bdf6adef2eee78dc665f85041270fe4fb; owner journal blob bb41f403080b51332f80db6cfed7dce6d0b98f73
+diff --git a/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi b/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
+index 87d901c3846359a91be3e8288f24302cc7060257..969f8c11eaca20c69e9610422731862c7bd3ed62 100644
+--- a/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
++++ b/stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi
+@@ -100,12 +100,54 @@
+     DetailPrint "$CheckResult"
+     Abort "Payload SHA-256 verification FAILED. No application files activated."
+   ${EndIf}
++  ; Marker ownership is required by update, rollback and conservative uninstall.
++  ; A failed write must never reach either activation rename.
++  ClearErrors
+   FileOpen $2 "$StageDir\nox-p01-owned.txt" w
+-  IfErrors 0 +2
+-    Abort "Could not write ownership marker."
++  IfErrors MarkerOpenFailed
+   FileWrite $2 "NOXHELION.P01 V16$\r$\n"
++  IfErrors MarkerWriteFailed
+   FileClose $2
++  ; FileWrite success alone does not prove persisted exact marker contents.
++  ; Reopen/read back before FIRST rename; never accept partial/empty metadata.
++  ClearErrors
++  FileOpen $2 "$StageDir\nox-p01-owned.txt" r
++  IfErrors MarkerReadbackFailed
++  ClearErrors
++  FileRead $2 $3
++  IfErrors MarkerReadFailed
++  FileClose $2
++  StrCmp $3 "NOXHELION.P01 V16$\r$\n" MarkerReady MarkerReadbackFailed
++  MarkerReadFailed:
++    FileClose $2
++  MarkerReadbackFailed:
++    SetErrorLevel 2
++    Abort "Ownership marker readback failed; no application directories moved."
++  MarkerWriteFailed:
++    FileClose $2
++  MarkerOpenFailed:
++    SetErrorLevel 2
++    Abort "Could not write ownership marker. No application directories moved."
++  MarkerReady:
++  ; Prepare and SHA-attest the generated uninstaller in STAGING, before moving
++  ; either live application tree. Keep the independently generated plugin copy
++  ; as provenance for an after-activation integrity check.
+   SetOutPath "$TEMP" ; release current working directory before Rename
++  ClearErrors
++  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
++  IfErrors InstallUninstallerPreparationFailed
++  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 InstallUninstallerPreparationFailed
++  ClearErrors
++  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$StageDir"
++  IfErrors InstallUninstallerPreparationFailed
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$StageDir" -Manifest "$StageDir\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    SetErrorLevel 2
++    Abort "Staged uninstaller or payload SHA-256 verification failed; no application directories moved."
++  ${EndIf}
+   ; Preserve one backup for explicit rollback. Failed activation restores original.
+   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 ActivateNew
+     Rename "$INSTDIR" "$BackupDir"
+@@ -117,22 +159,63 @@
+     IfFileExists "$BackupDir\nox-p01-owned.txt" 0 +2
+       Rename "$BackupDir" "$INSTDIR"
+     Abort "Activation failed; previous version restored if present."
+-  ; Registry/shortcuts only after activation.
++  ; Re-hash the live activated directory BEFORE changing the registry.
++  ; No success metadata may point to a missing, altered or untrusted Uninstall.exe.
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe"'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Goto InstallPostActivationRecovery
++  ${EndIf}
++  ; Registry/shortcuts only after activation and exact live attestation.
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayName" "${APP_NAME}"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "${APP_VERSION}"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "InstallLocation" "$INSTDIR"
+   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "NoModify" 1
+   SetOutPath "$INSTDIR"
+-  WriteUninstaller "$INSTDIR\Uninstall.exe"
+   CreateDirectory "$SMPROGRAMS\NOX HELION"
+   CreateShortcut "$SMPROGRAMS\NOX HELION\NOX HELION.lnk" "$INSTDIR\NOX.P01.Shell.exe"
+   DetailPrint "NOX installed. Persistent state under LOCALAPPDATA is untouched."
++  Goto FinishInstall
++  InstallUninstallerPreparationFailed:
++    SetErrorLevel 2
++    Abort "Could not prepare a trusted uninstaller; no application directories moved."
++  InstallPostActivationRecovery:
++    ; Fail closed: preserve the suspect new tree as staging, and restore
++    ; the prior app if it was moved. Never delete/recurse user data.
++    SetOutPath "$TEMP"
++    ClearErrors
++    Rename "$INSTDIR" "$StageDir"
++    IfErrors InstallRecoveryHold
++    IfFileExists "$BackupDir\nox-p01-owned.txt" 0 InstallRecoveryDone
++      ClearErrors
++      Rename "$BackupDir" "$INSTDIR"
++      IfErrors InstallRecoveryHold
++  InstallRecoveryDone:
++    SetErrorLevel 2
++    Abort "Activated payload attestation failed; previous app restored if present, failed stage retained."
++  InstallRecoveryHold:
++    SetErrorLevel 2
++    Abort "Activated payload attestation failed; operator recovery needed, both app trees retained."
+   FinishInstall:
+ SectionEnd
+ 
+ Function RestorePrevious
+   SetOutPath "$TEMP"
++  ; Reuse install path/ownership checks, including parents above the backup root.
++  ; Recovery must not require an available WebView2 runtime.
++  InitPluginsDir
++  File "/oname=$PLUGINSDIR\Preflight-InstallPath.ps1" "${PREFLIGHT_SCRIPT}"
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Preflight-InstallPath.ps1" -InstallRoot "$INSTDIR" -PathOnly'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    SetErrorLevel 2
++    Abort "Rollback path or ownership preflight failed. No application directories moved."
++  ${EndIf}
+   IfFileExists "$BackupDir\nox-p01-owned.txt" 0 NoPrevious
+   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 NoCurrent
+   IfFileExists "$StageDir" 0 +2
+@@ -144,7 +227,7 @@
+   ; A mere ownership marker is not evidence of unmodified program files.
+   InitPluginsDir
+   File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
+-  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata'
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$BackupDir" -Manifest "$BackupDir\payload.sha256.json" -AllowInstalledMetadata -ReportVersion'
+   Pop $ExitCode
+   Pop $CheckResult
+   ${If} $ExitCode != "0"
+@@ -152,6 +235,20 @@
+     SetErrorLevel 2
+     Abort "Backup payload SHA-256 mismatch; rollback refused without moving application directories."
+   ${EndIf}
++  ; The backup's generated Uninstall.exe is not SHA-attested by payload.sha256.json.
++  ; Generate a trusted replacement from THIS setup before moving either app tree.
++  ClearErrors
++  WriteUninstaller "$PLUGINSDIR\Uninstall.exe"
++  IfErrors 0 RollbackUninstallerPrepared
++    SetErrorLevel 2
++    Abort "Cannot prepare rollback uninstaller; both app versions remain untouched."
++  RollbackUninstallerPrepared:
++  IfFileExists "$PLUGINSDIR\Uninstall.exe" 0 RollbackUninstallerMissing
++    Goto RollbackUninstallerReady
++  RollbackUninstallerMissing:
++    SetErrorLevel 2
++    Abort "Generated rollback uninstaller missing; both app versions remain untouched."
++  RollbackUninstallerReady:
+   Rename "$INSTDIR" "$TmpDir"
+   IfErrors 0 +2
+     Abort "Cannot move current app. Close NOX first."
+@@ -159,9 +256,42 @@
+   IfErrors 0 +3
+     Rename "$TmpDir" "$INSTDIR"
+     Abort "Rollback activation failed; attempted restoration."
++  ; Never reactivate the prior, merely size-checked Uninstall.exe as executable.
++  ; Copy a fresh one from the trusted setup and verify exact SHA before registry writes.
++  ClearErrors
++  CopyFiles /SILENT "$PLUGINSDIR\Uninstall.exe" "$INSTDIR"
++  IfErrors RollbackUninstallerRecovery
++  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata -TrustedUninstaller "$PLUGINSDIR\Uninstall.exe" -ReportVersion'
++  Pop $ExitCode
++  Pop $CheckResult
++  ${If} $ExitCode != "0"
++    DetailPrint "$CheckResult"
++    Goto RollbackUninstallerRecovery
++  ${EndIf}
+   ; Leave newer version saved for operator recovery, NEVER delete it.
++  ; The backup verifier returned its validated version without a trailing newline.
++  ; Register it only after BOTH directory renames succeeded.
++  ClearErrors
++  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "DisplayVersion" "$CheckResult"
++  IfErrors 0 +3
++    SetErrorLevel 2
++    Abort "Previous files restored, but Windows version registration failed. Recovery copies retained."
+   DetailPrint "Previous version restored; superseded app retained at $TmpDir."
+   Return
++  RollbackUninstallerRecovery:
++    ; Never report success after installer executable integrity fails.
++    ; Preserve both app trees and attempt restoration of the original install.
++    SetOutPath "$TEMP"
++    ClearErrors
++    Rename "$INSTDIR" "$BackupDir"
++    IfErrors RollbackRecoveryFailed
++    Rename "$TmpDir" "$INSTDIR"
++    IfErrors RollbackRecoveryFailed
++    SetErrorLevel 2
++    Abort "Rollback uninstaller verification failed; current install restored, backup retained."
++  RollbackRecoveryFailed:
++    SetErrorLevel 2
++    Abort "Rollback uninstaller integrity failed; operator recovery needed, app trees retained."
+   NoPrevious:
+     Abort "No installer-owned previous version available for rollback."
+   NoCurrent:
+diff --git a/stage/proposals/P01/C09/Installer/Verify-Payload.ps1 b/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
+index 6c178c04957d7397c0c081e3b123940637abc6e9..e448f8266ba15e809c13bff669924fa825fd4bc1 100644
+--- a/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
++++ b/stage/proposals/P01/C09/Installer/Verify-Payload.ps1
+@@ -3,10 +3,13 @@
+ param(
+   [Parameter(Mandatory=$true)][string]$Root,
+   [Parameter(Mandatory=$true)][string]$Manifest,
+-  [switch]$AllowInstalledMetadata
++  [switch]$AllowInstalledMetadata,
++  [switch]$ReportVersion,
++  [string]$TrustedUninstaller
+ )
+ $ErrorActionPreference = 'Stop'
+ function Fail([string]$reason) { throw "P01_PAYLOAD_VERIFY_FAILED: $reason" }
++if ($TrustedUninstaller -and -not $AllowInstalledMetadata) { Fail 'trusted uninstaller requires installed metadata' }
+ $rootInfo = Get-Item -LiteralPath $Root -ErrorAction Stop
+ if (-not $rootInfo.PSIsContainer -or (($rootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) { Fail 'unsafe or reparse root' }
+ $rootFull = [IO.Path]::GetFullPath($rootInfo.FullName).TrimEnd('\')
+@@ -88,6 +91,24 @@
+   # This file is NOT SHA-attested by the payload manifest; rollback does not
+   # execute it, and E07 must verify the eventual installed uninstaller.
+   [void]$metadata.Add('Uninstall.exe')
++  if ($TrustedUninstaller) {
++    # Compare against executable generated by THIS setup, never backup metadata
++    # and never the restored uninstaller as its own authority.
++    if (-not [IO.Path]::IsPathRooted($TrustedUninstaller)) { Fail 'nonabsolute trusted uninstaller' }
++    $trustedFull = [IO.Path]::GetFullPath($TrustedUninstaller)
++    if ($trustedFull -ieq $uninstaller -or
++        $trustedFull.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase)) {
++      Fail 'untrusted self-reference in uninstaller comparison'
++    }
++    $trustedInfo = Get-Item -LiteralPath $trustedFull -Force -ErrorAction Stop
++    if ($trustedInfo.PSIsContainer -or (($trustedInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
++      Fail 'unsafe trusted uninstaller source'
++    }
++    if ($uninstallerInfo.Length -ne $trustedInfo.Length) { Fail 'trusted uninstaller length mismatch' }
++    $trustedSha = (Get-FileHash -LiteralPath $trustedFull -Algorithm SHA256).Hash
++    $installedSha = (Get-FileHash -LiteralPath $uninstaller -Algorithm SHA256).Hash
++    if ($installedSha -cne $trustedSha) { Fail 'trusted uninstaller SHA-256 mismatch' }
++  }
+ }
+ # Include only regular files the packager approved; prevents hidden extras in staging.
+ $actualFiles = @(Get-ChildItem -LiteralPath $rootFull -Recurse -Force -File)
+@@ -100,4 +121,7 @@
+ }
+ if ($actualFiles.Count -ne ($registered.Count + 1 + $metadata.Count)) { Fail 'file count mismatch' }
+ if (-not (Test-Path -LiteralPath (Join-Path $rootFull 'NOX.P01.Shell.exe') -PathType Leaf)) { Fail 'entrypoint absent' }
+-'P01_PAYLOAD_SHA256_PASS'
++# Rollback registration uses ONLY the existing validated manifest version.
++# No newline: nsExec captures exactly this value, not a PASS marker or CR/LF.
++if ($ReportVersion) { [Console]::Out.Write([string]$m.version) }
++else { 'P01_PAYLOAD_SHA256_PASS' }
+diff --git a/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1 b/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
+index 81fbe7dfeb70801a0eaf5e4246a8789cb5032916..9975f9c1802040d0bb5f30b9563060a1ebd8c44b 100644
+--- a/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
++++ b/stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1
+@@ -86,6 +86,8 @@
+   }
+ }
+ if ($checked.Count -ne $registered.Count -or $checked.Count -lt 1) { throw 'P01_UNINSTALL_REFUSED_MODIFIED_FILES:incomplete-validation' }
++# A partial manifest must never authorize metadata cleanup while leaving the app orphaned.
++if (-not $registered.Contains('NOX.P01.Shell.exe')) { throw 'P01_UNINSTALL_ENTRYPOINT_UNREGISTERED' }
+ # PHASE 2 — full-list drift check BEFORE the first delete, for C08 no-loss parity.
+ foreach ($entry in $checked) {
+   try { Assert-VerifiedEntry $entry } catch { throw "P01_UNINSTALL_FILE_CHANGED_DURING_COMMIT:$($entry.Relative)" }
