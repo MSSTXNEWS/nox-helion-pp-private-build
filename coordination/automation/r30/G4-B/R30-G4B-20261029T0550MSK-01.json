@@ -1,0 +1,91 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_G4B_RECEIPT_V1",
+  "run_id": "R30-G4B-20261029T0550MSK-01",
+  "slot": "G4-B",
+  "area": "P04 GPU loader source-only preflight",
+  "scope": "NOX_HELION_EXPRESS_INTEGRATOR_FIN_ZAGR_V16_WINDOWS_LOADER_ONLY_NOT_MAIN_NOX",
+  "status": "SOURCE_PATCH_TESTED_RUNTIME_HOLD",
+  "report_gate": "GIT_RECEIPT_PENDING_READBACK_CENTRAL_DRIVE_WRITER_C",
+  "base_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "base_commit_sha": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "private_branch": "automation/r30/g4b/R30-G4B-20261029T0550MSK-01",
+  "ownership_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "slot_owner_exclusive": true
+  },
+  "conflicts_index": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+  },
+  "snapshots": {
+    "directories_count_verified": 25,
+    "originals_modified": false,
+    "registry_status": "HISTORICAL_BRANCH_RESULTS_COLLECTED_NOT_MERGED",
+    "p04_donor_preflight_refs": [
+      "astra/r29-a04-20261029",
+      "astra-b/r29-b1-20261029",
+      "astra-b/r29-b2-20261029"
+    ],
+    "p04_donors_integrated": false
+  },
+  "task_id": "G4B-P04-WINDOWS-CPU-PYTHON-ABI-ADMISSION-01",
+  "source_change": "Preflight now refuses Windows non-AMD64 or 32-bit Python worker before invoking NVIDIA telemetry; this does not certify CUDA, PyPA wheel compatibility or training.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "git_blob_sha_pre": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "git_blob_sha_post": "b46d9b971918bdd70c2eb41d77fe1172ca991267",
+      "sha256_post": "3144c540f67aacb9379de59e40f526ebc17886ef6cd55a241fa60438a10df979",
+      "commit_sha": "895b844515cc0f592232acc1eadbd05e173d3520"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "git_blob_sha_pre": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+      "git_blob_sha_post": "c77360d7f54ae3fb60535054ebbb30dad657dc0f",
+      "sha256_post": "2d03259ffd832d5b7f94ca3cc28ced567b0b80287f14e4a4086e01fe07472c47",
+      "commit_sha": "12d23b597a745154aa09de5d2f797d282c9e835b"
+    }
+  ],
+  "tests": {
+    "actual_command": "PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s /mnt/data/g4btest/tests/P04 -p test_local_gpu_preflight.py -v",
+    "python_unittest": "PASS 5/5, 0.009s",
+    "syntax_command": "python -m py_compile /mnt/data/g4btest/Packages/P04/preflight_local_gpu.py /mnt/data/g4btest/tests/P04/test_local_gpu_preflight.py",
+    "syntax": "PASS",
+    "source_structural": "PASS 8/8 checks",
+    "exact_git_blob_sha_verified_for_isolated_source_and_test": true,
+    "environment": "Isolated Linux Python, exact new file bytes verified using git hash-object, synthetic train_qlora import stub; Windows GPU/CUDA hardware not exercised",
+    "new_cases": [
+      "ARM64 x64 rejects before vendor call",
+      "x86 32bit rejects before vendor call",
+      "AMD64 32bit rejects before vendor call",
+      "AMD64 64bit reaches original missing-vendor HOLD"
+    ]
+  },
+  "root_cause": "Previously preflight on unsupported Windows worker CPU architecture or 32-bit Python could reach NVIDIA telemetry and misclassify ABI incompatibility as vendor telemetry unavailable.",
+  "self_improvement": {
+    "id": "G4B_ARCH_ABI_GUARD_BEFORE_VENDOR_YIELD",
+    "observed": "Prior runs separated external hardware prerequisites from code faults; this gap would hide an incompatible host architecture behind a generic telemetry error.",
+    "applied": "Fail closed at CPU/Python pointer-width boundary and add explicit negative regression plus positive control without invoking GPU/training.",
+    "prevention": "Require verified wheel-tag/Python/CUDA ABI and wheel hashes before eventual packaging, avoid copying divergent donor branches blindly; never upgrade SOURCE tests to runtime status."
+  },
+  "blocked": [
+    "Target Windows AMD64 host PyPA/wheel ABI and hashed wheel closure not certified on current R30 base; existing R29 donor changes need exact-owner reconciliation",
+    "NVIDIA driver and CUDA runtime real Windows verification NOT_RUN",
+    "GPU VRAM, thermals and Windows CPU hardware checks NOT_RUN",
+    "Rights-approved weights/dataset and actual LoRA/QLoRA optimizer/checkpoint/evaluation/merge NOT_RUN",
+    "EXE/NSIS/Windows CI/GitLab pipeline/final integration/independent E07 NOT_RUN"
+  ],
+  "untouched_paths": [
+    "Packages/P04/model_snapshot_probe.py",
+    "tests/P04/test_model_snapshot_probe.py",
+    "tests/P04/test_wheel_inventory_preflight_r29.py",
+    "coordination/astra/r30/snapshots/"
+  ],
+  "forbidden_paths_changed": [],
+  "global_journal_write": "NOT_PERFORMED_SHARED_DOCS_SINGLE_WRITER_ASTRA_C_ONLY",
+  "source_ready": false,
+  "release_ready": false,
+  "product_progress": "N/D",
+  "runtime_status": "HOLD"
+}
