@@ -1,0 +1,26 @@
+# NOX V16 · MANUAL #2 / T08 → T10 · ONE APPROACH / ONE MEGABLOCK
+Status: READY FOR NEXT QA APPROACH, NOT A PRODUCT PASS.
+Last observed PR #162: cb25c487ee67fe9ec22909731aa51ea446b36f29 (DRAFT, moving); this is NOT a frozen T09 SHA.
+Prior QA RunID: NOX-V16-M2-R36-THREE-BLOCKS-20261030.
+QA readback: four artifacts in branch qa/manual2-r36-threeblocks-reusefirst-20261030, and T02 handoff GitHub issue #177 comments 6510971410/6510985202.
+Preserve NO-LOSS: original 729/3, SourceLock, D02/WOW200, 8 CoreID, 5 Persona, PACK01/02, STOP, ACL, consent, all historical DONE/TaskID.
+
+## ONE MEGABLOCK (not 10 fabricated cycles)
+A. PIN. Read CURRENT PR162 HEAD and its tree and latest owner receipts/ERROR_REGISTER/lessons. Compare ONLY changed files against R36 evidence (Git blob IDs). Use exactly one source SHA for the entire QA acceptance attempt. If it moves while testing, compare exact new paths; untouched-file evidence can carry forward only when its blob SHA matches. Do not overwrite or merge product files: MANUAL #2 is independent QA.
+
+B. OWNERS' REQUIRED SOURCE FIXES BEFORE PASS:
+1. P01 E06 source-test mismatch: tests/e06/test_theater_webview2_routes_r13.py blob fe296a4dc6ba21d8c33972a510349f71d2002cda asserts direct Navigate literal, existing host uses theaterUrl variable (host blob at prior check 5a43dc50c1c5afe31b3a6636c319da3779aaad0d). MANUAL #1/T06 fixes ONLY stale test fixture with owner PRE/CAS; test actual navi/virtual origin.
+2. P04 model_snapshot_probe.py source blob c0286fe58c020835ec1fd8c4a7b6d1345f115598: deny JSON exponent overflow 1e9999, escaped lone UTF16 surrogate, and tensor shape dimension >= 2**64 even for empty tensors. MANUAL #3 owns patch and tests; MANUAL #1 integrates after approval, exact PRE/CAS.
+3. P04 real training owner port p04_owner_training_port.py blob f403927f9fb99591af6edeaa20bb25620137527e has profile {ECO,BALANCED,MAX}, but train_qlora.py blob 82fad1f4aec3bc9ebb34958ece3fd5786e1adbea uses {ECO,BALANCED,INTENSIVE}; MANUAL #3/#1 align to original trainer without altering approved UX/functionality.
+4. Finish source owner-bound Host50 wiring and consent/ACL/STOP/backup/voice/PC CONTROL/RAG/GPU/SPACE gates as specified by fixed P01–P05 criteria. 37/50+13 is a historical committed source ledger only; more recent 40/50+10 is owner reporting, requires exact current receipts. Keep 14 native pending separately for post-build. PACK02 fifty offline operations are NOT native Host50 approvals. Review PR #223 donor against current source; do not merge wholesale or replay already integrated fixes.
+
+C. ONE FOCUSED QA SWEEP AFTER OWNER SOURCE CHANGE. Run (not merely enumerate) relevant Python test suites using coordination/e06/run_source_integrations_r13.py (currently contains 19 source suites), P03 STOP/ACK/consent Node tests, P01 WebView2/installer negative tests, P04 RAG/GPU/worker/checkpoint/rights tests, P05 events.v3/telemetry/source receipts and SPACE tests, and independent stored negative tests:
+- coordination/manual/no2/r36/test_p04_snapshot_r36.py (5 tests; 3 negative, 2 positive);
+- coordination/manual/no2/r36/test_p04_training_profile_alignment_r36.py (3 tests).
+These independent QA tests are currently in QA branch, not guaranteed on product HEAD; use pinned read-only/test-only workspace or owner-approved incorporation. If no test runner/runtime available, mark NOT_RUN; never convert static matches or mocks into native PASS. Preserve and check SHA/preimage/capability/consent/STOP/data protection of any new upstream modules. Reuse free official libraries before rewriting, but don't import unapproved versions or GPL/weights.
+
+D. FINITE EXIT GATE. Compare actual test results to all fixed source acceptance criteria for P01–P05; map failed checks to existing ERROR_ID with root cause/owner/preimage and regressions, without duplicating TaskID. Produce ONE T08 QA disposition for EXACT HEAD/tree, source test counts, Git file SHA, error states and evidence. Source VERIFIED ≠ INTEGRATED ≠ QA_ACCEPTED ≠ Windows verified. MANUAL #2 must not self-approve its own changes. T02 is sole CAS writer to Master/E06/Lessons/ERROR_REGISTER; an issue comment is only handoff. PASS journal only after actual CAS+readback. If owner dependencies remain, mark HOLD with exact reason and no fabricated 100%.
+
+E. DELIVERY. Single OТЧ-1 with RunID and actual times, A–E, 0–10 approach bar as activity only, P01–P05 source/integration/QA statuses and N/D when unverified; HEAD PRE/POST, tree, file blob hashes, tests pass/fail/NOT_RUN, delta DONE, blockers, next checkpoint. If all P01–P05 source criteria and owner receipts pass, T09 pins frozen source, independent T10 may attest SOURCE_READY. Only THEN manual #1 may perform authorized GitLab Free Windows build; then manual #2 performs E07 on the single BuildID/EXE SHA, including 14 pending native checks, install/update/rollback, STOP/ACL/consent/NO-LOSS/graphics. Do NOT run EXE/NSIS/GitLab CI/E07 before authorized gate.
+
+Definition of completion for this ONE QA approach: all currently verifiable source-level work either independently PASS with immutable evidence on exact SHA or is explicitly HOLD with owner, delta, and specific proof; one readback-verified QA receipt and T02 handoff. It does not claim full product 100% until release gates are physically proven.
