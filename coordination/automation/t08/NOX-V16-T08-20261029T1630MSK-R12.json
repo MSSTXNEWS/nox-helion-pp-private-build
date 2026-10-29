@@ -1,0 +1,94 @@
+{
+  "schema": "NOX_V16_T08_PROVEN_P0P1_ONLY_PERSONAL_RECEIPT_V2",
+  "task_id": "T08",
+  "run_id": "NOX-V16-T08-20261029T1630MSK-R12",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "planned_msk": "2026-10-29T16:25:00+03:00",
+  "observed_start_msk": "2026-10-29T16:29:57+03:00",
+  "receipt_recorded_utc": "2026-10-29T13:32:18.306Z",
+  "status": "NO_CODE_BLOCKERS_ON_CURRENT_T06_SOURCE_CANDIDATE",
+  "gate": "HOLD_T06_NOT_OWNER_ACCEPTED_NO_FROZEN_HEAD",
+  "code_patch": "NONE_NO_REPRODUCED_AUTHORIZED_P0P1",
+  "tests": "NOT_RUN_BY_DESIGN_NO_CHANGE_NO_NEW_QA",
+  "evidence": {
+    "canon_google_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc",
+    "t02_master_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "t02_master_revision": "AHj4eMR10nCVf172iWhn3u-niqLAacUA_maDssIB90J-iZUEVCDEFEtXfcGlSIBUEmMti8C3X1_e1auAewpYqhga9IR4wy6F3YYDrl0zytA",
+    "t02_latest_fixed_ledger": "NOX-V16-T02-COORD-20261029T1625MSK-R12",
+    "t02_fixed_entries": 5,
+    "t02_product_code_defects_reproduced": 0,
+    "t06_run_id": "NOX-V16-T06-20261029T162028MSK-R05",
+    "t06_receipt_blob_sha1": "86f75512f884042f227ae904f8455ad7d0cdda87",
+    "t06_status": "HOLD_OWNER_1_CAS_NO_UNIFIED_SOURCE",
+    "t09_run_id": "NOX-V16-T09-20261029T162545MSK-R12-HOLD",
+    "t09_receipt_blob_sha1": "46cfc7bf8870dc17c72be3b0b0b09f88dafbb6c2",
+    "t09_status": "HOLD_NO_IMMUTABLE_ACCEPTED_T06_SOURCE",
+    "t10_run_id": "NOX-V16-T10-20261029T160303MSK-R11",
+    "t10_receipt_blob_sha1": "b2747537cc62b0a81dc332da1f9c4c236d19190a",
+    "t10_status": "SOURCE_READY_HOLD",
+    "latest_pr162_rest_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_draft": true,
+    "source_lock": "HOLD_PHYSICAL_THREE_PART_729_SHA256_UNVERIFIED"
+  },
+  "blocker_ledger_disposition": [
+    {
+      "id": "P0-01",
+      "status": "ORIGINAL_SOURCELOCK_EVIDENCE_HOLD_NOT_CODE_DEFECT",
+      "owner": "T07/G6-A"
+    },
+    {
+      "id": "P0-02",
+      "status": "ONE_SOURCE_HEAD_OWNER_FREEZE_HOLD_NOT_CODE_DEFECT",
+      "owner": "T04/T05/T06/T09"
+    },
+    {
+      "id": "P0-03",
+      "status": "HOST50_13_SOURCE_ADMISSION_HOLD_NO_RUNTIME_FAILURE_PROVEN",
+      "owner": "T05/T06/G6-B"
+    },
+    {
+      "id": "P1-01",
+      "status": "NATIVE_ACCEPTANCE_HOLD_NOT_REPRODUCED_PRODUCT_DEFECT",
+      "owner": "T08/T10"
+    },
+    {
+      "id": "P1-02",
+      "status": "COORDINATION_PROVENANCE_HOLD_NOT_PRODUCT_DEFECT",
+      "owner": "T02"
+    }
+  ],
+  "source_pre_sha": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "source_post_sha": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "source_git_blobs": "UNCHANGED; no production files edited",
+  "source_sha256": "NOT_COMPUTED; no source edit; Git SHA1 is not SHA256",
+  "no_loss": {
+    "source_729_original_parts": "UNALTERED_NOT_PHYSICALLY_VERIFIED",
+    "inventory_968": "NO_MUTATION",
+    "historic_DONE": "PRESERVED",
+    "D02_WOW200_CoreID8_Persona5_Pack01_02_50plus50_voice_rag_gpu_space": "NO_MUTATION_NOT_REACCEPTED",
+    "user_data_permissions": "NO_MUTATION",
+    "main_PR162_shared_R30_snapshots": "UNTOUCHED"
+  },
+  "gates": {
+    "t08": "NO_CODE_BLOCKERS_CURRENT_CANDIDATE",
+    "t06_accepted_head": "HOLD",
+    "t09_frozen": "HOLD",
+    "t10_source_ready": "HOLD",
+    "E06": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "handoff_to": {
+    "T09": "T08 has zero demonstrated authorized fixable P0/P1 on PR162 47a817f6; NO_CODE_BLOCKERS gate applies only to this HEAD; do not treat as SOURCE_READY or a frozen T06 tree.",
+    "T10": "No T08 production patch/test needed for the currently checked SHA; independently preserve source lock, native source acceptance and E07 gates. Recheck only if T06 supplies an actually different accepted HEAD or a reproducible P0/P1."
+  },
+  "lesson": "Absence of a reproduced functional defect in the fixed five-entry ledger is a valid NO_CODE_BLOCKERS disposition for this candidate, not proof of runtime/Windows correctness or authority to freeze source. Do not turn donor SHA drift/unknown native evidence into invented defects.",
+  "progress": {
+    "proven_fixable_p0p1": 0,
+    "scope_readiness_percent": "N/D; no proven-defect denominator",
+    "bar": "░░░░░░░░░░",
+    "P01_P05": "N/D"
+  }
+}
