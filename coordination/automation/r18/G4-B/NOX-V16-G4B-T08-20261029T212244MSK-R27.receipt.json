@@ -1,0 +1,195 @@
+{
+  "schema": "NOX_V16_T08_R18_IMMUTABLE_SOURCE_QA_RECEIPT_V1",
+  "run_id": "NOX-V16-G4B-T08-20261029T212244MSK-R27",
+  "role": "G4-B / manual #2 T08 independent source QA",
+  "scope": "Windows EXPRESS INTEGRATOR source-only",
+  "planned_slot_msk": ":45 hourly",
+  "actual_start_msk": "2026-10-29T21:22:44+03:00",
+  "receipt_recorded_at_utc": "2026-10-29T18:29:08.352Z",
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pinned_head": "632bc1464a2f927087e77d394d5248890fad4912",
+    "pinned_tree": "e21e35795884a0cf832d730836f5751c999f257f",
+    "earlier_source_head": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+    "current_source_diff_from": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "current_diff": "only T06 coordination receipt 1 file; no product changes"
+  },
+  "prestart": {
+    "canon_google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "section33_consolidated_count": 56,
+    "shared_register_git_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "shared_register_status_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "r18_toolkit": "TOOL_NOT_RUN (read-only preview not needed)",
+    "manual_roles_blob": "31fba12cee825226cc9dff60560550b178da8bc9",
+    "pre_r18_role_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "master_google_doc_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "c34_google_doc_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "e06_lessons_direct_fresh_doc_readback": "NOT_VERIFIED: exact current canonical document identifiers unavailable in this run",
+    "fresh_read_gate": "PARTIAL"
+  },
+  "owner_source_delta": {
+    "error_id": "ERR-SRC-004",
+    "owner": "M1/T06 sole PR162 writer",
+    "commit": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "owner_receipt_path": "coordination/automation/t06/NOX-V16-T06-20261029-M1-R22-SOURCELOCK-PUBLISH.json",
+    "owner_receipt_blob": "294da49253f19478c20d33b8946f19893684a42d",
+    "source_file": "coordination/e06/stage_p01.py",
+    "source_git_pre": "b0bd954407949965e4871acaa9f15ccc060e3187",
+    "source_git_post": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+    "regression_file": "tests/e06/test_stage_p01_shared_zip_guard.py",
+    "regression_git_pre": "d97775098b68492f52463b45e30828e7dca72137",
+    "regression_git_post": "d67ec73b707526ecf6b878efe179254ec026f009",
+    "code_state": "OWNER_PATCH_INTEGRATED_ON_PINNED_HEAD, NOT full T06 owner acceptance"
+  },
+  "new_independent_evidence": {
+    "kind": "TARGETED ISOLATED PYTHON ALGORITHM EXECUTION, NOT full Git checkout module",
+    "local_script": "NOX_V16_T08_R27_P01_TRANSACTION_ISOLATED_QA.py",
+    "local_script_sha256": "4fbf0bca0d0a2e60021d46234670299751cb06ec2029ffde3fd4b17e8c399a31",
+    "local_test_log": "NOX_V16_T08_R27_P01_TRANSACTION_ISOLATED_QA.log",
+    "local_test_log_sha256": "33d796f2f4e8c632c0513eaa78c925fba5bc8469c9a9b02cce9ea1aed277ab4c",
+    "tests": {
+      "successful_lock_first_publish": "PASS",
+      "late_foreign_lock_collision_preserves_foreign_and_no_R11": "PASS",
+      "denied_R11_rename_rolls_back_same_inode_lock_only": "PASS",
+      "concurrent_foreign_replacement_on_rollback_preserved": "PASS"
+    },
+    "executed": "4/4 PASS, isolated exact transaction-algorithm reproduction; full upstream stage module with 28-part fixture NOT_RUN",
+    "source_security_static": "stage parent reparse checks, donor SHA checks, fsync, exclusive hardlink, inode-safe rollback observed in exact Git source",
+    "native_windows": "NOT_RUN",
+    "p01_source_only_disposition": "prior late-lock collision bug corrected on pinned source; NO NEW P01 P0/P1 from tested four transaction cases; not global NO_CODE_BLOCKERS or SOURCE_READY"
+  },
+  "cross_owner_errors": [
+    {
+      "id": "ERR-SYS-001",
+      "ack": "DELEGATE",
+      "owner": "T02",
+      "reason": "shared journal historical coverage incomplete; immutable receipt to T02"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "ack": "APPLIED",
+      "owner": "T02",
+      "reason": "Git HEAD advanced from b907 to 632; compared only one coordination receipt and reconfirmed unchanged source/test blobs"
+    },
+    {
+      "id": "ERR-SRC-003",
+      "ack": "DELEGATE",
+      "owner": "T06/Host50",
+      "reason": "current Host50 admission blob d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4 has owner attestation HMAC and native verifier; 13 native routes remain unaccepted"
+    },
+    {
+      "id": "ERR-SRC-004",
+      "ack": "APPLIED_PARTIAL",
+      "owner": "T06",
+      "reason": "new P01 source transaction algorithm independently checked 4/4 isolated; full P01-P05 acceptance HOLD"
+    },
+    {
+      "id": "ERR-SRC-005",
+      "ack": "NO_IMPACT",
+      "owner": "T06",
+      "reason": "runner blob 303194331b1387690f8ac935bdcc968f8312143b was not changed in targeted P01 delta; no independent full suite"
+    },
+    {
+      "id": "ERR-SYS-006",
+      "ack": "ALREADY_VERIFIED",
+      "owner": "T07/T09",
+      "reason": "729 original ZIP historic DONE unchanged"
+    },
+    {
+      "id": "ERR-SYS-007",
+      "ack": "ALREADY_VERIFIED",
+      "owner": "T04",
+      "reason": "34 arbitration decisions historic DONE unchanged"
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "ack": "DELEGATE",
+      "owner": "T09/T02",
+      "reason": "freeze requires T06 owner-accepted full SHA, shared Docs readback; no false DONE"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "ack": "APPLIED",
+      "owner": "ALL",
+      "reason": "T08 remains 1/3 despite physical source fix; RunID completion != task completion"
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ack": "NO_IMPACT",
+      "owner": "T06",
+      "reason": "source owner process incident separately managed"
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "ack": "DELEGATE",
+      "owner": "T08/T02",
+      "reason": "guard remains 56806fb744694b2dd146db88229597722953ddd9; T06 full accepted tuple, P0/P1 and shared Docs evidence absent"
+    }
+  ],
+  "mass_lessons": {
+    "active_register_processed": 11,
+    "root_causes_deduplicated": [
+      "stale HEAD",
+      "P01 publication order/data-loss",
+      "owner attestation vs real native acceptance",
+      "premature closeout/shared journal readback"
+    ],
+    "applied": [
+      "live SHA resync",
+      "targeted four-case preservation and rollback regression"
+    ],
+    "delegated": [
+      "Host50 native and full T06 acceptance",
+      "shared T02 journal updates"
+    ],
+    "remaining": "full live E06/Lessons readback and same-source owner acceptance; 419 historic fingerprints not re-opened"
+  },
+  "progress": {
+    "t08_criteria": {
+      "accepted": 1,
+      "denominator": 3,
+      "percent": 33.3,
+      "bar": "███░░░░░░░",
+      "accepted_id": "historical T09/T10 handoff preserved",
+      "outstanding": [
+        "complete T06 owner-accepted SHA/tree/manifest + fixed P0/P1",
+        "final same-HEAD P0/P1 disposition"
+      ],
+      "before_percent": 33.3,
+      "after_percent": 33.3,
+      "delta_pp": 0
+    },
+    "product": "N/D (no complete frozen P01-P05 TaskID ledger)",
+    "new_accepted_task_ids": 0
+  },
+  "gates": {
+    "A_READ": "PARTIAL, full canon/register/current Git checked; E06/Lessons separate IDs not verified",
+    "B_PHYSICAL": "PASS narrow isolated 4/4 regression with exact-source snippet; NOT full upstream",
+    "C_JOURNAL": "PENDING REMOTE GIT RECEIPT CREATION + READBACK",
+    "D_IMPROVEMENT": "APPLIED two non-duplicative safeguards; shared T02 CAS not claimed"
+  },
+  "forbidden_actions": {
+    "exe": false,
+    "nsis": false,
+    "ci": false,
+    "e07": false,
+    "release": false,
+    "pr162_product_write": false,
+    "shared_t02_journal_write": false
+  },
+  "checkpoint": {
+    "owner": "M1/T06",
+    "next_action": "Run canonical targeted tests/e06/test_stage_p01_shared_zip_guard.py and manual #2 test_p01_sourcelock_foreign_owner_r21.py against pinned source; publish complete P01-P05+Host50 13 native consent/ACL/STOP owner acceptance. T08 then same-SHA delta-only disposition, one handoff T09/T10 and T02 CAS.",
+    "source_head": "632bc1464a2f927087e77d394d5248890fad4912",
+    "source_tree": "e21e35795884a0cf832d730836f5751c999f257f",
+    "status": "INCOMPLETE"
+  }
+}
