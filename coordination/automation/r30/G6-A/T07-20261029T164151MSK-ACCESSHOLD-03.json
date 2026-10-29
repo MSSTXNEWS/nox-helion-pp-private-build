@@ -1,0 +1,146 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T07_FIXED_CRITERIA_ACCESS_HOLD_V3",
+  "TaskID": "T07",
+  "RunID": "T07-20261029T164151MSK-ACCESSHOLD-03",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY",
+  "status": "HOLD_RAW_BYTES_UNAVAILABLE",
+  "sourceChanged": false,
+  "schedule": {
+    "plannedStartMSK": "2026-10-29T16:45:00+03:00",
+    "firstObservedMSK": "2026-10-29T16:40:03+03:00",
+    "lastEvidenceMSK": "2026-10-29T16:41:51+03:00",
+    "durationSeconds": null
+  },
+  "provenance": {
+    "baseGitCommit": "d1bb1544d8983c5e39fe120d827927bb5d6ca694",
+    "previousRunID": "T07-20261029T163109MSK-ACCESSHOLD-02",
+    "previousReceiptPath": "coordination/automation/r30/G6-A/T07-20261029T163109MSK-ACCESSHOLD-02.json",
+    "previousReceiptBlobSHA1": "4aa78ffcded1a41033235c269e34fb6d4ea70f18",
+    "ownerLockBlobSHA1": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+  },
+  "expected": {
+    "parts": [
+      {
+        "path": "source_00.part",
+        "size": 20971520,
+        "gitBlobSHA1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      },
+      {
+        "path": "source_01.part",
+        "size": 20971520,
+        "gitBlobSHA1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      },
+      {
+        "path": "source_02.part",
+        "size": 18421306,
+        "gitBlobSHA1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      }
+    ],
+    "assembledBytes": 60364346,
+    "assembledSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "zipMemberCount": 729
+  },
+  "actual": {
+    "partSHA256": [
+      null,
+      null,
+      null
+    ],
+    "assembledBytes": null,
+    "assembledSHA256": null,
+    "membersRead": 0,
+    "membersVerified": 0,
+    "mismatchList": null,
+    "mismatchListStatus": "UNDETERMINABLE_NO_RAW_BYTES",
+    "signedT09SourceLockReceipt": false
+  },
+  "physicalAccessAttemptsThisRun": [
+    {
+      "source": "GitHub fetch_file",
+      "path": "source_00.part",
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "requestedEncoding": "base64",
+      "returnedGitBlobSHA1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "returnedContentLength": 0,
+      "result": "NO_BYTES"
+    },
+    {
+      "source": "Google Drive search",
+      "query": "source_00.part",
+      "matchedFiles": 0
+    },
+    {
+      "source": "Local /mnt/data",
+      "matchedPartFiles": 0
+    }
+  ],
+  "criteria": [
+    {
+      "criterion": 1,
+      "status": "DONE_HISTORICAL",
+      "evidenceRunID": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+      "evidenceReceiptSHA1": "fc50d785cb14f348b6d3070556790d6133a36104",
+      "description": "3/3 Git blob identifiers verified previously; not rechecked"
+    },
+    {
+      "criterion": 2,
+      "status": "DONE_HISTORICAL",
+      "evidenceRunID": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+      "evidenceReceiptSHA1": "fc50d785cb14f348b6d3070556790d6133a36104",
+      "description": "25 snapshots verified previously; not rechecked"
+    },
+    {
+      "criterion": 3,
+      "status": "DONE_HISTORICAL",
+      "evidenceRunID": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+      "evidenceReceiptSHA1": "fc50d785cb14f348b6d3070556790d6133a36104",
+      "description": "968 baseline Git blobs previously verified; not rechecked"
+    },
+    {
+      "criterion": 4,
+      "status": "HOLD",
+      "evidence": "3 .part raw bytes unavailable; no actual physical SHA256"
+    },
+    {
+      "criterion": 5,
+      "status": "HOLD",
+      "evidence": "Expected 60364346 bytes and ff8e...9e9a only; physical combined ZIP not computed"
+    },
+    {
+      "criterion": 6,
+      "status": "HOLD",
+      "evidence": "0/729 member SHA256 calculated; signed immutable T09 SourceLock acceptance absent"
+    }
+  ],
+  "fixedProgress": {
+    "denominator": 6,
+    "completedBefore": 3,
+    "completedAfter": 3,
+    "beforePercent": 50,
+    "afterPercent": 50,
+    "deltaPercentagePoints": 0,
+    "remaining": 3,
+    "bar": "█████░░░░░",
+    "previousProgressRestoredFrom": "Historical T07-20261029T160311MSK-PHYSICALHOLD-01 metadata 3/3 + T07-20261029T163109MSK-ACCESSHOLD-02 physical HOLD"
+  },
+  "handoff": {
+    "owner": "T07 requires byte-preserving access to the three original .part files",
+    "T09": "Preserve metadata DONE; do not issue signed SourceLock manifest/receipt without physical 3-part and 729-member checks.",
+    "T10": "SOURCE_READY must remain HOLD until independently computed physical SHA256 for actual 60364346-byte ZIP and all 729 member hashes, plus T09 receipt.",
+    "T02": "Collect personal immutable receipt into Master/E06/Lessons only as exclusive shared Google Docs writer with CAS+readback."
+  },
+  "appliedLesson": "A correctly identified Git blob with base64 content length 0 is not binary evidence; retain historical metadata DONE, keep expected and actual SHA fields separate, and do not repeat physical hashing until byte-preserving access changes.",
+  "gates": {
+    "SOURCELOCK": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "noBuild": true,
+  "noEXE": true,
+  "noNSIS": true,
+  "noGitLabCI": true,
+  "sharedDocsChanged": false,
+  "noOwnerCodeTouched": true
+}
