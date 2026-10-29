@@ -693,6 +693,59 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertIs(result["model_license_verified"], False)
 
 
+
+    def _g4a_r10_write_zero_payload_header(self, *, shape, optional=None):
+        tensor = {"dtype": "F32", "shape": shape, "data_offsets": [0, 0]}
+        if optional is not None:
+            tensor["optional"] = optional
+        header = json.dumps({"q.weight": tensor}, ensure_ascii=True,
+                            separators=(",", ":")).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header
+        )
+
+    def test_g4a_r10_shape_over_u64_after_zero_dimension_holds_before_hash(self):
+        # Rust safetensors rejects 2**64 as usize; Python int has no ceiling.
+        self._g4a_r10_write_zero_payload_header(shape=[0, 1 << 64])
+        with mock.patch.object(probe, "_sha256_stream",
+                               side_effect=AssertionError("invalid header hashed")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+        self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r10_nested_lone_surrogate_ignored_tensor_member_holds(self):
+        # An unrecognized tensor-member string was skipped by the old scanner.
+        self._g4a_r10_write_zero_payload_header(
+            shape=[0], optional={"annotations": [chr(0xD800)]}
+        )
+        with mock.patch.object(probe, "_sha256_stream",
+                               side_effect=AssertionError("invalid header hashed")):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SAFETENSORS_HEADER_INVALID")
+        self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r10_max_u64_zero_dim_remains_valid(self):
+        # Avoid off-by-one rejection: Rust 64-bit usize accepts this edge.
+        self._g4a_r10_write_zero_payload_header(shape=[0, (1 << 64) - 1])
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 1)
+        self.assertEqual(result["weight_files"][0]["sha256"],
+                         hashlib.sha256((self.root / "model.safetensors").read_bytes()).hexdigest())
+        self.assertFalse(result["snapshot_revision_attested"])
+
+    def test_g4a_r10_valid_nested_unicode_optional_member_remains_valid(self):
+        self._g4a_r10_write_zero_payload_header(
+            shape=[0], optional={"annotations": ["valid-" + chr(0x1F680)]}
+        )
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["tensor_headers"], 1)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
