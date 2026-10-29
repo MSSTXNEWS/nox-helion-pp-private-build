@@ -1,0 +1,40 @@
+{
+  "run_id": "ASTRA-R29-A06-20261029-ORIGINAL729",
+  "status": "PHYSICAL_SOURCE_ARCHIVE_VERIFIED_ONLY",
+  "source_ref": "f04f616091ffae9b2421a1d353e6610550edf327",
+  "source_drive_id": "14SWJzNFgBSuLdSTdPmM2O1ckQ4D4DnDn",
+  "source_title": "NOX_G42_PEFILE_CONFIG_CANONICAL_SOURCE.zip",
+  "discovery_receipt_drive_id": "1U2rskxlA_PNJhWa9X6Og9OqFBiQVROq7",
+  "transfer": "GoogleDrive.fetch download_raw_file=true include_base64=false, authenticated file_uri materialized",
+  "bytes": 60364346,
+  "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "command": "python coordination/e06/verify_original_729_source.py --parts-dir original-parts --out ORIGINAL_729_PHYSICAL_SOURCELOCK.json --run-id ASTRA-R29-A06-20261029-ORIGINAL729",
+  "verifier_code_commit": "21abf41bbf5015203732cff6245aba0f03a4af75",
+  "verifier_files": [
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "sha256": "601991af00f1c03d59d1af3d63eaee1984107c82fe03ca8a411e2f3d3f836595",
+      "git_blob_sha1": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a"
+    },
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "sha256": "089200b6be61a375346fc1825a7ab96bd507d61d57ae79461650381933770307",
+      "git_blob_sha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e"
+    }
+  ],
+  "output_path": "coordination/astra/agents/A06/ORIGINAL_729_PHYSICAL_SOURCELOCK.json",
+  "output_sha256": "9dbe16aa6ab957a314433b293f0967182e6afbfcbe95a5ac8e765d5e16a7f8c9",
+  "file_count": 729,
+  "part_git_blobs_verified": 3,
+  "namespace_crc_member_sha256": "PASS",
+  "code_pass_count": 2,
+  "code_pass_delta": 0,
+  "no_loss": "Original bytes never overwritten, raw archive not republished, only bounded read-only source recovery in isolated cache",
+  "not_claimed": [
+    "OWNER_RECEIPTS_VERIFIED",
+    "UNIFIED_RUNTIME_INTEGRATED",
+    "NATIVE_WINDOWS_ACCEPTED",
+    "RELEASE_ACCEPTED"
+  ],
+  "lesson": "Large GitHub content emptiness is a transport limitation, not unavailable source. Trace exact historical source SHA to observed Drive ID and use streamed authenticated file reference; verify every byte before using recovered code."
+}

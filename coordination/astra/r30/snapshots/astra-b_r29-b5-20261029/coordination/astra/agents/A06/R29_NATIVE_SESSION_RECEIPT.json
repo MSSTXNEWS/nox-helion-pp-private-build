@@ -1,0 +1,38 @@
+{
+  "schema": "NOX_R29_A06_NATIVE_SESSION_SNAPSHOT_V1",
+  "runId": "ASTRA-R29-A06-20261029-IPC-SESSION-01",
+  "parent": "d969e5c8a2c6cec479fb7eacd6db2663f79f6f83",
+  "ownerAssignment": "Root sole ownership for narrow shared native_bridge.py correction; A02 confirmed no shared-file edit",
+  "sourcePreimageGitBlobSha1": "805ade553b3fd102f8995a54632d0ad904316c9c",
+  "codeStartedUtc": "2026-10-29T01:10:14Z",
+  "focusedGreenUtc": "2026-10-29T01:10:56Z",
+  "timingScope": "code materialization through focused GREEN, excludes earlier diagnosis and later save",
+  "testCommand": "NOX_ORIGINAL_ZIP=original-729.zip NOX_PACK01_PATH=proposals/NOX-PACK01-50 python -m unittest discover -s coordination/e06/adapters -p test_pc_control_owner_port.py -v",
+  "red": "10 tests, 4 failing subcases: three identity fields changed by native approval and principal changed by readiness",
+  "green": "10 tests PASS, includes original E11 preview/STOP and exact session versus equal copy, no actual PC execution",
+  "contract": "Snapshot authenticated tenant/principal/chat/allowed/private_approved at common dispatcher admission. Revalidate after JSON preparation, native approval and readiness; preserve same NativeSession object and frozen request payload. This guards native callback contract mutation, not page access to Python objects.",
+  "originalZipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "routePolicyEntries": 50,
+  "sourceFiles": [
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "sha256": "f467c063f138e0fb1da189aa5aeb1e94437940faa263c675e95dd1aa60ef0f85"
+    },
+    {
+      "path": "coordination/e06/adapters/test_pc_control_owner_port.py",
+      "sha256": "2ce843cfae240cd064c36314cd826afa1fad84cb1ff23a155e630a260e89147d"
+    }
+  ],
+  "newVerifiedApproaches": 1,
+  "A06VerifiedApproachesTotal": 4,
+  "nativeWindowsAcceptance": "NOT_RUN",
+  "finalIntegration": false,
+  "lesson": "Snapshot before the first native callback; a downstream adapter cannot recover the identity to which earlier consent was granted. Revalidate the same object across each authority boundary.",
+  "taskLedgerEvidence": {
+    "canonicalReference": "FIN_ZAGR_V15_TASK_LEDGER.csv named by V16 line614; exact file not found in bounded Git tree/Drive name query",
+    "host50Path": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+    "host50Blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "host50Scope": "NIP01 route source ledger, not full weighted product denominator",
+    "fullTaskIDCoverage": "N/D"
+  }
+}

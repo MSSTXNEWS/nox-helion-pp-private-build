@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_V16_E03_C40_R07_RECEIPT_V1",
+  "run_id": "NOX-V16-G1-03-20261028T1148MSK-R07",
+  "owner": "E03",
+  "scope": "ModelCenter C40 P03",
+  "baseline": {
+    "main_commit": "0b3a7d435be735148d64171deb9027093a89646e",
+    "main_tree": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+    "live_main_checked": "MATCH",
+    "pr66": "INVENTORY_ONLY",
+    "original_raw_3parts_sha256": "HOLD",
+    "original_729_member_lock": "HOLD",
+    "e06_new_sourcelock_owner_ack": "HOLD"
+  },
+  "preimage": {
+    "commit": "0d1065cf45b07b6ca7e464d7140fd42a4f8e91d6",
+    "tree": "aa06c5b4d224e8f1550df415e44a11243ab52bb3",
+    "parent_pr": 112
+  },
+  "code_commit": "d8358d73daf8e3762d878ed35a27f190798b8769",
+  "ci_commit": "fcd548e2df127a62e719b3f3462ab5dcb955979c",
+  "branch": "owner3/nox-v16-g1-03-malformed-payload-20261028-r07",
+  "pr": 122,
+  "files": [
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "owner": "E03",
+      "pre_sha256": "b3e1cec060360629d6287c87bd7fe53c6c49f946cb5fc69f8c6c88e00515fbb5",
+      "post_sha256": "ac751b40887418476ac858cd7dcc8297e01bc8d9707a166a72263390ff1ac474",
+      "pre_git_blob_sha1": "eb3590fe8ff494078fbc547481cddcbd2924fe69",
+      "post_git_blob_sha1": "7590fe64cafca8b8807bd0539288c0bddaf12fdb"
+    },
+    {
+      "path": "Packages/P03/Admission/test_p03_modelcenter_gate.py",
+      "owner": "E03",
+      "pre_sha256": "a483f66f4797001f384bc2d8141fa9aed1fd648eea99547d5880b13d020b4d72",
+      "post_sha256": "941593e66c167836a9fd5373f9c653d66d371a9d17e7a7aedd9eec54a69e6883",
+      "pre_git_blob_sha1": "09f66685bb9614cef05d312210a1bdc292dddab1",
+      "post_git_blob_sha1": "23475a36303f620b66bf0e2b7eb94af216e00d05"
+    },
+    {
+      "path": ".github/workflows/e03-g1-03-admission.yml",
+      "owner": "E03",
+      "pre_sha256": "f1d3d28de7dadc23927c98536ea8a3ac8d3eabf76f3a267282aa2781bff9151c",
+      "post_sha256": "301030a17c9b0986463a54e7d2ec8902349d10c029e583feb600d09ed525d29b",
+      "pre_git_blob_sha1": "7529440b19c8c7586d46753a1f34eba2092c43eb",
+      "post_git_blob_sha1": "44c22260b4105966f6e46d573abee7e2e14f8853"
+    }
+  ],
+  "test_receipt": {
+    "r06_baseline_unittests": 106,
+    "r07_additional": 12,
+    "r07_red_before_patch": "2 FAIL + 10 ERRORS on 118 tests",
+    "r07_local_after_patch": "118/118 PASS",
+    "py_compile": "PASS",
+    "yaml_parse": "PASS",
+    "github_source_tree_blob_check": "2/2 MATCH",
+    "github_ci_blob_check": "1/1 MATCH",
+    "github_actions_run_id": 40660012177,
+    "github_actions_ubuntu": "FAILURE_BEFORE_STEPS_TEST_NOT_RUN",
+    "github_actions_windows": "FAILURE_BEFORE_STEPS_TEST_NOT_RUN",
+    "current_windows_exe": "NOT_RUN",
+    "physical_downloads_started": false
+  },
+  "model_inventory": {
+    "ollama_exact_tag_leads": 25,
+    "external_ASR_TTS_image_video_train_leads": 17,
+    "verified_immutable_artifacts": 0,
+    "status": "HOLD"
+  },
+  "task_ids": [
+    "G1.03-R07-01",
+    "G1.03-R07-02",
+    "G1.03-R07-03",
+    "G1.03-R07-04",
+    "G1.03-R07-05",
+    "G1.03-R07-06",
+    "G1.03-R07-07",
+    "G1.03-R07-08",
+    "G1.03-R07-09",
+    "G1.03-R07-10"
+  ],
+  "progress": {
+    "E01": "SOURCE/HOLD/NOT_RUN",
+    "E02": "SOURCE/HOLD/NOT_RUN",
+    "E03": "SOURCE/COMPONENT_OFFLINE_118_118/INTEGRATED_HOLD/WINDOWS_NOT_RUN",
+    "E04": "SOURCE/REAL_GPU_HOLD/WINDOWS_NOT_RUN",
+    "E05": "SOURCE/HOLD/WINDOWS_NOT_RUN",
+    "E06": "SOURCELOCK_HOLD/INTEGRATED_HOLD",
+    "E07": "EXE_QA_0_OF_10_NOT_RUN",
+    "weighted_20_25_20_25_10": "N/D"
+  },
+  "new_error": "Malformed untrusted IPC JSON shapes crashed policy; fractional 729.0 accepted as SourceLock count. Fixed fail-closed with 12 negative regressions.",
+  "one_practical_lesson": "UNTRUSTED_JSON_SHAPE_GATE: validate native decoded mapping/scalar types and strict int provenance counts before membership, dictionary or state-machine operations; reject safely; prove red/green.",
+  "handoff": "E06 verify original raw SHA and owner receipts then wire single native queue; E07 same BuildID EXE acceptance",
+  "no_loss": "No main merges, peer edits, D02/WOW deletion, model downloads or second downloader."
+}

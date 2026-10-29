@@ -1,0 +1,53 @@
+{
+  "run_id": "ASTRA-B-R29-B6-STAGE-TRANSACTION-20261029",
+  "task_id": "B6-E06-STAGE-TRANSACTION",
+  "task_id_kind": "local implementation ID; canonical matrix task_ids were empty",
+  "owner": "B6",
+  "parent_sha": "cbfe853500c781bfeac6419ccc581843ea1bedce",
+  "owner_release_commit": "5a0793926066ecbc50252ce139703165283fe8f4",
+  "source_lock": {
+    "path": "coordination/e06/stage_onehost.py",
+    "pre_git_blob": "8ae8523d83e175cb83a32ca497bb2c15f08948ca",
+    "original_bridge_sha256": "ee978b13a7f1058b1a509a506feef495efe440f410ab63103088fefa08e1d86f",
+    "original_exe_sha256": "4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3",
+    "original_archive_verification": "NOT_RUN"
+  },
+  "changes": [
+    "Prepare bytes and backup before publishing; flush/readback",
+    "Cooperative exclusive lock; refuse existing outputs",
+    "Publish addon without overwrite; atomically replace individual bridge; publish complete receipt last",
+    "Restore exact preimage after exceptions; remove only identity+bytes-matching transaction outputs",
+    "Detected foreign changes or failed rollback preserve recovery files and lock with HOLD"
+  ],
+  "test": {
+    "command": "python -B tests/e06/test_stage_onehost_atomic_b6.py -v",
+    "tests": 8,
+    "result": "PASS",
+    "coverage": "seven prepare/publish/replace fail-once boundaries, temp fsync failure, existing lock, foreign receipt race, early/late bridge drift, rollback failure, success"
+  },
+  "lesson": "Pre-validation is not transactionality: prepare all bytes, publish receipt last, preserve recovery instead of clobbering foreign edits.",
+  "limits": [
+    "Exception rollback, not crash-atomic multi-file commit",
+    "No protection against arbitrary writers ignoring the owner lease; SHA-check and rename are not OS-wide CAS",
+    "Crash leaves lock/backups for manual inspection; automatic stale lock clearing intentionally absent",
+    "Windows/NTFS/hardlink runtime acceptance NOT_RUN",
+    "No source archive reconstruction or release build"
+  ],
+  "source_only": true,
+  "release_accepted": false,
+  "windows_runtime_accepted": false,
+  "shared_journal": "Astra-A sole writer; root handoff only",
+  "drive_readback": "NOT_RUN_BY_B6",
+  "files": [
+    {
+      "path": "coordination/e06/stage_onehost.py",
+      "post_sha256": "6327236ca7f8fd6e32577fa29b3b18e0be92e6974f026b42ea1049eb28574217",
+      "post_git_blob": "4136ae420ed953ad5715b5c4416834327c5fd096"
+    },
+    {
+      "path": "tests/e06/test_stage_onehost_atomic_b6.py",
+      "post_sha256": "74ed2f50858c210e2cba180f4c0ddd26b3863cbdd6943401ee64c12154b64893",
+      "post_git_blob": "777ac97a0d32b5bd4cf7942a06fe6f5d63ca0df2"
+    }
+  ]
+}

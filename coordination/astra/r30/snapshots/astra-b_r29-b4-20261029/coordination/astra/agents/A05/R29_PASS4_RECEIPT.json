@@ -1,0 +1,59 @@
+{
+  "run_id": "ASTRA-R29-A05-4",
+  "source_parent": "dad8ebfb310ea415898abe2a96b283d24453ee09",
+  "owner": "A05/P05",
+  "verified_approaches": 3,
+  "source_blocks": 4,
+  "native_candidates": "TaskID collision and canonical ID bounds: code present, native execution NOT_RUN",
+  "task": "Align existing terminal projection with pinned canonical events.v3 owner and complete counter identity",
+  "contract": {
+    "path": "Contracts/events.v3.json",
+    "git_blob_sha1": "5204e668ab39e4bf4955ff7b405279628b5bbef2"
+  },
+  "tests": {
+    "focused": "6 tests: 2 baseline PASS,4 RED; all6 GREEN after fix",
+    "suite": "40/40 Node runner units PASS, including unchanged125 inline assertions",
+    "native": "NOT_RUN dotnet/csc/mcs unavailable; two C# counterexample/boundary assertions added, no native PASS",
+    "formatting": "git diff --check PASS (not semantic verification)"
+  },
+  "files": [
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre_sha256": "645d8f6032d7bc9e59997fc36aee5a668604e9bb9e02669b3196d6b633d4503f",
+      "post_sha256": "f533d18b95eb11984ff3611aca6d75019671aa3876e049e5fb67c26ba42a631b"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.test.mjs",
+      "pre_sha256": "e5af4d9fca9b5604ca1cc79cd53a9ef7cac500fe99bcc4691a7c08c597ee1b82",
+      "post_sha256": "4aa0c8397df77a8075447783182d2840ffcc446f1afe66b5c65afb6a2a1c36d8"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceRunErrorHistoryR15.test.mjs",
+      "pre_sha256": "c837ef69a5e61f443954c254c9f2b67fb8ec90591ac8b5ff1e7c46612cef7dee",
+      "post_sha256": "b7c044e67ccd09ee19d3de21c5b423f25f9046b6d2948cdb714514c6bd719802"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05CanonicalTerminalR29.test.mjs",
+      "pre_sha256": null,
+      "post_sha256": "e4973dbc7c55ee995f4fbed7c1f9f523b5760c7c8bb74cf54faa1f7b39f4f951"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "pre_sha256": "e33233b9ded37a3642f2a6680eedba417a4e834ca1fb0df46f7d146d7d0174ba",
+      "post_sha256": "a59ec877f5dfb6083be9845aa5309d291ce335aee8c1cb4ea9b4d056dea885e7"
+    },
+    {
+      "path": "Packages/P05/E05/checks/Program.cs",
+      "pre_sha256": "380c70f6a46b01fa72b8a8a506268ed99c1c1f4f2d2568f2deea9c4551aeccaa",
+      "post_sha256": "58c4a078b7308919698898f0ba45ce6bdf576712ae12bd7ae5b5c7685a05584c"
+    }
+  ],
+  "lesson": "Use pinned canonical schema plus existing native numeric admission; repair fixture producers, never loosen ownership or drop required counters to preserve old tests.",
+  "critical_remaining": [
+    "Execute existing native checks covering TaskID collision and ID boundary candidates.",
+    "Current frozen ledger verifier and authenticated host event/Drive composition need evidence; existing implementations preserved."
+  ],
+  "build": "NOT_RUN",
+  "integration": "NOT_RUN",
+  "product_percent": null
+}

@@ -1,0 +1,42 @@
+{
+  "run_id": "ASTRA-R29-A06-20261029-PC-PREVIEW-STOP",
+  "task_ids": [
+    "NIP01-49.PREVIEW_STOP_SOURCE_BINDING"
+  ],
+  "parent": "4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db",
+  "status": "SOURCE_ADAPTER_COMPONENT_VERIFIED",
+  "completed_code_passes": 3,
+  "fix": "Bind existing original E11 PC preview/STOP to existing PACK01 owner1 route without constructing a backend or exposing privileged host methods",
+  "files": [
+    {
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "pre_blob": null,
+      "post_blob": "005866951edbd17a4ab120feecc177c8fd414c8e",
+      "sha256": "b560e214552382b9800b15a70aee30c7159404c017502331a9ed93fa99dcc616"
+    },
+    {
+      "path": "coordination/e06/adapters/test_pc_control_owner_port.py",
+      "pre_blob": null,
+      "post_blob": "9b97e9ee3766d068415c466c18378189ab2be0fb",
+      "sha256": "c078555b4c6570ff0c612a7546c8ff661336e8d63cb89e2d3eebff746caa206d"
+    }
+  ],
+  "tests": {
+    "command": "NOX_ORIGINAL_ZIP=original-729.zip NOX_PACK01_PATH=fixture-pack01 python -m unittest discover -s coordination/e06/adapters -p test_pc_control_owner_port.py -v",
+    "passed": 7,
+    "failed": 0,
+    "original_import": "Real unchanged helion.e11.service.E11Service zipimport from physically verified729 archive",
+    "host_import": "Actual unchanged native_bridge.NoxPackHost and catalog from pinned source fixture",
+    "operations": "Previewticket in memory and original STOP revocation only; no pc_enable_readonly or pc_execute_preview call"
+  },
+  "source_archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+  "runtime_wiring": "Future trusted host provides native_binding_from_session(session)->NativePcBinding(session,existing_session_owned_E11_service,native_project) and owner_ready; adapter.register(existing_host,receipt=owner_receipt)",
+  "limits": [
+    "Native binding provider must return an already-owned session service because original pc_stop revokes the whole instance",
+    "Host-only enable/execute and original PCModelController/ConsentGate remain unchanged and unexposed",
+    "Original service/host not copied or altered",
+    "Windows runtime, actual PC execution, final integration NOT_RUN; full NIP01-49 completion not claimed"
+  ],
+  "lesson": "Recover exact original implementation first. Adapt its restricted page API and existing session owner, not privileged methods or a newly constructed backend; preserve fresh consent and reject page identity overrides.",
+  "host_blob_sha1": "805ade553b3fd102f8995a54632d0ad904316c9c"
+}

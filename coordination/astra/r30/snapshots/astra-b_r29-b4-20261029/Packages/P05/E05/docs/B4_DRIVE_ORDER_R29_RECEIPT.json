@@ -1,0 +1,24 @@
+{
+  "run_id": "ASTRA-B-R29-B4-20261029-01",
+  "task_id": "B4-P05-DRIVE-ORDER-01",
+  "task_id_scope": "local defect ID; not weighted V16 acceptance",
+  "base_sha": "856d225543e78103868b3b04f0c53398437513f7",
+  "owner": "/root/b4",
+  "owner_handoff": "coordination/astra/ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "source_lock": {
+    "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+    "pre_git_blob": "4390085208078e9f5bf21c16155e1b046301cd13",
+    "post_sha256": "36467d721a4661788d512da605ff231b6b2444b05ce130e9957962fd78f43754"
+  },
+  "change": "Canonical report/lessons/master write order; caller order no longer suppresses independent report receipts at master HOLD.",
+  "checks": {
+    "source_review": "PASS",
+    "permutation_control_flow_model": "12/12 PASS; not C# execution",
+    "authored_csharp_http_fixture": "12 scenarios NOT_RUN; dotnet/csc/mcs unavailable",
+    "build": "NOT_RUN"
+  },
+  "lesson": "Validate and pin destinations once; choose workflow order explicitly. Keep standalone regression project outside recursive existing checks glob.",
+  "report_gate": "HOLD pending Astra-A shared journal readback",
+  "product_readiness": "NOT_DECLARED",
+  "checkout": "Git clone unavailable (credentials); isolated source snapshot plus connector-backed branch preserves full parent tree."
+}

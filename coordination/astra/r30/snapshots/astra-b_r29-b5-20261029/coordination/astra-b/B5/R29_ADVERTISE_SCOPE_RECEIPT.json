@@ -1,0 +1,27 @@
+{
+  "schema": "NOX_AST​RA_B_SOURCE_RECEIPT_V1",
+  "runId": "ASTRA-B-B5-R29-ADVERTISE-SCOPE-01",
+  "taskId": "B5-ADVERTISE-SESSION-CALLBACK",
+  "taskIdScope": "local candidate; full canonical denominator not established",
+  "owner": "B5",
+  "baseCommit": "cbfe853500c781bfeac6419ccc581843ea1bedce",
+  "releaseCommit": "5a0793926066ecbc50252ce139703165283fe8f4",
+  "sourceLock": {
+    "preimageGitBlob": "ed2bc0f16dce327fa4e51400da684a29e4758089",
+    "preimageSha256": "f467c063f138e0fb1da189aa5aeb1e94437940faa263c675e95dd1aa60ef0f85",
+    "postSha256": "ab2fe38d65f01a55c4c4f8a798d9f4cd832493eabe152417e6a2c89f6d64a9e5"
+  },
+  "test": {
+    "command": "python -B tests/e06/test_pack01_advertise_session_r29.py",
+    "result": "PASS",
+    "testMethods": 1,
+    "subcases": 15,
+    "testSha256": "7977ecb1391d6f9cf866c239511e27f7d633a74c042ffba65541c09a91d86a0f"
+  },
+  "change": "Pin validated native session identity and permissions throughout advertise, including failing readiness callbacks; reject partial stale capability result.",
+  "lesson": "Revalidate session outside callback exception handler: mutation followed by callback failure must not evade the guard.",
+  "nativeWindowsAcceptance": "NOT_RUN",
+  "finalIntegration": false,
+  "reportGate": "SHARED_JOURNAL_OWNER_ROOT; Git receipt fallback; Drive readback not claimed",
+  "completedApproaches": 1
+}

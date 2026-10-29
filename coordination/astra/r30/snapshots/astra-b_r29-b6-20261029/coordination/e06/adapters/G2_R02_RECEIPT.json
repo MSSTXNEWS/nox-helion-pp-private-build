@@ -1,0 +1,195 @@
+{
+  "schema": "NOX-E06-G2-05-R02-OWNER-6-SOURCE-RECEIPT-v1",
+  "runId": "NOX-V16-E06-G2-05-20261028T0712MSK-R02",
+  "generatedOn": "2026-10-28",
+  "sourceRepo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "draftPr": 70,
+  "baseCommitGitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+  "baseTreeGitSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+  "sourceBaselineMode": "PR66_INVENTORY_NOT_EXTRACTED_WHOLE_APP_SEAL",
+  "r03Original729ManifestSha256": "806c748e939c9acca3c3055ae731a752504ef2723d077c0bb07fd89904fd98df",
+  "r03RawBinarySourcePartsSha256": "N_D_UNVERIFIED",
+  "branch": "e06/v16-g2-05-space-mobile-20261028-c01",
+  "owner": "E06#6",
+  "files": [
+    {
+      "path": "coordination/e06/adapters/g2_space_mobile.py",
+      "preSha256": "6c04df150466ff7cb22faa1b82416d1f095285f8a833e14739f97b6730d4a8b6",
+      "preGitBlobSha1": "50d28e1affb4b2d40da050b2786b1d070c09ec71",
+      "postSha256": "8dbc742663c33446a19546a2f17f2c88ed30f2c90ab17eb475c69045a3827b7e",
+      "postGitBlobSha1": "0af98aebf380a2a967d44c696d00d18fddebeb34",
+      "diff": "two narrow Python changes: native mobile port only binds when ready; copy immutable receipt mapping",
+      "tasks": [
+        "G2-05-02",
+        "G2-05-08",
+        "G2-05-09"
+      ],
+      "owner": "E06 (#6)",
+      "runId": "NOX-V16-E06-G2-05-20261028T0712MSK-R02",
+      "preimageBaseGitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "preimageBaseGitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLockOwnerR03RawBytes": "HOLD",
+      "readback": "EXACT_FILE_BYTES_SHA256_AND_GIT_BLOB_SHA1_MATCH",
+      "windowsTests": "32_DEFINED_0_EXECUTED_CURRENT_HEAD"
+    },
+    {
+      "path": "tests/e06/adapters/test_g2_space_mobile.py",
+      "preSha256": "225d5b8dfbdb14ef33c664ec001111b719192f19194ce44bfb752592e4f06874",
+      "preGitBlobSha1": "085215cd68c1804aec28fd916e5024108752ce40",
+      "intermediateSha256": "f9bfe491af95f8e06e2fb8cde048cc7e9d39b7501745a9199b251b3154731fcb",
+      "intermediateGitBlobSha1": "c74698316de306a99978a2c1ab62a2c4b82def31",
+      "postSha256": "eece8b05ebfe5b6bdd9b3c2fbd195e92f9a049c7ddf0c2d602e430bd517b26da",
+      "postGitBlobSha1": "57e77b9c542586e3957edc6f4e740e9c6e80ffa0",
+      "diff": "add 3 regression tests (32 total), use original BoundPort.evidence_id property instead of nonexistent .receipt",
+      "tasks": [
+        "G2-05-10"
+      ],
+      "owner": "E06 (#6)",
+      "runId": "NOX-V16-E06-G2-05-20261028T0712MSK-R02",
+      "preimageBaseGitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "preimageBaseGitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLockOwnerR03RawBytes": "HOLD",
+      "readback": "EXACT_FILE_BYTES_SHA256_AND_GIT_BLOB_SHA1_MATCH",
+      "windowsTests": "32_DEFINED_0_EXECUTED_CURRENT_HEAD"
+    },
+    {
+      "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+      "preSha256": "33d7f9ec3ecbb48e8525344435e36c9c217a71d4c773a65f1f7bf4e52de72ef7",
+      "preGitBlobSha1": "6b97c4c47bd7c1c1b80ff9a49d5ce42a9d76f2c0",
+      "postSha256": "fa067815784c8ae51bc3c2e5fd449546fdfbee143fabb9f2aaea7c58a2dbc19d",
+      "postGitBlobSha1": "93037911ecd81c925c61da0c9a8de5c6d2a7a1d1",
+      "diff": "update exact Windows suite label from 29 to 32, same pinned owner modules",
+      "tasks": [
+        "G2-05-10"
+      ],
+      "owner": "E06 (#6)",
+      "runId": "NOX-V16-E06-G2-05-20261028T0712MSK-R02",
+      "preimageBaseGitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "preimageBaseGitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLockOwnerR03RawBytes": "HOLD",
+      "readback": "EXACT_FILE_BYTES_SHA256_AND_GIT_BLOB_SHA1_MATCH",
+      "windowsTests": "32_DEFINED_0_EXECUTED_CURRENT_HEAD"
+    },
+    {
+      "path": "coordination/e06/adapters/G2_R02_HANDOFF.md",
+      "preSha256": "ABSENT",
+      "preGitBlobSha1": "ABSENT",
+      "postSha256": "14038019d2979091d44c5cd3ddf17c5038a8df39a71ea39ea6bf63bdf919a9a3",
+      "postGitBlobSha1": "a7ea1cd0234303898255c6acb242aac24946a755",
+      "diff": "NEW standalone R02 owner7 handoff, ten tasks, seven lanes, one improvement",
+      "tasks": [
+        "G2-05-01",
+        "G2-05-10"
+      ],
+      "owner": "E06 (#6)",
+      "runId": "NOX-V16-E06-G2-05-20261028T0712MSK-R02",
+      "preimageBaseGitCommitSha1": "0b3a7d435be735148d64171deb9027093a89646e",
+      "preimageBaseGitTreeSha1": "f108d604c444f718b32aaecfd07b90b8f91b9a6f",
+      "sourceLockOwnerR03RawBytes": "HOLD",
+      "readback": "EXACT_FILE_BYTES_SHA256_AND_GIT_BLOB_SHA1_MATCH",
+      "windowsTests": "32_DEFINED_0_EXECUTED_CURRENT_HEAD"
+    }
+  ],
+  "previousHistoricalC01Receipt": "coordination/e06/adapters/G2_RECEIPT.json",
+  "previousReceiptRetainedUnchanged": true,
+  "receiptFileSelfHash": "POST_WRITE_EXTERNAL_MASTER_E06_ONLY",
+  "realModelDownloads": 0,
+  "paidCallsStarted": 0,
+  "publicPortsOpenedByThisAdapter": 0,
+  "workflow": {
+    "path": ".github/workflows/nox-e06-g2-space-mobile.yml",
+    "testDefinitions": 32,
+    "actualCurrentHeadWindowsTests": "NOT_RUN",
+    "currentWinInstaller": "NOT_RUN",
+    "sourceOnlyLocalEvaluation": "NOT_RUN",
+    "noPassFabrication": true
+  },
+  "taskIDs": {
+    "G2-05-01": "SOURCE_BASELINE_VERIFIED_APP_RAW_PARTS_HOLD",
+    "G2-05-02": "SOURCE_BASELINE_VERIFIED_APP_RAW_PARTS_HOLD",
+    "G2-05-03": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-04": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-05": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-06": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-07": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-08": "SOURCE_PRIVATE_MOBILE_PORT_FIX_VERIFIED_ON_READBACK_WINDOWS_HOLD",
+    "G2-05-09": "SOURCE_ONLY_INTEGRATION_HOLD",
+    "G2-05-10": "SOURCE_32_TESTS_DEFINED_WINDOWS_NOT_RUN"
+  },
+  "sevenIndicators": [
+    {
+      "executor": "E01",
+      "tasks": "V16.26.3,G1.01–10",
+      "source": "PR77",
+      "component": "LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E02",
+      "tasks": "V16.26.4,G1.C14",
+      "source": "PR76",
+      "component": "LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E03",
+      "tasks": "V16.26.5,G1.03.01–10",
+      "source": "PR78",
+      "component": "LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E04",
+      "tasks": "V16.26.6,G1.04",
+      "source": "PR74",
+      "component": "GPU_N_D",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E05",
+      "tasks": "V16.26.7,G1.05",
+      "source": "PR75",
+      "component": "LOCAL_ONLY",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E06",
+      "tasks": "G2-05-01..10",
+      "source": "PR70_R02",
+      "component": "32_TESTS_DEFINED_NOT_RUN",
+      "integrated": "HOLD_ORIGINAL_SOURCELOCK",
+      "windowsAccepted": "NOT_RUN",
+      "percent": null
+    },
+    {
+      "executor": "E07",
+      "tasks": "QA01–QA10",
+      "source": "PR46_DIAGNOSTIC",
+      "component": "HISTORIC_ONLY",
+      "integrated": "HOLD",
+      "windowsAccepted": "NOT_RUN_FINAL",
+      "percent": null
+    }
+  ],
+  "weights": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10
+  },
+  "weightedProgress": null,
+  "release": "BLOCKED",
+  "exactlyOneLesson": "Freeze admission from one immutable owner-receipt snapshot and only register/advertise mobile when current native private gateway is attested; revoke=HOLD, with negative regression.",
+  "nextGate": "Owner6 seal exact 3 raw source part SHA-256 and current 729 tree; E07 rerun exact PR70 HEAD Windows 32 tests, then same EXE SHA physical acceptance."
+}

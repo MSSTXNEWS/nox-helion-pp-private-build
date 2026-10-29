@@ -1,0 +1,24 @@
+# NOX FIN ZAGR V16 · ASTRA MAIN + SIX SUBAGENTS · SOURCE-ONLY EXPRESS INTEGRATOR
+**R29 supersedes all old ten-agent and whole-NOX wording, including R23-R28.** Do not develop standalone NOX HELION AI. Only finish **existing NOX HELION EXPRESS INTEGRATOR Windows loader-installer** in source code through 100% V16 TaskIDs.
+
+SOURCE: PRIVATE `MSSTXNEWS/nox-helion-pp-private-build`, working `astra/v16-code-complete-source-only-20261029`. Do not push PR162/main or final integrate. The distinct owner-chosen builder is GitLab Free `s-grouptwet/nox-helion-pp-private-build` — NO GitLab CI, EXE, NSIS or E07 until source complete. Exact future path `coordination/astra/ASTRA_R26_GITLAB_FREE_PRIMARY_BUILD_HANDOFF.md`.
+
+**ONE ASTRA CONTROLLER + SIX REAL SUBAGENTS A01–A06 ONLY.** Ten source approaches per subagent, 60 scheduled. This is NOT ten subagents and not 100 completed tasks. Actual spawn only with a real spawn tool and worker IDs; without a tool `SUBAGENT_SPAWN_UNAVAILABLE`, proceed personally with six queues rather than stop. No extra workload outside loader. Each role owns only its file scope and does not change another owner's code without handoff:
+- **A01 P01 (20%)**: one approved original Express Integrator WPF/WebView2 HOME/MENU/CORE, 8 MENU ≠ 8 CoreID, five Persona, real buttons, D02/WOW200, install/update/rollback/uninstall source and data protection.
+- **A02 P02 (25%)**: source contracts to EXISTING single Ollama streaming/chat/STOP, SQL history ACL and attachments, voice RU↔ES and RAG citations; no new local AI product/SQLite/chat architecture.
+- **A03 P03 (20%)**: original ModelCenter downloader and installer, 24+ weights catalog, GGUF/real Pull, progress/STOP/retry/resume, legal revisions/licensing, prereqs Python/Ollama/Git/WebView2.
+- **A04 P04 (25%)**: installation/use of EXISTING RAG/embeddings/PEFT LoRA/QLoRA/GPU owner contract, legal dataset and checkpoints; do not build new training engines.
+- **A05 P05 (10%)**: events.v3, real status sensors, six progress bars of P01–P05 plus combined, SPACE/status/Google Drive receipts and self-improvement.
+- **A06 E06 (without weight)**: SourceLock original three-part ZIP/729 members, V15 56 rules, complete TaskID/owner maps, existing host IPC, safe GitLab handoff planning. **No premature integration or build.**
+
+**MANDATORY EXACT 60-PASS MATRIX:** `coordination/astra/ASTRA_R29_ONE_ASTRA_PLUS_6_AGENTS_10_PASSES.json` (predecessor ten-agent archive is obsolete, do not execute it). Keep one source controller writer for shared GitHub/Drive ledgers; separate owner branches/worktrees when real workers run. Source file pre/post exact Git blobs, narrow tests and no-loss for each TaskID.
+
+**RULES:** read full `coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md` (all 01–56 verified) and [official FIN ZAGR V16](https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit). The original full loader requirements §§1–33 govern functional scope; new §§54–56 override obsolete early-build/roles instructions, not useful functions.
+
+**JOURNALS:** before a launch read latest master V16 errors, historical C34, last E06 run report and last lesson. After actual source coding append exact RunID, real fixes/errors and lesson to existing Google Drive Docs and verify readback per `coordination/astra/ASTRA_R24_MANDATORY_JOURNAL_RW_EVERY_LAUNCH.md`. If Drive unavailable, source commits still proceed, Git fallback and REPORT_GATE HOLD. The 56 rule audit and journals are not a substitute for writing code.
+
+**ZERO-LOSS:** original 968 Git blob path manifest, 3 parts/729 files, approved graphics/personas/WOW, 50+50 toolkit routes. Original raw archive and semantic functions are not declared independently verified just because Git metadata exists. `coordination/astra/verify_astra_no_loss_r23.py` is fast check. Preserve historical source candidates without blindly merging PR204/208/209/210/211.
+
+**EACH APPROACH:** target a real incomplete loader TaskID; read current owner SHA; implement existing owner source path or adapt existing native route; execute targeted source test; commit exact code, pre/post hashes and honest receipt; apply concrete prior lesson; next task. For hardware/license unavailable record HOLD and continue other code. Six progress bars A01–A06 show measured completed passes 0–10; separate PRODUCT P01–P05 TaskID coverage weights 20/25/20/25/10 only with verified denominator, otherwise N/D. Any attempt to build NOX product from scratch is OUT OF SCOPE.
+
+**STOP only after max feasible real loader code progress in the current run**, leave saved next checkpoint. The final deliverable is `LOADER_SOURCE_CODE_COMPLETE_CANDIDATE` for independent single integration and later GitLab Free final Windows build/E07. No background promises without real scheduler.
