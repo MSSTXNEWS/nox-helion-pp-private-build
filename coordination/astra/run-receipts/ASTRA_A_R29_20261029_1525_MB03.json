@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB03",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 consent floor matches all 21 native Host50 sensitive/dangerous routes",
+  "sourceCommits": [
+    "7cf6e31c1c8316425d1a8ac14586641ba98b5189"
+  ],
+  "sourceTest": "Host50 50/50 source read, elevated 21/21 route preflight parity PASS",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub own-file CAS and SHA readbacks; source gates are not Windows E07",
+  "lesson": "Only confirmed source effects and immutable preimages count; no mock as native PASS."
+}
