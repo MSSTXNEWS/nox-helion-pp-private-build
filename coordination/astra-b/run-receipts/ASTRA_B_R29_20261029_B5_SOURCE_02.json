@@ -1,0 +1,12 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-B5-02",
+  "task_id": "B5-E06-POSTCALL-IDENTITY",
+  "owner": "B5",
+  "source_sha": "58d57cbe52b4311b2a42745f49b17215c728f6c3",
+  "source_only": true,
+  "source_readback": "PASS",
+  "targeted_check": "SOURCE_INVARIANT_PASS",
+  "native_execution": "NOT_RUN",
+  "source_complete": false,
+  "report_writer": "ASTRA_A"
+}
