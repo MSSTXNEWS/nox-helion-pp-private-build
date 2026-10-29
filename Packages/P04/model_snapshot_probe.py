@@ -42,7 +42,7 @@ def _safe_root(root: Path) -> Path:
     return original
 
 
-def _json_file(path: Path) -> dict:
+def _json_file(path: Path, *, return_sha: bool = False):
     if not _regular(path) or path.stat().st_size > MAX_JSON_BYTES:
         raise ValueError("MODEL_METADATA_INVALID")
     try:
@@ -53,12 +53,13 @@ def _json_file(path: Path) -> dict:
                     raise ValueError("duplicate model metadata key")
                 values[key] = value
             return values
-        obj = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_pairs)
+        raw = path.read_bytes()
+        obj = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_pairs)
     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
         raise ValueError("MODEL_METADATA_INVALID")
-    return obj
+    return (obj, hashlib.sha256(raw).hexdigest()) if return_sha else obj
 
 
 def _sha256(path: Path) -> str:
@@ -277,7 +278,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         if not isinstance(expected_revision, str) or not REVISION_RE.fullmatch(expected_revision):
             raise ValueError("IMMUTABLE_REVISION_REQUIRED")
         base = _safe_root(root)
-        config = _json_file(base / "config.json")
+        config, config_sha256 = _json_file(base / "config.json", return_sha=True)
         if not isinstance(config.get("model_type"), str) or not config["model_type"].strip():
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
         index = base / "model.safetensors.index.json"
@@ -320,7 +321,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": artifact["bytes"],
                 "sha256": artifact["sha256"],
             })
-        report["candidate_sha256"] = _sha256(base / "config.json")
+        report["candidate_sha256"] = config_sha256
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
     except (ValueError, OSError) as exc:
