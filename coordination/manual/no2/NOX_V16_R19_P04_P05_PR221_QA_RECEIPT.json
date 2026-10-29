@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_V16_MANUAL2_R19_PR221_SOURCE_QA",
+  "run_id": "NOX-V16-M2-20261029-R19-P04P05-STATIC-OWNER-HANDOFF",
+  "scope": "INDEPENDENT QA ON ORIGINAL P04/P05 SOURCE, NOT NATIVE WINDOWS",
+  "owner": "manual #2 independent source QA, no product code write",
+  "product_repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "canonical_pr162_head_seen": "53ce1653fd1cc2c186472ea4c538d7a9ed0b458a",
+  "owner_pr221_head": "f1a391bd40003c5f098580ddc7e068450c8b193d",
+  "files": [
+    {
+      "path": "Packages/P04/Rag/RagIngestionService.cs",
+      "pre": "a45386b1e3b4f3eb87e3452529b652328bcec687",
+      "post": "d68b09de46b07f98f40f8254a399d5679e6e862a",
+      "changed": true
+    },
+    {
+      "path": "Packages/P04/Rag/RagService.cs",
+      "pre": "a6730cd630dc7c9adc335b6182940ca84c4107ca",
+      "post": "a98cf03da0ffeabe959faa9d7aa11608fdd04a21",
+      "changed": true
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre": "78cb5cefac8a1aad3af9338dc42653eac94f5537",
+      "post": "5eceeaa130e9c06d030171212ce38709577ad77c",
+      "changed": true
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre": "83800381c0adb0070f968590db2ff3e550810285",
+      "post": "2335f8f00a3808ec09e7a5e59e2fbfb61d712768",
+      "changed": true
+    }
+  ],
+  "preimage_rule": "T06 must re-fetch all current path blobs and compare exact pre before CAS; source tree can change",
+  "checks": {
+    "total": 18,
+    "passed": 18,
+    "status": "PASS_STATIC_ONLY",
+    "focus": [
+      "P04 SID and conversation scope",
+      "P04 byte-exact full citation SHA and nontruncation",
+      "P04 cancellation guard",
+      "P05 approved response endpoint including redirects",
+      "P05 STOP before cache",
+      "P05 future timestamps typed INVALID",
+      "P05 test callbacks and malformed timestamp cases"
+    ],
+    "dotnet": "NOT_RUN",
+    "native_host": "NOT_RUN"
+  },
+  "priority": "T06 sole PR162 source writer; preserve ACL/STOP/native consent/SourceLock; T08 independent same-head QA",
+  "journal": "T02 only shared writer",
+  "release": "NO_EXE_NSIS_CI_E07",
+  "done_product_task_ids_new": 0
+}
