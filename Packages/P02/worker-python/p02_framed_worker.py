@@ -66,26 +66,41 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
     workers: list[threading.Thread] = []
     count = 0
     fatal_errors: list[Exception] = []
+    output_failed = threading.Event()
+
+    def require_output_transport() -> None:
+        if output_failed.is_set():
+            raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED")
 
     def send(payload: bytes) -> None:
-        if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
-            raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
-        with write_lock:
-            # Raw host pipes may accept only part of a write. Keep the entire
-            # frame under one lock and require progress before acknowledging it.
-            for part in (_HEADER.pack(len(payload)), payload):
-                view = memoryview(part)
-                while view:
-                    written = writer.write(view)
-                    if type(written) is not int or not 0 < written <= len(view):
-                        raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED")
-                    view = view[written:]
-            writer.flush()
+        try:
+            if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
+                raise ProtocolHold("NATIVE_FRAME_OUTPUT_INVALID")
+            with write_lock:
+                require_output_transport()
+                # Raw host pipes may accept only part of a write. Keep the entire
+                # frame under one lock and require progress before acknowledging it.
+                for part in (_HEADER.pack(len(payload)), payload):
+                    view = memoryview(part)
+                    while view:
+                        written = writer.write(view)
+                        if type(written) is not int or not 0 < written <= len(view):
+                            raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED")
+                        view = view[written:]
+                writer.flush()
+        except Exception as exc:
+            # A partial frame/failed flush has unknown delivery. Never append a
+            # new reply or admit another native operation on that same stream.
+            output_failed.set()
+            if isinstance(exc, ProtocolHold):
+                raise
+            raise ProtocolHold("NATIVE_OUTPUT_TRANSPORT_FAILED") from exc
 
     def dispatch(data: bytes, nonce: str | None) -> None:
         nonlocal active
         try:
             try:
+                require_output_transport()
                 result = ingress.handle(data)
             except ProtocolHold as exc:
                 # Only fixed, documented error codes are returned. No raw data,
@@ -105,6 +120,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
 
     try:
         while True:
+            require_output_transport()
             header = reader.read(1)
             if header == b"":
                 break
@@ -117,6 +133,9 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
             if not 0 < size <= MAX_INPUT:
                 raise ProtocolHold("NATIVE_FRAME_SIZE_INVALID")
             data = _read_exact(reader, size)
+            # A worker can lose its reply while this reader is blocked. Check
+            # again after input arrives, before parsing/admitting more work.
+            require_output_transport()
             count += 1
             nonce = None
             route = None
@@ -145,6 +164,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
                     send(_encode_status(ingress, nonce, code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,99}", code) else "NATIVE_PROVIDER_HOLD"))
                 continue
             with active_lock:
+                require_output_transport()
                 if active:
                     busy = True
                 else:

@@ -1,0 +1,54 @@
+test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) ... 
+  test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='zero') ... FAIL
+  test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='write_error') ... FAIL
+  test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='flush_error') ... FAIL
+
+======================================================================
+FAIL: test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='zero')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_frame_failure_latch_r29.py", line 49, in test_reply_failure_prevents_later_native_request_and_more_frame_writes
+    self.assertEqual(dispatcher.seen,['chat.model'])
+AssertionError: Lists differ: ['chat.model', 'chat.model'] != ['chat.model']
+
+First list contains 1 additional elements.
+First extra element 1:
+'chat.model'
+
+- ['chat.model', 'chat.model']
++ ['chat.model']
+
+======================================================================
+FAIL: test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='write_error')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_frame_failure_latch_r29.py", line 49, in test_reply_failure_prevents_later_native_request_and_more_frame_writes
+    self.assertEqual(dispatcher.seen,['chat.model'])
+AssertionError: Lists differ: ['chat.model', 'chat.model'] != ['chat.model']
+
+First list contains 1 additional elements.
+First extra element 1:
+'chat.model'
+
+- ['chat.model', 'chat.model']
++ ['chat.model']
+
+======================================================================
+FAIL: test_reply_failure_prevents_later_native_request_and_more_frame_writes (test_p02_frame_failure_latch_r29.FailureAdmissionTests.test_reply_failure_prevents_later_native_request_and_more_frame_writes) (failure='flush_error')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d06a942f0895/agents/R29-A02/Packages/P02/worker-python/test_p02_frame_failure_latch_r29.py", line 49, in test_reply_failure_prevents_later_native_request_and_more_frame_writes
+    self.assertEqual(dispatcher.seen,['chat.model'])
+AssertionError: Lists differ: ['chat.model', 'chat.model'] != ['chat.model']
+
+First list contains 1 additional elements.
+First extra element 1:
+'chat.model'
+
+- ['chat.model', 'chat.model']
++ ['chat.model']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=3)
