@@ -77,7 +77,7 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
     def test_indexed_shard_valid(self):
         (self.root / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"a": "model-00001-of-00001.safetensors"}}),
+            json.dumps({"weight_map": {"q.weight": "model-00001-of-00001.safetensors"}}),
             encoding="utf-8"
         )
         make_weights(self.root / "model-00001-of-00001.safetensors")
@@ -138,6 +138,44 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         (self.root / "model.safetensors").write_bytes(
             len(encoded).to_bytes(8, "little") + encoded + bytes(4))
         self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
+
+
+    def test_index_tensor_names_match_exact_shard_contents(self):
+        shard1, shard2 = "model-1.safetensors", "model-2.safetensors"
+        def write_shard(name, tensor_names):
+            header = {tensor: {"dtype": "F32", "shape": [1],
+                              "data_offsets": [i * 4, (i + 1) * 4]}
+                      for i, tensor in enumerate(tensor_names)}
+            raw = json.dumps(header).encode("utf-8")
+            (self.root / name).write_bytes(
+                len(raw).to_bytes(8, "little") + raw + bytes(4 * len(tensor_names)))
+        cases = [
+            ({"q": shard1, "r": shard2}, ["q"], ["r"], True),
+            ({"q": shard1}, ["missing"], ["r"], False),
+            ({"q": shard1}, ["q", "undeclared"], ["r"], False),
+            ({"q": shard1, "r": shard2}, ["r"], ["q"], False),
+        ]
+        for mapping, first, second, valid in cases:
+            with self.subTest(mapping=mapping, first=first, second=second):
+                write_shard(shard1, first)
+                write_shard(shard2, second)
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": mapping}), encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY" if valid else "HOLD")
+                if not valid:
+                    self.assertEqual(result["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
+
+    def test_duplicate_index_tensor_mapping_is_rejected(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            '{"weight_map":{"q.weight":"missing.safetensors","q.weight":"model.safetensors"}}',
+            encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_METADATA_INVALID")
+
+    def test_count_helper_contract_is_preserved(self):
+        self.assertEqual(probe._weight_header(self.root / "model.safetensors"), 1)
 
 
 if __name__ == "__main__":

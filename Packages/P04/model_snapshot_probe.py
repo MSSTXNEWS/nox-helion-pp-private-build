@@ -46,8 +46,15 @@ def _json_file(path: Path) -> dict:
     if not _regular(path) or path.stat().st_size > MAX_JSON_BYTES:
         raise ValueError("MODEL_METADATA_INVALID")
     try:
-        obj = json.loads(path.read_text(encoding="utf-8"))
-    except (UnicodeError, ValueError, OSError) as exc:
+        def unique_pairs(pairs):
+            values = {}
+            for key, value in pairs:
+                if key in values:
+                    raise ValueError("duplicate model metadata key")
+                values[key] = value
+            return values
+        obj = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_pairs)
+    except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
         raise ValueError("MODEL_METADATA_INVALID")
@@ -172,7 +179,7 @@ def inspect_wheel(path: Path, *, expected_sha256: str, target_tags,
     return report
 
 
-def _weight_header(path: Path) -> int:
+def _weight_tensor_names(path: Path) -> frozenset[str]:
     if not _regular(path):
         raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
     size = path.stat().st_size
@@ -221,7 +228,12 @@ def _weight_header(path: Path) -> int:
         cursor = end
     if cursor != capacity:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    return len(tensors)
+    return frozenset(k for k in header if k != "__metadata__")
+
+
+def _weight_header(path: Path) -> int:
+    """Retain the count-only helper contract for existing callers."""
+    return len(_weight_tensor_names(path))
 
 
 def inspect(root: Path, expected_revision: str | None) -> dict:
@@ -245,6 +257,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         if not isinstance(config.get("model_type"), str) or not config["model_type"].strip():
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
         index = base / "model.safetensors.index.json"
+        weights = None
         if index.exists() or index.is_symlink():
             metadata = _json_file(index)
             weights = metadata.get("weight_map")
@@ -271,8 +284,12 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
-            tensor_count = _weight_header(file)
-            report["tensor_headers"] += tensor_count
+            tensor_names = _weight_tensor_names(file)
+            if weights is not None:
+                expected_names = frozenset(tensor for tensor, shard in weights.items() if shard == name)
+                if tensor_names != expected_names:
+                    raise ValueError("MODEL_SHARD_TENSOR_MAP_MISMATCH")
+            report["tensor_headers"] += len(tensor_names)
             report["weight_files"].append({
                 "name": name,
                 "bytes": file.stat().st_size,
