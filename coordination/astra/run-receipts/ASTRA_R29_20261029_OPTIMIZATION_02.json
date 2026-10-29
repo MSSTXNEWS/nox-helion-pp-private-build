@@ -1,0 +1,58 @@
+{
+  "run_id": "ASTRA-R29-20261029-OPTIMIZATION-02",
+  "scope": "NOX HELION EXPRESS INTEGRATOR source only",
+  "previous_checkpoint": "d4c78f5808675c41226d333496c657606fcf72a1",
+  "owner_commits": {
+    "A01": "755c7968a5ddbcb85b858a4dda53d31a956892b5",
+    "A02": "e7175b6058394a7a13b89a407266e83b37d27987",
+    "A03": "39f230a04cd9dcedbee0dca5d31c2cf115f1623b",
+    "A04": "507dadf2dc7c0f6b16f56f41262b8f1943bcc488",
+    "A05": "dad8ebfb310ea415898abe2a96b283d24453ee09",
+    "A06": "d4ec96dfc170054ad9e84f791f8ff3bfb1fd3a38"
+  },
+  "verified_approaches": [
+    2,
+    6,
+    4,
+    5,
+    2,
+    3
+  ],
+  "verified_total": 22,
+  "A05_extra_candidate": "Cross-lane TaskID C# collision patch: native test NOT_RUN, excluded from22",
+  "physical_original729_proof_commit": "4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db",
+  "journal_readback": [
+    {
+      "name": "lesson",
+      "document_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "revision": "AHj4eMTYY0kGCjulFQ6YY96uiD1rxVLsssUrBsisquxGL9HTZuwY4bUxz_Cc7Zd1WGjLJvf20FaQd5SDTzZqKTfbwZZpi5ltlj1vuTIxgdU",
+      "exact_readback": true,
+      "occurrences": 1
+    },
+    {
+      "name": "master",
+      "document_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "revision": "AHj4eMRVEO9EDNt2uHcam3LZDTI119OdofdKREybFa9vxJrOqDzma1BxX3rbU3IDUq99ZqoqL2QrhgvUGIZlZYqudbb5hQOp2taVsJhJnP4",
+      "exact_readback": true,
+      "occurrences": 1
+    },
+    {
+      "name": "report",
+      "document_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "revision": "AHj4eMSowme0aXZF3xmbEqhaNqQ7SdPoM03BFA86b18GqucTfMRJtFszvng0mOMBk3NirMeCsZuoNouW0XxmEqL_AAkIftmzpJOXSJj96Lg",
+      "exact_readback": true,
+      "occurrences": 1
+    }
+  ],
+  "journal_payloads": {
+    "master": "\n\n=== ASTRA-R29-20261029-OPTIMIZATION-02 ===\nSource-only loader NOX HELION EXPRESS INTEGRATOR, R29 root+six owners. Previous source checkpoint d4c78f5808675c41226d333496c657606fcf72a1 retained. Original729 physical HOLD is now CLOSED: exact60,364,346-byte archive SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a verified729 members, CRC/per-file hashes and original three Git part pins. Proof commit4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db.\nOptimization: reuse recovered original VoiceSession and E11 service, official PyPA packaging parser, and actual Ollama transfer contract; consolidate connected lifecycle fixes instead of filling pass quotas.\nNew saved source blocks: A02 e7175b6058394a7a13b89a407266e83b37d27987 authenticated voice STOP lifecycle and atomic completion retirement,46/46 focused tests; A03 39f230a04cd9dcedbee0dca5d31c2cf115f1623b connected queue/progress/STOP/retry/receipt and Ollama admission,157/157 focused suite; A04 507dadf2dc7c0f6b16f56f41262b8f1943bcc488 existing requirement ranges enforced using packaging,10/10; A06 d4ec96dfc170054ad9e84f791f8ff3bfb1fd3a38 original E11 preview/STOP adapter,7/7. A05 dad8ebfb310ea415898abe2a96b283d24453ee09 duplicate TaskID C# patch saved as CANDIDATE only: native test NOT_RUN, not added to verified pass count.\nVerified code approaches A01 2/10; A02 6/10; A03 4/10; A04 5/10; A05 2/10; A06 3/10 =22 R29;24 historical R27 retained. These are not accepted product TaskIDs. P01/P02/P03/P04/P05 weights20/25/20/25/10; full readiness denominator unknown, N/D. Earlier03:50 ETA remains withdrawn. Changed block granularity and unknown remaining product TaskIDs prevent honest numerical time-saved or completion ETA.\nResidual: authenticated native composition/providers and real voice/capture/output acceptance; PC privileged execution stays original host-only and not tested; NOX self-update must not be confused with prerequisites update/inventory; exact worker ABI/CUDA/wheel hash lock and model rights evidence; native PowerShell/C# execution unavailable here; independent donor/owner reconciliation later. No final cross-owner integration, EXE/NSIS build, release CI, GitLab write, main/PR162 changes.\nErrors fixed: voice STOP acknowledged without active original token, completion race, valid growing Ollama layer total rejected, incompatible installed versions accepted. Source tests establish scoped behavior only.\n=== END ASTRA-R29-20261029-OPTIMIZATION-02 ===\n",
+    "report": "\n\n=== ASTRA-R29-20261029-OPTIMIZATION-02 ===\nSource-only loader NOX HELION EXPRESS INTEGRATOR, R29 root+six owners. Previous source checkpoint d4c78f5808675c41226d333496c657606fcf72a1 retained. Original729 physical HOLD is now CLOSED: exact60,364,346-byte archive SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a verified729 members, CRC/per-file hashes and original three Git part pins. Proof commit4759ee65cbbdaa2fd9b0aeb017cdf0e8921e54db.\nOptimization: reuse recovered original VoiceSession and E11 service, official PyPA packaging parser, and actual Ollama transfer contract; consolidate connected lifecycle fixes instead of filling pass quotas.\nNew saved source blocks: A02 e7175b6058394a7a13b89a407266e83b37d27987 authenticated voice STOP lifecycle and atomic completion retirement,46/46 focused tests; A03 39f230a04cd9dcedbee0dca5d31c2cf115f1623b connected queue/progress/STOP/retry/receipt and Ollama admission,157/157 focused suite; A04 507dadf2dc7c0f6b16f56f41262b8f1943bcc488 existing requirement ranges enforced using packaging,10/10; A06 d4ec96dfc170054ad9e84f791f8ff3bfb1fd3a38 original E11 preview/STOP adapter,7/7. A05 dad8ebfb310ea415898abe2a96b283d24453ee09 duplicate TaskID C# patch saved as CANDIDATE only: native test NOT_RUN, not added to verified pass count.\nVerified code approaches A01 2/10; A02 6/10; A03 4/10; A04 5/10; A05 2/10; A06 3/10 =22 R29;24 historical R27 retained. These are not accepted product TaskIDs. P01/P02/P03/P04/P05 weights20/25/20/25/10; full readiness denominator unknown, N/D. Earlier03:50 ETA remains withdrawn. Changed block granularity and unknown remaining product TaskIDs prevent honest numerical time-saved or completion ETA.\nResidual: authenticated native composition/providers and real voice/capture/output acceptance; PC privileged execution stays original host-only and not tested; NOX self-update must not be confused with prerequisites update/inventory; exact worker ABI/CUDA/wheel hash lock and model rights evidence; native PowerShell/C# execution unavailable here; independent donor/owner reconciliation later. No final cross-owner integration, EXE/NSIS build, release CI, GitLab write, main/PR162 changes.\nAll four new blocks saved to separate owner branches; A02 and A06 final saves completed after workers were explicitly resumed. Root metadata handoff references exact commits, not merged code.\n=== END ASTRA-R29-20261029-OPTIMIZATION-02 ===\n",
+    "lesson": "\n\n=== ASTRA-R29-20261029-OPTIMIZATION-02 ===\nLesson: recover and hash-verify pinned original implementations before writing replacements. Reusing original cancellation/service ownership exposed actual wiring defects and avoided duplicate backends. Measure connected verified product tasks, not differently sized pass counts; no numeric ETA without a measured remaining denominator. Check actual worker state after interruption and resume existing files/IDs rather than assume background progress or restart work. Applied: original729 proof, real VoiceSession STOP including atomic retirement, E11 restricted preview/STOP adapter, official packaging parser. Windows/native acceptance remains NOT_RUN, not inferred from Python tests.\n=== END ASTRA-R29-20261029-OPTIMIZATION-02 ===\n"
+  },
+  "product_readiness": null,
+  "eta": null,
+  "time_saved": null,
+  "source_code_complete": "NOT_DECLARED",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}
