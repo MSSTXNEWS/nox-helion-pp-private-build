@@ -42,6 +42,16 @@ def pinned_ref(sha):
         raise ValueError("UNPINNED_GITLAB_SOURCE_REF")
     return urllib.parse.quote(sha,safe="")
 
+def migration_ref_from_handoff(handoff):
+    """The canonical migration ref lives in history, never in gitlab metadata."""
+    history = handoff.get("history") if type(handoff) is dict else None
+    ref = history.get("migration_github_ref") if type(history) is dict else None
+    if (type(ref) is not str or
+            re.fullmatch(r"migration/[A-Za-z0-9._/-]{1,190}", ref) is None or
+            ".." in ref or "//" in ref or ref.endswith("/")):
+        raise ValueError("GITLAB_MIGRATION_REF_NOT_IN_CANONICAL_HANDOFF")
+    return ref
+
 def evaluate_live_evidence(result, handoff):
     """Independent fail-closed GitLab migration proof; never grants build consent."""
     problems = []
@@ -62,6 +72,10 @@ def evaluate_live_evidence(result, handoff):
             result["access_level"] >= 20, "PROJECT_READ_PERMISSION_UNVERIFIED")
     require(result.get("migration_commit_preserved") is True,
             "HISTORIC_MIGRATION_COMMIT_MISSING")
+    require(result.get("migration_commit_reachable") is True,
+            "HISTORIC_COMMIT_NOT_ON_MIGRATION_BRANCH")
+    require(result.get("default_head_stable") is True,
+            "DEFAULT_HEAD_CHANGED_DURING_AUDIT")
     require(result.get("migration_head_stable") is True,
             "MIGRATION_HEAD_CHANGED_DURING_AUDIT")
     require(len({f["path"] for f in required_files}) == 27 and
@@ -111,6 +125,8 @@ def main():
         "live_gitlab_head": None,
         "migration_live_head": None,
         "migration_commit_preserved": False,
+        "migration_commit_reachable": False,
+        "default_head_stable": False,
         "migration_head_stable": False,
         "migration_unique_verified": 0,
         "migration_unique_total": len(handoff["history"]["migration_only_files"]),
@@ -155,7 +171,7 @@ def main():
         ]
         branch_dict = {b["name"]: b["sha"] for b in result["branches"]}
         result["live_gitlab_head"] = branch_dict.get(info.get("default_branch"))
-        migration_ref = handoff["gitlab"]["historical_migration_branch"]
+        migration_ref = migration_ref_from_handoff(handoff)
         result["migration_live_head"] = branch_dict.get(migration_ref)
         try:
             get("projects/" + pid + "/repository/commits/" +
@@ -163,6 +179,14 @@ def main():
             result["migration_commit_preserved"] = True
         except urllib.error.HTTPError:
             result["migration_commit_preserved"] = False
+        if result["migration_commit_preserved"]:
+            # A known Git object elsewhere in the project is not migrated history.
+            refs = pages("projects/" + pid + "/repository/commits/" +
+                         handoff["history"]["migration_github_commit"] +
+                         "/refs?type=branch", token)
+            result["migration_commit_reachable"] = any(
+                type(entry) is dict and entry.get("type") == "branch" and
+                entry.get("name") == migration_ref for entry in refs)
 
         if result["migration_live_head"]:
             for f in handoff["history"]["migration_only_files"]:
@@ -220,6 +244,12 @@ def main():
             result["migration_head_stable"] = (
                 (tip.get("commit") or {}).get("id") ==
                 result["migration_live_head"])
+        if result["live_gitlab_head"]:
+            default_tip = get("projects/" + pid + "/repository/branches/" +
+                              urllib.parse.quote(info["default_branch"], safe=""), token)
+            result["default_head_stable"] = (
+                (default_tip.get("commit") or {}).get("id") ==
+                result["live_gitlab_head"])
         evaluate_live_evidence(result, handoff)
     except (urllib.error.HTTPError, urllib.error.URLError, ValueError, KeyError) as ex:
         result["read_error_type"] = type(ex).__name__

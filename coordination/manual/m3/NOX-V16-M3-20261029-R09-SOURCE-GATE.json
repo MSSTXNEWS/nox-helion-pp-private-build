@@ -1,0 +1,245 @@
+{
+  "schema": "NOX_V16_R09_MANUAL_EXPRESS_M3_IMMUTABLE_RECEIPT",
+  "run_id": "NOX-V16-M3-R09-20261029-MANUAL-EXPRESS",
+  "task_id": "M3",
+  "roles": [
+    "T10 independent SOURCE_READY",
+    "T11 existing GitLab Free readiness"
+  ],
+  "phase": "SOURCE_ONLY",
+  "prestart_read_proof": {
+    "canonical_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_rev": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "section33_rules": 56,
+    "sections": "1–33,54–56,R29",
+    "master_rev": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_rev": "AHj4eMQY6ZGiLg_zMOvJMhWkQvZ8a4uNJKTt3fYN-kS1-o2NEYkcJKRQ5VvoVYaJ3KO-3vSt_gY4jIuf0gAy914WZs9NBoN-9cYFNLXBQPs",
+    "lessons_rev": "AHj4eMRaSImHlTzD5b-jbMy5_gXQwxOK0vyg-EFBLdXLHnPgOlRnGae2uiMn34FD-t8YvRGPa6uYh1P0qrcrEPXOBzSQwHi9LhZf4s9EEQY",
+    "c34_rev": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "ledger_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "ledger_blob_git_sha1": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "ledger_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "source_pr162": "integration/nox-v16-unified-candidate-20261028-r01",
+    "source_head_first_observed": "6dcddf7e9557a8c42d26d6fb51a95d9d70d077d0",
+    "source_tree_first_observed": "14ed8da015911511c993d5cac8711a1ce6deb301",
+    "source_head_last_observed": "6dcddf7e9557a8c42d26d6fb51a95d9d70d077d0",
+    "source_not_accepted_frozen": true,
+    "history_coverage": "PARTIAL",
+    "latest_t09_r16_frozen_integrated_tuple": null
+  },
+  "mass_self_improvement": {
+    "clusters": [
+      {
+        "error_ids": [
+          "ERR-SYS-001",
+          "ERR-SYS-002",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "cause": "stale HEAD, stale ACK and report-only loop",
+        "fix": "fresh registry and HEAD prestart, one exact-Git R09 receipt; no DONE promotion",
+        "test": "registry 11 IDs and fixed 12 denominator",
+        "owner": "T02/C + M3",
+        "status": "PROCESS_APPLIED_NOT_SHARED_CLOSED"
+      },
+      {
+        "error_ids": [
+          "ERR-SRC-003",
+          "ERR-SRC-004",
+          "ERR-SRC-005",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "cause": "unaccepted P01-P05/Host50 native contracts and missing independent same-SHA proof",
+        "fix": "no foreign canonical edits; exact owner T06/T08/T09 handoff, retain OPEN/UNVERIFIED",
+        "test": "source acceptance frozen manifest not supplied",
+        "owner": "T06,T08,T09",
+        "status": "OWNER_DEPENDENCY_NOT_CLOSED"
+      },
+      {
+        "error_ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "cause": "stale archival HOLD after signed historic original/archive owner proofs",
+        "fix": "preserve SourceLock original 729/729 and T04 34/34 without rerun",
+        "test": "reused prior exact immutable receipt",
+        "owner": "T07/T09,T04",
+        "status": "ALREADY_VERIFIED_CLOSED"
+      }
+    ],
+    "all_error_ack": [
+      {
+        "error_id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "ACK_AND_RETAIN_OWNER",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "ACK_AND_RETAIN_OWNER",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "action": "PRESERVE_CLOSED",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "action": "PRESERVE_CLOSED",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "action": "ACK_AND_RETAIN_OWNER",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "action": "HANDOFF_EXACT_OWNER_SAME_SHA",
+        "verified_closed_this_run": false
+      }
+    ],
+    "covered_ids": 11,
+    "physical_code_bug": "Missing gitlab.historical_migration_branch in canonical handoff; actual source ref in history.migration_github_ref. Historic commit existence is not proof it belongs to migrated branch, and mutable default HEAD may drift.",
+    "lessons_implemented": [
+      "STRICT_CANONICAL_MIGRATION_REF",
+      "HISTORIC_COMMIT_REACHABILITY",
+      "DEFAULT_HEAD_DRIFT_FAIL_CLOSED",
+      "EXISTING_27_PLUS_3_SAME_SHA_PRESERVED"
+    ],
+    "other_owners_source_files_changed": 0
+  },
+  "physical_change": {
+    "branch": "manual/m3/t11-pinned-migration-r06-20261029",
+    "pre_git_commit": "dddfdb47a2d7e7af591c3c1bf78409f9ebfa6b22",
+    "pre_git_tree": "a4f7ed2d22307f5537d191793942e4b918db2ea6",
+    "paths": [
+      {
+        "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+        "pre_blob_git_sha1": "33120bce05a5e5cb3a12eb8016a1a2c19ed98442",
+        "post_blob_git_sha1": "1251df86780b0f07490e43b633f6694943fcb456"
+      },
+      {
+        "path": "coordination/t11/test_NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+        "pre_blob_git_sha1": "ab5f0f75b43b1995a6d2e1e5a6bee224dede351d",
+        "post_blob_git_sha1": "51fb0a4bb559af528170771f248a7733838e02d6"
+      }
+    ],
+    "contract_check": "8/8 STATIC SOURCE CONTRACT PASS, full Python interpreter test NOT_RUN",
+    "new_python_regressions": 4,
+    "total_python_regressions": 19,
+    "git_readback": "PENDING"
+  },
+  "t10": {
+    "done": 1,
+    "total": 7,
+    "status": "SOURCE_READY_HOLD_MISSING_T09_FROZEN_ACCEPTED"
+  },
+  "t11": {
+    "done": 2,
+    "total": 5,
+    "status": "GITLAB_LIVE_ACCESS_HOLD"
+  },
+  "progress": {
+    "before_done": 3,
+    "after_done": 3,
+    "total": 12,
+    "before_pct": 25,
+    "after_pct": 25,
+    "delta_pct_points": 0,
+    "bar": "███░░░░░░░"
+  },
+  "gitlab": {
+    "project": "s-grouptwet/nox-helion-pp-private-build",
+    "authenticated_project_access": false,
+    "live_head": null,
+    "history_27_unique_github": "HISTORICAL_VERIFIED",
+    "live_gitlab_27": "UNVERIFIED",
+    "no_push": true,
+    "no_force_push": true,
+    "no_pipeline": true
+  },
+  "handoff_to_T02": {
+    "target": "T02/C sole writer of shared Master E06 Lessons and error register",
+    "request": "Ingest R09 immutable receipt on exact Git SHA via own CAS/readback; update ERR-SYS-001, ERR-SYS-002 process references, preserve ERR-SRC-003 OPEN; do not fabricate SOURCE_READY",
+    "shared_journals_written_by_M3": false
+  },
+  "gates": {
+    "A": "PASS",
+    "B": "PHYSICAL_PATCH_APPLIED_SOURCE_ONLY",
+    "C": "PENDING_GIT_READBACK",
+    "D": "ALL_11_ACK_AND_M3_RELEVANT_SOURCE_GATES_APPLIED"
+  },
+  "safety": {
+    "canonical_PR162_unchanged_by_M3": true,
+    "original_source_729_preserved": true,
+    "T04_34_preserved": true,
+    "no_loss": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_e07": true,
+    "no_gitlab_ci": true,
+    "no_release": true
+  }
+}

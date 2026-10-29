@@ -28,6 +28,8 @@ class GateTests(unittest.TestCase):
             "live_gitlab_head":"a"*40,
             "migration_live_head":"b"*40,
             "migration_head_stable":True,
+            "default_head_stable":True,
+            "migration_commit_reachable":True,
             "access_level":30, "migration_commit_preserved":True,
             "migration_unique_verified":27,"migration_unique_mismatches":[],
             "original_parts_verified":3,"original_parts_mismatches":[],
@@ -87,6 +89,19 @@ class GateTests(unittest.TestCase):
             MODULE.pinned_ref("migration/nox-v16-gitlab-free-20261028-r01")
     def test_pinned_ref_accepts_sha(self):
         self.assertEqual(MODULE.pinned_ref("a"*40),"a"*40)
+
+    def test_canonical_handoff_migration_ref(self):
+        handoff = {"history":{"migration_github_ref":"migration/nox-v16-gitlab-free-20261028-r01"},
+                   "gitlab":{"path":"s-grouptwet/nox-helion-pp-private-build"}}
+        self.assertEqual(MODULE.migration_ref_from_handoff(handoff),
+                         "migration/nox-v16-gitlab-free-20261028-r01")
+    def test_missing_canonical_ref_rejected(self):
+        with self.assertRaisesRegex(ValueError,"GITLAB_MIGRATION_REF_NOT_IN_CANONICAL_HANDOFF"):
+            MODULE.migration_ref_from_handoff({"gitlab":{"historical_migration_branch":"wrong"}})
+    def test_historic_commit_elsewhere_is_not_migration(self):
+        self.verify({"migration_commit_reachable":False},False)
+    def test_default_branch_drift_fails_closed(self):
+        self.verify({"default_head_stable":False},False)
 
 if __name__=="__main__":
     unittest.main()
