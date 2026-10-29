@@ -34,6 +34,21 @@ test("dangerous commands require host-confirmed native-consent capability",()=>{
  const d=normalizeCapabilities(catalog,{[item.routeId]:{enabled:true,state:"VERIFIED",nativeConsent:true}});
  assert.equal(d[item.routeId].enabled,true);
 });
+test("canonical route/risk/owner policy cannot be downgraded in the UI catalogue",()=>{
+  for(const [index,entry] of catalog.actions.entries()){
+    for(const field of ["risk","owner","routeId","taskId"]){
+      const altered=structuredClone(catalog),a=altered.actions[index];
+      a[field]=field==="risk"?(entry.risk==="safe"?"sensitive":"safe"):
+               field==="owner"?(entry.owner%6+1):
+               field==="routeId"?"tampered.route":"NIP01-99";
+      assert.throws(()=>verifyCatalog(altered),/CANONICAL_OWNER_RISK_MISMATCH/);
+    }
+    if(entry.risk==="dangerous"){
+      const state=normalizeCapabilities(catalog,{[entry.routeId]:{state:"VERIFIED",enabled:true}});
+      assert.equal(state[entry.routeId].enabled,false);
+    }
+  }
+});
 test("search and category filtering have no side effects",()=>{
  assert.equal(filteredActions(catalog,"Qwen").length,0);
  assert.ok(filteredActions(catalog,"gpu").length>=1);
