@@ -104,11 +104,19 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
     def test_indexed_shard_valid(self):
         (self.root / "model.safetensors.index.json").write_text(
-            json.dumps({"weight_map": {"a": "model-00001-of-00001.safetensors"}}),
+            json.dumps({"weight_map": {"q.weight": "model-00001-of-00001.safetensors"}}),
             encoding="utf-8"
         )
         make_weights(self.root / "model-00001-of-00001.safetensors")
         self.assertEqual(probe.inspect(self.root, REV)["status"], "LOCAL_FILES_PRESENT_ONLY")
+
+    def test_rejects_valid_shard_with_wrong_tensor_mapping(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"a": "model-00001-of-00001.safetensors"}}),
+            encoding="utf-8"
+        )
+        make_weights(self.root / "model-00001-of-00001.safetensors")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
 
 
 if __name__ == "__main__":
