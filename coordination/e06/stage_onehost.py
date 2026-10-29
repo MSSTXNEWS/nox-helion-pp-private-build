@@ -33,9 +33,20 @@ def _identity(path):
 
 
 def _owned(path, identity, content):
+    """Bind readback to the same inode before, during and after the read."""
     try:
         trusted_path(path)
-        return _identity(path) == identity and path.read_bytes() == content
+        if _identity(path) != identity:
+            return False
+        # A pathname may be replaced with identical bytes after the first
+        # lstat. Verify the opened descriptor and the pathname after readback.
+        with path.open("rb") as stream:
+            info = os.fstat(stream.fileno())
+            if (info.st_dev, info.st_ino) != identity:
+                return False
+            if stream.read(len(content) + 1) != content:
+                return False
+        return _identity(path) == identity
     except (OSError, SystemExit):
         return False
 

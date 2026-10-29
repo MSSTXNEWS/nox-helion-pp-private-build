@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V8",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T130436MSK-R08",
+  "status": "HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "taskId": "G6A-E06-OWNED-FD-PATH-IDENTITY-R08",
+  "branch": "automation/r30/g6a/G6A-20261029T130436MSK-R08",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T120133MSK-R07",
+  "parentCommit": "fb1ce92eff62f1bf57571dfee37f7ef637774dd6",
+  "parentTreeSha": "76fd3f253786683fec2d616191a4414e3214c29d",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPaths": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "receiptOnlyDir": "coordination/automation/r30/G6-A/"
+  },
+  "source": {
+    "path": "coordination/e06/stage_onehost.py",
+    "preimageGitBlobSHA1": "036229a7a9cbfb374d956a3a2c699e5faef7f9d3",
+    "postGitBlobSHA1": "ff785e750360e7a1b35233143cc13a3b0d628438",
+    "modifiedFunction": "_owned",
+    "scope": "exact one owner-assigned Python source file",
+    "defect": "The R07 _owned check validated pathname inode once and then compared only bytes. A foreign process could atomically replace the path with identical bytes during readback, returning a false owner match and permitting subsequent rollback deletion of a foreign inode.",
+    "fix": "Pin lstat identity before read, fstat the opened descriptor, bound the read to expected length+1 and recheck path identity after closing; return false on any drift. Existing owner-only rollback remains."
+  },
+  "targetedTest": {
+    "testId": "G6A-R08-OWNED-PATH-FD-READBACK",
+    "command": "python /tmp/g6a_r08_owned_path_pin_test.py",
+    "result": "PASS_ISOLATED_ONLY",
+    "count": 1,
+    "observations": [
+      "RED R07: pathname replaced during read with same-byte foreign inode, old _owned returned True",
+      "GREEN R08 excerpt: identical injected replacement returns False",
+      "Normal owned path returns True; wrong expected bytes returns False; foreign path remains untouched"
+    ],
+    "testFileSHA256": "b79d00fb944a05a1bcba196b866b5817c4e5ff322ab19c26e338800acf27f22c",
+    "testCommitted": false,
+    "testFileOwnerBlocker": "Exact assigned_paths has no tests/e06/* permission; local unique test executed but not committed",
+    "fullModuleTest": "NOT_RUN",
+    "nativeWindowsTest": "NOT_RUN",
+    "sourceStaticSyntax": "PATCH_ANCHOR_CHECKED_EXACT_ONCE; full Python module NOT_RUN"
+  },
+  "inputVerification": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rulesGitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "latestSpecs": "Google Docs FIN ZAGR V16 §§54-56 + R29 scope override READ",
+    "conflictsGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen968Manifest": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+    "frozen968ManifestBlob": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "parentGitTreeComplete": true,
+    "parentTreeTruncated": false,
+    "parentTreeEntries": 31620,
+    "baselineGitBlobs": 968,
+    "presentBaselinePaths": 968,
+    "missingBaselinePaths": 0,
+    "unchangedBaselineGitBlobs": 963,
+    "modifiedBaselineGitBlobs": 5,
+    "donorSnapshotDirectories": 25,
+    "donorSnapshotGitBlobFiles": 24876,
+    "donorSnapshotAllThreeOriginalPartsMatching": 25,
+    "branchPartsGitBlobSha": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "archiveCombinedExpectedSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "original729InnerSHA256": "NOT_VERIFIED_BINARY_BYTES_NOT_READ",
+    "snapshotBytesRehashed": false
+  },
+  "journalsReadOnly": {
+    "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "commonDocsModified": false,
+    "sharedWriter": "Astra-C only",
+    "readback": "NOT_APPLICABLE_TO_G6A"
+  },
+  "appliedLesson": "R07 proved filename is not stable ownership of scratch inodes. R08 applies same inode pinning to readback of already-published source, receipt and lock path.",
+  "newLesson": "Comparing bytes after a single lstat is insufficient proof of file ownership: a path can be swapped to a foreign inode with exactly identical bytes during I/O. Bind the opened descriptor via fstat and check path identity after readback, with bounded reads. Model the swap in a RED→GREEN test; keep HOLD for untested native Windows races.",
+  "ownerRequest": {
+    "kind": "TEST_PATH_OWNERSHIP",
+    "desiredPath": "tests/e06/test_g6a_r08_owned_path_fd_readback.py",
+    "proposalOnly": true,
+    "proposal": "Assign exactly this unique G6-A test filename to owner lane if committed regression is desired; no unauthorized test file was written."
+  },
+  "preservation": {
+    "original25SnapshotsModified": false,
+    "priorDonePreserved": true,
+    "mainModified": false,
+    "pr162Modified": false,
+    "centralR30Modified": false,
+    "forbiddenFilesModified": false,
+    "exe": false,
+    "nsis": false,
+    "gitlabCI": false,
+    "finalIntegration": false
+  },
+  "gates": {
+    "sourceCodeComplete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "original729RawSHA": "NOT_VERIFIED",
+    "nativeWindowsRollback": "NOT_RUN",
+    "productPercent": "N/D"
+  },
+  "changedPaths": [
+    "coordination/e06/stage_onehost.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T130436MSK-R08.json"
+  ]
+}
