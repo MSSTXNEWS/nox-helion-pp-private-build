@@ -42,7 +42,15 @@ def _get(url: str, *, payload=None, timeout=20):
                   headers={"Content-Type":"application/json"} if payload is not None else {},
                   method="POST" if payload is not None else "GET")
     with urlopen(req, timeout=timeout) as res:
-        return json.loads(res.read(8_000_000).decode("utf-8"))
+        # Read one byte beyond the trusted response budget. Never accept a
+        # valid JSON *prefix* while dropping trailing untrusted provider data.
+        wire=res.read(8_000_001)
+        if len(wire)>8_000_000:
+            raise ValueError("NOX_PROVIDER_JSON_OVERSIZE")
+        result=json.loads(wire.decode("utf-8"))
+        if type(result) is not dict:
+            raise ValueError("NOX_PROVIDER_JSON_OBJECT_REQUIRED")
+        return result
 
 class Studio(CreativeExtensions):
     """Local provider adapter; use through a trusted NOX host, not public internet."""
