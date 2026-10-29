@@ -42,7 +42,7 @@ class GitLabFreeSourceGateTests(unittest.TestCase):
     def test_source_ready_is_checked_before_network_or_build(self):
         self.assertLess(
             self.adapter.index("GITLAB_T08_T10_SAME_SHA_SOURCE_READY_REQUIRED"),
-            self.adapter.index("Find-Python31210\\n"),
+            self.adapter.index("Find-Python31210\n"),
         )
         self.assertIn("NOX_FROZEN_SOURCE_SHA != null", self.pipeline)
         self.assertIn("NOX_FROZEN_SOURCE_REF != null", self.pipeline)
