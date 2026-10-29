@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_V16_R19_PINNED_DATA_PROGRESS_V1",
+  "observed_at": "2026-10-29",
+  "primary_scope": "NOX_HELION_EXPRESS_INTEGRATOR",
+  "pr162_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+  "source_ledger": "coordination/e06_host50/CURRENT_50_TASK_LEDGER.json",
+  "source_ledger_git_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+  "source_ledger_scope": "Historic fixed 50-route source binding snapshot stored on PR162; NOT a current full TaskID acceptance manifest",
+  "product_weights": {
+    "P01": 20,
+    "P02": 25,
+    "P03": 20,
+    "P04": 25,
+    "P05": 10
+  },
+  "source_route_by_product": [
+    {
+      "block": "P01",
+      "owner": 1,
+      "source_candidate": 0,
+      "total": 7,
+      "hold": 7,
+      "source_candidate_pct": 0,
+      "weighted_source_route_points": 0
+    },
+    {
+      "block": "P02",
+      "owner": 2,
+      "source_candidate": 13,
+      "total": 15,
+      "hold": 2,
+      "source_candidate_pct": 86.6667,
+      "weighted_source_route_points": 21.6667
+    },
+    {
+      "block": "P03",
+      "owner": 3,
+      "source_candidate": 10,
+      "total": 10,
+      "hold": 0,
+      "source_candidate_pct": 100,
+      "weighted_source_route_points": 20
+    },
+    {
+      "block": "P04",
+      "owner": 4,
+      "source_candidate": 8,
+      "total": 11,
+      "hold": 3,
+      "source_candidate_pct": 72.7273,
+      "weighted_source_route_points": 18.1818
+    },
+    {
+      "block": "P05",
+      "owner": 5,
+      "source_candidate": 6,
+      "total": 6,
+      "hold": 0,
+      "source_candidate_pct": 100,
+      "weighted_source_route_points": 10
+    }
+  ],
+  "integration_host": {
+    "owner": 6,
+    "source_candidate": 0,
+    "total": 1,
+    "hold": 1
+  },
+  "source_candidates_total": 37,
+  "source_hold_total": 13,
+  "source_route_coverage_pct": 74,
+  "source_route_weighted_index_pct": 69.8485,
+  "source_route_weighted_index_formula": "20*(0/7)+25*(13/15)+20*(10/10)+25*(8/11)+10*(6/6); excludes cross-cutting owner6; diagnostic only",
+  "manual_role1_source_route_index_pct": 64.1026,
+  "manual_role3_source_route_index_pct": 80.5195,
+  "manual_role1_source_route_covered": 23,
+  "manual_role1_source_route_total": 32,
+  "manual_role3_source_route_covered": 14,
+  "manual_role3_source_route_total": 17,
+  "pack01_ledger": {
+    "route_candidates": 50,
+    "native_accepted": 0,
+    "release_accepted": 0
+  },
+  "pack02_ledger": {
+    "source_implemented": 50,
+    "native_exe": 0,
+    "accepted": 0
+  },
+  "prebuild_stages": {
+    "T06": [
+      1,
+      8
+    ],
+    "T08": [
+      1,
+      3
+    ],
+    "T09": [
+      1,
+      6
+    ],
+    "T10": [
+      1,
+      7
+    ],
+    "T11": [
+      2,
+      5
+    ],
+    "total_accepted": 6,
+    "total": 29,
+    "accepted_pct": 20.6897,
+    "remaining": 23
+  },
+  "gitlab": {
+    "T11": [
+      2,
+      5
+    ],
+    "live_authenticated_head": "NOT_VERIFIED",
+    "build": "NOT_AUTHORIZED"
+  },
+  "release_e07": {
+    "accepted": 0,
+    "total": 10
+  },
+  "fully_accepted_product_megablocks": 0,
+  "development_progress_percent": null,
+  "reason": null,
+  "missing_for_valid_product_percent": [
+    "Full frozen P01-P05 TaskID manifest with weights and exact acceptance definitions",
+    "Verified current HEAD code and independent acceptance receipts per TaskID",
+    "Reconcile historical DONE and owner pre/post SHA without duplicates",
+    "Actual SourceLock/onehost and same-SHA T08/T09/T10 independent gates",
+    "GitLab live authenticated readback and later authorized Windows E07"
+  ],
+  "caution": "Source-route index and 0 E07 release acceptance MUST NOT be presented as completed product percent. Historical ledger is not same-head current functional QA. No new manual role authorized by this read-only calculation."
+}
