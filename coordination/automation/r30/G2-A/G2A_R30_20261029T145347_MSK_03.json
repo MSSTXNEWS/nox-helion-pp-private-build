@@ -1,0 +1,106 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G2A_IMMUTABLE_SOURCE_OWNER_RECEIPT_V1",
+  "run_id": "G2A_R30_20261029T145347_MSK_03",
+  "slot": "G2-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR LOADER ONLY",
+  "mode": "SOURCE_ONLY_NO_EXE_NSIS_WINDOWS_CI_GITLAB_NO_MERGE",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P02/worker-python/p02_runtime.py",
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/p02_framed_worker.py",
+      "Packages/P02/worker-python/p02_host_admission.py"
+    ],
+    "forbidden_paths_touched": []
+  },
+  "policy": {
+    "historical_56_rules_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "V16_google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "V16_sections_read": [
+      "33 (56/56 consolidated)",
+      "54",
+      "55",
+      "56",
+      "R29 latest loader-only override"
+    ],
+    "drive_error_master_read_latest": "ASTRA-C-R30-20261029T1430MSK-09",
+    "drive_self_improvement_read_latest": "ASTRA-C-R30-20261029T1430MSK-09"
+  },
+  "snapshot_index": {
+    "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexed_immutable_snapshots": 25,
+    "original_snapshot_modifications": 0,
+    "full_per_snapshot_byte_scan": "NOT_RUN; only index verified, no 729 raw archive SHA claim"
+  },
+  "provenance": {
+    "base_ref": "automation/r30/g2a/G2A_R30_20261029T054004_MSK_01",
+    "base_collection_HEAD_at_run": "316fd4e48c21c69d90258886082442e2d9c76489",
+    "astra_source_HEAD_at_run": "e02ee60dc2a71b5f2cf27c51d6e6acaf4b1f4b7c",
+    "private_branch": "automation/r30/g2a/G2A_R30_20261029T145347_MSK_03",
+    "previous_hold_run": "G2A_R30_20261029T064123_MSK_02",
+    "previous_hold_was_not_remote_saved": true
+  },
+  "source_patch": {
+    "task_id": "G2A-P02-NATIVE-EVENTS-V3-MODEL-TAG-UNICODE-ADMISSION-20261029-03",
+    "path": "Packages/P02/worker-python/p02_host_admission.py",
+    "pre_git_blob_sha1": "471af16cea3dff48e30ea94fcab4b8d9ca2585e0",
+    "post_git_blob_sha1": "9531897578f1fa0309bdafa3703025b2bf3a0969",
+    "pre_content_sha256": "e23572df5435fc6bd3da91392019c544b87de94242b4416c078e4f1868fbe19d",
+    "post_content_sha256": "72e15d682b0248a8d4b5a92e71d94a260bf1affdb0f4e1c37a688f7980fc07ac",
+    "code_commit": "97a31ae174e038f4e96ceac7fc4357608b7b7dd7",
+    "exact_change": "Reject Unicode categories Cc/Cf/Cs in chat.start model tag before publishing on existing events.v3; preserve original model name length 1..256 and allowed Unicode letters. Previous ASCII chat.error code fix preserved.",
+    "no_new_native_host": true
+  },
+  "targeted_source_test": {
+    "command_red": "python test_model_tag_admission_ephemeral.py 0",
+    "red_exit": 1,
+    "red_result": "EXPECTED 9 failures of invalid control/bidi/surrogate model IDs; 2 other methods passed",
+    "command_green": "python test_model_tag_admission_ephemeral.py 1",
+    "green_exit": 0,
+    "green_result": "PASS: 3 Python unittest methods (9 malicious model tags rejected, 5 realistic model names accepted, original boundary budgets preserved)",
+    "source_static_readback": "PASS 6/6 exact own GitHub source checks; diff vs previous own G2A branch +1 commit, only p02_host_admission.py changed",
+    "test_source_location": "local isolated test from prior G2A HOLD package; NOT a committed or full-import module test",
+    "test_new_unapproved_path_committed": false,
+    "full_host_windows_runtime": "NOT_RUN",
+    "E06_E07": "NOT_RUN"
+  },
+  "previous_error_and_lesson": {
+    "previous_error": "Attempt R02 model-tag patch was tested locally but GitHub branch creation was blocked, no Git receipt; coordinator correctly excluded it from DONE.",
+    "applied_lesson": "Never count local-only RED/GREEN as remotely saved. Reuse approved R02 exact preimage, recheck live Git blob, create new unique branch, commit source and read back before receipt.",
+    "observed_defect": "chat.start model ID admitted Unicode control, format, surrogate code points that could confuse native logs/UI after events.v3 mapping.",
+    "root_cause": "Machine ID was treated as freeform display text while later event fields use explicit native wire admission.",
+    "improvement": "Use exact blob lease and negative/positive Unicode boundary fixtures; save immutable own Git receipt after every attempt; keep isolated-model test distinct from real native host test."
+  },
+  "report_gate": {
+    "astra_c_only_google_docs_writer": true,
+    "worker_google_drive_writes": 0,
+    "request_to_astra_c": "Read immutable receipt, append actual G2-A report and applied lesson via Docs CAS and RunID readback; do not claim complete/native PASS.",
+    "drive_ingestion": "PENDING_ASTRA_C",
+    "shared_journal_changed": false
+  },
+  "forbidden_changes": {
+    "main": false,
+    "PR162": false,
+    "shared_R30": false,
+    "foreign_owner_paths": false,
+    "voice": false,
+    "capabilities": false,
+    "owner_route_ports": false,
+    "original_25_snapshots": false,
+    "windows_exe": false,
+    "NSIS": false,
+    "GitLab_run": false,
+    "Windows_CI": false,
+    "final_integration": false
+  },
+  "status": "OWNER_SOURCE_COMMITTED_TARGETED_ISOLATED_REGRESSION_PASS",
+  "SOURCE_CODE_COMPLETE": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "RELEASE": "HOLD",
+  "accepted_product_taskids": "NOT_ASSESSED",
+  "product_percent": "N/D"
+}
