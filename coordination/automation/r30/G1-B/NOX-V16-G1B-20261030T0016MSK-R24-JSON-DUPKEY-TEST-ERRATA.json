@@ -1,0 +1,19 @@
+{
+  "run_id": "NOX-V16-G1B-20261030T0016MSK-R24-JSON-DUPKEY",
+  "existing_task_id": "ERR-SRC-004/P01-NSIS-existing",
+  "error": "INTERNAL_TEST_SERIALIZATION_ESCAPE_REGRESSION",
+  "root_cause": "Source test writer emitted /\\\\b/ and /\\\\w/ when generating JavaScript regex; these match literal escapes, not word boundaries. Initial receipt R24 was immutable and remains in history.",
+  "prior_commit": "e5e98cd1a96c4175f16beb5992a540ae78542359",
+  "prior_test_blob": "9fd59ad0b0b5931e1fb73dd884dbfa4934fea9b7",
+  "corrected_test_pre_sha": "9fd59ad0b0b5931e1fb73dd884dbfa4934fea9b7",
+  "correction": "Replace literal two-backslash sequences with one-backslash JS regex tokens, retaining the same file path in isolated G1-B branch with exact preimage CAS; original commit remains retrievable.",
+  "guard_check_before_save": {
+    "expected_match_with_current_Verify": true,
+    "observed_match": true,
+    "match_type": "V8 against current real source bytes",
+    "v8_parse_fixture_last_wins": true
+  },
+  "unresolved": "Even corrected source-static test is expected RED until G1-A adds duplicate member fail-closed guard. Native PS5.1 not run, no product acceptance or shared source edit.",
+  "owner": "G1-B auxiliary tester; G1-A owns P01 source; T06 sole PR162 writer; T02 sole shared ledger writer",
+  "no_build": true
+}

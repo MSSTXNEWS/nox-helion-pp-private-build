@@ -13,9 +13,9 @@ assert.equal(JSON.parse(cases[0]).schema, 'NOX_P01_PAYLOAD_SHA256_V1');
 assert.equal(JSON.parse(cases[1]).files.length, 1);
 for (const file of files) {
   const source=readFileSync(file,'utf8');
-  assert.match(source, /\\bConvertFrom-Json\\b/, file+' must be manifest JSON parser');
+  assert.match(source, /\bConvertFrom-Json\b/, file+' must be manifest JSON parser');
   // Conservative source-triage heuristic, NOT a substitute for the native negative fixture.
-  const guard=/\\b(?:Assert|Reject|Validate|Ensure|Test)[\\w-]{0,70}(?:Duplicate|Unique)(?:Json|Key|Member)[\\w-]*\\b/i.test(source);
+  const guard=/\b(?:Assert|Reject|Validate|Ensure|Test)[\w-]{0,70}(?:Duplicate|Unique)(?:Json|Key|Member)[\w-]*\b/i.test(source);
   assert.ok(guard, 'P01_DUPLICATE_MANIFEST_MEMBER_REJECTION_MISSING: '+file);
 }
 console.log('P01_DUPLICATE_JSON_GUARD_SOURCE_STATIC_PASS; native Windows PowerShell 5.1 fixture still REQUIRED');
