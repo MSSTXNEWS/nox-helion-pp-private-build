@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace Nox.P03;
 
@@ -51,6 +52,26 @@ public static class ModelArtifactReviewRegistry
         uri!.Host.Equals("ollama.com", StringComparison.OrdinalIgnoreCase) &&
         uri.AbsolutePath.Equals("/library/" + family, StringComparison.OrdinalIgnoreCase) &&
         string.IsNullOrWhiteSpace(uri.Query);
+    // JSON parser lookup returns the LAST duplicate key; review inputs must
+    // reject duplicate/case-equivalent aliases even inside nested objects.
+    private static void RequireUniqueTemplateKeys(JsonElement node, int depth = 0)
+    {
+        if (depth > 64) throw new InvalidDataException("REVIEW_TEMPLATE_DEPTH_INVALID");
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in node.EnumerateObject())
+            {
+                if (!seen.Add(p.Name.Normalize(NormalizationForm.FormC)))
+                    throw new InvalidDataException("REVIEW_TEMPLATE_AMBIGUOUS_JSON_KEYS");
+                RequireUniqueTemplateKeys(p.Value, depth + 1);
+            }
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+            foreach (var item in node.EnumerateArray())
+                RequireUniqueTemplateKeys(item, depth + 1);
+    }
+
     public static IReadOnlyList<ModelArtifactReviewCandidate> ReadTemplate(string path)
     {
         // The caller supplies an existing local review template, never a URL.
@@ -60,6 +81,7 @@ public static class ModelArtifactReviewRegistry
         if (templateInfo.Length is <= 0 or > 1048576)
             throw new InvalidDataException("REVIEW_TEMPLATE_SIZE_INVALID");
         using var doc = JsonDocument.Parse(File.ReadAllText(path));
+        RequireUniqueTemplateKeys(doc.RootElement);
         if (!doc.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array ||
             items.GetArrayLength() < 15 || items.GetArrayLength() > 250)
             throw new InvalidDataException("REVIEW_TEMPLATE_INVALID");
