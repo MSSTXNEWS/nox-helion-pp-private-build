@@ -1,0 +1,78 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G3B_SOURCE_RECEIPT_V8",
+  "run_id": "G3B-20261029T144549MSK-R08",
+  "slot": "G3-B",
+  "project": "FIN ZAGR V16 loader only",
+  "status": "SOURCE_PATCH_SAVED_NATIVE_HOLD",
+  "branch": "automation/r30/g3b/G3B-20261029T144549MSK-R08",
+  "base_ref": "automation/r30/g3b/G3B-20261029T114827MSK-R07",
+  "base_head_commit": "967236b78a350e8f83e79ad73a47fea72d5ff288",
+  "source_path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+  "source_commit": "06e6c045bb294e34d29da039a94697a9d5083f85",
+  "source_git_blob_before": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+  "source_git_blob_after": "3692811ac3234afb54e82958c7415b23619c1f0f",
+  "source_sha256_before": "e3293dc4aa2ebd50e9b51f090f64801c1e27ae4923e2bea7b8d41b779a68465b",
+  "source_sha256_after": "dcaa2785378cfa56542fdc09ca0a2cfc8e6431fd03a05659ad00be65cc5d9434",
+  "task_ids": [
+    "G3B-R30-P03-EVENT-PROGRESS-MONOTONIC-PERSISTED-R08"
+  ],
+  "previous_done_not_recredited": [
+    "G3B-R01-QUEUE-CANCEL-RACE",
+    "G3B-R02-IMMUTABLE-COMMAND",
+    "G3B-R03-UI-INGEST",
+    "G3B-R04-UI-STOP-RACE",
+    "G3B-R05-STOP-RETRY",
+    "G3B-R06-UI-PROGRESS"
+  ],
+  "prior_hold_07": {
+    "patch_saved": false,
+    "reason": "R07 proposed SHA guard would not prevent corrupt queue because ReadCore ValidateJobs rejects nonhex digest before RunNextAsync; held without claiming DONE"
+  },
+  "defect": "OnProgress writes counters through ModelDownloadQueueStore.UpdateAsync, which preserves monotonic counters, but published the raw u.Completed/u.Total; out-of-order/partial stream events made the UI progress regress or disappear while persisted queue counters remained correct.",
+  "fix": "Use persisted.CompletedBytes and persisted.TotalBytes in progress lifecycle events, retaining cancellation guard, source job identity, and existing ModelCenter.",
+  "test": {
+    "type": "exact-source V8 argument extraction plus store normalization model",
+    "old": "6/12 PASS",
+    "new": "12/12 PASS",
+    "static_guard_checks": "7/7 PASS",
+    "csharp_compile": "NOT_RUN .NET unavailable",
+    "ollama_pull_cancel_retry_progress": "NOT_RUN",
+    "windows_webview2": "NOT_RUN",
+    "persistent_test_file": "NOT_WRITTEN: tests/P03 is not an exact assigned path"
+  },
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+    ],
+    "forbidden": [
+      "Packages/P03/Admission/",
+      "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+    ]
+  },
+  "historical": {
+    "index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_indexed": 25,
+    "full_snapshot_bytewise_audit": false
+  },
+  "prior_drive_lessons_read": true,
+  "section33_56_consolidated_read": true,
+  "sections54_56_read": true,
+  "drive_writes": false,
+  "central_writer": "Astra-C",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "accepted_product_delta": 0,
+  "percent": "N/D",
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_ci": true,
+  "no_final_integration": true,
+  "new_self_improvement_lesson": "When the store normalizes telemetry, lifecycle events should publish the committed values, not the raw transient update. Re-evaluate the previous unsaved R07 premise against the actual store validation before committing a duplicate or ineffective fix."
+}
