@@ -1,0 +1,323 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T11_GITLAB_FREE_SOURCE_HANDOFF_V1",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY; not main NOX",
+  "scope": "GITLAB_READY SOURCE ONLY; no final integration and no CI",
+  "state": "ACCESS_HOLD",
+  "source_ready": "HOLD",
+  "release": "HOLD",
+  "t11_done": false,
+  "moscow": {
+    "planned": "2026-10-29T16:25:00+03:00",
+    "observed_at": "2026-10-29T16:30:00+03:00",
+    "actual_start": "NOT_INDEPENDENTLY_TIMESTAMPED",
+    "duration_seconds": null
+  },
+  "gitlab_target": {
+    "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "expected_visibility": "PRIVATE",
+    "live_authenticated_access": "NOT_AVAILABLE",
+    "live_head_sha": "UNVERIFIED_ACCESS_HOLD",
+    "live_branch_inventory": "UNVERIFIED_ACCESS_HOLD",
+    "runner_live_status": "UNVERIFIED_ACCESS_HOLD",
+    "historical_pipeline_id": "3000422727",
+    "historical_windows_job_id": "17549234693",
+    "historical_outcome": "FAILED_ON_P02; NO_ACCEPTED_EXE",
+    "historic_runner_tag": "saas-windows-medium-amd64",
+    "historical_only": true
+  },
+  "github_verified": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "historical_migration_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+    "historical_migration_head_sha1": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "working_astra_ref": "astra/v16-code-complete-source-only-20261029",
+    "working_astra_candidate_sha1": "f0064948119c55001601e1bae1cd3755826605ed",
+    "pr162_candidate_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "t09_frozen_sha": "NOT_AVAILABLE_T09_HOLD",
+    "r30_snapshot_count": 25,
+    "r30_conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "migration_git_blobs": 882,
+    "astra_git_blobs": 1012,
+    "migration_only_file_count": 27,
+    "migration_only_files": [
+      {
+        "path": ".gitlab-ci.yml",
+        "git_blob_sha1": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "size_bytes": 993
+      },
+      {
+        "path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+        "git_blob_sha1": "a330977156c49aab0c433978b0d924549c5e2421",
+        "size_bytes": 10455
+      },
+      {
+        "path": "coordination/migration/GITLAB_FREE_MIGRATION_NOLOSS_20261028.md",
+        "git_blob_sha1": "cb19790dd5291672d7a86fc2e2930a71698d26a3",
+        "size_bytes": 7351
+      },
+      {
+        "path": "coordination/migration/NOX_V16_MASTER_PR162_SYNC_20261028_C3.json",
+        "git_blob_sha1": "d885106aab3e976847d0229174691008cf7ef7c2",
+        "size_bytes": 3499
+      },
+      {
+        "path": "coordination/migration/pr180-source/.github/workflows/nox-express-wow-r12.yml",
+        "git_blob_sha1": "47c0314651f014bd4b86fe73c00b2005b0948392",
+        "size_bytes": 2745
+      },
+      {
+        "path": "coordination/migration/pr180-source/DONOR_MANIFEST.json",
+        "git_blob_sha1": "c877a5a98efc620c858ea0aeed3d5340375b81fc",
+        "size_bytes": 3893
+      },
+      {
+        "path": "coordination/migration/pr180-source/coordination/e06/build_onehost_installer.ps1",
+        "git_blob_sha1": "f5c019a66712272ed14f3f5b50610f2dea52e787",
+        "size_bytes": 17311
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/FINAL_APPLY_AND_BUILD.ps1",
+        "git_blob_sha1": "adc48b5a5816528f649356433672498d8247fc4c",
+        "size_bytes": 6822
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+        "git_blob_sha1": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+        "size_bytes": 425
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/bridge/CreativeHostBridge.cs",
+        "git_blob_sha1": "e6262e8a0bfd9f52c82894a43ece89b83ff63fdc",
+        "size_bytes": 16654
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/stage_creative.py",
+        "git_blob_sha1": "9d6b22198bd57362477afa1a7132c982793c1a64",
+        "size_bytes": 5367
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/stage_persona_media.py",
+        "git_blob_sha1": "5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",
+        "size_bytes": 4406
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/tests/test_persona_media.py",
+        "git_blob_sha1": "98bb074f98622aec9f431fde69214e624ae0b2b6",
+        "size_bytes": 4314
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/tests/test_projector_contract.py",
+        "git_blob_sha1": "59a3b35549b1bb0ec5551f96a684d90ae98de52a",
+        "size_bytes": 2010
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/entry.js",
+        "git_blob_sha1": "34032ba9cb41bc3d71afcdbe57f690e15fd76755",
+        "size_bytes": 4540
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/persona-media.css",
+        "git_blob_sha1": "e3b89165ebd3bb3436e2b1a51ff39a2c67b9aa91",
+        "size_bytes": 990
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/persona-media.js",
+        "git_blob_sha1": "2b2d0f55b75eb7c94d0c27441726ec0e595558d0",
+        "size_bytes": 4622
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/studio.html",
+        "git_blob_sha1": "b90322fc4a69205f0eaf68b66ee8f30ad272eb7f",
+        "size_bytes": 13260
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/studio.js",
+        "git_blob_sha1": "cbbec5b6bc69051c7725abcdab8e8c1aa0f43f78",
+        "size_bytes": 16091
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/theater.html",
+        "git_blob_sha1": "8218097b981d9fb0cb9965da92acac59ed4ae765",
+        "size_bytes": 1789
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/creative/web/theater.js",
+        "git_blob_sha1": "04b05a20644aad580bfcb30322acba5fe7bbf77c",
+        "size_bytes": 2749
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/express-wow/README_RU.md",
+        "git_blob_sha1": "ded74d9891d098e1c111cb5b212b6ef3c03399c0",
+        "size_bytes": 917
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/express-wow/apply_express.py",
+        "git_blob_sha1": "72d799090f9f258beaf00c0a91773f27f57ef8f0",
+        "size_bytes": 5918
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/express-wow/tests/test_one_shot_order.py",
+        "git_blob_sha1": "f219d706e62f67e59ee44848374f71fd89d6db8e",
+        "size_bytes": 5932
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/express-wow/tests/test_utf8_bridge_limit.py",
+        "git_blob_sha1": "12fd9c7235b2b190f1195584d808282c4e1ad90a",
+        "size_bytes": 984
+      },
+      {
+        "path": "coordination/migration/pr180-source/integrations/wow200/tests/test_home_scene.mjs",
+        "git_blob_sha1": "694bbb26dc0abb91693e726e24b941435a02754b",
+        "size_bytes": 3025
+      },
+      {
+        "path": "tests/e06/test_gitlab_free_source_gate.py",
+        "git_blob_sha1": "88d84097d752d5dfb53329215677dccf5454ed34",
+        "size_bytes": 3402
+      }
+    ],
+    "astra_only_file_count": 157,
+    "changed_shared_file_count": 43,
+    "changed_shared_paths": [
+      "Packages/P02/worker-python/p02_framed_worker.py",
+      "Packages/P02/worker-python/p02_host_admission.py",
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "Packages/P02/worker-python/test_p02_admission.py",
+      "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+      "Packages/P04/Rag/RagService.cs",
+      "Packages/P04/rag_python_compat.py",
+      "Packages/P04/train_qlora.py",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "Packages/P05/Space/SpaceFeedClient.cs",
+      "azure-pipelines-nox-v16.yml",
+      "coordination/e06/adapters/g2_space_mobile.py",
+      "coordination/e06/build_onehost_installer.ps1",
+      "coordination/e06/onehost_p02_p04.py",
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06_host50/admission.py",
+      "coordination/release/NOX_V16_FINAL_TWO_MANUAL_EXECUTORS_20261028.md",
+      "coordination/source-lock/verify_original_archive.py",
+      "integrations/creative/bridge/CreativeHostBridge.cs",
+      "integrations/creative/stage_creative.py",
+      "integrations/creative/web/entry.js",
+      "integrations/creative/web/studio.html",
+      "integrations/creative/web/studio.js",
+      "integrations/creative/web/theater.js",
+      "integrations/wow200/runtime/home-scene.mjs",
+      "integrations/wow200/runtime/loader.mjs",
+      "integrations/wow200/stage_wow200.py",
+      "integrations/wow200/tests/test_home_scene.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.test.mjs",
+      "proposals/NOX-PACK01-50/native_bridge.py",
+      "proposals/NOX-PACK01-50/test_native_bridge.py",
+      "proposals/NOX-VOICE-LAB/voice-lab.js",
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Test-NSIS-Windows.ps1",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "tests/e06/test_creative_worker_stdout_admission_r14.py",
+      "tests/e06/test_onehost_manifest_contract.py"
+    ],
+    "historic_migration_commits_not_in_astra": 21,
+    "original_parts": [
+      {
+        "path": "source_00.part",
+        "git_blob_sha1_migration": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "git_blob_sha1_astra": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "git_blob_equal": true,
+        "blob_size_bytes": 20971520
+      },
+      {
+        "path": "source_01.part",
+        "git_blob_sha1_migration": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "git_blob_sha1_astra": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "git_blob_equal": true,
+        "blob_size_bytes": 20971520
+      },
+      {
+        "path": "source_02.part",
+        "git_blob_sha1_migration": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "git_blob_sha1_astra": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "git_blob_equal": true,
+        "blob_size_bytes": 18421306
+      }
+    ],
+    "archive_expected_joined_size_bytes": 60364346,
+    "archive_expected_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "archive_joined_sha256_actual": "NOT_VERIFIED_PHYSICAL_T07_HOLD",
+    "archive_member_sha256_count_verified": 0,
+    "original_file_count_expected": 729,
+    "baseline_inventory_968": "HISTORICAL_REFERENCE_NOT_REVERIFIED"
+  },
+  "scaffold": {
+    "ci_source_file": ".gitlab-ci.yml",
+    "ci_blob_sha1": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "windows_entrypoint": "coordination/e06/gitlab_windows_entrypoint.ps1",
+    "entrypoint_blob_sha1": "a330977156c49aab0c433978b0d924549c5e2421",
+    "source_test": "tests/e06/test_gitlab_free_source_gate.py",
+    "source_test_blob_sha1": "88d84097d752d5dfb53329215677dccf5454ed34",
+    "manual_ci_gate": "CI_PIPELINE_SOURCE in {web,api} AND NOX_APPROVE_WINDOWS_BUILD=YES",
+    "hardcoded_branch": "migration/nox-v16-gitlab-free-20261028-r01",
+    "artifact_target": "work/gitlab-artifacts/GITLAB_NOX_WINDOWS_RUN_RECEIPT.json",
+    "problem": "Windows entrypoint currently hard-pins historical migration branch; cannot use new frozen SHA without future reviewed T12 owner change",
+    "source_test_execution": "NOT_RUN_NO_NEW_CI_OR_TESTS"
+  },
+  "gates": {
+    "T06_one_accepted_tree": "HOLD",
+    "T07_physical_source_lock": "HOLD",
+    "T09_frozen_sha": "HOLD_0_OF_6",
+    "T10_independent_source_ready": "HOLD_0_OF_7",
+    "T11_authenticated_gitlab_live_head": "ACCESS_HOLD",
+    "T12_windows_build": "NOT_RUN",
+    "T13_e07_native": "NOT_RUN",
+    "T15_release": "HOLD"
+  },
+  "handoff_to_T12": {
+    "state": "CONDITIONAL_HANDOFF_ONLY_NOT_AUTHORIZATION_TO_BUILD",
+    "required_preconditions": [
+      "T06 accepted one common P01-P05 source tree with immutable owner receipts and no-loss seal",
+      "T07 physical joined original archive SHA256 + all 729 members verified",
+      "T09 immutable frozen source commit SHA/tree/manifest/SourceLock PASS",
+      "T10 independent SOURCE_READY PASS against the identical frozen source SHA",
+      "T11 authenticated live GitLab PRIVATE project, real target branch HEAD, permissions, quota, runner availability proven"
+    ],
+    "non_destructive_process": [
+      "Authenticate directly to the existing GitLab Free project; inventory branches/tags/protection/project visibility and actual HEAD without assuming imported GitHub mirror is synchronized",
+      "Back up existing GitLab refs and original migration history; compare with frozen approved GitHub source and this inventory of 27 unique migration paths and 43 shared-content divergences",
+      "Owner-review every changed shared path against exact Git blob and SourceLock preimage; never overwrite 27 unique migration files or protected original three archive parts",
+      "Prepare a reviewed integration commit preserving both histories with rollback; ensure any GitLab update is authorized fast-forward ONLY; if histories diverge, stop for reviewed additive reconciliation, never force-push/reimport",
+      "Review historical CI hard-pinned branch condition and source revision gate for the new frozen SHA without enabling pipeline, preserving manual consent and private Windows runner constraints",
+      "Only after same-SHA gates PASS permit one later manual GitLab Windows build by T12; emit immutable BuildID and EXE/Setup SHA; independent T13 E07 installed 10/10 before T15 release"
+    ],
+    "current_decision": "DO_NOT_PUSH_GITLAB_DO_NOT_RUN_PIPELINE",
+    "primary_blocker": "No authenticated LIVE GitLab HEAD; additionally no T09 frozen SHA and T10 SOURCE_READY PASS"
+  },
+  "lesson": "Historical GitHub source-branch comparison, even with 27 exact unique blobs and matching three ZIP-part Git SHA-1, is never evidence of the private LIVE GitLab HEAD or of raw archive SHA-256. Require authenticated live refs and identical frozen SourceLock before a safe fast-forward; a diverged target is HOLD, never force/reimport.",
+  "safety": {
+    "changed_product_source": false,
+    "changed_main": false,
+    "changed_pr162": false,
+    "changed_r30_snapshots": false,
+    "changed_shared_google_docs": false,
+    "exe_run": false,
+    "nsis_run": false,
+    "gitlab_ci_run": false,
+    "gitlab_push": false,
+    "gitlab_reimport": false
+  },
+  "write_scope": {
+    "branch": "automation/v16/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD",
+    "only_new_receipt_path": "coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+  },
+  "acceptance": {
+    "task_progress": "N/D",
+    "reason": "authenticated GitLab live HEAD and approved T09/T10 gate missing; no invented completion percentage",
+    "old_DONE_preserved": true
+  }
+}
