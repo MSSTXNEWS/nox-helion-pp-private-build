@@ -1,0 +1,170 @@
+{
+  "schema": "NOX_V16_G1C_R21_COMPAT_SOURCE_PROOF_V1",
+  "run_id": "NOX-V16-G1C-20261029T215817MSK-R16-R21-COMPAT",
+  "task_id": "G1-C-P04-P05",
+  "role": "G1-C",
+  "outcome": "INCOMPLETE_SOURCE_ONLY",
+  "timestamp_msk": "2026-10-29T22:05:29+03:00",
+  "planned_msk": "2026-10-29T22:01:00+03:00",
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMSFWX8K4dfFOfJe1TvCD5TjQVgkSVw-_RIhCkOBnfcUxP2N5txGNKJH_fGQ4fyf8zCBMl5kUscDDpX3Fv91bTgPh9Kb-slrI1asLDI",
+    "canon_sections": "1-33,54-56,R29",
+    "section33_rule_numbers_unique": 56,
+    "register_ref_sha": "44207c01a12ab3ede96607a8ac658746e113d642",
+    "register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "TOTAL": 11
+    },
+    "controls_branch_sha": "ef21a54356f051f5f45fbbf205f8fd6007da9cf0",
+    "full_role_prompt_blob": "757e64e3c012d064561bd3331d50b87a2858e06b",
+    "docs_revisions": {
+      "master": "AHj4eMQiPGKK0zGV6OtJ1XXv3Ar3p1MTmEmygVnNP2YLbK1Ej9o14rguvA_0M1k1a4dB37VBcAazXTVcNIZsSHMY_H6r7a760tY8uwscqGs",
+      "e06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+      "lessons": "AHj4eMTsBH9C9JHyQ5ggj6NWJizOJpSYqnt--9sAnQZJ4m_4CmxLB3HciyyBrrQq2fiI1WhDSJPn4r4EIsx36HZBgVaX4_Evs_uXEN6q8No",
+      "c34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    }
+  },
+  "live_source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "tree": "656ed36f4f61eaba1276f38fdd2136afbb2cfef1",
+    "source_change_count": 0,
+    "bindings": [
+      {
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "sha": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+      },
+      {
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "sha": "15d6807033040711ac54c4c9f63432c5653e62bd"
+      },
+      {
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "sha": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+      },
+      {
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "sha": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+      }
+    ],
+    "historical_owner_receipt_corroboration": {
+      "P04": {
+        "receipt_blob": "6375a87e825a7f7946e106a7d4a5319009113582",
+        "historic_rag_expected": "5556534de3ea36d634df68813c6906007181c606",
+        "current_rag": "58af025bd05f0e99a445b56c307e12d600b8f19f",
+        "historic_workflow_path": ".github/workflows/nox-p04-candidate-ci.yml",
+        "historic_workflow_current": "ABSENT_404"
+      },
+      "P05": {
+        "receipt_blob": "aa2cce569966fb6e858a4722c99e0b484dde8bbe",
+        "historic_events_expected": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "current_events": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+      },
+      "significance": "Historical owner receipt SHA drift only; current canonical source remains authoritative. T06 R23 already reported stale rows. Do not roll back working source or mark runtime QA accepted."
+    }
+  },
+  "r21_tool_proof": {
+    "script_path": "coordination/r21/flow_r21.py",
+    "script_blob": "5f5503d9cdef177d43f715846d4c34efa91b41a8",
+    "saved_queue_path": "coordination/r19/R19_ACTIVE_ERROR_AND_GATE_QUEUE.json",
+    "saved_queue_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+    "source_exact_git_blob_match_local": true,
+    "snapshot_exact_git_blob_match_local": true,
+    "observed_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "observed_register": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "execution": "ACTUAL_PYTHON_CLI_LOCAL_OFFLINE",
+    "status": "READ_ONLY_PLAN_NOT_AUTHORIZED",
+    "queued_ready_preview": 11,
+    "deferred": 4,
+    "excluded_from_ready": [
+      "T08",
+      "T09",
+      "T10",
+      "T11"
+    ],
+    "zero_mutations": true,
+    "remote_owner_authenticated": false,
+    "qa_accepted": false,
+    "output_sha256": "5c210a23348895023676d72582964a575402ec3ef0be5c34a2e0bc7fa6ac0590",
+    "targeted_negative_cases_passed": 10,
+    "targeted_negative_cases_total": 10,
+    "test_log_sha256": "031944806bf203d5a6ee25e88868fb984cf6c110d0f8e529e84407aed735dc9f",
+    "local_test_script_sha256": "63fac8450b50171f454d906c2cba30ebdd331198b7638c04bdf5e65f5f3d2cb4",
+    "cases": [
+      "exact matching snapshot is preview-only",
+      "HEAD drift blocks all READY",
+      "register drift blocks all READY",
+      "dual drift blocks all READY",
+      "FIX_APPLIED_UNVERIFIED cannot become ACCEPTED",
+      "T06 dependency self-deadlock rejected",
+      "non-null lease requires owner CAS",
+      "duplicate TaskID rejected",
+      "dependency cycle rejected",
+      "remote auth and QA remain false"
+    ],
+    "limitations": "Local read-only adapter tests are NOT Windows functional QA, remote lease, GitLab CI, owner acceptance, or BUILD admission."
+  },
+  "progress": {
+    "source_binding": "4/4 operational",
+    "before_accepted": 0,
+    "new_accepted": 0,
+    "after_accepted": 0,
+    "product_progress": "N/D",
+    "stage": "SOURCE_BINDING_ONLY"
+  },
+  "lessons": {
+    "active_errors_examined": 11,
+    "applied_local_guard": [
+      "ERR-SYS-002",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ],
+    "already_verified_closed": [
+      "ERR-SYS-006",
+      "ERR-SYS-007"
+    ],
+    "delegated": [
+      "ERR-SYS-001",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "history_coverage": "PARTIAL_419_HISTORICAL_FINGERPRINTS_NOT_ACTIVE",
+    "applied_lesson": "Never reuse READY without live ref and register blob comparison; keep local preview separate from remote authorization, native QA and accepted TaskID."
+  },
+  "gates": {
+    "A": "PASS_READ_CURRENT_REVISION_AND_ALL_56_RULES",
+    "B": "PASS_NEW_R21_EXACT_LOCAL_TEST_10_10_AND_SAME_HEAD_P04_P05_RECEIPT_CORROBORATION",
+    "C": "PENDING_GIT_READBACK",
+    "D": "PARTIAL_ACTIVE_11_TRIAGED_BUT_NO_OWNER_ACCEPTANCE"
+  },
+  "handoff": {
+    "to": [
+      "T06",
+      "G4-B",
+      "manual #3",
+      "T02",
+      "T08"
+    ],
+    "issue": 177,
+    "action": "T06 evaluate current exact four bindings and historical P04/P05 owner receipt drift in owner 8/8 workflow; request current owner-approved overlay without reverting canonical code; T08 independently test only current pinned HEAD; T02 record receipt/evidence if new. R21 preview never authorizes merge or DONE."
+  },
+  "no_loss": {
+    "acl": true,
+    "stop": true,
+    "consent": true,
+    "user_data_untouched": true,
+    "source_729_untouched": true,
+    "build": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "e07": "NOT_RUN"
+  }
+}
