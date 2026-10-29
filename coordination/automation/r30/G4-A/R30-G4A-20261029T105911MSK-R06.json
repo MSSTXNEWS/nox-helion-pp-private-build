@@ -1,0 +1,159 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T105911MSK-R06",
+  "slot": "G4-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 — LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "P04-G4A-R06-EARLY_SHARD_POST_HASH_STAT_FENCE",
+  "status": "HOLD",
+  "release_status": "HOLD",
+  "source_change": "COMMITTED_AND_GIT_READBACK_PASS",
+  "product_task_accepted": false,
+  "source_ready": false,
+  "attempted_at_msk": "2026-10-29T10:52:07+03:00",
+  "receipt_generated_utc": "2026-10-29T08:00:44.120Z",
+  "branch": "automation/r30/g4a/20261029T105911MSK-R06",
+  "parent_branch": "automation/r30/g4a/20261029T094735MSK-R05",
+  "parent_commit_sha": "64151fda6f6c18fce2cfbadd7c3ad8f8df687815",
+  "code_head_commit_sha": "bb13de4acdf7becab89ad3fc806005efbc569124",
+  "code_commits": [
+    "c992e23d1b6b7201057e1e73c9db8a655ba900bc",
+    "bb13de4acdf7becab89ad3fc806005efbc569124"
+  ],
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_first": true,
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "only_owned_paths_modified": true,
+    "peer": "G4-B"
+  },
+  "rules": {
+    "consolidated_56_read": true,
+    "section33_canonical_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "canonical_rules_git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "note": "56 consolidated historical rules (not proven verbatim ancient text). Current §§54–56 and R29 loader-only override read in Drive; no build, merge, GitLab or release."
+  },
+  "historical": {
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "indexed_frozen_branches": 25,
+    "historical_A04_source_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "historical_B1_source_git_blob": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+    "historical_B2_source_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "overlap_merged": false,
+    "snapshots_written": false,
+    "all_25_snapshot_file_bodies_verified": false,
+    "raw_original_729_SHA256_verified": false,
+    "original_three_archive_parts_written": false,
+    "interpretation": "25 frozen snapshot refs established by canonical conflict index and latest Astra-C readback; not a physical byte-by-byte independent verification."
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "de30534ecfef79fd1744d5ebe0d2400dc7144f63",
+      "post_git_blob_sha1": "c71d7d10817f59c708122708175cb000801b1c32",
+      "pre_sha256": "8f366dc42a8cb4f52aa8f42850c41232fba9c82b5907d53058c1c4223c9d9a6e",
+      "post_sha256": "f7195f5e7db2f329ffd614791e9af5175cd4027a55e5de20659adae061581bf3",
+      "commit": "c992e23d1b6b7201057e1e73c9db8a655ba900bc"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "911be5823a273de11530be6def3c29a64bf60d64",
+      "post_git_blob_sha1": "43ef05d4b8364008c5ee1c264e31eb373af5e98a",
+      "pre_sha256": "56d84705fd5bff2c768e9ede3b7d5ef4d1ac0138c2d46faf75453df1e088204e",
+      "post_sha256": "750f88233e35e56462507b5aa41fca7165bf33e8993ce3fe29c0c3e53c76c90b",
+      "commit": "bb13de4acdf7becab89ad3fc806005efbc569124"
+    }
+  ],
+  "code_delta": {
+    "root_cause": "An early verified shard can be modified, deleted or replaced during later shard SHA-256 computation, after its descriptor checks, leaving a mixed-time weight_files list even though config/index reread are unchanged.",
+    "changes": [
+      "Return internal file stat signature from same validated open descriptor as each shard SHA-256.",
+      "Retain per-shard internal signatures separately from public report; no secrets or filesystem metadata in output.",
+      "After all shard hash and metadata rereads, lstat every earlier shard, reject changed inode/size/timestamps, links and disappeared files before LOCAL_FILES_PRESENT_ONLY.",
+      "Reuse standard HOLD cleanup to clear partial weight_files and tensor_headers; preserve SHA-256, weight_map and total_size checks."
+    ],
+    "caution": "Not atomic cross-file snapshot protection: adversarial restore of timestamps/inode or mutation after final stat can evade detection; Windows NTFS/FAT semantics and full multi-GB races NOT_TESTED."
+  },
+  "targeted_tests": {
+    "command": "python /tmp/g4a_r06_scoped_source_test.py && python -m py_compile /tmp/g4a_r06_scoped_source_test.py",
+    "actual_scope": "ISOLATED_SCOPED_PYTHON_HELPER_AND_TEMPFILES — not imported GitHub repository module",
+    "actual_result": "4/4 PASS",
+    "checked": [
+      "unchanged two-shard stat signatures accepted",
+      "older shard appended after its stat sampling -> ValueError",
+      "older shard deleted before final check -> ValueError",
+      "symlink swap before final check -> ValueError"
+    ],
+    "repository_regressions_added": [
+      "test_g4a_r06_unchanged_multi_shard_sha_and_total_size",
+      "test_g4a_r06_older_shard_mutated_after_later_hash_holds"
+    ],
+    "repository_regressions_executed": false,
+    "full_repository_test_module": "NOT_RUN",
+    "full_repository_source_py_compile": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "real_GPU": "NOT_RUN",
+    "model_rights_dataset_revision_attested": false,
+    "git_readback_source_and_tests": "PASS",
+    "git_compare_parent_to_code_head": "PASS_ONLY_TWO_ASSIGNED_PATHS",
+    "prepost_sha256_domain": "UTF8_FILE_CONTENTS_NOT_GIT_OBJECT_SHA"
+  },
+  "google_drive": {
+    "read_only": true,
+    "read": [
+      "NOX FIN ZAGR V16 §33, §§54–56 + R29 latest loader-only override",
+      "NOX_GROWTH_JOURNAL_MASTER_CONTINUATION_V16_20261028_R04 (last Astra-C 10:34 MSK)",
+      "NOX Group B Task 14 E06 coordinator — run report (10:34 MSK)",
+      "NOX Group B Task 14 E06 coordinator — self-improvement (10:34 MSK)",
+      "NOX C34 Error Journal",
+      "NOX Group B Task 10 P04 RAG — self-improvement"
+    ],
+    "common_docs_written": false,
+    "owner_of_aggregation": "Astra-C only",
+    "receipt_to_aggregate": "R30-G4A-20261029T105911MSK-R06"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_R06_EARLY_SHARD_MUST_STAY_STABLE_UNTIL_FINAL_FENCE",
+    "prior_lesson_applied": "R05 re-read original config/index after slow shard hashing; preserve previous safetensors weight_map/total_size and fail-closed partial report cleanup.",
+    "observed_error": "R05 still omitted late mutation of already-hashed early shard while subsequent shards were processing.",
+    "root_cause": "Per-file integrity checks were not retained as a cross-shard end-of-scan consistency fence.",
+    "source_fix": "Record stat signature from validated descriptor and final lstat every shard after metadata rechecks.",
+    "regression": "2 slot-specific test methods saved in original tests/P04 module; isolated behavior 4/4 PASS, full module NOT_RUN.",
+    "process_change": "Treat source-level scoped Python tests and Git blob readback separately from full repository tests and native Windows acceptance.",
+    "next": "Run python -m unittest tests/P04/test_model_snapshot_probe.py against this pinned source checkout; evaluate multi-shard delayed edits, FAT/NTFS timestamp rollback and stronger snapshot locking separately."
+  },
+  "scope_guards": {
+    "no_PR162": true,
+    "no_main": true,
+    "no_common_R30_write": true,
+    "no_other_owner_paths": true,
+    "no_snapshots_modified": true,
+    "no_preflight_local_gpu": true,
+    "no_EXE": true,
+    "no_NSIS": true,
+    "no_Windows_CI": true,
+    "no_GitLab_execution": true,
+    "no_final_integration": true
+  },
+  "blockers": [
+    "Full original tests/P04 module was not executed in this session; repository tests authored, not independently confirmed.",
+    "Stat signatures are weaker than cross-file immutable snapshot locking, especially against malicious timestamp restore.",
+    "Physical original 729 archive SHA and all historical snapshots not byte-verified.",
+    "No native Windows/GPU/licensing/revision/E06/E07 evidence."
+  ],
+  "completed_product_task_count_this_run": 0,
+  "provisional_source_patch_count_this_run": 1,
+  "weighted_product_completion_percentage": "N/D",
+  "conclusion": "HOLD: isolated source security mitigation saved on owned branch, GitHub readback PASS, no release or native test claim."
+}
