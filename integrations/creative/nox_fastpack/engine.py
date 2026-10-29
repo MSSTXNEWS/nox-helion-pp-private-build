@@ -503,14 +503,24 @@ class Studio(CreativeExtensions):
                 if self._active_process is proc:self._active_process=None
 
     def stop(self,interrupt_comfy=False):
-        """Cancel this Studio's active FFmpeg; Comfy interruption separately consented."""
+        """Verify this Studio's FFmpeg exit; never infer Comfy interruption."""
+        if type(interrupt_comfy) is not bool:
+            raise StudioError("ComfyUI interruption requires an explicit native boolean")
         self._stop_event.set()
         with self._process_lock:proc=self._active_process
         ffmpeg_running=bool(proc and proc.poll() is None)
-        if ffmpeg_running:proc.kill()
-        result={'status':'STOP_REQUESTED' if ffmpeg_running else 'NO_ACTIVE_LOCAL_RENDER',
-                'ffmpeg_cancelled':ffmpeg_running,'comfy_interrupted':False}
-        if interrupt_comfy:
+        confirmed=False
+        if ffmpeg_running:
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+                confirmed=proc.poll() is not None
+            except (OSError,subprocess.TimeoutExpired):
+                confirmed=proc.poll() is not None
+        result={'status':'STOPPED' if confirmed else
+                         'STOP_UNCONFIRMED' if ffmpeg_running else 'NO_ACTIVE_LOCAL_RENDER',
+                'ffmpeg_cancelled':confirmed,'comfy_interrupted':False}
+        if interrupt_comfy is True:
             try:
                 _get(self.comfy+'/interrupt',payload={},timeout=10)
                 result['comfy_interrupted']=True
