@@ -1,0 +1,198 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_G3B_M1_SOURCE_ONLY_R11_RECEIPT_V1",
+  "run_id": "G3B-20261029T183648MSK-M1-R11-ONEHOST-CATALOG-FINITE",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader ONLY",
+  "slot": "G3-B",
+  "status": "SOURCE_PATCH_SAVED_TESTED_HANDOFF_DONE_NATIVE_HOLD",
+  "progress": {
+    "denominator": 4,
+    "before": {
+      "done": 0,
+      "percent": 0,
+      "bar": "░░░░░░░░░░"
+    },
+    "after": {
+      "done": 1,
+      "percent": 25,
+      "bar": "███░░░░░░░"
+    },
+    "delta_pp": 25,
+    "remaining": 3,
+    "criteria": [
+      {
+        "name": "PACK02 existing source admitted",
+        "status": "HOLD_OWNER_G7B_AND_T06"
+      },
+      {
+        "name": "D02 WOW200 8CoreID 5Persona acceptance",
+        "status": "HOLD_NOT_VERIFIED_THIS_RUN"
+      },
+      {
+        "name": "No-loss native host integration acceptance",
+        "status": "HOLD_NOT_VERIFIED_THIS_RUN",
+        "source_hardening_done": true
+      },
+      {
+        "name": "T06 owner handoff",
+        "status": "DONE_HANDOFF_ONLY",
+        "issue_comment_id": 6501326837
+      }
+    ]
+  },
+  "prestart": {
+    "active_error_register": {
+      "ref": "coordination/v16-shared-error-ledger-20261029-r01",
+      "blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+      "statuses": {
+        "OPEN": 4,
+        "FIX_APPLIED_UNVERIFIED": 5,
+        "VERIFIED_CLOSED": 2
+      }
+    },
+    "owner_lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+      "g3b_paths": [
+        "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "Packages/P03/Source/P03.ModelCenter.Wow/ui.js"
+      ],
+      "pack02_owner": "G7-B"
+    },
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_preserved": 25,
+    "canonical_doc_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "drive_delta_after": "G3B-20261029T144549MSK-R08",
+    "drive_revisions": {
+      "master": "AHj4eMSJ-HMkRIWvuGIRwYzjoZAREvlzp2St_5eQmFRUCnhFF0DfHXZ3PGwsTbKh6aRr9w-UGhW5pFx-yf1P7m59c9zkz1rgJHu0_M35z3I",
+      "e06": "AHj4eMQ26ET967ECI-krnS89c08HuXD2O15CXDtfCbYrvneoTxxvBNT0imHjOngADnFB8daAKxEzxZm9kHyt4jRyiQnYYCX6bcBxMVW4Exs",
+      "lessons": "AHj4eMSFtSRgQ9CYJQf8Xvbr7spCyNLrmaIvAUlstega6SYRO_4QgLF21KCkzb-L36Z_oJUM-SF-MZhd-FjeY99efHvEMocFUiT43tGdKpI"
+    }
+  },
+  "source_change": {
+    "owner": "G3-B",
+    "base_branch": "automation/r30/g3b/G3B-20261029T144549MSK-R08",
+    "base_commit": "8e31b71a1ebb5abeeea203b1a082fe4bd1ffa603",
+    "branch": "automation/r30/g3b/G3B-20261029T183648MSK-M1-R11-ONEHOST-CATALOG-FINITE",
+    "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+    "pre_git_blob": "46071d6dd86a627b1e4d9c8be20181f4fd1d5032",
+    "post_git_blob": "6e8bd718e20ccd5af0f33db3bd2d070575719666",
+    "commit": "be1a99ddddadac4e4d68f6e46e36fafad16905",
+    "cas": "update_file expected PRE blob; exact GitHub POST readback MATCH",
+    "defect": "P03 discovery JSON parse_constant rejected NaN, but finite-in-source exponent 1e309 passed Python float parsing as Infinity and could contaminate model-card metadata.",
+    "repair": "Validate parse_float by math.isfinite and raise P03PortHold on overflow; preserve original P02 transport, 30 reviewed family cards, model license/owner constraints."
+  },
+  "targeted_test": {
+    "kind": "ONE isolated Python json.loads callback contract; not full original P03 module",
+    "cases": 4,
+    "pass": 4,
+    "fail": 0,
+    "cases_run": [
+      "1.25 finite preserved",
+      "1e309 rejected",
+      "NaN rejected",
+      "duplicate key rejected"
+    ],
+    "full_module": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "host50_native": "NOT_RUN"
+  },
+  "pack02_handoff": {
+    "owner": "G7-B",
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "unified_ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "unified_branch_head_observed": "e1ed247dfadfa7829c6db5cf1e701ee657aa8030",
+    "pre_unified_blob": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+    "g7b_v10_ref": "automation/r30/g7b/G7-B-20261029T1452MSK-PACK02-CSV-HEADERONLY-SCHEMA-V10",
+    "g7b_v10_blob": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+    "routes_in_both": 50,
+    "owner_conflict": "G3-B cannot change PACK02; G7-B must owner-check and T06 must same-HEAD admit",
+    "native_acceptance": "NOT_VERIFIED",
+    "T06_issue_comment": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6501326837",
+    "handoff_readback": true
+  },
+  "error_acks": [
+    {
+      "id": "ERR-SYS-001",
+      "action": "HANDOFF",
+      "why": "Own immutable ACK/receipt is supplied; shared registry writer remains T02."
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "FIX_PROCESS",
+      "why": "Pinned own base commit and Git blob CAS, observed mutable unified HEAD separately; no stale SHA promotion."
+    },
+    {
+      "id": "ERR-SRC-003",
+      "action": "HANDOFF",
+      "why": "G3-B cannot close Host50 admission; T06/T08 native same-SHA 13-route proof still required."
+    },
+    {
+      "id": "ERR-SRC-004",
+      "action": "FIX_PARTIAL_HANDOFF",
+      "why": "One P03 existing-host catalog parser hardening saved; full P01-P05 native acceptance still OPEN."
+    },
+    {
+      "id": "ERR-SRC-005",
+      "action": "NO_IMPACT",
+      "why": "T06 owner fixture runner is not touched."
+    },
+    {
+      "id": "ERR-SYS-006",
+      "action": "NO_IMPACT_VERIFIED_CLOSED",
+      "why": "729 original physical ZIP proof remains historic DONE, not re-opened."
+    },
+    {
+      "id": "ERR-SYS-007",
+      "action": "NO_IMPACT_VERIFIED_CLOSED",
+      "why": "T04 archived overlap 34/34 remains DONE; no re-arbitration."
+    },
+    {
+      "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "HANDOFF",
+      "why": "No freeze/closeout claims; source != native acceptance."
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "FIX_PROCESS",
+      "why": "Actual source patch/test/readback and owner handoff instead of repeated empty HOLD."
+    },
+    {
+      "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "NO_IMPACT",
+      "why": "T06 owned guard source unverified, no cross-write."
+    },
+    {
+      "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "HANDOFF",
+      "why": "T08/Host50 independent 13-route attestation remains needed."
+    }
+  ],
+  "self_improvement_lesson": {
+    "prior": "G3B-R08: publish stored normalized values, not raw transient events; C-R20 lesson: bind every error claim to immutable source SHA and do not close without independent proof.",
+    "root_cause": "Existing catalog JSON path enforced parse_constant only, while Python accepted overflow exponent into non-finite floats; review evidence could be corrupted without explicit error.",
+    "method_applied": "Reused existing digest finite_float policy at the catalog intake boundary, verified PRE blob and owner lock before change, used GitHub content-sha CAS and readback.",
+    "effect": "One overflow path now fails closed while finite metadata remains valid; isolated 4/4 checks, but no full native acceptance; external T06 receives exact SHA drift and link."
+  },
+  "constraints": {
+    "new_host": false,
+    "new_database": false,
+    "pack01_changed": false,
+    "pack02_changed": false,
+    "d02_wow_changed": false,
+    "original_zip_changed": false,
+    "main_changed": false,
+    "pr162_changed": false,
+    "google_docs_changed": false,
+    "exe": false,
+    "nsis": false,
+    "gitlab_ci": false,
+    "e07": false,
+    "release": false,
+    "old_done_preserved": true
+  },
+  "owner_acceptance": "HOLD",
+  "source_ready": "HOLD",
+  "release": "BLOCKED"
+}
