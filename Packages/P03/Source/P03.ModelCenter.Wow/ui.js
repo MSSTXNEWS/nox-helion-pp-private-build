@@ -87,16 +87,16 @@ function renderCatalog(){const list=$('catalog');list.replaceChildren();const q=
     b.append(check);list.append(b);
   }
 }
-function renderHero(){const m=current();const j=currentJob();const verified=hasEvidence(m);$('selectedName').textContent=m?.name||'Нет моделей';
+function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvidence(m);$('selectedName').textContent=m?.name||'Нет моделей';
   $('heroSubtitle').textContent=m ? `Семейство ${m.id} · ${verified?'Проверенные артефактные данные':'Сведения об артефакте требуют проверки'}`:'Каталог пуст';
   const chips=$('heroChips');chips.replaceChildren();chips.append(el('span','chip '+(verified?'ok':'warning'),verified?'ARTIFACT VERIFIED':'REVIEW_REQUIRED'));
   if(j?.state) chips.append(el('span','chip',j.state));
   const complete=numeric(j?.completedBytes),total=numeric(j?.totalBytes);const realPct=complete!==null&&total!==null&&total>0&&complete<=total?Math.min(100,Math.round(complete/total*100)):null;
   $('orbit').style.setProperty('--pct',realPct===null?'0%':realPct+'%');$('orbit').classList.toggle('working',j?.state==='Running'||j?.state==='Downloading');
   $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПЕРЕДАНО';
-  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?.status||'Нет активной операции';
+  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?`${safeText(j.modelTag)} · ${j.status||'Нет активной операции'}`:'Нет активной операции';
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
-  $('transferNote').textContent=realPct===null?'Без достоверного процента':`Передано ${realPct}% · установка требует receipt`;
+  $('transferNote').textContent=j?`${safeText(j.modelTag)} · ${realPct===null?'Без достоверного процента':`Передано ${realPct}%`} · установка требует receipt`:'Без достоверного процента';
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
   const cap=state.capabilities||{};const queue=state.activeJob,queueModel=queueJobModel();
   const canStop=state.hostReady&&cap.stop===true&&queue&&queueModel&&['Queued','Running'].includes(queue.state);
