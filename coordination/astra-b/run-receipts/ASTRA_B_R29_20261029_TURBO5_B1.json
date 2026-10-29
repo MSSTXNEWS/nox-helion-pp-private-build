@@ -1,0 +1,15 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-TURBO5-B1",
+  "worker": "B1",
+  "task_id": "P04-STRICT-JSON-SNAPSHOT",
+  "source_commit": "76563dd1169c6e11fbf3f0a1caaec31970a589ab",
+  "source_only": true,
+  "actual_subagent_id": null,
+  "change": "Reject NaN/Infinity non-JSON tokens in model metadata",
+  "test": "FOCUSED_SOURCE_ASSERT_PASS",
+  "native_test": "NOT_RUN",
+  "source_readback": "PASS",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "lesson": "The model snapshot cannot accept non-finite JSON despite Python's permissive parser.",
+  "complete_taskid": "N_D"
+}
