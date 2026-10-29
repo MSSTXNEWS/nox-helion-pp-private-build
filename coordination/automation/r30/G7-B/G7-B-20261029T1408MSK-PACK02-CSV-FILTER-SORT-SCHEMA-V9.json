@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V9",
+  "run_id": "G7-B-20261029T1408MSK-PACK02-CSV-FILTER-SORT-SCHEMA-V9",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY, not main NOX",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T1408MSK-PACK02-CSV-FILTER-SORT-SCHEMA-V9",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T1305MSK-PACK02-CSV-SELECT-FAILCLOSED-V8",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "personal_receipt_dir": "coordination/automation/r30/G7-B/",
+    "exclusive_owner": true
+  },
+  "pre_read": {
+    "rules_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rules_read": "56/56 consolidated rules, not verified verbatim original",
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "v16_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_errors_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historic_C34_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "R30_index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "R30_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "historical_snapshot_root_count": 25,
+    "historical_snapshots_recursive_git_trees_read": 25,
+    "historical_snapshots_recursive_git_trees_truncated": 0,
+    "snapshots_raw_content_and_physical_SHA256": "NOT_VERIFIED",
+    "original_729_raw_archive_SHA256": "NOT_VERIFIED",
+    "r27_a10_alternate_json_blob": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6"
+  },
+  "task_id": "G7B-PACK02-CSV-FILTER-SORT-OWN-SCHEMA-BOUNDARY-20261029-09",
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "previous_lesson_applied": "R08: CSV select rejects nonexistent/inherited field instead of inventing results; extend same own-column safety invariant to CSV filter and sort, without modifying earlier DONE or unrelated golden tests.",
+  "bug": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "affected_existing_routes": [
+      "data.csv.filter",
+      "data.csv.sort"
+    ],
+    "before": "Missing/misspelled CSV columns passed silently to filter/sort; prototype keys constructor/__proto__/toString could be read as inherited JS values, yielding misleading outcomes rather than an error.",
+    "after": "Shared csvColumn own-column membership check rejects unknown/non-string fields with CSV_UNKNOWN_FIELD when data rows exist, preserves real reserved-name columns and valid filtering/numeric sorting. Empty CSV remains [] without header-only schema validation.",
+    "source_git_blob_before": "1a850441cd74fb49e20220afbd53650debdfa314",
+    "source_git_blob_after": "4337ef89a3ea2a8aa8cc45fc620649e6f76b83fb",
+    "source_commit": "93e105d2ed54f1a7b0abe37e78c2cb882908c91d",
+    "route_ids_before": 50,
+    "route_ids_after": 50,
+    "new_routes": 0
+  },
+  "targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-csv-filter-sort-own-columns.test.mjs",
+    "blob": "3e05946150a054a636f0773c07cc90d662dc50a1",
+    "commit_sha": "81ea45bb9e50b659bd0018e1f55cde6f8f87b4e8",
+    "command": "node --test proposals/NOX-PACK02-50/g7b-r30-csv-filter-sort-own-columns.test.mjs",
+    "full_node_execution": "NOT_RUN; no private repository checkout in Node runtime and CI explicitly prohibited",
+    "exact_saved_Git_source_V8": "19/19 checks PASS: fourteen inherited/missing/non-string field rejections, three valid behavior checks, one route count, one source test import assertion",
+    "preimage_RED": "V8 preimage reproduced accepted nonexistent filter field and inherited constructor sort field",
+    "independent_native_Windows_Host50": "NOT_RUN",
+    "scope_limitation": "V8 module-function execution is not Node native test, Windows loader test, or licensed Host50 admission."
+  },
+  "comparison_before_receipt": {
+    "base_ref": "automation/r30/g7b/G7-B-20261029T1305MSK-PACK02-CSV-SELECT-FAILCLOSED-V8",
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "changed_files": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-csv-filter-sort-own-columns.test.mjs"
+    ]
+  },
+  "self_improvement": {
+    "lesson_id": "R30_G7B_UNIFY_CSV_SCHEMA_VALIDATION_ACROSS_READ_ROUTES",
+    "observed_error": "Prior fix made CSV select safe but two sibling routes still silently accepted missing and prototype-inherited fields.",
+    "root_cause": "Repeated per-route field access without a single CSV own-column contract; regression coverage previously scoped to select only.",
+    "applied_fix": "Introduce a tiny shared schema-boundary helper for filter and sort; add one owner-specific regression test with legitimate reserved header, invalid fields, numeric sort and unchanged route inventory.",
+    "future_prevention": "Audit sibling operations that access user-selected object keys, favor own-property field membership at ingress, and separately flag header-only CSV schema ambiguity. Never count isolated V8 as Node/full Host50 acceptance."
+  },
+  "owner_request": {
+    "to": "G6-B original Host50 owner",
+    "status": "HOLD_OWNER_APPROVAL",
+    "description": "Licensed, consent-gated internet adapters must be admitted via the original Host50 after permission/license/provenance review. No cross-owner PACK01/native_bridge edits by G7-B.",
+    "foreign_files_written": false
+  },
+  "unresolved": [
+    "CSV header-only (zero data rows) field validation requires a separate parser/schema contract decision; current behavior remains [] as historically.",
+    "Historic r27-a10 dotted-key JSON semantics differ from current fail-closed JSON_PATH_COLLISION; owner policy HOLD.",
+    "Authored full Node test NOT_RUN, original Windows Host50 adapter/permission review pending.",
+    "Original 729 raw source archive per-file SHA256 and independent E06/E07 gates NOT_VERIFIED."
+  ],
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "Host50": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_GOOGLE_DOCS_CAS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "historical_snapshots_modified": false,
+    "PACK01_native_bridge_modified": false,
+    "D02_WOW_modified": false,
+    "foreign_owner_paths_modified": false,
+    "Google_Docs_modified": false,
+    "old_DONE_deleted": false,
+    "EXE_run": false,
+    "NSIS_run": false,
+    "GitLab_CI_run": false,
+    "final_integration_run": false
+  },
+  "Astra_C_instruction": "Only Astra-C may append this immutable R09 RunID and new lesson to shared Google Docs via revision/CAS and RunID readback. Keep SOURCE gates HOLD."
+}
