@@ -1,0 +1,156 @@
+{
+  "schema": "NOX_V16_G1C_R08_CHECKPOINT_V1",
+  "taskId": "G1-C-P04-P05",
+  "runId": "NOX-V16-G1C-20261029T191315MSK-R11",
+  "recordedUTC": "2026-10-29T16:18:44.938Z",
+  "scope": "EXPRESS INTEGRATOR V16 LOADER SOURCE ONLY",
+  "prestart": {
+    "canonicalDocId": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "rules33": "56/56 read",
+    "registerBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "sourceHEAD": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+    "sourceTreeSha": null,
+    "readStatus": "READ_BLOCKED_TREE_SHA_NOT_EXPOSED"
+  },
+  "bindings": [
+    {
+      "owner": "G4-A",
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+      "post": "34c09ced3f49f28a8542138d9e5bce18c553b75d"
+    },
+    {
+      "owner": "G4-B",
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "pre": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "post": "15d6807033040711ac54c4c9f63432c5653e62bd"
+    },
+    {
+      "owner": "G5-A",
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+      "post": "1dcf0df656cdce6f4231f5f411db9150d0768ead"
+    },
+    {
+      "owner": "G5-B",
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "pre": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd",
+      "post": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+    }
+  ],
+  "focusedTest": {
+    "scope": "actual existing P05 .mjs source evaluated in JS V8 against four event cases",
+    "sourceBlob": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+    "cases": [
+      "CROSS_TYPE_EVENT_ID_COLLISION",
+      "CROSS_TYPE_EVENT_SEQUENCE_COLLISION",
+      "LEGITIMATE_VERIFIED_ERROR",
+      "IDENTICAL_EVENT_REPLAY_DEDUP"
+    ],
+    "passed": 4,
+    "total": 4,
+    "sourceMode": "actual function execution",
+    "nodeNative": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "windowsGPU": "NOT_RUN"
+  },
+  "errorTriage": {
+    "all11IDsRead": true,
+    "clusters": [
+      {
+        "ids": [
+          "ERR-SYS-001",
+          "ERR-SYS-002"
+        ],
+        "owner": "T02",
+        "action": "DELEGATE",
+        "reason": "current HEAD/readback+shared register"
+      },
+      {
+        "ids": [
+          "ERR-SRC-003",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "owner": "T06/T08",
+        "action": "DELEGATE",
+        "reason": "Host50 admission base mismatch; native 13 routes"
+      },
+      {
+        "ids": [
+          "ERR-SRC-004",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01"
+        ],
+        "owner": "T06/T08/G1-C",
+        "action": "APPLY_FOCUSED_P05_AND_DELEGATE_NATIVE",
+        "reason": "source binding and security test do not prove source acceptance"
+      },
+      {
+        "ids": [
+          "ERR-SRC-005"
+        ],
+        "owner": "T08",
+        "action": "DELEGATE",
+        "reason": "pinned fixture runner native independent check"
+      },
+      {
+        "ids": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "owner": "T04/T07/T09",
+        "action": "ALREADY_FIXED",
+        "reason": "retain historical 729/729 and 34/34"
+      },
+      {
+        "ids": [
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "owner": "T09/T02",
+        "action": "DELEGATE",
+        "reason": "freeze after source 8/8"
+      },
+      {
+        "ids": [
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+        ],
+        "owner": "ALL/T02",
+        "action": "APPLY_REPORT_GATE",
+        "reason": "HOLD alone not completion"
+      }
+    ],
+    "activeReviewed": 11,
+    "activeTotal": 11,
+    "historic419NotActive": true,
+    "olderReceipts": "PARTIAL"
+  },
+  "progress": {
+    "sourceBindingBefore": "4/4",
+    "sourceBindingAfter": "4/4",
+    "beforePercent": 100,
+    "afterPercent": 100,
+    "deltaPp": 0,
+    "newIndependentFocusedSecurityEvidence": "4/4",
+    "functionalAcceptedDelta": 0
+  },
+  "gates": {
+    "A": "READ_BLOCKED_TREE_SHA",
+    "B": "PASS_FOCUSED_SOURCE_EVIDENCE",
+    "C": "PENDING_RECEIPT_GIT_READBACK",
+    "D": "PASS_ACTIVE_11_IDS_WITH_PARTIAL_HISTORICAL_CURSOR",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "lesson": "Same content blob on moving HEAD permits independent source-level proof, not native PASS or source tree seal. Historical DONE preserved; no donor reimport.",
+  "next": "T06 share exact tree SHA+accepted manifest; T08 run native P04/P05+13 Host50 tests at identical HEAD; T02 append journal after CAS readback.",
+  "noProductCodeWrites": true,
+  "noSharedDocsWrites": true,
+  "noEXE_NSIS_CI": true
+}
