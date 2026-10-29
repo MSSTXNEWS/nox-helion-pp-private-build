@@ -70,6 +70,13 @@ public sealed class GoogleDocsAppendReadback
                 return new(runId, documentId, revision, null,
                     write.StatusCode == System.Net.HttpStatusCode.BadRequest ?
                         "REVISION_CONFLICT_OR_REJECTED" : "APPEND_REJECTED", entry.Length);
+            // Verify the Docs API acknowledgement is for the target document.
+            using var ack = await ParseBoundedAsync(write, stop).ConfigureAwait(false);
+            if (ack.RootElement.ValueKind != JsonValueKind.Object ||
+                !ack.RootElement.TryGetProperty("documentId", out var acknowledgedId) ||
+                acknowledgedId.ValueKind != JsonValueKind.String ||
+                acknowledgedId.GetString() != documentId)
+                return new(runId, documentId, revision, null, "WRITE_DOCUMENT_ID_MISMATCH", entry.Length);
 
             using var after = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
                 token, null, stop).ConfigureAwait(false);
