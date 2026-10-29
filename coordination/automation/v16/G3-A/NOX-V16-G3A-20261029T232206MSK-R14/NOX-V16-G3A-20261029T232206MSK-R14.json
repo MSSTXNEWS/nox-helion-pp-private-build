@@ -1,0 +1,88 @@
+{
+  "run_id": "NOX-V16-G3A-20261029T232206MSK-R14",
+  "schema": "NOX_V16_G3A_R23_P04_SOURCE_PARITY_PROOF_V1",
+  "area": "EXPRESS INTEGRATOR P04",
+  "stage": "SOURCE_PARITY_VERIFIED_LIMITED",
+  "task_id": "existing P04 model snapshot source",
+  "accepted_delta": 0,
+  "progress": "0/4 -> 0/4",
+  "product": "N/D",
+  "source_head_PRE": "d23956686fd9634225512f456b194fc723eda933",
+  "source_head_POST": "d23956686fd9634225512f456b194fc723eda933",
+  "source_tree": "dd1e245a61767c0c47585d412fe18e763decb4e6",
+  "donor_pr221": "3434f21904910f579c4175f961c84db5f4e2dfd9",
+  "pinned_blobs": {
+    "donor_source": "fe81cefda2970479f18cc50bae485d006d28f03f",
+    "integrated_source": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+    "donor_test": "1b9fd37a56a39c728b663b7eefda6f800037fded",
+    "integrated_test": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e"
+  },
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "active_register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "active_errors": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2
+  },
+  "ownership_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "physical_result": "New executable SHA-pinned read-only P04 source parity guard, isolated G3-A. Verified exact source bytes on authenticated GitHub read; no product merge.",
+  "finding": "Current PR162 integrated P04 source already contains complete PR221 donor functionality plus stricter Windows path validation. The 29 donor Python test methods are preserved, one escaped-newline negative fixture strengthened, and three path-security methods added; blind donor overwrite would lose security.",
+  "checks": {
+    "source_contract_V8": {
+      "pass": true,
+      "errors": [],
+      "donor_test_count": 29,
+      "integrated_test_count": 32,
+      "new_security_tests": [
+        "test_rejects_control_character_shard_path",
+        "test_rejects_windows_backslash_shard_path",
+        "test_rejects_windows_drive_relative_shard_path"
+      ]
+    },
+    "mutation_checks": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "passed": 5,
+    "total": 5,
+    "Python_unit": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "QA": "NOT_SIGNED"
+  },
+  "error_ack": {
+    "ERR-SRC-004": "P04 source already integrated + stronger guard, T06 retains security",
+    "ERR-SYS-002": "Live HEAD/tree/4 blobs pinned",
+    "ERR-SYS-001": "Personal receipt only, T02 shared CAS pending",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "INCOMPLETE not DONE",
+    "ERR-SRC-003": "NO_IMPACT Host50 owner T06",
+    "ERR-SRC-005": "NO_IMPACT PACK01 owner T08",
+    "ERR-SYS-006": "CLOSED_NO_REOPEN",
+    "ERR-SYS-007": "CLOSED_NO_REOPEN",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "DELEGATE T08"
+  },
+  "lessons_applied": [
+    "Do not replace stronger integrated code with stale PR donor",
+    "Separate source parity from Python runtime verification and independent QA",
+    "Preserve same-SHA proof after moving PR162 HEAD"
+  ],
+  "handoff": {
+    "T06": "On live PR162 pin P04 source/test blobs and run full Python tests/P04/test_model_snapshot_probe.py; do NOT blindly merge older PR221 P04 donor; preserve extra Windows path guards.",
+    "T08": "After T06 accepted exact frozen HEAD, independently run same-head Python/security QA, not native 13 route acceptance.",
+    "T02": "Ingest RunID receipt into shared Error/Master/E06/Lessons via sole-writer CAS/readback; no automatic status promotion."
+  },
+  "gate_status": {
+    "A": "PASS with Google Docs canon + active register + PR HEAD, Drive Master/C34; E06/Lessons specific current revision unconfirmed",
+    "B": "PASS isolated executable guard + V8 exact-source tests",
+    "C": "personal immutable Git receipt pending readback",
+    "D": "PASS relevant antiregression clustered"
+  },
+  "restriction": "SOURCE ONLY; no EXE, NSIS, CI, E07, training, product merge, shared journal write",
+  "tool_status": {
+    "R21": "TOOL_NOT_RUN",
+    "R22": "TOOL_NOT_RUN"
+  }
+}
