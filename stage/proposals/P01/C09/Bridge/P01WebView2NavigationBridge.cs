@@ -131,10 +131,17 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         }
     }
 
-    private bool IsCurrent(string documentSource) =>
-        Volatile.Read(ref _disposed) == 0 && !_lifetime.IsCancellationRequested &&
-        IsTrustedSource(_webView.Source) &&
-        string.Equals(_webView.Source, documentSource, StringComparison.OrdinalIgnoreCase);
+    private bool IsCurrent(string documentSource)
+    {
+        if (Volatile.Read(ref _disposed) != 0 || _lifetime.IsCancellationRequested) return false;
+        try
+        {
+            var current = _webView.Source;
+            return IsTrustedSource(current) &&
+                   string.Equals(current, documentSource, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception) { return false; /* WebView2 may be closing or disposed */ }
+    }
 
     private void ReplyIfCurrent(string documentSource, string requestId, string routeId, string status, string error)
     {
@@ -153,7 +160,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _webView.WebMessageReceived -= OnWebMessageReceived;
+        try { _webView.WebMessageReceived -= OnWebMessageReceived; }
+        catch (Exception) { /* native WebView2 may already be disposed */ }
         _lifetime.Cancel();
         _lifetime.Dispose();
         _pending.Clear();
