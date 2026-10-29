@@ -7,7 +7,7 @@ route exposes neither. NoxPackHost retains dangerous-action native consent.
 """
 from dataclasses import dataclass
 from helion.e11.service import E11Service, scope_id
-from native_bridge import BoundPort, HostDenied, HostHold, NativeSession, NoxPackHost
+from native_bridge import BoundPort, HostDenied, HostHold, NativeSession, NoxPackHost, _native_owner_scope
 
 ROUTE = "system.pc_control"
 
@@ -31,9 +31,9 @@ def _scope(session):
     session.validate()
     if ROUTE not in session.allowed or ROUTE not in session.private_approved:
         raise HostDenied("Native PC scope required")
-    return (session.tenant, session.principal, session.chat_id,
-            session.allowed, session.private_approved,
-            session.windows_sid, session.session_lease)
+    # Within NoxPackHost.execute, this also probes the pinned live Windows
+    # SID/session lease at each original E11 preview/STOP owner boundary.
+    return _native_owner_scope(session)
 
 
 class ExistingPcControlPort:
