@@ -8,8 +8,8 @@
   "build": "NOT_AUTHORIZED; EXE/NSIS/GitLabCI/E07 off",
   "source_head_rule": "Read Git HEAD on EVERY start, immutable SHA per accepted evidence; no stale SHA promotions.",
   "stats": {
-    "OPEN": 4,
-    "FIX_APPLIED_UNVERIFIED": 5,
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
     "VERIFIED_CLOSED": 2,
     "total": 11,
     "history_complete": false
@@ -45,19 +45,22 @@
     },
     {
       "error_id": "ERR-SRC-003",
-      "status": "FIX_APPLIED_UNVERIFIED",
+      "status": "OPEN",
       "owner": "T06/Host50",
       "kind": "SOURCE_CONTRACT",
       "priority": "P1_SOURCE",
       "issue": "Host50Admission initially treated historic BASE_TREE as only allowed active_tree and raised WHOLE_TREE_SOURCELOCK_NOT_RECONCILED after integration.",
-      "next_action": "Host50 admission source исправлен; T06/G6-B подтвердить owner/native attestation и 13 source routes, T08 независимо проверяет same SHA.",
+      "next_action": "T06/Host50 sole source writer: reconcile owner-map historical sourceBaseCommit using owner-authorized exact-PRE 0b3a.. vs eb46.. safely; keep HMAC/native verifier, ACL, STOP, consent. T08 independently verify at SAME HEAD. 13 native routes HOLD.",
       "proof": [
         "Git source on 2026-10-29 includes owner source_attestation, SHA-bound seal, native_source_verifier and explicit legacy BASE_TREE preservation",
-        "Current source code lines 282-329; historic BASE_TREE still present intentionally"
+        "Current source code lines 282-329; historic BASE_TREE still present intentionally",
+        "2026-10-29 T08 R20 + C R21 Git source readback on c0d706e0f75046d08a6785c55f74f4497a5ef401: admission.py blob efd5af93853d04cf5c1748af41b13570fc49c0ad BASE_COMMIT 0b3a7d435be735148d64171deb9027093a89646e, owner-binding-map.json blob 7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4 sourceBaseCommit eb46b49fb8a022cefa679afb8606877016808db1; audit_registry sets baselineDrift, __init__ raises WHOLE_TREE_SOURCELOCK_NOT_RECONCILED. Candidate 9471fbbc2bb7abf1ceb597ed19a0cb1647518802 is unattached/NOT applied."
       ],
       "source_ref": "coordination/e06_host50/admission.py",
       "current_blob": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
-      "recurrence": 1
+      "recurrence": 2,
+      "last_seen": "2026-10-29",
+      "last_verified_source_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401"
     },
     {
       "error_id": "ERR-SRC-004",
@@ -69,10 +72,13 @@
       "next_action": "T06/P01-P05: native owner bindings, P01 host provenance, Voice/STOP/ACL/consent, 13 Host50; owner-accepted HEAD/tree/manifest.",
       "proof": [
         "T06 R09 1/8; PR162 current draft",
-        "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted"
+        "Host50 prior ledger 37 source candidates / 13 source HOLD / 0 native accepted",
+        "2026-10-29 T06 G3C R14 commit c0d706e0f75046d08a6785c55f74f4497a5ef401 and receipt ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be: P03 ModelCatalog.cs blob 72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf, ModelDownloadQueueWorker.cs blob 3692811ac3234afb54e82958c7415b23619c1f0f, focused test source 0650f8d927d3abc65b92cdd58b3057335ad547b2; 13/13 STATIC owner-check only, .NET/native NOT_RUN; T06 1/8 SOURCE_READY HOLD."
       ],
       "source_ref": "Existing P01–P05 functional source contracts; latest subroot P01 WPF source provenance and P02 PACK01 route mapping",
-      "recurrence": 0
+      "recurrence": 0,
+      "last_seen": "2026-10-29",
+      "last_verified_source_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401"
     },
     {
       "error_id": "ERR-SRC-005",
@@ -137,8 +143,11 @@
       "priority": "PROCESS_AND_SOURCE_GATES_ONLY",
       "issue": "Repeated HOLD-only closeout without readback/physical correction",
       "next_action": "Для каждого HOLD: реальное действие/точная внешняя зависимость + исправление + проверка; отчёт и RunID не считаются DONE.",
-      "proof": [],
-      "recurrence": 1
+      "proof": [
+        "T06 M1 issue #177 comment 6501328743 reports repeat premature closeout at 1/8 after concrete P02/P03 source work and blocked Host50 Git write. Actual task not DONE; process fault recurring, no additional TaskID."
+      ],
+      "recurrence": 2,
+      "last_seen": "2026-10-29"
     },
     {
       "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
@@ -148,8 +157,11 @@
       "priority": "PROCESS_AND_SOURCE_GATES_ONLY",
       "issue": "Mechanical guard source/test added but no independent T06 8/8 accepted",
       "next_action": "T06 closeout guard не должен требовать T10 заранее; проверить owner RunID/SHA и реальный hook, затем owner 8/8 отдельно.",
-      "proof": [],
-      "recurrence": 1
+      "proof": [
+        "T06 M1 issue #177 comment 6501328743: live HEAD c0d706e0f75046d08a6785c55f74f4497a5ef401, 1/8 owner accepted; uncommitted Host50 patch cannot satisfy source acceptance. Guard exists but does not enforce ongoing task completion."
+      ],
+      "recurrence": 2,
+      "last_seen": "2026-10-29"
     },
     {
       "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
@@ -174,14 +186,26 @@
     ],
     "historical_observations_count": 419,
     "not_active_defects": "419 historical fingerprints are NOT 419 live errors",
-    "issue_cursor": 284,
+    "issue_cursor": 296,
     "missing_receipts": [
       "T02",
-      "T03",
       "older independent-branch owner receipts"
     ],
     "full_archived_register_blob": "72d8a84b89663748feb4187d527b138728d0a604",
-    "full_archive_preservation": "Previous full R03 registry (including 419 fingerprints, issue evidence, all verbose incident diagnostics) remains available through immutable Git history. Do not re-inflate this active file."
+    "full_archive_preservation": "Previous full R03 registry (including 419 fingerprints, issue evidence, all verbose incident diagnostics) remains available through immutable Git history. Do not re-inflate this active file.",
+    "verified_receipts": {
+      "T03": {
+        "run_id": "T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05",
+        "branch": "automation/r30/g1a/T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05",
+        "path": "coordination/automation/r30/G1-A/T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05.json",
+        "blob_sha": "2704dcb533376ee96bf4aa5322b92219e718b8ab",
+        "commit_sha": "521f87767e9b61c7f4fc457970485cee4715519b",
+        "static_test": "5/5 PASS; secondary 6/7 drift not a proven product failure",
+        "historical_status": "T03 DONE 5/5 unchanged; NSIS build NOT_RUN",
+        "checked_run_id": "NOX-V16-C-20261029T1855MSK-R21-DELTA"
+      }
+    },
+    "last_ingested_comment_id": 6501507295
   },
   "operations": {
     "before": "Read entire compact entries (11 incl CLOSED) + new errors/receipts from ALL agents since RunID; identify source HEAD and register blob; ACK every relevant чужой ERROR_ID. T02 continues historical missing receipt cursor, without full re-scan.",
@@ -192,7 +216,7 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "NOX-V16-C-20261029T181207MSK-DELTA-R20",
+    "run_id": "NOX-V16-C-20261029T1855MSK-R21-DELTA",
     "progress": {
       "historical_t02": "4/4 100%",
       "current_c": "0/4 0%",
@@ -201,12 +225,79 @@
       "delta_pp": 0,
       "bar": "░░░░░░░░░░"
     },
-    "source_head_observed": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
-    "docs_gate": "PASS_3_OF_3_CAS_REQUIRED_REVISION_BEGIN_END_READBACK",
+    "source_head_observed": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+    "docs_gate": "PENDING_REQUIRED_REVISION_CAS_READBACK",
     "registered_errors": 11,
-    "source_acked": 2
+    "source_acked": "T06 current 11/11; T09 stale 11/11; others partial",
+    "history": "PARTIAL"
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
-  "no_new_task_ids": true
+  "no_new_task_ids": true,
+  "history_coverage_note": "Current all 11 active entries read; 419 dedup root/path archived unchanged. Missing T02 older receipt and older independent-branch owner receipts. Full historical coverage not claimed.",
+  "owner_ack_evidence": {
+    "T02/C": {
+      "registry_blob_pre": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+      "run_id": "NOX-V16-C-20261029T1855MSK-R21-DELTA",
+      "actions": {
+        "ERR-SYS-001": "FIX_PARTIAL: Git register/delta CAS + shared Docs pending; historical receipts still partial",
+        "ERR-SYS-002": "FIX_PARTIAL: re-read PR162 HEAD and use exact current source blobs; no freeze claimed",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "OWNER_HANDOFF: owner T06 recurrence and real gate blockers; no fake DONE"
+      }
+    },
+    "T06": {
+      "registry_blob": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+      "run_id": "NOX-V16-T06-20261029T183827MSK-G3C-R14",
+      "receipt_blob": "ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be",
+      "read": 11,
+      "acked": 11,
+      "source_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401"
+    },
+    "T09": {
+      "registry_blob": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+      "receipt_blob": "bcd75944451f736bbcd2208d1c81d241b6dcadbf",
+      "read": 11,
+      "acked": 9,
+      "stale_blob_for_current": true
+    },
+    "G3-B": {
+      "issue_comment": 6501326837,
+      "acks": [
+        "ERR-SRC-004",
+        "ERR-SRC-003",
+        "ERR-SYS-002"
+      ],
+      "owner_safe_only": true
+    }
+  },
+  "last_delta": {
+    "run_id": "NOX-V16-C-20261029T1855MSK-R21-DELTA",
+    "observed_utc": "2026-10-29T15:57:13.045Z",
+    "source_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+    "registry_pre_sha": "deba36ea3a16648e3bb57750c520cdb9f33b94f2",
+    "source_code_changed_by_C": 0,
+    "source_changes_since_R20": [
+      {
+        "commit": "ab5159fd8045c5ba232cb5b1e4f3452f6cd845f",
+        "module": "P02",
+        "source_blob": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+        "test_blob": "c129aec0f446b63704928e84d962146a8431fa21",
+        "owner_receipt": "9cc9ab9d765670fe891d6889c9270f223e70a3c0"
+      },
+      {
+        "commit": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+        "module": "P03",
+        "source_blobs": [
+          "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+          "3692811ac3234afb54e82958c7415b23619c1f0f"
+        ],
+        "test_blob": "0650f8d927d3abc65b92cdd58b3057335ad547b2",
+        "owner_receipt": "ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be"
+      }
+    ],
+    "source_defect_confirmed": "ERR-SRC-003 mismatch: admission.py BASE_COMMIT vs owner-binding-map sourceBaseCommit",
+    "new_owner_receipt": "T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05",
+    "repeated_process_error": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "no_exe_nsis_ci_e07": true
+  }
 }
