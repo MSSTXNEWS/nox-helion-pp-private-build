@@ -1,0 +1,136 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V8",
+  "runId": "R30-G1-B-20261029T1230MSK-R08",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER ONLY",
+  "taskId": "G1-B-P01-WEBVIEW2-POPUP-ONE-HOST-FAIL-CLOSED-R08",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "ownership": {
+    "lockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlobSHA1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "privateBranch": "automation/r30/g1b/R30-G1-B-20261029T1230MSK-R08",
+    "sharedWriter": "Astra-C",
+    "forbiddenChanges": 0
+  },
+  "base": {
+    "previousBranch": "automation/r30/g1b/R30-G1-B-20261029T1128MSK-R07",
+    "preCommit": "e1fa4173ce2893cb9e9965f9eb091208fe10bf3d",
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T1230MSK-R08",
+    "preReceiptHead": "24fd3fb78c911a78a4857825bbbf0d78fd1ba601"
+  },
+  "sourcesRead": {
+    "consolidated56GitPath": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "consolidated56GitBlobSHA1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rulesCount": 56,
+    "v16Sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "v16GoogleDocId": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "historicC34DriveId": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "masterErrorsDriveId": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06ReportDriveId": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06LessonsDriveId": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "priorR07ReceiptRead": true,
+    "googleDriveWritePerformed": false
+  },
+  "snapshots": {
+    "indexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "indexGitBlobSHA1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshotRoot": "coordination/astra/r30/snapshots/",
+    "frozenBranchesIndexed": 25,
+    "githubSnapshotDirectoriesEnumerated": 25,
+    "individualBytesSHA256Verified": false,
+    "changed": 0,
+    "p01HistoricalConflicts": "C09 Installer paths only; forbidden to G1-B"
+  },
+  "observedProblem": "R07 blocked off-origin top-level NavigationStarting but did not subscribe to CoreWebView2.NewWindowRequested. WebView2 window.open()/target=_blank may open an unmanaged popup without passing through this bridge's NavigationStarting origin guard. This was identified from the exact C09 source and official WebView2 API documentation; native exploitation not observed.",
+  "actualFix": "Within the existing CoreWebView2 adapter, register NewWindowRequested, set args.Handled=true unconditionally, and detach on Dispose. Do not instantiate a second host or open links via Process.Start. Keep original document epoch, HOME/MENU/CORE, consent, errors, origin and replay untouched. Legitimate external links require separate authorized host-owner UX.",
+  "sourceChanges": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "a1f0f0fe8d03748e85b8fc126e064e2022896d10",
+      "postGitBlobSHA1": "34c07c7e7a97df99b3e4b60da767483c54d7fc39",
+      "preSHA256": "8ad2d272b2c5f473723faa1e159681d76c0f07fa23628809d2b442e8f8d3ebf0",
+      "postSHA256": "400549441f31d8543fd96d7b710102266ca3cb19cfe9797eb5dfb499fabbbe42",
+      "commit": "644d477832b194c6656959d52000cf54554b8276"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_single_host_popup_r08.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "00ec9568e0599b61d680ff62836f3ebc4b058f56",
+      "postSHA256": "d380b013630aa860d4fae98ab35ff3c300348e52a200befa995dd930cd37b11c",
+      "commit": "24fd3fb78c911a78a4857825bbbf0d78fd1ba601"
+    }
+  ],
+  "targetedSourceTest": {
+    "engine": "V8 executable structural assertions on exact before/after GitHub UTF-8 bridge file",
+    "redBeforeExpectedFailures": 4,
+    "redBeforeFailureNames": [
+      "register",
+      "detach",
+      "handler",
+      "unconditional"
+    ],
+    "greenAfterPassed": 13,
+    "greenAfterTotal": 13,
+    "postGitHubReadbackChecksPassed": 8,
+    "postGitHubReadbackChecksTotal": 8,
+    "newPythonRegressionPath": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_single_host_popup_r08.py",
+    "newPythonTestCasesSaved": 8,
+    "pythonUnittestExecuted": false,
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "nativeHomeMenuCoreObserved": false,
+    "nativeButtonsObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorHandlingObserved": false,
+    "nativeWindowsOriginObserved": false,
+    "gitReadback": true,
+    "compareAhead": 2,
+    "compareBehind": 0,
+    "compareChangedFilesBeforeReceipt": [
+      "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_single_host_popup_r08.py"
+    ],
+    "foreignPathEdits": 0
+  },
+  "apiReference": "https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/winrt/microsoft_web_webview2_core/corewebview2newwindowrequestedeventargs?view=webview2-winrt-1.0.2535.41",
+  "blocker": {
+    "status": "HOLD",
+    "reason": "C09 is a source candidate not yet wired to existing original C08 MainWindow.xaml.cs. Windows mapped HTTPS origin, real popup suppression, route HOME/MENU/CORE/buttons, native consent, actual ACK and external-link UX remain unobserved.",
+    "ownerRequest": "Existing C08 WPF host owner should integrate this same adapter into one authorized host and explicitly route legitimate external links through approved native policy; test window.open, target=_blank, redirect, same-origin popup, renderer ProcessFailed, HOME/MENU/CORE, consent and errors on Windows. No second host and no G1-B unauthorized changes."
+  },
+  "lesson": {
+    "priorApplied": "R07: WebMessage origin checks are not sufficient to stop document display; block unsafe top-level navigation at the navigation event. R08 reviews adjacent popup event family without changing already DONE R07.",
+    "new": "In WebView2, NewWindowRequested is a separate navigation surface from NavigationStarting; rejecting off-origin main-frame navigation cannot by itself prevent unmanaged popups. Register/detach the popup event and fail closed. Do not conflate a source-level regression with native Windows verification.",
+    "driveStatus": "ASTRA_C_ONLY_COMMON_JOURNAL_WRITER"
+  },
+  "noGo": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
