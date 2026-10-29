@@ -67,7 +67,7 @@ public sealed class ModelDownloadQueueWorker(
                         linked.Cancel();
                         return;
                     }
-                    await SafePublishAsync(job, "progress", u.Status, u.Completed, u.Total, u.Digest, null, token);
+                    await SafePublishAsync(job, "progress", u.Status, persisted.CompletedBytes, persisted.TotalBytes, u.Digest, null, token);
                 }
                 string? digest;
                 if (current.Kind == ModelJobKind.OllamaPull)
