@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASSEMBLY_D_SOURCE_SELECTION_UPDATE_R02",
+  "run_id": "NOX-V16-ASSEMBLY-D-20261029T1701MSK-R02",
+  "task_id": "T05 historical DONE; ASSEMBLY-D ongoing; no new product TaskID",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader only; SOURCE ONLY",
+  "run": {
+    "planned_msk": "2026-10-29T16:45:00+03:00",
+    "observed_runtime_context_msk": "2026-10-29T16:57:55+03:00",
+    "final_duration_seconds": null
+  },
+  "progress": {
+    "historical_t05": "DONE 13/13",
+    "previous_assembly_d": "2/3 (66.7%)",
+    "new_assembly_d": "2/3 (66.7%)",
+    "delta_percentage_points": 0,
+    "criteria": {
+      "P04_scoped_disposition": "COMPLETE_BASELINE_SELECTION_WITH_BLOCKED_R30_DONORS",
+      "P05_scoped_disposition": "COMPLETE_BASELINE_SELECTION_WITH_BLOCKED_R30_DONORS",
+      "signed_T06_handoff": "HOLD_NO_OWNER1_ACCEPTANCE"
+    },
+    "visual": "███████░░░"
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pinned_candidate_commit": "2fcd72a001c084697e696d6a44dd1a47d7c8a0e0",
+    "pinned_candidate_tree": "93f26c73a80695801405ea03ae398de7b1dde355",
+    "t09_manifest_git_blob": "7296c2e22323d6656bbbb5b35e11a2c3ee5dc916",
+    "t09_manifest_sha256": "41c900c5f14d0ef4cc0daf274d9f55a3e978d0a81d16d661a7a8b4bad9de1841",
+    "current_t06_pr214_head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+    "pr162_source_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "original_source_zip_sha256_per_t09_receipt": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "source_status": "PINNED_CANDIDATE_NOT_OWNER1_ACCEPTED_FINAL"
+  },
+  "authority": {
+    "owner_lock_git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "t04_owner_source_selection_branch": "manual/t04/20261029-owner-approved-conflict-resolution-r02",
+    "t04_owner_source_selection_manifest_blob": "dce35f04f074620a365f1812aa1cbfb57ba7905a",
+    "t04_owner_source_selection_receipt_blob": "84c1f8032c8d1af972bf8b46783ddd72349b0c39",
+    "t04_dispositions": "34/34 selected; 19 ACCEPT (18 keep exact canonical baseline, one absent P02 voice CONDITIONAL); 15 archived SKIP; source integrations=0",
+    "t04_authorization_scope": "Selection/coordination ONLY. Does not authorize D to write product code or PR162.",
+    "t05_r12_manifest_blob": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+    "t05_historical_12_r30_donors": "STILL_NOT_ADMITTED",
+    "pr214_github_reviews_seen": 0,
+    "final_owner_1_acceptance": "NOT_FOUND"
+  },
+  "P04": {
+    "disposition": "KEEP_PINNED_CANONICAL; DO_NOT_REBASE_WITHOUT_APPROVAL",
+    "files": [
+      {
+        "owner": "G4-A",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "exact_pinned_pre": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "r30_donor_required_pre": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+        "r30_donor_post": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+        "focused_test": "tests/P04/test_model_snapshot_probe.py",
+        "focused_test_blob": "2bad69047606a6b9a03ad93efc4561d492afabbf"
+      },
+      {
+        "owner": "G4-B",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "exact_pinned_pre": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "r30_donor_required_pre": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+        "r30_donor_post": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+        "focused_test": "tests/P04/test_local_gpu_preflight.py",
+        "focused_test_blob": "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051"
+      }
+    ],
+    "test_run_by_D": "NOT_RUN",
+    "code_write_by_D": false
+  },
+  "P05": {
+    "disposition": "KEEP_PINNED_CANONICAL; NO R30 SOURCE ADMISSION",
+    "files": [
+      {
+        "owner": "G5-A",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "exact_pinned_pre": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "r30_donor_required_pre": "a6d723190213feb10091ab6dd699d56c46a00c46",
+        "r30_donor_post": "ae3c3a9f9471193a88046306fc91717df6360520",
+        "focused_owner_test": "NOT_DURABLY_EVIDENCED_IN_T05_R12"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "exact_pinned_pre": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "r30_donor_required_pre": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+        "r30_donor_post": "96bc6a90b57c58fa285a8733cd280c6beeff9100",
+        "focused_owner_test": "NOT_DURABLY_EVIDENCED_IN_T05_R12"
+      },
+      {
+        "owner": "G5-B",
+        "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "exact_pinned_pre": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "t04_selection": "KEEP_CANONICAL_ALREADY_SELECTED"
+      }
+    ],
+    "archival_identical_variants": "SKIP not product DONE",
+    "test_run_by_D": "NOT_RUN",
+    "code_write_by_D": false
+  },
+  "Host50": {
+    "owner": "G6-B",
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "exact_pinned_pre": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "r30_required_pre": "0010d0dececebdcc7d6677a03c63bbf1e5993deb",
+    "r30_post": "2a4fc9c96d9cb7d5ba39399f6e9ba0be869358ae",
+    "pr207_candidate_post": "c60d4ef3983e56c8991370efb58839bd1216cd2d",
+    "t04_selection": "KEEP_CANONICAL",
+    "assembly_a_proposal_patch_blob": "0896593033c36ad64354e6eeac272ce89f1d6919",
+    "avoid_duplicate_host50_patch": true,
+    "host50_13_source_holds": "PRESERVED"
+  },
+  "remaining_blocker": "No explicit owner #1 acceptance of final T06 HEAD/tree and per-path approval for applying diverged R30 donor patches.",
+  "lesson_applied": "Latest exact T04 owner-authorized SOURCE-SELECTION R02 supersedes obsolete 17 OWNER_HOLD narrative: 34/34 decisions are classified, but no source patch is integrated. Do not conflate owner selection with permission to overwrite product.",
+  "handoff_to": "T06 manual owner #1 via immutable Git receipt and issue #177; T02 may append Docs with CAS/readback",
+  "forbidden_effects": {
+    "no_product_code_changes": true,
+    "no_PR162_main_changes": true,
+    "no_t06_head_changes": true,
+    "no_shared_Google_Docs_writes": true,
+    "no_EXE_NSIS_GitLab_CI_E07": true
+  }
+}
