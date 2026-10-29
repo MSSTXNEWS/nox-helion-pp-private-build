@@ -197,6 +197,19 @@ class OwnerTwoPorts:
             if cleared is not True:
                 raise RouteHold("NATIVE_VOICE_REVOKED_OUTPUT_CLEANUP_HOLD")
             raise
+        # ACL revalidation itself can invoke native callbacks. STOP may arrive
+        # during that last callback; never send a newly persisted audio receipt
+        # to the page after cancellation has already been requested.
+        if stop is not None and stop.is_set():
+            if not callable(self.discard_output_audio):
+                raise RouteHold("NATIVE_VOICE_FINAL_STOP_CLEANUP_HOLD")
+            try:
+                cleared = self.discard_output_audio(scope, output_id)
+            except Exception as exc:
+                raise RouteHold("NATIVE_VOICE_FINAL_STOP_CLEANUP_HOLD") from exc
+            if cleared is not True:
+                raise RouteHold("NATIVE_VOICE_FINAL_STOP_CLEANUP_HOLD")
+            raise RouteHold("NATIVE_VOICE_STOPPED_AFTER_FINAL_ACL")
         return {"transcript": result.transcript, "response": result.response,
                 "output_audio_id": output_id, "target_lang": result.target_lang,
                 "mode": result.mode}
