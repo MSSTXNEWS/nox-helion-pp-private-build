@@ -257,6 +257,43 @@ class ModelSnapshotProbeTests(unittest.TestCase):
 
 
 
+    def test_g4a_r02_windows_device_aliases_hold_before_weight_io(self):
+        for name in ("COM¹.safetensors", "LPT³.safetensors",
+                     "CON .safetensors", "NUL  .safetensors"):
+            with self.subTest(name=name):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {"q.weight": name}}), encoding="utf-8")
+                with mock.patch.object(probe, "_inspect_weight",
+                                       side_effect=AssertionError("unsafe shard I/O")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r02_surrogate_shard_names_hold_without_encoding_exception(self):
+        for name in ("\ud800.safetensors", "shard\udfff.safetensors"):
+            with self.subTest(name=repr(name)):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {"q.weight": name}}), encoding="utf-8")
+                with mock.patch.object(probe, "_inspect_weight",
+                                       side_effect=AssertionError("unsafe shard I/O")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r02_valid_utf8_shard_preserves_observed_digest(self):
+        name = "modèle-00001.safetensors"
+        make_weights(self.root / name)
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": name}}), encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["weight_files"][0]["name"], name)
+        self.assertEqual(len(result["weight_files"][0]["sha256"]), 64)
+        self.assertIs(result["snapshot_revision_attested"], False)
+
+
 if __name__ == "__main__":
     unittest.main()
 
