@@ -258,7 +258,18 @@ export function projectFeeds(feeds, nowMs) {
   const licensedMarketIds=new Set(distinctMarkets.keys());
   const visible=[...uniqueLicensed,...disabled.filter(f=>
     !singletonMarketIds.has(f.id) || !licensedMarketIds.has(f.id))];
-  return visible.slice(0,16).flatMap(f=>{
+  // Show conflicting quotes before a long news list, but count only one
+  // HOLD tile per instrument before applying the 16-card display limit.
+  const conflicting = f => singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1;
+  const ordered=[...visible.filter(conflicting),...visible.filter(f=>!conflicting(f))];
+  const conflictSeen=new Set();
+  const capped=ordered.filter(f=>{
+    if (!conflicting(f)) return true;
+    if (conflictSeen.has(f.id)) return false;
+    conflictSeen.add(f.id);
+    return true;
+  });
+  return capped.slice(0,16).flatMap(f=>{
     if (singletonMarketIds.has(f.id) && (marketCounts.get(f.id)||0)>1) {
       if (emittedMarkets.has(f.id)) return [];
       emittedMarkets.add(f.id);
