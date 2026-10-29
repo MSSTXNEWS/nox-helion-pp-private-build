@@ -1,0 +1,6 @@
+--- a/coordination/e06/t06_owner_receipt_same_head_gate_r23.py
++++ b/coordination/e06/t06_owner_receipt_same_head_gate_r23.py
+@@ safe_path(value)
+-        not value.startswith("/") and "\\" not in value and "\x00" not in value
++        not value.startswith("/") and "\\" not in value and "\x00" not in value
++        and ":" not in value and value.isprintable()
