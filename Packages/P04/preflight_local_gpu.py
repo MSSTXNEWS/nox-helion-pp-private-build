@@ -229,6 +229,13 @@ def inspect(profile: str, gpu_index: int) -> dict:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
                 else:
                     props = torch.cuda.get_device_properties(0)
+                    # The official bitsandbytes NF4/FP4 NVIDIA floor is CC 6.0.
+                    major, minor = torch.cuda.get_device_capability(0)
+                    if (type(major) is not int or type(minor) is not int or
+                            major < 6 or minor < 0):
+                        report["errors"].append("QLORA_NF4_COMPUTE_CAPABILITY_UNSUPPORTED")
+                    else:
+                        report["gpu"]["compute_capability"] = f"{major}.{minor}"
                     total = getattr(props, "total_memory", None)
                     if type(total) is not int or total <= 0:
                         report["errors"].append("TORCH_GPU_MEMORY_METADATA_INVALID")
