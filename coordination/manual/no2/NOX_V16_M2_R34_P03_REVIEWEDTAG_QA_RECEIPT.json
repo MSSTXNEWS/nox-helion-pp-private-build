@@ -1,0 +1,37 @@
+{
+  "schema": "NOX_V16_MANUAL2_R34_P03_REVIEWEDTAG_QA",
+  "run_id": "NOX-V16-M2-20261029-R34-P03-REVIEWEDTAG",
+  "role": "MANUAL2_INDEPENDENT_QA",
+  "existing_task_id": "P03/ModelCenter",
+  "related_error_id": "ERR-SRC-004",
+  "canonical_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "canonical_ui_source_blob": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+  "canonical_ui_has_weak_evidence": true,
+  "owner_candidate_commit": "b2c8c42d0828ef91077ccde4902165a18651d472",
+  "owner_candidate_ui_blob": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6",
+  "owner_candidate_safe_preimage": "const reviewedTag = (s,id) => typeof s==='string' && s.length<=160 &&",
+  "proposed_guard": "typeof id==='string' && typeof s==='string' && s.length<=160",
+  "focused_test": {
+    "source": "exact reviewedTag function excerpt from candidate; focused Node.js V8 test",
+    "invalid_ids_typeerrors_pre": "6/6 reproduced",
+    "valid_cases_post": "14/14 pass",
+    "independent_original_full_ui_tests": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "hash_local_test_sha256": "b8d60bc3b03c279920cdf1bcf4c80ab26f1dd0f1d1aa6c9c4d7e45f89f1a3036",
+    "hash_local_log_sha256": "6b9e1e19b74cb2e2e7463c45b3ec071809d525b73f94830c7282dde1152e7ffc"
+  },
+  "git_test_commit": "2ac2de81b103275b79576c5cc149c8bb5d111ccc",
+  "git_test_blob": "7297601080ae8934311096eefa0a8ba6828a5416",
+  "source_correction_status": "ISOLATED_CANDIDATE_ONLY_NOT_INTEGRATED",
+  "qa_disposition": "FAIL_SOURCE_CANDIDATE_UNSAFE_TYPE; OWNER PATCH_RED_GREEN_VERIFIED; FULL_QA_ACCEPTED_NO",
+  "owner_handoff": "P03 owner fixes existing candidate; T06 sole PR162 writer integrates exact current PRE/POST after whole UI tests; T08 retest on final same HEAD; T02 sole shared writer append only existing ERR-SRC-004",
+  "source_lock_no_loss": [
+    "original 729 files",
+    "SourceLock",
+    "STOP",
+    "ACL",
+    "consent",
+    "no EXE/NSIS/CI/E07"
+  ],
+  "accepted_product_task_delta": 0
+}
