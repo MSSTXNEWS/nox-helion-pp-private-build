@@ -17,6 +17,11 @@ test("C5.11 explicit WOW rejection must restore previous cinema mode",()=>{const
  x.wow.setMode=()=>false;const c=create(x.fx,x.wow);
  assert.equal(c.set("MAX"),false);assert.equal(x.get()[0],"BALANCED");
 });
+test("C5.12 rejected FX profile restores its prior state",()=>{
+ let mode="BALANCED";const fx={setProfile(next){mode=next;return next!=="MAX";}};
+ const c=create(fx,null);assert.equal(c.set("MAX"),false);
+ assert.equal(mode,"BALANCED");assert.equal(c.get().mode,"BALANCED");
+});
 test("C5.09 closed controller rejects mutation",()=>{const x=fixture();const c=create(x.fx,x.wow);c.close();
  assert.equal(c.set("ECO"),false);assert.equal(c.get().closed,true);});
 test("C5.10 read-only status does not manufacture sensor state",()=>{const x=fixture();
