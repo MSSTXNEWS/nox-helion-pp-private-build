@@ -1,0 +1,96 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T1107MSK-06",
+  "slot": "G7-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "status": "SOURCE_PATCH_SAVED; TARGETED_EXACT_SOURCE_V8_RED_TO_GREEN; SOURCE_READY_HOLD; E06_HOLD; E07_NOT_RUN; RELEASE_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T1107MSK-06",
+  "base_branch": "automation/r30/g7a/R30-G7-A-20261029T1010MSK-05",
+  "base_commit": "1446224ea35eb4c836da72ddfc2ebf2991b71a39",
+  "prior_receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T1010MSK-05.json",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbidden_paths": [
+      "proposals/NOX-PACK01-50/",
+      "proposals/NOX-PACK02-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "receipt_dir": "coordination/automation/r30/G7-A/"
+  },
+  "provenance": {
+    "rules_56_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "V16_sections": "§§54–56 + latest R29 loader-only clarification read from Drive canonical 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_directories": 25,
+    "snapshot_tree_inventory": "25/25 historic snapshot directories and Git tree entry paths/blobs enumerated; 31620 total overall tree entries",
+    "snapshot_bytes_full_read": false,
+    "physical_original_729_raw_sha256": "NOT_VERIFIED",
+    "historical_cinema_variant": "r27-a02 snapshot diverges at blob 09e74921a160dfde8d24e25badb476d9da268f82; preserved",
+    "drive_read_only": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ]
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-EXPLICIT-REDUCED-FAST-BOUNDS-20261029-06",
+    "source_path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "c3135acd0ec32ea575f169cb1b0c8145d3dcee9e",
+    "post_blob_sha": "3123b0b23be88b605249a69c1deeba02779bbb49",
+    "observed_defect": "After ECO emitted and scheduled next rare burst, explicit setProfile(REDUCED) then setProfile(MAX or BALANCED) kept the ECO nextBurst beyond the faster profile's maximum deadline: oldMin Infinity was excluded from faster/clamped path.",
+    "root_cause": "faster calculation excludes oldMin===Infinity and incorrectly treats an explicit REDUCED->finite mode transition as slower, using only a minimum rebase.",
+    "patch": "Include oldMin=Infinity in faster transition when new minimum is finite, reusing existing validated [min,max] per-orb bounds; preserve all timing/DOM/controls."
+  },
+  "test": {
+    "file": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.explicit-reduced-fast-burst.test.mjs",
+    "blob_sha": "0a30c0c6bd4853160000cfabadb5e088b80caacc",
+    "unique_test_file_count": 1,
+    "command": "V8 evaluation of exact old/new serialized GitHub JS module with the same authored regression fixture; Node CLI NOT_RUN",
+    "preimage_RED": "Error: burst must occur by new max MAX EXPECTED=4 ACTUAL=2",
+    "patched_GREEN": "1 targeted test PASS: ECO burst -> explicit REDUCED -> MAX/BALANCED; no premature ejecta; emits by each new max deadline; nine original D02 orbs retained, RAF cleanup, corrupt clock fail-closed.",
+    "windows": "NOT_RUN",
+    "native_node_cli": "NOT_RUN"
+  },
+  "change_scope": {
+    "allowed_source": true,
+    "allowed_test": true,
+    "allowed_receipt": true,
+    "changed_paths": [
+      "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.explicit-reduced-fast-burst.test.mjs",
+      "coordination/automation/r30/G7-A/R30-G7-A-20261029T1107MSK-06.json"
+    ],
+    "deleted_paths": [],
+    "legacy_done_preserved": true,
+    "original_25_snapshots_untouched": true,
+    "main_and_PR162_untouched": true,
+    "Installer_and_PACK01_PACK02_untouched": true,
+    "one_atomic_commit_for_source_test_receipt": true
+  },
+  "self_improvement": {
+    "applied": "Validate clocks and every finite deadline before mutating live D02 state, including OS Reduced Motion resume.",
+    "new_lesson": "An explicit REDUCED->finite profile transition has old minimum Infinity, which semantically means 'resume from suspension', not 'enter slower mode'. Treat it as a faster bounded re-arm and enforce BOTH minimum and maximum burst deadlines; test each resume entry point separately."
+  },
+  "coordination": {
+    "shared_google_docs_writer": "Astra-C ONLY",
+    "worker_google_docs_writes": "NONE",
+    "drive_write_status": "ASTRA_C_PENDING",
+    "handoff": "Astra-C to collect immutable Git receipt, append new lesson via CAS+RunID and verify readback."
+  },
+  "acceptance": {
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "product_progress_percent": "N/D"
+  }
+}

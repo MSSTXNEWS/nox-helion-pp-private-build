@@ -348,7 +348,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       const newPolicy=profileFor(next,preference);
       const nextMin=PROFILES[next].minimumBurstMs;
       const oldMin=PROFILES[mode].minimumBurstMs;
-      const faster=Number.isFinite(nextMin)&&nextMin<oldMin&&oldMin!==Infinity;
+      // Explicit REDUCED -> active profile also needs a bounded fresh burst window.
+      // Otherwise a dormant ECO deadline can exceed MAX/BALANCED's maximum.
+      const faster=Number.isFinite(nextMin)&&nextMin<oldMin;
       const slower=Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity);
       let rebaseNow=null,fastBounds=null;
       if(faster||slower){
