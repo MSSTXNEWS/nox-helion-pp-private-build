@@ -1,0 +1,467 @@
+{
+  "schema": "NOX_V16_T04_HOST50_FIXED13_OWNER_BINDING_HANDOFF_R01",
+  "task_id": "T04",
+  "subscope": "Host50 source contracts on single current Windows loader source tree",
+  "run_id": "NOX-V16-T04-HOST50-20261029T174010MSK-R01",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader only",
+  "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "source_commit_sha1": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+  "source_tree_sha1": "534612db9e496d1688c0116b7a214b3129baaa32",
+  "source_reference_sha": {
+    "legacy_fixed13_ledger": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+    "legacy_owner_binding_map": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+    "canonical_50_route_catalog": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "approved_T04_version_choices": "f723d37b39cb82425c873b51545f720d90af778d",
+    "owner_lock": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+  },
+  "prior_T04_archival_choice": {
+    "fixed_done": 34,
+    "fixed_total": 34,
+    "unchanged": true
+  },
+  "host50_new_fixed_scale": {
+    "total": 13,
+    "before_done": 0,
+    "after_done": 0,
+    "delta_done": 0,
+    "percent_before": 0,
+    "percent_after": 0,
+    "delta_pp": 0,
+    "progress_bar": "░░░░░░░░░░",
+    "remaining": 13
+  },
+  "checks": {
+    "legacy_hold_exactly_13": true,
+    "legacy_total_exactly_50": true,
+    "all_13_catalog_owner_risk_match": true,
+    "all_13_binding_map_sourceBinding_null": true,
+    "source_tree_git_truncated": false,
+    "source_only_no_native_runtime_tests": true,
+    "no_product_code_modified": true,
+    "origin_scope_consent_not_inferred": true
+  },
+  "map_ledger_difference": {
+    "legacy_map_null_bindings_count": 14,
+    "legacy_ledger_hold_count": 13,
+    "extra_map_null_route_outside_fixed_13": [
+      "chat.rag"
+    ],
+    "comment": "Do not widen fixed 13 denominator. NIP01-07 chat.rag is ledger CANDIDATE but map has null sourceBinding; needs separate T06 consistency check; not a newly accepted route."
+  },
+  "common_blocker": {
+    "owner": "T06 one-tree integrator, with per-route original P01–P05/E06 owner receipts",
+    "condition": "Host50Admission._cap requires non-null exact sourceBinding AND native Capability.integrated/ready on current attested source tree; all thirteen current map bindings null, and current-tree native attestation/SID/consent/origin not independently proven.",
+    "policy_file": "coordination/e06_host50/admission.py",
+    "policy_blob": "efd5af93853d04cf5c1748af41b13570fc49c0ad"
+  },
+  "decisions": [
+    {
+      "taskId": "NIP01-08",
+      "routeId": "chat.voice",
+      "owner": 2,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing P02 OwnerTwoPorts.captured_voice exists, but canonical Host50 owner-binding-map has no sourceBinding or native capability; installed approved ASR/TTS, one-use microphone capture, native SID/session/consent callback and current-tree attestation unproven.",
+      "existing_source_or_reserved_owner_path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "existing_source_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "requested_owner": "G2-B (P02 voice owner) + T06 host owner",
+      "minimal_safe_owner_handoff": "register_with_existing_pack01 with exact native scope and P02 callback; no new voice engine",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+      }
+    },
+    {
+      "taskId": "NIP01-26",
+      "routeId": "training.start",
+      "owner": 4,
+      "risk": "dangerous",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing P04 train_qlora.py:main and GpuGuardian worker are present, but no trusted owner start binding; dataset/model licence consent and checked GPU worker origin, native dangerous consent, current-tree SourceLock unproven.",
+      "existing_source_or_reserved_owner_path": "Packages/P04/train_qlora.py",
+      "existing_source_git_blob_sha1": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea",
+      "requested_owner": "P04 GPU owner + T06 host owner",
+      "minimal_safe_owner_handoff": "Expose ONLY existing authorized worker start to Host50 with dataset/model/rights/VRAM limits, STOP, receipt; no trainer rewrite",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "FRESH_NATIVE_CONSENT_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea"
+      }
+    },
+    {
+      "taskId": "NIP01-30",
+      "routeId": "training.evaluate",
+      "owner": 4,
+      "risk": "safe",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing train_qlora has validation/holdout routines and P04TrainingReadOnlyPack can inspect checkpoints, but no approved independent native evaluation owner callback or session-scoped evaluation receipt bound.",
+      "existing_source_or_reserved_owner_path": "proposals/NOX-PACK01-50/p04_training_readonly.py",
+      "existing_source_git_blob_sha1": "9581415a59824803df074b101aa60ec0f2a9c74b",
+      "requested_owner": "P04 owner + T06 host owner",
+      "minimal_safe_owner_handoff": "Bind verified existing evaluation/checkpoint receipt reader only after P04 owner provides exact method; no guessed evaluation result",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "ROUTE_SCOPE_REQUIRED",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "9581415a59824803df074b101aa60ec0f2a9c74b"
+      }
+    },
+    {
+      "taskId": "NIP01-35",
+      "routeId": "calls.history",
+      "owner": 2,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing OwnerTwoPorts.calls_history exists, but native_call_history provider callback and tenant/principal SID-backed ACL/session, current capability receipt and source map binding are missing.",
+      "existing_source_or_reserved_owner_path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "existing_source_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "requested_owner": "G2-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Use OwnerTwoPorts.calls_history via native scope resolver, verified provider and current receipt; no new call-log DB",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+      }
+    },
+    {
+      "taskId": "NIP01-36",
+      "routeId": "media.player",
+      "owner": 1,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "P01 C09 WebView2 navigation bridge is present, but no source-approved native local video player handler, owner media instance or selected-file provenance is registered in Host50.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "existing_source_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "requested_owner": "G1-B (P01 UI) + T06 host owner",
+      "minimal_safe_owner_handoff": "Bind already-existing P01 player callback only with approved picker/ACL and trusted origin; do not create a player",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+      }
+    },
+    {
+      "taskId": "NIP01-37",
+      "routeId": "media.subtitles",
+      "owner": 1,
+      "risk": "safe",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "P01 C09 WebView2 bridge is present, but no approved source-bound native subtitle/timeline owner method or trusted media selection attached to Host50.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "existing_source_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "requested_owner": "G1-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Use original subtitle/timeline callback and P01-approved media scope; no subtitle generator",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "ROUTE_SCOPE_REQUIRED",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+      }
+    },
+    {
+      "taskId": "NIP01-38",
+      "routeId": "browser.open",
+      "owner": 1,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "P01 C09 WebView2NavigationBridge exists with reserved virtual origin, but no browser.navigate native owner port approved for this route in Host50; external navigation isolation unproven.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "existing_source_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "requested_owner": "G1-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Attach existing trusted P01 navigation callback and route-level native consent/allowlist; never use arbitrary WebView2 page JS as host",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+      }
+    },
+    {
+      "taskId": "NIP01-39",
+      "routeId": "browser.bookmarks",
+      "owner": 1,
+      "risk": "safe",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "P01 WebView2 bridge exists, but no native bookmarks owner store/read callback bound; origin/tenant isolation must come from existing host, not a new SQLite store.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "existing_source_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "requested_owner": "G1-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Bind existing scoped bookmarks retrieval if original owner proves method and provenance; do not invent persistent store",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "ROUTE_SCOPE_REQUIRED",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+      }
+    },
+    {
+      "taskId": "NIP01-40",
+      "routeId": "images.generate",
+      "owner": 4,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing Comfy image/video proposal files are not owner-approved P04 production image engine with installed permitted weights and native capability; no current Host50 sourceBinding.",
+      "existing_source_or_reserved_owner_path": "integrations/wow200/proposals/NOX-SUPER-CINEMA-3D/comfy_bridge.py",
+      "existing_source_git_blob_sha1": "1332c463b70fac29fd79128edc812d631d0f41f1",
+      "requested_owner": "P04 owner + G7-A media scope + T06 host owner",
+      "minimal_safe_owner_handoff": "Only if owner proves existing rights-cleared local generator: bind it via native P04 capability and explicit file output rights; do not promote demo",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "1332c463b70fac29fd79128edc812d631d0f41f1"
+      }
+    },
+    {
+      "taskId": "NIP01-47",
+      "routeId": "system.update",
+      "owner": 1,
+      "risk": "dangerous",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Installer contains NSIS/PowerShell maintenance source, but no owner-approved authenticated update entrypoint, update package SHA/manifest or rollback route bound to Host50.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "existing_source_git_blob_sha1": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "requested_owner": "G1-A (Installer) + T06 host owner",
+      "minimal_safe_owner_handoff": "Route only to existing signed update/preflight action after user consent and hash/rollback verification; no installer changes here",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "FRESH_NATIVE_CONSENT_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "6c178c04957d7397c0c081e3b123940637abc6e9"
+      }
+    },
+    {
+      "taskId": "NIP01-48",
+      "routeId": "system.backup",
+      "owner": 1,
+      "risk": "dangerous",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Installer has backup/rollback source patterns, but no authenticated native backup/restore handler, authorized destination and per-user data ACL bound to Host50.",
+      "existing_source_or_reserved_owner_path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "existing_source_git_blob_sha1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "requested_owner": "G1-A + T06 host owner",
+      "minimal_safe_owner_handoff": "Owner must identify existing backup API and explicit per-user consent/restore scope; avoid overwriting/removing user data",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "FRESH_NATIVE_CONSENT_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+      }
+    },
+    {
+      "taskId": "NIP01-49",
+      "routeId": "system.pc_control",
+      "owner": 1,
+      "risk": "dangerous",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Owner-journal reserves coordination/e06/adapters/pc_control_owner_port.py for G6-B but that path is absent from current unified HEAD; no approved PC-control callback or elevation/consent decision connected.",
+      "existing_source_or_reserved_owner_path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "existing_source_git_blob_sha1": null,
+      "requested_owner": "G6-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Request G6-B exact-PRE owner source handoff and explicit dangerous-operation native confirmation; do not create or launch privileged router",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "FRESH_NATIVE_CONSENT_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": null
+      }
+    },
+    {
+      "taskId": "NIP01-50",
+      "routeId": "mobile.connect",
+      "owner": 6,
+      "risk": "sensitive",
+      "decision": "HOLD_ACTUAL_MISSING_BINDING",
+      "source_bound_ready": false,
+      "blocking_contract": "Existing G2OneHostBinder and PrivateMobileContract exist but require original SourceLock, verified P02 identity/private peer, TLS origin+CSRF, native consent, current owner receipt and capability epoch; no Host50 binding_map sourceBinding.",
+      "existing_source_or_reserved_owner_path": "coordination/e06/adapters/g2_space_mobile.py",
+      "existing_source_git_blob_sha1": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283",
+      "requested_owner": "E06 native owner G6-B + T06 host owner",
+      "minimal_safe_owner_handoff": "Attach existing PrivateMobileContract only after trusted peer/CSRF and current-tree source seal verification; no public gateway",
+      "native_origin": "TRUSTED_WEBVIEW2_HTTPS_VIRTUAL_HOST_REQUIRED",
+      "native_scope": "CURRENT_WINDOWS_SID_TENANT_PRINCIPAL_AND_ROUTE_SCOPES_REQUIRED",
+      "native_consent": "PRIVATE_APPROVED_ROUTE_SCOPE_NOT_PROVEN",
+      "source_capability": "NO_CURRENT_SOURCEBINDING_AND_NO_BOUND_CAPABILITY_READY_RECEIPT",
+      "proof": {
+        "ledger_blob": "21c9b4504ed89f0c59fd1a8178acef20958bb375",
+        "binding_map_blob": "7d3d4eb1f6c77607560deb1ff32e25d916c0e3e4",
+        "catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+        "source_blob": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283"
+      }
+    }
+  ],
+  "minimum_owner_patch_sets_for_T06": [
+    {
+      "scope": "P01",
+      "owner": "G1-B/G1-A; T06 integrator only",
+      "preimages": [
+        {
+          "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+          "git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+          "git_blob_sha1": "6c178c04957d7397c0c081e3b123940637abc6e9"
+        }
+      ],
+      "routes": [
+        "media.player",
+        "media.subtitles",
+        "browser.open",
+        "browser.bookmarks",
+        "system.update",
+        "system.backup"
+      ],
+      "handoff": "Existing approved callbacks ONLY; real native origin, user-file ownership and dangerous-action consent; no new player/browser/installer."
+    },
+    {
+      "scope": "P02",
+      "owner": "G2-B; T06 integrator only",
+      "preimages": [
+        {
+          "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+          "git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f"
+        }
+      ],
+      "routes": [
+        "chat.voice",
+        "calls.history"
+      ],
+      "handoff": "Use existing OwnerTwoPorts methods with verified native Host50 session, P02 store, local voice weights, one-use capture and provider; exact receipt before sourceBinding update."
+    },
+    {
+      "scope": "P03",
+      "owner": "G3-A/G3-B",
+      "preimages": [],
+      "routes": [],
+      "handoff": "No changes authorized by the fixed 13 Host50 HOLD ledger."
+    },
+    {
+      "scope": "P04",
+      "owner": "G4-A/G4-B or approved P04 owner; T06 integrator only",
+      "preimages": [
+        {
+          "path": "Packages/P04/train_qlora.py",
+          "git_blob_sha1": "82fad1f4aec3bc9ebb34958ece3fd5786e1adbea"
+        },
+        {
+          "path": "proposals/NOX-PACK01-50/p04_training_readonly.py",
+          "git_blob_sha1": "9581415a59824803df074b101aa60ec0f2a9c74b"
+        }
+      ],
+      "routes": [
+        "training.start",
+        "training.evaluate",
+        "images.generate"
+      ],
+      "handoff": "Only existing model/training/evaluation/approved media implementations; GPU rights, dataset holdout and output file ACL, never invent evaluation or promote unapproved Comfy demo."
+    },
+    {
+      "scope": "P05",
+      "owner": "G5-A/G5-B",
+      "preimages": [],
+      "routes": [],
+      "handoff": "No changes authorized by fixed 13 Host50 HOLD; preserve events.v3 and space sources."
+    },
+    {
+      "scope": "E06",
+      "owner": "G6-B for owned adapter; sole T06 writer for one-tree SourceLock and registry",
+      "preimages": [
+        {
+          "path": "coordination/e06_host50/admission.py",
+          "git_blob_sha1": "efd5af93853d04cf5c1748af41b13570fc49c0ad"
+        },
+        {
+          "path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "git_blob_sha1": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62"
+        },
+        {
+          "path": "coordination/e06/adapters/g2_space_mobile.py",
+          "git_blob_sha1": "020a8fa016a8d4ebdb1cb9129a4c0bf4db671283"
+        }
+      ],
+      "routes": [
+        "mobile.connect",
+        "system.pc_control"
+      ],
+      "handoff": "Host50Admission requires current owner native source attestation; sourceBinding and Capability integrated/ready for all 13. Preserve historical BASE_TREE provenance; never mutate the baseline constant without full approved proof."
+    }
+  ],
+  "used_improvement_lesson": "Compare immutable current-tree owner/source preimages and actual native callback acceptance, not historical source code presence or status labels; only admit routes after current-tree SourceLock, origin, scope, consent and native capability evidence.",
+  "handoff": "T06 only: request exact owner PRE/POST and attach route-specific existing method to the current host, then native owner/source attestation and independent same-HEAD source acceptance. T02 alone appends shared Docs with CAS/readback.",
+  "safety": {
+    "source_only": true,
+    "installer_unchanged": true,
+    "original_729_archive_unchanged": true,
+    "snapshots_25_unchanged": true,
+    "main_and_PR162_unchanged": true,
+    "no_exe_nsis_gitlab_ci_e07": true,
+    "source_ready": "HOLD",
+    "release": "HOLD"
+  }
+}
