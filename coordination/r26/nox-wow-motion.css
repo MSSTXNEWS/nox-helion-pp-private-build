@@ -1,0 +1,49 @@
+/* NOX HELION R28 · additive motion only · no altered passport assets, no fake telemetry */
+:root{--nox-pointer-x:50%;--nox-pointer-y:50%;--nox-tilt-x:0deg;--nox-tilt-y:0deg;--nox-live-glow:rgba(232,173,110,.25)}
+.main{perspective:1300px}
+.hero{--mx:0px;--my:0px;transform-style:preserve-3d}
+.hero:before{transform:translate3d(calc(var(--mx)*-.18),calc(var(--my)*-.18),-5px) scale(1.06);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.hero .eclipse{transform:translate3d(calc(var(--mx)*.09),calc(var(--my)*.07),0);transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.hero .sun{animation:nox-eclipse-heart 9s ease-in-out infinite,nox-eclipse-rise 16s ease-in-out infinite}
+.hero .orbit-dot{animation:nox-orbit-life 10s ease-in-out infinite;animation-delay:calc(var(--orb-index,0)*-1.2s)}
+.hero .orbit-dot::after{content:"";position:absolute;inset:-9px;border:1px solid rgba(233,194,138,.16);border-radius:50%;animation:nox-moon-wave 7s ease-in-out infinite;animation-delay:calc(var(--orb-index,0)*-.85s)}
+.hero .nucleus{animation:nox-core-caption 9s ease-in-out infinite}
+.metrics .metric,.manual-card,.block-card,.auto-card,.report-card{transition:transform .25s ease,border-color .3s ease,box-shadow .35s ease}
+.metrics .metric:hover,.manual-card:hover,.block-card:hover,.auto-card:hover,.report-card:hover{transform:translateY(-4px);border-color:rgba(233,190,130,.65);box-shadow:inset 0 1px rgba(255,231,190,.13),0 12px 35px #000a,0 0 22px rgba(196,122,58,.12)}
+.glass{--sheen-x:50%;--sheen-y:20%}
+.glass::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 30% 55% at var(--sheen-x) var(--sheen-y),rgba(242,212,164,.055),transparent 100%);opacity:.9}
+.glass>*{position:relative}
+.hero .eclipse,.hero .hero-copy,.hero .hero-metrics{position:absolute}
+.metrics .metric b{font-variant-numeric:tabular-nums}
+#live-status .dot{transition:background .35s,box-shadow .35s}
+#live-status[data-connection=online] .dot{background:#91ddbc;box-shadow:0 0 12px #87ddb9,0 0 28px #55b9a86c;animation:nox-connection-beat 2.8s ease-in-out infinite}
+#live-status[data-connection=offline] .dot{background:#ce8f81;box-shadow:0 0 10px #bd665c66;animation:none}
+#live-status[data-connection=checking] .dot{background:#efbf88;animation:nox-connection-beat 1.6s ease-in-out infinite}
+#nox-telemetry{display:flex;align-items:center;gap:12px;min-height:30px;flex-wrap:wrap;color:#d5b892;font:10px/1.4 "Cascadia Code",Consolas,monospace;letter-spacing:.08em}
+#nox-telemetry .pulse-label{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+#nox-telemetry .pulse-pin{width:7px;height:7px;border:1px solid #ba9770;border-radius:50%;background:#513827}
+#nox-telemetry[data-connection=online] .pulse-pin{background:#98d9b8;box-shadow:0 0 10px #98d9b8}
+#nox-telemetry[data-connection=offline] .pulse-pin{background:#cc877c}
+#nox-pulse-wave{display:block;width:min(240px,100%);height:36px;overflow:visible}
+#nox-pulse-wave path{fill:none;stroke:#c89e6b;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:260;stroke-dashoffset:0;filter:drop-shadow(0 0 4px #ad79483f);animation:nox-wave-flow 6s linear infinite}
+#nox-telemetry[data-connection=online] #nox-pulse-wave path{stroke:#b4e2c9;filter:drop-shadow(0 0 5px #81d5b385)}
+#nox-telemetry[data-connection=offline] #nox-pulse-wave path{stroke:#be8279;animation:none;opacity:.45}
+#nox-telemetry .pulse-info{color:#a9aba7;white-space:normal}
+#nox-telemetry .pulse-info b{color:#e4c7a1;font-weight:550}
+.nox-scanning{position:relative}
+.nox-scanning:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:8;background:linear-gradient(180deg,transparent 0%,rgba(218,182,120,.1) 49%,transparent 50%);background-size:100% 270%;animation:nox-scan 16s ease-in-out infinite}
+#network .node:hover rect,#network .node:focus-visible rect{stroke:#f1cb93;filter:drop-shadow(0 0 10px #e5bc8470)}
+#network .edge{stroke-dasharray:9 9;animation:nox-flow-trace 20s linear infinite}
+#network .edge.support{stroke-dasharray:4 9;animation-duration:12s}
+@keyframes nox-eclipse-heart{0%,100%{filter:brightness(.92) drop-shadow(0 0 10px #be7e3d45)}50%{filter:brightness(1.08) drop-shadow(0 0 24px #d09b5850)}}
+@keyframes nox-eclipse-rise{0%,100%{margin-top:0}50%{margin-top:-7px}}
+@keyframes nox-orbit-life{0%,100%{filter:brightness(.83) saturate(.85);opacity:.78}50%{filter:brightness(1.17) saturate(1.04);opacity:.96}}
+@keyframes nox-moon-wave{0%,100%{opacity:.15;transform:scale(.92)}50%{opacity:.65;transform:scale(1.07)}}
+@keyframes nox-core-caption{0%,100%{opacity:.7}50%{opacity:.96}}
+@keyframes nox-connection-beat{0%,100%{transform:scale(1);opacity:.65}40%{transform:scale(1.38);opacity:1}60%{transform:scale(1.02)}}
+@keyframes nox-wave-flow{to{stroke-dashoffset:-520}}
+@keyframes nox-scan{0%,22%{background-position:0 -100%}65%,100%{background-position:0 160%}}
+@keyframes nox-flow-trace{to{stroke-dashoffset:-360}}
+body.nox-eco .hero .sun,body.nox-eco .hero .orbit-dot,body.nox-eco .hero .orbit-dot:after,body.nox-eco #network .edge,body.nox-eco #nox-pulse-wave path,body.nox-eco .nox-scanning:after{animation:none!important}
+@media(max-width:640px){#nox-telemetry{gap:6px}#nox-pulse-wave{width:135px}.hero:before,.hero .eclipse{transform:none!important}}
+@media(prefers-reduced-motion:reduce){.hero:before,.hero .eclipse,.glass,.metric,.manual-card,.block-card,.auto-card{transition:none!important}#nox-telemetry *,#nox-telemetry *:before,#nox-telemetry *:after,.nox-scanning:after,#network .edge,.hero .sun,.hero .orbit-dot,.hero .orbit-dot:after,.hero .nucleus{animation:none!important}}
