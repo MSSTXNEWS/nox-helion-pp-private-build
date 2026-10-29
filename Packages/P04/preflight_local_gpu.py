@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 from importlib import metadata
 import json
+import math
 import os
 import platform
 import sys
@@ -186,7 +187,8 @@ def inspect(profile: str, gpu_index: int) -> dict:
         if not selected:
             raise RuntimeError("GPU_INDEX_NOT_FOUND")
         temperature = train_qlora.gpu_temperature(exe, selected["uuid"])
-        if temperature is None:
+        if (type(temperature) not in (int, float) or
+                not math.isfinite(temperature) or temperature < -50 or temperature > 150):
             raise RuntimeError("GPU_TEMPERATURE_UNAVAILABLE")
         limit = {"ECO": 80, "BALANCED": 83, "INTENSIVE": 85}[profile]
         if temperature >= limit:
