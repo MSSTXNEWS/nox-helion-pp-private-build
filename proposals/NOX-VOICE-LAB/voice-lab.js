@@ -192,6 +192,9 @@
       const text=output.textContent.trim();
       if(text&&voice.value)dispatch('nox.voice.speak',{text,voiceId:voice.value});
     };
+    // Changing call details invalidates consent tied to the old quote.
+    number.oninput=()=>{consent.checked=false;};
+    purpose.oninput=()=>{consent.checked=false;};
     modes.onchange=updateMode;updateMode();
     const visibility=()=>{if(document.hidden&&(recorder||capturePending))stopCapture(false);};
     document.addEventListener('visibilitychange',visibility);
@@ -203,8 +206,12 @@
         updateMode();
       },
       setCallProvider(x){
-        providerReady=x?.ready===true && typeof x?.priceLabel==='string'&&x.priceLabel.length>0;
-        callPrice=providerReady?x.priceLabel.slice(0,80):null;cost.textContent=callPrice||'Тариф не определён';
+        const nextReady=x?.ready===true && typeof x?.priceLabel==='string'&&x.priceLabel.length>0;
+        const nextQuote=nextReady?x.priceLabel.slice(0,80):null;
+        // Provider quote changes require a fresh explicit user confirmation.
+        if(nextQuote!==callPrice||nextReady!==providerReady)consent.checked=false;
+        providerReady=nextReady;callPrice=nextQuote;
+        cost.textContent=callPrice||'Тариф не определён';
       },
       setResponse(e){
         if(!e||typeof e!=='object')return;
