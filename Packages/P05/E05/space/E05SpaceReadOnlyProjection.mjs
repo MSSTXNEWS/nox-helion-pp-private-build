@@ -331,6 +331,17 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   ((e.event_type==='model.stopped' && e.state==='STOPPED') ||
    (e.event_type==='task.failed' && e.state==='ERROR'));
 
+// Date.parse drops native sub-millisecond ticks/nanoseconds. A terminal
+// arriving later in the SAME JS millisecond is still a future event and must
+// not confirm STOPPED/ERROR. Date.now() exposes integer milliseconds.
+const futureTerminalUtc = (timestamp, nowMs) => {
+  const ms = Date.parse(timestamp);
+  if (ms > nowMs) return true;
+  if (ms !== nowMs) return false;
+  const fraction = /\.(\d{4,9})(?:Z|\+00:00)$/.exec(timestamp)?.[1];
+  return !!fraction && /[1-9]/.test(fraction.slice(3));
+};
+
 export function projectCanonicalEvents(events, runId, nowMs) {
   if (!Array.isArray(events) || !validRunId(runId) || !Number.isFinite(nowMs))
     return {state:'N_D',errors:0};
@@ -359,7 +370,7 @@ export function projectCanonicalEvents(events, runId, nowMs) {
         !isoUtc(e.timestamp_utc)) return {state:'HOLD_MALFORMED_TERMINAL_TIMESTAMP',errors:null};
     if (!canonicalTerminal(e) || e.run_id!==runId) continue;
     // Do not erase a future same-run failure behind a verified STOP.
-    if (Date.parse(e.timestamp_utc)>nowMs)
+    if (futureTerminalUtc(e.timestamp_utc, nowMs))
       return {state:'HOLD_FUTURE_TERMINAL',errors:null};
     // A schema-valid terminal with evidence_verified:false is only a report,
     // NOT proof that STOP completed or that the failure was authenticated.
