@@ -25,6 +25,33 @@ class HardwarePreflightContracts(unittest.TestCase):
         self.assertIn("WINDOWS_GPU_HOST_REQUIRED", result["errors"])
         self.assertFalse(result["runtime_training_verified"])
 
+    def test_g4b_rejects_unsupported_windows_cpu_abi_before_vendor_probe(self):
+        for cpu, maxsize in (("ARM64", (1 << 63) - 1),
+                             ("x86", (1 << 31) - 1),
+                             ("AMD64", (1 << 31) - 1)):
+            with self.subTest(cpu=cpu, maxsize=maxsize), patch.object(
+                probe.platform, "system", return_value="Windows"
+            ), patch.object(probe.platform, "machine", return_value=cpu), patch.object(
+                probe.sys, "maxsize", maxsize
+            ), patch.object(probe.metadata, "version", return_value="fixture"), patch.object(
+                probe.train_qlora, "nvidia_smi",
+                side_effect=AssertionError("incompatible worker must not probe GPU")
+            ):
+                result = probe.inspect("BALANCED", 0)
+            self.assertEqual(result["status"], "HOLD")
+            self.assertIn("WINDOWS_AMD64_64BIT_PYTHON_REQUIRED", result["errors"])
+
+    def test_g4b_supported_amd64_64bit_reaches_existing_vendor_gate(self):
+        with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+            probe.platform, "machine", return_value="AMD64"
+        ), patch.object(probe.sys, "maxsize", (1 << 63) - 1), patch.object(
+            probe.metadata, "version", return_value="fixture"
+        ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+            result = probe.inspect("BALANCED", 0)
+        self.assertNotIn("WINDOWS_AMD64_64BIT_PYTHON_REQUIRED", result["errors"])
+        self.assertIn("NVIDIA_TELEMETRY_UNAVAILABLE", result["errors"])
+        self.assertEqual(result["status"], "HOLD")
+
     def test_missing_vendor_probe_holds_even_with_local_packages(self):
         with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
             probe.metadata, "version", return_value="1.0"
