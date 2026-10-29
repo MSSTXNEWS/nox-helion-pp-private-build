@@ -268,6 +268,12 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
 
 
 
+def _file_signature(info) -> tuple:
+    """Identity/metadata snapshot; not a cryptographic file-content attestation."""
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
 def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
     if not _regular(path):
         raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
@@ -275,9 +281,7 @@ def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
         initial = os.fstat(stream.fileno())
         if not stat.S_ISREG(initial.st_mode):
             raise ValueError("MODEL_WEIGHTS_NOT_REGULAR")
-        def stamp(info):
-            return (info.st_dev, info.st_ino, info.st_size,
-                    info.st_mtime_ns, info.st_ctime_ns)
+        stamp = _file_signature
         names = _parse_weight_tensor_names(stream, initial.st_size)
         payload_bytes = initial.st_size - stream.tell()
         digest = None
@@ -290,7 +294,8 @@ def _inspect_weight(path: Path, *, include_hash: bool = False) -> dict:
                 not _regular(path) or stamp(path.stat()) != stamp(initial)):
             raise ValueError("MODEL_WEIGHTS_CHANGED_DURING_INSPECTION")
         return {"names": names, "bytes": initial.st_size,
-                "payload_bytes": payload_bytes, "sha256": digest}
+                "payload_bytes": payload_bytes, "sha256": digest,
+                "stat_signature": stamp(initial)}
 
 
 def _weight_tensor_names(path: Path) -> frozenset[str]:
@@ -393,6 +398,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         _validate_windows_shard_names(names)
         observed_total_bytes = 0
+        weight_signatures = []
         for name in names:
             file = base / name
             artifact = _inspect_weight(file, include_hash=True)
@@ -408,6 +414,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": artifact["bytes"],
                 "sha256": artifact["sha256"],
             })
+            weight_signatures.append((name, artifact["stat_signature"]))
         if expected_total_bytes is not None and observed_total_bytes != expected_total_bytes:
             raise ValueError("MODEL_SHARD_TOTAL_SIZE_MISMATCH")
         # Hashing many shards can take hours. Re-read bounded metadata before
@@ -423,6 +430,19 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             _, index_sha256_after = _json_file(index, return_sha=True)
             if index_sha256_after != report["shard_index_sha256"]:
                 raise ValueError("MODEL_SHARD_INDEX_CHANGED_DURING_INSPECTION")
+        # A shard verified early may change while later GB-sized shards hash.
+        # Fail closed on late deletion, link replacement, inode/size/time change.
+        # This is a best-effort stat fence, NOT an atomic multi-file snapshot.
+        for name, before in weight_signatures:
+            try:
+                after = (base / name).lstat()
+            except OSError as exc:
+                raise ValueError("MODEL_SHARD_CHANGED_AFTER_HASH") from exc
+            if (not stat.S_ISREG(after.st_mode) or
+                    (getattr(after, "st_file_attributes", 0) &
+                     getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)) or
+                    _file_signature(after) != before):
+                raise ValueError("MODEL_SHARD_CHANGED_AFTER_HASH")
         report["candidate_sha256"] = config_sha256
         # Observation-only fingerprint, not a trusted cross-file atomic lock.
         observed = {"config": config_sha256,
