@@ -31,27 +31,33 @@
       "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
       "preSha256": null,
       "preState": "ABSENT_ON_STARTING_R30_HEAD",
-      "postSha256": "dd9f6a2276a98a0d8e8f9a62404f667ad1222ed7e4c27d3dcb7afb21cdeb1c16",
-      "postGitBlobSha1": "c187649a6fe74d5cf76baef3453cad2d91089e45"
+      "postSha256": "a8d74635d5c36faec701830a44c1ea37ab62bf910a3687e371de3105c6477228",
+      "postGitBlobSha1": "40a648674a01b0498bb589f59db50dbb7cfe205b",
+      "firstCandidateSha256": "dd9f6a2276a98a0d8e8f9a62404f667ad1222ed7e4c27d3dcb7afb21cdeb1c16",
+      "firstCandidateGitBlobSha1": "c187649a6fe74d5cf76baef3453cad2d91089e45"
     },
     {
       "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_webview2_bridge_source.py",
       "preSha256": null,
       "preState": "ABSENT_ON_STARTING_R30_HEAD",
-      "postSha256": "d900170bc3b0331ef8757debfd2674ae329011e604d465e867536027a159a9b3",
-      "postGitBlobSha1": "fb689a8ed0da7a1daf505a8d3ab353ebc1bd8679"
+      "postSha256": "e035fb0d2090279305aef195d6be215fd6ffdb5eb2c7714afe19949ec260c884",
+      "postGitBlobSha1": "c869a2fcd7cfb52ff22bfbce7ed1171096f867ec",
+      "firstCandidateSha256": "d900170bc3b0331ef8757debfd2674ae329011e604d465e867536027a159a9b3",
+      "firstCandidateGitBlobSha1": "fb689a8ed0da7a1daf505a8d3ab353ebc1bd8679"
     }
   ],
   "sourceCommits": [
     "fc41d3632e93154bcd06246c9ec00695ce13d6f1",
-    "e83504f54cd83d0c266d4faaf31273b72b9694dd"
+    "e83504f54cd83d0c266d4faaf31273b72b9694dd",
+    "406be13413709c0ecb1834e3460087c9534730a8",
+    "95168d43e3338e27bf1491f22ed8c9dad60a685a"
   ],
   "test": {
     "command": "python -m unittest discover -s stage/proposals/P01/C09/QA/P01_E01_C09 -p test_webview2_bridge_source.py -v",
     "environment": "Linux python, isolated exact-blob local source",
-    "results": "6/6 PASS",
+    "results": "6/6 PASS, rerun against final bytes",
     "type": "SOURCE_STRUCTURAL_ONLY",
-    "gitBlobReadback": "2/2 MATCH",
+    "gitBlobReadback": "2/2 MATCH final post-update Git blob SHA1 against local tested files",
     "nativeCSharpCompile": "NOT_RUN",
     "windowsWebView2Runtime": "NOT_RUN",
     "realNavigationHOME_MENU_CORE": "HOLD_HOST_NOT_BOUND",
@@ -75,5 +81,7 @@
     "loaderProductPercent": null,
     "sourceCodeComplete": false,
     "releaseAccepted": false
-  }
+  },
+  "appliedAdditionalLesson": "WPF/WebView2 may be disposed while async consent/route callbacks run; catch failures on current Source read and event detach, suppress stale ACK. Rechecked exact owner blobs after patch.",
+  "receiptUpdatedAtUtc": "2026-10-29T02:39:59.465Z"
 }
