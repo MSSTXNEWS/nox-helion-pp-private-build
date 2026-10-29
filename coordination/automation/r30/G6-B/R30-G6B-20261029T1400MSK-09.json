@@ -1,0 +1,183 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_IMMUTABLE_SOURCE_RECEIPT_R09",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER ONLY",
+  "slot": "G6-B",
+  "run_id": "R30-G6B-20261029T1400MSK-09",
+  "phase": "SOURCE_ONLY",
+  "status": "SOURCE_CANDIDATE_INTEGRATION_HOLD",
+  "task": {
+    "source_task_id": "G6B-R30-HOST50-SENSITIVE-ADVERTISE-PRIVATE-SCOPE-PREPROBE-R09",
+    "accepted_product_TaskID": false,
+    "finding": "Source-derived privacy gap: NoxPackHost.advertise invoked sensitive BoundPort.available() for session.allowed routes even when session.private_approved lacked that route; scoped=False only AFTER the owner readiness callback. A HOLD button must not trigger private owner capability probing.",
+    "fix": "Require safe risk OR per-route private_approved before any session-live/owner.available callback, preserving all dangerous route no-probe and reentrancy checks."
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "parent_branch": "automation/r30/g6b/R30-G6B-20261029T1305MSK-08",
+    "branch": "automation/r30/g6b/R30-G6B-20261029T1400MSK-09",
+    "modified_paths": [
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ],
+    "preimage_git_blob": "cffd8d5b3860f35353636fef3a3801393c91b003",
+    "postimage_git_blob": "0010d0dececebdcc7d6677a03c63bbf1e5993deb",
+    "source_commit": "c974fe21ee93f429db691ba8d8bba4fce15442af",
+    "patch_lines": {
+      "additions": 4,
+      "deletions": 1
+    },
+    "unchanged_owned_adapter": {
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "git_blob": "5f567effc336ca6611757e581841710450287a29"
+    },
+    "Git_readback": "PASS exact minimal replacement against parent text; pre/post blobs confirmed"
+  },
+  "inputs": {
+    "owner_lock": {
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+      "read_first": true,
+      "assigned_paths": [
+        "coordination/e06/adapters/pc_control_owner_port.py",
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "forbidden_paths": [
+        "coordination/e06/verify_original_729_source.py",
+        "coordination/e06/source_deep_inventory.py",
+        "coordination/e06/stage_onehost.py"
+      ],
+      "receipt_dir": "coordination/automation/r30/G6-B/",
+      "assigned_test_path": false
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "read_56_of_56": true,
+      "verified_historically_verbatim": false
+    },
+    "spec": {
+      "google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "read_sections": [
+        33,
+        54,
+        55,
+        56
+      ],
+      "read_R29_scope_correction": true,
+      "scope": "LOADER_ONLY"
+    },
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "frozen_snapshot_count": 25,
+      "competing_historical_source_variants_not_adopted": true
+    },
+    "snapshots": {
+      "path": "coordination/astra/r30/snapshots/",
+      "recursive_tree_sha": "34350552e847909e5945c8d1418cc3cc282796b4",
+      "recursive_tree_entries": 30388,
+      "truncated": false,
+      "snapshot_roots_checked": 25,
+      "original_three_part_blob_references_checked": 75,
+      "three_blobs_identical_across_all_25": true,
+      "original_part_blobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "original_archives_bytes_read": false,
+      "physical_sha256_729_originals": "NOT_VERIFIED"
+    },
+    "google_drive_read_only": {
+      "master_errors": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "historical_C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "latest_coordinator_delta": "ASTRA-C-R30-20261029T1330MSK-08"
+    }
+  },
+  "checks": {
+    "targeted_test": {
+      "kind": "one transient isolated Python unittest behavioral model (not imported production module)",
+      "cases": 6,
+      "passed": 6,
+      "status": "PASS",
+      "case_summary": [
+        "unapproved sensitive skips all native and owner callbacks",
+        "approved sensitive admitted",
+        "approved sensitive unavailable stays HOLD",
+        "safe STOP availability preserved",
+        "dangerous PC remains no-probe even with scope",
+        "unallowed route remains no-probe"
+      ],
+      "persistent_Git_test_file": false,
+      "reason": "ownership journal has no assigned G6-B regression test path"
+    },
+    "source_and_policy": {
+      "kind": "Git readback, minimal diff, canonical route/owner/risk static comparison",
+      "passed": 8,
+      "total": 8,
+      "status": "PASS",
+      "E06_admission_path": "coordination/e06_host50/admission.py",
+      "E06_admission_git_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+      "routes_checked": 50,
+      "routes_matching": 50,
+      "parent_compare": {
+        "ahead_by": 1,
+        "behind_by": 0,
+        "changed_paths": [
+          "proposals/NOX-PACK01-50/native_bridge.py"
+        ]
+      }
+    },
+    "full_production_python_import": "NOT_RUN",
+    "real_Windows_SID_token": "NOT_RUN",
+    "live_session_revocation": "NOT_RUN",
+    "native_consent": "NOT_RUN",
+    "live_STOP": "NOT_RUN",
+    "E06_full_module": "NOT_RUN",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "physical_original_729_sha256": "NOT_VERIFIED"
+  },
+  "lesson": {
+    "id": "G6B_R09_DENIED_SENSITIVE_CAPABILITY_MUST_NOT_TRIGGER_READINESS",
+    "applied_previous": "R08 pinned full owner registry across advertise callbacks; R09 preserves that fail-closed guard while limiting which owner callbacks can run.",
+    "observation": "Checking private_approved only when building the final enabled flag permits a sensitive owner readiness callback even though the UI must display HOLD.",
+    "improvement": "Perform per-route risk and explicit private scope gating BEFORE any native-sensitive capability probing; prove no-probe with a callback-counting negative test, and retain dangerous always-HOLD policy.",
+    "next": "Astra-C should assign an exact unique G6-B test path in ownership journal, then run imported production-module regression and independent native Windows SID/lease/consent/STOP tests with G6-A, no cross-owner writes."
+  },
+  "proposals": [
+    {
+      "recipient": "Astra-C ownership maintainer",
+      "request": "Assign exact unique G6-B owned test path proposals/NOX-PACK01-50/test_native_bridge_G6B_r09.py; do not assume assignment from generic 'own tests' wording."
+    },
+    {
+      "recipient": "G6-A / Windows host owner",
+      "request": "Provide real native SID-bound token/session lease verification, revocation and dangerous consent/STOP evidence without G6-B changes to your files."
+    }
+  ],
+  "integrity": {
+    "forbidden_paths_modified": 0,
+    "foreign_source_paths_modified": 0,
+    "shared_R30_modified": false,
+    "main_modified": false,
+    "PR162_modified": false,
+    "old_DONE_preserved": true,
+    "original_25_snapshots_modified": false,
+    "Google_Docs_modified": false,
+    "central_Google_Docs_writer": "Astra-C_ONLY",
+    "REPORT_GATE": "HOLD until Astra-C Google Docs append with RunID readback",
+    "DRIVE_WRITE_HOLD": true,
+    "merges": 0,
+    "builds": 0,
+    "product_accepted_TaskIDs": 0,
+    "weighted_product_progress": "N/D",
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  }
+}
