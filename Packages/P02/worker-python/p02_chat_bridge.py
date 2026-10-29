@@ -194,6 +194,9 @@ class ChatBridge:
                             not isinstance(item.get("done"), bool)):
                         raise P02Error("Malformed Ollama stream frame")
                     delta = item["delta"]
+                    # A native adapter can retain this dictionary while the UI
+                    # suspends at chat.delta; pin the validated terminal state.
+                    terminal = item["done"]
                     if not self._utf8_ok(delta):
                         raise P02Error("Ollama stream returned invalid Unicode")
                     if delta:
@@ -205,7 +208,7 @@ class ChatBridge:
                             raise P02Error("Ollama reply exceeded persistence quota")
                         parts.append(delta)
                         yield {"type": "chat.delta", "run_id": run, "text": delta}
-                    if item["done"]:
+                    if terminal:
                         # A yielded delta can be suspended by the UI just before the
                         # done frame. Never mark a cancelled turn as completed.
                         if stop.is_set():

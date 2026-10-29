@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import math
 import os
 import pathlib
 import queue
@@ -24,6 +25,7 @@ from typing import Any, Callable, Iterator
 MAX_FILE = 25 * 1024 * 1024
 MAX_CHAT = 100 * 1024 * 1024
 ALLOWED_MIME = {"application/pdf", "image/png", "image/jpeg", "text/plain"}
+MAX_OLLAMA_EVENT = 1024 * 1024
 class _DenyRedirect(urllib.request.HTTPRedirectHandler):
     """Never forward local prompts to a redirected remote host."""
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -50,6 +52,37 @@ def _transport_failure(error):
 
 class Cancelled(P02Error):
     pass
+
+
+def _ollama_json(raw: bytes):
+    """One strict decoder for the existing HTTP registry and NDJSON stream."""
+    def pairs(items):
+        obj = {}
+        for key, value in items:
+            if key in obj:
+                raise ValueError("Duplicate Ollama JSON field")
+            key.encode('utf-8', errors='strict')
+            obj[key] = value
+        return obj
+    def constant(_):
+        raise ValueError("Nonfinite Ollama JSON constant")
+    def number(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("Nonfinite Ollama JSON number")
+        return value
+    value = json.loads(raw.decode('utf-8'), object_pairs_hook=pairs,
+                       parse_constant=constant, parse_float=number)
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, str):
+            item.encode('utf-8', errors='strict')
+        elif isinstance(item, dict):
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return value
 
 
 class OllamaClient:
@@ -94,8 +127,8 @@ class OllamaClient:
         if len(raw) > 2 * 1024 * 1024:
             raise P02Error("Ollama model list over size limit")
         try:
-            doc = json.loads(raw)
-        except (ValueError, UnicodeDecodeError) as exc:
+            doc = _ollama_json(raw)
+        except (ValueError, UnicodeError, RecursionError) as exc:
             raise P02Error("Invalid Ollama model list") from exc
         if not isinstance(doc, dict):
             raise P02Error("Invalid Ollama model metadata")
@@ -170,16 +203,22 @@ class OllamaClient:
                         return
                     self._active = response
                 done_seen = False
-                for raw in response:
+                # HTTPResponse iteration uses unbounded readline(). Bound the
+                # allocation before a newline arrives, not after receiving it.
+                # Retain the existing injected iterator adapter contract.
+                readline = getattr(response, 'readline', None)
+                events = (iter(lambda: readline(MAX_OLLAMA_EVENT + 1), b'')
+                          if callable(readline) else iter(response))
+                for raw in events:
                     if cancel.is_set() or stop.is_set():
                         return
-                    if len(raw) > 1024 * 1024:
+                    if len(raw) > MAX_OLLAMA_EVENT:
                         raise P02Error("Overlarge Ollama event")
                     if not raw.strip():
                         continue
                     try:
-                        data = json.loads(raw)
-                    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                        data = _ollama_json(raw)
+                    except (ValueError, UnicodeError, RecursionError) as exc:
                         raise P02Error("Malformed Ollama NDJSON") from exc
                     if not isinstance(data, dict):
                         raise P02Error("Ollama stream event must be an object")
@@ -230,8 +269,11 @@ class OllamaClient:
                     if stop.is_set() or cancel.is_set():
                         raise Cancelled("STOP requested")
                     assert isinstance(payload, dict)
+                    # The consumer owns the yielded dictionary. Its edits must
+                    # never change the transport's already-validated terminal bit.
+                    terminal = payload["done"]
                     yield payload
-                    if payload["done"]:
+                    if terminal:
                         saw_done = True
                         break
                 elif kind == "error":
