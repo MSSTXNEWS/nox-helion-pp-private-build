@@ -24,11 +24,14 @@ export function installP01Adaptive(root){
     root.dataset.noxP01Dpi=Number.isFinite(dpr)&&dpr>=.5&&dpr<=6?String(Math.round(dpr*100)):"unknown";
   }
   win.addEventListener("resize",update,{passive:true});
-  mq?.addEventListener?.("change",update);update();
+  if(typeof mq?.addEventListener==="function")mq.addEventListener("change",update);
+  else mq?.addListener?.(update);
+  update();
   return Object.freeze({update,destroy(){
     if(destroyed)return;destroyed=true;
     win.removeEventListener("resize",update);
-    mq?.removeEventListener?.("change",update);
+    if(typeof mq?.removeEventListener==="function")mq.removeEventListener("change",update);
+    else mq?.removeListener?.(update);
     for(const s of saved){if(s.had)root.dataset[s.key]=s.value;else delete root.dataset[s.key];}
   }});
 }
