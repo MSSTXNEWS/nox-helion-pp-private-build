@@ -105,11 +105,22 @@ class P03OneHostPort:
         def reject_constant(value):
             raise P03PortHold("P03 catalog invalid JSON numeric constant")
 
+        def finite_float(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise P03PortHold("P03 catalog non-finite JSON number")
+            return number
+
         try:
-            doc = json.loads(path.read_text(encoding="utf-8"),
+            # Enforce the actual read cap even if the file grows after stat().
+            with path.open("rb") as stream:
+                raw = stream.read(100_001)
+            if len(raw) > 100_000:
+                raise P03PortHold("P03 catalog exceeds owner size cap")
+            doc = json.loads(raw.decode("utf-8"),
                              object_pairs_hook=unique_object,
-                             parse_constant=reject_constant)
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                             parse_constant=reject_constant, parse_float=finite_float)
+        except (OSError, UnicodeError, ValueError, RecursionError) as exc:
             raise P03PortHold("Malformed/unsafe P03 catalog JSON") from exc
         if not isinstance(doc, dict):
             raise P03PortHold("P03 catalog root must be a JSON object")
@@ -177,6 +188,12 @@ class P03OneHostPort:
 
     def installed(self, session: object, args: dict) -> dict:
         self._ensure_native_scope(session, "models.installed", args)
+        tags = self._installed_tags()
+        return {"models": [{"tag": t, "installed": True, "digest": None} for t in tags],
+                "digestVerified": False, "source": "existing P02 OllamaClient.models"}
+
+    def _installed_tags(self) -> list[str]:
+        # The health advertisement and actual read use identical validation.
         try:
             tags = self.ollama.models()  # EXISTING P02 transport and /api/tags
         except Exception as exc:
@@ -185,8 +202,7 @@ class P03OneHostPort:
                 or any(not isinstance(t, str) or not TAG.fullmatch(t) for t in tags)
                 or len(tags) != len(set(tags))):
             raise P03PortHold("Installed model evidence invalid")
-        return {"models": [{"tag": t, "installed": True, "digest": None} for t in tags],
-                "digestVerified": False, "source": "existing P02 OllamaClient.models"}
+        return tags
 
     def digest(self, session: object, args: dict) -> dict:
         """Read Ollama-reported local manifest digest using the EXISTING P02 transport.
@@ -347,7 +363,8 @@ class P03OneHostPort:
 
     def _local_ready(self) -> bool:
         try:
-            return isinstance(self.ollama.models(), list)
+            self._installed_tags()
+            return True
         except Exception:
             return False
 
