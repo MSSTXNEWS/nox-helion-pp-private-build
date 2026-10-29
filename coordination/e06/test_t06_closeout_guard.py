@@ -39,7 +39,12 @@ class Closeout(unittest.TestCase):
         x["handoff_to_t09"]["tree_sha"]="0"*40
         self.assertFalse(g.decide(x)["done"])
     def test_fabricated_string_proofs_fail_closed(self):
-        x={"criteria":{name:proof(True,name) for name in g.CRITERIA}}
+        x={"criteria":{name:proof(True,name) for name in g.CRITERIA},
+           "head_sha":"a"*40,"tree_sha":"b"*40,"manifest_blob_sha":"c"*40,
+           "owner_acceptance":True,"owner_acceptance_receipt_sha":"d"*40,
+           "no_loss_receipt_sha":"e"*40,"source_no_loss_attested":True,
+           "handoff_to_t09":{"head_sha":"a"*40,"tree_sha":"b"*40,
+                             "manifest_blob_sha":"c"*40,"receipt_sha":"f"*40}}
         x["criteria"]["P01"]["evidence"]["owner_receipt"]="anything"
         self.assertEqual(g.decide(x)["completed"],7)
     def test_baseline_not_falsely_failed_for_missing_prepost(self):
