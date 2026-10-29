@@ -1,0 +1,33 @@
+# NOX V16 T11 conditional GitLab CI template - NOT active at repository root.
+# Owner T12 may propose these rules only AFTER T09/T10 exact frozen-source PASS,
+# authenticated GitLab inspection, and an owner-reviewed non-destructive adoption.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_FROZEN_SOURCE_SHA == $CI_COMMIT_SHA && $NOX_FROZEN_REF == $CI_COMMIT_REF_NAME'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_FROZEN_SOURCE_SHA == $CI_COMMIT_SHA && $NOX_FROZEN_REF == $CI_COMMIT_REF_NAME'
+      when: always
+    - when: never
+stages:
+  - windows-diagnostic
+variables:
+  GIT_DEPTH: "0"
+  GIT_STRATEGY: "fetch"
+  NOX_WINDOWS_RUNNER_TAG: "saas-windows-medium-amd64"
+nox_v16_windows_diagnostic:
+  stage: windows-diagnostic
+  tags:
+    - $NOX_WINDOWS_RUNNER_TAG
+  timeout: 1h
+  interruptible: false
+  retry: 0
+  script:
+    # Candidate must first be adopted into an explicitly approved canonical path;
+    # this relative file exists only in the future approved freeze tree.
+    - '& .\coordination\t11\NOX_V16_PINNED_SOURCE_PREFLIGHT.ps1'
+    - '& .\coordination\e06\gitlab_windows_entrypoint.ps1'
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - work/gitlab-artifacts/
