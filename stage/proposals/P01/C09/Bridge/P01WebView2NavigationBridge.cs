@@ -306,9 +306,23 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             _webView.ProcessFailed -= OnProcessFailed;
         }
         catch (Exception) { /* native WebView2 may already be disposed */ }
-        _lifetime.Cancel();
-        _lifetime.Dispose();
-        _pending.Clear();
-        _seenRequestIds.Clear();
+        // Linked native route callbacks may throw while Cancel invokes them.
+        // The existing host is already closed to new messages; cleanup must
+        // complete even when a third-party cancellation callback fails.
+        try
+        {
+            _lifetime.Cancel();
+        }
+        catch (AggregateException)
+        {
+            // CancellationTokenSource.Cancel wraps callback failures.
+            // Never allow that exception to tear down the WPF host shutdown.
+        }
+        finally
+        {
+            _lifetime.Dispose();
+            _pending.Clear();
+            _seenRequestIds.Clear();
+        }
     }
 }
