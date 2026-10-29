@@ -27,7 +27,8 @@ const files = names.map(name => {
     pre_git_blob_sha1:before?GIT(["hash-object","--stdin"],{input:before,encoding:"utf8"}).trim():null,
     post_git_blob_sha1:GIT(["hash-object","--stdin"],{input:after,encoding:"utf8"}).trim()};
 });
-const deleted=GIT(["diff","--name-only","--diff-filter=D",BASE,"HEAD"],{encoding:"utf8"}).trim();
+// Disable rename detection: renaming a protected original is a real deletion.
+const deleted=GIT(["diff","--no-renames","--name-only","--diff-filter=D",BASE,"HEAD"],{encoding:"utf8"}).trim();
 if(deleted) throw new Error("NO_LOSS_DELETION:"+deleted);
 const changed=GIT(["diff","--name-only",BASE,"HEAD"],{encoding:"utf8"}).trim().split(/\r?\n/).filter(Boolean);
 const bad=changed.filter(p=>!p.startsWith("stage/proposals/P01/C09/Installer/") &&
