@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T134536MSK-R09",
+  "slot": "G4-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows LOADER only",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "task_id": "P04-G4A-R09-JSON-NATIVE-FLOAT-OVERFLOW-AND-METADATA-SURROGATE-GATE",
+  "branch": "automation/r30/g4a/20261029T134536MSK-R09",
+  "base_branch": "automation/r30/g4a/20261029T124948MSK-R08",
+  "base_head_commit": "ed248811620823708b731dd32848dd667c460ee7",
+  "source_commit": "0813fed734a3a24e9074cd75b0a2bcce20e4415b",
+  "tests_commit": "a011a2b0a7a41a4e7aa465eb431b8997ce0d5495",
+  "owner_lock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "cross_owner_write_attempts": 0
+  },
+  "rules": {
+    "section33_consolidated_read_56_of_56": true,
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "oldest_original_verbatim_verified": false,
+    "sections54_55_56_drive_read": true,
+    "r29_loader_only_precedence": true,
+    "master_errors_read_through": "ASTRA-C-R30-20261029T1330MSK-08",
+    "e06_lessons_read_through": "ASTRA-C-R30-20261029T1330MSK-08",
+    "historic_C34_read": true,
+    "unique_receipt_per_run": true
+  },
+  "history": {
+    "donor_A04_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "donor_B1_git_blob": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+    "donor_B2_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_root_directories_count": 25,
+    "full_snapshots_byte_verified": false,
+    "original_three_archives_modified": false,
+    "original_729_raw_sha256_verified": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob": "30887593e92672ea6c00e510e6ef82f7d2d686c3",
+      "post_git_blob": "e72719fdc4edc04a75f1cc3571fbc809cd3d8275",
+      "pre_sha256": "d918f97019778fb8ed4ab28810e980356e0f6b501d5dc07aff52d6e2458783f9",
+      "post_sha256": "d5afcb6e9e4d1232e599083b0ca021d84f853063651fb0a24ba71d7a61c2dabb",
+      "change": "Fail closed for 1e9999 JSON numeric overflow in model config, shard index and safetensors headers; recursively validate all config/index strings and keys for escaped lone UTF-16 surrogates."
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob": "9ffdd208ca34bf4eb0aa00e4c908f2050fc1d969",
+      "post_git_blob": "34dd158d2a4871110e8961a3babf2d03ce473e75",
+      "pre_sha256": "ef041d1b00d2db0caab13a87414cbd01034b4d31470855da91171372abced7b3",
+      "post_sha256": "b6b20d31b02a67ccdccf63072e1b30ef83367a472b64b04ac1084b0421f6c3a3",
+      "change": "Five new test_g4a_r09_* unittest methods: config overflow; index overflow; header overflow; nested config/index unpaired surrogate strings; positive finite/paired unicode case."
+    }
+  ],
+  "tests": {
+    "red_reproduction": {
+      "local_python_stdlib": "json.loads with parse_constant guard accepts 1e9999 as inf, and accepts escaped \\uD800 in nested model index metadata",
+      "result": "2 reproduced baseline unsafe acceptances"
+    },
+    "local_scoped_command": "python /mnt/data/g4a_r09_scoped_unicode_float_test.py",
+    "local_scoped_result": "6/6 PASS",
+    "local_scoped_scope": "Python execution of byte-equivalent newly authored helpers and representative vectors, NOT directly imported repo GitHub module",
+    "sha256_known_vector": "abc -> ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad PASS",
+    "github_source_static_readback": "4/4 required guard tokens present",
+    "github_test_method_readback": "5/5 new regression method names present",
+    "real_repository_python_unittest": "NOT_RUN",
+    "recommended_command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -k g4a_r09 -v",
+    "windows_native": "NOT_RUN",
+    "cuda_training": "NOT_RUN"
+  },
+  "compare_before_receipt": {
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "changed_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ]
+  },
+  "errors_and_improvements": {
+    "root_cause": "parse_constant rejects NaN/Infinity tokens but CPython parse_float accepts overflowing 1e9999 as +inf; json.loads also accepts lone Unicode surrogate escapes in arbitrary nested config/index metadata even though native Rust JSON may reject them.",
+    "previous_lesson_applied": "R08 mandated differential CPython/native parsing and strict malformed-Unicode paths, with actual escaped surrogate fixtures rather than double-escaped strings.",
+    "self_improvement_lesson": "Validate JSON scalar constraints centrally at every metadata boundary, not only named fields or nonfinite literal tokens; test unrecognized nested fields, overflow-exponent syntax and positive finite/paired-Unicode controls. A fetched GitHub file plus local extracted-helper tests is still NOT a complete repository unittest run.",
+    "coordinator_request": "Astra-C only: collect this immutable receipt from worker Git branch into shared Drive journals. Worker made no common Drive writes."
+  },
+  "safety": {
+    "main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "other_owner_paths_changed": false,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_run": true,
+    "no_final_integration": true,
+    "no_merge": true
+  },
+  "gates": {
+    "source_edit_saved": true,
+    "github_blob_readback": true,
+    "full_p04_suite": false,
+    "source_code_complete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_task_accepted": false
+  }
+}
