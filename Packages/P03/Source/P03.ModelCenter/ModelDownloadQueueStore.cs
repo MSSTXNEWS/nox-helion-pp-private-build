@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
@@ -357,6 +358,8 @@ public sealed class ModelDownloadQueueStore
             var bytes = await File.ReadAllBytesAsync(backup, ct);
             if (bytes.Length == 0 || bytes.Length > MaxQueueFileBytes)
                 throw new InvalidDataException("Queue backup is invalid or too large.");
+            using (var parsedBackup = JsonDocument.Parse(bytes))
+                RequireUniqueQueueKeys(parsedBackup.RootElement);
             var snapshot = JsonSerializer.Deserialize<List<ModelJob>>(bytes, JsonOptions)
                 ?? throw new InvalidDataException("Backup queue is null.");
             ValidateJobs(snapshot);
@@ -409,6 +412,9 @@ public sealed class ModelDownloadQueueStore
             throw new InvalidDataException("Queue is empty or exceeds its safety limit; original bytes preserved.");
         try
         {
+            using (var raw = await JsonDocument.ParseAsync(input, cancellationToken: ct))
+                RequireUniqueQueueKeys(raw.RootElement);
+            input.Position = 0;
             var jobs = await JsonSerializer.DeserializeAsync<List<ModelJob>>(input, JsonOptions, ct)
                 ?? throw new InvalidDataException("Null queue is not a valid snapshot.");
             ValidateJobs(jobs);
@@ -418,6 +424,26 @@ public sealed class ModelDownloadQueueStore
         {
             throw new InvalidDataException("Queue is corrupt; original bytes preserved.", ex);
         }
+    }
+
+    // A persisted queue is authority for Cancelled/Completed/Retry states.
+    // JsonSerializer would otherwise accept the last duplicate state field.
+    private static void RequireUniqueQueueKeys(JsonElement node, int depth = 0)
+    {
+        if (depth > 64) throw new InvalidDataException("QUEUE_JSON_DEPTH_INVALID");
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in node.EnumerateObject())
+            {
+                if (!keys.Add(property.Name.Normalize(NormalizationForm.FormC)))
+                    throw new InvalidDataException("QUEUE_JSON_AMBIGUOUS_KEYS");
+                RequireUniqueQueueKeys(property.Value, depth + 1);
+            }
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+            foreach (var item in node.EnumerateArray())
+                RequireUniqueQueueKeys(item, depth + 1);
     }
 
     private static void ValidateJobs(IReadOnlyList<ModelJob> jobs)
