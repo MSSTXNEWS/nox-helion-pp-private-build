@@ -1,0 +1,114 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7A_IMMUTABLE_OWNER_RECEIPT_V1",
+  "RunID": "R30-G7-A-20261029T0910MSK-04",
+  "slot": "G7-A",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "status": "SOURCE_PATCH_SAVED; TARGETED_V8_RED_TO_GREEN; SOURCE_READY_HOLD; RELEASE_HOLD",
+  "branch": "automation/r30/g7a/R30-G7-A-20261029T0910MSK-04",
+  "base_branch": "automation/r30/g7a/R30-G7-A-20261029T0810MSK-03",
+  "parent_commit": "9a741bb37a03fba24d2932821ca632e46ffc2484",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/"
+    ],
+    "forbidden_paths": [
+      "proposals/NOX-PACK01-50/",
+      "proposals/NOX-PACK02-50/",
+      "stage/proposals/P01/C09/Installer/"
+    ]
+  },
+  "read_evidence": {
+    "v16_rules_56_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16_sections": "54-56 plus latest R29 scope clarification",
+    "historical_conflicts_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_dirs": 25,
+    "frozen_snapshot_full_git_trees_checked": 25,
+    "frozen_snapshot_tree_truncated": 0,
+    "all_snapshot_file_bytes_individually_read": false,
+    "original_729_member_sha256": "NOT_RUN",
+    "historical_d02_variant": "r27-a02 snapshot blob 09e74921a160dfde8d24e25badb476d9da268f82 differs; left untouched",
+    "drive_docs_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ],
+    "last_self_improvement": "Failed profile changes must not partially trim live D02 particles before clock validation."
+  },
+  "task": {
+    "TaskID": "G7A-R30-D02-FAST-PROFILE-BURST-20261029-04",
+    "scope": "Original D02 loader scene, not Installer or core NOX",
+    "problem": "ECO to MAX/BALANCED preserved ECO nextBurst (up to 52s), exceeding the newly selected profile burst window and leaving the visual scene quiet after mode selection.",
+    "fix": "When accelerating, read and validate the clock and all per-orb earliest/latest bounds before mutations; clamp each existing due time into the selected policy window. Retain prior slow-mode safe lower-bound behavior.",
+    "source_path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+    "pre_blob_sha": "a4d67e278cfb2ecb0be67ebd9633e3a511c35306",
+    "post_blob_sha": "e1d5592d8405f8ca69ad329cd5f2253ac88a02ed",
+    "code_commit": "a2d802150d4fe75d7f01c7c37588f7c05209b420"
+  },
+  "test": {
+    "file": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.fast-profile-bursts.test.mjs",
+    "blob_sha": "a82da1ee9837e1b9d6bec6b6c8ef24fa423fb8c6",
+    "unique_test_count": 1,
+    "cases": [
+      "ECO_TO_MAX",
+      "ECO_TO_BALANCED"
+    ],
+    "engine": "V8 isolated source-execution with fake DOM/RAF",
+    "observed_RED": {
+      "MAX": {
+        "emitted_before": 2,
+        "emitted_after_maximum_window": 2
+      },
+      "BALANCED": {
+        "emitted_before": 2,
+        "emitted_after_maximum_window": 2
+      }
+    },
+    "observed_GREEN": {
+      "MAX": {
+        "emitted_before": 2,
+        "early": 2,
+        "emitted_after_maximum_window": 4
+      },
+      "BALANCED": {
+        "emitted_before": 2,
+        "early": 2,
+        "emitted_after_maximum_window": 4
+      }
+    },
+    "cleanup": "RAF pending=0, D02 decorator removed, baseline elements preserved",
+    "node_cli": "NOT_RUN",
+    "native_windows": "NOT_RUN"
+  },
+  "source_readback": {
+    "preimage_verified": true,
+    "source_post_blob_match": true,
+    "test_post_blob_match": true,
+    "compare_to_parent": "2 files source/test, no deletes, ahead 1"
+  },
+  "immutable_history": "Previous G7-A DONE receipts and 25 frozen snapshots unchanged; no PR162/main/common R30 merge or edits.",
+  "self_improvement": {
+    "applied": "R03 validate dependent clock before any particle trim.",
+    "new_lesson": "A faster graphics policy also needs its own upper timing bound: only rebasing when slowing down can leave faster modes visibly inert. Precompute and validate every orb deadline before any mode/particle state mutation."
+  },
+  "coordination": {
+    "google_docs_writer": "Astra-C ONLY",
+    "this_worker_drive_writes": "NONE",
+    "receipt_handoff": "Astra-C should ingest this Git receipt with RunID and Docs CAS+readback",
+    "shared_docs_write_status": "ASTRA_C_PENDING"
+  },
+  "acceptance": {
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "exe": "NOT_BUILT",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "product_progress_percent": "N/D"
+  }
+}
