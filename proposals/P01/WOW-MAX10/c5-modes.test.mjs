@@ -13,6 +13,10 @@ test("C5.07 invalid mode leaves scene unchanged",()=>{const x=fixture();const c=
 test("C5.08 one scene error rolls existing FX back",()=>{const x=fixture();
  x.wow.setMode=()=>{throw Error("renderer unavailable")};const c=create(x.fx,x.wow);
  assert.equal(c.set("MAX"),false);assert.equal(x.get()[0],"BALANCED");});
+test("C5.11 explicit WOW rejection must restore previous cinema mode",()=>{const x=fixture();
+ x.wow.setMode=()=>false;const c=create(x.fx,x.wow);
+ assert.equal(c.set("MAX"),false);assert.equal(x.get()[0],"BALANCED");
+});
 test("C5.09 closed controller rejects mutation",()=>{const x=fixture();const c=create(x.fx,x.wow);c.close();
  assert.equal(c.set("ECO"),false);assert.equal(c.get().closed,true);});
 test("C5.10 read-only status does not manufacture sensor state",()=>{const x=fixture();
