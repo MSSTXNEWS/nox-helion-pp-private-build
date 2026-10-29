@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_E06_NATIVE_SOURCE_RECEIPT_V3",
+  "run_id": "R30-G6B-20261029T0808MSK-03",
+  "slot": "G6-B",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY (NOT primary NOX)",
+  "status": "SOURCE_CANDIDATE_IN_PRIVATE_BRANCH",
+  "integration": "HOLD",
+  "product_code_complete": "HOLD",
+  "release": "HOLD",
+  "source_only": true,
+  "accepted_product_task_ids": [],
+  "product_progress_percent": null,
+  "git": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "automation/r30/g6b/R30-G6B-20261029T0808MSK-03",
+    "base_branch": "automation/r30/g6b/R30-G6B-20261029T0700MSK-02",
+    "source_commit_sha": "84ff74d3631e5d54ac005e177ee96be79aa91243",
+    "lock_file": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "owned_source_changes": [
+      {
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "pre_blob_sha1": "60aba9b2434aa02e249073537ca2070d9369ad4b",
+        "post_blob_sha1": "9b98cfc6e580046c8031cb0fb9b70a96b3c69c82",
+        "additions": 31,
+        "deletions": 7
+      }
+    ],
+    "retained_owned_source": [
+      {
+        "path": "coordination/e06/adapters/pc_control_owner_port.py",
+        "blob_sha1": "2869bf3bf80642cb79f486c669a953595fc9caf2"
+      }
+    ],
+    "base_compare": "ahead by one source commit, exactly one owned path, no foreign path changed",
+    "forbidden_path_writes": 0,
+    "foreign_path_writes": 0,
+    "new_test_file_writes": 0,
+    "historical_unassigned_test": "Inherited prior branch test not modified; pending explicit owner manifest permission; preserve older DONE/history"
+  },
+  "inputs": {
+    "rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md, Git blob 46fc22c8b2f5e49e78526a2f75456555577e5571; consolidated list 01-56, not verbatim earlier original",
+    "v16": "Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§54-56 and R29 loader-only clarification",
+    "error_master": "Google Doc 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 including ASTRA-C R30 07:27 delta",
+    "e06": "Google Doc 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons": "Google Doc 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ including G6-B 07:27 nested scope lesson",
+    "historical": "Google Doc 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU C34 read-only",
+    "index": "25 immutable snapshot branches, conflict index; source overlaps must compare blobs not overwrite",
+    "snapshots": "25/25 snapshot ROOT inventories inspected (27 root entries each); all three archival part Git blobs identical across the 25. NOT exhaustive leaf-file byte reading; original physical 729 SHA NOT_VERIFIED.",
+    "source_parts_git_sha": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozen_bridge_shas": {
+      "B5": "164c7c0027c98c5bf201977d4cf23591dc1562a0",
+      "B6": "ed2bc0f16dce327fa4e51400da684a29e4758089",
+      "A06": "ed2bc0f16dce327fa4e51400da684a29e4758089"
+    },
+    "prior_g6b_receipt": "coordination/automation/r30/G6-B/R30-G6B-20261029T0700MSK-02.json"
+  },
+  "change": {
+    "area": "50 native routes / trusted Windows session verifier / dangerous native consent",
+    "issue": "Potential native authority TOCTOU: mutable host.native_session_live or host.native_approve attributes could be replaced by callbacks between dispatcher checks; if the verifier changed to one returning True after lease revocation, authorization continuity is not assured. Host route registry identity was likewise not pinned.",
+    "fix": "Capture the native session verifier, native approval callback and route/port registries at execution entry; freeze risk category before callbacks; deny authority or registry identity substitution across all admission, consent, readiness, owner and result stages. Detect session verifier substitution during its own callback, and reject changes during capability advertisement.",
+    "invariants": "50 canonical route/owner/risk tuples preserved; SID/lease format checks, frozenset scopes, fresh dangerous consent, native revocation gating and STOP route retained.",
+    "limits": "Source-level hardening only. Native host must still bind real SID/token, session lease revocation checks at owner pre-effect boundaries; no Windows runtime proof, and callback mutation restored between observations cannot be detected by identity checks alone."
+  },
+  "targeted_test": {
+    "name": "G6-B callback/authority continuity source regression",
+    "kind": "GitHub source-static invariant check against exact post-commit blob; NOT a Python/native runtime test",
+    "result": "PASS",
+    "checked": [
+      "50/50 approved native policy records preserved",
+      "native_session_live verifier identity checked after its callback",
+      "advertise rejects host authority/registry swaps",
+      "execute rejects host authority/registry swaps",
+      "dangerous consent calls pinned approval callback",
+      "risk class selected before native callbacks",
+      "Windows SID and lease validation kept",
+      "STOP route retained"
+    ],
+    "checks_pre_write": 9,
+    "checks_post_write": 6,
+    "python_unittest": "NOT_RUN; no private source checkout in Python environment and no approved new test file path",
+    "windows_native_test": "NOT_RUN",
+    "unsafe_operations_executed": 0,
+    "actual_stop_test": "NOT_RUN"
+  },
+  "errors_lessons": {
+    "applied_previous": "Full seven-field SID/lease scope comparison from 07:00 source pass; frozen Git blob preimage instead of mutable B5 donor.",
+    "new_error": "Authority identity pin gap across callbacks despite already pinned session identity; a changing verifier/consent handler could undermine admission continuity (static source finding, native exploit not executed).",
+    "new_lesson_id": "G6B_R30_PIN_NATIVE_VERIFIER_AND_APPROVAL_CALLBACK_IDENTITY",
+    "new_lesson": "A stable session tuple is not a stable authority: capture security callback identities and immutable risk/registry reference before any third-party native callback, verify them again after every callback, and fail closed if replaced. Pair this with actual host-side token/revocation checks at the effect boundary.",
+    "prevention": "Require dedicated Python adversarial callback mutation regression in an explicitly assigned G6-B test path; require native Windows E06/E07 same-SHA validation before any readiness claim."
+  },
+  "proposals_to_owners": [
+    {
+      "owner": "Astra-C / owner manifest",
+      "request": "Explicitly authorize G6-B unique slot-named Python test path under assigned_paths (existing inherited test path is not authorized); do not write to reserved files."
+    },
+    {
+      "owner": "G6-A / trusted Windows host E06",
+      "request": "Bind native SID/token and revocation verifier to immutable lifetime; ensure owner pre-effect checks for irreversible operations and STOP; no modifications attempted outside G6-B paths."
+    }
+  ],
+  "coordination": {
+    "single_google_docs_writer": "Astra-C ONLY",
+    "worker_google_docs_writes": 0,
+    "worker_google_docs_readback": "NOT_APPLICABLE",
+    "please_collect_git_receipt": true,
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "original_25_snapshots_modified": false,
+    "EXE_NSIS_GitLab_CI_final_integration": "NOT_RUN",
+    "old_DONE_preserved": true
+  },
+  "receipt_readback": "PENDING_POST_CREATE_FETCH"
+}
