@@ -217,6 +217,8 @@ def inspect(profile: str, gpu_index: int) -> dict:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
             import torch
+            if not isinstance(getattr(torch.version, "cuda", None), str) or not torch.version.cuda:
+                report["errors"].append("TORCH_CUDA_BUILD_UNAVAILABLE")
             if not torch.cuda.is_available():
                 report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
             else:
