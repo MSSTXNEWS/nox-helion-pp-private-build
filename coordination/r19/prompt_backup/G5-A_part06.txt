@@ -1,0 +1,2 @@
+tion; все роли передают дельту T02, ТОЛЬКО T02 пишет общий реестр+Master/E06/Lessons через CAS/readback. НЕ обходи STOP/ACL/native consent/SourceLock/NO-LOSS и запрет EXE/NSIS/GitLabCI/E07 до SOURCE_READY. Прежние DONE, технический канон и расписание НЕ МЕНЯТЬ.
+=== END NOX_V16_R17_ALL_ROLES_NO_PREMATURE_STOP_20261029 ===
