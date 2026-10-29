@@ -44,6 +44,8 @@ public sealed class GoogleDocsAppendReadback
             if (!before.IsSuccessStatusCode)
                 return new(runId, documentId, null, null, "READ_FAILED", entry.Length);
             using var beforeJson = await ParseBoundedAsync(before, stop).ConfigureAwait(false);
+            if (!DocumentMatches(beforeJson.RootElement, documentId))
+                return new(runId, documentId, null, null, "GET_WRONG_DOCUMENT", entry.Length);
             string? revision = ReadRevision(beforeJson.RootElement);
             if (string.IsNullOrWhiteSpace(revision))
                 return new(runId, documentId, null, null, "NO_REVISION", entry.Length);
@@ -91,6 +93,8 @@ public sealed class GoogleDocsAppendReadback
             if (!after.IsSuccessStatusCode)
                 return new(runId, documentId, revision, null, "READBACK_FAILED", entry.Length);
             using var afterJson = await ParseBoundedAsync(after, stop).ConfigureAwait(false);
+            if (!DocumentMatches(afterJson.RootElement, documentId))
+                return new(runId, documentId, revision, null, "READBACK_WRONG_DOCUMENT", entry.Length);
             string? revAfter = ReadRevision(afterJson.RootElement);
             if (string.IsNullOrWhiteSpace(revAfter))
                 return new(runId, documentId, revision, null, "NO_READBACK_REVISION", entry.Length);
@@ -184,6 +188,14 @@ public sealed class GoogleDocsAppendReadback
         foreach (char c in id)
             if (!(char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.')) return false;
         return true;
+    }
+    // Legacy stub responses may omit documentId; reject explicit disagreement.
+    private static bool DocumentMatches(JsonElement root, string expected)
+    {
+        if (root.ValueKind != JsonValueKind.Object) return false;
+        if (!root.TryGetProperty("documentId", out var id)) return true;
+        return id.ValueKind == JsonValueKind.String &&
+            string.Equals(id.GetString(), expected, StringComparison.Ordinal);
     }
     private static string? ReadRevision(JsonElement root) =>
         root.ValueKind == JsonValueKind.Object &&
