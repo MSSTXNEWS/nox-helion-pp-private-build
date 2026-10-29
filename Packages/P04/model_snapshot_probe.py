@@ -19,6 +19,18 @@ MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_WEIGHT_FILES = 512
 REVISION_RE = re.compile(r"[0-9a-fA-F]{40}")
 
+# Safetensors primitive widths in bytes. Unsupported types remain HOLD rather
+# than being guessed as a valid model snapshot.
+_TENSOR_WIDTH = {
+    "BOOL": 1, "U8": 1, "I8": 1,
+    "F8_E4M3": 1, "F8_E4M3FN": 1, "F8_E5M2": 1,
+    "U16": 2, "I16": 2, "F16": 2, "BF16": 2,
+    "U32": 4, "I32": 4, "F32": 4,
+    "U64": 8, "I64": 8, "F64": 8,
+}
+_MAX_TENSOR_RANK = 32
+_MAX_TENSOR_NAME = 1024
+
 def _strict_json_object(raw: str | bytes) -> dict:
     """Reject ambiguous duplicate keys and nonfinite JSON constants at every depth."""
     def unique_pairs(pairs):
@@ -96,23 +108,47 @@ def _weight_header(path: Path) -> frozenset[str]:
             header = _strict_json_object(f.read(length))
         except (UnicodeError, ValueError) as exc:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
-    tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
     capacity = size - length - 8
-    if not tensors or any(
-        not isinstance(t, dict) or not isinstance(t.get("dtype"), str) or
-        not isinstance(t.get("shape"), list) or
-        type(t.get("data_offsets")) is not list or len(t["data_offsets"]) != 2 or
-        any(type(n) is not int for n in t["data_offsets"]) or
-        not (0 <= t["data_offsets"][0] <= t["data_offsets"][1] <= capacity)
-        for t in tensors
-    ):
+    tensors = [(name, value) for name, value in header.items() if name != "__metadata__"]
+    metadata = header.get("__metadata__", {})
+    if (not tensors or not isinstance(metadata, dict) or
+        any(not isinstance(v, str) for v in metadata.values())):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    # A header with individually in-bounds yet overlapping tensor spans is
-    # not an unambiguous local weight snapshot. Fail closed before SHA claims.
-    spans = sorted((t["data_offsets"][0], t["data_offsets"][1]) for t in tensors)
-    if any(spans[i][0] < spans[i - 1][1] for i in range(1, len(spans))):
+    for name, tensor in tensors:
+        if (not name or len(name) > _MAX_TENSOR_NAME or
+            any(ord(c) < 32 or ord(c) == 127 for c in name) or
+            not isinstance(tensor, dict)):
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+        width = _TENSOR_WIDTH.get(tensor.get("dtype")) if isinstance(tensor.get("dtype"), str) else None
+        shape = tensor.get("shape")
+        offsets = tensor.get("data_offsets")
+        if (width is None or type(shape) is not list or len(shape) > _MAX_TENSOR_RANK or
+            any(type(dim) is not int or dim < 0 for dim in shape) or
+            type(offsets) is not list or len(offsets) != 2 or
+            any(type(n) is not int for n in offsets) or
+            not (0 <= offsets[0] <= offsets[1] <= capacity)):
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+        # Bound each multiplication by the actual file capacity. A zero-sized
+        # tensor legitimately occupies no bytes; an empty rank is one scalar.
+        expected = 0 if 0 in shape else width
+        if expected:
+            for dimension in shape:
+                if dimension and expected > capacity // dimension:
+                    raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+                expected *= dimension
+        if offsets[1] - offsets[0] != expected:
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    # The safetensors buffer must be fully indexed: no overlapping or hidden
+    # gaps/trailing bytes. Empty tensors (zero-length spans) remain permitted.
+    spans = sorted((t["data_offsets"][0], t["data_offsets"][1]) for _, t in tensors)
+    position = 0
+    for begin, end in spans:
+        if begin != position:
+            raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+        position = end
+    if position != capacity:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    return frozenset(k for k in header if k != "__metadata__")
+    return frozenset(name for name, _ in tensors)
 
 
 def inspect(root: Path, expected_revision: str | None) -> dict:
@@ -157,6 +193,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         for name in names:
             if (not isinstance(name, str) or not name or name != Path(name).name or
+                    "/" in name or chr(92) in name or ":" in name or
+                    any(ord(ch) < 32 or ord(ch) == 127 for ch in name) or
                     not name.endswith(".safetensors") or name in {".", ".."}):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
