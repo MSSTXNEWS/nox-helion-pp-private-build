@@ -1,0 +1,202 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T11_FIVE_FIXED_CRITERIA_R15",
+  "task_id": "T11",
+  "run_id": "NOX-V16-T11-20261029T1715MSK-R15-ACCESS-HOLD",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "state": "ACCESS_HOLD",
+  "no_exe_nsis_ci_e07": true,
+  "times": {
+    "timezone": "Europe/Moscow",
+    "planned_start": "2026-10-29T17:15:00+03:00",
+    "actual_start_utc": "2026-10-29T14:15:09.065142Z",
+    "observed_prewrite_utc": "2026-10-29T14:19:33.387Z",
+    "actual_end_utc": null,
+    "duration_seconds": null,
+    "end_reason": "Immutable receipt created before end; final elapsed can only be reported after Git readback."
+  },
+  "historical_checkpoint": {
+    "run_id": "NOX-V16-T11-20261029T165515MSK-R14-ACCESS-HOLD",
+    "commit_sha": "ccfd481cc43d2dedeb34a68ac88cb53b38a7a231",
+    "receipt_blob_sha": "60c7cad7c829e9c0bb0ef5533f675ed867bd019e",
+    "done": 2,
+    "denominator": 5,
+    "percent": 40
+  },
+  "progress_checkpoint": {
+    "before_done": 2,
+    "after_done": 2,
+    "denominator": 5,
+    "before_percent": 40,
+    "after_percent": 40,
+    "delta_percentage_points": 0,
+    "remaining": 3,
+    "bar": "████░░░░░░",
+    "basis": "Preserve two proven R12/R14 DONE; neither fresh PR162 movement nor T07 archive proof satisfies T11 criteria 3-5."
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "Historical GitLab Free migration identified",
+      "status": "DONE",
+      "proof": {
+        "github_migration_commit": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+        "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+        "receipt_r12": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/3cef69137be12e740b739d8a070a463e8eb62182"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Preserve 27 migration-unique files and history in single T12 handoff",
+      "status": "DONE",
+      "proof": {
+        "r12_receipt_blob": "7ec747bbe1d7bf0430e9d9eee710a403bd9a01ba",
+        "unique_file_count": 27,
+        "historical_commit_count_from_r12": 21,
+        "r12_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Authenticated current live GitLab HEAD confirmed",
+      "status": "HOLD",
+      "blocker": "GITLAB_LIVE_ACCESS_HOLD",
+      "proof": {
+        "gitlab_project": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+        "current_authenticated_gitlab_head": null,
+        "live_gitlab_history_verified": false,
+        "owner": "authorized private GitLab project owner"
+      },
+      "note": "Static GitHub migration head is not live GitLab HEAD; HOLD never counts as PASS."
+    },
+    {
+      "id": 4,
+      "name": ".gitlab-ci.yml and Windows entrypoint aligned to accepted frozen SHA without CI",
+      "status": "HOLD",
+      "blocker": "NO_T09_ACCEPTED_FROZEN_SHA",
+      "proof": {
+        "ci_git_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+        "entrypoint_git_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+        "current_entrypoint_branch_guard": "migration/nox-v16-gitlab-free-20261028-r01",
+        "current_github_pr162_candidate_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+        "current_github_pr162_candidate_tree": "bd564152829af66e91c0216e6912591c0c64389b",
+        "final_owner_accepted_frozen_sha": null,
+        "t09_original_archive_receipt": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/commit/5b0ae2efaf579b586d735f38a59ba760d2b1272d"
+      },
+      "owner": "T06 owner #1 + T09 source freezer; T11/T12 CI owners after accepted SHA",
+      "note": "Do not silently replace hardcoded branch with mutable ref, bypass manual build approval, or mutate historical migration scaffolding."
+    },
+    {
+      "id": 5,
+      "name": "Unambiguous GitLab READY and same-SHA handoff to T12",
+      "status": "HOLD",
+      "blocker": "GITLAB_ACCESS_AND_SOURCE_READY_HOLD",
+      "proof": {
+        "single_existing_conditional_handoff": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/3cef69137be12e740b739d8a070a463e8eb62182/coordination/automation/t11/NOX-V16-T11-20261029T163000MSK-R12-ACCESS-HOLD.json",
+        "gitlab_ready": false,
+        "same_sha": null,
+        "independent_t10_source_ready": false
+      },
+      "owner": "T12 after T09/T10/T11 PASS",
+      "note": "R12 remains the ONE conditional handoff; no duplicate READY object and no build."
+    }
+  ],
+  "new_verified_delta": {
+    "pr214": {
+      "merged": true,
+      "merged_at_utc": "2026-10-29T14:04:13Z",
+      "source_head": "4927fa8e96fb36f9c72df739a636f96dff438753",
+      "url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/pull/214",
+      "meaning": "Narrow P02 patch admitted to existing PR162, not full P01-P05 source acceptance."
+    },
+    "pr162": {
+      "head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+      "tree": "bd564152829af66e91c0216e6912591c0c64389b",
+      "state": "OPEN_DRAFT",
+      "base_old": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "compare_ahead_commits": 9,
+      "compare_behind_commits": 0,
+      "changed_paths": 8,
+      "deleted_paths": 0,
+      "source_new_code_paths": [
+        "Packages/P02/worker-python/p02_framed_worker.py",
+        "Packages/P02/worker-python/p02_native_ingress.py"
+      ],
+      "source_tests_paths": [
+        "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+        "Packages/P02/worker-python/test_p02_native_ingress.py"
+      ],
+      "owner_decisions_added": true,
+      "not_frozen": true
+    },
+    "t06_r08": {
+      "run_id": "NOX-V16-T06-20261029T170832MSK-R08",
+      "receipt_blob": "1615f22de296384a610f5528d6069fecb0df5c44",
+      "source_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+      "source_tree": "bd564152829af66e91c0216e6912591c0c64389b",
+      "reported_git_blob_count": 974,
+      "source_deleted": [],
+      "role": "working-base inventory, NOT accepted final T06 frozen tuple"
+    },
+    "t07_owner_decision": {
+      "blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+      "status": "T07_DONE_ORIGINAL_ARCHIVE_6_OF_6",
+      "physical_729": 729,
+      "joined_zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "scope": "ORIGINAL ZIP ONLY"
+    },
+    "t09_r14": {
+      "run_id": "NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK",
+      "receipt_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+      "status": "ORIGINAL_ARCHIVE_SOURCELOCK_SIGNED_FINAL_INTEGRATED_TREE_FREEZE_HOLD",
+      "progress": "1/6",
+      "final_frozen_head": null,
+      "final_frozen_tree": null,
+      "final_frozen_manifest": null
+    },
+    "t02_docs_read_only": {
+      "master_rev": "AHj4eMQZCR5s4vq2QVIVdeZPtKVTwrxbtAS_7dzAXIDdvfEJ-DSVLjEPu87y18TPkaLlXFRsvedEy5Jkdp1B_u4kruJ_7Osi50pJcC6lcfs",
+      "e06_rev": "AHj4eMRR7dw-x4iJyrHyu3rPBO6iHoqAXozm5HJar0yPXgAyvq1BZhf_NoNCUZ6u5LLppqObrxnPbMS4D2flbU2tvR8sD2flbU2KTARyI0aQvkmYvklQ3HKIf3H44xdE4s",
+      "shared_docs_written_by_t11": false
+    }
+  },
+  "single_T12_CI_source_handoff": {
+    "ref": "R12 existing conditional handoff",
+    "status": "NOT_READY",
+    "steps": [
+      "Await T06 owner-accepted immutable integrated HEAD/tree/manifest and T09 final frozen SHA plus T10 same-SHA SOURCE_READY PASS.",
+      "Get authenticated live GitLab HEAD, branch/ref, history/remote evidence and 27-path preservation; compare with frozen GitHub SHA before any GitLab push.",
+      "Only then propose owner-CAS alignment of CI and Windows entrypoint to exact frozen ref/SHA while retaining explicit web/api+NOX_APPROVE_WINDOWS_BUILD=YES guard; do not alter migration-owned files without ownership.",
+      "Require GitLab same SHA and retained history; pass existing single T12 handoff to later build owner. No force-push/reimport and no CI/EXE/NSIS/E07 in T11."
+    ]
+  },
+  "one_controlling_blocker": {
+    "id": "GITLAB_LIVE_ACCESS_HOLD",
+    "owner": "authorized private GitLab project owner",
+    "also_unresolved_dependency": "T06 owner-accepted source => T09 final SHA => T10 SOURCE_READY"
+  },
+  "lesson_applied": "A merged owner patch and a freeze-named branch can represent genuine source progress, but neither creates a signed final integrated SourceLock or authentic GitLab HEAD; preserve verified old DONE and increment only fixed criteria with exact same-SHA evidence.",
+  "handoff_to_T02": {
+    "action": "READ_PERSONAL_IMMUTABLE_RECEIPT_AND_CAS_APPEND_ONLY_IF_NOT_ALREADY_PRESENT",
+    "run_id": "NOX-V16-T11-20261029T1715MSK-R15-ACCESS-HOLD",
+    "shared_docs_writer": "T02 ONLY",
+    "t11_shared_docs_writes": 0
+  },
+  "safety": {
+    "source_code_edits": 0,
+    "existing_ci_edits": 0,
+    "shared_google_docs_writes": 0,
+    "gitlab_push": 0,
+    "force_push": 0,
+    "reimport": 0,
+    "exe": 0,
+    "nsis": 0,
+    "gitlab_ci": 0,
+    "e07": 0,
+    "main_changed": false,
+    "pr162_changed_by_t11": false,
+    "original_729_changed": false,
+    "old_done_preserved": true,
+    "automation_enabled_required": true
+  }
+}
