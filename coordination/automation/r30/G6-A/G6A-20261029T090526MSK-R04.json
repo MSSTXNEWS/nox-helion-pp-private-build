@@ -1,0 +1,130 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V4",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T090526MSK-R04",
+  "status": "HOLD",
+  "gate": "SOURCE_PATCH_STAGED_FOR_OWNER_REVIEW_NOT_SOURCE_READY",
+  "taskId": "G6A-E06-ROLLBACK-LINK-IDENTITY-FAILURE-R04",
+  "branch": "automation/r30/g6a/G6A-20261029T090526MSK-R04",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T080427MSK-R03",
+  "parentCommit": "0b70d2ebc03e3a0f2dfa66532404d20cf025bb8e",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "slot": "G6-A",
+    "assignedPaths": [
+      "coordination/e06/verify_original_729_source.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py"
+    ],
+    "forbiddenPathsUntouched": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ]
+  },
+  "source": {
+    "path": "coordination/e06/stage_onehost.py",
+    "beforeGitBlobSha1": "01793a664c52b1e77a746d069ebbc92f33cdcddd",
+    "afterGitBlobSha1": "0961b9720524a965a4cb97bbc13520639ad7c268",
+    "preimageChecked": true,
+    "patch": "After each successful os.link, use prevalidated prepared_ids instead of a new fallible _identity(path) before inserting link in rollback ledger.",
+    "modifiedFunctions": [
+      "commit_stage"
+    ],
+    "preservedPreviousR03AtomicRollback": true
+  },
+  "defect": "A successful os.link could be followed by a failing _identity(prepared[X]) before published.append. The rollback ledger then omits an already-created destination, leaving an orphan addon or receipt despite HOLD; the post-link lstat was unnecessary because a pinned inode ID was already recorded at preparation.",
+  "targetedTest": {
+    "testId": "G6A-R04-POST-LINK-IDENTITY-FAIL-ROLLBACK",
+    "testPath": "/tmp/g6a_r04_regression.py",
+    "storage": "LOCAL_EPHEMERAL_ONLY_NON_REPO",
+    "commandGreen": "python /tmp/g6a_r04_regression.py",
+    "resultGreen": "PASS",
+    "commandRed": "python /tmp/g6a_r04_regression_old.py",
+    "resultRed": "EXPECTED_FAIL_EXIT_1",
+    "actualAsserts": [
+      "fault injected after successful addon hardlink publication",
+      "patched isolated helper detects post-link fault and rolls back published addon",
+      "original preimage preserved",
+      "receipt not published",
+      "cooperative lock and temporary files removed"
+    ],
+    "observedTestCount": 1,
+    "executionKind": "ISOLATED_PYTHON_HELPER_CONTRACT_NOT_FULL_REPO_IMPORT_OR_NATIVE_WINDOWS",
+    "claimRestrictions": "Does not establish full module/Windows rollback PASS. Source file cannot be tested in GitHub-hosted Python from this connector without running CI. RED/green results refer to two variants of one isolated targeted fixture."
+  },
+  "testOwnership": {
+    "newTestFileCommitted": false,
+    "reason": "G6-A assigned_paths enumerate only three production source files; R30 coordinator identified new unassigned G6-A tests. Do not create new repo test at an unapproved path.",
+    "ownerRequest": "Owner/Astra-C: approve a unique G6-A test path (e.g. tests/e06/test_g6a_r04_link_identity_rollback.py) in assigned_paths before Git test commit. Existing files remain untouched."
+  },
+  "inputs": {
+    "rules": "§33 56/56 consolidated items read from coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md plus latest V16 §§54–56 and R29 loader-only precedence",
+    "conflictIndex": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "gitBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "originalSnapshots": 25,
+    "originalSnapshotsRecursiveTreesRead": 25,
+    "allSnapshotTreesUntruncated": true,
+    "sourcePartsGitBlobShaSameAcross25": true,
+    "sourcePartsGitBlobSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "frozenGitBlobManifest": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+    "frozenGitBlobsCount": 968,
+    "baselinePathsPresentAtR03": 968,
+    "unchangedGitBlobsAtR03": 963,
+    "changedGitBlobsAtR03": 5,
+    "missingBaselinePathsAtR03": 0,
+    "changedOriginalBaselinePaths": [
+      "Packages/P02/worker-python/p02_native_ingress.py",
+      "Packages/P02/worker-python/test_p02_native_ingress.py",
+      "coordination/e06/source_deep_inventory.py",
+      "coordination/e06/stage_onehost.py",
+      "coordination/e06/verify_original_729_source.py"
+    ],
+    "physicalOriginalZipReassemblyAndInner729Sha256": "NOT_RUN_RAW_BINARY_BYTES_UNAVAILABLE_TO_CONNECTED_GITHUB_READS",
+    "windowsNativeRollback": "NOT_RUN_SOURCE_ONLY"
+  },
+  "googleDriveReadOnly": {
+    "spec": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "thisSlotSharedDocWrites": false,
+    "exclusiveWriter": "Astra-C"
+  },
+  "previousLessonApplied": "R03: rollback must revert only its own proven files; R04 extends this to recording the immutable output identity BEFORE any side-effect publication and avoiding post-link fallible operations before tracking rollback.",
+  "newLesson": "ERROR: successful hardlink + exception in subsequent metadata read can create an untracked output. ROOT CAUSE: rollback ledger appended only after an avoidable post-publication _identity call. FIX: pin verified temp inode at preparation and append the output using cached identity directly after os.link. REGRESSION: fault-inject metadata read after first link and assert orphan-free cleanup. PREVENTION: no fallible I/O between an irreversible publication and its rollback registration; isolate test assertions from native/full-repository acceptance.",
+  "preservation": {
+    "oldDonePreserved": true,
+    "original25SnapshotsModified": false,
+    "mainModified": false,
+    "pr162Modified": false,
+    "centralR30Modified": false,
+    "forbiddenFilesModified": false,
+    "newPathsOnlyOwnReceipt": true,
+    "nsisBuilt": false,
+    "exeBuilt": false,
+    "gitlabCIStarted": false,
+    "finalIntegration": false
+  },
+  "gates": {
+    "sourceCodeComplete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "rawOriginal729": "HOLD",
+    "release": "HOLD",
+    "productProgressPercent": "N/D"
+  },
+  "changedPaths": [
+    "coordination/e06/stage_onehost.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T090526MSK-R04.json"
+  ]
+}

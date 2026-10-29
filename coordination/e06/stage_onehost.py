@@ -105,7 +105,9 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
             raise RuntimeError("OWNER6_PREPARED_FILES_CHANGED_HOLD")
         # Hard-link publication is atomic and refuses an existing destination.
         os.link(prepared[1], trusted_path(dest))
-        published.append((dest, _identity(prepared[1]), extra))
+        # Use the identity pinned during preparation: metadata reads here can fail
+        # AFTER a successful link, before rollback knows this path is ours.
+        published.append((dest, prepared_ids[prepared[1]], extra))
         if not _owned(original, before_identity, before):
             raise RuntimeError("OWNER6_WPF_PREIMAGE_SHA_HOLD")
         require_lock_owned()
@@ -116,7 +118,9 @@ def commit_stage(original, before, patched, dest, extra, out, receipt_bytes):
         # Receipt is the final commit marker; refuse a lost/foreign owner lease.
         require_lock_owned()
         os.link(prepared[2], trusted_path(out))
-        published.append((out, _identity(prepared[2]), receipt_bytes))
+        # A published receipt must enter the rollback ledger without a fallible
+        # post-link lstat; earlier preparation already pinned this inode.
+        published.append((out, prepared_ids[prepared[2]], receipt_bytes))
         if any(not _owned(path, identity, raw) for path, identity, raw in published):
             raise RuntimeError("OWNER6_RECEIPT_READBACK_HOLD")
         require_lock_owned()
