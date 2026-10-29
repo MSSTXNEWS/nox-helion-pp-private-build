@@ -215,8 +215,11 @@ export function projectCorePersona(core, nowMs) {
     new Set(agg.weights.map(x=>x.id)).size===8 &&
     Math.abs(agg.weights.reduce((a,c)=>a+c.weight,0)-100)<0.000001;
   const values=new Map(outCores.map(c=>[c.id,c.percent]));
+  // Eight source percentages may each be <100 yet round to 100 in aggregate.
+  // Never display completion until every sealed CoreID is exactly complete.
   const helion=complete && validWeights ?
-    round2(agg.weights.reduce((a,c)=>a+values.get(c.id)*c.weight/100,0)):null;
+    (outCores.every(c=>c.percent===100) ? 100 : Math.min(99.99,
+      round2(agg.weights.reduce((a,c)=>a+values.get(c.id)*c.weight/100,0)))):null;
   return {helion,coreIds:outCores,personas:outPersonas,
     stage:complete && validWeights?'SOURCE_DATED':'N_D'};
 }
