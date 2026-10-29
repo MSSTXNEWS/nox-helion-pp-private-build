@@ -275,6 +275,9 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   // Roll back only FX-owned nodes on malformed native subscription.
   function rollbackFailedMount(){
+    // G7-A R30: a failed subscribe may leave a callback on the host bus.
+    // Retire the callback before rollback touches any original D02 nodes.
+    disposed=true;
     if(listenerReady)try{doc.removeEventListener("visibilitychange",onVisibility);}catch(_){}
     if(motionReady&&motion){
       try{
@@ -308,7 +311,10 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
   }
   mounted.set(root,true);
   try{wake();}catch(error){
-    disposed=true;rollbackFailedMount();mounted.delete(root);throw error;
+    disposed=true;
+    // A failed initial RAF is not a successful subscription: release it.
+    try{unsubscribe?.();}catch(_){}
+    rollbackFailedMount();mounted.delete(root);throw error;
   }
   return Object.freeze({
     setProfile(next){
