@@ -1,0 +1,220 @@
+{
+  "schema": "NOX_V16_M3_INDEPENDENT_SOURCE_READY_GITLAB_CHECKPOINT_V1",
+  "task_id": "M3",
+  "run_id": "NOX-V16-M3-20261029T1816MSK-R01",
+  "scope": "T10 independent SOURCE_READY + T11 existing private GitLab Free prep for NOX HELION EXPRESS INTEGRATOR V16, no Windows build",
+  "timing": {
+    "observed_msk": "2026-10-29T18:16:37+03:00",
+    "session_start_from_context": "2026-10-29T18:12+03:00",
+    "duration_seconds": null,
+    "reason": "Actual completion/duration not independently metered"
+  },
+  "canon": {
+    "doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": "1–33,54–56,R29; all 56 rules §33",
+    "function_lock": true,
+    "no_loss": true
+  },
+  "preflight": {
+    "registered_in_source": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registry_blob_git_sha1": "81c8ecc72d1bcb35f434745cff9fba14eb9f2940",
+    "registry_policy": "2026-10-29-R02-MEGA-ONE-CHECK-ONE-SAVE",
+    "history_index": "DOCS_AND_ISSUE_OBSERVATIONS_INDEXED__ALL_HISTORICAL_RECEIPTS_PENDING",
+    "entries_all": [
+      {
+        "error_id": "ERR-SYS-001",
+        "registry_status": "OPEN",
+        "owner": "T02/C",
+        "disposition": "HANDOFF",
+        "reason": "Cross-owner registry ACK + shared Docs CAS must be verified by sole writer"
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "registry_status": "OPEN",
+        "owner": "T02/C",
+        "disposition": "APPLIED",
+        "reason": "Live PR162 HEAD reread after 46e09 -> e7b17 drift and prior stale snapshot not saved"
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "registry_status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06/T08",
+        "disposition": "HANDOFF",
+        "reason": "Host50 source patch present but 13 native route owner proofs absent"
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "registry_status": "OPEN",
+        "owner": "T06,P01-P05",
+        "disposition": "HANDOFF",
+        "reason": "M1 R12 P02 immutable route mapping applied, T06 remains 1/8; need full same SHA acceptance"
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "registry_status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06/T08",
+        "disposition": "HANDOFF",
+        "reason": "Runner fixture source fix remains independent same-head unverified"
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "registry_status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "disposition": "ALREADY_CLOSED",
+        "reason": "Original archive 729/729 preserved; do not reopen"
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "registry_status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "disposition": "ALREADY_CLOSED",
+        "reason": "Historical 34/34 decisions preserved"
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "registry_status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "disposition": "HANDOFF",
+        "reason": "T09 R16 frozen integrated head/tree/manifest absent"
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "registry_status": "OPEN",
+        "owner": "ALL/T02",
+        "disposition": "APPLIED",
+        "reason": "Performed actual source-drift detection and immutable Git readback, not a false DONE closeout"
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "registry_status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "disposition": "HANDOFF",
+        "reason": "M1 R12 physical P02 code change but owner T06 1/8, native tests not run"
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "registry_status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08/T06",
+        "disposition": "HANDOFF",
+        "reason": "Same SHA 13 route source attestation remains absent"
+      }
+    ],
+    "stats": {
+      "OPEN": 4,
+      "FIX_APPLIED_UNVERIFIED": 5,
+      "VERIFIED_CLOSED": 2
+    }
+  },
+  "source": {
+    "pr": 162,
+    "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "live_head_snapshot_git_sha1": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "live_tree_snapshot_git_sha1": "44377fc99428eec0fd8c451ed87ddede94eaba4f",
+    "pr_draft": true,
+    "t06_latest_receipt": "NOX-V16-T06-20261029T181631MSK-M1-R12",
+    "t06_r12_blob": "b07e4d6974e9ed67a5911deccc76c32c213d3a00",
+    "t06_progress": "1/8",
+    "latest_physical_change": [
+      "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "Packages/P02/worker-python/test_p02_owner_route_ports.py"
+    ],
+    "t06_new_p02_proof": "Source mapping modified; owner test NOT_RUN, not same-head native acceptance",
+    "t09_latest_observed_receipt_blob": "51170f031d1c724d093baccdf2859d3af2fbe651",
+    "t09_working_freeze_commit": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "t09_working_freeze_tree": "bd564152829af66e91c0216e6912591c0c64389b",
+    "final_owner_accepted_frozen_head": null,
+    "final_frozen_manifest_sha256": null,
+    "source_ready": "HOLD",
+    "host50_admission_blob": "efd5af93853d04cf5c1748af41b13570fc49c0ad",
+    "native_host50_13_acceptance": false,
+    "original_archive": {
+      "parts": "3/3",
+      "members": "729/729",
+      "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "status": "HISTORICAL_PASS_SCOPE_ONLY",
+      "not_rehashed": true
+    },
+    "historic_T04": "34/34 archival decisions preserved"
+  },
+  "gitlab": {
+    "url": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+    "existing_private_project_only": true,
+    "authenticated_provider_available": false,
+    "authenticated_live_head": null,
+    "permissions": null,
+    "github_migration_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+    "github_migration_commit": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "historical_27_unique_git_blobs": "27/27 verified by T11 R17",
+    "archive_parts_git_blobs": "3/3 verified by T11 R17",
+    "original_ci_path": ".gitlab-ci.yml",
+    "ci_blob": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "entrypoint_path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+    "entrypoint_blob": "a330977156c49aab0c433978b0d924549c5e2421",
+    "existing_ci_guard": "workflow web/api explicit NOX_APPROVE_WINDOWS_BUILD=YES; push DENY",
+    "source_entrypoint_hardcoded_migration_ref": true,
+    "sha_binding_to_T09_not_available": true,
+    "existing_readonly_helper": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+    "required_external_action": "Authorized GitLab owner run existing read-only audit helper locally with protected token; deliver sanitized JSON with actual GitLab project HEAD, permissions, 27-path preservation, no token",
+    "no_gitlab_write": true
+  },
+  "progress": {
+    "before": {
+      "T10": "1/7",
+      "T11": "2/5",
+      "M3": "3/12",
+      "percent": 25
+    },
+    "after": {
+      "T10": "1/7",
+      "T11": "2/5",
+      "M3": "3/12",
+      "percent": 25,
+      "ten_bar": "███░░░░░░░"
+    },
+    "delta_pp": 0,
+    "done_criteria": [
+      3,
+      8,
+      9
+    ],
+    "blocked_criteria": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      10,
+      11,
+      12
+    ],
+    "denominator": 12
+  },
+  "single_focused_check": {
+    "name": "LIVE_SNAPSHOT_TUPLE_VS_T09_SIGNED_FINAL_AND_GITLAB_LIVE",
+    "result": "BLOCKED_MISSING_TWO_EXTERNAL_GATES",
+    "actual_current_candidate_sha": "e7b17bbaf670909a95189732bd990fa87bcdb16b",
+    "actual_current_candidate_tree": "44377fc99428eec0fd8c451ed87ddede94eaba4f",
+    "t09_final_frozen_sha": null,
+    "t11_live_authenticated_gitlab_sha": null,
+    "readback": "SAVED_RECEIPT_GIT_READBACK_REQUIRED",
+    "lesson": "ERR-SYS-002: abandon stale 46e09 source preflight when PR162 moved, refresh exact HEAD/tree and bind receipt to latest verified snapshot without treating it as frozen"
+  },
+  "handoff": {
+    "to_M1_T06": "Finish owner-approved 8/8 P01–P05/Host50/Voice/STOP/ACL native source acceptance on one Git SHA, exact manifest, no fake signature",
+    "to_M2_T08_T09": "Independently verify SAME SHA, then one immutable frozen HEAD/tree/manifest handoff",
+    "to_T02_C": "Sole shared error+Master/E06/Lessons CAS writer; ingest immutable M3 receipt after Git readback; no claims of Docs update before proof",
+    "to_GitLab_owner": "Read actual live GitLab project via existing helper; never substitute GitHub HEAD",
+    "to_T12": "Not authorized until T09/T10 SOURCE_READY and GitLab same-SHA confirmation"
+  },
+  "safety": {
+    "canonical_source_writes": 0,
+    "shared_docs_writes": 0,
+    "gitlab_pushes": 0,
+    "force_pushes": 0,
+    "ci_runs": 0,
+    "exe": 0,
+    "nsis": 0,
+    "e07": 0
+  }
+}
