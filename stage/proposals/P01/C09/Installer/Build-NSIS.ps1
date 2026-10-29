@@ -59,6 +59,13 @@ if (-not $SkipPublish) {
 if (-not (Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe') -PathType Leaf)) { throw 'P01_PUBLISHED_EXE_MISSING' }
 $setup=Join-Path $root 'NOX-HELION-Setup-CANDIDATE.exe'
 if ((Test-Path -LiteralPath $setup) -or (Test-Path -LiteralPath (Join-Path $root 'p01-nsis-build-receipt.json'))) { throw 'P01_BUILD_OUTPUT_ALREADY_EXISTS' }
+# Directory junctions are not included by Get-ChildItem -File and must not
+# escape the payload manifest unnoticed.
+foreach ($dir in @(Get-ChildItem -LiteralPath $payload -Recurse -Directory -Force)) {
+  if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw 'P01_PUBLISH_DIRECTORY_REPARSE'
+  }
+}
 $files = @(Get-ChildItem -LiteralPath $payload -Recurse -File | Sort-Object FullName | ForEach-Object {
   $relative = $_.FullName.Substring($payload.Length).TrimStart('\')
   if ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "P01_REPARSE_POINT:$relative" }
