@@ -1,0 +1,173 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T074510MSK-R03",
+  "slot": "G4-A",
+  "task_id": "P04-G4A-R03-SAFETENSORS_NONFINITE_AND_PARTIAL_SHARD_FAIL_CLOSED",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 - loader only",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "source_change": "COMMITTED_AND_GITHUB_POSTIMAGE_READBACK_VERIFIED",
+  "release_status": "HOLD",
+  "product_task_accepted": false,
+  "source_ready": false,
+  "branch": "automation/r30/g4a/20261029T074510MSK-R03",
+  "parent_branch": "automation/r30/g4a/20261029T064630MSK-R02",
+  "parent_commit_sha": "e42803670dd95f5ed20123bd6394c2e3f84e5ae3",
+  "collection_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "collection_head_at_run": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_before_work": true,
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "overlap_with_peer": false
+  },
+  "rules": {
+    "original_56_copy": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16_sections": "54-56 plus R29 override: separate loader, no main-NOX recreation",
+    "read": true
+  },
+  "historical_reconciliation": {
+    "A04": {
+      "ref": "astra/r29-a04-20261029",
+      "model_probe_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+    },
+    "B1": {
+      "ref": "astra-b/r29-b1-20261029",
+      "model_probe_git_blob_sha1": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f"
+    },
+    "B2": {
+      "ref": "astra-b/r29-b2-20261029",
+      "model_probe_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+    },
+    "baseline_from_R02": "Exact shard tensor membership, same-file-descriptor SHA256, Win32 device alias and surrogate shard name rejection preserved; no original DONE re-counted."
+  },
+  "frozen_snapshots": {
+    "index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "directories_read": 25,
+    "root_entries_each": 27,
+    "three_source_parts_same_git_blob_shas_in_all_roots": true,
+    "source_part_git_blob_shas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "deep_file_by_file_audit": "NOT_RUN",
+    "raw_archive_sha256_and_729_member_parity": "NOT_VERIFIED",
+    "changed": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "74eced107a05d02e2ba3e9c0679f5940ebd1404d",
+      "post_git_blob_sha1": "bdc4b6b4c3220b4b65cdb44073e3c8238878a10d",
+      "pre_sha256": "9c76ba6d8553c283ffd1261896fb3ec4b2998461d098acbf2cc0d27644446598",
+      "post_sha256": "7add437e2833af66a2998940b9d039eb855d42308e764cbbfeb0fa517f3d50d9",
+      "commit": "56e3524bd0d317830f26db7575c158783cefc88f"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "3eaffde8c45a11f2c58ac16181762663d837a33b",
+      "post_git_blob_sha1": "e300017da6b76b2a76897089269792c9122b8454",
+      "pre_sha256": "0241b7d86b4be420092204d0e5bc824f9e518b9f4218349e44cff0a6aa3db58c",
+      "post_sha256": "fa4abde3642a79ff77e6ca193c9d9358c106c3e725f50219ac762c9cf1887505",
+      "commit": "bd8fa6c1d5a10ade85399322d782243ef650ed29"
+    }
+  ],
+  "code_delta": {
+    "reason": "Python JSON decoder accepts nonstandard NaN/Infinity payload in safetensors extra metadata; earlier header parser did not reject. During multi-shard inspection, one validated shard could remain in weight_files with status HOLD after later shard failure.",
+    "changes": [
+      "Add parse_constant=reject_nonfinite to safetensors JSON header admission, allowing fail-closed MODEL_SAFETENSORS_HEADER_INVALID before weight hashing",
+      "Clear weight_files and tensor_headers on any snapshot HOLD exception, without elevating candidate/revision/rights status."
+    ],
+    "diff_verified": {
+      "base": "e42803670dd95f5ed20123bd6394c2e3f84e5ae3",
+      "code_head": "bd8fa6c1d5a10ade85399322d782243ef650ed29",
+      "ahead_by": 2,
+      "paths_exactly": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ]
+    }
+  },
+  "focused_tests": {
+    "local_command": "python /tmp/p04_g4a_r03_isolated.py",
+    "execution": "ISOLATED EXTRACTED_PYTHON_LOGIC, not full private GitHub module",
+    "result": "6/6 PASS",
+    "cases": [
+      "Baseline Python JSON accepted NaN/Infinity/-Infinity (RED reproduced)",
+      "Patched non-finite rejection 3 tokens -> HOLD",
+      "Valid JSON header control preserved",
+      "Baseline partial shard evidence persists (RED reproduced)",
+      "Patched missing later shard clears partial weight_files/tensor_headers",
+      "Patched tensor-map mismatch in later shard clears partial evidence"
+    ],
+    "repo_test_methods_added": [
+      "test_g4a_r03_nonfinite_header_is_hold_before_weight_hash",
+      "test_g4a_r03_late_missing_shard_drops_partial_evidence",
+      "test_g4a_r03_late_tensor_map_mismatch_drops_partial_evidence"
+    ],
+    "remote_source_readback": true,
+    "remote_tests_readback": true,
+    "repository_module_test_run": "NOT_RUN",
+    "full_P04_tests": "NOT_RUN",
+    "Windows_native": "NOT_RUN",
+    "GPU_training": "NOT_RUN",
+    "model_license_and_dataset_rights": "NOT_ATTESTED"
+  },
+  "google_drive": {
+    "read": [
+      "NOX_GROWTH_JOURNAL_MASTER_CONTINUATION_V16_20261028_R04",
+      "NOX Group B Task 14 E06 coordinator — self-improvement",
+      "NOX C34 Error Journal (historical)",
+      "NOX FIN ZAGR V16 consolidated spec"
+    ],
+    "read_latest_c_delta": "ASTRA-C-R30-20261029T0727MSK-02",
+    "shared_docs_modified": false,
+    "aggregation_owner": "Astra-C only",
+    "receipt_for_aggregation": "R30-G4A-20261029T074510MSK-R03"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_FAIL_CLOSED_SAFETENSORS_NONFINITE_AND_PARTIAL_SHARD_RECEIPTS",
+    "prior_lesson_applied": "R02 first validates all filename aliases before I/O; preserve casefold/DOS guards. R03 moves deeper into header correctness and multi-shard negative paths.",
+    "error": "Header could accept non-JSON NaN/Infinity, and a second bad shard could leave an apparently valid first-shard digest inside a HOLD report.",
+    "fix": "Reject parser constants in safetensors header and zero partial shard evidence on any inspect HOLD.",
+    "verification": "Isolated Python RED->GREEN 6/6 and exact GitHub file post-image readback; not equivalent to complete repo suite.",
+    "next": "On a source checkout, run python -m unittest tests/P04/test_model_snapshot_probe.py (or discover appropriate test module), then test Windows path semantics and independently verify model license/revision/gpu gates before any promotion."
+  },
+  "scope_guards": {
+    "no_pr162": true,
+    "no_main": true,
+    "no_common_r30_write": true,
+    "no_other_owner_paths": true,
+    "no_snapshot_modification": true,
+    "no_preflight_local_gpu": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_execution": true,
+    "no_final_integration": true
+  },
+  "blockers": [
+    "Full Python repository test module not executed because private GitHub source cannot be checked out in this local isolated test environment",
+    "Native Windows filesystem/weight path behavior not run",
+    "Physical raw archive sha256 and 729-member full SourceLock parity not verified",
+    "No license/dataset/GPU/model-revision attestation",
+    "Independent E07 acceptance and all product TaskIDs not complete"
+  ],
+  "project_completion_percentage": "N/D",
+  "completed_source_task_count_this_run": 0,
+  "provisional_source_patch_count_this_run": 1,
+  "conclusion": "HOLD - committed source delta and receipt do not constitute product DONE or 100%."
+}
