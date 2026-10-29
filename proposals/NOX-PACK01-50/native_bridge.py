@@ -7,7 +7,9 @@ Unknown/unavailable actions always HOLD; never simulate completion.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from contextvars import ContextVar
+from collections.abc import Iterator, AsyncIterator
 from types import MappingProxyType
+import inspect
 from typing import Callable, Any
 import json
 import re
@@ -375,6 +377,13 @@ class NoxPackHost:
         require_current_authority()
         if self.ports.get(route) is not port:
             raise HostHold("Native owner binding changed during execution")
+        # The synchronous dispatcher must not return deferred work (including
+        # generators, async generators or awaitables) after the ContextVar has
+        # been reset. A later caller could otherwise execute owner effects
+        # outside this SID/lease and native-consent admission boundary.
+        # Original P02 streaming is already consumed synchronously by chat().
+        if inspect.isawaitable(result) or isinstance(result, (Iterator, AsyncIterator)):
+            raise HostHold("Deferred native owner result requires a verified synchronous owner boundary")
         return result
 
 
