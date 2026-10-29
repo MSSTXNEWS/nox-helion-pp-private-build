@@ -69,7 +69,21 @@ function csvOut(a){
     Object.prototype.hasOwnProperty.call(row,key)?esc(row[key]):""
   ).join(","))].join("\n");
 }
-function flat(o,p="",out=Object.create(null),dep=0){if(dep>20)throw Error("JSON_DEPTH_LIMIT");if(o&&typeof o==="object"){for(const [k,v] of Object.entries(o))flat(v,p?p+"."+k:k,out,dep+1)}else{if(Object.prototype.hasOwnProperty.call(out,p))throw Error("JSON_PATH_COLLISION");out[p]=o}return out}
+function flat(o,p="",out=Object.create(null),dep=0){
+  if(dep>20)throw Error("JSON_DEPTH_LIMIT");
+  const record=value=>{
+    if(Object.prototype.hasOwnProperty.call(out,p))throw Error("JSON_PATH_COLLISION");
+    out[p]=value;
+  };
+  if(o&&typeof o==="object"){
+    const entries=Object.entries(o);
+    // Preserve empty nested JSON containers instead of dropping them as absent paths.
+    // Retain the existing root-empty result and fail-closed dotted-key collision gate.
+    if(!entries.length&&p!=="")record(o);
+    else for(const [k,v] of entries)flat(v,p?p+"."+k:k,out,dep+1);
+  }else record(o);
+  return out;
+}
 const tasklist=s=>ls(s).filter(x=>x.trim()).map((x,i)=>{const m=/^\s*(?:[-*]\s*)?(?:\[(x|X| )\]\s*)?(.*)$/.exec(x),a=m[2].split("|").map(y=>y.trim()),o=Object.fromEntries(a.slice(1).map(y=>y.split("=",2).map(z=>z.trim())).filter(z=>z.length===2));return {id:i+1,title:a[0],done:!!m[1]&&m[1].toLowerCase()==="x",owner:o.owner||"unassigned",status:o.status||"todo",weight:bounded(o.weight,0,10000,1),minutes:bounded(o.minutes,0,100000,0)}});
 const base64=s=>{const b=new TextEncoder().encode(s);return btoa(Array.from(b,x=>String.fromCharCode(x)).join(""))};
 const unbase=s=>new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(atob(s.trim()),x=>x.charCodeAt(0)));
