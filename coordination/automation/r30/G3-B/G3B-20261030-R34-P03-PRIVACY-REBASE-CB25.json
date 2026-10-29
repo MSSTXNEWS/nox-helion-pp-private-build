@@ -1,0 +1,147 @@
+{
+  "schema": "NOX_V16_G3B_R34_SOURCE_ONLY_OWNER_SAFE_REBASE_V1",
+  "run_id": "G3B-20261030-R34-P03-PRIVACY-REBASE-CB25",
+  "area": "NOX HELION EXPRESS INTEGRATOR P03 ONEHOST UI (no new Host50 route)",
+  "status": "SOURCE_PREPARED_VERIFIED_V8_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "policy": "NOX_R34_SOURCE_ONLY_REUSE_FIRST; old G3-B R26 donor rebased to changed live PR162 source; ERR-SRC-004 P0 privacy/consent regression on exact new SHA",
+  "prestart_read_proof": {
+    "canon_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraph_chars": 218066,
+    "section33_rules": "56/56 accessed; no new rules",
+    "register_blob": "09ab4de165f0d921b4229a2dfb9115278b05749e",
+    "active_errors": [
+      {
+        "error_id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "action": "SOURCE_PATCH_PRIVACY_CONSENT"
+      },
+      {
+        "error_id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "action": "NO_IMPACT_HISTORICAL_CLOSED"
+      },
+      {
+        "error_id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "action": "NO_IMPACT_HISTORICAL_CLOSED"
+      },
+      {
+        "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "action": "APPLY_NO_PREMATURE_DONE"
+      },
+      {
+        "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      },
+      {
+        "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "action": "OWNER_HANDOFF_NO_CROSS_WRITE"
+      }
+    ],
+    "pr162_head": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+    "pr162_tree": "bff2619b8cbef0c4f946a5ef3a4b9dcb5a8cf9d4",
+    "g3b_owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "master_e06_lessons_c34": "read with Google Drive get_document_text; latest relevant lessons: no duplicate donor, old PASS != new-head acceptance, STOP/ACL/consent NO-LOSS required"
+  },
+  "source": {
+    "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "pre_blob": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+    "post_blob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+    "donor_blob": "839c67cdcf65a9da2c8a1bf9ab6f1f757faf961c",
+    "donor_ref": "automation/r30/g3b/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY",
+    "reused_changes": [
+      "public status/ACK allowlists",
+      "snapshot validate before consent mutation",
+      "host event/activeJob status redaction"
+    ],
+    "retained_from_current": [
+      "native jobId/modelTag ACK pin",
+      "durable STOP state",
+      "catalog license/sha review"
+    ]
+  },
+  "regression": {
+    "test_path": "coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs",
+    "test_blob": "e910d1778c9807df8b5530c72926e332b84b1bb0",
+    "provenance": "reused byte-identical G3-B R26 corrected owner test",
+    "execution": "V8 mocked DOM/WebView only; Node/.NET/Windows NOT_RUN",
+    "baseline_red": [
+      "G3B invalid snapshot leaves consent unchanged",
+      "G3B raw host status and event are never public",
+      "G3B failed ACK never leaks host reason"
+    ],
+    "candidate_pass": [
+      "G3B invalid snapshot leaves consent unchanged",
+      "G3B raw host status and event are never public",
+      "G3B failed ACK never leaks host reason",
+      "G3B foreign job and tag ACK cannot unlock STOP",
+      "G3B STOP Cancelling beats stale Installed"
+    ],
+    "static_guards": [
+      "STOP jobId/modelTag pin present",
+      "Cancelling monotonic invariant present",
+      "license/consent verification code remains"
+    ]
+  },
+  "owner_handoff": {
+    "to": "manual #1 / T06",
+    "instruction": "Before any PR162 CAS, re-fetch current exact source blob; if PRE differs from 1498d6049de9dd641cabb1b049f68a4f57ee0b85 rebase only changed privacy segments; run Node targeted regression, STOP/ACL/native-consent/privacy/NO-LOSS; integrate only as sole PR162 writer.",
+    "independent_qa": "manual #2 / T08 exact integrated HEAD",
+    "shared_journal": "T02 sole writer; deduplicate existing ERR-SRC-004; no new TaskID"
+  },
+  "honest_gates": {
+    "new_taskid_accepted": 0,
+    "role_accepted_criteria_delta": 0,
+    "product_progress": "N/D",
+    "gitlab_head": "UNKNOWN",
+    "native_pass": false,
+    "exe_nsis_ci_e07_run": false
+  },
+  "no_loss": {
+    "original_zip_729": "untouched",
+    "D02_WOW_8Core_5Persona": "untouched",
+    "PACK01_PACK02": "untouched",
+    "onehost": "retained",
+    "STOP_ACL_consent": "retained"
+  }
+}
