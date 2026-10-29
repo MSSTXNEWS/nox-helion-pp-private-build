@@ -290,7 +290,7 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                         encoding="utf-8")
         first = probe.inspect(self.root, REV)
         self.assertEqual(first["status"], "LOCAL_FILES_PRESENT_ONLY")
-        path.write_text('{"weight_map": {"q.weight": "model.safetensors"}}',
+        path.write_text('{"weight_map":{"q.weight":"model.safetensors"}}',
                         encoding="utf-8")
         second = probe.inspect(self.root, REV)
         self.assertEqual(second["status"], "LOCAL_FILES_PRESENT_ONLY")

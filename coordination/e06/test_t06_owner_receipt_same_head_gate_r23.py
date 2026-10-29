@@ -22,6 +22,20 @@ class OwnerReceiptGateR23(unittest.TestCase):
         self.assertFalse(gate.safe_path("/absolute/path"))
         self.assertTrue(gate.safe_path("Packages/P04/model.py"))
 
+    def test_windows_sensitive_source_paths_fail_closed(self):
+        invalid = [
+            "test/COM1:stream", "test/x\n.txt", "test/file?.json",
+            "test/AUX", "test/trail .txt", "test/a|b.json",
+            "test/file\x7f.txt", "test/C:relative", "test/CON.txt",
+            "test/LPT¹.txt", "test/trail.", "test/hidden\u202e.txt",
+        ]
+        for candidate in invalid:
+            with self.subTest(path=repr(candidate)):
+                self.assertFalse(gate.safe_path(candidate))
+        for valid in ("Packages/P04/model.py", "test/P01.source", "docs/HELION File.md"):
+            with self.subTest(path=valid):
+                self.assertTrue(gate.safe_path(valid))
+
     def test_receipt_sha_must_resolve_to_git_blob_not_tree_or_commit(self):
         target="Packages/P04/model_snapshot_probe.py"
         sha="a"*40

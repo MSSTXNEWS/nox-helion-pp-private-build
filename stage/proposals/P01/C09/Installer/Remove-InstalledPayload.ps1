@@ -33,7 +33,51 @@ foreach ($meta in @($markerPath, $manifestPath)) {
 }
 $ownership = (Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8).Trim()
 if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MARKER' }
-$m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+# Reject duplicate JSON member names before ConvertFrom-Json may collapse them.
+# Published payload manifest member names are fixed unescaped ASCII.
+function Assert-NoDuplicateJsonMembers([string]$Text) {
+  $frames = New-Object 'System.Collections.Generic.List[object]'
+  for ($i = 0; $i -lt $Text.Length; $i++) {
+    $ch = $Text[$i]
+    if ($ch -eq [char]34) {
+      $start = $i + 1
+      $escaped = $false
+      for ($i = $i + 1; $i -lt $Text.Length; $i++) {
+        if ($Text[$i] -eq [char]92) { $escaped = $true; $i++; continue }
+        if ($Text[$i] -eq [char]34) { break }
+      }
+      if ($i -ge $Text.Length) { throw 'P01_JSON_UNTERMINATED_STRING' }
+      if ($frames.Count -gt 0) {
+        $top = $frames[$frames.Count - 1]
+        if ($top.Kind -eq 'object' -and $top.ExpectKey) {
+          if ($escaped) { throw 'P01_JSON_ESCAPED_MEMBER_NAME' }
+          $key = $Text.Substring($start, $i - $start)
+          if (-not $top.Keys.Add($key)) { throw 'P01_JSON_DUPLICATE_MEMBER' }
+          $top.ExpectKey = $false
+        }
+      }
+      continue
+    }
+    switch ([int]$ch) {
+      123 {
+        $keys = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        $frames.Add([pscustomobject]@{ Kind='object'; Keys=$keys; ExpectKey=$true })
+      }
+      91 { $frames.Add([pscustomobject]@{ Kind='array' }) }
+      125 { if ($frames.Count -gt 0) { $frames.RemoveAt($frames.Count - 1) } }
+      93 { if ($frames.Count -gt 0) { $frames.RemoveAt($frames.Count - 1) } }
+      44 {
+        if ($frames.Count -gt 0) {
+          $top = $frames[$frames.Count - 1]
+          if ($top.Kind -eq 'object') { $top.ExpectKey = $true }
+        }
+      }
+    }
+  }
+}
+$manifestRaw = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8
+Assert-NoDuplicateJsonMembers $manifestRaw
+$m = $manifestRaw | ConvertFrom-Json -ErrorAction Stop
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
 if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
 if ($m.runId -isnot [string] -or $m.runId -ceq 'P01-UNSET' -or $m.runId -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$') { throw 'P01_UNINSTALL_INVALID_RUN_ID' }
