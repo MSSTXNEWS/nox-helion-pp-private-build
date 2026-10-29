@@ -39,8 +39,19 @@ class ContradictingHeads(unittest.TestCase):
         self._downstream({'head':H},{'head':H,'source_head':X},False)
     def test_downstream_clean_receipts_pass_source_only(self):
         self._downstream({'head':H,'source_head':H},{'source_head':H},True)
-    def _downstream(self,p0proof,handoffproof,expected):
+    def test_patch_applied_focused_test_alias_conflict_is_rejected(self):
+        self._downstream({'head':H},{'head':H},False, 'PATCH_APPLIED',
+                         {'status':'PASS','head':H,'source_head':X})
+    def test_patch_applied_missing_focused_test_head_is_rejected(self):
+        self._downstream({'head':H},{'head':H},False, 'PATCH_APPLIED',
+                         {'status':'PASS'})
+    def test_patch_applied_consistent_focused_test_sha_can_pass(self):
+        self._downstream({'head':H},{'head':H},True, 'PATCH_APPLIED',
+                         {'status':'PASS','head':H,'source_head':H})
+    def _downstream(self,p0proof,handoffproof,expected,status='NO_CODE_BLOCKERS',focused=None):
         receipts={'0'*40:p0proof,'1'*40:handoffproof}
+        if focused is not None:
+            receipts['9'*40]=focused
         journal={}
         for i,doc in enumerate(gate.DOCS):
             sha=str(i+2)*40
@@ -51,7 +62,9 @@ class ContradictingHeads(unittest.TestCase):
         def git(*args):
             if args==('rev-parse','HEAD'):return H.encode()
             raise AssertionError(args)
-        p0={'receipt_blob':'0'*40,'status':'NO_CODE_BLOCKERS'}
+        p0={'receipt_blob':'0'*40,'status':status}
+        if status=='PATCH_APPLIED':
+            p0['focused_test_blob']='9'*40
         handoff={'receipt_blob':'1'*40}
         with patch.object(gate,'_root_git',return_value=(Path('.'),git)),patch.object(
                 gate,'_actual_json_blob',side_effect=lambda git,sha:receipts[sha]):
