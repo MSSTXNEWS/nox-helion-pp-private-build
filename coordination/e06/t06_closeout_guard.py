@@ -10,8 +10,17 @@ import sys
 from pathlib import Path
 
 CRITERIA = ("base", "P01", "P02", "P03", "P04", "P05", "common_integration", "accepted_head_manifest")
-HEX40 = re.compile(r"[0-9a-f]{40}\Z")
+HEX40 = re.compile(r"[0-9a-f]{40}\\Z")
+HEX_PROOF = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\\Z")
 PROOF = ("owner_receipt", "preimage_sha", "postimage_sha", "test_receipt")
+
+def valid_owner_and_proof(row: dict, evidence: dict) -> bool:
+    # This checks evidence format, NOT the Git object's existence or its owner's
+    # authority. The sole integrator must separately obtain CAS/readback proof.
+    return (type(row.get("owner")) is str and bool(row["owner"].strip())
+            and row["owner"] != "UNASSIGNED"
+            and all(type(evidence.get(k)) is str and
+                    bool(HEX_PROOF.fullmatch(evidence[k])) for k in PROOF))
 
 def decide(receipt: dict) -> dict:
     if not isinstance(receipt, dict) or not isinstance(receipt.get("criteria"), dict):
@@ -30,15 +39,19 @@ def decide(receipt: dict) -> dict:
             ok = (row.get("status") == "DONE" and isinstance(evidence, dict)
                   and isinstance(evidence.get("canonical_head_sha"), str)
                   and bool(HEX40.fullmatch(evidence["canonical_head_sha"]))
-                  and isinstance(evidence.get("source_choice_receipt"), str)
-                  and bool(evidence["source_choice_receipt"].strip()))
+                  and type(row.get("owner")) is str and bool(row["owner"].strip())
+                  and type(evidence.get("source_choice_receipt")) is str
+                  and bool(HEX_PROOF.fullmatch(evidence["source_choice_receipt"])))
         else:
-            ok = row.get("status") == "DONE" and isinstance(evidence, dict) and all(
-                isinstance(evidence.get(k), str) and bool(evidence[k].strip()) for k in PROOF)
+            ok = (row.get("status") == "DONE" and isinstance(evidence, dict)
+                  and valid_owner_and_proof(row, evidence))
         if name == "accepted_head_manifest" and ok:
             ok = all(isinstance(receipt.get(key), str) and bool(HEX40.fullmatch(receipt[key]))
                      for key in ("head_sha", "tree_sha", "manifest_blob_sha"))
-            ok = ok and receipt.get("owner_acceptance") is True and receipt.get("independent_source_qa") is True
+            # T10 independently verifies SOURCE_READY *after* T09 freezes T06's
+            # accepted source. Making T10 a T06 prerequisite deadlocks the
+            # canonical T06 -> T08 -> T09 -> T10 pipeline.
+            ok = ok and receipt.get("owner_acceptance") is True
         if ok:
             accepted.append(name)
         else:
@@ -53,6 +66,7 @@ def decide(receipt: dict) -> dict:
             "completed": count, "total": 8, "progress_pct": count*12.5,
             "progress_bar": "█"*round(count*10/8) + "░"*(10-round(count*10/8)),
             "remaining": remaining, "continuation_required": not done,
+            "T10_source_ready": "INDEPENDENT_PASS_REQUIRED_AFTER_T09_FREEZE",
             "limitations": "No script controls assistant turn lifetime or proves native Windows behavior"}
 
 def main() -> int:
