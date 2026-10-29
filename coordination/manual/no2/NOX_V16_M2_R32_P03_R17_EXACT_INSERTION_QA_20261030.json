@@ -1,0 +1,29 @@
+{
+  "schema": "NOX_V16_M2_R32_SOURCE_DISPOSITION_V1",
+  "run_id": "NOX-V16-M2-R32-20261030-P03-R17-INDEPENDENT",
+  "role": "manual2-independent-QA",
+  "source_pr": 162,
+  "latest_seen_head": "14128d9d2eb2b32c9152665fa9dd43a39910bbe0",
+  "canonical_blob": "1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf",
+  "donor_commit": "23d8d114327ef4caa626648e9ec1f51b3b14380a",
+  "donor_blob": "1c8056c8d6f1c0f5e59608ff8eb31626c16cc7a6",
+  "existing_task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+  "existing_error_id": "ERR-SRC-004",
+  "exact_content_relation": "donor = canonical + single 342-character ACK target guard, all other 25167 canonical characters unchanged",
+  "tests": {
+    "ack_canonical": "FAIL on other job ACK",
+    "ack_donor": "13/13 source V8 PASS",
+    "consent_canonical": "12/12 source V8 PASS",
+    "consent_donor": "12/12 source V8 PASS"
+  },
+  "disposition": "SOURCE_FIX_VERIFIED_ON_ISOLATED_DONOR_NOT_INTEGRATED",
+  "product_source_edited_by_manual2": false,
+  "native_windows": "NOT_RUN",
+  "qa_accepted_taskids_delta": 0,
+  "source_ready": "HOLD",
+  "release": "HOLD",
+  "next_owner1": "CAS integrate only ACK guard into PR162 current exact preimage; run existing ACK+consent regressions, signed owner receipt/readback",
+  "next_manual2": "Independent changed-code QA after owner1 exact-head commit",
+  "next_t02": "Index only existing ERR-SRC-004 with CAS/readback and visible control-panel stage; do not mark QA_ACCEPTED",
+  "finite_cycle_rule": "If source blobs and dependent owner evidence unchanged, WAITING_OWNER_SOURCE_CHANGE; no repeated counts"
+}
