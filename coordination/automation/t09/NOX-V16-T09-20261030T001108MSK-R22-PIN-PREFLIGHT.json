@@ -1,0 +1,187 @@
+{
+  "schema": "NOX_V16_T09_PIN_PREFLIGHT_R22_V1",
+  "task_id": "T09",
+  "run_id": "NOX-V16-T09-20261030T001108MSK-R22-PIN-PREFLIGHT",
+  "actual_check_utc": "2026-10-29T21:11:08.497Z",
+  "planned_start_msk": "2026-10-30T00:03:00+03:00",
+  "scope": "Windows NOX HELION EXPRESS INTEGRATOR only; source freeze prebuild",
+  "rights": {
+    "t06_sole_pr162_writer": true,
+    "t02_sole_shared_ledger_writer": true,
+    "t09_product_code_written": false,
+    "t10_pass_required_before_t09_freeze": false
+  },
+  "fresh_read": {
+    "canon_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "section33_consolidated_rules": 56,
+    "registry_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "error_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "history_complete": false
+    },
+    "documents_revision": {
+      "Master": "AHj4eMTb0gnJFJVyiGiFmlCL6Xe1ppue6gWCiUVDgl0KUWZS3RoHKQQsp3CuA2PwvjN6mxvV789xdxOS_18e779jCqt96ejGilGfIfU9WJE",
+      "E06": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+      "Lessons": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc",
+      "C34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "recovery_policy_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e"
+  },
+  "source": {
+    "ref": "integration/nox-v16-unified-candidate-20261028-r01",
+    "prev_observed_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "current_observed_head": "dbfd22340427e35440242f144aa1730833661695",
+    "current_git_tree": "9ccaf2dfbc41a6c63b7446318f33887c6029762c",
+    "drift_after_prev_head": {
+      "ahead": 1,
+      "behind": 0,
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "changed": "MODIFIED",
+      "no_removed_paths": true,
+      "pre_blob": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+      "post_blob": "2e5830b468bf7d77475e7544cd985a1a3ff45bec"
+    },
+    "independent_source_check": {
+      "result": "STATIC_TYPE_GUARD_PRESENT_NOT_QA_ACCEPTED",
+      "checks": [
+        "reviewedTag typeof id===string before id.toLowerCase()",
+        "hasEvidence requires artifactVerified and evidence",
+        "STOP/host consent code path still present in same file"
+      ],
+      "no_native_windows_runtime": true
+    }
+  },
+  "original_source_lock": {
+    "status": "PASS_ORIGINAL_ARCHIVE_ONLY",
+    "parts_pass": "3/3",
+    "entries_pass": "729/729",
+    "bytes": 60364346,
+    "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "not_rehashed": true
+  },
+  "acceptance": {
+    "criterion_count": 6,
+    "accepted_unique": [
+      3
+    ],
+    "statuses": [
+      "HOLD",
+      "HOLD",
+      "DONE",
+      "HOLD",
+      "HOLD",
+      "HOLD"
+    ],
+    "before": 1,
+    "after": 1,
+    "delta": 0,
+    "percent_before": 16.7,
+    "percent_after": 16.7,
+    "bar": "██░░░░░░░░",
+    "remaining": 5,
+    "product": "N/D"
+  },
+  "evidence": {
+    "t06_owner_8_of_8": "NOT_EVIDENCED",
+    "t08_full_same_sha": "NOT_EVIDENCED",
+    "t08_r32_9_of_9_only_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "t06_manifest_approved_sha256": null,
+    "final_frozen_head": null,
+    "source_ready": false,
+    "build": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "errors_read": [
+    "ERR-SYS-001",
+    "ERR-SYS-002",
+    "ERR-SRC-003",
+    "ERR-SRC-004",
+    "ERR-SRC-005",
+    "ERR-SYS-006",
+    "ERR-SYS-007",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+  ],
+  "errors_ack": [
+    {
+      "error_id": "ERR-SYS-001",
+      "action": "HANDOFF",
+      "reason": "T02 owner; shared history backfill still PARTIAL; T09 cannot mutate common Docs"
+    },
+    {
+      "error_id": "ERR-SYS-002",
+      "action": "APPLY",
+      "reason": "Re-read PR162 from 1f5737bd to dbfd2234; invalidate earlier T08 SHA-bound evidence"
+    },
+    {
+      "error_id": "ERR-SRC-003",
+      "action": "HANDOFF",
+      "reason": "T06/T08; Host50 native admission not signed at current SHA"
+    },
+    {
+      "error_id": "ERR-SRC-004",
+      "action": "HANDOFF",
+      "reason": "T06/#1; P01-P05+Host50 accepted 8/8 and manifest absent; P03 UI now has typed ID guard but independent acceptance pending"
+    },
+    {
+      "error_id": "ERR-SRC-005",
+      "action": "HANDOFF",
+      "reason": "T08 independent current-SHA fixture validation remains unproven"
+    },
+    {
+      "error_id": "ERR-SYS-006",
+      "action": "ALREADY_VERIFIED",
+      "reason": "T07+T09 original three-part ZIP/729 files SourceLock remains PASS without recalc"
+    },
+    {
+      "error_id": "ERR-SYS-007",
+      "action": "ALREADY_VERIFIED",
+      "reason": "T04 historical 34/34 source choices preserved"
+    },
+    {
+      "error_id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "action": "APPLY",
+      "reason": "Fail closed at T09 1/6; receipt not source freeze"
+    },
+    {
+      "error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLY",
+      "reason": "No confusion of automation run/receipt with TaskID DONE"
+    },
+    {
+      "error_id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "action": "HANDOFF",
+      "reason": "T06 owner signed 8/8 HEAD/tree/manifest is missing, cannot infer from source commits"
+    },
+    {
+      "error_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "action": "HANDOFF",
+      "reason": "T08 R32 exact 1f5737bd Python 9/9 source-only, but no T06 native 13/13 and new dbfd2234 changed head"
+    }
+  ],
+  "self_improvement": {
+    "deduplicated_clusters": 4,
+    "applied": 1,
+    "delegated": 3,
+    "already_verified": 2,
+    "remaining": "Owner 8/8, T08 exact SHA, frozen manifest, downstream handoff",
+    "lesson": "Source changed after T08 source-only QA; invalidate stale SHA, check changed P03 UI guard only and preserve original 729 without rehash."
+  },
+  "owner_action": {
+    "primary_owner": "manual #1 / T06",
+    "next": "Publish owner-accepted 8/8 source HEAD+tree+manifest SHA and owner CAS/STOP/ACL/native consent/Host50 receipts pinned to current or later PR162 commit; T08 independent exact same-HEAD disposition; T09 then immutable freeze without T10 prerequisite",
+    "t02": "Read this T09 receipt and conditionally append delta to shared registry/Docs via sole-writer CAS+readback"
+  },
+  "status": "INCOMPLETE_NOT_FROZEN",
+  "source_commit_is_not_freeze": true
+}
