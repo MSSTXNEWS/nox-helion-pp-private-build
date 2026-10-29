@@ -289,6 +289,21 @@ const eventPackages = new Set(['P01','P02','P03','P04','P05','E06','E07']);
 // Contract events.v3 bounds event identity fields at 128 characters. The
 // general UI RunID helper allows 160 and is not an event envelope validator.
 const eventToken128 = v => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,128}$/.test(v);
+// events.v3 optional fields are schema-controlled even on STOP/ERROR.
+// A malformed optional metric must never certify a terminal as successful.
+const eventOptionalFieldsCanonical = e => {
+  const field = (key, check) => !Object.prototype.hasOwnProperty.call(e,key) ||
+    e[key] === null || check(e[key]);
+  const nonnegativeInteger = v => Number.isSafeInteger(v) && v >= 0;
+  return field('metric_name',v=>typeof v==='string' && v.length<=64) &&
+    field('metric_value',v=>typeof v==='number' && Number.isFinite(v)) &&
+    field('temperature_c',v=>typeof v==='number' && Number.isFinite(v) && v>=0 && v<=150) &&
+    field('gpu_utilization_percent',v=>typeof v==='number' && Number.isFinite(v) && v>=0 && v<=100) &&
+    field('memory_used_mib',nonnegativeInteger) &&
+    field('memory_total_mib',nonnegativeInteger) &&
+    field('gpu_index',nonnegativeInteger) &&
+    field('gpu_name',v=>typeof v==='string' && v.length<=256);
+};
 const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   eventToken128(e.run_id) && eventToken128(e.event_id) && eventToken128(e.task_id) &&
   eventToken128(e.action_id) && eventPackages.has(e.package_id) &&
@@ -297,6 +312,7 @@ const canonicalTerminal = e => e && e.schema===EVENT_SCHEMA &&
   typeof e.message==='string' && e.message.length<=240 &&
   !/[\x00-\x1f\x7f]/.test(e.message) &&
   typeof e.evidence_verified==='boolean' &&
+  eventOptionalFieldsCanonical(e) &&
   // Optional events.v3 fields are still schema-governed. A malformed replay
   // sequence or bidi/control-laden error code cannot certify a terminal.
   (!Object.prototype.hasOwnProperty.call(e,'event_sequence') ||
@@ -353,7 +369,10 @@ export function projectCanonicalEvents(events, runId, nowMs) {
     const fingerprint=JSON.stringify([e.run_id,e.event_id,e.event_type,
       e.task_id,e.package_id,e.action_id,e.timestamp_utc,e.state,
       e.source,e.message,e.evidence_verified,e.numerator,e.denominator,
-      e.event_sequence??null,e.error_code??null]);
+      e.event_sequence??null,e.error_code??null,
+      e.metric_name??null,e.metric_value??null,e.temperature_c??null,
+      e.gpu_utilization_percent??null,e.memory_used_mib??null,
+      e.memory_total_mib??null,e.gpu_index??null,e.gpu_name??null]);
     const previous=seen.get(e.event_id);
     if (previous!==undefined) {
       if (previous!==fingerprint) return {state:'HOLD_EVENT_ID_COLLISION',errors:null};
