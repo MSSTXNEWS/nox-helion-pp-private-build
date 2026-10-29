@@ -169,6 +169,17 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        # Availability probes are native callbacks too. Keep the advertised
+        # capabilities bound to the same identity and permission snapshot;
+        # never return a partial list assembled across different sessions.
+        def session_scope():
+            session.validate()
+            return (session.tenant, session.principal, session.chat_id,
+                    session.allowed, session.private_approved)
+        authorized_scope = session_scope()
+        def require_unchanged_session():
+            if session_scope() != authorized_scope:
+                raise HostDenied("Native session changed during advertisement")
         out = {}
         for route, item in self.routes.items():
             port = self.ports.get(route)
@@ -176,12 +187,15 @@ class NoxPackHost:
             if port and route in session.allowed:
                 try:ready = port.available() is True
                 except Exception:ready = False
+                # Check even when the probe raised after mutating the session.
+                require_unchanged_session()
             risk = item["risk"]
             scoped = ready and (risk == "safe" or route in session.private_approved)
             if risk == "dangerous":scoped = False
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
+        require_unchanged_session()
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
