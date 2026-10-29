@@ -1,0 +1,21 @@
+{
+  "schema": "ASTRA_B_R29_SOURCE_ONLY_BLOCK_V1",
+  "run_id": "ASTRA-B-R29-20261029-B3-02",
+  "worker_label": "B3",
+  "real_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE_THIS_SESSION",
+  "task_id": "B3-P05-FUTURE-EVENT-HOLD",
+  "branch": "astra-b/r29-b3-20261029",
+  "source_commit": "89ca00184e45fad5c866c9906341737ab8472962",
+  "source_file": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+  "source_git_blob": "53deb294f567f4fbcef8813090470943926c42ee",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "focused_test": "JS_RUNTIME_3_OF_3_PASS; plus prior CoreID_3_OF_3_PASS at 40d189a846aadb1804f54fd508332f705feb21d3",
+  "source_readback": "EXACT_COMMIT_BLOB_MATCH",
+  "lesson": "Future-dated error must HOLD rather than disappear; partial CoreID must never round up to 100.",
+  "original_729_physical_check": "NOT_RUN",
+  "native_windows_check": "NOT_RUN",
+  "source_complete": false,
+  "release_build": false,
+  "shared_drive_journal": "ASTRA_A_ONLY"
+}
