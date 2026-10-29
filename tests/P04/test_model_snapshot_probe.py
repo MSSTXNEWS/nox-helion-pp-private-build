@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import tempfile
 import unittest
@@ -334,6 +335,61 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(result["weight_files"], [])
         self.assertEqual(result["tensor_headers"], 0)
         self.assertIsNone(result["observed_snapshot_sha256"])
+
+
+    def test_g4a_r04_declared_payload_size_valid_and_full_shard_sha(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"metadata": {"total_size": 4},
+                        "weight_map": {"q.weight": "model.safetensors"}}),
+            encoding="utf-8")
+        result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "LOCAL_FILES_PRESENT_ONLY")
+        self.assertEqual(result["weight_files"][0]["sha256"],
+                         hashlib.sha256((self.root / "model.safetensors").read_bytes()).hexdigest())
+        self.assertEqual(result["tensor_headers"], 1)
+        self.assertFalse(result["snapshot_revision_attested"])
+
+    def test_g4a_r04_declared_payload_size_mismatch_holds_without_partial_hashes(self):
+        for wrong_total in (0, 3, 5, 999):
+            with self.subTest(total_size=wrong_total):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"metadata": {"total_size": wrong_total},
+                                "weight_map": {"q.weight": "model.safetensors"}}),
+                    encoding="utf-8")
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_TOTAL_SIZE_MISMATCH")
+                self.assertEqual(result["weight_files"], [])
+                self.assertEqual(result["tensor_headers"], 0)
+                self.assertIsNone(result["observed_snapshot_sha256"])
+
+    def test_g4a_r04_invalid_index_total_size_rejected_before_weight_io(self):
+        for bad in (-1, True, False, "4", 4.0, None, [], {}):
+            with self.subTest(total_size=bad):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"metadata": {"total_size": bad},
+                                "weight_map": {"q.weight": "model.safetensors"}}),
+                    encoding="utf-8")
+                with mock.patch.object(probe, "_inspect_weight",
+                                       side_effect=AssertionError("weight I/O before index validation")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_METADATA_INVALID")
+                self.assertEqual(result["weight_files"], [])
+
+    def test_g4a_r04_invalid_index_metadata_container_rejected_before_weight_io(self):
+        for bad in (None, 4, "not-a-dict", [], True):
+            with self.subTest(metadata=bad):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"metadata": bad,
+                                "weight_map": {"q.weight": "model.safetensors"}}),
+                    encoding="utf-8")
+                with mock.patch.object(probe, "_inspect_weight",
+                                       side_effect=AssertionError("weight I/O before index validation")):
+                    result = probe.inspect(self.root, REV)
+                self.assertEqual(result["status"], "HOLD")
+                self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_METADATA_INVALID")
+                self.assertEqual(result["weight_files"], [])
 
 
 if __name__ == "__main__":
