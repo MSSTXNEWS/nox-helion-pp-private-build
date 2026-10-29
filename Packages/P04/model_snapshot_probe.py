@@ -244,6 +244,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         config = _json_file(base / "config.json")
         if not isinstance(config.get("model_type"), str) or not config["model_type"].strip():
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
+        weights = None
         index = base / "model.safetensors.index.json"
         if index.exists() or index.is_symlink():
             metadata = _json_file(index)
@@ -276,7 +277,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             if observed_tensors.intersection(tensor_names):
                 raise ValueError("MODEL_DUPLICATE_TENSOR_ACROSS_SHARDS")
             observed_tensors.update(tensor_names)
-            if 'weights' in locals() and any(weights.get(tensor) != name for tensor in tensor_names):
+            if weights is not None and any(weights.get(tensor) != name for tensor in tensor_names):
                 raise ValueError("MODEL_SHARD_WEIGHT_MAP_MISMATCH")
             report["tensor_headers"] += len(tensor_names)
             report["weight_files"].append({
@@ -284,7 +285,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": file.stat().st_size,
                 "sha256": _sha256(file),
             })
-        if 'weights' in locals() and observed_tensors != set(weights):
+        if weights is not None and observed_tensors != set(weights):
             raise ValueError("MODEL_SHARD_WEIGHT_MAP_MISMATCH")
         report["candidate_sha256"] = _sha256(base / "config.json")
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
