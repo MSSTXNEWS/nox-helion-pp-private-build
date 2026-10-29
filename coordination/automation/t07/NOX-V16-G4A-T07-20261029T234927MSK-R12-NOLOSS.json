@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_V16_T07_NOLOSS_DELTA_RECEIPT_V1",
+  "run_id": "NOX-V16-G4A-T07-20261029T234927MSK-R12-NOLOSS",
+  "existing_task_id": "T07",
+  "role": "G4-A/M2 NO-LOSS evidence support",
+  "product_scope": "Windows EXPRESS INTEGRATOR V16 ONLY",
+  "baseline": {
+    "historical_original_zip": "6/6 DONE (reused; not rehashed)",
+    "original_729": "729/729 SHA/CRC previously evidenced",
+    "physical_t09_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "historical_t07_closeout": "a70ab3dc9c45e29afee737810d6be8f623b8f210"
+  },
+  "prestart_read": {
+    "canon_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "section33": "56 historic consolidated rules inspected; original text itself acknowledges reconstruction",
+    "role_archive_blob": "8af458928b1b7f6bda8434f40df3fd04ab13349f",
+    "r23_controls_blob": "e43275bb348f4010d9d87a796c0e0f682b2c7f3e",
+    "r25_controls_blob": "bf92ecf0283006e6638f598b31389ccd1738c86b",
+    "error_register_pre_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "error_register_post_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_revision": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "git_tree": "UNKNOWN: GitHub current PR/commit connector did not expose tree SHA",
+    "read_gate": "PARTIAL_NOT_FULL_ACCEPTANCE"
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "shared_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pre_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+    "post_head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "shared_write": false,
+    "commit_delta": 18,
+    "files_changed": 17,
+    "files_modified": 12,
+    "files_added": 5,
+    "files_removed": 0,
+    "original_part_paths_changed": 0,
+    "original_baseline_rehash": false
+  },
+  "targeted_static_source_contracts": {
+    "method": "actual GitHub file bytes at pinned HEAD inspected, source-only assertions; no Python/.NET/native execution",
+    "pass": [
+      [
+        "P04 strict nested duplicate/nonfinite JSON",
+        "f5cf5df231ee9ba4344a6445358034b5aaad9241"
+      ],
+      [
+        "P04 safetensors zero-gap/no-overlap bounds",
+        "f5cf5df231ee9ba4344a6445358034b5aaad9241"
+      ],
+      [
+        "P04 negative regression test source present",
+        "15a81d1bd44c65625d99fdb617abf434d5a6fe0e"
+      ],
+      [
+        "P04 RAG ownerSID+cancel signatures",
+        "a98cf03da0ffeabe959faa9d7aa11608fdd04a21"
+      ],
+      [
+        "P05 HTTPS+STOP cache/request guard",
+        "dd04965a5f38e1809d1804b37a51aee08c7f5d8b"
+      ],
+      [
+        "T08 source HEAD alias+focused receipt rejection guard",
+        "73eac868c0e7cc43a263a733c771339632e9fe8e"
+      ]
+    ],
+    "fail_or_open": [
+      [
+        "PACK01 duplicate request JSON keys not explicitly rejected before consent: json.loads(raw) last-key-wins; no object_pairs_hook",
+        "proposals/NOX-PACK01-50/native_bridge.py",
+        "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62"
+      ]
+    ],
+    "host50_owner_map": {
+      "blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+      "route_ids": 50,
+      "source_bound": 39,
+      "source_unbound": 11,
+      "native_pending": 14,
+      "legacy_source_hold": 13
+    },
+    "runtime_tests": "NOT_RUN",
+    "source_variant_full_acceptance": false
+  },
+  "checklist": {
+    "fixed_denominator": 4,
+    "old_accepted": 2,
+    "new_accepted": 2,
+    "before_pct": 50,
+    "after_pct": 50,
+    "delta_pct_points": 0,
+    "done": [
+      1,
+      3
+    ],
+    "hold": [
+      2,
+      4
+    ]
+  },
+  "gates": {
+    "T06_OWNER_ACCEPTED_8_OF_8": "NOT_PROVEN_ON_PINNED_HEAD",
+    "T08_INDEPENDENT_SAME_SHA": "NOT_PROVEN",
+    "T09_SEALED_FREEZE": "NOT_PROVEN",
+    "T10_SOURCE_READY": "HOLD",
+    "PRODUCT": "N/D",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "active_errors": {
+    "relevant": [
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ],
+    "lesson_applied": "Re-read live register after mid-run drift; compare only changed paths; no previous HEAD evidence promotion",
+    "handoff_T06": "At HEAD 1f5737... (refresh live PRE), reject duplicate JSON keys on PACK01 before consent/ACL; retain STOP/privacy; owner CAS integration and targeted negative test. Also review T02 R26 P01 verifier ADS path and P03 tag bugs without duplicating donor patches.",
+    "handoff_T08": "Independent same-HEAD source and security QA after owner 8/8; native/Windows not inferred from static checks.",
+    "handoff_T09": "Only seal owner-accepted HEAD/tree/manifest after T08 acceptance; original 729 proof may be reused without rehash.",
+    "handoff_T02": "Journal this exact RunID and linked ERR-SRC-004 under sole-writer CAS/readback; do not mark error closed.",
+    "error_closed_this_run": 0
+  },
+  "next_checkpoint": "Refresh T06 PR162 head and register SHA; if owner-accepted T06 8/8 + T08 same SHA obtained, do final NO-LOSS mapping and ask T09 for sealed handoff. Otherwise do not claim SOURCE_READY.",
+  "accepted_task_ids_delta": 0,
+  "source_product_files_modified_by_t07": 0,
+  "confirmed_failures_not_runtime_exploits": true
+}
