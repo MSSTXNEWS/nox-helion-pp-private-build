@@ -1,0 +1,17 @@
+--- a/coordination/e06/verify_integration.py
++++ b/coordination/e06/verify_integration.py
+@@ -15,7 +15,11 @@
+ )
+ 
+-def safe_path(p):
+-    return isinstance(p, str) and bool(p) and "\\" not in p and "\x00" not in p and not p.startswith("/") and all(x not in ("", ".", "..") for x in p.split("/"))
++def safe_path(p):
++    # Fail closed on Windows-reserved filename syntax and trailing aliases.
++    # E06 must not admit Git paths that Windows would reinterpret at staging.
++    return (isinstance(p, str) and bool(p) and not p.startswith("/")
++            and not any(c in p for c in ('\\', '\x00', ':', '*', '?', '"', '<', '>', '|'))
++            and all(x not in ("", ".", "..") and not x.endswith((".", " "))
++                    for x in p.split("/")))
+ 
+ def read_archive(parts, folder, expected):
+     """Stream all source parts, verify Git blob SHA-1 + reconstructed SHA-256."""
