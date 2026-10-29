@@ -200,9 +200,29 @@ class ConsentGatedSip:
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_START')
         if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
             raise PermissionError('Native principal required')
-        if not all(callable(x) for x in
-                   (self.provider, self.user_approval, self.provider_quote_verify)):
+        # Pin all native/provider authority before any re-entrant callback.
+        # Callbacks may update mutable host bindings; no swapped approver or
+        # dialer is allowed to inherit an earlier authorization.
+        provider, approval, quote_verify = (
+            self.provider, self.user_approval, self.provider_quote_verify)
+        if not all(callable(x) for x in (provider, approval, quote_verify)):
             raise P02Error('SIP_PROVIDER_QUOTE_OR_CONSENT_HOLD')
+        if not isinstance(quote, CallQuote):
+            raise PermissionError('Expired SIP quote')
+        pinned_scope = (scope.tenant, scope.principal, scope.core_id,
+                        scope.persona_id, scope.session_id)
+        pinned_quote = (quote.number, quote.purpose, quote.max_cost,
+                        quote.currency, quote.quote_id, quote.expires_at)
+        def require_native_authority():
+            if (self.provider is not provider
+                    or self.user_approval is not approval
+                    or self.provider_quote_verify is not quote_verify):
+                raise P02Error('SIP_NATIVE_HOOK_REBOUND_HOLD')
+            if ((scope.tenant, scope.principal, scope.core_id,
+                 scope.persona_id, scope.session_id) != pinned_scope
+                    or (quote.number, quote.purpose, quote.max_cost,
+                        quote.currency, quote.quote_id, quote.expires_at) != pinned_quote):
+                raise PermissionError('SIP_SCOPE_OR_QUOTE_REBOUND_HOLD')
         def require_fresh_quote():
             # Provider verification and the native consent dialog may block.
             # Recheck the original quote after each callback, not only on entry.
@@ -216,22 +236,26 @@ class ConsentGatedSip:
             raise Cancelled('CALL_STOP_BEFORE_START')
         with self._lock:
             require_fresh_quote()
+            require_native_authority()
             if quote.quote_id in self._used: raise PermissionError('Call quote already consumed')
             # The price and number must be independently bound to a real provider
             # quote; a caller-constructed CallQuote is NOT sufficient authority.
-            if self.provider_quote_verify(scope,quote) is not True:
+            if quote_verify(scope, quote) is not True:
                 raise PermissionError('Provider quote verification required')
+            require_native_authority()
             require_fresh_quote()
             if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_APPROVAL')
             # approval callback MUST be the native consent dialog, not page JS.
-            if self.user_approval(scope,quote) is not True:
+            if approval(scope, quote) is not True:
                 raise PermissionError('Native user confirmation required')
+            require_native_authority()
             require_fresh_quote()
             if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
             self._used.add(quote.quote_id)
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
         require_fresh_quote()
-        return self.provider(scope,quote,stop)
+        require_native_authority()
+        return provider(scope, quote, stop)
 
 
 def authorize_private_mobile(scope: Identity, *, verified_private_peer: bool,
