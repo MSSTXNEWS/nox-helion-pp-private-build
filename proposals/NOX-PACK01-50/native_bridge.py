@@ -103,9 +103,13 @@ class NativeSession:
     chat_id: str
     allowed: frozenset[str] = field(default_factory=frozenset)
     private_approved: frozenset[str] = field(default_factory=frozenset)
+    # Verified by the trusted Windows host, never copied from WebView/page JSON.
+    windows_sid: str = ""
+    session_lease: str = ""
 
     def validate(self):
-        if not all(isinstance(s, str) and 0 < len(s) <= 128
+        if not all(isinstance(s, str) and 0 < len(s) <= 128 and
+                   s == s.strip() and not any(ord(ch) < 32 or ord(ch) == 127 for ch in s)
                    for s in (self.tenant, self.principal, self.chat_id)):
             raise HostDenied("Invalid authenticated native session")
         # Native host only: permissions are immutable exact sets, never a
@@ -116,6 +120,9 @@ class NativeSession:
                 not self.allowed.issubset(ALLOWED_ROUTES) or
                 not self.private_approved.issubset(self.allowed)):
             raise HostDenied("Invalid route scopes")
+        if (type(self.windows_sid) is not str or len(self.windows_sid) > 184 or
+                type(self.session_lease) is not str or len(self.session_lease) > 128):
+            raise HostDenied("Malformed native Windows SID/session lease")
 
 @dataclass(frozen=True)
 class BoundPort:
@@ -126,7 +133,9 @@ class BoundPort:
 
 class NoxPackHost:
     """One in-process dispatcher. No network endpoint, subprocess or new database."""
-    def __init__(self, catalog:dict, *, native_approve:Callable[[NativeSession,str,dict],bool] | None=None):
+    def __init__(self, catalog:dict, *,
+                 native_approve:Callable[[NativeSession,str,dict],bool] | None=None,
+                 native_session_live:Callable[[NativeSession],bool] | None=None):
         if not isinstance(catalog, dict) or catalog.get("version") != "NOX-INTEGRATION-PACK-01":
             raise ValueError("Wrong catalogue")
         actions = catalog.get("actions")
@@ -153,6 +162,27 @@ class NoxPackHost:
         })
         self.ports:dict[str,BoundPort] = {}
         self.native_approve = native_approve
+        self.native_session_live = native_session_live
+
+    def _require_live_session(self, session:NativeSession):
+        """Trusted host must pin SID to OS token and lease to active session.
+
+        No page-originated SID or lease is accepted; missing native verifier is
+        HOLD. Only exact True from the host revocation probe admits a route.
+        """
+        session.validate()
+        if re.fullmatch(r"S-[0-9]+(?:-[0-9]+){2,15}", session.windows_sid) is None:
+            raise HostDenied("Native Windows SID required")
+        if re.fullmatch(r"[A-Za-z0-9_-]{24,128}", session.session_lease) is None:
+            raise HostDenied("Native session lease required")
+        if not callable(self.native_session_live):
+            raise HostHold("Trusted native SID-bound revocation probe not bound")
+        try:
+            live = self.native_session_live(session)
+        except Exception as exc:
+            raise HostDenied("Trusted native session verification failed") from exc
+        if live is not True:
+            raise HostDenied("Native Windows session revoked or mismatched")
 
     def bind(self, route:str, port:BoundPort):
         if route not in self.routes or not isinstance(port,BoundPort):
@@ -169,27 +199,86 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        # Availability probes are native callbacks too. Keep the advertised
+        # capabilities bound to the same identity and permission snapshot;
+        # never return a partial list assembled across different sessions.
+        def session_scope():
+            session.validate()
+            return (session.tenant, session.principal, session.chat_id,
+                    session.allowed, session.private_approved,
+                    session.windows_sid, session.session_lease)
+        authorized_scope = session_scope()
+        def require_unchanged_session():
+            if session_scope() != authorized_scope:
+                raise HostDenied("Native session changed during advertisement")
         out = {}
+        advertised_ports = {}
         for route, item in self.routes.items():
             port = self.ports.get(route)
             ready = False
-            if port and route in session.allowed:
-                try:ready = port.available() is True
-                except Exception:ready = False
+            # Dangerous actions are never probed merely to draw UI buttons.
+            if port and route in session.allowed and item["risk"] != "dangerous":
+                try:
+                    self._require_live_session(session)
+                    ready = port.available() is True
+                    self._require_live_session(session)
+                except (HostDenied, HostHold):
+                    ready = False
+                except Exception:
+                    ready = False
+                # Check even when the probe raised after mutating the session.
+                require_unchanged_session()
+                if self.ports.get(route) is not port:
+                    raise HostHold("Native owner binding changed during advertisement")
             risk = item["risk"]
             scoped = ready and (risk == "safe" or route in session.private_approved)
             if risk == "dangerous":scoped = False
+            if scoped:
+                advertised_ports[route] = port
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
+        require_unchanged_session()
+        # A later probe can also revoke an earlier advertised route.
+        if any(self.ports.get(route) is not port
+               for route, port in advertised_ports.items()):
+            raise HostHold("Native owner binding changed during advertisement")
+        # A later capability probe could revoke a previously advertised SID.
+        # Recheck every enabled capability before publishing the snapshot.
+        for route, port in advertised_ports.items():
+            try:
+                self._require_live_session(session)
+            except (HostDenied, HostHold):
+                out[route] = {"state":"HOLD", "enabled":False, "sourceId":None}
+            require_unchanged_session()
+            if self.ports.get(route) is not port:
+                raise HostHold("Native owner binding changed during advertisement")
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        # A frozen dataclass is a host contract, not protection against a native
+        # callback mutating it. Consent must remain bound to the exact identity
+        # and permission snapshot checked at entry, on the same session object.
+        def session_scope():
+            session.validate()
+            return (session.tenant, session.principal, session.chat_id,
+                    session.allowed, session.private_approved)
+        authorized_scope = session_scope()
+        def require_unchanged_session():
+            if session_scope() != authorized_scope:
+                raise HostDenied("Native session changed during request admission")
         if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
+        # Revalidate the actual SID-bound lease before and after ALL callbacks,
+        # including fresh dangerous consent, readiness, STOP and owner output.
+        def require_current_authority():
+            require_unchanged_session()
+            self._require_live_session(session)
+            require_unchanged_session()
+        require_current_authority()
         if not isinstance(payload, dict):
             raise HostDenied("Missing/oversize request")
         try:
@@ -201,6 +290,7 @@ class NoxPackHost:
         # Capture the exact JSON approved at this native boundary. Neither the
         # source caller nor a provider-ready check may change the execution data.
         frozen_payload = json.loads(raw)
+        require_current_authority()
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
@@ -208,12 +298,24 @@ class NoxPackHost:
             not callable(self.native_approve) or
             self.native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
+        require_current_authority()
         port = self.ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
+        require_current_authority()
+        # A readiness callback may revoke or replace the native owner binding.
+        # Never call a stale captured port after its registry lease has changed.
+        if self.ports.get(route) is not port:
+            raise HostHold("Native owner binding changed during request admission")
         if not ready:raise HostHold("Owner backend unavailable")
-        return port.call(session,frozen_payload)
+        result = port.call(session,frozen_payload)
+        # A native handler may return data after revoking caller identity/port.
+        # Fail closed before publishing any cross-session owner result.
+        require_current_authority()
+        if self.ports.get(route) is not port:
+            raise HostHold("Native owner binding changed during execution")
+        return result
 
 
 class ExistingP02Adapter:
@@ -247,13 +349,22 @@ class ExistingP02Adapter:
         return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
 
     def chat(self, session, args):
+        session.validate()
+        scope=(session.tenant,session.principal,session.chat_id,
+               session.allowed,session.private_approved)
+        def check_scope():
+            session.validate()
+            if (session.tenant,session.principal,session.chat_id,
+                    session.allowed,session.private_approved)!=scope:
+                raise HostDenied("Native chat callback changed authenticated scope")
         message = args.get("text")
         model = args.get("model")
         if not isinstance(message,str) or not 0 < len(message) <= MAX_TEXT:
             raise HostDenied("Bounded nonempty chat text required")
         installed = self.client.models()
         if model not in installed:raise HostHold("Selected model not installed")
-        conversation = self.store.history(session.tenant,session.principal,session.chat_id,80)
+        check_scope()
+        conversation = self.store.history(scope[0],scope[1],scope[2],80)
         conversation = conversation + [{"role":"user","content":message}]
         answer = []
         bytes_seen = 0
@@ -269,17 +380,22 @@ class ExistingP02Adapter:
             answer.append(delta)
             if self.event_sink:
                 self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
+            check_scope()
             if chunk.get("done") is True:done = True
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
-        # Persist messages only after real terminal success.
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"user",message)
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
+        # Persist only for the exact authenticated scope from chat admission.
+        check_scope()
+        self.store.add_message(scope[0],scope[1],scope[2],"user",message)
+        self.store.add_message(scope[0],scope[1],scope[2],"assistant",text)
         return {"answer":text,"done":True}
 
     def attach_native_selected(self,session,args):
         if not callable(self.native_selected_file):
             raise HostHold("Trusted native file picker not bound")
+        session.validate()
+        initial_scope=(session.tenant,session.principal,session.chat_id,
+                       session.allowed,session.private_approved)
         selected = self.native_selected_file(session)
         if not isinstance(selected,tuple) or len(selected)!=2:
             raise HostHold("Native file picker returned no approved file")
@@ -287,9 +403,13 @@ class ExistingP02Adapter:
         if not isinstance(mime,str) or not callable(getattr(stream,"read",None)):
             raise HostDenied("Native file selection invalid")
         try:
-            # Existing P02 handles MIME/signature/size/SHA, SQLite ACL and stored ID.
-            result=self.store.store_file(session.tenant,session.principal,
-                session.chat_id,mime,stream)
+            session.validate()
+            if (session.tenant,session.principal,session.chat_id,
+                    session.allowed,session.private_approved)!=initial_scope:
+                raise HostDenied("Native file picker changed authenticated scope")
+            # Existing P02 handles MIME/signature/size/SHA and SQLite ACL.
+            result=self.store.store_file(initial_scope[0],initial_scope[1],
+                initial_scope[2],mime,stream)
             return {"storedAttachment":result}
         finally:
             if callable(getattr(stream,"close",None)):stream.close()
@@ -367,8 +487,15 @@ class ExistingP02VoiceAdapter:
 
     def speak(self,session,args, *,mode):
         if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
+        session.validate()
+        expected_scope=(session.tenant,session.principal,session.chat_id,
+                        session.allowed,session.private_approved)
         identity=self.native_identity(session)
         captured=self.native_audio(session)
+        session.validate()
+        if (session.tenant,session.principal,session.chat_id,
+                session.allowed,session.private_approved)!=expected_scope:
+            raise HostDenied("Native microphone callback changed session scope")
         if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
             raise HostDenied("No trusted bounded microphone capture")
         direction=args.get("direction","ru-es")
@@ -395,8 +522,15 @@ class ExistingP02VoiceAdapter:
 
     def dial(self,session,args):
         if not self.sip_ready():raise HostHold("SIP provider, quote verification or consent not configured")
+        session.validate()
+        expected_scope=(session.tenant,session.principal,session.chat_id,
+                        session.allowed,session.private_approved)
         identity=self.native_identity(session)
         quote=self.native_quote(session)  # NEVER generated from client price or number.
+        session.validate()
+        if (session.tenant,session.principal,session.chat_id,
+                session.allowed,session.private_approved)!=expected_scope:
+            raise HostDenied("Native SIP quote changed authenticated scope")
         if quote is None:raise HostHold("No live quote approved by SIP provider")
         return self.sip.place(identity,quote)
 
