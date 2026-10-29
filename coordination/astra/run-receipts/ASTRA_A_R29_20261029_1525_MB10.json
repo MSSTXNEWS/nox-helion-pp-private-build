@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB10",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 rejected FX profile that mutated renderer state must restore previous mode; add C5.12",
+  "sourceCommits": [
+    "3689a74e5dfb7d36b17df483e5dd6c83835f00c4",
+    "d8dd3c1821a6223254d87ce14690b87cb6ff5602"
+  ],
+  "sourceTest": "node --test, exact matching Git blobs source=574181f5bdab26b901a3b554add1e55970b9fcc2, test=613180072d71a8ee3251bb0ce248ea5f3037b9db, 12/12 PASS",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub owner-file CAS/Git blob readback; exact Node suite for final P01 FX only.",
+  "lesson": "Only execute safe owned source changes; native acceptance requires later independent pinned Windows run."
+}
