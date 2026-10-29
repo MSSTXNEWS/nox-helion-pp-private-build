@@ -1,0 +1,497 @@
+{
+  "schema": "NOX_V16_T06_ONE_TREE_R04_FIXED_DECISIONS_V1",
+  "taskId": "T06",
+  "runId": "NOX-V16-T06-20261029-R04-FIXED",
+  "project": "NOX HELION EXPRESS INTEGRATOR WINDOWS LOADER ONLY",
+  "sourceHeadBeforeManifest": "2c08ec865c25d9d40252b969c6933eb5986a8bf7",
+  "sourceTreeBeforeManifest": "e6390f797429a8d918daf4afb88fa7ea856cc18a",
+  "basePR162": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "admittedPR210Source": "8b7f9572e2f4d6016eeb213208856c236b238919",
+  "t04": {
+    "classified": 34,
+    "skip": 15,
+    "selectedBaseline": 18,
+    "voiceTechnicalHold": 1,
+    "decisions": [
+      {
+        "position": 1,
+        "path": "Packages/P02/worker-python/p02_native_ingress.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+        "owner": "G2-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 2,
+        "path": "coordination/astra/render_astra_progress_r24.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "cc407695882a1a3223699e24cb7d90cff813cf00",
+        "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 3,
+        "path": "coordination/astra/verify_astra_no_loss_r23.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "1e7799ff800cd2a27633c0298ad78e8cd147e907",
+        "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 4,
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "owner": "G5-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 5,
+        "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+        "owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 6,
+        "path": "Packages/P02/worker-python/p02_runtime.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+        "owner": "G2-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 7,
+        "path": "Packages/P02/worker-python/p02_capabilities.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "d721cd9608d62052060ae2c7ff6db240b281802f",
+        "owner": "G2-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 8,
+        "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+        "owner": "G2-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 9,
+        "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+        "owner": "G3-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 10,
+        "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+        "owner": "G3-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 11,
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "owner": "G4-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 12,
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "owner": "G4-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 13,
+        "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "8c20156bee3db953f74b34f62bc5e57709d30c6a",
+        "owner": "G5-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 14,
+        "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "b1be2beaf849089a2fddc76219af37cbea926940",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+        "owner": "G5-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 15,
+        "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+        "owner": "G5-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 16,
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "owner": "G5-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 17,
+        "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "9315534a691d9a2040b48daffd3543c1b66e373e",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+        "owner": "G5-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 18,
+        "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "71b623cb114667c3b37b26103ec220f99233c398",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "2187ee5ecae18179a5daa7c60859cad06f275b81",
+        "owner": "G5-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 19,
+        "path": "coordination/e06/adapters/pc_control_owner_port.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "005866951edbd17a4ab120feecc177c8fd414c8e",
+        "owner": "G6-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 20,
+        "path": "coordination/e06/source_deep_inventory.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "0851cbe68f3534bfa3b0755fb3efbf4f3730ea8c",
+        "owner": "G6-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 21,
+        "path": "coordination/e06/stage_onehost.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+        "owner": "G6-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 22,
+        "path": "coordination/e06/verify_original_729_source.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "d03e4b7e65fe94bb5c708c1bb8f604e6f46ad61a",
+        "owner": "G6-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 23,
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "805ade553b3fd102f8995a54632d0ad904316c9c",
+        "owner": "G6-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 24,
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "87d901c3846359a91be3e8288f24302cc7060257",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "87d901c3846359a91be3e8288f24302cc7060257",
+        "owner": "G1-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 25,
+        "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+        "owner": "T06 / ручной владелец №1 (назначен решением владельца проекта для этой source-selection, не изменение owner-lock)",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 26,
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "owner": "G1-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 27,
+        "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "4d4a47beebb4373f3556a0ef6f623e80a9a4131d",
+        "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 28,
+        "path": "Packages/P02/worker-python/p02_framed_worker.py",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "255dfb7ab330c825fcc362b619614189c4915e6c",
+        "owner": "G2-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 29,
+        "path": "Packages/P02/worker-python/p02_host_admission.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "055a315575f2d0d740bb066771b8c59f426d2c92",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "bd4e3da6771242c2eb2b903411ed654885b1fddd",
+        "owner": "G2-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 30,
+        "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+        "historicalDecision": "OWNER_HOLD",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "PRESERVE_ORIGINAL_VOICE_MODULES_PENDING_API_BIND",
+        "priorSelection": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4",
+        "owner": "G2-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 31,
+        "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "6f3e75b6fc9a0a83c66505bbe41d75d10170dce0",
+        "owner": "G3-A",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 32,
+        "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": null,
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "e4fc503d37bf96d8894104078ee4c9198abd0834",
+        "owner": "UNASSIGNED_NOT_NEEDED_FOR_SKIP",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 33,
+        "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+        "historicalDecision": "SKIP",
+        "selectedInCurrentTree": "12762f9f36b8813aaac22476495a59484aa9f22a",
+        "sourceChoice": "SKIP_DUPLICATE",
+        "priorSelection": "e3959d561fcb5142fc09271fd674e6f7dc58e3eb",
+        "owner": "G3-B",
+        "finalRuntimeAccepted": false
+      },
+      {
+        "position": 34,
+        "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+        "historicalDecision": "ACCEPT",
+        "selectedInCurrentTree": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+        "sourceChoice": "KEEP_CURRENT_SOURCE_VARIANT",
+        "priorSelection": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+        "owner": "G3-A",
+        "finalRuntimeAccepted": false
+      }
+    ]
+  },
+  "t05": {
+    "total": 13,
+    "candidates": [
+      {
+        "slot": "G1-B",
+        "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "gitBlob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+        "ownerDonorPost": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+        "disposition": "OWNER_PATCH_IN_TREE"
+      },
+      {
+        "slot": "G2-A",
+        "path": "Packages/P02/worker-python/p02_framed_worker.py",
+        "gitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "ownerDonorPost": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "disposition": "OWNER_PATCH_IN_TREE"
+      },
+      {
+        "slot": "G2-B",
+        "path": "Packages/P02/worker-python/p02_capabilities.py",
+        "gitBlob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+        "ownerDonorPost": "da8d42570d5732e5fe009f86caf02b45d935edc9",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G3-A",
+        "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "gitBlob": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+        "ownerDonorPost": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G3-B",
+        "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "gitBlob": "8cf2f867d353be837e29c7c517a89dafe5c53e29",
+        "ownerDonorPost": "3692811ac3234afb54e82958c7415b23619c1f0f",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G4-A",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "gitBlob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+        "ownerDonorPost": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G4-B",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "gitBlob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+        "ownerDonorPost": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G5-A",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "gitBlob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+        "ownerDonorPost": "ae3c3a9f9471193a88046306fc91717df6360520",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G5-B",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "gitBlob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+        "ownerDonorPost": "96bc6a90b57c58fa285a8733cd280c6beeff9100",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G6-A",
+        "path": "coordination/e06/verify_original_729_source.py",
+        "gitBlob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+        "ownerDonorPost": "5ba6f3eaf9e142b21c530c49dc28a27d9ccb4dd5",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G6-B",
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "gitBlob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+        "ownerDonorPost": "2a4fc9c96d9cb7d5ba39399f6e9ba0be869358ae",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G7-A",
+        "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+        "gitBlob": "7e4acf43c287b3578e38e0acab0266e0343132e3",
+        "ownerDonorPost": "2b7acac6d4ac3f4eb1246562307a2e79a0bd7862",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      },
+      {
+        "slot": "G7-B",
+        "path": "proposals/NOX-PACK02-50/ops.mjs",
+        "gitBlob": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+        "ownerDonorPost": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+        "disposition": "PRESERVE_CURRENT_SOURCE_NO_FORCED_REPLACEMENT"
+      }
+    ],
+    "originalPreimageCompatible": 1,
+    "othersNotReplaced": 12
+  },
+  "p01Bridge": {
+    "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+    "blob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+  },
+  "p02Framing": {
+    "path": "Packages/P02/worker-python/p02_framed_worker.py",
+    "blob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+    "ownerPost": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"
+  },
+  "physicalOriginalArchive": {
+    "expectedAndMeasuredSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalMembers": 729,
+    "originalPartGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "receiptGitBlob": "e159da6cbab131a6257f0f4d9f25a798a9a5403b"
+  },
+  "voiceOriginalPackage": "Original helion_voice 13 files preserved from verified archive; port integration not proven",
+  "host50": {
+    "sourceCandidate": 37,
+    "sourceHolds": 13,
+    "doNotEnableWithoutNativeHandlers": true
+  },
+  "noLoss": {
+    "originalArchivesPreserved": true,
+    "sourceRemoved": 0,
+    "coreAssetsPreserved": true,
+    "oldDonePreserved": true
+  },
+  "gates": {
+    "finalOwnerAcceptance": "PENDING",
+    "sourceFreeze": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLabCI": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "lesson": "Use exact Git blobs and one non-destructive tree, not repeated donor wholesale overwrites."
+}

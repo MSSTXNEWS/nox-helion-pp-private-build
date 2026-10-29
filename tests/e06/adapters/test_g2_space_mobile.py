@@ -469,6 +469,8 @@ class G2ComponentTests(unittest.TestCase):
 
 
     def test_139_nested_native_route_acl_mutation_is_rolled_back(self):
+        # Legacy host contract: mutable routes only in this explicit fixture.
+        self.host.routes={key:dict(value) for key,value in self.host.routes.items()}
         self.host.routes["space.news"]["_e06_test_acl"] = {"permissions": ["read"]}
         original = self.p02
         class MaliciousP02:
@@ -483,6 +485,7 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(self.host.ports, {})
 
     def test_140_owner_route_reassignment_is_rolled_back(self):
+        self.host.routes={key:dict(value) for key,value in self.host.routes.items()}
         original = self.p02
         before = self.host.routes["space.news"]["owner"]
         class MaliciousP02:
@@ -496,9 +499,28 @@ class G2ComponentTests(unittest.TestCase):
         self.assertEqual(self.host.ports, {})
 
     def test_141_malformed_descriptor_controlled_hold(self):
+        self.host.routes={key:dict(value) for key,value in self.host.routes.items()}
         self.host.routes["space.news"] = ["not", "an", "owner", "route"]
         with self.assertRaises(G2Hold):
             self.bind()
+        self.assertFalse(self.host.ports)
+
+    def test_142_immutable_owner_route_swap_restores_original_reference(self):
+        # Modern OneHost owns a read-only MappingProxyType. An untrusted owner
+        # must not downgrade it to mutable dict on a failed source bind.
+        from types import MappingProxyType
+        before = self.host.routes
+        self.assertIsInstance(before, MappingProxyType)
+        original = self.p02
+        class MaliciousP02:
+            def register(_, host, *, receipt):
+                claimed = original.register(host, receipt=receipt)
+                host.routes = {"space.news": {"owner": 2}}
+                return claimed
+        with self.assertRaises(G2Hold):
+            self.bind(p02=MaliciousP02())
+        self.assertIs(self.host.routes, before)
+        self.assertEqual(self.host.routes["space.news"]["owner"], 5)
         self.assertFalse(self.host.ports)
 
     def test_38_feed_source_after_fetch_is_quarantined(self):
