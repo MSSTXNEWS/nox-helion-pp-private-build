@@ -1,0 +1,121 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T05_CLOSURE_EXCEPTION_LEDGER_V1",
+  "task_id": "T05",
+  "run_id": "T05-20261029T162500MSK-6cb526ae",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY; source intake; no product code or builds",
+  "decision": "DONE_EXCEPTION_LEDGER_HANDOFF; NO_PATCH_ADMITTED_OR_INTEGRATED",
+  "done_basis": "Explicit exception ledger for every scoped candidate is permitted by the fixed T05 completion criterion; zero patches satisfy all strict admission gates. Unadmitted candidate remains T06 owner-reviewed input, never automatic merge.",
+  "observed_moscow_start_from_automation_context": "2026-10-29T16:23:33+03:00",
+  "moscow_planned_start": "2026-10-29T16:25:00+03:00",
+  "observed_checkpoint_utc": "2026-10-29T13:27:57.863Z",
+  "prior_evidence": {
+    "intake_manifest": {
+      "path": "coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.json",
+      "git_blob_sha1": "cb40add312db492a06a16baa600740bcb5575de2",
+      "commit": "ccb2a29af63afbc611514b88e1185f927d3df78f"
+    },
+    "readback": {
+      "path": "coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.READBACK.json",
+      "commit": "6cb526ae02ab69603b2d296696d3b46b6873b729",
+      "prior_manifest_readback": "PASS"
+    },
+    "source_ref": {
+      "ref": "astra/v16-code-complete-source-only-20261029",
+      "sha": "f0064948119c55001601e1bae1cd3755826605ed",
+      "rechecked_this_run": true
+    },
+    "pr162": {
+      "sha": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "rechecked_this_run": true
+    },
+    "r30": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "sha": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+      "rechecked_this_run": true
+    },
+    "owner_lock_git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "google_docs_read_only": [
+      "canon §§1–33,54–56 and loader-only R29",
+      "Master latest T02",
+      "E06 latest T02",
+      "Lessons latest T02",
+      "historical C34"
+    ]
+  },
+  "scoped_exception_inventory": {
+    "historical_snapshots": 25,
+    "owner_slots": 14,
+    "source_patches": 13,
+    "owner_holds_no_patch": 1,
+    "same_source_blob_occurrences_duplicates": 9,
+    "other_historical_source_path_instances_exception": 106,
+    "source_post_blobs_readback_verified": 13,
+    "content_sha256_pre_post_pairs_verified": 7,
+    "existing_focused_tests_blob_verified": 8,
+    "persisted_focused_tests_missing": 5,
+    "tests_executed_by_t05": 0,
+    "fully_admissible_source_patches": 0,
+    "only_exact_pr162_and_astra_preimage_candidate": {
+      "slot": "G2-A",
+      "cause": "BINARY_FRAME_PARTIAL_WRITE",
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "pre_git_blob": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post_git_blob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "focused_existing_test": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+      "focused_test_git_blob": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+      "owner_receipt_git_blob": "88c4a67fc78efcd45c07919036be52f5fd18acf6",
+      "status": "CONDITIONAL_ONLY; owner reports isolated 4/4 PASS; T05 has not executed test and no native host proof"
+    },
+    "other_12_source_patches": "EXCEPTION_PREIMAGE_MISMATCH_OR_MISSING; each slot/path and hash enumerated in immutable prior_manifest.r30_owner_intake.source_candidates",
+    "missing_5_test_slots": [
+      "G3-B",
+      "G5-A",
+      "G5-B",
+      "G6-A",
+      "G6-B"
+    ],
+    "stale_owner_lock_case": "G1-A older HOLD based on 56ae lock; current bb41 lock changed; request fresh owner approval and CAS; do not erase original HOLD",
+    "source_lock_raw_3parts_729_members": "PHYSICAL_SHA256_NOT_VERIFIED; belongs to T07"
+  },
+  "acceptance_criteria": {
+    "canon_and_current_owner_lock": "PASS",
+    "canonical_pr162_astra_r30_heads_pinned": "PASS",
+    "historical_25_donors_indexed_without_edit": "PASS",
+    "fourteen_owner_receipts_and_thirteen_source_patches_classified": "PASS",
+    "sha_and_existing_focused_test_availability_classified_with_explicit_HOLD": "PASS",
+    "all_nonadmissible_patch_exceptions_recorded_without_duplicate_admission": "PASS",
+    "single_manifest_and_readback_handoff_to_t06": "PASS",
+    "t05_inventory_closure": "7/7 evidence-classification criteria; source patch quality acceptance remains HOLD"
+  },
+  "handoff_to_T06": {
+    "manifest_ref": "automation/t05/T05-20261029T1600MSK-R11-f0064948:coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.json",
+    "readback_ref": "automation/t05/T05-20261029T1600MSK-R11-f0064948:coordination/automation/t05/T05-20261029T160000MSK-R11-f0064948.READBACK.json",
+    "rule": "Only owner-signed exact SHA/PRE_POST, focused test, semantic dedupe and SourceLock can permit an individual integration. Preserve newer existing code; no direct carryover of R27/R29 donor trees.",
+    "source_merge_by_T05": "NONE"
+  },
+  "lessons": {
+    "applied": "A stale receipt's owner-lock SHA cannot overrule a newer owner lock. A saved owner test with Git blob is not equivalent to execution or native acceptance.",
+    "closeout": "Do not reopen T05 to manufacture tests or source changes after exhaustive exception-ledger handoff. T06/T07/T08 own remaining technical gates; keep their HOLD independently."
+  },
+  "protected": {
+    "legacy_DONE_preserved": true,
+    "original_729_and_3_raw_parts_not_modified": true,
+    "original_968_git_blobs_not_modified": true,
+    "original_25_snapshots_not_modified": true,
+    "D02_WOW200_CoreID8_Persona5_PACK01_02_50plus50_voice_RAG_GPU_SPACE_user_data_not_modified": true,
+    "main_PR162_astra_R30_not_modified": true,
+    "no_shared_GoogleDocs_write": true,
+    "no_EXE_NSIS_WindowsCI_GitLab_run": true
+  },
+  "release_gates": {
+    "SOURCE": "CANDIDATES_ONLY",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_STARTED",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "P01_P05_WEIGHTED": "N/D"
+  }
+}
