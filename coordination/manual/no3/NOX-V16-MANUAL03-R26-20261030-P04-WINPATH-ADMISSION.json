@@ -1,0 +1,37 @@
+{
+  "schema": "NOX_V16_R26_MANUAL3_OWNER_PATCH_RECEIPT",
+  "run_id": "NOX-V16-MANUAL03-20261030-R26-P04-WINPATH-ADMISSION",
+  "owner": "manual_no3",
+  "existing_task_id": "P04 model snapshot validation",
+  "error_id": "ERR-SRC-004",
+  "status": "SOURCE_PATCH_SAVED_QA_PENDING",
+  "parent_commit": "93b0507e5bf89a6d115d04bcd4a5e378932283bd",
+  "parent_tree": "ee9881282f17527355eeddfcd58a4311b269f6d1",
+  "changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_blob": "fe81cefda2970479f18cc50bae485d006d28f03f",
+      "post_blob": "98b51bdbf59e56a629dbafc81d74b5c03a67e7b5"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_blob": "1b9fd37a56a39c728b663b7eefda6f800037fded",
+      "post_blob": "4f60e931161bbaedba25a417a3610c7e6da2505d"
+    }
+  ],
+  "root_cause": "POSIX Path(name).name does not reject Windows backslashes, alternate data streams, reserved device names or case-folded collisions in a candidate shard index.",
+  "fix": "Platform-independent filename validation and case-fold collision denial before reading model shard files.",
+  "proof": "Offline isolated pathname validator 8/8 (local harness); new full probe regression cases authored, Python repository suite NOT_RUN; GPU, rights, Windows runtime NOT_RUN.",
+  "gate": "NO_PRODUCT_ACCEPTANCE_NO_MERGE; source-only handoff to manual #1 and independent #2",
+  "preserve": [
+    "SourceLock729",
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02",
+    "STOP",
+    "ACL",
+    "consent",
+    "NO-LOSS"
+  ]
+}

@@ -31,6 +31,24 @@ _TENSOR_WIDTH = {
 _MAX_TENSOR_RANK = 32
 _MAX_TENSOR_NAME = 1024
 
+# Windows path semantics must be checked even when the probe runs on Linux.
+# Reject reserved device names, NTFS alternate data streams and paths whose
+# case-folded names collide on a later Windows filesystem import.
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL"}
+_WINDOWS_RESERVED.update(f"{prefix}{n}" for prefix in ("COM", "LPT") for n in range(1, 10))
+_WINDOWS_RESERVED.update(f"{prefix}{n}" for prefix in ("COM", "LPT") for n in ("¹", "²", "³"))
+_INVALID_WINDOWS_FILENAME_CHARS = frozenset('<>:"/\\|?*')
+
+
+def _valid_shard_filename(name: object) -> bool:
+    return (isinstance(name, str) and bool(name) and
+            name == Path(name).name and name.endswith(".safetensors") and
+            len(name.encode("utf-16-le")) <= 510 and
+            not any(c in _INVALID_WINDOWS_FILENAME_CHARS or
+                    ord(c) < 32 or ord(c) == 127 for c in name) and
+            name.split(".", 1)[0].rstrip(" ").upper() not in _WINDOWS_RESERVED)
+
+
 def _strict_json_object(raw: str | bytes) -> dict:
     """Reject ambiguous duplicate keys and nonfinite JSON constants at every depth."""
     def unique_pairs(pairs):
@@ -186,14 +204,15 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
                 expected_by_shard.setdefault(shard_name, set()).add(tensor_name)
             names = sorted(expected_by_shard)
+            if len({name.casefold() for name in names}) != len(names):
+                raise ValueError("MODEL_SHARD_PATH_UNSAFE")
         else:
             expected_by_shard = None
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
         for name in names:
-            if (not isinstance(name, str) or not name or name != Path(name).name or
-                    not name.endswith(".safetensors") or name in {".", ".."}):
+            if not _valid_shard_filename(name):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
             file = base / name
             tensor_names = _weight_header(file)

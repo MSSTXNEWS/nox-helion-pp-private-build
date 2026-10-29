@@ -226,5 +226,28 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_SHARD_TENSOR_MAP_MISMATCH")
 
 
+    def test_rejects_windows_specific_shard_paths_on_any_host_os(self):
+        for unsafe in (r"subdir\\model.safetensors", "C:weights.safetensors",
+                       "CON.safetensors", "LPT1.safetensors", "COM¹.safetensors",
+                       "bad|name.safetensors", "bad\\u0000.safetensors"):
+            with self.subTest(unsafe=unsafe):
+                (self.root / "model.safetensors.index.json").write_text(
+                    json.dumps({"weight_map": {"q.weight": unsafe}}), encoding="utf-8"
+                )
+                result = probe.inspect(self.root, REV)
+                self.assertEqual(result["reason"], "MODEL_SHARD_PATH_UNSAFE")
+
+    def test_rejects_casefold_colliding_windows_shard_names(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {
+                "q.weight": "Part-1.safetensors",
+                "v.weight": "part-1.safetensors",
+            }}), encoding="utf-8"
+        )
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_PATH_UNSAFE")
+
+
+
 if __name__ == "__main__":
     unittest.main()
