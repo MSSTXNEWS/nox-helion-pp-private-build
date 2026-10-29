@@ -1,0 +1,190 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T07_INDEPENDENT_PHYSICAL_SOURCELOCK_RECEIPT_V1",
+  "taskId": "T07-ORIGINAL-SOURCELOCK-729",
+  "runId": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+  "slot": "G6-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR loader-installer V16 ONLY",
+  "status": "HOLD",
+  "statusReason": "Original source_00/01/02.part raw bytes cannot be obtained by this runtime; physical ZIP SHA256 and 729 members cannot be computed. Git metadata is not physical SHA256.",
+  "time": {
+    "timezone": "Europe/Moscow",
+    "plannedStart": "2026-10-29T16:00:00+03:00",
+    "firstObservedExecution": "2026-10-29T15:57:08+03:00",
+    "observedThrough": "2026-10-29T16:03:11+03:00",
+    "actualEnd": null,
+    "durationSeconds": null
+  },
+  "policy": {
+    "sourceOnly": true,
+    "exeRun": false,
+    "nsisRun": false,
+    "gitlabCiRun": false,
+    "buildRun": false,
+    "mainTouched": false,
+    "pr162Touched": false,
+    "sharedDocsTouched": false,
+    "originalSnapshotsTouched": false
+  },
+  "receiptBase": {
+    "branchFrom": "f0ea6ec60c9ae8cc4aadbca07c1f6d89cb235106",
+    "gitTreeSha1": "85f3bad8320737c7a4a793d1a54daeb2579ed324",
+    "ownerJournalGitBlobSha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "r30ConflictIndexGitBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozenR23ManifestPath": "coordination/astra/ASTRA_V16_R23_FROZEN_968_GIT_BLOBS_20261029.json",
+    "frozenR23ManifestGitBlobSha1": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "frozenR23InitialCommit": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+  },
+  "expectedOriginal": {
+    "sourceParts": [
+      {
+        "path": "source_00.part",
+        "sizeBytes": 20971520,
+        "gitBlobSha1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      },
+      {
+        "path": "source_01.part",
+        "sizeBytes": 20971520,
+        "gitBlobSha1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      },
+      {
+        "path": "source_02.part",
+        "sizeBytes": 18421306,
+        "gitBlobSha1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      }
+    ],
+    "reassembledExpectedSizeBytes": 60364346,
+    "reassembledExpectedSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "expectedZipMembers": 729
+  },
+  "physicalChecks": {
+    "partRawBytesAvailable": false,
+    "actualPartSha256": [
+      null,
+      null,
+      null
+    ],
+    "partActualByteSizes": [
+      null,
+      null,
+      null
+    ],
+    "actualReassembledSizeBytes": null,
+    "actualReassembledSha256": null,
+    "membersPhysicallyRead": 0,
+    "membersSha256Verified": 0,
+    "actualMemberSha256Manifest": null,
+    "zipInnerSha256MismatchList": null,
+    "mismatchListStatus": "UNDETERMINABLE_WITHOUT_RAW_BYTES_NOT_ZERO_MISMATCHES",
+    "reassembledZipVerified": false
+  },
+  "physicalAccessEvidence": [
+    "Local /mnt/data contains only prior Python test samples; none of source_00/01/02.part.",
+    "GitHub fetch_file source_00.part encoding=base64 returned Git blob SHA and empty content; not raw binary.",
+    "GitHub fetch_blob for source_00.part failed with UnicodeDecodeError on binary bytes.",
+    "GitHub raw.githubusercontent.com source_00.part fetch rejected as unsupported/too large.",
+    "Google Drive title search for source_00.part, source_01.part, source_02.part returned no raw files.",
+    "Local git ls-remote could not resolve github.com (DNS)."
+  ],
+  "gitMetadata": {
+    "treeApiTruncated": false,
+    "r11": {
+      "commit": "f0ea6ec60c9ae8cc4aadbca07c1f6d89cb235106",
+      "tree": "85f3bad8320737c7a4a793d1a54daeb2579ed324",
+      "baselinePathsPresent": 968,
+      "baselinePathsTotal": 968,
+      "unchangedGitSha1": 963,
+      "changedGitSha1": 5,
+      "missing": [],
+      "modeMismatches": [],
+      "changed": [
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "pre": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+          "post": "d17270551ed924b6be4715f1d5383339568d51f0"
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "pre": "a39dbb9703e915f908aff6cd0c9baa417d92d5a9",
+          "post": "b8749db4d9b86897a748983f22bb335f6cf01528"
+        },
+        {
+          "path": "coordination/e06/source_deep_inventory.py",
+          "pre": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65",
+          "post": "3a9ec72f46bda8851861c790fc8e0bea33bb0ab4"
+        },
+        {
+          "path": "coordination/e06/stage_onehost.py",
+          "pre": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+          "post": "ff785e750360e7a1b35233143cc13a3b0d628438"
+        },
+        {
+          "path": "coordination/e06/verify_original_729_source.py",
+          "pre": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+          "post": "5ba6f3eaf9e142b21c530c49dc28a27d9ccb4dd5"
+        }
+      ]
+    },
+    "pr162": {
+      "head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "baselinePathsPresent": 968,
+      "unchangedGitSha1": 968,
+      "changedGitSha1": 0,
+      "missing": []
+    },
+    "astraSourceOnly": {
+      "head": "f0064948119c55001601e1bae1cd3755826605ed",
+      "baselinePathsPresent": 968,
+      "unchangedGitSha1": 966,
+      "changedGitSha1": 2,
+      "missing": []
+    },
+    "snapshots": {
+      "count": 25,
+      "originalPartGitMetadataMatched": 75,
+      "originalPartGitMetadataTotal": 75,
+      "originalPartGitMetadataMismatches": [],
+      "snapshotGitFileEntries": 24876,
+      "treeApiTruncated": false
+    }
+  },
+  "manifestContinuity": {
+    "expectedArchiveFieldsPresent": true,
+    "sourcePartGitShaContinuityConfirmed": true,
+    "r30ConflictIndexStatesA06Named729Receipt": true,
+    "a06OriginalRawByteEvidenceIndependentlyVerified": false,
+    "perMemberPhysicalContinuity": "HOLD",
+    "originalHistoricalDonePreserved": true,
+    "semanticFunctionNoLoss": "NOT_EVALUATED_BY_T07"
+  },
+  "oneRelatedTest": {
+    "name": "READ_ONLY_968_FROZEN_GIT_BLOB_PARITY_AND_SNAPSHOT_PART_GIT_METADATA",
+    "executed": true,
+    "method": "Compare 968 path/sha/mode entries against full nontruncated Git Trees API; compare 3 original Git part blobs in each of 25 snapshots",
+    "result": "PASS_METADATA_ONLY",
+    "physicalZipTest": "NOT_RUN_RAW_BINARY_UNAVAILABLE"
+  },
+  "newAppliedLesson": "Separate expected archive SHA256, Git blob SHA1, and computed raw-file SHA256 in typed receipt fields; when binary acquisition fails use null physical hashes and HOLD, never copy the expected hash into an actual field.",
+  "gate": {
+    "SOURCE": "HOLD_PHYSICAL_ARCHIVE",
+    "INTEGRATED": "NOT_EVALUATED",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D"
+  },
+  "acceptance": {
+    "physicalArchiveCriteriaPassed": 0,
+    "physicalArchiveCriteriaTotal": 3,
+    "metadataCriteriaPassed": 3,
+    "metadataCriteriaTotal": 3,
+    "physicalProgressBar": "░░░░░░░░░░",
+    "overallProjectProgress": "N/D"
+  },
+  "coordinationRequest": "T02 coordinator: append immutable T07 HOLD receipt only via exclusive shared-Google-Docs writer CAS + readback. To unblock, provide complete authenticated byte-preserving source_00/01/02.part locally or through a binary-safe connector; then independently stream SHA256 for each part, combined 60364346-byte ZIP, and all 729 named members against an approved member manifest."
+}
