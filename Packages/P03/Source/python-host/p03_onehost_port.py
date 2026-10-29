@@ -63,10 +63,17 @@ class P03OneHostPort:
         def reject_constant(value):
             raise P03PortHold("P03 catalog invalid JSON numeric constant")
 
+        def finite_catalog_float(raw):
+            number = float(raw)
+            if not math.isfinite(number):
+                raise P03PortHold("P03 catalog non-finite JSON number")
+            return number
+
         try:
             doc = json.loads(path.read_text(encoding="utf-8"),
                              object_pairs_hook=unique_object,
-                             parse_constant=reject_constant)
+                             parse_constant=reject_constant,
+                             parse_float=finite_catalog_float)
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise P03PortHold("Malformed/unsafe P03 catalog JSON") from exc
         if not isinstance(doc, dict):
