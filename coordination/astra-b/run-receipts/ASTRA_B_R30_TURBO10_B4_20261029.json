@@ -1,0 +1,33 @@
+{
+  "schema": "ASTRA_B_SOURCE_ONLY_10_PASS_RECEIPT_V1",
+  "run_id": "ASTRA-B-R30-TURBO10-20261029",
+  "worker_label": "B4",
+  "real_subagent_id": null,
+  "spawn_status": "NOT_AVAILABLE",
+  "source_branch": "astra-b/r29-b4-20261029",
+  "baseline_previous_saved_source_approaches": 5,
+  "new_source_commits": [
+    "5171a9564d486375a3f388c659822c1a327fac81",
+    "af0622d40ca50e2c6e7b31374a7c7860b42ea496",
+    "295b938bebf6c3a2d999e667c6d50f7e3ee35b08",
+    "bf82d5094e352abc5b14a84a3591725d0c760dc4",
+    "e674e00a199bd18935ceb6974a06c8b9db069590"
+  ],
+  "source_commits_saved_total_in_lane": 10,
+  "new_task_ids_local": [
+    "batchupdate-documentId",
+    "ack-requiredRevisionId",
+    "get-documentId-match",
+    "get-documentId-required",
+    "readback-revision-match"
+  ],
+  "terminal_code_commit": "e674e00a199bd18935ceb6974a06c8b9db069590",
+  "prepost_compare_readback": "PASS_ONLY_ASSIGNED_PATH",
+  "targeted_test": "five targeted source invariants PASS; C# native NOT_RUN",
+  "release_acceptance": "NOT_RUN",
+  "product_taskid_coverage": "N_D",
+  "original_archive_729_this_run": "NOT_REVERIFIED",
+  "lesson": "A source-assertion and GitHub SHA prove code text, not native installer behavior; preserve unresolved gates.",
+  "shared_docs_writer": "ASTRA_A_ONLY",
+  "source_complete": false
+}
