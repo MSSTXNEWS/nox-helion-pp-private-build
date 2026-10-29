@@ -1,0 +1,63 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T14_RELEASE_BLOCKER_ONLY_RECEIPT_V1",
+  "task": "T14",
+  "run_id": "NOX-V16-T14-20261029T164051MSK-R02-NO-BUILD",
+  "observed_check_time_msk": "2026-10-29T16:40:51+03:00",
+  "scope": "NOX EXPRESS INTEGRATOR Windows loader only; release blockers proven by exact T12 BuildID/EXE SHA + T13 E07",
+  "status": "NO_BLOCKERS_EVIDENCE_UNAVAILABLE__RELEASE_HOLD",
+  "t12": {
+    "latest_automation_result": "NONE",
+    "setup_exe": "NOT_AVAILABLE",
+    "build_id": "NOT_AVAILABLE",
+    "exe_sha256": "NOT_AVAILABLE",
+    "real_windows_build": "NOT_VERIFIED"
+  },
+  "t13": {
+    "latest_automation_result": "NOT_RUN",
+    "e07_executed": 0,
+    "e07_required": 10,
+    "accepted_same_sha": "NOT_AVAILABLE"
+  },
+  "upstream": {
+    "t09": "SOURCE_FREEZE_HOLD",
+    "t10": "SOURCE_READY_HOLD",
+    "t11": "GITLAB_ACCESS_HOLD",
+    "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219"
+  },
+  "release_p0_p1": {
+    "proven_on_exact_build": 0,
+    "fixes_applied": 0,
+    "code_changed": false,
+    "source_before_after": "IDENTICAL",
+    "action": "NO_BLOCKERS",
+    "qualification": "No installed build and no E07, so this is NOT evidence of no runtime bugs"
+  },
+  "score": {
+    "own_percent": "N/D",
+    "own_bar": "░░░░░░░░░░",
+    "reason": "T14 receives no admissible installed EXE/BuildID/SHA or failing E07 evidence; cannot count unknown input as PASS"
+  },
+  "remaining": "T12 real Windows GitLab Free EXE+NSIS/BuildID/SHA after T09/T10/T11; T13 actual same-SHA E07 10/10; if P0/P1 then only targeted T14 fix, rebuild T12 and rerun T13",
+  "no_loss": [
+    "original 729 files/3 ZIP parts",
+    "968 archived Git blobs",
+    "D02/WOW001-200",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02 + 50+50",
+    "Voice/RAG/GPU/SPACE",
+    "user data/permissions",
+    "all historic DONE"
+  ],
+  "no_new_task_id": true,
+  "no_product_code_write": true,
+  "no_release_claim": true,
+  "docs_shared_write": "FORBIDDEN_T02_ONLY",
+  "applied_lesson": "Do not misclassify a source or pipeline HOLD as a defect in a non-existent installed BuildID; release-specific P0/P1 requires same-build reproducible E07 evidence.",
+  "v16": "V16 §§1-33,54-56, R29, 56 §33 rules; same-SHA E07 gate",
+  "source_receipts": {
+    "t09": "36ed0a4ba3e32d7d57d2e87a954459e5b8eb79a9",
+    "t10": "427d5f895164aac5c4e157d0fa267cbd92b366cb",
+    "t11": "3cef69137be12e740b739d8a070a463e8eb62182"
+  }
+}
