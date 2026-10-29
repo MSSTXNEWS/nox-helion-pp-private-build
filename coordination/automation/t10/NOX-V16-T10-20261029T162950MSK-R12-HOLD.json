@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T10_SOURCE_READY_INDEPENDENT_QA_V2",
+  "taskId": "T10",
+  "runId": "NOX-V16-T10-20261029T162950MSK-R12-HOLD",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY; not main NOX",
+  "kind": "INDEPENDENT_SOURCE_QA_NO_PRODUCTION_EDITS",
+  "status": "HOLD_T09_NO_FROZEN_OWNER_ACCEPTED_HEAD",
+  "sourceReadyPass": false,
+  "time": {
+    "timezone": "Europe/Moscow",
+    "plannedStart": "2026-10-29T16:25:00+03:00",
+    "firstObserved": "2026-10-29T16:29:50+03:00",
+    "receiptPreparedAt": "2026-10-29T16:33:30+03:00",
+    "actualEndAtReceipt": null,
+    "durationSecondsAtReceipt": null
+  },
+  "canon": {
+    "googleDoc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": "1-33,54-56,R29; all 56 consolidated §33 rules",
+    "revisionRead": "AHj4eMRySqo9EdwKn868yp4HbwEI0d2OvL_BnGxW-WbVlqM6jcthsOllYcpxo3wlqL61clI4Rof-9YaCeQ_BP7r8BXkdZT4w9FqG2llvHxc"
+  },
+  "sourceRefs": {
+    "t09": {
+      "runId": "NOX-V16-T09-20261029T162545MSK-R12-HOLD",
+      "commit": "36ed0a4ba3e32d7d57d2e87a954459e5b8eb79a9",
+      "receiptBlobGitSHA1": "46cfc7bf8870dc17c72be3b0b0b09f88dafbb6c2",
+      "sourceFrozen": false,
+      "acceptedHead": null,
+      "acceptedTree": null,
+      "acceptedManifestSHA256": null,
+      "status": "HOLD_NO_IMMUTABLE_ACCEPTED_T06_SOURCE"
+    },
+    "t06": {
+      "runId": "NOX-V16-T06-20261029T162028MSK-R05",
+      "commit": "e5913abec08cb843036edecc015c9a77abdf9b0c",
+      "receiptBlobGitSHA1": "86f75512f884042f227ae904f8455ad7d0cdda87",
+      "status": "HOLD_OWNER_1_CAS_NO_UNIFIED_SOURCE",
+      "sourcePreHEAD": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "sourcePostHEAD": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "acceptedHead": null
+    },
+    "t07": {
+      "runId": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+      "commit": "e2a9543b07c8d0f1c20d355d3d9b6df1f9e38572",
+      "receiptBlobGitSHA1": "fc50d785cb14f348b6d3070556790d6133a36104",
+      "status": "HOLD",
+      "sourcePartsGitMetadata": "3/3",
+      "snapshotPartsGitMetadata": "75/75",
+      "rawJoinedSHA256": "NOT_COMPUTED",
+      "memberRawSHA256Verified": 0,
+      "memberCount": 729,
+      "joinedExpectedSizeBytes": 60364346,
+      "joinedExpectedSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+    },
+    "t08": {
+      "runId": "NOX-V16-T08-20261029T160732MSK-R11",
+      "commit": "707f6fae00c256fe4366773118e0203eae9948a2",
+      "receiptBlobGitSHA1": "b87b7561f16fdca998f2a6ff7d481350a0247ce6",
+      "status": "HOLD_NO_CONFIRMED_FIXABLE_CODE_P0P1"
+    },
+    "pr162": {
+      "head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "treeReported": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+      "frozen": false
+    },
+    "astra": {
+      "head": "f0064948119c55001601e1bae1cd3755826605ed",
+      "treeReported": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+      "frozen": false
+    },
+    "r30": {
+      "head": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+      "treeReported": "6f38d9a3e4fc966c61e1e5fd361c262b3de945ed",
+      "notMerged": true
+    },
+    "ownershipLockGitBlobSHA1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflictIndexGitBlobSHA1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+  },
+  "verification": {
+    "performed": "Read exact current T09 frozen-gate receipt, independent T06 owner receipt, T07 physical-source receipt, T08 P0/P1 receipt, current canonical §33/§54-56 and T02 Master/E06/Lessons deltas; compare current branch HEAD refs.",
+    "targetedTest": "T09_R12_T06_R05_SOURCE_FREEZE_CONSISTENCY_READBACK",
+    "targetedResult": "PASS_METADATA_ONLY: T09 has sourceFrozen=false; T06 has acceptedHead=null, acceptedTree=null, acceptedManifestSha256=null; T07 729 physical SHA256 unverified; therefore SOURCE_READY=HOLD",
+    "productSourceTest": "NOT_RUN_NO_FROZEN_CHECKOUT_OR_CODE_CHANGE",
+    "sourcePreHEAD": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "sourcePostHEAD": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "productSourceMutation": false,
+    "physicalZipTest": "NOT_RUN_BINARY_BYTES_UNAVAILABLE",
+    "windowsE07": "NOT_RUN_BUILD_NOT_AUTHORIZED",
+    "independentCriteriaAcceptedFull": 0,
+    "independentCriteriaTotal": 7,
+    "progressBar": "░░░░░░░░░░",
+    "fullChecklist": [
+      "Single T09 frozen owner-accepted HEAD/tree/manifest = HOLD",
+      "Original 3 ZIP parts + full raw 729 member SourceLock SHA256 = HOLD",
+      "P01-P05 fixed TaskID owner receipts/CAS and semantic conflicts fully sealed on one HEAD = HOLD",
+      "Original 968 Git blobs plus NO-LOSS D02/WOW001-200/8 CoreIDs/5 Personas/PACK01/02/50+50 = NOT_FULLY_PROVEN_ONE_TREE",
+      "Native Host50/ACL/consent/STOP/voice/GPU/RAG/SPACE/SQLite/source contracts = NOT_FULLY_PROVEN_ONE_TREE",
+      "E06 independent source/integration tests and no open reproduced P0/P1 on same frozen SHA = HOLD",
+      "Independent signed 100% mandatory SOURCE_READY gate = HOLD"
+    ]
+  },
+  "oneBlocker": {
+    "id": "T06_OWNER1_ACCEPTED_UNIFIED_SOURCE_CAS_MISSING",
+    "owner": "T06 / source owner #1, then T09",
+    "evidence": "T06 R05 explicitly has acceptedHead=null and owner authorization/CAS HOLD; T09 R12 has sourceFrozen=false and no accepted tree/manifest; T07 still lacks raw 729 physical SHA256.",
+    "handoff": "Owner #1 must approve/pin ONE integrated HEAD+tree+manifest/SourceLock and reconciled owner receipts using CAS; T07 must supply actual 3-part ZIP and 729-member SHA256; T09 then publishes immutable frozen tuple. T10 only rechecks that exact tuple, not unmerged donors."
+  },
+  "lessonApplied": "Do not attribute old G1-G7 worker latest results to reused T01-T15 automation IDs; and do not promote Git blob SHA1 or 25 historical snapshot inventories into physical original ZIP SHA256. Read immutable current TaskID receipts before deciding source gate.",
+  "preservedHistoricalDone": true,
+  "weightedProgress": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "weightsPercent": "20/25/20/25/10",
+    "overallPercent": "N/D"
+  },
+  "gates": {
+    "SOURCE": "CANDIDATE",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "actions": {
+    "noProductCodeEdits": true,
+    "noMerge": true,
+    "noBuild": true,
+    "noEXE": true,
+    "noNSIS": true,
+    "noWindowsCI": true,
+    "noGitLabPipeline": true,
+    "noMainOrPR162Edits": true,
+    "noSnapshotEdits": true,
+    "noSharedGoogleDocsEdits": true
+  },
+  "coordinatorOnly": "T02 may append isolated immutable receipt to Master/E06/Lessons via CAS+readback, T10 must not write shared Docs"
+}
