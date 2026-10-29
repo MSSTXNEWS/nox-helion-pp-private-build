@@ -1,0 +1,189 @@
+{
+  "schema": "NOX_V16_G1A_R21_PINNED_PR162_OWNER_CAS_HANDOFF_V1",
+  "run_id": "NOX-V16-G1A-20261029T2213MSK-R21-P01-CAS-REBASE",
+  "role": "G1-A",
+  "scope": "SOURCE_ONLY_NO_EXE_NO_NSIS_NO_CI_NO_E07",
+  "created_utc": "2026-10-29T19:12:59.624Z",
+  "prestart": {
+    "canon_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_modified_utc": "2026-10-29T18:57:16.321Z",
+    "rules_33_read": 56,
+    "source_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "source_tree": "656ed36f4f61eaba1276f38fdd2136afbb2cfef1",
+    "active_error_register_git_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+    "error_status_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "r21_adapter_blob": "5f5503d9cdef177d43f715846d4c34efa91b41a8",
+    "r20_queue_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a"
+  },
+  "r21_readonly": {
+    "status": "READ_ONLY_PLAN_NOT_AUTHORIZED",
+    "snapshot_matching_current_head_and_register": true,
+    "qa_accepted": false,
+    "not_remote_authorization": true,
+    "local_preview_sha256": "5c210a23348895023676d72582964a575402ec3ef0be5c34a2e0bc7fa6ac0590"
+  },
+  "owner_scope": {
+    "assigned_paths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "forbidden_paths_enforced": true,
+    "main_pr162_not_written": true,
+    "receipt_path": "coordination/automation/r30/G1-A/NOX-V16-G1A-20261029T2213MSK-R21-P01-CAS-REBASE.json"
+  },
+  "patch": {
+    "source_owner": "G1-A / P01 C09 Installer",
+    "donor_provenance_commit": "1b6cf897c0ef35bd3153fc214b837275c61bfc31",
+    "target_pr162_pre_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+    "paths": [
+      {
+        "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "pre": "87d901c3846359a91be3e8288f24302cc7060257",
+        "post": "5a42310568368927c00d9d0fd766fbb6d99d0325"
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+        "pre": "6c178c04957d7397c0c081e3b123940637abc6e9",
+        "post": "e448f8266ba15e809c13bff669924fa825fd4bc1"
+      },
+      {
+        "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+        "pre": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+        "post": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+      }
+    ],
+    "semantics": "Rebase existing owner-reviewed R16/R18 fail-closed stage-directory, verified payload/uninstaller, registry/rollback and conservative removal changes onto latest real PR162. No new backend/host."
+  },
+  "targeted_checks": {
+    "kind": "STATIC_ON_REAL_GIT_BYTES",
+    "pass": 14,
+    "total": 14,
+    "ids": [
+      "stage_directory_before_extraction",
+      "stage_outdir_guard",
+      "stage_fail_closed",
+      "stage_marker_readback",
+      "generated_uninstaller_sha",
+      "activation_verify_before_registry",
+      "registry_writes_checked",
+      "shortcut_errors_checked",
+      "prior_registry_recovery",
+      "rollback_preserves_failed_tree",
+      "no_recursive_user_data_delete",
+      "verify_uninstaller_supported",
+      "safe_remove_no_recursive",
+      "installer_no_native_execution"
+    ],
+    "security_contracts": [
+      "STOP, ACL, native consent paths not modified",
+      "NO-LOSS no recursive user-profile deletion",
+      "P02/P03 source blobs untouched",
+      "Windows native NOT_RUN"
+    ]
+  },
+  "lessons": {
+    "discovered": 11,
+    "relevant": 9,
+    "clusters": 6,
+    "applied": 1,
+    "already_fixed": 2,
+    "delegated": 6,
+    "blocked": 2,
+    "remaining": 6,
+    "clusters_by_root": [
+      {
+        "id": "REGISTER_GOVERNANCE",
+        "errors": [
+          "ERR-SYS-001"
+        ],
+        "action": "DELEGATE",
+        "owner": "T02",
+        "recurrence": "shared register readback"
+      },
+      {
+        "id": "HEAD_DRIFT",
+        "errors": [
+          "ERR-SYS-002"
+        ],
+        "action": "APPLY",
+        "owner": "G1-A",
+        "recurrence": "exact base SHA+per-path Git blob CAS"
+      },
+      {
+        "id": "INCOMPLETE_FUNCTION_BINDING",
+        "errors": [
+          "ERR-SRC-003",
+          "ERR-SRC-004"
+        ],
+        "action": "DELEGATE",
+        "owner": "T06",
+        "recurrence": "signed native same-SHA Host50/OneHost and WPF host proof"
+      },
+      {
+        "id": "UNVERIFIED_SOURCE_PATCHES",
+        "errors": [
+          "ERR-SRC-005",
+          "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+        ],
+        "action": "DELEGATE",
+        "owner": "T08",
+        "recurrence": "independent pinned SHA SOURCE QA"
+      },
+      {
+        "id": "PREMATURE_STAGE_DONE",
+        "errors": [
+          "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+          "NOX-V16-T06-ROOT-STOP-20261029-R01",
+          "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+        ],
+        "action": "DELEGATE",
+        "owner": "T06/T09/T02",
+        "recurrence": "acceptance only owner+QA same-SHA; receipt != DONE"
+      },
+      {
+        "id": "HISTORICAL_CLOSED",
+        "errors": [
+          "ERR-SYS-006",
+          "ERR-SYS-007"
+        ],
+        "action": "ALREADY_FIXED",
+        "owner": "T04/T07/T09",
+        "recurrence": "keep 729/729 and T04 34/34 DONE"
+      }
+    ]
+  },
+  "progress": {
+    "historical_T01": "100/100 DONE UNCHANGED",
+    "role_G1_A_before": "1/4",
+    "role_G1_A_after": "1/4",
+    "accepted_delta": 0,
+    "PRODUCT": "N/D",
+    "source_patch_stage": "PREPARED_OWNER_SCOPE_NOT_INTEGRATED",
+    "native_tests": "NOT_RUN"
+  },
+  "next_action": {
+    "owner": "T06 / manual #1",
+    "required": "At live PR162 HEAD re-read 3 PRE blobs; if exact, owner approve/apply 3-file pinned patch as one CAS, then T08 check same HEAD; do not merge automatically.",
+    "p01_wpf_host_missing_provenance": "NOX.P01.Shell.csproj / MainWindow.xaml absent from observed PR162 tree; G1-B/T06 own host integration",
+    "t02": "Read immutable personal receipt and record Git blob in common register via owner CAS"
+  }
+}
