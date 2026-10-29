@@ -53,10 +53,18 @@ public sealed class SpaceFeedClient
     private readonly ConcurrentDictionary<CacheIdentity, FeedSnapshot> _cache = new();
     private readonly TimeSpan _ttl;
     private readonly TimeSpan _timeout;
-    public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout)
+    private readonly TimeSpan _maxSourceAge;
+    // Same existing E05 freshness policy, without a second feed client/bus.
+    // Existing 3-argument callers retain their signature and a conservative
+    // 24-hour default; approved providers may require a shorter age.
+    public SpaceFeedClient(HttpClient http, TimeSpan ttl, TimeSpan timeout,
+        TimeSpan? maxSourceAge = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         if (ttl <= TimeSpan.Zero || timeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException();
+        _maxSourceAge = maxSourceAge ?? TimeSpan.FromHours(24);
+        if (_maxSourceAge <= TimeSpan.Zero || _maxSourceAge > TimeSpan.FromDays(365))
+            throw new ArgumentOutOfRangeException(nameof(maxSourceAge));
         _ttl = ttl; _timeout = timeout;
     }
 
@@ -82,9 +90,19 @@ public sealed class SpaceFeedClient
             now >= old.FetchedAt && now - old.FetchedAt < _ttl)
             {
                 stop.ThrowIfCancellationRequested();
-                return old with {
-                    Status = old.Status is "LIVE" or "CACHE" ? "CACHE" : old.Status
-                };
+                // Cache TTL only controls transport reuse; a formerly LIVE
+                // observation can become stale without another HTTP request.
+                if (old.Status is "LIVE" or "CACHE")
+                {
+                    if (old.SourceTimestamp is not { } sourceTime ||
+                        now - sourceTime > _maxSourceAge ||
+                        sourceTime > now.AddMinutes(5))
+                        return old with {
+                            Status = "STALE_SOURCE", ErrorCode = "SOURCE_STALE", IsStale = true
+                        };
+                    return old with { Status = "CACHE" };
+                }
+                return old;
             }
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stop);
         timeout.CancelAfter(_timeout);
@@ -139,12 +157,16 @@ public sealed class SpaceFeedClient
             // Provider timestamps are evidence, not authority. A timestamp
             // far in the future must never be reported as LIVE or CACHE.
             var futureTime = observed is not null && observed.Value > checkedAt.AddMinutes(5);
+            var staleTime = observed is not null && checkedAt - observed.Value > _maxSourceAge;
             var sourceStatus = observed is null ? "UNVERIFIED_TIMESTAMP" :
-                futureTime ? "INVALID_SOURCE_TIME" : "LIVE";
+                futureTime ? "INVALID_SOURCE_TIME" :
+                staleTime ? "STALE_SOURCE" : "LIVE";
             var snapshot = new FeedSnapshot(id, provider, observed,
                 checkedAt, cloned, sourceStatus,
                 observed is null ? "SOURCE_TIME_MISSING" :
-                futureTime ? "FUTURE_SOURCE_TIME" : null, futureTime || observed is null);
+                futureTime ? "FUTURE_SOURCE_TIME" :
+                staleTime ? "SOURCE_STALE" : null,
+                futureTime || staleTime || observed is null);
             // STOP can arrive from the host during the source-time callback.
             stop.ThrowIfCancellationRequested();
             _cache[key] = snapshot;
