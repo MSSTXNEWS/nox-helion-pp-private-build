@@ -29,7 +29,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
         self.assertIn("var current = _webView.Source;", TEXT)
         self.assertIn("string.Equals(current, documentSource", TEXT)
         self.assertIn("catch (Exception) { return false; /* WebView2 may be closing or disposed */ }", TEXT)
-        self.assertIn("if (!IsCurrent(documentSource) || !_isNativeRouteAvailable(routeId)) return", TEXT)
+        self.assertIn("if (!IsCurrent(documentSource, documentEpoch) || !_isNativeRouteAvailable(routeId)) return", TEXT)
 
     def test_native_consent_cannot_be_supplied_by_page(self):
         self.assertIn('if (kind == "action")', TEXT)
@@ -50,7 +50,7 @@ class WebView2BridgeSourceGuard(unittest.TestCase):
 
     def test_duplicate_ids_cancellation_and_detach(self):
         self.assertIn("if (!_pending.Add(requestId))", TEXT)
-        self.assertIn("_pending.Remove(requestId)", TEXT)
+        self.assertIn("_pending.Remove((documentEpoch, requestId))", TEXT)
         self.assertIn("Interlocked.Exchange(ref _disposed, 1)", TEXT)
         self.assertIn("_webView.WebMessageReceived -= OnWebMessageReceived", TEXT)
         self.assertIn("_lifetime.Cancel()", TEXT)
