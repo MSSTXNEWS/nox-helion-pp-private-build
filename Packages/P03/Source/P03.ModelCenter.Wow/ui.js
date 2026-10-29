@@ -29,6 +29,13 @@ const hasEvidence = m => !!(m && m.artifactVerified===true && m.exactTag && m.im
 const currentJob = () => state.activeJob && current() &&
   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
    state.activeJob.modelTag===current().id) ? state.activeJob : null;
+// STOP and Retry follow the actual host queue, regardless of selected card.
+const queueJobModel = () => {
+ const j=state.activeJob;if(!j)return null;
+ if(typeof j.modelId==='string')return state.models.find(m=>m.id===j.modelId)||null;
+ const matches=state.models.filter(m=>(m.exactTag&&m.exactTag===j.modelTag)||m.id===j.modelTag);
+ return matches.length===1?matches[0]:null;
+};
 function lineItem(k,v){const dt=el('dt','',k),dd=el('dd','',v);return [dt,dd];}
 
 /* One real action path for all 20 cards: the existing host pull route.
@@ -80,25 +87,29 @@ function renderCatalog(){const list=$('catalog');list.replaceChildren();const q=
     b.append(check);list.append(b);
   }
 }
-function renderHero(){const m=current();const j=currentJob();const verified=hasEvidence(m);$('selectedName').textContent=m?.name||'Нет моделей';
+function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvidence(m);$('selectedName').textContent=m?.name||'Нет моделей';
   $('heroSubtitle').textContent=m ? `Семейство ${m.id} · ${verified?'Проверенные артефактные данные':'Сведения об артефакте требуют проверки'}`:'Каталог пуст';
   const chips=$('heroChips');chips.replaceChildren();chips.append(el('span','chip '+(verified?'ok':'warning'),verified?'ARTIFACT VERIFIED':'REVIEW_REQUIRED'));
   if(j?.state) chips.append(el('span','chip',j.state));
   const complete=numeric(j?.completedBytes),total=numeric(j?.totalBytes);const realPct=complete!==null&&total!==null&&total>0&&complete<=total?Math.min(100,Math.round(complete/total*100)):null;
   $('orbit').style.setProperty('--pct',realPct===null?'0%':realPct+'%');$('orbit').classList.toggle('working',j?.state==='Running'||j?.state==='Downloading');
   $('orbitLabel').textContent=realPct===null?(j?.state||'НЕТ ЗАГРУЗКИ'):realPct+'% · ПЕРЕДАНО';
-  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?.status||'Нет активной операции';
+  const stateText=j?.state||'Н/Д'; $('jobState').textContent=stateText;$('jobPhase').textContent=j?`${safeText(j.modelTag)} · ${j.status||'Нет активной операции'}`:'Нет активной операции';
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
-  $('transferNote').textContent=realPct===null?'Без достоверного процента':`Передано ${realPct}% · установка требует receipt`;
+  $('transferNote').textContent=j?`${safeText(j.modelTag)} · ${realPct===null?'Без достоверного процента':`Передано ${realPct}%`} · установка требует receipt`:'Без достоверного процента';
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
-  const cap=state.capabilities||{};const canStop=state.hostReady&&cap.stop===true&&j&&['Queued','Running'].includes(j.state);
-  const canRetry=state.hostReady&&cap.retry===true&&j&&['Failed','Cancelled'].includes(j.state);
+  const cap=state.capabilities||{};const queue=state.activeJob;
+  const canStop=state.hostReady&&cap.stop===true&&queue&&['Queued','Running'].includes(queue.state);
+  const canRetry=state.hostReady&&cap.retry===true&&queue&&['Failed','Cancelled'].includes(queue.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
   $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
   $('retryBtn').disabled=!(canRetry&&!state.pending.has('retry'));
   $('diagBtn').disabled=!(state.hostReady&&cap.diagnose===true&&!state.pending.has('diagnose'));
-  $('actionHint').textContent=state.hostReady?'Действия выполняются только после подтверждения Windows host.':'Без host доступен просмотр каталога; операции отключены.';
+  $('actionHint').textContent=!state.hostReady
+   ? 'Без host доступен просмотр каталога; операции отключены.'
+   : queue ? `STOP/Повтор управляют очередью ${safeText(queue.modelTag)} (${queue.state}), независимо от выбранной карточки. Host подтверждает операции.`
+   : 'Действия выполняются только после подтверждения Windows host.';
 }
 function renderDna(){const m=current();const dl=$('dnaList');dl.replaceChildren();if(!m)return;
   const verified=hasEvidence(m);
@@ -130,18 +141,22 @@ function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(stat
   li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
 }
 function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
-function sendAction(action){const c=state.capabilities||{};const job=currentJob();if(!state.hostReady||c[action]!==true)return;
+function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retry'].includes(action);
+ const job=isQueue?state.activeJob:currentJob(),targetModel=isQueue?queueJobModel():current();
+ if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
- if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
+ // Queue commands need the durable jobId, not a card in the discovery catalog.
+ if(isQueue&&(!job||!job.jobId))return;
  if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
  if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
  if(state.pending.has(action))return;const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
- const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
+ const data={type:'p03.command.v1',commandId,action,modelId:targetModel?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
- const m=current(),pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,timer:null};
+ const m=targetModel,pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,
+  jobId:isQueue?job.jobId:null,jobTag:isQueue?job.modelTag:null,timer:null};
  state.pending.set(action,pending);renderHero();renderQuick20();
  try{window.chrome.webview.postMessage(data);
   pending.timer=setTimeout(()=>{if(state.pending.get(action)!==pending)return;state.pending.delete(action);renderHero();renderQuick20();showToast('Нет ACK host: исход неизвестен; проверьте очередь.');},45000);
@@ -168,6 +183,8 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       typeof incoming.modelTag!=='string'||incoming.modelTag.length>160||
       !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incoming.state)))return;
   let next=incoming?{...incoming}:null;
+  // An absent/null job is not confirmation of the durable STOP request.
+  if(next===null&&old?.state==='Cancelling')next={...old};
   if(next){
     const done=numeric(next.completedBytes),total=numeric(next.totalBytes);
     if(done!==null&&total!==null&&done>total)return;
@@ -175,7 +192,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     if(old&&old.jobId===next.jobId&&old.modelTag===next.modelTag){
       if(['Completed','Cancelled','Failed'].includes(old.state)&&next.state!==old.state)next={...old};
       else{
-        if(old.state==='Cancelling'&&['Queued','Running'].includes(next.state))next.state='Cancelling';
+        // Durable STOP wins over stale completion, failure and transfer snapshots.
+        // Preserve the complete Cancelling record until host confirms Cancelled.
+        if(old.state==='Cancelling'&&next.state!=='Cancelled')next={...old};
         if(['Running','Cancelling'].includes(old.state)&&next.state==='Queued')next.state=old.state;
         if(numeric(old.completedBytes)!==null&&
            (next.completedBytes===null||next.completedBytes<old.completedBytes)){
@@ -201,10 +220,17 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
   const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
+  // The active queue job is independent of the selected catalog card.
+  const job=state.activeJob;
+  const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
+  // Out-of-order host messages must neither erase durable STOP nor display
+  // a false "Installed"/"Failed"/"Starting" in the lifecycle event feed.
+  if(sameJob&&(
+     ['Completed','Failed','Cancelled'].includes(job.state)||
+     (job.state==='Cancelling'&&evt.phase!=='cancelled')||
+     (evt.phase==='started'&&job.state!=='Queued')))return;
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
-  const job=currentJob();
-  if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
-     !['Completed','Failed','Cancelled'].includes(job.state)){
+  if(sameJob){
     if(typeof evt.status==='string')job.status=evt.status;
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
@@ -221,7 +247,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
   if(pending.timer!==null)clearTimeout(pending.timer);
   state.pending.delete(data.action);renderHero();renderQuick20();
-  const m=current(),samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null);
+  const isQueue=['stop','retry'].includes(data.action),m=isQueue?queueJobModel():current();
+  const samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null)&&
+    (!isQueue||(pending.jobId===state.activeJob?.jobId&&pending.jobTag===state.activeJob?.modelTag));
   showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);

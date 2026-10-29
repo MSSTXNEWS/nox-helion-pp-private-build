@@ -157,5 +157,20 @@ class ReusedCanonicalZipGate(unittest.TestCase):
    STAGE.main()
   self.assertEqual(list(real.iterdir()),[])
 
+ def test_symlink_stage_ancestor_denied_before_writes(self):
+  # A parent symlink escapes staging while WORK.is_symlink() remains False.
+  names=NEEDED+[f"R11/QA/extra-{i:03}.txt" for i in range(75-len(NEEDED))]
+  self.create([(name,stat.S_IFREG) for name in names])
+  outside=self.root/"outside";outside.mkdir()
+  shortcut=self.root/"link"
+  try:shortcut.symlink_to(outside,target_is_directory=True)
+  except (NotImplementedError,OSError) as e:self.skipTest(str(e))
+  work=shortcut/"nested"/"staged"
+  with patch.object(STAGE,"WORK",work), patch.object(STAGE,"R11",work/"R11"):
+   with self.assertRaisesRegex(SystemExit,"E06_STAGE_REPARSE_ROOT_HOLD"):
+    STAGE.main()
+  self.assertEqual(list(outside.iterdir()),[])
+
+
 if __name__=="__main__":
  unittest.main()

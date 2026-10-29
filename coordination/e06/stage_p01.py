@@ -41,9 +41,17 @@ def main():
     spec.loader.exec_module(canonical)
     if not callable(getattr(canonical,"validate_members",None)):
         raise SystemExit("CANONICAL_ZIP_NAMESPACES_GATE_MISSING")
+    # A symlink/junction in WORK's ancestors can redirect staging outside
+    # the owned source directory even when WORK itself is not a symlink.
+    def require_stage_tree():
+        for node in (R11, WORK, *WORK.parents):
+            if node == ROOT:
+                break
+            if node.is_symlink() or getattr(node, "is_junction", lambda: False)():
+                raise SystemExit("E06_STAGE_REPARSE_ROOT_HOLD")
+    require_stage_tree()
     WORK.mkdir(parents=True,exist_ok=True)
-    if WORK.is_symlink() or R11.is_symlink():
-        raise SystemExit("E06_STAGE_REPARSE_ROOT_HOLD")
+    require_stage_tree()
     if (WORK/"source_lock.json").exists() or (WORK/"source_lock.json").is_symlink():
         raise SystemExit("E06_SOURCELOCK_ALREADY_EXISTS_NO_OVERWRITE")
     temp=WORK/"source-donor-immutable.zip"
