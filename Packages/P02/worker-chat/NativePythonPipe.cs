@@ -171,7 +171,8 @@ public sealed class NativePythonPipe : IAsyncDisposable
                     throw new NativePipeHold("NATIVE_RESPONSE_STATUS_INVALID");
                 var value = status.GetString();
                 NativePipeResult outcome;
-                if (value == "OK" && root.TryGetProperty("result", out var result))
+                if (value == "OK" && root.TryGetProperty("result", out var result) &&
+                    result.ValueKind == JsonValueKind.Object)
                     outcome = new NativePipeResult(nonce, true, result.Clone(), null);
                 else if (value == "HOLD" && root.TryGetProperty("errorCode", out var code) &&
                          code.ValueKind == JsonValueKind.String && ErrorCode.IsMatch(code.GetString() ?? ""))
