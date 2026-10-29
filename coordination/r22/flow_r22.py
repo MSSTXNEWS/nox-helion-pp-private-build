@@ -9,8 +9,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from copy import deepcopy
 from pathlib import Path
+# In Git the dependency is coordination/r21/flow_r21.py, not beside R22.
+# Do not fetch modules from network or fall back to an unrelated package.
+_sibling_r21 = Path(__file__).resolve().parents[1] / 'r21'
+if (_sibling_r21 / 'flow_r21.py').is_file():
+    sys.path.insert(0, str(_sibling_r21))
 from flow_r21 import queue_preview, read_json, check, HEX40
 
 SCHEMA = 'NOX_V16_R20_FIXED_DISPATCH_SNAPSHOT_V1'
