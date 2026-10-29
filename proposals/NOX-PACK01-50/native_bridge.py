@@ -316,6 +316,7 @@ class ExistingP02Adapter:
         bytes_seen = 0
         done = False
         for chunk in self.client.stream(model,conversation):
+            if done: raise HostHold("Unexpected stream content after completion")
             if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
                 raise HostHold("Invalid Ollama chunk")
             delta = chunk["delta"]
