@@ -1,0 +1,129 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T140324MSK-09",
+  "slot": "G5-A",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "peer_forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "decision": "G5-A exclusive owner, no other source paths edited"
+  },
+  "rules": {
+    "section33_consolidated_56_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "items_read": 56,
+    "sections": [
+      "54",
+      "55",
+      "56",
+      "R29 LOADER ONLY"
+    ],
+    "note": "Historical pre-V15 verbatim list not authenticated"
+  },
+  "history": {
+    "previous_run": "R30-G5A-20261029T130231MSK-08",
+    "previous_branch": "automation/r30/g5a/20261029T130231MSK-08",
+    "previous_head": "ebe2d7bfaa5ea34dc76dbfa15b360c199972857d",
+    "master_drive_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_drive_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_drive_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "historical_c34_id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "last_c_controller_delta_read": "ASTRA-C-R30-20261029T1330MSK-08",
+    "applied_prior_lesson": "Use the exact canonical events.v3 envelope and preserve native sub-millisecond time rules; distinguish source fixture tests from real Windows/.NET admission"
+  },
+  "snapshots": {
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "complete_recursive_git_tree_sha": "34350552e847909e5945c8d1418cc3cc282796b4",
+    "root_directories": 25,
+    "recursive_tree_truncated": false,
+    "recursive_entries": 30388,
+    "file_blobs": 24876,
+    "all_original_file_bytes_re_read": false,
+    "physical_729_sha256_verified": false,
+    "original_files_modified": 0
+  },
+  "task": {
+    "id": "G5A-R30-P05-EVENT-ID-NONTERMINAL-COLLISION-HOLD-R09",
+    "outcome": "SOURCE_PATCH_ONLY",
+    "new_product_taskids_independently_accepted": 0,
+    "product_percent": "N/D",
+    "root_cause": "projectCanonicalEvents tracked event_id collisions only among terminal events; a same-run task.started/progress/completed and STOP with the same event_id returned STOPPED instead of HOLD, violating append-only event identity.",
+    "fix": "Pre-scan the bounded same-RunID nonterminal event types for event IDs and reject terminal/nonterminal reuse with HOLD_EVENT_ID_COLLISION in either arrival order."
+  },
+  "branch": "automation/r30/g5a/20261029T140324MSK-09",
+  "source_change": {
+    "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_blob": "16b69e400a5699d8a33d2efc87111904ae6a374f",
+    "postimage_blob": "a6d723190213feb10091ab6dd699d56c46a00c46",
+    "source_commit": "1da24680663a3ea6510258d4ec0a259403bdf7b8",
+    "git_postimage_readback": "PASS"
+  },
+  "test": {
+    "kind": "One exact-source V8 RED to GREEN targeted regression (10 cases)",
+    "execution": "GitHub fetch_file exact source => in-memory source evaluation => projectCanonicalEvents fixtures; persisted GitHub source re-executed",
+    "preimage_failures_reproduced": 4,
+    "preimage_cases": 10,
+    "postimage_passed": 10,
+    "postimage_cases": 10,
+    "persisted_git_passed": 10,
+    "persisted_git_cases": 10,
+    "case_names": [
+      "start_before_stop",
+      "start_after_stop",
+      "progress_before_stop",
+      "completed_after_stop",
+      "unrelated_id",
+      "foreign_run",
+      "identical_replay",
+      "terminal_sequence_collision",
+      "normal_stop",
+      "normal_error"
+    ],
+    "csharp_compilation": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "node_full_suite": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "new_test_file": "NOT_WRITTEN_TEST_PATH_NOT_EXPLICITLY_ASSIGNED"
+  },
+  "ownership": {
+    "changed_owned_source_paths": [
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "other_owner_paths_changed": [],
+    "main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "forbidden_paths_changed": [],
+    "old_done_preserved": true
+  },
+  "self_improvement": {
+    "lesson_id": "G5A-R09-EVENT-ID-UNIQUENESS-INCLUDES-NONTERMINALS",
+    "cause": "Terminal-only event_id deduplication missed collisions with task.started/progress/completed in an append-only journal.",
+    "action": "For stateful event projections, test uniqueness across all recognized event types and test both arrival orders. An otherwise verified STOP cannot certify a reused event_id.",
+    "next_action": "Have E06 native producer confirm global event_id uniqueness and require .NET/Node native parity before product acceptance. Also review event_sequence uniqueness across nonterminal types under the owner contract."
+  },
+  "gates": {
+    "source_code_complete": "HOLD",
+    "product": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "report_gate": "CENTRAL_DRIVE_READBACK_PENDING_C_ONLY",
+    "drive_writes_by_g5a": 0
+  },
+  "readback": {
+    "source_blob": "PASS",
+    "owner_receipt": "VERIFY_POST_COMMIT"
+  }
+}
