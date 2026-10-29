@@ -1,0 +1,199 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T085818MSK-R04",
+  "slot": "G4-A",
+  "task_id": "P04-G4A-R04-SAFETENSORS_INDEX_TOTAL_SIZE_FAIL_CLOSED",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 - WINDOWS LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "source_change": "COMMITTED_AND_GITHUB_POSTIMAGE_READBACK_VERIFIED",
+  "release_status": "HOLD",
+  "product_task_accepted": false,
+  "source_ready": false,
+  "branch": "automation/r30/g4a/20261029T085818MSK-R04",
+  "parent_branch": "automation/r30/g4a/20261029T074510MSK-R03",
+  "parent_commit_sha": "7a2db033fade65fdbcc4a04b73d68903eee0cd51",
+  "code_head_commit_sha": "0e35a9038d123537ecfce4b9df7af8cc5b885e24",
+  "collection_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "read_before_work": true,
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "peer": "G4-B",
+    "one_writer_per_path": true
+  },
+  "rules": {
+    "original_56_copy": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "git_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16_sections_read": [
+      "33 (56/56 consolidated)",
+      "54",
+      "55",
+      "56"
+    ],
+    "note": "§54 SOURCE_ONLY overrides earlier build directives; historical 56 rules are consolidated, not proof of verbatim archaic source."
+  },
+  "historical_reconciliation": {
+    "A04": {
+      "ref": "astra/r29-a04-20261029",
+      "source_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "tests_git_blob_sha1": "197bda6b8f4fb4abb18b9ee64ccf6d210600baea"
+    },
+    "B1": {
+      "ref": "astra-b/r29-b1-20261029",
+      "source_git_blob_sha1": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+      "tests_git_blob_sha1": "1f6eaac4228cca455ae888ae26d6f146a5fc61bc"
+    },
+    "B2": {
+      "ref": "astra-b/r29-b2-20261029",
+      "source_git_blob_sha1": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "tests_git_blob_sha1": "197bda6b8f4fb4abb18b9ee64ccf6d210600baea"
+    },
+    "resolution": "Use current sequential R03 owner source as parent; historical overlap not merged or overwritten."
+  },
+  "frozen_snapshots": {
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "branches_in_index": 25,
+    "immutable_snapshot_directory_entries_read": 25,
+    "detail_root_entries_A04_B1_B2": 27,
+    "source_part_git_blob_shas": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "three_parts_consistent_in_A04_B1_B2": true,
+    "raw_archives_sha256": "NOT_VERIFIED",
+    "deep_25_snapshot_file_bodies": "NOT_VERIFIED",
+    "original_729_full_physical_hash_parity": "NOT_VERIFIED",
+    "changed": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "bdc4b6b4c3220b4b65cdb44073e3c8238878a10d",
+      "post_git_blob_sha1": "9f0d04647152dc415654eef29b937d3852b3d7a6",
+      "pre_sha256": "7add437e2833af66a2998940b9d039eb855d42308e764cbbfeb0fa517f3d50d9",
+      "post_sha256": "1f8f09a8835a714116211ac42c0a9649f3e50a5702d6c9ade78a7184369dc610",
+      "commit": "9c1063296ec84aa61f7aaefcf56095a3a1e1a9fd"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "e300017da6b76b2a76897089269792c9122b8454",
+      "post_git_blob_sha1": "5a4976392e2cdea5a2b95ff42628e0b2bd2aeaaa",
+      "pre_sha256": "fa4abde3642a79ff77e6ca193c9d9358c106c3e725f50219ac762c9cf1887505",
+      "post_sha256": "1f5716368fa74f03bc386678ed8f0bf6f805a3f808a6b67435dfd7378f760747",
+      "commits": [
+        "fd6d13a4b009a85a7f495435b3b5534164629d9a",
+        "0e35a9038d123537ecfce4b9df7af8cc5b885e24"
+      ]
+    }
+  ],
+  "code_delta": {
+    "reason": "Safetensors shard index metadata.total_size was ignored, potentially allowing apparently present/mapped per-shard SHA-256 weights despite inconsistent declared aggregate tensor bytes.",
+    "changes": [
+      "Extract each validated safetensors shard payload byte size excluding the 8-byte length prefix and JSON header; preserve full-file SHA-256 for every shard.",
+      "Check optional weight index metadata.total_size is nonnegative integer and metadata container is object before touching shard paths.",
+      "After exact weight_map tensor-name membership and SHA-256 verification, compare observed payload byte sum with declared total_size. On mismatch, HOLD and clear all partial shard evidence.",
+      "Preserve valid index without metadata.total_size and R01–R03 fail-closed behavior."
+    ],
+    "diff_verified": {
+      "base": "7a2db033fade65fdbcc4a04b73d68903eee0cd51",
+      "code_head": "0e35a9038d123537ecfce4b9df7af8cc5b885e24",
+      "ahead_by": 3,
+      "paths_exactly": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ]
+    }
+  },
+  "focused_tests": {
+    "local_command": "python /tmp/p04_g4a_r04_isolated.py && python -m py_compile /tmp/p04_g4a_r04_isolated.py",
+    "execution": "ISOLATED EXTRACTED_PYTHON_LOGIC; not full private GitHub repo module, no Windows/GPU",
+    "result": "10/10 PASS",
+    "cases": [
+      "Declared total_size matched",
+      "Nonnegative integer typed-only",
+      "Reject invalid metadata container before shard I/O",
+      "Mismatched total_size HOLD",
+      "Reject missing declared bytes",
+      "Compute full-file SHA-256 independently",
+      "Exclude safetensors header overhead from payload bytes",
+      "Omitted metadata remains compatible",
+      "Two distinct shard names and byte sizes sum exactly",
+      "Two-shard fixture controls"
+    ],
+    "repo_test_methods_added": [
+      "test_g4a_r04_declared_payload_size_valid_and_full_shard_sha",
+      "test_g4a_r04_declared_payload_size_mismatch_holds_without_partial_hashes",
+      "test_g4a_r04_invalid_index_total_size_rejected_before_weight_io",
+      "test_g4a_r04_invalid_index_metadata_container_rejected_before_weight_io",
+      "test_g4a_r04_two_shard_total_size_and_digest_contract"
+    ],
+    "first_isolated_negative": "One isolated harness assumption hardcoded 'q.weight' and rejected second valid r.weight; harness corrected and 10/10 PASS; this was not a repository failure.",
+    "remote_source_postimage_readback": true,
+    "remote_tests_postimage_readback": true,
+    "repository_module_test_run": "NOT_RUN",
+    "full_P04_tests": "NOT_RUN",
+    "Windows_native": "NOT_RUN",
+    "GPU_training": "NOT_RUN",
+    "model_license_and_dataset_rights": "NOT_ATTESTED"
+  },
+  "google_drive": {
+    "read": [
+      "NOX_GROWTH_JOURNAL_MASTER_CONTINUATION_V16_20261028_R04",
+      "NOX Group B Task 14 E06 coordinator run report",
+      "NOX Group B Task 14 E06 coordinator self-improvement",
+      "NOX C34 Error Journal",
+      "NOX Group B Task 10 P04 self-improvement",
+      "NOX FIN ZAGR V16 §33 §§54–56"
+    ],
+    "latest_shared_delta": "ASTRA-C-R30-20261029T0831MSK-03",
+    "shared_docs_modified": false,
+    "aggregation_owner": "Astra-C ONLY",
+    "receipt_for_aggregation": "R30-G4A-20261029T085818MSK-R04"
+  },
+  "self_improvement_lesson": {
+    "id": "G4A_VALIDATE_INDEX_TOTAL_SIZE_VS_ACTUAL_SHARD_PAYLOAD",
+    "prior_lesson_applied": "R03 reject invalid metadata before SHA and never leave partial shard evidence on HOLD.",
+    "failure": "Before this fix an attacker/corrupt local index could declare tensor total_size different from actual sharded safetensors payload while each file SHA/name check appeared internally consistent.",
+    "fix": "Cross-check optional metadata.total_size against sum of verified shard payload bytes; fail closed and clear partial evidence, never mark rights/revision/training verified.",
+    "verification": "10/10 isolated source logic checks; five owner-path regression methods committed, not executed as full GitHub test module.",
+    "lesson": "Distinguish complete-file SHA256 from payload-only declared tensor size, use exact-owner pre/post Git blob and byte SHA256, avoid overclaiming test coverage.",
+    "next": "Run complete tests/P04/test_model_snapshot_probe.py against this exact pinned branch in source-capable checkout; test Windows native semantics separately. Before promotion verify independent archive729 SHA and legal model/dataset licenses."
+  },
+  "scope_guards": {
+    "no_PR162": true,
+    "no_main": true,
+    "no_common_R30_write": true,
+    "no_other_owner_paths": true,
+    "no_snapshot_modification": true,
+    "no_preflight_local_gpu": true,
+    "no_EXE": true,
+    "no_NSIS": true,
+    "no_Windows_CI": true,
+    "no_GitLab_execution": true,
+    "no_final_integration": true
+  },
+  "blockers": [
+    "Only isolated source logic executed; actual full module tests NOT_RUN.",
+    "Native Windows safetensors/path and real multi-GB shard I/O NOT_RUN.",
+    "25 frozen snapshot roots indexed but physical raw archive hashes and original 729 members NOT_VERIFIED.",
+    "No license/dataset/revision/GPU hardware attestation.",
+    "E06 cross-owner source integration, E07 acceptance and Windows release NOT_RUN."
+  ],
+  "completed_source_task_count_this_run": 0,
+  "provisional_source_patch_count_this_run": 1,
+  "project_completion_percentage": "N/D",
+  "conclusion": "HOLD — source patch with exact owner Git evidence does not constitute product DONE, GPU training, release readiness or 100%."
+}
