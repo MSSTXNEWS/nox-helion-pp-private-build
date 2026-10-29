@@ -66,6 +66,11 @@ class OwnerReceiptGateR23(unittest.TestCase):
                 gate,"blob_at",side_effect=blob):
             out=gate.audit("b"*40)
             self.assertTrue(out["all_source_receipts_match"])
+            rows[gate.RECEIPTS["P01"]]["parts"][0]["git_blob_sha1"]=123
+            invalid=gate.audit("b"*40)
+            self.assertFalse(invalid["all_source_receipts_match"])
+            self.assertEqual(invalid["owners"]["P01"]["matched"],0)
+            rows[gate.RECEIPTS["P01"]]["parts"][0]["git_blob_sha1"]="a"*40
             self.assertIs(out["source_ready"],False)
             self.assertIs(out["owner_qa_accepted"],False)
             self.assertEqual(out["native_windows"],"NOT_RUN")
