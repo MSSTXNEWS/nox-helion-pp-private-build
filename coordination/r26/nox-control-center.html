@@ -109,6 +109,45 @@ body.nox-eco .hero .sun{box-shadow:0 0 3px 6px #ffd9aa2c,0 0 22px 12px #c9904f37
 @media(max-width:620px){.main{padding:16px 12px 50px}.hero{min-height:780px}.hero:before{background-position:center center;opacity:.8}.hero .hero-copy{left:5%;top:5%;width:90%;height:auto;min-height:0;padding:19px 18px;background:linear-gradient(90deg,#010305bb,transparent)}.hero-copy h2{font-size:clamp(25px,8vw,39px);margin:10px 0 8px}.hero-copy p{max-width:280px;font-size:11px}.hero-copy .status{margin-top:14px}.hero .sun{width:235px;height:235px;left:50%;top:48%}.hero .orbit-dot{left:50%;top:48%;transform:rotate(var(--rot)) translateY(-151px) rotate(calc(-1 * var(--rot)));width:34px;height:34px}.hero .nucleus{left:50%;top:48%}.hero .hero-metrics{width:90%;right:5%;bottom:7%;min-height:140px;padding:14px}.hero .eclipse-caption{display:none}.hero-metrics strong{font-size:24px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric b{font-size:27px}.top h1{font-size:27px}.manual-grid,.auto-grid{grid-template-columns:1fr}.block-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.hero .sun,.hero .sun:before,.hero .sun:after,.hero .orbit-dot{animation:none!important}.hero .orbit-dot{opacity:.76}}
 
+
+/* NOX R28 CINEMATIC MOTION LAYER — visuals only; no product/QA state mutation */
+.hero{perspective:1100px;transform-style:preserve-3d}
+.hero:before{animation:nox-parallax-glow 24s ease-in-out infinite alternate}
+.hero .eclipse{transform-style:preserve-3d}
+.hero #orbital-lights{transform-style:preserve-3d;animation:nox-constellation-tilt 32s ease-in-out infinite alternate}
+.hero .orbit-dot{transition:box-shadow .5s,filter .5s,opacity .5s}
+.hero .orbit-dot:nth-child(2n){animation-duration:19s}
+.hero .orbit-dot:nth-child(3n){animation-duration:23s}
+.hero:hover .orbit-dot{box-shadow:0 0 20px #f7ca8a88,0 0 35px #b6835766,inset 0 0 10px #000;filter:brightness(1.15)}
+.hero .sun{will-change:filter}
+.hero .sun:before{box-shadow:0 0 35px 4px #e2a66d25}
+.hero .sun:after{box-shadow:0 0 47px 7px #93d8e31b}
+.hero .eclipse:after{content:"";position:absolute;inset:4%;pointer-events:none;border:1px solid #e2b98514;border-radius:50%;transform:scaleX(.83);box-shadow:0 0 80px #d39b4a13;animation:nox-ring-drift 42s ease-in-out infinite}
+.hero .hero-copy{transition:transform .8s ease,background .8s ease}
+.hero:hover .hero-copy{transform:translate3d(0,-3px,18px)}
+.glass{transition:border-color .45s,box-shadow .45s,transform .45s}
+.manual-card:hover,.metric:hover,.auto-card:hover,.report-card:hover{transform:translateY(-3px);border-color:#e0ad796b;box-shadow:0 22px 60px #0009,0 0 28px #d2a06a1b}
+.graph-svg .node rect{transition:stroke .2s,filter .2s}
+.graph-svg .node:hover rect{filter:drop-shadow(0 0 15px #ca9b63a8)}
+.live-pulse{display:inline-flex;align-items:center;gap:7px;color:#d7bb93;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.live-pulse i{position:relative;display:inline-block;width:7px;height:7px;border-radius:50%;background:#c68c64;box-shadow:0 0 12px #d4a878}
+.live-pulse i:after{content:"";position:absolute;inset:-8px;border:1px solid #d9b88770;border-radius:50%;animation:nox-sensor-ping 3.8s ease-out infinite}
+.live-pulse[data-state="offline"] i{background:#b86f66;box-shadow:none}.live-pulse[data-state="offline"] i:after{animation:none}
+.live-pulse[data-state="online"] i{background:#8ac6aa;box-shadow:0 0 14px #75dbba}.live-pulse[data-state="online"] i:after{border-color:#9dedd0}
+.core-wave{position:absolute;left:58%;top:51%;width:400px;height:400px;border:1px solid #e3b77922;border-radius:50%;transform:translate(-50%,-50%);animation:nox-wave 14s ease-in-out infinite;pointer-events:none}
+.core-wave:nth-child(2){animation-delay:-7s;border-color:#9fdde124}
+.metric-breathe{display:inline-block;animation:nox-metric-breathe 4s ease-in-out infinite}
+@keyframes nox-parallax-glow{0%{filter:saturate(.7) brightness(.68);transform:scale(1.01)}100%{filter:saturate(.88) brightness(.76);transform:scale(1.055)}}
+@keyframes nox-constellation-tilt{0%{transform:rotate(-2deg) scale(.99)}100%{transform:rotate(2deg) scale(1.015)}}
+@keyframes nox-ring-drift{50%{transform:scaleX(.91) rotate(15deg);opacity:.55}}
+@keyframes nox-wave{0%,100%{opacity:.18;transform:translate(-50%,-50%) scale(.91)}50%{opacity:.55;transform:translate(-50%,-50%) scale(1.13)}}
+@keyframes nox-sensor-ping{0%{opacity:.8;transform:scale(.38)}90%,100%{opacity:0;transform:scale(1.6)}}
+@keyframes nox-metric-breathe{50%{filter:brightness(1.18)}}
+body.nox-eco .hero:before,body.nox-eco .hero #orbital-lights,body.nox-eco .hero .eclipse:after,body.nox-eco .core-wave,body.nox-eco .live-pulse i:after,body.nox-eco .metric-breathe{animation:none!important}
+@media(max-width:900px){.core-wave{left:62%;width:300px;height:300px}}
+@media(max-width:620px){.core-wave{left:50%;top:48%;width:220px;height:220px}}
+@media(prefers-reduced-motion:reduce){.hero:before,.hero #orbital-lights,.hero .eclipse:after,.core-wave,.live-pulse i:after,.metric-breathe{animation:none!important}.glass,.hero .hero-copy,.hero .orbit-dot{transition:none!important}}
+
 </style></head><body>
 <div class="shell">
 <aside class="side"><div class="brand"><div class="symbol" aria-hidden="true"></div><div><b>NOX HELION</b><small>CONTROL CENTER / R26</small></div></div><div class="eyebrow">NAVIGATION</div>
@@ -120,10 +159,10 @@ body.nox-eco .hero .sun{box-shadow:0 0 3px 6px #ffd9aa2c,0 0 22px 12px #c9904f37
 <div class="side-foot"><small>PINNED SOURCE HEAD</small><b id="side-head">НЕ ЗАГРУЖЕН</b><small>Изменение HEAD требует повторной проверки QA.</small></div></aside>
 <main class="main">
 <div class="top"><div><div class="eyebrow">D02 · CINEMATIC COMMAND INTERFACE</div><h1>NOX <em>HELION</em></h1><p>Живая архитектура исполнителей · исходники · независимая приёмка</p></div><div class="actions"><button class="btn" type="button" id="scene-mode" aria-pressed="false">◐ ECO</button><button class="btn" type="button" id="reload">↻ Обновить снимок</button><button class="btn" type="button" id="export">⇩ JSON-снимок</button><a class="btn gold" id="github-link" href="https://github.com" target="_blank" rel="noopener">↗ GitHub PR</a></div></div>
-<div class="notice"><strong>◉ SOURCE FIRST</strong><span id="notice-text">Загрузка контрольных данных…</span></div>
+<div class="notice"><strong>◉ SOURCE FIRST</strong><span id="notice-text">Загрузка контрольных данных…</span><span class="live-pulse" id="pulse-state" data-state="offline"><i></i><span id="pulse-label">SNAPSHOT</span></span></div>
 <section id="tab-overview">
 <div class="hero"><article class="glass hero-copy"><div><div class="eyebrow">THE LIQUID ECLIPSE · D02</div><h2>ЖИВОЕ ЯДРО.<br><span>УПРАВЛЕНИЕ</span> ВСЕЛЕННОЙ.</h2><p>Измеряем принятые функции на одном SHA, а не число запусков, коммитов или отчётов.</p></div><div class="status"><span class="dot"></span><span>ИСТОЧНИКИ · QA · FREEZE · GitLab</span></div></article>
-<div class="glass eclipse" aria-label="D02: затмение и восемь функциональных орбитальных ядер"><div class="sun" aria-hidden="true"></div><div class="nucleus">NOX<br>HELION</div><div id="orbital-lights" aria-hidden="true"></div><div class="eclipse-caption">CONSCIOUSNESS  ·  ATLAS  ·  REFLECTION  ·  NEXUS  ·  FORGE  ·  CORE  ·  VOICE  ·  PERSONA</div></div>
+<div class="glass eclipse" aria-label="D02: затмение и восемь функциональных орбитальных ядер"><div class="core-wave" aria-hidden="true"></div><div class="core-wave" aria-hidden="true"></div><div class="sun" aria-hidden="true"></div><div class="nucleus">NOX<br>HELION</div><div id="orbital-lights" aria-hidden="true"></div><div class="eclipse-caption">CONSCIOUSNESS  ·  ATLAS  ·  REFLECTION  ·  NEXUS  ·  FORGE  ·  CORE  ·  VOICE  ·  PERSONA</div></div>
 <article class="glass hero-metrics"><div><div class="eyebrow">RELEASE READINESS</div><strong>HOLD <span>· не принято</span></strong><div class="meta">Windows E07 и SOURCE_READY не подтверждены. Веса P01–P05 не подменяют реальные готовые TaskID.</div></div><div><div class="micro">HISTORICAL PREBUILD GATES</div><div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px"><b id="gate-numeric">Н/Д</b><span class="muted" id="gate-pct">исторические данные</span></div><div class="track"><span id="gate-track" style="width:0%"></span></div></div></article></div>
 <div class="metrics" id="metrics"></div>
 <div class="section-head"><div><h2>Главные ручные исполнители</h2><p>Основные продуктовые функции, интеграция и независимая проверка.</p></div><span class="chip gold" id="manual-total">—</span></div><div class="manual-grid" id="manual-grid"></div>
@@ -247,7 +286,7 @@ q("report-provenance").innerHTML=[
 renderReports();
 let liveRequest=null;
 function liveStatus(message,online){
-const el=q("live-status");if(!el)return;el.replaceChildren();
+const el=q("live-status");const sensor=q("pulse-state");if(sensor)sensor.dataset.state=online?"online":"offline";if(q("pulse-label"))q("pulse-label").textContent=online?"API ONLINE":"SNAPSHOT";if(!el)return;el.replaceChildren();
 const dot=document.createElement("span");dot.className="dot"+(online?"":" red");
 el.append(dot,document.createTextNode(message));
 }
