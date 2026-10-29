@@ -342,7 +342,9 @@ _QUEUE_STATES = frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING"
                            "CANCELLED", "FAILED", "COMPLETED"})
 _QUEUE_TRANSITIONS = {
     "QUEUED": frozenset({"QUEUED", "RUNNING", "CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED"}),
-    "RUNNING": frozenset({"RUNNING", "CANCEL_REQUESTED", "CANCELLING", "FAILED", "COMPLETED"}),
+    # Original worker can observe external token cancellation before a persisted
+    # Cancelling state. This edge still requires native cancel ACK below.
+    "RUNNING": frozenset({"RUNNING", "CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED", "COMPLETED"}),
     "CANCEL_REQUESTED": frozenset({"CANCEL_REQUESTED", "CANCELLING", "CANCELLED", "FAILED"}),
     "CANCELLING": frozenset({"CANCELLING", "CANCELLED", "FAILED"}),
     "CANCELLED": frozenset(),
