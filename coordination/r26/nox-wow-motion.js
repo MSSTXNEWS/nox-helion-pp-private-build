@@ -61,6 +61,6 @@ function pointer(e){
 }
 document.addEventListener("pointermove",pointer,{passive:true});
 document.addEventListener("pointerleave",()=>{pos.x=0;pos.y=0;pos.sx=50;pos.sy=50;if(!pointerFrame)pointerFrame=requestAnimationFrame(animatePosition);});
-function start(){createPulse();placeOrbs();setConnection({online:false});const hero=document.querySelector(".hero");if(hero)hero.classList.add("nox-scanning");}
+function start(){createPulse();placeOrbs();setConnection({online:false});const hero=document.querySelector(".hero");if(hero)hero.classList.add("nox-scanning");const status=document.getElementById("live-status");if(status){const sync=()=>{const text=status.textContent||"";if(text.startsWith("API отвечает"))setConnection({online:true,checkedAt:Date.now()});else if(text.includes("Проверяю"))setConnection({checking:true});else setConnection({online:false});};const watch=new MutationObserver(sync);watch.observe(status,{childList:true,subtree:true,characterData:true});sync();}}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
