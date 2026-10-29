@@ -1,0 +1,15 @@
+{
+  "run_id": "ASTRA-B-R29-20261029-TURBO5-B2",
+  "worker": "B2",
+  "task_id": "P04-GPU-IDENTITY-VRAM-CROSSCHECK",
+  "source_commit": "4b2ce00b40b5b7c90f84b172a89dbcf498039b53",
+  "source_only": true,
+  "actual_subagent_id": null,
+  "change": "Compare CUDA-reported memory to selected UUID nvidia-smi capacity",
+  "test": "FOCUSED_SOURCE_ASSERT_PASS",
+  "native_test": "NOT_RUN",
+  "source_readback": "PASS",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "lesson": "One visible CUDA device is not enough without independent hardware identity checks.",
+  "complete_taskid": "N_D"
+}
