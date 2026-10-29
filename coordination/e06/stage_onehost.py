@@ -44,6 +44,7 @@ def _prepare(path, content):
     """Prepare complete bytes beside their destination; never truncate a live file."""
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".e06-", dir=path.parent)
     temporary = Path(name)
+    identity = (os.fstat(fd).st_dev, os.fstat(fd).st_ino)
     try:
         with os.fdopen(fd, "wb") as target:
             if target.write(content) != len(content):
@@ -54,7 +55,11 @@ def _prepare(path, content):
             raise OSError("OWNER6_TEMP_READBACK_HOLD")
         return temporary
     except BaseException:
-        temporary.unlink(missing_ok=True)
+        try:
+            if _identity(temporary) == identity:
+                temporary.unlink()
+        except FileNotFoundError:
+            pass
         raise
 
 
