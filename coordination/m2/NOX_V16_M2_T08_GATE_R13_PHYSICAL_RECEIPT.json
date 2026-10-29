@@ -1,0 +1,68 @@
+{
+  "schema": "NOX_V16_MANUAL_M2_T08_EXACT_GATE_SOURCE_R13",
+  "run_id": "NOX-V16-M2-20261029-R13-REAL-T08-GATE",
+  "role": "manual M2 T08 independently verify P0/P1 and T09 handoff",
+  "incident_id": "ERR-T08-20261029-GIT-EVIDENCE-FORGED-DONE",
+  "existing_parent_error_id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+  "canonical_source_observed": {
+    "head": "a10e6820d374a049f51b5b80f41e2de33250b812",
+    "tree": "d161e787bd1b216b018cba94418f8a43a136735e",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "owner": "T06 only",
+    "status": "NOT_ACCEPTED_8_OF_8"
+  },
+  "error_register": {
+    "sha": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "entries_read": 11,
+    "existing_incident_status": "OPEN"
+  },
+  "megablock": {
+    "type": "PHYSICAL_EXISTING_GATE_REPLACEMENT_IN_OWNED_M2_PROPOSAL_BRANCH_NOT_CANONICAL",
+    "target_existing_path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+    "previous_source_git_blob": "56806fb744694b2dd146db88229597722953ddd9",
+    "new_source_git_blob": "a7757620bbe024fdfb388d0cae81f72707d12ffa",
+    "target_existing_test": "coordination/automation/t08/test_t08_autofix_closeout_gate.py",
+    "previous_test_git_blob": "b9503bb02ed44d95daab902c1b382b5f4a460967",
+    "new_test_git_blob": "100d3faeb3deae639a755291517ef62a75851251",
+    "issue": "Original gate accepted SHA-shaped evidence and tests falsely expected 3/3 DONE with synthetic Git SHAs; unsafe T06 import from dirty working tree",
+    "fix": "Require Git object readback, official committed T06 guard and manifest, same-head P0/P1 evidence + T02 Docs Git receipt, reject dirty/poisoned T06 owner guard, preserve no T10 prereq"
+  },
+  "verification": {
+    "one_focused_local_python_prototype": "5/5 PASS source-only temporary Git objects, prototype source variant not same bytes as new Git file",
+    "exact_new_Git_source_static_contract": "13/13 PASS, before create_blob",
+    "new_Git_Python_test_cases": "AUTHORED_NOT_EXECUTED",
+    "windows_native": "NOT_RUN",
+    "owner_8of8": "NOT_PROVEN",
+    "git_readback": "PENDING_CAS"
+  },
+  "self_improvement": {
+    "lessons": [
+      "Do not produce one more duplicate proposed gate: replace existing T08 path in isolated M2 branch",
+      "Test must reject synthetic SHA-shaped object IDs not mark DONE",
+      "Pin executed T06 guard bytes to Git HEAD; no mutable worktree imports",
+      "One branch commit with SHA verified readback; T06 only canonical owner source PR writer"
+    ],
+    "report_only_fix": false
+  },
+  "progress": {
+    "T08": "1/3",
+    "T09": "1/6",
+    "m2": "2/9",
+    "percentage": 22.22,
+    "delta_pp": 0,
+    "remaining": 7
+  },
+  "handoff": {
+    "T06": "Source-owner-only review and CAS integrate exact M2 T08 paths to PR162; run actual focused Python suite on canonical accepted head",
+    "T02": "Sole writer; add novel incident lesson to shared journal with CAS/readback",
+    "T09": "Same-head freeze only after T06 accepted 8/8 and T08 independent P0/P1 disposition"
+  },
+  "safety": {
+    "no_exe": true,
+    "no_nsis": true,
+    "no_ci": true,
+    "no_e07": true,
+    "preserve_zip729": true,
+    "STOP_ACL_consent_retained": true
+  }
+}
