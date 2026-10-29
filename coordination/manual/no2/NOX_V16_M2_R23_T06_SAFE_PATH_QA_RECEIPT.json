@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_V16_M2_R23_INDEPENDENT_OWNER_RECEIPT_PATH_SECURITY_QA",
+  "run_id": "NOX-V16-M2-20261029-R23-T06-SAFE-PATH-EXACT",
+  "role": "Manual #2 independent SOURCE QA",
+  "existing_task_id": "ERR-SRC-004",
+  "source_head": "d0d941864a02110583fba23fac2e0c20c9e4a639",
+  "source_path": "coordination/e06/t06_owner_receipt_same_head_gate_r23.py",
+  "source_pre_blob": "2c3144507280b12e4584539c3e518e0fb7f7ffdd",
+  "related_owner_test_blob": "7f2870fdfe2553b1042eb06a73718dbb7cd94a06",
+  "proposed_post_blob": "da993ba1c9bb006dd9ac195d6b4a740819ce855b",
+  "r23_policy_blob": "ed7bf81059a1807eaaab82547d64d82e1549bd64",
+  "r20_role_blob": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+  "archived_prompt_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+  "canon_revision": "63",
+  "Master_revision": "343",
+  "E06_revision": "501",
+  "Lessons_revision": "393",
+  "C34_revision": "106",
+  "active_register_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "A_read": "PASS",
+  "B_physical": {
+    "exact_source_sha_verified": "2c3144507280b12e4584539c3e518e0fb7f7ffdd",
+    "exact_existing_test_sha_verified": "7f2870fdfe2553b1042eb06a73718dbb7cd94a06",
+    "baseline_unittest": "3/3 PASS from exact Git byte source",
+    "independent_negative_red": "7 unsafe path subcases FAILED on current exact Git source",
+    "candidate_green": "5/5 PASS (3 baseline + 2 independent), valid paths preserved",
+    "real_git_fixture": "P01–P05 pinned source match PASS; stale P05 source FAIL CLOSED; foreign Windows ADS owner path RED on canonical/GREEN candidate",
+    "native_windows": "NOT_RUN"
+  },
+  "C_save": "QA personal branch Git readback required; T02 only shared owner",
+  "D_lessons": [
+    "source-path contains printable control/Unicode and Windows alternate stream separators not excluded",
+    "use Python str.isprintable and colon prohibition in existing function; no new dependency",
+    "current production HEAD may move, owner T06 must CAS exact PRE, T08 re-verify final",
+    "do not reapply already-integrated bd61 path fix or P04 snapshot code"
+  ],
+  "owner_next": "T06/№1 sole PR162 source writer: apply minimal two-term safe_path hardening to live source, run exact P01–P05 owner tests & negative paths, CAS/readback; T08 independent source+Windows QA; T02 journal append existing ERR-SRC-004",
+  "state": "QA_FAIL_CURRENT_SOURCE__PROPOSED_PATCH_GREEN__NOT_INTEGRATED",
+  "new_product_done": 0,
+  "NoLoss": [
+    "729 originals",
+    "SourceLock",
+    "STOP",
+    "ACL",
+    "native consent",
+    "P01-P05",
+    "D02/WOW200",
+    "no EXE/NSIS/CI/E07"
+  ]
+}
