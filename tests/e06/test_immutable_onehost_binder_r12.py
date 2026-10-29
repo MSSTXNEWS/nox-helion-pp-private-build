@@ -98,6 +98,35 @@ class FrozenHostBinder(unittest.TestCase):
             self.host.routes["models.catalog"]["owner"]=2
         self.assertIs(self.host.routes,self.before)
 
+    def test_p04_readonly_owner_receipt_and_native_readiness(self):
+        class ReadOnlyP04:
+            def native_permission(self, session, route): return False
+            def review_dataset(self, session): return {"status":"TEST_ONLY"}
+            def inspect_checkpoint(self, session): return {"status":"TEST_ONLY"}
+        def preimage(source, receipts):
+            return source=="a"*64 and receipts=={
+                "P02":"b"*64, "P03":"c"*64, "P05":"d"*64, "P04":"e"*64}
+        kwargs=dict(existing_p02=self.p02, existing_p03=self.p03,
+                    e05=SourceOnlyE05(), mobile=None, existing_p02_voice=None,
+                    source_lock_sha256="a"*64, verify_original_preimages=preimage,
+                    existing_host_mutation_lock=self.lock,
+                    p04_readonly=ReadOnlyP04(), p04_ready=lambda name:False)
+        with self.assertRaisesRegex(g2.G2Hold, "P04"):
+            g2.G2OneHostBinder(self.host, pack.BoundPort,
+                owner_receipts_sha256={"P02":"b"*64,"P03":"c"*64,"P05":"d"*64},
+                **kwargs).bind()
+        self.assertFalse(self.host.ports)
+        bound=g2.G2OneHostBinder(self.host, pack.BoundPort,
+            owner_receipts_sha256={
+                "P02":"b"*64,"P03":"c"*64,"P05":"d"*64,"P04":"e"*64},
+            **kwargs).bind()
+        self.assertTrue({"datasets.review","training.checkpoints"}.issubset(bound))
+        for route in ("datasets.review","training.checkpoints"):
+            self.assertEqual(self.host.ports[route].owner,4)
+            self.assertEqual(self.host.ports[route].evidence_id,"e"*64)
+            self.assertFalse(self.host.ports[route].available())
+        self.assertIs(self.host.routes,self.before)
+
     def test_source_lock_missing_prevents_any_native_mutation(self):
         with self.assertRaises(g2.G2Hold):
             self.bind(seal="invalid")

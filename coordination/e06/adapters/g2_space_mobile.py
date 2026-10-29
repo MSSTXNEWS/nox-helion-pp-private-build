@@ -432,7 +432,9 @@ class G2OneHostBinder:
                  verify_original_preimages: Callable,
                  existing_host_mutation_lock: object,
                  owner2_additional_ports: object | None = None,
-                 native_scope_from_session: Callable | None = None):
+                 native_scope_from_session: Callable | None = None,
+                 p04_readonly: object | None = None,
+                 p04_ready: Callable | None = None):
         self.host, self.port_type = host, bound_port_type
         self.p02, self.p03, self.e05, self.mobile, self.voice = (
             existing_p02, existing_p03, e05, mobile, existing_p02_voice)
@@ -447,6 +449,9 @@ class G2OneHostBinder:
             raise G2Hold("P02 additional ports require a matching trusted native scope resolver")
         self.extra_p02_ports = owner2_additional_ports
         self.native_scope_from_session = native_scope_from_session
+        if (p04_readonly is None) != (p04_ready is None):
+            raise G2Hold("P04_OWNER_READY_PAIR_REQUIRED")
+        self.p04_readonly, self.p04_ready = p04_readonly, p04_ready
 
     def _receipt(self, owner: str) -> str:
         digest = self.receipts.get(owner)
@@ -462,6 +467,10 @@ class G2OneHostBinder:
             raise G2Hold("Current original app SourceLock / host serial lock missing")
         for owner in ("P02", "P03", "P05"):
             self._receipt(owner)
+        if self.p04_readonly is not None:
+            self._receipt("P04")
+            if not callable(self.p04_ready) or not all(callable(getattr(self.p04_readonly, n, None)) for n in ("review_dataset", "inspect_checkpoint", "native_permission")):
+                raise G2Hold("P04_READONLY_OWNER_CALLBACKS_REQUIRED")
         if not isinstance(getattr(self.host, "routes", None), Mapping) or not isinstance(
                 getattr(self.host, "ports", None), dict):
             raise G2Hold("Existing PACK01 one-host route registry is mandatory")
@@ -524,9 +533,10 @@ class G2OneHostBinder:
             if mobile_routes:
                 # Owner 6 cannot borrow P02's receipt to publish a mobile port.
                 self._receipt("E06")
-            intended = set(e05_routes) | set(voice_routes) | mobile_routes
+            p04_methods = {"datasets.review":"review_dataset", "training.checkpoints":"inspect_checkpoint"} if self.p04_readonly is not None else {}
+            intended = set(e05_routes) | set(voice_routes) | mobile_routes | set(p04_methods)
             for route in intended:
-                owner = 5 if route in e05_routes else 6 if route in mobile_routes else 2
+                owner = 4 if route in p04_methods else 5 if route in e05_routes else 6 if route in mobile_routes else 2
                 descriptor = frozen_routes.get(route)
                 if (route in before or type(descriptor) is not dict
                         or type(descriptor.get("owner")) is not int
@@ -572,6 +582,20 @@ class G2OneHostBinder:
                         claimed.add(route)
                 if set(p2) & set(p3) or claimed & intended:
                     raise G2Hold("Cross-owner route collision on one host")
+                for route, method in sorted(p04_methods.items()):
+                    def p04_call(session, args, name=route, fn=getattr(self.p04_readonly, method)):
+                        if type(args) is not dict or args or self.p04_readonly.native_permission(session, name) is not True:
+                            raise G2Denied("P04_NATIVE_READONLY_ACCESS_DENIED")
+                        result = fn(session)
+                        if self.p04_readonly.native_permission(session, name) is not True:
+                            raise G2Denied("P04_NATIVE_PERMISSION_REVOKED")
+                        return result
+                    def p04_available(name=route):
+                        try:
+                            return self.p04_ready(name) is True
+                        except Exception:
+                            return False
+                    self.host.bind(route, self.port_type(p04_call, p04_available, self._receipt("P04"), 4))
                 for route in sorted(e05_routes):
                     self.host.bind(route, self.port_type(
                         lambda s, a, r=route: self.e05.read(s, r, a),
