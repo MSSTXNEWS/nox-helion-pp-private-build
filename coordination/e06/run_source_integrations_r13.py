@@ -97,6 +97,7 @@ def main(*, closeout_receipt: Path | None = None)->int:
             "P02":snapshot_owner(P02,fixtures/"P02"),
             "P03":snapshot_owner(P03,fixtures/"P03"),
             "PACK01":snapshot_owner(PACK,fixtures/"PACK01"),
+            "HOST50":snapshot_owner(HOST50_TESTS,fixtures/"HOST50"),
             "G2_ADAPTERS":snapshot_owner(G2_ADAPTERS,fixtures/"G2"),
             "P01_INSTALLER":snapshot_owner(P01_INSTALLER,fixtures/"P01Installer"),
         }
@@ -114,7 +115,8 @@ def main(*, closeout_receipt: Path | None = None)->int:
         for label,folder,pattern in SUITES:
             # Owner tests must import the SHA-verified copies, not mutable live paths.
             source_folder = (fixtures/"P02" if folder == P02 else
-                             fixtures/"P03" if folder == P03 else folder)
+                             fixtures/"P03" if folder == P03 else
+                             fixtures/"HOST50" if folder == HOST50_TESTS else folder)
             matches=list(source_folder.glob(pattern)) if "*" in pattern else [source_folder/pattern]
             if not matches or any(not match.is_file() or match.is_symlink() for match in matches):
                 print("HOLD: SOURCE_TEST_MISSING",label,pattern,flush=True)
