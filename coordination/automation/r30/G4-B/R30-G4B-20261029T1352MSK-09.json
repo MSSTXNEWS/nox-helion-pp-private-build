@@ -1,0 +1,128 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V9",
+  "run_id": "R30-G4B-20261029T1352MSK-09",
+  "slot": "G4-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "G4B-R30-P04-CUDA-ONE-SHOT-CHILD-PROBE-R09",
+  "status": "SOURCE_GIT_READBACK_PASS_EXTRACTED_HELPER_7_7_FULL_MODULE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "branch": "automation/r30/g4b/R30-G4B-20261029T1352MSK-09",
+  "pre_commit": "a641a4f496c048eeacdf4249c9f1a1bb7e6effbd",
+  "source_commits": [
+    "c9fae46ec66fb637a5d7fbbc5099376c5b53a7ac",
+    "39e21fea9308acd701ee5e4f7808ebed7be18a66"
+  ],
+  "test_commit": "d73347e7e81e73b078ca313bfbe90b5426fc2bf2",
+  "read_inputs": {
+    "owner_lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "consolidated_rules_read": 56
+    },
+    "spec": "Google Drive V16 ID 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§33,54-56",
+    "error_journal": "Google Drive 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 (Astra-C R08 13:30 MSK)",
+    "historical_c34": "Google Drive 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "e06_report": "Google Drive 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 (R08)",
+    "e06_lessons": "Google Drive 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ (G4-B R08 parent CUDA context lesson)",
+    "previous_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T1252MSK-08.json",
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "historic_P04_preflight_overlaps": 3
+    },
+    "snapshots": {
+      "indexed": 25,
+      "github_root_directories_observed": 25,
+      "all_blob_bodies_rehashed": false,
+      "originals_untouched": true
+    }
+  },
+  "cause": "R08 restores CUDA_VISIBLE_DEVICES and CUDA_DEVICE_ORDER, but in-process import and cuda.is_available/device_count can leave a process-global PyTorch CUDA context bound to a retired GPU mask. This may corrupt later loader tasks even though the environment is restored.",
+  "fix": "Replace inspect() in-process CUDA probe with isolated short-lived Python -I -c child, copied UUID-only CUDA environment, strict child JSON schema, no shell, 20 s deadline, canonical GPU UUID, parent mask recheck; no parent CUDA import from inspect(). Retain existing non-CUDA PyPA/wheel/VRAM/thermal guards. Fix Python invalid-escape warning by raw child literal. Legacy helper retained unchanged, no longer invoked by inspect.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "blob_pre": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+      "sha256_pre": "68f57f0a3f23e6f065601455aa4dff90712fa7a02e10b24a4379fe214eb4baf9",
+      "blob_post": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+      "sha256_post": "5ec61594bda75f63dcd298fa38f41095127cdb75e9d6c5324c4098ae8495a17a"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "blob_pre": "7a1e1b968c9998840e24ffd8890050d4c9c18b7a",
+      "sha256_pre": "9f50e3ae567853c31ddd52c20306906229709410cc3724406907ed33f21c6001",
+      "blob_post": "6ad08fe51cc20a5bcec186e4473cc9cb5653610f",
+      "sha256_post": "0d67879af66f7ed36198dada7ceb36cf00b36de526eb13e0a4e129a91afac398"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "PR162_main_shared_R30_untouched": true,
+    "drive_central_writer": "Astra-C only"
+  },
+  "git_compare_pre_receipt": {
+    "base": "a641a4f496c048eeacdf4249c9f1a1bb7e6effbd",
+    "ahead_by": 3,
+    "behind_by": 0,
+    "total_commits": 3,
+    "files_modified": 2,
+    "files_deleted": 0
+  },
+  "tests": {
+    "isolated_command": "python -W error::SyntaxWarning -m py_compile /tmp/g4b_r09_cuda_isolated.py && python -W error::SyntaxWarning /tmp/g4b_r09_cuda_isolated.py",
+    "isolated_result": "PASS 7/7 Python unittest cases on manually extracted CUDA child/launcher code; child code compiles, no real torch import or GPU launched",
+    "owner_regressions_added": 3,
+    "previous_owner_mock_tests_adjusted": 4,
+    "saved_owner_test_module": "22 test methods, complete test module NOT_RUN; new regressions saved, not fully executed",
+    "full_owner_module": "NOT_RUN (private repository cannot be checked out in isolated local container; direct GitHub connector source checked)",
+    "github_source_and_test_blob_readback": "2/2 PASS",
+    "real_windows_cuda": "NOT_RUN",
+    "real_gpu": "NOT_MEASURED",
+    "LoRA_QLoRA": "NOT_RUN",
+    "PyPA_full_wheel_hash_lock": "NOT_VERIFIED"
+  },
+  "self_improvement": {
+    "lesson_id": "G4B_R09_CUDA_CHILD_PROCESS_ISOLATION",
+    "observed_error": "Environment restoration alone does not unload CUDA state initialized by torch. Additional extracted Python check exposed non-raw child source regex SyntaxWarning.",
+    "applied_fix": "Move CUDA probe to one-shot isolated child with env copy, strict bounded JSON/timeout response; use raw child string; add three new saved regression methods; distinguish extracted 7/7 from full test suite.",
+    "remaining_limitation": "Process-wide inherited environment may still race with other threads during copy; child process cannot certify actual long-running training, future physical CUDA affinity, thermal safety, exact wheel files or privileges."
+  },
+  "holds": [
+    "Full existing P04 test module NOT_RUN",
+    "Actual Windows CUDA child execution NOT_RUN",
+    "PyPA compatible installed root tags do not verify exact wheel SHA/transitive lock",
+    "Physical GPU UUID/VRAM/temperature evidence unavailable here",
+    "25 snapshot directory roots observed; complete body SHA256 not rehashed",
+    "729 original archive SHA256 physically unverified",
+    "SOURCE_CODE_COMPLETE, E06 and RELEASE HOLD"
+  ],
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_run": true,
+  "no_final_integration": true,
+  "no_training": true
+}
