@@ -1,0 +1,40 @@
+{
+  "runId": "NOX-V16-ASSEMBLY-B-20261029T165826MSK-R07",
+  "role": "ASSEMBLY-B",
+  "project": "NOX EXPRESS INTEGRATOR V16 loader-installer SOURCE ONLY",
+  "status": "HOLD",
+  "progress": "0/4 -> 0/4, delta 0",
+  "ownerLock": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+  "exclusiveInstallerOwner": "G1-A",
+  "t03": "DONE 5/5 unchanged",
+  "t06Head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "t06Staging": "PR214 draft, 4927fa8e96fb36f9c72df739a636f96dff438753",
+  "pre": [
+    "87d901c3846359a91be3e8288f24302cc7060257",
+    "6c178c04957d7397c0c081e3b123940637abc6e9",
+    "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+  ],
+  "candidate": [
+    "969f8c11eaca20c69e9610422731862c7bd3ed62",
+    "e448f8266ba15e809c13bff669924fa825fd4bc1",
+    "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+  ],
+  "fileOrder": [
+    "NOX-HELION-Setup.nsi",
+    "Verify-Payload.ps1",
+    "Remove-InstalledPayload.ps1"
+  ],
+  "ownerCandidateRef": "automation/r30/g1a/R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+  "t04": "82c1b6c81e90a48eb5cf38fc96c8fe94e54978a6; 17 SKIP, 17 OWNER_HOLD; NSIS OWNER_HOLD",
+  "test": "existing test_G1-A_activation_attestation_r30_20261029.cjs e6b9813dbd22b00957add869e58c7eba6bea39d2 V8/mock: owner 17/17 PASS, T06 base RED; no NSIS/Windows/CI",
+  "blocker": "B not Installer owner; no #1 CAS approval; owner patch incremental NSIS PRE c94568922e98fd9fbf20eb47e8bc62b0f957d183 differs from T06 PRE; no safe write",
+  "handoff": "G1-A and T06 owner #1: review combined three-file patch against exact PRE, preserve rollback, no recursive user-data removal, authorize CAS, test, readback; no Preflight edits.",
+  "lesson": "Owner regression green != T06 source admission: compare exact baseline red and post green before handoff.",
+  "changes": "One isolated receipt only; zero product source edits; T02 alone writes shared Google Docs.",
+  "planMsk": "16:45",
+  "startMsk": "16:58:26",
+  "receiptTimeUtc": "2026-10-29T14:03:26.299Z",
+  "sourceReady": "HOLD",
+  "build": "NOT_RUN",
+  "e07": "NOT_RUN"
+}
