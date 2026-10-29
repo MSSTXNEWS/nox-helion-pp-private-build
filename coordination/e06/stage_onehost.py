@@ -17,8 +17,17 @@ def digest(b: bytes) -> str:
 def digest_file(path: Path) -> str:
     hasher = hashlib.sha256()
     with path.open("rb") as source:
+        first = os.fstat(source.fileno())
+        if not stat.S_ISREG(first.st_mode):
+            raise RuntimeError("ORIGINAL_EXE_NOT_REGULAR")
         for block in iter(lambda: source.read(1024 * 1024), b""):
             hasher.update(block)
+        last = os.fstat(source.fileno())
+    def stamp(s):
+        return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+    if (stamp(first) != stamp(last) or not path.is_file() or
+            stamp(path.stat()) != stamp(first)):
+        raise RuntimeError("ORIGINAL_EXE_CHANGED_DURING_HASH")
     return hasher.hexdigest()
 
 def trusted_path(value):
