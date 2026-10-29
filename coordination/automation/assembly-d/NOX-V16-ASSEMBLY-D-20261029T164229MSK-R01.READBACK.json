@@ -1,0 +1,31 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_ASSEMBLY_D_GIT_READBACK_V1",
+  "run_id": "NOX-V16-ASSEMBLY-D-20261029T164229MSK-R01",
+  "initial_manifest_commit_sha1": "f37790f245e77ad3b72becdcc3312b886ad16fba",
+  "initial_manifest_git_blob_sha1": "358dc30f5216aa4c1cb309e61e6007e0c912bb86",
+  "branch": "automation/v16/assembly-d/NOX-V16-ASSEMBLY-D-20261029T164229MSK-R01",
+  "parent_original_pr162_sha1": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "manifest_file_readback": "PASS",
+  "git_compare_initial": "ahead 1 behind 0; only immutable manifest JSON added",
+  "git_commit_authentication": {
+    "git_sha1_verified_readback": true,
+    "cryptographic_signature_verified": false,
+    "github_reason": "unsigned",
+    "owner1_approval": false,
+    "t06_signature": false
+  },
+  "scope_complete": {
+    "p04_disposition": true,
+    "p05_disposition": true,
+    "signed_t06_handoff": false
+  },
+  "new_role_progress": {
+    "accepted_criteria": 2,
+    "total_criteria": 3,
+    "percent": 66.6667,
+    "product_code_accepted": 0
+  },
+  "status": "HOLD_SIGNED_HANDOFF_OWNER1_APPROVAL",
+  "lesson": "A Git commit SHA and readback are integrity witnesses, NOT a verified cryptographic signature or owner approval. Do not call an unsigned handoff signed.",
+  "no_product_changes": true
+}
