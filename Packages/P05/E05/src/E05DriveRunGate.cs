@@ -51,6 +51,8 @@ public static class E05DriveRunGate
                 string.IsNullOrWhiteSpace(receipt.RevisionBefore) ||
                 (receipt.Status == "READBACK_PASS" &&
                  receipt.RevisionBefore == receipt.RevisionAfter) ||
+                (receipt.Status == "ALREADY_PRESENT" &&
+                 receipt.RevisionBefore != receipt.RevisionAfter) ||
                 receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
                 string.IsNullOrWhiteSpace(receipt.RevisionAfter))
                 return new(runId, "HOLD_WRITE_OR_READBACK", receipts);
