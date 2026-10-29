@@ -45,20 +45,20 @@ check('after-activation verification linked to recovery',
   src.includes('Goto InstallPostActivationRecovery') && src.includes('InstallRecoveryHold:'));
 check('preserves new and previous apps', src.includes('Rename "$INSTDIR" "$StageDir"') &&
   src.includes('Rename "$BackupDir" "$INSTDIR"'));
-check('no recursive removal of user files', !/RMDir\\s+\\/r\\b/i.test(src) &&
-  !/Remove-Item\\s+-Recurse/.test(src));
-check('success bypasses failure labels', src.includes('Goto FinishInstall\\n  InstallUninstallerPreparationFailed:'));
+check('no recursive removal of user files', !/RMDir\s+\/r\b/i.test(src) &&
+  !/Remove-Item\s+-Recurse/.test(src));
+check('success bypasses failure labels', src.includes('Goto FinishInstall\n  InstallUninstallerPreparationFailed:'));
 check('both trusted hash checks same source',
   src.split(trust).length - 1 === 2);
 check('NSIS conditional macros balanced',
-  (src.match(/\\$\\{If\\}/g) || []).length === (src.match(/\\$\\{EndIf\\}/g) || []).length);
+  (src.match(/\$\{If\}/g) || []).length === (src.match(/\$\{EndIf\}/g) || []).length);
 const negative = [
   ['lost live SHA attestation', s => s.replace('-Root "$INSTDIR" -Manifest "$INSTDIR\\payload.sha256.json" -AllowInstalledMetadata ' + trust,
     '-Root "$INSTDIR" -Manifest "$INSTDIR\\payload.sha256.json" -AllowInstalledMetadata')],
   ['lost staged source attestation', s => s.replace('-Root "$StageDir" -Manifest "$StageDir\\payload.sha256.json" -AllowInstalledMetadata ' + trust,
     '-Root "$StageDir" -Manifest "$StageDir\\payload.sha256.json" -AllowInstalledMetadata')],
-  ['unverified registry published first', s => s.replace('  ; Registry/shortcuts only after activation and exact live attestation.',
-    '  WriteRegStr HKCU "TEST" "TEST" "UNVERIFIED"\\n  ; Registry/shortcuts only after activation and exact live attestation.')],
+  ['unverified registry published first', s => s.replace('  ; Re-hash the live activated directory BEFORE changing the registry.',
+    '  WriteRegStr HKCU "TEST" "TEST" "UNVERIFIED"\n  ; Re-hash the live activated directory BEFORE changing the registry.')],
   ['no failure recovery', s => s.replace('Goto InstallPostActivationRecovery', 'Goto FinishInstall')],
   ['late overwrite of uninstaller', s => s.replace('  CreateDirectory "$SMPROGRAMS\\NOX HELION"',
     '  WriteUninstaller "$INSTDIR\\Uninstall.exe"\\n  CreateDirectory "$SMPROGRAMS\\NOX HELION"')]
