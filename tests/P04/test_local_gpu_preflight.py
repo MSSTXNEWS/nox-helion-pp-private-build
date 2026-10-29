@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+from packaging.tags import Tag
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2] / "Packages" / "P04"
@@ -22,12 +23,24 @@ class HardwarePreflightContracts(unittest.TestCase):
     def setUp(self):
         # Synthetic universal WHEEL metadata tests the PyPA contract parser,
         # not target Windows CUDA binary compatibility or original wheel SHA.
-        installed = SimpleNamespace(read_text=lambda name: "Wheel-Version: 1.0\nTag: py3-none-any\n")
+        # Simulate target Windows CPython wheel tags explicitly. Mocking only
+        # platform.system() cannot alter packaging.tags.sys_tags() on Linux.
+        self._fixture_distribution = lambda package: SimpleNamespace(
+            read_text=lambda _: "Wheel-Version: 1.0\nTag: " + (
+                "cp311-cp311-win_amd64" if package == "torch" else
+                "py3-none-win_amd64" if package == "bitsandbytes" else
+                "py3-none-any") + "\n"
+        )
         for name, replacement in (("version", VERSIONS.__getitem__),
-                                  ("distribution", lambda _: installed)):
+                                  ("distribution", self._fixture_distribution)):
             patcher = patch.object(probe.metadata, name, side_effect=replacement)
             patcher.start()
             self.addCleanup(patcher.stop)
+        tags = [Tag("cp311", "cp311", "win_amd64"),
+                Tag("py3", "none", "win_amd64"), Tag("py3", "none", "any")]
+        patcher = patch("packaging.tags.sys_tags", return_value=tags)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_non_windows_is_hold_without_running_gpu(self):
         with patch.object(probe.platform, "system", return_value="Linux"), patch.object(
@@ -111,6 +124,22 @@ class HardwarePreflightContracts(unittest.TestCase):
             result = probe.inspect("BALANCED", 0)
         self.assertIn("WHEEL_ABI_TAG_MISMATCH:torch", result["errors"])
         self.assertEqual(result["status"], "HOLD")
+
+    def test_g4b_gpu_native_dependencies_reject_universal_only_metadata(self):
+        for root in ("torch", "bitsandbytes"):
+            with self.subTest(root=root):
+                def dist_for(name):
+                    if name == root:
+                        return SimpleNamespace(read_text=lambda _: "Wheel-Version: 1.0\nTag: py3-none-any\n")
+                    return self._fixture_distribution(name)
+                with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+                    probe.metadata, "distribution", side_effect=dist_for
+                ), patch.object(probe.train_qlora, "nvidia_smi",
+                                side_effect=AssertionError("native ABI HOLD before vendor")):
+                    result = probe.inspect("BALANCED", 0)
+                self.assertIn("GPU_NATIVE_WIN_AMD64_WHEEL_REQUIRED:" + root, result["errors"])
+                self.assertEqual(result["status"], "HOLD")
+                self.assertFalse(result["runtime_training_verified"])
 
     def test_g4b_missing_or_ambiguous_wheel_metadata_blocks_telemetry(self):
         for text in (None, "Wheel-Version: 1.0\nWheel-Version: 1.0\nTag: py3-none-any\n",
