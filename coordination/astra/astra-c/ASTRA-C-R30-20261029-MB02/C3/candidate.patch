@@ -1,0 +1,20 @@
+--- a/Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs
++++ b/Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs
+@@ -30,7 +30,7 @@
+         var terminalSuccess = false;
+         await foreach (var update in ReadEventsAsync(response, ct))
+         {
+-            if (update.Error is not null) throw new InvalidOperationException(update.Error);
++            if (update.Error is not null) throw new InvalidOperationException("OLLAMA_STREAM_PROVIDER_ERROR");
+             if (string.Equals(update.Status, "success", StringComparison.OrdinalIgnoreCase)) terminalSuccess = true;
+             if (update.Digest is not null && update.Total is > 0)
+             {
+@@ -117,7 +117,7 @@
+         var createSuccess = false;
+         await foreach (var update in ReadEventsAsync(create, ct))
+         {
+-            if (update.Error is not null) throw new InvalidOperationException(update.Error);
++            if (update.Error is not null) throw new InvalidOperationException("OLLAMA_STREAM_PROVIDER_ERROR");
+             if (string.Equals(update.Status, "success", StringComparison.OrdinalIgnoreCase)) createSuccess = true;
+             await progress(update, ct);
+         }
