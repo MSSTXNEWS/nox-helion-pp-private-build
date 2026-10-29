@@ -1,0 +1,31 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_A_R13_SCOPED_DELTA",
+  "runId": "ASSEMBLY-A-20261029T1740MSK-R13",
+  "baseCommit": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+  "scope": "P01",
+  "owner": [
+    "G1-B",
+    "G7-A",
+    "T06/#1"
+  ],
+  "decision": "NOOP_KEEP_STRONGER_CURRENT_WOW_AND_ALREADY_STAGED_C09_BRIDGE",
+  "paths": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "postGitBlob": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "status": "EXACT_EXISTING_BRIDGE_NO_DUPLICATE"
+    },
+    {
+      "path": "integrations/wow200/runtime/loader.mjs",
+      "preGitBlob": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+      "postGitBlob": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+      "status": "KEEP_CANONICAL_REJECT_ARCHIVED_R12_POST_1fa3adcfd7aa6c1305e9406402a40e3236bd55ca"
+    }
+  ],
+  "reason": "Archived R12 WOW donor removes stricter safeMode enum fallback and media-query addListener legacy fallback; current loader enforces OS Reduced Motion. Do not regress it.",
+  "mainWindowFilesInGitTree": [],
+  "hostBinding": "HOLD: pinned tree has original C09 bridge but no MainWindow.cs/xaml; T06/#1 must locate and reconcile original WPF MainWindow from saved 729-file source and attach bridge to the single host with owner authorization.",
+  "host50Historic13HOLDPreserved": true,
+  "productDone": false
+}
