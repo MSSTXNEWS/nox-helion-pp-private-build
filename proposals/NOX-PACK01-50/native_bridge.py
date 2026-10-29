@@ -324,6 +324,7 @@ class ExistingP02Adapter:
             if bytes_seen > MAX_ANSWER:
                 self.client.stop()
                 raise HostHold("Answer too large")
+            check_scope()
             answer.append(delta)
             if self.event_sink:
                 self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
