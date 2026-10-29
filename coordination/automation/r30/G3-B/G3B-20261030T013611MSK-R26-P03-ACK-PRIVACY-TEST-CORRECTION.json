@@ -1,0 +1,30 @@
+{
+  "schema": "NOX_V16_G3B_R26_IMMUTABLE_TEST_CORRECTION_V1",
+  "run_id": "G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY",
+  "correction_of": "6a81f51e2517e2dd10508656b48db2532c1188ea",
+  "status": "SOURCE_ISOLATED_TEST_CORRECTED_BUT_NOT_NATIVE_NODE_EXECUTED",
+  "correction": "Saved Node regression escaped newline twice in new Function source; original test would not instantiate UI JS. One exact correction to test file only; original receipt preserved.",
+  "test_path": "coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs",
+  "test_pre_blob": "c43e76711fdbf5a90fc73b6f7568b6d0eea122c4",
+  "source_blob": "839c67cdcf65a9da2c8a1bf9ab6f1f757faf961c",
+  "evidence": {
+    "mocked_V8_actual_test_file_body_pass": [
+      "G3B invalid snapshot leaves consent unchanged",
+      "G3B raw host status and event are never public",
+      "G3B failed ACK never leaks host reason",
+      "G3B foreign job and tag ACK cannot unlock STOP",
+      "G3B STOP Cancelling beats stale Installed"
+    ],
+    "test_count": 5,
+    "node_runtime_not_executed": true,
+    "no_product_done": true,
+    "original_privacy_and_ack_source_unchanged": true
+  },
+  "manual_owners": {
+    "T06": "CAS admit source exact PRE 1eaf4435a6ae788b29340e67e9d52bb9fedf1bcf -> POST 839c67cdcf65a9da2c8a1bf9ab6f1f757faf961c only after targeted Node and STOP/ACL/consent checks",
+    "T08": "same-head independent QA",
+    "T02": "dedup ERR-SRC-004; do not call QA ACCEPTED"
+  },
+  "no_build": true,
+  "test_post_blob": "e910d1778c9807df8b5530c72926e332b84b1bb0"
+}
