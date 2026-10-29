@@ -1,0 +1,582 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_IMMUTABLE_BRANCH_COLLECTION_CONFLICT_INDEX_V1",
+  "status": "ALL_SOURCE_TREES_COLLECTED_NOT_MERGED_NOT_BUILT",
+  "collection_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "branches": [
+    {
+      "ref": "astra/r27-a01-20261029",
+      "commit": "f0090d5ccc2df4f29a878b595bd6689c69215290",
+      "at": "2026-10-28T23:21:55Z",
+      "changed_files": 17,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a01-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a02-20261029",
+      "commit": "aee23543005edde9b15626b5747429725615933d",
+      "at": "2026-10-28T23:29:24Z",
+      "changed_files": 34,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a02-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a03-20261029",
+      "commit": "c881e989fd5e7e2041a3592791def7606bf2965f",
+      "at": "2026-10-28T23:21:48Z",
+      "changed_files": 16,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a03-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a04-20261029",
+      "commit": "5ed25389bbe553e39c5293e417bc184909d53bf8",
+      "at": "2026-10-28T23:42:18Z",
+      "changed_files": 24,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a04-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a05-20261029",
+      "commit": "62a3e682a45b1ea34a85aa446828bd8cb76ecf19",
+      "at": "2026-10-28T23:30:58Z",
+      "changed_files": 28,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a05-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a06-20261029",
+      "commit": "e96ff6a87d0ab089029b3218ecea36759897e8bf",
+      "at": "2026-10-28T23:28:57Z",
+      "changed_files": 20,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a06-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a07-20261029",
+      "commit": "37915c53f99a7fa91ad05a43abcf40eb0c0e51dd",
+      "at": "2026-10-28T23:25:24Z",
+      "changed_files": 17,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a07-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a08-20261029",
+      "commit": "e2fd3c50190ffac04abc30d2bd1b46caf9dab454",
+      "at": "2026-10-28T23:25:15Z",
+      "changed_files": 16,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a08-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a09-20261029",
+      "commit": "e953a5a9cbb914080697e2e810d2f5af66a8a14d",
+      "at": "2026-10-28T23:30:57Z",
+      "changed_files": 21,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a09-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r27-a10-20261029",
+      "commit": "b18db96810b37b8740dc143dd2ffb5e3aae9088b",
+      "at": "2026-10-28T23:29:07Z",
+      "changed_files": 20,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r27-a10-20261029",
+      "source_diff_base": "817bb4146db0a2c79407d249d54fdeeb22261bb6"
+    },
+    {
+      "ref": "astra/r29-a01-20261029",
+      "commit": "51fa2a849924d87e2302f90ebaa67b720fc723c7",
+      "at": "2026-10-29T02:16:32Z",
+      "changed_files": 17,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a01-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a02-20261029",
+      "commit": "5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c",
+      "at": "2026-10-29T01:56:27Z",
+      "changed_files": 82,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a02-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a2-p01-20261029",
+      "commit": "98916abf2a3ce6e7d3e88696340b2399fb5b1081",
+      "at": "2026-10-29T01:57:17Z",
+      "changed_files": 15,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a2-p01-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a03-20261029",
+      "commit": "99b28cbfc0b618129564964297d5df5c6e2a9b3e",
+      "at": "2026-10-29T02:02:12Z",
+      "changed_files": 31,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a03-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a04-20261029",
+      "commit": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
+      "at": "2026-10-29T01:15:47Z",
+      "changed_files": 14,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a04-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a04-voice-20261029",
+      "commit": "cc79314e361655fa4230b0f4583fefafe8635960",
+      "at": "2026-10-29T01:59:05Z",
+      "changed_files": 78,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a04-voice-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a05-20261029",
+      "commit": "856d225543e78103868b3b04f0c53398437513f7",
+      "at": "2026-10-29T01:12:11Z",
+      "changed_files": 22,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a05-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a06-20261029",
+      "commit": "cbfe853500c781bfeac6419ccc581843ea1bedce",
+      "at": "2026-10-29T01:11:39Z",
+      "changed_files": 13,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a06-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra/r29-a6-p03-catalog-20261029",
+      "commit": "7bc1cec5ac5fd411f673c2847e6e0106986ae86b",
+      "at": "2026-10-29T01:58:36Z",
+      "changed_files": 30,
+      "snapshot_dir": "coordination/astra/r30/snapshots/r29-a6-p03-catalog-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b1-20261029",
+      "commit": "1d4207118a756449ffa564745bcde68a0bbb61f3",
+      "at": "2026-10-29T02:01:39Z",
+      "changed_files": 16,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b1-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b2-20261029",
+      "commit": "3d7df5c1fdfc069c82a88722756b0215d76bb6ca",
+      "at": "2026-10-29T01:59:45Z",
+      "changed_files": 15,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b2-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b3-20261029",
+      "commit": "99253b61e6b4825420245bfe9336dadc1cd40ac1",
+      "at": "2026-10-29T02:01:07Z",
+      "changed_files": 25,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b3-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b4-20261029",
+      "commit": "1eacb5f01a50f121e72973380bab940e4a131fc6",
+      "at": "2026-10-29T02:00:43Z",
+      "changed_files": 25,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b4-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b5-20261029",
+      "commit": "98b516cf057bf50832fe094bbeb8a6fbd4bc9002",
+      "at": "2026-10-29T02:02:55Z",
+      "changed_files": 16,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b5-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    },
+    {
+      "ref": "astra-b/r29-b6-20261029",
+      "commit": "0f4d08ad2f247ec410eb34e18e36e242bc0dbd41",
+      "at": "2026-10-29T02:03:10Z",
+      "changed_files": 15,
+      "snapshot_dir": "coordination/astra/r30/snapshots/astra-b_r29-b6-20261029",
+      "source_diff_base": "f04f616091ffae9b2421a1d353e6610550edf327"
+    }
+  ],
+  "frozen_branches": 25,
+  "total_changed_path_instances": 627,
+  "unique_touched_paths": 276,
+  "changed_domain_distribution": {
+    "P01": 19,
+    "P02": 82,
+    "P03": 34,
+    "P04": 13,
+    "P05": 23,
+    "E06": 9,
+    "WOW": 12,
+    "other": 84
+  },
+  "deleted_paths_in_deltas": [],
+  "overlapping_code_paths": [
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "branches": [
+        "astra/r27-a01-20261029",
+        "astra/r27-a02-20261029",
+        "astra/r27-a03-20261029",
+        "astra/r27-a04-20261029",
+        "astra/r27-a05-20261029",
+        "astra/r27-a06-20261029",
+        "astra/r27-a07-20261029",
+        "astra/r27-a08-20261029",
+        "astra/r27-a09-20261029",
+        "astra/r27-a10-20261029",
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 12,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "branches": [
+        "astra/r27-a01-20261029",
+        "astra/r27-a02-20261029",
+        "astra/r27-a03-20261029",
+        "astra/r27-a04-20261029",
+        "astra/r27-a05-20261029",
+        "astra/r27-a06-20261029",
+        "astra/r27-a07-20261029",
+        "astra/r27-a08-20261029",
+        "astra/r27-a09-20261029",
+        "astra/r27-a10-20261029"
+      ],
+      "competing_branches": 10,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "branches": [
+        "astra/r27-a01-20261029",
+        "astra/r27-a02-20261029",
+        "astra/r27-a03-20261029",
+        "astra/r27-a04-20261029",
+        "astra/r27-a05-20261029",
+        "astra/r27-a06-20261029",
+        "astra/r27-a07-20261029",
+        "astra/r27-a08-20261029",
+        "astra/r27-a09-20261029",
+        "astra/r27-a10-20261029"
+      ],
+      "competing_branches": 10,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "branches": [
+        "astra/r27-a09-20261029",
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 4,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "branches": [
+        "astra/r27-a04-20261029",
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "branches": [
+        "astra/r27-a04-20261029",
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "branches": [
+        "astra/r27-a05-20261029",
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "branches": [
+        "astra/r27-a05-20261029",
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "branches": [
+        "astra/r27-a06-20261029",
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "branches": [
+        "astra/r27-a06-20261029",
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "branches": [
+        "astra/r29-a04-20261029",
+        "astra-b/r29-b1-20261029",
+        "astra-b/r29-b2-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "branches": [
+        "astra/r29-a04-20261029",
+        "astra-b/r29-b1-20261029",
+        "astra-b/r29-b2-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "branches": [
+        "astra/r29-a05-20261029",
+        "astra-b/r29-b3-20261029",
+        "astra-b/r29-b4-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "branches": [
+        "astra/r29-a06-20261029",
+        "astra-b/r29-b5-20261029",
+        "astra-b/r29-b6-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/e06/source_deep_inventory.py",
+      "branches": [
+        "astra/r29-a06-20261029",
+        "astra-b/r29-b5-20261029",
+        "astra-b/r29-b6-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/e06/stage_onehost.py",
+      "branches": [
+        "astra/r29-a06-20261029",
+        "astra-b/r29-b5-20261029",
+        "astra-b/r29-b6-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "branches": [
+        "astra/r29-a06-20261029",
+        "astra-b/r29-b5-20261029",
+        "astra-b/r29-b6-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "branches": [
+        "astra/r29-a06-20261029",
+        "astra-b/r29-b5-20261029",
+        "astra-b/r29-b6-20261029"
+      ],
+      "competing_branches": 3,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "branches": [
+        "astra/r29-a01-20261029",
+        "astra/r29-a2-p01-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "branches": [
+        "astra/r29-a01-20261029",
+        "astra/r29-a2-p01-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "branches": [
+        "astra/r29-a01-20261029",
+        "astra/r29-a2-p01-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "branches": [
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "branches": [
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "branches": [
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "branches": [
+        "astra/r29-a02-20261029",
+        "astra/r29-a04-voice-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "branches": [
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "branches": [
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "branches": [
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "branches": [
+        "astra/r29-a03-20261029",
+        "astra/r29-a6-p03-catalog-20261029"
+      ],
+      "competing_branches": 2,
+      "VERIFICATION_REQUIRED": "Compare exact Git blob SHA; overlap alone is not a semantic conflict"
+    }
+  ],
+  "overlap_with_astra_b": 14,
+  "original_729_status": "A06 contains 729 named SHA256 member receipt; structural manifest verified, physical raw archive requires independent hash recheck",
+  "source_complete": "HOLD",
+  "cross_owner_integration": "NOT_DONE",
+  "WindowsEXE": "NOT_BUILT",
+  "E07": "NOT_RUN"
+}
