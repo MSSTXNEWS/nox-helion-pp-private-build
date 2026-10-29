@@ -1,0 +1,64 @@
+{
+  "run_id": "NOX-V16-G4B-T08-20261029T205419MSK-R25",
+  "start_msk": "2026-10-29T20:58:13.955+03:00",
+  "planned_msk": "2026-10-29T20:45:00+03:00",
+  "source_head": "22ea5406ebb3599b2830dc655274ffe3ac50b71d",
+  "original_r24_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+  "source_blobs": {
+    "coordination/e06/stage_p01.py": "a56a9ccc369d584e6468bf7e41b8768e5672cbe2",
+    "tests/e06/test_stage_p01_shared_zip_guard.py": "d97775098b68492f52463b45e30828e7dca72137",
+    "coordination/e06_host50/admission.py": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "coordination/e06/run_source_integrations_r13.py": "303194331b1387690f8ac935bdcc968f8312143b"
+  },
+  "checks": {
+    "source_matching_T06_receipt": true,
+    "preexisting_work_ancestor_guard": true,
+    "new_donor_path_confinement": true,
+    "symlink_and_junction_rejection": true,
+    "no_overwrite_source_lock": true,
+    "no_overwrite_R11": true,
+    "archive_integrity_gate": true,
+    "targeted_negative_test_presence": true,
+    "host50_stop_and_exact_scope": true,
+    "host50_owner_attestation_hmac": true,
+    "ERR_SRC_005_fixture_runner": true
+  },
+  "static_passed": 11,
+  "static_total": 11,
+  "python_tests": "NOT_RUN (no local authenticated source checkout)",
+  "native_windows": "NOT_RUN",
+  "owner_acceptance": "NOT_ACCEPTED",
+  "independent_source_qa": "STATIC_ONLY",
+  "task_stage_before": "PATCHED_ON_PR162_OWNER_QA_PENDING",
+  "task_stage_after": "SOURCE_STATIC_VERIFIED_ON_PINNED_HEAD_QA_PENDING",
+  "progress_before": "1/3 33.3%",
+  "progress_after": "1/3 33.3%",
+  "new_accepted_taskids": 0,
+  "remaining": [
+    "T06 owner-accepted HEAD/tree/manifest and T02 frozen P0/P1",
+    "Same-head final P0/P1 disposition with actual native STOP/ACL/consent evidence"
+  ],
+  "lesson": "ERR-SYS-002: use current Git SHA and source blobs rather than stale HOLD; R24 P01 P0 now integrated at fresh HEAD, do not repeat owner PATCH request",
+  "status": "INCOMPLETE",
+  "safety": "Original 729 + ZIP proofs preserved, no source writes by T08, no EXE/NSIS/CI/E07",
+  "gates": {
+    "A": "PASS fresh Git+Docs read",
+    "B": "PASS INDEPENDENT STATIC SOURCE DELTA (not runtime)",
+    "C": "PENDING_GIT_RECEIPT_READBACK",
+    "D": "APPLIED / 11 active ERROR_ID triaged"
+  },
+  "error_id_actions": {
+    "ERR-SYS-001": "DELEGATE T02 only shared Docs CAS",
+    "ERR-SYS-002": "APPLIED fresh SHA check",
+    "ERR-SRC-003": "OWNER T06/Host50: source attestation static present, 13 native route acceptance unverified",
+    "ERR-SRC-004": "P01 exact POST now integrated; T06 P01-P05 8/8 acceptance missing",
+    "ERR-SRC-005": "STATIC FIXTURE PINNING CHECKED; runtime unverified",
+    "ERR-SYS-006": "ALREADY_VERIFIED historical 729/729",
+    "ERR-SYS-007": "ALREADY_VERIFIED historical T04 34/34",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS": "DELEGATE T09 after T06, no false freeze",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01": "APPLIED preserve 1/3 not DONE",
+    "NOX-V16-T06-ROOT-STOP-20261029-R01": "DELEGATE T06 accepted gate",
+    "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN": "BLOCKED 13 native routes and owner seal"
+  },
+  "receipt_branch": "automation/g4b/t08-r25-20261029-205419"
+}
