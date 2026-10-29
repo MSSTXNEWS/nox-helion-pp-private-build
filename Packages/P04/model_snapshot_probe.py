@@ -300,6 +300,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         "reason": None,
         "candidate_sha256": None,
         "shard_index_sha256": None,
+        "observed_snapshot_sha256": None,
         "weight_files": [],
         "tensor_headers": 0,
         "model_license_verified": False,
@@ -360,6 +361,13 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "sha256": artifact["sha256"],
             })
         report["candidate_sha256"] = config_sha256
+        # Observation-only fingerprint, not a trusted cross-file atomic lock.
+        observed = {"config": config_sha256,
+                    "index": report["shard_index_sha256"],
+                    "weights": report["weight_files"]}
+        raw_observed = json.dumps(observed, sort_keys=True, separators=(",", ":"))
+        report["observed_snapshot_sha256"] = hashlib.sha256(
+            raw_observed.encode("utf-8")).hexdigest()
         report["status"] = "LOCAL_FILES_PRESENT_ONLY"
         report["reason"] = "LICENSE_DATASET_GPU_AND_REVISION_ATTESTATION_PENDING"
     except (ValueError, OSError) as exc:
