@@ -1,0 +1,145 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T080112MSK-03",
+  "recorded_utc": "2026-10-29T05:07:09.395Z",
+  "slot": "G5-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows LOADER-INSTALLER ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "source_code_complete": "HOLD",
+  "release_status": "HOLD",
+  "accepted_product_TaskIDs_new": 0,
+  "historical_DONE": "PRESERVED_NOT_RECOUNTED",
+  "branch": "automation/r30/g5a/20261029T080112MSK-03",
+  "parent_branch": "automation/r30/g5a/20261029T070130MSK-02",
+  "parent_commit_sha": "c6712529d4e98109bee619aa41b67729baf66879",
+  "source_commit_sha": "9e53a743d698bec96a47a995e31d99a9702ef7e9",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_touched": []
+  },
+  "references": {
+    "spec_drive_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "historical_rules_read": "56/56 from V16 §33",
+    "active_sections": [
+      "§54",
+      "§55",
+      "§56",
+      "§56 R29 loader-only override"
+    ],
+    "events_contract": "Contracts/events.v3.json",
+    "events_contract_blob_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "previous_receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T070130MSK-02.json",
+    "drive_docs_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ]
+  },
+  "frozen_snapshots": {
+    "directory_count": 25,
+    "git_tree_manifests_read": 25,
+    "truncated_tree_manifests": 0,
+    "read_original_full_file_bytes": false,
+    "snapshot_files_modified": 0,
+    "p05_blob_variants_compared": true,
+    "overlapping_r29_donors_not_merged": true
+  },
+  "change": {
+    "source_taskid": "G5A-R30-EVENTS-V3-128-IDENTITY-BOUNDS-03",
+    "task_kind": "SOURCE_DEFECT_FIX_NOT_ACCEPTED_PRODUCT_TASKID",
+    "source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "preimage_git_blob_sha": "83ff628287ce7ccd1a64fd1bef5ac48ea9767144",
+    "postimage_git_blob_sha": "b254d9e760ea4b658fd75ede79fa3419411d9b82",
+    "source_commit_sha": "9e53a743d698bec96a47a995e31d99a9702ef7e9",
+    "root_cause": "General WebView2 validRunId permits up to 160 ASCII characters. projectCanonicalEvents reused it for events.v3 run_id/event_id/task_id/action_id even though canonical Contracts/events.v3.json maxLength is 128 for each. Four old-source 129-character terminal fixtures incorrectly displayed STOPPED instead of HOLD.",
+    "fix": "Introduced event-only eventToken128 for four envelope identifiers; preserved general 160-character UI helper for unrelated DTOs. A malformed same-run terminal now goes to HOLD_MALFORMED_TERMINAL rather than presenting verified STOPPED. No native event writer, no artificial readiness acceptance.",
+    "diff": "+5/-2 lines, one assigned source path"
+  },
+  "targeted_test": {
+    "description": "ONE targeted events.v3 identifier-boundary and previous replay regression suite on exact GitHub JavaScript source in V8",
+    "scope": "ACTUALLY_EXECUTED_ISOLATED_V8_EXACT_SOURCE",
+    "preimage_red": "6/10 PASS, 4/10 FAIL: four 129-character identifiers incorrectly STOPPED",
+    "precommit_postimage": "13/13 PASS",
+    "github_saved_postimage_readback": "13/13 PASS",
+    "test_cases": [
+      "valid STOP",
+      "129 event_id HOLD",
+      "129 task_id HOLD",
+      "129 action_id HOLD",
+      "129 run_id HOLD",
+      "128 event_id STOP",
+      "128 task_id STOP",
+      "128 action_id STOP",
+      "128 run_id STOP",
+      "future STOP HOLD",
+      "zero event_sequence HOLD",
+      "same TaskID+sequence collision HOLD",
+      "identical replay idempotent"
+    ],
+    "native_node_cli": "NOT_RUN",
+    "csharp_dotnet": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "post_branch_compare": "exactly one assigned source file modified +5/-2, ahead 1, behind 0"
+  },
+  "ownership_test_policy": {
+    "new_repository_test_file_written": false,
+    "reason": "Lock assigns four exact source filenames, not a new standalone test path. The addressed suite was run ephemerally against exact GitHub source.",
+    "requested_future_test_file_owner_approval": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.test.mjs"
+  },
+  "self_improvement": {
+    "previous_lesson_applied": "R30_G5A_SEQUENCE_IS_NOT_AN_AUTHORITY_SHORTCUT",
+    "evidence": "Previous zero sequence, task-local collision and identical replay regressions still PASS in the focused postimage suite.",
+    "new_lesson_id": "R30_G5A_VALIDATE_CONTRACT_FIELD_BOUNDS_NOT_GENERIC_RUNID",
+    "observation": "A shared validator can be stricter in character alphabet yet looser in length than a particular wire contract, laundering malformed native events into successful UI terminals.",
+    "change_of_method": "Compare each event envelope field directly to the canonical events.v3 schema and test valid maximum 128 plus invalid 129 before Git CAS; never repurpose a broader UI token validator as a schema gate.",
+    "future_prevention": "Maintain exact-boundary RED→GREEN fixtures for independently owned event DTOs, verify exact Git blob before and after, and keep product completion uncredited without E06 native acceptance."
+  },
+  "astra_c_handoff": {
+    "shared_google_docs_writer": "Astra-C only",
+    "instruction": "Ingest this immutable G5-A receipt's RunID, observed defect, verified source patch and exact new lesson into master/E06 report/E06 self-improvement with revision-CAS and RunID readback.",
+    "shared_drive_docs_worker_write": "NOT_PERFORMED_POLICY",
+    "shared_drive_append_status": "HOLD_ASTRA_C_ONLY"
+  },
+  "readiness": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "overall": "N/D",
+    "no_false_100": true
+  },
+  "forbidden_writes": {
+    "PR162": false,
+    "main": false,
+    "shared_R30": false,
+    "other_owner_files": false,
+    "DriveAdapters": false,
+    "SafeRunReports": false,
+    "GoogleDocs": false
+  }
+}
