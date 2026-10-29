@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_V16_T10_R23_INDEPENDENT_PRE_FREEZE_SOURCE_DELTA_QA_V1",
+  "task_id": "T10",
+  "run_id": "NOX-V16-G5B-T10-20261029T231651MSK-R23-P04-DELTA-QA",
+  "role": "G5-B / T10 independent source QA",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader",
+  "status": "INCOMPLETE",
+  "source_ready": false,
+  "qa_signature": false,
+  "build_authorized": false,
+  "time_moscow": {
+    "observed_clock_start": "2026-10-29T23:15:36+03:00",
+    "planned_start": null,
+    "duration_seconds": null
+  },
+  "read_proof": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_rules_33": 56,
+    "register_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_revision": "AHj4eMTjT_wNQqqKG3XDo28XrR-NYYmvLHbM24H1RroXPASRUuJqnpmakVExnv3Xp1YkvSxvuZWa2S7WA4esqGC0vdsoxPoi0FjGPoa2ZYQ",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTqmQN6DAj4R6RLZyRQ4xni9Pu3lRjQTxfPBSibaz8rCdAL5S7oHiTedZv6vmopCt3YVLhc_pEeCp9FWZ6EAl7laRDSDjmaKvVvPjU",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M",
+    "r23_policy_blob": "9d43c95332ec13d7f62478ddb02486aee11270ed",
+    "role_parts_blobs": [
+      "e278e4031c5f3c1ccd8a3538dbde0723706deb4e",
+      "f25f582d974bc59609e1b0befc098d3eda459502",
+      "ab3bd919949b4737f481696d4262a577d9b28cfe",
+      "53efabcbff6380669e40eb6a6b5b418b2d475963",
+      "a1a079b51e455cf92e813680416fe4f991adf0f2"
+    ]
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "first_read_head": "42cc000ad1b04eb96d0e3f886d469451d1f5501f",
+    "qa_pinned_head": "66f9f7812186ec1a3b1c8472d1792a854760ec7e",
+    "qa_tree": "b343fade360149b72062a16af155349ed9ef07b4",
+    "git_pre": "66f9f7812186ec1a3b1c8472d1792a854760ec7e",
+    "git_post": "66f9f7812186ec1a3b1c8472d1792a854760ec7e",
+    "prod_files_written": 0,
+    "owner_commit_message": "T06 P04: exact owner safetensors completeness, shape and cross-platform shard hardening"
+  },
+  "p04_delta": {
+    "path": "Packages/P04/model_snapshot_probe.py",
+    "prior_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+    "current_blob": "f5cf5df231ee9ba4344a6445358034b5aaad9241",
+    "test_path": "tests/P04/test_model_snapshot_probe.py",
+    "prior_test_blob": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+    "current_test_blob": "15a81d1bd44c65625d99fdb617abf434d5a6fe0e",
+    "static_contract_presence_checks": {
+      "count": 15,
+      "matched": 15,
+      "checks": [
+        "reject duplicate JSON keys",
+        "reject nonfinite metadata",
+        "reject symlink weights",
+        "reject reparse ancestors",
+        "validate tensor dtype and dimension types",
+        "validate tensor byte size",
+        "reject overlap and gaps/trailing bytes",
+        "reject unsafe shard paths",
+        "require exact shard tensor map",
+        "license/dataset/GPU/revision remain unverified",
+        "overlap negative fixture declared",
+        "duplicate tensor negative fixture declared",
+        "wrong shard mapping negative fixture declared",
+        "symlink negative fixture declared",
+        "no remote model execution code in probe"
+      ]
+    },
+    "unit_test_methods_declared": 32,
+    "unit_tests_executed": false,
+    "native_tests_executed": false,
+    "source_verified_full": false,
+    "owner_qa_accepted": false
+  },
+  "current_receipt_alignment": {
+    "historical_p04_receipt_blob": "6375a87e825a7f7946e106a7d4a5319009113582",
+    "historical_p04_source_path": "Packages/P04/rag_python_compat.py",
+    "historical_p04_expected_blob": "5556534de3ea36d634df68813c6906007181c606",
+    "actual_p04_blob": "58af025bd05f0e99a445b56c307e12d600b8f19f",
+    "historical_p04_workflow_path": ".github/workflows/nox-p04-candidate-ci.yml",
+    "historical_p04_workflow_fetch": "NOT_FOUND_ON_QA_HEAD",
+    "historical_p05_receipt_blob": "aa2cce569966fb6e858a4722c99e0b484dde8bbe",
+    "historical_p05_source_path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "historical_p05_expected_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+    "actual_p05_blob": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+    "matching_legacy_p03_p04_p05_checked_paths": 6,
+    "checked_legacy_paths": 9,
+    "classification": "HISTORICAL_RECEIPTS_NOT_CURRENT_ACCEPTANCE; neither missing workflow nor changed blobs alone proves a code regression; do not reintroduce disallowed CI"
+  },
+  "stages": {
+    "SOURCE_PATCH_PREPARED": "EXISTING",
+    "SOURCE_VERIFIED": "STATIC_DELTA_CORROBORATED_ONLY",
+    "INTEGRATED_ON_CURRENT_HEAD": "YES_66f9f781",
+    "OWNER_QA_ACCEPTED": false,
+    "delta_accepted_unique_taskids": 0
+  },
+  "t10_gate": {
+    "previous_done": 1,
+    "current_done": 1,
+    "denominator": 7,
+    "previous_percent": 14.3,
+    "current_percent": 14.3,
+    "delta_pp": 0,
+    "remaining": 6,
+    "criterion_3_original_729_archive": "HISTORICALLY_ACCEPTED_NO_REHASH",
+    "other_criteria": "NOT_YET_INDEPENDENTLY_ACCEPTED_ON_T09_FROZEN_HEAD",
+    "product_progress": "N/D"
+  },
+  "errors": {
+    "relevant": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "same_head_p04_legacy_ledger_status": "OWNER_RECONCILIATION_REQUIRED",
+    "no_new_error_id": true,
+    "lessons_applied": [
+      "After observed HEAD drift 42cc->66f9 re-read only changed P04 dependency blobs, not full archived 729/34/34",
+      "Historical owner receipt digest mismatch means stale evidence, not proven missing functionality or permission to restore retired CI"
+    ],
+    "shared_journal_written": false
+  },
+  "handoff": [
+    {
+      "owner": "T06/#1",
+      "action": "On current PR162 HEAD verify P04 source/test bytes and owner ledger; supersede stale historical P04/P05 receipt claims by signed exact-head source manifest without erasing original receipts; run focused model_snapshot test and required STOP/ACL/consent/privacy/NO-LOSS; provide owner-accepted SHA."
+    },
+    {
+      "owner": "T08/#2",
+      "action": "Independently execute P04 tests on T06 accepted exact HEAD and confirm no P0/P1 regression, then issue same-SHA QA receipt; do not claim native training."
+    },
+    {
+      "owner": "T09",
+      "action": "Freeze one accepted T06+T08 HEAD/tree/manifest, not earlier 17:12 historical ref."
+    },
+    {
+      "owner": "T02",
+      "action": "Append this T10 receipt as existing ERR-SRC-004/ERR-SYS-002 evidence to shared journals by owner CAS+readback only; no synthetic closure."
+    }
+  ],
+  "next_checkpoint": "T06 current same-head P01–P05 owner acceptance/ledger + T08 independent exact-head QA -> T09 frozen tuple -> T10 SOURCE_READY x/7",
+  "stop_acl_native_consent_no_loss_preserved": true,
+  "exe_nsis_ci_e07_release": "NOT_RUN_NOT_AUTHORIZED"
+}
