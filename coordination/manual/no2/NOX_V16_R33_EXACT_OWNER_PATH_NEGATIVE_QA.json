@@ -1,0 +1,37 @@
+{
+  "schema": "NOX_V16_MANUAL2_R33_EXACT_OWNER_PATH_NEGATIVE_QA",
+  "run_id": "NOX-V16-M2-20261029-R33-T06-OWNER-PATH-FAIL_CLOSED",
+  "role": "MANUAL2 INDEPENDENT SOURCE QA",
+  "existing_error_id": "ERR-SRC-004",
+  "pr162_head_observed": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+  "source_blob_exact": "f839f2edf12a7120a7be613afa0102a6e4d8aef5",
+  "canonical_test_blob_exact": "9f1deb2aa265763893211b6ebdd65609b4c00225",
+  "git_source_byte_hash_match": true,
+  "git_canonical_test_byte_hash_match": true,
+  "actual_execution": {
+    "current_source_existing_tests": "3/3 PASS",
+    "current_source_new_negative": "7/7 unsafe path variants not rejected; RED",
+    "repaired_candidate_existing_and_new": "5/5 Python tests GREEN (subcases include seven previously accepted unsafe paths)",
+    "runtime": "local Linux Python; no native Windows",
+    "status": "SOURCE_SECURITY_QA_FAIL_PENDING_T06_OWNER_FIX"
+  },
+  "source_fix_existing": "In existing safe_path reject colon and nonprintable Unicode via value.isprintable(), preserving prior NUL/backslash and traversals checks; single minimal change",
+  "test_evidence_zip_sha256": "14fe377e528df7463f53f3ab8b91c879c9c9a08fe4af8804dff492be3577ffc0",
+  "shared_register_current_blob": "967932904afa9caa743fb33b29bbd807c59f714b",
+  "shared_register_modified_by_manual2": false,
+  "source_pr_modified_by_manual2": false,
+  "owner_next": "T06 only PR162 source writer check exact preimage and CAS integrate focused change, then rerun 5+ tests. T08 independently recheck final pinned source, T02 only shared journal owner. No forced safety override.",
+  "preserve": [
+    "729 originals",
+    "SourceLock",
+    "D02/WOW200",
+    "STOP",
+    "ACL",
+    "native consent",
+    "NO-LOSS",
+    "historic DONE"
+  ],
+  "no_build": true,
+  "source_ready": false,
+  "product_done_delta": 0
+}
