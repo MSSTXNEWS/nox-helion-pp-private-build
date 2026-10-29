@@ -234,6 +234,18 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
     metadata = header.get("__metadata__", {})
     if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
+    # Python's JSON decoder permits lone escaped UTF-16 surrogates (\\uD800),
+    # whereas the native safetensors parser rejects them. A successful probe
+    # must not claim a snapshot that the model loader cannot deserialize.
+    # Check names AND metadata keys/values before any shard hashing.
+    try:
+        for tensor_name in header:
+            tensor_name.encode("utf-8", errors="strict")
+        for meta_key, meta_value in metadata.items():
+            meta_key.encode("utf-8", errors="strict")
+            meta_value.encode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     # Offset bounds alone can accept a tensor with impossible shape/byte length.
     # Accept documented byte-addressable dtypes; unknown future dtypes HOLD.
     element_bytes = {"BOOL": 1, "U8": 1, "I8": 1,
