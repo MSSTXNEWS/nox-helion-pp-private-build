@@ -1,0 +1,78 @@
+{
+  "schema": "NOX_V16_MANUAL2_EXPRESS_CYCLE1_P04_OWNER_HANDOFF",
+  "run_id": "NOX-V16-M2-20261029-EXPRESS-CYCLE1-P04-LATEST-DONOR",
+  "role": "MANUAL2 INDEPENDENT SOURCE QA",
+  "task_id": "P04/model_snapshot",
+  "error_id": "ERR-SRC-004",
+  "cycle": 1,
+  "approaches": 10,
+  "actions": [
+    {
+      "number": "1",
+      "check": "current HEAD main and donor identified",
+      "source_present": true
+    },
+    {
+      "number": "2",
+      "check": "existing main source differs from owner donor",
+      "source_present": true
+    },
+    {
+      "number": "3",
+      "check": "existing main test differs from owner donor",
+      "source_present": true
+    },
+    {
+      "number": "4",
+      "check": "strict JSON duplicate-key rejection",
+      "source_present": true
+    },
+    {
+      "number": "5",
+      "check": "reject nonfinite metadata JSON",
+      "source_present": true
+    },
+    {
+      "number": "6",
+      "check": "full buffer contiguous required",
+      "source_present": true
+    },
+    {
+      "number": "7",
+      "check": "known dtype widths",
+      "source_present": true
+    },
+    {
+      "number": "8",
+      "check": "rank cap and integer shapes",
+      "source_present": true
+    },
+    {
+      "number": "9",
+      "check": "byte length exact",
+      "source_present": true
+    },
+    {
+      "number": "10",
+      "check": "negative size fixtures",
+      "source_present": true
+    }
+  ],
+  "scope": "10 source-provenance/static controls only; NOT ten native/functional tests",
+  "main_head": "42cc000ad1b04eb96d0e3f886d469451d1f5501f",
+  "main_source_blob": "9a837f86c40d71124f47f340229ca2f8814bd99e",
+  "main_test_blob": "b0244acdfbb4dc173fc4e48d1bcae40d89ed20ec",
+  "owner_pr": 221,
+  "owner_head": "3434f21904910f579c4175f961c84db5f4e2dfd9",
+  "owner_source_blob": "fe81cefda2970479f18cc50bae485d006d28f03f",
+  "owner_test_blob": "1b9fd37a56a39c728b663b7eefda6f800037fded",
+  "owner_number_of_declared_tests": 29,
+  "root_cause": "Previous owner handoff used stale P04 donor source ca028... but current donor contains new dtype/length/rank protections at fe81...; no per-component CAS/QA acceptance.",
+  "owner_next": "T06 owner apply compatible latest donor exact P04 PRE/POST source+test in one CAS; focused Python tests and no-loss; independent T08 acceptance on final HEAD. Avoid replay of old donor SHA.",
+  "T02_next": "Append existing ERR-SRC-004 only, no duplicate TaskID and no source-only QA_ACCEPTED.",
+  "native_windows": "NOT_RUN",
+  "GPU": "NOT_RUN",
+  "source_integrated": false,
+  "new_accepted_task_ids": 0,
+  "preservation": "STOP ACL native consent 729 original SourceLock NO-LOSS; NO EXE/NSIS/CI/E07"
+}
