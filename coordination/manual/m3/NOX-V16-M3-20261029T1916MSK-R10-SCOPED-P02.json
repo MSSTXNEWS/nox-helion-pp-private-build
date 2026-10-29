@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_V16_M3_R10_INDEPENDENT_SCOPED_BINDING_RECEIPT_V1",
+  "run_id": "NOX-V16-M3-20261029T1916MSK-R10",
+  "role": "M3/T10 independent source-only verifier and T11 existing GitLab readiness",
+  "stage": "INDEPENDENT_SCOPED_SOURCE_CONTRACT_PROOF_NOT_FULL_SOURCE_READY",
+  "prestart_read_proof": {
+    "canon_doc": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_sections": "§§1-33 54-56 R29 and all 56 rules §33",
+    "registry_branch": "coordination/v16-shared-error-ledger-20261029-r01",
+    "registry_blob_sha1": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "all_error_ids_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "source_commit_git_sha1": "6dcddf7e9557a8c42d26d6fb51a95d9d70d077d0",
+    "source_tree_git_sha1": "14ed8da015911511c993d5cac8711a1ce6deb301",
+    "source_not_frozen": true
+  },
+  "source_files": {
+    "proposals/NOX-PACK01-50/owner-binding-map.json": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "Packages/P02/worker-python/p02_owner_route_ports.py": "11660f13048b4cc91da7ac0fb7ca95ca7ad3e31c",
+    "coordination/e06_host50/admission.py": "efd5af93853d04cf5c1748af41b13570fc49c0ad"
+  },
+  "one_targeted_verification": {
+    "result": "PASS_SOURCE_BINDING_ONLY",
+    "routes": [
+      {
+        "route_id": "chat.rag",
+        "owner": 2,
+        "method": "OwnerTwoPorts.rag_context",
+        "binding_exact": true,
+        "method_present": true,
+        "componentCI": "NOT_RUN",
+        "native_accepted": false
+      },
+      {
+        "route_id": "chat.voice",
+        "owner": 2,
+        "method": "OwnerTwoPorts.captured_voice",
+        "binding_exact": true,
+        "method_present": true,
+        "componentCI": "NOT_RUN",
+        "native_accepted": false
+      },
+      {
+        "route_id": "calls.history",
+        "owner": 2,
+        "method": "OwnerTwoPorts.calls_history",
+        "binding_exact": true,
+        "method_present": true,
+        "componentCI": "NOT_RUN",
+        "native_accepted": false
+      }
+    ],
+    "catalog_routes": 50,
+    "source_methods_bound": 39,
+    "unverified_same_head_native_route_count_at_least": 11,
+    "native_admission_blocker": "CURRENT_NATIVE_OWNER_CAPABILITY_CONSENT_SOURCELOCK_NOT_VERIFIED",
+    "critical_hard_blocker": {
+      "error_id": "ERR-SRC-003",
+      "map_sourceBaseCommit": "eb46b49fb8a022cefa679afb8606877016808db1",
+      "host_baseCommit": "0b3a7d435be735148d64171deb9027093a89646e",
+      "exact_path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+      "result": "BASELINE_DRIFT_CAUSES_FAIL_CLOSED_HOLD",
+      "owner": "T06 sole canonical source writer with P02 and T08 independent verification",
+      "necessary_action": "Owner-approved exact PRE/CAS reconciliation of historical owner-map provenance to correct current base; do not blind string replace or force native approvals"
+    }
+  },
+  "physical_result": "New independent SHA-bound verification of three T06 P02 bindings. No source mutation by M3.",
+  "error_clusters": [
+    {
+      "ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "action": "fresh SHA-bound evidence and immutable personal receipt; T02 sole register writer",
+      "status": "ACK_NO_NEW_CLOSE"
+    },
+    {
+      "ids": [
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "action": "scoped exact P02 source paths independently verified; native owner map still drift and capabilities unaccepted; return to T06/T08",
+      "status": "PARTIAL_SCOPED_SOURCE_VERIFIED_NOT_CLOSED"
+    },
+    {
+      "ids": [
+        "ERR-SRC-005",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "action": "not verified this run, remain with T06/T08",
+      "status": "NO_IMPACT"
+    },
+    {
+      "ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "action": "preserve T07 729/729 original archive and T04 historical 34/34",
+      "status": "VERIFIED_CLOSED_PRESERVED"
+    }
+  ],
+  "mass_self_improvement": {
+    "lesson": "Verify only newly altered exact methods on a single HEAD, not rehash original archive or repeat broad HOLD, and explicitly separate source binding PASS from native capability PASS",
+    "applied": true
+  },
+  "progress": {
+    "T10_before": "1/7",
+    "T10_after": "1/7",
+    "T11_before": "2/5",
+    "T11_after": "2/5",
+    "M3_before": "3/12",
+    "M3_after": "3/12",
+    "pct_before": 25,
+    "pct_after": 25,
+    "delta_pp": 0,
+    "scale": "███░░░░░░░"
+  },
+  "ready": {
+    "source_ready": false,
+    "gitlab_live_head": null,
+    "ci_entrypoint_same_frozen_sha": false,
+    "final_T12_handoff": false
+  },
+  "handoff": {
+    "T06": "Resolve current signed owner-map base drift, actual native P02 routes and P01-P05 whole-tree acceptance on one SHA",
+    "T08": "Independently verify native ACL/STOP/consent on new accepted SHA, not source-only",
+    "T09": "Frozen SHA/tree/manifest only after T06 8/8 and T08 same-head",
+    "T02": "Ingest this SHA-bound independent scoped receipt; do not promote ERR-SRC-003 or M3 criterion without further native evidence",
+    "GitLabOwner": "Authenticated read-only live GitLab HEAD required; cannot use GitHub head"
+  },
+  "safety": {
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "shared_docs_untouched": true,
+    "gitlab_unchanged": true,
+    "no_build": true,
+    "no_nsis": true,
+    "no_ci": true,
+    "no_e07": true,
+    "no_force_push": true
+  }
+}
