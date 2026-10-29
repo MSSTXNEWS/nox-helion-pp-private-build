@@ -1,0 +1,1173 @@
+{
+  "schema": "ASTRA_R30_R29_A",
+  "rows": [
+    {
+      "ref": "astra/r29-a01-20261029",
+      "head_sha": "51fa2a849924d87e2302f90ebaa67b720fc723c7",
+      "at": "2026-10-29T02:16:32Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 6,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+          "status": "modified",
+          "previous": null,
+          "added": 46,
+          "deleted": 3
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 9,
+          "deleted": 1
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A01-B01.json",
+          "status": "added",
+          "previous": null,
+          "added": 28,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A01-B02.json",
+          "status": "added",
+          "previous": null,
+          "added": 22,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A1-B04.json",
+          "status": "added",
+          "previous": null,
+          "added": 26,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A1-B05.json",
+          "status": "added",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Test-RollbackPreflight.ps1",
+          "status": "added",
+          "previous": null,
+          "added": 39,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Test-UninstallManifest.ps1",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 6,
+          "deleted": 2
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_marker_write_flow.py",
+          "status": "added",
+          "previous": null,
+          "added": 88,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_rollback_preflight_contract.py",
+          "status": "added",
+          "previous": null,
+          "added": 33,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_rollback_version_flow.py",
+          "status": "added",
+          "previous": null,
+          "added": 76,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_uninstall_manifest_contract.py",
+          "status": "added",
+          "previous": null,
+          "added": 18,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/R29-A01-B03.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/Test-P01Native-C09.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 5,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_source_c09.py",
+          "status": "modified",
+          "previous": null,
+          "added": 45,
+          "deleted": 6
+        }
+      ]
+    },
+    {
+      "ref": "astra/r29-a02-20261029",
+      "head_sha": "5f5cfb2c204a33a8ce0fc16a697edeb299bcf97c",
+      "at": "2026-10-29T01:56:27Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 14,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT01/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 24,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT01/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 34,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT01/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 86,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT01/original_sources.json",
+          "status": "added",
+          "previous": null,
+          "added": 7,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT01/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 57,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT02/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 11,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT02/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 16,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT02/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 84,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT02/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 43,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT03/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 18,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT03/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 21,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT03/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 54,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_CONT03/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 44,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 34,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS01/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 17,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS01/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 100,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS01/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS02/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 18,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS02/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 72,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS02/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 38,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS03/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 23,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS03/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 64,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS03/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS04/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 21,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS04/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 43,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS04/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS05/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS05/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 108,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS05/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 51,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS06/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 51,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS06/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 42,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS06/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 81,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS06/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 58,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS07/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 71,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS07/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS07/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 591,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS07/elapsed.json",
+          "status": "added",
+          "previous": null,
+          "added": 7,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS07/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 86,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS08/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 43,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS08/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 17,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS08/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 142,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS08/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 58,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS09/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS09/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 15,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS09/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 104,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS09/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 58,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS10/GREEN.log",
+          "status": "added",
+          "previous": null,
+          "added": 48,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS10/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 30,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS10/RED.log",
+          "status": "added",
+          "previous": null,
+          "added": 122,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_PASS10/receipt.json",
+          "status": "added",
+          "previous": null,
+          "added": 51,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/HANDOFF.md",
+          "status": "added",
+          "previous": null,
+          "added": 33,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/observed.json",
+          "status": "added",
+          "previous": null,
+          "added": 28,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_capabilities.py",
+          "status": "modified",
+          "previous": null,
+          "added": 75,
+          "deleted": 20
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+          "status": "modified",
+          "previous": null,
+          "added": 7,
+          "deleted": 3
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_framed_worker.py",
+          "status": "modified",
+          "previous": null,
+          "added": 34,
+          "deleted": 7
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_host_admission.py",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 5
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 97,
+          "deleted": 6
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+          "status": "added",
+          "previous": null,
+          "added": 199,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+          "status": "modified",
+          "previous": null,
+          "added": 73,
+          "deleted": 13
+        },
+        {
+          "path": "Packages/P02/worker-python/p02_runtime.py",
+          "status": "modified",
+          "previous": null,
+          "added": 85,
+          "deleted": 16
+        },
+        {
+          "path": "Packages/P02/worker-python/test_ollama_protocol_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 73,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_admission.py",
+          "status": "modified",
+          "previous": null,
+          "added": 16,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_frame_failure_latch_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 52,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_framed_worker.py",
+          "status": "modified",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_loader_existing_pack_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 48,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_loader_timeout_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 59,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_loader_voice_stop_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 68,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_ingress.py",
+          "status": "modified",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_native_voice_lifecycle_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 182,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_original_voice_outcomes_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 60,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_original_voice_port_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 141,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 1
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_runtime.py",
+          "status": "modified",
+          "previous": null,
+          "added": 17,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_sip_stop_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 28,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_voice_consent_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 54,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 57,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_voice_request_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 40,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_voice_result_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 41,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_p02_voice_sip_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 134,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_sqlite_admission_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 56,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P02/worker-python/test_stream_snapshot_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 61,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra/r29-a2-p01-20261029",
+      "head_sha": "98916abf2a3ce6e7d3e88696340b2399fb5b1081",
+      "at": "2026-10-29T01:57:17Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 4,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "coordination/astra/agents/A2/R29_P01_DIRECTORY_KIND.json",
+          "status": "added",
+          "previous": null,
+          "added": 51,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+          "status": "modified",
+          "previous": null,
+          "added": 12,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 11,
+          "deleted": 1
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A01-B01.json",
+          "status": "added",
+          "previous": null,
+          "added": 28,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/R29-A01-B02.json",
+          "status": "added",
+          "previous": null,
+          "added": 22,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Test-InstallDirectoryKinds.ps1",
+          "status": "added",
+          "previous": null,
+          "added": 55,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Test-RollbackPreflight.ps1",
+          "status": "added",
+          "previous": null,
+          "added": 39,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/Test-UninstallManifest.ps1",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_directory_kind_contract.py",
+          "status": "added",
+          "previous": null,
+          "added": 46,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_rollback_preflight_contract.py",
+          "status": "added",
+          "previous": null,
+          "added": 33,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/Installer/test_uninstall_manifest_contract.py",
+          "status": "added",
+          "previous": null,
+          "added": 18,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/R29-A01-B03.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/Test-P01Native-C09.ps1",
+          "status": "modified",
+          "previous": null,
+          "added": 5,
+          "deleted": 0
+        },
+        {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_source_c09.py",
+          "status": "modified",
+          "previous": null,
+          "added": 45,
+          "deleted": 6
+        }
+      ]
+    },
+    {
+      "ref": "astra/r29-a03-20261029",
+      "head_sha": "99b28cbfc0b618129564964297d5df5c6e2a9b3e",
+      "at": "2026-10-29T02:02:12Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 13,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+          "status": "modified",
+          "previous": null,
+          "added": 103,
+          "deleted": 26
+        },
+        {
+          "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+          "status": "added",
+          "previous": null,
+          "added": 109,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_attestation_binding_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 55,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_connected_download_chain_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 104,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_direct_native_cancel_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 72,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_modelcenter_gate.py",
+          "status": "modified",
+          "previous": null,
+          "added": 7,
+          "deleted": 4
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_native_revision_contract_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_native_types_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 46,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Admission/test_p03_reviewed_artifact_adapter.py",
+          "status": "added",
+          "previous": null,
+          "added": 108,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter.HardeningSmoke/CancelRetirementRaceFixture.cs",
+          "status": "added",
+          "previous": null,
+          "added": 69,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+          "status": "added",
+          "previous": null,
+          "added": 124,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+          "status": "modified",
+          "previous": null,
+          "added": 27,
+          "deleted": 14
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 27,
+          "deleted": 1
+        },
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+          "status": "modified",
+          "previous": null,
+          "added": 8,
+          "deleted": 2
+        },
+        {
+          "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+          "status": "modified",
+          "previous": null,
+          "added": 75,
+          "deleted": 7
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_catalog_bounds_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 55,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_command_binding_r27.py",
+          "status": "added",
+          "previous": null,
+          "added": 101,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+          "status": "modified",
+          "previous": null,
+          "added": 3,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+          "status": "modified",
+          "previous": null,
+          "added": 2,
+          "deleted": 1
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_CATALOG_READINESS_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 27,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_CONNECTED_DOWNLOADER_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 33,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_NATIVE_REVIEW_EXPORT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 33,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_NATIVE_REVISION_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 31,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_ONEHOST_COMMAND_DONOR_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_ONEHOST_DONOR_FIXTURE_CHECK_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 17,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_P03_DONOR_RECONCILIATION_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 30,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_QUEUE_UI_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 21,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_RAM_PREFLIGHT_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 20,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A03_UNKNOWN_TOTAL_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 20,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A5_CANCEL_CTS_RETIREMENT_CANDIDATE_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 27,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P03/Source/receipts/ASTRA_R29_A5_DIRECT_NATIVE_CANCEL_20261029.json",
+          "status": "added",
+          "previous": null,
+          "added": 30,
+          "deleted": 0
+        }
+      ]
+    },
+    {
+      "ref": "astra/r29-a04-20261029",
+      "head_sha": "995e1488bf0fac028dadabafad9c197d2ef3b1f7",
+      "at": "2026-10-29T01:15:47Z",
+      "base": "f04f616091ffae9b2421a1d353e6610550edf327",
+      "ahead": 8,
+      "behind": 0,
+      "status": "ahead",
+      "files": [
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 37,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_02_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 32,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_03_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 35,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_04_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 34,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_05_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 67,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_06_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 52,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_CORRECTION_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 36,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/ASTRA_R29_A04_CONTINUATION_01_RECEIPT.json",
+          "status": "added",
+          "previous": null,
+          "added": 49,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/INSTALLER_DEPENDENCY_HANDOFF_R29.md",
+          "status": "added",
+          "previous": null,
+          "added": 151,
+          "deleted": 0
+        },
+        {
+          "path": "Packages/P04/model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 150,
+          "deleted": 5
+        },
+        {
+          "path": "Packages/P04/preflight_local_gpu.py",
+          "status": "modified",
+          "previous": null,
+          "added": 127,
+          "deleted": 1
+        },
+        {
+          "path": "tests/P04/test_local_gpu_preflight.py",
+          "status": "modified",
+          "previous": null,
+          "added": 180,
+          "deleted": 3
+        },
+        {
+          "path": "tests/P04/test_model_snapshot_probe.py",
+          "status": "modified",
+          "previous": null,
+          "added": 57,
+          "deleted": 0
+        },
+        {
+          "path": "tests/P04/test_wheel_inventory_preflight_r29.py",
+          "status": "added",
+          "previous": null,
+          "added": 106,
+          "deleted": 0
+        }
+      ]
+    }
+  ]
+}
