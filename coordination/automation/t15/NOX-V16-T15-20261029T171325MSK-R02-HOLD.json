@@ -1,0 +1,151 @@
+{
+  "schema": "NOX_V16_T15_IMMUTABLE_RELEASE_GATE_RECEIPT_V2",
+  "task_id": "T15",
+  "run_id": "NOX-V16-T15-20261029T171325MSK-R02-HOLD",
+  "product_scope": "NOX HELION EXPRESS INTEGRATOR Windows loader/installer ONLY",
+  "scope_canon": {
+    "document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "sections": [
+      "1–33",
+      "54–56",
+      "R29",
+      "latest FAST CLOSEOUT"
+    ],
+    "rule33_count": 56
+  },
+  "clock": {
+    "planned_msk": "2026-10-29T17:15:00+03:00",
+    "automation_observed_started_msk": "2026-10-29T17:13:24.512753+03:00",
+    "checkpoint_msk": "2026-10-29T17:15:35+03:00",
+    "completed_msk": null,
+    "duration_seconds": null
+  },
+  "status": "RELEASE_HOLD",
+  "decision": "DO_NOT_PUBLISH",
+  "release_published": false,
+  "artifact_url": null,
+  "setup_url": null,
+  "exe_url": null,
+  "build_id": null,
+  "exe_sha256": null,
+  "setup_sha256": null,
+  "progress": {
+    "accepted_release_criteria": 0,
+    "total_release_criteria": 3,
+    "percent": 0,
+    "prior_percent": 0,
+    "delta_percentage_points": 0,
+    "bar": "░░░░░░░░░░",
+    "remaining": 3,
+    "note": "0/3 is T15 release-gate completion, not source P01–P05 implementation progress."
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "requirement": "T12 genuine Windows Setup + EXE bytes, immutable BuildID, distinct SHA256, pipeline/job real",
+      "status": "NOT_RUN_NO_BUILD",
+      "accepted": false,
+      "evidence": "T12 R02 receipt commit 035e88227988ae903f5135bd1693b8bf72d743b2; blob 44e4782b3c6200a2063d1d37abbf5254acaac70c"
+    },
+    {
+      "id": 2,
+      "requirement": "T13 independently installed real EXE E07 10/10 same BuildID and EXE/Setup SHA as T12",
+      "status": "NOT_RUN_0_OF_10",
+      "accepted": false,
+      "evidence": "T13 R02 receipt commit 258cadb7159091a8f535f2c58814872fb6631e37; blob 664ff0a6e30889b45fec9a6a990d718150981dfc"
+    },
+    {
+      "id": 3,
+      "requirement": "T14 zero verified release-blocking P0/P1 on exactly accepted BuildID/SHA, or repaired and retested",
+      "status": "UNTESTED_NO_BLOCKERS_IS_NOT_PASS",
+      "accepted": false,
+      "evidence": "T14 R02 commit 35adea8272df9c2e1765dba1891f8c18d1d027eb; blob d7a37328db90c94ab291f63d31cc8caeffa84a26"
+    }
+  ],
+  "upstream": {
+    "T07": {
+      "original_physical_zip_verified": true,
+      "parts": "3/3",
+      "members": "729/729",
+      "archive_bytes": 60364346,
+      "archive_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "explicit_limit": "This SHA covers ORIGINAL ZIP, not final patched/frozen source tree"
+    },
+    "T09": {
+      "receipt_run_id": "NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK",
+      "receipt_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+      "original_source_lock_signed": true,
+      "criteria_done": 1,
+      "criteria_total": 6,
+      "final_integrated_freeze": false
+    },
+    "T10": {
+      "run_id": "NOX-V16-T10-20261029T164206MSK-R13-HOLD",
+      "criteria_done": 0,
+      "criteria_total": 7,
+      "source_ready": false
+    },
+    "T11": {
+      "run_id": "NOX-V16-T11-20261029T165515MSK-R14-ACCESS-HOLD",
+      "criteria_done": 2,
+      "criteria_total": 5,
+      "authenticated_gitlab_live_head_verified": false,
+      "gitlab_ready": false
+    },
+    "T12": {
+      "run_id": "NOX-V16-T12-20261029T171005MSK-R02-HOLD",
+      "criteria_done": 0,
+      "criteria_total": 4,
+      "build_started": false,
+      "exe_bytes": false,
+      "setup_bytes": false,
+      "build_id": null,
+      "sha256": null,
+      "latest_recorded_automation_completed": true,
+      "automation_enabled_at_check": false
+    },
+    "T13": {
+      "run_id": "NOX-V16-T13-20261029T164324MSK-R02-NOT_RUN",
+      "independent_installed_exe_e07_accepted": 0,
+      "e07_total": 10
+    },
+    "T14": {
+      "run_id": "NOX-V16-T14-20261029T164051MSK-R02-NO-BUILD",
+      "finding": "NO_BLOCKERS",
+      "release_clearance": false
+    }
+  },
+  "github": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "observed_live_head_sha1": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "pr_draft": true,
+    "pr_merged": false,
+    "source_frozen": false,
+    "verified_final_build_head": null,
+    "no_product_edit_by_T15": true
+  },
+  "single_blocker": {
+    "owner": "T12 (dependency on T06/T09/T10/T11)",
+    "code": "NO_FINAL_WINDOWS_SETUP_EXE_BUILDID_SHA256",
+    "handoff": "After one owner-accepted frozen source HEAD with SourceLock, independent T10 SOURCE_READY PASS and authenticated GitLab T11 READY, T12 must produce real Setup/EXE bytes and immutable BuildID/EXE+Setup SHA-256; then T13 independent E07 10/10 same-SHA and T14 release blocker clearance. T15 may publish ONLY then."
+  },
+  "one_applied_lesson": "Correct stale T07 0/729 in R01: original physical ZIP is now independently receipted PASS 729/729, but do not promote original SHA to final frozen tree or to a Windows EXE proof.",
+  "no_loss": {
+    "historic_done_untouched": true,
+    "original_729_3zip_retained": true,
+    "git_968_base_retained": true,
+    "D02_WOW_001_200_8CoreID_5Persona_PACK01_02_50plus50_Voice_RAG_GPU_SPACE_user_data_retained": true,
+    "product_writes": 0,
+    "master_e06_lessons_writes": 0,
+    "new_task_ids": 0,
+    "no_release_files_published": true
+  },
+  "evidence_refs": [
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t12/NOX-V16-T12-20261029T171005MSK-R02-HOLD/coordination/automation/t12/NOX-V16-T12-20261029T171005MSK-R02-HOLD.json",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK/coordination/automation/t09/NOX-V16-T09-20261029T1707MSK-R14-ORIGINAL-SOURCELOCK.json",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t13/NOX-V16-T13-20261029T164324MSK-R02-NOT_RUN/coordination/automation/t13/NOX-V16-T13-20261029T164324MSK-R02-NOT_RUN.json",
+    "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/automation/v16/t14/NOX-V16-T14-20261029T164051MSK-R02-NO-BUILD/coordination/automation/t14/NOX-V16-T14-20261029T164051MSK-R02-NO-BUILD.json"
+  ]
+}
