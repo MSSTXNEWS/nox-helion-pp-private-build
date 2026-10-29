@@ -20,17 +20,22 @@ public static class E05DriveRunGate
         IReadOnlyList<E05DriveTarget> approved, bool masterIntegrityVerified,
         CancellationToken stop)
     {
+        var snapshot = approved?.ToArray();
         if (writer is null || string.IsNullOrWhiteSpace(runId) ||
             string.IsNullOrWhiteSpace(text) ||
             !text.Contains(runId, StringComparison.Ordinal) ||
-            approved is null || approved.Count != 3 ||
-            approved.Select(x => x.DocumentId).Distinct(StringComparer.Ordinal).Count() != 3 ||
+            snapshot is null || snapshot.Length != 3 ||
+            snapshot.Any(x => x is null || !GoogleDocsAppendReadback.ValidInput(x.DocumentId, runId, text)) ||
+            snapshot.Select(x => x.DocumentId).Distinct(StringComparer.Ordinal).Count() != 3 ||
             !new[] { "report", "lessons", "master" }.All(p =>
-                approved.Count(t => t.Purpose == p) == 1))
+                snapshot.Count(t => t.Purpose == p) == 1))
             return new(runId, "HOLD_CONTRACT", Array.Empty<DriveAppendReceipt>());
         var receipts = new List<DriveAppendReceipt>();
-        foreach (var target in approved)
+        // Persist the report and lesson before evaluating the optional master gate.
+        // Caller ordering must not prevent their independent readback receipts.
+        foreach (string purpose in new[] { "report", "lessons", "master" })
         {
+            var target = snapshot.Single(x => x.Purpose == purpose);
             stop.ThrowIfCancellationRequested();
             if (target.Purpose == "master" && !masterIntegrityVerified)
                 return new(runId, "HOLD_MASTER_INTEGRITY", receipts);
@@ -47,3 +52,4 @@ public static class E05DriveRunGate
         return new(runId, "PASS", receipts);
     }
 }
+

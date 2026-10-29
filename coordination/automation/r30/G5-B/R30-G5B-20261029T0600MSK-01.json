@@ -1,0 +1,150 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_SOURCE_ONLY_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5B-20261029T0600MSK-01",
+  "slot": "G5-B",
+  "automation_id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+  "time_zone": "Europe/Moscow",
+  "cycle": "2026-10-29 06:00 MSK",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows LOADER-INSTALLER V16 ONLY",
+  "status": "SOURCE_PATCH_SAVED__NATIVE_AND_DRIVE_WRITE_HOLD",
+  "stage": "SOURCE_ONLY",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T0600MSK-01",
+  "immutable_base": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "commit_git_sha1": "316fd4e48c21c69d90258886082442e2d9c76489",
+    "tree_git_sha1": "9b9ce6716f4f8936d33d8488ce2364f91eb6e389"
+  },
+  "ownership": {
+    "manifest": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "manifest_git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "wrote_only_assigned_paths_and_own_receipt": true
+  },
+  "history": {
+    "r30_snapshots_inventory": {
+      "count": 25,
+      "recursive_tree_entries": 30388,
+      "tree_truncated": false,
+      "three_original_archive_parts_same_git_blob_all_snapshots": true,
+      "physical_729_zip_sha256": "NOT_RUN"
+    },
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "competing_history_for_3_paths": [
+      "astra/r29-a05-20261029",
+      "astra-b/r29-b3-20261029",
+      "astra-b/r29-b4-20261029"
+    ],
+    "resolution": "Exact latest donor blob compared and reused in exclusive branch; no cross-owner merge; existing snapshots unchanged."
+  },
+  "source_changes": [
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "preimage_git_blob_sha1": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "immutable_donor_git_blob_sha1": "37b70dc61102a666d0325aa5889deb3b8a54de46",
+      "postimage_git_blob_sha1": "35efd33d9631db69b88658294e39b4aabc617017",
+      "source_sha256": "NOT_COMPUTED_GIT_BLOB_SHA1_NOT_SHA256"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "preimage_git_blob_sha1": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "immutable_donor_git_blob_sha1": "259206f4622919d54100d4c2cc22c1881af6c129",
+      "postimage_git_blob_sha1": "259206f4622919d54100d4c2cc22c1881af6c129",
+      "source_sha256": "NOT_COMPUTED_GIT_BLOB_SHA1_NOT_SHA256"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "preimage_git_blob_sha1": "9315534a691d9a2040b48daffd3543c1b66e373e",
+      "immutable_donor_git_blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+      "postimage_git_blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+      "source_sha256": "NOT_COMPUTED_GIT_BLOB_SHA1_NOT_SHA256"
+    }
+  ],
+  "fix": {
+    "root_cause": "Baseline adapter flattened Google Docs content across tabs and trusted substring RunID; approved targets could mutate during await and order depended on caller; post-POST readback accepted stale revisions and ACL denials lacked a separate failure code.",
+    "changes": [
+      "Reused stronger saved donor code: one tab identity across pre-read, endOfSegmentLocation write and readback; revision CAS; immutable approved-target snapshot; report→lessons→master order.",
+      "Exact token RunID boundary validation avoids R-10/R-100 collisions.",
+      "Fail closed on unchanged postwrite revision and expose read/write/readback permission-denied HOLD statuses."
+    ],
+    "new_backend_created": false
+  },
+  "targeted_test": {
+    "name": "R30-G5B-DRIVE-IMMUTABLE-TAB-CAS-STATIC-01",
+    "kind": "ONE_SOURCE_STATIC_CONTRACT_SUITE",
+    "result": "PASS_SOURCE_STATIC_ONLY",
+    "assertions": 12,
+    "token_boundary_oracle_cases": 5,
+    "execution": "V8 JavaScript assertions against exact in-memory C# postimages and an independent token-boundary oracle",
+    "csharp_execution": "NOT_RUN",
+    "dotnet_sdk": "UNAVAILABLE_IN_THIS_RUNTIME",
+    "google_live_write": "NOT_RUN",
+    "legacy_contract_tests": "NOT_RUN"
+  },
+  "drive": {
+    "docs": [
+      {
+        "purpose": "master",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "tab_id": "t.0",
+        "readback_revision": "AHj4eMR-SnuV8cWvVXUlQCc8JHKit_6xm1-VQm7o_xM6uXhHVBG53KDngbmYRANqkjvqmmhXfLMI34Z-FHrbxKRrjeE7On74QDIDznFTfjw",
+        "connector_read": "OK",
+        "tab_and_revision_read": "OK",
+        "permissions_metadata": "AVAILABLE_WRITER_ROLE_NOT_PROVEN"
+      },
+      {
+        "purpose": "report",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "tab_id": "t.0",
+        "readback_revision": "AHj4eMRfum_VlDfWsdMLcfLZ-pBZoCNSc4HIaaxM6LJ21tTtz6DabuX6vK-hV9WQwyNGgA7razTV2wj6pY0RRxYPOGgUahwzEOYjjzZRclY",
+        "connector_read": "OK",
+        "tab_and_revision_read": "OK",
+        "permissions_metadata": "AVAILABLE_WRITER_ROLE_NOT_PROVEN"
+      },
+      {
+        "purpose": "lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "tab_id": "t.0",
+        "readback_revision": "AHj4eMQswIKKJb1APxPeSXP53QWTXJBl7Ky2fjsZlAVLOVPQG48QHvz3PM3Soltxcgx1wW2eEONoRop5bimNVwoVsLLlrnBbybqtYQ7BQY0",
+        "connector_read": "OK",
+        "tab_and_revision_read": "OK",
+        "permissions_metadata": "AVAILABLE_WRITER_ROLE_NOT_PROVEN"
+      }
+    ],
+    "docs_write": "NOT_ATTEMPTED_SINGLE_WRITER_ASTRA_C",
+    "docs_write_readback": "PENDING_ASTRA_C",
+    "report_gate": "HOLD_PENDING_CENTRAL_WRITER",
+    "readback_in_this_run": "READ_ONLY_METADATA_AND_TEXT"
+  },
+  "lesson": {
+    "id": "G5B_R30_SNAPSHOT_PORT_WITH_EXACT_RUNID_TOKEN_AND_TAB_REVISION",
+    "previous_lesson_applied": "R29 use same observed tab/body and Google Docs revision across write/readback, do not concatenate unrelated tabs; use one exact source preimage and never replay old DONE as new.",
+    "observation": "25 immutable snapshots preserve a newer P05 Drive adapter than active R30 root; three conflicting source histories require blob SHA selection, not blind aggregate merge.",
+    "correction": "Port selected donor blobs only after exact owner lock and preimage compare. Add token-boundary collision control and explicit permission/stale-revision failures; keep C# runtime and Docs writes HOLD until verified by authorized executor.",
+    "prevention": "Single-writer central Docs coordination; immutable per-run Git receipt with exact blob SHA, no unowned test writes, no invented native PASS."
+  },
+  "external_gates": {
+    "GitHub_source_storage": "TO_VERIFY_REMOTE_READBACK",
+    "Google_Docs_shared_writes": "ASTRA_C_ONLY",
+    "Windows_EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "PR162": "UNTOUCHED",
+    "main": "UNTOUCHED",
+    "SOURCE_READY": "HOLD",
+    "release": "HOLD"
+  },
+  "next_owner": "Astra-C may read this receipt by immutable RunID and alone append one lesson to shared Google Docs using revision CAS + exact tab/body readback. Run native C# HTTP-fixture test separately when a .NET runtime is available, without building an installer."
+}
