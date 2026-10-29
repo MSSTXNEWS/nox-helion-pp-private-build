@@ -299,6 +299,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         "status": "HOLD",
         "reason": None,
         "candidate_sha256": None,
+        "shard_index_sha256": None,
         "weight_files": [],
         "tensor_headers": 0,
         "model_license_verified": False,
@@ -316,7 +317,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
         index = base / "model.safetensors.index.json"
         weights = None
         if index.exists() or index.is_symlink():
-            metadata = _json_file(index)
+            metadata, index_sha256 = _json_file(index, return_sha=True)
+            report["shard_index_sha256"] = index_sha256
             weights = metadata.get("weight_map")
             if not isinstance(weights, dict) or not weights:
                 raise ValueError("MODEL_SHARD_INDEX_INVALID")
