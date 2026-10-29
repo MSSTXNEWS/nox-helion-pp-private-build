@@ -1,0 +1,19 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB07",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 cinema FX must roll back if WOW adapter explicitly returns false; add regression case C5.11",
+  "sourceCommits": [
+    "0e27b4006945bf32020e907ac96ddb534f155405",
+    "66f28e587ffeb693390e6e2056f4cb381351cff4"
+  ],
+  "sourceTest": "Exact-source/test Node suite 12/12 PASS at final HEAD; test includes C5.11",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub owner-file CAS/Git blob readback; exact Node suite for final P01 FX only.",
+  "lesson": "Only execute safe owned source changes; native acceptance requires later independent pinned Windows run."
+}
