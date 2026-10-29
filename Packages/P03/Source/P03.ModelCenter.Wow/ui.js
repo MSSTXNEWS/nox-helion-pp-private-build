@@ -141,18 +141,21 @@ function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(stat
   li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
 }
 function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
-function sendAction(action){const c=state.capabilities||{};const job=currentJob();if(!state.hostReady||c[action]!==true)return;
+function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retry'].includes(action);
+ const job=isQueue?state.activeJob:currentJob(),targetModel=isQueue?queueJobModel():current();
+ if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
- if(['stop','retry'].includes(action)&&(!job||!job.jobId))return;
+ if(isQueue&&(!job||!job.jobId||!targetModel))return;
  if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
  if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
  if(state.pending.has(action))return;const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
- const data={type:'p03.command.v1',commandId,action,modelId:current()?.id||null,
+ const data={type:'p03.command.v1',commandId,action,modelId:targetModel?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
- const m=current(),pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,timer:null};
+ const m=targetModel,pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,
+  jobId:isQueue?job.jobId:null,timer:null};
  state.pending.set(action,pending);renderHero();renderQuick20();
  try{window.chrome.webview.postMessage(data);
   pending.timer=setTimeout(()=>{if(state.pending.get(action)!==pending)return;state.pending.delete(action);renderHero();renderQuick20();showToast('Нет ACK host: исход неизвестен; проверьте очередь.');},45000);
@@ -243,7 +246,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const pending=state.pending.get(data.action);if(!pending||pending.commandId!==data.commandId)return;
   if(pending.timer!==null)clearTimeout(pending.timer);
   state.pending.delete(data.action);renderHero();renderQuick20();
-  const m=current(),samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null);
+  const isQueue=['stop','retry'].includes(data.action),m=isQueue?queueJobModel():current();
+  const samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null)&&
+    (!isQueue||pending.jobId===state.activeJob?.jobId);
   showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);
