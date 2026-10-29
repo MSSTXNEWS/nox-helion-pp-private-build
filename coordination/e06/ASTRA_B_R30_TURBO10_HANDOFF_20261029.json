@@ -1,0 +1,30 @@
+{
+  "run_id": "ASTRA-B-R30-TURBO10-20261029",
+  "source_only": true,
+  "independent_lanes": 6,
+  "new_commits": 27,
+  "source_candidate_counts": {
+    "B1": 10,
+    "B2": 10,
+    "B3": 10,
+    "B4": 10,
+    "B5": 10,
+    "B6": 10
+  },
+  "new_code_sha": {
+    "B1": "cd790e0107c49ffd19f995a8549fb5bc63f27b39",
+    "B2": "b1fe0c1daa8ca56cef2b31f9544854348711dd8c",
+    "B3": "4dbff4254be1212a066360a4b6440368ba24d5c3",
+    "B4": "e674e00a199bd18935ceb6974a06c8b9db069590",
+    "B5": "cea58ba3992c9a143d8b6038034bf57604ceb22c",
+    "B6": "506bb0dc3c75d22e6bf2fb92b4cebde9453b8821"
+  },
+  "one_file_per_lane": true,
+  "source_readback": "PASS",
+  "native_tests": "NOT_RUN",
+  "real_new_subagents": 0,
+  "product_taskid": "N_D",
+  "shared_docs": "ASTRA_A_ONLY",
+  "release": "HOLD",
+  "lesson": "A source patch and check cannot prove Windows runtime behavior; reconcile owner diffs before integrating."
+}
