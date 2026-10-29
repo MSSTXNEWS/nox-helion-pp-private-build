@@ -1,0 +1,301 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T05_R12_FINAL_SOURCE_INTAKE_HANDOFF_V1",
+  "task": "T05",
+  "run_id": "NOX-V16-T05-R12-20261029-SOURCE-INTAKE-FINAL",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "started_or_recorded_msk": "2026-10-29T16:29:58+03:00",
+  "status": "T05_CANDIDATE_DISPOSITION_DONE__NOT_PRODUCT_ACCEPTANCE",
+  "frozen_context": {
+    "astra_head": "f0064948119c55001601e1bae1cd3755826605ed",
+    "pr162_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "r30_snapshot_head": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "owner_lock_blob_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "historical_t05_r11_manifest_git_blob_sha1": "cb40add312db492a06a16baa600740bcb5575de2"
+  },
+  "fixed_intake_progress": {
+    "candidate_total": 13,
+    "decisions_completed": 13,
+    "accepted_for_t06_candidate": 1,
+    "rejected_product_integration": 0,
+    "hold_isolated": 12,
+    "disposition_percent": 100,
+    "source_integrated_by_t05": 0,
+    "product_accepted_taskid_delta": 0
+  },
+  "snapshots_prior_manifest": {
+    "snapshots": 25,
+    "source_occurrences": 115,
+    "byte_identical_skip": 9,
+    "not_directly_admitted": 106,
+    "historical_overlaps_paths": 34,
+    "not_proven_defects": 34,
+    "original_snapshot_mutation": false
+  },
+  "compatible_for_t06": [
+    {
+      "slot": "G2-A",
+      "task_id": "G2A-P02-NATIVE-BINARY-FRAME-SHORT-WRITE-20261029-04",
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "owner": "G2-A/P02-IPC",
+      "pre_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post_git_blob_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "pre_sha256": "4cb7c92cd405bfcdd7639148b7cd2da23b7d6e9954948926a8e9b34a5f51cada",
+      "post_sha256": "d519f14a7b7af8339d973856da2c5b95d75e064517a0dfb1c221a434e8db0b5c",
+      "owner_receipt_blob_sha1": "88c4a67fc78efcd45c07919036be52f5fd18acf6",
+      "owner_code_commit": "4686e323cf3f64b85b933cb0fdc2f1db612439fc",
+      "owner_test_blob_sha1": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+      "owner_red": "EXPECTED_FAIL, exit 1, 4 methods / 7 failures: header/payload truncated, STOP-fragment count wrong, five invalid return counts accepted.",
+      "owner_green": "PASS exit 0, four methods, five invalid count subtests all rejected; short and full byte frame exact; STOP fast-path preserved",
+      "tested_by_t05": "NOT_RERUN_REUSE_OWNER_PROOF",
+      "t06_action": "Apply owner-authored patch only on pinned compatible preimage via T06 authorized CAS; preserve original STOP/host; no early EXE."
+    }
+  ],
+  "candidate_dispositions": [
+    {
+      "slot": "G1-B",
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISSING",
+      "pre_git_blob_sha1": "c9c68bce1f1e1a6d074255f7150f2f04bc52179f",
+      "post_git_blob_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "pre_content_sha256": "0c586e5df3a92a32cd7ed65988bc63046a52a7a759563e5d0623b2e9e56d108b",
+      "post_content_sha256": "d3800c7fb6892140d3bb87431c90ea8b015be1de7c5251ab1b3386faa959b0ea",
+      "test_file_git_blob_sha1": "35edce19360db21dd5193f55e1c8b0834a54490e",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "MISSING",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G2-A",
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "decision": "ACCEPTED_FOR_T06_SOURCE_CANDIDATE",
+      "reason": "EXACT_PREIMAGE_MATCH_BOTH_ASTRA_AND_PR162_OWNER_RED_GREEN_4OF4_NO_REPEAT",
+      "pre_git_blob_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post_git_blob_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "pre_content_sha256": "4cb7c92cd405bfcdd7639148b7cd2da23b7d6e9954948926a8e9b34a5f51cada",
+      "post_content_sha256": "d519f14a7b7af8339d973856da2c5b95d75e064517a0dfb1c221a434e8db0b5c",
+      "test_file_git_blob_sha1": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "MATCH",
+      "requires_t04_ownership_resolution": false
+    },
+    {
+      "slot": "G2-B",
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f",
+      "post_git_blob_sha1": "da8d42570d5732e5fe009f86caf02b45d935edc9",
+      "pre_content_sha256": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+      "post_content_sha256": "143d170331d1184cf618cffbbeb9f517b4f381cd54d37b99e6c368aa1c9e69b0",
+      "test_file_git_blob_sha1": "f7e17d984358620f82ba80bc0de0fc9d21f83387",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G3-A",
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "0b94237d7861c021a7db3cfda56073939562d312",
+      "post_git_blob_sha1": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+      "pre_content_sha256": "b5e6850ce7e550c6a65d85ccddd1ae36bef52f4d9fc15404ebb88c77a64b53d7",
+      "post_content_sha256": "55ba008fc9012a4edf7fdd455137f6eca7844e2faf19e2d60825a694e4dcbb79",
+      "test_file_git_blob_sha1": "0650f8d927d3abc65b92cdd58b3057335ad547b2",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G3-B",
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+      "post_git_blob_sha1": "3692811ac3234afb54e82958c7415b23619c1f0f",
+      "pre_content_sha256": "e3293dc4aa2ebd50e9b51f090f64801c1e27ae4923e2bea7b8d41b779a68465b",
+      "post_content_sha256": "dcaa2785378cfa56542fdc09ca0a2cfc8e6431fd03a05659ad00be65cc5d9434",
+      "test_file_git_blob_sha1": null,
+      "unresolved_additional_test_gate": "NO_DURABLE_FOCUSED_TEST",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G4-A",
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+      "post_git_blob_sha1": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+      "pre_content_sha256": "8438e88300f1f9320283a4e263e00fcac86205c921e2e24b40ef110165eb430b",
+      "post_content_sha256": "a8a0f7f5bf9f30b13a6cf8e6273c868bd53a5f4539948ef459163fa479a4224e",
+      "test_file_git_blob_sha1": "3b321a141a433e82e66a2a539c255cf7e7fe1af5",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G4-B",
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+      "post_git_blob_sha1": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+      "pre_content_sha256": "68f57f0a3f23e6f065601455aa4dff90712fa7a02e10b24a4379fe214eb4baf9",
+      "post_content_sha256": "5ec61594bda75f63dcd298fa38f41095127cdb75e9d6c5324c4098ae8495a17a",
+      "test_file_git_blob_sha1": "6ad08fe51cc20a5bcec186e4473cc9cb5653610f",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G5-A",
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "a6d723190213feb10091ab6dd699d56c46a00c46",
+      "post_git_blob_sha1": "ae3c3a9f9471193a88046306fc91717df6360520",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "69f00e5d17f6f28c149fddd1d34fc5b48ae3eeaf0d89e42caf2832e3be1c55a7",
+      "test_file_git_blob_sha1": null,
+      "unresolved_additional_test_gate": "NO_DURABLE_FOCUSED_TEST",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G5-B",
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+      "post_git_blob_sha1": "96bc6a90b57c58fa285a8733cd280c6beeff9100",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "bcc7164a3166042b497ba67e8449f592614ad1e5fc08e2e622c977e8d2635bc5",
+      "test_file_git_blob_sha1": null,
+      "unresolved_additional_test_gate": "NO_DURABLE_FOCUSED_TEST",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G6-A",
+      "path": "coordination/e06/verify_original_729_source.py",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "972f7e14746a6b4e633adcfce248322d69590499",
+      "post_git_blob_sha1": "5ba6f3eaf9e142b21c530c49dc28a27d9ccb4dd5",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "8f910516c308bfbe037f3dd0c9f76430fecda4cb5c545864f210b94cccc1dcb5",
+      "test_file_git_blob_sha1": null,
+      "unresolved_additional_test_gate": "NO_DURABLE_FOCUSED_TEST",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G6-B",
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "0010d0dececebdcc7d6677a03c63bbf1e5993deb",
+      "post_git_blob_sha1": "2a4fc9c96d9cb7d5ba39399f6e9ba0be869358ae",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "148c499d597816b6070e7fef4881346ff4f4f923e877d5a1c93d1c63f66f2ab1",
+      "test_file_git_blob_sha1": null,
+      "unresolved_additional_test_gate": "NO_DURABLE_FOCUSED_TEST",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G7-A",
+      "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "027382303a9a286ab8deea1b167abb20920bc0ba",
+      "post_git_blob_sha1": "2b7acac6d4ac3f4eb1246562307a2e79a0bd7862",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "a1e9583d65cb7f6d8ea38e1a79f2bf1c8f94021c36445278d18b5e0fbe753383",
+      "test_file_git_blob_sha1": "7e8d99e461f7e4e5ba55e5ba2328f568495f8b6e",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    },
+    {
+      "slot": "G7-B",
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "decision": "HOLD",
+      "reason": "TARGET_PREIMAGE_MISMATCH",
+      "pre_git_blob_sha1": "4337ef89a3ea2a8aa8cc45fc620649e6f76b83fb",
+      "post_git_blob_sha1": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+      "pre_content_sha256": "NOT_VERIFIED",
+      "post_content_sha256": "16786a89dd2494a54a68e2a3c258a0e336798fb7c94446e042b8ecb7ce2cdac6",
+      "test_file_git_blob_sha1": "9a708eee013ba1c2c0c34fec55b523b6868401ca",
+      "unresolved_additional_test_gate": "OWNER_TEST_EVIDENCE_ONLY",
+      "compatibility_r11": "DIFFERENT",
+      "requires_t04_ownership_resolution": true
+    }
+  ],
+  "exceptions_for_t06": [
+    {
+      "code": "G1A_OLD_OWNER_RECEIPT",
+      "reason": "Old G1-A HOLD used 56ae owner lock; current bb41 has Installer allowed; historical HOLD not auto-promoted."
+    },
+    {
+      "code": "PREIMAGE_PATH_MISMATCH",
+      "count": 12,
+      "reason": "11 different Git preimages and 1 absent from Astra target; no blanket cherry-pick or overwrite."
+    },
+    {
+      "code": "FOCUSED_TEST_NOT_SAVED",
+      "count": 5,
+      "slots": [
+        "G3-B",
+        "G5-A",
+        "G5-B",
+        "G6-A",
+        "G6-B"
+      ],
+      "reason": "No immutable focused regression test file per exact current receipt."
+    },
+    {
+      "code": "HISTORICAL_DONOR_NONADMISSION",
+      "count": 106,
+      "reason": "Not byte-identical against frozen source; leave as historical donor candidates and protect 25 snapshots."
+    }
+  ],
+  "preserved": {
+    "original_729_files": true,
+    "original_3_zip_parts": true,
+    "NO_LOSS": true,
+    "D02_WOW200": true,
+    "P01_P05": true,
+    "one_host": true,
+    "existing_done": true,
+    "no_deleted_or_replaced_source": true
+  },
+  "prohibited_actions_observed": {
+    "no_product_code_write": true,
+    "no_merge": true,
+    "no_t06_tree_change": true,
+    "no_windows_build": true,
+    "no_exe": true,
+    "no_e07": true,
+    "no_shared_Google_Docs_write": true,
+    "no_new_modelcenter_voice_gpu_rag_wow_improvements": true
+  },
+  "applied_lesson": {
+    "source": "C34 + Master/E06/Lessons; R11 G1-A stale owner-lock lesson",
+    "action": "Verify current owner lock bb41 and exact content preimage; never convert Git-blob difference into patch rejection without owner reconciliation; reuse G2-A RED-GREEN rather than repeat tests.",
+    "verified": "G2-A preimage Git blob matches both pinned Astra+PR162, owner R04 receipt+saved test blob match; other 12 isolated"
+  },
+  "handoff": {
+    "to": "T06",
+    "journal_writer": "T02_only",
+    "docs_write_by_T05": "FORBIDDEN",
+    "source_code_complete": "HOLD",
+    "source_ready": "HOLD",
+    "GitLab": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "notify_via": "immutable Git receipt; issue #177 comment after readback"
+  },
+  "actual_end_msk": "TO_BE_RECORDED_BY_GIT_READBACK_OR_REPORT; do not guess"
+}
