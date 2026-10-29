@@ -1,0 +1,103 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T120000MSK-07",
+  "slot": "G5-A",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "decision": "G5-A assigned exact C# file; no forbidden Drive or SafeRunReports paths written"
+  },
+  "rules": {
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "count": 56,
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only latest priority"
+    ]
+  },
+  "history": {
+    "previous_owner_branch": "automation/r30/g5a/20261029T110059MSK-06",
+    "previous_head": "cd2fb6037a9b39995cbcd29a120849d1ab5089c9",
+    "master_drive_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06_drive_id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "lessons_drive_id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "latest_coordinator_delta": "ASTRA-C-R30-20261029T1133MSK-06",
+    "previous_lesson_applied": "Validate events.v3 field bounds against canonical JSON schema and retain earlier JS optional-field fixes; do not claim native approval."
+  },
+  "snapshots": {
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_index_branches": 25,
+    "root_dirs_listed": 25,
+    "complete_recursive_git_tree_manifests_read": 25,
+    "git_tree_truncated_count": 0,
+    "original_snapshot_file_bytes_exhaustively_read": false,
+    "original_729_physical_sha256_verified": false,
+    "snapshot_mutations": 0
+  },
+  "task": {
+    "id": "G5A-R30-P05-CSHARP-EVENTS-V3-IDENTITY-AND-MESSAGE-BOUNDS-R07",
+    "outcome": "SOURCE_PATCH_ONLY",
+    "new_product_taskids_accepted": 0,
+    "product_percent": "N/D"
+  },
+  "branch": "automation/r30/g5a/20261029T120000MSK-07",
+  "source_change": {
+    "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "preimage_blob": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+    "postimage_blob": "b2a7f68d1b9c41f0ac0213b8d820380a86718700",
+    "source_commit": "f7996fce12b9a272d86cd5747a4ac570946fbc8d",
+    "root_cause": "C# factory used source >120/message >240 instead of canonical 128/4096 and left RunId/EventId/TaskId/ActionId unbounded.",
+    "fix": "Align source/message maxima with Contracts/events.v3.json; require all four event identities <=128; keep host-owned bridge and all preexisting GPU/P04 restrictions.",
+    "git_source_readback": "PASS"
+  },
+  "test": {
+    "kind": "targeted static source-invariant assertions on exact GitHub C# content",
+    "executable_csharp": false,
+    "preimage_red_assertions": 9,
+    "postimage_assertions_passed": 11,
+    "postimage_assertions_total": 11,
+    "source_git_readback": "PASS",
+    "csharp_compilation": "NOT_RUN_NO_DOTNET_SDK",
+    "run_exe": false,
+    "run_nsis": false,
+    "run_gitlab_ci": false,
+    "run_final_integration": false,
+    "notes": "No separately committed new tests because tests/ is outside G5-A explicit assigned_paths. Do not promote static contract checks to executable .NET PASS."
+  },
+  "ownership": {
+    "changed_owned_source_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs"
+    ],
+    "receipt_dir": "coordination/automation/r30/G5-A/",
+    "other_owner_paths_changed": [],
+    "shared_main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "old_done_preserved": true
+  },
+  "self_improvement": {
+    "new_lesson_id": "G5A-R07-CSHARP-JS-SCHEMA-PARITY-BEFORE-BOUNDARY-CLAIMS",
+    "cause": "Equivalent JavaScript and C# event entry points drifted from the same canonical schema: C# rejected valid diagnostics while IDs lacked maximum lengths.",
+    "action": "On each G5-A source patch, compare canonical events.v3 schema to every owned boundary, test accepted limits and rejected overflows, and record which runtime was actually executed.",
+    "next_action": "Run independent .NET edge tests with a C# SDK in an approved environment; until then retain DOTNET_HOLD."
+  },
+  "gates": {
+    "product": "HOLD",
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD",
+    "report_gate": "DRIVE_CENTRAL_READBACK_PENDING_C_ONLY",
+    "drive_writes_by_g5a": 0
+  },
+  "readback": {
+    "owner_receipt": "PENDING_POST_COMMIT",
+    "source_blob": "PASS"
+  }
+}
