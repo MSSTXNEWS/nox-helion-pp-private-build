@@ -31,8 +31,14 @@ foreach ($meta in @($markerPath, $manifestPath)) {
   $metaInfo=Get-Item -LiteralPath $meta -Force -ErrorAction Stop
   if (($metaInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'P01_UNINSTALL_METADATA_REPARSE' }
 }
-$ownership = (Get-Content -LiteralPath $markerPath -Raw -Encoding UTF8).Trim()
-if ($ownership -cne 'NOXHELION.P01 V16') { throw 'P01_UNINSTALL_INVALID_OWNER_MARKER' }
+# A filename or trimmed string is not sufficient authority for deletion.
+# The exact 19-byte NSIS marker must match before manifest or file removal.
+$markerExpected = [Text.Encoding]::ASCII.GetBytes('NOXHELION.P01 V16'+[char]13+[char]10)
+$markerActual = [IO.File]::ReadAllBytes($markerPath)
+if ($markerActual.Length -ne $markerExpected.Length -or
+    [Convert]::ToBase64String($markerActual) -cne [Convert]::ToBase64String($markerExpected)) {
+  throw 'P01_UNINSTALL_INVALID_OWNER_MARKER'
+}
 $m = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
 if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or $m.entrypoint -cne 'NOX.P01.Shell.exe') { throw 'P01_UNINSTALL_BAD_MANIFEST' }
 if ($null -eq $m.files -or @($m.files).Count -lt 1 -or @($m.files).Count -gt 50000) { throw 'P01_UNINSTALL_INVALID_MANIFEST_LENGTH' }
