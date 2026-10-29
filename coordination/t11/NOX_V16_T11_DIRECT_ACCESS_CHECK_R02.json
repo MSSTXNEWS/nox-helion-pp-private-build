@@ -1,0 +1,92 @@
+{
+  "schema": "NOX_V16_T11_DIRECT_GITLAB_ACCESS_ATTEMPT_AND_PINNED_CI_PROPOSAL_R02",
+  "task": "T11",
+  "run_id": "NOX-V16-T11-20261029-DIRECT-ACCESS-ATTEMPT-R02",
+  "checkpoint_msk": "2026-10-29 17:37:47",
+  "product": "NOX HELION EXPRESS INTEGRATOR V16 loader only",
+  "independent_direct_access_attempt": {
+    "provider": "GitLab.com private project s-grouptwet/nox-helion-pp-private-build",
+    "gitlab_plugin_discovery": "NO GitLab plugin found",
+    "current_available_gitlab_connector": false,
+    "container_glab_binary": false,
+    "container_git": true,
+    "authorized_gitlab_token_present_in_tool_session": false,
+    "direct_gitlab_api_unauthenticated_request": "GET /api/v4/projects/s-grouptwet%2Fnox-helion-pp-private-build",
+    "network_result": "DNS resolution failed for gitlab.com from sandbox",
+    "public_web_access_result": "GitLab private project/API fetch unavailable; cannot prove live HEAD",
+    "gitlab_live_head": null,
+    "project_runner_live_state": null,
+    "access_status": "GITLAB_ACCESS_HOLD",
+    "required_single_owner_action": "Authenticate to existing private GitLab project in an environment with network access; execute coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py with locally set NOX_GITLAB_READ_API_TOKEN (read_api), then share only sanitized JSON; no credential in chat. Runner API requires at least Maintainer or Auditor access.",
+    "docs": "https://docs.gitlab.com/api/runners/"
+  },
+  "github_static_evidence": {
+    "preserved_migration_ref": "migration/nox-v16-gitlab-free-20261028-r01",
+    "migration_sha": "fe4a3dab75f1c6c23c74ccf0e5860692a939b862",
+    "migration_unique_files_verified": 27,
+    "shared_divergent_paths": 43,
+    "historical_commits_not_in_astra": 21,
+    "historical_ci_git_blob_sha1": "86234bbb059d8fd9edaf21b0561e99cff1bb6714",
+    "historical_windows_entrypoint_git_blob_sha1": "a330977156c49aab0c433978b0d924549c5e2421",
+    "candidate_source_head_observed": "0cdeb101848e97088f9c464f502a68dc28049b7b",
+    "t09_final_owner_accepted_frozen_sha": null,
+    "t10_same_sha_SOURCE_READY_PASS": false,
+    "freeze_named_branch_is_not_final": "freeze/nox-v16-t09-20261029-1712msk points to original-only acceptance, NOT full-source freeze"
+  },
+  "isolated_prepared_files": [
+    {
+      "path": "coordination/t11/NOX_V16_PINNED_SOURCE_PREFLIGHT.ps1",
+      "blob": "f51a5c3471be4f03cc28e50507e042fce2078ee3",
+      "purpose": "pinned exact SHA/ref/source manifest digest guard"
+    },
+    {
+      "path": "coordination/t11/NOX_V16_PINNED_GITLAB_CI_CANDIDATE.yml",
+      "blob": "a8cc88a39f5d8e431c5dc4fe1522b1fa13257642",
+      "purpose": "opt-in web/api + YES conditional CI proposal, not active"
+    },
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_READONLY_AUDIT.py",
+      "blob": "0b57108e02b9cac5630ade54dacbbcbf6a709c4f",
+      "purpose": "GitLab GET-only evidence collector"
+    },
+    {
+      "path": "coordination/t11/NOX_V16_T11_GITLAB_FREE_NONDESTRUCTIVE_HANDOFF_R01.json",
+      "blob": "f259f0269cb3f8a89250c44c0643ccd67b0a6f18",
+      "purpose": "source/CI/migration/no-loss handoff"
+    }
+  ],
+  "safeguard": {
+    "source_pr162_unchanged_by_t11": true,
+    "existing_gitlab_project_unchanged": true,
+    "historical_migration_branch_unchanged": true,
+    "active_gitlab_ci_not_edited": true,
+    "pipelines_started": 0,
+    "exe_builds_started": 0,
+    "nsis_runs": 0,
+    "e07_executions": 0,
+    "force_push": 0,
+    "reimport": 0,
+    "history_deleted": 0
+  },
+  "progress": {
+    "fixed_criteria": 5,
+    "confirmed_done": 2,
+    "remaining": 3,
+    "bar": "████░░░░░░",
+    "percent": 40,
+    "delta_percentage_points": 0,
+    "reason": "Cannot upgrade #3 live project or #4 frozen SHA from static GitHub evidence; #5 depends on both plus T10."
+  },
+  "lesson": {
+    "error": "Earlier work left only an ACCESS_HOLD report after repeated GitHub-only checks.",
+    "root_cause": "No authenticated GitLab tool or network access; CI tied to mutable historical migration branch.",
+    "applied": "Collected direct access failure evidence and staged pinned SHA+manifest+ref fail-closed CI proposal and safe GET-only collector without touching active pipeline.",
+    "prevention": "Never treat GitHub historical migration refs or hosted Windows documentation as live private GitLab readiness; verify actual private refs/runner with authorized readback, and re-freeze if a CI commit shifts source SHA."
+  },
+  "t02_report_request": {
+    "writer": "T02/C",
+    "action": "Append R02 RunID, direct GitLab access failure, exact 2/5, one applied lesson to Master/E06/Lessons with CAS/readback and preserve history.",
+    "status": "NOT_YET_CONFIRMED"
+  },
+  "state": "GITLAB_ACCESS_HOLD"
+}
