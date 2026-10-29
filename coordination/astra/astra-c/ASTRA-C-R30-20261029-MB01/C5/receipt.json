@@ -1,0 +1,18 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C5",
+  "taskId": "P05-SEALED-READINESS-ROUNDING",
+  "owner": "Astra-B/P05",
+  "baseBranch": "astra/c-r30-c5-progress-overflow-20261029",
+  "originalPath": "Packages/P05/E05/src/E05CriterionSeal.cs",
+  "preimageGitBlobSha1": "3015fa132ee3fa83ccae335cda40f595aaca77cb",
+  "patchCommit": "7fcc74fdacc804e246bfabf48f035a60d686208d",
+  "defect": "E05SealedProgress.Evaluate and Overall round very-high partial acceptance to 100.00 despite positive HOLD TaskID, contradicting accepted-only product readiness.",
+  "fix": "Cap partial TaskID lane and weighted overall at 99.99%; reserve 100 strictly for complete ACCEPTED evidence.",
+  "staticReplacementCheck": "PASS",
+  "test": "C_SHARP_NATIVE_NOT_RUN; numeric regression-model executed separately",
+  "windowsRuntime": "NOT_RUN",
+  "sourceCandidateStatus": "PATCH_CANDIDATE",
+  "noOwnerSourceWrites": true,
+  "limitations": "Owner must recheck current SHA and run native or focused source tests; do not promote to accepted."
+}
