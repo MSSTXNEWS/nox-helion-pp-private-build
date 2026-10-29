@@ -16,8 +16,34 @@ public sealed record ModelArtifactReviewCandidate(
 
 public static class ModelArtifactReviewRegistry
 {
+    /// <summary>Owner-side snapshot for the existing native/Python boundary.
+    /// Caller supplies authenticated owner receipt verification; page JSON must
+    /// never set it. Export is metadata, not a queue permission or install receipt.
+    /// </summary>
+    public static bool TryExportReviewedArtifact(ModelArtifactReviewCandidate? candidate,
+        bool ownerReceiptVerified, out string? json)
+    {
+        json = null;
+        if (!TryPromote(candidate, ownerReceiptVerified, out var model) || model is null)
+            return false;
+        json = JsonSerializer.Serialize(new {
+            schema = "NOX_P03_NATIVE_REVIEWED_ARTIFACT_V1",
+            familyId = model.Id, exactTag = model.ExactTag, version = model.Version,
+            licenseId = model.License, licenseEvidenceUrl = model.LicenseEvidenceUri!.AbsoluteUri,
+            artifactBytes = model.ArtifactBytes, requiredDiskBytes = model.RequiredDiskBytes,
+            recommendedRamBytes = model.RecommendedRamBytes,
+            requiredVramBytes = model.RecommendedVramBytes,
+            artifactSha256 = model.ExpectedSha256!.ToLowerInvariant(),
+            manifestSha256 = model.ExpectedManifestDigestSha256!.ToLowerInvariant(),
+            immutableRevision = model.ImmutableRevision,
+            compatibilityEvidenceUrl = model.CompatibilityEvidenceUri!.AbsoluteUri,
+            reviewerReceiptId = candidate!.ReviewerReceiptId
+        });
+        return true;
+    }
+
     private static readonly Regex TagPattern = new(@"^[a-zA-Z0-9][a-zA-Z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?:[a-zA-Z0-9][a-zA-Z0-9._-]*$", RegexOptions.Compiled);
-    private static bool Sha(string? x) => x is { Length: 64 } && x.All(Uri.IsHexDigit);
+    private static bool Sha(string? x) => x is { Length: 64 } && x.All(Uri.IsHexDigit) && x.Any(ch => ch != '0');
     private static bool Https(string? x, out Uri? uri) =>
         Uri.TryCreate(x, UriKind.Absolute, out uri) && uri.Scheme == Uri.UriSchemeHttps &&
         string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment);
@@ -60,7 +86,7 @@ public static class ModelArtifactReviewRegistry
             !Sha(c.ArtifactSha256) || !Sha(c.ManifestSha256) ||
             !c.CompatibilityReviewed || string.IsNullOrWhiteSpace(c.ImmutableRevision) ||
             !(Sha(c.ImmutableRevision) || c.ImmutableRevision.StartsWith("sha256:",StringComparison.OrdinalIgnoreCase) && Sha(c.ImmutableRevision[7..]))) return false;
-        result=ModelCatalog.Get(c.FamilyId) with {
+        var promoted=ModelCatalog.Get(c.FamilyId) with {
             EvidenceStatus=CatalogEvidenceStatus.ArtifactVerified,
             ExactTag=c.ExactTag, Version=c.Version, License=c.LicenseId,
             ArtifactBytes=c.ArtifactBytes, RequiredDiskBytes=c.RequiredDiskBytes,
@@ -69,6 +95,10 @@ public static class ModelArtifactReviewRegistry
             LicenseEvidenceUri=license, CompatibilityEvidenceUri=compat,
             ImmutableRevision=c.ImmutableRevision, CompatibilityReviewed=true
         };
-        return result.CanOfferOneClickPull;
+        // A failed Try operation must never leak a partially promoted artifact.
+        // Direct entries and reviewed candidates share the catalogue resource gate.
+        if (!promoted.CanOfferOneClickPull) return false;
+        result=promoted;
+        return true;
     }
 }

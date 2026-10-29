@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Mapping, Any
 import re
+import json
 import ipaddress
 import ntpath
 import unicodedata
@@ -59,6 +60,25 @@ def _sha(s: Any) -> bool:
     return isinstance(s, str) and SHA.fullmatch(s) is not None and s != "0" * 64
 
 
+def _immutable_revision(s: Any, kind: str) -> bool:
+    """Recognize existing owner formats without treating digest as Git commit.
+
+    Historical evidence uses a 40-hex source revision. Original Ollama
+    ModelArtifactReviewRegistry.TryPromote also emits a 64-hex digest reference,
+    optionally sha256-prefixed. Only that route has this native contract; never
+    infer it for GGUF/external source revisions or turn syntax into rights proof.
+    The original string still reaches the trusted attestor unchanged.
+    """
+    if not isinstance(s, str):
+        return False
+    if REVISION.fullmatch(s):
+        return True
+    if kind != "ollama":
+        return False
+    digest = s[7:] if s[:7].lower() == "sha256:" else s
+    return re.fullmatch(r"[a-fA-F0-9]{64}", digest) is not None and digest != "0" * 64
+
+
 def _https_url(s: Any) -> bool:
     """Lexical E06 evidence URL gate; NEVER fetch/DNS-resolve in this policy.
 
@@ -97,6 +117,43 @@ def _https_url(s: Any) -> bool:
 
 def _positive(value: Any) -> bool:
     return type(value) is int and 0 < value < (1 << 63)
+
+
+def _evidence_snapshot(*values: Mapping[str, Any]) -> str:
+    """Bound callback evidence including nested MappingProxyType records.
+
+    Native attestations must describe exactly the objects evaluated by policy;
+    mutating valid identifiers after an earlier check cannot inherit its PASS.
+    No user-defined scalar coercion, non-finite JSON or unbounded graphs.
+    """
+    nodes = 0
+
+    def plain(value, depth=0):
+        nonlocal nodes
+        nodes += 1
+        if depth > 32 or nodes > 4096:
+            raise ValueError("Evidence structure limit")
+        if isinstance(value, Mapping):
+            if len(value) > 4096 or any(type(k) is not str or len(k) > 65536 for k in value):
+                raise ValueError("Evidence object keys")
+            return {k: plain(v, depth + 1) for k, v in value.items()}
+        if type(value) is list:
+            if len(value) > 4096:
+                raise ValueError("Evidence array limit")
+            return [plain(v, depth + 1) for v in value]
+        if type(value) is str:
+            if len(value) > 65536:
+                raise ValueError("Evidence text limit")
+            return value
+        if value is None or type(value) in (bool, int, float):
+            return value
+        raise ValueError("Evidence JSON value required")
+
+    encoded = json.dumps([plain(v) for v in values], sort_keys=True,
+                         separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    if len(encoded.encode("utf-8")) > 262144:
+        raise ValueError("Evidence byte limit")
+    return encoded
 
 
 def _nonblank_license_id(value: Any) -> bool:
@@ -148,6 +205,9 @@ def prerequisite_gates(facts: Mapping[str, Any], role: str) -> tuple[str, ...]:
     if not isinstance(facts, Mapping):
         facts = {}
     needed = ("ollama",) if role == "OLLAMA" else ("python", "git")
+    if role == "GGUF":
+        # Existing native GGUF import invokes the original Ollama service.
+        needed = ("python", "git", "ollama")
     if role in {"TRAINING", "GPU_TRAINING"}:
         needed = ("python", "git", "cuda", "torch", "peft", "trl", "accelerate")
     return tuple("PREREQUISITE_" + x.upper() + "_UNVERIFIED"
@@ -204,7 +264,7 @@ def admit_for_existing_downloader(
         reasons.append("ARTIFACT_BYTES_UNVERIFIED")
     elif evidence["requiredDiskBytes"] < evidence["artifactBytes"]:
         reasons.append("INSUFFICIENT_REQUIRED_DISK_BUDGET")
-    if not isinstance(evidence.get("immutableRevision"), str) or not REVISION.fullmatch(evidence["immutableRevision"]):
+    if not _immutable_revision(evidence.get("immutableRevision"), kind):
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")
@@ -212,13 +272,21 @@ def admit_for_existing_downloader(
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
         try:
-            if trusted_attestor(evidence, context) is not True:
+            # A native callback must not mutate previously authorized rights,
+            # artifact SHA, SourceLock, consent or measured hardware.
+            pre_attestation = _evidence_snapshot(evidence, context)
+            accepted = trusted_attestor(evidence, context) is True
+            if _evidence_snapshot(evidence, context) != pre_attestation:
+                reasons.append("OWNER_ATTESTATION_EVIDENCE_CHANGED")
+            if not accepted:
                 reasons.append("OWNER_ATTESTATION_REJECTED")
         except Exception:
             reasons.append("OWNER_ATTESTATION_ERROR")
 
     # Never trust editable UI VRAM or disk. Require a measured, attested native
     # probe bound to this exact E06 host/session.
+    if type(evidence.get("requiresGPU")) is not bool:
+        reasons.append("GPU_REQUIREMENT_FLAG_UNVERIFIED")
     native = context.get("nativeMeasuredHardware")
     if not isinstance(native, Mapping) or native.get("attested") is not True:
         reasons.append("NATIVE_HARDWARE_NOT_ATTESTED")
@@ -254,7 +322,7 @@ def admit_for_existing_downloader(
             reasons.append("GGUF_NATIVE_MAGIC_UNVERIFIED")
         if not (_sha(evidence.get("nativeLocalFileSha256")) and evidence.get("nativeLocalFileSha256") == evidence.get("artifactSha256")):
             reasons.append("GGUF_LOCAL_FILE_SHA_NOT_MATCHED")
-        role = "EXTERNAL"
+        role = "GGUF"
     else:
         if not isinstance(evidence.get("leadId"), str) or evidence.get("leadId") not in dict(EXTERNAL_LEADS):
             reasons.append("UNKNOWN_EXTERNAL_WEIGHT_LEAD")
