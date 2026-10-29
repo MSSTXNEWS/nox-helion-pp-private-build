@@ -9,16 +9,22 @@ test('one binding proof for exactly fifty canonical route IDs',()=>{
   assert.deepEqual(new Set(map.routes.map(x=>x.routeId)),new Set(catalog.actions.map(x=>x.routeId)));
   assert.equal(new Set(map.routes.map(x=>x.taskId)).size,50);
 });
-test('36 owner method bindings and 14 distinct HOLD routes',()=>{
-  const bound=map.routes.filter(x=>x.sourceBinding);
-  const hold=map.routes.filter(x=>!x.sourceBinding);
-  assert.equal(bound.length,36);
-  assert.equal(hold.length,14);
+test('39 source bindings and 11 source-unbound routes remain separate from 14 native pending',()=>{
+  const bound=map.routes.filter(x=>Boolean(x.sourceBinding));
+  const unbound=map.routes.filter(x=>!x.sourceBinding);
+  const routeIds=new Set(map.routes.map(x=>x.routeId));
+  const nativePending=map.remainingNativeBlockers.map(x=>x.routeId);
+  assert.equal(bound.length,39);
+  assert.equal(unbound.length,11);
+  assert.equal(bound.length,map.counts.sourceOwnerMethodBound);
+  assert.equal(unbound.length,map.counts.unbound);
+  assert.equal(map.counts.p02+map.counts.p03+map.counts.p04+map.counts.e05,bound.length);
+  assert.equal(bound.length+unbound.length,50);
+  assert.equal(nativePending.length,14);
+  assert.equal(new Set(nativePending).size,nativePending.length);
+  for(const routeId of nativePending)assert.ok(routeIds.has(routeId),routeId);
   assert.equal(map.counts.exeIntegrated,0);
   assert.equal(map.counts.releaseAccepted,0);
-  assert.equal(map.counts.p02+map.counts.p03+map.counts.p04+map.counts.e05,36);
-  assert.deepEqual(new Set(hold.map(x=>x.routeId)),
-                   new Set(map.remainingNativeBlockers.map(x=>x.routeId)));
 });
 test('no source-bound method claims installed acceptance',()=>{
   for(const item of map.routes){
