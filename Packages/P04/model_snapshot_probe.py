@@ -376,6 +376,14 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                 "bytes": artifact["bytes"],
                 "sha256": artifact["sha256"],
             })
+        # Shard scanning can outlive mutable config/index files. Verify the
+        # final metadata paths still match the bytes used for this observation.
+        if (not _regular(base / "config.json") or
+                _sha256(base / "config.json") != config_sha256 or
+                (weights is not None and
+                 (not _regular(index) or
+                  _sha256(index) != report["shard_index_sha256"]))):
+            raise ValueError("MODEL_METADATA_CHANGED_DURING_SCAN")
         report["candidate_sha256"] = config_sha256
         # Observation-only fingerprint, not a trusted cross-file atomic lock.
         observed = {"config": config_sha256,
