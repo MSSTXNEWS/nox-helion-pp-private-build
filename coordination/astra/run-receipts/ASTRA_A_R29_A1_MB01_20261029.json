@@ -1,0 +1,26 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A1-MB01-20261029",
+  "owner": "A1",
+  "branch": "astra/r29-a01-20261029",
+  "taskId": "P01 ownership marker exact readback before Rename",
+  "prePostGitBlobs": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "pre": "945ebce2aa20a59fe59d04517b602310fbd07fb7",
+      "post": "19233446b6ee8b508106a548ff67eaffe13dbb82",
+      "commit": "51fa2a849924d87e2302f90ebaa67b720fc723c7"
+    }
+  ],
+  "sourceStaticAssertions": "8/8 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 2,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "2/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
