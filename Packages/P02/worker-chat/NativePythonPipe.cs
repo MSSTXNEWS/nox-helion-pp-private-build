@@ -91,6 +91,10 @@ public sealed class NativePythonPipe : IAsyncDisposable
             await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
             try
             {
+                // A prior failed peer write may close the pipe while this
+                // request waits on the serialization lock. Never admit it.
+                if (Volatile.Read(ref _closed) != 0)
+                    throw new NativePipeHold("NATIVE_PIPE_CLOSED");
                 var header = new byte[4];
                 BinaryPrimitives.WriteUInt32BigEndian(header, checked((uint)bytes.Length));
                 await _output.WriteAsync(header, cancel).ConfigureAwait(false);
