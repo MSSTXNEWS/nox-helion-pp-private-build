@@ -1,0 +1,112 @@
+{
+  "schema": "NOX_V16_T08_COMPONENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261030-R33-P03-CONSENT-QA",
+  "role": "G4-B/T08 AUTOMATION SUPPORT (manual #2 owns final independent acceptance)",
+  "date_utc": "2026-10-29T21:19:00.852Z",
+  "task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "root_cause": "P03 snapshot consent invalidation compares only six fields; seven additional safety-sensitive evidence fields can change without clearing licenseAcknowledged, and five changed fields still permit a mock pull command.",
+  "canonical": {
+    "pull_request": 162,
+    "head": "fc9182f519c64f5f4e54a52ded9b2575c0bcff9a",
+    "tree": "5e0d9127f6b5a57f6bda47a6fd213866689d4fae",
+    "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "source_git_blob": "2e5830b468bf7d77475e7544cd985a1a3ff45bec",
+    "source_pre_for_owner_CAS": "2e5830b468bf7d77475e7544cd985a1a3ff45bec"
+  },
+  "proposal": {
+    "already_existing_donor_commit": "b85a4f5bfa7b9b6a82485ca009c6d14137d7db68",
+    "donor_source_blob": "336a7adf614058f15f5ef39cc7fcb9a9eace49ab",
+    "reuse_test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+    "required_one_line_delta": {
+      "old": "['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified']",
+      "replacement": "['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed']"
+    },
+    "status": "PREPARED_ISOLATED_EXISTING_NOT_PR162",
+    "no_code_written_by_t08": true
+  },
+  "tests": {
+    "execution": "JavaScript V8 current source evaluated from GitHub connector retrieved original ui.js UTF-8; bootstrapping DOM event listener excluded; real processMessage, hasEvidence, sendAction executed; document/WebView2 and URL fixture parser mocked. No Windows native.",
+    "method": "For each field: establish valid reviewed baseline, mark licenseAck true, deliver p03.snapshot.v1 with only field modified, evaluate checked flag and sent p03.command.v1 Pull. Compare same test against existing donor source.",
+    "changed_fields": [
+      "officialUrl",
+      "licenseEvidenceUrl",
+      "artifactBytes",
+      "requiredDiskGiB",
+      "requiredVramGiB",
+      "recommendedRamGiB",
+      "compatibilityReviewed",
+      "license",
+      "exactTag",
+      "sha256",
+      "manifestSha256",
+      "immutableRevision",
+      "artifactVerified"
+    ],
+    "live_stale_ack_fields": [
+      "officialUrl",
+      "licenseEvidenceUrl",
+      "artifactBytes",
+      "requiredDiskGiB",
+      "requiredVramGiB",
+      "recommendedRamGiB",
+      "compatibilityReviewed"
+    ],
+    "live_pull_emitted_after_stale_ack": [
+      "licenseEvidenceUrl",
+      "artifactBytes",
+      "requiredDiskGiB",
+      "requiredVramGiB",
+      "recommendedRamGiB"
+    ],
+    "live_stale_count": 7,
+    "live_pull_count": 5,
+    "donor_stale_count": 0,
+    "donor_pull_count": 0,
+    "red_green": "RED_CURRENT_SOURCE / GREEN_EXISTING_DONOR",
+    "original_host_acl_stop_consent_native": "NOT_RUN",
+    "final_same_head_manual_QA": "NOT_RUN"
+  },
+  "disposition": "SOURCE_INTEGRATED_CURRENT / COMPONENT_CONSENT_QA_FAIL / QA_ACCEPTED_FALSE",
+  "source_verified_other_paths": "NOT_REEVALUATED",
+  "product_accepted_delta": 0,
+  "stage_to_claim": "INTEGRATED; SOURCE_SECURITY_NEGATIVE_FAIL; not QA_ACCEPTED",
+  "lessons": {
+    "action": "DELEGATE_EXISTING_OWNER_PATCH",
+    "dedup_error_id": "ERR-SRC-004",
+    "recurrence_check": "All rights/provenance fields from hasEvidence must invalidate checkbox on change; explicit negative pull-not-sent regression; include dynamic snapshot coverage."
+  },
+  "handoff": {
+    "manual_1_T06": "Check fresh PR162 head+ui.js exact blob, integrate ONLY existing R15 consent-field-list delta with owner CAS; run existing G2C/G3B 12-case test plus STOP/ACL/privacy/NO-LOSS and readback.",
+    "manual_2_T08": "Independent same-head V8/WebView2 source regression and native consent/rights acceptance when available.",
+    "T02": "Append only as source QA FAIL under existing ERR-SRC-004 with Git/doc CAS readback; do not mark VERIFIED_CLOSED.",
+    "T09": "No freeze from this intermediate receipt."
+  },
+  "safety": {
+    "no_product_source_write": true,
+    "no_exe_nsis_ci_e07": true,
+    "no_new_taskid": true,
+    "no_release": true,
+    "no_native_pass_claim": true
+  },
+  "fresh_read": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "register_blob": "2f209e3564b0d414b25155d54a8eaff40cf2778d",
+    "register_stats": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "master_revision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTdsvLH-c5nARtiXkhz8D1-n8xpwL41zCluDx17cbleeeKiXfQeeqwwucXDPAw23vqu63V8VaWEMJp1himo__vwJzPjTd4k4CwcOFc"
+  },
+  "receipt_branch": "automation/g4b/t08-r29-p01-component-disposition-20261029",
+  "receipt_path": "coordination/automation/t08/dispositions/NOX-V16-G4B-T08-20261030-R33-P03-CONSENT-QA.json",
+  "journal_sync": "PENDING_T02_CAS",
+  "status": "INCOMPLETE",
+  "product_progress": "N/D"
+}
