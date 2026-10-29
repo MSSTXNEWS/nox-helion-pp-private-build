@@ -1,0 +1,134 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5A_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "R30-G5A-20261029T070130MSK-02",
+  "slot": "G5-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows LOADER-INSTALLER ONLY",
+  "recorded_utc": "2026-10-29T04:08:06.576Z",
+  "status": "SOURCE_PATCH_SAVED_PRODUCT_HOLD",
+  "source_complete": "HOLD",
+  "release_status": "HOLD",
+  "new_accepted_product_taskids": 0,
+  "prior_DONE": "PRESERVED_NOT_RECOUNTED",
+  "branch": "automation/r30/g5a/20261029T070130MSK-02",
+  "parent_branch": "automation/r30/g5a/20261029T060247MSK-01",
+  "parent_commit_sha": "a07c0ac77fc0f81a1c2298eeb1a577ff7c7db6aa",
+  "source_commit_sha": "e7237e1da188bb1ad50fe6533ed9b5701ce70981",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "forbidden_touched": []
+  },
+  "references": {
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "consolidated_rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_read": "56/56",
+    "active_sections_read": [
+      "V16 §54",
+      "V16 §55",
+      "V16 §56",
+      "R29 loader-only override"
+    ],
+    "past_receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T060247MSK-01.json",
+    "contract": "Contracts/events.v3.json",
+    "contract_blob_sha": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "docs_read": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+    ]
+  },
+  "frozen_snapshots": {
+    "directory_count": 25,
+    "full_git_tree_manifests_read": 25,
+    "tree_truncated_count": 0,
+    "full_unrelated_file_bytes_read": false,
+    "original_snapshots_modified": false,
+    "owner_p05_blob_variants_compared": true
+  },
+  "change": {
+    "task_id": "G5A-R30-EVENT-SEQUENCE-REPLAY-01",
+    "task_kind": "SOURCE_FIX_NOT_ACCEPTED_PRODUCT_TASKID",
+    "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+    "git_blob_preimage": "b02452968884bc007ba5d3cec6aa1591cd40929f",
+    "git_blob_postimage": "83ff628287ce7ccd1a64fd1bef5ac48ea9767144",
+    "commit": "e7237e1da188bb1ad50fe6533ed9b5701ce70981",
+    "root_cause": "Read-only terminal projection accepted events.v3 optional event_sequence=0/fractional and untrusted error_code with bidi characters, and accepted two distinct native terminal event_ids claiming the same TaskID+event_sequence. All three prepatch defect fixtures incorrectly displayed STOPPED.",
+    "fix": "Admit optional event_sequence only as positive safe integer; admit error_code only as null or bounded ASCII token; fail closed on distinct terminal event_id collision for one TaskID+sequence without imposing cross-task global order. No new native writer, no product acceptance."
+  },
+  "tests": {
+    "scope": "ONE targeted events.v3 regression suite, isolated V8 evaluation of exact GitHub JavaScript source",
+    "execution": "ACTUALLY_EXECUTED_IN_V8",
+    "old_source_red": "3/3 invalid/replayed terminal fixtures incorrectly STOPPED",
+    "patched_source_precommit": "9/9 PASS",
+    "postcommit_exact_github_readback": "9/9 PASS",
+    "coverage": [
+      "valid STOPPED",
+      "sequence zero HOLD",
+      "fractional sequence HOLD",
+      "bidi error_code HOLD",
+      "same-TaskID duplicate sequence HOLD",
+      "identical event_id replay idempotent",
+      "different TaskIDs same sequence compatible",
+      "same TaskID monotonic sequence compatible",
+      "future terminal still HOLD"
+    ],
+    "other_owner_source_sha_unchanged": true,
+    "compare_with_parent": "exactly one assigned source path, +19 -0",
+    "node_cli": "NOT_RUN",
+    "dotnet_csharp": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "nsis": "NOT_RUN",
+    "gitlab_ci": "NOT_RUN",
+    "github_actions": "NOT_RUN",
+    "final_integration": "NOT_RUN"
+  },
+  "ownership_test_policy": {
+    "new_test_file_written": false,
+    "reason": "Owner lock assigns four exact source files only, no standalone test pathname; regression run ephemerally to avoid writing unassigned path.",
+    "suggested_owner_approval": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.G5-A.R30.test.mjs"
+  },
+  "prohibited_writes": {
+    "PR162": false,
+    "main": false,
+    "shared_R30": false,
+    "other_owner_files": false,
+    "DriveAdapters": false,
+    "SafeRunReports": false,
+    "GoogleDocs": false
+  },
+  "new_self_improvement_lesson": {
+    "id": "R30_G5A_SEQUENCE_IS_NOT_AN_AUTHORITY_SHORTCUT",
+    "observation": "A field being optional in events.v3 does not make an invalid provided value acceptable; duplicate task-local sequence numbers can launder replayed terminal states.",
+    "applied": "A strict optional-field gate plus TaskID-scoped replay-sequence hold before counting any failure or choosing STOPPED; tests include both old-source RED and committed-source GREEN.",
+    "prevention": "Require preimage blob CAS, explicit malformed-source RED fixture, exact Git postimage readback and one focused source test every new attempt; keep N/D/HOLD until independent native E06/E07 evidence."
+  },
+  "astra_c_handoff": {
+    "only_shared_docs_writer": "Astra-C",
+    "action": "Append this unique source receipt's RunID, error and lesson to master/E06 report/E06 lessons with revision-CAS and exact RunID readback; worker must not update shared Docs.",
+    "docs_write_status": "HOLD_ASTRA_C_ONLY",
+    "product_taskid_acceptance": "NONE"
+  },
+  "readiness": {
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "overall": "N/D",
+    "no_false_100": true
+  }
+}
