@@ -1,0 +1,100 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_D_POST_ADMISSION_ACK_R05",
+  "taskId": "ASSEMBLY-D",
+  "runId": "NOX-V16-ASSEMBLY-D-20261029T174336MSK-R05",
+  "scope": "NOX HELION EXPRESS INTEGRATOR V16 WINDOWS LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "planStartMsk": "2026-10-29T17:40:00+03:00",
+  "observedFirstVerificationMsk": "2026-10-29T17:43:36+03:00",
+  "historical": {
+    "T05": "DONE 13/13 unchanged",
+    "historicalR30Hold": 12,
+    "T04": "VERSION CHOICE DONE 34/34"
+  },
+  "progress": {
+    "prev": "3/3",
+    "current": "3/3",
+    "prevPercent": 100,
+    "currentPercent": 100,
+    "deltaPp": 0,
+    "bar": "██████████",
+    "criteria": [
+      "P04 OWNER SAFE PATCH_SET STAGED AND HANDED OFF",
+      "P05 OWNER SAFE PATCH_SET STAGED AND HANDED OFF",
+      "T06 RECEIPT HANDED OFF"
+    ],
+    "notProductCodeComplete": true
+  },
+  "canonical": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "observedHead": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
+    "fullSourceTreeAccepted": false
+  },
+  "priorHandoff": {
+    "commit": "422f6b19dcdb60ab2b444b14a22a69ab383b19d2",
+    "receiptPath": "coordination/automation/assembly-d/NOX-V16-ASSEMBLY-D-202610291727MSK-R04/T06_HANDOFF_RECEIPT.json",
+    "issue177CommentId": 6499426429
+  },
+  "gitReadback": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "post": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+      "owner": "G4-A",
+      "actual": "34c09ced3f49f28a8542138d9e5bce18c553b75d",
+      "match": true
+    },
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "pre": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "post": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "owner": "G4-B",
+      "actual": "15d6807033040711ac54c4c9f63432c5653e62bd",
+      "match": true
+    },
+    {
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "pre": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "post": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+      "owner": "G5-A",
+      "actual": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+      "match": true
+    },
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "pre": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "post": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd",
+      "owner": "G5-B",
+      "actual": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd",
+      "match": true
+    }
+  ],
+  "result": "ALL FOUR PREVIOUSLY STAGED P04/P05 POSTIMAGES NOW EXACTLY MATCH CANONICAL PRODUCT PATH BLOBS. ADMITTED TO SOURCE BY T06. NO NEW D SOURCE MUTATION.",
+  "acceptedSourcePaths": 4,
+  "unacceptedThisRun": 0,
+  "archivalDonorsAutomaticallyAccepted": 0,
+  "tests": {
+    "newTestsThisRun": "NOT_RUN_PER_DELTA_ONLY_SCOPE",
+    "previousDModels": "5/5 events, 9/9 token syntax",
+    "t06NativePythonDotNetNode": "NOT_CONFIRMED",
+    "independentSameSha": "HOLD"
+  },
+  "gates": {
+    "D": "DONE 3/3",
+    "T06": "1/8 LATEST VERIFIED OWNER RECEIPT R10; do not infer latest functional progress",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "singleRemainingBlocker": "T06/T08/T09/T10 have not supplied same-HEAD native contract validation and final frozen owner-accepted source tree.",
+  "appliedLesson": "Prior receipt 4/4 staged is not 4/4 integrated. This run compared exact current canonical product Git blobs with staged POST blobs and upgraded only integration evidence, not functional SOURCE_READY.",
+  "constraints": {
+    "noSourceChangesByD": true,
+    "noMainPR162Overwrite": true,
+    "noDriveSharedWrites": true,
+    "noEXENSISGitLabE07": true,
+    "noHistoricalSnapshotsChanged": true
+  }
+}
