@@ -423,6 +423,9 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             expected_total_bytes = _index_total_size(metadata)
             # Validate decoded metadata before hashing/sorting: malformed shard
             # values must produce an installer HOLD report, not a TypeError.
+            # Group tensor names once: rescanning the untrusted weight_map
+            # for every shard creates O(tensors * shards) loader work.
+            expected_by_shard = {}
             for tensor, shard in weights.items():
                 if not isinstance(tensor, str) or not tensor.strip():
                     raise ValueError("MODEL_SHARD_INDEX_INVALID")
@@ -432,7 +435,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     raise ValueError("MODEL_SHARD_INDEX_INVALID") from exc
                 if not isinstance(shard, str):
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
-            names = sorted(set(weights.values()))
+                expected_by_shard.setdefault(shard, set()).add(tensor)
+            names = sorted(expected_by_shard)
         else:
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
@@ -446,7 +450,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             observed_total_bytes += artifact["payload_bytes"]
             tensor_names = artifact["names"]
             if weights is not None:
-                expected_names = frozenset(tensor for tensor, shard in weights.items() if shard == name)
+                expected_names = frozenset(expected_by_shard[name])
                 if tensor_names != expected_names:
                     raise ValueError("MODEL_SHARD_TENSOR_MAP_MISMATCH")
             report["tensor_headers"] += len(tensor_names)
