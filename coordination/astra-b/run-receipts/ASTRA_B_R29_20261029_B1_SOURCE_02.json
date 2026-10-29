@@ -1,0 +1,21 @@
+{
+  "schema": "ASTRA_B_R29_SOURCE_ONLY_BLOCK_V1",
+  "run_id": "ASTRA-B-R29-20261029-B1-02",
+  "worker_label": "B1",
+  "real_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE_THIS_SESSION",
+  "task_id": "B1-P04-CONFIG-METADATA-SAME-BYTES",
+  "branch": "astra-b/r29-b1-20261029",
+  "source_commit": "ea00c2cc4cbd03fc9e232d7d584131acb3fb3261",
+  "source_file": "Packages/P04/model_snapshot_probe.py",
+  "source_git_blob": "232fa8b31c314dc2c5c37d79582cb59867d835c6",
+  "source_lock": "ASTRA_A_B_R29_OWNER_HANDOFF_20261029.json",
+  "focused_test": "FOCUSED_SOURCE_INVARIANT_PASS; PYTHON_RUNTIME_NOT_RUN",
+  "source_readback": "EXACT_COMMIT_BLOB_MATCH",
+  "lesson": "Hash the exact bytes already decoded and validated; avoid validating one config and hashing another.",
+  "original_729_physical_check": "NOT_RUN",
+  "native_windows_check": "NOT_RUN",
+  "source_complete": false,
+  "release_build": false,
+  "shared_drive_journal": "ASTRA_A_ONLY"
+}
