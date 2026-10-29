@@ -421,8 +421,15 @@ class ExistingP02VoiceAdapter:
 
     def speak(self,session,args, *,mode):
         if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
+        session.validate()
+        expected_scope=(session.tenant,session.principal,session.chat_id,
+                        session.allowed,session.private_approved)
         identity=self.native_identity(session)
         captured=self.native_audio(session)
+        session.validate()
+        if (session.tenant,session.principal,session.chat_id,
+                session.allowed,session.private_approved)!=expected_scope:
+            raise HostDenied("Native microphone callback changed session scope")
         if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
             raise HostDenied("No trusted bounded microphone capture")
         direction=args.get("direction","ru-es")
