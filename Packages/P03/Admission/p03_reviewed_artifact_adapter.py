@@ -41,15 +41,14 @@ class ReviewedArtifactSnapshot:
         pairs = (("modelTag", "exactTag"), ("licenseId", "licenseId"),
                  ("licenseEvidenceUrl", "licenseEvidenceUrl"),
                  ("artifactBytes", "artifactBytes"), ("requiredDiskBytes", "requiredDiskBytes"),
+                 ("recommendedRamBytes", "recommendedRamBytes"), ("requiredVramBytes", "requiredVramBytes"),
                  ("artifactSha256", "artifactSha256"), ("manifestSha256", "manifestSha256"),
                  ("immutableRevision", "immutableRevision"))
         if any(type(evidence.get(a)) is not type(self.fields[b]) or evidence.get(a) != self.fields[b]
                for a, b in pairs):
             return False
         gpu = _positive(self.fields["requiredVramBytes"])
-        return evidence.get("requiresGPU") is gpu and (not gpu or
-            type(evidence.get("requiredVramBytes")) is int and
-            evidence.get("requiredVramBytes") == self.fields["requiredVramBytes"])
+        return evidence.get("requiresGPU") is gpu
 
 
 def read_native_reviewed_artifact(model_tag: str,

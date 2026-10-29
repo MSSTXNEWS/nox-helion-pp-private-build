@@ -35,16 +35,17 @@ class NativeReviewedArtifactAdapter(unittest.TestCase):
 
     def test_exact_identity_matches_without_granting_queue_admission(self):
         snapshot = self.read(); evidence, context = example()
-        evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64)
+        evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64, recommendedRamBytes=800000)
         self.assertTrue(snapshot.matches_artifact_identity(evidence))
         decision = gate.admit_for_existing_downloader(evidence, context, lambda e, c: True)
         self.assertIn("NOT_IN_OWNER3_EXACT_TAG_LEADS", decision.reasons)
 
     def test_any_selected_artifact_identity_drift_fails(self):
         snapshot = self.read(); evidence, _ = example()
-        evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64)
+        evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64, recommendedRamBytes=800000)
         for key in ("modelTag", "licenseId", "licenseEvidenceUrl", "artifactBytes", "requiredDiskBytes",
-                    "artifactSha256", "manifestSha256", "immutableRevision", "requiresGPU", "requiredVramBytes"):
+                    "artifactSha256", "manifestSha256", "immutableRevision", "requiresGPU", "requiredVramBytes",
+                    "recommendedRamBytes"):
             changed = dict(evidence); changed[key] = None
             self.assertFalse(snapshot.matches_artifact_identity(changed), key)
         changed = dict(evidence, artifactBytes=500000.0)
@@ -90,7 +91,8 @@ class NativeReviewedArtifactAdapter(unittest.TestCase):
 
     def test_cpu_only_artifact_uses_existing_ram_metadata(self):
         snapshot = self.read(dict(export_fixture(), requiredVramBytes=None))
-        evidence, _ = example(); evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64, requiresGPU=False)
+        evidence, _ = example(); evidence.update(modelTag="phi4:mini", immutableRevision="c" * 64,
+                                                requiresGPU=False, requiredVramBytes=None, recommendedRamBytes=800000)
         self.assertTrue(snapshot.matches_artifact_identity(evidence))
         evidence["requiresGPU"] = 0
         self.assertFalse(snapshot.matches_artifact_identity(evidence))
