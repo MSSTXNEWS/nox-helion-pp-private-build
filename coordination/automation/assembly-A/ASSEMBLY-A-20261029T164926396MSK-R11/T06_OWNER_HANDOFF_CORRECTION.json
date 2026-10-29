@@ -1,0 +1,40 @@
+{
+  "schema": "ASSEMBLY_A_CORRECTION_V2",
+  "runId": "ASSEMBLY-A-20261029T164926396MSK-R11",
+  "msk": "2026-10-29T16:54:43.805Z",
+  "base": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "t01": "9bcf1e8ce035424592ebcb3c9619a7bdf795b451",
+  "patches": {
+    "P01": {
+      "file": "P01_Host50.v2.scoped.patch",
+      "blob": "0896593033c36ad64354e6eeac272ce89f1d6919",
+      "state": "OWNER_HOLD"
+    },
+    "P02": {
+      "file": "P02.scoped.patch",
+      "blob": "d9ce519d29749a36753589fab6fdda028beef3bd",
+      "state": "PRE_MATCH_OWNER_TEST_HOLD"
+    },
+    "P03": {
+      "file": "P03.owner_rebase_v2_ONLY.patch",
+      "blob": "f5d4c4006988a5f5fc0b2ca7f3620f5f58341987",
+      "state": "DONOR_PRE_MISMATCH_DO_NOT_APPLY"
+    }
+  },
+  "superseded": [
+    "P01_Host50.scoped.patch",
+    "P03.owner_rebase_ONLY.patch"
+  ],
+  "staticReconstruction": "6/6 PRE->POST, not runtime tests",
+  "host50": "37 source candidate / 13 historical SOURCE HOLD; 0 accepted",
+  "scale": {
+    "old": "0/4",
+    "now": "1/4",
+    "deltaPercentagePoints": 25,
+    "bar": "███░░░░░░░"
+  },
+  "signature": "T06_OWNER_PENDING",
+  "lesson": "No-final-LF donor files require explicit Git patch EOF markers; no force-push or foreign source edits.",
+  "sourceMerge": "NONE",
+  "testsOrBuilds": "NONE"
+}
