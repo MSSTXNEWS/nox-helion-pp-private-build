@@ -155,6 +155,11 @@ class OwnerTwoPorts:
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         LocalVoicePipeline.validate_result(result, source=source, target=target, mode=mode)
+        # ASR/TTS may have waited on an external provider. Revalidate the
+        # native session and ACL before storing or exposing generated voice.
+        self._session(scope, "chat.voice")
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
         # Reuse R18's post-persistence STOP boundary, then revoke the exact
