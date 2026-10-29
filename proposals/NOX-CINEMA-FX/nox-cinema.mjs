@@ -320,23 +320,24 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
     setProfile(next){
       if(disposed)return false;
       if(!profileSet.has(next))return false;
-      // Budget applies to ALREADY LIVE ejecta, not just the next emission.
+      // Validate the policy clock BEFORE touching live particles: a rejected
+      // mode change must not partially discard the existing D02 animation.
       const newPolicy=profileFor(next,preference);
+      const nextMin=PROFILES[next].minimumBurstMs;
+      const oldMin=PROFILES[mode].minimumBurstMs;
+      let rebaseNow=null;
+      if(Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity)){
+        try{rebaseNow=time();}catch(_){return false;}
+        if(!Number.isFinite(rebaseNow)||rebaseNow<0||
+           !Number.isFinite(rebaseNow+nextMin))return false;
+      }
+      // Only a validated profile transition may trim the live ejecta budget.
       while(particles.length>newPolicy.maxParticles){
         const p=particles.pop();p.node.remove();
       }
       particleCount=particles.length;
-      // A slower ECO policy (or waking from REDUCED) must not inherit a
-      // stale, imminent burst. lastFrame may predate a long suspended tab.
-      const nextMin=PROFILES[next].minimumBurstMs;
-      const oldMin=PROFILES[mode].minimumBurstMs;
-      if(Number.isFinite(nextMin)&&(nextMin>oldMin||oldMin===Infinity)){
-        let now;
-        try{now=time();}catch(_){return false;}
-        if(!Number.isFinite(now)||now<0||!Number.isFinite(now+nextMin))
-          return false;
-        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,now+nextMin);
-      }
+      if(rebaseNow!==null)
+        for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,rebaseNow+nextMin);
       mode=next;root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();
       if(next==="REDUCED")sleep();else wake();return true;
     },
