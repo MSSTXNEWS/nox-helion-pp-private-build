@@ -84,6 +84,47 @@ class ReusedCanonicalZipGate(unittest.TestCase):
   self.assertFalse((self.work/"R11").exists())
   self.assertFalse((self.work/"source_lock.json").exists())
 
+ def test_verified_original_p01_wpf_donor_receipt(self):
+  # Check real native WPF donor bytes; archive 729 is a separate provenance.
+  owner=json.loads((ROOT/"donors/P01_C07/P01_C07_RECEIPT.json").read_text("utf-8"))
+  self.assertEqual(len(owner["parts"]),28)
+  joined=io.BytesIO()
+  for part in owner["parts"]:
+   path=ROOT/part["path"]
+   self.assertTrue(path.is_file() and not path.is_symlink())
+   raw=path.read_bytes()
+   self.assertEqual(len(raw),part["size_bytes"])
+   self.assertEqual(blob(raw),part["git_blob_sha1"])
+   joined.write(raw)
+  self.assertEqual(joined.tell(),owner["original_zip_bytes"])
+  self.assertEqual(hashlib.sha256(joined.getvalue()).hexdigest(),owner["original_zip_sha256"])
+  with zipfile.ZipFile(joined) as archive:
+   self.assertIsNone(archive.testzip())
+   self.assertTrue({"R11/App.xaml","R11/MainWindow.xaml",
+     "R11/MainWindow.xaml.cs","R11/NOX.P01.Shell.csproj"}.issubset(archive.namelist()))
+   import xml.etree.ElementTree as ET
+   app=ET.fromstring(archive.read("R11/App.xaml"))
+   window=ET.fromstring(archive.read("R11/MainWindow.xaml"))
+   x="{http://schemas.microsoft.com/winfx/2006/xaml}Class"
+   self.assertEqual(app.attrib[x],"NoxP01.App")
+   self.assertEqual(app.attrib["StartupUri"],"MainWindow.xaml")
+   self.assertEqual(window.attrib[x],"NoxP01.MainWindow")
+   proj=ET.fromstring(archive.read("R11/NOX.P01.Shell.csproj"))
+   self.assertIn("net8.0-windows",[e.text for e in proj.iter()])
+   historic=json.loads(archive.read("R11/SOURCE_MANIFEST_SHA256.json"))
+   receipts=json.loads(archive.read("P01_TURBO10_PATCH_RECEIPTS.json"))
+   accepted={}
+   self.assertEqual(len(receipts["patches"]),2)
+   for p in receipts["patches"]:
+    self.assertNotIn(p["path"],accepted)
+    self.assertEqual(hashlib.sha256(archive.read(p["patchName"])).hexdigest(),p["patchSHA256"])
+    self.assertEqual(hashlib.sha256(archive.read("R11/"+p["path"])).hexdigest(),p["postSHA256"])
+    accepted[p["path"]]=p["postSHA256"]
+   self.assertEqual(len(historic),79)
+   for path,original in historic.items():
+    self.assertEqual(hashlib.sha256(archive.read("R11/"+path)).hexdigest(),
+                     accepted.get(path,original))
+
  def test_file_parent_conflict_before_writes(self):
   self.create([("R11/Assets/index.html",stat.S_IFREG),
                ("R11/Assets",stat.S_IFREG)])
