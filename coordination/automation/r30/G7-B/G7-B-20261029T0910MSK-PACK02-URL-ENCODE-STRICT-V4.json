@@ -1,0 +1,171 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V4",
+  "run_id": "G7-B-20261029T0910MSK-PACK02-URL-ENCODE-STRICT-V4",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY (not main NOX)",
+  "status": "HOLD",
+  "source_patch_status": "GIT_SAVED_EXACT_BLOB_READBACK_SOURCE_ONLY",
+  "branch": "automation/r30/g7b/G7-B-20261029T0910MSK-PACK02-URL-ENCODE-STRICT-V4",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T0808MSK-PACK02-JSON-EMPTY-NODES-V3",
+  "task_ids_source_only": [
+    "G7B-PACK02-URL-ENCODE-DECODE-CANONICAL-20261029-04"
+  ],
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "ownership": {
+    "manifest": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lock_git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-B/",
+    "one_writer_per_path": true
+  },
+  "sources_read": {
+    "section33_rules_file": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "section33_rules_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "rules_read": "01-56 (consolidated historical requirements, not certified verbatim oldest list)",
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only override"
+    ],
+    "v16_google_doc_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "all_results_conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "index_git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_directory": "coordination/astra/r30/snapshots/",
+    "snapshots_indexed": 25,
+    "snapshots_recursive_git_tree_inventory_read": 25,
+    "snapshot_trees_truncated": 0,
+    "snapshot_ops_sha_distribution": {
+      "41cb40e3a1d77f36a74482cec6599c354e1cf3ee": 24,
+      "3df02661abf3f75fdd3d883e4c30b75d6887eaf6": 1
+    },
+    "snapshot_source_parts_git_blob_stable": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "snapshots_full_file_byte_read": false,
+    "physical_original_729_archive_sha256": "NOT_VERIFIED",
+    "google_drive_read_only": [
+      {
+        "role": "master latest Astra-C delta",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50"
+      },
+      {
+        "role": "E06 report",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4"
+      },
+      {
+        "role": "E06 lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+      },
+      {
+        "role": "historical C34",
+        "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU"
+      }
+    ]
+  },
+  "source_change": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "preimage_git_blob_sha": "0c710928ef0b52463af5b46ab3bda343bd1397c2",
+    "postimage_git_blob_sha": "7d2fc0da59dca2701eda5ee1237f3e7cbec4d173",
+    "source_commit_sha": "fcb32937bb8c6f2671ea9135eafbc1bfc70d6450",
+    "git_readback": true,
+    "existing_routes_after": 50,
+    "route_added": 0,
+    "changed_route": "dev.url.query_encode",
+    "details": [
+      "Reject Unicode NFC/case-fold alias keys before URL query encoding, matching existing dev.url.query_decode canonical duplicate gate.",
+      "Reject nested arrays and objects instead of lossy implicit string coercion (e.g. [object Object] or 1,2).",
+      "Preserve existing scalar serialization and safe prototype-like keys, without changing decode, CSV, JSON flatten or unresolved historical dotted-key policy."
+    ]
+  },
+  "one_owner_targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-url-encode-strict.test.mjs",
+    "commit_sha": "094db22f202983252d58f8f77ae8b6b17577419f",
+    "git_blob_sha": "7514bb9885072b5102c7d21c8254a27f7db31bc3",
+    "git_readback": true,
+    "authored_command": "node --test proposals/NOX-PACK02-50/g7b-r30-url-encode-strict.test.mjs",
+    "authored_exact_git_module_node_execution": "NOT_RUN",
+    "extracted_helper_node_test": {
+      "local_path": "/mnt/data/g7b-validation/g7b-url-encode-extracted.test.cjs",
+      "command": "node --test /mnt/data/g7b-validation/g7b-url-encode-extracted.test.cjs",
+      "execution": "RUN",
+      "pass": 7,
+      "total": 7,
+      "fail": 0,
+      "scope": "Identical manually extracted URL encode/decode helper bodies, not the complete GitHub ops.mjs module or authored Git test."
+    },
+    "source_structural_readback": {
+      "id_route_count": 50,
+      "unique_route_ids": "NOT_NATIVELY_EXECUTED",
+      "blob_readback": true
+    },
+    "Windows_native_host_test": "NOT_RUN"
+  },
+  "compare_to_previous_private_branch": {
+    "status": "ahead",
+    "ahead_by_before_receipt": 2,
+    "behind_by": 0,
+    "files_before_receipt": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-url-encode-strict.test.mjs"
+    ],
+    "other_owner_files_changed": false
+  },
+  "applied_previous_lesson": "Retain frozen r27-a10 JSON dotted-key semantic variants separately (HOLD); make a narrowly scoped compatible repair to a known producer/consumer contract rather than wholesale-copying a donor or rewriting unrelated routes.",
+  "new_lesson": {
+    "id": "R30_G7B_QUERY_ENCODER_DECODER_BIDIRECTIONAL_CONTRACT_GATE",
+    "observed_error": "URL query encoder accepted case/NFC-alias keys and nested JSON values that the already strict query decoder would reject or interpret after lossy string coercion.",
+    "root_cause": "Producer and consumer enforced inconsistent input invariants; implicit String() of objects/arrays destroyed structure before roundtrip.",
+    "correction": "Reject aliases by exact decoder normalization and reject structured values, keeping scalar operations stable; save one focused regression and run isolated helper Node tests.",
+    "prevention": "For paired encode/decode APIs, compare input admissibility symmetrically; regression covers aliases, NFC, reserved keys, nested structures, and ordinary scalar roundtrips. Never elevate extracted helper PASS to full-module/native acceptance."
+  },
+  "Host50_handoff": {
+    "status": "HOLD_OWNER_APPROVAL_AND_LICENSE_REQUIRED",
+    "original_host": "proposals/NOX-PACK01-50/native_bridge.py",
+    "request": "Host50 owner must approve and attest any licensed internet adapter including source/provenance, licenses, scopes, consent and STOP; G7-B cannot edit PACK01 nor invent a second host.",
+    "modified": false
+  },
+  "outstanding_conflicts": [
+    "Frozen r27-a10 JSON escaped dotted-path keys incompatible with current G7-B collision-rejecting API: HOLD explicit owner decision.",
+    "Native execution of full authored Git Node regression not performed; extracted helper test is lower-level evidence.",
+    "Licensed online adapters still not admitted through original Host50.",
+    "Raw physical 729 originals SHA-256 and full Windows/E07 acceptance not verified."
+  ],
+  "no_loss": {
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "shared_R30_branch_untouched": true,
+    "frozen_25_snapshots_untouched": true,
+    "source_archive_parts_untouched": true,
+    "PACK01_native_bridge_untouched": true,
+    "D02_WOW_untouched": true,
+    "other_owner_files_untouched": true,
+    "all_historical_DONE_retained": true,
+    "shared_Google_Docs_untouched": true
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "native_Host50": "NOT_VERIFIED",
+    "Windows_EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_SHARED_DOCS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "instruction_to_Astra_C": "Single approved writer: append unique G7-B run receipt + observed error + lesson to shared master/E06/lessons Docs via revision CAS and exact RunID readback. Preserve old DONE, conflicts, and all source. Do not infer 100% from source changes."
+}
