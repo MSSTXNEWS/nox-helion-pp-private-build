@@ -199,7 +199,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   if(models.some(m=>!m||!modelId(m.id)||typeof m.name!=='string'||m.name.length>100)||
     new Set(models.map(m=>m.id)).size!==models.length)return;
   const before=current(),after=models.find(m=>m.id===state.activeId);
-  if(!before||!after||['exactTag','immutableRevision','sha256','manifestSha256','license','artifactVerified'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
+  if(!before||!after||['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
   state.models=models.map(m=>({...m}));
   if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
   // Preserve terminal and monotone state when an older host snapshot arrives.
