@@ -82,8 +82,14 @@ def _check_installed_metadata(report: dict) -> None:
     for package in PACKAGES:
         try:
             installed_metadata = metadata.metadata(package)
-            python_constraint = installed_metadata.get("Requires-Python")
-            if python_constraint and not SpecifierSet(python_constraint).contains(Version(report["python"])):
+            python_constraints = installed_metadata.get_all("Requires-Python", [])
+            if len(python_constraints) > 1 or any(
+                not isinstance(value, str) or not value.strip()
+                for value in python_constraints
+            ):
+                raise ValueError("Requires-Python must be a nonempty singleton")
+            python_constraint = python_constraints[0] if python_constraints else None
+            if python_constraint is not None and not SpecifierSet(python_constraint).contains(Version(report["python"])):
                 report["errors"].append("PACKAGE_PYTHON_INCOMPATIBLE:" + package)
             for line in installed_metadata.get_all("Requires-Dist", []):
                 requirement = Requirement(line)

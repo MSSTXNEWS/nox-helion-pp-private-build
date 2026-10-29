@@ -39,6 +39,20 @@ class HardwarePreflightContracts(unittest.TestCase):
         ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
             return probe.inspect("BALANCED", 0)
 
+    def test_requires_python_must_be_a_nonempty_singleton(self):
+        for constraints in ((">=3", ">=99"), (">=99", ">=3"), (">=3", ">=3"), ("",), ("  ",)):
+            with self.subTest(constraints=constraints):
+                value = Message()
+                for constraint in constraints:
+                    value["Requires-Python"] = constraint
+                self.package_metadata.return_value = value
+                with patch.object(probe.platform, "system", return_value="Windows"), patch.object(
+                    probe.metadata, "version", side_effect=VERSIONS.__getitem__
+                ), patch.object(probe.train_qlora, "nvidia_smi", return_value=None):
+                    result = probe.inspect("BALANCED", 0)
+                self.assertIn("PACKAGE_DEPENDENCY_METADATA_INVALID:torch", result["errors"])
+                self.assertEqual(result["dependency_metadata_status"], "HOLD")
+
     def test_installed_package_python_requirement_is_enforced(self):
         result = self.metadata_result(python=">=99")
         self.assertIn("PACKAGE_PYTHON_INCOMPATIBLE:torch", result["errors"])
