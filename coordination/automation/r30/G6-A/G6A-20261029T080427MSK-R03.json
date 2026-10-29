@@ -1,0 +1,106 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6A_IMMUTABLE_SOURCE_RECEIPT_V3",
+  "slot": "G6-A",
+  "runId": "G6A-20261029T080427MSK-R03",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "status": "HOLD",
+  "sourceState": "SOURCE_PATCH_COMMITTED_NOT_SOURCE_READY",
+  "taskId": "G6A-E06-STAGE-ONEHOST-ROLLBACK-ATOMIC-01",
+  "branch": "automation/r30/g6a/G6A-20261029T080427MSK-R03",
+  "parentBranch": "automation/r30/g6a/G6A-20261029T070752MSK-R02",
+  "parentCommit": "157575a34c375a7cfe029eb1c7fb38c226fa5216",
+  "ownerLock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "gitBlobSha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPath": "coordination/e06/stage_onehost.py",
+    "forbiddenUntouched": [
+      "coordination/e06/adapters/pc_control_owner_port.py",
+      "proposals/NOX-PACK01-50/native_bridge.py"
+    ]
+  },
+  "source": {
+    "path": "coordination/e06/stage_onehost.py",
+    "beforeGitBlobSha1": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+    "afterGitBlobSha1": "01793a664c52b1e77a746d069ebbc92f33cdcddd",
+    "donorBranch": "astra-b/r29-b6-20261029",
+    "donorGitBlobSha1": "01793a664c52b1e77a746d069ebbc92f33cdcddd",
+    "retainedConstants": [
+      "RUN_ID",
+      "ORIGINAL_BRIDGE_SHA256",
+      "ORIGINAL_EXE_SHA256",
+      "ANCHOR",
+      "REPLACEMENT"
+    ],
+    "donorPortPolicy": "Exact earlier saved E06 owner file candidate ported to unique G6-A branch; original donor branch unchanged. No blind multi-branch merge."
+  },
+  "defect": "Prior G6-A stage_onehost.py wrote patched staged WPF original, then addon, then receipt directly. Failed addon/receipt publication could leave partially applied staged files or overwrite an existing receipt; symlinked output checks were incomplete.",
+  "repair": "Reuse previously saved R29-B6 E06 stage candidate: trusted non-reparse paths, owner stage lock with identity checks, prepare/flush/fsync and readback all four blobs, exclusive hard-link publishing, receipt published last, rollback stage preimage+addon on failure, fail-closed recovery lock on foreign conflict.",
+  "targetedTest": {
+    "name": "G6-A-stage-receipt-link-failure-rollback",
+    "command": "python /tmp/g6a_atomic_stage_contract_test.py",
+    "execution": "PASS_ISOLATED_PYTHON_HELPER_CONTRACT_NOT_REPO_IMPORT",
+    "testsRun": 1,
+    "testsPassed": 1,
+    "assertions": [
+      "Injected OSError on second os.link (receipt commit)",
+      "original staged bridge restored byte-exactly",
+      "addon output absent after rollback",
+      "receipt output absent after rollback",
+      "owner lock and prepared temporary files cleaned"
+    ],
+    "elapsedSecondsObserved": 0.01,
+    "limitation": "Test executed on faithfully copied helper contract in local temporary Python fixture; full GitHub repository module, Windows execution, and original ZIP ingestion NOT_RUN. No unapproved new test file committed."
+  },
+  "inputs": {
+    "rules": "V16 §33 historical 56 consolidated, latest §§54–56 with R29 loader-only precedence",
+    "r30SnapshotDirs": 25,
+    "r30SnapshotsGitTreesRead": 25,
+    "sourcePartsGitBlobSameAcross25": true,
+    "sourcePartsBlobSha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "conflictIndexGitBlobSha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozenGitBlobBaselineCount": 968,
+    "baselinePathsPresentBeforePatch": 968,
+    "baselinePathsMissingBeforePatch": 0,
+    "baselineGitBlobsChangedBeforePatch": 4,
+    "gitTreeTruncated": false,
+    "physical729ZIPInnerSHA256": "NOT_RUN_GITHUB_BINARY_FETCH_UNICODE_ERROR",
+    "releaseRollbackWindows": "NOT_RUN_SOURCE_ONLY"
+  },
+  "googleDriveReadOnly": {
+    "masterJournal": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historicalC34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "e06Report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "e06Lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "sharedWriteBy": "Astra-C only",
+    "thisSlotSharedDriveWrite": false
+  },
+  "preservation": {
+    "mainChanged": false,
+    "pr162Changed": false,
+    "centralR30Changed": false,
+    "original25SnapshotsChanged": false,
+    "previousDONEChanged": false,
+    "forbiddenPathsChanged": false,
+    "gitlabCITriggered": false,
+    "exeOrNsisBuilt": false,
+    "finalIntegrationPerformed": false
+  },
+  "newLesson": "For stage-level rollback, a final JSON receipt is a commit marker, never the first write. Prepare/fsync/readback immutable bytes before publication, pin the cooperative owner lock identity, atomically install under no-clobber, and revert only files still proven ours; foreign mutation requires HOLD with recovery evidence. Do not count an isolated helper test as a native Windows verification.",
+  "currentGates": {
+    "productProgressPercent": "N/D",
+    "sourceCodeComplete": "HOLD",
+    "original729PhysicalSourceLock": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD"
+  },
+  "changedPaths": [
+    "coordination/e06/stage_onehost.py",
+    "coordination/automation/r30/G6-A/G6A-20261029T080427MSK-R03.json"
+  ]
+}
