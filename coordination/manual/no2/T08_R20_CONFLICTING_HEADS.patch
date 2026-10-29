@@ -1,0 +1,12 @@
+--- a/coordination/automation/t08/t08_autofix_closeout_gate.py
++++ b/coordination/automation/t08/t08_autofix_closeout_gate.py
+@@ -88,3 +88,7 @@ def _verified_downstream(source, p0, handoff, journal):
+-            if not any(proof.get(k) == head for k in
+-                       ("head", "head_sha", "source_head", "source_head_sha")):
++            # Every declared source identity must match; one good alias
++            # cannot conceal another contradictory/stale owner HEAD.
++            claims = [proof[k] for k in
++                      ("head", "head_sha", "source_head", "source_head_sha")
++                      if k in proof]
++            if not claims or any(type(v) is not str or v != head for v in claims):
+                 return False

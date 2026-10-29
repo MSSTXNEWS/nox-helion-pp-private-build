@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_V16_MANUAL2_R20_EXACT_SOURCE_QA_RED_GREEN",
+  "run_id": "NOX-V16-M2-20261029-R20-T08-CONFLICTING-HEAD-QA",
+  "role": "MANUAL2_INDEPENDENT_QA",
+  "task_id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+  "canon_revision": "60",
+  "r19_policy_blob": "df0c6c0017fb5ed8773630e261f00e54bbd172c0",
+  "r20_manual_blob": "b1e4e07e56da61992cb40d72a371ecb53511cab2",
+  "r20_queue_blob": "6cd258cf380a9b18b83fc1b4e8d6635c530e2a8a",
+  "original_prompt_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+  "master_revision": "341",
+  "e06_revision": "501",
+  "lessons_revision": "392",
+  "ledger_blob": "69bc78d10f6767de1536b7c6c84c82889b38809d",
+  "source_pr_head": "70cd7b19a1e92eb5bfdc40612ff56d076e21f36c",
+  "source_pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+  "physical_test": {
+    "type": "Offline Python real temporary Git blob and alias conflict",
+    "red": "1/1 expected failure with vulnerable verified `any(proof.get(k) == head...)` logic on source-equivalent replay; byte-level reconstructed Git blob did not match canonical, so no exact-blob claim",
+    "green": "12/12 local Python focused checks PASS with hardened candidate including 1/1 alias-conflict negative",
+    "native_windows": "NOT_RUN",
+    "full_original_suite": "NOT_RUN",
+    "condition": "All present head aliases must exactly match pinned HEAD"
+  },
+  "fix_source": {
+    "path": "coordination/automation/t08/t08_autofix_closeout_gate.py",
+    "pre_blob": "923211baca7f0aab4229e7676b36de0436b10ac5",
+    "canonical_modified": false,
+    "patch_file": "coordination/manual/no2/T08_R20_CONFLICTING_HEADS.patch",
+    "patch_type": "minimal owner-safe targeted proposal"
+  },
+  "exact_same_head_qa": "FAIL_CURRENT_GATE_FORGED_IDENTITY ; CANDIDATE_GREEN_LOCAL",
+  "existing_error_only": true,
+  "lessons": [
+    "One matching SHA/HEAD alias is insufficient: every declared alias must be checked",
+    "Do not count failed prompt/run as code rollback",
+    "Never build alternate host, bypass ACL/STOP/native consent/SourceLock",
+    "T06 sole writer PR162; T02 sole shared journal writer; T08 independent acceptance on T06 accepted HEAD"
+  ],
+  "status": "QA_DEFECT_REPRODUCED_CANDIDATE_READY_NOT_INTEGRATED",
+  "next": "T06 integrate exact patch against current PRE/HEAD with CAS and test; manual2/T08 independently re-run exact integrated SHA; T02 append existing error only; T09->T10 on accepted head",
+  "release": "EXE NSIS CI E07 NOT_AUTHORIZED"
+}
