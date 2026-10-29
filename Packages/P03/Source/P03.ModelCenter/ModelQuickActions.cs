@@ -59,6 +59,12 @@ public static class ModelQuickActions
 
     /// <summary>A genuine quick button can request ONLY a host-attested catalog
     /// model through EnqueueVerifiedPullAsync. Explicit license ack is required.</summary>
+    // A button for one family must never silently install a different
+    // family's artifact, even if a direct catalog entry claims to be reviewed.
+    private static bool MatchesFamily(ModelCatalogEntry model) =>
+        !string.IsNullOrWhiteSpace(model.ExactTag) &&
+        model.ExactTag.StartsWith(model.Id + ":", StringComparison.OrdinalIgnoreCase);
+
     public static bool TryResolveApprovedOllamaPull(
         string? selectedId, IReadOnlyCollection<ModelCatalogEntry> approvedCatalog,
         bool licenseAcknowledged, bool hostPullCapability, out ModelCatalogEntry? model)
@@ -69,7 +75,7 @@ public static class ModelQuickActions
             !OllamaSlots.Any(x => string.Equals(x.Id, selectedId, StringComparison.Ordinal)))
             return false;
         var matches = approvedCatalog.Where(x => x.Id == selectedId).Take(2).ToArray();
-        if (matches.Length != 1 || !matches[0].CanOfferOneClickPull) return false;
+        if (matches.Length != 1 || !matches[0].CanOfferOneClickPull || !MatchesFamily(matches[0])) return false;
         model = matches[0];
         return true;
     }
@@ -89,7 +95,7 @@ public static class ModelQuickActions
         var matches = approvedCatalog.Where(x =>
             string.Equals(x.ExactTag, exactTag, StringComparison.Ordinal) &&
             string.Equals(x.Id, lead.FamilyId, StringComparison.Ordinal)).Take(2).ToArray();
-        if (matches.Length != 1 || !matches[0].CanOfferOneClickPull) return false;
+        if (matches.Length != 1 || !matches[0].CanOfferOneClickPull || !MatchesFamily(matches[0])) return false;
         model = matches[0];
         return true;
     }
