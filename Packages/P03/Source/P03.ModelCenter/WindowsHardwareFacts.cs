@@ -28,7 +28,8 @@ public static class WindowsHardwareFacts
                     available=checked((long)status.AvailablePhysical);
                 }
                 else error.Add("RAM_SENSOR_FAILED"); }
-            catch(Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or OverflowException)
+            catch(Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or OverflowException
+                or System.Security.SecurityException)
             {error.Add("RAM_SENSOR_UNAVAILABLE");}
             try {var root=Path.GetPathRoot(Environment.SystemDirectory);
                 if (!string.IsNullOrWhiteSpace(root))
@@ -39,7 +40,8 @@ public static class WindowsHardwareFacts
                     else error.Add("SYSTEM_DISK_UNAVAILABLE");
                 }
                 else error.Add("SYSTEM_DISK_UNAVAILABLE");
-            } catch(Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            } catch(Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                or System.Security.SecurityException)
             {error.Add("SYSTEM_DISK_UNAVAILABLE");}
         }
         else error.Add("WINDOWS_ONLY");
