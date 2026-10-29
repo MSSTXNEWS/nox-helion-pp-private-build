@@ -1,0 +1,36 @@
+# NOX V16 / Manual #3 source-only component template.
+# Reuses the EXISTING P04 PowerShell harness, P05 .NET8 tests and GitLab Windows runner.
+# This is a template: T06/#1 may include it only after source freeze and consent.
+# No auto-trigger, EXE/NSIS packaging, GPU training, model pulls or deployment.
+#
+# In canonical GitLab's .gitlab-ci.yml, after source/SourceLock gate approval only:
+# include:
+#   - local: '/coordination/manual/no3/gitlab-p04-p05-reuse.yml'
+#
+# Existing canonical stage: windows-diagnostic
+nox_p04_p05_source_reuse:
+  stage: windows-diagnostic
+  tags:
+    - saas-windows-medium-amd64
+  timeout: 25m
+  interruptible: false
+  retry: 0
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_SOURCE_READY == "YES" && $NOX_P04_P05_COMPONENTS == "YES"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_SOURCE_READY == "YES" && $NOX_P04_P05_COMPONENTS == "YES"'
+      when: on_success
+    - when: never
+  script:
+    - '$ErrorActionPreference = "Stop"'
+    - 'if (-not (Get-Command python -ErrorAction SilentlyContinue)) { throw "HOLD_PYTHON_UNAVAILABLE" }'
+    - 'if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw "HOLD_DOTNET8_UNAVAILABLE" }'
+    - '$head = (& git rev-parse HEAD | Out-String).Trim().ToLowerInvariant()'
+    - 'if ($LASTEXITCODE -ne 0 -or $head -cne $env:CI_COMMIT_SHA.ToLowerInvariant()) { throw "EXACT_SOURCE_HEAD_DRIFT" }'
+    - '& .\Packages\P04\verify_components.ps1'
+    - 'if ($LASTEXITCODE -ne 0) { throw "P04_ORIGINAL_COMPONENTS_FAILED" }'
+    - '& dotnet run --project Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj -c Release'
+    - 'if ($LASTEXITCODE -ne 0) { throw "P05_ORIGINAL_FEED_FAILED" }'
+    - '& dotnet run --project Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj -c Release'
+    - 'if ($LASTEXITCODE -ne 0) { throw "P05_ORIGINAL_FRESHNESS_FAILED" }'
+    - 'Write-Output "P04_P05_EXISTING_COMPONENTS_PASS_ONLY; HOST_GPU_EXE_E07_NOT_VERIFIED"'
