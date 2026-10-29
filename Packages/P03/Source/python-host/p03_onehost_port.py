@@ -92,6 +92,118 @@ class P03OneHostPort:
             result.append(dict(item))
         return tuple(result)
 
+    @staticmethod
+    def _command_json(args: dict) -> str:
+        """Pin bounded JSON content, without coercing keys or arbitrary objects."""
+        if type(args) is not dict:
+            raise P03PortDenied("Bounded JSON owner3 command required")
+        pending = [(args, 0)]
+        count = 0
+        while pending:
+            value, depth = pending.pop()
+            count += 1
+            if depth > 32 or count > 4096:
+                raise P03PortDenied("Owner3 command nesting/size limit")
+            if type(value) is dict:
+                if len(value) > 4096 or any(type(k) is not str or len(k) > 65536 for k in value):
+                    raise P03PortDenied("Owner3 JSON object keys required")
+                pending.extend((v, depth + 1) for v in value.values())
+            elif type(value) is list:
+                if len(value) > 4096:
+                    raise P03PortDenied("Owner3 command size limit")
+                pending.extend((v, depth + 1) for v in value)
+            elif type(value) is str:
+                if len(value) > 65536:
+                    raise P03PortDenied("Owner3 command size limit")
+            elif value is not None and type(value) not in (bool, int, float):
+                raise P03PortDenied("JSON owner3 command values required")
+        try:
+            encoded = json.dumps(args, ensure_ascii=False, sort_keys=True,
+                                 separators=(",", ":"), allow_nan=False)
+            if len(encoded.encode("utf-8")) > 65536:
+                raise ValueError("command size")
+        except (TypeError, ValueError, UnicodeError, RecursionError):
+            raise P03PortDenied("Bounded finite JSON owner3 command required") from None
+        return encoded
+
+    @staticmethod
+    def _scope_token(session: object) -> tuple:
+        # Copy mutable route sets so a callback cannot revoke/switch identity
+        # after authorization but before the original queue receives a command.
+        return tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")) + tuple(
+            frozenset(value) if isinstance(value, (set, frozenset)) else None
+            for value in (getattr(session, "allowed", None), getattr(session, "private_approved", None)))
+
+    def __init__(self, existing_p02_ollama: object, *,
+                 owner3_backend: object | None = None,
+                 native_approve: Callable[[object, str, dict], bool] | None = None,
+                 catalog_path: str | Path | None = None):
+        if not callable(getattr(existing_p02_ollama, "models", None)):
+            raise ValueError("Use existing P02 OllamaClient.models(), not another downloader")
+        self.ollama = existing_p02_ollama
+        self.backend = owner3_backend
+        self.native_approve = native_approve
+        path = Path(catalog_path) if catalog_path else Path(__file__).with_name("catalog30.discovery.json")
+        self.family_cards = self._validate_catalog(path)
+
+    @staticmethod
+    def _validate_catalog(path: Path) -> tuple[dict, ...]:
+        # Model discovery is immutable until owner review. No source URL means weights.
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 100_000:
+            raise P03PortHold("No safe pinned owner3 discovery catalog")
+        # Ambiguous JSON or malformed roots must HOLD, never crash/approve a model.
+        # Python's default decoder silently accepts duplicate keys and NaN.
+        def unique_object(pairs):
+            obj = {}
+            for key, value in pairs:
+                if key in obj:
+                    raise P03PortHold("P03 catalog duplicate JSON key")
+                obj[key] = value
+            return obj
+
+        def reject_constant(value):
+            raise P03PortHold("P03 catalog invalid JSON numeric constant")
+
+        def finite_float(value):
+            number = float(value)
+            if not math.isfinite(number):
+                raise P03PortHold("P03 catalog non-finite JSON number")
+            return number
+
+        try:
+            # Enforce the actual read cap even if the file grows after stat().
+            with path.open("rb") as stream:
+                raw = stream.read(100_001)
+            if len(raw) > 100_000:
+                raise P03PortHold("P03 catalog exceeds owner size cap")
+            doc = json.loads(raw.decode("utf-8"),
+                             object_pairs_hook=unique_object,
+                             parse_constant=reject_constant, parse_float=finite_float)
+        except (OSError, UnicodeError, ValueError, RecursionError) as exc:
+            raise P03PortHold("Malformed/unsafe P03 catalog JSON") from exc
+        if not isinstance(doc, dict):
+            raise P03PortHold("P03 catalog root must be a JSON object")
+        if doc.get("schema") != "NOX-P03-PYTHON-ONEHOST-CATALOG-V1" or doc.get("sourceType") != "discovery_only":
+            raise P03PortHold("P03 catalog schema drift")
+        data = doc.get("models")
+        if not isinstance(data, list) or len(data) != 30:
+            raise P03PortHold("Approved 30 family discovery cards missing")
+        result, used = [], set()
+        for item in data:
+            if not isinstance(item, dict):
+                raise P03PortHold("Malformed catalog card")
+            ident = item.get("id")
+            if not isinstance(ident, str) or not ID.fullmatch(ident) or ident in used:
+                raise P03PortHold("Duplicated/untrusted model family")
+            if (not isinstance(item.get("name"), str) or len(item["name"]) > 128
+                    or item.get("url") != "https://ollama.com/library/" + ident
+                    or item.get("reviewStatus") != "REVIEW_REQUIRED"
+                    or item.get("downloadEligible") is not False):
+                raise P03PortHold("Unreviewed catalog card cannot enable a download")
+            used.add(ident)
+            result.append(dict(item))
+        return tuple(result)
+
     def _ensure_native_scope(self, session: object, route: str, args: dict):
         # Strings and mappings are NOT native route sets: membership would
         # authorize substrings/keys; None and integers would raise TypeError.
@@ -217,7 +329,12 @@ class P03OneHostPort:
         }
 
     def execute_backend(self, session: object, route: str, args: dict) -> Any:
+        command_json = self._command_json(args)
+        args = json.loads(command_json)  # detach caller-owned nested payloads
+        scope = self._scope_token(session)
         self._ensure_native_scope(session, route, args)
+        if self._command_json(args) != command_json or self._scope_token(session) != scope:
+            raise P03PortDenied("Native consent command or identity changed")
         method_name = OWNER_ROUTES.get(route)
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
@@ -236,10 +353,14 @@ class P03OneHostPort:
             raise
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
+        if self._command_json(args) != command_json or self._scope_token(session) != scope:
+            raise P03PortDenied("Native consent command or identity changed")
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
-            return func(session, args)
+            # No reference retained by approval/health callbacks is handed to
+            # the queue; execute exactly the command whose consent was checked.
+            return func(session, json.loads(command_json))
         except (P03PortDenied, P03PortHold):
             raise
         except Exception:
