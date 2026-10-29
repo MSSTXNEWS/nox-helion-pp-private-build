@@ -14,6 +14,13 @@ REPLACEMENT = 'case "models.preflight":\n                    await RunDiagnostic
 def digest(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
+def digest_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            hasher.update(block)
+    return hasher.hexdigest()
+
 def trusted_path(value):
     path = Path(value).absolute()
     for node in (path, *path.parents):
@@ -192,7 +199,7 @@ def main():
     extra = e06.read_bytes()
     if b"ReportOriginalPythonDiagnosticAsync" not in extra:
         raise SystemExit("OWNER6_PARTIAL_FUNCTION_MISSING")
-    if not python_exe.is_file() or python_exe.is_symlink() or digest(python_exe.read_bytes()) != ORIGINAL_EXE_SHA256:
+    if not python_exe.is_file() or python_exe.is_symlink() or digest_file(python_exe) != ORIGINAL_EXE_SHA256:
         raise SystemExit("ORIGINAL_PYTHON_EXE_SHA_HOLD")
     dest = trusted_path(stage / "Integration" / "OriginalPythonDiagnosticBridge.cs")
     out = trusted_path(stage.parent / "E06_R10_SOURCE_RECEIPT.json")
