@@ -10,6 +10,8 @@ const stamp=x=>{const m=/^(\d{2}):(\d{2}):(\d{2})[,.](\d{3})$/.exec(x);if(!m||+m
 const fmt=(v,sep=",")=>{const n=Math.max(0,Math.round(v)),s=Math.floor(n/1000);return String(Math.floor(s/3600)).padStart(2,"0")+":"+String(Math.floor(s/60)%60).padStart(2,"0")+":"+String(s%60).padStart(2,"0")+sep+String(n%1000).padStart(3,"0")};
 const cues=s=>txt(s).trim().replace(/^WEBVTT[^\n]*\n/i,"").split(/\n\s*\n/).filter(Boolean).map((b,i)=>{const a=ls(b),k=a.findIndex(x=>x.includes("-->"));if(k<0)throw Error("MISSING_TIMECODE");const m=/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s+-->\s+(\d{2}:\d{2}:\d{2}[,.]\d{3})/.exec(a[k]);if(!m)throw Error("INVALID_TIMECODE");const start=stamp(m[1]),end=stamp(m[2]);if(end<=start)throw Error("BAD_DURATION");return {n:i+1,start,end,text:a.slice(k+1).join("\n")}});
 const printCues=(a,vtt=false)=>(vtt?"WEBVTT\n\n":"")+a.map((c,i)=>(vtt?"":String(i+1)+"\n")+fmt(c.start,vtt?".":",")+" --> "+fmt(c.end,vtt?".":",")+"\n"+c.text).join("\n\n")+"\n";
+// Keep parsed header schema even for a header-only CSV; nonenumerable metadata leaves JSON results unchanged.
+const csvColumns=Symbol("csvColumns");
 function csv(s){
   // Strict RFC4180-style local parsing: never silently reassign task columns.
   const data=txt(s),rows=[];
@@ -42,14 +44,17 @@ function csv(s){
     if(!h||normalized.has(key))return true;
     normalized.add(key);return false;
   }))throw Error("INVALID_CSV_HEADER");
-  return rows.filter(r=>r.quoted||r.cells.length!==1||r.cells[0]!=="").map(({cells:r})=>{
+  const parsed=rows.filter(r=>r.quoted||r.cells.length!==1||r.cells[0]!=="").map(({cells:r})=>{
     if(r.length!==header.length)throw Error("CSV_WIDTH_MISMATCH");
     return Object.fromEntries(header.map((key,i)=>[key,r[i]]));
   });
+  Object.defineProperty(parsed,csvColumns,{value:header});
+  return parsed;
 }
 // CSV field operations must use declared own columns, not Object.prototype aliases.
 const csvColumn=(rows,field)=>{
-  if(rows.length&&(typeof field!=="string"||!Object.prototype.hasOwnProperty.call(rows[0],field)))throw Error("CSV_UNKNOWN_FIELD");
+  const declared=rows[csvColumns];
+  if((declared||rows.length)&&(typeof field!=="string"||(declared?!declared.includes(field):!Object.prototype.hasOwnProperty.call(rows[0],field))))throw Error("CSV_UNKNOWN_FIELD");
   return field;
 };
 function csvOut(a){
@@ -117,11 +122,11 @@ export const OPS=Object.freeze({
 "docs.text.chunks":(s,o)=>{let a=[],n=bounded(o.size,100,4000,400),parts=Array.from(s);for(let i=0;i<parts.length;i+=n)a.push(parts.slice(i,i+n).join(""));return a},
 "data.csv.parse":s=>csv(s),
 "data.csv.stringify":s=>csvOut(val(s)),
-"data.csv.select":(s,o)=>{const k=txt(o.fields).split(",").map(x=>x.trim()).filter(Boolean),rows=csv(s);if(rows.length&&k.some(key=>!Object.prototype.hasOwnProperty.call(rows[0],key)))throw Error("CSV_UNKNOWN_FIELD");return rows.map(r=>Object.fromEntries(k.map(x=>[x,r[x]])))},
+"data.csv.select":(s,o)=>{const k=txt(o.fields).split(",").map(x=>x.trim()).filter(Boolean),rows=csv(s);for(const field of k)csvColumn(rows,field);return rows.map(r=>Object.fromEntries(k.map(x=>[x,r[x]])))},
 "data.csv.filter":(s,o)=>{const rows=csv(s),field=csvColumn(rows,o.field);return rows.filter(r=>txt(r[field]).toLocaleLowerCase().includes(txt(o.term).toLocaleLowerCase()))},
 "data.csv.sort":(s,o)=>{const rows=csv(s),field=csvColumn(rows,o.field);return rows.sort((a,b)=>txt(a[field]).localeCompare(txt(b[field]),"ru",{numeric:true})*(o.desc?-1:1))},
 "data.csv.dedupe":s=>[...new Map(csv(s).map(x=>[JSON.stringify(x),x])).values()],
-"data.csv.stats":s=>{const a=csv(s);return {rows:a.length,columns:keys(a[0]),emptyCells:a.reduce((n,r)=>n+Object.values(r).filter(x=>x==="").length,0)}},
+"data.csv.stats":s=>{const a=csv(s);return {rows:a.length,columns:a[csvColumns]??keys(a[0]),emptyCells:a.reduce((n,r)=>n+Object.values(r).filter(x=>x==="").length,0)}},
 "data.json.pretty":s=>JSON.stringify(val(s),null,2),
 "data.json.flatten":s=>flat(val(s)),
 "data.json.keys":s=>keys(val(s)),
