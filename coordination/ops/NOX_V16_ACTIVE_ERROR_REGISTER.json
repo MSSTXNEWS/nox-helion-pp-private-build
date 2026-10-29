@@ -1,13 +1,13 @@
 {
   "schema": "NOX_V16_SHARED_ERROR_REPAIR_LOOP_V1",
   "product": "Only NOX HELION EXPRESS INTEGRATOR V16 Windows loader; not main NOX",
-  "policy_version": "2026-10-29-R01",
+  "policy_version": "2026-10-29-R02-MEGA-ONE-CHECK-ONE-SAVE",
   "owner": "T02/C — single shared error-register and Master/E06/Lessons writer via Git CAS/readback",
   "invariant": "All NOX V16 56 rules §33 and Function Lock/NO-LOSS apply intact; source acceptance cannot be forged; no EXE/NSIS/GitLab CI/E07 until separate authorization",
   "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
   "source_head_at_creation": "5b42260bdf6adef2eee78dc665f85041270fe4fb",
   "source_head_policy": "A snapshot, NEVER a permanent pin; every run must fetch current HEAD before attributing an error or closing a fix",
-  "latest_revision": "R01",
+  "latest_revision": "R02",
   "workflow": {
     "start": "BEFORE doing task work: fetch this Git register on branch (not a stale raw URL pinned to a commit); compare checkpoint with prior personal receipt; read ALL OPEN or FIX_APPLIED_UNVERIFIED entries affecting own paths plus each other owner's new/changed errors; check latest Master/E06/Lessons delta and upstream T01-T11 receipts; acknowledge each relevant error by ID and source HEAD in personal receipt.",
     "triage": "For each error, distinguish source CODE_DEFECT, MISSING_EVIDENCE, ACCESS_BLOCK, STALE_STATUS, PROCESS_DEFECT. Keep one fixed owner; route cross-owner errors instead of duplicating code. Do not treat a saved patch or HOLD as DONE.",
@@ -151,5 +151,86 @@
     "A note in old docs is not itself a current instruction: check live Git and status on each run.",
     "Never mark P01-P05 accepted or SOURCE_READY merely by adding this register or a Git receipt."
   ],
-  "no_build": true
+  "no_build": true,
+  "history_coverage": {
+    "status": "BACKFILL_REQUIRED_NOT_CLAIMED_COMPLETE",
+    "known_records": 7,
+    "sources": [
+      "Master entire history",
+      "E06 entire history",
+      "Lessons entire history",
+      "GitHub issue #177 all 243+ comments including later pages",
+      "All T01-T11 personal Git receipts and historical R29/R30",
+      "T01–T11 latest automation run results"
+    ],
+    "assigned_to": "T02/C coordinator",
+    "initial_action": "One-time deterministic inventory and dedup of all historical errors into THIS existing register, not new TaskIDs; include original error source RunID and source path, firstSeen, lastSeen, owner, current exact HEAD and proof. Read full history ONCE to close index gaps; subsequently use full open register plus new deltas. Do not claim all errors indexed until historical source coverage/checkpoint is written with evidence."
+  },
+  "mega_block_protocol": {
+    "priority": "NEW OPERATIONAL V16 RULE; supersedes old repeated 10x10, audit-only approaches, and 'read last journal delta only' but NEVER supersedes original V16 all 56 rules or Function Lock",
+    "preflight": "EACH RUN MUST fetch the ENTIRE cumulative error register at current branch ref, not just last cycle, enumerate every OPEN and FIX_APPLIED_UNVERIFIED entry across ALL owners, identify newly added and recurrent errors from all other executors, read the latest personal receipts and GitHub issue from all relevant owners. If T02 historic indexing is incomplete, consult historical error sources when needed for own paths and mark HISTORIC_COVERAGE_PENDING; do not hide that gap. Acknowledge register blob_sha and all relevant ERROR IDs (including other owners), classify self-fix/cross-owner handoff/not-applicable with specific reason.",
+    "unit_of_work": "ONE MEGA-BLOCK = all owner-authorized fixes for the assigned subsystem that can be completed safely on ONE current source HEAD; do one substantial work package, exactly ONE minimum necessary end-of-block verification of changes and ONE immutable Git save/receipt. Do NOT do separate analysis rounds, battery of tests, 10x10 iterations or a new branch per hypothesis. Existing mandatory integrity/security contracts still require evidence; never skip critical preimage/CAS check or invent a PASS.",
+    "source_writes": "ONLY T06 writes canonical P01-P05 branch; others prepare EXACT owner-scoped patches and dispatch; T02 ONLY writes Master/E06/Lessons and this Git error register. Every writer must fetch fresh HEAD and exact current file blob, use content-SHA/CAS; do not rewrite unrelated paths, bypass STOP/ACL/native consent or delete originals.",
+    "error_fixer": "When own error: implement actual owner-safe source correction in mega-block, preserve PRE/POST Git SHA and changed paths. When someone else's error: send owner exact ERROR ID and SHA; never claim fixed via report or duplicated code. When issue is MISSING_EVIDENCE or ACCESS_BLOCK, identify physically available evidence or the exact missing access; do other ready work, don't generate recurring HOLD-only reports.",
+    "one_check": "After mega-block perform ONE focused acceptance check for changed source contracts and one Git readback of final commit/state. This is one end-of-block check, not many test cycles. Required safety/crypto/permission verification remains compulsory even if there is no executable test.",
+    "one_save": "ONE end-of-block immutable TaskID receipt with run_id, checkpoint_registry_blob, every error ID read/acknowledged, error events, source head before/after, affected paths, single verification outcome, one applied lesson, criteria before/after/delta and ten-bar meter. T02 deduplicates/merges receipts into single shared register + Master/E06/Lessons with revision CAS and readback; avoid cross-agent writes.",
+    "anti_recurrence": "If any ERROR ID appears twice in consecutive runs without new source evidence, mark REPEAT_WITHOUT_REMEDIATION; next run must not repeat same audit or report—either apply owner fix or send exact unblock dependency with one next action; always pursue other independent ready backlog. A CLOSED error reopens only with new physical conflicting evidence.",
+    "closure": "A FIX_APPLIED_UNVERIFIED error becomes VERIFIED_CLOSED only on same exact source HEAD or properly scoped immutable artifact when independent owner/controller confirms one focused mandatory check; CLOSED carries close_sha and verify_receipt. Other workers MUST ingest closed status next run, not continue stale HOLD.",
+    "status_labels": [
+      "OPEN",
+      "FIX_APPLIED_UNVERIFIED",
+      "VERIFIED_CLOSED",
+      "ACCESS_BLOCK_WITH_OWNER",
+      "REPEAT_WITHOUT_REMEDIATION"
+    ],
+    "no_new_scope": true,
+    "no_exe_ci_nsis_e07": true,
+    "no_fabricated_full_history": true
+  },
+  "required_receipt_schema": {
+    "task_id": "Txx or role",
+    "run_id": "exact",
+    "registered_in_source": "branch/ref + registry blob_sha",
+    "preflight": {
+      "read_all_open_error_ids": [],
+      "new_errors_other_owners": [],
+      "resolved_errors_other_owners": [],
+      "cross_owner_ack": [
+        {
+          "error_id": "ERR-...",
+          "action": "APPLY|HANDOFF|NO_IMPACT",
+          "reason": "..."
+        }
+      ],
+      "history_index_status": "COMPLETE|IN_PROGRESS"
+    },
+    "mega_block": {
+      "fixed_error_ids": [],
+      "new_error_ids": [],
+      "source_before_sha": "...",
+      "source_after_sha": "...",
+      "source_paths": [],
+      "one_verification": "PASS|BLOCKED with evidence",
+      "saved_commit_sha": "..."
+    },
+    "efficiency": {
+      "own_before": "x/n",
+      "own_after": "x/n",
+      "delta_points": 0,
+      "progress_bar": "████░░░░░░",
+      "global_closed_tasks": "n/11"
+    },
+    "lesson": {
+      "source_error_id": "ERR-...",
+      "applied_action": "...",
+      "prevents_recurrence_by": "..."
+    }
+  },
+  "recurrence_check": {
+    "open_before": 3,
+    "awaits_verification": 2,
+    "closed": 2,
+    "first_update_phase": "POLICY_INSTALLED_NOT_YET_RUNTIME_PROVEN",
+    "independent_new_run_evidence_required": true
+  }
 }
