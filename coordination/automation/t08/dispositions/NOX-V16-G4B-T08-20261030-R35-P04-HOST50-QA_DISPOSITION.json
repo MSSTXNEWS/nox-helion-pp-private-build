@@ -1,0 +1,140 @@
+{
+  "schema": "NOX_V16_T08_INDEPENDENT_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-G4B-T08-20261030-R35-P04-HOST50-EXACT",
+  "role": "AUTO G4-B/T08 auxiliary to manual #2; no product or shared-ledger writes",
+  "task_ids_existing": [
+    "T08",
+    "P04/model_snapshot"
+  ],
+  "scope": "M3 component QA on integrated P04 + changed Host50 UI 50-route catalog",
+  "read_proof": {
+    "canon_document": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "r26_policy_blob": "1d800dbf26c937e3086d5089d243c5c963b77b15",
+    "previous_role_blob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "register_ref": "coordination/v16-shared-error-ledger-20261029-r01",
+    "register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11
+    },
+    "master_latest_rev_prefix": "AHj4eMQJfPI1",
+    "c34_rev_prefix": "AHj4eMTYjSL",
+    "e06_lessons_fresh_read": "PARTIAL_NOT_VERIFIED_IN_THIS_RUN",
+    "related_error_ids": [
+      "ERR-SRC-004",
+      "ERR-SYS-002",
+      "ERR-SRC-005",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ]
+  },
+  "sha_lock": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "canonical_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "pr": 162,
+    "source_head": "79005fcb92dd540d00d82355203757bd367e2f20",
+    "tree": "c6602e45359e3311a5af5ab37863c62307dab444",
+    "owner_batch_receipt_blob": "ca0ed1b8a639343f26887ed07c9826faa9311983",
+    "p04_source_blob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+    "p04_original_test_blob": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+    "host50_registry_blob": "f63b0139efaf11aa128d1b68435df3d056fcb3a5",
+    "host50_smoke_test_blob": "d39122860f4052a9552f3ae13805d0c2e0616d22",
+    "host50_catalog_blob": "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d",
+    "host50_owner_map_blob": "3a5071a10e3d94057b5b19562a371f30811aaca5",
+    "host50_native_bridge_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+    "host50_admission_blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4"
+  },
+  "physical": {
+    "p04": {
+      "original_git_blob_verification": "SOURCE_AND_ORIGINAL_TEST_BLOB_EXACT_MATCH",
+      "command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -v",
+      "platform": "Linux Python 3.13.5",
+      "tests_total": 37,
+      "passed": 36,
+      "failed": 1,
+      "fail_case": "test_local_manifest_sha_tracks_shard_index_bytes",
+      "root_cause": "Test uses json.dumps with default separators, then writes a byte-identical JSON literal; expects manifest SHA to differ even though no bytes changed. The product code is not proven faulty.",
+      "original_log_sha256": "95f9bcae202ee1b29bd49c9f995e6371af7d241c3d6b5dc7fcdc1374a24348b5",
+      "isolated_qa_test_correction": {
+        "path": "tests/P04/test_model_snapshot_probe.py",
+        "pre_blob": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+        "proposed_post_blob": "525b77d61050b0bac5b1653aedc7b5eec3314991",
+        "exact_one_line": "path.write_text('{\"weight_map\": {\"q.weight\": \"model.safetensors\"}}', -> path.write_text('{\"weight_map\":{\"q.weight\":\"model.safetensors\"}}',",
+        "focused_corrected_command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe_QA_FIX_CANDIDATE.py -v",
+        "corrected_pass": 37,
+        "corrected_fail": 0,
+        "corrected_log_sha256": "e0262a39f9fb3339b58b1d959c85c6d666f3191589651e2f53828674e061f10b",
+        "diff_sha256": "d7f9935e6a31357ac429e0562da4ac7c2a9decdc2eca9e23532904546121e0e2",
+        "status": "TEST_FIX_PREPARED_ONLY_NOT_INTEGRATED"
+      },
+      "component_qa": "FAIL_ORIGINAL_SUITE_NOT_QA_ACCEPTED"
+    },
+    "host50": {
+      "original_git_smoke_test_bodies_executed": 58,
+      "original_test_bodies_passed": 58,
+      "assertions": 701,
+      "method": "Execute exact Git-pinned registry.mjs and 58 original smoke.test.mjs test bodies in V8 with stubbed node:fs/assert and real Git catalog; not node --test",
+      "additional_negative_checks": {
+        "UI_FAIL_CLOSED_PC_RISK_DOWNGRADE": "PASS",
+        "UI_STOP_NO_CAPABILITY": "PASS",
+        "UI_DANGEROUS_NO_CONSENT": "PASS",
+        "ONE_HOST_OWNER_MAP_COUNTS": "PASS",
+        "NATIVE_PENDING_NOT_ACCEPTED": "PASS"
+      },
+      "counts": {
+        "routes": 50,
+        "source_bound": 39,
+        "source_unbound": 11,
+        "native_pending": 14,
+        "legacy_source_holds": 13,
+        "Windows_accepted": 0
+      },
+      "finding": "The prior synthetic UI risk downgrade was closed at source level by new canonical owner/risk/taskId route policy; fail-closed on tampered risk validated. Native policy remains separate.",
+      "node_cli": "NOT_RUN",
+      "windows_native": "NOT_RUN",
+      "native_acl_stop_consent": "NOT_RUN",
+      "source_only": "VERIFIED"
+    }
+  },
+  "disposition": {
+    "p04_stages": {
+      "SOURCE_PREPARED": "PRIOR",
+      "SOURCE_VERIFIED": "OWNER_SOURCE",
+      "INTEGRATED": "YES",
+      "QA_ACCEPTED": false
+    },
+    "host50_stages": {
+      "SOURCE_MATRIX_VERIFIED": "YES_ON_CURRENT_BLOBS",
+      "SOURCE_BINDINGS": "39/50",
+      "NATIVE_QA": "NOT_RUN",
+      "QA_ACCEPTED": false
+    },
+    "t08": "1/3 HISTORICAL_UNCHANGED",
+    "accepted_task_delta": 0,
+    "product_progress": "N/D",
+    "source_ready": false,
+    "release_authorized": false
+  },
+  "lessons": {
+    "applied": [
+      "Pin actual Git blobs before tests; no stale HEAD promotion",
+      "Treat negative-test data equivalence as a test failure, not a product failure",
+      "Re-run changed registry source rather than reuse R34 unchanged assumption"
+    ],
+    "remaining": [
+      "Original P04 test regression red until owner test one-line fix",
+      "11 Host50 source unbound, 14 native pending and STOP/ACL/consent native owner proofs",
+      "Shared journal T02 only; E06/Lessons fresh delta partial"
+    ]
+  },
+  "handoff": {
+    "manual1": "Review and apply ONE-LINE P04 test fixture change by exact PRE cf115be6 -> POST 525b77d6 via owner CAS, run original 37 tests; no product implementation change. Complete remaining 11 native source bindings and provide 14 device-level receipts.",
+    "manual2": "Independently re-run exact-head P04 37 tests and Host50 50/native14 STOP/ACL/consent under authorized Windows host; fail original suite until test correction integrated.",
+    "t02": "Record test-fixture QA fault as delta under existing ERR-SRC-004 / ERR-SYS-002; do not duplicate ERROR_ID or mark verified closed without shared CAS readback."
+  },
+  "build": "NO_CI_EXE_NSIS_E07_RELEASE",
+  "status": "INCOMPLETE",
+  "created_at_utc": "2026-10-29T21:59:00.765Z"
+}
