@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import math
 import re
 import threading
 import time
@@ -22,6 +23,16 @@ from p02_runtime import P02Error, Cancelled
 LANG = frozenset({'ru','es'})
 LEVELS = frozenset({'A1','A2','B1','B2','C1','C2'})
 E164 = re.compile(r'^\+[1-9][0-9]{7,14}$')
+
+
+def _voice_text(value: str, limit: int, error: str) -> None:
+    """Reject malformed provider text before another adapter or native storage."""
+    if type(value) is not str or not 0 < len(value) <= limit or not value.strip():
+        raise P02Error(error)
+    try:
+        value.encode('utf-8', 'strict')
+    except UnicodeEncodeError as exc:
+        raise P02Error(error) from exc
 
 
 @dataclass(frozen=True)
@@ -75,7 +86,22 @@ class LocalVoicePipeline:
                  *, approved_models: bool = False, permitted_voices: frozenset[str] = frozenset()):
         self.asr, self.chat, self.tts = asr, chat, tts
         self.approved_models = approved_models
-        self.permitted_voices = permitted_voices
+        # The caller cannot silently broaden voice rights by mutating its set.
+        self.permitted_voices = frozenset(permitted_voices)
+
+    def validate_request(self, scope: Identity, *, source: str, target: str,
+                         voice: str, mode: str = 'translate', level: str = 'A2') -> None:
+        """Pure preflight, shared with native capture admission before consumption."""
+        if (type(source) is not str or type(target) is not str
+                or source not in LANG or target not in LANG or source == target):
+            raise ValueError('Only RU↔ES is enabled')
+        if type(voice) is not str or voice not in self.permitted_voices:
+            raise PermissionError('Unapproved voice identity')
+        if (type(mode) is not str or type(level) is not str
+                or mode not in ('translate', 'maestro') or level not in LEVELS):
+            raise ValueError('Unsupported voice mode or learning level')
+        if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
+            raise PermissionError('Missing trusted native principal')
 
     def run(self, scope: Identity, audio: bytes, *, source: str, target: str,
             voice: str, mode: str = 'translate', level: str = 'A2',
@@ -84,35 +110,49 @@ class LocalVoicePipeline:
         stop = stop or threading.Event()
         if stop.is_set():
             raise Cancelled('Voice STOP before start')
-        if not microphone_consent or not self.approved_models:
+        if microphone_consent is not True or self.approved_models is not True:
             raise PermissionError('VOICE_CONSENT_OR_MODEL_RIGHTS_HOLD')
-        if not all(callable(a) for a in (self.asr,self.chat,self.tts)):
+        providers = (self.asr, self.chat, self.tts)
+        if not all(callable(a) for a in providers):
             raise P02Error('LOCAL_ASR_LLM_TTS_PROVIDER_HOLD')
         if not isinstance(audio, bytes) or not 0 < len(audio) <= 16 * 1024 * 1024:
             raise ValueError('Invalid capped microphone audio buffer')
-        if source not in LANG or target not in LANG or source == target:
-            raise ValueError('Only RU↔ES is enabled')
-        if voice not in self.permitted_voices:
-            raise PermissionError('Unapproved voice identity')
-        if mode not in ('translate', 'maestro') or level not in LEVELS:
-            raise ValueError('Unsupported voice mode or learning level')
-        if not isinstance(scope, Identity) or not scope.tenant or not scope.principal:
-            raise PermissionError('Missing trusted native principal')
-        transcript = self.asr(scope, audio, source, stop)
+        self.validate_request(scope, source=source, target=target, voice=voice,
+                              mode=mode, level=level)
+        def retain_admission():
+            if self.approved_models is not True or voice not in self.permitted_voices:
+                raise PermissionError('VOICE_MODEL_OR_VOICE_RIGHTS_REVOKED')
+            if any(current is not pinned for current, pinned in
+                   zip((self.asr, self.chat, self.tts), providers)):
+                raise P02Error('LOCAL_VOICE_PROVIDER_CHANGED_DURING_RUN')
+        asr, chat, tts = providers
+        transcript = asr(scope, audio, source, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after ASR')
-        if not isinstance(transcript, str) or not 0 < len(transcript) <= 20000:
-            raise P02Error('ASR_INVALID_RESULT')
+        retain_admission()
+        _voice_text(transcript, 20000, 'ASR_INVALID_RESULT')
         # No other provider; reuse one installed chat LLM supplied by #6.
         directive = ('RU_ES_TRANSLATE' if mode == 'translate' else 'MAESTRO_CEFR_'+level)
-        response = self.chat(scope, transcript, source, target, directive, stop)
+        response = chat(scope, transcript, source, target, directive, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after LLM')
-        if not isinstance(response, str) or not 0 < len(response) <= 30000:
-            raise P02Error('LLM_INVALID_RESULT')
-        output = self.tts(scope, response, target, voice, stop)
+        retain_admission()
+        _voice_text(response, 30000, 'LLM_INVALID_RESULT')
+        output = tts(scope, response, target, voice, stop)
         if stop.is_set(): raise Cancelled('Voice STOP after TTS')
+        retain_admission()
         if not isinstance(output, bytes) or not 0 < len(output) <= 16 * 1024 * 1024:
             raise P02Error('TTS_INVALID_RESULT')
         return VoiceResult(transcript,response,output,source,target,mode)
+
+    @staticmethod
+    def validate_result(result: VoiceResult, *, source: str, target: str, mode: str) -> None:
+        """Native owner must not store audio from a mismatched/overridden adapter."""
+        if (type(result) is not VoiceResult or result.source_lang != source
+                or result.target_lang != target or result.mode != mode):
+            raise P02Error('VOICE_RESULT_REQUEST_MISMATCH')
+        _voice_text(result.transcript, 20000, 'ASR_INVALID_RESULT')
+        _voice_text(result.response, 30000, 'LLM_INVALID_RESULT')
+        if type(result.audio) is not bytes or not 0 < len(result.audio) <= 16 * 1024 * 1024:
+            raise P02Error('TTS_INVALID_RESULT')
 
 
 @dataclass(frozen=True)
@@ -163,19 +203,34 @@ class ConsentGatedSip:
         if not all(callable(x) for x in
                    (self.provider, self.user_approval, self.provider_quote_verify)):
             raise P02Error('SIP_PROVIDER_QUOTE_OR_CONSENT_HOLD')
-        if not isinstance(quote,CallQuote) or quote.expires_at <= time.time():
-            raise PermissionError('Expired SIP quote')
+        def require_fresh_quote():
+            # Provider verification and the native consent dialog may block.
+            # Recheck the original quote after each callback, not only on entry.
+            if (not isinstance(quote, CallQuote)
+                    or type(quote.expires_at) not in (int, float)
+                    or not math.isfinite(quote.expires_at)
+                    or quote.expires_at <= time.time()):
+                raise PermissionError('Expired SIP quote')
+        require_fresh_quote()
+        if stop.is_set():
+            raise Cancelled('CALL_STOP_BEFORE_START')
         with self._lock:
+            require_fresh_quote()
             if quote.quote_id in self._used: raise PermissionError('Call quote already consumed')
             # The price and number must be independently bound to a real provider
             # quote; a caller-constructed CallQuote is NOT sufficient authority.
             if self.provider_quote_verify(scope,quote) is not True:
                 raise PermissionError('Provider quote verification required')
+            require_fresh_quote()
+            if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_APPROVAL')
             # approval callback MUST be the native consent dialog, not page JS.
             if self.user_approval(scope,quote) is not True:
                 raise PermissionError('Native user confirmation required')
+            require_fresh_quote()
+            if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
             self._used.add(quote.quote_id)
         if stop.is_set(): raise Cancelled('CALL_STOP_BEFORE_DIAL')
+        require_fresh_quote()
         return self.provider(scope,quote,stop)
 
 

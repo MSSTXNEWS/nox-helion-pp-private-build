@@ -6,6 +6,7 @@ exact route and bind its existing provider. All unbound ports remain HOLD.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from collections.abc import Mapping
 import re
 import threading
 from typing import Callable, Any
@@ -46,7 +47,9 @@ class OwnerTwoPorts:
                  rag_index: Any = None,
                  voice_pipeline: LocalVoicePipeline | None = None,
                  native_take_audio: Callable[[NativeScope, str], bytes] | None = None,
+                 native_mic_consent: Callable[[NativeScope, str], bool] | None = None,
                  native_store_output_audio: Callable[[NativeScope, bytes], str] | None = None,
+                 native_discard_output_audio: Callable[[NativeScope, str], bool] | None = None,
                  native_call_history: Callable[[NativeScope, int], list[dict]] | None = None,
                  owner_ready: Callable[[str], bool] | None = None):
         if not isinstance(store, P02Store) or not callable(native_authorize):
@@ -55,6 +58,10 @@ class OwnerTwoPorts:
         self.rag, self.voice, self.take_audio, self.call_history = (
             rag_index, voice_pipeline, native_take_audio, native_call_history)
         self.store_output_audio = native_store_output_audio
+        self.discard_output_audio = native_discard_output_audio
+        # R17 donor: only the authenticated host can attest this capture's
+        # current OS permission and user consent; no page JSON flags.
+        self.mic_consent = native_mic_consent
         self.owner_ready = owner_ready
 
     def _session(self, scope: NativeScope, route: str) -> None:
@@ -79,8 +86,9 @@ class OwnerTwoPorts:
         implementations = {"chat.rag": callable(getattr(self.rag, "context", None)),
                            "chat.voice": isinstance(self.voice, LocalVoicePipeline)
                                          and callable(self.take_audio)
+                                         and callable(self.mic_consent)
                                          and callable(self.store_output_audio)
-                                         and self.voice.approved_models,
+                                         and self.voice.approved_models is True,
                            "calls.history": callable(self.call_history)}
         try:
             return bool(implementations.get(route) and self.owner_ready(route) is True)
@@ -105,15 +113,30 @@ class OwnerTwoPorts:
 
     def captured_voice(self, scope: NativeScope, args: dict, stop: threading.Event | None = None) -> dict:
         """Consume ONLY native-host-captured audio; never accept JS audio/path bytes."""
+        if (type(args) is not dict or any(key in args for key in
+                ("audio", "audio_path", "microphone_consent", "mic_consent"))):
+            raise PermissionError("Audio and consent must come from trusted native capture")
+        # Capture primitive request values before any native callback can mutate
+        # the caller's request. Invalid input must not burn a one-use capture.
+        cap_id = args.get("capture_id")
+        source, target, voice = args.get("source"), args.get("target"), args.get("voice")
+        mode, level = args.get("mode", "translate"), args.get("level", "A2")
         self._session(scope, "chat.voice")
         if not self.available("chat.voice"):
             raise RouteHold("INSTALLED_LOCAL_ASR_TTS_OR_HOST_CAPTURE_HOLD")
-        if not isinstance(args, dict) or "audio" in args or "audio_path" in args:
-            raise PermissionError("Audio must be retrieved from one-use native capture")
-        cap_id = args.get("capture_id")
-        if not isinstance(cap_id, str) or not _TOKEN.fullmatch(cap_id):
+        if type(cap_id) is not str or not _TOKEN.fullmatch(cap_id):
             raise ValueError("Opaque native capture id required")
+        self.voice.validate_request(scope.identity, source=source, target=target,
+                                    voice=voice, mode=mode, level=level)
         # STOP before consumption must preserve the one-use native capture.
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
+        try:
+            consented = self.mic_consent(scope, cap_id) is True
+        except Exception as exc:
+            raise RouteHold("NATIVE_MIC_PERMISSION_CHECK_HOLD") from exc
+        if not consented:
+            raise PermissionError("NATIVE_MIC_CONSENT_REQUIRED")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
         # Native host consumes capture exactly once; a second lookup MUST fail.
@@ -126,14 +149,27 @@ class OwnerTwoPorts:
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
         result = self.voice.run(
-            scope.identity, audio, source=args.get("source"), target=args.get("target"),
-            voice=args.get("voice"), mode=args.get("mode", "translate"),
-            level=args.get("level", "A2"), microphone_consent=True, stop=stop)
+            scope.identity, audio, source=source, target=target, voice=voice,
+            mode=mode, level=level, microphone_consent=consented, stop=stop)
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
+        LocalVoicePipeline.validate_result(result, source=source, target=target, mode=mode)
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
+        # Reuse R18's post-persistence STOP boundary, then revoke the exact
+        # native receipt. Only the authenticated host may delete its audio.
+        if stop is not None and stop.is_set():
+            if (not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id)
+                    or not callable(self.discard_output_audio)):
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            try:
+                discarded = self.discard_output_audio(scope, output_id)
+            except Exception as exc:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD") from exc
+            if discarded is not True:
+                raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE_CLEANUP_HOLD")
+            raise RouteHold("NATIVE_VOICE_STOPPED_DURING_OUTPUT_PERSISTENCE")
         if not isinstance(output_id, str) or not _TOKEN.fullmatch(output_id):
             raise RouteHold("NATIVE_OUTPUT_AUDIO_RECEIPT_REQUIRED")
         return {"transcript": result.transcript, "response": result.response,
@@ -176,7 +212,9 @@ class OwnerTwoPorts:
 
 def register_with_existing_pack01(dispatcher, bound_port_type,
                                   host_scope_from_session: Callable,
-                                  owner_ports: OwnerTwoPorts, *, receipt: str) -> frozenset[str]:
+                                  owner_ports: OwnerTwoPorts, *, receipt: str,
+                                  native_stop_from_session: Callable | None = None,
+                                  original_voice_port=None) -> frozenset[str]:
     """Bind three owner #2 ports to #6's already-existing PACK01 dispatcher.
 
     The native scope resolver is provided by the integrator, never page input;
@@ -185,26 +223,48 @@ def register_with_existing_pack01(dispatcher, bound_port_type,
     if (not callable(host_scope_from_session) or not isinstance(owner_ports, OwnerTwoPorts)
             or not _bounded(receipt, 256)):
         raise RouteHold("CURRENT_OWNER_RECEIPT_AND_NATIVE_SCOPE_REQUIRED")
+    if native_stop_from_session is not None and not callable(native_stop_from_session):
+        raise RouteHold("NATIVE_VOICE_STOP_BINDING_REQUIRED")
+    if original_voice_port is not None:
+        from p02_original_voice_port import OriginalVoicePort
+        if (type(original_voice_port) is not OriginalVoicePort
+                or original_voice_port.owner_ports is not owner_ports
+                or original_voice_port.scope_from_session is not host_scope_from_session):
+            raise RouteHold("ORIGINAL_VOICE_SAME_NATIVE_BINDING_REQUIRED")
     mapping = owner_ports.route_methods()
     # Preflight all three canonical owner routes BEFORE publishing any handler.
     # A late foreign owner/missing route must not leave two live P02 ports.
     routes = getattr(dispatcher, "routes", None)
     ports = getattr(dispatcher, "ports", None)
-    if not isinstance(routes, dict) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
+    if not isinstance(routes, Mapping) or not isinstance(ports, dict) or not callable(getattr(dispatcher, "bind", None)):
         raise RouteHold("EXISTING_PACK01_DISPATCHER_REQUIRED")
     for route in mapping:
         if route in ports:
             raise RouteHold("EXISTING_ROUTE_ALREADY_BOUND_NO_OVERRIDE")
         info = routes.get(route)
-        if not isinstance(info, dict) or type(info.get("owner")) is not int or info["owner"] != 2:
+        if not isinstance(info, Mapping) or type(info.get("owner")) is not int or info["owner"] != 2:
             raise RouteHold("CANONICAL_PACK01_OWNER_ROUTE_REQUIRED")
     staged = {}
     for route, handler in mapping.items():
-        def call(session, args, fn=handler):
+        def call(session, args, fn=handler, name=route):
+            if name == "chat.voice" and original_voice_port is not None:
+                return original_voice_port.call(session, args)
             native_scope = host_scope_from_session(session)
+            if name == "chat.voice":
+                if native_stop_from_session is None:
+                    raise RouteHold("NATIVE_VOICE_STOP_BINDING_REQUIRED")
+                # Reuse the host session's existing cancellation token. Never
+                # create a disconnected Event or read STOP authority from args.
+                stop = native_stop_from_session(session)
+                if not isinstance(stop, threading.Event):
+                    raise RouteHold("NATIVE_VOICE_STOP_TOKEN_REQUIRED")
+                return fn(native_scope, args, stop=stop)
             return fn(native_scope, args)
-        staged[route] = bound_port_type(
-            call, lambda name=route: owner_ports.available(name), receipt, 2)
+        def available(name=route):
+            if name == "chat.voice" and original_voice_port is not None:
+                return original_voice_port.available()
+            return (name != "chat.voice" or native_stop_from_session is not None) and owner_ports.available(name)
+        staged[route] = bound_port_type(call, available, receipt, 2)
     try:
         for route, port in staged.items():
             dispatcher.bind(route, port)

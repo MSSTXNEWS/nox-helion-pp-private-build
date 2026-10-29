@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G2B_SOURCE_OWNER_RECEIPT_V1",
+  "run_id": "R30-G2-B-20261029T0540MSK-R01",
+  "slot": "G2-B",
+  "status": "SOURCE_PATCHED_COMPONENT_HOLD",
+  "product": "NOX HELION EXPRESS INTEGRATOR loader ONLY",
+  "policy": "SOURCE_ONLY_NO_WINDOWS_BUILD_NO_NSIS_NO_GITLAB_NO_PR162_WRITE",
+  "base_branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+  "base_head_sha": "316fd4e48c21c69d90258886082442e2d9c76489",
+  "base_tree_sha": "9b9ce6716f4f8936d33d8488ce2364f91eb6e389",
+  "branch": "automation/r30/g2b/20261029T0540MSK-r01",
+  "owner_lock": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+  "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+  "snapshots_compared": 25,
+  "snapshot_donor": "coordination/astra/r30/snapshots/r29-a04-voice-20261029/",
+  "saved_donor_not_product_DONE": true,
+  "source_changes": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_git_blob_sha1": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+      "pre_sha256": "8a0c06bd9d44a156997bb8cce9609504ea4f1adcf3ac828c8f0ae7a1f8bd80ec",
+      "post_sha256": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+      "donor_git_blob_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob_sha1": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "pre_sha256": "094ec8369033ffaf95b08d5955b19c79ef2e11483d19822132d56034792fb1ed",
+      "post_sha256": "35f7b3b820f4cb06afb80691564806f7bf5a772c4b6e8fdc667fea5e735406a4",
+      "donor_git_blob_sha1": "85eda24f2515bdd8a2a3fea83ed88b0c58e38359"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "pre_git_blob_sha1": "ABSENT",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "cf366a29a34f8dcef7b63c5c78a4bb4647dc8c82cf1c94025e9a22848a5f6377",
+      "donor_git_blob_sha1": "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_g2b_r30_voice_sip.py",
+      "pre_git_blob_sha1": "ABSENT",
+      "pre_sha256": "ABSENT",
+      "post_sha256": "61439fefae29dbc48ca7e5fc144e4f91cdb25318263aac74e99f682d5dcef890",
+      "donor_git_blob_sha1": null
+    }
+  ],
+  "tested": {
+    "method": "EXECUTED_DETERMINISTIC_V8_EXACT_SOURCE_ASSERTIONS",
+    "checks": {
+      "sha256_vector": true,
+      "provenance_25_snapshot_reference": true,
+      "consent_exact_true": true,
+      "model_rights_exact_true": true,
+      "cancelled_post_asr": true,
+      "cancelled_post_tts": true,
+      "sip_quote_reverify": true,
+      "sip_stop_before_dial": true,
+      "native_mic_callback": true,
+      "immutable_audio_request": true,
+      "native_stop_cleanup": true,
+      "strict_readiness": true,
+      "original_owner_dependency_hold": true,
+      "original_only_preview": true,
+      "regression_suite_12_cases": true,
+      "no_new_voice_engine": true
+    },
+    "pass": 16,
+    "total": 16,
+    "new_python_test": "Packages/P02/worker-python/test_p02_g2b_r30_voice_sip.py",
+    "new_python_cases": 12,
+    "python_unittest_execution": "NOT_RUN_NO_AUTHENTICATED_LOCAL_CHECKOUT",
+    "windows_native": "NOT_RUN",
+    "real_sip_provider": "NOT_RUN",
+    "real_microphone": "NOT_RUN"
+  },
+  "scope": {
+    "native_microphone_consent": "REQUIRED_FOR_NEW_NATIVE_CAPTURE_ROUTE",
+    "stop_during_audio_storage": "DISCARD_RECEIPT_OR_HOLD",
+    "sip_quote": "FRESH_BEFORE_EACH_DIAL_EFFECT",
+    "original_voice": "ADAPTER_ONLY_NO_NEW_ENGINE_MISSING_MODULES_HOLD",
+    "status": "SOURCE_CANDIDATE_NOT_INSTALLED"
+  },
+  "blocked_integration": [
+    "G2-A owns p02_native_ingress.py/p02_runtime.py/p02_host_admission.py/p02_framed_worker.py; no edits by G2-B",
+    "Original helion_voice package not present as direct root package in pinned Git tree; actual native binding and Python import require owner evidence",
+    "Legacy test_p02_owner_route_ports.py fixtures predate mandatory native_mic_consent; maintainers must adjust their fixtures after source promotion, not use fabricated consent",
+    "No claim full repository test suite passed"
+  ],
+  "requested_to_G2_A": {
+    "required_contract": "NativeIngress.voice_session_from_native + _voice_session_type + true STOP-retirement checks must be verified on G2-A own branch; DO NOT modify G2-A paths"
+  },
+  "last_lesson_applied": "R29: reuse pinned owner donor, recheck native consent and STOP at callback boundaries; no new voice engine",
+  "new_lesson": {
+    "id": "G2B_R30_STRICT_READY_AND_OPTIONAL_NATIVE_DEPENDENCY_HOLD",
+    "root_cause": "Old canonical P02 source had no native mic confirmation and advertised non-boolean model approval as ready; optional original native modules could surface bare ImportError.",
+    "action": "Promote saved R29 voice donor to unique owner branch, require approved_models is exactly True for readiness and turn missing optional original voice package into explicit HOLD; source-only targeted gates and regression cases.",
+    "limit": "No native Windows/physical audio/proven provider verification; final readiness remains HOLD"
+  },
+  "progress": {
+    "new_product_done": 0,
+    "source_patch_files": 3,
+    "new_test_files": 1,
+    "overall_percent": "N/D",
+    "source_ready": "HOLD",
+    "release": "HOLD"
+  },
+  "drive_write": "COORDINATOR_C_ONLY",
+  "receipt_is_immutable": true
+}
