@@ -41,6 +41,10 @@ public sealed class GoogleDocsAppendReadback
         if (string.IsNullOrWhiteSpace(token))
             return new(runId, documentId, null, null, "NO_AUTH", entry.Length);
 
+        // A failed transport must yield a stage-specific HOLD receipt.
+        // Preserve the initial CAS revision when a later HTTP operation fails.
+        string httpStage = "READ";
+        string? knownRevision = null;
         try
         {
             using var before = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
@@ -53,6 +57,7 @@ public sealed class GoogleDocsAppendReadback
                         "READ_FAILED", entry.Length);
             using var beforeJson = await ParseBoundedAsync(before, stop).ConfigureAwait(false);
             string? revision = ReadRevision(beforeJson.RootElement);
+            knownRevision = revision;
             if (string.IsNullOrWhiteSpace(revision))
                 return new(runId, documentId, null, null, "NO_REVISION", entry.Length);
             if (!TryBody(beforeJson.RootElement, pinnedTabId, out var tabId, out var beforeBody))
@@ -76,6 +81,7 @@ public sealed class GoogleDocsAppendReadback
                     endOfSegmentLocation = location, text = entry } } },
                 writeControl = new { requiredRevisionId = revision }
             });
+            httpStage = "WRITE";
             using var write = await SendAsync(HttpMethod.Post, uri + ":batchUpdate",
                 token, payload, stop).ConfigureAwait(false);
             if (!write.IsSuccessStatusCode)
@@ -89,6 +95,7 @@ public sealed class GoogleDocsAppendReadback
                     IsTransientHttpStatus(write.StatusCode) ? "WRITE_TRANSIENT_HOLD" :
                         "APPEND_REJECTED", entry.Length);
 
+            httpStage = "READBACK";
             using var after = await SendAsync(HttpMethod.Get, uri + "?includeTabsContent=true",
                 token, null, stop).ConfigureAwait(false);
             if (!after.IsSuccessStatusCode)
@@ -128,6 +135,17 @@ public sealed class GoogleDocsAppendReadback
         {
             return new(runId, documentId, null, null, "INVALID_GOOGLE_RESPONSE", entry.Length);
         }
+        catch (HttpRequestException) when (!stop.IsCancellationRequested)
+        {
+            return new(runId, documentId, knownRevision, null,
+                httpStage + "_TRANSPORT_HOLD", entry.Length);
+        }
+        catch (TaskCanceledException) when (!stop.IsCancellationRequested)
+        {
+            // HttpClient timeout is not a caller-requested STOP; no blind retry.
+            return new(runId, documentId, knownRevision, null,
+                httpStage + "_TIMEOUT_HOLD", entry.Length);
+        }
         // Cancellation should propagate, not be interpreted as success.
     }
     // Retryable transport responses are HOLD, never evidence of an append.
@@ -135,6 +153,7 @@ public sealed class GoogleDocsAppendReadback
     private static bool IsTransientHttpStatus(System.Net.HttpStatusCode status) =>
         status is System.Net.HttpStatusCode.RequestTimeout or
             System.Net.HttpStatusCode.TooManyRequests or
+            System.Net.HttpStatusCode.InternalServerError or
             System.Net.HttpStatusCode.BadGateway or
             System.Net.HttpStatusCode.ServiceUnavailable or
             System.Net.HttpStatusCode.GatewayTimeout;

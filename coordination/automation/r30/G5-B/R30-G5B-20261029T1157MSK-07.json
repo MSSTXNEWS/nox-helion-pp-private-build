@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_RECEIPT_V1",
+  "slot": "G5-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "run_id": "R30-G5B-20261029T1157MSK-07",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T1157MSK-07",
+  "task_id": "G5B-R30-DOCS-HTTP-TRANSPORT-TIMEOUT-STAGE-HOLD-R07",
+  "source_base": {
+    "branch": "automation/r30/g5b/R30-G5B-20261029T1057MSK-06",
+    "commit_sha1": "d55e4974a49e6f544e3bff323fef720eb0b91695",
+    "tree_sha1": "39fdf25e7b17c505a850f49f5999c3a99b487ad0"
+  },
+  "ownership_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+  },
+  "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "rules": {
+    "section33_consolidated_rules_read": 56,
+    "sections54_55_56_read": true,
+    "older_verbatim_rules": "NOT_INDEPENDENTLY_VERIFIED"
+  },
+  "assigned_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "Packages/P05/E05/src/E05DriveRunGate.cs",
+    "Packages/P05/E05/src/E05SafeRunReports.cs"
+  ],
+  "forbidden_paths_untouched": [
+    "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "Packages/P05/E05/src/E05CriterionSeal.cs",
+    "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+    "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+  ],
+  "preimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "7b470401c07e51ff8dabec04c351c612dd31af90"
+  },
+  "postimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "7def1c5c9e303299d715035bb18b1b6c062c7ef6"
+  },
+  "modified_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "coordination/automation/r30/G5-B/R30-G5B-20261029T1157MSK-07.json"
+  ],
+  "change": "Catch real HTTP transport failure and HttpClient timeout separately at READ/WRITE/READBACK; retain last CAS revision and return stage-specific HOLD, propagate caller cancellation, include HTTP 500 in transient status. No new success condition or automatic retry.",
+  "targeted_test": {
+    "name": "G5-B-R07-GOOGLE-DOCS-TRANSPORT-STAGE-SOURCE-V8-FIXTURE",
+    "method": "one executed in-process JavaScript source-static + semantic fixture, not a native .NET/HTTP test",
+    "model_cases_passed": 9,
+    "model_cases_total": 9,
+    "static_assertions_passed": 11,
+    "static_assertions_total": 11,
+    "result": "PASS_SOURCE_STATIC_JS_MODEL_ONLY",
+    "native_dotnet": "NOT_RUN_DOTNET_SDK_ABSENT",
+    "live_google_docs_http": "NOT_RUN",
+    "test_file_written": "NONE_OWNER_LOCK_ONLY_THREE_SOURCE_PATHS"
+  },
+  "snapshots": {
+    "tree_inventory_read": true,
+    "snapshot_roots": 25,
+    "recursive_tree_entries": 30363,
+    "trees_truncated": false,
+    "original_three_part_git_sha_consistent_25_of_25": true,
+    "physical_original_729_sha256": "NOT_VERIFIED",
+    "snapshots_modified": false
+  },
+  "google_docs": {
+    "writer": "ASTRA-C ONLY",
+    "shared_docs_mutated": false,
+    "read_documents": [
+      {
+        "purpose": "master",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "tab": "t.0",
+        "revision": "AHj4eMQurDEoARZosoEmXFHCz35G627SNKLw-EJps3OuOl0PQWVTiDox6P7tyMEkztFFdHIk9f9-RacGCIXt059RIf93i52ixAmOynst2I4",
+        "permission_roles_read": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "report",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "tab": "t.0",
+        "revision": "AHj4eMTWwbi47jdxjn20WsR_JKBrJw1Xy7OBB4npIFKVd4tKiRSf8z_aaO5HMDbUe4CPZdDqwnZl0O8F4Ix62smEr9nYl-YQoVUDC0dD3vc",
+        "permission_roles_read": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "tab": "t.0",
+        "revision": "AHj4eMSGmMQQmbHFBHj1uoXmWHhqXvoW---wvg-QaG_ROSCc8IEuzH1KSCGg7TSJsfAZAK9dbwr0lb8ECwRpkIcLIRZEWcgEUILuD8jjWz8",
+        "permission_roles_read": [
+          "owner"
+        ]
+      }
+    ],
+    "run_id_tab_revision_acl_readback": "SOURCE_ONLY_READ_METADATA_NO_LIVE_WRITE_READBACK",
+    "report_gate": "HOLD"
+  },
+  "prior_error_and_lesson": "Astra-C 11:33 R06: owner-only changes; worker fixture != native .NET, no false product %, G5-B HTTP CAS and transient diagnostics R06",
+  "new_lesson": "A returned HTTP 408/429/5xx is not the only failure mode: DNS/TLS/socket errors throw HttpRequestException and HttpClient.Timeout throws TaskCanceledException even without owner STOP. Track the exact HTTP stage and last known CAS revision, return fail-closed HOLD, never reissue an uncertain write or mislabel caller cancellation as timeout. Verify on native .NET separately.",
+  "release_gates": {
+    "source_code_complete": "HOLD",
+    "native_dotnet": "HOLD",
+    "shared_docs_write": "HOLD_ASTRA_C_ONLY",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_pct": "N/D"
+  },
+  "no_exe": true,
+  "no_nsis": true,
+  "no_gitlab_ci": true,
+  "no_final_integration": true,
+  "no_main_pr162_change": true,
+  "old_done_preserved": true
+}
