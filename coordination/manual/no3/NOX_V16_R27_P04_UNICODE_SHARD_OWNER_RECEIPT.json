@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_V16_MANUAL03_OWNER_PATCH_RECEIPT_R27",
+  "run_id": "NOX-V16-MANUAL03-R27-20261030-P04-NFC-SHARD-IDENTITY",
+  "role": "MANUAL_3",
+  "existing_task_id": "P04 model snapshot validation",
+  "existing_error_id": "ERR-SRC-004",
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "previous_owner_head": "d7893206a10deba5a4a7fbf9926d107d64478beb",
+  "post_owner_head": "297c89c9a9678625e71916367b4a37b7b27a13a2",
+  "changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob_sha1": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "post_git_blob_sha1": "1ab9b9d90016ba062f2785c9143239b6efa90e05",
+      "pre_content_sha256": "55278a499f3ffeabc6e033ad68795c86c065df9a7e5e333fc0c03f1795271683",
+      "post_content_sha256": "575a3db0492a49cab7eff02fcfaa4e1cb4aa66cdbf8cf8c4630cfa47bd3e1e91",
+      "post_bytes_utf8": 11485
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob_sha1": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+      "post_git_blob_sha1": "941146d84297e724c7f75585ecd7667bff1af0f2",
+      "pre_content_sha256": "9ea4afd5ef2c363a722fe3cc400cc6c1bb2b1040e6c3645b7b5503f18c5b1114",
+      "post_content_sha256": "7995216ddd0f3205a609e50a4c9eb6498b1ef87740a0d26f8ce1c1dede2d9f8c",
+      "post_bytes_utf8": 16108
+    }
+  ],
+  "source_guard": "reject shard filenames with NFC+casefold duplicate identity without renaming raw paths",
+  "p04_test_methods": 38,
+  "prior_p04_test_methods": 37,
+  "deleted_prior_tests": 0,
+  "verification": {
+    "git_blob_readback": "PASS",
+    "source_text_static": "PASS",
+    "unicode_equivalence_local_fixture_5": "PASS_RULE_ONLY",
+    "p04_full_python": "NOT_RUN",
+    "p04_dotnet": "NOT_RUN",
+    "gpu_train": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "independent_qa": "HOLD",
+    "t02_shared_register": "NOT_WRITTEN"
+  },
+  "source_status": "OWNER_SOURCE_PREPARED_NOT_QA_ACCEPTED",
+  "note": "No product ACCEPTED delta, no SourceLock promotion, existing history and TaskID retained; T06 exact owner preimage acceptance required."
+}
