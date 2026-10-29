@@ -11,6 +11,7 @@ from importlib import metadata
 import json
 import os
 import platform
+import re
 import sys
 from pathlib import Path
 import train_qlora
@@ -133,6 +134,18 @@ def inspect(profile: str, gpu_index: int) -> dict:
         _check_pypa_wheel_abi(report)
     if report["errors"]:
         return report
+    # UUID isolation must be established before any CUDA context exists.
+    # Changing CUDA_VISIBLE_DEVICES cannot safely rebind an initialized one.
+    preloaded_torch = sys.modules.get("torch")
+    if preloaded_torch is not None:
+        is_initialized = getattr(getattr(preloaded_torch, "cuda", None), "is_initialized", None)
+        try:
+            context_state = is_initialized() if callable(is_initialized) else None
+        except Exception:
+            context_state = None
+        if context_state is not False:
+            report["errors"].append("CUDA_CONTEXT_PREINITIALIZED_OR_UNVERIFIABLE")
+            return report
     exe = train_qlora.nvidia_smi()
     if not exe:
         report["errors"].append("NVIDIA_TELEMETRY_UNAVAILABLE")
@@ -164,12 +177,16 @@ def inspect(profile: str, gpu_index: int) -> dict:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"] = selected["uuid"]
             import torch
-            if not torch.cuda.is_available():
+            cuda_build = getattr(getattr(torch, "version", None), "cuda", None)
+            if not isinstance(cuda_build, str) or not re.fullmatch(r"[0-9]{1,2}\.[0-9]{1,2}", cuda_build):
+                report["errors"].append("TORCH_CUDA_BUILD_NOT_CONFIRMED")
+            elif not torch.cuda.is_available():
                 report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
             else:
-                report["gpu"]["cuda_runtime"] = torch.version.cuda
-                report["gpu"]["cuda_device_count"] = torch.cuda.device_count()
-                if torch.cuda.device_count() != 1:
+                report["gpu"]["cuda_runtime"] = cuda_build
+                device_count = torch.cuda.device_count()
+                report["gpu"]["cuda_device_count"] = device_count
+                if device_count != 1:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
