@@ -419,6 +419,65 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(bad["tensor_headers"], 0)
 
 
+    def test_g4a_r05_config_modified_during_shard_hash_holds_without_evidence(self):
+        original = probe._inspect_weight
+
+        def change_config(path, *, include_hash=False):
+            artifact = original(path, include_hash=include_hash)
+            (self.root / "config.json").write_text('{"model_type":"qwen4"}',
+                                                   encoding="utf-8")
+            return artifact
+
+        with mock.patch.object(probe, "_inspect_weight", side_effect=change_config):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_CONFIG_CHANGED_DURING_INSPECTION")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
+    def test_g4a_r05_index_modified_during_shard_hash_holds_without_evidence(self):
+        index = self.root / "model.safetensors.index.json"
+        weights = {"q.weight": "model.safetensors"}
+        index.write_text(json.dumps({"metadata": {"total_size": 4},
+                                     "weight_map": weights}), encoding="utf-8")
+        original = probe._inspect_weight
+
+        def change_index(path, *, include_hash=False):
+            artifact = original(path, include_hash=include_hash)
+            index.write_text(json.dumps({"weight_map": weights,
+                                         "metadata": {"total_size": 4},
+                                         "untrusted_edit": True}), encoding="utf-8")
+            return artifact
+
+        with mock.patch.object(probe, "_inspect_weight", side_effect=change_index):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_CHANGED_DURING_INSPECTION")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
+    def test_g4a_r05_new_index_published_mid_hash_holds_without_evidence(self):
+        index = self.root / "model.safetensors.index.json"
+        original = probe._inspect_weight
+
+        def publish_index(path, *, include_hash=False):
+            artifact = original(path, include_hash=include_hash)
+            index.write_text(json.dumps({"weight_map":
+                                         {"q.weight": "model.safetensors"}}),
+                             encoding="utf-8")
+            return artifact
+
+        with mock.patch.object(probe, "_inspect_weight", side_effect=publish_index):
+            result = probe.inspect(self.root, REV)
+        self.assertEqual(result["status"], "HOLD")
+        self.assertEqual(result["reason"], "MODEL_SHARD_INDEX_APPEARED_DURING_INSPECTION")
+        self.assertEqual(result["weight_files"], [])
+        self.assertEqual(result["tensor_headers"], 0)
+        self.assertIsNone(result["observed_snapshot_sha256"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
