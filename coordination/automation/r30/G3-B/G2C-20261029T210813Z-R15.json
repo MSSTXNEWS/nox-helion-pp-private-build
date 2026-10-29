@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_V16_G2C_G3B_R24_R15_OWNER_RECEIPT_V1",
+  "run_id": "G2C-20261029T210813Z-R15",
+  "scope": "NOX HELION EXPRESS INTEGRATOR / P03 Queue source only",
+  "role": "G2-C, G3-B exclusive owner",
+  "status": "INCOMPLETE_SOURCE_VERIFIED_NOT_INTEGRATED",
+  "task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+  "new_task_ids": 0,
+  "accepted_delta": 0,
+  "pr162_observed": {
+    "head": "1f5737bdb8d41019dd21cb1b0ec41118186fb8f9",
+    "source_blob": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3"
+  },
+  "owner_base": {
+    "commit": "b2c8c42d0828ef91077ccde4902165a18651d472",
+    "tree": "a2fa490150303d5017b7107d83a5b208da10c4bb",
+    "source_pre_blob": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6"
+  },
+  "source": {
+    "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "pre_git_blob": "f261956746e2d2f6b0c91246a9284b0d1dbb8fe6",
+    "post_git_blob": "336a7adf614058f15f5ef39cc7fcb9a9eace49ab"
+  },
+  "test": {
+    "path": "tests/P03/test_g2c_g3b_consent_snapshot_r24.cjs",
+    "post_git_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+    "consent_pre": {
+      "passed": 4,
+      "total": 12,
+      "failed": [
+        "license evidence URL",
+        "changed license evidence cannot reuse old pull consent",
+        "official family URL",
+        "artifact bytes",
+        "disk",
+        "vram",
+        "ram",
+        "compatibility verdict"
+      ]
+    },
+    "consent_post": {
+      "passed": 12,
+      "total": 12,
+      "failed": []
+    },
+    "r14_regression_post": {
+      "passed": 15,
+      "total": 15,
+      "failures": []
+    },
+    "runner": "actual ui.js evaluated under V8 isolated mock DOM with URL constructor; Node test file saved, native Windows NOT_RUN"
+  },
+  "error_ids": [
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "root_cause": "Snapshot license/evidence/URL/size/resource/compatibility changes did not revoke prior license acknowledgement; UI could issue Pull reusing outdated consent.",
+  "fix": "Expand existing per-model snapshot consent invalidation to all security-relevant fields serialized by ModelWowBridgeContract; no backend or source-catalog edit.",
+  "lesson": {
+    "cluster": "P03_STALE_USER_CONSENT_ON_SNAPSHOT_METADATA_DRIFT",
+    "status": "APPLIED_SOURCE_VERIFIED",
+    "recurrence_test": "tests/P03/test_g2c_g3b_consent_snapshot_r24.cjs",
+    "new_test_acceptance": "12/12 (pre 4/12); previous GGUF STOP/Retry tests 15/15 unchanged",
+    "remaining": "T06 owner PR162 CAS and T08 exact-head independent QA"
+  },
+  "boundaries": {
+    "main_untouched": true,
+    "pr162_untouched": true,
+    "foreign_paths_untouched": true,
+    "windows_build": "NOT_RUN",
+    "ollama": "NOT_RUN",
+    "journal_shared": "T02_ONLY_PENDING"
+  },
+  "owner_handoff": {
+    "next": "T06/manual #1",
+    "preimage_required": "a777328e67b79bd21dfbc2f3d517c46a5baa77a3",
+    "donor_source": "336a7adf614058f15f5ef39cc7fcb9a9eace49ab",
+    "next_action": "Review cumulative R14+R15 diff against exact current PR162 ui.js blob, integrate only via T06 CAS and rerun focused consent+GGUF+ACL/STOP safeguards. T08/manual #2 exact same SHA QA; T02 register by immutable receipt."
+  },
+  "product_progress": "N/D",
+  "complete": false
+}
