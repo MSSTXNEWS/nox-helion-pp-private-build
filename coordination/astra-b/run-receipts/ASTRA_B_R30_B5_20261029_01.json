@@ -1,0 +1,18 @@
+{
+  "schema": "ASTRA_B_R30_SOURCE_ONLY_V1",
+  "run_id": "ASTRA-B-R30-20261029-B5-01",
+  "label": "B5",
+  "actual_spawn_id": null,
+  "spawn_status": "SUBAGENT_SPAWN_UNAVAILABLE",
+  "task_id": "E06-OLLAMA-POST-DONE-STREAM",
+  "owner_source_branch": "astra-b/r29-b5-20261029",
+  "code_commit": "d7b437e61b34b35a8c0915c2f78b1efc94da7fa6",
+  "status": "SAVED_SOURCE_CANDIDATE",
+  "focused_check": "SOURCE_ASSERT_PASS; PYTHON_NOT_RUN",
+  "lesson": "A terminal completion cannot be followed by more chunks before persistence.",
+  "report_gate": "ASTRA_A_SHARED_DOCS_WRITER_ONLY",
+  "original_archive_729": "NOT_RUN",
+  "Windows_native": "NOT_RUN",
+  "finished_taskid_coverage": "N_D",
+  "release": "HOLD"
+}
