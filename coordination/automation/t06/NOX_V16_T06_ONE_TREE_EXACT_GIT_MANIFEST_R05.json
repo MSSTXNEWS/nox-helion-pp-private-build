@@ -6335,7 +6335,16 @@
         "preserveAlternatives": true
       }
     ],
-    "notes": "One later PR210 Host50 native_bridge source supersedes prior baseline source-only choice; preserve archived baseline. Never call two blobs identical."
+    "notes": "One later PR210 Host50 native_bridge source supersedes prior baseline source-only choice; preserve archived baseline. Never call two blobs identical.",
+    "latestSupersedingSourceChoice": {
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "historicalSelectedBlob": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "nowInOneTreeBlob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+      "sourceChangeOrigin": "PR210 original existing native host / owner-group batch preflight",
+      "ownerReview": "SOURCE_SELECTED_WITH_USER_AUTHORIZATION__NATIVE_RUNTIME_NOT_SIGNED",
+      "priorShaPreservedInGit": true,
+      "independentWindowsHostAcceptance": "NOT_RUN"
+    }
   },
   "t05": {
     "total": 13,
@@ -6343,7 +6352,26 @@
     "priorHold": 12,
     "sourcePresentFromOwnerG1B": true,
     "sourcePresentFromOwnerG2A": true,
-    "otherCandidates": "preserve current source; do not overwrite on PRE drift"
+    "otherCandidates": "preserve current source; do not overwrite on PRE drift",
+    "latestExactSourceDisposition": {
+      "sourceHead": "e51b2b0199feca59dded179d2d5a2edadeef312c",
+      "alreadyOwnerPostIntegrated": [
+        {
+          "slot": "G1-B",
+          "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+          "gitBlob": "6338c56c509c31d8deee70afef6eb639603e1e2d"
+        },
+        {
+          "slot": "G2-A",
+          "path": "Packages/P02/worker-python/p02_framed_worker.py",
+          "gitBlob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"
+        }
+      ],
+      "remainingOwnerDonorPreimageMatches": 0,
+      "remainingOlderDonorsWithDifferentPreimage": 11,
+      "disposition": "KEEP_CURRENT_INTEGRATED_VERSION_WITH_EXACT_GIT_SHA; NO_MASS_OVERWRITE; OTHER_HISTORICAL_PATCHES_RETAINED_FOR_SEMANTIC_REVIEW",
+      "note": "Historical T05 13/13 triage is retained; these 11 source variants are not 11 independently confirmed product defects."
+    }
   },
   "host50": {
     "total": 50,
