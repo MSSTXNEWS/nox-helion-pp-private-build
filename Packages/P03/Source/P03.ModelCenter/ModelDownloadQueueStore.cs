@@ -173,11 +173,25 @@ public sealed class ModelDownloadQueueStore
             var index = jobs.FindIndex(j => j.Id == id);
             if (index < 0 || jobs[index].State != ModelJobState.Queued) return null;
             var old = jobs[index];
-            if (old.Kind == ModelJobKind.OllamaPull &&
-                (old.ExpectedOllamaDigest is not { Length: 64 } ||
-                 !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
-                 string.IsNullOrWhiteSpace(old.ImmutableRevision)))
-                throw new InvalidOperationException("REVIEW_REQUIRED: unpinned Pull cannot start.");
+            if (old.Kind == ModelJobKind.OllamaPull)
+            {
+                // A restored/edited queue file is not an artifact approval.
+                // Recheck exact tag, immutable revision and HTTPS license
+                // before any persisted Queued -> Running network transition.
+                ValidateTag(old.ModelTag);
+                var hasLicense = Uri.TryCreate(old.LicenseSource, UriKind.Absolute, out var license) &&
+                    license.Scheme == Uri.UriSchemeHttps &&
+                    string.IsNullOrEmpty(license.UserInfo) &&
+                    string.IsNullOrEmpty(license.Fragment);
+                var revision = old.ImmutableRevision ?? "";
+                var revisionSha = revision.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+                    ? revision[7..] : revision;
+                if (!old.LicenseAcknowledged || !hasLicense ||
+                    old.ExpectedOllamaDigest is not { Length: 64 } ||
+                    !ShaPattern.IsMatch(old.ExpectedOllamaDigest) ||
+                    !ShaPattern.IsMatch(revisionSha))
+                    throw new InvalidOperationException("REVIEW_REQUIRED: queue source is not an approved pinned Pull.");
+            }
             var claimed = old with { State = ModelJobState.Running,
                 Attempts = checked(old.Attempts + 1), Status = "Starting",
                 UpdatedAtUtc = DateTimeOffset.UtcNow };
