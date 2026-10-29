@@ -141,3 +141,46 @@ class ExistingDispatcherBindingTests(RouteTests):
         with self.assertRaises(RouteHold):
             register_with_existing_pack01(Dispatcher(),lambda *args:None,
                                           lambda _:self.scope,self.ports,receipt='E02-PIN')
+
+    def test_real_frozen_pack01_host_registration_preserves_acl_and_single_owner(self):
+        """The shipped native bridge uses MappingProxyType at both levels."""
+        import importlib.util
+        import json
+        import sys
+        from types import MappingProxyType
+        from p02_owner_route_ports import register_with_existing_pack01, RouteHold
+        root = Path(__file__).resolve().parents[3]
+        pack = root / "proposals" / "NOX-PACK01-50"
+        spec = importlib.util.spec_from_file_location(
+            "nox_actual_pack01_p02_binding_test", pack / "native_bridge.py")
+        native = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = native
+        try:
+            spec.loader.exec_module(native)
+            host = native.NoxPackHost(json.loads((pack / "catalog.json").read_text("utf-8")))
+            original_routes = host.routes
+            self.assertIsInstance(original_routes, MappingProxyType)
+            self.assertIsInstance(original_routes["chat.rag"], MappingProxyType)
+            bound = register_with_existing_pack01(
+                host, native.BoundPort, lambda _session: self.scope,
+                self.ports, receipt="P02-OWNER-TEST-ONLY")
+            self.assertEqual(bound, frozenset(("chat.rag", "chat.voice", "calls.history")))
+            self.assertIs(host.routes, original_routes)
+            self.assertEqual(len(host.ports), 3)
+            session = native.NativeSession(
+                "tenant", "alice", "chat",
+                frozenset(("chat.rag",)), frozenset())
+            result = host.execute("chat.rag", {"query": "facts"}, session)
+            self.assertEqual(result["sources"][0]["source_id"], "file:1")
+            with self.assertRaises(native.HostDenied):
+                host.execute("calls.history", {}, session)
+            with self.assertRaises(TypeError):
+                host.routes["chat.rag"]["owner"] = 1
+            ports_before = dict(host.ports)
+            with self.assertRaises(RouteHold):
+                register_with_existing_pack01(
+                    host, native.BoundPort, lambda _session: self.scope,
+                    self.ports, receipt="P02-OWNER-TEST-ONLY")
+            self.assertEqual(host.ports, ports_before)
+        finally:
+            sys.modules.pop(spec.name, None)
