@@ -19,6 +19,9 @@ from pathlib import Path
 
 MAX_JSON_BYTES = 4 * 1024 * 1024
 MAX_WEIGHT_FILES = 512
+# Native Rust safetensors shape dimensions deserialize as unsigned 64-bit usize
+# on the supported 64-bit installer target. Python integers are unbounded.
+MAX_NATIVE_USIZE = (1 << 64) - 1
 REVISION_RE = re.compile(r"[0-9a-fA-F]{40}")
 
 
@@ -248,6 +251,9 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
                             object_pairs_hook=unique_pairs,
                             parse_constant=reject_nonfinite,
                             parse_float=_json_finite_float)
+        # Validate *all* header strings, including ignored tensor-member keys
+        # and nested annotations, before accepting a Python-only JSON parse.
+        _json_scalar_unicode(header)
     except (UnicodeError, ValueError, RecursionError) as exc:
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     tensors = [v for k, v in header.items() if k != "__metadata__"] if isinstance(header, dict) else []
@@ -255,7 +261,8 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
     if not tensors or any(
         not isinstance(t, dict) or not isinstance(t.get("dtype"), str) or
         not isinstance(t.get("shape"), list) or
-        any(type(n) is not int or n < 0 for n in t["shape"]) or
+        any(type(n) is not int or n < 0 or n > MAX_NATIVE_USIZE
+            for n in t["shape"]) or
         type(t.get("data_offsets")) is not list or len(t["data_offsets"]) != 2 or
         any(type(n) is not int for n in t["data_offsets"]) or
         not (0 <= t["data_offsets"][0] <= t["data_offsets"][1] <= capacity)
@@ -265,18 +272,6 @@ def _parse_weight_tensor_names(f, size: int) -> frozenset[str]:
     metadata = header.get("__metadata__", {})
     if not isinstance(metadata, dict) or any(not isinstance(v, str) for v in metadata.values()):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
-    # Python's JSON decoder permits lone escaped UTF-16 surrogates (\\uD800),
-    # whereas the native safetensors parser rejects them. A successful probe
-    # must not claim a snapshot that the model loader cannot deserialize.
-    # Check names AND metadata keys/values before any shard hashing.
-    try:
-        for tensor_name in header:
-            tensor_name.encode("utf-8", errors="strict")
-        for meta_key, meta_value in metadata.items():
-            meta_key.encode("utf-8", errors="strict")
-            meta_value.encode("utf-8", errors="strict")
-    except UnicodeError as exc:
-        raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     # Offset bounds alone can accept a tensor with impossible shape/byte length.
     # Accept documented byte-addressable dtypes; unknown future dtypes HOLD.
     element_bytes = {"BOOL": 1, "U8": 1, "I8": 1,
