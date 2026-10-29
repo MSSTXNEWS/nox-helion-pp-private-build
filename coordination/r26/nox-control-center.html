@@ -25,6 +25,89 @@ button,a,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-v
 .gates-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:12px}.gate-panel,.errors-panel{padding:20px}.gate-item{margin:15px 0}.gate-item .row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:7px}.gate-item .row b{font-weight:590}.error-stat{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #a1c0cd1c;padding:13px 0;font-size:12px}.error-stat strong{font-size:22px}.empty{padding:22px;color:var(--dim);font-size:12px}
 .footer{margin-top:35px;padding:16px 0;border-top:1px solid var(--edge);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:10px}
 [hidden]{display:none!important}@keyframes orbit{to{transform:rotate(360deg) scaleX(.78)}}@keyframes sweep{50%{background-position:100%}100%{background-position:0}}@media(max-width:1250px){.hero{grid-template-columns:1fr .7fr}.hero-metrics{grid-column:1/-1;min-height:145px}.manual-grid{grid-template-columns:repeat(2,1fr)}.block-grid{grid-template-columns:repeat(3,1fr)}.auto-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:850px){.shell{grid-template-columns:1fr}.side{height:auto;position:relative;gap:12px;flex-direction:row;flex-wrap:wrap;align-items:center;padding:14px}.side-foot{display:none}.side .eyebrow{display:none}.nav{display:flex;flex-wrap:wrap}.nav button{padding:9px}.main{padding:20px}.hero{grid-template-columns:1fr 1fr}.hero-metrics{grid-column:1/-1}.metrics{grid-template-columns:repeat(2,1fr)}.gates-layout{grid-template-columns:1fr}}@media(max-width:570px){.hero{grid-template-columns:1fr}.eclipse{min-height:210px}.hero-copy{min-height:205px}.manual-grid,.auto-grid{grid-template-columns:1fr}.block-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top h1{font-size:28px}.nav button{font-size:11px}.brand b{font-size:12px}}@media(prefers-reduced-motion:reduce){*,:before,:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* NOX D02 / R27 CINEMATIC OVERRIDE — preserves all control functions and receipts.
+   Uses existing approved same-origin imagery /media/* on protected NOX Vercel site.
+   Pure-CSS fallback retains liquid eclipse when those files are absent. */
+:root{--bg:#030405;--glass:rgba(8,13,17,.73);--edge:rgba(216,164,104,.22);--white:#e8dfd5;--dim:#aaa7a1;--gold:#e1ab72;--cyan:#b3d4d3;--danger:#c78c87;--ok:#7dbda9}
+body{background:#030506;color:var(--white);font-family:"Segoe UI Variable Display","Segoe UI",Arial,sans-serif}
+body:before{background:radial-gradient(ellipse at 56% 14%,rgba(170,99,41,.12),transparent 46%),url('/media/orbital-temple.webp') center top/cover fixed;opacity:.16;mask-image:none}
+body:after{content:"";position:fixed;z-index:-1;pointer-events:none;inset:0;background:linear-gradient(90deg,rgba(1,3,5,.9),transparent 60%),linear-gradient(180deg,#01030511,#010305da 82%);opacity:.75}
+.shell{max-width:1920px;grid-template-columns:190px minmax(0,1fr)}
+.side{background:linear-gradient(180deg,#030507ed 0%,#0b1116ed 65%,#030506f8 100%);border-right:1px solid rgba(220,180,133,.16);box-shadow:14px 0 50px #0007;padding:32px 12px}
+.brand{gap:9px}.brand b{letter-spacing:.18em;font-size:12px}.brand small{font-size:8px;letter-spacing:.13em}.brand .symbol{box-shadow:0 0 31px #ad6d3335,0 0 2px 1px #efd0a470}
+.side .nav button{border-radius:8px;padding:14px 11px;border:1px solid transparent;color:#aaa49c;letter-spacing:.11em;text-transform:uppercase;font-size:10px}
+.side .nav button span{font-size:18px;color:#b08e6b}
+.side .nav button.active,.side .nav button:hover{border-color:#cfb08354;background:linear-gradient(96deg,#3d271e99,#11171aaa);box-shadow:inset 2px 0 #d6a66c,0 0 20px #c1945d14;color:#f0cfaa}
+.side-foot{background:#060a0dd9;border-color:#aa835639}
+.main{padding-top:27px}
+.top{padding:10px 2px 18px;border-bottom:1px solid #deb78a1e}
+.top .eyebrow{font-size:9px;letter-spacing:.34em;color:#bb9164}
+.top h1{font-size:clamp(25px,3vw,38px);font-weight:420;letter-spacing:.22em}
+.top h1 em{color:#cda777;font-style:normal;font-weight:260}
+.top p{font-size:11px;letter-spacing:.03em}
+.actions .btn{border-radius:3px;background:#090c0fba;border:1px solid #b28b6048;color:#e6d1b7;letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+.actions .btn:hover{background:#33231a;border-color:#f7cca2}
+.notice{margin-top:15px;border:1px solid #b9976661;border-left:3px solid #d6ac75;background:linear-gradient(95deg,#32251a83,#0a0c0b85);border-radius:4px;max-width:100%;font-size:11px;color:#d9c3a8}
+.glass{background:linear-gradient(145deg,#171a1bdb,#0b1116eb 46%,#070a0ddc);border:1px solid #b38a5b38;border-radius:8px;backdrop-filter:blur(17px) saturate(.75);box-shadow:0 20px 60px #0008,inset 0 1px #e9bd7a10}
+.glass:after{opacity:.3;animation-duration:32s}
+.hero{position:relative;min-height:610px;display:block;isolation:isolate;overflow:hidden;border:1px solid #c29e6b50;border-radius:14px;background:#030507;box-shadow:inset 0 0 110px #000b,0 35px 90px #000a}
+.hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#030507e8 0%,#030507a0 31%,#03050716 60%,#030507b4 97%),linear-gradient(180deg,#0005,#0305075d 80%),url('/media/orbital-temple.webp') center 42%/cover no-repeat;filter:saturate(.77) brightness(.69);opacity:.96}
+.hero:after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at 56% 53%,transparent 12%,#03050755 47%,#030507ab 91%),repeating-linear-gradient(0deg,#fff1 0,#fff1 1px,transparent 1px,transparent 5px);opacity:.33}
+.hero .eclipse{position:absolute;z-index:1;inset:0;width:100%;height:100%;min-height:0;background:radial-gradient(ellipse at 58% 50%,#b2783540,transparent 40%);border:0;box-shadow:none;backdrop-filter:none;border-radius:0;overflow:visible}
+.hero .sun{width:clamp(225px,29vw,370px);height:clamp(225px,29vw,370px);position:absolute;top:51%;left:58%;transform:translate(-50%,-50%);background:radial-gradient(ellipse at 42% 36%,#1c2120 0%,#010304 50%,#000 77%);box-shadow:inset -15px -18px 34px #000,inset 9px 9px 32px #33322b50,0 0 2px 6px #ffdfb63d,0 0 20px 12px #c9904f76,0 0 70px 28px #bb74334d,0 0 140px 55px #9a542523;animation:heartlight 12s ease-in-out infinite;filter:drop-shadow(0 0 12px #ac673d35)}
+.hero .sun:before{inset:-17%;transform:rotate(-18deg) scaleY(.84);animation:halo-rotate 76s linear infinite;box-shadow:0 0 22px #be8e4d26;border-color:#eeb98068}
+.hero .sun:after{inset:-29%;transform:rotate(22deg) scaleX(.76);animation:halo-counter 91s linear infinite;border-color:#dfb78b30}
+.hero .nucleus{position:absolute;top:51%;left:58%;transform:translate(-50%,-50%);font-size:clamp(11px,1.1vw,16px);line-height:1.9;letter-spacing:.4em;color:#f5e3d6b0;text-shadow:0 0 35px #b4814388;z-index:5}
+.hero #orbital-lights{position:absolute;inset:0;pointer-events:none;z-index:4}
+.hero .orbit-dot{top:51%;left:58%;width:clamp(28px,3.5vw,54px);height:clamp(28px,3.5vw,54px);border:1px solid #efd1a88c;opacity:.78;background:radial-gradient(circle at 44% 34%,#d9ac6b7a,#5a3926 33%,#080a0d 68%);background-size:cover;background-position:center;box-shadow:0 0 12px #dca7724d,inset 0 0 9px #000;transform:rotate(var(--rot)) translateY(clamp(-240px,-20vw,-160px)) rotate(calc(-1 * var(--rot)));animation:orb-breathe 15s ease-in-out infinite}
+.hero .orbit-dot:nth-child(1){background-image:url('/media/orb_consciousness.webp')}.hero .orbit-dot:nth-child(2){background-image:url('/media/orb_atlas.webp')}.hero .orbit-dot:nth-child(3){background-image:url('/media/orb_reflection.webp')}.hero .orbit-dot:nth-child(4){background-image:url('/media/orb_nexus.webp')}.hero .orbit-dot:nth-child(5){background-image:url('/media/orb_forge.webp')}.hero .orbit-dot:nth-child(6){background-image:url('/media/orb_core.webp')}.hero .orbit-dot:nth-child(7){background-image:url('/media/orb_voice.webp')}.hero .orbit-dot:nth-child(8){background-image:url('/media/orb_persona.webp')}
+.hero .eclipse-caption{bottom:22px;left:50%;transform:translateX(-50%);width:90%;text-align:center;font-family:Consolas,monospace;letter-spacing:.15em;color:#d9c19c88;white-space:normal;line-height:1.8;font-size:9px}
+.hero .hero-copy{position:absolute;z-index:6;top:10%;left:4%;width:35%;min-height:0;height:66%;padding:26px 20px 26px 27px;display:flex;flex-direction:column;justify-content:space-between;border:0;border-left:2px solid #b58c59aa;background:linear-gradient(90deg,#030608cc,#0306085c 75%,transparent);backdrop-filter:blur(4px);box-shadow:none}
+.hero-copy h2{font-size:clamp(27px,3.2vw,49px);line-height:1.19;font-weight:330;letter-spacing:.07em;text-shadow:0 4px 18px #000;margin:25px 0 18px}
+.hero-copy h2 span{color:#e8bf8f;font-weight:440}
+.hero-copy p{max-width:315px;color:#bfb0a3;font-size:12px;line-height:1.85}
+.hero-copy .eyebrow{font-size:10px;letter-spacing:.21em;color:#e0bc8b}
+.hero-copy .status{font-size:10px;letter-spacing:.12em;color:#c2aa88}
+.hero .hero-metrics{position:absolute;z-index:6;right:3%;bottom:10%;width:29%;min-height:174px;padding:20px 22px;justify-content:space-between;border:1px solid #deb88553;border-top:1px solid #ebca9b76;background:linear-gradient(127deg,#080b0cd9,#171715d9);border-radius:4px;box-shadow:0 20px 55px #0009;backdrop-filter:blur(13px)}
+.hero-metrics strong{font-size:33px;letter-spacing:.04em;font-weight:390;color:#e7b481}.hero-metrics strong span{font-size:10px;letter-spacing:.07em;color:#b3a396}
+.hero-metrics .meta{font-size:10px;line-height:1.55}
+.hero-metrics .eyebrow{font-size:9px}
+.hero-metrics .micro{font-size:9px}
+.metrics{margin-top:14px;gap:9px}.metric{min-height:124px;position:relative;background:linear-gradient(160deg,#14191ada,#080e12f0);border-radius:5px;border-top:1px solid #c4a1785e}.metric:before{content:"";position:absolute;left:17px;top:0;width:23%;height:1px;background:#e8c899}
+.metric b{font-size:32px;font-weight:390;color:#d9be9f}
+.metric .eyebrow{font-size:9px;letter-spacing:.16em}
+.section-head{border-left:2px solid #d5aa73;padding-left:16px;position:relative;margin:34px 0 17px}
+.section-head h2{font-size:20px;letter-spacing:.09em;text-transform:uppercase;font-weight:400;color:#f1e0cd}
+.section-head p{color:#a9aaa4;font-size:11px}
+.manual-grid{gap:11px}.manual-card{border-radius:5px;padding:22px;background:linear-gradient(130deg,#30211869,#0c1014e8 52%,#05090cda);border-left:1px solid #c4a3725c}
+.manual-card:before{content:"";display:block;position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,#daa976,transparent 65%);opacity:.57}
+.manual-card h3{font-size:16px;color:#f2d4ac;letter-spacing:.035em}
+.manual-number{font-size:10px;color:#e1bc8b}
+.manual-card p{color:#adb2ae}
+.block-card{background:linear-gradient(160deg,#241d19d9,#090e11ed);border-radius:4px;border-color:#c09b7044}
+.block-card:hover,.block-card.selected{background:linear-gradient(165deg,#39251b,#090e12dc);box-shadow:0 0 30px #bb8f5341;border-color:#f1c89492}
+.block-card strong{color:#e2ba8d}
+.auto-card{border-radius:3px;background:linear-gradient(135deg,#12191cd6,#070c10f0)}
+.auto-status{color:#9ec6b6}
+.graph-scroll{background:radial-gradient(ellipse at 50% 49%,#8e643025,transparent 63%),linear-gradient(180deg,#0c0e11,#05080a);border:1px solid #c9a57652;box-shadow:inset 0 0 75px #000}
+.graph-svg .edge{stroke:#d8a56b7a;stroke-width:2;filter:drop-shadow(0 0 6px #d4a36661)}.graph-svg .edge.support{stroke:#96bdc072}
+.graph-svg .node rect{fill:#16191add;stroke:#b9936382;rx:5;filter:drop-shadow(0 8px 14px #000c)}.graph-svg .node.manual rect{fill:#2d2018f0;stroke:#e3bc86bb}.graph-svg .node.block rect{fill:#202021f3;stroke:#d5aa7399}
+.graph-svg .node text{fill:#ecd6ba}.graph-svg .node text.sub{fill:#b6ada1}.graph-svg .layer-label{fill:#e0bd91}
+.chip{border-radius:3px;background:#14202388;color:#b8c8c6}.chip.gold{border-color:#d3ad806e;color:#f4ce9c;background:#71533424}
+.btn{border-radius:4px}
+.track{background:#090d10;border:1px solid #c6a27028}.track span{background:linear-gradient(90deg,#78502b,#e5c493);box-shadow:0 0 11px #d8ac6b70}
+@keyframes heartlight{0%,100%{filter:brightness(.95);box-shadow:inset -15px -18px 34px #000,0 0 3px 6px #ffdfb63d,0 0 20px 12px #c9904f69,0 0 65px 28px #bb743342}50%{filter:brightness(1.055);box-shadow:inset -15px -18px 34px #000,0 0 4px 7px #ffe1b956,0 0 24px 14px #d0a16670,0 0 76px 34px #c47a4e52}}
+@keyframes halo-rotate{to{transform:rotate(342deg) scaleY(.84)}}
+@keyframes halo-counter{to{transform:rotate(-338deg) scaleX(.76)}}
+@keyframes orb-breathe{0%,100%{opacity:.72;filter:brightness(.86)}50%{opacity:.83;filter:brightness(1.06)}}
+body.nox-eco .hero .sun,body.nox-eco .hero .sun:before,body.nox-eco .hero .sun:after,body.nox-eco .orbit-dot,body.nox-eco .glass:after{animation:none!important}
+body.nox-eco .hero .sun{box-shadow:0 0 3px 6px #ffd9aa2c,0 0 22px 12px #c9904f37,0 0 60px 22px #bb743320}
+@media(max-width:1260px){.hero{min-height:585px}.hero .hero-copy{width:39%}.hero .hero-metrics{width:34%;bottom:7%}.hero .sun{left:60%}.hero .orbit-dot{left:60%}.hero .nucleus{left:60%}}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.side{position:relative;height:auto;flex-direction:row;justify-content:space-between;align-items:center;padding:12px 18px}.side .nav{display:flex;flex-wrap:wrap}.side .nav button{padding:10px}.hero{min-height:540px}.hero .hero-copy{width:42%;top:8%;left:2%;height:72%}.hero .hero-metrics{width:40%;right:3%;bottom:5%}.hero .sun,.hero .nucleus,.hero .orbit-dot{left:62%}}
+@media(max-width:620px){.main{padding:16px 12px 50px}.hero{min-height:780px}.hero:before{background-position:center center;opacity:.8}.hero .hero-copy{left:5%;top:5%;width:90%;height:auto;min-height:0;padding:19px 18px;background:linear-gradient(90deg,#010305bb,transparent)}.hero-copy h2{font-size:clamp(25px,8vw,39px);margin:10px 0 8px}.hero-copy p{max-width:280px;font-size:11px}.hero-copy .status{margin-top:14px}.hero .sun{width:235px;height:235px;left:50%;top:48%}.hero .orbit-dot{left:50%;top:48%;transform:rotate(var(--rot)) translateY(-151px) rotate(calc(-1 * var(--rot)));width:34px;height:34px}.hero .nucleus{left:50%;top:48%}.hero .hero-metrics{width:90%;right:5%;bottom:7%;min-height:140px;padding:14px}.hero .eclipse-caption{display:none}.hero-metrics strong{font-size:24px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.metric b{font-size:27px}.top h1{font-size:27px}.manual-grid,.auto-grid{grid-template-columns:1fr}.block-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.hero .sun,.hero .sun:before,.hero .sun:after,.hero .orbit-dot{animation:none!important}.hero .orbit-dot{opacity:.76}}
+
 </style></head><body>
 <div class="shell">
 <aside class="side"><div class="brand"><div class="symbol" aria-hidden="true"></div><div><b>NOX HELION</b><small>CONTROL CENTER / R26</small></div></div><div class="eyebrow">NAVIGATION</div>
@@ -35,11 +118,11 @@ button,a,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-v
 <button type="button" data-tab="acceptance"><span>▣</span> Приёмка</button><button type="button" data-tab="reports"><span>▤</span> ОТЧ-1</button></nav>
 <div class="side-foot"><small>PINNED SOURCE HEAD</small><b id="side-head">НЕ ЗАГРУЖЕН</b><small>Изменение HEAD требует повторной проверки QA.</small></div></aside>
 <main class="main">
-<div class="top"><div><div class="eyebrow">NOX V16 / OPERATIONS INTELLIGENCE</div><h1>Mission Control</h1><p>Доказательства, мегаблоки и реальные владельцы работы.</p></div><div class="actions"><button class="btn" type="button" id="reload">↻ Обновить снимок</button><button class="btn" type="button" id="export">⇩ JSON-снимок</button><a class="btn gold" id="github-link" href="https://github.com" target="_blank" rel="noopener">↗ GitHub PR</a></div></div>
+<div class="top"><div><div class="eyebrow">D02 · CINEMATIC COMMAND INTERFACE</div><h1>NOX <em>HELION</em></h1><p>Живая архитектура исполнителей · исходники · независимая приёмка</p></div><div class="actions"><button class="btn" type="button" id="scene-mode" aria-pressed="false">◐ ECO</button><button class="btn" type="button" id="reload">↻ Обновить снимок</button><button class="btn" type="button" id="export">⇩ JSON-снимок</button><a class="btn gold" id="github-link" href="https://github.com" target="_blank" rel="noopener">↗ GitHub PR</a></div></div>
 <div class="notice"><strong>◉ SOURCE FIRST</strong><span id="notice-text">Загрузка контрольных данных…</span></div>
 <section id="tab-overview">
-<div class="hero"><article class="glass hero-copy"><div><div class="eyebrow">CRITICAL PATH / PRIMARY OWNERS</div><h2>Три ручных — ядро.<br>Авто — усиление.</h2><p>Измеряем принятые функции на одном SHA, а не число запусков, коммитов или отчётов.</p></div><div class="status"><span class="dot"></span><span>ИСТОЧНИКИ · QA · FREEZE · GitLab</span></div></article>
-<div class="glass eclipse"><div class="sun"></div><div class="nucleus">NOX<br>HELION</div><div id="orbital-lights"></div><div class="eclipse-caption">8 CORE · D02 / CINEMATIC</div></div>
+<div class="hero"><article class="glass hero-copy"><div><div class="eyebrow">THE LIQUID ECLIPSE · D02</div><h2>ЖИВОЕ ЯДРО.<br><span>УПРАВЛЕНИЕ</span> ВСЕЛЕННОЙ.</h2><p>Измеряем принятые функции на одном SHA, а не число запусков, коммитов или отчётов.</p></div><div class="status"><span class="dot"></span><span>ИСТОЧНИКИ · QA · FREEZE · GitLab</span></div></article>
+<div class="glass eclipse" aria-label="D02: затмение и восемь функциональных орбитальных ядер"><div class="sun" aria-hidden="true"></div><div class="nucleus">NOX<br>HELION</div><div id="orbital-lights" aria-hidden="true"></div><div class="eclipse-caption">CONSCIOUSNESS  ·  ATLAS  ·  REFLECTION  ·  NEXUS  ·  FORGE  ·  CORE  ·  VOICE  ·  PERSONA</div></div>
 <article class="glass hero-metrics"><div><div class="eyebrow">RELEASE READINESS</div><strong>HOLD <span>· не принято</span></strong><div class="meta">Windows E07 и SOURCE_READY не подтверждены. Веса P01–P05 не подменяют реальные готовые TaskID.</div></div><div><div class="micro">HISTORICAL PREBUILD GATES</div><div style="display:flex;justify-content:space-between;margin:7px 0;font-size:13px"><b id="gate-numeric">Н/Д</b><span class="muted" id="gate-pct">исторические данные</span></div><div class="track"><span id="gate-track" style="width:0%"></span></div></div></article></div>
 <div class="metrics" id="metrics"></div>
 <div class="section-head"><div><h2>Главные ручные исполнители</h2><p>Основные продуктовые функции, интеграция и независимая проверка.</p></div><span class="chip gold" id="manual-total">—</span></div><div class="manual-grid" id="manual-grid"></div>
@@ -120,6 +203,7 @@ q("task-matrix").innerHTML=(data.tasks||[]).map(t=>{const href=String(t.evidence
 q("pipeline").innerHTML=["№3 · OWNER PATCH","№1 · INTEGRATED","№2 · SAME-HEAD QA","T09/T10 · SOURCE READY","GitLab / E07 · RELEASE"].map((v,i)=>'<article class="glass block-card"><small>STEP '+(i+1)+'</small><b>'+esc(v)+'</b><span class="chip '+(i>1?"warn":"")+'">'+(i===0?"SOURCE WORK":"NOT ACCEPTED")+'</span></article>').join("");
 function switchTab(name){for(const n of ["overview","architecture","executors","acceptance","reports"])q("tab-"+n).hidden=n!==name;document.querySelectorAll("[data-tab]").forEach(el=>el.classList.toggle("active",el.dataset.tab===name));if(name==="architecture")drawGraph();}
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+q("scene-mode").addEventListener("click",()=>{const eco=document.body.classList.toggle("nox-eco");q("scene-mode").textContent=eco?"◉ CINEMA":"◐ ECO";q("scene-mode").setAttribute("aria-pressed",String(eco));});
 q("reload").addEventListener("click",()=>location.reload());
 q("export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="NOX_R26_EVIDENCE_SNAPSHOT.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)});
 for(let i=0;i<8;i++){const el=document.createElement("i");el.className="orbit-dot";el.style.setProperty("--rot",(i*45)+"deg");q("orbital-lights").appendChild(el);}
