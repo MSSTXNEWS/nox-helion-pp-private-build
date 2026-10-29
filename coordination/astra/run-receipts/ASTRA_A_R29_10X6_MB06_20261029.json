@@ -1,0 +1,30 @@
+{
+  "schema": "ASTRA_R29_SOURCE_ONLY_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB06",
+  "ownerChanges": {
+    "A5": {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs",
+      "commit": "befcaf8132d3207dbf29e5a83a07e3689299f12b",
+      "blob": "af32e30f5a04465e6001d8d0d4f078b3dee34975",
+      "issue": "Ollama JSON duplicate/case-equivalent aliases were trusted by last-definition property lookup"
+    },
+    "A6": {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+      "commit": "3fc47b68cb1c48d5723e147580d3091ed233a2fd",
+      "blob": "31dbe54043c1e4c07c78580f8f58da9d9ab22b79",
+      "issue": "Direct reviewed model accepted arbitrary immutable revision string"
+    }
+  },
+  "unmodifiedOwners": [
+    "A1",
+    "A2",
+    "A3",
+    "A4"
+  ],
+  "test": "2/2 exact changed source readback PASS",
+  "native": "NOT_RUN",
+  "lesson": "Use a common immutable schema check before any last-definition JSON property lookup; direct object constructors must not bypass reviewed-artifact gate.",
+  "productDoneNew": 0,
+  "remainingRequestedRounds": 4,
+  "ownerSeparation": "Astra-B and main/PR162 untouched"
+}
