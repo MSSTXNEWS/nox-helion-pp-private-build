@@ -96,7 +96,12 @@ class P01ResticBackupPort:
         if type(p.binary_sha256) is not str or not HASH.fullmatch(p.binary_sha256):
             raise BackupHold("SIGNED_RESTIC_SHA256_REQUIRED")
         binary = _plain(p.binary, file=True)
-        if sha256(binary.read_bytes()).hexdigest() != p.binary_sha256.lower():
+        # Do not materialize an entire installed binary in RAM for attestation.
+        digest = sha256()
+        with binary.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != p.binary_sha256.lower():
             raise BackupHold("RESTIC_BINARY_HASH_DRIFT")
         repository = _plain(p.repository)
         secret = _plain(p.password_file, file=True)
@@ -156,3 +161,20 @@ class P01ResticBackupPort:
         if len(ids) != 1:
             raise BackupHold("RESTIC_CONFIRMED_SNAPSHOT_RECEIPT_REQUIRED")
         return {"status": "RESTIC_SNAPSHOT_CREATED", "snapshot_id": ids[0], "accepted": False}
+
+    def backup(self, native_session: object, payload: dict) -> dict:
+        """Existing PACK01 native BoundPort call shape, no extra route/host."""
+        return self(native_session, payload)
+
+    def register(self, existing_host: object, *, receipt: str) -> frozenset[str]:
+        """Explicit owner1 wiring only after actual native readiness and SHA receipt.
+
+        Reuse canonical bind_owner_methods; it enforces the single host,
+        exact owner, dangerous native_approve and rollback on collision.
+        """
+        if not self.available():
+            raise BackupHold("RESTIC_NATIVE_PORT_UNAVAILABLE")
+        from native_bridge import bind_owner_methods
+        return bind_owner_methods(existing_host, 1, self,
+                                  {"system.backup": "backup"},
+                                  receipt=receipt, probe=self.available)
