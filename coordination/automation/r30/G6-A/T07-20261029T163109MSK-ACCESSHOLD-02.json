@@ -1,0 +1,112 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T07_RAW_ACCESS_HOLD_V2",
+  "TaskID": "T07",
+  "RunID": "T07-20261029T163109MSK-ACCESSHOLD-02",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16 ONLY",
+  "status": "HOLD",
+  "startedAtObservedMSK": "2026-10-29T16:28:35+03:00",
+  "lastEvidenceAtMSK": "2026-10-29T16:31:09+03:00",
+  "plannedStartMSK": "2026-10-29T16:25:00+03:00",
+  "priorImmutableReceipt": "coordination/automation/r30/G6-A/T07-20261029T160311MSK-PHYSICALHOLD-01.json",
+  "priorReceiptGitBlobSha1": "fc50d785cb14f348b6d3070556790d6133a36104",
+  "priorGitHEAD": "e2a9543b07c8d0f1c20d355d3d9b6df1f9e38572",
+  "expected": {
+    "parts": [
+      {
+        "path": "source_00.part",
+        "size": 20971520,
+        "gitBlobSHA1": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      },
+      {
+        "path": "source_01.part",
+        "size": 20971520,
+        "gitBlobSHA1": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      },
+      {
+        "path": "source_02.part",
+        "size": 18421306,
+        "gitBlobSHA1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      }
+    ],
+    "assembledZipSize": 60364346,
+    "assembledZipSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "memberCount": 729
+  },
+  "physical": {
+    "partBytesRead": [
+      null,
+      null,
+      null
+    ],
+    "partActualSHA256": [
+      null,
+      null,
+      null
+    ],
+    "assembledByteSize": null,
+    "assembledActualSHA256": null,
+    "membersRead": 0,
+    "membersVerified": 0,
+    "memberMismatchList": null,
+    "mismatchListStatus": "UNDETERMINABLE_NO_RAW_BYTES"
+  },
+  "newEvidence": [
+    {
+      "source": "GitHub fetch_file source_02.part",
+      "ref": "automation/r30/g6a/G6A-20261029T154536MSK-R11",
+      "requestedEncoding": "base64",
+      "returnedGitBlobSHA1": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+      "returnedContentLength": 0,
+      "physicalResult": "HOLD_NO_BYTES"
+    },
+    {
+      "source": "Google Drive search",
+      "queries": [
+        "source_00.part",
+        "source_01.part",
+        "source_02.part"
+      ],
+      "matchingRawFiles": 0
+    },
+    {
+      "source": "local /mnt/data",
+      "matchingRawParts": 0
+    },
+    {
+      "source": "Files Library targeted title search",
+      "matchingRawParts": 0
+    }
+  ],
+  "previouslyVerifiedNotRepeated": [
+    "25 R30 Git trees",
+    "968 baseline Git blobs",
+    "75 original-part Git metadata matches"
+  ],
+  "gates": {
+    "SOURCELOCK": "HOLD_RAW_BYTE_ACCESS",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD"
+  },
+  "handoff": {
+    "to": [
+      "T09",
+      "T10",
+      "T02"
+    ],
+    "exactBlocker": "Provide authenticated byte-preserving downloads of source_00.part (20,971,520 B), source_01.part (20,971,520 B), source_02.part (18,421,306 B), with stable local/connector filesystem paths. T07 must then independently hash all three, reconstruct 60,364,346 B ZIP, compare actual SHA256, verify 729 member SHA256 against approved manifest.",
+    "T09": "Freeze can reference prior metadata DONE but SourceLock remains HOLD until physical receipt.",
+    "T10": "Independent SOURCE_READY must not be PASS on Git SHA1/manifest expectation alone.",
+    "T02": "Append only via exclusive Google Docs writer using CAS+readback; do not rewrite owner receipts."
+  },
+  "appliedLesson": "A nonempty Git blob SHA with returned base64 content length 0 proves metadata access only, not physical bytes. Leave actual SHA256 null and member mismatches UNDETERMINABLE; stop repeated verification until byte-preserving access changes.",
+  "sourceChanged": false,
+  "existingDONEPreserved": true,
+  "noBuild": true,
+  "noEXE": true,
+  "noNSIS": true,
+  "noGitLabCI": true,
+  "sharedDocsChanged": false
+}
