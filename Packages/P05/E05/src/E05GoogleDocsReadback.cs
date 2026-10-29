@@ -129,20 +129,27 @@ public sealed class GoogleDocsAppendReadback
         }
         catch (InvalidDataException)
         {
-            return new(runId, documentId, null, null, "DOCUMENT_TOO_LARGE", entry.Length);
+            return new(runId, documentId, knownRevision, null, "DOCUMENT_TOO_LARGE", entry.Length);
         }
         catch (JsonException)
         {
-            return new(runId, documentId, null, null, "INVALID_GOOGLE_RESPONSE", entry.Length);
+            return new(runId, documentId, knownRevision, null, "INVALID_GOOGLE_RESPONSE", entry.Length);
         }
         catch (HttpRequestException) when (!stop.IsCancellationRequested)
         {
             return new(runId, documentId, knownRevision, null,
                 httpStage + "_TRANSPORT_HOLD", entry.Length);
         }
-        catch (TaskCanceledException) when (!stop.IsCancellationRequested)
+        catch (IOException) when (!stop.IsCancellationRequested)
         {
-            // HttpClient timeout is not a caller-requested STOP; no blind retry.
+            // Content-stream I/O may throw directly without HttpRequestException.
+            return new(runId, documentId, knownRevision, null,
+                httpStage + "_TRANSPORT_HOLD", entry.Length);
+        }
+        catch (OperationCanceledException) when (!stop.IsCancellationRequested)
+        {
+            // A timeout can surface as OperationCanceledException or TaskCanceledException.
+            // Caller STOP is excluded by the filter and must still propagate.
             return new(runId, documentId, knownRevision, null,
                 httpStage + "_TIMEOUT_HOLD", entry.Length);
         }

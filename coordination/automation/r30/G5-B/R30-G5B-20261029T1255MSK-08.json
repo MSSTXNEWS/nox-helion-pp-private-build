@@ -1,0 +1,153 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_RECEIPT_V1",
+  "slot": "G5-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader-installer ONLY",
+  "run_id": "R30-G5B-20261029T1255MSK-08",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T1255MSK-08",
+  "task_id": "G5B-R30-GOOGLE-DOCS-OPERATIONCANCELED-STREAM-IO-REVISION-HOLD-R08",
+  "source_base": {
+    "branch": "automation/r30/g5b/R30-G5B-20261029T1157MSK-07",
+    "commit_sha1": "c3b3f64bbc81eb185ae8695a96e67069ec7563c9",
+    "tree_sha1": "2669d6c5781095f03cf99c3bf0ac44e14078a011"
+  },
+  "ownership_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+  },
+  "conflict_index_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+  "rules": {
+    "section33_consolidated_rules_read": 56,
+    "source_rules_blob_sha1": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections54_55_56_and_R29_override_read": true,
+    "older_verbatim_rules": "NOT_INDEPENDENTLY_VERIFIED"
+  },
+  "assigned_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "Packages/P05/E05/src/E05DriveRunGate.cs",
+    "Packages/P05/E05/src/E05SafeRunReports.cs"
+  ],
+  "forbidden_paths_untouched": [
+    "Packages/P05/E05/src/E05CanonicalEvents.cs",
+    "Packages/P05/E05/src/E05CriterionSeal.cs",
+    "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+    "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+  ],
+  "preimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "7def1c5c9e303299d715035bb18b1b6c062c7ef6"
+  },
+  "postimage": {
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs": "c6e57fd91ff93198d467708adb2cf8e7c05966e8"
+  },
+  "modified_paths": [
+    "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+    "coordination/automation/r30/G5-B/R30-G5B-20261029T1255MSK-08.json"
+  ],
+  "change": "Fail closed on HttpClient OperationCanceledException (including TaskCanceledException) with caller STOP distinguished by token filter; map direct content-stream IOException to per-stage transport HOLD; retain last-known CAS revision on malformed/oversized readback. Preserve exact RunID, tab, requiredRevisionId writeControl, ACL and readback predicates; no retry/new PASS.",
+  "targeted_test": {
+    "name": "G5-B-R08-GOOGLE-DOCS-OPCANCEL-IO-READBACK-CAS-SOURCE-MODEL",
+    "runner": "functions.exec V8 in-process one targeted source-static and JS semantic fixture",
+    "status": "PASS_SOURCE_STATIC_JS_MODEL_ONLY",
+    "assertions_passed": 14,
+    "assertions_total": 14,
+    "model_scenarios_passed": 12,
+    "model_scenarios_total": 12,
+    "old_red_precondition": true,
+    "native_dotnet": "NOT_RUN_DOTNET_SDK_ABSENT",
+    "live_docs_http": "NOT_RUN",
+    "test_file_written": "NONE_OWNER_LOCK_ONLY_THREE_SOURCE_PATHS"
+  },
+  "snapshots": {
+    "tree_inventory_read": true,
+    "snapshot_roots": 25,
+    "recursive_tree_entries": 30363,
+    "trees_truncated": false,
+    "individual_tree_counts": {
+      "astra-b_r29-b1-20261029": 1213,
+      "astra-b_r29-b2-20261029": 1212,
+      "astra-b_r29-b3-20261029": 1214,
+      "astra-b_r29-b4-20261029": 1216,
+      "astra-b_r29-b5-20261029": 1215,
+      "astra-b_r29-b6-20261029": 1212,
+      "r27-a01-20261029": 1200,
+      "r27-a02-20261029": 1210,
+      "r27-a03-20261029": 1199,
+      "r27-a04-20261029": 1205,
+      "r27-a05-20261029": 1209,
+      "r27-a06-20261029": 1198,
+      "r27-a07-20261029": 1199,
+      "r27-a08-20261029": 1199,
+      "r27-a09-20261029": 1202,
+      "r27-a10-20261029": 1202,
+      "r29-a01-20261029": 1210,
+      "r29-a02-20261029": 1283,
+      "r29-a03-20261029": 1222,
+      "r29-a04-20261029": 1209,
+      "r29-a04-voice-20261029": 1279,
+      "r29-a05-20261029": 1212,
+      "r29-a06-20261029": 1210,
+      "r29-a2-p01-20261029": 1211,
+      "r29-a6-p03-catalog-20261029": 1222
+    },
+    "original_three_part_git_sha_consistent_25_of_25": true,
+    "original_three_part_git_blob_sha1": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "physical_original_729_sha256": "NOT_VERIFIED",
+    "snapshots_modified": false
+  },
+  "google_docs": {
+    "writer": "ASTRA-C ONLY",
+    "shared_docs_mutated": false,
+    "read_documents": [
+      {
+        "purpose": "master",
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "tab": "t.0",
+        "revision": "AHj4eMQwwRaeodLle3n4BIbBswm9M81XQQlz9mLGudLKj1qMWtB7N_wWZV4TjeXPApqybPehDB-bzqHHCTF_69DtPDTrBYLLEqW_cF_a2zE",
+        "permission_roles_read": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "report",
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "tab": "t.0",
+        "revision": "AHj4eMRIzwmbyeUQAtji-_j7u2i3LO-GUh1q2yjFyPgCFbg7pGpfATglHdw1jHuzijqBLkS6oL5hWemyg6wvqgmMrNmEUYspmDt-t5IhZtg",
+        "permission_roles_read": [
+          "owner"
+        ]
+      },
+      {
+        "purpose": "lessons",
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "tab": "t.0",
+        "revision": "AHj4eMTliG9WhNMjWZTzjmmc_-kAUw4FLgis6WobiKACm5aIloV6W3ZFnuILeR-S_bCD71hBVMwK4Yej_NbAI6FWboWVJJl4rc3I_tJD1pY",
+        "permission_roles_read": [
+          "owner"
+        ]
+      }
+    ],
+    "run_id_tab_revision_acl_readback": "SOURCE_ONLY_READ_METADATA_NO_LIVE_WRITE_READBACK",
+    "report_gate": "HOLD"
+  },
+  "prior_error_and_lesson": "Astra-C 12:26 R07: G5-B stage-specific HTTP transport and timeout HOLD, native .NET not run; immutable owner receipt and model tests count as source evidence only.",
+  "new_lesson": "Do not assume HttpClient always throws TaskCanceledException: an uncancelled caller can receive the base OperationCanceledException, and streaming responses may raise IOException rather than HttpRequestException. Catch both fail-closed with stage+CAS context while letting caller STOP propagate. Also preserve the last known CAS revision when JSON parsing or byte limits fail after WRITE. Confirm by native .NET fixture later; never retry uncertain writes.",
+  "release_gates": {
+    "source_code_complete": "HOLD",
+    "native_dotnet": "HOLD",
+    "shared_docs_write": "HOLD_ASTRA_C_ONLY",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_pct": "N/D"
+  },
+  "no_exe": true,
+  "no_nsis": true,
+  "no_gitlab_ci": true,
+  "no_final_integration": true,
+  "no_main_pr162_change": true,
+  "old_done_preserved": true
+}
