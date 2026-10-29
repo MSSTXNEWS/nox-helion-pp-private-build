@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_V16_R26_G1C_LOCAL_P04_TARGETED_EVIDENCE_V1",
+  "run_id": "NOX-V16-G1C-20261030T010040MSK-R28-P04-41TEST",
+  "role": "AUTO G1-C auxiliary to manual #3 / manual #1 T06 / manual #2 T08",
+  "existing_taskid": "P04:model_snapshot_probe / ERR-SRC-004",
+  "product": "EXISTING NOX V16 Windows EXPRESS INTEGRATOR ONLY",
+  "read": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "section33": "56/56",
+    "register_blob": "a8f71dd3e12906120fd6ee52386cbd549615a2eb",
+    "active_error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "lessons_revision": "AHj4eMS6cmdD9FjICYqnZoXoqri4xNcKjajmExX3ssZsBuGvUGZggjcGIDW8WU31M6SolglBHaECwZOr0oPtDXFKCcLwkjb8mIvGL-QXf0E"
+  },
+  "source": {
+    "head_pre": "b87e7e7f27e783837c1adb5acadc0099b5ea4f1e",
+    "tree_pre": "0049d088ead26e062666bdcbbf72a397f861eb45",
+    "head_after_dependency_compare": "99f33d9cc5a07096ff2102d85acfd46c2c623c77",
+    "tree_after": "88fcba77a6bad0a324a5d8bbe39d559886fcb1e5",
+    "changed_after_pre": [
+      "coordination/automation/t06/NOX_V16_R26_T06_M1_MOBILE_SOURCE_RECEIPT_20261030.json",
+      "coordination/e06/run_source_integrations_r13.py"
+    ],
+    "P04_git_blob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+    "P04_sha256": "55278a499f3ffeabc6e033ad68795c86c065df9a7e5e333fc0c03f1795271683",
+    "P04_official_test_blob": "cf115be6729a975244ed3c87067823e8b6c33f6d",
+    "P04_unittest_git_run": "NOT_RUN_OFFICIAL_37",
+    "P04_gpu_blob": "15d6807033040711ac54c4c9f63432c5653e62bd",
+    "P05_events_blob": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+    "P05_Drive_blob": "ba4d72c29a295ef22156871e19a1d7aa1659b3dd"
+  },
+  "physical": {
+    "type": "LOCAL_REAL_PYTHON_UNITTESTS_ON_EXACT_GIT_BLOB",
+    "source_reconstruction": "Git blob SHA1 matched c0286fe58c020835ec1fd8c4a7b6d1345f115598 BEFORE running tests",
+    "test_sets": {
+      "earlier_r23_regressions": "23/23 PASS",
+      "earlier_r27_adversarial": "10/10 PASS",
+      "new_r26_manifest_windows_delta": "8/8 PASS"
+    },
+    "total": "41/41 PASS",
+    "environment": "Linux/Python, no CUDA, no Windows, no P05 .NET, no GPU training",
+    "test_script_sha256": "ab9265b51bae272ef3eb10682d6cc508d8d9ee89aba5ef162389468e2a2b2470",
+    "test_logs_sha256": [
+      "a9d02e52c67b991b7799ea7cc99598626ca422e1fee47c86957da3f992d294b8",
+      "ad43e24949f78ef3ef60d2b6deb0eb4daeeba69de90f87255ca2f4b606970eec",
+      "ff5edcfb1661e0a2e38b91ebcbe51f8a0da275a3e3cb4889c770b1e1eac70881"
+    ],
+    "artifact_sha256": "3cb82f39246987a6fee7a5de5b9599177e566f2788c39c97959eb8329ef7fef6"
+  },
+  "status": {
+    "SOURCE_PREPARED": "ALREADY_INTEGRATED_OWNER_PATCH",
+    "SOURCE_VERIFIED": "AUXILIARY_COMPONENT_TESTED",
+    "INTEGRATED_ON_CURRENT_HEAD": true,
+    "QA_ACCEPTED": false,
+    "new_QA_ACCEPTED_TaskIDs": 0,
+    "PRODUCT": "N/D",
+    "SOURCE_READY": false,
+    "BUILD": "NOT_AUTHORIZED"
+  },
+  "lessons": {
+    "processed_clusters": 3,
+    "applied": "HEAD drift revalidated only affected files; dependency P04 unchanged",
+    "already_fixed": "Owner T06 integrated current P04 source+test",
+    "delegated": "T08 official same-SHA independent QA; T02 shared journal CAS",
+    "remaining": "T08 current official test and owner-signed QA"
+  },
+  "safety": {
+    "STOP": "NO_ACTUATION",
+    "ACL": "UNCHANGED",
+    "consent": "UNCHANGED",
+    "privacy": "OFFLINE_READ_ONLY",
+    "NO_LOSS": "NO_SHARED_SOURCE_WRITE"
+  },
+  "handoff": {
+    "manual3": "Keep P04 c028... canonical; no donor overwrite; 41 focused checks PASS",
+    "manual1_T06": "Source already integrated; do not cherry-pick same P04 patch; pin current dependency blob",
+    "manual2_T08": "Run official tests/P04/test_model_snapshot_probe.py cf115be.. on pinned current HEAD; sign independent acceptance only after real tests and affected safeguards",
+    "T02": "Record ERR-SRC-004 proof delta without closing it; no shared journal write by G1-C"
+  },
+  "next_checkpoint": "Exact PR162 HEAD/tree recheck; T08 independent pinned-SHA P04 official suite; T02 CAS/readback. No build/E07."
+}
