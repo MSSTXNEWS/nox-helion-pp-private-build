@@ -90,6 +90,21 @@ public sealed class ModelDownloadQueueWorker(
                 if (cancelled?.State == ModelJobState.Cancelled)
                     await SafePublishAsync(job, "cancelled", "Cancelled", null, null, null, null, CancellationToken.None);
             }
+            catch (Exception ex) when (linked.IsCancellationRequested)
+            {
+                // Native cancel can surface as an HTTP/IO exception rather than
+                // OperationCanceledException. Preserve durable CANCELLED.
+                var cancelled = await store.UpdateAsync(job.Id, j =>
+                    j.State is ModelJobState.Running or ModelJobState.Cancelling
+                        ? j with { State = ModelJobState.Cancelled,
+                            Status = "Cancelled; Ollama may resume this pull later" }
+                        : j, CancellationToken.None);
+                if (cancelled?.State == ModelJobState.Cancelled)
+                    await SafePublishAsync(job, "cancelled", "Cancelled", null, null,
+                        null, null, CancellationToken.None);
+                System.Diagnostics.Trace.TraceInformation(
+                    "P03_CANCEL_NETWORK_TERMINATED job={0} error={1}", job.Id, ex.GetType().Name);
+            }
             catch (Exception ex)
             {
                 var failed = await store.UpdateAsync(job.Id, j =>
