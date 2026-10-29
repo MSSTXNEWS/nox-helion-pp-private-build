@@ -1,0 +1,158 @@
+{
+  "schema": "NOX_V16_T06_FIXED_8_WORKING_BASE_RECEIPT_R08",
+  "taskId": "T06",
+  "runId": "NOX-V16-T06-20261029T170832MSK-R08",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows loader, SOURCE ONLY",
+  "times": {
+    "planned_start_msk": "2026-10-29T16:45:00+03:00",
+    "observed_start_msk": "2026-10-29T17:08:32+03:00",
+    "receipt_prewrite_utc": "2026-10-29T14:17:44.644Z",
+    "final_end_utc": null,
+    "full_duration_seconds": null
+  },
+  "source": {
+    "pr": 162,
+    "checked_head": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "checked_tree": "bd564152829af66e91c0216e6912591c0c64389b",
+    "working_branch": "automation/v16/t06/NOX-V16-T06-20261029T170832MSK-R08-WORKING-BASE",
+    "ancestor_T09_head": "2fcd72a001c084697e696d6a44dd1a47d7c8a0e0",
+    "ancestor_T09_tree": "93f26c73a80695801405ea03ae398de7b1dde355",
+    "manifest_path": "coordination/automation/t06/NOX-V16-T06-20261029T170832MSK-R08_WORKING_BASE_MANIFEST.json",
+    "manifest_commit": "50256ee6bcd72dc02c8ca6a085dbc609f3c1ee9d",
+    "manifest_git_blob_sha1": "1615f22de296384a610f5528d6069fecb0df5c44",
+    "source_git_blobs_pinned": 970,
+    "source_git_blobs_checked": 974,
+    "changed_production_existing_files": 2,
+    "added_evidence_files": 4,
+    "deleted_files": 0
+  },
+  "cas_provenance": {
+    "P02_framed_worker": {
+      "pre": "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "post": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "owner": "G2-A",
+      "via": "MERGED PR214"
+    },
+    "P02_native_ingress": {
+      "pre": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "post": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+      "commit": "410c4b10ae97e599936c82bd762b6e387368841b"
+    },
+    "P02_native_test": {
+      "pre": "a39dbb9703e915f908aff6cd0c9baa417d92d5a9",
+      "post": "b606aaba1a7e82eb294a87d64fde6a8c399c605d",
+      "commit": "81bf64b319a16e6b3e24381c7cf8e200a1c5b808"
+    }
+  },
+  "source_archive": {
+    "original_zip_raw_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "original_zip_bytes": 60364346,
+    "original_files": 729,
+    "original_parts": 3,
+    "original_source_lock_receipt_git_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+    "T07_owner_acceptance_blob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+    "physical_raw_rehashed_during_T06": false
+  },
+  "owner_receipts": {
+    "one_tree_choice": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+    "T04_final_version_arbitration": "f723d37b39cb82425c873b51545f720d90af778d",
+    "T04_selection": "34/34 closed, 15 archived SKIP + 17 keep existing + 2 admitted owner source patches; voice archived donor deliberately not imported",
+    "T05_final_intake": "e1db8ff1f24b97041209eb162313fa4c8ab1d3a7",
+    "T05_intake": "13/13 classified, 1 PRE-matched owner patch accepted; 12 divergent candidates remain archived/HOLD",
+    "T07_physical_original": "6/6 owner receipt, not integrated app tree SOURCE_READY"
+  },
+  "fixed_progress": {
+    "denominator": 8,
+    "previous_checkpoint": {
+      "runId": "NOX-V16-T06-20261029T165543MSK-R07",
+      "accepted": 1,
+      "percent": 12.5,
+      "git_receipt_blob": "a6a03ae7dcc9dd269b2f13caab8532df96011241"
+    },
+    "before": 1,
+    "after": 1,
+    "before_percent": 12.5,
+    "after_percent": 12.5,
+    "delta_percentage_points": 0,
+    "remaining": 7,
+    "bar": "█░░░░░░░░░",
+    "criteria": [
+      {
+        "id": 1,
+        "name": "Official source base HEAD",
+        "status": "DONE",
+        "evidence": "Current PR162 7f78e15f51451b60ce4dc6cec7ccd9724639b04a + owner one tree decision e5ba5ca3402fdbfacf6923f6add733a2b70543f3"
+      },
+      {
+        "id": 2,
+        "name": "P01 accepted in same tree",
+        "status": "HOLD",
+        "evidence": "P01 native WebView2 C09 and D02 wiring remain functional owner-signoff HOLD"
+      },
+      {
+        "id": 3,
+        "name": "P02 accepted in same tree",
+        "status": "HOLD",
+        "evidence": "framed blob 8af1338b / ingress 842f3d60 are merged, but full P02 STOP/ACL/voice host is not functionally accepted"
+      },
+      {
+        "id": 4,
+        "name": "P03 accepted in same tree",
+        "status": "HOLD",
+        "evidence": "T05 R12 archived mismatch; no complete P03 signoff on 7f78e15f"
+      },
+      {
+        "id": 5,
+        "name": "P04 accepted in same tree",
+        "status": "HOLD",
+        "evidence": "T04 owner chose baseline; CUDA/RAG/GPU functional source contract not accepted"
+      },
+      {
+        "id": 6,
+        "name": "P05 accepted in same tree",
+        "status": "HOLD",
+        "evidence": "T04 owner chose baseline; SPACE/event v3 functional source contract not accepted"
+      },
+      {
+        "id": 7,
+        "name": "D02/WOW/Host50/E06, NO LOSS accepted",
+        "status": "HOLD",
+        "evidence": "Git 970 pinned preserved/0 deletion + original ZIP 729 T07 PASS; 13 Host50 native routes still SOURCE HOLD"
+      },
+      {
+        "id": 8,
+        "name": "One accepted final HEAD/tree/manifest and owner receipts handed to T09",
+        "status": "HOLD",
+        "evidence": "WORKING BASE 7f78e15f / bd564152 with 974-blobs manifest 1615f22; not full P01-P05 owner acceptance"
+      }
+    ]
+  },
+  "single_blocker": {
+    "owner": "Manual owner #1, with Host50 G6-B and P01/P02 native contract owners",
+    "id": "HOST50_13_NATIVE_ROUTE_FUNCTIONAL_ACCEPTANCE_UNPROVEN",
+    "description": "13 native Host50 routes have no final owner-approved same-tree source contract + STOP/ACL/consent evidence; original physical SourceLock and historical owner version choices cannot substitute functional binding signoff",
+    "action": "Request exact owner path/contract approval and immutable native source receipts; retain baseline otherwise"
+  },
+  "lesson_applied": "Refresh actual source HEAD and owner receipts. Old R07 claimed PR214 draft and T04 voice owner HOLD; both became stale: PR214 merged, T04 archive version arbitration 34/34 complete, T07 original archive accepted 6/6. Preserve technical functional HOLD separately and never treat historical version choices as P01-P05 acceptance.",
+  "handoff_to": [
+    "T02 as sole shared Docs writer",
+    "T08",
+    "T09",
+    "T10",
+    "T11",
+    "Manual owner #1"
+  ],
+  "safety": {
+    "no_product_source_modified_on_T06_branch": true,
+    "main_untouched": true,
+    "PR162_not_written_by_this_run": true,
+    "no_old_snapshots_changed": true,
+    "no_user_data_modified": true,
+    "EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "Windows_CI": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "new_TaskIDs": 0
+  }
+}
