@@ -151,6 +151,9 @@ class OwnerTwoPorts:
             raise RouteHold("NATIVE_AUDIO_CAPTURE_UNAVAILABLE")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
+        # Audio capture can block on the OS. Recheck native permission before
+        # consuming the bytes in an installed ASR/translation provider.
+        self._session(scope, "chat.voice")
         result = self.voice.run(
             scope.identity, audio, source=source, target=target, voice=voice,
             mode=mode, level=level, microphone_consent=consented, stop=stop)
