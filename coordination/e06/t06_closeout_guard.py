@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 
 CRITERIA = ("base", "P01", "P02", "P03", "P04", "P05", "common_integration", "accepted_head_manifest")
-HEX40 = re.compile(r"[0-9a-f]{40}\\Z")
-HEX_PROOF = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\\Z")
+HEX40 = re.compile(r"[0-9a-f]{40}\Z")
+HEX_PROOF = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 PROOF = ("owner_receipt", "preimage_sha", "postimage_sha", "test_receipt")
 
 def valid_owner_and_proof(row: dict, evidence: dict) -> bool:
