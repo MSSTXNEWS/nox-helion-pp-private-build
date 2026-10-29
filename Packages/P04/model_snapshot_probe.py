@@ -349,6 +349,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             names = ["model.safetensors"]
         if not names or len(names) > MAX_WEIGHT_FILES:
             raise ValueError("MODEL_WEIGHT_COUNT_INVALID")
+        if len({name.casefold() for name in names}) != len(names):
+            raise ValueError("MODEL_SHARD_CASE_COLLISION")
         for name in names:
             # Portable Windows basename policy: reject ADS, drive syntax, and
             # separators even when this preflight runs on another OS.
