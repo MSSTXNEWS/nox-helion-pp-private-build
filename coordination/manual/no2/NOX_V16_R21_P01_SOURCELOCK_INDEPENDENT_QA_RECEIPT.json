@@ -1,0 +1,77 @@
+{
+  "schema": "NOX_V16_MANUAL2_R21_INDEPENDENT_SOURCE_QA_RECEIPT",
+  "run_id": "NOX-V16-MANUAL2-20261029-R21-P01-SOURCELOCK-SAMEHEAD",
+  "role": "manual #2 independent QA, no product-source writer",
+  "canonical": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "head": "b9076c62a7e9de67146ff5397ef6882250efad00",
+    "tree": "11382ce77e1dce65157345d92600649bd3a399e2",
+    "frozen": false
+  },
+  "source": {
+    "path": "coordination/e06/stage_p01.py",
+    "pre_blob": "b0bd954407949965e4871acaa9f15ccc060e3187",
+    "post_blob": "d12ff7868bc78626df4b6d3f89d230aeaf6ba3a7",
+    "current_test": "tests/e06/test_stage_p01_shared_zip_guard.py",
+    "current_test_blob": "d67ec73b707526ecf6b878efe179254ec026f009"
+  },
+  "qa": {
+    "stage": "SOURCE_VERIFIED_STATIC_ONLY",
+    "checks": {
+      "source_lock_reserved_before_R11": true,
+      "os_hardlink_exclusive": true,
+      "staged_lock_fsync": true,
+      "lock_file_collision_failclosed": true,
+      "no_foreign_lock_delete": true,
+      "owned_inode_verified_before_unlink": true,
+      "reparse_guard_retained": true,
+      "original_R11_no_overwrite": true,
+      "existing_owner_lock_no_overwrite": true,
+      "negative_test_source_saved": true
+    },
+    "static_passed": 10,
+    "static_total": 10,
+    "owner_test_source_presence": true,
+    "owner_suite_execution": "NOT_RUN_IN_THIS_MANUAL2_SESSION",
+    "native_windows": "NOT_RUN",
+    "source_ready": "NOT_AUTHORIZED"
+  },
+  "independent_regression": {
+    "branch": "manual/no2/20261029-r18-proof-hardening",
+    "commit": "143dfdb545c104e815a698a23c2dc8288f5b8113",
+    "file": "coordination/manual/no2/test_p01_sourcelock_foreign_owner_r21.py",
+    "blob": "9ac47f9e957c67436b7a6aa391b7244a4f82e7ce",
+    "status": "GIT_SAVED_READBACK_PASS; NOT_RUN_REAL_SOURCE_NATIVE",
+    "cases": [
+      "foreign exclusive collision preserves lock and no R11",
+      "foreign replaces own hardlink before failed promotion and is not unlinked",
+      "successful full WPF R11 staging and manifest"
+    ]
+  },
+  "journal": {
+    "error_id": "ERR-SRC-004",
+    "shared_active_registry_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "writer": "T02 ONLY",
+    "manual2_shared_write": false,
+    "issue_177_comment": 6504921751
+  },
+  "scope": [
+    "NO-LOSS",
+    "729 originals untouched",
+    "ACL preserved",
+    "STOP preserved",
+    "native consent preserved",
+    "SourceLock no foreign deletion",
+    "no EXE/NSIS/CI/E07"
+  ],
+  "new_accepted_product_tasks": 0,
+  "progress": {
+    "this_source_specific_10_of_10_static": true,
+    "overall_role2_not_100": true,
+    "P01_P05_product_percent": "N/D",
+    "owner8_accepted": "NOT_PROVED",
+    "host50_native13": "NOT_PROVED"
+  },
+  "next": "T08 run full same SHA negative tests including independent R21; T06 complete all own 8 criteria and native Host50; T02 CAS shared error register; T09 freeze; T10 SOURCE_READY independent."
+}
