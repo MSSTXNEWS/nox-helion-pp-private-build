@@ -166,8 +166,29 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             // can still finish with COMPLETED; keep exactly one reply authority.
             if (root.ValueKind == JsonValueKind.Object)
             {
+                // JSON permits repeated keys; different parsers may select different
+                // command fields. Never authorize or ACK an ambiguous UI request.
+                int requestIdKeys = 0;
+                int kindKeys = 0;
+                int routeIdKeys = 0;
+                foreach (var property in root.EnumerateObject())
+                {
+                    if (property.NameEquals("requestId")) requestIdKeys++;
+                    else if (property.NameEquals("kind")) kindKeys++;
+                    else if (property.NameEquals("routeId")) routeIdKeys++;
+                }
+                // A duplicate requestId has no uniquely addressable reply channel.
+                if (requestIdKeys > 1) return;
                 TryString(root, "requestId", out requestId);
                 if (RequestId.IsMatch(requestId) && _seenRequestIds.Contains(requestId)) return;
+                // A unique, fresh requestId can receive a terminal schema rejection.
+                // Neither malformed path reserves an ID or invokes native callbacks.
+                if (kindKeys > 1 || routeIdKeys > 1)
+                {
+                    ReplyIfCurrent(documentSource, documentEpoch, requestId, routeId,
+                        "REJECTED", "P01_BAD_MESSAGE");
+                    return;
+                }
             }
             if (root.ValueKind != JsonValueKind.Object ||
                 !TryString(root, "kind", out var kind) ||
