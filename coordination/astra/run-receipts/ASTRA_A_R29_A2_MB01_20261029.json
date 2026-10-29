@@ -1,0 +1,32 @@
+{
+  "schema": "NOX_V16_R29_ASTRA_A_ROLE_RECEIPT_V1",
+  "runId": "ASTRA-A-R29-A2-MB01-20261029",
+  "owner": "A2",
+  "branch": "astra/r29-a2-p01-20261029",
+  "taskId": "P01 byte-exact ownership marker for preflight and uninstall",
+  "prePostGitBlobs": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "pre": "25eb2bc57a0feaf472490dff30f68d2a31cdf1ee",
+      "post": "c87fc85715b68d121c59b10344eef15d9ed332e4",
+      "commit": "7b7da27adbae8091e4e3d45528b23f7a98ce147f"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "pre": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+      "post": "90eec94ff85fa69daa9bc639fe4833faa59cc2c4",
+      "commit": "b8a0776e3c4a1c2e1b7c0d50d704ee2ee806861f"
+    }
+  ],
+  "sourceStaticAssertions": "6/6 PASS",
+  "githubCodeReadback": "PASS",
+  "nativeActualTests": "NOT_RUN",
+  "productAccepted": "NOT_PROVEN",
+  "historicalVerifiedPasses": 1,
+  "newVerifiedPassCredit": 0,
+  "patchCandidateThisTurn": 1,
+  "progress": "1/10 verified + 1 source candidate",
+  "noLoss": "owner-scoped changes only; original ZIP/WOW/Persona/P04/P05/E06/main/PR162 unchanged",
+  "lesson": "Validate native identity/terminal state at the operation boundary rather than assuming preflight success; rerun actual component tests before source acceptance.",
+  "next": "Pick next concrete incomplete owner TaskID; one targeted native test and CAS readback, no filler."
+}
