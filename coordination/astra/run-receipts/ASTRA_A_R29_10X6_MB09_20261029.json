@@ -1,0 +1,25 @@
+{
+  "schema": "ASTRA_R29_SOURCE_ONLY_MEGA_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB09",
+  "tasks": {
+    "A3": {
+      "commit": "e5974d8d0f2344e927758fdeb4d7e7a325ed4ba4",
+      "file": "Packages/P02/worker-chat/NativePythonPipe.cs",
+      "blob": "c7117867d882cf281ca038f3d3bc6b30d7e4bee7",
+      "fix": "Nested duplicate keys and case-insensitive privilege aliases denied before native IPC"
+    },
+    "A6": {
+      "commit": "67dcb140411f5bb1f0c930e9a33fe07b7be20824",
+      "file": "Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs",
+      "blob": "0533a21a7517cb274c946db5424adaa0b93322ee",
+      "fix": "Zero free disk space reported as unavailable, not ready"
+    }
+  },
+  "otherLanes": "Retain existing original services and fixes, no new proven blocker claimed",
+  "sourceTest": "2/2 exact Git readback",
+  "native": "NOT_RUN",
+  "noReleaseOrIntegration": true,
+  "newVerifiedProductTaskId": 0,
+  "requestedRoundsRemaining": 1,
+  "lesson": "Authenticated host authority must not accept case-equivalent browser payload fields; resource readiness must reflect actual positive capacity."
+}
