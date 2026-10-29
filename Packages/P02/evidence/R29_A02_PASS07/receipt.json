@@ -1,0 +1,86 @@
+{
+  "run_id": "ASTRA-R29-A02-20261029-PASS07",
+  "agent_id": "/root/a02",
+  "parent_commit": "e7175b6058394a7a13b89a407266e83b37d27987",
+  "status": "SOURCE_COMPONENT_VERIFIED",
+  "completed_approaches": 7,
+  "planned_approaches": 10,
+  "task_ids": [
+    "R29-A02-APPROACH08-VOICE-CONSENT-REQUEST-RESULT"
+  ],
+  "files": [
+    {
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "pre_git_blob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+      "post_git_blob": "5983f221f24d6c521b71adef6c208a641cb47af3",
+      "pre_sha256": "8a0c06bd9d44a156997bb8cce9609504ea4f1adcf3ac828c8f0ae7a1f8bd80ec",
+      "post_sha256": "3bce2ebee88df83bad9f1159ef7704805f56a43a08455a3556f62524e4fa8c8c"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "pre_git_blob": "de89a0eb8e896018f8d1184f05e7b7fe6c1b8560",
+      "post_git_blob": "cd977e9da7e13acb9530f49e495c22ee16657dc8",
+      "pre_sha256": "b8a4954029b6c23efff575199b74658af825e70557072d059ca56b09bb1190a6",
+      "post_sha256": "5614394558a735ad70b371c03312060026f1e54df0b2644649e03f89c7173ec2"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_owner_route_ports.py",
+      "pre_git_blob": "55086d3bf29b8c7f600346a9fe14729f93b440e4",
+      "post_git_blob": "94e268f9ecd820676c84e18b7c25c39a6bd45366",
+      "pre_sha256": "8e8c3efb72827339bfb8214c62890dc827af01f9afe7c0d0cbe941bca6b6b966",
+      "post_sha256": "13754524bdc7bdba9a136b885ae3c520b203b997417f49e82592252edbba45ef"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_PASS07/HANDOFF.md",
+      "pre_git_blob": null,
+      "post_git_blob": "74d0d4ef9feb6a17d42cd8a3dcec48396b486098",
+      "pre_sha256": null,
+      "post_sha256": "a4fe8367c98ea7e962d28f63218d3fbf83a5437b8dda3521101580cc5e8849e3"
+    },
+    {
+      "path": "Packages/P02/evidence/R29_A02_PASS07/elapsed.json",
+      "pre_git_blob": null,
+      "post_git_blob": "9a8b0f5351cbced2d8a57c70f1e724df18dabb94",
+      "pre_sha256": null,
+      "post_sha256": "22e81717583e74632846d3e96634aa13f29f7573eb7fa0817cb2d013ca470e48"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_consent_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "2e521d296968e331abb39580ea82631ea74041de",
+      "pre_sha256": null,
+      "post_sha256": "a7fc5d84b46c4412ced82997695588f5f36ec7d94301e9c6f6671d33fd1dfc35"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_lifecycle_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "09e2ab822fe9c0b872197f0cf2761b29877b0f73",
+      "pre_sha256": null,
+      "post_sha256": "fc0500c450c8f6d2e6d43c0f2b4e87544579cdcb2867ff2816582cb2cb37ccbd"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_request_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "65d9cbcf537235b79d783d4ec5b41064cf08591d",
+      "pre_sha256": null,
+      "post_sha256": "ed044881f4932b1c03f9435aa0c5d53d7186b91b0338b90bbff72007161505d7"
+    },
+    {
+      "path": "Packages/P02/worker-python/test_p02_voice_result_r27.py",
+      "pre_git_blob": null,
+      "post_git_blob": "0845b6955512006cccda1702ff9f288a720fcf8d",
+      "pre_sha256": null,
+      "post_sha256": "55531529525219266755d5169ede2474aa11cfd8c31501307eb01ad426576245"
+    }
+  ],
+  "lesson": "Replay ready donor tests on current source; reuse exact connected consent/request/result sections and preserve lifecycle overlays, with explicit native composition obligations.",
+  "tests": {
+    "red": "RED.log",
+    "green": "GREEN.log",
+    "limitations": "Real Python modules and OS subprocess pipes; no Windows installer/UI/provider acceptance"
+  },
+  "product_readiness_percent": null,
+  "windows": "NOT_RUN",
+  "build": "NOT_RUN",
+  "final_integration": "NOT_RUN"
+}

@@ -47,6 +47,7 @@ class OwnerTwoPorts:
                  rag_index: Any = None,
                  voice_pipeline: LocalVoicePipeline | None = None,
                  native_take_audio: Callable[[NativeScope, str], bytes] | None = None,
+                 native_mic_consent: Callable[[NativeScope, str], bool] | None = None,
                  native_store_output_audio: Callable[[NativeScope, bytes], str] | None = None,
                  native_discard_output_audio: Callable[[NativeScope, str], bool] | None = None,
                  native_call_history: Callable[[NativeScope, int], list[dict]] | None = None,
@@ -58,6 +59,9 @@ class OwnerTwoPorts:
             rag_index, voice_pipeline, native_take_audio, native_call_history)
         self.store_output_audio = native_store_output_audio
         self.discard_output_audio = native_discard_output_audio
+        # R17 donor: only the authenticated host can attest this capture's
+        # current OS permission and user consent; no page JSON flags.
+        self.mic_consent = native_mic_consent
         self.owner_ready = owner_ready
 
     def _session(self, scope: NativeScope, route: str) -> None:
@@ -82,6 +86,7 @@ class OwnerTwoPorts:
         implementations = {"chat.rag": callable(getattr(self.rag, "context", None)),
                            "chat.voice": isinstance(self.voice, LocalVoicePipeline)
                                          and callable(self.take_audio)
+                                         and callable(self.mic_consent)
                                          and callable(self.store_output_audio)
                                          and self.voice.approved_models,
                            "calls.history": callable(self.call_history)}
@@ -108,15 +113,30 @@ class OwnerTwoPorts:
 
     def captured_voice(self, scope: NativeScope, args: dict, stop: threading.Event | None = None) -> dict:
         """Consume ONLY native-host-captured audio; never accept JS audio/path bytes."""
+        if (type(args) is not dict or any(key in args for key in
+                ("audio", "audio_path", "microphone_consent", "mic_consent"))):
+            raise PermissionError("Audio and consent must come from trusted native capture")
+        # Capture primitive request values before any native callback can mutate
+        # the caller's request. Invalid input must not burn a one-use capture.
+        cap_id = args.get("capture_id")
+        source, target, voice = args.get("source"), args.get("target"), args.get("voice")
+        mode, level = args.get("mode", "translate"), args.get("level", "A2")
         self._session(scope, "chat.voice")
         if not self.available("chat.voice"):
             raise RouteHold("INSTALLED_LOCAL_ASR_TTS_OR_HOST_CAPTURE_HOLD")
-        if not isinstance(args, dict) or "audio" in args or "audio_path" in args:
-            raise PermissionError("Audio must be retrieved from one-use native capture")
-        cap_id = args.get("capture_id")
-        if not isinstance(cap_id, str) or not _TOKEN.fullmatch(cap_id):
+        if type(cap_id) is not str or not _TOKEN.fullmatch(cap_id):
             raise ValueError("Opaque native capture id required")
+        self.voice.validate_request(scope.identity, source=source, target=target,
+                                    voice=voice, mode=mode, level=level)
         # STOP before consumption must preserve the one-use native capture.
+        if stop is not None and stop.is_set():
+            raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
+        try:
+            consented = self.mic_consent(scope, cap_id) is True
+        except Exception as exc:
+            raise RouteHold("NATIVE_MIC_PERMISSION_CHECK_HOLD") from exc
+        if not consented:
+            raise PermissionError("NATIVE_MIC_CONSENT_REQUIRED")
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_CAPTURE")
         # Native host consumes capture exactly once; a second lookup MUST fail.
@@ -129,12 +149,12 @@ class OwnerTwoPorts:
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_ASR")
         result = self.voice.run(
-            scope.identity, audio, source=args.get("source"), target=args.get("target"),
-            voice=args.get("voice"), mode=args.get("mode", "translate"),
-            level=args.get("level", "A2"), microphone_consent=True, stop=stop)
+            scope.identity, audio, source=source, target=target, voice=voice,
+            mode=mode, level=level, microphone_consent=consented, stop=stop)
         # A STOP while ASR/LLM/TTS was running must not publish new audio.
         if stop is not None and stop.is_set():
             raise RouteHold("NATIVE_VOICE_STOPPED_BEFORE_OUTPUT")
+        LocalVoicePipeline.validate_result(result, source=source, target=target, mode=mode)
         # Native host owns the temporary output bytes; no raw audio to page JSON.
         output_id = self.store_output_audio(scope, result.audio)
         # Reuse R18's post-persistence STOP boundary, then revoke the exact

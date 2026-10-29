@@ -1,0 +1,7 @@
+{
+  "measurement_start_epoch": 1793234798.5167003,
+  "measurement_scope": "after rules/C34 and initial donor diff read; implementation/test/save only",
+  "prepared_epoch": 1793234902.632003,
+  "elapsed_to_verified_prepared_seconds": 104.115,
+  "prepared_utc": "2026-10-29T00:48:22.632003+00:00"
+}
