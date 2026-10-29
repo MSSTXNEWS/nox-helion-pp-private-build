@@ -11,7 +11,10 @@ using System.Threading.Tasks;
 namespace NoxHelion.E05;
 
 public sealed record DriveAppendReceipt(string RunId, string DocumentId,
-    string? RevisionBefore, string? RevisionAfter, string Status, int ExpectedChars);
+    string? RevisionBefore, string? RevisionAfter, string Status, int ExpectedChars)
+{
+    public string? VerifiedTabId { get; init; }
+}
 
 // Uses existing host OAuth flow. No service-account secrets, token persistence or
 // whole-document rewrites. The host must explicitly approve each document.
@@ -26,9 +29,10 @@ public sealed class GoogleDocsAppendReadback
     { this.client = client; this.accessToken = accessToken; }
 
     public async Task<DriveAppendReceipt> AppendAsync(string documentId, string runId,
-        string entry, CancellationToken stop)
+        string entry, CancellationToken stop, string? pinnedTabId = null)
     {
-        if (!ValidInput(documentId, runId, entry))
+        if (!ValidInput(documentId, runId, entry) ||
+            (pinnedTabId is not null && !ValidTabId(pinnedTabId)))
             throw new ArgumentException("Invalid receipt inputs");
         stop.ThrowIfCancellationRequested();
 
@@ -50,13 +54,14 @@ public sealed class GoogleDocsAppendReadback
             string? revision = ReadRevision(beforeJson.RootElement);
             if (string.IsNullOrWhiteSpace(revision))
                 return new(runId, documentId, null, null, "NO_REVISION", entry.Length);
-            if (!TryBody(beforeJson.RootElement, null, out var tabId, out var beforeBody))
+            if (!TryBody(beforeJson.RootElement, pinnedTabId, out var tabId, out var beforeBody))
                 return new(runId, documentId, revision, null, "INVALID_DOCUMENT_TAB", entry.Length);
             var priorText = new StringBuilder();
             GatherText(beforeBody, priorText);
             string current = priorText.ToString();
             if (current.Contains(entry, StringComparison.Ordinal))
-                return new(runId, documentId, revision, revision, "ALREADY_PRESENT", entry.Length);
+                return new(runId, documentId, revision, revision, "ALREADY_PRESENT", entry.Length)
+                    { VerifiedTabId = tabId };
             if (ContainsExactRunId(current, runId))
                 return new(runId, documentId, revision, revision, "RUNID_COLLISION", entry.Length);
 
@@ -100,7 +105,8 @@ public sealed class GoogleDocsAppendReadback
             GatherText(afterBody, buffer);
             return new(runId, documentId, revision, revAfter,
                 buffer.ToString().Contains(entry, StringComparison.Ordinal) ? "READBACK_PASS" :
-                    "READBACK_MISMATCH", entry.Length);
+                    "READBACK_MISMATCH", entry.Length)
+                { VerifiedTabId = tabId };
         }
         catch (InvalidDataException)
         {
@@ -119,6 +125,16 @@ public sealed class GoogleDocsAppendReadback
             entry.Length > 100000 || !ContainsExactRunId(entry, runId)) return false;
         foreach (char c in documentId)
             if (!(char.IsAsciiLetterOrDigit(c) || c is '_' or '-')) return false;
+        return true;
+    }
+
+    // Google Docs tab IDs commonly contain dots (e.g. t.0).
+    // Reject malformed tab selectors before any document or token request.
+    internal static bool ValidTabId(string tabId)
+    {
+        if (string.IsNullOrWhiteSpace(tabId) || tabId.Length > 128) return false;
+        foreach (char c in tabId)
+            if (!(char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-')) return false;
         return true;
     }
 
@@ -159,7 +175,14 @@ public sealed class GoogleDocsAppendReadback
         if (tabs.ValueKind != JsonValueKind.Array || tabs.GetArrayLength() == 0) return false;
         if (selectedTab is null)
         {
+            // A caller without an approved tab must not silently append to
+            // tabs[0] when a document has several tabs or child tabs.
+            if (tabs.GetArrayLength() != 1) return false;
             var first = tabs[0];
+            if (first.ValueKind != JsonValueKind.Object) return false;
+            if (first.TryGetProperty("childTabs", out var descendants) &&
+                (descendants.ValueKind != JsonValueKind.Array || descendants.GetArrayLength() != 0))
+                return false;
             if (first.ValueKind != JsonValueKind.Object ||
                 !first.TryGetProperty("tabProperties", out var properties) ||
                 properties.ValueKind != JsonValueKind.Object ||

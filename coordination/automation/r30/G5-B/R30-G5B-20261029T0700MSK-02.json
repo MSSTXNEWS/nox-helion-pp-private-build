@@ -1,0 +1,139 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G5B_SOURCE_ONLY_OWNER_RECEIPT_V1",
+  "run_id": "R30-G5B-20261029T0700MSK-02",
+  "slot": "G5-B",
+  "automation_id": "6ae2af2b1bcc8191a4d15cb8f6f9d25b",
+  "cycle": "2026-10-29 07:00 Europe/Moscow",
+  "stage": "SOURCE_ONLY",
+  "status": "SOURCE_PATCH_SAVED__NATIVE_AND_DOCS_WRITE_HOLD",
+  "product": "NOX HELION EXPRESS INTEGRATOR LOADER-INSTALLER V16 ONLY",
+  "branch": "automation/r30/g5b/R30-G5B-20261029T0700MSK-02",
+  "parent": {
+    "ref": "automation/r30/g5b/R30-G5B-20261029T0600MSK-01",
+    "commit_git_sha1": "1ad7a3782f19a087ea1c58821dd7a5303cea586e",
+    "tree_git_sha1": "76199cab6e91dfaec88de4d39e12f18f98ddc4f1",
+    "previous_receipt": "coordination/automation/r30/G5-B/R30-G5B-20261029T0600MSK-01.json",
+    "old_done_preserved": true
+  },
+  "ownership": {
+    "journal": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "journal_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "Packages/P05/E05/src/E05SafeRunReports.cs"
+    ],
+    "forbidden_paths": [
+      "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs"
+    ],
+    "only_owned_paths_written": true
+  },
+  "reviewed": {
+    "v15_section33_rules": 56,
+    "v16_latest_sections": [
+      54,
+      55,
+      56
+    ],
+    "historical_C34": "READ_ONLY",
+    "master_delta": "READ_ONLY",
+    "E06_report_delta": "READ_ONLY",
+    "E06_lessons_delta": "READ_ONLY",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_git_blob_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_read": 25,
+    "snapshot_tree_entries": 30363,
+    "snapshot_trees_truncated": 0,
+    "original_three_part_blobs_equal_across_all_25": true,
+    "physical_729_SHA256": "NOT_RUN"
+  },
+  "source_changes": [
+    {
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "preimage_git_blob_sha1": "35efd33d9631db69b88658294e39b4aabc617017",
+      "postimage_git_blob_sha1": "5fdb19d4b735774792d291b1af15bfdbc0674305",
+      "sha_type": "GIT_BLOB_SHA1_NOT_SHA256"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "preimage_git_blob_sha1": "259206f4622919d54100d4c2cc22c1881af6c129",
+      "postimage_git_blob_sha1": "acf7799db99c54b111e665cb9e80a8b95924db8e",
+      "sha_type": "GIT_BLOB_SHA1_NOT_SHA256"
+    },
+    {
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "preimage_git_blob_sha1": "88aff5db7dbf54b8db1ea0657f175f6a3597c622",
+      "postimage_git_blob_sha1": "b8adf8a229776fda202a53e506f2c3365274ad2f",
+      "sha_type": "GIT_BLOB_SHA1_NOT_SHA256"
+    }
+  ],
+  "source_task": {
+    "id": "G5B-R30-APPROVED-GOOGLE-DOCS-TAB-ADMISSION-01",
+    "status": "SOURCE_PATCH_SAVED_NOT_NATIVE_VERIFIED",
+    "defect": "Adapter silently selected tabs[0] in a Google Doc with multiple tabs, permitting report or lesson to land on an unapproved tab despite CAS and same-tab readback.",
+    "correction": "Optional approved per-target TabId is propagated to the GET tab selection and batchUpdate/readback. Unpinned documents with more than one root tab or any child tabs are rejected. Tab selector is validated and positive receipts carry VerifiedTabId, checked against target."
+  },
+  "targeted_test": {
+    "name": "R30-G5B-DOCS-TAB-ADMISSION-RED-GREEN-STATIC-02",
+    "scope": "ONE_TARGETED_SOURCE_STATIC_CONTRACT_SUITE",
+    "result": "PASS_SOURCE_STATIC_ONLY",
+    "assertion_count": 14,
+    "red_baseline_unprotected_first_tab": true,
+    "green_source_checks": [
+      "RED detects silent first tab",
+      "reject ambiguous root tabs",
+      "reject unapproved nested tabs",
+      "support approved pinned tab selector",
+      "pin prewrite/write/readback tab",
+      "preserve revision CAS",
+      "validate tab syntax",
+      "receipt captures verified tab",
+      "target immutable optional tab",
+      "gate protects target tab",
+      "safe report protects target tab",
+      "gate exact RunID token",
+      "safe report exact RunID token",
+      "three owned sources changed"
+    ],
+    "CSharp_compilation": "NOT_RUN_DOTNET_SDK_UNAVAILABLE",
+    "GoogleDocs_HTTP_fixture": "NOT_RUN",
+    "live_GoogleDocs_write": "NOT_ATTEMPTED_ASTRA_C_ONLY"
+  },
+  "drive": {
+    "approved_targets_metadata": [
+      "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ"
+    ],
+    "file_permissions": "METADATA_READ_OWNER_ROLE_PRESENT_API_OAUTH_WRITE_NOT_PROVEN",
+    "live_tab_and_revision": "NOT_FETCHED_CURRENT_USING_GOOGLE_DOCS_API",
+    "writes": "NOT_ATTEMPTED_ASTRA_C_ONLY",
+    "readback_of_new_lessons": "PENDING_ASTRA_C",
+    "report_gate": "HOLD"
+  },
+  "lesson": {
+    "id": "G5B_R30_MULTI_TAB_FIRST_TAB_IS_NOT_APPROVAL",
+    "previous": "Retain exact RunID, revision CAS, immutable document target list and same tab readback; do not merge competing historical Git blobs blindly.",
+    "observation": "Selecting tabs[0] when the document contains multiple tabs passes a same-tab readback but cannot demonstrate the correct target tab was approved.",
+    "applied": "Add optional immutable TabId to approved target and fail-closed tab selection if the document is ambiguous; return verified tab identity in receipt and check it before reporting PASS.",
+    "follow_up": "When .NET is available, execute a real HttpMessageHandler fixture: multi-tab/no pin -> INVALID_DOCUMENT_TAB; explicit t.0 -> same tab append + revision CAS + readback; forbidden/409 -> HOLD. Do not count model/static checks as native fixture.",
+    "prevention": "Single central Astra-C writer; never treat first-tab default as authorization. Store exact Git blob pre/post and per-run receipt; no unassigned test file writes."
+  },
+  "external_gates": {
+    "main": "UNTOUCHED",
+    "PR162": "UNTOUCHED",
+    "R30_shared": "UNTOUCHED",
+    "snapshots": "UNTOUCHED",
+    "Windows_EXE": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "SOURCE_READY": "HOLD",
+    "RELEASE": "HOLD"
+  },
+  "next_owner": "Astra-C only consolidates immutable Git receipt lesson into shared Google Docs, CAS+immutable RunID/tab/revision and readback."
+}

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NoxHelion.E05;
 
-public sealed record E05DriveTarget(string Purpose, string DocumentId);
+public sealed record E05DriveTarget(string Purpose, string DocumentId, string? TabId = null);
 public sealed record E05DriveRunGateResult(string RunId, string State,
     IReadOnlyList<DriveAppendReceipt> Receipts);
 
@@ -23,9 +23,10 @@ public static class E05DriveRunGate
         var snapshot = approved?.ToArray();
         if (writer is null || string.IsNullOrWhiteSpace(runId) ||
             string.IsNullOrWhiteSpace(text) ||
-            !text.Contains(runId, StringComparison.Ordinal) ||
+            !GoogleDocsAppendReadback.ContainsExactRunId(text, runId) ||
             snapshot is null || snapshot.Length != 3 ||
-            snapshot.Any(x => x is null || !GoogleDocsAppendReadback.ValidInput(x.DocumentId, runId, text)) ||
+            snapshot.Any(x => x is null || !GoogleDocsAppendReadback.ValidInput(x.DocumentId, runId, text) ||
+                (x.TabId is not null && !GoogleDocsAppendReadback.ValidTabId(x.TabId))) ||
             snapshot.Select(x => x.DocumentId).Distinct(StringComparer.Ordinal).Count() != 3 ||
             !new[] { "report", "lessons", "master" }.All(p =>
                 snapshot.Count(t => t.Purpose == p) == 1))
@@ -41,12 +42,13 @@ public static class E05DriveRunGate
                 return new(runId, "HOLD_MASTER_INTEGRITY", receipts);
             DriveAppendReceipt receipt;
             try { receipt = await writer.AppendAsync(target.DocumentId, runId,
-                    text, stop).ConfigureAwait(false); }
+                    text, stop, target.TabId).ConfigureAwait(false); }
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
             catch (Exception) { return new(runId, "HOLD_WRITE_OR_READBACK", receipts); }
             receipts.Add(receipt);
             if (receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
-                string.IsNullOrWhiteSpace(receipt.RevisionAfter))
+                string.IsNullOrWhiteSpace(receipt.RevisionAfter) ||
+                (target.TabId is not null && receipt.VerifiedTabId != target.TabId))
                 return new(runId, "HOLD_WRITE_OR_READBACK", receipts);
         }
         return new(runId, "PASS", receipts);

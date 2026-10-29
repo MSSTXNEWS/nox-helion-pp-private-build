@@ -13,11 +13,12 @@ public static class E05SafeRunReports
         var snapshot = targets?.ToArray();
         if (writer is null || string.IsNullOrWhiteSpace(runId) ||
             string.IsNullOrWhiteSpace(report) || string.IsNullOrWhiteSpace(lesson) ||
-            !report.Contains(runId, StringComparison.Ordinal) ||
-            !lesson.Contains(runId, StringComparison.Ordinal) ||
+            !GoogleDocsAppendReadback.ContainsExactRunId(report, runId) ||
+            !GoogleDocsAppendReadback.ContainsExactRunId(lesson, runId) ||
             snapshot is null || snapshot.Length != 2 ||
             snapshot.Any(x => x is null || !GoogleDocsAppendReadback.ValidInput(x.DocumentId, runId,
-                x.Purpose == "report" ? report : lesson)) ||
+                x.Purpose == "report" ? report : lesson) ||
+                (x.TabId is not null && !GoogleDocsAppendReadback.ValidTabId(x.TabId))) ||
             snapshot.Count(x => x.Purpose == "report") != 1 ||
             snapshot.Count(x => x.Purpose == "lessons") != 1 ||
             snapshot[0].DocumentId == snapshot[1].DocumentId)
@@ -30,10 +31,11 @@ public static class E05SafeRunReports
             try
             {
                 var result = await writer.AppendAsync(t.DocumentId, runId,
-                    purpose == "report" ? report : lesson, ct).ConfigureAwait(false);
+                    purpose == "report" ? report : lesson, ct, t.TabId).ConfigureAwait(false);
                 receipts.Add(result);
                 if (result.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
-                    string.IsNullOrWhiteSpace(result.RevisionAfter))
+                    string.IsNullOrWhiteSpace(result.RevisionAfter) ||
+                    (t.TabId is not null && result.VerifiedTabId != t.TabId))
                     return new(runId, "HOLD_READBACK", receipts);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
