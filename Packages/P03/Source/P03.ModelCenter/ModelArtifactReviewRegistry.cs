@@ -86,7 +86,7 @@ public static class ModelArtifactReviewRegistry
             !Sha(c.ArtifactSha256) || !Sha(c.ManifestSha256) ||
             !c.CompatibilityReviewed || string.IsNullOrWhiteSpace(c.ImmutableRevision) ||
             !(Sha(c.ImmutableRevision) || c.ImmutableRevision.StartsWith("sha256:",StringComparison.OrdinalIgnoreCase) && Sha(c.ImmutableRevision[7..]))) return false;
-        result=ModelCatalog.Get(c.FamilyId) with {
+        var promoted=ModelCatalog.Get(c.FamilyId) with {
             EvidenceStatus=CatalogEvidenceStatus.ArtifactVerified,
             ExactTag=c.ExactTag, Version=c.Version, License=c.LicenseId,
             ArtifactBytes=c.ArtifactBytes, RequiredDiskBytes=c.RequiredDiskBytes,
@@ -95,6 +95,10 @@ public static class ModelArtifactReviewRegistry
             LicenseEvidenceUri=license, CompatibilityEvidenceUri=compat,
             ImmutableRevision=c.ImmutableRevision, CompatibilityReviewed=true
         };
-        return result.CanOfferOneClickPull;
+        // A failed Try operation must never leak a partially promoted artifact.
+        // Direct entries and reviewed candidates share the catalogue resource gate.
+        if (!promoted.CanOfferOneClickPull) return false;
+        result=promoted;
+        return true;
     }
 }

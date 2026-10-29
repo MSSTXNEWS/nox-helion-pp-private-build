@@ -33,12 +33,15 @@ public sealed record ModelCatalogEntry(
         && !string.IsNullOrWhiteSpace(License)
         && ArtifactBytes is > 0
         && RequiredDiskBytes is > 0
+        && RequiredDiskBytes >= ArtifactBytes
         && IsSha256(ExpectedSha256)
         && IsSha256(ExpectedManifestDigestSha256)
         && LicenseEvidenceUri is { Scheme: "https" }
         && CompatibilityEvidenceUri is { Scheme: "https" }
         && !string.IsNullOrWhiteSpace(ImmutableRevision)
         && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
+        && (RecommendedRamBytes is null or > 0)
+        && (RecommendedVramBytes is null or > 0)
         && CompatibilityReviewed;
 
     private static bool IsSha256(string? value) => value is { Length: 64 }

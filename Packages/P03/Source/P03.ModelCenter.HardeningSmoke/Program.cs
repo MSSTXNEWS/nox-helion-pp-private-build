@@ -2,6 +2,8 @@ using System.Text;
 using System.Text.Json;
 using Nox.P03;
 
+CatalogResourceFixture.Run();
+
 int pass = 0;
 void Assert(bool value, string name) { if (!value) throw new Exception("FAIL " + name); Console.WriteLine("PASS " + name); pass++; }
 void MustReject(Action fn, string name) {
