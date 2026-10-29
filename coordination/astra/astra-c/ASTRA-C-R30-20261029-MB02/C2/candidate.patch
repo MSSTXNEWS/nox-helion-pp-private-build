@@ -1,0 +1,11 @@
+--- a/Packages/P02/worker-python/p02_framed_worker.py
++++ b/Packages/P02/worker-python/p02_framed_worker.py
+@@ -151,7 +151,7 @@
+                     candidate = request.get("requestId")
+                     nonce = candidate if isinstance(candidate, str) and _NONCE.fullmatch(candidate) else None
+                     route = request.get("route")
+-            except (ValueError, UnicodeError, RecursionError):
++            except (ValueError, UnicodeError, RecursionError, ProtocolHold):
+                 # Invalid frames must not kill the native pipe, occupy the
+                 # one non-STOP worker, or hide the following valid request.
+                 send(_encode_status(ingress, nonce, "NATIVE_FRAME_INVALID_JSON"))
