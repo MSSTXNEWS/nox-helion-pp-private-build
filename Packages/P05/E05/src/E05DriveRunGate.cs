@@ -45,7 +45,9 @@ public static class E05DriveRunGate
             catch (OperationCanceledException) when (stop.IsCancellationRequested) { throw; }
             catch (Exception) { return new(runId, "HOLD_WRITE_OR_READBACK", receipts); }
             receipts.Add(receipt);
-            if (receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
+            // Confirm the returned receipt belongs to this run and document.
+            if (receipt.RunId != runId || receipt.DocumentId != target.DocumentId ||
+                receipt.Status is not ("READBACK_PASS" or "ALREADY_PRESENT") ||
                 string.IsNullOrWhiteSpace(receipt.RevisionAfter))
                 return new(runId, "HOLD_WRITE_OR_READBACK", receipts);
         }
