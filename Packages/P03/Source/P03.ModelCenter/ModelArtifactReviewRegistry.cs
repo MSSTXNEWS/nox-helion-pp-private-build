@@ -53,6 +53,12 @@ public static class ModelArtifactReviewRegistry
         string.IsNullOrWhiteSpace(uri.Query);
     public static IReadOnlyList<ModelArtifactReviewCandidate> ReadTemplate(string path)
     {
+        // The caller supplies an existing local review template, never a URL.
+        // Bound its size and reject junctions before allocating an in-memory DOM.
+        ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+        var templateInfo = new FileInfo(path);
+        if (templateInfo.Length is <= 0 or > 1048576)
+            throw new InvalidDataException("REVIEW_TEMPLATE_SIZE_INVALID");
         using var doc = JsonDocument.Parse(File.ReadAllText(path));
         if (!doc.RootElement.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array ||
             items.GetArrayLength() < 15 || items.GetArrayLength() > 250)
