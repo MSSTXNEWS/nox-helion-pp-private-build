@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T154738MSK-R11",
+  "slot": "G4-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR Windows loader V16 ONLY",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "task_id": "P04-G4A-R11-LINEAR-WEIGHT-MAP-SHARD-VALIDATION",
+  "branch": "automation/r30/g4a/20261029T154738MSK-R11",
+  "base_branch": "automation/r30/g4a/20261029T145000MSK-R10",
+  "base_head_commit": "131cb97c4bec721e8d104c0c5f9e3f394865acfb",
+  "source_commit": "4eda300726de46a3214591212c1ce4455a667b7e",
+  "tests_commit": "1677c89621468f01f3116b34d8f637978f113a64",
+  "owner_lock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "cross_owner_writes": 0
+  },
+  "rules": {
+    "section33_consolidated_56_read": true,
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "original_verbatim_not_attested": true,
+    "sections54_55_56_read": true,
+    "last_r29_loader_only_override_applied": true,
+    "latest_drive_e06_lessons_through": "ASTRA-C-R30-20261029T1452MSK-10",
+    "prior_g4a_receipt_read": "R30-G4A-20261029T145000MSK-R10"
+  },
+  "historical": {
+    "donor_A04_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "donor_B1_git_blob": "e919bf876c49c1a6b397eb18f267f4c38564fee0",
+    "donor_B2_git_blob": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_root_directories_seen": 25,
+    "snapshot_contents_byte_verified": false,
+    "original_729_physical_sha256_verified": false,
+    "original_three_archives_modified": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+      "post_git_blob": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+      "pre_sha256": "8438e88300f1f9320283a4e263e00fcac86205c921e2e24b40ef110165eb430b",
+      "post_sha256": "a8a0f7f5bf9f30b13a6cf8e6273c868bd53a5f4539948ef459163fa479a4224e",
+      "change": "Compute one per-shard tensor membership map during weight_map validation, removing O(number of shards times number of tensors) repeated scans. Preserve validation, SHA-256, total_size, and fail-closed mapping comparison."
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob": "a90ee9821c80427d08d45357b8d3d25fcc6f02f1",
+      "post_git_blob": "3b321a141a433e82e66a2a539c255cf7e7fe1af5",
+      "pre_sha256": "7ee261cd2ca21e1b5da010e8835cb9c3896e05de19d0884d520fc99ce00869f0",
+      "post_sha256": "eebf04819807d02f5aac865e852834c62b19e0f7dfc5e625b78091a8b16baa48",
+      "change": "Two unique G4-A R11 tests saved: 12 real safetensors shards/36 tensors verify only one weight_map.items() scan and consistent SHA/report; later mapped-shard mismatch must HOLD and purge partial evidence."
+    }
+  ],
+  "tests": {
+    "scoped_command": "python /tmp/g4a_r11_scoped_test.py",
+    "scoped_semantics": "Separate local Python reproduction of actual R10 weight_map scanning vs one-pass map. NOT a direct import of GitHub source.",
+    "scoped_results": "5/5 PASS",
+    "prior_quadratic_observed": "65 items() invocations for 4096 tensors / 64 shards",
+    "patched_linear_observed": "1 items() invocation for the same logical mapping",
+    "scoped_equivalence": "PASS: same exact per-shard names, same invalid tensor/shard rejection",
+    "new_real_repo_test_methods_committed": 2,
+    "full_repo_unittest": "NOT_RUN",
+    "recommended_command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -k g4a_r11 -v",
+    "windows": "NOT_RUN",
+    "gpu": "NOT_RUN",
+    "rights": "NOT_ATTESTED",
+    "github_readback": "PASS source and tests blob + SHA256",
+    "after_source_compare": {
+      "base": "automation/r30/g4a/20261029T145000MSK-R10",
+      "head": "automation/r30/g4a/20261029T154738MSK-R11",
+      "base_sha": "131cb97c4bec721e8d104c0c5f9e3f394865acfb",
+      "status": "ahead",
+      "ahead_by": 2,
+      "behind_by": 0,
+      "only_paths": [
+        "Packages/P04/model_snapshot_probe.py",
+        "tests/P04/test_model_snapshot_probe.py"
+      ]
+    }
+  },
+  "errors_and_improvements": {
+    "root_cause": "Valid but large bounded sharded index was rescanned in its entirety for each shard. On 512 shards, mapping validation could require O(512*tensor_count) iterations, turning locally supplied metadata into an installer performance-denial risk.",
+    "previous_lesson_applied": "R10 owner receipt and Astra-C R10 lesson: preserve exact Git provenance, owner gate and immutable receipt; do not equate isolated tests with actual full module.",
+    "self_improvement_lesson": "For attacker-supplied bounded indexes, byte limits alone do not bound algorithmic complexity. Build the inverse map in one validated pass, then compare per-shard sets; test both a large positive input and late failure with erased partial evidence.",
+    "coordinator_request": "Astra-C only: ingest this immutable receipt into common Google Drive error/E06/lessons journals after 14 owner lanes, with CAS/readback. Do not count this source optimization as accepted product DONE; full module, Windows native, license and 729 physical SHA still HOLD."
+  },
+  "safety": {
+    "no_main_write": true,
+    "no_pr162_write": true,
+    "no_shared_r30_write": true,
+    "no_foreign_owner_write": true,
+    "no_preflight_local_gpu_change": true,
+    "no_snapshots_change": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_run": true,
+    "no_final_integration": true,
+    "no_merge": true
+  },
+  "gates": {
+    "source_patch_saved": true,
+    "source_blob_readback": true,
+    "full_p04_suite": false,
+    "source_code_complete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_task_accepted": false
+  }
+}
