@@ -1,0 +1,123 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G1B_OWNER_RECEIPT_V7",
+  "runId": "R30-G1-B-20261029T1128MSK-R07",
+  "slot": "G1-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 WINDOWS LOADER ONLY",
+  "taskId": "G1-B-P01-WEBVIEW2-TRUSTED-TOPLEVEL-NAVIGATION-CANCEL-R07",
+  "status": "SOURCE_CANDIDATE_NATIVE_HOLD",
+  "sourceCodeComplete": false,
+  "releaseAccepted": false,
+  "productReadinessPercent": null,
+  "ownership": {
+    "lockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lockPath": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lockGitBlob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/"
+    ],
+    "forbiddenPaths": [
+      "stage/proposals/P01/C09/Installer/"
+    ],
+    "exclusiveOwner": "G1-B",
+    "outOfScopeWrites": 0
+  },
+  "base": {
+    "branch": "automation/r30/g1b/R30-G1-B-20261029T1027MSK-R06",
+    "preCommit": "0963602c86391931127fddd1f9bbb8a64545e92a",
+    "privateBranch": "automation/r30/g1b/R30-G1-B-20261029T1128MSK-R07"
+  },
+  "sourcesRead": {
+    "v16Section33ConsolidatedRules": "56/56",
+    "section33GitBlob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "v16Sections54to56": true,
+    "r29LoaderOnlyOverride": true,
+    "historicC34DriveId": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "liveMasterDriveId": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "e06ReportDriveId": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "priorLessonDriveId": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "priorR06Receipt": true,
+    "googleDriveWritePerformed": false,
+    "sharedJournalWriter": "Astra-C"
+  },
+  "snapshots": {
+    "conflictIndexPath": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflictIndexGitBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshotRoot": "coordination/astra/r30/snapshots/",
+    "frozenBranchesIndexed": 25,
+    "existingSnapshotDirectoriesEnumeratedViaGitHubContents": 25,
+    "individualSnapshotFileContentsAndRawSHA256Verified": false,
+    "modified": 0,
+    "historicalP01Overlaps": "C09/Installer/* only and forbidden for G1-B"
+  },
+  "observedProblem": "R06 validated WebMessageReceived source against trusted HTTPS origin but OnNavigationStarting only revoked the document epoch. It did not cancel WebView2 top-level navigation to external/unmapped origins; an untrusted document could be displayed inside the existing host despite its messages being rejected. Native Windows exploitation and UI appearance were not observed.",
+  "actualFix": "Reused IsTrustedSource(args.Uri) on the existing CoreWebView2 NavigationStarting event. Any top-level navigation outside the pre-mapped local HTTPS virtual origin is cancelled with args.Cancel=true after revoking stale native work. The existing host, HOME/MENU/CORE, native consent, cancellation/backpressure and ACK behavior remain unchanged; no new host or external browser launcher is introduced.",
+  "sourceChanges": [
+    {
+      "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "preGitBlobSHA1": "cb48561c5d4c2416281cfb3ae6fa685124e22d71",
+      "postGitBlobSHA1": "a1f0f0fe8d03748e85b8fc126e064e2022896d10",
+      "preSHA256": "b922ce6eb2220563ea8dc4e87e1df5774c6a3f4f08039d363e1b72280ea19354",
+      "postSHA256": "8ad2d272b2c5f473723faa1e159681d76c0f07fa23628809d2b442e8f8d3ebf0",
+      "sourceCommit": "92db6a7116ff40d87521137c1ff1d712cbd85e2d"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_origin_navigation_r07.py",
+      "preState": "ABSENT",
+      "postGitBlobSHA1": "422163877e190fd4cf7b9421bdcdaafbc732b8ca",
+      "testCommit": "8b48b8e149488793ace03a27dcabae5586179d0c"
+    }
+  ],
+  "targetedSourceTest": {
+    "commandDescription": "V8 assertions against the actual before/after GitHub C09 C# source and saved G1-B Python test readback; source structural only",
+    "redBefore": "R06 did not contain args.Cancel=true and lacked a top-level navigation origin gate",
+    "passed": 20,
+    "total": 20,
+    "sourceReadback": true,
+    "gitBlobReadback": true,
+    "pythonRegressionFileSaved": true,
+    "pythonUnittestExecuted": false,
+    "csharpCompiled": false,
+    "windowsWebView2Executed": false,
+    "nativeHomeMenuCoreObserved": false,
+    "nativeConsentObserved": false,
+    "nativeErrorHandlingObserved": false,
+    "windowsOriginObserved": false
+  },
+  "gitProof": {
+    "compareBase": "0963602c86391931127fddd1f9bbb8a64545e92a",
+    "headBeforeReceipt": "8b48b8e149488793ace03a27dcabae5586179d0c",
+    "aheadByBeforeReceipt": 2,
+    "behindBy": 0,
+    "changedFilesBeforeReceipt": [
+      "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+      "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_webview2_origin_navigation_r07.py"
+    ],
+    "forbiddenPathsChanged": 0
+  },
+  "blocker": {
+    "status": "HOLD",
+    "reason": "Existing original WPF MainWindow.xaml.cs under C08 is not wired to this isolated C09 adapter in evidence inspected. Real mapped WebView2 origin, button, native consent, route ACK and external-link UX require authorized host-owner integration and later independent Windows source acceptance.",
+    "ownerHandoff": "Original MainWindow/WebView2 owner and E06 integrator must wire existing C09 bridge to the one original WPF host, verify intended local mapped HTTPS origin and native handling of legitimate external links; test HOME/MENU/CORE/buttons, consent, renderer failure, blocked off-origin redirects, and same-SHA Windows behavior. Do not edit G1-B paths or create a second host."
+  },
+  "lesson": {
+    "appliedPriorLesson": "R06: keep independent native in-flight cap (8) and replay check before quota; R07 leaves those protections untouched.",
+    "newLesson": "A message-ingress origin filter cannot prevent rendering an off-origin top-level document. NavigationStarting must itself fail closed against the same pinned virtual HTTPS origin, even if untrusted pages cannot invoke native routes. Validate real host origin separately; source guards are not Windows execution evidence.",
+    "processError": "First local SHA-256 preflight implementation assumed ASCII source, but existing file contains Unicode. Corrected the independent digest implementation to UTF-8 and verified the R06 preimage digest before Git write; no erroneous digest was committed.",
+    "sharedDriveHandoff": "Astra-C is the exclusive writer of Google Drive common journals; consume this immutable receipt and preserve native HOLD."
+  },
+  "noGo": [
+    "EXE",
+    "NSIS",
+    "WindowsCI",
+    "GitLabCI",
+    "FinalIntegration",
+    "Installer/*",
+    "D02/WOW",
+    "P02-P05",
+    "PR162",
+    "main",
+    "sharedR30",
+    "sharedGoogleDrive",
+    "25FrozenSnapshots"
+  ]
+}
