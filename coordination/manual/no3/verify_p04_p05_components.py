@@ -6,6 +6,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -81,6 +82,20 @@ def probe(args: argparse.Namespace) -> tuple[int, dict]:
                 report["steps"].append(entry)
                 if run.returncode:
                     report["reason"] = "COMPONENT_FAILURE_" + label
+                    report["status"] = "FAILED"
+                    return 1, report
+                if label == "P04-PYTHON":
+                    counts = re.findall(r"Ran (\d+) tests?", log)
+                    if not counts or int(counts[-1]) < 40:
+                        report["reason"] = "P04_TEST_DISCOVERY_INCOMPLETE"
+                        report["status"] = "FAILED"
+                        return 1, report
+                if label == "P05-FEED" and "P05 R16 smoke: 24 semantic assertions PASS" not in log:
+                    report["reason"] = "P05_FEED_PROOF_MISSING"
+                    report["status"] = "FAILED"
+                    return 1, report
+                if label == "P05-FRESHNESS" and "P05 SOURCE_FRESHNESS 7/7" not in log:
+                    report["reason"] = "P05_FRESHNESS_PROOF_MISSING"
                     report["status"] = "FAILED"
                     return 1, report
             except subprocess.TimeoutExpired:
