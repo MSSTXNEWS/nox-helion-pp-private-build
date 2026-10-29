@@ -1,0 +1,120 @@
+{
+  "schema": "NOX_V16_ASSEMBLY_B_NSIS_DELTA_OWNER_CAS_HOLD_R08",
+  "runId": "NOX-V16-ASSEMBLY-B-20261029T1715MSK-R08",
+  "task": "ASSEMBLY-B",
+  "scope": "ONLY NOX HELION EXPRESS INTEGRATOR V16 Windows loader-installer; SOURCE ONLY",
+  "status": "HOLD_OWNER_APPROVAL_AND_T06_CAS",
+  "time": {
+    "plannedMsk": "2026-10-29T17:15:00+03:00",
+    "firstObservedMsk": "2026-10-29T17:12:45+03:00",
+    "firstReliableToolClockMsk": "2026-10-29T17:15:48+03:00",
+    "receiptUtc": "2026-10-29T14:16:59.300Z",
+    "actualStart": "NOT_INDEPENDENTLY_MEASURED",
+    "actualEnd": "NOT_YET_OBSERVED"
+  },
+  "historicalT03": {
+    "status": "DONE",
+    "criteria": "5/5",
+    "lockBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "reopened": false
+  },
+  "progress": {
+    "metric": "NSIS SOURCES: 3 exact file CAS acceptances + immutable T06 owner-approved handoff",
+    "previous": "0/4",
+    "current": "0/4",
+    "previousPercent": 0,
+    "currentPercent": 0,
+    "deltaPercentagePoints": 0,
+    "bar": "░░░░░░░░░░",
+    "reason": "A receipt or existing file is not a newly owner-approved integrated NSIS patch"
+  },
+  "currentTarget": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "previousObservedHead": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "newHead": "7f78e15f51451b60ce4dc6cec7ccd9724639b04a",
+    "deltaCommitsAhead": 9,
+    "deltaCommitsBehind": 0,
+    "changedPathSummary": "P02 ingress/framed/test and owner-decision/receipt paths only; no Installer files altered",
+    "installersChangedSincePreviousHead": 0,
+    "ownerLockBranch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "ownerLockBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73"
+  },
+  "sourcePaths": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "owner": "G1-A",
+      "targetPreGitBlob": "87d901c3846359a91be3e8288f24302cc7060257",
+      "historicalCandidateGitBlob": "969f8c11eaca20c69e9610422731862c7bd3ed62",
+      "targetCASStatus": "NOT_AUTHORIZED",
+      "t04Selection": "KEEP_CURRENT_TARGET"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "owner": "G1-A",
+      "targetPreGitBlob": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "historicalCandidateGitBlob": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "targetCASStatus": "NOT_AUTHORIZED"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "owner": "G1-A",
+      "targetPreGitBlob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "historicalCandidateGitBlob": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+      "targetCASStatus": "NOT_AUTHORIZED",
+      "t04Selection": "KEEP_CURRENT_TARGET"
+    }
+  ],
+  "ownerLatest": {
+    "ownerDecisionFile": "coordination/owner-decisions/NOX_V16_OWNER_ONE_TREE_CHOICE_20261029_R01.json",
+    "ownerDecisionBlob": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+    "t04FinalArbitrationFile": "coordination/owner-decisions/NOX_V16_T04_FINAL_VERSION_ARBITRATION_R02.json",
+    "t04FinalArbitrationBlob": "f723d37b39cb82425c873b51545f720d90af778d",
+    "historicalOverlaps": "34/34 disposition decided; installer NSIS and Remove selected current; archive alternatives not admitted; no product/source functional acceptance",
+    "ownerAuthority": "Latest owner selection is NOT G1-A explicit permission to transplant historical three-file rollback patch"
+  },
+  "t06": {
+    "latestReadReceipt": "NOX-V16-T06-20261029T165543MSK-R07",
+    "receiptBlob": "a6a03ae7dcc9dd269b2f13caab8532df96011241",
+    "reportedAcceptedHead": null,
+    "reportedAcceptedTree": null,
+    "reportedOwner1Approval": false,
+    "warning": "T06 R07 describes PR214 as draft, but live PR214 subsequently merged at 2026-10-29T14:04:13Z, PR162 now at 7f78e15f; rebase gate must use current HEAD, not older copied summary"
+  },
+  "regression": {
+    "newExecution": false,
+    "reason": "All three current Installer blob SHAs equal previous R07 baseline; do not repeat unchanged static/mock tests",
+    "historicalOwnerMockTest": "G1-A 17/17 PASS in R07, not re-run or native proof",
+    "oneTargetedSourceEquality": "3/3 Git blob equality between previously observed baseline and updated PR162; 0 Installer diff",
+    "noLoss": "No source files modified, no user data operations, no deletions by this run"
+  },
+  "blocker": "No exact G1-A owner-approved, three-file-compatible PRE->POST patch and manual owner #1 CAS admission at latest PR162 HEAD; T04 KEEP_CURRENT selection explicitly prohibits blindly overwriting current installer.",
+  "handoff": {
+    "recipient": "G1-A plus manual source owner #1 / T06",
+    "request": "First obtain fresh G1-A reviewed incremental patch for exact current PRE blobs; explicitly address rollback/uninstaller SHA attestation and Verify-Payload parameter coupling. Then manual owner #1 must approve CAS against PR162 current HEAD, apply all linked changes atomically, perform focused SOURCE-only regression and Git readback. Preserve rollback and user data. Do not touch Preflight-InstallPath.ps1 or unrelated files.",
+    "approvedNow": false
+  },
+  "lessonApplied": "A 34/34 version-choice decision is archive disposition, not permission to transplant a stale rollback patch. Refreshed canonical HEAD and exact three blob PREs, avoided silently replacing all three and skipped unchanged QA.",
+  "changes": {
+    "added": "one isolated immutable JSON receipt on a new private branch",
+    "installerFilesModified": 0,
+    "sourcePatchCommitted": false,
+    "pr162Touched": false,
+    "commonDocsWritten": false,
+    "snapshotsChanged": 0,
+    "windowsInstaller": false,
+    "nsisCompiler": false,
+    "ci": false,
+    "exe": false,
+    "e07": false
+  },
+  "gates": {
+    "SOURCE": "HOLD",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "P01_P05": "N/D"
+  }
+}
