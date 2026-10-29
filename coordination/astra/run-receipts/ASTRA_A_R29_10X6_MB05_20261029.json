@@ -1,0 +1,25 @@
+{
+  "schema": "ASTRA_R29_SOURCE_ONLY_MEGA_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB05",
+  "tasks": {
+    "A1": "Build manifest refuses directory junctions",
+    "A3": "Outer framed parser rejects nonfinite JSON exponents/constants",
+    "A5": "P03 P01 display failure cannot block P05 receipt fanout",
+    "A6": "Model review template parsed through one bounded held file handle",
+    "A2": "NO_NEW_VERIFIED_DEFECT_NOT_MODIFIED",
+    "A4": "NO_NEW_VERIFIED_DEFECT_NOT_MODIFIED"
+  },
+  "commits": {
+    "A1": "2306f48a034bf4a54592ac8e58fdb688231106ba",
+    "A3": "94b2226bc4792df0f72185c959407e57220af191",
+    "A5": "81ed3dfcf11b5ed360b28c152c1ed50c58172fb5",
+    "A6": "6485a58ee83aa5fe09d98cad0929ddcc9c39ca39"
+  },
+  "test": "4/4 exact owner source readback PASS",
+  "native": "NOT_RUN",
+  "historicalVerifiedPassCreditAdded": 0,
+  "stillQueued": 5,
+  "filesOwnerBound": true,
+  "noBinary": true,
+  "lesson": "Never equate preflight path/sink success with verified bytes or complete fanout; isolate independent sinks but report errors."
+}
