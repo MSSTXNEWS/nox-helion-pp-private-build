@@ -1,0 +1,645 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T05_R29_R30_INTAKE_EXCEPTIONS_V1",
+  "task_id": "T05-R29-R30-OWNER-INTAKE-R11",
+  "run_id": "T05-20261029T160000MSK-R11-f0064948",
+  "scope": "NOX HELION EXPRESS INTEGRATOR WINDOWS LOADER-INSTALLER V16 ONLY",
+  "status": "PARTIAL_EXCEPTION_LEDGER_PREPARED_NO_SOURCE_MERGE",
+  "utc_context_date": "2026-10-29",
+  "moscow_planned_start": "2026-10-29T16:00:00+03:00",
+  "moscow_actual_start_observed": "2026-10-29T15:57:25+03:00",
+  "moscow_end": "OBSERVE_AFTER_READBACK",
+  "immutable_expected_heads": {
+    "main": "0b3a7d435be735148d64171deb9027093a89646e",
+    "pr162": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "astra_source": "f0064948119c55001601e1bae1cd3755826605ed",
+    "astra_source_tree": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+    "r30_snapshots": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "r30_tree": "6f38d9a3e4fc966c61e1e5fd361c262b3de945ed"
+  },
+  "controls": {
+    "owner_lock_current_git_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "owner_lock_prior_git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_originals_untouched": true,
+    "original_729_raw_sha256": "NOT_INDEPENDENTLY_VERIFIED",
+    "source_only": true,
+    "main_pr162_common_r30_drive_unchanged": true
+  },
+  "historical_intake": {
+    "snapshots_indexed": 25,
+    "donor_branches": 25,
+    "source_like_occurrences": 115,
+    "snapshot_source_paths_missing": 0,
+    "vs_astra_source_tree": {
+      "same_blob": 9,
+      "different_blob": 93,
+      "missing_path": 13
+    },
+    "vs_pr162_tree": {
+      "same_blob": 0,
+      "different_blob": 102,
+      "missing_path": 13
+    },
+    "overlapping_historical_paths": 34,
+    "overlap_astra_b": 14,
+    "donors": [
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a01-20261029",
+        "source_like_instances": 1,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a02-20261029",
+        "source_like_instances": 8,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a03-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a04-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a05-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a06-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a07-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a08-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a09-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r27-a10-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a01-20261029",
+        "source_like_instances": 4,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a02-20261029",
+        "source_like_instances": 8,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a2-p01-20261029",
+        "source_like_instances": 3,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a03-20261029",
+        "source_like_instances": 8,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a04-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a04-voice-20261029",
+        "source_like_instances": 8,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a05-20261029",
+        "source_like_instances": 7,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a06-20261029",
+        "source_like_instances": 5,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/r29-a6-p03-catalog-20261029",
+        "source_like_instances": 9,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b1-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b2-20261029",
+        "source_like_instances": 2,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b3-20261029",
+        "source_like_instances": 8,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b4-20261029",
+        "source_like_instances": 9,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b5-20261029",
+        "source_like_instances": 5,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      },
+      {
+        "snapshot": "coordination/astra/r30/snapshots/astra-b_r29-b6-20261029",
+        "source_like_instances": 5,
+        "intake": "HISTORICAL_DONOR_EXCEPTION_NOT_DIRECTLY_ADMITTED",
+        "reason": "Frozen R29/R27 baseline; do not replace newer owner files. Exact matching blobs are duplicate/obsolete; differing paths require owner-specific preimage+receipt+focused test+semantic reconciliation."
+      }
+    ],
+    "policy": "Per-path blobs only. 9 identical source occurrences are dedupe candidates, not 9 completed TaskIDs; 106 nonidentical or absent require review. No donor copy/cherry-pick/merge."
+  },
+  "r30_owner_intake": {
+    "slots_read": 14,
+    "source_changes_examined": 13,
+    "source_post_git_blob_readback_pass": 13,
+    "source_post_sha256_computed": 13,
+    "source_pre_sha256_verified_when_recorded": 7,
+    "source_post_sha256_receipt_matched_when_recorded": 7,
+    "focused_existing_test_files_verified": 8,
+    "focused_existing_test_files_missing": 5,
+    "tests_executed_by_t05": 0,
+    "exact_preimage_match_both_astra_and_pr162": 1,
+    "exact_preimage_diverged_or_missing": 12,
+    "product_taskids_independently_accepted": 0,
+    "receipts": [
+      {
+        "slot": "G1-A",
+        "head": "2d6ec711af59ef42f3ed4ce4e72ed0a254eac43a",
+        "receipt": "coordination/automation/r30/G1-A/R30-G1-A-20261029T1447MSK-OWNER-LOCK-HOLD-04.json",
+        "receipt_blob": "3601db0cc5cdf2eec923a2cde49972bbf642f4c9",
+        "status": "HOLD_ONLY",
+        "cause": "STALE_OWNER_LOCK_56ae_to_bb41_no_product_patch"
+      },
+      {
+        "slot": "G1-B",
+        "head": "8cdc024a2e0aafb7bee33c31c0b8a02e4d3bced5",
+        "receipt": "coordination/automation/r30/G1-B/R30-G1-B-20261029T1545MSK-R12.json",
+        "receipt_blob": "65ffd30a36ba399f40d01490f570ad0646b372f9",
+        "status": "PATCH",
+        "cause": "WPF_DISPOSE_CALLBACK_EXCEPTION"
+      },
+      {
+        "slot": "G2-A",
+        "head": "922e00d367473541b0020ece32ae6af35b553612",
+        "receipt": "coordination/automation/r30/G2-A/G2A_R30_20261029T154652_MSK_04.json",
+        "receipt_blob": "88c4a67fc78efcd45c07919036be52f5fd18acf6",
+        "status": "PATCH",
+        "cause": "BINARY_FRAME_PARTIAL_WRITE"
+      },
+      {
+        "slot": "G2-B",
+        "head": "957e8bae1f901a29c31f30cffce94991764aea1d",
+        "receipt": "coordination/automation/r30/G2-B/R30-G2-B-20261029T0640MSK-R02.json",
+        "receipt_blob": "933a301d66dde84a15011484f62c2cfaf1dffa09",
+        "status": "PATCH",
+        "cause": "SIP_PROVIDER_CALLBACK_DRIFT"
+      },
+      {
+        "slot": "G3-A",
+        "head": "1aaf192fc4f654fb1054cfdc31df70c8bcfc32bc",
+        "receipt": "coordination/automation/r30/G3-A/G3A-20261029T154526MSK-R11-a6c92bc0.json",
+        "receipt_blob": "cdd9a78c9de4d30ecc1c537b4c5a5efd4450f2e3",
+        "status": "PATCH",
+        "cause": "MODEL_CATALOG_ORIGIN"
+      },
+      {
+        "slot": "G3-B",
+        "head": "8e31b71a1ebb5abeeea203b1a082fe4bd1ffa603",
+        "receipt": "coordination/automation/r30/G3-B/G3B-20261029T144549MSK-R08.json",
+        "receipt_blob": "1e2150ce68cd44f4a78f31156605fa8daa73f322",
+        "status": "PATCH",
+        "cause": "QUEUE_PROGRESS_COMMITTED_VS_RAW"
+      },
+      {
+        "slot": "G4-A",
+        "head": "30c19cb6e7630f9f0ef784d4a150519a431fdbf5",
+        "receipt": "coordination/automation/r30/G4-A/R30-G4A-20261029T154738MSK-R11.json",
+        "receipt_blob": "d5857d4738b8f27e29820abdca1afd88f412af97",
+        "status": "PATCH",
+        "cause": "SHARD_WEIGHT_MAP_QUADRATIC_SCAN"
+      },
+      {
+        "slot": "G4-B",
+        "head": "c1c0bc8abc2bd1576c15c292fd905eea9aaa4c24",
+        "receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T1352MSK-09.json",
+        "receipt_blob": "81218683de7c17105e7cbef433a13f76ede25e53",
+        "status": "PATCH",
+        "cause": "CUDA_CHILD_PROBE_BOUNDARY"
+      },
+      {
+        "slot": "G5-A",
+        "head": "61eb3f0d77e6655bc6c9ae724cdced139322d1b8",
+        "receipt": "coordination/automation/r30/G5-A/R30-G5A-20261029T1450MSK-10.json",
+        "receipt_blob": "3f539af4fe9623981652c6b2d763bbd7f713d272",
+        "status": "PATCH",
+        "cause": "EVENT_ID_CROSS_TYPE_SEQUENCE_COLLISION"
+      },
+      {
+        "slot": "G5-B",
+        "head": "aa32dda4cd05e53ce6bcfcb984a94a1c9452cbc4",
+        "receipt": "coordination/automation/r30/G5-B/R30-G5B-20261029T1446MSK-10.json",
+        "receipt_blob": "0f5bb5fac02dd080eb73c76e367528b99ce14d14",
+        "status": "PATCH",
+        "cause": "OAUTH_BEARER_RFC6750_GRAMMAR"
+      },
+      {
+        "slot": "G6-A",
+        "head": "f0ea6ec60c9ae8cc4aadbca07c1f6d89cb235106",
+        "receipt": "coordination/automation/r30/G6-A/G6A-20261029T154536MSK-R11.json",
+        "receipt_blob": "b4e191a39b468b6695e2ac9f3f95f3746d3b1937",
+        "status": "PATCH",
+        "cause": "SOURCE_PART_REHASH_FINAL_GATE"
+      },
+      {
+        "slot": "G6-B",
+        "head": "d6c576e4f42fa0b7e597d228f5c5b11ec0b11c49",
+        "receipt": "coordination/automation/r30/G6-B/R30-G6B-20261029T1452MSK-10.json",
+        "receipt_blob": "38609ccd0a1be63c466ffd639ed978dd5acb4872",
+        "status": "PATCH",
+        "cause": "HOST50_NATIVE_BOUNDPORT_REGISTRY_DRIFT"
+      },
+      {
+        "slot": "G7-A",
+        "head": "57d2dfa3c5582537931347a0bf26ffad64abfb76",
+        "receipt": "coordination/automation/r30/G7-A/R30-G7-A-20261029T1454MSK-10.json",
+        "receipt_blob": "dca62dabcfc326e4d439409ad3ea7e7003bd6f6d",
+        "status": "PATCH",
+        "cause": "CANCELLED_RAF_STALE_CALLBACK"
+      },
+      {
+        "slot": "G7-B",
+        "head": "1f6eacf289b2021df2ea4152c41a7935f5f0c25a",
+        "receipt": "coordination/automation/r30/G7-B/G7-B-20261029T1452MSK-PACK02-CSV-HEADERONLY-SCHEMA-V10.json",
+        "receipt_blob": "0010b2a914618ccff56f074fdeee5a8784aefd07",
+        "status": "PATCH",
+        "cause": "CSV_HEADER_ONLY_SCHEMA_BOUNDARY"
+      }
+    ],
+    "source_candidates": [
+      {
+        "slot": "G1-B",
+        "path": "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "pre_git_sha1": "c9c68bce1f1e1a6d074255f7150f2f04bc52179f",
+        "post_git_sha1": "6338c56c509c31d8deee70afef6eb639603e1e2d",
+        "pre_sha256_verified": "0c586e5df3a92a32cd7ed65988bc63046a52a7a759563e5d0623b2e9e56d108b",
+        "post_sha256_verified": "d3800c7fb6892140d3bb87431c90ea8b015be1de7c5251ab1b3386faa959b0ea",
+        "focused_test": {
+          "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_g1b_shutdown_cancellation_safety_r12.py",
+          "git_sha1": "35edce19360db21dd5193f55e1c8b0834a54490e",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "MISSING",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G2-A",
+        "path": "Packages/P02/worker-python/p02_framed_worker.py",
+        "pre_git_sha1": "255dfb7ab330c825fcc362b619614189c4915e6c",
+        "post_git_sha1": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+        "pre_sha256_verified": "4cb7c92cd405bfcdd7639148b7cd2da23b7d6e9954948926a8e9b34a5f51cada",
+        "post_sha256_verified": "d519f14a7b7af8339d973856da2c5b95d75e064517a0dfb1c221a434e8db0b5c",
+        "focused_test": {
+          "path": "Packages/P02/worker-python/test_p02_framed_partial_write_r30_g2a.py",
+          "git_sha1": "3674906d2f021f2ff5722baf6f1d689ceb29de26",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "MATCH",
+        "pr162_preimage": "MATCH",
+        "decision": "CONDITIONAL_REVIEW_REQUIRE_TEST_AND_T06_OWNER_CAS"
+      },
+      {
+        "slot": "G2-B",
+        "path": "Packages/P02/worker-python/p02_capabilities.py",
+        "pre_git_sha1": "d721cd9608d62052060ae2c7ff6db240b281802f",
+        "post_git_sha1": "da8d42570d5732e5fe009f86caf02b45d935edc9",
+        "pre_sha256_verified": "267a47f95d53df65a4646ec6843361b456adba0a0a3a391a3135891aa17973ef",
+        "post_sha256_verified": "143d170331d1184cf618cffbbeb9f517b4f381cd54d37b99e6c368aa1c9e69b0",
+        "focused_test": {
+          "path": "Packages/P02/worker-python/test_p02_g2b_r30_0640_sip_authority.py",
+          "git_sha1": "f7e17d984358620f82ba80bc0de0fc9d21f83387",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G3-A",
+        "path": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
+        "pre_git_sha1": "0b94237d7861c021a7db3cfda56073939562d312",
+        "post_git_sha1": "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+        "pre_sha256_verified": "b5e6850ce7e550c6a65d85ccddd1ae36bef52f4d9fc15404ebb88c77a64b53d7",
+        "post_sha256_verified": "55ba008fc9012a4edf7fdd455137f6eca7844e2faf19e2d60825a694e4dcbb79",
+        "focused_test": {
+          "path": "Packages/P03/Admission/test_g3a_r30_r11_catalog_official_origin.py",
+          "git_sha1": "0650f8d927d3abc65b92cdd58b3057335ad547b2",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G3-B",
+        "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+        "pre_git_sha1": "51ac82fee462113573775a9cb0c1e16dcdcf5172",
+        "post_git_sha1": "3692811ac3234afb54e82958c7415b23619c1f0f",
+        "pre_sha256_verified": "e3293dc4aa2ebd50e9b51f090f64801c1e27ae4923e2bea7b8d41b779a68465b",
+        "post_sha256_verified": "dcaa2785378cfa56542fdc09ca0a2cfc8e6431fd03a05659ad00be65cc5d9434",
+        "focused_test": null,
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G4-A",
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "pre_git_sha1": "9015f3fd156f0a760455e76dde82d7cfecc54b82",
+        "post_git_sha1": "4934f4fc9e3eb21c2adaccdc4c305ffeab621c23",
+        "pre_sha256_verified": "8438e88300f1f9320283a4e263e00fcac86205c921e2e24b40ef110165eb430b",
+        "post_sha256_verified": "a8a0f7f5bf9f30b13a6cf8e6273c868bd53a5f4539948ef459163fa479a4224e",
+        "focused_test": {
+          "path": "tests/P04/test_model_snapshot_probe.py",
+          "git_sha1": "3b321a141a433e82e66a2a539c255cf7e7fe1af5",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G4-B",
+        "path": "Packages/P04/preflight_local_gpu.py",
+        "pre_git_sha1": "ff8edfc07cb97b96a34f34213234b903f0f5b750",
+        "post_git_sha1": "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+        "pre_sha256_verified": "68f57f0a3f23e6f065601455aa4dff90712fa7a02e10b24a4379fe214eb4baf9",
+        "post_sha256_verified": "5ec61594bda75f63dcd298fa38f41095127cdb75e9d6c5324c4098ae8495a17a",
+        "focused_test": {
+          "path": "tests/P04/test_local_gpu_preflight.py",
+          "git_sha1": "6ad08fe51cc20a5bcec186e4473cc9cb5653610f",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G5-A",
+        "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+        "pre_git_sha1": "a6d723190213feb10091ab6dd699d56c46a00c46",
+        "post_git_sha1": "ae3c3a9f9471193a88046306fc91717df6360520",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "69f00e5d17f6f28c149fddd1d34fc5b48ae3eeaf0d89e42caf2832e3be1c55a7",
+        "focused_test": null,
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G5-B",
+        "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+        "pre_git_sha1": "5f77770a7d2e1e8b85d16abc8fac3881b0c4161e",
+        "post_git_sha1": "96bc6a90b57c58fa285a8733cd280c6beeff9100",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "bcc7164a3166042b497ba67e8449f592614ad1e5fc08e2e622c977e8d2635bc5",
+        "focused_test": null,
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G6-A",
+        "path": "coordination/e06/verify_original_729_source.py",
+        "pre_git_sha1": "972f7e14746a6b4e633adcfce248322d69590499",
+        "post_git_sha1": "5ba6f3eaf9e142b21c530c49dc28a27d9ccb4dd5",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "8f910516c308bfbe037f3dd0c9f76430fecda4cb5c545864f210b94cccc1dcb5",
+        "focused_test": null,
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G6-B",
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "pre_git_sha1": "0010d0dececebdcc7d6677a03c63bbf1e5993deb",
+        "post_git_sha1": "2a4fc9c96d9cb7d5ba39399f6e9ba0be869358ae",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "148c499d597816b6070e7fef4881346ff4f4f923e877d5a1c93d1c63f66f2ab1",
+        "focused_test": null,
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G7-A",
+        "path": "proposals/NOX-CINEMA-FX/nox-cinema.mjs",
+        "pre_git_sha1": "027382303a9a286ab8deea1b167abb20920bc0ba",
+        "post_git_sha1": "2b7acac6d4ac3f4eb1246562307a2e79a0bd7862",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "a1e9583d65cb7f6d8ea38e1a79f2bf1c8f94021c36445278d18b5e0fbe753383",
+        "focused_test": {
+          "path": "proposals/NOX-CINEMA-FX/nox-cinema.g7a.r30.stale-raf.test.mjs",
+          "git_sha1": "7e8d99e461f7e4e5ba55e5ba2328f568495f8b6e",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      },
+      {
+        "slot": "G7-B",
+        "path": "proposals/NOX-PACK02-50/ops.mjs",
+        "pre_git_sha1": "4337ef89a3ea2a8aa8cc45fc620649e6f76b83fb",
+        "post_git_sha1": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+        "pre_sha256_verified": null,
+        "post_sha256_verified": "16786a89dd2494a54a68e2a3c258a0e336798fb7c94446e042b8ecb7ce2cdac6",
+        "focused_test": {
+          "path": "proposals/NOX-PACK02-50/g7b-r30-csv-header-only-schema.test.mjs",
+          "git_sha1": "9a708eee013ba1c2c0c34fec55b523b6868401ca",
+          "readback": "EXISTS_BLOB_MATCH",
+          "run_by_T05": "NOT_RUN"
+        },
+        "canonical_f006_preimage": "DIFFERENT",
+        "pr162_preimage": null,
+        "decision": "HOLD_PREIMAGE_MISMATCH_OR_MISSING"
+      }
+    ]
+  },
+  "exception_ledger": [
+    {
+      "code": "G1A_STALE_LOCK_HOLD",
+      "slots": [
+        "G1-A"
+      ],
+      "detail": "G1-A R04 HOLD receipt used older journal blob 56ae7c48 with forbidden Installer prefix. CURRENT canonical journal bb41f403 has forbidden_paths=[] and 3 explicitly assigned Installer paths. Do not silently promote or invalidate historical HOLD. T06 verify current journal+owner approval and ask G1-A for fresh CAS receipt."
+    },
+    {
+      "code": "SOURCE_PREIMAGE_MISMATCH",
+      "slots": [
+        "G1-B",
+        "G2-B",
+        "G3-A",
+        "G3-B",
+        "G4-A",
+        "G4-B",
+        "G5-A",
+        "G5-B",
+        "G6-A",
+        "G6-B",
+        "G7-A",
+        "G7-B"
+      ],
+      "detail": "11 diverged source preimage Git blobs and 1 missing from frozen Astra source tree; do not cherry-pick wholesale; T06 compare exact desired changes atop current source, preserve newer owner work."
+    },
+    {
+      "code": "TEST_GATE",
+      "slots": [
+        "G3-B",
+        "G5-A",
+        "G5-B",
+        "G6-A",
+        "G6-B"
+      ],
+      "detail": "No durable single root-cause focused regression file on exact authorized path for 5 sources; V8/static or transient isolated models not full source test. Obtain owner-approved tests and commit/readback."
+    },
+    {
+      "code": "NATIVE_TEST_HOLD",
+      "slots": [
+        "G1-B",
+        "G2-A",
+        "G2-B",
+        "G3-A",
+        "G3-B",
+        "G4-A",
+        "G4-B",
+        "G5-A",
+        "G5-B",
+        "G6-A",
+        "G6-B",
+        "G7-A",
+        "G7-B"
+      ],
+      "detail": "Eight focused tests exist by exact blob but T05 did not execute them; native .NET/Windows/SIP/GPU/E06 tests not confirmed. G2-A R04 owner reports RED/GREEN Python 4/4 under isolated actual-module copy; do not translate to E06 PASS."
+    },
+    {
+      "code": "HISTORICAL_DONOR_EXCEPTION",
+      "branches": 25,
+      "detail": "All R27/R29 snapshots preserved; 9 byte-identical source occurrences rejected as duplicate instances, other 106 not admissible without owner receipts/preimage semantics/tests; 34 overlapping paths are risk candidates rather than proven semantic conflicts."
+    },
+    {
+      "code": "SOURCELOCK_PHYSICAL_HOLD",
+      "detail": "Three raw original ZIP parts and 729 member physical SHA256 not rehashed. DO NOT infer source ready from Git object tree or preserved 25 snapshot folders."
+    }
+  ],
+  "t06_handoff": {
+    "first": "Re-read exact PR162 and Astra source HEAD/trees; abort if any differ from pins. Keep main/PR162 unchanged until T06 independently authorized to integrate.",
+    "priority_candidate": "G2-A framed_worker R04: expected code/PR162 preblob 255dfb7ab330c825fcc362b619614189c4915e6c. Owner postblob 8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1. Execute existing exact focused Python test and compare source pre/post + STOP before intake.",
+    "all_other_owner_changes": "Intake only by path after current preimage/owner branch CAS, semantic dedupe and exact existing root cause tests; no mass copy; keep older DONE receipts and all 25 snapshots.",
+    "owner_requests": [
+      "Resolve G1-A outdated owner-lock contradiction using current bb41 journal + fresh owner receipt",
+      "G3-B/G5-A/G5-B/G6-A/G6-B supply one durable focused existing test on explicitly assigned path or request owner lock allocation",
+      "G7-B Host50 cross-owner adapter request goes to G6-B, never auto-edit its file"
+    ],
+    "gates": {
+      "SOURCE_CODE_COMPLETE": "HOLD",
+      "SOURCE": "PATCH_CANDIDATES_ONLY",
+      "INTEGRATED": "NOT_DONE",
+      "E06": "HOLD",
+      "SOURCE_READY": "HOLD",
+      "BUILD": "NOT_STARTED_FORBIDDEN",
+      "E07": "NOT_RUN",
+      "RELEASE": "HOLD",
+      "P01": "N/D",
+      "P02": "N/D",
+      "P03": "N/D",
+      "P04": "N/D",
+      "P05": "N/D"
+    }
+  },
+  "lesson": {
+    "prior": "Do not treat changed Git branch, isolated static PASS, or old DONE receipts as integration/acceptance.",
+    "applied": "Read current owner lock before any write; exact blob equality exposed nine historical duplicate path instances and only one R30 preimage-compatible branch vs both source and PR162.",
+    "new": "Owner permission decisions must be based on latest *content SHA* not the owner's older journal SHA: G1-A's contradictory HOLD is tied to 56ae, whereas canonical bb41 no longer forbids the path. Preserve old receipt and demand refreshed owner CAS rather than erase history."
+  },
+  "no_source_patch_this_t05": true,
+  "no_merge": true,
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_execution": true,
+  "no_google_docs_write": true,
+  "no_original_25_snapshot_mutation": true,
+  "acceptance": {
+    "task_complete": false,
+    "criteria": {
+      "owner_journal_verified": true,
+      "canon_heads_pinned": true,
+      "snapshots_25_indexed": true,
+      "latest_owner_receipts_14_identified": true,
+      "readback_13_source_blobs": true,
+      "pre_post_content_sha_7_verified": true,
+      "focused_persistent_tests_8_identified": true,
+      "full_focused_tests_executed": false,
+      "all_owner_source_preimages_compatible": false,
+      "immutable_handoff_git_readback": "PENDING"
+    }
+  }
+}
