@@ -1,0 +1,156 @@
+{
+  "schema": "NOX_V16_R18_T07_NOLOSS_G4A_V1",
+  "run_id": "NOX-V16-G4A-T07-20261029T204313MSK-R09-NOLOSS-DELTA",
+  "task_id": "T07",
+  "role": "G4-A",
+  "status": "INCOMPLETE",
+  "planned_start_msk": "2026-10-29T20:45:00+03:00",
+  "observed_start_msk": "2026-10-29T20:43:13+03:00",
+  "prestart": {
+    "canon_modified_utc": "2026-10-29T17:32:24.318Z",
+    "canon_chars": 209373,
+    "full_sections": "1-33,54-56,R29,56 rules of §33",
+    "active_error_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "active_error_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2
+    },
+    "r18_policy_blob": "a66ff0177f68c04e875c9369334a53321e922e20",
+    "r18_toolkit_blob": "631fbdacd398492d6db25fb0dbb2de893aa1dbc9",
+    "r30_ownership_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "fresh_docs_delta": "Master/E06/Lessons R22, C34; current T06 R17/R18",
+    "errors_read": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ]
+  },
+  "original_immutable": {
+    "status": "HISTORIC_DONE_6_OF_6_REUSED_NOT_REHASHED",
+    "t09_physical_commit": "aab1154cf127ef0a216b19d06362343bbda4e152",
+    "t07_acceptance_commit": "a70ab3dc9c45e29afee737810d6be8f623b8f210",
+    "size_bytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "member_sha_crc": "729/729 PASS historical",
+    "old_git_blobs": "968 PASS historical, not retested",
+    "snapshots": "25 PASS historical, not rescanned"
+  },
+  "latest_source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "before_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "observed_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+    "observed_tree": "c106dc08c61a3150aaa2b8808ce8bf2f678ed95a",
+    "ahead_commits": 6,
+    "modified_paths": 7,
+    "added_paths": 5,
+    "deleted_paths": 0,
+    "original_part_paths_changed": 0,
+    "source_owner_acceptance": "T06 1/8",
+    "t06_r17_receipt_blob": "b3da5da969eac289e9247a99a54954901fad00e8",
+    "t09_last_receipt": "R16 at older 5b42260bdf6adef2eee78dc665f85041270fe4fb, no same-HEAD seal found"
+  },
+  "changed_git_blob_pre_post": [
+    [
+      "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs",
+      "3692811ac3234afb54e82958c7415b23619c1f0f",
+      "d4f582552dad3906f9caa3b4e2dabb52ed89f52b"
+    ],
+    [
+      "coordination/e06/adapters/g2_space_mobile.py",
+      "c8b937172eb431310229111945971bb11cd8ff90",
+      "e1f14ea075e9a384346757d7fd23c9a61745200c"
+    ],
+    [
+      "coordination/e06/run_source_integrations_r13.py",
+      "5fc83d43d5da248938c2e6bc76f7011536663330",
+      "303194331b1387690f8ac935bdcc968f8312143b"
+    ],
+    [
+      "coordination/e06/stage_p01.py",
+      "10a608cca709b7c04309ab175e350a6e8e67012f",
+      "3283b9d53a4cc691666951dbf24cd06d326fafaf"
+    ],
+    [
+      "tests/P04/test_local_gpu_preflight.py",
+      "4c3df879b6f4d2c92d264c2af6a7c8d4fc36d051",
+      "2977f79608e93adf35011436d56f23a9e65531ca"
+    ],
+    [
+      "tests/e06/test_immutable_onehost_binder_r12.py",
+      "b50d9154cf57f44cd2b5eaa2a81d68850c254e69",
+      "c6092045c1759ebe9d54b5d6d3aaf8ecd830cb8b"
+    ],
+    [
+      "tests/e06/test_stage_p01_shared_zip_guard.py",
+      "9e8cc6c2c8773aef5639ab50e6d12453aef6c669",
+      "cce9597542013455da1925d0e536596047e8a0d0"
+    ]
+  ],
+  "independent_delta_proof": {
+    "status": "READ_ONLY_STATIC_SOURCE_CORROBORATION",
+    "pass": 10,
+    "total": 10,
+    "assertions": [
+      "P01_CANONICAL_ZIP_GATE",
+      "P01_NO_OVERWRITE",
+      "P01_ZIP_PRECHECK",
+      "P01_NEGATIVE_TESTS_PRESENT",
+      "P03_PUBLIC_LABEL_DIGEST",
+      "P03_STOP_PRIVACY",
+      "P03_TESTS_PRESENT",
+      "P04_NEGATIVE_TEST_PRESENT",
+      "ONE_HOST_LOCK",
+      "RUNNER_PINNED_FIXTURE_HEURISTIC"
+    ],
+    "source_executable_tests_run": false,
+    "R18_toolkit": "TOOL_NOT_RUN",
+    "note": "P01 28-part donor is different from physical 3-part 729 immutable original, no independent functional Windows PASS claimed"
+  },
+  "progress": {
+    "fixed_scale": "T07 NO-LOSS equal-weight operational 4 criteria",
+    "before": "2/4 50.0%",
+    "after": "2/4 50.0%",
+    "delta_pp": 0,
+    "bar": "█████░░░░░",
+    "outstanding": [
+      "T06 exact current owner-accepted 8/8 HEAD/tree/manifest",
+      "T09 sealed same-head owner handoff after T08"
+    ],
+    "new_product_taskids_accepted": 0,
+    "product_percent": "N/D"
+  },
+  "self_improvement": {
+    "active_error_ids_processed": 11,
+    "applied": [
+      "ERR-SYS-002 exact SHA pinning",
+      "premature STOP incident no false DONE"
+    ],
+    "delegated": [
+      "ERR-SYS-001 T02",
+      "ERR-SRC-003 T06/T08",
+      "ERR-SRC-004 T06",
+      "ERR-SRC-005 T08",
+      "T09 premature close T09/T02",
+      "T06 root STOP T06",
+      "T08 Host50 T08"
+    ],
+    "already_fixed": [
+      "ERR-SYS-006 physical original",
+      "ERR-SYS-007 T04 34/34"
+    ],
+    "next_action": "T06 sign 8/8 owner accepted exact e04c31 HEAD/tree/manifest; T08 same-SHA STOP/ACL/native consent/13 routes; T09 seal; T02 dedup register CAS"
+  },
+  "product_code_changed_by_t07": false,
+  "PR162_modified": false,
+  "shared_docs_modified": false,
+  "no_build_or_e07": true
+}
