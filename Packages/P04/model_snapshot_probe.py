@@ -410,6 +410,19 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             })
         if expected_total_bytes is not None and observed_total_bytes != expected_total_bytes:
             raise ValueError("MODEL_SHARD_TOTAL_SIZE_MISMATCH")
+        # Hashing many shards can take hours. Re-read bounded metadata before
+        # publishing a complete observation: index/config replacements during
+        # hashing must HOLD. This is not a cross-file atomic snapshot lock.
+        _, config_sha256_after = _json_file(base / "config.json", return_sha=True)
+        if config_sha256_after != config_sha256:
+            raise ValueError("MODEL_CONFIG_CHANGED_DURING_INSPECTION")
+        if weights is None:
+            if index.exists() or index.is_symlink():
+                raise ValueError("MODEL_SHARD_INDEX_APPEARED_DURING_INSPECTION")
+        else:
+            _, index_sha256_after = _json_file(index, return_sha=True)
+            if index_sha256_after != report["shard_index_sha256"]:
+                raise ValueError("MODEL_SHARD_INDEX_CHANGED_DURING_INSPECTION")
         report["candidate_sha256"] = config_sha256
         # Observation-only fingerprint, not a trusted cross-file atomic lock.
         observed = {"config": config_sha256,
