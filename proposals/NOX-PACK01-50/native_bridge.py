@@ -105,7 +105,8 @@ class NativeSession:
     private_approved: frozenset[str] = field(default_factory=frozenset)
 
     def validate(self):
-        if not all(isinstance(s, str) and 0 < len(s) <= 128
+        if not all(isinstance(s, str) and 0 < len(s) <= 128 and
+                   s == s.strip() and not any(ord(ch) < 32 or ord(ch) == 127 for ch in s)
                    for s in (self.tenant, self.principal, self.chat_id)):
             raise HostDenied("Invalid authenticated native session")
         # Native host only: permissions are immutable exact sets, never a
