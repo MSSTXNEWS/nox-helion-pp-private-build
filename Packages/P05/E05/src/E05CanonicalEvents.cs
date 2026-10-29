@@ -44,15 +44,21 @@ public static class E05CanonicalEventFactory
         "QUEUED", "RUNNING", "PAUSED", "COMPLETED", "ERROR",
         "STOPPED", "OFFLINE", "HOLD", "READY", "N_D"
     };
+    // The schema bounds each event identity field to 1..128 characters.
+    // No terminal event or native telemetry may bypass these limits.
+    private static bool IsEventIdentity(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= 128 &&
+        !value.Any(char.IsControl);
+
     public static bool IsCanonical(E05CanonicalEvent? e)
     {
         if (e is null || e.Schema != Schema || !Allowed.Contains(e.EventType) ||
             !States.Contains(e.State) || e.TimestampUtc.Offset != TimeSpan.Zero ||
-            string.IsNullOrWhiteSpace(e.RunId) || string.IsNullOrWhiteSpace(e.EventId) ||
-            string.IsNullOrWhiteSpace(e.TaskId) ||
+            !IsEventIdentity(e.RunId) || !IsEventIdentity(e.EventId) ||
+            !IsEventIdentity(e.TaskId) ||
             e.PackageId is not ("P01" or "P02" or "P03" or "P04" or "P05" or "E06" or "E07") ||
-            string.IsNullOrWhiteSpace(e.ActionId) || string.IsNullOrWhiteSpace(e.Source) ||
-            e.Source.Length > 120 || e.Message is null || e.Message.Length > 240 ||
+            !IsEventIdentity(e.ActionId) || string.IsNullOrWhiteSpace(e.Source) ||
+            e.Source.Length > 128 || e.Message is null || e.Message.Length > 4096 ||
             e.Message.Any(c => char.IsControl(c)) ||
             e.Source.Any(c => char.IsControl(c))) return false;
         // The original events.v3 schema scopes neural worker events to P04.
