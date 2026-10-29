@@ -71,9 +71,7 @@
         "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
         "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
       ],
-      "forbidden_paths": [
-        "stage/proposals/P01/C09/Installer/"
-      ],
+      "forbidden_paths": [],
       "peer": "G1-B",
       "unique_receipt_dir": "coordination/automation/r30/G1-A/",
       "one_writer_per_path": true,
@@ -85,7 +83,8 @@
         "targeted test command/result",
         "immutable receipt and self-improvement lesson",
         "no build, no merge"
-      ]
+      ],
+      "ownership_fix": "R30: Installer files assigned exclusively to G1-A; G1-B is still forbidden from Installer/. Prior self-denial removed; archived audit remains historical."
     },
     {
       "slot": "G1-B",
