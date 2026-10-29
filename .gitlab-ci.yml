@@ -1,0 +1,34 @@
+# NOX V16 / GitLab Free: private Windows 2022 beta runner or own Windows runner.
+# NEVER automatically run on push/import. Start only after T08/T10 source-ready proof; explicit manual/API pipeline with immutable SOURCE SHA and branch pins:
+# CI_PIPELINE_SOURCE=web (UI) or api (authenticated project Pipeline API); NOX_APPROVE_WINDOWS_BUILD=YES.
+# Free GitLab.com compute quota is limited; no auto retries.
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+      when: always
+    - when: never
+
+stages:
+  - windows-diagnostic
+
+variables:
+  GIT_DEPTH: "0"
+  GIT_STRATEGY: "fetch"
+  NOX_WINDOWS_RUNNER_TAG: "saas-windows-medium-amd64"
+
+nox_v16_windows_diagnostic:
+  stage: windows-diagnostic
+  tags:
+    - $NOX_WINDOWS_RUNNER_TAG
+  timeout: 1h
+  interruptible: false
+  retry: 0
+  script:
+    - '& .\coordination\e06\gitlab_windows_entrypoint.ps1'
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - work/gitlab-artifacts/
