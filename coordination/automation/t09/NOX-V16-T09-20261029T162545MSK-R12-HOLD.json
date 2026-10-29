@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_T09_FREEZE_HOLD_CHECKLIST_V2",
+  "taskId": "T09",
+  "runId": "NOX-V16-T09-20261029T162545MSK-R12-HOLD",
+  "scope": "ONLY NOX HELION EXPRESS INTEGRATOR Windows loader-installer V16; not main NOX",
+  "status": "HOLD_NO_IMMUTABLE_ACCEPTED_T06_SOURCE",
+  "sourceFrozen": false,
+  "time": {
+    "timezone": "Europe/Moscow",
+    "plannedStart": "2026-10-29T16:25:00+03:00",
+    "firstObserved": "2026-10-29T16:25:45+03:00",
+    "evidenceCheckpointUTC": "2026-10-29T13:28:27.990Z",
+    "observedEndUTC": null,
+    "durationSeconds": null
+  },
+  "sourceCandidateRefs": {
+    "PR162": {
+      "head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+      "tree": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+      "treeEvidence": "T06 receipt (not independently re-read now)",
+      "status": "DRAFT_UNFROZEN"
+    },
+    "Astra": {
+      "head": "f0064948119c55001601e1bae1cd3755826605ed",
+      "tree": "d905a55464fca9ff3ec2787c013993e82ba8774d",
+      "status": "CANDIDATE_UNFROZEN"
+    },
+    "R30": {
+      "head": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+      "tree": "6f38d9a3e4fc966c61e1e5fd361c262b3de945ed",
+      "status": "SNAPSHOTS_NOT_MERGED"
+    },
+    "PR207": {
+      "head": "61b24683cebaf06411f45600864ee949310c700f",
+      "status": "DONOR_DRAFT_NOT_ADMITTED"
+    }
+  },
+  "upstreamReceipts": {
+    "T06": {
+      "commit": "e5913abec08cb843036edecc015c9a77abdf9b0c",
+      "receiptBlob": "86f75512f884042f227ae904f8455ad7d0cdda87",
+      "runId": "NOX-V16-T06-20261029T162028MSK-R05",
+      "status": "HOLD_OWNER_1_CAS_NO_UNIFIED_SOURCE",
+      "acceptedHead": null,
+      "acceptedTree": null,
+      "acceptedManifestSha256": null
+    },
+    "T07": {
+      "commit": "e2a9543b07c8d0f1c20d355d3d9b6df1f9e38572",
+      "receiptBlob": "fc50d785cb14f348b6d3070556790d6133a36104",
+      "runId": "T07-20261029T160311MSK-PHYSICALHOLD-01",
+      "rawArchiveZipSHA256": "NOT_COMPUTED",
+      "memberSHA256Verified": 0,
+      "expectedMembers": 729,
+      "status": "HOLD"
+    },
+    "T08": {
+      "commit": "707f6fae00c256fe4366773118e0203eae9948a2",
+      "receiptBlob": "b87b7561f16fdca998f2a6ff7d481350a0247ce6",
+      "runId": "NOX-V16-T08-20261029T160732MSK-R11",
+      "status": "HOLD_NO_CONFIRMED_FIXABLE_CODE_P0P1",
+      "runtimeTest": "NOT_RUN"
+    }
+  },
+  "otherProvenance": {
+    "ownerJournalBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "R30ConflictIndexBlob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "historicalFrozenBranches": 25,
+    "physicalSourceMembersVerified": 0,
+    "inventory968Blob": "410645efe7809b6ec798f13b9b785d37bc1e19e5",
+    "manifestSha256": "NOT_VERIFIED"
+  },
+  "acceptance": [
+    {
+      "criterion": "Single T06 owner-accepted immutable source HEAD and tree",
+      "status": "HOLD"
+    },
+    {
+      "criterion": "Owner-accepted original manifest Git SHA and physical SourceLock 3 parts/729",
+      "status": "HOLD"
+    },
+    {
+      "criterion": "All TaskID immutable receipt SHAs and historical DONE preserved",
+      "status": "HOLD_NOT_SEALED"
+    },
+    {
+      "criterion": "T04/T05 source ownership conflict resolution at exact preimages",
+      "status": "HOLD"
+    },
+    {
+      "criterion": "T08 targeted source blockers absent or accepted at same HEAD",
+      "status": "HOLD"
+    },
+    {
+      "criterion": "T09 publish immutable frozen HEAD/tree/manifest/sourceLock for T10/T11/T12",
+      "status": "NOT_DONE"
+    }
+  ],
+  "acceptedCriteria": "0/6",
+  "progressBar": "░░░░░░░░░░",
+  "onePreciseBlocker": {
+    "id": "T09-BLOCK-OWNER1-UNIFIED-SOURCE-CAS",
+    "owner": "T06 principal source integrator / sole owner #1",
+    "evidence": "T06 R05 has source_pre_head=source_post_head=PR162 47a817f6... and one_tree_status HOLD; original T07 SourceLock remains physical HOLD.",
+    "requiredHandoff": "One explicitly accepted source commit SHA + Git tree SHA + immutable manifest SHA and SourceLock/TaskID receipt digests, with T07 physical original proof and T08 gate disposition on that same SHA. Only then can T09 pin freeze."
+  },
+  "gates": {
+    "SOURCE": "CANDIDATE",
+    "INTEGRATED": "HOLD",
+    "E06": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "BUILD": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "P01": "N/D",
+    "P02": "N/D",
+    "P03": "N/D",
+    "P04": "N/D",
+    "P05": "N/D"
+  },
+  "verification": {
+    "read_only": "T06 R05, T07 physical HOLD, T08 no reproduced P0/P1, latest PR162 head and R30 conflict index",
+    "sourceTest": "NOT_RUN_NO_SOURCE_MODIFICATION",
+    "snapshotPhysicalSHA256": "NOT_RUN",
+    "noFalseFrozen": true
+  },
+  "lessonApplied": "Treat owner-specific Git commit/receipt and historic inventory Git blob as metadata proof, not as single accepted frozen SOURCE/physical SHA256 proof. T09 must stop on T06 owner CAS HOLD.",
+  "mutable": {
+    "productCodeChanged": false,
+    "mainChanged": false,
+    "PR162Changed": false,
+    "sourceSnapshotsChanged": false,
+    "sharedDocsChanged": false,
+    "EXE_NSIS_CI": false
+  },
+  "handoffTo": [
+    "T06 owner #1: accept and pin exactly one tree with CAS and SourceLock proof",
+    "T07 owner G6-A: provide physical 3-part raw ZIP plus 729 member SHA256",
+    "T10/T11/T12: HOLD; do not use these candidate HEADs as frozen"
+  ]
+}
