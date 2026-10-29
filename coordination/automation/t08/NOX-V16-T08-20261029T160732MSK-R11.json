@@ -1,0 +1,85 @@
+{
+  "schema": "NOX_V16_T08_TARGETED_P0P1_PERSONAL_RECEIPT_V1",
+  "run_id": "NOX-V16-T08-20261029T160732MSK-R11",
+  "task_id": "T08",
+  "product": "NOX HELION EXPRESS INTEGRATOR V16 Windows loader ONLY",
+  "planned_msk": "2026-10-29 16:10",
+  "actual_started_msk": "2026-10-29 16:07:32",
+  "evidence_checked_msk": "2026-10-29 16:09",
+  "status": "HOLD_NO_CONFIRMED_FIXABLE_CODE_P0P1",
+  "code_patch": "NOT_APPLIED",
+  "reason": "T02 fixed 5-entry P0/P1 ledger contains evidence/ownership/source-freeze blockers, not a confirmed reproducible new product code defect authorized for T08. P1-01 is native source coverage HOLD pending accepted frozen HEAD, not an observed failure. User forbids fresh test/audit cycles and new features; neither run tests without changed source nor modify owner-reserved files.",
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "baseline_pr": 162,
+    "pre_source_commit": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pre_source_blob_sha1": {
+      "integrations/wow200/runtime/loader.mjs": "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+      "proposals/NOX-PACK01-50/native_bridge.py": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "tests/e06/test_wow_owner_runtime_preflight_r06.py": "0c48430afb6b2857e989cca0ce0df9b0e0a73b46"
+    },
+    "post_source_blobs": "UNCHANGED_FROM_PRE (no product code edit)",
+    "source_sha256": "NOT_COMPUTED; Git blob SHA1 is not file SHA256",
+    "source_lock_729": "UNVERIFIED",
+    "source_ready": "HOLD",
+    "pr207": "OPEN_UNMERGED; not an accepted source preimage"
+  },
+  "t02_fixed_ledger": {
+    "run_id": "NOX-V16-T02-P0-REGISTER-20261029T155718MSK-R11",
+    "master_doc_id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "entries": [
+      {
+        "id": "P0-01",
+        "owner": "T07/G6-A",
+        "status": "RELEASE_EVIDENCE_HOLD, NO_CODE_BUG_PROVEN"
+      },
+      {
+        "id": "P0-02",
+        "owner": "T04/T05/T06/T09",
+        "status": "SOURCE_FREEZE_OWNER_HOLD, NO_CODE_BUG_PROVEN"
+      },
+      {
+        "id": "P0-03",
+        "owner": "T05/T06/G6-B/owners",
+        "status": "13_HOST50_SOURCE_HOLD, NO_LIVE_BUG_PROVEN"
+      },
+      {
+        "id": "P1-01",
+        "owner": "T08/T10",
+        "status": "NATIVE_COVERAGE_HOLD, NO_REPRODUCED_DEFECT"
+      },
+      {
+        "id": "P1-02",
+        "owner": "T02",
+        "status": "COORDINATION_PROVENANCE_HOLD, NO_PRODUCT_BUG"
+      }
+    ]
+  },
+  "guardrails": {
+    "no_source_owner_conflict": true,
+    "owner_lock_sha1": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_sha1": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "owner_lane": "T08; R30 G1-G7 assigned_paths not mutated",
+    "tests": "NOT_RUN (no source code change; no repeated cycles)",
+    "ci": "NOT_RUN",
+    "exe": "NOT_BUILT",
+    "nsis": "NOT_BUILT",
+    "gitlab": "NOT_RUN",
+    "windows_e07": "NOT_RUN",
+    "main_pr162_updated": false,
+    "shared_docs_updated": false,
+    "original_snapshots_changed": false
+  },
+  "lesson": "Treat a known owner/source-lock or native-evidence HOLD as a gate, not as a confirmed P0/P1 product defect. Owner-reviewed immutable source HEAD and a reproducible failure are prerequisites before an authorized T08 patch; do not repeat T02 static checks or turn PR207 donor diffs into bugs.",
+  "progress": {
+    "T08": "N/D; no frozen proven defect denominator",
+    "product_P01_to_P05": "N/D",
+    "known_confirmed_fixable_code_defects_in_T02_ledger": 0,
+    "known_acceptance_holds": 5,
+    "source_code_complete": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "release": "HOLD"
+  },
+  "receipt_expected_path": "coordination/automation/t08/NOX-V16-T08-20261029T160732MSK-R11.json"
+}
