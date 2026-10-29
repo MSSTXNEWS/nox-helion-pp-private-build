@@ -1,0 +1,35 @@
+{
+  "schema": "ASTRA_A_R29_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-10X6-MB02",
+  "scope": "Only NOX Express Integrator source in 6 disjoint owner branches",
+  "createdAt": "2026-10-29",
+  "sourceGate": "6/6 static source contracts confirmed by GitHub readback",
+  "liveWindowsTests": "NOT_RUN",
+  "branchCommits": {
+    "A1": "3d936561d10b630962f61e608e1c6fa4fc1a523a",
+    "A2": "c0a0023ac8c8d7f94851a5167c4bde3e5ed22a62",
+    "A3": "f9fabf1e4edecaa396527bdba1dffa3aadf4f121",
+    "A4": "fa7be99a53f97accb38ba010ada6cb039ef43fde",
+    "A5": "304324a17f967b3944001f4eef5c89cb20603947",
+    "A6": "5e2716374e8bb1a96f27dc6e37d4ff82b78429a7"
+  },
+  "sourceBlobs": {
+    "A1": "354afb4dfb0de4f45b9931e68196d733c9da0042",
+    "A2": "e6423488e78f6b158ff0c594b9da7f23e69d6782",
+    "A3": "a6287d553a69686f677918f794105068ea56825b",
+    "A4": "45bcd62998c1427607cebd96e7907c4ba2eb4797",
+    "A5": "0d18be64c1fe739b97ceb93df6c965897b137718",
+    "A6": "b4654e599c60d8bb73ef970e8d80c8e94ee77c41"
+  },
+  "tasks": {
+    "A1": "Marker extra trailing data denied before activation",
+    "A2": "Unicode noncanonical manifest path denied on uninstall",
+    "A3": "Recursive duplicate JSON reply properties fail-closed",
+    "A4": "Recheck voice native session after ASR/TTS before storing",
+    "A5": "Treat network failure after STOP as cancellation, not failed install",
+    "A6": "Disable model pull UI for malformed/unpinned exact tag"
+  },
+  "safety": "No main/PR162/P04/P05/E06/GitLab/EXE/NSIS; historical owner DONE preserved",
+  "verifiedApproachesCredit": 0,
+  "queuedMegablocksRemaining": 8
+}
