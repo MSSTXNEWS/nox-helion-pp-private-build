@@ -13,6 +13,7 @@ import json
 import os
 import re
 import stat
+import unicodedata
 from pathlib import Path
 
 MAX_JSON_BYTES = 4 * 1024 * 1024
@@ -309,7 +310,7 @@ def _weight_header(path: Path) -> int:
 
 def _validate_windows_shard_names(names: list[str]) -> None:
     """Reject DOS device aliases, invalid Unicode and casefold aliases before I/O."""
-    reserved = {"CON", "PRN", "AUX", "NUL"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
+    reserved = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {f"COM{i}" for i in range(1, 10)} | {f"LPT{i}" for i in range(1, 10)}
     folded = set()
     for name in names:
         if not isinstance(name, str):
@@ -323,6 +324,8 @@ def _validate_windows_shard_names(names: list[str]) -> None:
         # Win32 treats trailing spaces before the first extension as aliases.
         # Superscript digits ¹²³ are also reserved by COM/LPT device names.
         stem = name.split(".", 1)[0].rstrip(" .").upper()
+        # Canonically equivalent names can alias on normalization-aware volumes.
+        alias_key = unicodedata.normalize("NFC", name).casefold()
         if (not name or
                 re.search(r'[<>:"/\\|?*\x00-\x1f]', name) or
                 name != Path(name).name or
@@ -330,9 +333,9 @@ def _validate_windows_shard_names(names: list[str]) -> None:
                 name in {".", ".."} or
                 stem in reserved or
                 re.fullmatch(r"(?:COM|LPT)[¹²³]", stem) is not None or
-                name.casefold() in folded):
+                alias_key in folded):
             raise ValueError("MODEL_SHARD_PATH_UNSAFE")
-        folded.add(name.casefold())
+        folded.add(alias_key)
 
 
 def _index_total_size(index_metadata: dict) -> int | None:
