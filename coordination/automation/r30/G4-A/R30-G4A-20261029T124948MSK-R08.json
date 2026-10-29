@@ -1,0 +1,126 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_RECEIPT_V1",
+  "run_id": "R30-G4A-20261029T124948MSK-R08",
+  "slot": "G4-A",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows LOADER only",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "task_id": "P04-G4A-R08-SAFETENSORS-JSON-UNPAIRED-SURROGATE-REJECTION",
+  "branch": "automation/r30/g4a/20261029T124948MSK-R08",
+  "base_branch": "automation/r30/g4a/20261029T115234MSK-R07",
+  "base_head_commit": "d64aba2460e9ba253344c76ea3f38f805044fb3f",
+  "source_commit": "0baa97662ba717acc6f0e9493ffdac05e7c97406",
+  "tests_commit": "df43c51f6bf30a87f7bdcf6592fd2c173e665d62",
+  "owner_lock": {
+    "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "forbidden_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "cross_owner_write_attempts": 0
+  },
+  "rules": {
+    "section33_56_read": true,
+    "section33_git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections54_55_56_drive_read": true,
+    "r29_loader_only_precedence": true,
+    "latest_master_lessons_read_through": "ASTRA-C-R30-20261029T1226MSK-07"
+  },
+  "history": {
+    "original_donor_git_blob": {
+      "astra/r29-a04-20261029": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966",
+      "astra-b/r29-b1-20261029": "331c376727194bb7c0db7cabdaf5b1ae5dd1186f",
+      "astra-b/r29-b2-20261029": "c9fdfd34323dd26b3b75604b379b2ce91ae0d966"
+    },
+    "conflict_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "frozen_snapshot_dirs_indexed": 25,
+    "frozen_snapshot_dirs_listed": 25,
+    "original_three_archive_parts_modified": false,
+    "original_729_physical_sha256_verified": false
+  },
+  "files": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre_git_blob": "d1a2c59427e60b586427135868dd1cedeeca0cbe",
+      "post_git_blob": "30887593e92672ea6c00e510e6ef82f7d2d686c3",
+      "pre_sha256": "1165a18799c8644b307fd030cd4d4f9ab6417e0ba54a4ef6bf6d80df07026755",
+      "post_sha256": "d918f97019778fb8ed4ab28810e980356e0f6b501d5dc07aff52d6e2458783f9",
+      "change": "Reject lone escaped UTF-16 surrogate codepoints in safetensors JSON tensor names, __metadata__ keys and values before hashing."
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre_git_blob": "c81bfcdfb8086428c1b9a19efdcf65c1887d1dd4",
+      "post_git_blob": "9ffdd208ca34bf4eb0aa00e4c908f2050fc1d969",
+      "pre_sha256": "3d45f1f71f4924849f7fe25535fd5452e4ab87be7cc7f4232da2cd04db9908de",
+      "post_sha256": "ef041d1b00d2db0caab13a87414cbd01034b4d31470855da91171372abced7b3",
+      "change": "Three G4-A R08 regression methods: unpaired surrogate tensor names, metadata names/values, valid non-ASCII plus valid surrogate pairs."
+    }
+  ],
+  "tests": {
+    "executed": {
+      "extracted_exact_parser_baseline_red": "4/4 prior R07 parser accepted invalid surrogate headers (RED)",
+      "extracted_parser_with_R08_gate_green": "5/5 PASS",
+      "independent_safetensors_0_7_0_native_header_parser": "6/6 expected accept/reject PASS",
+      "sha256_implementation_known_vector": "abc ba7816bf... PASS"
+    },
+    "not_run": [
+      "Python unittest full tests/P04/test_model_snapshot_probe.py against actual fetched GitHub module",
+      "Windows native file semantics",
+      "GPU/CUDA/LoRA/QLoRA",
+      "full 729-file archive physical hashes"
+    ],
+    "recommended_command": "python -m unittest discover -s tests/P04 -p test_model_snapshot_probe.py -k g4a_r08 -v",
+    "caveat": "Extracted local Python logic plus independent installed safetensors parser are not direct execution of the committed P04 Python unittest module."
+  },
+  "errors_and_improvements": {
+    "root_cause": "CPython json.loads accepts lone escaped UTF-16 surrogate codepoints but native safetensors 0.7.0 rejects their headers, so a prior local probe could return LOCAL_FILES_PRESENT_ONLY for unreadable weights.",
+    "discovered_preimage_counterexamples": [
+      "unpaired high surrogate tensor name",
+      "unpaired low surrogate tensor name",
+      "unpaired high surrogate metadata value",
+      "unpaired low surrogate metadata key"
+    ],
+    "lesson_applied": "R07 errata showed that escaped literal tests can falsely PASS. Use chr(0xD800)/chr(0xDFFF) for real decoded invalid codepoints, JSON ensure_ascii=True for literal on-disk escapes, and positive emoji surrogate-pair cases. Independently cross-check against native safetensors parser.",
+    "self_improvement_lesson": "Check parser differential (Python JSON vs native safetensors) before claiming import compatibility, and distinguish extracted unit tests, native parser conformance and full GitHub unittest execution. An anchor mismatch must abort instead of doing a blind replacement.",
+    "temporary_write_error": "First test patch attempt aborted before write because expected EOF marker omitted a trailing newline. Retried with exact unique anchored marker, committed and read back.",
+    "coordinator_request": "Astra-C: collect this immutable G4-A receipt into common Google Drive journals; no worker-side edits to shared journals."
+  },
+  "compare_before_receipt": {
+    "status": "ahead",
+    "ahead_by": 2,
+    "behind_by": 0,
+    "changed_paths": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ]
+  },
+  "safety": {
+    "main_changed": false,
+    "pr162_changed": false,
+    "shared_r30_changed": false,
+    "other_owner_paths_changed": false,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_windows_ci": true,
+    "no_gitlab_run": true,
+    "no_final_integration": true,
+    "no_merge": true
+  },
+  "gate": {
+    "source_edit_saved": true,
+    "github_blob_readback": true,
+    "full_p04_suite": false,
+    "source_code_complete": "HOLD",
+    "e06": "HOLD",
+    "e07": "NOT_RUN",
+    "release": "HOLD",
+    "product_task_accepted": false
+  }
+}
