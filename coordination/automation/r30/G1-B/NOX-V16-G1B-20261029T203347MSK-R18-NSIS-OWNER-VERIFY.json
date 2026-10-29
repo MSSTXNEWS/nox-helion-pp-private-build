@@ -1,0 +1,122 @@
+{
+  "schema": "NOX_V16_R18_G1B_INDEPENDENT_OWNER_SOURCE_PROOF_V1",
+  "run_id": "NOX-V16-G1B-20261029T203347MSK-R18-NSIS-OWNER-VERIFY",
+  "role": "G1-B independent source-contract verifier (not T08 QA signoff)",
+  "group": "G1",
+  "task_id": "ERR-SRC-004/P01-NSIS-existing",
+  "scope": "NOX HELION EXPRESS INTEGRATOR V16 source only",
+  "started_at_msk": "2026-10-29T20:33:47+03:00",
+  "proof_prepared_at_utc": "2026-10-29T17:43:10.280Z",
+  "prestart_read_proof": {
+    "canon_revision": "AHj4eMQZ0_0E6J6emNbVCOHwSZVhcGcW-PLJb2yf1Heh7sQ7__OQwiDyAlU5A5LIQgnv-eI_OGDsahNTskqwwq5bowIjSbwvAv-hCtVt8RM",
+    "canon_paragraphs": 684,
+    "section_33_rules_checked": 56,
+    "sections": "1-33,54-56,R29,R18",
+    "register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "error_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2,
+      "total": 11
+    },
+    "error_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "docs_revisions": {
+      "master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "e06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "lessons": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg",
+      "c34": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+    },
+    "owner_journal_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "one_tree_pr162_head": "e04c31b69211f46a26927efff6fd4700474ef4eb",
+    "one_tree_pr162_tree": "c106dc08c61a3150aaa2b8808ce8bf2f678ed95a",
+    "owner_patch_commit": "b63b193f739bef21b406667cefff74635e1dc301",
+    "owner_receipt_blob": "d718351012d95ae2d0f15751be90b9d3def89949"
+  },
+  "tests": {
+    "engine": "Fresh fetched real Git blobs; V8 executed 14 positive source contract assertions, 6 independently constructed negative scenarios; portable Node .mjs script saved for exact re-run",
+    "output": "7/7 scenarios behaved as expected; 14/14 positive assertions on owner candidate; R10 donor RED; mutations HKCU, shortcut, trusted uninstaller, version validation and uninstall entrypoint rejected",
+    "script_path": "coordination/automation/r30/G1-B/G1B_R18_InstallerOwnerCandidateVerification.test.mjs",
+    "node_execution": "NOT_RUN",
+    "windows_ps1": "NOT_RUN",
+    "nsis_compile": "NOT_RUN",
+    "ci": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "exact_paths": [
+    {
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "target_pre": "87d901c3846359a91be3e8288f24302cc7060257",
+      "owner_post": "bc1ab71e6e57ac865fd1f98665ca6fb9919d6138",
+      "PR162_live_blob": "87d901c3846359a91be3e8288f24302cc7060257"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "target_pre": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "owner_post": "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "PR162_live_blob": "6c178c04957d7397c0c081e3b123940637abc6e9"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "target_pre": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "owner_post": "9975f9c1802040d0bb5f30b9563060a1ebd8c44b",
+      "PR162_live_blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    }
+  ],
+  "supporting_contract": {
+    "preflight_blob": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+    "r10_donor_blob": "c54ca1b6ca6b7566b46a89740da7aa1e7ade6b80"
+  },
+  "progression": {
+    "stage": "SOURCE_VERIFIED_STATIC_OWNER_ISOLATED_NOT_INTEGRATED",
+    "role_accepted_before": 1,
+    "role_accepted_after": 1,
+    "role_denominator": 4,
+    "percent_before": 25,
+    "percent_after": 25,
+    "delta_pp": 0,
+    "progress_bar": "███░░░░░░░",
+    "new_product_accepted_taskids": 0,
+    "product": "N/D",
+    "t03_historical": "DONE 5/5 unchanged"
+  },
+  "gates": {
+    "A": "PASS",
+    "B": "PASS_TARGETED_INDEPENDENT_NEGATIVE_STATIC_PROOF",
+    "C": "PENDING_GIT_COMMIT_READBACK",
+    "D": "PARTIAL_NOT_FULL_HISTORICAL_COVERAGE"
+  },
+  "lessons": {
+    "discovered_active": 11,
+    "relevant_for_role": 3,
+    "deduplicated_clusters": 3,
+    "applied": 1,
+    "already_fixed": 2,
+    "delegated": 8,
+    "remaining_owner_dependencies": 1,
+    "learning": "Do not repeat R12 RED after owner G1-A already fixed it. Pin and compare exact POST; require regression capable of rejecting equivalent source mutants before requesting T06 CAS."
+  },
+  "open_blocker": {
+    "owner": "T06/Manual #1 sole PR162 writer",
+    "cause": "Owner G1-A patch exists and passes independent static proof but three PR162 blobs still PRE; T04 KEEP canonical requires explicit T06 adoption, not blind overwrite",
+    "next_action": "T06 re-read exact HEAD/tree and three PRE blobs, review G1-A R16 receipt and source, CAS merge three owner POST blobs, one focused P01 install/update/rollback/uninstall integrity and security check, Git readback; T08/manual #2 independent same-SHA QA; T02 journal CAS",
+    "user_data_archive": "NO_CHANGE",
+    "pr162_product_writes": 0
+  },
+  "journal_routing": {
+    "T02_only_shared_writer": true,
+    "request": "Append ERR-SRC-004 new independent G1-B owner patch proof; do not close until same-HEAD T08; track HEAD drift ERR-SYS-002",
+    "local_immutable_receipt_path": "coordination/automation/r30/G1-B/NOX-V16-G1B-20261029T203347MSK-R18-NSIS-OWNER-VERIFY.json"
+  }
+}
