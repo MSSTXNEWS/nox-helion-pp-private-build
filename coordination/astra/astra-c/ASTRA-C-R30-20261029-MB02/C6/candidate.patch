@@ -1,0 +1,12 @@
+--- a/coordination/e06/verify_integration.py
++++ b/coordination/e06/verify_integration.py
+@@ -64,7 +64,8 @@
+             occurrences[path].append(pr["number"])
+     collisions = {path: sorted(ids) for path, ids in occurrences.items() if len(ids) > 1}
+     declared = {row["path"]: sorted(row["pr_numbers"]) for row in data["conflicts"]}
+-    outcomes[GATES[4]] = "PASS" if declared == collisions else "HOLD"
++    windows_names = {p.casefold() for p in all_paths}
++    outcomes[GATES[4]] = "PASS" if declared == collisions and len(windows_names) == len(all_paths) else "HOLD"
+ 
+     receipts = receipts or {}
+     def valid_receipt(path):
