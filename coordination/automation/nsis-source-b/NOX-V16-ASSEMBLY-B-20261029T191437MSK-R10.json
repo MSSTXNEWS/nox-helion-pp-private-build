@@ -1,0 +1,211 @@
+{
+  "schema": "NOX_V16_NSIS_B_R10_EXACT_CROSSFILE_CONTRACT_PATCH_RECEIPT_V1",
+  "runId": "NOX-V16-ASSEMBLY-B-20261029T191437MSK-R10",
+  "role": "B_NON_OWNER_HANDOFF_T06",
+  "sourceOnly": true,
+  "status": "PATCH_CORRECTED_UNAPPLIED_OWNER_APPROVAL_REQUIRED",
+  "times": {
+    "plannedMsk": "2026-10-29T19:15:00+03:00",
+    "observedStartMsk": "2026-10-29T19:14:37+03:00",
+    "receiptPreparedUtc": "2026-10-29T16:24:16.493Z"
+  },
+  "prestart": {
+    "canonRevision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canonParagraphs": 679,
+    "canonChars": 204400,
+    "rules33": 56,
+    "sections": "1–33,54–56,R29",
+    "registerBlob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "registerCount": 11,
+    "registerStatusCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "errorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "PR162Head": "5abbf5cfeae619ce30c214ba596bda3d153f2dd9",
+    "PR162Tree": "32e3efcd5858049bc96eba8a0c783fc4124a78bc",
+    "ownerLockBlob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "G1AOwns": 3,
+    "G1BInstallerForbidden": true
+  },
+  "source": {
+    "pre": [
+      "87d901c3846359a91be3e8288f24302cc7060257",
+      "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    ],
+    "priorOwnerCandidate": [
+      "969f8c11eaca20c69e9610422731862c7bd3ed62",
+      "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    ],
+    "correctedPost": [
+      "c54ca1b6ca6b7566b46a89740da7aa1e7ade6b80",
+      "e448f8266ba15e809c13bff669924fa825fd4bc1",
+      "9975f9c1802040d0bb5f30b9563060a1ebd8c44b"
+    ],
+    "changedPaths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "sourceChangesInT06": 0,
+    "patchPath": "coordination/automation/nsis-source-b/NOX-V16-ASSEMBLY-B-20261029T191437MSK-R10.patch",
+    "priorR09PatchBlob": "2b7929c525974a4e11cc5015e10464896a2b8f92"
+  },
+  "defect": {
+    "type": "P1_UNAPPLIED_OWNER_CANDIDATE_CLI_MISMATCH",
+    "preflightPath": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+    "preflightBlob": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+    "rootCause": "R09 donor NSIS rollback uses -PathOnly, whereas installed Preflight-InstallPath.ps1 supports only -InstallRoot. Prior 17/17 owner regression did not check cross-file PS parameters.",
+    "impact": "If R09 merged unchanged, PowerShell rejects unknown switch and rollback stops before tree moves; this is not a demonstrated LIVE T06 defect.",
+    "fix": "In proposed NSIS call remove unsupported -PathOnly, correct comment; conservative path/ownership preflight remains before rollback rename."
+  },
+  "tests": {
+    "kind": "V8 targeted cross-file source assertions, no PowerShell/NSIS/native",
+    "checks": {
+      "mismatchReproduced": true,
+      "unsupportedFlagRemoved": true,
+      "supportedParamUsed": true,
+      "preflightBeforeMutation": true,
+      "verifyMatched": true,
+      "noRecursiveRemoval": true,
+      "noLossUninstall": true
+    },
+    "pass": "7/7",
+    "patchHunks": [
+      5,
+      3,
+      1
+    ],
+    "patchPaths": "3/3 exact",
+    "native": "NOT_RUN",
+    "NSIS": "NOT_RUN",
+    "CI": "NOT_RUN"
+  },
+  "security": {
+    "noRecursiveRemoval": true,
+    "appDataUntouched": true,
+    "rollbackBackupPreserved": true,
+    "noSourceBranchWrite": true,
+    "original729Unchanged": true,
+    "ACL_STOP_CONSENT_notModified": true
+  },
+  "limitation": "Without approved -PathOnly support in separately owned Preflight script, safe fallback still depends on WebView2 runtime; absent runtime makes rollback fail closed. Owner T06 must separately approve broader change if this is unacceptable.",
+  "approvals": {
+    "G1ASigned": false,
+    "T06Integrated": false,
+    "T04KeeperSelectionOverridePending": true,
+    "T02SharedDocsWritten": false
+  },
+  "selfImprovement": {
+    "lesson": "Cross-check caller switch names against exact current callee signature before using a donor's static 17/17 PASS; preserve unmodified target.",
+    "activeCoverage": "11/11",
+    "history419": "archived fingerprints, NOT all verified live errors",
+    "cases": [
+      {
+        "id": "ERR-SYS-001",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "disposition": "DELEGATE"
+      },
+      {
+        "id": "ERR-SYS-002",
+        "status": "OPEN",
+        "owner": "T02/C",
+        "disposition": "APPLY_SOURCE_PROOF"
+      },
+      {
+        "id": "ERR-SRC-003",
+        "status": "OPEN",
+        "owner": "T06/Host50",
+        "disposition": "NOT_APPLICABLE_OTHER_OWNER"
+      },
+      {
+        "id": "ERR-SRC-004",
+        "status": "OPEN",
+        "owner": "T06+P01-P05 functional owners",
+        "disposition": "APPLY_SOURCE_PROOF"
+      },
+      {
+        "id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "disposition": "NOT_APPLICABLE_OTHER_OWNER"
+      },
+      {
+        "id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T07/T09",
+        "disposition": "ALREADY_FIXED"
+      },
+      {
+        "id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "owner": "T04",
+        "disposition": "ALREADY_FIXED"
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T09",
+        "disposition": "NOT_APPLICABLE_OTHER_OWNER"
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "owner": "ALL_EXECUTORS",
+        "disposition": "APPLY_SOURCE_PROOF"
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T06",
+        "disposition": "DELEGATE"
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "owner": "T08",
+        "disposition": "NOT_APPLICABLE_OTHER_OWNER"
+      }
+    ]
+  },
+  "progress": {
+    "before": "1/4 25%",
+    "after": "1/4 25%",
+    "deltaPP": 0,
+    "tenBlock": "███░░░░░░░",
+    "note": "Verified updated handoff does not count as new accepted installer file."
+  },
+  "journalForT02": {
+    "ids": [
+      "ERR-SRC-004",
+      "ERR-SYS-002",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+    ],
+    "newEvidence": "R09 donor -PathOnly missing in exact Preflight eb45add5a929eee99bc09ef87f2db3735556b78b",
+    "request": "Append only after T02 CAS+readback",
+    "notWritten": true
+  },
+  "nextExactAction": "G1-A approves R10 corrected three-file patch or returns compatible call; T06 sole writer rechecks latest target PRE and T04 choice, git apply --check --index + 3 POST readback; independent T10 source acceptance later.",
+  "gates": {
+    "A": "PASS",
+    "B": "NEW_CORRECTED_PATCH_ARTIFACT_TARGETED_TEST",
+    "C": "PENDING_READBACK",
+    "D": "11_ACTIVE_TRIAGED_WITH_HISTORY_PARTIAL"
+  }
+}
