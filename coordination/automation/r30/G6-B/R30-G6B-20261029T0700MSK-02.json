@@ -1,0 +1,124 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_E06_NATIVE_SOURCE_RECEIPT_V2",
+  "run_id": "R30-G6B-20261029T0700MSK-02",
+  "slot": "G6-B",
+  "scope": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY, not primary NOX",
+  "source_only": true,
+  "status": "SOURCE_CANDIDATE_IN_PRIVATE_BRANCH",
+  "integration": "HOLD",
+  "code_complete": "HOLD",
+  "release": "HOLD",
+  "accepted_product_task_ids": [],
+  "product_progress_percent": null,
+  "schedule_context": {
+    "local_timezone": "Europe/Moscow",
+    "nominal_start_local": "2026-10-29T07:00:30+03:00",
+    "finish_utc": "2026-10-29T04:07:48.229Z",
+    "duration_seconds": null
+  },
+  "git": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "automation/r30/g6b/R30-G6B-20261029T0700MSK-02",
+    "base_branch": "automation/r30/g6b/R30-G6B-20261029T0605MSK-01",
+    "base_commit_sha": "fcc8f0470dff29796585b2a51fe3e33381a6a320",
+    "source_commit_sha": "ead7e6612cd5edd93ba4c8d963638ee885251dba",
+    "lock_path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "changed_owned_source": [
+      {
+        "path": "proposals/NOX-PACK01-50/native_bridge.py",
+        "pre_git_blob_sha1": "693367daebc6d28b1782f7e6b3fa7d186456a782",
+        "post_git_blob_sha1": "60aba9b2434aa02e249073537ca2070d9369ad4b",
+        "additions": 39,
+        "deletions": 25
+      }
+    ],
+    "retained_unchanged_owned_source": [
+      {
+        "path": "coordination/e06/adapters/pc_control_owner_port.py",
+        "git_blob_sha1": "2869bf3bf80642cb79f486c669a953595fc9caf2"
+      }
+    ],
+    "new_test_file_writes": 0,
+    "foreign_path_writes": 0,
+    "forbidden_path_writes": 0,
+    "historical_branch_inheritance_note": "Base G6-B 06:05 branch already contains a test under coordination/e06/adapters/tests/ not enumerated by canonical assigned_paths. Its history is preserved; this run neither modified nor re-committed that path. Astra-C approval/owner-map correction required before any cross-owner acceptance."
+  },
+  "sources_read": {
+    "rules56": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md, blob 46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "sections": "Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §54 §55 §56, latest R29 loader-only priority",
+    "master": "Google Doc 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50, latest Astra-C R30",
+    "e06_report": "Google Doc 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4, latest Astra-C 06:30",
+    "e06_lessons": "Google Doc 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ, latest Astra-C 06:30",
+    "historical_c34": "Google Doc 1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json, blob c9514d0aa93e9828d913ac431ac7ca54c86fcc98, 25 frozen branch records",
+    "snapshots": "25/25 snapshot root Git trees inspected; E06 B5 and B6 exact frozen native_bridge blobs checked. This is structural inventory and focused E06 review, NOT exhaustive leaf-content review of all 25 full trees.",
+    "frozen_b5_native_bridge_blob": "164c7c0027c98c5bf201977d4cf23591dc1562a0",
+    "frozen_b6_native_bridge_blob": "ed2bc0f16dce327fa4e51400da684a29e4758089",
+    "prior_live_b5_blob": "3b89627fa4d17afd3ea5edcc8060a2c8d9bc0902",
+    "previous_g6b_receipt": "coordination/automation/r30/G6-B/R30-G6B-20261029T0605MSK-01.json"
+  },
+  "bugfix": {
+    "area": "Inner P02/native owner callback identity boundary",
+    "problem": "Top-level NoxPackHost pinned Windows SID/session_lease, but nested P02 chat/attachment/voice/SIP callback scope guards compared only tenant/principal/chat_id/permissions. Callbacks could rotate SID or session lease without changing those five fields, allowing stream event or backend call before the outer post-return check.",
+    "implementation": "One private _native_owner_scope helper captures full 7-element scope. Rechecked after P02 history callback, on each stream chunk before event publication and after event sink, between message writes, after file picker and store; voice identity before microphone capture, after capture and after owner call; SIP identity before quote, after quote and after owner call. The existing host50 catalog/owner/risk, dangerous fresh native consent, session revocation verifier, E11 preview/STOP remain byte-identical.",
+    "limitations": "A mutated SID/lease is now detected at inner side-effect boundaries. Native logout/revocation without tuple mutation requires live host callback and owner pre-effect checks; outer post-return denial cannot roll back physical calls or side effects. Native Windows validation still pending."
+  },
+  "focused_test": {
+    "name": "G6-B nested callback SID/lease source-gate and Host50 policy preservation",
+    "type": "LIVE_GITHUB_SOURCE_STATIC_READBACK_NOT_PYTHON_RUNTIME",
+    "addressed_cases": [
+      "P02 streaming callback SID/lease rotation before event emission",
+      "voice native_identity changing SID/lease before microphone capture",
+      "SIP native_quote changing SID/lease before owner place",
+      "P02 attachment owner result scope recheck"
+    ],
+    "pre_write_static_checks": {
+      "status": "PASS",
+      "count": 10
+    },
+    "post_write_static_checks": {
+      "status": "PASS",
+      "count": 8,
+      "readback_blob": "60aba9b2434aa02e249073537ca2070d9369ad4b"
+    },
+    "catalog_routes_pinned": 50,
+    "dangerous_routes_risk_policy_unchanged": true,
+    "host_native_consent_and_revocation_code_unchanged": true,
+    "python_unittest": "NOT_RUN; no private checkout in local Python environment and test file is not an approved new write path.",
+    "windows_sid_native_auth": "NOT_RUN",
+    "actual_dangerous_operations": 0,
+    "actual_stop_execution": "NOT_RUN",
+    "claims_of_runtime_acceptance": 0
+  },
+  "errors_and_lessons": {
+    "applied_prior_lesson": "Used exact pinned G6-B preimage rather than mutable B5 live donor and required readback of every seven-field owner scope guard; did not trust replacement count alone.",
+    "new_error": "Inner P02 callbacks had a narrower identity tuple than outer NoxPackHost; stale SID/lease could survive nested pre-effect checks.",
+    "new_lesson_id": "G6B_R30_PIN_OUTER_AUTHORITY_AT_INNER_EFFECT_BOUNDARIES",
+    "new_lesson": "Authorization checked only at dispatcher entry and exit is insufficient for streaming, microphone or SIP callbacks. Every nested owner boundary must recheck the exact native Windows SID and lease immediately BEFORE sensitive side effects; put rechecks before emitting streamed deltas, not merely after.",
+    "prevention": "Reuse one seven-field immutable-scope function for all nested P02 boundaries, validate before/after callbacks, add future actual Python regression where test path owner grant and a checkout exist, and keep physical native/effect-side STOP gates HOLD without Windows evidence."
+  },
+  "proposals_to_owners": [
+    {
+      "owner": "Astra-C/ownership-manifest owner",
+      "request": "Explicitly add unique G6-B test destination to assigned_paths or authorize a slot-named test file; prior 06:05 test inherited but OUTSIDE exact current assigned paths. Preserve historical DONE; do not silently adopt the test."
+    },
+    {
+      "owner": "G6-A/native Windows host and E06 integrator",
+      "request": "Bind native_session_live to exact Windows token SID + scopes + unrevoked per-session lease and check before irreversible owner operations; ensure native SIP/audio mic and original E11 STOP honor revocation. Do not change other owners' files."
+    }
+  ],
+  "coordination": {
+    "single_shared_google_docs_writer": "Astra-C only",
+    "google_docs_writes_by_this_worker": 0,
+    "google_docs_readback_status": "NOT_APPLICABLE_SINGLE_WRITER_ASTRA_C",
+    "please_collect_this_git_receipt_to_master_e06_lessons": true,
+    "PR162_modified": false,
+    "main_modified": false,
+    "shared_R30_modified": false,
+    "original_25_snapshots_modified": false,
+    "EXE_NSIS_GitLab_CI_final_integration": "NOT_RUN",
+    "old_DONE_preserved": true
+  },
+  "receipt_readback": "PENDING_SEPARATE_FETCH"
+}
