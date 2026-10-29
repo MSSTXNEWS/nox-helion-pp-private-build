@@ -198,5 +198,35 @@ class G6BNativeLeaseR30Tests(unittest.TestCase):
         self.assertTrue(all(x["state"] == "HOLD" for x in states.values()))
 
 
+    def test_revocation_verifier_requires_exact_true_not_truthy(self):
+        host = self.make_host(alive=lambda scope: 1)
+        with self.assertRaises(native.HostDenied):
+            host.execute("helion.chat", {}, session("helion.chat"))
+
+    def test_sid_and_lease_format_are_not_page_supplied(self):
+        host = self.make_host(alive=lambda scope: True)
+        for bad_scope in (
+            session("helion.chat", sid="S-1-5-NotAnIdentifier"),
+            session("helion.chat", lease="attacker"),
+            session("helion.chat", sid=" S-1-5-18 "),
+        ):
+            with self.subTest(sid=bad_scope.windows_sid, lease=bad_scope.session_lease):
+                with self.assertRaises(native.HostDenied):
+                    host.execute("helion.chat", {}, bad_scope)
+
+    def test_original_pc_adapter_stop_preview_only_and_sid_scope(self):
+        pc_source = (
+            ROOT / "coordination" / "e06" / "adapters" /
+            "pc_control_owner_port.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("from helion.e11.service import E11Service, scope_id", pc_source)
+        self.assertIn("session.windows_sid, session.session_lease", pc_source)
+        self.assertIn('if op == "stop":', pc_source)
+        self.assertIn('elif op == "preview":', pc_source)
+        self.assertIn("Native PC identity changed before original owner dispatch", pc_source)
+        self.assertNotIn("pc_enable_readonly(", pc_source)
+        self.assertNotIn("pc_execute_preview(", pc_source)
+
+
 if __name__ == "__main__":
     unittest.main()
