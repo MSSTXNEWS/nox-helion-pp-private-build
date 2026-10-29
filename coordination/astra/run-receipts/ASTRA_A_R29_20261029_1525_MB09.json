@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB09",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P03 hardware readiness fails closed for Windows SecurityException during RAM/disk probes",
+  "sourceCommits": [
+    "d25993c0f61f1776f7486ca7420611719d6c4365"
+  ],
+  "sourceTest": "Both hardware sensor exception paths checked in saved source; native Windows probe NOT_RUN",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub owner-file CAS/Git blob readback; exact Node suite for final P01 FX only.",
+  "lesson": "Only execute safe owned source changes; native acceptance requires later independent pinned Windows run."
+}
