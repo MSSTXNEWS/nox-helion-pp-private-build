@@ -28,7 +28,7 @@ public sealed record ModelCatalogEntry(
     string? ExpectedManifestDigestSha256 = null)
 {
     public bool CanOfferOneClickPull => EvidenceStatus == CatalogEvidenceStatus.ArtifactVerified
-        && !string.IsNullOrWhiteSpace(ExactTag)
+        && IsCanonicalOwnerTag(ExactTag, Id)
         && !string.IsNullOrWhiteSpace(Version)
         && !string.IsNullOrWhiteSpace(License)
         && ArtifactBytes is > 0
@@ -36,13 +36,43 @@ public sealed record ModelCatalogEntry(
         && RequiredDiskBytes >= ArtifactBytes
         && IsSha256(ExpectedSha256)
         && IsSha256(ExpectedManifestDigestSha256)
-        && LicenseEvidenceUri is { Scheme: "https" }
-        && CompatibilityEvidenceUri is { Scheme: "https" }
-        && !string.IsNullOrWhiteSpace(ImmutableRevision)
+        && IsReviewedHttpsEvidence(LicenseEvidenceUri)
+        && IsReviewedHttpsEvidence(CompatibilityEvidenceUri)
+        && IsNativeReviewedRevision(ImmutableRevision)
         && (RecommendedRamBytes is > 0 || RecommendedVramBytes is > 0)
         && (RecommendedRamBytes is null or > 0)
         && (RecommendedVramBytes is null or > 0)
         && CompatibilityReviewed;
+
+    // This public record may be constructed without TryPromote. Do not allow
+    // an ArtifactVerified flag alone to bypass the original owner's exact
+    // tag, pinned digest, or evidence-URL requirements.
+    private static bool IsCanonicalOwnerTag(string? tag, string family) =>
+        tag is { Length: <= 160 }
+        && tag.StartsWith(family + ":", StringComparison.OrdinalIgnoreCase)
+        && !tag.EndsWith(":latest", StringComparison.OrdinalIgnoreCase)
+        && !tag.Contains("..", StringComparison.Ordinal)
+        && System.Text.RegularExpressions.Regex.IsMatch(
+            tag, @"^[A-Za-z0-9][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*$");
+
+    // Match the existing owner registry: 64-hex digest or sha256:64-hex.
+    // 40-hex source commit revisions remain a separate Python-native format.
+    private static bool IsNativeReviewedRevision(string? revision) =>
+        IsSha256(revision) || (revision is not null
+            && revision.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+            && IsSha256(revision[7..]));
+
+    // Structural only: the trusted native owner must still verify DNS,
+    // redirects, bytes, licenses, rights and SourceLock before any pull.
+    private static bool IsReviewedHttpsEvidence(Uri? uri) =>
+        uri is not null && uri.IsAbsoluteUri
+        && uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort
+        && !uri.IsLoopback && !string.IsNullOrWhiteSpace(uri.Host)
+        && string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Fragment)
+        && !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        && !uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
+        && !uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
+        && !uri.Host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsSha256(string? value) => value is { Length: 64 }
         && value.All(Uri.IsHexDigit) && value.Any(ch => ch != '0');
