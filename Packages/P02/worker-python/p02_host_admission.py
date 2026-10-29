@@ -86,7 +86,9 @@ class P02EventRelay:
             if self._started:
                 raise P02Error('DUPLICATE_CHAT_START')
             if (not isinstance(event.get('model'), str) or
-                    not 0 < len(event['model']) <= 256):
+                    not 0 < len(event['model']) <= 256 or
+                    any(unicodedata.category(ch) in ('Cc', 'Cf', 'Cs')
+                        for ch in event['model'])):
                 raise P02Error('CHAT_START_MODEL_REQUIRED')
         elif not self._started:
             raise P02Error('CHAT_START_REQUIRED')
