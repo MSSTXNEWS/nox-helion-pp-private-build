@@ -8,6 +8,7 @@ Page JSON is never accepted as user/session identity or authorization.
 from __future__ import annotations
 
 import json
+import unicodedata
 import math
 import re
 import threading
@@ -44,9 +45,14 @@ def _finite_json_number(token: str) -> float:
 
 def _reject_duplicate_fields(pairs):
     obj = {}
+    identities = set()
     for key, value in pairs:
-        if key in obj:
-            raise ValueError("Duplicated JSON key forbidden")
+        # .NET/Windows consumers may compare Unicode/case-equivalent keys
+        # differently. Reject ambiguity before creating native authority data.
+        identity = unicodedata.normalize("NFC", key).casefold()
+        if identity in identities:
+            raise ValueError("Duplicated canonical JSON key forbidden")
+        identities.add(identity)
         obj[key] = value
     return obj
 
