@@ -48,6 +48,12 @@ def inspect(profile: str, gpu_index: int) -> dict:
     if platform.system() != "Windows":
         report["errors"].append("WINDOWS_GPU_HOST_REQUIRED")
         return report
+    # A Windows ARM/x86 or 32-bit Python worker must not advertise a CUDA
+    # preflight for the target AMD64 PyTorch/bitsandbytes wheel environment.
+    # This is an ABI admission guard, NOT proof of wheel or CUDA compatibility.
+    if sys.maxsize <= (1 << 32) or platform.machine().lower() not in ("amd64", "x86_64"):
+        report["errors"].append("WINDOWS_AMD64_64BIT_PYTHON_REQUIRED")
+        return report
     exe = train_qlora.nvidia_smi()
     if not exe:
         report["errors"].append("NVIDIA_TELEMETRY_UNAVAILABLE")
