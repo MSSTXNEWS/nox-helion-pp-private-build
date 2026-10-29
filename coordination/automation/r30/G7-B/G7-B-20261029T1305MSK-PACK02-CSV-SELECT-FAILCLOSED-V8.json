@@ -1,0 +1,138 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V8",
+  "run_id": "G7-B-20261029T1305MSK-PACK02-CSV-SELECT-FAILCLOSED-V8",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY, not main NOX",
+  "mode": "SOURCE_ONLY",
+  "status": "HOLD",
+  "branch": "automation/r30/g7b/G7-B-20261029T1305MSK-PACK02-CSV-SELECT-FAILCLOSED-V8",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T1210MSK-PACK02-URL-INSPECT-STRICT-V7",
+  "owner_lock": {
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "personal_receipt_dir": "coordination/automation/r30/G7-B/",
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "one_writer_per_path": true
+  },
+  "pre_read": {
+    "rules_path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "rules_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "consolidated_rules": "56/56 read; historical word-for-word original not attested",
+    "v16_sections": [
+      "54",
+      "55",
+      "56",
+      "R29 loader-only clarification"
+    ],
+    "v16_GoogleDocId": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "master_errors_doc": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+    "historic_C34_errors_doc": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+    "E06_report_doc": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+    "E06_lessons_doc": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+    "R30_index_path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "R30_index_git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshots_root_count": 25,
+    "snapshots_recursive_git_trees_checked": 25,
+    "snapshots_recursive_truncated": 0,
+    "snapshots_raw_file_bytes_SHA256": "NOT_VERIFIED",
+    "original_729_physical_SHA256": "NOT_VERIFIED",
+    "historical_r27_a10_donor_blob": "3df02661abf3f75fdd3d883e4c30b75d6887eaf6"
+  },
+  "task_id": "G7B-PACK02-CSV-SELECT-SCHEMA-BOUNDARY-20261029-08",
+  "accepted_product_task_ids": [],
+  "product_completion_percent": "N/D",
+  "previous_lesson_applied": "R07: distinguish byte-exact Git source from full Node runtime and catch lossy transformations before they conceal the user's real data; test original route and preserve 50 IDs.",
+  "bug": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "route": "data.csv.select",
+    "observed_before": "Requesting misspelled / nonexistent CSV field returned a fabricated empty string column; inherited keys such as constructor and __proto__ could be read without hasOwn, resulting in incorrect in-memory selected data.",
+    "root_cause": "r[x]??'' had no explicit schema membership check; own data and inherited Object.prototype fields were conflated.",
+    "fix": "Validate every requested column against actual own CSV row keys after parsing; return CSV_UNKNOWN_FIELD on absent/inherited headers, without changing valid selection results.",
+    "source_git_blob_before": "2b7d4315f7e4da6e5e7b0ecc2bccb8c35b07443d",
+    "source_git_blob_after": "1a850441cd74fb49e20220afbd53650debdfa314",
+    "source_commit": "f45830d542359e1bb9bdd430a1ca60f4e01dd9b3",
+    "route_ids_before": 50,
+    "route_ids_after": 50,
+    "new_routes": 0
+  },
+  "preserved_golden_tests": {
+    "path": "proposals/NOX-PACK02-50/golden.test.mjs",
+    "pre_sha": "250f4f01ffdaed2e6690a10df2d670b15abc4dab",
+    "post_sha": "83e77b4de9061cbb7240cdc286a5022e18a15526",
+    "commit_sha": "87eefa65fa5116a134d7af23aa895ff2f071776c",
+    "why": "Fix two stale golden expectations from prior JSON hardening: null-prototype flatten result and JSON compare presence flags; do not revert security behavior."
+  },
+  "targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-csv-select-known-fields.test.mjs",
+    "blob": "a3dd55399c10249c320aad34b6baf9dae15c0e0c",
+    "commit_sha": "6546c16980afe31abeeaeb5b2e5d2d4b583a4dbb",
+    "command": "node --test proposals/NOX-PACK02-50/g7b-r30-csv-select-known-fields.test.mjs",
+    "actual_full_Node_run": "NOT_RUN: private GitHub checkout unavailable to Node runtime; no CI launched",
+    "exact_Git_source_V8": "12/12 checks PASS on fetched exact module source: 9 functional checks including route inventory, 3 static source/readback conditions.",
+    "before_after_V8": "RED: nonexistent header fabricated empty column in preimage; GREEN: CSV_UNKNOWN_FIELD in patched source.",
+    "scope_limitation": "V8 is neither Node's module loader nor the installed Windows Host50; TEST_STATUS for full authored Node command stays NOT_RUN."
+  },
+  "Git_comparison_pre_receipt": {
+    "base": "automation/r30/g7b/G7-B-20261029T1210MSK-PACK02-URL-INSPECT-STRICT-V7",
+    "status": "ahead",
+    "ahead_by": 3,
+    "behind_by": 0,
+    "changed_files": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/golden.test.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-csv-select-known-fields.test.mjs"
+    ]
+  },
+  "self_improvement": {
+    "lesson_id": "R30_G7B_FAIL_CLOSED_CSV_HEADER_MEMBERSHIP_AND_GOLDEN_DRIFT",
+    "observed_error": "A CSV projection silently created empty data for misspelled column names; stale golden expectations lagged the earlier JSON compatibility/security changes.",
+    "root_cause": "Absent own-header validation and undetected test-contract drift.",
+    "applied_fix": "Validate own CSV columns and update only two stale golden assertions without weakening prior JSON source guards.",
+    "future_prevention": "Before writing a transform, test absent/misspelled and inherited field names; validate retained golden tests against current source contracts. Never label V8 source checks as Node/full Host50 acceptance."
+  },
+  "owner_request": {
+    "to": "G6-B original Host50 owner",
+    "issue": "Admit licensed, consent-gated internet adapters only through original Host50 after independent provenance and permission review. No PACK01/native_bridge edits by G7-B.",
+    "path_modified": false,
+    "status": "HOLD_OWNER_APPROVAL"
+  },
+  "unresolved": [
+    "Historic r27-a10 reversible dotted-key JSON semantics conflict with current JSON_PATH_COLLISION fail-closed behavior, pending policy decision.",
+    "Full authored Node module test NOT_RUN.",
+    "Host50 adapters and license/permission approval pending.",
+    "Original 729 raw archive physical SHA256, E06 and E07 Windows native acceptance NOT_VERIFIED."
+  ],
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "Host50": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "REPORT_GATE": "HOLD_UNTIL_ASTRA_C_GOOGLE_DOCS_CAS_READBACK",
+    "RELEASE": "HOLD"
+  },
+  "safety": {
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "snapshots_modified": false,
+    "PACK01_native_bridge_modified": false,
+    "D02_WOW_modified": false,
+    "foreign_owner_paths_modified": false,
+    "Google_Docs_modified": false,
+    "old_DONE_deleted": false,
+    "EXE_run": false,
+    "NSIS_run": false,
+    "GitLab_CI_run": false,
+    "final_integration_run": false
+  },
+  "Astra_C_instruction": "Astra-C ONLY may append the new G7-B V8 RunID and exactly one self-improvement lesson to common Google Docs under CAS+readback. No worker shared Doc writes."
+}
