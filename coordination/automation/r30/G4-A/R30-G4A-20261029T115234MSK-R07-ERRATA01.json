@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4A_IMMUTABLE_SOURCE_RECEIPT_ERRATUM_V1",
+  "run_id": "R30-G4A-20261029T115234MSK-R07-ERRATA01",
+  "slot": "G4-A",
+  "status": "HOLD",
+  "release_status": "HOLD",
+  "is_new_source_task": false,
+  "additional_product_task_count": 0,
+  "branch": "automation/r30/g4a/20261029T115234MSK-R07",
+  "original_receipt": "coordination/automation/r30/G4-A/R30-G4A-20261029T115234MSK-R07.json",
+  "original_receipt_git_blob": "92a90e3cfba874d8d7d039bef314635b9bc016a3",
+  "supersedes_fields": [
+    "targeted_tests.repo_test_methods_saved evidence line literals",
+    "files[tests/P04/test_model_snapshot_probe.py].post_git_blob_sha1",
+    "files[tests/P04/test_model_snapshot_probe.py].post_sha256",
+    "code_head_commit_sha"
+  ],
+  "reason": "Original regression used Python escaped-backslash Unicode sequences, so it would HOLD for a backslash instead of a genuine Unicode NFC/NFD alias, creating a false-positive test.",
+  "correction": "Use chr(0xE9) and chr(0x301) in fixture values, preserving real distinct Unicode spellings; source validator unchanged.",
+  "test_file": {
+    "path": "tests/P04/test_model_snapshot_probe.py",
+    "pre_git_blob_sha1": "9ae607029d375c6db6d5b7c5a46726b63c2d7e0a",
+    "post_git_blob_sha1": "c81bfcdfb8086428c1b9a19efdcf65c1887d1dd4",
+    "pre_sha256": "bd337ac5e6e8caf08c38958d667b03ee37d62443d4557a13d626f4a378868eb1",
+    "post_sha256": "3d45f1f71f4924849f7fe25535fd5452e4ab87be7cc7f4232da2cd04db9908de",
+    "fix_commit": "4a26cf1cd6d48c5ba95180ca4b0b5222ae0c79ab"
+  },
+  "source_file_unchanged": {
+    "path": "Packages/P04/model_snapshot_probe.py",
+    "git_blob_sha1": "d1a2c59427e60b586427135868dd1cedeeca0cbe",
+    "sha256": "1165a18799c8644b307fd030cd4d4f9ab6417e0ba54a4ef6bf6d80df07026755"
+  },
+  "targeted_tests": {
+    "corrected_unicode_fixture_isolated": "3/3 PASS",
+    "original_validator_red_cases": "3/3 RED",
+    "full_repository_module": "NOT_RUN",
+    "repo_test_source_updated": true
+  },
+  "owner_lock": {
+    "git_blob_sha1": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "allowed_test_path": true
+  },
+  "google_drive": {
+    "read_only": true,
+    "coordinator": "Astra-C",
+    "common_journals_written": false
+  },
+  "lesson": "Test fixtures must assert *why* HOLD occurs, not merely HOLD. Avoid double-escaped Unicode; use explicit codepoint construction and require two individually permitted names that only reject when combined.",
+  "aggregation": "Astra-C: count R07 source change ONCE; use corrected test SHA and commit from this ERRATA01 receipt. Do not count a second source TaskID.",
+  "no_EXE": true,
+  "no_NSIS": true,
+  "no_Windows_CI": true,
+  "no_GitLab": true,
+  "no_main_PR162": true,
+  "no_snapshots_write": true
+}
