@@ -15,8 +15,8 @@ import re
 import subprocess
 from typing import Callable
 
-HEX64 = re.compile(r"[0-9a-f]{64}\\Z", re.I)
-RUN_ID = re.compile(r"[A-Za-z0-9._:-]{8,128}\\Z")
+HEX64 = re.compile(r"[0-9a-f]{64}\Z", re.I)
+RUN_ID = re.compile(r"[A-Za-z0-9._:-]{8,128}\Z")
 ARGS = frozenset({
     "--model", "--model-lock", "--model-revision", "--dataset-manifest",
     "--rights-verifier", "--train-jsonl", "--holdout-jsonl", "--output-dir",
