@@ -90,11 +90,13 @@
       "next_action": "T08 подтвердить pinned fixture runner на точном HEAD; не повторять неотносящиеся тесты.",
       "proof": [
         "GitHub exact POST readback",
-        "Isolated mocked RED→GREEN and py_compile PASS; full component suites NOT_RUN"
+        "Isolated mocked RED→GREEN and py_compile PASS; full component suites NOT_RUN",
+        "T06 new same-source runner commit c0d706e0f75046d08a6785c55f74f4497a5ef401, PRE 90274f85e414e6321b9a5c6eb82ec21a7811abd8 -> POST e124a33066d25736851e3860c6292dd13d0ff71b (cached .pyc excluded from source fixture copy); Git readback MATCH, independent test NOT_RUN."
       ],
       "source_ref": "coordination/e06/run_source_integrations_r13.py",
-      "current_blob": "d086fce7ec876c9851c2e81ffd5d38272cce60bb",
-      "recurrence": 0
+      "current_blob": "e124a33066d25736851e3860c6292dd13d0ff71b",
+      "recurrence": 0,
+      "last_verified_source_head": "c0d706e0f75046d08a6785c55f74f4497a5ef401"
     },
     {
       "error_id": "ERR-SYS-006",
@@ -293,11 +295,20 @@
         ],
         "test_blob": "0650f8d927d3abc65b92cdd58b3057335ad547b2",
         "owner_receipt": "ce9d8ceafebe2ba2f2055035e9d6bb4ab4f6d2be"
+      },
+      {
+        "commit": "c0d706e0f75046d08a6785c55f74f4497a5ef401",
+        "module": "E06",
+        "path": "coordination/e06/run_source_integrations_r13.py",
+        "pre_blob": "90274f85e414e6321b9a5c6eb82ec21a7811abd8",
+        "post_blob": "e124a33066d25736851e3860c6292dd13d0ff71b",
+        "independent_test": "NOT_RUN"
       }
     ],
     "source_defect_confirmed": "ERR-SRC-003 mismatch: admission.py BASE_COMMIT vs owner-binding-map sourceBaseCommit",
     "new_owner_receipt": "T03-R30-20261029T1600MSK-OWNERLOCK-VALIDATION-05",
     "repeated_process_error": "NOX-V16-T06-ROOT-STOP-20261029-R01",
-    "no_exe_nsis_ci_e07": true
+    "no_exe_nsis_ci_e07": true,
+    "correlative_git_cas": "SHA moved while R21 registry CAS started; one corrective Git CAS after exact source readback"
   }
 }
