@@ -1,0 +1,208 @@
+{
+  "schema": "NOX_V16_T10_G5B_INDEPENDENT_PRE_FREEZE_SOURCE_PROOF_R12",
+  "task_id": "T10",
+  "run_id": "NOX-V16-G5B-T10-20261029T194413MSK-R11-P01-CLI-QA",
+  "role": "G5-B, T10 source-ready handoff SUPPORT; NOT authorized independent SOURCE_READY signature",
+  "scope": "ONLY NOX EXPRESS INTEGRATOR Windows loader; pre-freeze source QA only",
+  "outcome": "INCOMPLETE_SOURCE_READY_HOLD",
+  "msk": {
+    "planned": "2026-10-29T18:55:00+03:00",
+    "first_observable": "2026-10-29T19:44:13+03:00",
+    "source_test_checkpoint": "2026-10-29T19:48:12+03:00",
+    "actual_job_start": "N/D",
+    "actual_job_end": "N/D",
+    "duration": "N/D"
+  },
+  "prestart": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "canon_paragraphs": 679,
+    "canon_section33_rules": 56,
+    "canon_ref": "https://docs.google.com/document/d/11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc/edit",
+    "register_git_blob": "2c8e374ec17f66b1a435e386e496f8cc8662ca00",
+    "register_entries": 11,
+    "register_statuses": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "source_branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "source_head": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "source_tree": "4dc3325a52b6cfc863e29dd565c758210c059a88",
+    "source_head_readback": "GitHub PR162 metadata checked twice; exact commit tree and four file blobs read",
+    "latest_t09_receipt": "NOX-V16-T09-20261029T174041MSK-R16-DELTA-HANDOFF, blob 51170f031d1c724d093baccdf2859d3af2fbe651, final_frozen=false",
+    "docs_read": {
+      "master": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+      "e06": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+      "lessons": "read latest delta R22",
+      "c34": "read latest delta"
+    }
+  },
+  "hierarchy": {
+    "role": "G5-B T10 support",
+    "mega_block": "T10 SOURCE_READY gate preparatory evidence",
+    "block": "P01 installer four-callee CLI and safe negative contract",
+    "fixed_gate_criteria": 7,
+    "accepted_gate_criteria": 1,
+    "operational_equal_weight": true,
+    "product_percentage": "N/D"
+  },
+  "checkpoint": {
+    "before": {
+      "accepted": 1,
+      "total": 7,
+      "percent": 14.3
+    },
+    "after": {
+      "accepted": 1,
+      "total": 7,
+      "percent": 14.3
+    },
+    "delta_pp": 0,
+    "remaining": 6,
+    "bar": "█░░░░░░░░░"
+  },
+  "criteria": [
+    {
+      "number": 1,
+      "name": "T09 exact frozen HEAD",
+      "status": "HOLD",
+      "owner": "T09",
+      "evidence": "No final_frozen signed tuple for current 23c1557c; latest verified R16 final_frozen=false"
+    },
+    {
+      "number": 2,
+      "name": "Complete immutable P01–P05 acceptance ledger",
+      "status": "HOLD",
+      "owner": "T06",
+      "evidence": "Current T06 owner receipt NOX-V16-T06-20261029T1933MSK-G3C-R15 reports 1/8, not accepted all contracts"
+    },
+    {
+      "number": 3,
+      "name": "Original 3-part ZIP 729 SourceLock",
+      "status": "DONE",
+      "owner": "T07/T09",
+      "evidence": "T09 physical aab1154cf127ef0a216b19d06362343bbda4e152 and T07 a70ab3dc9c45e29afee737810d6be8f623b8f210; 729/729 SHA+CRC PASS, archival DONE preserved; no rehash"
+    },
+    {
+      "number": 4,
+      "name": "D02/WOW001-200/8 CoreIDs/5 Personas/PACK01/02 no-loss same-head",
+      "status": "HOLD",
+      "owner": "T06/T08",
+      "evidence": "No independent complete live same-head acceptance evidence; historical T04 34/34 preserved"
+    },
+    {
+      "number": 5,
+      "name": "Host50/Voice/IPC/STOP/ACL/GPU/RAG/SPACE source contract permissions",
+      "status": "HOLD",
+      "owner": "T06/T08",
+      "evidence": "Host50 admission.py blob d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4 present, 13 native routes require native owner receipts; P01 original MainWindow host provenance unresolved"
+    },
+    {
+      "number": 6,
+      "name": "No proven P0/P1 source regressions/unknown mandatory blocker",
+      "status": "HOLD",
+      "owner": "T06/T08",
+      "evidence": "ERR-SRC-004 P01 WPF provenance and Host50 binding; not a claim of detected installed failure"
+    },
+    {
+      "number": 7,
+      "name": "Independent SOURCE_READY PASS on exact frozen SHA",
+      "status": "HOLD",
+      "owner": "manual T10 independent QA",
+      "evidence": "No accepted T09 freeze; G5-B cannot sign independent QA"
+    }
+  ],
+  "physical": {
+    "type": "NEW independent bounded source validation on exact production commit, NO production modification",
+    "path_prefix": "stage/proposals/P01/C09/Installer/",
+    "source_blobs": {
+      "NOX-HELION-Setup.nsi": "87d901c3846359a91be3e8288f24302cc7060257",
+      "Preflight-InstallPath.ps1": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "Verify-Payload.ps1": "6c178c04957d7397c0c081e3b123940637abc6e9",
+      "Remove-InstalledPayload.ps1": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916"
+    },
+    "executed_source_contract_tests": {
+      "real_caller_callee": 4,
+      "real_matched": 4,
+      "synthetic_negative": 2,
+      "synthetic_rejected": 2,
+      "total_pass": 6,
+      "total_tests": 6
+    },
+    "positive": {
+      "Preflight-InstallPath.ps1": 1,
+      "Verify-Payload.ps1": 2,
+      "Remove-InstalledPayload.ps1": 1
+    },
+    "negative": [
+      "unknown -PathOnly rejected as UNDECLARED_FLAG",
+      "missing mandatory -InstallRoot rejected as MANDATORY_FLAG_MISSING"
+    ],
+    "safety_readback": [
+      "Preflight P01_INSTALL_REPARSE_ANCESTOR",
+      "uninstaller Assert-VerifiedEntry",
+      "verifier Get-FileHash",
+      "NSIS no RMDir /r"
+    ],
+    "limitations": "Connector-sourced static contract test in JavaScript, NOT PowerShell/NSIS execution, NOT .NET/Windows E07, NOT independent freeze acceptance",
+    "source_pre_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "source_post_sha": "23c1557c0347fa0b66a7cd8d92a4a76637861402",
+    "production_paths_modified": 0
+  },
+  "active_errors": [
+    {
+      "ids": [
+        "ERR-SYS-001",
+        "ERR-SYS-002",
+        "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "NOX-V16-T06-ROOT-STOP-20261029-R01"
+      ],
+      "action": "HANDOFF T02/T09/T06, retain fixed x/7 and live SHA, no RUN=TASK DONE"
+    },
+    {
+      "ids": [
+        "ERR-SRC-003",
+        "ERR-SRC-004",
+        "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+      ],
+      "action": "HANDOFF T06/T08; admission source change verified at exact blob, 13 native routes unaccepted"
+    },
+    {
+      "ids": [
+        "ERR-SRC-005"
+      ],
+      "action": "HANDOFF T08, pinned runner requires independent native/source same-SHA acceptance"
+    },
+    {
+      "ids": [
+        "ERR-SYS-006",
+        "ERR-SYS-007"
+      ],
+      "action": "ALREADY_VERIFIED_CLOSED historical ZIP729 and T04 34/34, not reopened"
+    }
+  ],
+  "lessons": {
+    "discovered_active_ids": 11,
+    "triaged": 11,
+    "clusters": 4,
+    "applied": "independent P01 actual four-call positive + two negative fail-closed verification, without promoting task criteria",
+    "delegated": "T06/T08 Host50 and host provenance; T09 frozen tuple; T02 registry CAS",
+    "already_closed_ids": 2,
+    "remaining_untriaged": 0,
+    "remaining_unaccepted_criteria": 6,
+    "lesson": "Source test PASS and receipt do not imply SOURCE_READY; T06 current SHA must be frozen by T09 and independently signed by authorized T10"
+  },
+  "next_checkpoint": {
+    "owner": "T06 then T08 then T09 then manual T10",
+    "error_id": "ERR-SRC-004",
+    "paths": [
+      "coordination/e06/stage_p01.py",
+      "coordination/e06_host50/admission.py"
+    ],
+    "condition": "T06 approved source head/tree/manifest + P01 host provenance and 13 Host50 native receipts, T08 same-head acceptance, T09 immutable freeze"
+  },
+  "no_build_no_release": true,
+  "no_shared_journal_write": true,
+  "no_prod_write": true
+}
