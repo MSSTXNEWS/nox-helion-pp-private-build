@@ -10,6 +10,7 @@ from types import MappingProxyType
 from typing import Callable, Any
 import json
 import re
+import unicodedata
 
 MAX_TEXT = 20000
 MAX_ANSWER = 60000
@@ -106,7 +107,8 @@ class NativeSession:
 
     def validate(self):
         if not all(isinstance(s, str) and 0 < len(s) <= 128 and
-                   s == s.strip() and not any(ord(ch) < 32 or ord(ch) == 127 for ch in s)
+                   s == s.strip() and unicodedata.is_normalized("NFC", s) and
+                   not any(ord(ch) < 32 or ord(ch) == 127 for ch in s)
                    for s in (self.tenant, self.principal, self.chat_id)):
             raise HostDenied("Invalid authenticated native session")
         # Native host only: permissions are immutable exact sets, never a
