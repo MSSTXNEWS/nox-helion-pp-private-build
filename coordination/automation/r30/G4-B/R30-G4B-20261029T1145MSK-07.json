@@ -1,0 +1,113 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G4B_EXCLUSIVE_SOURCE_RECEIPT_V7",
+  "run_id": "R30-G4B-20261029T1145MSK-07",
+  "slot": "G4-B",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 LOADER ONLY",
+  "mode": "SOURCE_ONLY",
+  "task_id": "G4B-R30-P04-PARENT-CUDA-SELECTOR-ADMISSION-R07",
+  "status": "SOURCE_GIT_READBACK_PASS_ISOLATED_HELPER_7_7_FULL_MODULE_NOT_RUN_RUNTIME_HOLD",
+  "source_code_complete": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "release": "HOLD",
+  "percent_complete": "N/D",
+  "accepted_new_product_DONE": 0,
+  "branch": "automation/r30/g4b/R30-G4B-20261029T1145MSK-07",
+  "pre_commit": "b8d5c611427aa769e006d41e22f805c1317dc14c",
+  "code_commit": "67e1c714f10be3838442dc33a879a1e8a95986c8",
+  "test_commit": "dd933af4317c486a8583b8d6c6b4f7e49f5a2620",
+  "read_inputs": {
+    "owner_lock": {
+      "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a"
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "consolidated_rules_read": 56
+    },
+    "spec": "Drive 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§54–56 and R29 loader-only override",
+    "error_journal": "Drive 1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50 Astra-C R06 11:33 MSK",
+    "e06_journal": "Drive 17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4 Astra-C R06 11:33 MSK",
+    "lessons": "Drive 14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ Astra-C R06 11:33 MSK",
+    "conflicts": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98"
+    },
+    "snapshots": {
+      "indexed": 25,
+      "bodies_fully_read_or_SHA256_rehashed": false,
+      "originals_untouched": true
+    },
+    "previous_receipt": "coordination/automation/r30/G4-B/R30-G4B-20261029T1046MSK-06.json"
+  },
+  "cause": "Previous R06 GPU identity and VRAM checks still silently overwrote inherited CUDA_VISIBLE_DEVICES/CUDA_DEVICE_ORDER; a parent could have pinned a different CUDA device or disabled all CUDA devices.",
+  "fix": "After revalidating UUID and memory, reject inherited CUDA selector or order conflicting with intended selected GPU before mutating CUDA environment or importing CUDA.",
+  "changes": [
+    {
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "blob_pre": "d3c85a2bca69a9660b9a9ccdc2ca46949a55f42f",
+      "sha256_pre": "88c3966c06cd60dbb871e716a8ca8b9e6c2132c6da2c5db0c75c99775dec9b01",
+      "blob_post": "1ae973b5e44cc29fbb21df2b2439e5e931a5bbce",
+      "sha256_post": "d95a92d3d18a2e93ef3f657f4d156b28d0e54f37d3a4054640b85a182a7f8100"
+    },
+    {
+      "path": "tests/P04/test_local_gpu_preflight.py",
+      "blob_pre": "1b48a54c870e58f97284d4900732548c74de846d",
+      "sha256_pre": "c464d2f7c9269db667430eac90b9d4adc0ebf61435f6c1fa22262dcb65ba4f39",
+      "blob_post": "2dc9f7f6f983905fe23241db6e832498e1c0837f",
+      "sha256_post": "c2ffd5d354e90ede602cd65e350ab17d533b1991d13f5129a53ffc5b1d4a82fc"
+    }
+  ],
+  "ownership": {
+    "assigned_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py",
+      "tests/P04/test_wheel_inventory_preflight_r29.py"
+    ],
+    "changed_paths": [
+      "Packages/P04/preflight_local_gpu.py",
+      "tests/P04/test_local_gpu_preflight.py"
+    ],
+    "forbidden_paths_untouched": [
+      "Packages/P04/model_snapshot_probe.py",
+      "tests/P04/test_model_snapshot_probe.py"
+    ],
+    "shared_branches_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "drive_single_writer": "Astra-C only"
+  },
+  "tests": {
+    "isolated_command": "python3 /tmp/test_g4b_r07_cuda_environment.py (extracted exact helper, 7 synthetic unittest cases)",
+    "isolated_result": "PASS 7/7",
+    "full_owner_test_module": "NOT_RUN (no authenticated checkout in local Python environment)",
+    "new_owner_regressions": "2 unittest methods SAVED but NOT_EXECUTED as complete module",
+    "source_readback": "2/2 exact content and SHA-256 PASS",
+    "Windows_CUDA": "NOT_RUN",
+    "actual_GPU": "NOT_MEASURED",
+    "LoRA_QLoRA": "NOT_RUN",
+    "PyPA_transitive_hash_lock": "NOT_VERIFIED"
+  },
+  "previous_lesson_applied": "R06 selected GPU identity + VRAM + thermal checks must be tied to the inherited CUDA selection that may already exist in the host process.",
+  "self_improvement": {
+    "lesson_id": "G4B_R07_INHERITED_CUDA_SELECTOR_FAIL_CLOSED",
+    "observed_error": "Reassigning an inherited CUDA_VISIBLE_DEVICES could undermine UUID selection despite apparently consistent nvidia-smi telemetry.",
+    "applied_fix": "Fail closed before CUDA import when inherited GPU mask or CUDA_DEVICE_ORDER conflicts; add owner-scoped synthetic and integrated regression methods.",
+    "limits": "Checking process environment is not proof of CUDA-to-physical-GPU UUID or driver/runtime functionality."
+  },
+  "holds": [
+    "Full owner test module not executed",
+    "Source-only PyPA tags not wheel file SHA, actual CUDA/VRAM/CPU/OS runtime not measured",
+    "25 snapshots indexed, not individually byte rehashed",
+    "729 original source SHA physical unverified",
+    "SOURCE_CODE_COMPLETE/E06/E07/RELEASE HOLD"
+  ],
+  "no_exe": true,
+  "no_nsis": true,
+  "no_windows_ci": true,
+  "no_gitlab_run": true,
+  "no_final_integration": true,
+  "no_training": true
+}
