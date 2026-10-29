@@ -65,10 +65,17 @@ public sealed class NativePythonPipe : IAsyncDisposable
         try { data = JsonSerializer.SerializeToElement(payload); }
         catch (Exception e) when (e is JsonException or NotSupportedException) { throw new NativePipeHold("NATIVE_PAYLOAD_INVALID"); }
         if (data.ValueKind != JsonValueKind.Object) throw new NativePipeHold("NATIVE_PAYLOAD_INVALID");
+        // Page-created JsonElement can preserve duplicate/case-equivalent fields.
+        // Reject before sending them to the Python authority parser.
+        try { RequireUniqueReplyProperties(data); }
+        catch (NativePipeHold) { throw new NativePipeHold("NATIVE_PAYLOAD_INVALID"); }
         foreach (var prop in data.EnumerateObject())
-            if (prop.Name is "tenant" or "principal" or "windows_sid" or "session_id" or "scopes"
-                or "private_approved" or "native_approve" or "nativeConsent" or "admin")
+        {
+            var key = prop.Name.Normalize(NormalizationForm.FormC).ToLowerInvariant();
+            if (key is "tenant" or "principal" or "windows_sid" or "session_id" or "scopes"
+                or "private_approved" or "native_approve" or "nativeconsent" or "admin")
                 throw new NativePipeHold("PAGE_AUTHORITY_CLAIM_DENIED");
+        }
 
         bool regular = route != "chat.stop";
         if (regular && Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
