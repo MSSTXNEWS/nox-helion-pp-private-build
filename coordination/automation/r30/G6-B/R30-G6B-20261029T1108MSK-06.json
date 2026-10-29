@@ -1,0 +1,163 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G6B_IMMUTABLE_SOURCE_RECEIPT_R06",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer ONLY",
+  "slot": "G6-B",
+  "run_id": "R30-G6B-20261029T1108MSK-06",
+  "scheduled_context": "2026-10-29 11:08 Europe/Moscow; exact execution completion time not asserted",
+  "status": "SOURCE_CANDIDATE_INTEGRATION_HOLD",
+  "stage": "SOURCE_ONLY",
+  "source_task": {
+    "id": "G6B-R30-HOST50-NESTED-DEFERRED-RESULT-GATE-R06",
+    "previous_plan": "Astra-C 2026-10-29 10:34 MSK G6B-R30-HOST50-DEFERRED-RETURN-NATIVE-R06",
+    "product_TaskID_accepted": false
+  },
+  "inputs": {
+    "owner_lock": {
+      "branch": "astra/fin-zagr-v16-all-results-r30-20261029",
+      "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+      "git_blob": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+      "read_first": true
+    },
+    "rules": {
+      "path": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+      "git_blob": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+      "read_all_56": true,
+      "original_historical_literal_56_unverified": true
+    },
+    "V16_doc": {
+      "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "read_sections": [
+        54,
+        55,
+        56
+      ],
+      "latest_override": "R29 loader-only and source-only no-build"
+    },
+    "conflict_index": {
+      "path": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+      "git_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+      "frozen_branches": 25
+    },
+    "snapshots": {
+      "directory": "coordination/astra/r30/snapshots/",
+      "snapshot_count": 25,
+      "git_trees_recursively_listed": 25,
+      "git_tree_truncated_count": 0,
+      "original_source_part_git_blobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "all_25_source_part_git_blobs_match": true,
+      "full_file_bytes_read": false,
+      "physical_sha256_of_729_originals": "NOT_VERIFIED"
+    },
+    "canonical_admission": {
+      "path": "coordination/e06_host50/admission.py",
+      "git_blob": "9a3cdd174da6e8a1303a5cce3ef3c42b9a32f60f",
+      "ordered_policy_match": "PASS_50_OF_50"
+    },
+    "drive_read_only": {
+      "master_errors": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+      "historical_C34": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+      "E06_report": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+      "E06_lessons": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+      "latest_coordinator_delta_read": "ASTRA-C-R30-20261029T1034MSK-05"
+    }
+  },
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "new_unique_branch": "automation/r30/g6b/R30-G6B-20261029T1108MSK-06",
+    "parent_branch": "automation/r30/g6b/R30-G6B-20261029T1001MSK-05",
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "preimage_git_blob": "15144b98b4e3a519d46a7e42028d6ba68128557d",
+    "postimage_git_blob": "f05fd6eaaf7f004fe4f0adb09e829eaec84d7627",
+    "source_commit": "0feb82826de2019aede5dacd6ebf069bd9af6776",
+    "unchanged_assigned_path": "coordination/e06/adapters/pc_control_owner_port.py",
+    "unchanged_assigned_path_blob": "5f567effc336ca6611757e581841710450287a29",
+    "diff_before_receipt": {
+      "ahead_by": 1,
+      "behind_by": 0,
+      "changed_paths": [
+        "proposals/NOX-PACK01-50/native_bridge.py"
+      ],
+      "additions": 36,
+      "deletions": 2
+    },
+    "git_readback": "PASS exact blob and content"
+  },
+  "finding": {
+    "cause": "R05 rejected only top-level generator/awaitable/iterator. A native handler could return an eager dict/list/tuple containing a lazy object that executes later outside the already-reset SID/session-lease/native-consent ContextVar.",
+    "repair": "Apply bounded _reject_deferred_owner_result to top-level result and nested exact built-in dict/list/tuple/set/frozenset elements before returning; never iterate custom objects, generators, awaitables, or any owner callback to inspect. Fail closed on lazy values, cycles/shared containers, nesting >=32, and >16384 inspected values.",
+    "preserved": "No second host/backend, 50/50 ordered route policy and owner/risk unchanged, existing P02 synchronous streaming and STOP retained, native consent/SID/lease checks unchanged.",
+    "residual_risk": "Unknown custom objects and owner-internal delayed side effects may still bypass a shallow object-graph scan; native Windows host/token binding and owner pre-effect reauthorization require independent integration proof."
+  },
+  "targeted_test": {
+    "command": "python /tmp/g6b_r06_nested_result_contract.py",
+    "scope": "Isolated Python helper contract, copied verbatim into production module; full module import not performed, no Windows operations",
+    "result": "PASS",
+    "passed": 9,
+    "total": 9,
+    "cases": [
+      "nested dict/list generator rejected without iteration",
+      "nested coroutine rejected",
+      "nested async generator rejected",
+      "ordinary eager STOP/bytes/nested response accepted",
+      "ordinary tuple/list accepted",
+      "cyclic list rejected",
+      "oversized list rejected",
+      "too-deep object rejected",
+      "top-level generator rejected without iteration"
+    ],
+    "production_imported_test": "NOT_RUN",
+    "git_test_file_committed": false,
+    "reason": "Owner manifest assigns only two production files; no unique G6-B test path authorized",
+    "windows_native_sid_revocation_stop": "NOT_RUN",
+    "dangerous_operations": "NOT_RUN",
+    "exe_nsis_gitlab_ci": "NOT_RUN"
+  },
+  "new_lesson": {
+    "id": "G6B_R06_NESTED_DELAYED_OWNER_WORK_MUST_NOT_ESCAPE_HOST_CONTEXT",
+    "previous_applied": "R05 top-level deferred result gate and R04 repeated live SID/lease native owner checkpoints remain in place.",
+    "observed": "A dict that is synchronous at its outer boundary may still contain an iterator/coroutine whose work occurs later, after native context revocation.",
+    "improvement": "Inspect inert built-in container graph with hard depth/node bounds before returning from host. Never consume lazy objects in an audit, and never classify microtests as real native runtime acceptance.",
+    "next": "Propose owner-approved G6-B unique regression path and obtain real Windows native SID/session-lease/consent STOP proofs before considering integration."
+  },
+  "proposals": [
+    {
+      "owner": "Astra-C/ownership journal",
+      "request": "Assign exact unique test path proposals/NOX-PACK01-50/test_native_bridge_G6B_r06.py; do not write there before owner-file-lock approval."
+    },
+    {
+      "owner": "G6-A/native Windows host",
+      "request": "Attest actual Windows SID/token binding, native consent lease revocation and STOP, same-SHA real native callbacks; G6-B must not edit stage_onehost.py or verify_original_729_source.py."
+    },
+    {
+      "owner": "P02/E11/owner implementations",
+      "request": "Review custom response objects and internally delayed work; verify pre-effect authorization and method return contracts. No foreign source changes by G6-B."
+    }
+  ],
+  "integrity": {
+    "authorized_source_changes": 1,
+    "foreign_paths_changed": 0,
+    "forbidden_paths_changed": 0,
+    "unique_receipt_dir": "coordination/automation/r30/G6-B/",
+    "main_modified": false,
+    "PR162_modified": false,
+    "shared_R30_modified": false,
+    "original_25_snapshots_modified": false,
+    "old_DONE_preserved": true,
+    "shared_google_docs_modified": false,
+    "docs_writer": "Astra-C only; worker Git receipt queued for aggregation",
+    "no_merge": true,
+    "no_build": true,
+    "no_exe": true,
+    "no_nsis": true,
+    "no_gitlab_ci": true,
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "RELEASE": "HOLD",
+    "P01_P05_weighted_progress": "N/D"
+  }
+}
