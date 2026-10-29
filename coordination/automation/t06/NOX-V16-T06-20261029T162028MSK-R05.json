@@ -1,0 +1,101 @@
+{
+  "schema": "NOX_V16_T06_ONE_SOURCE_TREE_OWNER_HANDOFF_V1",
+  "task_id": "T06",
+  "run_id": "NOX-V16-T06-20261029T162028MSK-R05",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows loader ONLY",
+  "planned_msk": "2026-10-29T16:25:00+03:00",
+  "observed_start_msk": "2026-10-29T16:20:28+03:00",
+  "receipt_utc": "2026-10-29T13:25:48.685Z",
+  "duration_seconds": null,
+  "status": "HOLD_OWNER_1_CAS_NO_UNIFIED_SOURCE",
+  "source_only": true,
+  "spec": "Google Docs 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc §§1-33,54-56 incl 56 consolidated rules and R29 loader-only",
+  "pinned": {
+    "pr162": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+    "pr162_tree_reported": "4255004c379a77c72bb02cdc54d56fe29e6aec9f",
+    "astra": "f0064948119c55001601e1bae1cd3755826605ed",
+    "r30": "f1352cb0fa2b584377d892ccb378501e698b78f6",
+    "pr207": "61b24683cebaf06411f45600864ee949310c700f",
+    "lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "conflict_index_blob": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "t05_receipt_blob": "cb40add312db492a06a16baa600740bcb5575de2"
+  },
+  "source_pre_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "source_post_head": "47a817f6d1f47b5d73f858c3f986de4d3fb7d219",
+  "source_SHA256": "NOT_APPLICABLE_NO_SOURCE_MUTATION",
+  "observations": {
+    "pr162_astra_compare": "diverged 72 ahead / 1 behind; 46 files (2 P02 product source paths).",
+    "r30": "25 immutable snapshots, 34 historical overlapping paths, NO accepted cross-owner merge.",
+    "t05": "13 source candidates, 13 post-blob readbacks, 1 of 13 preimage matches both PR162/Astra, 12 diverged or missing; T05 tests executed 0; accepted product tasks 0.",
+    "t04": "semantic path conflict resolution NOT_VERIFIED.",
+    "host50": "T02 ledger 37 SOURCE CANDIDATE / 13 SOURCE HOLD, integrated 0; no runtime tests by T06.",
+    "source_lock": "physical three-part reassembly/729 member SHA256 NOT_RUN by T06.",
+    "t10": "independent SOURCE_READY 0/7 accepted, HOLD."
+  },
+  "exact_file_readback": [
+    [
+      "P02 framed worker",
+      "255dfb7ab330c825fcc362b619614189c4915e6c",
+      "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "G2-A donor preimage matches both; only CONDITIONAL admission after focused tests and owner CAS"
+    ],
+    [
+      "P01 C09 navigation bridge",
+      "MISSING_PR162_AND_ASTRA",
+      "6338c56c509c31d8deee70afef6eb639603e1e2d",
+      "G1-B donor exists, source binding and owner admission HOLD"
+    ],
+    [
+      "WOW200 runtime loader",
+      "5882140fb5ad63366e48fb4849ecb240aeaf885a",
+      "1fa3adcfd7aa6c1305e9406402a40e3236bd55ca",
+      "PR207 4-file DRAFT donor, test and CAS"
+    ],
+    [
+      "PACK01 native bridge",
+      "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "c60d4ef3983e56c8991370efb58839bd1216cd2d",
+      "PR207 DRAFT donor, Host50 acceptance HOLD"
+    ],
+    [
+      "P03 ModelCatalog",
+      "9b9e293be5a785369764fe378ee69c6c88c86b46",
+      "72e72960b69c74cd9d11cdc5fa0c6eebee6aefcf",
+      "preimage diverged; owner semantic reconciliation"
+    ],
+    [
+      "P04 GPU preflight",
+      "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "02b65c3bcd961390f828519cb5b50a2e4a652ee9",
+      "preimage diverged; owner semantic reconciliation"
+    ]
+  ],
+  "checks": "16 GitHub path/ref outcomes inspected; 14 present, 2 missing; NOT equivalent to test execution",
+  "tests_executed_by_T06": 0,
+  "code_changed_by_T06": false,
+  "owner_1_handoff": [
+    "Pin live PR162 HEAD/tree. Do not overwrite if CAS preimage changed.",
+    "Reconcile T04 conflicts semantically; preserve all 25 snapshots and historical DONE.",
+    "Review PR207 four paths and its dedicated existing tests before owner #1 CAS merge; never wholesale merge.",
+    "Review 13 T05 candidates by Git blob owner preimages; only G2-A matches old PR162/Astra, but does not automatically PASS.",
+    "Resolve P01 bridge absence and 13 Host50 source HOLD routes within ONE host.",
+    "Physically verify 3 ZIP parts and 729 member SHA256; seal one accepted source tree before T09."
+  ],
+  "handoff_to": {
+    "T09": "HOLD until owner #1 publishes immutable accepted unified HEAD/tree/SourceLock",
+    "T10": "HOLD until T09 PASS and all source criteria independently verified",
+    "T11": "PREP_ONLY: preserve GitLab 27 unique files/41 drift, do not sync/build before SOURCE_READY"
+  },
+  "blocker": "T06 B has no explicit owner #1 authorization to write PR162; GitHub push privilege alone does not grant one-merger authority.",
+  "lesson": "Exact Git blob and owner preimage must govern admission; historical path overlap alone is not a proven defect.",
+  "unchanged": {
+    "main": true,
+    "pr162": true,
+    "shared_drive": true,
+    "original_snapshots": true,
+    "gitlab": true
+  },
+  "no_exe_nsis_windows_ci_gitlab_build": true,
+  "one_tree_status": "HOLD",
+  "progress": "░░░░░░░░░░ N/D"
+}
