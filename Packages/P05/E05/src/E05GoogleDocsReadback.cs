@@ -107,7 +107,8 @@ public sealed class GoogleDocsAppendReadback
     }
     internal static bool ValidInput(string documentId, string runId, string entry)
     {
-        if (string.IsNullOrWhiteSpace(documentId) || string.IsNullOrWhiteSpace(runId) ||
+        if (string.IsNullOrWhiteSpace(documentId) || documentId.Length > 256 ||
+            string.IsNullOrWhiteSpace(runId) ||
             runId.Length > 160 || !IsSafeRunId(runId) || string.IsNullOrWhiteSpace(entry) ||
             entry.Length > 100000 || !entry.Contains(runId, StringComparison.Ordinal)) return false;
         foreach (char c in documentId)
