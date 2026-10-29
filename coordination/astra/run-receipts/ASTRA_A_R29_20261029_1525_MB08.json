@@ -1,0 +1,18 @@
+{
+  "schema": "NOX_R29_ASTRA_A_SOURCE_MEGABLOCK_V1",
+  "runId": "ASTRA-A-R29-20261029-1525-MB08",
+  "branchRoot": "astra/v16-code-complete-source-only-20261029",
+  "actualSubagentsSpawned": 0,
+  "agentConstraint": "SIX_OWNER_GIT_BRANCHES_ONLY",
+  "task": "P01 receipt generator forbids symlinked source and HEAD/worktree mismatches before attesting SHA",
+  "sourceCommits": [
+    "2524fe86ea0195a2380a65fd8df4e6b997d0bea1"
+  ],
+  "sourceTest": "Source drift and symlink gate + Git blob readback PASS",
+  "nativeWindows": "NOT_RUN",
+  "ProductTaskIDDone": "NOT_SEALED",
+  "AstraBOwnersUntouched": true,
+  "build": "NOT_RUN",
+  "proof": "GitHub owner-file CAS/Git blob readback; exact Node suite for final P01 FX only.",
+  "lesson": "Only execute safe owned source changes; native acceptance requires later independent pinned Windows run."
+}
