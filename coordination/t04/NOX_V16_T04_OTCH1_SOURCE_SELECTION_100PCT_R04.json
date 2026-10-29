@@ -1,0 +1,343 @@
+{
+  "schema": "NOX_V16_T04_OTCH_1_FINAL_SOURCE_RESOLUTION_R04",
+  "run_id": "NOX-V16-T04-EXACT34-FINAL-20261029-R04",
+  "task_id": "T04",
+  "reported_msk": "2026-10-29 17:10:53",
+  "first_exact_checkpoint_utc": "2026-10-29T14:10:17.985Z",
+  "measured_manifest_to_receipt_seconds": 36,
+  "full_run_start": "NOT_CAPTURED_SECONDS",
+  "full_run_duration_seconds": null,
+  "progress": "██████████ — 34/34",
+  "status": "DONE_100_PERCENT_SOURCE_VERSION_DISPOSITIONS_ONLY",
+  "previous": "R03 33/34, 1 OWNER_HOLD due incompatible voice donor",
+  "current": {
+    "total": 34,
+    "classified": 34,
+    "final_decisions": 34,
+    "SKIP": 15,
+    "ACCEPT": 19,
+    "OWNER_HOLD": 0,
+    "retained_baseline": 18,
+    "already_integrated_owner_patch": 1,
+    "source_changes_by_T04": 0,
+    "merge_by_T04": 0,
+    "product_accepted_taskid_delta_by_T04": 0
+  },
+  "actual_delta": "1 final historical donor selection decision #30: KEEP_CANONICAL_ABSENT, reject incompatible archived glue; 34/34 signed owner source choices corroborated exact frozen tree, #28 owner patch already integrated by T06/PR214 (NOT a T04 code change).",
+  "closed_this_run": [
+    {
+      "n": 30,
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "decision": "ACCEPT_CANONICAL_ABSENCE / REJECT_ARCHIVED_STANDALONE_GLUE",
+      "current_blob": null,
+      "historical_donors": [
+        "a0b7171b063d4c51832c0330b40261c0837941c1",
+        "beba4bdcc5877fe6504ae280039e9f2a2fc3b3e4"
+      ],
+      "owner": "G2-B, source-choice owner #1",
+      "proof_tree_sha1": "9f8d7dafb67398d52a09cdc1ddd35185042bb0c2"
+    }
+  ],
+  "all_34_positions": [
+    {
+      "n": 1,
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "decision": "ACCEPT",
+      "selected_blob": "b7edc3c4c7be95a2dde3da7352624bcbdcbc0c47",
+      "owner": "G2-A",
+      "source_absent": false
+    },
+    {
+      "n": 2,
+      "path": "coordination/astra/render_astra_progress_r24.py",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": true
+    },
+    {
+      "n": 3,
+      "path": "coordination/astra/verify_astra_no_loss_r23.py",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": true
+    },
+    {
+      "n": 4,
+      "path": "Packages/P05/E05/space/E05SpaceReadOnlyProjection.mjs",
+      "decision": "ACCEPT",
+      "selected_blob": "a1f1ca5a72388a43be2dc035150487405820ffcf",
+      "owner": "G5-A",
+      "source_absent": false
+    },
+    {
+      "n": 5,
+      "path": "Packages/P02/worker-python/p02_chat_bridge.py",
+      "decision": "ACCEPT",
+      "selected_blob": "65eeb35f2d333e522db92988ef7afa26617a31fa",
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": false
+    },
+    {
+      "n": 6,
+      "path": "Packages/P02/worker-python/p02_runtime.py",
+      "decision": "ACCEPT",
+      "selected_blob": "124517fdb5f99c96840596cd14b0ff496bc5c14a",
+      "owner": "G2-A",
+      "source_absent": false
+    },
+    {
+      "n": 7,
+      "path": "Packages/P02/worker-python/p02_capabilities.py",
+      "decision": "SKIP",
+      "selected_blob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+      "owner": "G2-B",
+      "source_absent": false
+    },
+    {
+      "n": 8,
+      "path": "Packages/P02/worker-python/p02_owner_route_ports.py",
+      "decision": "ACCEPT",
+      "selected_blob": "b6b06a1431a3fbb19bc596d6c4c0829e50fabe2f",
+      "owner": "G2-B",
+      "source_absent": false
+    },
+    {
+      "n": 9,
+      "path": "Packages/P03/Admission/p03_modelcenter_gate.py",
+      "decision": "ACCEPT",
+      "selected_blob": "720537eaaa9c7a54c52e575b2955bc082a3ce3d5",
+      "owner": "G3-A",
+      "source_absent": false
+    },
+    {
+      "n": 10,
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "decision": "ACCEPT",
+      "selected_blob": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "owner": "G3-B",
+      "source_absent": false
+    },
+    {
+      "n": 11,
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "decision": "ACCEPT",
+      "selected_blob": "7815e7356b538166cb6c068d8eaafd098f3f42c9",
+      "owner": "G4-A",
+      "source_absent": false
+    },
+    {
+      "n": 12,
+      "path": "Packages/P04/preflight_local_gpu.py",
+      "decision": "ACCEPT",
+      "selected_blob": "5a2a0940b68eba9a8e10cd4dde5f5e3821070db5",
+      "owner": "G4-B",
+      "source_absent": false
+    },
+    {
+      "n": 13,
+      "path": "Packages/P05/E05/src/E05CanonicalEvents.cs",
+      "decision": "SKIP",
+      "selected_blob": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+      "owner": "G5-A",
+      "source_absent": false
+    },
+    {
+      "n": 14,
+      "path": "Packages/P05/E05/src/E05CriterionSeal.cs",
+      "decision": "SKIP",
+      "selected_blob": "b1be2beaf849089a2fddc76219af37cbea926940",
+      "owner": "G5-A",
+      "source_absent": false
+    },
+    {
+      "n": 15,
+      "path": "Packages/P05/E05/src/E05DriveRunGate.cs",
+      "decision": "ACCEPT",
+      "selected_blob": "a1c6e8c109c180d4c1ec0af6804e02a988256f96",
+      "owner": "G5-B",
+      "source_absent": false
+    },
+    {
+      "n": 16,
+      "path": "Packages/P05/E05/src/E05GoogleDocsReadback.cs",
+      "decision": "ACCEPT",
+      "selected_blob": "90f78a41dd6e658ad14f12b47eefcb5a2b45341e",
+      "owner": "G5-B",
+      "source_absent": false
+    },
+    {
+      "n": 17,
+      "path": "Packages/P05/E05/src/E05SafeRunReports.cs",
+      "decision": "SKIP",
+      "selected_blob": "9315534a691d9a2040b48daffd3543c1b66e373e",
+      "owner": "G5-B",
+      "source_absent": false
+    },
+    {
+      "n": 18,
+      "path": "Packages/P05/E05/src/E05VerifiedReadiness.cs",
+      "decision": "SKIP",
+      "selected_blob": "71b623cb114667c3b37b26103ec220f99233c398",
+      "owner": "G5-A",
+      "source_absent": false
+    },
+    {
+      "n": 19,
+      "path": "coordination/e06/adapters/pc_control_owner_port.py",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "G6-B",
+      "source_absent": true
+    },
+    {
+      "n": 20,
+      "path": "coordination/e06/source_deep_inventory.py",
+      "decision": "SKIP",
+      "selected_blob": "168c819a4f28a6ef0c7f2f704dbf804cdab20e65",
+      "owner": "G6-A",
+      "source_absent": false
+    },
+    {
+      "n": 21,
+      "path": "coordination/e06/stage_onehost.py",
+      "decision": "ACCEPT",
+      "selected_blob": "88649c375a3ba6ffeb943bcc8d405fcd324427cd",
+      "owner": "G6-A",
+      "source_absent": false
+    },
+    {
+      "n": 22,
+      "path": "coordination/e06/verify_original_729_source.py",
+      "decision": "SKIP",
+      "selected_blob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+      "owner": "G6-A",
+      "source_absent": false
+    },
+    {
+      "n": 23,
+      "path": "proposals/NOX-PACK01-50/native_bridge.py",
+      "decision": "ACCEPT",
+      "selected_blob": "805ade553b3fd102f8995a54632d0ad904316c9c",
+      "owner": "G6-B",
+      "source_absent": false
+    },
+    {
+      "n": 24,
+      "path": "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "decision": "ACCEPT",
+      "selected_blob": "87d901c3846359a91be3e8288f24302cc7060257",
+      "owner": "G1-A",
+      "source_absent": false
+    },
+    {
+      "n": 25,
+      "path": "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1",
+      "decision": "ACCEPT",
+      "selected_blob": "eb45add5a929eee99bc09ef87f2db3735556b78b",
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": false
+    },
+    {
+      "n": 26,
+      "path": "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1",
+      "decision": "ACCEPT",
+      "selected_blob": "81fbe7dfeb70801a0eaf5e4246a8789cb5032916",
+      "owner": "G1-A",
+      "source_absent": false
+    },
+    {
+      "n": 27,
+      "path": "Packages/P02/evidence/R29_A02_VOICE_STOP_HOLD/reproduce.py",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": true
+    },
+    {
+      "n": 28,
+      "path": "Packages/P02/worker-python/p02_framed_worker.py",
+      "decision": "ACCEPT",
+      "selected_blob": "8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1",
+      "owner": "G2-A",
+      "source_absent": false
+    },
+    {
+      "n": 29,
+      "path": "Packages/P02/worker-python/p02_host_admission.py",
+      "decision": "SKIP",
+      "selected_blob": "055a315575f2d0d740bb066771b8c59f426d2c92",
+      "owner": "G2-A",
+      "source_absent": false
+    },
+    {
+      "n": 30,
+      "path": "Packages/P02/worker-python/p02_original_voice_port.py",
+      "decision": "ACCEPT",
+      "selected_blob": null,
+      "owner": "G2-B",
+      "source_absent": true
+    },
+    {
+      "n": 31,
+      "path": "Packages/P03/Admission/p03_reviewed_artifact_adapter.py",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "G3-A",
+      "source_absent": true
+    },
+    {
+      "n": 32,
+      "path": "Packages/P03/Source/P03.ModelCenter.QuickSmoke/queue_lifecycle_r29.cjs",
+      "decision": "SKIP",
+      "selected_blob": null,
+      "owner": "UNASSIGNED_IN_OLD_MANIFEST",
+      "source_absent": true
+    },
+    {
+      "n": 33,
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "decision": "SKIP",
+      "selected_blob": "12762f9f36b8813aaac22476495a59484aa9f22a",
+      "owner": "G3-B",
+      "source_absent": false
+    },
+    {
+      "n": 34,
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
+      "decision": "ACCEPT",
+      "selected_blob": "c057fea02f9e53121ba21110b12b12f2128a8fb2",
+      "owner": "G3-A",
+      "source_absent": false
+    }
+  ],
+  "exact_source_sha": {
+    "head": "c4508b0d1ea32860b9abe429da30847edc630836",
+    "tree": "9f8d7dafb67398d52a09cdc1ddd35185042bb0c2",
+    "owner_choice_blob": "e5ba5ca3402fdbfacf6923f6add733a2b70543f3",
+    "manifest_blob": "8fcd92239ecd07e246915689765cebb9439da6de",
+    "owner_lock": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "t09_physical_original_zip_receipt": "e159da6cbab131a6257f0f4d9f25a798a9a5403b"
+  },
+  "lesson_applied": {
+    "observed_error": "R02 34/34 optimistic selection called voice donor acceptable before native interface proof; R03 corrected to technical HOLD",
+    "root_cause": "Selection and source admission were conflated; newer integrated owner approval/PR214 merge were not yet incorporated.",
+    "applied_measure": "Bind final selection to committed owner 34-row decision + exact live SHA for every path, accept current absence as no-op, independently confirm PR214 merge; never infer runtime readiness from source choice.",
+    "regression_guard": "Any HEAD drift mandates per-path delta recheck; incompatible voice adapters cannot be admitted without native interface/test proof."
+  },
+  "execution": {
+    "source_files_modified_by_T04": 0,
+    "full_merge_by_T04": false,
+    "windows_build": false,
+    "nsis": false,
+    "e07": false,
+    "source_ready_not_asserted": true,
+    "shared_docs_CAS_readback": "T02_PENDING_NOT_CLAIMED"
+  },
+  "handoff": {
+    "T05": "Final manifest controls 34 historic paths; existing T05 13/13 intake unchanged; do not adopt unbound voice glue.",
+    "T06": "PR162 pinned source tree and exact path choices; preserve merged P02 partial write; no extra donor imports. Final T06 source completeness remains separately assessed.",
+    "T02": "CAS append new RunID, counts, evidence, one applied lesson to Master/E06/Lessons and read back. T04 does not write other owners' documents."
+  }
+}
