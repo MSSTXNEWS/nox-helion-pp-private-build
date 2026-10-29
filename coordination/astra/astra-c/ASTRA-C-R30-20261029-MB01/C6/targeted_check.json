@@ -1,0 +1,11 @@
+{
+  "runId": "ASTRA-C-R30-20261029-MB01",
+  "lane": "C6",
+  "sourceBranch": "astra-b/r29-b6-20261029",
+  "preimageGitBlobSha1": "13d97c8a0baa4d1994ed609fecfeac9b43002a85",
+  "patchGitBlobSha1": "2600a54d8baf39ad1fa6e99efb8b93fdad6f7a8f",
+  "sourceAnchorCheck": "PASS",
+  "focusedReproducer": "Python shuffled-order regression predicate 1/1 PASS",
+  "sourceRuntime": "NOT_RUN",
+  "nativeRuntime": "NOT_RUN"
+}
