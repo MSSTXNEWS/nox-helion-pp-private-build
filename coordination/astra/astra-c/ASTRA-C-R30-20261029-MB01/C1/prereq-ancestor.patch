@@ -1,0 +1,15 @@
+--- a/stage/proposals/P01/C09/Installer/Get-P01Prerequisites.ps1
++++ b/stage/proposals/P01/C09/Installer/Get-P01Prerequisites.ps1
+@@
+   $item=Get-Item -LiteralPath $exePath -Force -ErrorAction Stop
+   if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { return [ordered]@{name=$Name;available=$false;source='PATH';executable=$null} }
++  # An executable under a junction is not a verified regular PATH prerequisite.
++  $parent=[IO.Path]::GetDirectoryName($exePath)
++  while ($parent) {
++    $node=Get-Item -LiteralPath $parent -Force -ErrorAction Stop
++    if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
++      return [ordered]@{name=$Name;available=$false;source='PATH';executable=$null}
++    }
++    $parent=[IO.Path]::GetDirectoryName($parent)
++  }
+   return [ordered]@{name=$Name;available=$true;source='PATH';executable=$exePath}
