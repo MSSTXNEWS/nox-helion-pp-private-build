@@ -1,0 +1,36 @@
+{
+  "run_id": "ASTRA-R29-A01-B03-C09-C11-20261029",
+  "owner": "A01/P01",
+  "started_utc": "2026-10-29T01:07:15.705Z",
+  "source_tests_finished_utc": "2026-10-29T01:08:35.786Z",
+  "parent": "755c7968a5ddbcb85b858a4dda53d31a956892b5",
+  "task": "P01 existing C09 verifier vs C11 and R29 safety",
+  "preimages": [
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/test_source_c09.py",
+      "sha": "7754a083a3663f0e8e29a360fd49cf37e766c297"
+    },
+    {
+      "path": "stage/proposals/P01/C09/QA/P01_E01_C09/Test-P01Native-C09.ps1",
+      "sha": "8646a04b6e7f3953819b4d2f27657c4501c32cbd"
+    }
+  ],
+  "changes": [
+    "Verify full-list drift check then final per-file check before removal; require registered entrypoint",
+    "Assert bidirectional source/output overlap and strict run/version/manifest bounds using current C11 guards",
+    "Five mutation probes prove removed safety checks still fail verifier",
+    "Native clean fixture now includes manifest-listed synthetic non-PE entrypoint; never launches it"
+  ],
+  "tests": {
+    "before": "9 discovered: 4 passed, 3 failed, 1 error, 1 skipped",
+    "after": "10 discovered: 9 passed, 1 skipped; 5 safety mutations rejected",
+    "command": "python -m unittest discover -s stage/proposals/P01/C09/QA/P01_E01_C09 -p test_source_c09.py -v",
+    "skipped": "Historical C08 asset donor ZIP not materialized in this isolated C09 subset. Original729 proof is separate.",
+    "native": "NOT_RUN; PowerShell unavailable",
+    "build": "NOT_RUN; prohibited"
+  },
+  "completed_prior_blocks": 2,
+  "continuation_saved_blocks": 1,
+  "product_done": false,
+  "lesson": "Repair stale verifier contracts against retained stronger source, and mutation-test the guard rather than replacing obsolete checks with loose marker searches."
+}

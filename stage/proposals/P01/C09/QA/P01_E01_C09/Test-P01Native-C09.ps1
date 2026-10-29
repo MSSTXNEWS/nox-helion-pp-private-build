@@ -27,6 +27,10 @@ function New-Fixture([string]$Label) {
   $records=@(Get-ChildItem -LiteralPath (Join-Path $root 'data') -File | ForEach-Object {
     [ordered]@{path='data/'+$_.Name;bytes=$_.Length;sha256=(Hash $_.FullName)}
   })
+  # Synthetic text payload, never executable or launched: exercise required entrypoint identity.
+  $entrypoint=Join-Path $root 'NOX.P01.Shell.exe'
+  [IO.File]::WriteAllText($entrypoint,'C09 disposable non-PE entrypoint fixture')
+  $records+=@([ordered]@{path='NOX.P01.Shell.exe';bytes=(Get-Item -LiteralPath $entrypoint).Length;sha256=(Hash $entrypoint)})
   $m=[ordered]@{schema='NOX_P01_PAYLOAD_SHA256_V1';entrypoint='NOX.P01.Shell.exe';runId='E01-C09-FIXTURE';version='0.1.0';files=$records}
   [IO.File]::WriteAllText((Join-Path $root 'payload.sha256.json'),($m | ConvertTo-Json -Depth 5))
   return [pscustomobject]@{Local=$local;Root=$root;Manifest=$m}
@@ -102,6 +106,7 @@ try {
   Invoke-Uninstaller $t $true 'clean'
   Assert (-not (Test-Path -LiteralPath (Join-Path $t.Root 'data\a.txt'))) 'clean-payload-remained'
   Assert (-not (Test-Path -LiteralPath (Join-Path $t.Root 'data\z.txt'))) 'clean-payload-remained'
+  Assert (-not (Test-Path -LiteralPath (Join-Path $t.Root 'NOX.P01.Shell.exe'))) 'clean-entrypoint-remained'
   Assert (Test-Path -LiteralPath (Join-Path $t.Root 'user-created.txt')) 'unknown-user-data-deleted'
   Assert (Test-Path -LiteralPath (Join-Path $t.Root 'nox-p01-owned.txt')) 'marker-removed-before-NSIS'
   Assert (Test-Path -LiteralPath (Join-Path $t.Root 'payload.sha256.json')) 'manifest-removed-before-NSIS'
