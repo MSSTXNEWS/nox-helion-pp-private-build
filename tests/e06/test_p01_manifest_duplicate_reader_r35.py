@@ -38,6 +38,13 @@ class ManifestDuplicateReaderContract(unittest.TestCase):
                 self.assertIn("$quotas.MaxDepth = 32",source)
                 self.assertIn("$quotas.MaxArrayLength = 16777216",source)
 
+    def test_size_checked_before_readallbytes(self):
+        for name,source in self.sources.items():
+            with self.subTest(name=name):
+                self.assertIn("P01_MANIFEST_PRE_READ_SIZE_HOLD",source)
+                self.assertLess(source.index("$boundedInfo.Length -gt 16777216"),
+                                source.index("[IO.File]::ReadAllBytes($Path)"))
+
     def test_verify_precedes_any_json_object_parsing(self):
         src=self.sources["Verify-Payload.ps1"]
         self.assertLess(src.index("Assert-P01UniqueManifestMembers $manifestFull"),
