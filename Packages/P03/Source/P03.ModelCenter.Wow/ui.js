@@ -202,7 +202,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
   const safe={...evt,status:typeof evt.status==='string'?evt.status:'',modelTag:typeof evt.modelTag==='string'?evt.modelTag:''};
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
-  const job=currentJob();
+  // Queue ownership is independent of the card currently being inspected.
+  // Preserve background completion/STOP so returning to its card is truthful.
+  const job=state.activeJob;
   if(job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag)&&
      !['Completed','Failed','Cancelled'].includes(job.state)){
     if(typeof evt.status==='string')job.status=evt.status;
