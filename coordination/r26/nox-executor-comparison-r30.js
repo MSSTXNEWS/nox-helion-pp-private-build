@@ -58,7 +58,15 @@ function card(worker,kind){
  var trend=m.change==null?"Н/Д":(m.change>0?"+":"")+m.change+"%";
  var bar=m.percent==null?0:Math.min(100,Math.max(0,m.percent));
  var proof=m.url?'<a target="_blank" rel="noopener" href="'+esc(m.url)+'">Открыть квитанцию</a>':'Нужны проверенные квитанции';
- return'<article class="nox-r30-card"><div class="nox-r30-top"><b>'+esc(worker.name||worker.title||worker.id)+'</b><small class="'+cl+'">'+esc(status)+'</small></div><div class="nox-r30-mid"><div class="nox-r30-big">'+esc(num)+'<span>QA_ACCEPTED · '+esc(kind)+'</span></div>'+line(points)+'</div><div class="nox-r30-row"><span>Δ принятых: <b>'+esc(delta)+'</b></span><span>TaskID/ч: <b>'+(m.rate==null?'Н/Д':m.rate.toFixed(2))+'</b></span><span>Δ скорости: <b>'+esc(trend)+'</b></span></div><div class="nox-r30-track"><span style="width:'+bar+'%"></span></div><p>Принято по фиксированному знаменателю: '+(m.percent==null?"Н/Д":m.percent+"%")+' · '+proof+'</p></article>';
+ var src=Array.isArray(D.tasks)?D.tasks:[];
+ var related=src.filter(t=>t&&(String(t.owner)===String(worker.id)||String(t.integrator)===String(worker.id)||kind==="РУЧНОЙ"&&worker.id==="2"&&String(t.qa)==="2"));
+ var integrated=related.filter(t=>/^INTEGRATED/.test(String(t.stage||""))).length;
+ var prepared=related.filter(t=>/^SOURCE_PREPARED/.test(String(t.stage||""))).length;
+ var sourceNote=related.length?("Исторические TaskID в работе: "+related.length+" · интегрировано (не принято QA): "+integrated+" · подготовлено: "+prepared):"Исходные TaskID для этой роли в неполном реестре: Н/Д";
+ var sched=w.NOX_SCHEDULE_SNAPSHOT,rec=kind==="AUTO"&&Array.isArray(sched?.tasks)?sched.tasks.find(t=>String(t.id)===String(worker.id)):null;
+ var runWhen=rec?.last_run?.completed_at||rec?.last_run?.started_at;
+ var lastRun=runWhen?"Последний факт. запуск: "+new Date(runWhen).toLocaleString("ru-RU",{timeZone:"Europe/Moscow"})+" МСК · "+String(rec.last_run.status||"N/D"):"Последний фактический запуск: Н/Д";
+ return'<article class="nox-r30-card"><div class="nox-r30-top"><b>'+esc(worker.name||worker.title||worker.id)+'</b><small class="'+cl+'">'+esc(status)+'</small></div><div class="nox-r30-mid"><div class="nox-r30-big">'+esc(num)+'<span>QA_ACCEPTED · '+esc(kind)+'</span></div>'+line(points)+'</div><div class="nox-r30-row"><span>Δ принятых: <b>'+esc(delta)+'</b></span><span>TaskID/ч: <b>'+(m.rate==null?'Н/Д':m.rate.toFixed(2))+'</b></span><span>Δ скорости: <b>'+esc(trend)+'</b></span></div><div class="nox-r30-track"><span style="width:'+bar+'%"></span></div><p>Принято по фиксированному знаменателю: '+(m.percent==null?"Н/Д":m.percent+"%")+' · '+proof+'</p><p>'+esc(sourceNote)+'</p><p>'+esc(lastRun)+'</p></article>';
 }
 function render(){
  var root=d.getElementById("nox-r30-comparison");if(!root)return;
