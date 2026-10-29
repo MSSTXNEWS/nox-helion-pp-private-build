@@ -4,7 +4,7 @@ const watch=require("./nox_delivery_watchdog.js");
 const HEAD="a".repeat(40),BLOB="b".repeat(40),NOW="2026-10-30T01:00:00Z";
 const proof={blob:BLOB,head:HEAD,url:"https://github.com/MSSTXNEWS/nox-helion-pp-private-build/blob/"+HEAD+"/coordination/r31/receipt.json",readback:true};
 function fixture(){
- return{schema:"NOX_R31_DELIVERY_INPUT_V1",observed_at:NOW,head:HEAD,
+ return{schema:"NOX_R31_DELIVERY_INPUT_V1",observed_at:NOW,head:HEAD,receipt_index_complete:true,
   executors:[{id:"1",title:"Manual №1",category:"manual",scope:"current",enabled:true,
    last_run:{id:"M1-20261030-C01",started_at:"2026-10-30T00:05:00Z",
       completed_at:"2026-10-30T00:20:00Z",status:"completed"}}],
@@ -25,4 +25,6 @@ x=fixture();x.executors[0].last_run={id:"newrun",started_at:"2026-10-30T00:58:00
 x=fixture();x.executors[0].last_run={id:"newrun",started_at:"2026-10-30T00:54:00Z",status:"completed",completed_at:"2026-10-30T00:55:00Z"};z=evaluation(x);assert.equal(z.workers[0].status,"AWAITING_RECEIPT");
 x=fixture();x.receipts=[];x.executors[0].scope="historical";z=evaluation(x);assert.equal(z.summary.manual_current,0);assert.equal(z.complete,false);
 x=fixture();x.receipts[0].proof.url="https://attacker.invalid/receipt";z=evaluation(x);assert.equal(z.workers[0].status,"REPORTED_UNVERIFIED");
-console.log("NOX R31: 12 delivery watchdog checks passed");
+x=fixture();delete x.receipt_index_complete;x.receipts=[];z=evaluation(x);assert.equal(z.workers[0].status,"RECEIPT_INDEX_INCOMPLETE");assert.equal(z.complete,false);
+x=fixture();delete x.receipts[0].proof.head;z=evaluation(x);assert.equal(z.workers[0].status,"REPORTED_UNVERIFIED");
+console.log("NOX R31: 14 delivery watchdog checks passed");
