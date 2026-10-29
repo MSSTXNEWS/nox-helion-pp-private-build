@@ -1,0 +1,84 @@
+{
+  "schema": "NOX_FIN_ZAGR_R30_G1_A_SOURCE_RECEIPT_V1",
+  "runId": "R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+  "slot": "G1-A",
+  "status": "SOURCE_PATCHED_NATIVE_HOLD",
+  "project": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 loader-installer ONLY",
+  "ownerLock": {
+    "ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "path": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assignedPaths": [
+      "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+      "stage/proposals/P01/C09/Installer/Verify-Payload.ps1",
+      "stage/proposals/P01/C09/Installer/Remove-InstalledPayload.ps1"
+    ],
+    "forbiddenScope": "All other Installer files except uniquely named own slot-scoped source tests",
+    "oneWriterPerPath": true
+  },
+  "prerequisitesRead": [
+    "56/56 consolidated §33 rules at coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "V16 specification §§54–56 and latest R29 loader-only override in Google Doc 11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+    "R30 25 snapshots directory, relevant r29-a01 and r29-a2-p01 NSIS installer source snapshots",
+    "R30 ALL_RESULTS_CONFLICT_INDEX_20261029.json SHA c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "R30 G1-A previous receipt R30-G1-A-20261029T0530MSK-TRUSTED-ROLLBACK-UNINSTALLER-01",
+    "Google Drive E06 self-improvement latest paragraphs, master error journal delta, E06 report"
+  ],
+  "sourceBase": {
+    "branch": "astra/r30-g1-a-20261029t0530-uninstaller-sha-01",
+    "gitCommit": "e52510c62f081daacbc1acc411a3da9173b6776d"
+  },
+  "privateBranch": "automation/r30/g1a/R30-G1-A-20261029T0630MSK-ACTIVATION-ATTESTATION-02",
+  "taskId": "P01/C09/INSTALL_STAGED_AND_ACTIVATED_UNINSTALLER_PROVENANCE",
+  "rootCause": "Fresh installation updated uninstall registry before creating Uninstall.exe, and did not rehash the activated directory after the stage->live rename. An absent or mutated generated executable could be published as a successful, uninstallable installation.",
+  "fixes": [
+    "Generate setup-owned Uninstall.exe in the NSIS plugin directory before moving application trees.",
+    "Copy generated uninstaller into the stage and verify manifest payload, exact ownership marker, generated file size and its SHA-256 against the independent plugin source before first rename.",
+    "After activation, reverify full live manifest and trusted uninstaller SHA-256 BEFORE uninstall registry publication.",
+    "On live attestation failure, move suspect new install back to stage and restore prior backup if present; retain trees on incomplete recovery, never recursively delete user files.",
+    "Keep old working rollback executable integrity correction and other previous completed checks."
+  ],
+  "changedPaths": [
+    "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+    "stage/proposals/P01/C09/Installer/test_G1-A_activation_attestation_r30_20261029.cjs"
+  ],
+  "gitEvidence": {
+    "sourcePreimageBlob": "c94568922e98fd9fbf20eb47e8bc62b0f957d183",
+    "sourcePostimageBlob": "969f8c11eaca20c69e9610422731862c7bd3ed62",
+    "sourceCommit": "02296b235581f2b7f1577131960c959ae61a7f1f",
+    "testBlob": "e6b9813dbd22b00957add869e58c7eba6bea39d2",
+    "testFinalCommit": "085154b00fa9b23e6fa5986390204dcd23ceaa7a",
+    "compareBase": "e52510c62f081daacbc1acc411a3da9173b6776d",
+    "changedPathCountBeforeReceipt": 2,
+    "deletedPaths": 0
+  },
+  "tests": {
+    "method": "Executed exact committed CommonJS test file source in ECMAScript/V8 using GitHub-fetched installer bytes and readFileSync mock (no Windows/Node command invoked); independently ran 14 additional source gate checks before write.",
+    "baselineRed": "Previous code lacked post-activation trusted-uninstaller check",
+    "committedSourceRegressionPass": 17,
+    "committedSourceRegressionFail": 0,
+    "negativeMutationsDetected": 5,
+    "prewriteSourceChecksPass": 14,
+    "githubReadback": "PASS",
+    "fileTestCommandForFuture": "node stage/proposals/P01/C09/Installer/test_G1-A_activation_attestation_r30_20261029.cjs",
+    "nodeCliRun": "NOT_RUN",
+    "nsisCompiler": "NOT_RUN",
+    "windowsPowerShell51": "NOT_RUN",
+    "windowsInstaller": "NOT_RUN",
+    "exe": "NOT_BUILT",
+    "ci": "NOT_RUN"
+  },
+  "actualErrorsEncountered": [
+    "First patch transformation aborted before any write due to path backslash representation mismatch; corrected anchor before branch creation.",
+    "Initial slot-scoped test had malformed regex escaping and failed V8 parsing; corrected in test-only commit before registering PASS."
+  ],
+  "singleLesson": "R30_G1_A_ATTEST_THE_ACTIVATED_OBJECT_BEFORE_PUBLISHING: Pre-stage trust checks are necessary but not sufficient. If publication refers to a live file tree, recompute verification on that exact live tree after the irreversible filesystem transition and before registry/shortcut success. Commit and execute the saved regression fixture, including negative mutations, not just an unsaved optimistic assertion. Distinguish V8 source checks from real Windows/NSIS validation.",
+  "conflictsAndHandoff": "Historic R29 index shows NSIS and Remove-InstalledPayload overlapping candidate branches (r29-a01/r29-a2-p01). Neither divergent donor blindly merged. This isolated G1-A branch retains previous G1-A rollback SHA patch. Astra-C should compare blob diffs and track the conflict; no other reserved source paths were modified.",
+  "holds": [
+    "Native NSIS compilation, actual PowerShell 5.1, Windows NTFS activation/rollback fault-injection and E07 same-SHA testing remain NOT_RUN.",
+    "Registry write failure during post-attestation registration is not yet transactionally recovered; requires future owner task/QA.",
+    "No source-ready, no E07/release acceptance, no product completion percentage."
+  ],
+  "sharedGoogleDriveWrite": "NOT_ATTEMPTED_ASTRA_C_SOLE_WRITER",
+  "oneFinalWindowsBuild": "NOT_BUILT"
+}
