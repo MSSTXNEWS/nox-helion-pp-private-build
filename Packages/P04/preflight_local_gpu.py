@@ -226,6 +226,11 @@ def inspect(profile: str, gpu_index: int) -> dict:
                 report["gpu"]["cuda_device_count"] = torch.cuda.device_count()
                 if torch.cuda.device_count() != 1:
                     report["errors"].append("CUDA_VISIBLE_DEVICE_COUNT_NOT_ONE")
+                else:
+                    props = torch.cuda.get_device_properties(0)
+                    total = getattr(props, "total_memory", None)
+                    if type(total) is not int or total <= 0:
+                        report["errors"].append("TORCH_GPU_MEMORY_METADATA_INVALID")
         except Exception:
             report["errors"].append("TORCH_CUDA_RUNTIME_UNAVAILABLE")
         finally:
