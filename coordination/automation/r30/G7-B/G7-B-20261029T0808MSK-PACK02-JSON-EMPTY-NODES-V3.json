@@ -1,0 +1,164 @@
+{
+  "schema": "NOX_FIN_ZAGR_V16_R30_G7B_PACK02_SOURCE_RECEIPT_V3",
+  "run_id": "G7-B-20261029T0808MSK-PACK02-JSON-EMPTY-NODES-V3",
+  "slot": "G7-B",
+  "product": "NOX HELION EXPRESS INTEGRATOR FIN ZAGR V16 Windows loader-installer only",
+  "status": "HOLD",
+  "source_patch_status": "GIT_SAVED_V8_SOURCE_CHECKS_PASS",
+  "branch": "automation/r30/g7b/G7-B-20261029T0808MSK-PACK02-JSON-EMPTY-NODES-V3",
+  "base_ref": "automation/r30/g7b/G7-B-20261029T071416MSK-PACK02-STRICTDATA-V2",
+  "ownership": {
+    "canonical_lock": "coordination/astra/r30/ASTRA_15_AUTOMATIONS_7X2_PLUS_C_FILE_OWNERSHIP_JOURNAL_20261029.json",
+    "lock_ref": "astra/fin-zagr-v16-all-results-r30-20261029",
+    "lock_blob_sha": "56ae7c48c02a144fc5b63c5343971c422dd7f80a",
+    "assigned_paths": [
+      "proposals/NOX-PACK02-50/"
+    ],
+    "forbidden_paths": [
+      "integrations/wow200/",
+      "proposals/NOX-CINEMA-FX/",
+      "proposals/NOX-PACK01-50/"
+    ],
+    "receipt_exception": "coordination/automation/r30/G7-B/",
+    "one_writer_per_path": true
+  },
+  "sources_read": {
+    "exact_56_rules": "coordination/astra/ASTRA_V16_R24_ALL_56_V15_RULES_EXACT_SECTION33.md",
+    "exact_56_rules_blob_sha": "46fc22c8b2f5e49e78526a2f75456555577e5571",
+    "V16_sections": [
+      "33",
+      "54",
+      "55",
+      "56",
+      "R29 loader-only priority appended to §56"
+    ],
+    "conflict_index": "coordination/astra/r30/ALL_RESULTS_CONFLICT_INDEX_20261029.json",
+    "conflict_index_sha": "c9514d0aa93e9828d913ac431ac7ca54c86fcc98",
+    "snapshot_folders": 25,
+    "snapshot_full_recursive_git_tree_inventories": 25,
+    "snapshot_git_tree_truncated": 0,
+    "snapshot_full_file_bytes_or_physical_archive_sha256": "NOT_PERFORMED",
+    "snapshot_ops_sha_distribution": {
+      "41cb40e3a1d77f36a74482cec6599c354e1cf3ee": 24,
+      "3df02661abf3f75fdd3d883e4c30b75d6887eaf6": 1
+    },
+    "divergent_donor": "coordination/astra/r30/snapshots/r27-a10-20261029/proposals/NOX-PACK02-50/ops.mjs",
+    "google_drive_read_only": [
+      {
+        "id": "1qPG5zZIrqHvAxOzjeLqGKN12gxjeNf0Pj4bHMJrjS50",
+        "role": "master errors latest Astra-C delta"
+      },
+      {
+        "id": "17scXv-pnI0hJYAw1I706cxc3lybsO23yue1AIYsmNU4",
+        "role": "E06 actual source report"
+      },
+      {
+        "id": "14FXmVrgd7rCR7mDKDfJ-1hpbU6DNI_Znqk1af_6BrDQ",
+        "role": "self-improvement"
+      },
+      {
+        "id": "1DzXIiABcXOgh4fyaCz84ApEp59lY317HRgVdPtXNVLU",
+        "role": "historical C34"
+      },
+      {
+        "id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+        "role": "V16 §33 §§54-56"
+      }
+    ]
+  },
+  "task_ids": [
+    "G7B-PACK02-JSON-EMPTY-NODE-NOLOSS-20261029-03"
+  ],
+  "changed_source": {
+    "path": "proposals/NOX-PACK02-50/ops.mjs",
+    "preimage_git_blob_sha": "196bc0260e4480bf0fec012883e7bffd225ddc7a",
+    "postimage_git_blob_sha": "0c710928ef0b52463af5b46ab3bda343bd1397c2",
+    "commit_sha": "269f9d76545ee6737b6d0e4af86e5a3fa399b084",
+    "git_readback": true,
+    "details": [
+      "Corrected JSON flatten() silently dropping nested empty object and empty array values, including empty nodes in arrays.",
+      "Preserved 50 original routes and existing normal dotted path contract; root empty object/array remains an empty mapping.",
+      "Preserved fail-closed JSON_PATH_COLLISION for literal dotted key vs nested path; avoided adopting conflicting frozen donor dotted-key escaping pending explicit decision.",
+      "Preserved Object.create(null) prototype-safe destination, depth gate, and duplicate-path guard."
+    ],
+    "new_routes": 0,
+    "original_routes_retained": 50
+  },
+  "one_owner_targeted_test": {
+    "path": "proposals/NOX-PACK02-50/g7b-r30-json-empty-nodes.test.mjs",
+    "blob_sha": "f0fb7acda4686611c3aadf0c0b2893b365ccc371",
+    "commit_sha": "c197f40a5134b2ad7176ddbc61a12b625b676b15",
+    "git_readback": true,
+    "authored_command": "node --test proposals/NOX-PACK02-50/g7b-r30-json-empty-nodes.test.mjs",
+    "actual_authored_module_node_execution": "NOT_RUN",
+    "exact_git_postimage_v8_source_evaluation": {
+      "passed": 8,
+      "total": 8
+    },
+    "extracted_identical_helper_local_node_test": {
+      "command": "node --test /tmp/g7b-r30-json-empty-helper.test.cjs",
+      "passed": 1,
+      "total": 1,
+      "scope": "EXTRACTED_HELPER_ONLY; not full GitHub module",
+      "build_or_ci": false
+    },
+    "Windows_natively_integrated_qa": "NOT_RUN"
+  },
+  "compare_to_previous_g7b_branch": {
+    "status": "ahead",
+    "ahead_by_before_receipt": 2,
+    "behind_by": 0,
+    "changed_files_before_receipt": [
+      "proposals/NOX-PACK02-50/ops.mjs",
+      "proposals/NOX-PACK02-50/g7b-r30-json-empty-nodes.test.mjs"
+    ],
+    "other_owner_files_changed": false
+  },
+  "Host50_handoff": {
+    "status": "HOLD_OWNER_APPROVAL_LICENSE_ORIGINAL_HOST_ADMISSION",
+    "original_host": "proposals/NOX-PACK01-50/native_bridge.py",
+    "read_only_blob_sha": "805ade553b3fd102f8995a54632d0ad904316c9c",
+    "request": "Original Host50 owner to evaluate licensed internet adapters, provenance and licenses, origin/credential boundaries and permission/STOP contracts; do not create a second host or write PACK01 from G7-B.",
+    "modified": false
+  },
+  "applied_previous_lesson": "Read all 25 immutable Git recursive snapshots; preserve useful r27-a10 JSON empty node semantics while retaining already recorded G7-B fail-closed dotted-key collision regression, rather than copying incompatible donor wholesale.",
+  "new_lesson": {
+    "id": "R30_G7B_INCOMPATIBLE_DONOR_PORT_MINIMUM_NONCONFLICTING_NOLOSS",
+    "observed_error": "Current G7-B JSON flatten returned no properties for nested empty object/array values. Frozen donor r27-a10 preserved these nodes but also adopted escaped dotted keys that contradict an existing saved G7-B collision-rejecting test.",
+    "root_cause": "Recursive flatten() iterated zero entries on empty containers, losing JSON data; branch donor replacement would silently change the established JSON_PATH_COLLISION contract.",
+    "correction": "Ported only preservation of empty nested containers, kept Object.create(null) and collision guard. Added one owner-scoped test and evaluated exact Git postimage in V8 plus isolated Node extracted-helper test.",
+    "prevention": "Compare frozen source and all preexisting owner tests before cherry-picking. Split compatible bug fixes from unresolved API-semantic changes; label extracted helper / static V8 distinct from full native Node and Windows acceptance."
+  },
+  "outstanding_conflicts": [
+    "JSON literal dotted key vs nested path remains fail-closed; frozen r27-a10 escaped-key compatibility not promoted without owner decision and full regression.",
+    "Native Node execution of authored Git test not yet performed; isolated helper Node result is not a substitute.",
+    "Original Host50 licensed online adapters not owner-approved or admitted."
+  ],
+  "no_loss": {
+    "historical_DONE_preserved": true,
+    "frozen_25_snapshots_untouched": true,
+    "source_archive_parts_untouched": true,
+    "main_untouched": true,
+    "PR162_untouched": true,
+    "shared_R30_branch_untouched": true,
+    "Google_Docs_untouched": true,
+    "PACK01_native_bridge_untouched": true,
+    "D02_WOW_untouched": true
+  },
+  "gates": {
+    "SOURCE_CODE_COMPLETE": "HOLD",
+    "SOURCE_READY": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "P01_P05_weighted_product_progress": "N/D",
+    "native_Host50": "NOT_VERIFIED",
+    "Windows_EXE": "NOT_BUILT",
+    "NSIS": "NOT_RUN",
+    "GitLab_CI": "NOT_RUN",
+    "final_integration": "NOT_RUN",
+    "Google_Docs_shared_write": "ASTRA_C_ONLY_NOT_PERFORMED_BY_G7_B",
+    "REPORT_GATE": "HOLD",
+    "RELEASE": "HOLD"
+  },
+  "instruction_to_Astra_C": "Append this unique G7-B owner receipt error and method lesson to master/E06/lessons Google Docs once using revision CAS and RunID readback. Never overwrite DONE, source, frozen trees or another owner's path."
+}
