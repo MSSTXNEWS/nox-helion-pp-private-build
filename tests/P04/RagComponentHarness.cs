@@ -150,6 +150,20 @@ internal static class Program
                 throw new InvalidOperationException("RAG_FORGED_CITATION_ACCEPTED");
             }
             catch (InvalidDataException) { _checks++; }
+            try
+            {
+                var foreignOwner = smallCitation with { OwnerSid = ownerB };
+                RagService.BuildContext(new[] { smallCitation, foreignOwner }, 512);
+                throw new InvalidOperationException("RAG_MIXED_OWNER_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
+            try
+            {
+                var foreignChat = smallCitation with { ConversationId = "other-conversation" };
+                RagService.BuildContext(new[] { smallCitation, foreignChat }, 512);
+                throw new InvalidOperationException("RAG_MIXED_CHAT_CITATION_ACCEPTED");
+            }
+            catch (InvalidDataException) { _checks++; }
             using (var reopened = new RagService(new Uri("http://127.0.0.1:" + port + "/"),
                 "no-model-test-double", Path.Combine(directory, "index.json")))
             {
