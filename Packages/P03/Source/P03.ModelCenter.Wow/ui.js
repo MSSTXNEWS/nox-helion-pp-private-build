@@ -98,9 +98,9 @@ function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvid
   $('transfer').textContent=complete!==null&&total!==null&&total>0?`${bytes(complete)} / ${bytes(total)}`:'Н/Д';
   $('transferNote').textContent=j?`${safeText(j.modelTag)} · ${realPct===null?'Без достоверного процента':`Передано ${realPct}%`} · установка требует receipt`:'Без достоверного процента';
   $('modelSize').textContent=verified?bytes(m?.artifactBytes):unknown;
-  const cap=state.capabilities||{};const queue=state.activeJob,queueModel=queueJobModel();
-  const canStop=state.hostReady&&cap.stop===true&&queue&&queueModel&&['Queued','Running'].includes(queue.state);
-  const canRetry=state.hostReady&&cap.retry===true&&queue&&queueModel&&['Failed','Cancelled'].includes(queue.state);
+  const cap=state.capabilities||{};const queue=state.activeJob;
+  const canStop=state.hostReady&&cap.stop===true&&queue&&['Queued','Running'].includes(queue.state);
+  const canRetry=state.hostReady&&cap.retry===true&&queue&&['Failed','Cancelled'].includes(queue.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
   $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
@@ -146,7 +146,8 @@ function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retr
  if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  if(action==='importGguf'&&!$('licenseAck').checked)return;
- if(isQueue&&(!job||!job.jobId||!targetModel))return;
+ // Queue commands need the durable jobId, not a card in the discovery catalog.
+ if(isQueue&&(!job||!job.jobId))return;
  if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
  if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
@@ -155,7 +156,7 @@ function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retr
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
   jobId:['stop','retry'].includes(action)?job.jobId:null};
  const m=targetModel,pending={commandId,id:m?.id||null,tag:m?.exactTag||null,revision:m?.immutableRevision||null,manifest:m?.manifestSha256||null,
-  jobId:isQueue?job.jobId:null,timer:null};
+  jobId:isQueue?job.jobId:null,jobTag:isQueue?job.modelTag:null,timer:null};
  state.pending.set(action,pending);renderHero();renderQuick20();
  try{window.chrome.webview.postMessage(data);
   pending.timer=setTimeout(()=>{if(state.pending.get(action)!==pending)return;state.pending.delete(action);renderHero();renderQuick20();showToast('Нет ACK host: исход неизвестен; проверьте очередь.');},45000);
@@ -248,7 +249,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   state.pending.delete(data.action);renderHero();renderQuick20();
   const isQueue=['stop','retry'].includes(data.action),m=isQueue?queueJobModel():current();
   const samePin=pending.id===(m?.id||null)&&pending.tag===(m?.exactTag||null)&&pending.revision===(m?.immutableRevision||null)&&pending.manifest===(m?.manifestSha256||null)&&
-    (!isQueue||pending.jobId===state.activeJob?.jobId);
+    (!isQueue||(pending.jobId===state.activeJob?.jobId&&pending.jobTag===state.activeJob?.modelTag));
   showToast(!samePin?'ACK от ранее выбранной модели; проверьте очередь.':data.accepted===true?'Host принял команду; установка требует receipt.':`Host отклонил: ${ellipsis(data.reason||'причина не указана')}`);
  }}
 $('search').addEventListener('input',renderCatalog);

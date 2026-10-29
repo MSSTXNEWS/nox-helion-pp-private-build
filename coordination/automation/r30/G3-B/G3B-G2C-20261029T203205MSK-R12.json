@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_V16_R16_IMMUTABLE_OWNER_RECEIPT",
+  "run_id": "G3B-G2C-20261029T203205MSK-R12",
+  "slot": "G3-B (G2-C coordination)",
+  "status": "INCOMPLETE_SOURCE_PATCH_PENDING_T06_T08_ACCEPTANCE",
+  "scope": "Windows EXPRESS INTEGRATOR loader P03 only, SOURCE ONLY",
+  "prestart": {
+    "canon_revision": "AHj4eMQBdNwVtwzPnq79HyIQOXSOqWDmTjA5_66HQJRcwkw5ah_pH3Kx6Wz1ouUA_Huc94KSNI5IZJuabMfqMwP-AtaaunAsf8QolSG-FRU",
+    "rules_33": "56/56",
+    "owner_lock_blob": "bb41f403080b51332f80db6cfed7dce6d0b98f73",
+    "active_register_blob": "0d70249e7849159f7a28f1b82aa31b7c24d0c35f",
+    "register_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "register_ids": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "pr162_head": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pr162_ui_blob": "12762f9f36b8813aaac22476495a59484aa9f22a",
+    "master_revision": "AHj4eMRLmpkQKr-x9gaoFD7SdREQT_JAVT70PIw17kEJz5AQXf6KCCpPvpu6GwhahtigNShc_D_k7P5dX--RlLVQNtzxDDZBmaJTyIEXMlM",
+    "e06_revision": "AHj4eMQvsqhebXI-ZMHGNnf5ByWrz730Zob8Cn1tU8Oix-zgvTFZAyBa02VYY6edeiFk0MtiNgecDA2Uh9n1BIzVEwhHpvXOnTDR7YyV2x0",
+    "lessons_revision": "AHj4eMSVR_FJ3gur9EGn7vp45lqjhDZxcj2COxKftuTf_-sf15s7rBbnFBk8z8JyhVSynoKr9xf_5BapbJlKncarZyHhFA6b2Jw_TmZ42Mg"
+  },
+  "physical": {
+    "task_id": "P03_QUEUE_GGUF_STOP_RETRY",
+    "source_path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "base_owner_commit": "8e31b71a1ebb5abeeea203b1a082fe4bd1ffa603",
+    "pre_git_blob": "826a8e9239fe80a70b8b6bdf480ea4fe202ecb28",
+    "previous_pre_sha256": "276a1814d77bc4b8767b27e6976132e6daec97012b098da4b72fa3e8dd7daebb",
+    "candidate_post_sha256": "655a4895989439738cf1e63933114ff98be3d534aa450e4b5db14c57690ea1a6",
+    "changes": "4 exact preimage replacements, unlisted GGUF STOP/Retry based on host jobId and capabilities, ACK pins jobId + modelTag, no catalog admission for queue controls",
+    "source_test": "19/19 PASS mocked real ui.js handler and DOM/WebView2 commands, preimage 4/4, JS syntax PASS",
+    "native_ollama": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "security": "Host capability, jobId, consent for new pull/import, no new host/backend retained"
+  },
+  "handoff": {
+    "owner": "T06/manual #1",
+    "target": "PR162 only owner T06 may write",
+    "pr162_pre_sha": "3b94fed3be6cba9bf6a2fa38d1451fa6ec6368c2",
+    "pr162_ui_pre_blob": "12762f9f36b8813aaac22476495a59484aa9f22a",
+    "note": "Do not wholesale overwrite PR162 ui.js: its currentJob() filters selected model; on exact PR UI pin STOP/Retry to state.activeJob with durable jobId, snapshot and ACK jobId/modelTag, preserving other PR changes; then independent same-SHA T08 tests. G3-B source branch supplies patch reference.",
+    "required_tests": [
+      "Unlisted GGUF stop and retry after card switch",
+      "jobId/modelTag ACK after job switch",
+      "host permission denied blocks controls",
+      "Cancelling cannot revert to Completed",
+      "pull/import retains native consent"
+    ]
+  },
+  "gates": {
+    "A": "PASS",
+    "B": "PASS_SOURCE_LOCAL_TEST_PENDING_GIT_READBACK",
+    "C": "PENDING_GIT_RECEIPT_READBACK",
+    "D": "PARTIAL_APPLIED_ONE_CLUSTER"
+  },
+  "lessons": {
+    "processed_active_register": 11,
+    "relevant_deduplicated_clusters": 3,
+    "applied": 1,
+    "delegated": 1,
+    "blocked": 1,
+    "remaining": 1,
+    "cursor": "new receipts after current canonical R22; do not rescan 419 archived fingerprints",
+    "learning": "Queue control intent must pin host job identity, never a catalog lookup; use single immutable source+receipt commit with separate PR owner acceptance."
+  },
+  "progress": {
+    "fixed_operational_denominator": 4,
+    "accepted_before": 0,
+    "accepted_after": 0,
+    "delta_accepted": 0,
+    "product_percentage": "N/D",
+    "stage": "SOURCE_VERIFIED owner branch only",
+    "outstanding": [
+      "Catalog requires G3-A/T06",
+      "Queue T06+T08 accepted on same SHA",
+      "OneHost/STOP native verification",
+      "T06 owner handoff acceptance"
+    ]
+  },
+  "safety": {
+    "no_exe_nsis_ci_gitlab_e07": true,
+    "no_pr162_main_write": true,
+    "no_shared_drive_write": true,
+    "no_original_snapshots_modified": true
+  }
+}
