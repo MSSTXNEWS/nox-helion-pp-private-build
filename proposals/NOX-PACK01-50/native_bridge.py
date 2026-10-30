@@ -328,8 +328,9 @@ class ExistingP02Adapter:
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
         # Persist messages only after real terminal success.
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"user",message)
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
+        # One SQLite transaction: no orphaned user message on assistant failure.
+        self.store.add_turn(session.tenant,session.principal,session.chat_id,
+                            message,text)
         return {"answer":text,"done":True}
 
     def attach_native_selected(self,session,args):
