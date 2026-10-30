@@ -1638,6 +1638,97 @@
       "build_authorized": false,
       "e07": "NOT_RUN",
       "next_owner": "T06 sole PR162 owner: exact-preimage integrate verified privacy-sensitive G2-A permission-before-side-effect and voice selector patches; PACK02 CSV no-loss with Node/native tests, T07 SourceLock byte-exact receipt and approved R41 preflight/CI only as source. Reconfirm 8/8 + portraits rights + WPF→Python. T08 independent same-head full QA; T09 freeze; T10 signed SOURCE_READY; G5-C mirror byte-exact GitLab frozen tree only then authorized build."
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-20261030T1247MSK-STOP-P0-SOURCE-RECEIPTS",
+      "existing_task_id": "T02",
+      "observed_at_moscow": "2026-10-30T12:47:09+03:00",
+      "source_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_at_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "registry_pre_blob": "9394036666b5283555e65c5aa60f657f3f6c819b",
+      "source_code_changed_since_previous_T02": false,
+      "new_material_owner_or_independent_receipts": 5,
+      "evidence": [
+        {
+          "owner": "G2-A",
+          "task_id": "NIP01-09 chat.stop",
+          "owner_commit": "76c9bbac74ea99f54052c25f434645ce1bf9dd7b",
+          "receipt_blob": "154ed23d8f80de1e9622020c879b7bbfab0776d0",
+          "issue_comment_id": 6518914064,
+          "source_path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "product_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+          "donor_blob": "f7cbebbae5fd2067ee71354c8763bbb7f60f5499",
+          "finding": "P0 offline Ollama can block chat.stop before client.stop; exact product/donor blobs read; isolated RED→GREEN reported, full Python/Windows NOT_RUN",
+          "stage": "DONOR_PREPARED_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "T10 independent",
+          "task_id": "T10",
+          "issue_comment_id": 6519368639,
+          "source_path": "proposals/NOX-PACK01-50/native_bridge.py",
+          "source_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+          "finding": "Independent same-head source read confirms STOP Ollama dependency, SOURCE_READY HOLD, Windows NOT_RUN",
+          "stage": "INDEPENDENT_SOURCE_HOLD",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G4-A/T07",
+          "task_id": "T07",
+          "owner_commit": "c07cf388d6234302d5622d5b70178a2d3c2ae7da",
+          "receipt_blob": "950c6be6d772e440e8ff397e8bbbc1f4830171f2",
+          "issue_comment_id": 6519781753,
+          "source_path": "coordination/source-lock/verify_original_archive.py",
+          "source_post_blob": "814e069c02948cfeb6f4a9bd285a04a6669276ff",
+          "finding": "Atomic published SourceLock receipt now exact-byte readback, isolated local extracted tests 4/4; original ZIP untouched, Windows/full unittest NOT_RUN",
+          "stage": "DONOR_PREPARED_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G3-B/PACK02",
+          "task_id": "NIP02-21/NIP02-22",
+          "owner_commit": "4fced3530bd2d38f9fab08ed0cfc4a9d9f8dda83",
+          "receipt_blob": "4239f39497ba7697eaad0b2e1236d63c49359c0b",
+          "issue_comment_id": 6519789086,
+          "source_path": "proposals/NOX-PACK02-50/ops.mjs",
+          "product_blob": "376d92062e609bcc33961fa372d67eca4d1a9499",
+          "donor_blob": "0002e7d116cdc3bb5cd627f2c5768240e10b850e",
+          "finding": "Quoted CSV CR/CRLF line-ending data loss fixed in isolated owner branch, focused V8 3/3, Node/Windows NOT_RUN",
+          "stage": "DONOR_PREPARED_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G5-C/T11",
+          "task_id": "T11",
+          "gitlab_head": "cd57466b3556e6141d6dd21e6a91c4fda3bb2abc",
+          "issue_comment_id": 6519609814,
+          "source_path": "coordination/r41/Assert-R41ArtifactHandoff.ps1",
+          "source_post_blob": "0bdd479742d0accc0770492fc4f8fc59510b346a",
+          "finding": "Isolated GitLab PE-format artifact header validation, 6/6 focused source checks, PowerShell/Windows NOT_RUN; still no GitHub/GitLab frozen parity",
+          "stage": "ISOLATED_BUILDER_SOURCE_PREPARED",
+          "qa_accepted": false
+        }
+      ],
+      "existing_error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "error_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "historic_done_preserved": true,
+      "original_source_729_3_preserved": true,
+      "last_lesson_application": "NOT_APPLIED to current PR162: prior zero-side-effect permission/STOP preconditions still require owner integration. T10 independent source check at exact 678ce736... confirms STOP can be gated on offline Ollama; no native proof.",
+      "new_lesson": "Cause: chat.stop used Ollama model availability predicate. Repair: donor route always-ready only for chat.stop, keep ACL/origin binding. Regression: disconnected Ollama STOP must invoke client.stop while ordinary chat HOLD and unauthorized STOP reject; full source/native tests pending. Prevention: model-offline STOP/ACL gate on exact integrated SHA before independent T08.",
+      "qa_accepted_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_authorized": false,
+      "e07": "NOT_RUN",
+      "next_owner": "P0 T06 sole PR162 writer: exact-preimage integrate one-line STOP donor (product 1cd8f2d4 -> approved patch); run full Python STOP/ACL/consent/privacy + offline model tests and owner 8/8, then independent T08. Coordinate permission-before-native, cumulative SourceLock/CSV fixes without overwriting donor chains. T09 freeze/5 portraits, T10 SOURCE_READY; G5-C frozen GitLab parity only after gates."
     }
   ]
 }
