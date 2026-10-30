@@ -73,6 +73,18 @@ class Tests(unittest.TestCase):
         with self.assertRaises(m.OwnerDenied):
             self.port.open_browser("trusted-session", {"url": "https://example.org"})
 
+    def test_browser_rejects_whatwg_numeric_ipv4_loopback_aliases(self):
+        # urlsplit/ipaddress do not normalize these Chromium/WHATWG aliases.
+        for url in ("https://127.1/admin", "https://127.0.1/",
+                    "https://0177.0.0.1/", "https://0x7f.1/"):
+            self.url = url
+            with self.subTest(url=url), self.assertRaises(m.OwnerDenied):
+                self.port.open_browser("trusted-session", {})
+        self.assertEqual(self.browser_calls, [])
+        self.url = "https://127.1.example.org/info"
+        self.assertIs(self.port.open_browser("trusted-session", {})["accepted"], False)
+        self.assertEqual(self.browser_calls, [self.url])
+
     def test_browser_native_consent_and_stop_revocation(self):
         self.allowed = False
         with self.assertRaises(m.OwnerDenied):

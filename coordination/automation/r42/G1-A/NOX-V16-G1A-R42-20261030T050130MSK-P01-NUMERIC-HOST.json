@@ -1,0 +1,76 @@
+{
+  "run_id": "NOX-V16-G1A-R42-20261030T050130MSK-P01-NUMERIC-HOST",
+  "group": "G1-A",
+  "existing_task_id": "P01 / existing browser.open native route",
+  "owner": "G1-A isolated helper; G3-C/T06 sole PR162 integrator",
+  "current_product_head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "product_tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+  "own_branch": "auto/r42/g1a-p01",
+  "branch_pre": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+  "active_register_blob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+  "active_error_counts": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2
+  },
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "related_issue": "#177",
+  "latest_r42_issue_comment": "6513110936",
+  "severity": "P1 native URL boundary",
+  "root_cause": "Python ipaddress rejects legacy numeric IPv4 spellings while WHATWG URL canonicalizes 127.1/0177.0.0.1/0x7f.1 to loopback; P01 allowed numeric aliases.",
+  "source_changes": [
+    {
+      "path": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+      "pre_blob": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+      "post_blob": "ecd39b64075b4edfd720dba5ab39f5a71c124b10"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+      "pre_blob": "41d7f6173d83d2a052ebf74639b2383936a45748",
+      "post_blob": "0278961473740f0d1511e9a4dafade1082c130d4"
+    }
+  ],
+  "tests": {
+    "numeric_alias_source_logic": {
+      "red": "4 unsafe aliases accepted before fix",
+      "green": "7/7 targeted Python expected decisions passed",
+      "browser_parser": "Node WHATWG 4/4 aliases normalize to 127.0.0.1"
+    },
+    "full_repo_unittest": "NOT_RUN (private GitHub source not locally mounted)",
+    "native_windows": "NOT_RUN",
+    "source_static_guards": "PASS (only one owner source anchor and one existing test insertion)",
+    "product_QA": "NOT_ACCEPTED"
+  },
+  "safety": {
+    "STOP": "PRESERVED_UNMODIFIED",
+    "ACL": "PRESERVED_UNMODIFIED",
+    "native_consent": "PRESERVED_UNMODIFIED",
+    "NO_LOSS": "BASE_TREE_ONLY_TWO_P01_FILES_CHANGED",
+    "HOME_MENU_WORK": "UNCHANGED_IN_BASE_TREE",
+    "personas": "UNCHANGED_IN_BASE_TREE",
+    "SOURCE_READY": false,
+    "build": false
+  },
+  "stages": {
+    "SOURCE_PATCH_PREPARED": true,
+    "SOURCE_VERIFIED": "TARGETED_SOURCE_LOGIC_ONLY",
+    "INTEGRATED": false,
+    "QA_ACCEPTED": false
+  },
+  "delta_accepted_task_ids": 0,
+  "product_progress": "N/D",
+  "lessons": {
+    "applied": "reject ambiguous all-numeric host spellings before passing URLs to OS browser",
+    "already_fixed": "WinGet short-path/long-path test fix preserved",
+    "delegated": "T06 integrate exact PRE; T08 same-SHA independent Windows/browser STOP/ACL/consent checks",
+    "remaining": "owner integration + native QA"
+  },
+  "next_owner": "G3-C/T06",
+  "next_action": "On current PR162 HEAD verify P01 source blob 550df2d4653990c5d981c8faf99a0761ffae97c7 and test blob 41d7f6173d83d2a052ebf74639b2383936a45748, apply isolated two-file patch with CAS, run full P01 22-test source suite and native Windows/STOP/ACL/consent safety QA; hand off to T08. T02 only for shared journals.",
+  "historical_DONE": "T01 100/100 unchanged",
+  "no_exe_ci_e07": true
+}
