@@ -1,0 +1,85 @@
+{
+  "schema": "NOX_V16_R47_T09_EXACT_HEAD_FREEZE_HOLD_V1",
+  "runId": "NOX-V16-T09-R47-20261030T1306MSK-T07-DIRECT-READBACK-SOURCE-HOLD",
+  "taskId": "T09",
+  "role": "QA-2 independent no-loss frozen-source keeper",
+  "scope": "ONE authentic frozen PR162 HEAD/tree only after T06+T08 same SHA",
+  "source": {
+    "pr": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headPre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "headPostAtRead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "driftSincePreviousT09": false
+  },
+  "previousT09": {
+    "receiptGitBlob": "c1e2b650c4539f737fa0eb468e0e48d538ab8bbd",
+    "ownQAbranchHeadAtRead": "366088a54e8e39b12b42f077e4c05cc5eb6e625f"
+  },
+  "sourceLock": {
+    "sourcePartGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "sizes": [
+      20971520,
+      20971520,
+      18421306
+    ],
+    "matchLastT07": true,
+    "historicPhysical729Of729PassReused": true,
+    "historicCombinedArchiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "raw60MBRedownload": "NOT_RUN"
+  },
+  "freshDelta": {
+    "kind": "INDEPENDENT_LIVE_BLOB_COMPARISON_OF_LATEST_T07_ISOLATED_PUBLISHER_FIX",
+    "path": "coordination/source-lock/verify_original_archive.py",
+    "pr162GitBlob": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+    "isolatedT07GitBlob": "814e069c02948cfeb6f4a9bd285a04a6669276ff",
+    "isolatedT07Head": "c07cf388d6234302d5622d5b70178a2d3c2ae7da",
+    "isolatedTestGitBlob": "e28bfcfb256c317a2f81cb8fe4d736dc6e795cde",
+    "isolatedE06WrapperGitBlob": "a42cc41b095c5997388274b3b4030aea4280cb6b",
+    "pr162E06WrapperGitBlob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+    "sourceFinding": "T07 standalone publish_manifest_exclusive isolated donor now checks output.read_bytes()==payload encoded UTF-8 after os.link; PR162 still lacks this exact-byte verification",
+    "testFinding": "Donor regression creates post-link whitespace tamper; Git source readback confirmed; T09 did not execute Python unittest",
+    "stage": "SOURCE_PREPARED_NOT_INTEGRATED",
+    "testStatus": "NOT_RUN_T09",
+    "t07OwnerFocusedTest": "EXTRACTED_FUNCTION_REPORTED_PASS_NOT_FULL_UNITTTEST"
+  },
+  "acceptance": {
+    "t06Owner8Of8SameSHA": "NOT_PROVEN",
+    "t08LatestReceiptGitBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "t08ExactHead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "t08Verdict": "P03_ONLY_28_OF_28_LIMITED_V8",
+    "t08FullP01P05Pass": false,
+    "approvedFivePortraitStillSHAAndRights": "HOLD_NOT_PROVEN",
+    "optionalEVMotion": "NOT_REQUIRED_IF_OPTIONAL",
+    "host50NativePending": 14,
+    "stopAclConsentPrivacyRollbackNative": "NOT_ACCEPTED",
+    "frozenHead": null,
+    "frozenTree": null,
+    "sourceReady": "HOLD",
+    "E07": "NOT_RUN",
+    "product": "N/D",
+    "qaAcceptedDelta": 0
+  },
+  "sharedJournal": {
+    "owner": "T02 ONLY",
+    "latestReadGitErrorBlob": "b9d87651889cf75b313d63eaea1626e03b2761be",
+    "existingErrorId": "ERR-SRC-004",
+    "newErrorId": null,
+    "noSharedWrite": true
+  },
+  "lesson": {
+    "previousApplied": "Compared exact unchanged PR162 3 part blobs and reused T07 729/729 physical proof without re-downloading; fail-closed donor != integrated source.",
+    "newRootCause": "NONE_NEW: standalone-publisher gap already diagnosed by T07 and indexed to ERR-SRC-004/ERR-SYS-002; no duplicate lesson"
+  },
+  "handoff": {
+    "oneBlockingId": "ERR-SRC-004",
+    "nextOwner": "T06 / manual #1",
+    "action": "On fresh exact PR162 PRE, owner CAS-integrate already prepared compatible STOP/ACL/permission-before-side-effect and cumulative T07 direct-publisher verification + source regressions, media SHA/rights and complete owner-map; prove 8/8 on one HEAD/tree/manifest. Then T08/manual #2 independently FULL SOURCE PASS same SHA; only then T09 immutable freeze to T10/T11."
+  },
+  "safety": "NO_PRODUCT_WRITE_NO_SHARED_JOURNAL_WRITE_NO_T10_SIGNATURE_NO_CI_NO_EXE_NO_E07",
+  "reportGate": "PENDING_GIT_READBACK"
+}
