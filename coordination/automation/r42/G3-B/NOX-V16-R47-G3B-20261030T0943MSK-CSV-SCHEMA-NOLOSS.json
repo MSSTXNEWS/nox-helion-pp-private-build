@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T0943MSK-CSV-SCHEMA-NOLOSS",
+  "owner": "G3-B",
+  "branch": "auto/r42/g3b-pack02",
+  "task_ids": [
+    "NIP02-22"
+  ],
+  "error_id": "ERR-SRC-004",
+  "stage": "SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "owner_pre_head": "6e0d44b224cd7c4cbec15294f2886ac62da2a0cf",
+  "owner_pre_tree": "a7fb62db234202975362e0c7d6c8dce7b7e944e4",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "36e02242c7c881e780a9a1712599e8d81356f69c",
+      "post_git_blob": "7324fe69bc7cbd2059e1657ecd06a051fbf1d3ee"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_schema_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "a1c48057a9260c42b29b437c92dc48e0bf659748"
+    }
+  ],
+  "red": "Second CSV object introduces phone column; existing stringify silently omits that field",
+  "fix": "Fail closed with CSV_SCHEMA_MISMATCH unless every row has exactly same own column keys (order-independent), retaining existing first-row column order",
+  "checks": {
+    "runtime": "V8 exact full Git source via Function()",
+    "passed": 6,
+    "failed": 0,
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "ids_preserved": 50
+  },
+  "lesson_applied": "Previous exact preimage + copy-on-write guards; same SHA revalidated and CSV quoting/unknown-header/BOM untouched",
+  "lesson_new": "CSV serializer must reject per-row schema drift before emitting output, preventing silent data loss; test unknown/missing column and valid reordered keys",
+  "no_loss": "Only offline PACK02 ops/test in isolated branch; original 729/3, HOME/MENU/WORK portraits, native ONEHOST STOP/ACL/consent/privacy untouched",
+  "next_owner": "T06/G3-C exact PRE CAS into PR162 then T08 independent same-SHA QA; T02 sole shared register writer"
+}
