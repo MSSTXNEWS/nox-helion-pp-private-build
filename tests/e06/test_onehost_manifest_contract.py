@@ -73,6 +73,9 @@ class OneHostManifestContract(unittest.TestCase):
         self.assertIn("NATIVE_PERMISSION_DENIED", adapter)
         self.assertIn("NATIVE_CONSENT_DENIED", adapter)
         self.assertIn("RequestAsync(", adapter)
+        self.assertIn("StopRevokedChatAsync()", adapter)
+        self.assertIn('RequestAsync("chat.stop", new { }', adapter)
+        self.assertIn("Interlocked.Decrement(ref _activeChat)", adapter)
         self.assertNotIn("Process.Start(", adapter)
         self.assertNotIn("HttpListener", adapter)
 
