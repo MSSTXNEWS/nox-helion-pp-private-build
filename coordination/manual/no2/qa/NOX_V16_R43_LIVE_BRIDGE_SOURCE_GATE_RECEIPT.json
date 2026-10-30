@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_V16_T08_R43_LIVE_BRIDGE_QA_RECEIPT_V1",
+  "runId": "NOX-V16-M2-R43-20261030-LIVE-BRIDGE-SOURCE-GATE",
+  "taskId": "T08",
+  "role": "INDEPENDENT_MANUAL_2",
+  "canonicalPR": 162,
+  "sourceHead": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "branch": "qa/manual2-r33-source-fix-candidate-20261030",
+  "testStage": "LOCAL_SYNTHETIC_REGRESSION_9_OF_9_PASS",
+  "verifiedTestEnvironment": "Linux Python local, no installed Windows native E07",
+  "sourceFiles": [
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "blobSha1": "ca8ce5d046452d8f2ad0730293171da3f9797f85"
+    },
+    {
+      "path": "coordination/e06/OriginalPythonDiagnosticBridge.cs",
+      "blobSha1": "b1bcc1a30c497eb6cae7cf195dc77e427a052e85"
+    },
+    {
+      "path": "Packages/P02/worker-python/p02_native_ingress.py",
+      "blobSha1": "842f3d60f9506a7ed54a4cf4e158254bf6617df6"
+    }
+  ],
+  "qaFiles": [
+    {
+      "path": "coordination/manual/no2/qa/verify_live_bridge_source_r43.py",
+      "blobSha1": "aa4ab5ce59b11e8d64d32b52b45dacc1e3d95f27",
+      "sha256": "e247b25b188889755e5d8419f6a8d5850b62c3bbb017020272191a71464f0e53"
+    },
+    {
+      "path": "coordination/manual/no2/qa/test_verify_live_bridge_source_r43.py",
+      "blobSha1": "982dbc6a3cb74ede2d11ebabce3cddca90d6e46f",
+      "sha256": "c4817f9588bc729e3fd5828a3336d26a83e958c1de4167e9ffcedb1cb06f1205"
+    }
+  ],
+  "liveObservations": {
+    "scope": "ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE",
+    "diagnosticArgsObserved": true,
+    "diagnosticOnlyFlagObserved": true,
+    "existingNativeIngressSourcePresent": true
+  },
+  "blockers": [
+    "BUILDER_DECLARES_DIAGNOSTIC_ONLY_NOT_LIVE",
+    "DIAGNOSTIC_BRIDGE_NOT_LIVE_FUNCTION_PROOF"
+  ],
+  "distinction": "Proves existing build declaration is diagnostic-only, not that no other runtime handler exists; owners must audit actual WPF route.",
+  "nextOwner": "G2-A/G2-B live host source owner then T06 sole PR162 integrator; T08 independently repeat only changed SHA",
+  "sourceReady": false,
+  "e07Accepted": false,
+  "releaseAccepted": false,
+  "noLoss": "No P01-P05 or original 729/3, D02/WOW200, 8 CoreID, 5 Persona, STOP/ACL/consent, HOME/MENU/WORK assets changed by T08",
+  "T02": "Send immutable QA receipt for deduplicated central journal update, T08 does not edit shared journals.",
+  "lesson": "SOURCE_DECLARED_DIAGNOSTIC_ONLY must not pass as native wiring simply because separate NativeIngress.handle source exists."
+}
