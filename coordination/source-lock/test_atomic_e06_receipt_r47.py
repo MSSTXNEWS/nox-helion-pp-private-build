@@ -212,5 +212,20 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
             self.assertEqual(list(Path(tmp).glob(".nox-source-audit-*")), [])
 
 
+    def test_member_kind_mismatch_fails_closed_without_truncating_name(self):
+        """ZIP directory flags must not truncate or alias a normal file path."""
+        for name, is_directory in (("assets/portrait.png", True),
+                                   ("assets/", False)):
+            with self.subTest(name=name, directory=is_directory):
+                with self.assertRaisesRegex(module.SourceHold, "ZIP_MEMBER_KIND_MISMATCH"):
+                    module.safe_member(name, is_directory)
+        for name, is_directory, expected in (
+                ("assets/portrait.png", False, "assets/portrait.png"),
+                ("assets/", True, "assets"),
+                ("HOME/MENU/WORK", False, "HOME/MENU/WORK")):
+            with self.subTest(valid=name):
+                self.assertEqual(module.safe_member(name, is_directory), expected)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -68,6 +68,10 @@ def safe_member(name: str, directory: bool) -> str:
         raise SourceHold("ZIP_UNSAFE_MEMBER_NAME")
     if unicodedata.normalize("NFC", name) != name:
         raise SourceHold("ZIP_NONCANONICAL_UNICODE")
+    # Directory metadata must agree with the trailing ZIP slash.
+    # Otherwise name[:-1] can silently truncate a normal file name.
+    if directory != name.endswith("/"):
+        raise SourceHold("ZIP_MEMBER_KIND_MISMATCH")
     path = name[:-1] if directory else name
     if not path or path.startswith("/") or path.startswith("//") or ":" in path:
         raise SourceHold("ZIP_ABSOLUTE_OR_ADS_PATH")

@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_R47_T07_KIND_MISMATCH_OWNER_CAS_V1",
+  "runId": "NOX-V16-R47-G4A-T07-20261030T1436MSK-KIND-MISMATCH",
+  "taskId": "T07",
+  "role": "G4-A",
+  "branch": "auto/r42/g4a-sourcelock",
+  "ownerPre": "f931e0b1bec905116e3c0ab5c7b71ada1d5f79b3",
+  "ownerTreePre": "55747dc4df18a7553182f17d7b58dc722625f49c",
+  "pr162Observed": {
+    "head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6"
+  },
+  "stage": "ISOLATED_PATCH_PREPARED_NOT_INTEGRATED",
+  "files": [
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "pre": "502aa45b794557d13439a25a79d4a0657773d84e",
+      "post": "329ce278518d4ded1b7522544d6b55103ef432e7"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "pre": "b1647119198119b135b5f9ed1d443e7bb55a6b5b",
+      "post": "0ca2306662d8605752f63f96daa7b017dbd44ffe"
+    }
+  ],
+  "rootCause": "safe_member(name,directory=True) removed the last character from non-directory ZIP names without verifying trailing slash, changing e.g. assets/portrait.png into assets/portrait.pn.",
+  "fix": "Fail closed on mismatch between directory flag and trailing slash before name slicing.",
+  "regression": {
+    "kind": "Python exact-function transcription",
+    "pre": "1/1 mislabeled directory silently truncated (RED)",
+    "post": "2/2 kind mismatches rejected; 3/3 valid names accepted; 5/5 earlier unsafe names rejected",
+    "repositoryUnittest": "NOT_RUN",
+    "WindowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "parts": 3,
+    "partGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "archiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalMemberHistoricalCount": 729,
+    "rawZIPReaudit": "NOT_RUN_UNCHANGED",
+    "originalMediaChanged": false,
+    "approvedPortraits": "HOLD separate five stills/rights"
+  },
+  "priorLesson": "ERR-SYS-002 live SHA preflight; preserve original ZIP proof without 60MB reread",
+  "newLesson": "Never truncate ZIP member names using an external directory flag without a same-entry trailing-slash consistency assertion; retain negative regression.",
+  "ownerHandoff": [
+    "T06 sole PR162 integrator",
+    "T08 independent QA",
+    "T09 frozen SourceLock handoff",
+    "T02 sole shared journal writer"
+  ],
+  "qaAcceptedDelta": 0,
+  "sourceReady": false,
+  "e07": "NOT_RUN"
+}
