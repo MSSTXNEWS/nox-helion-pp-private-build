@@ -1,0 +1,99 @@
+{
+  "schema": "NOX_V16_R47_T09_NOLOSS_EXACT_SHA_QA_HOLD_V1",
+  "runId": "NOX-V16-T09-R47-20261030T1209MSK-T07-UNMERGED-GATE",
+  "role": "QA-2/T09 existing TaskID; independent frozen-source keeper",
+  "stage": "HOLD_NO_FINAL_FREEZE",
+  "source": {
+    "pr": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headPre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "headDriftSinceLastT09": false
+  },
+  "prestart": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonicalRules": "§33 consolidated 56; §§54-56/R29",
+    "roleBlob": "be468852e4138c70095ea6d46ccfcc86c4bd981e",
+    "errorRegisterBlob": "9394036666b5283555e65c5aa60f657f3f6c819b",
+    "masterDocRevision": "AHj4eMQmbBDyK_uzmz4MIAMo14nCKT4x4_V8n70Oqx7yXESpO8XiACsidqUi2vXTjkTUAXJ2TZHWn9cNEeLrHpAHINLWqGpL9PYkamXsytc",
+    "e06DocRevision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessonsDocRevision": "AHj4eMRd9ASgmUorY9HJUPtfJw5Ro11VFot4XQRT-iqPuJzO9IaFr-65OmFN_3FrCF_2Iu2CqWc5gNehk4A0Sf7i8Gxs0Hmy3NqICKRtLRE",
+    "lastT09OwnBranch": "970ecae9f7b0c9f07d808b7f8396c03c7db57a14",
+    "issue177Read": true
+  },
+  "physical": {
+    "kind": "INDEPENDENT_NEW_T07_ISOLATED_DELTA_CHECK_ON_PINNED_PR162",
+    "originalParts": [
+      [
+        "source_00.part",
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        20971520
+      ],
+      [
+        "source_01.part",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        20971520
+      ],
+      [
+        "source_02.part",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        18421306
+      ]
+    ],
+    "originalArchiveSha256HistoricalT07": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "historicMemberHashAndCrcPass": 729,
+    "originalPartsChanged": false,
+    "rawArchiveRedownloadAndRehash": "NOT_RUN_IDENTICAL_GIT_BLOBS_AND_SIZES",
+    "approvedOriginalHOME_MENU_WORK": "HISTORICAL_PINS_RETAINED_NO_LIVE_STANDALONE_UI_ACCEPTANCE",
+    "approvedFiveStillPortraitMediaAndRights": "HOLD_NOT_PROVEN",
+    "optionalEvMotion": "NOT_REQUIRED_WHEN_STRICTLY_OPTIONAL",
+    "t07IsolatedBranch": "auto/r42/g4a-sourcelock",
+    "t07LatestHead": "6dccb4b416330a89d69533b07cad40d83f1b825c",
+    "t07NewPatch": "per-member NTFS UTF-16 component length and invalid Unicode rejected; new test still isolated",
+    "t07Files": [
+      {
+        "path": "coordination/source-lock/verify_original_archive.py",
+        "productGitBlob": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+        "isolatedGitBlob": "93e48fe2cf4b0326331f7a0bd42267b17539d7d6"
+      },
+      {
+        "path": "coordination/e06/verify_original_729_source.py",
+        "productGitBlob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+        "isolatedGitBlob": "a42cc41b095c5997388274b3b4030aea4280cb6b"
+      },
+      {
+        "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+        "productGitBlob": null,
+        "productPath": "ABSENT_404",
+        "isolatedGitBlob": "c6452591e167ac49e1bfb907a6fe02efbce7c02b"
+      }
+    ],
+    "t07FullCheckoutTest": "NOT_RUN",
+    "sourceExactFileBlobReadback": "PASS_3_PATHS",
+    "nativeWindowsStopAclConsentRollback": "NOT_RUN"
+  },
+  "acceptance": {
+    "T06Owner8Of8SameSha": "NOT_PROVEN",
+    "T08ReceiptBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "T08SourceVerdict": "P03_EXACT_HEAD_28_OF_28_LIMITED_V8_ONLY",
+    "fullIndependentP01P05SourcePass": false,
+    "t09FrozenSha": null,
+    "t10SourceReady": "HOLD",
+    "e07": "NOT_RUN",
+    "qaAcceptedDelta": 0,
+    "product": "N/D",
+    "securityBlocker": "ERR-SRC-004",
+    "host50NativePending": 14
+  },
+  "lesson": {
+    "previousApplied": "Reuse historical original 729/3 physical PASS only because current per-part Git blobs and sizes are identical; do not redownload 60MB or count donor code as product.",
+    "newEvidence": "New T07 NTFS UTF-16 fail-closed validator checks exist only in isolated commit 6dccb4b; current two product validators are distinct and source regression file absent. Treat SOURCE_PREPARED not INTEGRATED; require owner CAS and source regression before any T08 signature.",
+    "sharedWriter": "T02 only; this own receipt is a handoff, not a shared register write"
+  },
+  "handoff": {
+    "errorId": "ERR-SRC-004",
+    "owner": "T06/manual #1",
+    "action": "On live PR162 HEAD verify exact preimages then CAS integrate only approved cumulative safety deltas including T07 validator+test and previously prepared native permission-before-callback fix, perform focused original 729 manifest + STOP/ACL/consent/privacy/NO-LOSS regressions, produce 8/8 owner-accepted ONE HEAD/tree/manifest with original still portrait SHA256/rights/owner map; T08/manual #2 independently issue full P01-P05 SOURCE PASS on identical SHA; only then T09 seal and handoff to T10/T11."
+  },
+  "safety": "NO_PRODUCT_CODE_WRITE_NO_SHARED_LEDGER_WRITE_NO_CI_NO_EXE_NO_NSIS_NO_E07_NO_FALSE_SIGNATURE"
+}
