@@ -17,7 +17,7 @@
   const screen = document.createElement('section');
   screen.id = 'screen-five';
   screen.className = 'screen';
-  screen.innerHTML = \`
+  screen.innerHTML = `
     <div class="panel">
       <h2>CREATIVE STUDIO · Единый проект, пять блоков</h2>
       <p class="muted">Внутри существующего NOX. Исследования и редактура — локальные записи;
@@ -49,7 +49,7 @@
         <button class="action" type="button" id="cs5-models">Каталог моделей · P03</button>
       </div>
       <pre id="cs5-result" aria-live="polite">Проверка состояния...</pre>
-    </div>\`;
+    </div>`;
   content.appendChild(screen);
   const byId = id => document.getElementById(id);
   const kinds = {
