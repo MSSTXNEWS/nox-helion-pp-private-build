@@ -33,4 +33,24 @@ class NativeConsentR47(unittest.TestCase):
         p.native_approve=approve
         with self.assertRaises(P03PortHold): p.execute_backend(session(), ROUTE, {})
         self.assertEqual((b.calls,newer.calls),(0,0))
+    def test_consent_callback_mutated_model_tag_denied(self):
+        b=Backend()
+        def approve(_session, _route, payload):
+            payload["modelTag"]="unapproved"; return True
+        p=port(b, approve)
+        with self.assertRaises(P03PortDenied):
+            p.execute_backend(session(), ROUTE, {"modelTag":"approved"})
+        self.assertEqual(b.calls, 0)
+    def test_consent_callback_nested_payload_mutation_denied(self):
+        b=Backend()
+        def approve(_session, _route, payload):
+            payload["options"]["digest"]="changed"; return True
+        p=port(b, approve)
+        with self.assertRaises(P03PortDenied):
+            p.execute_backend(session(), ROUTE, {"modelTag":"approved","options":{"digest":"original"}})
+        self.assertEqual(b.calls, 0)
+    def test_unmodified_approved_payload_still_queues(self):
+        b=Backend(); p=port(b, lambda *_: True)
+        self.assertEqual(p.execute_backend(session(), ROUTE, {"modelTag":"approved"}), {"status":"QUEUED"})
+        self.assertEqual(b.calls, 1)
 if __name__=="__main__": unittest.main()

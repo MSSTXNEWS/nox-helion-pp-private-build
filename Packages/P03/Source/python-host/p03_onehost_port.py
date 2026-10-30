@@ -255,8 +255,21 @@ class P03OneHostPort:
             raise
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
+        # Consent must bind to the exact JSON arguments shown to the native owner.
+        # An approval callback can mutate nested dict/list values in-place.
+        try:
+            approved_payload = json.dumps(args, sort_keys=True, allow_nan=False,
+                                          separators=(",", ":"))
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload must be JSON") from None
         # Fresh approval belongs AFTER owner readiness and before queue mutation.
         self._ensure_native_scope(session, route, args)
+        try:
+            if json.dumps(args, sort_keys=True, allow_nan=False,
+                          separators=(",", ":")) != approved_payload:
+                raise P03PortDenied("Native owner3 payload changed during approval")
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload changed during approval") from None
         # Native approval can synchronously revoke scope or replace the owner.
         self._ensure_native_scope(session, route, args, check_consent=False)
         if identity != tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")):

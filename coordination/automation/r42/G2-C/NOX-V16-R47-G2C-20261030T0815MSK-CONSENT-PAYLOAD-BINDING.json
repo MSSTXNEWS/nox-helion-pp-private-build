@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_V16_R47_G2C_IMMUTABLE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T0815MSK-CONSENT-PAYLOAD-BINDING",
+  "role": "G2-C P03 existing model pull/consent TaskID; no new TaskID",
+  "scope": "auto/r42/g2c-p03 ONLY",
+  "owner_head_pre": "05b52b8ba9cb22c82168da39b0502b8ace11b053",
+  "product_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_tree_at_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "product_modified": false,
+  "error_register_blob_at_read": "1b0538fa418effb96345b87b204e40594b260457",
+  "changed_paths": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre_blob": "98e2c83288203b8f0cae2d4289e315b9fc71a2c4"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_native_consent_order_r47.py",
+      "pre_blob": "f0792fbd42f24223d1b8c0bba211a6ad9349dbf5"
+    }
+  ],
+  "root_cause": "R47 native consent callback could mutate the originally approved models.pull/GGUF payload (including nested dicts) while returning True; backend then received a changed, unapproved request.",
+  "fix": "Freeze canonical JSON payload after healthy backend before native approval; fail closed on any payload mutation/invalid JSON before original owner backend call.",
+  "regression": {
+    "local_exact_execute_backend_transcription": "RED baseline: 2/2 payload alterations executed; patched: positive unchanged and two tamper cases 3/3 PASS",
+    "full_repository_python": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "git_code_test_status": "ADDED_TO_EXISTING_TEST_NOT_EXECUTED_IN_FULL_REPOSITORY"
+  },
+  "lessons": {
+    "applied": "R47 verify all mutable state after synchronous native approval; R42 fail-closed on rejected host state",
+    "new": "Native approval must bind not just route/principal/backend but exact immutable action arguments, including nested parameters; an in-place consent callback modification must not reach worker."
+  },
+  "stage": {
+    "prepared": true,
+    "verified": "ISOLATED_EXACT_METHOD_3_OF_3",
+    "integrated": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "exe": false,
+    "e07": false
+  },
+  "handoff": "T06 sole PR162 integrator: compare exact Python port preimage 17bad1e52aa174ff8b1af9d39be3ea2056e7874a with owner R46/R47 changes; merge minimal nonduplicative delta including license read-only, native readiness/scope, and payload binding only after CAS. T08 same-SHA independent Python/PACK01 plus Windows-native consent tests; T02 sole master/error writer.",
+  "safety": "No model download; no PR162/main write; no new host/trainer; original assets untouched."
+}
