@@ -1,0 +1,76 @@
+// Validates the actual CS5 add-on in the ORIGINAL NOX Creative DOM (no root HOME/MENU).
+// Run: node --test integrations/creative/tests/five_blocks_ui.test.mjs
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+
+const source = readFileSync(new URL('../web/five_blocks.js', import.meta.url), 'utf8');
+
+function mount() {
+  const ids = new Map(), calls = [], navEvents = [], actions = [];
+  class Element {
+    constructor(tag='div') {
+      this.tag=tag;this.dataset={};this.children=[];this.handlers={};this.value='';
+      this.textContent='';this.innerHTML='';this.style={};
+    }
+    addEventListener(event, fn) {this.handlers[event]=fn;}
+    appendChild(node) {
+      this.children.push(node);
+      for (const match of node.innerHTML.matchAll(/id="([^"]+)"/g)) {
+        if (!ids.has(match[1])) ids.set(match[1], new Element());
+      }
+      if (ids.has('cs5-block')) ids.get('cs5-block').value='B01';
+      if (ids.has('cs5-project')) ids.get('cs5-project').value='creative01';
+    }
+    append(node) {this.children.push(node);}
+    replaceChildren(){this.children=[];}
+    focus(){}
+    click(){return this.handlers.click?.();}
+  }
+  const nav=new Element('nav'), main=new Element('main');
+  const document={
+    getElementById: name=>ids.get(name)||null,
+    querySelector: selector=>selector==='nav.nav'?nav:selector==='.layout main.content'?main:null,
+    createElement: tag=>new Element(tag),
+  };
+  for (const name of ['project','prompt']) ids.set(name,new Element());
+  let stops=0;const stop=new Element();stop.click=()=>{stops++;};ids.set('stop',stop);
+  const rpc=async(action,payload)=>{calls.push({action,payload});return {status:'LOCAL',action};};
+  const navigate=what=>navEvents.push(what);
+  const task=async(action,payload,target)=>{actions.push({action,payload,target});return {status:'ACCEPTED'};};
+  runInNewContext(source,{document,rpc,navigate,task});
+  return {ids,calls,nav,main,navEvents,actions,get stops(){return stops;}};
+}
+
+test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',async()=>{
+  const c=mount();
+  assert.equal(c.nav.children.length,1);
+  assert.equal(c.main.children.length,1);
+  assert.equal(c.nav.children[0].dataset.nav,'five');
+  assert.equal(c.calls[0].action,'cs5_overview');
+  c.ids.get('cs5-project').value='creative01';
+  c.ids.get('cs5-text').value='Original fictional screenplay';
+  c.ids.get('cs5-block').value='B03';
+  c.ids.get('cs5-block').handlers.change();
+  assert.equal(c.ids.get('cs5-kind').children.length,2);
+  c.ids.get('cs5-kind').value='production';
+  await c.ids.get('cs5-save').click();
+  assert.equal(c.calls.at(-1).action,'cs5_append');
+  assert.equal(c.calls.at(-1).payload.block,'B03');
+
+  await c.ids.get('cs5-storyboard').click();
+  await c.ids.get('cs5-music').click();
+  await c.ids.get('cs5-files').click();
+  assert.deepEqual(c.actions.map(x=>x.action),['storyboard','create_text','project_files']);
+  assert.ok(c.actions.every(x=>x.target==='cs5-result'));
+  assert.ok(c.actions.every(x=>x.payload.project_id==='creative01'));
+
+  await c.ids.get('cs5-produce').click();
+  await c.ids.get('cs5-models').click();
+  assert.deepEqual(c.navEvents,['create','models']);
+  assert.equal(c.ids.get('project').value,'creative01');
+  assert.equal(c.ids.get('prompt').value,'Original fictional screenplay');
+  await c.ids.get('cs5-stop').click();
+  assert.equal(c.stops,1);
+});
