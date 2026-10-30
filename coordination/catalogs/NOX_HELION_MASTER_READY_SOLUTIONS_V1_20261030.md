@@ -1,6 +1,6 @@
 ## IMPORTANT — CANONICAL SOURCE CATALOG UPDATE 2026-10-30
 
-This V1.1 file remains a historical inventory. **Current unified catalog V3:** [NOX HELION FINAL MASTER REUSE CATALOG V3](NOX_HELION_FINAL_MASTER_REUSE_CATALOG_V3_20261030.md). It consolidates 2,939 URL-level candidate sources in non-overlapping A/B/C register, embeds a separate 100-AI-engine block and 22 verified model cards, and documents current MENU/route ambiguity. The earlier 116 count is NOT the full R1 count. Product PR162 unchanged. No installation/weight download or code QA implied.
+This V1.1 file remains a historical inventory. **Current unified catalog V3:** [NOX HELION FINAL MASTER REUSE CATALOG V3](NOX_HELION_FINAL_MASTER_REUSE_CATALOG_V3_20261030.md). It consolidates 2,938 URL-level candidate sources in non-overlapping A/B/C register, embeds a separate 100-AI-engine block and 22 verified model cards, and documents current MENU/route ambiguity. The earlier 116 count is NOT the full R1 count. Product PR162 unchanged. No installation/weight download or code QA implied.
 
 ---
 
