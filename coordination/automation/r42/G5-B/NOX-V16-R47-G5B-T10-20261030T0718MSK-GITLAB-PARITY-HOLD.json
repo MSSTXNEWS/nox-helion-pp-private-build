@@ -1,0 +1,141 @@
+{
+  "schema": "NOX_V16_R47_T10_INDEPENDENT_SOURCEREADY_HOLD_V1",
+  "runId": "NOX-V16-R47-G5B-T10-20261030T0718MSK-GITLAB-PARITY-HOLD",
+  "existingTaskId": "T10",
+  "role": "G5-B QA-3 independent source signer",
+  "createdUTC": "2026-10-30T04:19:03.660Z",
+  "authorizedProductWriter": false,
+  "sharedJournalWriter": false,
+  "claimSourceReady": false,
+  "t10_accepted": false,
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonParagraphs": 705,
+    "consolidatedRules": 56,
+    "errorRegisterBlob": "f837addf069415c94da60b7198e33f95db9003df",
+    "errorCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "masterRead": true,
+    "e06Read": true,
+    "lessonsRead": true,
+    "issue177Read": true,
+    "latestT08ReceiptBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "latestT09ReceiptBlob": "465c35f40feaf08800c42f2461f09b43a6219bfa"
+  },
+  "source": {
+    "githubPR": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headPRE": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "headPOST": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6"
+  },
+  "gateSeven": {
+    "T06_Owner_8of8": {
+      "status": "HOLD",
+      "reason": "current source commit accepted for P03 limited patch only; no genuine owner signed 8/8"
+    },
+    "T08_independent": {
+      "status": "HOLD",
+      "reason": "same-SHA P03 source QA 28/28 V8 PASS_LIMITED, full P01-P05/native/STOP/ACL/consent absent"
+    },
+    "T09_immutable_freeze": {
+      "status": "HOLD",
+      "receipt": "5a2088c0b2f619a62bd243e1981b07fd3e90907d",
+      "frozen": null
+    },
+    "Original_729_3_and_five_portraits": {
+      "status": "HOLD",
+      "originalZipHistoric": "729/729 physical T07 PASS, exactly 3 parts, 60364346 bytes SHA256 ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "sourcePartBlobs": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ],
+      "reason": "five required approved portrait SHA256+rights/runtime binding not attested"
+    },
+    "P01_P05_WPF_P02_LIVE": {
+      "status": "HOLD",
+      "evidence": "coordination/e06/OriginalPythonDiagnosticBridge.cs blob b1bcc1a30c497eb6cae7cf195dc77e427a052e85 contains --diagnose and no NativePythonPipe; stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs blob d42e7ee44691efdbb3a87eb9dfe630f9ec23ed5d uses bool bridge/p01Result, not typed P02; Packages/P02/worker-chat/NativePythonPipe.cs blob 711644bf4d2052d812bf71a0b679d8531a3ca76e is isolated source"
+    },
+    "Host50_Stop_Acl_Consent_Privacy": {
+      "status": "HOLD",
+      "nativePending": 14,
+      "sourceDescriptorsNotNative": true,
+      "reason": "no independent signed real native STOP/ACL/consent/privacy/rollback on exact source"
+    },
+    "Gitlab_mirror_parity_T10_digest": {
+      "status": "FAILED",
+      "gitlabProject": "s-grouptwet/nox-helion-pp-private-build",
+      "gitlabBranch": "integration/nox-v16-unified-candidate-20261028-r01",
+      "gitlabHead": "eb38c599709cafeac9d64f374b43628df04a18be",
+      "githubHead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "changedPath": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "githubGitBlob": "312d428992aa0cab15a0f597dacd114653064bda",
+      "byteContentEqual": false,
+      "firstDiffCharacterOffset": 2078,
+      "githubLength": 27803,
+      "gitlabLength": 21825,
+      "independentSourceChecks": {
+        "githubReviewedDigest": true,
+        "gitlabReviewedDigest": false,
+        "githubReviewedEvidenceUrl": true,
+        "gitlabReviewedEvidenceUrl": false
+      },
+      "protectedT10EntryDigest": "NOT_PROVEN",
+      "reason": "Real authenticated GitLab readback has old byte content; current GitHub P03 delta is absent. Different commit hashes alone would not prove content mismatch, but exact file content comparison does."
+    }
+  },
+  "physical": {
+    "newUniqueAcceptedTaskIDs": 0,
+    "tests": [
+      {
+        "name": "GitHub_current_tree_3_parts",
+        "result": "PASS",
+        "note": "3/3 same Git objects, raw archive reused not rehashed"
+      },
+      {
+        "name": "GitHub_vs_GitLab_exact_P03_source_content",
+        "result": "FAIL_PARITY",
+        "note": "Retrieved full real committed file content on each repo; nonidentical bytes and missing guard functions on GitLab"
+      },
+      {
+        "name": "Native_Windows_SECURITY",
+        "result": "NOT_RUN"
+      }
+    ]
+  },
+  "stages": {
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "CODE_COMPLETE": "HOLD",
+    "INTEGRATED": "PARTIAL",
+    "SOURCE_READY": "HOLD",
+    "EXE": "NOT_RUN",
+    "PRODUCT": "N/D"
+  },
+  "errors": [
+    "ERR-SRC-004",
+    "ERR-SYS-002",
+    "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS"
+  ],
+  "lessons": {
+    "applied": "Only changed P03 Git content was compared; unchanged 729/3 raw ZIP T07 accepted evidence reused, no 60MB re-download and no stale T08 promotion",
+    "new": "Same branch name and correct GitHub SHA do not establish authenticated GitLab mirror parity. Compare actual source bytes and protected T10 entrypoint digest on FINAL frozen SHA before any builder authorization."
+  },
+  "handoff": {
+    "primaryOwner": "T06/sole source integrator -> T08 -> T09; G5-C/T11 GitLab mirror steward after T09",
+    "action": "T06 finish owner signed 8/8 with P01-P05 live WPF NativeIngress and five approved portrait SHA/rights; T08 full same-HEAD native/security; T09 immutable freeze; G5-C/T11 mirror exact frozen source and protected T10 file digest before any approved build; T02 index under existing ERR-SRC-004",
+    "noBuildAuthorized": true
+  },
+  "receiptBranch": "automation/v16/g5b/t10/20261030T001605MSK-AUTO11-P03-QA",
+  "receiptPRE": "ed44d7968343ee515cc850315784d655b4c7763c",
+  "status": "INCOMPLETE_SOURCE_READY_HOLD"
+}
