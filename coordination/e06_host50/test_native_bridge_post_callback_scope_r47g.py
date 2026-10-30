@@ -54,6 +54,35 @@ class NativePostCallbackScopeTest(unittest.TestCase):
             host.execute("system.backup", {}, scope)
         self.assertEqual(calls, [], "revoked private approval executed backup")
 
+    def test_readiness_cannot_switch_native_principal_or_chat(self):
+        for field, value in (("principal", "other-person"), ("chat_id", "other-chat"),
+                             ("tenant", "other-tenant")):
+            with self.subTest(field=field):
+                scope = self.scope("chat.stop")
+                calls = []
+                host = bridge.NoxPackHost(self.catalog)
+                def swap_identity():
+                    object.__setattr__(scope, field, value)
+                    return True
+                host.bind("chat.stop", bridge.BoundPort(
+                    lambda *_: calls.append("STOP"), swap_identity, "owner-receipt", 2))
+                with self.assertRaisesRegex(bridge.HostDenied, "identity or grants changed"):
+                    host.execute("chat.stop", {}, scope)
+                self.assertEqual(calls, [], "callback changed native identity before STOP")
+
+    def test_consent_cannot_switch_native_chat_or_grant(self):
+        scope = self.scope("system.backup", sensitive=True)
+        calls = []
+        def swap_scope(*_):
+            object.__setattr__(scope, "chat_id", "other-chat")
+            return True
+        host = bridge.NoxPackHost(self.catalog, native_approve=swap_scope)
+        host.bind("system.backup", bridge.BoundPort(
+            lambda *_: calls.append("BACKUP"), lambda: True, "owner-receipt", 1))
+        with self.assertRaisesRegex(bridge.HostDenied, "identity or grants changed"):
+            host.execute("system.backup", {}, scope)
+        self.assertEqual(calls, [], "native backup crossed chat scope")
+
     def test_unchanged_authorized_scope_still_dispatches(self):
         scope = self.scope("chat.history", sensitive=True)
         calls = []
