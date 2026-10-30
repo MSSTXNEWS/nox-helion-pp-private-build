@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_V16_R47_G4A_T07_SOURCELOCK_ATOMIC_PUBLISH_RECEIPT_V1",
+  "runId": "NOX-V16-R47-G4A-T07-20261030T0742MSK-ATOMIC-RECEIPT",
+  "owner": "G4-A T07",
+  "branch": "auto/r42/g4a-sourcelock",
+  "branchBaseHead": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "sourcePr162HeadAtPreflight": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "sourcePr162TreeAtPreflight": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "parentSourceBlobSha1": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+  "patchedSourceBlobSha1": "61eb4864b067350f588d4f7521aa1b0e269651d7",
+  "canonicalPublisherBlobSha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+  "targetSourcePath": "coordination/e06/verify_original_729_source.py",
+  "pairedTestPath": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+  "pairedTestBlobSha1": "b3e972a9a61a9fb9df2c868a36037aebc58c9457",
+  "errorIds": [
+    "ERR-SYS-002",
+    "ERR-SRC-004",
+    "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+  ],
+  "rootCause": "Direct xb() publication of E06 SourceLock output can leave partial receipt if write/fsync fails; subsequent runs see exists and HOLD despite no valid receipt",
+  "fix": "Reuse existing canonical temp+fsync+exclusive hardlink publisher and JSON content readback; preserve no-overwrite and source bytes",
+  "testEvidence": {
+    "isolatedPythonAlgorithmSmoke": "4/4 PASS using existing canonical publisher algorithm copied to ephemeral fixture, not full project suite",
+    "exactNewRepositoryTest": "NOT_RUN (no authenticated repository checkout/runner)",
+    "nativeWindows": "NOT_RUN",
+    "zipRawRehash": "NOT_RUN (unchanged original part blob SHA)"
+  },
+  "originalProofReuse": {
+    "sourceParts": [
+      [
+        "source_00.part",
+        20971520,
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      ],
+      [
+        "source_01.part",
+        20971520,
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      ],
+      [
+        "source_02.part",
+        18421306,
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ]
+    ],
+    "originalZipBytes": 60364346,
+    "originalZipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalMembers": "729/729 raw SHA256+CRC historical PASS, NOT rehashed",
+    "originalEvidence": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513693455",
+    "originalMediaSha256": {
+      "HOME": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+      "MENU": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
+      "MENU8": "7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4",
+      "WORK": "f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14",
+      "CORE01": "343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97",
+      "KW": "d1b2162db7e2d17fe18f052f1c88f5163dd410585348a501529e164035158051",
+      "AM": "8b97945fed08095b39dbd703c2587a9d3b8943e671f7347c37b0ee8dfa0254f9",
+      "KW_CAST_REF": "30d7cd6e10a4aa45f68bf81e5f461868c711d04d59a093492fc71078b10081d0"
+    },
+    "portraitAcceptance": "five approved portrait media SHA/rights + exact final HEAD runtime binding STILL HOLD; Markdown passport != portrait; optional EV motion separate"
+  },
+  "ownerHandoff": {
+    "T06": "Review and cherry-pick only this E06 verifier source patch/test on exact fresh PRE, do not merge unrelated branch; still require 8/8 native/visual",
+    "T08": "Run repository test and independent pinned-HEAD E06/STOP/ACL/consent/privacy/NO-LOSS",
+    "T09": "Use owner-accepted same-HEAD tree/manifest only, not historical archive PASS as freeze",
+    "T02": "Index existing ERR-SRC-004/ERR-SYS-002 under CAS; no new shared journal writer"
+  },
+  "stage": {
+    "originalZip": "HISTORICALLY_VERIFIED",
+    "patch": "ISOLATED_OWNER_CANDIDATE",
+    "sourceIntegrated": false,
+    "qaAccepted": false,
+    "sourceReady": false,
+    "windowsE07": "NOT_RUN"
+  },
+  "noLoss": {
+    "partPathsUnmodified": true,
+    "mediaAssetsUnmodified": true,
+    "productFilesUnmodified": true
+  }
+}

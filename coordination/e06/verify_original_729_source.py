@@ -215,14 +215,25 @@ def main() -> int:
             raise SourceHold("OUTPUT_ALREADY_EXISTS_OR_UNSAFE")
         _trusted_output_parent(args.out)
         receipt = verify_original(args.parts_dir, run_id=args.run_id)
-        encoded = (json.dumps(receipt, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-        # Exclusive create: never overwrite an existing receipt or owner file.
+        # Reuse the EXISTING canonical fsync + exclusive-hardlink publisher.
+        # Direct open("xb") could orphan a truncated owner receipt on an I/O
+        # failure; a failed publish must leave the destination untouched.
+        if not CANONICAL_VALIDATOR.is_file() or CANONICAL_VALIDATOR.is_symlink():
+            raise SourceHold("CANONICAL_ZIP_VALIDATOR_UNAVAILABLE")
+        spec = importlib.util.spec_from_file_location("nox_original_zip_publisher", CANONICAL_VALIDATOR)
+        if spec is None or spec.loader is None:
+            raise SourceHold("CANONICAL_ZIP_VALIDATOR_INVALID")
+        publisher_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(publisher_module)
+        publisher = getattr(publisher_module, "publish_manifest_exclusive", None)
+        if not callable(publisher):
+            raise SourceHold("CANONICAL_ATOMIC_PUBLISHER_MISSING")
         _trusted_output_parent(args.out)
-        with args.out.open("xb") as target:
-            target.write(encoded)
-            target.flush()
-            os.fsync(target.fileno())
-        print("ORIGINAL_729_SOURCELOCK_INNER_SHA_PASS", hashlib.sha256(encoded).hexdigest())
+        publisher(args.out, receipt)
+        persisted = args.out.read_bytes()
+        if json.loads(persisted) != receipt:
+            raise SourceHold("SOURCELOCK_RECEIPT_READBACK_MISMATCH")
+        print("ORIGINAL_729_SOURCELOCK_INNER_SHA_PASS", hashlib.sha256(persisted).hexdigest())
         return 0
     except (SourceHold, OSError, ValueError) as exc:
         print("ORIGINAL_729_SOURCELOCK_HOLD", str(exc))
