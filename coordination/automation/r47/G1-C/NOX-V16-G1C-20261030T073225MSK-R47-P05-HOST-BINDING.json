@@ -1,0 +1,109 @@
+{
+  "schema": "NOX_V16_R47_G1C_P05_SOURCE_BOUNDARY_RECEIPT_V1",
+  "run_id": "NOX-V16-G1C-20261030T073225MSK-R47-P05-HOST-BINDING",
+  "role": "G1-C / P05 owner auxiliary",
+  "existing_task_id": "E05-02",
+  "status": "INCOMPLETE_SOURCE_RUNTIME_BINDING_NOT_PROVEN",
+  "started_at_msk": "2026-10-30T07:32:25+03:00",
+  "completed_at_utc": "2026-10-30T04:36:33.469Z",
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr162_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "pr162_tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "owned_branch": "auto/r42/g1c-p05",
+    "owned_branch_pre": "385614f261100455fe8b4954876e466c8e3bbb24",
+    "owned_branch_tree": "32571208b82078fceccf1a5e1e480df46f9141d4",
+    "source_changed_files": 0,
+    "source_pre_post": "UNCHANGED",
+    "target_sources": [
+      [
+        "Contracts/events.v3.json",
+        "5204e668ab39e4bf4955ff7b405279628b5bbef2"
+      ],
+      [
+        "Packages/P05/E05/src/E05CanonicalEvents.cs",
+        "0bdaa2effa766bb798443ee5057c8116acbf25fe"
+      ],
+      [
+        "Packages/P05/E05/src/E05HostGpuPublisher.cs",
+        "5c51eeb8319b5c809d62d84250ac9dd607b70550"
+      ],
+      [
+        "Packages/P05/E05/src/E05HostTelemetryFacade.cs",
+        "fec1e138807aa8e336cad89e518b81ec63ff7713"
+      ],
+      [
+        "Packages/P05/E05/src/E05Telemetry.cs",
+        "a8c2a75f1a7feea581121b86afc6134e4b150a47"
+      ],
+      [
+        "coordination/e06/OriginalPythonDiagnosticBridge.cs",
+        "b1bcc1a30c497eb6cae7cf195dc77e427a052e85"
+      ],
+      [
+        "coordination/e06/onehost_p02_p04.py",
+        "acf09d1daaae4ee98a95f55a092b9c92abbc8673"
+      ]
+    ]
+  },
+  "read_proof": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_note": "Full current document fetched; reconstructed §33 rules not claimed verbatim original.",
+    "error_register_blob": "f837addf069415c94da60b7198e33f95db9003df",
+    "active_error_count": 11,
+    "error_counts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "lessons_revision": "AHj4eMSmg85_2_QK9ON8mKpdaStERZKK-zIrg1j8A0mSHk5LYArkmF-mR6a6O9yc8dpqkKfW6YDyVH0MmZVqJQrJMQXwmfhHIcwhZUB2RL0",
+    "master_revision": "AHj4eMQRfKESVd7L9UBH4q1eMSyTJUnKG2IDtnG0Sip_qgS0DdZ92lXGsiOQPFScn2GfQJFkQcWs-z2TM9qU78LALE05y5KE6tofY14BNmU",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "issue": 177,
+    "pr224_head": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+    "previous_receipt_blob": "089e1837142cf64d428fea45800cea31d46f9c35"
+  },
+  "physical": {
+    "method": "Authenticated pinned-source boundary assertions; NOT Windows/.NET runtime",
+    "static_checks_pass": 10,
+    "static_checks_total": 10,
+    "test_timestamp_utc": "2026-10-30T04:35:42.787Z",
+    "dotnet": "NOT_RUN_NO_DOTNET",
+    "windows_runtime": "NOT_RUN",
+    "new_code_patch": false,
+    "accepted_task_delta": 0,
+    "findings": [
+      "events.v3 admits gpu.sample, not telemetry.snapshot; P05 evidence_verified must remain false.",
+      "E05CanonicalEventFactory and E05HostGpuPublisher delegate to IE05HostEventV3Port, with STOP and sensor freshness guards.",
+      "Legacy E05SensorPublisher.PollOnceAsync is deliberately fail-closed.",
+      "Checked E06 OriginalPythonDiagnosticBridge.cs and onehost_p02_p04.py do not implement or reference IE05HostEventV3Port. Absence in inspected paths does not establish absence in unavailable original WPF archive.",
+      "P05 SpaceFeedClient/SpaceFeedPolicy unchanged; no duplicate host/bus or unapproved functional patch created."
+    ]
+  },
+  "required_next_owner": {
+    "owner": "T06/G3-C sole PR162 integrator",
+    "action": "On actual original WPF/EventV3Bridge source, verify implementation of IE05HostEventV3Port and live approved host scheduling. If missing, bind existing E05HostTelemetryFacade.ReadVerified/PublishGpuAsync into existing EventV3Bridge under native STOP/ACL/consent checks, no second bus or synthetic GPU telemetry; one exact-head host component test and Git CAS readback, then T08 independent QA.",
+    "handoff_to": "T02 sole shared Error/Master/E06/Lessons writer",
+    "error_id": "ERR-SRC-004",
+    "lesson_applied": "Avoid duplicate telemetry code where canonical publisher already exists.",
+    "lesson_new": "A passing mock of IE05HostEventV3Port cannot close the original WPF runtime binding gate; require actual owner bridge implementation and same-SHA host invocation proof."
+  },
+  "gates": {
+    "A": "READ_PASS",
+    "B": "SOURCE_BOUNDARY_EVIDENCE_ONLY_NO_PRODUCT_PATCH",
+    "C": "OWN_RECEIPT_WRITE_REQUESTED",
+    "D": "LESSON_APPLIED_AND_ACTIONABLE_NEXT",
+    "E": "REPORT_AFTER_GIT_READBACK"
+  },
+  "product_progress": "N/D",
+  "source_ready": "HOLD",
+  "E01": "HOLD",
+  "E02": "HOLD",
+  "E03": "HOLD",
+  "E04": "HOLD",
+  "E05": "HOLD",
+  "E06": "HOLD",
+  "E07": "NOT_RUN",
+  "prohibitions": "NO PR162/main write, no EXE/CI/E07, no force push, NOLOSS 729/3 and byte-exact media retained"
+}
