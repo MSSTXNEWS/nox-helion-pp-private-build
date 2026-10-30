@@ -180,6 +180,39 @@ New-Item -ItemType Directory -Path $OutputRoot -Force | Out-Null
 Assert-E06PlainPathAncestors -Candidate $OutputRoot -Scope 'OUTPUT_POST_CREATE'
 $out=(Resolve-Path $OutputRoot).Path
 $payload=Join-Path $out 'payload'
+# Stage the EXISTING P02 framed-pipe client plus the additive one-host WebView2
+# adapter into the DISPOSABLE R11 source. Never alter approved original archives.
+# This is compilable source only: live Python session and UI activation still
+# require native Windows E2E, not a --diagnose receipt.
+$repoRoot=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
+$gitTool=Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
+$p02StageSources=@(
+  @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='711644bf4d2052d812bf71a0b679d8531a3ca76e'},
+  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='79e3295cc146e8b56127949e6928e5eda749b76b'}
+)
+# Validate every donor BEFORE copying any source into the staged project.
+foreach ($entry in $p02StageSources) {
+  $origin=Join-Path $repoRoot $entry.relative
+  $target=Join-Path $source $entry.dest
+  Assert-E06PlainPathAncestors -Candidate $origin -Scope 'P02_SOURCE'
+  Assert-E06PlainPathAncestors -Candidate $target -Scope 'P02_STAGE'
+  if (!(Test-Path -LiteralPath $origin -PathType Leaf) -or
+      (Test-Path -LiteralPath $target)) { throw 'E06_P02_SOURCE_MISSING_OR_STAGE_COLLISION' }
+  $actual=(& $gitTool.Source hash-object -- $origin).Trim().ToLowerInvariant()
+  if ($LASTEXITCODE -ne 0 -or $actual -cne $entry.blob) {
+    throw 'E06_P02_OWNER_BLOB_MISMATCH'
+  }
+}
+foreach ($entry in $p02StageSources) {
+  $origin=Join-Path $repoRoot $entry.relative
+  $target=Join-Path $source $entry.dest
+  Copy-Item -LiteralPath $origin -Destination $target -ErrorAction Stop
+  $post=(& $gitTool.Source hash-object -- $target).Trim().ToLowerInvariant()
+  if ($LASTEXITCODE -ne 0 -or $post -cne $entry.blob) {
+    throw 'E06_P02_DISPOSABLE_STAGE_SHA_MISMATCH'
+  }
+}
 # One native UI process, original Python runtime invoked ONLY by fixed --diagnose, not auto-started.
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
