@@ -100,6 +100,16 @@ class FiveBlockContract(unittest.TestCase):
         result = dispatch_five(self.owner, {"action": "cs5_list", "project_id": "creative01"})
         self.assertEqual(result["count"], 0)
 
+    def test_existing_other_process_lock_rejects_write(self):
+        folder = self.owner._project("creative01")
+        lock = folder / ".cs5-project.lock"
+        lock.write_text("other process")
+        with self.assertRaisesRegex(ValueError, "CS5_CONCURRENT_WRITER_HOLD"):
+            self.event("B02", "idea")
+        self.assertEqual(lock.read_text(), "other process")
+        self.assertEqual(dispatch_five(self.owner,
+                         {"action": "cs5_list", "project_id": "creative01"})["count"], 0)
+
     def test_no_project_escape(self):
         with self.assertRaises(ValueError):
             dispatch_five(self.owner, {"action":"cs5_list","project_id":"../../other"})
