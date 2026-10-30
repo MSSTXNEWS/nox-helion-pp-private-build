@@ -1,0 +1,152 @@
+{
+  "schema": "NOX_V16_MANUAL2_T08_T10_GITLAB_SOURCE_GATE_RECEIPT_V1",
+  "runId": "NOX-V16-M2-T08T10-R39-GITLAB-FIRST-20261030",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "taskIds": [
+    "T08",
+    "T10"
+  ],
+  "purpose": "Finite single source-delta gate and GitLab Free readiness; no redundant QA suite or build",
+  "sourcePlatform": "GitHub source staging PR162 only",
+  "buildPlatform": "GitLab Free Windows (NOT GitHub Actions/Azure)",
+  "gitlabPrivateProject": "https://gitlab.com/s-grouptwet/nox-helion-pp-private-build",
+  "headPre": "852ccc1611d99afaf48e7fc4c33a5509d385f9a9",
+  "headPost": "852ccc1611d99afaf48e7fc4c33a5509d385f9a9",
+  "treeGitSha1": "17bdb7db4ccf0138f5f41356009215dea37077f2",
+  "headOwnerFrozenByT09": false,
+  "prState": "OPEN_DRAFT",
+  "selfImprovement": {
+    "lessons": "NOX T02 R34: distinguish Git vs E06 Docs CAS; never inherit QA across drift; avoid repeating unchanged checks; do not blindly retry E06 FAILED_PRECONDITION; status done != product DONE",
+    "priorQA": "NOX-V16-M2-T08T10-R38-20261030",
+    "sourceDeltaFromPriorQA": {
+      "headChanged": false,
+      "changedFileBlobs": 0,
+      "reranUnchangedTests": false
+    },
+    "noNewTaskId": true,
+    "noOldPatchReplayed": true
+  },
+  "gitlabSourcePreflight": {
+    "pipeline": {
+      "path": ".gitlab-ci.yml",
+      "gitBlobSha1": "6d9e5ff4faf8faee381cdd36c5591a7336851f14",
+      "status": "SOURCE_GUARD_PRESENT",
+      "details": "Manual/API only, NOX_APPROVE_WINDOWS_BUILD=YES, NOX_FROZEN_SOURCE_SHA/ref required, no auto push, retry=0"
+    },
+    "entrypoint": {
+      "path": "coordination/e06/gitlab_windows_entrypoint.ps1",
+      "gitBlobSha1": "2147750c6c56257593076d0942259f53efbabd1a",
+      "status": "SOURCE_GUARD_PRESENT",
+      "details": "Checks exact Git HEAD, CI_COMMIT_SHA, frozen ref/tree, signed T10 SOURCE_READY receipt SHA256 and independent T08/T10 boolean flags"
+    },
+    "existingPackager": "coordination/e06/build_onehost_installer.ps1",
+    "gitBlobSha1": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+    "gitlabProjectApiReadback": "NOT_AVAILABLE_NO_CONNECTED_GITLAB_PLUGIN",
+    "gitlabRunnerStatus": "NOT_VERIFIED",
+    "gitlabPipelineExecution": "NOT_RUN_NOT_AUTHORIZED",
+    "buildOrExeArtifact": "NOT_CREATED"
+  },
+  "ownerSourceEvidence": {
+    "t06OwnerReceipt": {
+      "path": "coordination/automation/t06/NOX-V16-T06-20261030-M1-SOURCE-ONEPASS-R01.json",
+      "blobSha1": "ccf32a8f571d110965b1347840ae58e3d8f732e3",
+      "status": "OWNER_SOURCE_ONLY_52_STATIC_CHECKS_NOT_8_OF_8_ACCEPTED"
+    },
+    "host50BindingMap": {
+      "path": "proposals/NOX-PACK01-50/owner-binding-map.json",
+      "blobSha1": "66b59aaa6d4db7c6adc7d34a802ba9c42498bda7",
+      "sourceCandidates": 46,
+      "totalRoutes": 50,
+      "sourceUnbound": [
+        "browser.open",
+        "browser.bookmarks",
+        "system.update",
+        "system.pc_control"
+      ],
+      "nativePending": 14,
+      "windowsAccepted": 0
+    },
+    "browserBoundary": {
+      "path": "Packages/P02/worker-chat/SpaceBrowserBoundary.cs",
+      "blobSha1": "e28c584c0065ebfc1fb69a6b8967895834b669bf",
+      "status": "POLICY_ONLY_NOT_NATIVE_OPEN_BOOKMARK_HANDLER"
+    },
+    "originalArchive": "729/3 historical SHA evidence retained, whole-current-app SourceLock/T09 owner seal NOT VERIFIED"
+  },
+  "existingP0SourceDefects": [
+    {
+      "cluster": "ERR-SRC-004",
+      "owner": "MANUAL_1_T06",
+      "path": "tests/e06/test_theater_webview2_routes_r13.py",
+      "preGitBlobSha1": "fe296a4dc6ba21d8c33972a510349f71d2002cda",
+      "reason": "Stale direct Navigate literal does not match existing theaterUrl invocation"
+    },
+    {
+      "cluster": "ERR-SRC-004",
+      "owner": "MANUAL_1_T06",
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "preGitBlobSha1": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+      "donorGitBlobSha1": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+      "reason": "Privacy+consent snapshot/host status redaction donor not yet in PR162; prior independent source RED3 GREEN5"
+    },
+    {
+      "cluster": "ERR-SRC-004",
+      "owner": "MANUAL_3_THEN_MANUAL_1",
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "preGitBlobSha1": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "donorCandidateBlob": "11c447b6d22c4dde4bcd7aa9d311a8cd3ee2b200",
+      "reason": "Overflow/surrogate/oversized tensor shape; extracted Python candidate passes 5/5, owner review pending"
+    },
+    {
+      "cluster": "ERR-SRC-004",
+      "owner": "MANUAL_3_THEN_MANUAL_1",
+      "path": "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "preGitBlobSha1": "6d9ec2bfe0ec13baf8ebc9fd4fd1830c9c4d91a3",
+      "reason": "MAX UI vs INTENSIVE worker profile needs verified trusted mapping and focused tests"
+    },
+    {
+      "cluster": "ERR-SRC-004",
+      "owner": "PACK02_OWNER_THEN_MANUAL_1",
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "preGitBlobSha1": "41cb40e3a1d77f36a74482cec6599c354e1cf3ee",
+      "donorCandidateBlob": "824ee59fd0a1d656a757959da4b632f1f35d518b",
+      "reason": "CSV unknown field and header-only schema loss; donor source test 8/8 vs current 6/8"
+    }
+  ],
+  "independentAcceptance": {
+    "sourceVerified": "PARTIAL",
+    "integrated": "PARTIAL_NOT_FULLY_SEALED",
+    "qaAccepted": "HOLD",
+    "sourceReady": "HOLD",
+    "t06EightOfEight": "NOT_PROVEN",
+    "t09FrozenHead": "NOT_PROVEN",
+    "t10IndependentSourceReady": "NOT_PROVEN",
+    "nativeHost50": "NOT_RUN",
+    "realModelGpuWindows": "NOT_RUN",
+    "e07SameBuildIdExeSha": "NOT_RUN",
+    "deltaNewProductDone": 0,
+    "productPercent": "N/D"
+  },
+  "journal": {
+    "soleWriter": "T02",
+    "errorIdsDedupe": [
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SYS-001",
+      "ERR-SYS-002"
+    ],
+    "sharedGitRegisterWrite": "NOT_PERFORMED_BY_MANUAL2",
+    "masterE06LessonsCas": "NOT_PERFORMED_BY_MANUAL2",
+    "t02Handoff": "PENDING_WRITE_RECEIPT"
+  },
+  "nextExactAction": "MANUAL_1 integrates owner-approved P01/P03/P04/PACK02/4 Host50 source patches with exact PRE/CAS and runnable source tests; MANUAL_3 approves P04; T09 freezes fully accepted source; MANUAL_2 independently T08/T10 checks same tree; only then authorized GitLab Free Windows build and E07",
+  "preserve": [
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Persona",
+    "729/3",
+    "PACK01/PACK02",
+    "STOP/ACL/consent/NO-LOSS",
+    "all historic DONE/TaskIDs"
+  ]
+}
