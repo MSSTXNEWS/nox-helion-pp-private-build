@@ -13,6 +13,7 @@ import json
 import os
 import re
 import stat
+import unicodedata
 from pathlib import Path
 
 MAX_JSON_BYTES = 4 * 1024 * 1024
@@ -97,7 +98,7 @@ def _json_file(path: Path) -> dict:
         raise ValueError("MODEL_METADATA_INVALID")
     try:
         obj = _strict_json_object(path.read_text(encoding="utf-8"))
-    except (UnicodeError, ValueError, OSError) as exc:
+    except (UnicodeError, ValueError, OSError, RecursionError) as exc:
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
         raise ValueError("MODEL_METADATA_INVALID")
@@ -125,7 +126,7 @@ def _weight_header(path: Path) -> frozenset[str]:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
         try:
             header = _strict_json_object(f.read(length))
-        except (UnicodeError, ValueError) as exc:
+        except (UnicodeError, ValueError, RecursionError) as exc:
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID") from exc
     capacity = size - length - 8
     tensors = [(name, value) for name, value in header.items() if name != "__metadata__"]
@@ -207,7 +208,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
                 expected_by_shard.setdefault(shard_name, set()).add(tensor_name)
             names = sorted(expected_by_shard)
-            if len({name.casefold() for name in names}) != len(names):
+            # Cross-platform shard admission: canonicalize Unicode before casefold
+            if len({unicodedata.normalize("NFC", name.casefold()) for name in names}) != len(names):
                 raise ValueError("MODEL_SHARD_PATH_UNSAFE")
         else:
             expected_by_shard = None

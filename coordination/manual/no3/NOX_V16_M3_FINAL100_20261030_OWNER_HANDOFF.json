@@ -1,0 +1,147 @@
+{
+  "schema": "NOX_V16_M3_FINAL100_EXACT_OWNER_HANDOFF_v1",
+  "run_id": "NOX_V16_M3_FINAL_100_20261030_OWNER_INTENT_AND_ACTUAL_EVIDENCE",
+  "scope": "EXISTING_MANUAL3_P04_P05_ONLY",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "canonical_main_pr": 162,
+  "canonical_main_observed_head": "cb25c487ee67fe9ec22909731aa51ea446b36f29",
+  "canonical_main_observed_tree": "bff2619b8cbef0c4f946a5ef3a4b9dcb5a8cf9d4",
+  "owner_pr": 222,
+  "owner_pre_receipt_head": "8dd7844f9cd67f1bc5eef7638778e751e144e432",
+  "owner_pre_receipt_tree": "533cc437b2ab5895affee096accb30adbc5faff1",
+  "owner_branch": "manual/no3/r26-p04-p05-no-loss-handoff-20261030",
+  "shared_error_register_blob": "09ab4de165f0d921b4229a2dfb9115278b05749e",
+  "shared_error_register_stats": {
+    "OPEN": 5,
+    "FIX_APPLIED_UNVERIFIED": 4,
+    "VERIFIED_CLOSED": 2,
+    "total": 11,
+    "history_complete": false
+  },
+  "owner_pr_state": "DRAFT_SOURCE_CANDIDATE",
+  "no_loss": {
+    "historical_source_files": 729,
+    "source_archive_parts": 3,
+    "original_d02_wow200": true,
+    "core_ids": 8,
+    "personas": 5,
+    "stop_acl_consent": true,
+    "existing_task_ids_preserved": true
+  },
+  "source_intake": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "shared_pre_git_blob_sha1": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "owner_post_git_blob_sha1": "27d5c850028acc32bb4c677b879b27ec2b8e4d25",
+      "owner_post_sha256": "679f616345b626f94e3fc3e3c182cc0c3995439e3c8f9b2c8fff49b5759de1f8",
+      "classification": "EXACT_PRE_REQUIRED"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "shared_pre_git_blob_sha1": "525b77d61050b0bac5b1653aedc7b5eec3314991",
+      "owner_post_git_blob_sha1": "3f10447c31ba5da5b4c12a1d02ce4865a5bbb869",
+      "owner_post_sha256": "e5accde914c643e8b1a10879c2e4bc599dd21e11c8758acd7d08345d8a0df5ff",
+      "classification": "EXACT_PRE_REQUIRED"
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "shared_pre_git_blob_sha1": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "owner_post_git_blob_sha1": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a",
+      "owner_post_sha256": "d2afe0bff6050b9aa02cd744f8c74c983418c8bd25fde5a7deaf4f03c80d792d",
+      "classification": "EXACT_PRE_REQUIRED"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "shared_pre_git_blob_sha1": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "owner_post_git_blob_sha1": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668",
+      "owner_post_sha256": "7e6fb51dbecca4a9b4f250bd72c728ded65f02b4344c85b405d072b9039afb88",
+      "classification": "EXACT_PRE_REQUIRED"
+    },
+    {
+      "path": "Packages/P04/verify_components.ps1",
+      "shared_pre_git_blob_sha1": "6ed0fc50f64cef567c4e52922c7d7e8635402529",
+      "owner_post_git_blob_sha1": "6a7459cbc6a89bdccc67b3fa3b8ead1cc9021dcb",
+      "owner_post_sha256": "86649ca4207d32500e427fe6b07005366d8afb491bea0a4909538da0f3888355",
+      "classification": "EXACT_PRE_REQUIRED"
+    },
+    {
+      "path": "coordination/manual/no3/verify_p04_p05_components.py",
+      "shared_pre_git_blob_sha1": null,
+      "owner_post_git_blob_sha1": "cbd25993a02c4f8362dbd52b20092c6972ab400c",
+      "owner_post_sha256": "1ec71bae854a975365952014401c5f3848ae7f76462a5f24a207f4f4db5e0613",
+      "classification": "NEW_OWNER_FILE"
+    },
+    {
+      "path": "tests/P04/test_component_gate_evidence_r36.py",
+      "shared_pre_git_blob_sha1": null,
+      "owner_post_git_blob_sha1": "e5102985ebe2814bd5b66a3395ebf32106d991cb",
+      "owner_post_sha256": "cca5ab8fa0b79ab56149c959e68589ec7a9a995d728489a3bd96f23c5400182c",
+      "classification": "NEW_OWNER_FILE"
+    },
+    {
+      "path": "coordination/manual/no3/gitlab-p04-p05-reuse.yml",
+      "shared_pre_git_blob_sha1": null,
+      "owner_post_git_blob_sha1": "fcf17063d517292ddeba4b5489a2ea3fc747292d",
+      "owner_post_sha256": "4bba9347b6b37305c06d0648359396e83181f8d5140453af742ce564ae4f87d8",
+      "classification": "NEW_OWNER_FILE"
+    }
+  ],
+  "skip_identical": [
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.cs",
+      "sha": "cbdd3d27d2eeb31f94edadc1263c13e31f0431ea"
+    },
+    {
+      "path": "Packages/P05/Space/tests/SpaceFeedSourceFreshnessR20.csproj",
+      "sha": "b7c3414404bfcef04d186b0d3a95fc1bc003e9dd"
+    }
+  ],
+  "p04_test_no_loss": {
+    "current_main_methods": 37,
+    "owner_methods": 40,
+    "all_current_methods_preserved": true,
+    "additional_methods": 3,
+    "unittest_actual_full_suite": "NOT_RUN"
+  },
+  "local_gate_selftest": {
+    "scope": "ISOLATED_LOCAL_MOCKS_NOT_GITHUB_EXACT_OWNER_BLOB",
+    "tests": 6,
+    "passed": 6,
+    "receipt_sha256": "5cfb86ac553a7fbd0b706e97100734a64177d2431657f8cf18fe575c96ca54f1"
+  },
+  "runtime_observations": {
+    "python_available": "3.13.5",
+    "dotnet_sdk_available": false,
+    "cuda_available": false,
+    "real_P04_Python": "NOT_RUN_FULL_OWNER_TREE",
+    "real_dotnet_P04_P05": "NOT_RUN",
+    "onehost_windows": "NOT_RUN",
+    "trained_GPU_QLoRA": "NOT_RUN",
+    "rights_approved_weights_dataset": "NOT_PROVIDED",
+    "independent_manual2_QA": "NOT_RUN",
+    "gitlab_live_head": "NOT_VERIFIED",
+    "gitlab_windows_build": "NOT_AUTHORIZED",
+    "e07": "NOT_RUN"
+  },
+  "stage_progress": {
+    "source": "OWNER_PREPARED",
+    "integrated": "PARTIAL_SEPARATE_T06_OWNER",
+    "runtime": "HOLD",
+    "qa_accepted_delta": 0,
+    "source_ready": false,
+    "percent": null
+  },
+  "owner_map": {
+    "manual3": "P04/P05 only",
+    "manual1": "T06 sole writer of PR162",
+    "manual2": "T08 independent QA exact same head",
+    "T02": "single shared journal writer"
+  },
+  "next_actions": [
+    "T06 reread current PR162 HEAD and each exact preimage; SKIP two identical P05 freshness files, admit only compatible owner P04/P05 changes serially by CAS",
+    "Use existing Python unittest and .NET8 harnesses on a real authorized Windows checkout; record exact BuildID/source SHA and full unmodified logs",
+    "Require license+rights attestation and CUDA for real P04 QLoRA checkpoint/eval/merge; verify onehost ACL/STOP/events.v3",
+    "T08 independently QA the frozen SHA, T02 reconciles errors with CAS; GitLab Free only after SOURCE_READY and explicit approval"
+  ],
+  "immutability": "No new product TaskID. New receipt is owner evidence, not independent acceptance. No final EXE or release asserted."
+}

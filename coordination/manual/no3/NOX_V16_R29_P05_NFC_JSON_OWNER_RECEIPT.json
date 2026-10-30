@@ -1,0 +1,43 @@
+{
+  "schema": "NOX_V16_R29_MANUAL3_P05_UNICODE_PROVIDER_JSON_OWNER_RECEIPT",
+  "run_id": "NOX-V16-MANUAL03-R29-20261030-P05-NFC-JSON-KEY",
+  "role": "manual_no3_P04_P05",
+  "existing_task_id": "P05 SPACE provider provenance / JSON identity",
+  "related_error_id": "ERR-SRC-004",
+  "pre_owner_head": "63046029ba7a04abaeadaca7291a81a0190dc8b9",
+  "post_owner_head": "a763057a930c8332b5502d9e28f30ec0d03ffe59",
+  "post_owner_tree": "ab04a1d1574cad266133956702ec37a8fbc17bf0",
+  "file_receipts": [
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "pre_git_blob_sha1": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "post_git_blob_sha1": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a",
+      "pre_content_sha256": "c81ee42260b8546d04cc0ed14bd260674ac440d634767048b120b44cbe2d5a25",
+      "post_content_sha256": "d2afe0bff6050b9aa02cd744f8c74c983418c8bd25fde5a7deaf4f03c80d792d",
+      "post_utf8_bytes": 12475
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "pre_git_blob_sha1": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "post_git_blob_sha1": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668",
+      "pre_content_sha256": "8db519e75a7acabff4b0987515b2fc69138523e0ffce7c5759dac48ce7f51ac3",
+      "post_content_sha256": "7e6fb51dbecca4a9b4f250bd72c728ded65f02b4344c85b405d072b9039afb88",
+      "post_utf8_bytes": 12946
+    }
+  ],
+  "source_result": "SOURCE_PATCH_SAVED",
+  "git_cas": "PASS",
+  "readback": "PASS_ON_EXACT_SOURCE_BLOBS",
+  "fixture": "nested JSON café (U+00E9) vs cafe + combining acute (U+0065 U+0301); normalization collision",
+  "fixture_rule_semantic_test": "PASS (isolated non-.NET)",
+  "test_assertions_defined": 24,
+  "dotnet_8_test_execution": "NOT_RUN",
+  "windows_native": "NOT_RUN",
+  "P04_training_GPU": "NOT_RUN",
+  "host_integrated": "NOT_VERIFIED",
+  "independent_qa": "HOLD",
+  "t02_cas": "NOT_WRITTEN_SINGLE_WRITER",
+  "source_ready": false,
+  "no_loss": "existing P01-P05/SourceLock729/D02/8 CoreID/5 Persona/PACK01/02/STOP/ACL/consent maintained; no original file deletion",
+  "handoff": "manual #1 exact post-head source selection then manual #2 independent QA"
+}

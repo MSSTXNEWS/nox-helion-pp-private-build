@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_V16_MANUAL03_R35_GATE_WORKTREE_INTEGRITY_V1",
+  "run_id": "NOX-V16-MANUAL03-R35-20261030-P04P05-FINISH-GATE",
+  "existing_role": "manual_3_P04_P05",
+  "existing_error_groups": [
+    "ERR-SRC-004",
+    "ERR-SYS-001",
+    "ERR-SYS-002"
+  ],
+  "latest_google_drive_lesson": "Never inherit QA from stale HEAD; distinguish source, integration and signed native QA; no blind replay after CAS denial.",
+  "owner_pre_head": "5fc95aedb4141c8538dae5600e76d37350d8ff0a",
+  "owner_code_commit": "5e61ee2697a783aa7005687830f2efc47f099679",
+  "owner_code_git_blob_sha1": "3e656efb15dda839fe8bc87ee48d052d5f6a883a",
+  "integration_head_observed": "a90e897c0a466cb6f7522d89a38cc02f6d44671e",
+  "file_changed": "coordination/manual/no3/verify_p04_p05_components.py",
+  "change": "check tracked worktree after component tests, not merely HEAD; reject test-induced tracked mutation with exit=3 HOLD",
+  "local_reproduction": {
+    "environment": "isolated synthetic git checkout on Python 3.13.5; NOT NOX runtime",
+    "receipt_sha256": "4a3c0677bf4fa953e499166043275c1c94d15ef062c320e014c6f3e2c3de1467",
+    "red_existing_gate": {
+      "exit": 0,
+      "status": "COMPONENT_PASS_ONLY",
+      "mutated": true
+    },
+    "green_fixed_gate": {
+      "exit": 3,
+      "status": "HOLD",
+      "reason": "WORKTREE_DIRTY_AFTER_TESTS",
+      "mutated": true
+    },
+    "green_unchanged_fixture": {
+      "exit": 0,
+      "status": "COMPONENT_PASS_ONLY",
+      "mutated": false
+    }
+  },
+  "owner_source_readback": "PASS",
+  "unchanged_component_git_blobs": {
+    "p04_probe": "27d5c850028acc32bb4c677b879b27ec2b8e4d25",
+    "p04_tests": "3f10447c31ba5da5b4c12a1d02ce4865a5bbb869",
+    "p05_feed": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a",
+    "p05_tests": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668"
+  },
+  "defined_tests": {
+    "p04_methods": 40,
+    "p05_assertions": 24
+  },
+  "verification_boundary": {
+    "actual_NOX_P04_Python": "NOT_RUN",
+    "actual_NOX_P05_dotnet": "NOT_RUN",
+    "Windows_host": "NOT_RUN",
+    "licensed_GPU_QLoRA": "NOT_RUN",
+    "independent_QA": "NOT_RUN",
+    "T02_shared_journal": "SINGLE_WRITER_HOLD",
+    "SOURCE_READY": false,
+    "QA_ACCEPTED_DELTA": 0
+  },
+  "handoff": "T06 exact PRE/CAS only, T08 independent same integrated SHA, GitLab Free after authorized SOURCE_READY; no GitHub/Azure CI",
+  "no_loss": "Original TaskIDs/729, D02/WOW200, 8 CoreID, 5 Persona, STOP/ACL/consent preserved",
+  "stop_rule": "No optional feature expansion; fix only exact failing gate to reach component proof."
+}
