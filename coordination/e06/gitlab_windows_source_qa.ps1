@@ -94,6 +94,9 @@ try {
     Invoke-SourceCheck 'P02_OWNER_PYTHON' 'python' @(
       '-m','unittest','discover','-s','Packages/P02/worker-python',
       '-p','test_p02_owner_route_ports.py','-v')
+    Invoke-SourceCheck 'P02_INGRESS_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','Packages/P02/worker-python',
+      '-p','test_p02_native_ingress.py','-v')
     Invoke-SourceCheck 'P04_SNAPSHOT_PYTHON' 'python' @(
       '-m','unittest','discover','-s','tests/P04',
       '-p','test_model_snapshot_probe.py','-v')
@@ -109,8 +112,11 @@ try {
     Invoke-SourceCheck 'P04_LIBRARY_COMPILE' 'dotnet' @(
       'build','Packages/P04/NoxP04.csproj','-c','Release',
       '--nologo','-v','quiet','-p:RestoreIgnoreFailedSources=true')
+    Invoke-SourceCheck 'P05_SPACE_DOTNET_SMOKE' 'dotnet' @(
+      'run','--project','Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj',
+      '--configuration','Release','--no-launch-profile')
     if (@($cases | Where-Object {$_.status -ne 'PASS'}).Count -gt 0 -or
-        $cases.Count -ne 8) {
+        $cases.Count -ne 10) {
         $reason = 'SOME_SOURCE_SUITES_FAILED_OR_NOT_RUN'
         Write-QAReceipt 'SOURCE_QA_HOLD' $reason
         exit 2
