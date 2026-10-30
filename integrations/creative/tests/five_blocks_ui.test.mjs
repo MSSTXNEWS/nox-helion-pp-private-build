@@ -136,10 +136,16 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.calls.find(x=>x.action==='cs5_append').payload.block,'B03');
   assert.equal(c.ids.get('project').value,'creative01');
 
+  c.ids.get('cs5-research-source').value='crossref';
+  c.ids.get('cs5-research-query').value='film history';
+  await c.ids.get('cs5-research').click();
+  assert.equal(c.actions.find(x=>x.action==='cs5_research').payload.source,'crossref');
+  await c.ids.get('cs5-export').click();
+  assert.equal(c.calls.at(-1).action,'cs5_export');
   await c.ids.get('cs5-storyboard').click();
   await c.ids.get('cs5-music').click();
   await c.ids.get('cs5-files').click();
-  assert.deepEqual(c.actions.map(x=>x.action),['storyboard','create_text','project_files']);
+  assert.deepEqual(c.actions.map(x=>x.action),['cs5_research','storyboard','create_text','project_files']);
   assert.ok(c.actions.every(x=>x.target==='cs5-result'));
   assert.ok(c.actions.every(x=>x.payload.project_id==='creative01'));
 

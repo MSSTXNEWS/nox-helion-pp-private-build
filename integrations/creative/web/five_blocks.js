@@ -61,8 +61,22 @@
       <label>URL первоисточника (необязательно)
         <input id="cs5-source" maxlength="600" placeholder="https://..." autocomplete="off">
       </label>
+      <div class="panel" id="cs5-research-panel">
+        <h3>Открытые исследовательские источники</h3>
+        <div class="formrow">
+          <label>API<select id="cs5-research-source"><option value="books">Google Books</option>
+            <option value="openlibrary">Open Library</option><option value="apple">Apple Podcasts</option>
+            <option value="crossref">Crossref</option><option value="worldbank">World Bank</option>
+            <option value="wikimedia">Wikimedia Pageviews</option><option value="openalex">OpenAlex</option>
+          </select></label>
+          <label>Запрос<input id="cs5-research-query" maxlength="160" placeholder="Название / ES / es|España"></label>
+        </div>
+        <button class="action primary" id="cs5-research" type="button">Исследовать по запросу</button>
+        <div class="grid" id="cs5-research-results" aria-live="polite"></div>
+      </div>
       <div class="actions">
         <button class="action" type="button" id="cs5-status">Проверить подключение</button>
+        <button class="action" type="button" id="cs5-export">Экспорт заметок / бренда (Markdown)</button>
         <button class="action primary" type="button" id="cs5-save">Сохранить в проект</button>
         <button class="action" type="button" id="cs5-list">История и SHA</button>
         <button class="action" type="button" id="cs5-older" disabled>Ранние записи</button>
@@ -220,6 +234,41 @@
   byId('cs5-status').addEventListener('click', () => {
     overviewReady = false;
     return verifyConnection();
+  });
+  byId('cs5-export').addEventListener('click', () => perform('cs5_export'));
+  byId('cs5-research').addEventListener('click', async () => {
+    const dest = byId('cs5-research-results');
+    dest.replaceChildren();
+    const source = byId('cs5-research-source').value;
+    const query = byId('cs5-research-query').value.trim();
+    if (!query || query.length > 160) {
+      byId('cs5-result').textContent = 'Нужен запрос от 1 до 160 символов';
+      return;
+    }
+    const result = await task('cs5_research', {source,query}, 'cs5-result');
+    if (!result || !Array.isArray(result.items)) return;
+    for (const item of result.items) {
+      const card = document.createElement('article');
+      card.className = 'model';
+      const title = document.createElement('h3');
+      title.textContent = item.title || 'Нет названия';
+      const detail = document.createElement('p');
+      detail.textContent = item.detail || '';
+      const metric = document.createElement('small');
+      metric.textContent = item.metric == null ? source : item.metric + ' ' + (item.unit || '') + ' · НЕ ПРОДАЖИ';
+      card.append(title,detail,metric);
+      if (item.source_url) {
+        try {
+          const url = new URL(item.source_url);
+          if (['https:','http:'].includes(url.protocol) && url.hostname && !url.username && !url.password) {
+            const link = document.createElement('a');
+            link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+            link.textContent='Открыть источник';card.append(link);
+          }
+        } catch {}
+      }
+      dest.append(card);
+    }
   });
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));

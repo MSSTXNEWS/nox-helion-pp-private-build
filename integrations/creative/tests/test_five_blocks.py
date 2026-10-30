@@ -137,6 +137,34 @@ class FiveBlockContract(unittest.TestCase):
                     "action": "cs5_list", "project_id": "creative01", "before": bad
                 })
 
+    def test_local_document_export_preserves_evidence_without_publication(self):
+        self.event("B02","idea","Original article idea")
+        report=dispatch_five(self.owner,{"action":"cs5_export","project_id":"creative01"})
+        self.assertEqual(report["status"],"EXPORTED_LOCAL_NOT_PUBLISHED")
+        payload=(Path(self.temp.name)/"creative01"/"cs5_project_export.md").read_bytes()
+        self.assertIn(b"Original article idea",payload)
+        self.assertIn(b"NOT verified",payload)
+        import hashlib
+        self.assertEqual(report["sha256"],hashlib.sha256(payload).hexdigest())
+
+    def test_seven_public_providers_and_stop_without_network(self):
+        from nox_fastpack.public_research import research,research_url,ResearchHold
+        for name,query in (("books","novel"),("openlibrary","novel"),
+                           ("apple","history"),("crossref","research"),
+                           ("worldbank","ES"),("wikimedia","es|España"),
+                           ("openalex","novel research")):
+            with self.subTest(name=name):
+                url=research_url(name,query)
+                self.assertTrue(url.startswith("https://"))
+                result=research(self.owner,{"source":name,"query":query},
+                                fetcher=lambda _:{"items":[],"docs":[],"results":[],"message":{"items":[]}})
+                self.assertEqual(result["status"],"TEST_METADATA_NOT_SALES")
+        with self.assertRaisesRegex(ResearchHold,"CS5_COUNTRY_CODE_HOLD"):
+            research_url("worldbank","../../../unsafe")
+        self.owner._stop_event.set()
+        with self.assertRaisesRegex(ResearchHold,"CS5_STOP_ACTIVE"):
+            research(self.owner,{"source":"books","query":"test"},fetcher=lambda _:{})
+
     def test_no_project_escape(self):
         with self.assertRaises(ValueError):
             dispatch_five(self.owner, {"action":"cs5_list","project_id":"../../other"})

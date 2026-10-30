@@ -106,6 +106,9 @@ def _write(path, state, *, stopped):
 def dispatch_five(studio, request):
     """Only the existing native worker calls this from its trusted dispatch."""
     action = request.get("action")
+    if action == "cs5_research":
+        from .public_research import research
+        return research(studio, request)
     if action == "cs5_overview":
         return {
             "status": "LOCAL_ADAPTER_READY_NOT_E11_ADMITTED",
@@ -117,7 +120,7 @@ def dispatch_five(studio, request):
             "production": "USE_EXISTING_STORYBOARD_COMFY_FFMPEG",
             "publication": "NO_EXTERNAL_PUBLISHER_CONNECTED",
         }
-    if action not in ("cs5_list", "cs5_append"):
+    if action not in ("cs5_list", "cs5_append", "cs5_export"):
         raise ValueError("CS5_UNKNOWN_ACTION")
     project_id = request.get("project_id")
     if not isinstance(project_id, str):
@@ -138,6 +141,8 @@ def dispatch_five(studio, request):
                     "events": selected, "count": total, "showing": len(selected),
                     "start_index": first, "next_before": first if first else None}
         with _project_writer_lock(path):
+            if action == "cs5_export":
+                return _export_project(studio, path, project_id)
             return _append_with_lock(studio, request, path)
 
 
@@ -178,3 +183,36 @@ def _append_with_lock(studio, request, path):
     return {"status": "SAVED_LOCAL_NOT_E11", "project_id": request["project_id"],
             "event_id": event["event_id"], "sha256": event["sha256"],
             "evidence_status": evidence}
+
+
+def _export_project(studio, path, project_id):
+    """Concrete local Markdown document; never publication, payment or upload."""
+    state=_read(path)
+    if not state["events"]:raise ValueError("CS5_EXPORT_EMPTY_HOLD")
+    if studio._stop_event.is_set():raise ValueError("CS5_STOP_ACTIVE")
+    destination=path.parent/"cs5_project_export.md"
+    if destination.is_symlink() or path.parent.is_symlink():raise ValueError("CS5_EXPORT_PATH_HOLD")
+    lines=["# NOX HELION Creative · "+project_id,"",
+           "Local user-authored notes. Revenue claims and external citations are NOT verified.",""]
+    for event in state["events"]:
+        lines.extend(["## "+event["block"]+" / "+event["kind"],"",
+                      event["text"].replace("<","&lt;").replace(">","&gt;"),"",
+                      "Timestamp: "+str(event.get("created_at_utc","unknown")),
+                      "Evidence: "+str(event.get("evidence_status","LOCAL_RECORD_ONLY")),
+                      "Source: "+str(event.get("source_url","")),
+                      "SHA256: "+event["sha256"],""])
+    data=("\n".join(lines)+"\n").encode("utf-8")
+    if len(data)>2_000_000:raise ValueError("CS5_EXPORT_SIZE_HOLD")
+    fd,temp=tempfile.mkstemp(prefix=".cs5-export-",dir=path.parent)
+    try:
+        with os.fdopen(fd,"wb") as stream:
+            stream.write(data);stream.flush();os.fsync(stream.fileno())
+        if studio._stop_event.is_set():raise ValueError("CS5_STOP_ACTIVE")
+        if destination.is_symlink():raise ValueError("CS5_EXPORT_PATH_HOLD")
+        os.replace(temp,destination)
+    finally:
+        if os.path.exists(temp):os.unlink(temp)
+    return {"status":"EXPORTED_LOCAL_NOT_PUBLISHED","project_id":project_id,
+            "file":"projects/"+project_id+"/cs5_project_export.md",
+            "bytes":len(data),"sha256":hashlib.sha256(data).hexdigest(),
+            "events":len(state["events"])}
