@@ -59,8 +59,11 @@ def run(home,web,out,browser_path=None):
                         page=browser.new_page(viewport={"width":w,"height":h},
                             device_scale_factor=1,reduced_motion="reduce")
                         try:
+                            runtime_errors=[]
+                            page.on("pageerror",lambda err: runtime_errors.append(str(err)[:280]))
                             page.goto(f"http://127.0.0.1:{httpd.server_port}/creative/studio.html",
                                       wait_until="domcontentloaded",timeout=25000)
+                            page.locator('nav.nav [data-nav="five"]').wait_for(state="visible",timeout=12000)
                             page.locator('nav.nav [data-nav="five"]').click(timeout=15000)
                             for block in BLOCKS:
                                 page.locator(f'#cs5-segments [data-cs5-segment="{block}"]').click()
@@ -71,20 +74,38 @@ def run(home,web,out,browser_path=None):
                                     touch:Math.min(...Array.from(
                                       document.querySelectorAll('#cs5-segments button'))
                                       .map(el=>el.getBoundingClientRect().height)),
-                                    reduced:matchMedia('(prefers-reduced-motion: reduce)').matches
+                                    reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,
+                                    titleVisible:(()=>{
+                                      const el=document.querySelector('#cs5-cinema-title');
+                                      if(!el)return false;
+                                      const r=el.getBoundingClientRect();
+                                      const style=getComputedStyle(el);
+                                      return r.width>60 && r.height>20 && style.visibility==='visible' &&
+                                        style.display!=='none' && parseFloat(style.opacity)>0 &&
+                                        !!el.textContent.trim();
+                                    })(),
+                                    heroSource:(()=>{
+                                      const el=document.querySelector('.hero');
+                                      return el ? getComputedStyle(el).backgroundImage.includes('home.png') : false;
+                                    })()
                                 })""")
                                 filename=f"CS5_{block}_{w}x{h}.jpg"
                                 page.screenshot(path=str(out/filename),type="jpeg",quality=84,
                                                 full_page=False)
                                 valid=(values["active"]==block and
                                        not values["overflow"] and values["buttons"]==5 and
-                                       values["touch"]>=44 and values["reduced"])
+                                       values["touch"]>=44 and values["reduced"]
+                                       and values["titleVisible"] and values["heroSource"]
+                                       and not runtime_errors)
                                 receipt["screens"].append({"block":block,"viewport":f"{w}x{h}",
-                                    "screenshot":filename,"layout_pass":valid,"metrics":values})
+                                    "screenshot":filename,"layout_pass":valid,
+                                    "browser_errors":list(runtime_errors),"metrics":values})
                                 if not valid:receipt["errors"].append(f"LAYOUT_{block}_{w}x{h}")
                         finally:page.close()
                 finally:browser.close()
         finally:httpd.shutdown();httpd.server_close()
+    if len(receipt["screens"])!=len(VIEWPORTS)*len(BLOCKS):
+        receipt["errors"].append("CS5_30_FRAME_COUNT_HOLD")
     receipt["status"]=("BROWSER_PREFLIGHT_PASS_ART_REVIEW_HOLD" if not receipt["errors"]
                        else "BROWSER_PREFLIGHT_FAIL_ART_REVIEW_HOLD")
     (out/"CS5_ART_RECEIPT.json").write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",
