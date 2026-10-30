@@ -83,7 +83,7 @@ class FiveBlockContract(unittest.TestCase):
 
     def test_provenance_url_requires_host_and_no_credentials(self):
         for url in ("https://", "https://user:secret@example.com",
-                    "https://example.com/a\\nX:1", "ftp://example.com"):
+                    "https://example.com/a\nX:1", "ftp://example.com"):
             with self.subTest(url=url), self.assertRaisesRegex(ValueError, "CS5_SOURCE_URL_HOLD"):
                 self.event("B01", "research", source_url=url)
 
