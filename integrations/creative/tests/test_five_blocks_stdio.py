@@ -101,6 +101,8 @@ class WorkerRoutes(unittest.TestCase):
         class Busy:
             def is_alive(self):
                 return True
+            def join(self, timeout=None):
+                return None
         request_id = "00000000-0000-4000-8000-000000000017"
         inbound = json.dumps({"request_id": request_id,
                               "payload": {"action": "cs5_overview"}}) + "\n"
