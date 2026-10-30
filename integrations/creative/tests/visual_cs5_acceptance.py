@@ -60,9 +60,17 @@ def run(home,web,out,browser_path=None):
                             device_scale_factor=1,reduced_motion="reduce")
                         try:
                             runtime_errors=[]
+                            network_errors=[]
                             page.on("pageerror",lambda err: runtime_errors.append(str(err)[:280]))
+                            page.on("console",lambda msg: runtime_errors.append("CONSOLE: "+msg.text[:240]) if msg.type=="error" else None)
+                            page.on("requestfailed",lambda req: network_errors.append(req.url[:240]))
+                            page.on("response",lambda resp: network_errors.append(f"HTTP_{resp.status}: {resp.url[:200]}") if resp.status>=400 else None)
                             page.goto(f"http://127.0.0.1:{httpd.server_port}/creative/studio.html",
                                       wait_until="domcontentloaded",timeout=25000)
+                            home_response=page.request.get(
+                                f"http://127.0.0.1:{httpd.server_port}/home.png",timeout=10000)
+                            if home_response.status!=200 or hashlib.sha256(home_response.body()).hexdigest()!=HOME_SHA:
+                                network_errors.append("ORIGINAL_HOME_HTTP_OR_HASH_HOLD")
                             page.locator('nav.nav [data-nav="five"]').wait_for(state="visible",timeout=12000)
                             page.locator('nav.nav [data-nav="five"]').click(timeout=15000)
                             for block in BLOCKS:
@@ -92,20 +100,25 @@ def run(home,web,out,browser_path=None):
                                 filename=f"CS5_{block}_{w}x{h}.jpg"
                                 page.screenshot(path=str(out/filename),type="jpeg",quality=84,
                                                 full_page=False)
+                                screenshot_hash=digest(out/filename)
                                 valid=(values["active"]==block and
                                        not values["overflow"] and values["buttons"]==5 and
                                        values["touch"]>=44 and values["reduced"]
                                        and values["titleVisible"] and values["heroSource"]
-                                       and not runtime_errors)
+                                       and not runtime_errors and not network_errors)
                                 receipt["screens"].append({"block":block,"viewport":f"{w}x{h}",
-                                    "screenshot":filename,"layout_pass":valid,
-                                    "browser_errors":list(runtime_errors),"metrics":values})
+                                    "screenshot":filename,"screenshot_sha256":screenshot_hash,
+                                    "layout_pass":valid,"browser_errors":list(runtime_errors),
+                                    "network_errors":list(network_errors),"metrics":values})
                                 if not valid:receipt["errors"].append(f"LAYOUT_{block}_{w}x{h}")
                         finally:page.close()
                 finally:browser.close()
         finally:httpd.shutdown();httpd.server_close()
     if len(receipt["screens"])!=len(VIEWPORTS)*len(BLOCKS):
         receipt["errors"].append("CS5_30_FRAME_COUNT_HOLD")
+    recorded={item["screenshot"] for item in receipt["screens"]}
+    if len(recorded)!=30 or any(not (out/name).is_file() for name in recorded):
+        receipt["errors"].append("CS5_FRAME_MANIFEST_HOLD")
     receipt["status"]=("BROWSER_PREFLIGHT_PASS_ART_REVIEW_HOLD" if not receipt["errors"]
                        else "BROWSER_PREFLIGHT_FAIL_ART_REVIEW_HOLD")
     (out/"CS5_ART_RECEIPT.json").write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",
