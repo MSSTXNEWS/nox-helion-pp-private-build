@@ -48,7 +48,7 @@ public static class E05CanonicalEventFactory
     {
         if (e is null || e.Schema != Schema || !Allowed.Contains(e.EventType) ||
             !States.Contains(e.State) || e.TimestampUtc.Offset != TimeSpan.Zero ||
-            string.IsNullOrWhiteSpace(e.RunId) || string.IsNullOrWhiteSpace(e.EventId) ||
+            string.IsNullOrWhiteSpace(e.RunId) || e.RunId.Length > 128 || string.IsNullOrWhiteSpace(e.EventId) ||
             string.IsNullOrWhiteSpace(e.TaskId) ||
             e.PackageId is not ("P01" or "P02" or "P03" or "P04" or "P05" or "E06" or "E07") ||
             string.IsNullOrWhiteSpace(e.ActionId) || string.IsNullOrWhiteSpace(e.Source) ||
@@ -75,7 +75,7 @@ public static class E05CanonicalEventFactory
     public static E05CanonicalEvent? GpuUtilization(string runId, SensorPoint reading,
         DateTimeOffset now, string taskId = "E05-02")
     {
-        if (string.IsNullOrWhiteSpace(runId) || reading.Key != "gpu.percent" ||
+        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 128 || reading.Key != "gpu.percent" ||
             reading.Status != "LIVE" || !reading.Value.HasValue ||
             !double.IsFinite(reading.Value.Value) ||
             reading.Value < 0 || reading.Value > 100 ||
