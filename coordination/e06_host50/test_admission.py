@@ -453,6 +453,27 @@ class HostAdmissionR07TOCTOUTests(unittest.TestCase):
                 request=req,native_file_picker=picker)
         self.assertEqual(self.host.pending,{})
 
+    def test_sensitive_permission_denied_before_any_native_select_callback(self):
+        from admission import Host50Admission
+        self.cat['actions'][5]['settings']=[{
+            'key':'model','kind':'select','source':'host.models.installed'}]
+        host=Host50Admission(self.cat,self.mapping,signing_key=self.host.key,
+            allowed_origins={'https://nox.invalid'},active_tree=BASE_TREE,
+            capabilities=self.host.capabilities)
+        unapproved=host.issue_session(tenant='tenant',principal='person',chat='chat1',
+            origin='https://nox.invalid',scopes=('chat.attach',),sensitive=())
+        req=self.req('chat.attach','NIP01-06')
+        req['settings']={'model':'installed-good'}
+        touched=[]
+        def callback(*_):
+            touched.append('native-inventory')
+            return True
+        with self.assertRaisesRegex(Denied,'SENSITIVE_NATIVE_PERMISSION_REQUIRED'):
+            host.admit(session=unapproved,actual_origin=unapproved.origin,
+                request=req,native_option_verifier=callback)
+        self.assertEqual(touched,[], 'Denied scope invoked native callback')
+        self.assertEqual(host.pending,{})
+
     def test_page_select_mutation_during_native_verifier_is_denied(self):
         from admission import Host50Admission
         self.cat['actions'][0]['settings']=[{'key':'model','kind':'select',
