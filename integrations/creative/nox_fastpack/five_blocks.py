@@ -126,8 +126,17 @@ def dispatch_five(studio, request):
         path = _journal_path(studio, project_id)
         if action == "cs5_list":
             state = _read(path)
+            # Stable absolute position, not a guessed page count, so a concurrent
+            # append cannot silently shift older events to a different page.
+            total = len(state["events"])
+            before = request.get("before", total)
+            if type(before) is not int or before < 0 or before > total:
+                raise ValueError("CS5_HISTORY_CURSOR_HOLD")
+            first = max(0, before - 20)
+            selected = state["events"][first:before]
             return {"status": "LOCAL_RECORDS_NOT_E11", "project_id": project_id,
-                    "events": state["events"][-20:], "count": len(state["events"]), "showing": min(len(state["events"]), 20)}
+                    "events": selected, "count": total, "showing": len(selected),
+                    "start_index": first, "next_before": first if first else None}
         with _project_writer_lock(path):
             return _append_with_lock(studio, request, path)
 
