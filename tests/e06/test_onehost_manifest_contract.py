@@ -37,6 +37,15 @@ class OneHostManifestContract(unittest.TestCase):
         ):
             self.assertGreater(self.source.find(token), nsis)
 
+    def test_t06_dotnet8_sdk_probe_before_visual_staging(self):
+        """Do not spend time staging visuals when .NET 8 is unavailable."""
+        probe = self.source.find("E06_DOTNET8_SDK_REQUIRED_PRECHECK")
+        self.assertGreater(probe, 0)
+        self.assertIn("Get-Command dotnet.exe", self.source)
+        self.assertIn(r"^8\.", self.source)
+        self.assertGreater(self.source.find("if ($wantsCreative) {"), probe)
+        self.assertGreater(self.source.find("& dotnet publish $project"), probe)
+
     def test_hidden_and_system_payload_files_are_hashed(self):
         self.assertRegex(
             self.source,
