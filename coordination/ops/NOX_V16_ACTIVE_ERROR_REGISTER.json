@@ -1373,6 +1373,78 @@
       "source_ready": false,
       "build_authorized": false,
       "next_owner": "T06/#1 current-HEAD 8/8, P01 NSIS WPF-P02 and approved portrait rights; T08 independent native STOP/ACL/consent/privacy; T09 freeze; G5-C/T11 content parity after T10 SOURCE_READY, no CI/EXE before separate approval."
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-20261030T0845MSK-OWNER-DELTA",
+      "existing_task_id": "T02",
+      "observed_at": "2026-10-30T08:45:14+03:00",
+      "source_head_pre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_head_post": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_post": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "registry_pre_blob": "1b0538fa418effb96345b87b204e40594b260457",
+      "source_code_changed_since_previous_T02": false,
+      "new_independent_evidence": true,
+      "evidence": [
+        {
+          "owner": "T09/QA-2",
+          "task_id": "T09",
+          "run_id": "NOX-V16-T09-R47-20261030T0809MSK-EXACT-T08-ARCHIVE-GATE",
+          "receipt_blob": "c71c06a097ef336b8d9c51cbd27cf37aa5ff3760",
+          "commit": "eb4bb36792812d1feaa318e53d4feeb05076c6f4",
+          "stage": "INDEPENDENT_SAME_HEAD_PARTIAL_1_OF_6",
+          "finding": "T08 P03 28/28 V8 receipt is exact HEAD (not STALE), still not full/native; source_00/01/02 Git objects match historical T07 raw 729/3; original still portrait SHA+rights 5/5 HOLD.",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G5-C/T11",
+          "task_id": "T11",
+          "run_id": "NOX-V16-R47-G5C-T11-20261030T0841MSK-REGEX-DOLLAR-REPLACEMENT-RECOVERY",
+          "receipt_blob": "7e3b16352395440f67ac8f360bd7e7ebeb83de6c",
+          "commit": "8de6c88fab6585c9d128cfa665c99c4049652e58",
+          "branch": "build/r41-windows-preparation-20261030",
+          "stage": "GITLAB_BUILDER_ISOLATED_SOURCE_PREPARED",
+          "finding": "Initial defective GitLab JS `$' replacement interpolation 9085e57... superseded by corrected mirror guard dbfe6293...; GitLab Python repo tests/Windows NOT_RUN; GitHub/GitLab product source parity still HOLD.",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G4-A/T07",
+          "task_id": "T07",
+          "run_id": "NOX-V16-R48-G4A-T07-20261030T0840MSK-WINDEV-NAME-GATE",
+          "receipt_blob": "17649a1bed4def9b86eb1317bcd8aa658b266102",
+          "commit": "ef117e68f20947392bf10aa633ffa668537d4159",
+          "stage": "ISOLATED_SOURCE_PREPARED",
+          "finding": "Both ZIP namespace validators now deny Windows reserved COM¹/²/³ LPT¹/²/³ CONIN$ CONOUT$, local regex 9 negative/7 positive PASS; full repository/native NOT_RUN; product PR162 unchanged.",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G3-B/PACK02",
+          "task_id": "NIP02-21",
+          "run_id": "NOX-V16-R47-G3B-20261030T0838MSK-CSV-BOM",
+          "receipt_blob": "3b84de6a7395bde247aae0017d050cf16b98b45c",
+          "commit": "6e0d44b224cd7c4cbec15294f2886ac62da2a0cf",
+          "stage": "ISOLATED_SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED",
+          "finding": "BOM-leading CSV header guard exact ops.mjs blob bd0d4f... ->36e022...; focused V8 3/3, Node/native NOT_RUN; requires preceding owner donor schema/quoting chain before T06 CAS.",
+          "qa_accepted": false
+        }
+      ],
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "error_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "qa_accepted_delta": 0,
+      "source_ready": false,
+      "product_percent": null,
+      "lesson_applied": "R47 exact-source HEAD preservation observed: T09 corrected prior STALE label to P03-only same-SHA V8 proof while withholding full/native acceptance. GitLab builder remains isolated and does not override GitHub/GitLab content parity gate.",
+      "lesson_new": "Cause: JS replace-string interpolates `$'` in generated Python regex; repair: replace via callback from authenticated PRE; regression: exact complete-file blob/syntax + one trusted_t10_environment; prevention: verify full source byte hash after code-template insertion before builder CAS.",
+      "next_owner": "T06: exact-PRE authorize integrated NSIS/P01/PACK02 + WPF→Python and approved five portraits; T08 full independent STOP/ACL/consent/privacy/native 14; T09 frozen exact SHA; T10 source-ready & GitHub/GitLab content parity; G5-C/T11 no CI/EXE until approved.",
+      "report_gate": "PARTIAL_E06_and_full_QA",
+      "build_ci_exe_e07": "NOT_RUN"
     }
   ]
 }
