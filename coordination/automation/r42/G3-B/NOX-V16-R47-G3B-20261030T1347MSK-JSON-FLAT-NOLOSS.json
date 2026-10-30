@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T1347MSK-JSON-FLAT-NOLOSS",
+  "owner": "G3-B",
+  "existing_task_id": "NIP02-29",
+  "route": "data.json.flatten",
+  "error_ref": "ERR-SRC-004",
+  "branch": "auto/r42/g3b-pack02",
+  "branch_head_pre": "4fced3530bd2d38f9fab08ed0cfc4a9d9f8dda83",
+  "branch_tree_pre": "acb0d121f450d03bf4201cbd42cb571fd3b252df",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_status": "ISOLATED_SOURCE_PATCH_TESTED_NOT_INTEGRATED_NOT_INDEPENDENT_QA",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "0002e7d116cdc3bb5cd627f2c5768240e10b850e",
+      "post_git_blob": "dd8a1427044f0b3b0a7f2bbe67e9d77426e40517"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_json_flatten_noloss_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "166151796f4f1f6b2afe830138cbd3fa039fd115"
+    }
+  ],
+  "root_cause": "Existing flatten output used ordinary {} with magic __proto__ setter and unguarded dotted-path assignment. Dotted-key collisions silently overwrote values; null __proto__ disappeared.",
+  "fix": "Use null-prototype result dictionary and fail closed on any duplicate flattened leaf path. Keep existing 50 operation IDs, JSON flatten wire shape for regular inputs, and depth limit.",
+  "tests": {
+    "runtime": "V8 exact owner Git source evaluated with Function (not Node/.NET/Windows)",
+    "pre_red": "2/2 collisions silent-loss reproduced; __proto__ loss reproduced",
+    "post_green": "4/4 (two collisions, prototype key, ordinary nested+50 operation IDs)",
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "independent_qa": "NOT_RUN"
+  },
+  "lesson_applied": "Prior PACK02 CSV no-loss/schema lesson enforced as explicit fail-closed collision and prototype own-property checks.",
+  "new_lesson": "JSON flatteners must use own-key-safe maps and reject path alias collisions instead of silently overwriting data; regression must cover dotted keys and __proto__.",
+  "preservation": "Unmodified source files and original 729 parts/3, HOME/MENU/WORK, approved five still Persona, D02/WOW200, STOP/ACL/consent/privacy/rollback not touched; EV motion remains HOLD.",
+  "next_owner": "T06 exact-CAS integration into PR162 after current source PRE, then independent T08; T02 sole shared Error/Master/E06/Lessons writer."
+}
