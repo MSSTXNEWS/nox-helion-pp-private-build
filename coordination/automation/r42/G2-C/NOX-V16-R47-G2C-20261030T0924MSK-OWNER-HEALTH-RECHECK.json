@@ -1,0 +1,41 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T0924MSK-OWNER-HEALTH-RECHECK",
+  "role": "G2-C existing P03 ModelCenter/P03 native owner method",
+  "task_id": "P03_EXISTING",
+  "branch": "auto/r42/g2c-p03",
+  "owner_head_pre": "4b7ecd74eae8cb44709b55079addb6a12a514005",
+  "product_pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_pr162_tree_at_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "files": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "git_blob_pre": "f963ee308e96a2c0b9c3b363dfa06195fcf3efbd",
+      "git_blob_post": "d879f329160b58e8f42759bed961eaa0df30777e"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_native_health_after_consent_r47.py",
+      "git_blob_pre": null,
+      "git_blob_post": "6cdb21f9fba7050a1729a94aca1585d4023147c1"
+    }
+  ],
+  "root_cause": "Native approval can take time and synchronously revoke backend availability or replace its method; cached pre-consent health and bound method were still invoked.",
+  "fix": "Revalidate same owner method and current backend health immediately after consent, session identity, payload and scope guards; fail closed if drift.",
+  "regression": {
+    "red_isolated_exact_method": "2/3 FAIL (offline, revoked method); stable 1/3 PASS",
+    "green_isolated_exact_method": "3/3 PASS Python 3.13",
+    "whole_repository_test": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "lesson_applied": "R47 fail-closed after consent callback; check exact owner capability as well as scope, identity and arguments.",
+  "lesson_new": "Never call a pre-consent cached capability without rechecking health and handler after native owner approval.",
+  "source_only": true,
+  "integrated": false,
+  "qa_accepted": false,
+  "source_ready": false,
+  "exe": false,
+  "e07": false,
+  "original_assets_changed": false,
+  "model_downloads": false,
+  "next_owner": "T06 compare PR162 live exact P03 port and merge only missing R46/R47 plus this method health recheck via CAS; T08 exact-SHA independent; T02 owns shared ERROR/Master/E06/Lessons."
+}

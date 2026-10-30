@@ -276,6 +276,19 @@ class P03OneHostPort:
             raise P03PortDenied("Native session identity changed during approval")
         if backend is not self.backend:
             raise P03PortHold("Owner3 backend changed during native approval")
+        # Consent can outlive the backend health/method that was previously checked.
+        # Fail closed instead of invoking a stale cached worker callback.
+        try:
+            live_func = getattr(backend, method_name, None)
+            live_probe = getattr(backend, "available", None)
+            if (not callable(live_func) or live_func != func
+                    or not callable(live_probe) or live_probe != probe
+                    or live_probe() is not True):
+                raise P03PortHold("Owner3 backend no longer ready after native approval")
+        except P03PortHold:
+            raise
+        except Exception:
+            raise P03PortHold("Owner3 backend changed during native approval") from None
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
