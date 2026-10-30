@@ -17,7 +17,7 @@ public static class E05HostStateAdapter
         string e06Gate, string e07Gate, CancellationToken stop)
     {
         stop.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 160)
+        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 128)
             throw new ArgumentException("RunID required", nameof(runId));
         var hardware = E05HostTelemetryFacade.ReadVerified(runId,
             providers ?? Array.Empty<ISensorProvider>(), now, stop);
