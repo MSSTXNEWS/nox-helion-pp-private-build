@@ -1,0 +1,104 @@
+{
+  "schema": "NOX_V16_T09_R47_EXACT_LIVE_SOURCE_HOLD_V1",
+  "runId": "NOX-V16-T09-R47-20261030T150725MSK-DELTA-T08-HOLD",
+  "role": "QA-2 / T09 independent frozen-source keeper",
+  "observedUTC": "2026-10-30T12:07:25.878Z",
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "20012055ea7bf7c4077b44e1a2963970570a74f0",
+    "tree": "c7ba8fa77804eb1fa7a879c8d98617a2833035be",
+    "previousT09Head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "previousT09Tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "delta": [
+      {
+        "commit": "33f2b10acb69ec46fca642d4bac42c8bde877a0c",
+        "path": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+        "preBlob": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+        "postBlob": "ecd39b64075b4edfd720dba5ab39f5a71c124b10",
+        "pairedTestPre": "41d7f6173d83d2a052ebf74639b2383936a45748",
+        "pairedTestPost": "0278961473740f0d1511e9a4dafade1082c130d4",
+        "acceptance": "SOURCE_ONLY_T08_P0_HOLD"
+      },
+      {
+        "commit": "20012055ea7bf7c4077b44e1a2963970570a74f0",
+        "path": "coordination/e06/verify_original_729_source.py",
+        "preBlob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+        "postBlob": "7376f1d3eebcabfffe1cd94ec7584f17948af03b",
+        "change": "ZIP_MEMBER_KIND_MISMATCH_FAIL_CLOSED",
+        "acceptance": "T06_INTEGRATED_SOURCE_ONLY_T08_SAME_SHA_MISSING"
+      }
+    ],
+    "deletionsSincePriorT09": 0,
+    "singleCanonicalTree": true
+  },
+  "sourceLock": {
+    "partPaths": [
+      "source_00.part",
+      "source_01.part",
+      "source_02.part"
+    ],
+    "partGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "partSizes": [
+      20971520,
+      20971520,
+      18421306
+    ],
+    "identicalToT07AndPriorT09": true,
+    "historicalT07PhysicalMembers": 729,
+    "combinedArchiveSha256FromT07": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "redownloadOrNativeVerificationThisRun": "NOT_RUN_UNCHANGED_BYTES",
+    "originalVisualsHomeMenuWorkPathsUnchanged": true,
+    "approved5PortraitStillSHA256RightsAndBinding": "NOT_PROVEN",
+    "optionalEVMotionReleaseRequirement": false
+  },
+  "gates": {
+    "t06Owner8Of8": "NOT_PROVEN",
+    "t08": {
+      "latestVerdict": "INDEPENDENT_SOURCE_QA_HOLD_P0",
+      "verifiedReceiptBlob": "eda1a6715de8167649096a75024a84c066bfc9a9",
+      "receiptHead": "33f2b10acb69ec46fca642d4bac42c8bde877a0c",
+      "currentHeadExactMatch": false,
+      "issueComment": 6522265131,
+      "rootCause": "Percent-encoded numeric hostname aliases bypass P01 local-IP browser admission",
+      "testLevel": "T08 excerpts and Node WHATWG; NOT full integrated tests"
+    },
+    "knownP01CurrentBlob": "ecd39b64075b4edfd720dba5ab39f5a71c124b10",
+    "p01NewPatchNotIntegrated": true,
+    "nativeSTOP_ACL_consent_privacy_rollback": "NOT_ACCEPTED",
+    "host50NativePending": 14,
+    "wpfToP02LiveBridge": "HOLD",
+    "originalPortraitRights": "HOLD",
+    "frozenHead": null,
+    "frozenTree": null,
+    "frozenManifest": null,
+    "freeze": "HOLD",
+    "sourceReady": "HOLD",
+    "windowsBuild": "NOT_RUN",
+    "exe": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "productWeighted": "N/D",
+    "newAcceptedTaskIDs": 0
+  },
+  "error": {
+    "onlyBlockingId": "ERR-SRC-004",
+    "newErrorId": null,
+    "t02SharedRegisterGitBlob": "66360c3bdbdae9e527b09ec1855017c80a11698d",
+    "sharedMasterE06LessonsReadThrough": "2026-10-30T14:45MSK",
+    "t02OnlySharedWriter": true
+  },
+  "lesson": {
+    "priorApplied": "Reused exact 729/3 Git blob proof without 60MB re-download; reverified only 2+1 changed paths; stale HEAD at prewrite detected and no unsafe stale receipt emitted",
+    "newRootCause": "NONE_BY_T09; cross-parser percent URL bypass discovered and independently signed as HOLD by T08",
+    "prevention": "Mandatory prewrite live HEAD/tree and independent same-SHA T08 proof; after each T06 commit verify delta-only; add WHATWG percent-host negative tests before T08 full QA"
+  },
+  "nextOwner": "T06 / manual #1",
+  "nextAction": "On exact current PRE, close P01 percent-encoded numeric hostname bypass and pending P0 source safety/callback, run actual regressions STOP/ACL/consent/NO-LOSS, prove 8/8; then T08 independent full SOURCE PASS on same NEW HEAD; only then T09 freeze and handoff T10.",
+  "permissions": "NO_PR162_PRODUCT_WRITE_NO_SHARED_JOURNAL_WRITE_NO_T10_SIGNATURE_NO_EXE_NO_CI_NO_E07",
+  "ownWrite": "ONE_IMMUTABLE_HOLD_RECEIPT_ON_EXISTING_T09_BRANCH_ONLY"
+}
