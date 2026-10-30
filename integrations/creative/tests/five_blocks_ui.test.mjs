@@ -40,7 +40,7 @@ function mount() {
       if (ids.has('cs5-block')) ids.get('cs5-block').value='B01';
       if (ids.has('cs5-project')) ids.get('cs5-project').value='creative01';
     }
-    append(node) {this.children.push(node);}
+    append(...nodes) {this.children.push(...nodes);}
     replaceChildren(){this.children=[];}
     focus(){}
     click(){return this.handlers.click?.();}
