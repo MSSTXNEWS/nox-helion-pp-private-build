@@ -1,0 +1,86 @@
+{
+  "schema": "NOX_V16_R47_T08_INDEPENDENT_EXACT_HEAD_SOURCE_QA_V1",
+  "run_id": "NOX-V16-R47-G4B-T08-20261030T0655MSK-P03-INTEGRATED-EXACT",
+  "existing_taskid": "T08",
+  "scope": "INDEPENDENT_SOURCE_ONLY",
+  "source_write": false,
+  "shared_ledger_write": false,
+  "recorded_utc": "2026-10-30T03:55:12.243Z",
+  "pin": {
+    "pr162": 162,
+    "head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "draft": true,
+    "previous_checked_head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "previous_tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "compared_one_commit_ahead": true,
+    "changed_paths": [
+      "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "tests/P03/test_g2c_r42_snapshot_atomicity.cjs"
+    ],
+    "p03_ui_blob_pre": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+    "p03_ui_blob_post": "312d428992aa0cab15a0f597dacd114653064bda",
+    "p03_atomic_test_blob": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb",
+    "p01_unchanged_blob": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+    "nsis_unchanged_blob": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+    "pr224_isolated_head": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+    "t02_register_blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "lessons_revision": "AHj4eMTUtXpfzs_XCbbrdD785ZSCycLa8qo8G1TdDn2vQcP1D4AvjWYxyHkaIlh6DAKtcrpThPhvNsvYL6UAMJaqbjaxYCKmgyJxVSAT-a4",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0"
+  },
+  "tests": {
+    "execution": "Original Git JavaScript and three original CJS test contents fetched by connector and executed in isolated Code Mode V8 new Function, with injected fs/path/assert and URL fixture. This is not genuine node runner nor Windows host.",
+    "integrated_p03_snapshot_atomicity": {
+      "test_blob": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb",
+      "pass": 3,
+      "total": 3
+    },
+    "integrated_p03_consent": {
+      "test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+      "pass": 12,
+      "total": 12
+    },
+    "integrated_p03_stop_ack": {
+      "test_blob": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+      "pass": 13,
+      "total": 13
+    },
+    "total_pass": 28,
+    "total_fail": 0,
+    "test_log_sha256": "e50e94e4d0144a0cdcacdace1be3902b4a2ce87ae2c93b809e307794ad76617c",
+    "log_note": "Exact run result structured JSON; SHA256 of local log. Git receipt is the durable independent proof.",
+    "node_original_runtime": "NOT_RUN",
+    "windows_dotnet_native": "NOT_RUN",
+    "live_acl_consent": "NOT_RUN",
+    "original_729_asset_sha_rehash": "NOT_RUN; verified comparison changed only 2 source/test paths, so preserve earlier owner T07 proofs, do not assert fresh portrait/rights validation"
+  },
+  "disposition": {
+    "p03_integrated": true,
+    "p03_source_qa": "PASS_LIMITED_ON_EXACT_SHA",
+    "all_p01_p05_accepted": "NOT_CONFIRMED",
+    "native_host50_pending": 14,
+    "native_accepted": 0,
+    "t06_all_8_gates": "NOT_CONFIRMED",
+    "t09_frozen": "NOT_CONFIRMED",
+    "t10_source_ready": "HOLD",
+    "e07": "NOT_RUN",
+    "qa_accepted_count_delta": 0,
+    "errors": [
+      "ERR-SRC-004",
+      "ERR-SYS-002"
+    ],
+    "remaining": [
+      "P01 numeric loopback fix remains isolated PR224, PR162 P01 source blob 550df2d4...",
+      "NSIS builder on PR162 retains old blob ca8ce5d0...; prior R46 ordering preflight concern remains candidate-only, no PowerShell executed",
+      "WPF WebView2 -> P02 NativeIngress one-host LIVE binding not demonstrated; earlier diagnosed --diagnose-only source",
+      "14 native routes require real Windows STOP/ACL/consent/rollback verification",
+      "Approved five portrait originals/rights/runtime bindings are separate from unchanged 729 ZIP parts; not newly revalidated",
+      "T06 8/8 owner, T09 exact-SHA freeze and T10 SOURCE_READY absent; no build or E07"
+    ]
+  },
+  "owner_handoff": "T06: integrate P01/NSIS only after exact owner CAS and check NativeIngress; manual #2/QA2: independent native on frozen head; T02 sole-writer index this receipt under existing ERR-SRC-004 without false DONE. T08: only next relevant blob/receipt delta.",
+  "applied_lesson": "R42 Lessons latest T02 05:50: branch donor + source checks are not QA_ACCEPTED or native; verified same-byte P03 donor landed in PR162, ran focused original regressions on integrated HEAD, and left SOURCE_READY HOLD.",
+  "new_lesson_proposal": "R47 evidence: a donor blob may be QA-tested while isolated, then copied bit-identically into PR162. Use Git compare changed-path set and blob SHA equality to transfer unchanged negative-test evidence; add an independently pinned integrated-HEAD source receipt but never transfer native status or accept T09/T10 on donor SHA.",
+  "safety": "NO_PRODUCT_CHANGE_NO_SHARED_DOC_WRITE_NO_CI_NO_EXE_NO_E07_NO_AUTOMATION_MUTATION"
+}
