@@ -82,6 +82,28 @@ class VoiceOwnerTests(unittest.TestCase):
             self.host.execute("translate.ru_es",
                 {"direction":"ru-es","voiceId":"not-installed"},self.session)
 
+    def test_invalid_voice_selectors_never_touch_native_identity_or_microphone(self):
+        observed=[]
+        self.adapter.native_identity=lambda session:(observed.append("identity") or self.scope)
+        self.adapter.native_audio=lambda session:(observed.append("microphone") or b"captured")
+        rejected=(
+            {"direction":"de-en","voiceId":"es-voice"},
+            {"direction":"ru-es","voiceId":"not-installed"},
+            {"direction":"ru-es","voiceId":"es-voice","level":"C9"},
+            {"direction":["ru-es"],"voiceId":"es-voice"},
+            {"direction":"ru-es","voiceId":["es-voice"]},
+            {"direction":"es-ru","voiceId":"es-voice","level":{"A1":True}},
+        )
+        for args in rejected:
+            with self.subTest(args=args):
+                with self.assertRaises(bridge.HostDenied):
+                    self.host.execute("translate.ru_es",args,self.session)
+                self.assertEqual(observed,[], "Rejected request touched native audio/identity")
+        out=self.host.execute("translate.ru_es",
+            {"direction":"ru-es","voiceId":"es-voice","level":"B1"},self.session)
+        self.assertEqual(out["answer"],"Hola")
+        self.assertEqual(observed,["identity","microphone"])
+
     def test_call_requires_fresh_native_confirm_not_client_field(self):
         with self.assertRaises(bridge.HostDenied):
             self.host.execute("calls.dial",{"userConfirmed":True},self.session)
