@@ -12,6 +12,7 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 _LOCK = threading.RLock()
 _SCHEMA = "NOX_CS5_PROJECT_EVENTS_V1"
@@ -61,7 +62,7 @@ def _read(path):
     return state
 
 
-def _write(path, state):
+def _write(path, state, *, stopped):
     data = (json.dumps(state, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     if len(data) > _MAX_FILE:
         raise ValueError("CS5_PROJECT_SIZE_HOLD")
@@ -73,6 +74,9 @@ def _write(path, state):
             os.fsync(stream.fileno())
         if path.is_symlink():
             raise ValueError("CS5_PROJECT_LINK_HOLD")
+        # Do not publish bytes if STOP arrived during disk flush.
+        if stopped():
+            raise ValueError("CS5_STOP_ACTIVE")
         os.replace(tmp, path)
     finally:
         if os.path.exists(tmp):
@@ -114,10 +118,14 @@ def dispatch_five(studio, request):
             raise ValueError("CS5_BLOCK_KIND_HOLD")
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 3000:
             raise ValueError("CS5_TEXT_LIMIT")
-        if not isinstance(url, str) or len(url) > 600 or (
-            url and not (url.startswith("https://") or url.startswith("http://"))
-        ):
+        if not isinstance(url, str) or len(url) > 600:
             raise ValueError("CS5_SOURCE_URL_HOLD")
+        if url:
+            parsed = urlsplit(url)
+            if (parsed.scheme not in ("https", "http") or not parsed.hostname or
+                parsed.username or parsed.password or
+                any(ord(char) < 32 for char in url)):
+                raise ValueError("CS5_SOURCE_URL_HOLD")
         if len(state["events"]) >= _MAX_EVENTS:
             raise ValueError("CS5_EVENT_BUDGET_HOLD")
         evidence = ("HYPOTHESIS" if kind == "hypothesis" else
@@ -131,7 +139,7 @@ def dispatch_five(studio, request):
         }
         event["sha256"] = _digest(event)
         state["events"].append(event)
-        _write(path, state)
+        _write(path, state, stopped=studio._stop_event.is_set)
         return {"status": "SAVED_LOCAL_NOT_E11", "project_id": project_id,
                 "event_id": event["event_id"], "sha256": event["sha256"],
                 "evidence_status": evidence}
