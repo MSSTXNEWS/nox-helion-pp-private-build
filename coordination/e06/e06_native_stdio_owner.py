@@ -6,7 +6,7 @@ Only the canonical WPF authenticated SID/ACL/consent host may launch this mode.
 Windows E2E/installed model acceptance remains separate from source tests.
 """
 from __future__ import annotations
-import getpass
+import ctypes
 import hashlib
 import os
 import sqlite3
@@ -102,7 +102,16 @@ def serve_existing_store(original_store, run_id: str) -> int:
     if type(run_id) is not str or not 1 <= len(run_id) <= 128 or any(
             not 32 <= ord(c) <= 126 for c in run_id):
         raise ValueError("E06_NATIVE_RUNID_INVALID")
-    principal = getpass.getuser().strip()
+    # getpass.getuser() trusts spoofable USERNAME/LOGNAME environment strings.
+    # Resolve the Windows process token account through the OS instead.
+    if os.name != "nt":
+        raise PermissionError("E06_NATIVE_WINDOWS_USER_TOKEN_REQUIRED")
+    buffer = ctypes.create_unicode_buffer(257)
+    buffer_size = ctypes.c_uint32(len(buffer))
+    if not ctypes.windll.advapi32.GetUserNameW(
+            buffer, ctypes.byref(buffer_size)):
+        raise PermissionError("E06_NATIVE_WINDOWS_USER_TOKEN_UNAVAILABLE")
+    principal = buffer.value.strip()
     if not principal or len(principal) > 128:
         raise PermissionError("E06_WINDOWS_USER_REQUIRED")
     p02 = admit_shared_p02_store(original_store, principal)
