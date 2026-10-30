@@ -432,10 +432,6 @@ class ExistingP02VoiceAdapter:
 
     def speak(self,session,args, *,mode):
         if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
-        identity=self.native_identity(session)
-        captured=self.native_audio(session)
-        if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
-            raise HostDenied("No trusted bounded microphone capture")
         direction=args.get("direction","ru-es")
         if direction not in ("ru-es","es-ru"):raise HostDenied("Only RU/ES directions")
         source,target=("ru","es") if direction=="ru-es" else ("es","ru")
@@ -443,6 +439,11 @@ class ExistingP02VoiceAdapter:
         if voice not in self.voice.permitted_voices:
             raise HostDenied("Voice must be one actually installed and approved")
         level=args.get("level","A2")
+        # Validate untrusted selections before native identity/microphone callbacks.
+        identity=self.native_identity(session)
+        captured=self.native_audio(session)
+        if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
+            raise HostDenied("No trusted bounded microphone capture")
         # Native Windows permission for the microphone happens before returning bytes.
         response=self.voice.run(identity,captured,source=source,target=target,
             voice=voice,mode=mode,level=level,microphone_consent=True)

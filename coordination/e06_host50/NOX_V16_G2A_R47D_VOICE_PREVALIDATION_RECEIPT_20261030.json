@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_V16_R47D_G2A_VOICE_PREVALIDATION_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T1053MSK-VOICE-PREVALIDATION",
+  "task_id": "NIP01-31",
+  "role": "G2-A Host50",
+  "branch": "auto/r42/g2a-host50",
+  "branch_pre_head": "e8287c53a627bb8b740775696a2e2638329e1f4e",
+  "pr162_source_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_git_blob": "a0c4ba31402182bdf8487720ec9ab569433875c8",
+    "post_git_blob": "418b92058c8a78c740074a599c6aa1ecf3582fa4"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_voice_prevalidation_r47d.py",
+    "git_blob": "304cdd4b8548228f03ee90654c3a1ee9d38775be",
+    "scenario_count": 3,
+    "extracted_python_method": "RED 2/2 to GREEN 3/3 PASS",
+    "full_module_unittest": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "severity": "P1_PRIVACY",
+  "root_cause": "ExistingP02VoiceAdapter.speak invoked identity/microphone before checking page-supplied direction and approved installed voice",
+  "fix": "Move existing selector checks ahead of native identity/capture; existing microphone consent/pipeline behavior on valid input preserved",
+  "previous_lesson_applied": "AUTHORIZE_BEFORE_PROBE: validate selectors before native capture",
+  "lesson_new": "MIC_ZERO_SIDE_EFFECT_DENIAL: invalid voice selectors must produce zero identity/microphone calls; repeat at WPF NativeIngress same-SHA QA",
+  "stage": "SOURCE_PREPARED_NOT_INTEGRATED",
+  "qa_accepted": false,
+  "source_ready": false,
+  "e07": "NOT_RUN",
+  "no_loss": "Only owned Python bridge plus new component test/receipt; 729/3, HOME/MENU/WORK, portraits, D02/WOW, P01-P05, privacy data untouched",
+  "next_owner": "T06 exact PRE to PR162 CAS + Python and STOP/ACL/consent/origin regression; T08 independent same SHA; T02 shared journal sole writer"
+}
