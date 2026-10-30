@@ -1,0 +1,88 @@
+{
+  "schema": "NOX_V16_T08_INDEPENDENT_EXACT_HEAD_SOURCE_QA_V1",
+  "run_id": "NOX-V16-R47-T08-20261030T1456MSK-P01-PCT-HOST",
+  "role": "G4-B / QA-1 T08 independent source QA",
+  "owner": "T06 sole PR162 writer",
+  "journal_owner": "T02",
+  "result": "SOURCE_QA_HOLD_P0_SECURITY",
+  "overall_source_ready": "HOLD",
+  "qa_accepted": false,
+  "done_delta": 0,
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr": 162,
+    "head_pre": "33f2b10acb69ec46fca642d4bac42c8bde877a0c",
+    "head_post": "33f2b10acb69ec46fca642d4bac42c8bde877a0c",
+    "tree": "4cfbf274cc0c66b2123c294ffffbc9aec982923d",
+    "parent": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "changed_paths": [
+      {
+        "path": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+        "pre_blob": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+        "post_blob": "ecd39b64075b4edfd720dba5ab39f5a71c124b10"
+      },
+      {
+        "path": "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+        "pre_blob": "41d7f6173d83d2a052ebf74639b2383936a45748",
+        "post_blob": "0278961473740f0d1511e9a4dafade1082c130d4"
+      }
+    ]
+  },
+  "finding": {
+    "error_id": "ERR-SRC-004",
+    "severity": "P0",
+    "kind": "cross-parser-host-validation-bypass",
+    "description": "New WHATWG numeric IPv4 alias block accepts percent-encoded host label digits: Python urlsplit/idna leaves %31 in hostname, numeric regex does not match it; JavaScript WHATWG URL maps host to 127.0.0.1. This is a SOURCE security bypass of intended local/private denial.",
+    "examples": [
+      "https://%31%32%37.1/admin",
+      "https://127.%31/admin",
+      "https://0x7f.%31/",
+      "https://%30x7f.1/",
+      "https://127.0.%30.1/"
+    ],
+    "narrow_owner_patch": "At _https_url(), directly after ascii_host = host.encode('idna').decode('ascii'), reject '%' in ascii_host by ValueError before ipaddress/numeric checks; rerun exact full-module browser.open native-selection and STOP/ACL/consent negative tests. Do not copy donor file or alter unrelated code.",
+    "proof": "Node v22 WHATWG URL parser normalizes 7/7 selected percent-encoded numeric variants to 127.0.0.1. Faithful manually transcribed current _https_url Python excerpt admits 5/7; remaining two already denied because host lacks literal dot."
+  },
+  "targeted_test": {
+    "level": "exact function excerpt manually copied from live Git source, not full repo import; real Node WHATWG parser",
+    "status": "FAIL_CURRENT_SOURCE__LOCAL_MINIMAL_PATCH_GREEN_LIMITED",
+    "current_escaped_loopback_admitted": 5,
+    "percent_aliases_to_loopback": 7,
+    "unaffected_existing_negative_numeric": 4,
+    "unaffected_public_dns": 3,
+    "unaffected_conventional_private": 3,
+    "candidate_guard_denied_all_percent_aliases": 7,
+    "unchanged_baseline_behaviors": 10,
+    "script_sha256": "d45dbd01d8db931979b731620a94e5398bc7d3c1121bcf3941b7251d9f899ac0",
+    "log_sha256": "5fd6a23f3f34cc714cb591b94fb98d0d0e7f5ed7d628f5df1bb055292e183c0a",
+    "full_repository_suite": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "unchanged_evidence": {
+    "p03_ui_blob": "312d428992aa0cab15a0f597dacd114653064bda",
+    "p03_prior_limited_qa_receipt_blob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "status": "REUSED_UNCHANGED_LIMITED_ONLY"
+  },
+  "remaining": {
+    "nsis": "HOLD",
+    "wpf_to_p02_live": "HOLD",
+    "native_routes_pending": 14,
+    "original_729": "UNCHANGED_PATHS_ONLY_REUSED",
+    "approved_portraits_rights": "NOT_PROVEN",
+    "t06_8of8": "NOT_PROVEN",
+    "t09": "HOLD",
+    "t10": "HOLD",
+    "e07": "NOT_RUN",
+    "weighted_product": "N/D"
+  },
+  "lesson": {
+    "last_t02": "SourceLock ZIP member kind fail-closed",
+    "applied": "N/A—only P01 URL code changed; SourceLock original blobs unchanged. Finite-delta blob comparison applied.",
+    "new": "Cross-runtime URL validation: percent-encoded host must not bypass numeric-IP filter; add WHATWG browser normalization negative cases to P01 regression on exact integrated SHA."
+  },
+  "permissions": {
+    "no_product_write": true,
+    "no_shared_journal_write": true,
+    "no_build_ci_release": true
+  }
+}
