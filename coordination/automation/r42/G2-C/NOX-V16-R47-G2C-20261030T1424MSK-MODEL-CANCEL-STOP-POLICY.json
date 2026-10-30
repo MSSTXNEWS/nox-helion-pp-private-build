@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T1424MSK-MODEL-CANCEL-STOP-POLICY",
+  "role": "G2-C/P03",
+  "task_id": "P03_EXISTING",
+  "error_id": "ERR-SRC-004",
+  "owner_branch": "auto/r42/g2c-p03",
+  "owner_head_pre": "4fb0249f4cc6eba18eec733314ce5c709d3ba466",
+  "owner_tree_pre": "1097d55d8b674683dd0daaa76dc4918776c1575d",
+  "pr162_head_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_tree_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "observed_native_host_policy_source": "proposals/NOX-PACK01-50/native_bridge.py",
+  "observed_native_host_policy_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+  "changed_paths": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre": "8ae1535301e742e9f67f6b6c53de46cd9792137d",
+      "post": "5587fa9de4a6993e4eae2a515c569570a13fee0e"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_cancel_acl_stop_r47.py",
+      "pre": null,
+      "post": "4e42d186610032fdbff12a50ecd4fed92aa1a92d"
+    }
+  ],
+  "root_cause": "Canonical PACK01 marks models.cancel safe (ACL-only stop) but isolated P03 Python SENSITIVE independently demanded fresh private_approved and native_approve even for cancellation. An authorized user without a second consent token cannot stop a running local transfer.",
+  "fix": "Remove only models.cancel from P03 SENSITIVE to conform to existing immutable PACK01 risk policy; session.allowed/owner3/backend readiness preserved, pull/gguf.import/retry retain fresh out-of-band consent.",
+  "regression": "New 3-test source-module unittest covers authorized ACL-only cancel, unauthorized cancel denial, and pull consent; test file saved but exact repository Python unittest NOT_RUN. Connector V8 static checks 11/11 PASS before blob write. No network/weights/CI.",
+  "previous_lesson": "Consent/ACL rules must be checked against immutable owner route policy, not an independent duplicated risk set; prior R47 guards remain byte-identical except one constant line.",
+  "new_lesson": "For native STOP/cancel routes, cross-check adapter sensitivity against canonical PACK01 owner policy before introducing extra approval gates; prevent regressions with separate unauthorized-cancel and sensitive-pull cases.",
+  "stages": {
+    "source_prepared": true,
+    "source_verified": "STATIC_ONLY",
+    "integrated_pr162": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "windows_build": false,
+    "E07": "NOT_RUN"
+  },
+  "noloss": "Only P03 owner Python constant plus new P03 unittest and this own receipt; no original files, ZIP parts, portrait stills, UI, STOP routing host, ACL/rights or main/PR162 changes.",
+  "next_owner": "T06 compare exact live PR162 P03 route risk, receive minimal one-line adapter fix with test, run exact-source Python unittest and existing native STOP/ACL/consent/privacy tests, integrate via CAS only when compatible. T08/T09/T10 independent same-SHA after T06, T02 sole shared ledger writer."
+}

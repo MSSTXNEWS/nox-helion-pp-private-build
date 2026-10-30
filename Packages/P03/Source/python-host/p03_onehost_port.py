@@ -23,7 +23,7 @@ OWNER_ROUTES = {
     "models.retry": "retry",
     "models.preflight": "preflight",
 }
-SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.cancel", "models.retry"))
+SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.retry"))
 ROUTES = frozenset(READ_ROUTES) | frozenset(OWNER_ROUTES)
 
 class P03PortHold(RuntimeError):
