@@ -89,7 +89,7 @@ class RightsIdentityBindingTests(unittest.TestCase):
         for key in ("schema", "status", "intent"):
             with self.subTest(key=key):
                 candidate = dict(self.attestation)
-                candidate[key] = candidate[key].upper()
+                candidate[key] = candidate[key].swapcase()
                 with self.assertRaisesRegex(ValueError, "RIGHTS_VERIFIER_ATTESTATION_MISMATCH"):
                     self.verify(candidate)
 
