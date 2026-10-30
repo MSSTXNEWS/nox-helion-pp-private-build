@@ -46,7 +46,7 @@ def _project_writer_lock(path):
         raise ValueError("CS5_CONCURRENT_WRITER_HOLD") from exc
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(f"{os.getpid()}\\n")
+            stream.write(f"{os.getpid()}\n")
         yield
     finally:
         lock.unlink(missing_ok=True)
