@@ -7,6 +7,7 @@ import functools
 import hashlib
 import http.server
 import json
+import re
 import shutil
 import tempfile
 import threading
@@ -32,6 +33,10 @@ def run(home,web,out,browser_path=None):
     except ImportError as exc:
         raise RuntimeError("PLAYWRIGHT_NOT_INSTALLED_HOLD") from exc
     out.mkdir(parents=True,exist_ok=True)
+    # Remove previous screenshots: a receipt must only describe this exact run.
+    for old in out.glob("CS5_B??_*x*.jpg"):
+        if re.fullmatch(r"CS5_B0[1-5]_\d+x\d+\.jpg", old.name):
+            old.unlink()
     receipt={"schema":"NOX_CS5_ART_PREFLIGHT_V1","owner_home_sha256":HOME_SHA,
              "source_sha256":{f:digest(web/f) for f in required},
              "screens":[],"errors":[],"art_independent_accepted":False,
@@ -92,6 +97,33 @@ def run(home,web,out,browser_path=None):
                                         style.display!=='none' && parseFloat(style.opacity)>0 &&
                                         !!el.textContent.trim();
                                     })(),
+                                    titleClipped:(()=>{
+                                      const el=document.querySelector('#cs5-cinema-title');
+                                      if(!el)return true;
+                                      const r=el.getBoundingClientRect();
+                                      return r.left < -1 || r.right > document.documentElement.clientWidth+1 ||
+                                        el.scrollWidth > el.clientWidth+2 ||
+                                        el.scrollHeight > el.clientHeight+2;
+                                    })(),
+                                    sceneVisible:(()=>{
+                                      const el=document.querySelector('#cs5-cinema');
+                                      if(!el)return false;
+                                      const r=el.getBoundingClientRect();
+                                      return r.width>150 && r.height>100 &&
+                                        getComputedStyle(el).display!=='none' &&
+                                        getComputedStyle(el).visibility==='visible';
+                                    })(),
+                                    navVisible:(()=>{
+                                      const el=document.querySelector('nav.nav [data-nav="five"]');
+                                      if(!el)return false;
+                                      const r=el.getBoundingClientRect();
+                                      return r.width>30 && r.height>=40;
+                                    })(),
+                                    allTargets:(()=>{
+                                      return Array.from(document.querySelectorAll('#cs5-segments button'))
+                                        .every(el=>{const r=el.getBoundingClientRect();
+                                          return r.width>=44 && r.height>=44;});
+                                    })(),
                                     heroSource:(()=>{
                                       const el=document.querySelector('.hero');
                                       return el ? getComputedStyle(el).backgroundImage.includes('home.png') : false;
@@ -104,7 +136,9 @@ def run(home,web,out,browser_path=None):
                                 valid=(values["active"]==block and
                                        not values["overflow"] and values["buttons"]==5 and
                                        values["touch"]>=44 and values["reduced"]
-                                       and values["titleVisible"] and values["heroSource"]
+                                       and values["titleVisible"] and not values["titleClipped"]
+                                       and values["sceneVisible"] and values["navVisible"]
+                                       and values["allTargets"] and values["heroSource"]
                                        and not runtime_errors and not network_errors)
                                 receipt["screens"].append({"block":block,"viewport":f"{w}x{h}",
                                     "screenshot":filename,"screenshot_sha256":screenshot_hash,
@@ -119,6 +153,13 @@ def run(home,web,out,browser_path=None):
     recorded={item["screenshot"] for item in receipt["screens"]}
     if len(recorded)!=30 or any(not (out/name).is_file() for name in recorded):
         receipt["errors"].append("CS5_FRAME_MANIFEST_HOLD")
+    receipt["expected_matrix"]={"blocks":BLOCKS,
+        "viewports":[f"{w}x{h}" for w,h in VIEWPORTS],
+        "frame_count":len(BLOCKS)*len(VIEWPORTS)}
+    receipt["frame_manifest_sha256"]=hashlib.sha256(
+        json.dumps(sorted((item["screenshot"],item["screenshot_sha256"])
+                          for item in receipt["screens"]),separators=(",",":")).encode()
+    ).hexdigest()
     receipt["status"]=("BROWSER_PREFLIGHT_PASS_ART_REVIEW_HOLD" if not receipt["errors"]
                        else "BROWSER_PREFLIGHT_FAIL_ART_REVIEW_HOLD")
     (out/"CS5_ART_RECEIPT.json").write_text(json.dumps(receipt,ensure_ascii=False,indent=2)+"\n",
