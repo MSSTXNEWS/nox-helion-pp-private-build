@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_V16_M2_R40_PINNED_OWNER_DELTA_ADDENDUM_V1",
+  "runId": "NOX-V16-M2-T08-R40-P01-R04-DELTA-ADDENDUM-20261030",
+  "baseQA": "NOX-V16-M2-T08T10-R40-DELTA-QA-20261030",
+  "role": "MANUAL_2_INDEPENDENT_SOURCE_QA",
+  "pr": 162,
+  "preHead": "ff01a3ba2ac96d5e46db612521d081a5ced5fe81",
+  "postHead": "bff5d06e915fd2114c1fd1639127a329112bd597",
+  "postTree": "f6feaacc18a6fa6301d3f3295ff6ed9913b9a4fc",
+  "draft": true,
+  "changedOnly": [
+    "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+    "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+    "coordination/automation/t06/NOX-V16-T06-20261030-M1-R04-P01-BOUNDARY-SAFETY.json"
+  ],
+  "p01SourceBlob": "9527c02ff7ad5a8c4e8cc777b69c75cb2e1412db",
+  "p01TestBlob": "bd00b9687a9e10ff072903d5ccf2ca4c4016f682",
+  "ownerReceiptBlob": "93861866861507b703a03c6ab89d8dd6bdd5e0a9",
+  "ownerLocalPython": "20/20 PASS reported by owner T06 with exact source byte hashes, independently unrun",
+  "independentStatic": {
+    "pass": 8,
+    "total": 8,
+    "checks": [
+      "browser consent recheck after external OS callback",
+      "bookmarks file identity/size/mtime and native permission before/after read",
+      "WinGet subprocess output redirected DEVNULL and binary SHA pin",
+      "PC inspect native permission recheck",
+      "PC cleanup checks each file",
+      "new owner unit regression functions exist"
+    ]
+  },
+  "carriedForwardOnlyWithUnchangedBlob": [
+    {
+      "component": "P03 privacy",
+      "blob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68"
+    },
+    {
+      "component": "P04 snapshot",
+      "blob": "88f44d21b191ed5997cf7cafe1ff7ef8925feaab",
+      "open": "nested surrogate"
+    },
+    {
+      "component": "PACK02 ops",
+      "blob": "376d92062e609bcc33961fa372d67eca4d1a9499",
+      "open": "new test fixture envelope mismatch"
+    },
+    {
+      "component": "Host50 map",
+      "blob": "f1c36357bc7791f9d7624b72cf9ba2a4d967847b",
+      "sourceBindings": 50,
+      "nativeAccepted": 0
+    }
+  ],
+  "acceptance": {
+    "qaAcceptedTasksDelta": 0,
+    "t06EightCriteria": "NOT_VERIFIED",
+    "t09": "NOT_FROZEN",
+    "t10": "HOLD",
+    "native14": "NOT_RUN",
+    "gitlabWindows": "NOT_AUTHORIZED",
+    "e07": "NOT_RUN",
+    "productPercent": "N/D"
+  },
+  "T02Journal": "SOLE_WRITER; no Master/E06/Lessons CAS claimed from QA addendum",
+  "noProductCodeModifiedByManual2": true
+}
