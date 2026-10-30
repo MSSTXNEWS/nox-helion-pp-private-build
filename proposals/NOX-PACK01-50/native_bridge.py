@@ -209,6 +209,11 @@ class NoxPackHost:
         if type(session) is not NativeSession:
             raise HostDenied("Existing native session type required")
         session.validate()
+        # Bind all native identity and permission fields to this operation.
+        # A provider readiness/consent callback cannot switch principal/chat
+        # while retaining a route name and making the final ACL check pass.
+        admitted_scope = (session.tenant, session.principal, session.chat_id,
+                          session.allowed, session.private_approved)
         if type(route) is not str or route not in self.routes or not ROUTE.fullmatch(route) or route not in session.allowed:
             raise HostDenied("Route not allowed for current principal")
         if not isinstance(payload, dict):
@@ -244,6 +249,9 @@ class NoxPackHost:
         # Privileged native callbacks can revoke the session scope during
         # readiness/consent. The one-host caller still owns cross-thread locking.
         session.validate()
+        if (session.tenant, session.principal, session.chat_id,
+            session.allowed, session.private_approved) != admitted_scope:
+            raise HostDenied("Native identity or grants changed before dispatch")
         if route not in session.allowed or (risk in ("sensitive", "dangerous")
                 and route not in session.private_approved):
             raise HostDenied("Native scope revoked before dispatch")
