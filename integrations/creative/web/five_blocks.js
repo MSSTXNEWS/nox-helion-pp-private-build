@@ -160,13 +160,21 @@
         ' · ' + (item.evidence_status || 'UNKNOWN') +
         ' · SHA-256 ' + (item.sha256 || 'НЕТ ДАННЫХ');
       card.append(heading, description, provenance);
-      if (item.source_url) {
-        const source = document.createElement('a');
-        source.href = item.source_url;
-        source.target = '_blank';
-        source.rel = 'noopener noreferrer';
-        source.textContent = 'Открыть первоисточник';
-        card.append(source);
+      if (typeof item.source_url === 'string') {
+        try {
+          const verified = new URL(item.source_url);
+          if (['http:', 'https:'].includes(verified.protocol) &&
+              verified.hostname && !verified.username && !verified.password) {
+            const source = document.createElement('a');
+            source.href = verified.href;
+            source.target = '_blank';
+            source.rel = 'noopener noreferrer';
+            source.textContent = 'Открыть первоисточник';
+            card.append(source);
+          }
+        } catch {
+          // Never turn malformed/untrusted stored metadata into a clickable URL.
+        }
       }
       destination.append(card);
     }
