@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_V16_R46_G1C_P05_OWNER_SCOPE_RECEIPT_V1",
+  "run_id": "NOX-V16-R46-G1C-20261030T0629MSK-P05-BRIDGE-SOURCE",
+  "role": "G1-C (P05 auxiliary owner, source-only)",
+  "existing_task": "E05-02 / P05 SPACE source contract; ERR-SRC-004 deduplicated",
+  "started_at_msk": "2026-10-30T06:29:14+03:00",
+  "saved_at_utc": "2026-10-30T03:35:06.204Z",
+  "github": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pr162_head_readback": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "pr162_tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "owned_branch": "auto/r42/g1c-p05",
+    "owned_branch_pre": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "source_paths_changed": 0
+  },
+  "read_proof": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_56_consolidated_rules": "read",
+    "register_blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+    "register_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2
+    },
+    "master_revision": "AHj4eMQ6xmTyvZWL3Oo8iT477zBBrsCPBwVPVstHgAqFB6vDxzBTK1NEJgXAUko5hZnYz6aN6x6RW0BiK5_NpWOQzg205oXEZxmIt1JBbKc",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTUtXpfzs_XCbbrdD785ZSCycLa8qo8G1TdDn2vQcP1D4AvjWYxyHkaIlh6DAKtcrpThPhvNsvYL6UAMJaqbjaxYCKmgyJxVSAT-a4",
+    "issue": 177
+  },
+  "checked_blobs": {
+    "Contracts/events.v3.json": "5204e668ab39e4bf4955ff7b405279628b5bbef2",
+    "Packages/P05/Space/tests/Program.cs": "15cf95c15e65720460a66743c4145dfae8839fc4",
+    "Packages/P05/E05/src/E05CanonicalEvents.cs": "0bdaa2effa766bb798443ee5057c8116acbf25fe",
+    "Packages/P05/E05/src/E05HostGpuPublisher.cs": "5c51eeb8319b5c809d62d84250ac9dd607b70550",
+    "Packages/P05/E05/src/E05HostTelemetryFacade.cs": "fec1e138807aa8e336cad89e518b81ec63ff7713",
+    "Packages/P05/E05/src/E05Telemetry.cs": "a8c2a75f1a7feea581121b86afc6134e4b150a47",
+    "Packages/P05/E05/src/E05SamplingLoop.cs": "4080d613bad775a8c76e4ca6d19f383243beeb95",
+    "Packages/P05/E05/checks/E05HostTelemetryChecks.cs": "8c7dfcdcc41cc478e2a23f244c3e7b3a0cbef7a8",
+    "coordination/e06/OriginalPythonDiagnosticBridge.cs": "b1bcc1a30c497eb6cae7cf195dc77e427a052e85",
+    "coordination/e06/build_onehost_installer.ps1": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+    "integrations/creative/bridge/CreativeHostBridge.cs": "5a43dc50c1c5afe31b3a6636c319da3779aaad0d"
+  },
+  "source_evidence": {
+    "checks": "11/11 deterministic exact-blob static assertions passed (not native/runtime tests)",
+    "dotnet": "NOT_RUN: dotnet command not installed in execution environment",
+    "node": "NOT_RUN: unchanged green P05 JS suite not repeated",
+    "finding": "Source contracts are present and fail-closed; actual E06/WPF implementation of IE05HostEventV3Port is not proven in the inspected owner host files. Legacy E05SensorPublisher.PollOnceAsync deliberately throws NotSupportedException for forbidden telemetry.snapshot; E05SamplingLoop.RunAsync would HOLD if host erroneously invokes the legacy path. E05HostTelemetryFacade.PublishGpuAsync needs injected E06 owner port and LIVE <=30s frame; mocked FixtureHost is not runtime binding. Current WPF original Python bridge only calls --diagnose.",
+    "patch": "NONE: missing E06/WPF runtime bridge is outside G1-C Packages/P05/Space source ownership; existing SpaceFeedClient is unchanged/green; no duplicate host or bus allowed.",
+    "safety": "STOP propagation, consent, ACL and privacy runtime acceptance NOT_RUN; no synthetic sensor metrics or privileged native route enabled."
+  },
+  "new_fact": "Previously absent designated branch auto/r42/g1c-p05 is now confirmed created by authorized controller at the live PR162 HEAD. Owner branch is safe for isolated receipts; no PR162 source write.",
+  "lessons": {
+    "prior_applied": "Do not redo already corrected duplicate license/LICENSE fixture; verified raw JSON at current Git blob.",
+    "new": "An interface plus a fake test host is not proof of ONE WPF EventV3Bridge runtime binding; gate E05 gpu.sample publishing on original E06 native host wiring with STOP+consent before declaring integration.",
+    "root_cause": "E05 host event port is intentionally injected, while inspected E06 WPF source is diagnostic-only and E05 legacy sampling loop fails closed."
+  },
+  "stages": {
+    "source_patched": false,
+    "source_verified": "SOURCE_CONTRACT_STATIC_ONLY",
+    "integrated": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "build": "NOT_RUN",
+    "windows_e07": "NOT_RUN",
+    "product_progress": "N/D",
+    "new_accepted_taskids": 0
+  },
+  "next_owner": {
+    "owner": "G3-C/T06 sole PR162 writer (with original E06 WPF Host50 owner)",
+    "exact_action": "At current pinned PR162 SHA inspect original R11 WPF EventV3Bridge: bind the existing IE05HostEventV3Port to the ONE accepted host journal and approved gpu.sample, inject E05HostTelemetryFacade only with actual LIVE <=30s sensors and native RUN/STOP/consent. Never call E05SamplingLoop legacy PollOnceAsync or send telemetry.snapshot. Run one component negative (host null, STOP, stale frame) plus required security tests, exact PRE/POST source CAS/readback; then T08 same-SHA independent QA.",
+    "next_t02": "Index this immutable personal receipt under existing ERR-SRC-004; no duplicate ErrorID or shared journal write.",
+    "blocker": "E06 host mapping outside G1-C owner source path; original owner approval / real Windows transport still HOLD"
+  }
+}
