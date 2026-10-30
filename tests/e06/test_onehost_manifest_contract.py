@@ -82,6 +82,20 @@ class OneHostManifestContract(unittest.TestCase):
         self.assertNotIn("Process.Start(", adapter)
         self.assertNotIn("HttpListener", adapter)
 
+    def test_r51_reuses_original_wpf_models_without_disabling_functions(self):
+        root = Path(__file__).resolve().parents[2]
+        script = root / "coordination/e06/stage_wpf_final8_no_loss.py"
+        raw = script.read_bytes()
+        blob = hashlib.sha1(("blob "+str(len(raw))).encode("ascii")+bytes([0])+raw).hexdigest()
+        self.assertIn(blob, self.source)
+        s = raw.decode("utf-8")
+        self.assertIn("E06_R51_EVENT_TYPED_NULL_AMBIGUITY",s)
+        self.assertIn("E06_R51_MODEL_CENTER_OWNER_ANCHOR_HOLD",s)
+        self.assertIn("PersistedQueueItem",s)
+        self.assertIn("E06_R51_WPF_OWNER_COMPAT_STAGE_HOLD",self.source)
+        self.assertLess(self.source.index("E06_R51_WPF_OWNER_COMPAT_STAGE_HOLD"),
+                        self.source.index("& dotnet publish $project"))
+
     def test_hidden_and_system_payload_files_are_hashed(self):
         self.assertRegex(
             self.source,

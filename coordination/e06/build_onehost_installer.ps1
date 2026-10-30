@@ -270,6 +270,16 @@ if (!(Test-Path -LiteralPath $wpfCompat -PathType Leaf) -or
 }
 & $stagePython.Source $wpfCompat $source
 if ($LASTEXITCODE -ne 0) { throw 'E06_WPF_EXACT_COMPAT_STAGE_HOLD' }
+# R51 reuses native BCL and the original P03/EventV3 owners: 8 guarded repairs
+# in disposable R11; original ZIP/HOME/MENU/WORK remain byte-identical.
+$finalWpfCompat=Join-Path $repoRoot 'coordination/e06/stage_wpf_final8_no_loss.py'
+Assert-E06PlainPathAncestors -Candidate $finalWpfCompat -Scope 'WPF_R51'
+if (!(Test-Path -LiteralPath $finalWpfCompat -PathType Leaf) -or
+    (& $gitTool.Source hash-object -- $finalWpfCompat).Trim().ToLowerInvariant() -cne '98bf0c54761f033cba30a9bd522afa12b5d7f2d9') {
+  throw 'E06_R51_WPF_OWNER_SOURCE_SHA_HOLD'
+}
+& $stagePython.Source $finalWpfCompat $source
+if ($LASTEXITCODE -ne 0) { throw 'E06_R51_WPF_OWNER_COMPAT_STAGE_HOLD' }
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
 if (!(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe'))) { throw 'WPF_ENTRYPOINT_MISSING' }
