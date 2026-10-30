@@ -245,7 +245,7 @@
       byId('cs5-result').textContent = 'Нужен запрос от 1 до 160 символов';
       return;
     }
-    const result = await task('cs5_research', {source,query}, 'cs5-result');
+    const result = await task('cs5_research', {source,query,project_id:projectId()}, 'cs5-result');
     if (!result || !Array.isArray(result.items)) return;
     for (const item of result.items) {
       const card = document.createElement('article');
