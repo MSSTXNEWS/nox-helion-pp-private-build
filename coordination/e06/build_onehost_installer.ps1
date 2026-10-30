@@ -239,6 +239,16 @@ if (!(Test-Path -LiteralPath $p05Repair -PathType Leaf) -or
 }
 & $stagePython.Source $p05Repair $source
 if ($LASTEXITCODE -ne 0) { throw 'E06_P05_EXACT_HTML_REPAIR_HOLD' }
+# T06: only exact original-owner duplicate declarations & missing using
+# repairs, in disposable R11. No P03 functionality, approved art or history lost.
+$wpfCompat=Join-Path $repoRoot 'coordination/e06/stage_wpf_compat_no_loss.py'
+Assert-E06PlainPathAncestors -Candidate $wpfCompat -Scope 'WPF_COMPAT'
+if (!(Test-Path -LiteralPath $wpfCompat -PathType Leaf) -or
+    (& $gitTool.Source hash-object -- $wpfCompat).Trim().ToLowerInvariant() -cne 'fc206205ec46e52d8d65eab33490193a27d1529a') {
+  throw 'E06_WPF_COMPAT_SOURCE_PIN_HOLD'
+}
+& $stagePython.Source $wpfCompat $source
+if ($LASTEXITCODE -ne 0) { throw 'E06_WPF_EXACT_COMPAT_STAGE_HOLD' }
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
 if (!(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe'))) { throw 'WPF_ENTRYPOINT_MISSING' }
