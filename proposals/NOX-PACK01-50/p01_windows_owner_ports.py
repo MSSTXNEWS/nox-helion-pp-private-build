@@ -87,10 +87,18 @@ def _https_url(value: str) -> str:
 
 
 def _pairs_unique(pairs):
+    # JSON object_pairs_hook runs on untrusted browser profiles. An explicit
+    # case-folded membership set keeps duplicate protection linear rather than
+    # comparing every new key against all preceding keys (quadratic DoS).
     out = {}
+    seen = set()
     for key, value in pairs:
-        if type(key) is not str or key.casefold() in (k.casefold() for k in out):
+        if type(key) is not str:
             raise OwnerHold("BOOKMARK_JSON_DUPLICATE_MEMBER")
+        folded = key.casefold()
+        if folded in seen:
+            raise OwnerHold("BOOKMARK_JSON_DUPLICATE_MEMBER")
+        seen.add(folded)
         out[key] = value
     return out
 

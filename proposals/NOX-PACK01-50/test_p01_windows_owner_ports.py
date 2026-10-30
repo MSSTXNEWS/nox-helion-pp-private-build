@@ -105,6 +105,18 @@ class Tests(unittest.TestCase):
         with self.assertRaises(m.OwnerHold):
             self.port.bookmarks("session", {})
 
+    def test_bookmark_json_many_unique_keys_is_linear_and_casefold_collision_denied(self):
+        # A 4 MB bookmark profile can contain thousands of unique keys;
+        # duplicate checks must not scale quadratically with object width.
+        pairs = [(f"field{i:05d}", i) for i in range(12000)]
+        parsed = m._pairs_unique(pairs)
+        self.assertEqual(len(parsed), 12000)
+        self.assertEqual(parsed["field11999"], 11999)
+        with self.assertRaises(m.OwnerHold):
+            m._pairs_unique([("Identifier", 1), ("identifier", 2)])
+        with self.assertRaises(m.OwnerHold):
+            m._pairs_unique([("Aa", 1), ("aA", 2)])
+
     def test_bookmarks_reject_symlink(self):
         other = self.root / "safe.json"
         other.write_text("{}")
