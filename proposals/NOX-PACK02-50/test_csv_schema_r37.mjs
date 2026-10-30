@@ -38,3 +38,16 @@ test("valid CSV filter and numeric sort remain unchanged",()=>{
  assert.deepEqual(execute("data.csv.filter",input,{field:"name",term:"ali"}).result,[{name:"Alice",count:"2"}]);
  assert.deepEqual(execute("data.csv.sort",input,{field:"count"}).result,[{name:"Alice",count:"2"},{name:"Bob",count:"10"}]);
 });
+test("CSV parser fails closed on quotes inside unquoted field or after quoted field",()=>{
+ for(const malformed of ['a,b\nab"cd",x','a,b\n"ab"cd,x']){
+  assert.throws(()=>execute("data.csv.parse",malformed),/BAD_CSV_QUOTE/);
+ }
+});
+test("CSV escaped quotes and quoted multiline comma remain valid",()=>{
+ const input='a,b\n"foo, ""bar""\nnext",x';
+ assert.deepEqual(execute("data.csv.parse",input).result,[{a:'foo, "bar"\nnext',b:"x"}]);
+});
+test("CSV empty final quoted row survives while blank lines remain ignored",()=>{
+ assert.deepEqual(execute("data.csv.parse",'a\n""').result,[{a:""}]);
+ assert.deepEqual(execute("data.csv.parse",'a\n\n').result,[]);
+});

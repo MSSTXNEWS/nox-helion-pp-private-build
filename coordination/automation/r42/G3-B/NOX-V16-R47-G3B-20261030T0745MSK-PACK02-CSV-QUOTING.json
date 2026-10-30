@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T0745MSK-PACK02-CSV-QUOTING",
+  "owner": "G3-B",
+  "branch": "auto/r42/g3b-pack02",
+  "task_ids": [
+    "NIP02-21"
+  ],
+  "error_id": "ERR-SRC-004",
+  "status": "SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "product_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "owner_pre_head": "ec48b2bc4b24cf6366b397e0447d8fed838d5db9",
+  "owner_pre_tree": "edd9b37e89c893f16072c8dfbd881e5dba7ab503",
+  "files": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_blob": "d40000fa226087e01bced6520a3b7a9481e8ffee",
+      "post_blob": "bd0d4f421cb7ae5e940667bc3d39227b3d852999",
+      "pre_sha256": "4d17150baa5124bd3913aa927148ad962e6602de5b56d95c24e5fdc459f6ac2b",
+      "post_sha256": "ea4042fd86a0fe743f897c4f039600e137d1897e24be99e55d554013813d123c"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_schema_r37.mjs",
+      "pre_blob": "0038bb02637ad3eebc328f268dce3bff6e28b64f",
+      "post_blob": "767450310e4cea7911bdb62a008eea788c699979",
+      "pre_sha256": "d9251f4e834ab49afe9a79b655e258f78c73d26befa58c6fac398ae2e81637ff",
+      "post_sha256": "72bc1639e31e26725cf771b6677210240ea5c2bcf0377833c01c8a12a7356d9f"
+    }
+  ],
+  "tests": {
+    "red": 2,
+    "green": [
+      {
+        "name": "reject malformed CSV quote",
+        "status": "PASS"
+      },
+      {
+        "name": "preserve legal quotes newline",
+        "status": "PASS"
+      },
+      {
+        "name": "preserve empty quoted row and ignore blank lines",
+        "status": "PASS"
+      }
+    ],
+    "runtime": "V8 executed exact Git source text; Node/.NET/Windows NOT_RUN"
+  },
+  "cause": "CSV parser accepted malformed quotes, losing literal quote content and treating trailing characters after closing quote as valid data",
+  "fix": "Fail closed for malformed quoting; retain escaped quoted multiline CSV and quoted empty terminal record, skipping blank lines",
+  "lesson_applied": "R42 exact preimage verified; previously fixed NIP02-24/25 field guards and full existing 50 route IDs preserved",
+  "lesson_new": "Require malformed quote and terminal-empty-quoted CSV tests before import route acceptance, in addition to schema checks",
+  "no_loss": "Only two PACK02 text sources; no original 729/3, still portraits, D02/WOW, STOP/ACL/native consent, other host/DB/trainer changes",
+  "stages": {
+    "source_component_verified": true,
+    "integrated": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "e07": "NOT_RUN"
+  },
+  "next_owner": "T06 sole PR162 CAS, T08 independent same-SHA QA, T02 sole shared journal"
+}
