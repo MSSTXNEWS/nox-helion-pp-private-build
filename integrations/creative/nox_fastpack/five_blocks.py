@@ -11,6 +11,7 @@ import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -30,6 +31,25 @@ _MAX_FILE = 1_500_000
 def _digest(entry):
     raw = json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
+
+
+@contextmanager
+def _project_writer_lock(path):
+    """Fail closed if another NOX host is committing this project."""
+    lock = path.parent / ".cs5-project.lock"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(lock, flags, 0o600)
+    except FileExistsError as exc:
+        raise ValueError("CS5_CONCURRENT_WRITER_HOLD") from exc
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(f"{os.getpid()}\\n")
+        yield
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def _journal_path(studio, project_id):
@@ -104,42 +124,48 @@ def dispatch_five(studio, request):
         raise ValueError("CS5_PROJECT_ID_REQUIRED")
     with _LOCK:
         path = _journal_path(studio, project_id)
-        state = _read(path)
         if action == "cs5_list":
+            state = _read(path)
             return {"status": "LOCAL_RECORDS_NOT_E11", "project_id": project_id,
                     "events": state["events"][-20:], "count": len(state["events"]), "showing": min(len(state["events"]), 20)}
-        if studio._stop_event.is_set():
-            raise ValueError("CS5_STOP_ACTIVE")
-        block = request.get("block")
-        kind = request.get("kind")
-        text = request.get("text")
-        url = request.get("source_url", "")
-        if block not in _BLOCKS or kind not in _BLOCKS[block]:
-            raise ValueError("CS5_BLOCK_KIND_HOLD")
-        if not isinstance(text, str) or not 1 <= len(text.strip()) <= 3000:
-            raise ValueError("CS5_TEXT_LIMIT")
-        if not isinstance(url, str) or len(url) > 600:
+        with _project_writer_lock(path):
+            return _append_with_lock(studio, request, path)
+
+
+def _append_with_lock(studio, request, path):
+    state = _read(path)
+    if studio._stop_event.is_set():
+        raise ValueError("CS5_STOP_ACTIVE")
+    block = request.get("block")
+    kind = request.get("kind")
+    text = request.get("text")
+    url = request.get("source_url", "")
+    if block not in _BLOCKS or kind not in _BLOCKS[block]:
+        raise ValueError("CS5_BLOCK_KIND_HOLD")
+    if not isinstance(text, str) or not 1 <= len(text.strip()) <= 3000:
+        raise ValueError("CS5_TEXT_LIMIT")
+    if not isinstance(url, str) or len(url) > 600:
+        raise ValueError("CS5_SOURCE_URL_HOLD")
+    if url:
+        parsed = urlsplit(url)
+        if (parsed.scheme not in ("https", "http") or not parsed.hostname or
+            parsed.username or parsed.password or
+            any(ord(char) < 32 for char in url)):
             raise ValueError("CS5_SOURCE_URL_HOLD")
-        if url:
-            parsed = urlsplit(url)
-            if (parsed.scheme not in ("https", "http") or not parsed.hostname or
-                parsed.username or parsed.password or
-                any(ord(char) < 32 for char in url)):
-                raise ValueError("CS5_SOURCE_URL_HOLD")
-        if len(state["events"]) >= _MAX_EVENTS:
-            raise ValueError("CS5_EVENT_BUDGET_HOLD")
-        evidence = ("HYPOTHESIS" if kind == "hypothesis" else
-                    "REPORTED_UNVERIFIED" if kind == "receipt" else "LOCAL_RECORD_ONLY")
-        previous = state["events"][-1]["sha256"] if state["events"] else ""
-        event = {
-            "event_id": uuid.uuid4().hex,
-            "created_at_utc": datetime.now(timezone.utc).isoformat(),
-            "block": block, "kind": kind, "text": text.strip(),
-            "source_url": url, "evidence_status": evidence, "prev_sha256": previous,
-        }
-        event["sha256"] = _digest(event)
-        state["events"].append(event)
-        _write(path, state, stopped=studio._stop_event.is_set)
-        return {"status": "SAVED_LOCAL_NOT_E11", "project_id": project_id,
-                "event_id": event["event_id"], "sha256": event["sha256"],
-                "evidence_status": evidence}
+    if len(state["events"]) >= _MAX_EVENTS:
+        raise ValueError("CS5_EVENT_BUDGET_HOLD")
+    evidence = ("HYPOTHESIS" if kind == "hypothesis" else
+                "REPORTED_UNVERIFIED" if kind == "receipt" else "LOCAL_RECORD_ONLY")
+    previous = state["events"][-1]["sha256"] if state["events"] else ""
+    event = {
+        "event_id": uuid.uuid4().hex,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "block": block, "kind": kind, "text": text.strip(),
+        "source_url": url, "evidence_status": evidence, "prev_sha256": previous,
+    }
+    event["sha256"] = _digest(event)
+    state["events"].append(event)
+    _write(path, state, stopped=studio._stop_event.is_set)
+    return {"status": "SAVED_LOCAL_NOT_E11", "project_id": project_id,
+            "event_id": event["event_id"], "sha256": event["sha256"],
+            "evidence_status": evidence}
