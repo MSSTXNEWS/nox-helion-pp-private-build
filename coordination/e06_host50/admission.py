@@ -432,6 +432,10 @@ class Host50Admission:
             raise Denied("UNKNOWN_OR_MISMATCHED_ROUTE")
         if route not in session.scopes:
             raise Denied("SCOPE_DENIED")
+        # R47: deny private native scope before even probing installed options.
+        # Verifiers can have native side effects; late consent remains enforced.
+        if row["risk"] != "safe" and route not in session.sensitive:
+            raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
         opts = request.get("settings", {})
         if (not isinstance(opts, dict) or any(k in FORBIDDEN_PAGE_KEYS for k in opts)
             or set(opts)-set(row["allowedSettings"])):

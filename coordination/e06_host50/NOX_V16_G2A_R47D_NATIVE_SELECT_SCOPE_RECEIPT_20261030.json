@@ -1,0 +1,42 @@
+{
+  "schema": "NOX_V16_G2A_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-202610300955MSK-OPTION-SCOPE",
+  "owner": "G2-A Host50",
+  "existing_task_id": "NIP01-13",
+  "branch": "auto/r42/g2a-host50",
+  "branch_pre": "7291032c38973ad4b5384b3ca977828ef866a6d5",
+  "branch_base_tree": "f714f005351b1fb7738c21f5c6f84a524770d6b5",
+  "pr162_head_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_writes": false,
+  "error_register_blob_read": "9cd9f3c5a5455b7a4097452b22477ea133f4507c",
+  "source": {
+    "path": "coordination/e06_host50/admission.py",
+    "pre_blob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+    "post_blob": "dcd28cf34ee02ad1c5dd8845688f1ef949c72ce6"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_pre_scope_native_select_r47d.py",
+    "blob": "edd181c4d078cc78c8e039469f088abeb3d7d17f",
+    "focused_source_order_checks": {
+      "uniquePreimage": true,
+      "redOrder": true,
+      "greenOrder": true,
+      "lateGuardPreserved": true
+    },
+    "python_in_repository": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "root_cause": "Host50Admission.admit invoked native_option_verifier for models.pull before rejecting missing sensitive native scope, permitting callback side effects for a denied action.",
+  "fix": "Early reject missing sensitive native scope before source-select verifier; retain original later check, native consent, STOP, immutable session and source attestation.",
+  "lessons": {
+    "applied": "R47C AUTHORIZE_BEFORE_PROBE is now enforced in E06 admission, not only PACK01 advertise.",
+    "new": "Native-option selectors are native callbacks; reject denied sensitive scope before any selector invocation."
+  },
+  "stage": "SOURCE_PREPARED",
+  "integrated_pr162": false,
+  "qa_accepted": false,
+  "source_ready": false,
+  "e07": "NOT_RUN",
+  "no_loss": "Only E06 admission.py, new scoped regression and one personal receipt; original 729/3 ZIP, HOME/MENU/WORK, portraits, D02/WOW200, 8 CoreID/5 Persona and data untouched.",
+  "next_owner": "T06 sole PR162 integrator: exact-CAS minimal guard, execute Python test file and STOP/ACL/consent/NO-LOSS regressions; then T08 independent same-head QA; T02 sole shared ledger writer."
+}
