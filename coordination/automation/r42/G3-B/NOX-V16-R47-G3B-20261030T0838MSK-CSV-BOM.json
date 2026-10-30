@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T0838MSK-CSV-BOM",
+  "owner": "G3-B",
+  "branch": "auto/r42/g3b-pack02",
+  "task_ids": [
+    "NIP02-21"
+  ],
+  "error_id": "ERR-SRC-004",
+  "stage": "SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "owner_pre_head": "622fc48406598a3c7e62463312da151211869d9d",
+  "owner_pre_tree": "88626b1b7bb9b81d6825adce9ceb168a646e34b6",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "bd0d4f421cb7ae5e940667bc3d39227b3d852999",
+      "post_git_blob": "36e02242c7c881e780a9a1712599e8d81356f69c"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_bom_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "5b54b5bee84bdfc66584cec0968e04d939cc1aa4"
+    }
+  ],
+  "focused_checks": {
+    "runtime": "V8 executed exact complete Git source text via Function(); Node/.NET/Windows NOT_RUN",
+    "red": "CSV BOM header cannot be addressed via canonical field (UNKNOWN_CSV_FIELD)",
+    "green": [
+      "BOM header parses as canonical name",
+      "CSV filter accesses canonical field",
+      "inner BOM kept as data"
+    ],
+    "pass": 3,
+    "fail": 0,
+    "ids_preserved": 50
+  },
+  "root_cause": "UTF-8 BOM at start of CSV became part of the first column name, making normal field filtering fail",
+  "repair": "Strip only leading U+FEFF in existing csv(s); preserve internal U+FEFF",
+  "prevention": "CSV import regressions must include BOM-leading header, field-based operations, and U+FEFF inside quoted data",
+  "lesson_applied": "R47 prior malformed quoting guards and schema filtering retained on exact parent blob; no stale-preimage replay",
+  "no_loss": "No portraits/zip/original HOME MENU WORK/host/STOP/ACL/consent/privacy changed; source and one narrow test only",
+  "next_owner": "T06/G3-C integrates by fresh exact-head CAS; T08 independently checks same head; T02 solely updates central logs"
+}
