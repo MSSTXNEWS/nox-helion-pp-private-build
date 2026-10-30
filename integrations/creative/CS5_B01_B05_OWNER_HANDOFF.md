@@ -5,7 +5,7 @@
 
 ## What actually changed
 - The existing trusted WPF/WebView2 action creativeInvoke and existing creative_worker.py receive three additive actions: cs5_overview, cs5_append, cs5_list.
-- The original entry.js loads five_blocks.js inside the existing creative/studio.html iframe; no new top-level HOME/MENU, routes, app or ports.
+- The ORIGINAL byte-identical entry.js remains unchanged; five_blocks.js is loaded by the EXISTING creative/studio.html after studio.js; no new top-level HOME/MENU, routes, app or ports.
 - The existing Studio._project and Studio._stop_event own storage and cancellation. Project records are append-only SHA-256 chained under the existing NOX project folder (cs5_project_events.json), not a second DB.
 - B01/B02/B05 collect provenance-backed hypotheses, ideas, editorial decisions, brands, forecasts and **unverified** provider receipts.
 - B03's actual media generation remains the existing storyboard/ComfyUI/FFmpeg engine. B04's model actions remain the existing P03 ModelCenter.
@@ -37,7 +37,7 @@ Run from the repository root:
 - No model weights were downloaded, no backup or cloud action executed, no paid calls, no EXE produced.
 - Stop in the existing Studio blocks cs5_append and remains active until the worker lifecycle resets. Reads are allowed.
 - E07, 10+10+10 cinema and real cross-process S26/E11 admissions remain HOLD.
-- Do not merge until source owner resolves existing PR180 overlap on entry.js and completes same-HEAD review.
+- PR180 and PR162 share identical original entry.js and studio.html blobs; PR180 changes studio.js. Native owner must run same-HEAD review across both PRs before merge; no automatic SOURCE_READY.
 
 ## Verified 30 October 2026 · physical QA + no-duplicate inventory
 
@@ -49,3 +49,11 @@ Run from the repository root:
 - GitLab source-only Windows pipeline 3006721811 succeeded on **a DIFFERENT SHA** (`0d3a8db60c075ec640fde30169af8e4f4bd3b645`); does not establish the new PR's Windows acceptance.
 - Scope remains B01–B05 local evidence UI + storage only. Real B01 live research, B02 full authored document workflow, B03 model-generated AV, B04 weights/training, B05 real publisher and finance receipts and E11/S26 remain separate existing-owner integrations/gates.
 - No MVVM, alternate UI toolkit, LiteLLM, second RAG, additional public port, alternate installer or unverified external dependency installed. The catalog is reuse candidates, not 100 mandatory dependencies.
+
+## 30 October 2026 · design/menu source hardening
+
+- `entry.js` restored to original Git blob `34032ba9cb41bc3d71afcdbe57f690e15fd76755`, so no outer-frame injection or original MENU changes.
+- `studio.html` owns the ordered add-on import after `studio.js` and before persona-media. Original R13 Creative navigation `rpc/task/navigate` is reused. Added real actions: storyboard, sound cue, project files, ModelCenter handoff, native STOP.
+- Original Studio CSS touch targets raised from 41 to 44 px without new art/palette. This does not by itself attest mobile viewport/device performance.
+- Added `tests/five_blocks_ui.test.mjs`: checks byte-exact original launcher, script order, internal-only nav/tab and real owner-action forwarding. Source script parses under V8; the committed Node test is not yet executed by Windows CI.
+- Designer 30-gate source ledger: `CS5_DESIGN_MENU_RULE1_ACCEPTANCE.md`; art 10+10+10 remains **not independently accepted**, E11/S26 original DB contract remains unavailable, Windows E07 remains not run. The late 10-world MENU vs 8-legacy-route mapping remains a main-menu owner responsibility, not a license to replace the global menu.
