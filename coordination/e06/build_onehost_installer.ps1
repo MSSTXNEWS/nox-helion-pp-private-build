@@ -12,6 +12,11 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+# R48 T06: fail closed before touching source/output or invoking any tool.
+# Strict .NET anchors prevent newline suffix bypass and filesystem path injection.
+if ($RunId -cnotmatch '\A[A-Za-z0-9][A-Za-z0-9._:-]{1,127}\z') {
+  throw 'E06_BUILD_INVALID_RUN_ID'
+}
 # Reject redirected input/output ancestors BEFORE resolve or publish (source gate).
 # This does not attest Windows races/ACLs; native acceptance remains HOLD.
 function Assert-E06PlainPathAncestors {
