@@ -423,7 +423,10 @@
       byId('cs5-result').textContent = 'HOLD / ERROR: ' + String(e?.message || e);
     }
   }
-  byId('cs5-pipeline').addEventListener('click', () => window.NOXCS5MegaFlow?.run());
+  byId('cs5-pipeline').addEventListener('click', () => {
+    if (window.NOXCS5MegaFlow?.run) return window.NOXCS5MegaFlow.run();
+    byId('cs5-result').textContent = 'HOLD: CS5_MEGAFLOW_SCRIPT_NOT_LOADED';
+  });
   byId('cs5-back').addEventListener('click', () => navigate(previousStudioScreen));
   byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
   byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
@@ -431,6 +434,9 @@
     executeExisting('storyboard', {kind:'movie', scenes:3}));
   byId('cs5-music').addEventListener('click', () => executeExisting('create_text', {}));
   byId('cs5-files').addEventListener('click', () => executeExisting('project_files', {}));
-  byId('cs5-stop').addEventListener('click', () => window.NOXCS5MegaFlow?.stop());
+  byId('cs5-stop').addEventListener('click', () => {
+    if (window.NOXCS5MegaFlow?.stop) return window.NOXCS5MegaFlow.stop();
+    return byId('stop')?.click(); // preserve the original native STOP route
+  });
   // No Worker is started during page initialization; explicit action only.
 })();
