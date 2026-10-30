@@ -229,6 +229,16 @@ if (-not $stagePython) { throw 'T06_NATIVE_STAGE_PYTHON_REQUIRED' }
 & $stagePython.Source $t06Stage $source $t06Addon
 if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_ORIGINAL_MAINWINDOW_STAGE_FAILED' }
 # One native UI process, original Python runtime invoked ONLY by fixed --diagnose, not auto-started.
+# T06: fix 17 malformed original P05 C# HTML raw-string fragments in the
+# disposable SHA-verified R11 stage; exact reversible transformation only.
+$p05Repair=Join-Path $repoRoot 'coordination/e06/stage_p05_html_verbatim.py'
+Assert-E06PlainPathAncestors -Candidate $p05Repair -Scope 'P05_DISPOSABLE_REPAIR'
+if (!(Test-Path -LiteralPath $p05Repair -PathType Leaf) -or
+    (& $gitTool.Source hash-object -- $p05Repair).Trim().ToLowerInvariant() -cne '3c250033f62ea6cb1c4e1607048b9bbad6c971d9') {
+  throw 'E06_P05_REPAIR_PIN_HOLD'
+}
+& $stagePython.Source $p05Repair $source
+if ($LASTEXITCODE -ne 0) { throw 'E06_P05_EXACT_HTML_REPAIR_HOLD' }
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
 if (!(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe'))) { throw 'WPF_ENTRYPOINT_MISSING' }
