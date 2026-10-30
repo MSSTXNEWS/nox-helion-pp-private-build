@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_V16_G2A_R47H_NATIVE_CAPABILITY_SCOPE_RECEIPT_V1",
+  "runId": "NOX-V16-R47-G2A-20261030T1448MSK-ADVERTISE-SCOPE",
+  "existingTaskId": "NIP01-05",
+  "ownerBranch": "auto/r42/g2a-host50",
+  "ownerPreHead": "7e7c3036d1f85bbdafbc84cd10e18032ad8a7ed8",
+  "ownerPreTree": "58e163dda1d933f70ecab13308c87629ae2a3bf9",
+  "ownerReadStartUtc": "2026-10-30T11:55:20.700Z",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "preGitBlob": "f48c90ef5be00335b7f158388c33d0a6896c6ad5",
+    "postGitBlob": "44aefdeab3d82d864f3efe8db57fb39bd31e1c06",
+    "preSha256": "9fa21b11941e3426acd1efa0f8ea1f06e36a236c855562254041bbcecd0d6b04",
+    "postSha256": "11d3326b0831db1ff59e3ec174ac594985242990b644e72e4cc327511146c38f"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_advertise_scope_revocation_r47h.py",
+    "postGitBlob": "c6e31cfdb6d78f1ebd5133cd9ecb55658c2a8971",
+    "postSha256": "4fc2d0696d4305c501dfa9fa681e7f5c90c6c22053610f4c2460ab7cdfa9407e",
+    "scenarios": 4,
+    "localExtractedExactMethod": "PRE_FAIL / POST_PASS; focused Python 4 scenarios; source method matched preimage",
+    "fullRepositoryUnittest": "NOT_RUN",
+    "windowsNative": "NOT_RUN"
+  },
+  "rootCause": "Previously R47B advertisement rechecked only BoundPort identity, while readiness callbacks could revoke NativeSession.allowed/private_approved without replacing the BoundPort, leaving CONNECTED enabled.",
+  "fix": "Final native session.validate and scope/consent membership recheck of each enabled capability after all owner readiness probes; keep port-epoch check and dangerous HOLD.",
+  "previousLesson": "AUTHORIZE_BEFORE_PROBE retained; R47G POST_CALLBACK_SCOPE_IS_AUTH extended from execute to advertise.",
+  "newLesson": "CAPABILITY_ADVERTISE_POST_PROBE_SCOPE: capability lists need the same final ACL/consent snapshot check after synchronous callbacks as execution does; native Windows host must still serialize cross-thread mutations.",
+  "stages": {
+    "source": "SOURCE_PREPARED",
+    "integratedPr162": false,
+    "qaAccepted": false,
+    "sourceReady": "HOLD",
+    "windowsInstaller": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "noLoss": "Only existing isolated Host50 Python source and one scoped test/receipt; no original 729/3 ZIP members, HOME/MENU/WORK, D02, approved five portraits, P02/host, events.v3, user data, pipelines or packager modified.",
+  "handoff": "T06 only: apply minimal advertise scope recheck on fresh PR162 preimage, reconcile existing owner delta; run in-repo Python + STOP/ACL/consent/origin and independently T08 same SHA. T02 only shared logs writer."
+}

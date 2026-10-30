@@ -191,8 +191,17 @@ class NoxPackHost:
                           "sourceId":port.evidence_id if scoped else None}
         # A later readiness callback can revoke any previously probed route.
         # The existing native Windows host still owns cross-thread locking.
+        # Readiness callbacks can revoke native scopes as well as ports.
+        # Verify at the end of the entire probe pass (native host still owns
+        # cross-thread locks), never advertise a just-revoked capability.
+        session.validate()
         for route, cap in out.items():
-            if cap["enabled"] and self.ports.get(route) is not inspected_ports[route]:
+            if not cap["enabled"]:
+                continue
+            risk = self.routes[route]["risk"]
+            if (self.ports.get(route) is not inspected_ports[route]
+                    or route not in session.allowed
+                    or (risk != "safe" and route not in session.private_approved)):
                 out[route] = {"state":"HOLD", "enabled":False, "sourceId":None}
         return out
 
