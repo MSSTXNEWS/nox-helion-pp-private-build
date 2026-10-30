@@ -76,6 +76,11 @@ def _https_url(value: str) -> str:
         try:
             ip = ipaddress.ip_address(ascii_host.strip("[]"))
         except ValueError:
+            # WHATWG URL parses numeric IPv4 shorthands like 127.1 and 0x7f.1
+            # as loopback even though Python ipaddress rejects the shorthand.
+            if all(re.fullmatch(r"(?:0[xX][0-9a-fA-F]+|[0-9]+)", label)
+                   for label in ascii_host.split(".")):
+                raise ValueError("ambiguous numeric IPv4 host")
             if "." not in ascii_host or ascii_host.startswith(".") or ascii_host.endswith("."):
                 raise ValueError("invalid public DNS name")
         else:
