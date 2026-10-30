@@ -289,6 +289,26 @@ class P03OneHostPort:
             raise
         except Exception:
             raise P03PortHold("Owner3 backend changed during native approval") from None
+        # Backend health callbacks are executable owner code; recheck the
+        # consent-bound request and native scope AFTER the last callback.
+        try:
+            if json.dumps(args, sort_keys=True, allow_nan=False,
+                          separators=(",", ":")) != approved_payload:
+                raise P03PortDenied("Native owner3 payload changed after health probe")
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload changed after health probe") from None
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        if identity != tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")):
+            raise P03PortDenied("Native session identity changed after health probe")
+        if backend is not self.backend:
+            raise P03PortHold("Owner3 backend changed after health probe")
+        try:
+            if getattr(backend, method_name, None) != func:
+                raise P03PortHold("Owner3 worker method changed after health probe")
+        except P03PortHold:
+            raise
+        except Exception:
+            raise P03PortHold("Owner3 worker method unavailable after health probe") from None
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:

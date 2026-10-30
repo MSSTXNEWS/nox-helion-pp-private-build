@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T1116MSK-POSTHEALTH-RACE",
+  "task_id": "P03_EXISTING",
+  "error_id": "ERR-SRC-004",
+  "branch": "auto/r42/g2c-p03",
+  "branch_head_pre": "0a8eb2f1329d2e8a985ff267754fcef9296996de",
+  "branch_tree_pre": "10ee9481535cd38f7896f1b4004a02f3e57a190f",
+  "pr162_head_at_pre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_untouched": true,
+  "paths": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre": "7e6711d9588e00660c95904fec0ae7c71d827382",
+      "post": "c41331cf2c26ec9bc0684e83ddf6c0daa7ca0079"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_posthealth_consent_r47.py",
+      "pre": null,
+      "post": "8907f1fe473084ee46fceec58aecf78ab9bc277b"
+    }
+  ],
+  "finding": "Backend.available() second post-consent health probe can synchronously mutate nested request or revoke native scope; old handler still calls cached pull worker.",
+  "repair": "After second probe, recheck approved JSON arguments, original session identity, scope/private approval, backend identity and worker method before invoking existing backend.",
+  "targeted_test": "Extracted-method Python unittest RED=1/3 PASS (two denied cases failed), GREEN=3/3 PASS. Exact full P03 module, Ollama and Windows NOT_RUN.",
+  "lesson_previous": "Post-consent checks must also cover all callbacks executed after the check (backend health).",
+  "lesson_new": "Any post-approval owner callback must be followed by a zero-side-effect revalidation of payload/permission/identity before queue dispatch.",
+  "status": "ISOLATED_SOURCE_PATCHED_PENDING_EXACT_MODULE_QA",
+  "qa_accepted": false,
+  "integrated_pr162": false,
+  "next_owner": "T06 exact-preimage CAS only if this delta missing; T08 independently test native STOP/ACL/consent and exact Python; T02 sole journal writer.",
+  "product_percent": null
+}
