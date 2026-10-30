@@ -1,0 +1,47 @@
+{
+  "schema": "NOX_V16_G2A_R47G_POST_CALLBACK_SCOPE_IMMUTABLE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T1342MSK-POSTCALLBACK-SCOPE",
+  "existing_task_id": "NIP01-48",
+  "affected_routes": [
+    "system.backup",
+    "chat.stop",
+    "chat.history"
+  ],
+  "role": "G2-A Host50 autonomous owner assistant",
+  "owner_branch": "auto/r42/g2a-host50",
+  "prior_owner_checkpoint": "bba367097b00c58d694b23415b71a7f351d01dbe",
+  "pr162_read_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_read_tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_git_blob": "3f72e56c936429f398c3cd4396613a442a4775ab",
+    "post_git_blob": "f48c90ef5be00335b7f158388c33d0a6896c6ad5",
+    "post_sha256": "9fa21b11941e3426acd1efa0f8ea1f06e36a236c855562254041bbcecd0d6b04",
+    "commit": "b54336cab4368d22c211d6ac7bee7d96f6d8ba7b"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_post_callback_scope_r47g.py",
+    "post_git_blob": "df4e44ba051b30af8f42dd10cae7a8afd6413f9e",
+    "post_sha256": "28b4d74d7113a95f7bd218041f82722100e959ec85fa6a857612a34ea076d6b5",
+    "commit": "1c048653a0d2edeb90640b7eda7d41fa8dc046f2",
+    "scenarios": 3,
+    "extracted_exact_execute_method": "RED 2 FAIL / GREEN 3 PASS",
+    "full_exact_repository_unittest": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "physical_fix": "Final native session.validate and route allowed/private_approved scope recheck after owner readiness/fresh-consent callbacks, before BoundPort.call; preserves existing port epoch guard and host lock ownership.",
+  "root_cause": "Before patch, synchronous native readiness or consent callback could revoke scope after initial permission check yet route still dispatched; 2 isolated extracted-execute regressions reproduced the issue.",
+  "lesson_applied": "R47 port-epoch and AUTHORIZE_BEFORE_PROBE protections retained; now post-probe native scope is rechecked before dispatch.",
+  "new_lesson": "POST_CALLBACK_SCOPE_IS_AUTH: Revalidate authenticated scope after all native callbacks and before owner call; preserve WPF host mutation lock for cross-thread revocation.",
+  "stages": {
+    "source": "SOURCE_PREPARED",
+    "integrated_pr162": false,
+    "qa_accepted": false,
+    "source_ready": "HOLD",
+    "windows_installer": "NOT_RUN",
+    "e07": "NOT_RUN"
+  },
+  "no_loss": "Only existing owned native_bridge.py and new scoped component test/receipt; no original 729/3 ZIP files, HOME/MENU/WORK, five approved portraits, D02/WOW200, host/P02 ingress source or user data touched. Original assets not rehashed in this run.",
+  "handoff": "T06 sole PR162 integrator: compare live PRE 1cd8f2d4... and cherry-pick only guard together with accumulated owner deltas; run full native_bridge component and STOP/ACL/consent/origin regressions before frozen SHA T08. T02 only shared ledger writer.",
+  "report_gate": "RECEIPT_PENDING_READBACK"
+}
