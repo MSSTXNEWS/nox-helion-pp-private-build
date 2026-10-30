@@ -1,0 +1,40 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T1220MSK-CATALOG-RIGHTS-ALLOWLIST",
+  "task_id": "P03_EXISTING",
+  "error_id": "ERR-SRC-004",
+  "role": "G2-C P03",
+  "branch": "auto/r42/g2c-p03",
+  "branch_head_pre": "37105c46f71df80a0b8240afcdcdb3a0163a3904",
+  "branch_tree_pre": "3f4e7cd9ae87791bc4acea76a7365046c8a51c16",
+  "pr162_head_at_pre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "scope": "Packages/P03/Source/python-host/**; own coordination receipt",
+  "changed_paths": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre": "c41331cf2c26ec9bc0684e83ddf6c0daa7ca0079",
+      "post": "e552e8fce5bd7fdbff5b9b845084210592e541a6"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_discovery_fields_r47.py",
+      "pre": null,
+      "post": "da4a72075962966085b736ba006b966a05644cb1"
+    }
+  ],
+  "finding": "P03 _validate_catalog checks five required fields but previously copied arbitrary extra keys into browser-facing discovery cards; a tampered card may carry an unreviewed licenseVerified or weightsUrl claim while retaining downloadEligible:false.",
+  "repair": "Reject every discovery card whose key set differs from the original SourceLock-reviewed five-field schema. Preserve exact original 30-card catalog, rights HOLD, owner ACL, STOP/consent and no download.",
+  "focused_test": "Exact _validate_catalog method extracted from owned source tested locally: baseline 1/3 PASS (two negative tests failed); proposed 3/3 PASS. Committed unittest on full source NOT_RUN, Windows/Ollama NOT_RUN.",
+  "lesson_applied": "R42 atomic rights-consent lesson: validate untrusted metadata before any browser-facing rights claim.",
+  "lesson_new": "Validate exact discovery schema as well as values; extension keys can smuggle unreviewed license/weights claims into otherwise valid cards.",
+  "stages": {
+    "source_prepared": true,
+    "source_verified": "EXTRACTED_METHOD_ONLY",
+    "integrated_pr162": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "windows_build": false,
+    "E07": "NOT_RUN"
+  },
+  "product_percent": null,
+  "next_owner": "T06 sole PR162 writer: exact-PRE minimal port change after checking current owner/donor and conflict; T08 same-SHA independent review; T02 sole shared journal writer."
+}

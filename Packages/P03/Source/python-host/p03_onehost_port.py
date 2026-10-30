@@ -80,6 +80,10 @@ class P03OneHostPort:
         for item in data:
             if not isinstance(item, dict):
                 raise P03PortHold("Malformed catalog card")
+            # SourceLock-reviewed cards contain only discovery facts. Unknown
+            # license/source fields must never reach a browser as approved rights.
+            if set(item) != {"id", "name", "url", "reviewStatus", "downloadEligible"}:
+                raise P03PortHold("Unreviewed P03 discovery-card fields")
             ident = item.get("id")
             if not isinstance(ident, str) or not ID.fullmatch(ident) or ident in used:
                 raise P03PortHold("Duplicated/untrusted model family")
