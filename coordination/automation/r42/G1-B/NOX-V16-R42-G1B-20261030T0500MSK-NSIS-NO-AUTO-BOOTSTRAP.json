@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_V16_R42_G1B_SOURCE_ONLY_V1",
+  "runId": "NOX-V16-R42-G1B-20261030T0500MSK-NSIS-NO-AUTO-BOOTSTRAP",
+  "role": "G1-B / M1 P01 NSIS / E06",
+  "taskId": "ERR-SRC-004/P01-NSIS",
+  "product": "NOX HELION EXPRESS INTEGRATOR",
+  "evidence": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonParagraphs": 705,
+    "section33Rules": 56,
+    "registerBlob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+    "registerErrors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "productHead": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "productTree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d"
+  },
+  "rootCause": "Existing E06 Windows builder automatically executed Chocolatey 'choco install nsis --version=3.11 --no-progress -y' if makensis was not on PATH, contrary to no silent installs/native consent.",
+  "source": {
+    "path": "coordination/e06/build_onehost_installer.ps1",
+    "pre": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+    "post": "e6bb8455f17f98289a0c308bc0a7c8a8a5d14835"
+  },
+  "test": {
+    "path": "stage/proposals/P01/C09/Installer/tests/no_silent_nsis_bootstrap.test.mjs",
+    "pre": "ABSENT",
+    "post": "29484b4e5528ce303c7113b4aad4bb6f38f2db34",
+    "checks": {
+      "original_red_detected": true,
+      "one_exact_context": true,
+      "no_package_installer": true,
+      "registered_locations": true,
+      "fail_closed_prior_compile": true,
+      "retained_manifest_sha_gate": true,
+      "scope_only_changed": true
+    },
+    "execution": "seven source-only V8 assertions PASS; Node/PowerShell/NSIS/Windows NOT_RUN"
+  },
+  "fix": "Remove unattended NSIS package install. Reuse existing makensis from PATH or standard Windows installations; fail closed if absent. No second build engine.",
+  "stage": "SOURCE_PATCH_PREPARED; NOT_INTEGRATED; NOT_QA_ACCEPTED",
+  "safety": "No NSIS/EXE/CI/E07/network/download; no changes to user data, HOME/MENU/WORK, original 729 files, STOP/ACL/consent, original snapshots.",
+  "operational": {
+    "previous": "1/4",
+    "current": "1/4",
+    "newAcceptedTaskIds": 0,
+    "product": "N/D"
+  },
+  "lessons": [
+    {
+      "id": "ERR-SRC-004",
+      "classification": "APPLY",
+      "action": "P0 fail-closed compiler prerequisite; prohibit silent machine changes"
+    },
+    {
+      "id": "ERR-SYS-001/002",
+      "classification": "ALREADY_FIXED_PROCESS",
+      "action": "No preview/commit counted as product DONE"
+    }
+  ],
+  "nextOwner": "T06/Manual1",
+  "journalOwner": "T02",
+  "qaOwner": "Manual2/T08",
+  "next": "Review exact E06 PRE/POST on fresh PR162, CAS integrated source only if matching. Independent QA on same HEAD; only T02 updates shared ledger."
+}
