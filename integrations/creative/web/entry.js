@@ -13,14 +13,7 @@
    if(typeof showScreen==='function')showScreen('creative');else screen.classList.add('active');
    if(text){window.__noxCreativePrefill={text,execute};if(frame.dataset.loaded==='yes'){frame.contentWindow.postMessage({type:'nox.creative.prefill.v1',text,execute},location.origin);window.__noxCreativePrefill=null}}
  }
- frame.addEventListener('load',()=>{frame.dataset.loaded='yes';
-   // CS5 stays inside the original Creative iframe; NO HOME/MENU replacement.
-   const doc=frame.contentDocument;
-   if(doc && !doc.getElementById('nox-cs5-script')){
-     const addon=doc.createElement('script');
-     addon.id='nox-cs5-script';addon.src='five_blocks.js';
-     doc.head.appendChild(addon);
-   }const t=window.__noxCreativePrefill;if(t){frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',...t},location.origin);window.__noxCreativePrefill=null}});
+ frame.addEventListener('load',()=>{frame.dataset.loaded='yes';const t=window.__noxCreativePrefill;if(t){frame.contentWindow?.postMessage({type:'nox.creative.prefill.v1',...t},location.origin);window.__noxCreativePrefill=null}});
  window.addEventListener('message',event=>{
    if(event.origin!==location.origin || event.source!==frame.contentWindow || !event.data)return;
    // The first 50 WOW route cards must lead to the REAL approved P01 route,
