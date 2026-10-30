@@ -2,7 +2,7 @@
 
 ## Scope and evidence levels
 
-**This is the FINAL CONSOLIDATED CATALOG EDITION, not a claim of completed product integration or an exhaustive audit of every owner file.** There are exactly **2,939 deduplicated candidate source URLs** in 3 non-overlapping source registers (A=1272, B=1329, C=338). URLs include public code repositories, web services, SDK documentation, model cards and ready-made app/template references. The 2,939 figure does **not** mean 2,939 verified ready-to-install modules, and redirect aliases can still exist. Each source has provenance in A/B/C. Overlapping additional proposals are cross-linked, not counted twice.
+**This is the FINAL CONSOLIDATED CATALOG EDITION, not a claim of completed product integration or an exhaustive audit of every owner file.** There are exactly **2,938 deduplicated candidate source URLs** in 3 non-overlapping source registers (A=1272, B=1329, C=337). URLs include public code repositories, web services, SDK documentation, model cards and ready-made app/template references. The 2,938 figure does **not** mean 2,938 verified ready-to-install modules, and redirect aliases can still exist. Each source has provenance in A/B/C. Overlapping additional proposals are cross-linked, not counted twice.
 
 **SPEC CONFLICT:** old 8 graphical tile MENU; older 10-world navigation tree; newer owner instruction describes 20–25+ functional menu divisions. Exact last-approved canonical count/names/routes were NOT proven by accessible source readback. Thus the 25 functional COVERAGE AREAS below are an **audit taxonomy**, never a claim that these are the 25 final menu labels. Existing 8 CoreIDs, approved HOME/MENU/WORK/passport images, historic routes and all user data remain immutable. Route/page/RequirementID audit must map to actual current source tree before proclaiming per-feature 3/3 coverage.
 
@@ -14,8 +14,8 @@
 |---|---:|---|
 | [NOX_MASS_1000_CODE_BATCH_A_20261030.md](./NOX_MASS_1000_CODE_BATCH_A_20261030.md) | 1,272 | Windows desktop, Web UI, AI, memory, voice, video, Godot, automation |
 | [NOX_MASS_1000_CODE_BATCH_B_20261030.md](./NOX_MASS_1000_CODE_BATCH_B_20261030.md) | 1,329 | Slides, books, sheets, PDF, site builders, Roblox, Minecraft, CRM, news, workflows |
-| [NOX_UNIFIED_SOURCE_REGISTER_C_20261030.md](./NOX_UNIFIED_SOURCE_REGISTER_C_20261030.md) | 338 | Extra code, service SDKs, 100 AI engines candidates, actual model cards, creative/engineering links |
-| **Total unique URL keys** | **2,939** | Dedup in URL level; not installation status |
+| [NOX_UNIFIED_SOURCE_REGISTER_C_20261030.md](./NOX_UNIFIED_SOURCE_REGISTER_C_20261030.md) | 337 | Extra code, service SDKs, 100 AI engines candidates, actual model cards, creative/engineering links |
+| **Total unique URL keys** | **2,938** | Dedup in URL level; not installation status |
 
 ### Batch A · 14 search categories (source assigned once)
 
@@ -57,7 +57,7 @@
 | Voice assistants | 91 |
 | Fine-tuning | 93 |
 
-Batch C contains 338 extra URL keys: 197 code repository links, 114 service/SDK/documentation links, 24 model/demo links and 3 package pages by parser classification. **Classification is indicative**, not product readiness.
+Batch C contains 337 extra URL keys: 196 code repository links, 114 service/SDK/documentation links, 24 model/demo links and 3 package pages by parser classification. **Classification is indicative**, not product readiness.
 
 ## 2. Functional menu + page scope: 25 audit coverage areas (NOT approved MENU names)
 
@@ -145,7 +145,7 @@ For every actual page: ScreenID → canonical visual/asset SHA → exact RouteID
 | 32 | Autonomous agents & coding | aider | [source](https://github.com/Aider-AI/aider) | Sandbox agent |
 | 33 | Autonomous agents & coding | opencode | [source](https://github.com/anomalyco/opencode) | Sandbox agent |
 | 34 | Autonomous agents & coding | cline | [source](https://github.com/cline/cline) | Sandbox agent |
-| 35 | Autonomous agents & coding | goose | [source](https://github.com/block/goose) | Sandbox agent |
+| 35 | Autonomous agents & coding | goose | [source](https://github.com/aaif-goose/goose) | Sandbox agent |
 | 36 | Autonomous agents & coding | langgraph | [source](https://github.com/langchain-ai/langgraph) | Sandbox agent |
 | 37 | Autonomous agents & coding | autogen | [source](https://github.com/microsoft/autogen) | Sandbox agent |
 | 38 | Autonomous agents & coding | crewAI | [source](https://github.com/crewAIInc/crewAI) | Sandbox agent |
