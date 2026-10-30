@@ -47,6 +47,10 @@
         <button class="action" type="button" id="cs5-list">История и SHA</button>
         <button class="action" type="button" id="cs5-produce">Производство · существующий движок</button>
         <button class="action" type="button" id="cs5-models">Каталог моделей · P03</button>
+        <button class="action" type="button" id="cs5-storyboard">Создать раскадровку через Ollama</button>
+        <button class="action" type="button" id="cs5-music">Создать музыкальный план</button>
+        <button class="action" type="button" id="cs5-files">Реальные файлы проекта</button>
+        <button class="action" type="button" id="cs5-stop">STOP · штатная команда</button>
       </div>
       <pre id="cs5-result" aria-live="polite">Проверка состояния...</pre>
     </div>`;
@@ -99,8 +103,37 @@
   }
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));
-  byId('cs5-produce').addEventListener('click', () => navigate('create'));
-  byId('cs5-models').addEventListener('click', () => navigate('models'));
+  function handoffToOriginal(kind) {
+    const target = byId('project');
+    if (target) target.value = projectId();
+    const originalPrompt = byId('prompt');
+    if (originalPrompt && byId('cs5-text').value.trim()) originalPrompt.value = byId('cs5-text').value.trim();
+    if (kind === 'models') navigate('models');
+    else { navigate('create'); originalPrompt?.focus(); }
+  }
+  async function executeExisting(action, extras) {
+    if (loading) return;
+    try {
+      const project_id = projectId();
+      const prompt = byId('cs5-text').value.trim();
+      if (action !== 'project_files' && prompt.length < 4) {
+        throw Error('Сначала введи описание задачи (минимум 4 символа)');
+      }
+      const payload = { project_id, ...extras, ...(action === 'project_files' ? {} : {prompt}) };
+      if (action === 'create_text') {payload.kind = 'sound';}
+      // The original studio task() owns busy, status, RPC and provider error handling.
+      await task(action, payload, 'cs5-result');
+    } catch (e) {
+      byId('cs5-result').textContent = 'HOLD / ERROR: ' + String(e?.message || e);
+    }
+  }
+  byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
+  byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
+  byId('cs5-storyboard').addEventListener('click', () =>
+    executeExisting('storyboard', {kind:'movie', scenes:3}));
+  byId('cs5-music').addEventListener('click', () => executeExisting('create_text', {}));
+  byId('cs5-files').addEventListener('click', () => executeExisting('project_files', {}));
+  byId('cs5-stop').addEventListener('click', () => byId('stop')?.click());
   rpc('cs5_overview').then(r => {
     byId('cs5-result').textContent = JSON.stringify(r,null,2);
   }).catch(e => {
