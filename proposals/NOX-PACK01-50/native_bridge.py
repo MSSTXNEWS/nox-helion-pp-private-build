@@ -171,18 +171,38 @@ class NoxPackHost:
             raise HostDenied("Existing native session type required")
         session.validate()
         out = {}
+        inspected_ports = {}
         for route, item in self.routes.items():
             port = self.ports.get(route)
+            inspected_ports[route] = port
+            risk = item["risk"]
+            # Do not probe an owner before native scope has authorized that route:
+            # readiness callbacks can perform work even when advertise() says HOLD.
+            # Dangerous actions are never advertised; execute() performs consent.
+            can_probe = (route in session.allowed and risk != "dangerous" and
+                         (risk == "safe" or route in session.private_approved))
             ready = False
-            if port and route in session.allowed:
+            if port and can_probe:
                 try:ready = port.available() is True
                 except Exception:ready = False
-            risk = item["risk"]
-            scoped = ready and (risk == "safe" or route in session.private_approved)
-            if risk == "dangerous":scoped = False
+            scoped = ready
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
+        # A later readiness callback can revoke any previously probed route.
+        # The existing native Windows host still owns cross-thread locking.
+        # Readiness callbacks can revoke native scopes as well as ports.
+        # Verify at the end of the entire probe pass (native host still owns
+        # cross-thread locks), never advertise a just-revoked capability.
+        session.validate()
+        for route, cap in out.items():
+            if not cap["enabled"]:
+                continue
+            risk = self.routes[route]["risk"]
+            if (self.ports.get(route) is not inspected_ports[route]
+                    or route not in session.allowed
+                    or (risk != "safe" and route not in session.private_approved)):
+                out[route] = {"state":"HOLD", "enabled":False, "sourceId":None}
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):
@@ -205,15 +225,28 @@ class NoxPackHost:
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
-        if risk == "dangerous" and (
-            not callable(self.native_approve) or
-            self.native_approve(session,route,json.loads(raw)) is not True):
-            raise HostDenied("Fresh native action approval required")
         port = self.ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
         if not ready:raise HostHold("Owner backend unavailable")
+        # The owner readiness probe may revoke a previously granted approval.
+        # Check the ONE native approval after the last pre-dispatch probe;
+        # never prompt for native consent on an unavailable route.
+        if risk == "dangerous" and (
+            not callable(self.native_approve) or
+            self.native_approve(session,route,json.loads(raw)) is not True):
+            raise HostDenied("Fresh native action approval required")
+        # Readiness and consent callbacks can synchronously revoke/rebind a port.
+        # A previously captured owner method must never dispatch after removal.
+        if self.ports.get(route) is not port:
+            raise HostHold("Native route owner binding changed before dispatch")
+        # Privileged native callbacks can revoke the session scope during
+        # readiness/consent. The one-host caller still owns cross-thread locking.
+        session.validate()
+        if route not in session.allowed or (risk in ("sensitive", "dangerous")
+                and route not in session.private_approved):
+            raise HostDenied("Native scope revoked before dispatch")
         return port.call(session,frozen_payload)
 
 
