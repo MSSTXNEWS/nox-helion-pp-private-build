@@ -8,6 +8,7 @@ import threading
 from pathlib import Path
 
 from nox_fastpack.engine import Studio, StudioError
+from nox_fastpack.five_blocks import dispatch_five
 
 WRITE = threading.RLock()
 THREADS = set()
@@ -35,7 +36,10 @@ def serve_line(studio, line):
         payload = request.get('payload')
         if not isinstance(request_id, str) or len(request_id)>70 or not isinstance(payload, dict):
             raise StudioError('Invalid request envelope')
-        result = studio.dispatch(payload)
+        if isinstance(payload.get('action'), str) and payload['action'].startswith('cs5_'):
+            result = dispatch_five(studio, payload)
+        else:
+            result = studio.dispatch(payload)
         emit(request_id, True, result)
     except (StudioError, TypeError, ValueError, OSError) as exc:
         emit(request_id, False, error=str(exc))
