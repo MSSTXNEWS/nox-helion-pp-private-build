@@ -122,5 +122,26 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
                                  name[:-1] if is_directory else name)
 
 
+    def test_readback_rejects_semantically_equal_mutated_bytes(self):
+        """The receipt must match exactly, not merely parse to the same JSON."""
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "source-lock.json"
+            real_link = os.link
+
+            def altered_link(source, target):
+                result = real_link(source, target)
+                # Simulate a post-publish write of legal JSON whitespace.
+                # Previous json.loads(readback)==receipt incorrectly passed.
+                with open(target, "ab") as stream:
+                    stream.write(b" ")
+                return result
+
+            with mock.patch("os.link", side_effect=altered_link):
+                status, message = self.invoke(out)
+            self.assertEqual(status, 2)
+            self.assertIn("SOURCELOCK_RECEIPT_READBACK_MISMATCH", message)
+            self.assertEqual(json.loads(out.read_bytes())["fileCount"], 729)
+
+
 if __name__ == "__main__":
     unittest.main()

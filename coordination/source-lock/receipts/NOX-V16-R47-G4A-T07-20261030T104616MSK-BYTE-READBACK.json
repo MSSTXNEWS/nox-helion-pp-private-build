@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_R47_G4A_T07_BYTE_EXACT_RECEIPT_READBACK_R1",
+  "runId": "NOX-V16-R47-G4A-T07-20261030T104616MSK-BYTE-READBACK",
+  "runTimeMoscow": "2026-10-30 10:46:16",
+  "role": "G4-A T07 SourceLock",
+  "ownerBranch": "auto/r42/g4a-sourcelock",
+  "ownerBranchPRE": "08cd861b5c7f263c222e9bdca29f72688f8dd3fb",
+  "ownerPRETree": "bf9591cefb50cffd665780272f9f41fc2fafd73f",
+  "pr162ObservedHEAD": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162UnchangedByThisRole": true,
+  "stage": "ISOLATED_SOURCE_PATCH_UNACCEPTED",
+  "target": [
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "preGitBlob": "674cb3a8d675c8eac7475288333ccd0721ab7c2f",
+      "postGitBlob": "83babf78c9129e79f9215d0972f1b92b19eaac88"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "preGitBlob": "742f7ef3b9c1c3219689cc91ff1ebec26cbbe3d5",
+      "postGitBlob": "daf76f25d3238a0bcc92c7dfc7fa2cd3a99ecc91"
+    }
+  ],
+  "rootCause": "JSON semantic equality accepted whitespace or duplicate-key edits of persisted owner SourceLock receipt, so readback did not establish exact published bytes.",
+  "change": "Compare persisted bytes with the canonical publisher's UTF-8 json.dumps(... ensure_ascii=False, indent=2) plus newline; negative test simulates post-link whitespace edit.",
+  "tests": {
+    "algorithmStandalonePython": "4/4 PASS",
+    "addedNegativeTest": "WRITTEN_NOT_EXECUTED",
+    "repositoryUnittest": "NOT_RUN",
+    "windowsE07": "NOT_RUN"
+  },
+  "noLoss": {
+    "archiveSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "partGitBlobs": [
+      "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+      "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+      "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+    ],
+    "historical729VerifiedBy": "issue-177-comment-6513693455",
+    "redoArchive": false,
+    "imagesChanged": false,
+    "personaApprovalsStillHOLD": true
+  },
+  "lessons": {
+    "previous": "ERR-SYS-002 check live exact PRE and reuse same-SHA immutable archive pins",
+    "new": "Cryptographic receipt readback must compare exact published bytes; JSON object equality does not establish binary integrity",
+    "recurrence": "negative whitespace mutation test on existing code"
+  },
+  "handoff": {
+    "T06": "Review exact PRE/POST blobs and CAS integrate isolated verifier+test into PR162; run existing test_atomic_e06_receipt_r47.py",
+    "T08": "Independently QA exact integrated SHA and receipt integrity",
+    "T09": "Seal only after same HEAD owner and QA",
+    "T02": "Index under ERR-SYS-002 and ERR-SRC-004; no shared journal write by G4-A"
+  },
+  "newAcceptedTaskIDs": 0,
+  "product": "N/D",
+  "sourceReady": "HOLD",
+  "build": "NOT_RUN"
+}

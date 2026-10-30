@@ -231,7 +231,10 @@ def main() -> int:
         _trusted_output_parent(args.out)
         publisher(args.out, receipt)
         persisted = args.out.read_bytes()
-        if json.loads(persisted) != receipt:
+        # Semantic JSON equality alone permits whitespace/duplicate-key tampering.
+        # Match the atomic publisher's exact UTF-8 bytes, not a reparsed object.
+        expected_bytes = (json.dumps(receipt, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        if persisted != expected_bytes:
             raise SourceHold("SOURCELOCK_RECEIPT_READBACK_MISMATCH")
         print("ORIGINAL_729_SOURCELOCK_INNER_SHA_PASS", hashlib.sha256(persisted).hexdigest())
         return 0
