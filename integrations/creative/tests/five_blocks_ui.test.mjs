@@ -31,6 +31,7 @@ function mount() {
       this.textContent='';this.innerHTML='';this.style={};
     }
     addEventListener(event, fn) {this.handlers[event]=fn;}
+    setAttribute(name, value) {this[name] = String(value);}
     appendChild(node) {
       this.children.push(node);
       for (const match of node.innerHTML.matchAll(/id="([^"]+)"/g)) {
@@ -64,6 +65,13 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.nav.children.length,1);
   assert.equal(c.main.children.length,1);
   assert.equal(c.nav.children[0].dataset.nav,'five');
+  const segments = c.ids.get('cs5-segments');
+  assert.equal(segments.children.length, 5);
+  assert.deepEqual(segments.children.map(x=>x.dataset.cs5Segment),
+    ['B01','B02','B03','B04','B05']);
+  segments.children[4].click();
+  assert.equal(c.ids.get('cs5-block').value, 'B05');
+  assert.equal(segments.children[4]['aria-pressed'], 'true');
   assert.equal(c.calls[0].action,'cs5_overview');
   // Selecting a Creative project before opening CS5 must not switch projects.
   c.ids.get('project').value='owner-project-42';
