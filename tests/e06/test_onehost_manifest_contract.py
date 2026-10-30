@@ -46,6 +46,36 @@ class OneHostManifestContract(unittest.TestCase):
         self.assertGreater(self.source.find("if ($wantsCreative) {"), probe)
         self.assertGreater(self.source.find("& dotnet publish $project"), probe)
 
+    def test_p02_webview_bridge_is_pinned_and_staged_before_publish(self):
+        """Only the actual owner pipe and SID/ACL guarded WPF seam may be staged."""
+        root = Path(__file__).resolve().parents[2]
+        adapter = (root / "coordination/e06/OneHostP02WebView2Bridge.cs").read_text("utf-8")
+        owner_pipe = (root / "Packages/P02/worker-chat/NativePythonPipe.cs").read_text("utf-8")
+
+        def git_blob(text):
+            data = text.encode("utf-8")
+            return hashlib.sha1(
+                ("blob " + str(len(data)) + "\0").encode("ascii") + data
+            ).hexdigest()
+
+        self.assertIn(git_blob(adapter), self.source)
+        self.assertIn(git_blob(owner_pipe), self.source)
+        self.assertIn("E06_P02_OWNER_BLOB_MISMATCH", self.source)
+        self.assertIn("E06_P02_SOURCE_MISSING_OR_STAGE_COLLISION", self.source)
+        self.assertLess(self.source.index("E06_P02_OWNER_BLOB_MISMATCH"),
+                        self.source.index("& dotnet publish $project"))
+        self.assertIn("CoreWebView2 existingCore", adapter)
+        self.assertIn("NativePythonPipe existingHostOwnedPipe", adapter)
+        self.assertIn("WindowsIdentity.GetCurrent().User?.Value", adapter)
+        self.assertIn("NativeSidMatches()", adapter)
+        self.assertIn("!Trusted(e.Source)", adapter)
+        self.assertIn('route != "chat.stop"', adapter)
+        self.assertIn("NATIVE_PERMISSION_DENIED", adapter)
+        self.assertIn("NATIVE_CONSENT_DENIED", adapter)
+        self.assertIn("RequestAsync(", adapter)
+        self.assertNotIn("Process.Start(", adapter)
+        self.assertNotIn("HttpListener", adapter)
+
     def test_hidden_and_system_payload_files_are_hashed(self):
         self.assertRegex(
             self.source,
