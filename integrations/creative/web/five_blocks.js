@@ -19,6 +19,10 @@
   screen.className = 'screen';
   screen.innerHTML = `
     <div class="panel">
+      <nav aria-label="Путь раздела" class="actions">
+        <button type="button" class="action" id="cs5-back">← Назад в творчество</button>
+        <span class="muted">NOX / ТВОРЧЕСТВО / 5 блоков</span>
+      </nav>
       <h2>CREATIVE STUDIO · Единый проект, пять блоков</h2>
       <p class="muted">Внутри существующего NOX. Исследования и редактура — локальные записи;
       производство — исходный Creative Worker; модели — штатный ModelCenter;
@@ -127,6 +131,7 @@
       byId('cs5-result').textContent = 'HOLD / ERROR: ' + String(e?.message || e);
     }
   }
+  byId('cs5-back').addEventListener('click', () => navigate('create'));
   byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
   byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
   byId('cs5-storyboard').addEventListener('click', () =>
