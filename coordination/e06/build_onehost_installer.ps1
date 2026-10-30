@@ -213,6 +213,21 @@ foreach ($entry in $p02StageSources) {
     throw 'E06_P02_DISPOSABLE_STAGE_SHA_MISMATCH'
   }
 }
+# Stage native WebView2/P02 activation only in the SHA-pinned original
+# MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
+$t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
+$t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
+foreach ($part in @(@{p=$t06Stage;sha='ab8520c7b277726f38400b9fc9a1ca5bd2571333'},@{p=$t06Addon;sha='0b65fc5ca62788dbde01e669e98769a23ac5e8a9'})) {
+  Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
+  if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
+      (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
+    throw 'T06_ORIGINAL_MAINWINDOW_ADDON_SHA_HOLD'
+  }
+}
+$stagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $stagePython) { throw 'T06_NATIVE_STAGE_PYTHON_REQUIRED' }
+& $stagePython.Source $t06Stage $source $t06Addon
+if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_ORIGINAL_MAINWINDOW_STAGE_FAILED' }
 # One native UI process, original Python runtime invoked ONLY by fixed --diagnose, not auto-started.
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
