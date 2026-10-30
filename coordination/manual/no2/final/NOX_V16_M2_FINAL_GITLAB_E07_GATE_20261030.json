@@ -1,0 +1,81 @@
+{
+  "schema": "NOX_V16_M2_T08T10_FINAL_PHASE_GATE_V1",
+  "runId": "NOX-V16-M2-FINAL-PHASE-GITLAB-CHECK-20261030",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "taskIds": [
+    "T08",
+    "T10"
+  ],
+  "authorization": "User approved creation and testing of final EXE on 2026-10-30; does not replace evidence",
+  "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+  "sourcePr": 162,
+  "sourceHead": "d7adf1fa9f1609c2a424e447298679b34d03dfab",
+  "sourceTree": "7e67b432f12ecfaad0b56a76d90191db812e4626",
+  "sourceDraft": true,
+  "releaseClaim": {
+    "sourceReady": false,
+    "t06Accepted": false,
+    "t09Frozen": false,
+    "t10Accepted": false,
+    "windowsBuild": "NOT_RUN",
+    "exeSHA256": null,
+    "e07": "NOT_RUN",
+    "productPercent": "N/D"
+  },
+  "existingSourceEvidence": {
+    "host50SourceMethodDescriptors": 50,
+    "host50NativePending": 14,
+    "installedExeAccepted": 0,
+    "releaseGate": "coordination/e06/t06_closeout_guard.py",
+    "releaseGateSha1": "68662ebc7395465b10331b45c049c569939b33db",
+    "requiredCriteria": [
+      "base",
+      "P01",
+      "P02",
+      "P03",
+      "P04",
+      "P05",
+      "common_integration",
+      "accepted_head_manifest"
+    ]
+  },
+  "gitlab": {
+    "sourceFile": ".gitlab-ci.yml",
+    "sourceBlob": "6d9e5ff4faf8faee381cdd36c5591a7336851f14",
+    "nativeEntryFile": "coordination/e06/gitlab_windows_entrypoint.ps1",
+    "nativeEntryBlob": "2147750c6c56257593076d0942259f53efbabd1a",
+    "builderMode": "GitLab Free hosted Windows 2022 beta, tag saas-windows-medium-amd64",
+    "sourceReadyReceiptRequired": true,
+    "manualOrApiAuthorization": true,
+    "hostedRunnerGuiE07Supported": false,
+    "runnerSource": "https://docs.gitlab.com/ci/runners/hosted_runners/windows/",
+    "interactiveGuiSource": "https://docs.gitlab.com/runner/install/windows/",
+    "ciProjectPrivateApi": "NOT_CONNECTED",
+    "networkProbe": "gitlab.com DNS EAI_AGAIN in model container",
+    "note": "GitLab hosted Windows runner can build binary, but interactive WPF/WebView2 UI E07 must use a signed-in interactive Windows session or foreground self-managed runner"
+  },
+  "localArtifact": {
+    "path": "NOX_V16_GITLAB_BUILD_GATE_PACKAGE.zip",
+    "zipIntegrity": "PASS",
+    "originalLocalUnitTests": "8/8 PASS executed via python -m unittest test_nox_gitlab_gated_build.py",
+    "directGateAttempt": "HOLD_REPOSITORY_GIT_PROOF_UNAVAILABLE on non-repo container folder; no pipeline fired",
+    "noCredentialAccess": true
+  },
+  "operationalNextAction": "T06 exact Git-owned 8/8 evidence + owner/test readback -> T08 independent source acceptance -> T09 freeze SHA/tree -> T10 signed SOURCE_READY -> one authorized GitLab Windows CI pipeline -> installed same BuildID/EXE SHA E07 on interactive Windows",
+  "noLoss": [
+    "729 original source files in 3 parts",
+    "D02",
+    "WOW200",
+    "8 CoreID",
+    "5 Persona",
+    "PACK01/02",
+    "STOP",
+    "ACL",
+    "consent",
+    "historic DONE"
+  ],
+  "productCodeModified": false,
+  "newTaskIds": 0,
+  "newAcceptedTaskIds": 0,
+  "sharedJournal": "T02 sole owner; QA branch receipt does not count as Master/E06/Lessons CAS"
+}
