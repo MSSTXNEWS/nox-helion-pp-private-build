@@ -164,5 +164,31 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
                 self.assertEqual(module.safe_member(name, False), name)
 
 
+
+    def test_canonical_publisher_rejects_post_link_receipt_tampering(self):
+        """A changed-but-parseable receipt is HOLD, even on direct CLI path."""
+        canonical_spec = importlib.util.spec_from_file_location(
+            "nox_original_archive_readback", module.CANONICAL_VALIDATOR)
+        canonical = importlib.util.module_from_spec(canonical_spec)
+        canonical_spec.loader.exec_module(canonical)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "source-lock-direct.json"
+            real_link = os.link
+
+            def alter_after_link(source, target):
+                result = real_link(source, target)
+                with open(target, "ab") as stream:
+                    stream.write(b" ")
+                return result
+
+            with mock.patch("os.link", side_effect=alter_after_link):
+                with self.assertRaisesRegex(
+                        ValueError, "OUTPUT_READBACK_BYTES_MISMATCH"):
+                    canonical.publish_manifest_exclusive(
+                        out, {"schema": "T07_TEST_ONLY", "fileCount": 729})
+            self.assertTrue(out.exists())
+            self.assertEqual(list(Path(tmp).glob(".nox-source-audit-*")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

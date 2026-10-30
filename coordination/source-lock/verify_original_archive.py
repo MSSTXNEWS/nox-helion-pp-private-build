@@ -161,6 +161,10 @@ def publish_manifest_exclusive(output: pathlib.Path, data: dict) -> None:
             os.link(temporary, output)
         except FileExistsError as exc:
             raise ValueError("OUTPUT_EXISTS_NO_OVERWRITE") from exc
+        # A receipt is valid only when the published bytes match the fsynced
+        # payload. The E06 wrapper already enforces this; protect direct CLI.
+        if output.read_bytes() != payload.encode("utf-8"):
+            raise ValueError("OUTPUT_READBACK_BYTES_MISMATCH")
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
