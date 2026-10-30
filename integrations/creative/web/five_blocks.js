@@ -38,6 +38,19 @@
         <span class="muted">NOX / ТВОРЧЕСТВО / 5 блоков</span>
       </nav>
       <h2>CREATIVE STUDIO · Единый проект, пять блоков</h2>
+      <div id="cs5-cinema" class="cs5-cinema" data-cs5-scene="B01"
+           aria-label="Контекст выбранного творческого сегмента">
+        <div class="cs5-cinema-eyebrow">NOX HELION / CREATIVE STUDIO · SOURCE-ONLY</div>
+        <div class="cs5-cinema-content">
+          <div class="cs5-cinema-copy">
+            <p id="cs5-cinema-kicker">ИССЛЕДОВАНИЕ</p>
+            <h3 id="cs5-cinema-title">Исследовать мир</h3>
+            <p id="cs5-cinema-detail">Проверяемые источники, наблюдения и оригинальные гипотезы.</p>
+            <span class="cs5-cinema-state">ЛОКАЛЬНЫЕ ФУНКЦИИ · E11 HOLD</span>
+          </div>
+          <div class="cs5-cinema-object" aria-hidden="true"><span id="cs5-cinema-symbol">◈</span></div>
+        </div>
+      </div>
       <div id="cs5-segments" class="actions" role="group" aria-label="Пять сегментов Creative Studio"></div>
       <p class="muted">Внутри существующего NOX. Исследования и редактура — локальные записи;
       производство — исходный Creative Worker; модели — штатный ModelCenter;
@@ -108,6 +121,13 @@
     B01: 'Исследование', B02: 'Истории', B03: 'Медиа',
     B04: 'Модели', B05: 'Бренды'
   };
+  const cinemaScenes = Object.freeze({
+    B01:['ИССЛЕДОВАНИЕ','Исследовать мир','Первоисточники, гипотезы и сравнительные наблюдения.','◈'],
+    B02:['ИСТОРИИ','Создавать вселенные','Оригинальные идеи, сценарии, библии миров и редакторские версии.','✧'],
+    B03:['МЕДИА','Производить кино','Музыка, фильмы, 2D/3D и раскадровки через действующие движки.','▣'],
+    B04:['МОДЕЛИ','Лаборатория ИИ','Официальный каталог, лицензии, проверки весов и ModelCenter.','◇'],
+    B05:['БРЕНДЫ','Создавать бренды','Публикационные проекты и доход только с настоящими квитанциями.','◆']
+  });
   for (const [key, name] of Object.entries(segmentLabels)) {
     const control = document.createElement('button');
     control.type = 'button';
@@ -122,6 +142,15 @@
     segments.appendChild(control);
   }
   function refreshKinds() {
+    const scene = cinemaScenes[block.value];
+    const stage = byId('cs5-cinema');
+    if (stage && scene) {
+      stage.dataset.cs5Scene = block.value;
+      byId('cs5-cinema-kicker').textContent = scene[0];
+      byId('cs5-cinema-title').textContent = scene[1];
+      byId('cs5-cinema-detail').textContent = scene[2];
+      byId('cs5-cinema-symbol').textContent = scene[3];
+    }
     for (const button of segments.children) {
       button.setAttribute('aria-pressed', button.dataset.cs5Segment === block.value ? 'true' : 'false');
     }

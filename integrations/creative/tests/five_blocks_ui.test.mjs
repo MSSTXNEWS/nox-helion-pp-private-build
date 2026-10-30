@@ -158,3 +158,19 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   await c.ids.get('cs5-stop').click();
   assert.equal(c.stops,1);
 });
+
+test('Five segment cinema scenes stay inside original Studio and reuse approved palette tokens',()=>{
+  const css=readFileSync(new URL('../web/five_blocks_art.css',import.meta.url),'utf8');
+  const html=readFileSync(new URL('../web/studio.html',import.meta.url),'utf8');
+  assert.ok(css.includes('#screen-five .cs5-cinema'));
+  assert.ok(css.includes('var(--edge)') && css.includes('var(--accent)'));
+  assert.ok(css.includes('prefers-reduced-motion:reduce') && css.includes('.mode-eco'));
+  assert.ok(html.includes('href="five_blocks_art.css"'));
+  const fixture=mount();
+  const buttons=fixture.ids.get('cs5-segments').children;
+  for(let i=0;i<5;i++){
+    buttons[i].click();
+    assert.equal(fixture.ids.get('cs5-cinema').dataset.cs5Scene,'B0'+(i+1));
+    assert.ok(fixture.ids.get('cs5-cinema-title').textContent);
+  }
+});
