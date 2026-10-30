@@ -11,7 +11,15 @@
   tab.type = 'button';
   tab.dataset.nav = 'five';
   tab.textContent = '◈ 5 блоков';
-  tab.addEventListener('click', () => navigate('five'));
+  tab.addEventListener('click', () => {
+    // Preserve the selected NOX Creative project instead of inventing a second one.
+    const originalProject = document.getElementById('project')?.value.trim();
+    const selected = document.getElementById('cs5-project');
+    if (originalProject && /^[a-z0-9_-]{1,48}$/i.test(originalProject) && selected) {
+      selected.value = originalProject;
+    }
+    navigate('five');
+  });
   nav.appendChild(tab);
 
   const screen = document.createElement('section');
@@ -81,6 +89,9 @@
   function projectId() {
     const value = byId('cs5-project').value.trim();
     if (!/^[a-z0-9_-]{1,48}$/i.test(value)) throw Error('ProjectID: только 1–48 букв, цифр, _ или -');
+    // The original studio and the five-block panel share the same logical ProjectID.
+    const originalProject = byId('project');
+    if (originalProject) originalProject.value = value;
     return value;
   }
   let loading = false;
