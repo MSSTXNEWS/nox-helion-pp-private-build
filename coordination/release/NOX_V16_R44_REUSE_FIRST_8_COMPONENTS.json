@@ -1,0 +1,120 @@
+{
+  "schema": "NOX_V16_R44_REUSE_FIRST_8_COMPONENTS_V1",
+  "runId": "NOX-V16-R44-20261030-REUSE-FIRST-8",
+  "sourceCommit": "fc6262dee8272d6ad66c7ef9c4fd78b614764a91",
+  "sourceTree": "67ba351ef77996b785775e221ce3931077fe210c",
+  "canonicalPR": 162,
+  "integrationPR": 224,
+  "installedExeAccepted": false,
+  "sourceReady": false,
+  "note": "Git repository source presence and approved upstream references, NOT proof of installed runtime. No automatic library downloads, new API credentials or replacement host/installer.",
+  "entries": [
+    {
+      "id": "WEBVIEW2",
+      "priority": "P0",
+      "upstream": "https://github.com/MicrosoftEdge/WebView2Samples",
+      "upstreamExample": "SampleApps/WebView2WpfBrowser/MainWindow.xaml.cs",
+      "owner": "G2-A/G2-B/T06",
+      "state": "EXISTING_WPF_REFERENCE_RUNTIME_NOT_ACCEPTED",
+      "paths": [
+        "stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs",
+        "coordination/e06/OriginalPythonDiagnosticBridge.cs"
+      ],
+      "reuse": "Native host WebMessageReceived with strict trusted origin, native SID/ACL/consent and owner P02 NativeIngress; sample as reference ONLY",
+      "license": "UPSTREAM_SAMPLE_LICENSE_REVIEW_REQUIRED"
+    },
+    {
+      "id": "NSIS",
+      "priority": "P0",
+      "upstream": "https://github.com/NSIS-Dev/nsis",
+      "owner": "G1-B/G5-C/T06",
+      "state": "SOURCE_PATCH_IN_R44_NOT_MAIN",
+      "paths": [
+        "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi",
+        "coordination/e06/build_onehost_installer.ps1",
+        "stage/proposals/P01/C09/Installer/tests/no_silent_nsis_bootstrap.test.mjs"
+      ],
+      "reuse": "Use original NSIS installer and preinstalled makensis; no silent Chocolatey install; existing SHA/rollback",
+      "license": "OWNER_DISTRIBUTION_LICENSE_REVIEW_REQUIRED"
+    },
+    {
+      "id": "MVVM",
+      "priority": "P0_REVIEW",
+      "upstream": "https://github.com/CommunityToolkit/dotnet",
+      "owner": "G2-A/T06",
+      "state": "NOT_IN_CURRENT_SOURCE_TREE",
+      "paths": [],
+      "reuse": "Optional CommunityToolkit.Mvvm only if approved WPF owner confirms necessity; do not add NuGet or rewrite working binding for cosmetic speed",
+      "license": "MIT_UPSTREAM_VERIFIED"
+    },
+    {
+      "id": "OLLAMA",
+      "priority": "P0",
+      "upstream": "https://github.com/ollama/ollama",
+      "owner": "G2-B/G2-C",
+      "state": "EXISTING_OWNER_ADAPTERS_RUNTIME_NOT_ACCEPTED",
+      "paths": [
+        "Packages/P02/worker-chat/OllamaChatClient.cs",
+        "Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs"
+      ],
+      "reuse": "Reuse one local Ollama client/listener for chat, embeddings, model pulls; no second backend",
+      "license": "MIT_UPSTREAM_VERIFIED"
+    },
+    {
+      "id": "RESTIC",
+      "priority": "P0",
+      "upstream": "https://github.com/restic/restic",
+      "owner": "G1-A/T06",
+      "state": "EXISTING_NATIVE_ADAPTER_RUNTIME_NOT_ACCEPTED",
+      "paths": [
+        "proposals/NOX-PACK01-50/p01_restic_backup_port.py",
+        "proposals/NOX-PACK01-50/test_p01_restic_backup_port.py"
+      ],
+      "reuse": "Reuse native restic backup/check/restore route with consent, pinned binary, no backup overwrite",
+      "license": "BSD_2_CLAUSE_UPSTREAM_VERIFIED"
+    },
+    {
+      "id": "PLAYWRIGHT",
+      "priority": "P0_QA",
+      "upstream": "https://github.com/microsoft/playwright",
+      "owner": "QA-1/QA-3",
+      "state": "NOT_IN_CURRENT_SOURCE_TREE",
+      "paths": [],
+      "reuse": "Optional separate read-only test harness for approved web assets or interactive Windows E07; avoid CDP remote-debugging exposure on user PC; never equate headless browser with installed WebView2",
+      "license": "APACHE_2_0_UPSTREAM_VERIFIED"
+    },
+    {
+      "id": "PSSCRIPTANALYZER",
+      "priority": "P0_QA",
+      "upstream": "https://github.com/PowerShell/PSScriptAnalyzer",
+      "owner": "G1-B/G5-C",
+      "state": "NOT_IN_CURRENT_SOURCE_TREE",
+      "paths": [],
+      "reuse": "Use preinstalled PSScriptAnalyzer for Windows source static checks of existing E06/NSIS PowerShell scripts; no auto-install; absence NOT_RUN, not PASS",
+      "license": "MIT_UPSTREAM_VERIFIED"
+    },
+    {
+      "id": "GITLAB_WINDOWS_RUNNER",
+      "priority": "P0",
+      "upstream": "https://docs.gitlab.com/ci/runners/hosted_runners/windows/",
+      "owner": "G5-C/QA-3",
+      "state": "RUNNER_PROVEN_SOURCE_QA_FINAL_EXE_NOT_RUN",
+      "paths": [
+        ".gitlab-ci.yml",
+        "coordination/e06/gitlab_windows_entrypoint.ps1",
+        "coordination/e06/gitlab_windows_source_qa.ps1"
+      ],
+      "reuse": "Single GitLab Free Windows job after T06/T08/T09/T10 exact frozen SHA; interactive Windows E07 separately",
+      "license": "HOSTED_SERVICE_NOT_A_COPIED_LIBRARY"
+    }
+  ],
+  "gates": {
+    "sourceOwner": "G3-C/T06",
+    "sourceQA": "QA-1/T08",
+    "freeze": "QA-2/T09",
+    "sourceReady": "QA-3/T10",
+    "build": "G5-C/GitLab",
+    "e07": "INTERACTIVE_WINDOWS_SAME_EXE",
+    "noLoss": "729/3 plus immutable HOME/MENU/WORK and five approved portrait SHA256"
+  }
+}

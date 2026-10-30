@@ -299,13 +299,12 @@ $manifestPath=Join-Path $payload 'payload.sha256.json'
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 $makensis=Get-Command 'makensis.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $makensis) {
-  if (-not (Get-Command choco -ErrorAction SilentlyContinue)) { throw 'NSIS_NOT_INSTALLED_AND_NO_TRUSTED_PACKAGE_MANAGER' }
-  & choco install nsis --version=3.11 --no-progress -y
-  if ($LASTEXITCODE -ne 0) { throw 'PINNED_NSIS_INSTALL_HOLD' }
+  # Never install software or run a package manager as a build-script side effect.
+  # T10 SOURCE_READY and separately approved build stage remain upstream gates.
   $candidates=@('C:\Program Files (x86)\NSIS\makensis.exe','C:\Program Files\NSIS\makensis.exe')
   $resolved=$candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-  if (!$resolved) { throw 'NSIS_BINARY_UNAVAILABLE_AFTER_PINNED_INSTALL' }
-  $makensis=Get-Item -LiteralPath $resolved
+  if (!$resolved) { throw 'NSIS_PREINSTALLED_BINARY_REQUIRED_NO_AUTO_INSTALL' }
+  $makensis=Get-Item -LiteralPath $resolved -ErrorAction Stop
 }
 $makensisPath = if ($makensis -is [System.IO.FileInfo]) { $makensis.FullName } else { $makensis.Source }
 if ([string]::IsNullOrWhiteSpace($makensisPath) -or !(Test-Path -LiteralPath $makensisPath -PathType Leaf)) { throw 'NSIS_BINARY_PATH_HOLD' }
