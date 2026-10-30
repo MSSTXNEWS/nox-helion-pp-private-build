@@ -1,0 +1,66 @@
+{
+  "schema": "NOX_V16_R42_OWN_IMMUTABLE_RECEIPT_V1",
+  "run_id": "NOX-V16-R42-G2C-20261030T0520MSK-P03-SNAPSHOT-ATOMICITY",
+  "role": "G2-C existing P03 Queue/ModelCenter",
+  "source_pr": 162,
+  "canonical_pre_head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "canonical_pre_tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+  "canonical_modified": false,
+  "branch": "auto/r42/g2c-p03",
+  "existing_task_id": "P03 Queue/ModelCenter existing owner contract",
+  "error_cluster": "ERR-SRC-004 / P03 host progress snapshot partial rights mutation",
+  "root_cause": "p03.snapshot.v1 committed state.models and licenseAck before completedBytes>total monotonicity guard. A rejected host frame could mutate catalog rights without being accepted.",
+  "source_file": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+  "source_pre_git_blob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+  "source_pre_sha256": "5830a149998f9f5bfb4f5d0b90ffa8d4bbc2d661ab7bbb3ff894a69963918812",
+  "source_post_sha256": "708f277995db9bc4f3c80875d575c47cc8b22a07d949fe83319cef3bdf47ff55",
+  "test_file": "tests/P03/test_g2c_r42_snapshot_atomicity.cjs",
+  "tests": {
+    "pre": "1/3 FAILED (invalid overrun atomicity)",
+    "post": "3/3 PASS in isolated V8 using real UI handlers and DOM/URL shim",
+    "persisted_node": "NOT_RUN",
+    "windows_ollama_native": "NOT_RUN",
+    "notes": "Real processMessage evaluated in V8; Node regression persisted for owner/native QA."
+  },
+  "change": "Moved existing consent and model mutation as a single guarded commit after all incoming queue progress checks; no new engine, downloader, model, host, route, or UI cosmetic changes.",
+  "prior_lesson": {
+    "action": "APPLIED",
+    "source": "R34/R41 exact-head no-stale-reuse / consent and privacy checks",
+    "proof": "No prior P03 patch replay; fresh current ui.js blob and negative→positive V8 regression."
+  },
+  "new_lesson": "Treat host snapshot handlers as transactions: validate queue counters/STOP monotonicity before mutating model rights or user consent; regression must assert state unchanged on malformed progress.",
+  "impact": {
+    "source_patch_prepared": true,
+    "focused_logic_verified": true,
+    "integrated_in_PR162": false,
+    "qa_accepted": false,
+    "new_accepted_task_ids": 0,
+    "product_percent": "N/D"
+  },
+  "approvals": {
+    "T06": "PENDING owner CAS",
+    "T08": "PENDING independent same-SHA QA",
+    "T02": "PENDING single-writer journal CAS"
+  },
+  "preserve": [
+    "original 729/3",
+    "HOME/MENU/WORK + passport SHA",
+    "D02/WOW200",
+    "8 CoreID/5 Persona",
+    "STOP/ACL/consent/privacy",
+    "original queue/host"
+  ],
+  "build_ci_exe_e07": "NOT_RUN",
+  "handoff": {
+    "owner": "T06",
+    "action": "Re-read current PR162 HEAD and Packages/P03/Source/P03.ModelCenter.Wow/ui.js exact preimage 20a5e48d4ec44cae804756bb648cf1ab7836cc68; merge only guarded consent relocation; run node tests/P03/test_g2c_r42_snapshot_atomicity.cjs plus existing R16 ACK and R24 consent; perform P03 safety checks; CAS+readback, T08 same-SHA QA.",
+    "journal_owner": "T02",
+    "qa_owner": "T08"
+  },
+  "status": "SOURCE_PATCH_FOCUSED_V8_VERIFIED_NOT_INTEGRATED",
+  "report_gate": "PENDING_GIT_READBACK",
+  "created_at_utc": "2026-10-30T02:24:27.321Z",
+  "source_post_git_blob": "312d428992aa0cab15a0f597dacd114653064bda",
+  "test_git_blob": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb",
+  "test_sha256": "217d00c4b0ea16ba20404ebacea5b92f032acdf7687f5fd9a014488d36b07169"
+}

@@ -228,10 +228,6 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   if(incomingCheck!=null&&(typeof incomingCheck!=='object'||!uuidCheck.test(incomingCheck.jobId||'')||
      typeof incomingCheck.modelTag!=='string'||incomingCheck.modelTag.length>160||
      !['Queued','Running','Cancelling','Completed','Cancelled','Failed'].includes(incomingCheck.state)))return;
-  const before=current(),after=models.find(m=>m.id===state.activeId);
-  if(!before||!after||['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
-  state.models=models.map(m=>({...m}));
-  if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
   // Preserve terminal and monotone state when an older host snapshot arrives.
   const incoming=data.activeJob,old=state.activeJob;
   const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -267,6 +263,12 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
       }
     }
   }
+  // A rejected progress snapshot must not mutate model rights or license consent.
+  // Commit the catalogue only after queue progress and STOP guards pass.
+  const before=current(),after=models.find(m=>m.id===state.activeId);
+  if(!before||!after||['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
+  state.models=models.map(m=>({...m}));
+  if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
   state.hostReady=true;state.activeJob=next;
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
