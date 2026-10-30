@@ -1,15 +1,25 @@
 """R64 source QA: NOX global P02 on one original-v4 SQLite file."""
-import importlib.util
-import json
+import os
 import sqlite3
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from p02_runtime import P02Store
-from helion.e06_native_stdio_owner import (
-    ORIGINAL_V4_OBJECTS, admit_shared_p02_store,
-)
+# The official production owner module is present ONLY in the SHA-pinned
+# disposable original-source stage, never at checkout/source root.
+STAGED = os.environ.get("NOX_R64_STAGED_ROOT", "")
+if STAGED:
+    stage = Path(STAGED)
+    if not (stage / "helion/e06_native_stdio_owner.py").is_file():
+        raise RuntimeError("NOX_R64_STAGED_OWNER_REQUIRED")
+    sys.path.insert(0, str(stage))
+    from helion.e06_native_stdio_owner import (
+        ORIGINAL_V4_OBJECTS, admit_shared_p02_store,
+    )
+else:
+    ORIGINAL_V4_OBJECTS = frozenset()
+    admit_shared_p02_store = None
 
 class ApprovedOriginal:
     def __init__(self, file):
@@ -25,6 +35,7 @@ class ApprovedOriginal:
         self.conn.execute("PRAGMA user_version=4")
         self.conn.commit()
 
+@unittest.skipUnless(STAGED, "requires exact stage of approved original 729-file source")
 class OriginalDbTest(unittest.TestCase):
     def setUp(self):
         self.dir=tempfile.TemporaryDirectory()
