@@ -339,5 +339,74 @@ class ModelSnapshotProbeTests(unittest.TestCase):
                          "MODEL_SHARD_INDEX_INVALID")
 
 
+
+    def test_rejects_unicode_normalization_colliding_shard_names(self):
+        composed = "part-\u00e9.safetensors"
+        decomposed = "part-e\u0301.safetensors"
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"q.weight": composed, "v.weight": decomposed}},
+                       ensure_ascii=True), encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_PATH_UNSAFE")
+
+    def test_rejects_pathologically_deep_model_config_json(self):
+        nested = "[" * 20000 + "0" + "]" * 20000
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","nested":' + nested + '}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_rejects_pathologically_deep_safetensors_header(self):
+        nested = "[" * 20000 + "0" + "]" * 20000
+        raw = ('{"q.weight":{"dtype":"F32","shape":[1],"data_offsets":[0,4]},'
+               '"nested":' + nested + '}').encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(raw).to_bytes(8, "little") + raw + bytes(4))
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_nested_unpaired_surrogate_config_value_rejected(self):
+        (self.root / "config.json").write_text(
+            r'{"model_type":"qwen3","extra":{"note":"\ud800"}}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_nested_unpaired_surrogate_config_key_rejected(self):
+        (self.root / "config.json").write_text(
+            r'{"model_type":"qwen3","extra":{"\ud800":"bad"}}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_nested_unpaired_surrogate_list_entry_rejected(self):
+        (self.root / "config.json").write_text(
+            r'{"model_type":"qwen3","tags":["ok","\udfff"]}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_valid_supplementary_unicode_pair_allowed(self):
+        (self.root / "config.json").write_text(
+            r'{"model_type":"qwen3","tags":["\ud83d\ude80"]}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["status"],
+                         "LOCAL_FILES_PRESENT_ONLY")
+
+    def test_nested_nonfinite_exponent_still_rejected(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","extra":{"value":1e9999}}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_valid_finite_nested_metadata_allowed(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","meta":{"license":"Apache-2.0","x":1.25}}',
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["status"],
+                         "LOCAL_FILES_PRESENT_ONLY")
+
 if __name__ == "__main__":
     unittest.main()

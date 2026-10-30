@@ -1,0 +1,61 @@
+{
+  "schema": "NOX_V16_T06_R05_SOURCE_OWNER_DELTA_V1",
+  "runId": "NOX-V16-T06-M1-R05-P04-NESTED-PACK02-FIX-20261030",
+  "existingTaskId": "T06",
+  "owner": "manual1",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "preHead": "bff5d06e915fd2114c1fd1639127a329112bd597",
+  "preTree": "f6feaacc18a6fa6301d3f3295ff6ed9913b9a4fc",
+  "postHead": "RESOLVE_FROM_ANCESTRY",
+  "postTree": "RESOLVE_FROM_GIT_COMMIT",
+  "changes": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "pre": "88f44d21b191ed5997cf7cafe1ff7ef8925feaab",
+      "post": "247fa7306210505744546b7ca87a63aa5c5b2259"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "pre": "4d93bf756986f77fece97e7ee0a53976bbcd0eb9",
+      "post": "d54dfdc12febeb1e1ed1230d2a4c0f624a006183"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_schema_r37.mjs",
+      "pre": "96c08a17b5639532fb0382bedccb3fe6249d0f9f",
+      "post": "7c8d9d7ffb4b4004f0a44b2c9c42e293ac01f711"
+    }
+  ],
+  "ownerSourcePatch": {
+    "P04": "Reject nested JSON UTF16 unpaired surrogates, NFC+casefold shard collisions, and deep JSON RecursionError; do not lose existing finite exponent/shape checks",
+    "PACK02": "Test-only fixed execute() envelope result expectations; product ops unchanged"
+  },
+  "evidence": {
+    "P04_earlier_owner": "R38 local 44/44 PASS (not on combined SHA)",
+    "P04_independent_nested": "R40 isolated 6/6 PASS (not on combined SHA)",
+    "P04_current_methods": 50,
+    "P04_current_combined_unittest": "NOT_RUN",
+    "PACK02_previous_corrected_QA": "R40 isolated V8 5/5 PASS, native Node NOT_RUN",
+    "PACK02_current_node": "NOT_RUN",
+    "native_Windows": "NOT_RUN",
+    "sameSHA_independentQA": "PENDING"
+  },
+  "host50": {
+    "source_method_descriptors": 50,
+    "source_unbound": 0,
+    "native_pending": 14,
+    "exe_accepted": 0
+  },
+  "stages": {
+    "source_integrated": "PENDING_CAS",
+    "SOURCE_READY": false,
+    "QA_ACCEPTED": false,
+    "GITLAB_BUILD": false,
+    "E07": false
+  },
+  "errors": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "lessons": "T08 R40 real defects: inspect schema before asserting PACK02 outputs; escaped JSON Unicode validation must cover nested keys and arrays. Reuse owner 44-case source tests and QA 6-case proof, never claim native.",
+  "journal": "T02_SOLE_WRITER_SHARED; THIS_IS_OWNER_RECEIPT_ONLY"
+}
