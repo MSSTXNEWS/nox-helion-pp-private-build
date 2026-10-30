@@ -69,6 +69,15 @@ if (-not $makensis) {
 }
 $makensisPath = if ($makensis -is [System.IO.FileInfo]) { $makensis.FullName } else { $makensis.Source }
 if ([string]::IsNullOrWhiteSpace($makensisPath) -or !(Test-Path -LiteralPath $makensisPath -PathType Leaf)) { throw 'NSIS_BINARY_PATH_HOLD' }
+# Require the existing .NET 8 SDK before any disposable visual staging or publish.
+# This is read-only discovery, not a package-manager install.
+$dotnetSdk = Get-Command dotnet.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $dotnetSdk) { throw 'E06_DOTNET8_SDK_REQUIRED_PRECHECK' }
+$installedSdks = @(& $dotnetSdk.Source --list-sdks 2>$null)
+if ($LASTEXITCODE -ne 0 -or
+    @($installedSdks | Where-Object { $_ -match '^8\\.' }).Count -eq 0) {
+  throw 'E06_DOTNET8_SDK_REQUIRED_PRECHECK'
+}
 $visualStage='NOT_REQUESTED'
 $wowReceiptPath=$null
 $personaReceiptPath=$null
