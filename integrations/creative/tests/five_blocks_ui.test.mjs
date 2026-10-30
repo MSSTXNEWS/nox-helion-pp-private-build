@@ -65,6 +65,10 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.main.children.length,1);
   assert.equal(c.nav.children[0].dataset.nav,'five');
   assert.equal(c.calls[0].action,'cs5_overview');
+  // Selecting a Creative project before opening CS5 must not switch projects.
+  c.ids.get('project').value='owner-project-42';
+  c.nav.children[0].click();
+  assert.equal(c.ids.get('cs5-project').value,'owner-project-42');
   c.ids.get('cs5-project').value='creative01';
   c.ids.get('cs5-text').value='Original fictional screenplay';
   c.ids.get('cs5-block').value='B03';
@@ -74,6 +78,7 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   await c.ids.get('cs5-save').click();
   assert.equal(c.calls.at(-1).action,'cs5_append');
   assert.equal(c.calls.at(-1).payload.block,'B03');
+  assert.equal(c.ids.get('project').value,'creative01');
 
   await c.ids.get('cs5-storyboard').click();
   await c.ids.get('cs5-music').click();
