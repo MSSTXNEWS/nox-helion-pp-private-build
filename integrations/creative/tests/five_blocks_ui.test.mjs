@@ -46,9 +46,12 @@ function mount() {
     click(){return this.handlers.click?.();}
   }
   const nav=new Element('nav'), main=new Element('main');
+  let activeScreen = 'create';
   const document={
     getElementById: name=>ids.get(name)||null,
-    querySelector: selector=>selector==='nav.nav'?nav:selector==='.layout main.content'?main:null,
+    querySelector: selector=>selector==='nav.nav'?nav:
+      selector==='.layout main.content'?main:
+      selector==='.screen.active'?{id:'screen-'+activeScreen}:null,
     createElement: tag=>new Element(tag),
   };
   for (const name of ['project','prompt']) ids.set(name,new Element());
@@ -63,11 +66,25 @@ function mount() {
     }
     return {status:'LOCAL',action};
   };
-  const navigate=what=>navEvents.push(what);
+  const navigate=what=>{navEvents.push(what);activeScreen=what;};
   const task=async(action,payload,target)=>{actions.push({action,payload,target});return {status:'ACCEPTED'};};
   runInNewContext(source,{document,rpc,navigate,task});
-  return {ids,calls,nav,main,navEvents,actions,get stops(){return stops;}};
+  return {ids,calls,nav,main,navEvents,actions,
+    setActiveScreen: value=>{activeScreen=value;},
+    get stops(){return stops;}};
 }
+
+test('BACK restores the actual previous NOX Studio screen instead of always Create',async()=>{
+  const c=mount();
+  c.setActiveScreen('jobs');
+  c.nav.children[0].click();
+  c.ids.get('cs5-back').click();
+  assert.deepEqual(c.navEvents, ['five','jobs']);
+  c.setActiveScreen('theater');
+  c.nav.children[0].click();
+  c.ids.get('cs5-back').click();
+  assert.deepEqual(c.navEvents, ['five','jobs','five','theater']);
+});
 
 test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',async()=>{
   const c=mount();
