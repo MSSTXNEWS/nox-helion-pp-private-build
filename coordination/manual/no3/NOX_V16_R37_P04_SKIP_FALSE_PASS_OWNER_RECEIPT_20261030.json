@@ -1,0 +1,75 @@
+{
+  "schema": "NOX_V16_M3_P04_COMPONENT_GATE_FALSE_PASS_FIX_V1",
+  "run_id": "NOX-V16-MANUAL03-R37-20261030-P04-P05-SOURCE-GATE",
+  "role": "MANUAL_3_P04_P05_OWNER_ONLY",
+  "existing_tasks": [
+    "P04",
+    "P05"
+  ],
+  "new_task_ids": 0,
+  "owner_pr": 222,
+  "owner_head_before_receipt": "23bb94f9c10cb4dc12601aad78589f5d99df07c3",
+  "integration_pr": 162,
+  "integration_head_observed": "ff01a3ba2ac96d5e46db612521d081a5ced5fe81",
+  "exclusive_shared_writer": "T06_MANUAL1",
+  "independent_qa_writer": "T08_MANUAL2",
+  "shared_journal_writer": "T02_ONLY",
+  "error_ids_existing": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "finding": "P04-PYTHON gate previously counted all discovered tests; a skipped-only 40-test run could be falsely admitted as complete source evidence",
+  "root_cause": "aggregate unittest Ran N tests count used without per-method result verification",
+  "fix": "verify exact 40 tests from pinned tests/P04/test_model_snapshot_probe.py as distinct verbose unittest ... ok lines; missing/skipped fail closed",
+  "files": [
+    {
+      "path": "coordination/manual/no3/verify_p04_p05_components.py",
+      "pre_git_blob_sha1": "cbd25993a02c4f8362dbd52b20092c6972ab400c",
+      "post_git_blob_sha1": "da7939560d6726fd38eb8c9dfdc206fb1131e65a",
+      "pre_sha256": "1ec71bae854a975365952014401c5f3848ae7f76462a5f24a207f4f4db5e0613",
+      "post_sha256": "79ee02701a9cd6d486ddb6c08ba1f0af58948a88ad0ee0d57724b08619edcc14"
+    },
+    {
+      "path": "tests/P04/test_component_gate_evidence_r36.py",
+      "pre_git_blob_sha1": "e5102985ebe2814bd5b66a3395ebf32106d991cb",
+      "post_git_blob_sha1": "da71a0a2d0d381a7f5112e20748c11355b0394f9",
+      "pre_sha256": "cca5ab8fa0b79ab56149c959e68589ec7a9a995d728489a3bd96f23c5400182c",
+      "post_sha256": "1cb40c365cca8046119311ea2656d8b462749fede6f8b72a7d14f28acbf3184a"
+    }
+  ],
+  "code_commits": [
+    "11f9ccc1c6dc46eba85bd40910369822b9640ad4",
+    "dad169d58853bd995091f63851493d244593a484",
+    "23bb94f9c10cb4dc12601aad78589f5d99df07c3"
+  ],
+  "evidence": {
+    "git_readback": "2/2 EXACT_BLOB_AND_CONTENT_PASS",
+    "sha256": "PRE_VALUES_MATCH_HISTORICAL_R36_RECEIPT;POST_COMPUTED_SHA256_LOCAL_JS",
+    "regex_reproduction": "3/3 PASS on representative Python unittest output",
+    "full_gate_unit_suite": "NOT_RUN_THIS_TURN; SOURCE_TESTS_ADDED_ONLY",
+    "p04_python_full": "NOT_RUN_NO_LOCAL_REPO_CHECKOUT",
+    "p04_dotnet8": "NOT_RUN_DOTNET8_SDK_UNAVAILABLE",
+    "p05_dotnet8": "NOT_RUN_DOTNET8_SDK_UNAVAILABLE",
+    "authorized_cuda_qlora": "NOT_RUN",
+    "windows_onehost": "NOT_RUN",
+    "t08_independent": "PENDING"
+  },
+  "stages": {
+    "source_verified": "OWNER_CODE_COMMIT_AND_BLOB_READBACK_ONLY",
+    "integrated": "NOT_INTEGRATED_TO_PR162",
+    "qa_accepted": false,
+    "source_ready": false,
+    "gitlab_build": "NOT_AUTHORIZED",
+    "e07": "NOT_RUN",
+    "product_done_delta": 0
+  },
+  "no_loss": {
+    "original_files_729": "UNTOUCHED",
+    "archive_parts_3": "UNTOUCHED",
+    "d02_wow200": "UNTOUCHED",
+    "core8_persona5": "UNTOUCHED",
+    "stop_acl_consent": "UNTOUCHED"
+  },
+  "lessons": "Never promote aggregate tests Ran N as PASS; bind evidence to exact named non-skipped methods, immutable blob and observed tested HEAD",
+  "handoff": "T06 compare exact owner blobs to current PR162; selectively integrate only missing owner-approved gate/test (not full PR222); run real Python/.NET component suites and SourceLock; send immutable receipt to T02; T08 verify same integrated SHA."
+}
