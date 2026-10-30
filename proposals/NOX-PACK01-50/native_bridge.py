@@ -448,19 +448,28 @@ class ExistingP02VoiceAdapter:
                 callable(self.sip.provider_quote_verify))
 
     def speak(self,session,args, *,mode):
+        # Deny untrusted selectors BEFORE invoking identity or microphone callbacks.
+        # A rejected direction/voice/CEFR level must never activate audio capture.
+        direction=args.get("direction","ru-es")
+        if type(direction) is not str or direction not in ("ru-es","es-ru"):
+            raise HostDenied("Only RU/ES directions")
+        voice=args.get("voiceId")
+        if type(voice) is not str or not voice or len(voice)>128:
+            raise HostDenied("Voice must be one actually installed and approved")
+        level=args.get("level","A2")
+        if type(level) is not str or level not in ("A1","A2","B1","B2","C1","C2"):
+            raise HostDenied("Unsupported CEFR level")
+        if mode not in ("translate","maestro"):
+            raise HostDenied("Unsupported voice mode")
         if not self.voice_ready():raise HostHold("Local ASR/LLM/TTS weights or voices missing")
+        if voice not in self.voice.permitted_voices:
+            raise HostDenied("Voice must be one actually installed and approved")
+        source,target=("ru","es") if direction=="ru-es" else ("es","ru")
         identity=self.native_identity(session)
+        # The native callback obtains permission; no page-provided audio is accepted.
         captured=self.native_audio(session)
         if not isinstance(captured,bytes) or not 0<len(captured)<=16*1024*1024:
             raise HostDenied("No trusted bounded microphone capture")
-        direction=args.get("direction","ru-es")
-        if direction not in ("ru-es","es-ru"):raise HostDenied("Only RU/ES directions")
-        source,target=("ru","es") if direction=="ru-es" else ("es","ru")
-        voice=args.get("voiceId")
-        if voice not in self.voice.permitted_voices:
-            raise HostDenied("Voice must be one actually installed and approved")
-        level=args.get("level","A2")
-        # Native Windows permission for the microphone happens before returning bytes.
         response=self.voice.run(identity,captured,source=source,target=target,
             voice=voice,mode=mode,level=level,microphone_consent=True)
         return {"transcript":response.transcript,"answer":response.response,
