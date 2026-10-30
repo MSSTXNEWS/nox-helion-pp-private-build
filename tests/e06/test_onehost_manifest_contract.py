@@ -76,6 +76,9 @@ class OneHostManifestContract(unittest.TestCase):
         self.assertIn("StopRevokedChatAsync()", adapter)
         self.assertIn('RequestAsync("chat.stop", new { }', adapter)
         self.assertIn("Interlocked.Decrement(ref _activeChat)", adapter)
+        # STOP of the real Ollama worker is request/ack, not proof of hard abort.
+        self.assertIn('route == "chat.stop" ? "STOP_REQUESTED" : "COMPLETED"', adapter)
+        self.assertNotIn('result.Accepted ? "COMPLETED" : "HOLD"', adapter)
         self.assertNotIn("Process.Start(", adapter)
         self.assertNotIn("HttpListener", adapter)
 
