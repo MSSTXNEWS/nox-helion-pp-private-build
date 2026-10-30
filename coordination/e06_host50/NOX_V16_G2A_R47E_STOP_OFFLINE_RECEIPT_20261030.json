@@ -1,0 +1,32 @@
+{
+  "schema": "NOX_V16_R47_G2A_STOP_OFFLINE_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T1149MSK-STOP-OFFLINE",
+  "task_id": "NIP01-09",
+  "role": "G2-A Host50",
+  "branch": "auto/r42/g2a-host50",
+  "branch_pre_head": "3ae352553f40ccf9815f5a47f0147da5ebc1e62c",
+  "pr162_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_git_blob": "418b92058c8a78c740074a599c6aa1ecf3582fa4",
+    "post_git_blob": "f7cbebbae5fd2067ee71354c8763bbb7f60f5499"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_stop_offline_r47e.py",
+    "git_blob": "c9d0a6687332659945d25b499ab4610a45507f3b",
+    "scenario_count": 3,
+    "local_extracted_register_probe": "RED 1/2, GREEN 2/2 PASS",
+    "full_exact_source_unittest": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "root_cause": "Emergency chat.stop inherited Ollama models() availability probe, so an offline or blocked model service prevented STOP from dispatching.",
+  "change": "Always-available readiness of native emergency STOP only; route ACL, real handler binding, and actual stop callback unchanged; other chat actions still require online model readiness.",
+  "previous_lesson_applied": "STOP must bypass blocking chat/model status; continue to enforce native authenticated route ACL.",
+  "new_lesson": "STOP_READINESS_INDEPENDENCE: test emergency stop when model inventory fails, plus negative unauthorized STOP and ordinary chat HOLD.",
+  "source_stage": "SOURCE_PREPARED_NOT_INTEGRATED",
+  "qa_accepted": false,
+  "source_ready": false,
+  "no_loss": "No original ZIP, D02 visuals, HOME/MENU/WORK, portraits, host, DB, rights, user data or pipeline touched.",
+  "next_owner": "T06 merge minimal exact PRE owner fix into PR162; independent T08 test same SHA P02 STOP and real WPF/Python transport; T02 sole shared journal writer."
+}

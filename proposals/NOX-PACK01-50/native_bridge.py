@@ -330,7 +330,7 @@ class ExistingP02Adapter:
             entries["chat.attach"]=self.attach_native_selected
         for route,func in entries.items():
             # Chat quick commands reflect current host route registry, not Ollama status.
-            ready=(lambda:True) if route=="chat.commands" else self.available
+            ready=(lambda:True) if route in ("chat.commands","chat.stop") else self.available
             dispatcher.bind(route,BoundPort(func,ready,receipt,2))
         return frozenset(entries)
 
