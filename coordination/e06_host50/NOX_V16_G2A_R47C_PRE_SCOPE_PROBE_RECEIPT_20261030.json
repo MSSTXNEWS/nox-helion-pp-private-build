@@ -1,0 +1,50 @@
+{
+  "schema": "NOX_V16_G2A_R47C_PRE_SCOPE_PROBE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T0851MSK-PRE-SCOPE-PROBE",
+  "task_id": "NIP01-05",
+  "role": "G2-A Host50 native bridge",
+  "owner_branch": "auto/r42/g2a-host50",
+  "branch_previous_receipt_commit": "b360ca002cf7e07f30e7e2d1dacb1c9ae4bd8ba7",
+  "source_commit": "8edab5933f0c4e861098e68f23f60214017d2b0a",
+  "test_commit": "97a3ae026e37d963e51a391b3409dee6a18d47cf",
+  "pr162_read_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_blob": "214c89e621dd51f3a5ae20b587dd92bdce9a59a6",
+    "post_blob": "a0c4ba31402182bdf8487720ec9ab569433875c8",
+    "pre_sha256": "f392fc615bb8ec92efdd40b35ab776efd29c466dc33436f13825660c1618f84d",
+    "post_sha256": "6e96d00a42e26d9dbfd520f23ce144204cca001cc006b6efe3615cafb44ec401"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_pre_scope_r47c.py",
+    "git_blob": "ee6df9fbe815be69ca6253b8c41748757b2301b0",
+    "sha256": "175ecbc6f8b2aa98f14938647ec21069f9bf273f4a046f3fc77e4d3afa89500b",
+    "full_repo_python": "NOT_RUN",
+    "native_windows": "NOT_RUN",
+    "extracted_exact_method_local": "RED_PRE_GREEN_POST_PASS",
+    "scenarios": [
+      "withheld native sensitive scope skips readiness callback",
+      "dangerous route has no advertisement probe but remains callable only with fresh native consent",
+      "approved safe and private sensitive routes remain available"
+    ]
+  },
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "error_register_blob_read": "9cd9f3c5a5455b7a4097452b22477ea133f4507c",
+  "root_cause": "NoxPackHost.advertise ran available() for every session.allowed route before checking risk/private_approved. A denied sensitive route or never-advertised dangerous route could invoke arbitrary native readiness work despite returned HOLD.",
+  "fix": "Gate available() by allowed + private scope and deny dangerous advertisement probes; execute() still enforces real consent/ACL and route owner identity.",
+  "lessons": {
+    "applied": "Preserved prior R47b revoked-binding final identity check and R47 executed-handler epoch guard with unchanged source portions",
+    "new": "AUTHORIZE_BEFORE_PROBE: capability discovery must not invoke native-owner callbacks for denied or dangerous routes. Check pre-scope zero side effects in future native transport integrations."
+  },
+  "source_stage": "SOURCE_PREPARED",
+  "integrated_pr162": false,
+  "qa_accepted": false,
+  "source_ready": false,
+  "installed_exe_e07": "NOT_RUN",
+  "wpf_dependency": "Original MainWindow.xaml.cs not a standalone PR162 file; coordination/e06/OriginalPythonDiagnosticBridge.cs is --diagnose only, cannot claim live WebMessageReceived -> NativeIngress.",
+  "no_loss": "Only owned native_bridge.py and one scoped test changed; original HOME/MENU/WORK, 729 ZIP/3 parts, portraits, D02/WOW200, 8 CoreID/5 Persona, P01–P05 and personal data untouched.",
+  "next_owner": "T06/№1: review exact PRE source for merge to PR162, run full in-repo Python test, preserve sensitive/private/dangerous STOP/ACL/consent and provide actual WPF MainWindow P02 NativeIngress owner bridge donor for independent T08 QA; T02 alone writes shared ledgers."
+}
