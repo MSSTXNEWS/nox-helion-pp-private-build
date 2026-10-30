@@ -53,7 +53,16 @@ function mount() {
   };
   for (const name of ['project','prompt']) ids.set(name,new Element());
   let stops=0;const stop=new Element();stop.click=()=>{stops++;};ids.set('stop',stop);
-  const rpc=async(action,payload)=>{calls.push({action,payload});return {status:'LOCAL',action};};
+  const rpc=async(action,payload)=> {
+    calls.push({action,payload});
+    if (action === 'cs5_list') {
+      const last = Number.isInteger(payload?.before) ? payload.before : 45;
+      const start = Math.max(0, last - 20);
+      return {status:'LOCAL_RECORDS_NOT_E11',count:45,showing:last-start,
+        start_index:start,next_before:start>0?start:null,events:[]};
+    }
+    return {status:'LOCAL',action};
+  };
   const navigate=what=>navEvents.push(what);
   const task=async(action,payload,target)=>{actions.push({action,payload,target});return {status:'ACCEPTED'};};
   runInNewContext(source,{document,rpc,navigate,task});
@@ -84,8 +93,18 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.ids.get('cs5-kind').children.length,2);
   c.ids.get('cs5-kind').value='production';
   await c.ids.get('cs5-save').click();
-  assert.equal(c.calls.at(-1).action,'cs5_append');
-  assert.equal(c.calls.at(-1).payload.block,'B03');
+  await c.ids.get('cs5-list').click();
+  assert.equal(c.ids.get('cs5-older').disabled,false);
+  assert.equal(c.ids.get('cs5-latest').disabled,true);
+  await c.ids.get('cs5-older').click();
+  assert.equal(c.calls.at(-1).payload.before,25);
+  assert.equal(c.ids.get('cs5-latest').disabled,false);
+  await c.ids.get('cs5-older').click();
+  assert.equal(c.calls.at(-1).payload.before,5);
+  assert.equal(c.ids.get('cs5-older').disabled,true);
+  await c.ids.get('cs5-latest').click();
+  assert.equal(c.calls.at(-1).payload.before,undefined);
+  assert.equal(c.calls.find(x=>x.action==='cs5_append').payload.block,'B03');
   assert.equal(c.ids.get('project').value,'creative01');
 
   await c.ids.get('cs5-storyboard').click();
