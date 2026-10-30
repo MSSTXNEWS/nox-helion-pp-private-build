@@ -120,12 +120,10 @@
   }
   let loading = false;
   let previousBefore = null;
-  let browsingHistory = false;
-  function updateHistoryControls(result) {
+  function updateHistoryControls(result, before) {
     previousBefore = result.next_before;
-    browsingHistory = result.start_index > 0 || result.next_before !== null;
     byId('cs5-older').disabled = result.next_before === null;
-    byId('cs5-latest').disabled = result.count === 0 || !browsingHistory;
+    byId('cs5-latest').disabled = before === null;
   }
   async function perform(action, before = null) {
     if (loading) return;
@@ -142,12 +140,11 @@
         payload.source_url = byId('cs5-source').value.trim();
       }
       const result = await rpc(action, payload);
-      if (action === 'cs5_list') updateHistoryControls(result);
+      if (action === 'cs5_list') updateHistoryControls(result, before);
       else if (action === 'cs5_append') {
         previousBefore = null;
         byId('cs5-older').disabled = true;
         byId('cs5-latest').disabled = true;
-        browsingHistory = false;
       }
       display.textContent = JSON.stringify(result, null, 2);
     } catch(e) {
