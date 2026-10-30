@@ -215,6 +215,25 @@ class ReusedCanonicalZipGate(unittest.TestCase):
   self.assertFalse((self.work/"source_lock.json").exists())
   self.assertFalse(list(self.work.glob(".nox-r11-pending-*")))
 
+ def test_temporary_archive_cleanup_is_owner_safe(self):
+  # Reuse the already approved SourceLock device/inode fence on the 28-part
+  # disposable ZIP. A concurrent replacement must never be deleted.
+  self.work.mkdir(parents=True, exist_ok=True)
+  name=self.work/"source-donor-immutable.zip"
+  name.write_bytes(b"ORIGINAL-STAGED")
+  original=name.lstat()
+  owned=(original.st_dev,original.st_ino)
+  replacement=self.work/"another-owner-temp.zip"
+  replacement.write_bytes(b"ANOTHER-OWNER-BYTES")
+  replacement.replace(name)
+  STAGE.cleanup_owned_temp(name,owned)
+  self.assertEqual(name.read_bytes(),b"ANOTHER-OWNER-BYTES")
+  new=name.lstat()
+  STAGE.cleanup_owned_temp(name,(new.st_dev,new.st_ino))
+  self.assertFalse(name.exists())
+  STAGE.cleanup_owned_temp(name,owned)  # Missing path is safe.
+  STAGE.cleanup_owned_temp(name,None)  # Never remove untracked path.
+
  def test_existing_r11_keeps_original_data(self):
   self.create([(name,stat.S_IFREG) for name in NEEDED])
   r11=self.work/"R11";r11.mkdir(parents=True)
