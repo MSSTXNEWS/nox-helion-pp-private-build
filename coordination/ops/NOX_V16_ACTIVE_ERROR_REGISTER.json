@@ -230,18 +230,18 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "02e4820d-742c-8332-b941-4684f18275f0",
-    "source_head_observed": "d7adf1fa9f1609c2a424e447298679b34d03dfab",
-    "source_tree_observed": "7e67b432f12ecfaad0b56a76d90191db812e4626",
-    "registry_pre_blob": "f55a4207d8e22ea55e567f79b3b02482995a15c8",
+    "run_id": "250e208a-66c0-832a-b343-8be44682f84f",
+    "source_head_observed": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
+    "source_tree_observed": "29efa2ee3b9d05eefd7bbfa696a8d753176490f8",
+    "registry_pre_blob": "69b9f0432a08d6fa31cb2468a3ad1d1533bdd4fe",
     "progress": {
       "historical_t02": "4/4 DONE unchanged",
       "current_c": "0/4 QA accepted",
       "accepted_task_id_delta": 0,
       "product": "N/D"
     },
-    "docs_gate": "GIT_ONLY; MASTER/E06/LESSONS_NOT_UPDATED_IN_THIS_CAS",
-    "next": "manual#2/T08 native same-HEAD STOP/ACL/consent/privacy/NO-LOSS + 14 Host50 routes; manual#1/T06 8/8 owner gate and full P04 suite; T09/T10 only after independent gates."
+    "docs_gate": "GIT_ONLY; DOCS_NOT_UPDATED_IN_THIS_CAS",
+    "next": "manual#1/T06 finish 8/8 and pin exact HEAD+visual/media/729 proof; manual#2/T08 independently test R41 exact-HEAD including STOP/ACL/consent/privacy/NO-LOSS+14 native; T09→T10 only after T08."
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -1078,6 +1078,71 @@
       "build_exe_e07": "NOT_RUN",
       "lesson": "R06 O(n^2) to O(n) bookmark-object member collision guard preserved fail-closed behavior; T08 R39 V8 mocked STOP/consent/privacy is not native Windows acceptance. Keep same-HEAD manual#2 and T09/T10 HOLD.",
       "next_owner": "manual#2/T08 native same-HEAD STOP/ACL/consent/privacy/NO-LOSS + 14 Host50 routes; manual#1/T06 8/8 owner gate and full P04 suite; T09/T10 only after independent gates."
+    },
+    {
+      "run_id": "250e208a-66c0-832a-b343-8be44682f84f",
+      "run_scope": "T02/C existing TaskID · R33 finite ledger · R41 owner/source evidence",
+      "observed_at": "2026-10-30T01:48:21.574Z",
+      "source_head_pre": "98fca925bfe91d0c2bd753a97c81914d2b84da33",
+      "source_head_post": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
+      "source_tree_post": "29efa2ee3b9d05eefd7bbfa696a8d753176490f8",
+      "registry_pre_blob": "69b9f0432a08d6fa31cb2468a3ad1d1533bdd4fe",
+      "registry_pre_commit": "8e9ac740ab591d229f3f2dc1b6e830c561a4a625",
+      "owner_receipts": [
+        {
+          "existing_task_id": "T06",
+          "owner": "manual#1",
+          "run_id": "NOX-V16-T06-R41-P01-P04-P05-OWNER-FINAL-SOURCE-20261030",
+          "receipt_blob": "e2e88a969e1efa0b162bbe9603e8c1c50d76f593",
+          "receipt_path": "coordination/automation/t06/NOX-V16-T06-R41-P01-P04-P05-OWNER-FINAL-SOURCE-20261030.json",
+          "pre_head": "98fca925bfe91d0c2bd753a97c81914d2b84da33",
+          "source_head": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
+          "verified_product_blobs": {
+            "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py": "41d7f6173d83d2a052ebf74639b2383936a45748",
+            "Packages/P04/model_snapshot_probe.py": "c370a18e058b879681a0b1da63cef3214f03b12a",
+            "tests/P04/test_model_snapshot_probe.py": "0290c3e01a3a3d797f3c4c3aa19668e3b58d870d",
+            "Packages/P05/Space/SpaceFeedClient.cs": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a",
+            "Packages/P05/Space/tests/Program.cs": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668"
+          },
+          "stage": "INTEGRATED_SOURCE_ONLY",
+          "source_test_execution": "NOT_RUN_WINDOWS_AFTER_PATCH"
+        }
+      ],
+      "independent_qa": {
+        "existing_task_id": "T08",
+        "owner": "manual#2",
+        "run_id": "NOX-V16-M2-R41-20261030-SOURCE-QA-01",
+        "evidence_url": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6512809582",
+        "qa_source_head": "98fca925bfe91d0c2bd753a97c81914d2b84da33",
+        "qa_disposition": "HOLD_STALE_HEAD",
+        "source_qa_windows_gitlab_sha": "60b1e97b6f20ebcea0322184bff2031e336c6a8b",
+        "source_qa_windows_suites": "5 PASS/3 FAIL on unmatched GitLab SHA; NOT current-HEAD verification",
+        "failed_categories": [
+          "P01 win32 short-long path",
+          "P02 immutable owner routes",
+          "P04 Unicode malformed index and shard path"
+        ],
+        "qa_accepted_delta": 0,
+        "native_windows": "NOT_RUN_CURRENT_HEAD"
+      },
+      "host50": {
+        "source_bound": 50,
+        "source_unbound": 0,
+        "native_pending": 14,
+        "native_accepted": 0,
+        "historical_source_hold": 13
+      },
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "accepted_task_ids_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_authorized_by_T10": false,
+      "lesson": "Never transfer Windows QA on mismatched GitLab SHA or old GitHub HEAD to new R41 code. Physical POST blobs 5/5 verified, but P01/P02/P04 Windows tests after patch are NOT_RUN. Preserve original 729/3, STOP/ACL/consent/privacy/NO-LOSS, no new TaskID; no release.",
+      "next_owner": "manual#1/T06 finish 8/8 and pin exact HEAD+visual/media/729 proof; manual#2/T08 independently test R41 exact-HEAD including STOP/ACL/consent/privacy/NO-LOSS+14 native; T09→T10 only after T08."
     }
   ]
 }
