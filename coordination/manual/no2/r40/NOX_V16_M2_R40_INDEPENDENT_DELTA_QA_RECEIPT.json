@@ -1,0 +1,152 @@
+{
+  "schema": "NOX_V16_M2_T08_T10_R40_INDEPENDENT_SOURCE_DELTA_QA_V1",
+  "runId": "NOX-V16-M2-T08T10-R40-DELTA-QA-20261030",
+  "role": "MANUAL_2_INDEPENDENT_QA",
+  "date": "2026-10-30",
+  "sourcePlatform": "GitHub PR162 Draft (source staging)",
+  "buildPlatform": "GitLab Free Windows (blocked until SOURCE_READY)",
+  "preOwnerHead": "852ccc1611d99afaf48e7fc4c33a5509d385f9a9",
+  "ownerInterimHead": "d534a3a931c4e1c9604fb62ed89969dea5c1b6c0",
+  "postOwnerHead": "ff01a3ba2ac96d5e46db612521d081a5ced5fe81",
+  "postTreeGitSha1": "3da985162f75dd7e651957762ab0ec988109d30b",
+  "t09Frozen": false,
+  "prDraft": true,
+  "selfImprovementApplied": [
+    "RED/GREEN acceptance only on exact source blob; unchanged targeted SHA can carry known component evidence, never entire HEAD acceptance",
+    "Do not demand identical MAX/INTENSIVE names; owner performs secure UI MAX -> original worker INTENSIVE mapping",
+    "Correct double-escaped UTF16 Python QA literals; exact readback of content bytes before presenting RED/GREEN",
+    "Original PACK02 test must compare execute(...).result rather than compare to entire envelope; do not change working CSV logic to satisfy invalid test",
+    "T02 sole common journal writer. Issue comment/readback is handoff only; GitHub evidence != E06 Docs CAS",
+    "Do not run GitLab Windows pipeline without frozen T09 and signed T10 SOURCE_READY; no extra backend, no EXE, no new TaskID"
+  ],
+  "sourceDeltas": [
+    {
+      "part": "P01 Host50 four final owner descriptors",
+      "result": "SOURCE_DESCRIPTORS_50_OF_50",
+      "mapPath": "proposals/NOX-PACK01-50/owner-binding-map.json",
+      "mapBlob": "f1c36357bc7791f9d7624b72cf9ba2a4d967847b",
+      "portPath": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+      "portBlob": "8c6c4dedf6799661d90fbb23d4fbab33bb40e0f0",
+      "newRoutes": [
+        "browser.open",
+        "browser.bookmarks",
+        "system.update",
+        "system.pc_control"
+      ],
+      "checks": "4/4 exact method+native _gate+existing single-host binder symbol PASS",
+      "native": "NOT_RUN"
+    },
+    {
+      "part": "P01 WebView2 stale fixture corrected",
+      "result": "SOURCE_CONTRACT_PASS",
+      "hostBlob": "5a43dc50c1c5afe31b3a6636c319da3779aaad0d",
+      "testBlob": "e1b4c0d74efc8a7c0a7f5302d82a14938ce11ef3",
+      "method": "21/21 V8 source assertion contract on unchanged blobs",
+      "windows": "NOT_RUN"
+    },
+    {
+      "part": "P03 privacy donor integrated exactly",
+      "result": "COMPONENT_SOURCE_FIX_PRESENT",
+      "productPath": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "productBlob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+      "sourceProvenance": "G3B isolated candidate same blob 20a5...",
+      "priorMocks": "5/5 V8 on exact blob, STOP/ACK preserved; not native"
+    },
+    {
+      "part": "P04 JSON exponent/weight dimension guards integrated",
+      "result": "SOURCE_POSITIVE_GUARDS_PRESENT",
+      "productPath": "Packages/P04/model_snapshot_probe.py",
+      "productBlob": "88f44d21b191ed5997cf7cafe1ff7ef8925feaab",
+      "checks": "math.isfinite parse_float; >2**63-1 shape bound; header/index/metadata targeted surrogate checks",
+      "canonicalFullPython": "NOT_RUN"
+    },
+    {
+      "part": "P04 MAX UI maps to worker INTENSIVE",
+      "result": "OWNER_FIX_INTEGRATED_SOURCE",
+      "path": "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "blob": "a03d261eff3dffcb558dadbb221c8e6b489e65a4",
+      "source": "verified trusted _plan_args MAX-to-INTENSIVE mapping; owner added source 2 methods, Python full suite NOT_RUN",
+      "candidateFromQaBranch": "ff230618412ba72ad15691d74bcfcace7577432c SUPERSEDED; DO NOT MERGE"
+    },
+    {
+      "part": "PACK02 CSV logic fixed but NEW fixture mismatches original execute return envelope",
+      "result": "PRODUCT_SOURCE_FIXED_TEST_FIXTURE_FAIL",
+      "productOps": "proposals/NOX-PACK02-50/ops.mjs",
+      "productBlob": "376d92062e609bcc33961fa372d67eca4d1a9499",
+      "productTest": "proposals/NOX-PACK02-50/test_csv_schema_r37.mjs",
+      "testBlob": "96c08a17b5639532fb0382bedccb3fe6249d0f9f",
+      "actualOriginalTest": "3/5 V8 exact transformed Node test/assert semantics; two false fixture FAIL",
+      "fixedTest": "5/5 V8 exact product ops; do not change ops",
+      "qaCandidatePath": "coordination/manual/no2/r40/test_csv_schema_r37_corrected_candidate.mjs",
+      "qaCandidateBlob": "bc44e6697b5dbcda19f8ab2f12abf9f44494d411",
+      "ownerAction": "exact two-assertion patch: compare execute(...).result to expected, use product-relative ./ops.mjs in owner fixture"
+    }
+  ],
+  "remainingP0": [
+    {
+      "cluster": "ERR-SRC-004",
+      "area": "P04 embedded metadata escaped surrogate",
+      "owner": "MANUAL_3_P04_THEN_MANUAL_1_T06",
+      "prePath": "Packages/P04/model_snapshot_probe.py",
+      "preBlob": "88f44d21b191ed5997cf7cafe1ff7ef8925feaab",
+      "cause": "_strict_json_object parses nested escaped lone UTF-16 surrogate keys/values when not a known consumed field",
+      "red_green": "exact source-extracted current 3/6, one-hunk candidate 6/6 Python; current full canonical Python NOT_RUN",
+      "candidatePath": "coordination/manual/no2/r40/model_snapshot_probe_NESTED_UNICODE_CANDIDATE.py",
+      "candidateBlob": "caeaa4bf796f07ce17fcf29d5586087b7aeb770e",
+      "qaFixturePath": "coordination/manual/no2/r40/test_p04_nested_unicode_r40.py",
+      "qaFixtureBlob": "ce699f65403c74e5a5604ffc8c0cad664888ea6b",
+      "ownerAction": "review exact PRE; apply recursive keys/values check only, retain all other integrated R03 guards; run original P04 41 tests plus 6 target; independent T08 readback"
+    },
+    {
+      "cluster": "ERR-SRC-004",
+      "area": "PACK02 test fixture envelope",
+      "owner": "PACK02_OWNER_THEN_MANUAL_1_T06",
+      "prePath": "proposals/NOX-PACK02-50/test_csv_schema_r37.mjs",
+      "preBlob": "96c08a17b5639532fb0382bedccb3fe6249d0f9f",
+      "ownerAction": "two-line exact test fixture correction; actual code no changes; execute Node -test project"
+    }
+  ],
+  "sourceRouteCounters": {
+    "catalogue": 50,
+    "ownerSourceBound": 50,
+    "unbound": 0,
+    "installedExeIntegrated": 0,
+    "nativePending": 14,
+    "qaAcceptedTasksDelta": 0,
+    "productReadyPercent": "N/D"
+  },
+  "mandatoryGates": {
+    "t06AllEight": "NOT_VERIFIED",
+    "t08SourceFullTree": "HOLD",
+    "t09FrozenHead": "NOT_AVAILABLE",
+    "t10SourceReady": "HOLD",
+    "windowsSameBuildId": "NOT_RUN",
+    "gitlabBuild": "NOT_AUTHORIZED",
+    "e07": "NOT_RUN",
+    "modelGpuTraining": "NOT_RUN",
+    "nativeSIDConsentStopACL": "NOT_RUN"
+  },
+  "journal": {
+    "T02SoleWriter": true,
+    "sharedRegisterCas": "NOT_WRITTEN_BY_MANUAL2",
+    "masterE06Lessons": "NOT_WRITTEN_BY_MANUAL2",
+    "handoff": "PENDING",
+    "errorDedupe": [
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SYS-001",
+      "ERR-SYS-002"
+    ]
+  },
+  "preserve": [
+    "original historical 729/3 source archive",
+    "D02/WOW200",
+    "8 CoreID",
+    "5 Personas",
+    "PACK01/02",
+    "STOP/ACL/consent/NO-LOSS",
+    "all original DONE/TaskID"
+  ],
+  "productSourceFilesEditedByManual2": false,
+  "ownerHandOffRequired": true
+}
