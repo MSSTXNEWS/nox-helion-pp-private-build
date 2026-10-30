@@ -103,6 +103,20 @@ class BridgeTest(unittest.TestCase):
             self.dispatch.execute("chat.history",{},wrong)
     def test_stop_invokes_actual_owner_stop(self):
         self.assertTrue(self.dispatch.execute("chat.stop",{},self.session)["stopRequested"])
+    def test_stop_remains_ready_when_ollama_model_inventory_is_offline(self):
+        # Native ACL/route checks remain in NoxPackHost.execute; only STOP's
+        # availability is decoupled from Ollama /api/tags.
+        with patch.object(self.client,"models",side_effect=OSError("Ollama offline")), \
+             patch.object(self.client,"stop",wraps=self.client.stop) as stop:
+            self.assertTrue(self.dispatch.advertise(self.session)["chat.stop"]["enabled"])
+            self.assertFalse(self.dispatch.advertise(self.session)["helion.chat"]["enabled"])
+            self.assertTrue(self.dispatch.execute("chat.stop",{},self.session)["stopRequested"])
+            stop.assert_called_once_with()
+            with self.assertRaises(bridge.HostHold):
+                self.dispatch.execute("helion.chat",{"text":"Hi","model":"qwen3:4b"},self.session)
+            with self.assertRaises(bridge.HostDenied):
+                self.dispatch.execute("chat.stop",{},bridge.NativeSession(
+                    "t1","p1","room1",allowed=frozenset()))
     def test_owner_p02_same_second_history_order_is_stable(self):
         # P02 owner fixed the same-second ordering bug with SQLite insertion
         # order (rowid for V1, stable_seq for approved V2). Never keep this
