@@ -439,6 +439,10 @@ class Host50Admission:
         if any(not isinstance(k,str) or not ROUTE.fullmatch(k) or isinstance(v,(dict,list))
                or type(v) not in (str,int,bool) or len(str(v))>256 for k,v in opts.items()):
             raise Denied("UNSAFE_SETTING")
+        # Static session permissions precede ANY native option callbacks.
+        # A rejected sensitive request must not query local model/voice identity.
+        if row["risk"] != "safe" and route not in session.sensitive:
+            raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
         for key, value in opts.items():
             selected = row["settingPolicy"].get(key)
             if not selected or type(value) is not str:
@@ -463,8 +467,6 @@ class Host50Admission:
             self._reap_pending(time.monotonic())
             if len(self.pending) >= MAX_PENDING:
                 raise Hold("TOO_MANY_UNACKNOWLEDGED_NATIVE_ACTIONS")
-        if row["risk"] != "safe" and route not in session.sensitive:
-            raise Denied("SENSITIVE_NATIVE_PERMISSION_REQUIRED")
         if row["risk"] == "dangerous":
             if not callable(native_consent):
                 raise Denied("FRESH_NATIVE_CONSENT_REQUIRED")
