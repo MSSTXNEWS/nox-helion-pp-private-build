@@ -58,6 +58,8 @@
       <div class="actions">
         <button class="action primary" type="button" id="cs5-save">Сохранить в проект</button>
         <button class="action" type="button" id="cs5-list">История и SHA</button>
+        <button class="action" type="button" id="cs5-older" disabled>Ранние записи</button>
+        <button class="action" type="button" id="cs5-latest" disabled>Последние записи</button>
         <button class="action" type="button" id="cs5-produce">Производство · существующий движок</button>
         <button class="action" type="button" id="cs5-models">Каталог моделей · P03</button>
         <button class="action" type="button" id="cs5-storyboard">Создать раскадровку через Ollama</button>
@@ -117,13 +119,22 @@
     return value;
   }
   let loading = false;
-  async function perform(action) {
+  let previousBefore = null;
+  let browsingHistory = false;
+  function updateHistoryControls(result) {
+    previousBefore = result.next_before;
+    browsingHistory = result.start_index > 0 || result.next_before !== null;
+    byId('cs5-older').disabled = result.next_before === null;
+    byId('cs5-latest').disabled = result.count === 0 || !browsingHistory;
+  }
+  async function perform(action, before = null) {
     if (loading) return;
     loading = true;
     const display = byId('cs5-result');
     display.textContent = 'Запрос к существующему NOX Creative Worker...';
     try {
       const payload = {project_id: projectId()};
+      if (action === 'cs5_list' && before !== null) payload.before = before;
       if (action === 'cs5_append') {
         payload.block = block.value;
         payload.kind = kind.value;
@@ -131,6 +142,13 @@
         payload.source_url = byId('cs5-source').value.trim();
       }
       const result = await rpc(action, payload);
+      if (action === 'cs5_list') updateHistoryControls(result);
+      else if (action === 'cs5_append') {
+        previousBefore = null;
+        byId('cs5-older').disabled = true;
+        byId('cs5-latest').disabled = true;
+        browsingHistory = false;
+      }
       display.textContent = JSON.stringify(result, null, 2);
     } catch(e) {
       display.textContent = 'HOLD / ERROR: ' + String(e && e.message || e);
@@ -140,6 +158,10 @@
   }
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));
+  byId('cs5-older').addEventListener('click', () => {
+    if (previousBefore !== null) perform('cs5_list', previousBefore);
+  });
+  byId('cs5-latest').addEventListener('click', () => perform('cs5_list'));
   function handoffToOriginal(kind) {
     const target = byId('project');
     if (target) target.value = projectId();
