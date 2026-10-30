@@ -1,0 +1,41 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T1043MSK-CSV-NONSCALAR",
+  "owner": "G3-B",
+  "branch": "auto/r42/g3b-pack02",
+  "task_ids": [
+    "NIP02-22"
+  ],
+  "error_id": "ERR-SRC-004",
+  "stage": "SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "owner_pre_head": "0569704146b2eace85bf665a162f8ec9099a6bb1",
+  "owner_pre_tree": "a4a06dc6e220dd41d98233d5f2cb8992484a65e0",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "7324fe69bc7cbd2059e1657ecd06a051fbf1d3ee",
+      "post_git_blob": "390bab8fbfae5b7826a56e24711dde769aa682fe"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_nonscalar_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "b6612fb173b408b4ab9f9c57d438b577f49d8649"
+    }
+  ],
+  "red": "Nested JSON object stringified to [object Object], array flattened to comma string, zero-header objects serialized as blank lines",
+  "fix": "Reject structured cell payloads and schema without columns before writing CSV; preserve 50 established operations",
+  "checks": {
+    "runtime": "V8 exact full Git source via Function()",
+    "red": 3,
+    "green": 5,
+    "failed": 0,
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "ids_preserved": 50
+  },
+  "lesson_applied": "Prior CSV row-schema guard did not inspect representability of nested cell values",
+  "lesson_new": "Data export boundaries reject non-scalar cells and empty schema before lossy conversion; test object, array, empty schema, scalar roundtrip",
+  "no_loss": "Original 729/three ZIP, UI stills, D02/WOW200 and onehost STOP/ACL/consent/privacy unchanged; owner branch PACK02-only",
+  "next_owner": "T06/G3-C exact PRE CAS into PR162, then T08 same-SHA independent QA, T02 shared journal only"
+}
