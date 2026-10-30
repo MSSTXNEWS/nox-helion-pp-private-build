@@ -38,3 +38,14 @@ Run from the repository root:
 - Stop in the existing Studio blocks cs5_append and remains active until the worker lifecycle resets. Reads are allowed.
 - E07, 10+10+10 cinema and real cross-process S26/E11 admissions remain HOLD.
 - Do not merge until source owner resolves existing PR180 overlap on entry.js and completes same-HEAD review.
+
+## Verified 30 October 2026 · physical QA + no-duplicate inventory
+
+- Exact Git blob match before test for `five_blocks.py`, `creative_worker.py`, and `test_five_blocks.py`; **11/11 Python contract tests PASS** in isolated Linux Python 3.13. The Worker JSONL route with a stubbed owner (not a native WPF host) passed CS5 overview/append/list, original-action passthrough and STOP.
+- 160 simultaneous project writes in one process: 160 records, zero errors; history readback displays last 20 by design. A second process holding `.cs5-project.lock` causes `CS5_CONCURRENT_WRITER_HOLD`, never silent overwrite. A crash may leave a stale lock; do not delete it until the operator confirms no other owner process is running.
+- URL validation rejects empty-host, embedded credentials, and control characters; STOP is checked again before atomic replace after fsync. SHA hash chain detects accidental record drift, **not malicious edits by a principal with write access**; no E11 admission.
+- The new `test_five_blocks_stdio.py` is added to source, but has **not** run against the actual GitHub `Studio`/Windows host in this session. An isolated stdio fixture (owner stub) passed.
+- P01 reuse source paths are `proposals/NOX-PACK01-50/p01_restic_backup_port.py` and `proposals/NOX-PACK01-50/p01_windows_owner_ports.py`; NSIS owner candidate is `stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi`. These are source candidates, not yet accepted owner runtime bindings.
+- GitLab source-only Windows pipeline 3006721811 succeeded on **a DIFFERENT SHA** (`0d3a8db60c075ec640fde30169af8e4f4bd3b645`); does not establish the new PR's Windows acceptance.
+- Scope remains B01–B05 local evidence UI + storage only. Real B01 live research, B02 full authored document workflow, B03 model-generated AV, B04 weights/training, B05 real publisher and finance receipts and E11/S26 remain separate existing-owner integrations/gates.
+- No MVVM, alternate UI toolkit, LiteLLM, second RAG, additional public port, alternate installer or unverified external dependency installed. The catalog is reuse candidates, not 100 mandatory dependencies.
