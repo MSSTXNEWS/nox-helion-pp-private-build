@@ -1,0 +1,260 @@
+{
+  "schema": "NOX_V16_T09_R43_SOURCE_PARITY_CHECKPOINT_V1",
+  "taskId": "T09",
+  "runId": "NOX-V16-T09-R43-20261030T0540MSK-NOLOSS-SOURCE-PARITY",
+  "role": "G4-C / QA-2 T09 independent source no-loss",
+  "observed_run_start_msk": "2026-10-30T05:37:44+03:00",
+  "planned_slot_msk": "2026-10-30T05:40:00+03:00",
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "tree_sha": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "pr_draft": true,
+    "head_mutated_by_T09": false
+  },
+  "read": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_33_rules": 56,
+    "error_registry_blob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+    "error_count": 11,
+    "errors_ack": [
+      {
+        "id": "ERR-SYS-001",
+        "status": "OPEN",
+        "action": "HANDOFF",
+        "reason": "T02 for central CAS or T06/T08 for exact HEAD owner/native signature; no right to claim 8/8."
+      },
+      {
+        "id": "ERR-SYS-002",
+        "status": "OPEN",
+        "action": "HANDOFF",
+        "reason": "T02 for central CAS or T06/T08 for exact HEAD owner/native signature; no right to claim 8/8."
+      },
+      {
+        "id": "ERR-SRC-003",
+        "status": "OPEN",
+        "action": "NO_IMPACT",
+        "reason": "Existing unrelated owner path; no code changed, no closure."
+      },
+      {
+        "id": "ERR-SRC-004",
+        "status": "OPEN",
+        "action": "HANDOFF",
+        "reason": "T02 for central CAS or T06/T08 for exact HEAD owner/native signature; no right to claim 8/8."
+      },
+      {
+        "id": "ERR-SRC-005",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "action": "NO_IMPACT",
+        "reason": "Existing unrelated owner path; no code changed, no closure."
+      },
+      {
+        "id": "ERR-SYS-006",
+        "status": "VERIFIED_CLOSED",
+        "action": "ALREADY_VERIFIED",
+        "reason": "Historical DONE preserved; untouched original parts and T04 decisions were not reopened."
+      },
+      {
+        "id": "ERR-SYS-007",
+        "status": "VERIFIED_CLOSED",
+        "action": "ALREADY_VERIFIED",
+        "reason": "Historical DONE preserved; untouched original parts and T04 decisions were not reopened."
+      },
+      {
+        "id": "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "action": "APPLY",
+        "reason": "Strict independent T06+T08 same-SHA gates keep frozenSource=null despite original ZIP parity; prevents premature STOP/DONE."
+      },
+      {
+        "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+        "status": "OPEN",
+        "action": "APPLY",
+        "reason": "Strict independent T06+T08 same-SHA gates keep frozenSource=null despite original ZIP parity; prevents premature STOP/DONE."
+      },
+      {
+        "id": "NOX-V16-T06-ROOT-STOP-20261029-R01",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "action": "HANDOFF",
+        "reason": "T02 for central CAS or T06/T08 for exact HEAD owner/native signature; no right to claim 8/8."
+      },
+      {
+        "id": "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+        "status": "FIX_APPLIED_UNVERIFIED",
+        "action": "HANDOFF",
+        "reason": "T02 for central CAS or T06/T08 for exact HEAD owner/native signature; no right to claim 8/8."
+      }
+    ],
+    "latest_T06_comment": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513584672",
+    "latest_G3B_persona_comment": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513634594"
+  },
+  "test": {
+    "kind": "CURRENT_PR162_GIT_TREE_TO_PREVIOUS_PHYSICAL_SOURCELOCK_SHA1_POINTER_PARITY_AND_MEDIA_GUARD",
+    "status": "PASS_SCOPE_LIMITED",
+    "raw_archive_rehashed_this_run": false,
+    "three_git_parts": [
+      {
+        "path": "source_00.part",
+        "sha_git": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "sha_expected": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "bytes": 20971520,
+        "bytes_expected": 20971520,
+        "archived_sha256": "44540669046b43a71c2abfd78a509fbbdbc59a0b37bb62535257e9f640c1456f",
+        "match": true
+      },
+      {
+        "path": "source_01.part",
+        "sha_git": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "sha_expected": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "bytes": 20971520,
+        "bytes_expected": 20971520,
+        "archived_sha256": "9e5d4c0b8dcb8d874fed343ea8b8c1a3fd7260b0da5bf19d4d73c5cb76c21bdd",
+        "match": true
+      },
+      {
+        "path": "source_02.part",
+        "sha_git": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "sha_expected": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "bytes": 18421306,
+        "bytes_expected": 18421306,
+        "archived_sha256": "6e1171b6d0e642a2370ea92c426adeab146ead84d450cae83730208a3b89185f",
+        "match": true
+      }
+    ],
+    "original_zip_sha256_archived": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "original_manifest_blob": "fdf998625f8d582d313be2116a9e34ee6154fbd0",
+    "original_members": 729,
+    "unique_paths": 729,
+    "all_manifest_sha256_crc_fields_wellformed": true,
+    "original_media_entries": 14,
+    "approved_home_menu_work": [
+      {
+        "path": "assets/HOME_OWNER_APPROVED.png",
+        "sha256": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a"
+      },
+      {
+        "path": "assets/approved_ui/NOX_HELION_MENU_OWNER_APPROVED_20261019.png",
+        "sha256": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9"
+      },
+      {
+        "path": "assets/approved_ui/NOX_HELION_WORK_OWNER_APPROVED_20261019.png",
+        "sha256": "f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14"
+      }
+    ],
+    "persona_source_blob": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+    "persona_stage_guard_blob": "5eed031e9f8dc5fb9c829e0dfa0668014b7eda36",
+    "persona_active_optional_motion": [
+      "KV",
+      "AM",
+      "LA",
+      "KW"
+    ],
+    "persona_blocked_optional_motion": [
+      "EV"
+    ],
+    "persona_guard_tokens": [
+      {
+        "token": "PERSONA_BUNDLE_SHA_HOLD",
+        "present": true
+      },
+      {
+        "token": "UNAPPROVED_PERSONA_ACTIVATION_FORBIDDEN",
+        "present": true
+      },
+      {
+        "token": "PERSONA_ASSETS_ALREADY_PRESENT_NO_OVERWRITE",
+        "present": true
+      },
+      {
+        "token": "PERSONA_SHA_HOLD",
+        "present": true
+      },
+      {
+        "token": "ORIGINAL_ONEHOST_REQUIRED",
+        "present": true
+      },
+      {
+        "token": "PERSONA_RECEIPT_READBACK_FAILED",
+        "present": true
+      }
+    ],
+    "media_bundle_actual_bytes_hashed_this_run": false,
+    "persona_5_identity_runtime_verified": false,
+    "source_native_stop_acl_consent_verified": false
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "T06 signed owner-accepted 8/8 exact source HEAD",
+      "status": "HOLD",
+      "evidence": "T06 R43 05:37 owner admission lists unverified/hold; no signed 8/8 on live HEAD"
+    },
+    {
+      "id": 2,
+      "name": "All T04/T05 owner decisions accepted by T06",
+      "status": "HOLD",
+      "evidence": "T04 34/34 historical, final owner P01-P05 manifest not accepted"
+    },
+    {
+      "id": 3,
+      "name": "T07 immutable original ZIP 3/729",
+      "status": "DONE",
+      "evidence": "Git archived T09 R14 blob fdf998625f8d582d313be2116a9e34ee6154fbd0; this run all 3 Git part blobs unchanged"
+    },
+    {
+      "id": 4,
+      "name": "Independent T08 same-HEAD genuine PASS",
+      "status": "HOLD",
+      "evidence": "R43 manual T08 verifier tests 9/9 synthetic; live WPF↔P02 diagnostic-only; not signed same-HEAD integration acceptance"
+    },
+    {
+      "id": 5,
+      "name": "One immutable integrated final HEAD/tree/manifest SHA",
+      "status": "HOLD",
+      "evidence": "No owner-accepted integrated manifest; source SHA MUST NOT be frozen"
+    },
+    {
+      "id": 6,
+      "name": "Exact frozen SHA handoff T10/T11",
+      "status": "HOLD",
+      "evidence": "No final T09 seal; T10 PASS not a prerequisite to T09"
+    }
+  ],
+  "progress": {
+    "denominator": 6,
+    "done_before": 1,
+    "done_after": 1,
+    "before_percent": 16.7,
+    "after_percent": 16.7,
+    "delta_pp": 0,
+    "remaining": 5,
+    "bar": "██░░░░░░░░",
+    "product_weighted": "N/D"
+  },
+  "nonloss": {
+    "original_729_3": "ARCHIVED_PHYSICAL_PASS_AND_CURRENT_GIT_POINTER_MATCH",
+    "original_home_menu_work": "ARCHIVED_SHA256_IN_729_MANIFEST_PRESERVED",
+    "five_persona_registrations": "EXISTING_IDENTITIES_NOT_FIVE_APPROVED_MOTION_FILES",
+    "ev_optional_motion": "IDENTITY_CONFLICT_HOLD",
+    "window_e07": "NOT_RUN"
+  },
+  "errors": {
+    "open": 5,
+    "patched_unverified": 4,
+    "verified_closed": 2
+  },
+  "lesson": {
+    "applied": "Original ZIP/approved still SHA1-pointer preservation is separate from integrated runtime same-head T06/T08 acceptance; no archival rehash or fake native PASS.",
+    "new": "For media freeze, keep five identities vs four optional active motion slots and EV disputed portrait distinct; never force EV or infer source ZIP bytes from Git tree-count."
+  },
+  "status": "INCOMPLETE_SOURCE_FREEZE_HOLD",
+  "blocker": {
+    "id": "ERR-SRC-004",
+    "owner": "T06/manual #1 then T08/independent QA #2",
+    "action": "T06 exact HEAD 8/8 accepted manifest with original/asset per-hash parity, live WPF↔P02/Host50 native evidence and owner CAS; T08 independent same-HEAD acceptance; then T09 seal; T10/T11 afterwards"
+  },
+  "product_writes": false,
+  "gitlab_ci_exe_nsis_e07": "NOT_RUN"
+}
