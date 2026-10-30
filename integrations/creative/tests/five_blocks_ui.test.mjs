@@ -4,8 +4,24 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {createHash} from 'node:crypto';
 
 const source = readFileSync(new URL('../web/five_blocks.js', import.meta.url), 'utf8');
+
+test('Creative add-on is ordered after original Studio and does not change native menu entry', () => {
+  const html = readFileSync(new URL('../web/studio.html', import.meta.url), 'utf8');
+  const entry = readFileSync(new URL('../web/entry.js', import.meta.url));
+  const expected = '34032ba9cb41bc3d71afcdbe57f690e15fd76755';
+  const hash = createHash('sha1')
+    .update(Buffer.from('blob ' + entry.length + '\\0', 'utf8'))
+    .update(entry).digest('hex');
+  assert.equal(hash, expected, 'original Creative launcher must remain byte-identical');
+  const first = html.indexOf('<script src="studio.js"></script>');
+  const addon = html.indexOf('<script src="five_blocks.js"></script>');
+  const last = html.indexOf('<script src="persona-media.js"></script>');
+  assert.ok(first >= 0 && addon > first && last > addon,
+    'CS5 must reuse the original Studio runtime, never replace HOME/MENU');
+});
 
 function mount() {
   const ids = new Map(), calls = [], navEvents = [], actions = [];
