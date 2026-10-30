@@ -1,0 +1,76 @@
+{
+  "schema": "NOX_V16_MANUAL3_R38_ACTUAL_P04_P05_COMPONENT_EVIDENCE_V1",
+  "run_id": "NOX-V16-MANUAL3-R38-20261030-ACCELERATED-P04-P05",
+  "existing_owner_role": "MANUAL3",
+  "existing_tasks": [
+    "P04",
+    "P05"
+  ],
+  "product_done_delta": 0,
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "owner_pr": 222,
+  "owner_head_pre": "acad23c354fc7fcf4cc8c0574b29ba7c9e11c40f",
+  "shared_pr": 162,
+  "shared_head_observed": "64a51aedb0d252faeaa2c74cfc8fb2260abde9a1",
+  "source_fix": {
+    "path": "tests/P04/test_model_snapshot_probe.py",
+    "pre_blob": "3f10447c31ba5da5b4c12a1d02ce4865a5bbb869",
+    "post_blob": "8a355191b250d266a1a6190969629a9238239d7a",
+    "commit": "acad23c354fc7fcf4cc8c0574b29ba7c9e11c40f",
+    "single_line_reused_from": "PR223 exact same fixture semantic correction",
+    "git_readback": "PASS"
+  },
+  "executable_evidence": {
+    "environment": "Python 3.13.5 Linux sandbox, authenticated GitHub exact source blobs verified with actual git blob SHA1 on local materialized checkout, not Windows",
+    "test_fail_before": {
+      "suite": "P04 snapshot",
+      "count": 40,
+      "failure": 1,
+      "log_sha256": "e3f0febe3d64dc59aba8a057643550a3f2a02ef1261dd37bffc6070839de5497"
+    },
+    "test_after": {
+      "suite": "P04 snapshot",
+      "count": 40,
+      "passed": 40,
+      "failed": 0,
+      "log_sha256": "7949693faa1d15d4db474e33c8bf4f5bfc54a7574f12c0269a98d2ee2bffe076"
+    },
+    "gate": {
+      "suite": "component_gate_evidence_r36",
+      "count": 7,
+      "passed": 7,
+      "failed": 0,
+      "log_sha256": "154be825cf830389b6183e0b92830fe34532411f086b7a815245ad34689009c6"
+    },
+    "partial_python_discovery": {
+      "suite": "tests/P04/test_*.py (locally available subset only)",
+      "count": 99,
+      "passed": 99,
+      "failed": 0,
+      "log_sha256": "ceea730eb2c99f15555f699f7c4bf51e711da42d17a592d5248bdc6200727b75",
+      "full_repo_suite": false,
+      "files_fetched": "9 test modules; 5 P04 Python source modules and 3 P02 bridge sources available",
+      "unfetched_remaining_tests": "NOT_RUN"
+    },
+    "dotnet": "NOT_RUN_DOTNET_NOT_INSTALLED",
+    "windows_host": "NOT_RUN",
+    "authorized_cuda_gpu_qlora": "NOT_RUN",
+    "full_rag_integration": "NOT_RUN",
+    "independent_T08": "PENDING"
+  },
+  "stages": {
+    "SOURCE_VERIFIED": "EXACT_BLOBS_AND_SELECTED_COMPONENT_TESTS_PASS",
+    "INTEGRATED": "PR162_T06_INTAKE_PENDING",
+    "QA_ACCEPTED": false,
+    "SOURCE_READY": false,
+    "GITLAB_BUILD": "NOT_AUTHORIZED",
+    "E07": "NOT_RUN"
+  },
+  "errors_existing": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "journal_writer": "T02_ONLY_UNCHANGED",
+  "no_loss": "No changes to shared PR162, original 729/3, D02 WOW200, 8 CoreID, 5 Persona, STOP ACL consent; no EXE and no new engine",
+  "handoff": "T06 exact current PR162 per-path CAS for P04 model snapshot fixture and preceding gate/test guard, then authorized Windows .NET8/RAG/P05 smoke/OneHost and T08 independent same SHA acceptance; do not infer 100%."
+}
