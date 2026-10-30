@@ -21,3 +21,20 @@ test("CSV valid selection preserves expected values",()=>{
 test("CSV malformed width remains a hard error",()=>{
   assert.throws(()=>execute("data.csv.parse","a,b\nonlyone"),/CSV_WIDTH_MISMATCH/);
 });
+
+test("filter and sort reject unknown and inherited CSV fields",()=>{
+ for(const routeId of ["data.csv.filter","data.csv.sort"])
+  for(const field of ["missing","toString","__proto__"])
+   assert.throws(()=>execute(routeId,"name,count\nAlice,2",{field,term:"Alice"}),/UNKNOWN_CSV_FIELD/);
+});
+test("filter/sort use header-only CSV schema",()=>{
+ for(const routeId of ["data.csv.filter","data.csv.sort"]){
+  assert.deepEqual(execute(routeId,"name,count\n",{field:"name"}).result,[]);
+  assert.throws(()=>execute(routeId,"name,count\n",{field:"absent"}),/UNKNOWN_CSV_FIELD/);
+ }
+});
+test("valid CSV filter and numeric sort remain unchanged",()=>{
+ const input="name,count\nAlice,2\nBob,10";
+ assert.deepEqual(execute("data.csv.filter",input,{field:"name",term:"ali"}).result,[{name:"Alice",count:"2"}]);
+ assert.deepEqual(execute("data.csv.sort",input,{field:"count"}).result,[{name:"Alice",count:"2"},{name:"Bob",count:"10"}]);
+});

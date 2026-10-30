@@ -1,0 +1,59 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T0643MSK-PACK02-CSV-SCHEMA",
+  "branch": "auto/r42/g3b-pack02",
+  "owner": "G3-B isolated",
+  "product_head_pr162": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pre_head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "pre_tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+  "task_ids": [
+    "NIP02-24",
+    "NIP02-25"
+  ],
+  "error_id": "ERR-SRC-004",
+  "status": "SOURCE_PATCHED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "files": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_blob": "376d92062e609bcc33961fa372d67eca4d1a9499",
+      "post_blob": "d40000fa226087e01bced6520a3b7a9481e8ffee",
+      "pre_sha256": "fe4ea4f173fa9b02fa10c98179608b2c5103dbd6cdee9709a37cd56f1166ed06",
+      "post_sha256": "4d17150baa5124bd3913aa927148ad962e6602de5b56d95c24e5fdc459f6ac2b"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_schema_r37.mjs",
+      "pre_blob": "7c8d9d7ffb4b4004f0a44b2c9c42e293ac01f711",
+      "post_blob": "0038bb02637ad3eebc328f268dce3bff6e28b64f",
+      "post_sha256": "d9251f4e834ab49afe9a79b655e258f78c73d26befa58c6fac398ae2e81637ff"
+    }
+  ],
+  "tests": {
+    "runtime": "V8 actual patched module, not Node/.NET/Windows",
+    "checks": [
+      {
+        "name": "unknown+prototype",
+        "status": "PASS"
+      },
+      {
+        "name": "header-only",
+        "status": "PASS"
+      },
+      {
+        "name": "valid filter/sort + Host50",
+        "status": "PASS"
+      }
+    ]
+  },
+  "cause": "filter/sort access undefined and inherited row fields without validating declared CSV header",
+  "fix": "reuse parsed columns metadata; reject UNKNOWN_CSV_FIELD, including header-only CSV",
+  "lesson_applied": "PRE SHA checked, previously fixed select schema reused; no stale donor or duplicate host",
+  "lesson_new": "Negative test inherited names and header-only field before labeling offline CSV operations safe",
+  "no_loss": "Only PACK02 ops and existing test modified; original 729/three ZIP, HOME/MENU/WORK/persona images, D02/WOW, STOP/ACL/consent untouched",
+  "stages": {
+    "integrated": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "e07": "NOT_RUN"
+  },
+  "next_owner": "T06/G3-C sole PR162 writer; T08 independent same-SHA QA; T02 sole shared ERR-SRC-004 writer"
+}
