@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,99}$")
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}(?::[A-Za-z0-9][A-Za-z0-9._-]{0,127})?$")
-READ_ROUTES = ("models.catalog", "models.installed", "models.digest")
+READ_ROUTES = ("models.catalog", "models.installed", "models.digest", "models.licenses")
 OWNER_ROUTES = {
     "models.pull": "pull",
     "models.gguf.import": "import_gguf",
@@ -23,7 +23,7 @@ OWNER_ROUTES = {
     "models.retry": "retry",
     "models.preflight": "preflight",
 }
-SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.cancel", "models.retry"))
+SENSITIVE = frozenset(("models.pull", "models.gguf.import", "models.retry"))
 ROUTES = frozenset(READ_ROUTES) | frozenset(OWNER_ROUTES)
 
 class P03PortHold(RuntimeError):
@@ -80,6 +80,10 @@ class P03OneHostPort:
         for item in data:
             if not isinstance(item, dict):
                 raise P03PortHold("Malformed catalog card")
+            # SourceLock-reviewed cards contain only discovery facts. Unknown
+            # license/source fields must never reach a browser as approved rights.
+            if set(item) != {"id", "name", "url", "reviewStatus", "downloadEligible"}:
+                raise P03PortHold("Unreviewed P03 discovery-card fields")
             ident = item.get("id")
             if not isinstance(ident, str) or not ID.fullmatch(ident) or ident in used:
                 raise P03PortHold("Duplicated/untrusted model family")
@@ -92,7 +96,7 @@ class P03OneHostPort:
             result.append(dict(item))
         return tuple(result)
 
-    def _ensure_native_scope(self, session: object, route: str, args: dict):
+    def _ensure_native_scope(self, session: object, route: str, args: dict, *, check_consent: bool = True):
         # Strings and mappings are NOT native route sets: membership would
         # authorize substrings/keys; None and integers would raise TypeError.
         allowed = getattr(session, "allowed", None)
@@ -112,6 +116,9 @@ class P03OneHostPort:
                     or route not in approved
                     or not callable(self.native_approve)):
                 raise P03PortDenied("Fresh out-of-band native approval required")
+            # Route scope may be checked before backend readiness without asking for consent.
+            if not check_consent:
+                return
             # A failing native callback must HOLD before any queue operation.
             # Suppress private callback diagnostics; never infer permission.
             try:
@@ -132,6 +139,21 @@ class P03OneHostPort:
         return {"models": [dict(x) for x in self.family_cards
                            if q in x["name"].casefold() or q in x["id"].casefold()],
                 "downloadEligible": False, "source": "P03 discovery only"}
+
+    def licenses(self, session: object, args: dict) -> dict:
+        """Existing PACK01 license route: discovery is never a legal grant."""
+        self._ensure_native_scope(session, "models.licenses", args)
+        if args:
+            raise P03PortDenied("No license assertions accepted from browser")
+        return {
+            "models": [{
+                "id": m["id"], "name": m["name"],
+                "license": None, "licenseEvidenceUrl": None,
+                "reviewStatus": "REVIEW_REQUIRED", "downloadEligible": False,
+            } for m in self.family_cards],
+            "licenseEvidenceVerified": False,
+            "source": "P03 discovery only",
+        }
 
     def installed(self, session: object, args: dict) -> dict:
         self._ensure_native_scope(session, "models.installed", args)
@@ -217,7 +239,8 @@ class P03OneHostPort:
         }
 
     def execute_backend(self, session: object, route: str, args: dict) -> Any:
-        self._ensure_native_scope(session, route, args)
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        identity = tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id"))
         method_name = OWNER_ROUTES.get(route)
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
@@ -236,10 +259,69 @@ class P03OneHostPort:
             raise
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
+        # Consent must bind to the exact JSON arguments shown to the native owner.
+        # An approval callback can mutate nested dict/list values in-place.
+        try:
+            approved_payload = json.dumps(args, sort_keys=True, allow_nan=False,
+                                          separators=(",", ":"))
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload must be JSON") from None
+        # Fresh approval belongs AFTER owner readiness and before queue mutation.
+        self._ensure_native_scope(session, route, args)
+        try:
+            if json.dumps(args, sort_keys=True, allow_nan=False,
+                          separators=(",", ":")) != approved_payload:
+                raise P03PortDenied("Native owner3 payload changed during approval")
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload changed during approval") from None
+        # Native approval can synchronously revoke scope or replace the owner.
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        if identity != tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")):
+            raise P03PortDenied("Native session identity changed during approval")
+        if backend is not self.backend:
+            raise P03PortHold("Owner3 backend changed during native approval")
+        # Consent can outlive the backend health/method that was previously checked.
+        # Fail closed instead of invoking a stale cached worker callback.
+        try:
+            live_func = getattr(backend, method_name, None)
+            live_probe = getattr(backend, "available", None)
+            if (not callable(live_func) or live_func != func
+                    or not callable(live_probe) or live_probe != probe
+                    or live_probe() is not True):
+                raise P03PortHold("Owner3 backend no longer ready after native approval")
+        except P03PortHold:
+            raise
+        except Exception:
+            raise P03PortHold("Owner3 backend changed during native approval") from None
+        # Backend health callbacks are executable owner code; recheck the
+        # consent-bound request and native scope AFTER the last callback.
+        try:
+            if json.dumps(args, sort_keys=True, allow_nan=False,
+                          separators=(",", ":")) != approved_payload:
+                raise P03PortDenied("Native owner3 payload changed after health probe")
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            raise P03PortDenied("Native owner3 payload changed after health probe") from None
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        if identity != tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")):
+            raise P03PortDenied("Native session identity changed after health probe")
+        if backend is not self.backend:
+            raise P03PortHold("Owner3 backend changed after health probe")
+        try:
+            if getattr(backend, method_name, None) != func:
+                raise P03PortHold("Owner3 worker method changed after health probe")
+        except P03PortHold:
+            raise
+        except Exception:
+            raise P03PortHold("Owner3 worker method unavailable after health probe") from None
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
-            return func(session, args)
+            result = func(session, args)
+            # A nullable retry/cancel owner result is not an execution ACK.
+            # Do not let a native bridge treat JSON null as a queued/successful job.
+            if result is None:
+                raise P03PortHold("Owner3 backend returned no operation acknowledgement")
+            return result
         except (P03PortDenied, P03PortHold):
             raise
         except Exception:
@@ -253,6 +335,7 @@ class P03OneHostPort:
         # and could clash with the separate PACK01 P03OwnerPack donor.
         pending = [
             ("models.catalog", self.catalog, lambda: True),
+            ("models.licenses", self.licenses, lambda: True),
             ("models.installed", self.installed, self._local_ready),
             ("models.digest", self.digest, self._metadata_ready),
         ]
@@ -295,8 +378,13 @@ class P03OneHostPort:
         return frozenset(ids)
 
     def _local_ready(self) -> bool:
+        # Readiness must apply the same bounds/shape rules as installed().
+        # Never advertise an unusable /api/tags response as a live native route.
         try:
-            return isinstance(self.ollama.models(), list)
+            tags = self.ollama.models()
+            return (isinstance(tags, list) and len(tags) <= 4096
+                    and all(isinstance(t, str) and TAG.fullmatch(t) for t in tags)
+                    and len(tags) == len(set(tags)))
         except Exception:
             return False
 

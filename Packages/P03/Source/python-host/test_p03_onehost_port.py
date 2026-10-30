@@ -76,7 +76,7 @@ class P03HostPortTests(unittest.TestCase):
             allowed=frozenset(ROUTES), private_approved=frozenset())
 
     def test_01_original_catalog_not_installable(self):
-        self.assertEqual(self.registered, frozenset({"models.catalog","models.installed","models.digest"}))
+        self.assertEqual(self.registered, frozenset({"models.catalog","models.installed","models.digest","models.licenses"}))
         r = self.dispatch.execute("models.catalog", {"query":"qwen"}, self.session)
         self.assertGreater(len(r["models"]), 0)
         self.assertTrue(all(not x["downloadEligible"] and
@@ -123,8 +123,8 @@ class P03HostPortTests(unittest.TestCase):
             self.dispatch.execute("models.digest", {"modelTag": "qwen3:4b"}, other)
 
     def test_03_unbound_actions_hold_no_second_downloader(self):
-        self.assertEqual(len(self.registered),3)
-        self.assertEqual(len(self.dispatch.ports),3)
+        self.assertEqual(len(self.registered),4)
+        self.assertEqual(len(self.dispatch.ports),4)
         with self.assertRaises(pack01.HostHold):
             self.dispatch.execute("models.pull",{},pack01.NativeSession(
                 "tenant","principal","chat",allowed=frozenset({"models.pull"}),
@@ -149,7 +149,7 @@ class P03HostPortTests(unittest.TestCase):
              native_approve=lambda session,route,payload: state["approved"])
         host = pack01.NoxPackHost(self.catalog,native_approve=lambda s,r,p:state["approved"])
         bound = port.register(host,pack01.BoundPort,receipt="P03_BACKEND_MOCK_SOURCE_ONLY")
-        self.assertEqual(bound, frozenset(("models.catalog","models.installed","models.digest","models.pull","models.queue")))
+        self.assertEqual(bound, frozenset(("models.catalog","models.installed","models.digest","models.licenses","models.pull","models.queue")))
         session = pack01.NativeSession("tenant","principal","chat",
             allowed=frozenset(ROUTES),private_approved=frozenset({"models.pull"}))
         with self.assertRaises(P03PortDenied):
@@ -250,8 +250,28 @@ class P03HostPortTests(unittest.TestCase):
 
     def test_08_existing_50_route_host_not_replaced(self):
         self.assertEqual(len(self.dispatch.routes),50)
-        self.assertEqual(len(self.dispatch.ports),3)
-        self.assertEqual(sum(v["enabled"] for v in self.dispatch.advertise(self.session).values()),3)
+        self.assertEqual(len(self.dispatch.ports),4)
+        self.assertEqual(sum(v["enabled"] for v in self.dispatch.advertise(self.session).values()),4)
+
+    def test_20_native_licenses_readonly_review_required(self):
+        result = self.dispatch.execute("models.licenses", {}, self.session)
+        self.assertEqual(len(result["models"]), 30)
+        self.assertFalse(result["licenseEvidenceVerified"])
+        self.assertTrue(all(
+            m["license"] is None and m["licenseEvidenceUrl"] is None
+            and m["reviewStatus"] == "REVIEW_REQUIRED"
+            and m["downloadEligible"] is False
+            for m in result["models"]
+        ))
+
+    def test_21_browser_cannot_assert_native_license_rights(self):
+        with self.assertRaises(P03PortDenied):
+            self.dispatch.execute(
+                "models.licenses", {"licenseAcknowledged": True}, self.session)
+        without_scope = pack01.NativeSession(
+            "tenant", "principal", "chat", allowed=frozenset())
+        with self.assertRaises(pack01.HostDenied):
+            self.dispatch.execute("models.licenses", {}, without_scope)
 
 if __name__ == "__main__":
     unittest.main()
