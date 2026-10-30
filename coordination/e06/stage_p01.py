@@ -60,6 +60,19 @@ def _pinned_part(raw: str) -> Path:
     _require_repo_path(part, hold)
     return part
 
+def cleanup_owned_temp(temp: Path, identity: tuple[int, int] | None) -> None:
+    """Reuse SourceLock inode-safe cleanup: never delete a replaced owner temp."""
+    if identity is None:
+        return
+    try:
+        live = temp.lstat()
+        if (stat.S_ISREG(live.st_mode)
+                and (live.st_dev, live.st_ino) == identity):
+            temp.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def main():
     _require_repo_path(RECEIPT, "E06_DONOR_RECEIPT_REPARSE_HOLD")
     lock=json.loads(RECEIPT.read_text(encoding="utf-8"))
@@ -96,8 +109,11 @@ def main():
     if temp.exists() or temp.is_symlink():
         raise SystemExit("E06_ORIGINAL_DONOR_TEMP_ALREADY_EXISTS")
     total=hashlib.sha256()
+    owned_temp = None
     try:
         with temp.open("xb") as stream:
+            own_stat = os.fstat(stream.fileno())
+            owned_temp = (own_stat.st_dev, own_stat.st_ino)
             for item in sources:
                 src=_pinned_part(item.get("path"))
                 if not src.is_file() or src.is_symlink():raise SystemExit("MISSING_PINNED_SOURCE:"+str(src))
@@ -212,5 +228,5 @@ def main():
         print("E06_P01_DONOR_HASH_PASS",total.hexdigest())
         print("E06_P01_CANDIDATE_SOURCE_FILES",len(files))
     finally:
-        if temp.exists():temp.unlink()
+        cleanup_owned_temp(temp, owned_temp)
 if __name__=="__main__":main()
