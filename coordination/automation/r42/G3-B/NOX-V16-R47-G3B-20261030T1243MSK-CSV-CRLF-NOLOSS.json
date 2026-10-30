@@ -1,0 +1,57 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T1243MSK-CSV-CRLF-NOLOSS",
+  "owner": "G3-B",
+  "existing_task_id": "NIP02-22",
+  "affected_existing_routes": [
+    "NIP02-21 data.csv.parse",
+    "NIP02-22 data.csv.stringify"
+  ],
+  "error_ref": "ERR-SRC-004",
+  "branch": "auto/r42/g3b-pack02",
+  "branch_head_pre": "2311539a7b03d192301f92503d92d1335c5d51fe",
+  "branch_tree_pre": "81522fdebe0c2f9a1e3f87773e39bb92b774d5e5",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "stage": "ISOLATED_SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_INDEPENDENT_QA",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "77e9abc25c15d51af69601f7dd0f6c46ea613547",
+      "post_git_blob": "0002e7d116cdc3bb5cd627f2c5768240e10b850e"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_line_endings_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "41966d011e3a8af223a507de81e7f920cd363d01"
+    }
+  ],
+  "root_cause": "CSV parser globally converted CRLF and CR inside quoted cells to LF; serializer failed to quote lone CR, silently losing value bytes.",
+  "fix": "Normalize CR and CRLF only outside CSV quotes; quote CR-containing cells in existing serializer, preserving all 50 operations.",
+  "tests": {
+    "runtime": "V8 exact Git source using Function",
+    "cases": [
+      {
+        "name": "quoted CRLF value",
+        "red_pre": true,
+        "green_post": true
+      },
+      {
+        "name": "quoted lone CR value",
+        "red_pre": true,
+        "green_post": true
+      },
+      {
+        "name": "row endings and 50 IDs",
+        "red_pre": false,
+        "green_post": true
+      }
+    ],
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "independent_QA": "NOT_RUN"
+  },
+  "lesson_applied": "Previous CSV no-loss/cardinality lessons applied via parse(stringify(rows)) contract tests.",
+  "new_lesson": "CSV record-separator normalization must be context-aware; include CR-only and CRLF-containing quoted values in bidirectional regression.",
+  "preservation": "No changes outside PACK02 source+new test+receipt; original 729 ZIP/3, HOME/MENU/WORK portraits, D02/WOW200, five Persona, STOP/ACL/consent untouched by patch.",
+  "next_owner": "T06 only integrate on live PR162 exact CAS; T08 same-SHA independent QA; T02 only shared registry writer. EV motion remains HOLD."
+}
