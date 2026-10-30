@@ -81,11 +81,14 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   segments.children[4].click();
   assert.equal(c.ids.get('cs5-block').value, 'B05');
   assert.equal(segments.children[4]['aria-pressed'], 'true');
-  assert.equal(c.calls[0].action,'cs5_overview');
+  assert.equal(c.calls.length,0,'Creative Worker must not start at page mount');
   // Selecting a Creative project before opening CS5 must not switch projects.
   c.ids.get('project').value='owner-project-42';
   c.nav.children[0].click();
+  assert.equal(c.calls[0].action,'cs5_overview');
   assert.equal(c.ids.get('cs5-project').value,'owner-project-42');
+  c.ids.get('cs5-status').click();
+  assert.equal(c.calls.at(-1).action,'cs5_overview');
   c.ids.get('cs5-project').value='creative01';
   c.ids.get('cs5-text').value='Original fictional screenplay';
   c.ids.get('cs5-block').value='B03';
