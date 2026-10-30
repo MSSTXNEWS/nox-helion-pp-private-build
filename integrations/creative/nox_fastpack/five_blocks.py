@@ -166,6 +166,6 @@ def _append_with_lock(studio, request, path):
     event["sha256"] = _digest(event)
     state["events"].append(event)
     _write(path, state, stopped=studio._stop_event.is_set)
-    return {"status": "SAVED_LOCAL_NOT_E11", "project_id": project_id,
+    return {"status": "SAVED_LOCAL_NOT_E11", "project_id": request["project_id"],
             "event_id": event["event_id"], "sha256": event["sha256"],
             "evidence_status": evidence}
