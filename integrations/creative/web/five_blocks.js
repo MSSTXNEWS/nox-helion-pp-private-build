@@ -7,11 +7,16 @@
   const content = document.querySelector('.layout main.content');
   if (!nav || !content || typeof rpc !== 'function' || typeof navigate !== 'function') return;
 
+  let previousStudioScreen = 'create';
+  const allowedReturnScreens = new Set(['create','models','jobs','theater','immersive','about']);
   const tab = document.createElement('button');
   tab.type = 'button';
   tab.dataset.nav = 'five';
   tab.textContent = '◈ 5 блоков';
   tab.addEventListener('click', () => {
+    const activeId = document.querySelector('.screen.active')?.id || '';
+    const candidate = activeId.startsWith('screen-') ? activeId.slice(7) : '';
+    if (allowedReturnScreens.has(candidate)) previousStudioScreen = candidate;
     // Preserve the selected NOX Creative project instead of inventing a second one.
     const originalProject = document.getElementById('project')?.value.trim();
     const selected = document.getElementById('cs5-project');
@@ -206,7 +211,7 @@
       byId('cs5-result').textContent = 'HOLD / ERROR: ' + String(e?.message || e);
     }
   }
-  byId('cs5-back').addEventListener('click', () => navigate('create'));
+  byId('cs5-back').addEventListener('click', () => navigate(previousStudioScreen));
   byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
   byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
   byId('cs5-storyboard').addEventListener('click', () =>
