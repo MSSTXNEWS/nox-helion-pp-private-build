@@ -305,5 +305,39 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["reason"],
                          "MODEL_SHARD_PATH_UNSAFE")
 
+
+    def test_nonfinite_json_exponent_in_config_fails_closed(self):
+        (self.root / "config.json").write_text(
+            '{"model_type":"qwen3","suspicious_number":1e9999}', encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"], "MODEL_METADATA_INVALID")
+
+    def test_escaped_lone_surrogate_tensor_name_fails_closed(self):
+        bad_name = "q" + chr(0xD800)
+        header = json.dumps({bad_name: {
+            "dtype": "F32", "shape": [1], "data_offsets": [0, 4]
+        }}, ensure_ascii=True).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header + bytes(4))
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_zero_shape_cannot_hide_enormous_dimension(self):
+        header = json.dumps({"q.weight": {
+            "dtype": "F32", "shape": [0, 1 << 64], "data_offsets": [0, 0]
+        }}).encode("utf-8")
+        (self.root / "model.safetensors").write_bytes(
+            len(header).to_bytes(8, "little") + header)
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SAFETENSORS_HEADER_INVALID")
+
+    def test_escaped_lone_surrogate_index_tensor_key_fails_closed(self):
+        (self.root / "model.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {
+                "q" + chr(0xD800): "model.safetensors"}}, ensure_ascii=True),
+            encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_INDEX_INVALID")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -87,4 +87,23 @@ class Tests(unittest.TestCase):
             self.port.register(host,receipt="a"*64)
         self.assertEqual(host.ports,{})
 
+
+    def test_ui_max_reuses_original_intensive_profile(self):
+        self.plan=m.NativeQLoRAPlan(
+            self.plan.python_exe, self.worker, self.plan.worker_sha256,
+            self.plan.argv_pairs + ("--profile", "MAX"), self.plan.run_id)
+        result=self.port.start("session", {})
+        self.assertEqual(result["status"], "ORIGINAL_QLORA_PROCESS_STARTED_NOT_TRAINED")
+        self.assertIs(result["accepted"], False)
+        self.assertEqual(self.sent[0][-2:], ("--profile", "INTENSIVE"))
+
+    def test_unsupported_native_profile_rejected_without_training(self):
+        self.plan=m.NativeQLoRAPlan(
+            self.plan.python_exe, self.worker, self.plan.worker_sha256,
+            self.plan.argv_pairs + ("--profile", "ULTRA"), self.plan.run_id)
+        with self.assertRaises(m.P04Hold):
+            self.port.start("session", {})
+        self.assertEqual(self.sent, [])
+
+
 if __name__=='__main__':unittest.main()

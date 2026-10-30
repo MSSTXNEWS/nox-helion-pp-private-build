@@ -1,0 +1,82 @@
+{
+  "schema": "NOX_V16_T06_M1_P03_P04_OWNER_REUSE_SOURCE_PATCH_R03",
+  "runId": "NOX-V16-T06-20261030-M1-SOURCE-ONEPASS-R03",
+  "existingTaskId": "T06",
+  "role": "Manual#1 sole integrator PR162",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "preHead": "d534a3a931c4e1c9604fb62ed89969dea5c1b6c0",
+  "preTree": "35fa4b9c7c9f7a02ae5bec83cef9e179ed2adb6d",
+  "postHead": "READ_FROM_IMMUTABLE_GIT_COMMIT",
+  "postTree": "READ_FROM_IMMUTABLE_GIT_COMMIT",
+  "files": [
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "preBlob": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+      "postBlob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68"
+    },
+    {
+      "path": "coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs",
+      "preBlob": null,
+      "postBlob": "e910d1778c9807df8b5530c72926e332b84b1bb0"
+    },
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "preBlob": "c0286fe58c020835ec1fd8c4a7b6d1345f115598",
+      "postBlob": "88f44d21b191ed5997cf7cafe1ff7ef8925feaab"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "preBlob": "525b77d61050b0bac5b1653aedc7b5eec3314991",
+      "postBlob": "4d93bf756986f77fece97e7ee0a53976bbcd0eb9"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/p04_owner_training_port.py",
+      "preBlob": "6d9ec2bfe0ec13baf8ebc9fd4fd1830c9c4d91a3",
+      "postBlob": "a03d261eff3dffcb558dadbb221c8e6b489e65a4"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p04_owner_training_port.py",
+      "preBlob": "bcad30af316511a4483b87a6c3c2030cc8010d8d",
+      "postBlob": "56dbc0ad1cd2da373d3934de0df70cb1157b0f15"
+    }
+  ],
+  "physical": [
+    "G3-B R34 owner P03 source byte-reuse of public queue status/tag/ACK error allowlists; preserve STOP jobId/modelTag and license consent",
+    "P04 model_snapshot.py strict finite JSON numeric exponent, invalid escaped surrogate names/metadata/index, upper bound on zero-shape enormous dimension",
+    "P04 native UI MAX alias safely mapped to original train_qlora.py INTENSIVE (ECO/BALANCED unchanged)",
+    "Focused negative regression: P03 G3-B five tests reused; P04 +4 probe tests, +2 training profile tests; original 37 P04 probe test methods retained"
+  ],
+  "preflight": "23/23_OWNER_STATIC_SOURCE_CHECKS_PASS",
+  "donor": "automation/r30/g3b/G3B-20261030-R34-P03-PRIVACY-REBASE-CB25 commit a691c8a0e017f9313737a0181272959acb339d72",
+  "tests": {
+    "G3B_donor": "V8_MOCK_5_CASES_PREVIOUS_EVIDENCE_NO_CURRENT_NODE_RUN",
+    "P04_existingMethodsPreserved": 37,
+    "P04_probeMethodsAfter": 41,
+    "newP04Methods": 6,
+    "canonicalPythonProjectSuite": "NOT_RUN",
+    "P03_NodeProjectSuite": "NOT_RUN",
+    "WindowsWPF": "NOT_RUN",
+    "E07": "NOT_RUN",
+    "nativeGPU": "NOT_RUN"
+  },
+  "host50": {
+    "sourceMethodCandidates": 50,
+    "sourceUnbound": 0,
+    "nativePending": 14,
+    "exeAccepted": 0
+  },
+  "errorsRelated": [
+    "ERR-SRC-004",
+    "ERR-SYS-001",
+    "ERR-SYS-002"
+  ],
+  "noLoss": "no original ZIP 729/3 deletion; D02/WOW200, 8 CoreID, 5 Persona, PACK01/02 unchanged; source only",
+  "sourceReady": false,
+  "qaAccepted": false,
+  "buildAuthorized": false,
+  "gitlabBuild": false,
+  "productPercent": "N/D",
+  "journal": "T02_SHARED_REGISTER_ONLY; personal T06 receipt + issue handoff",
+  "lesson": "Selective exact PRE→POST donor reuse and targeted safety hardening. No stale donor override, no native accepted without independent same-SHA test.",
+  "next": "T08 test P03/P04 and all P01–P05 on this immutable POST; T09 freeze after completed source and SourceLock; T10 SOURCE_READY only after QA."
+}

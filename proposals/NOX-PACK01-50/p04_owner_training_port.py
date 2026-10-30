@@ -69,11 +69,15 @@ def _plan_args(plan: NativeQLoRAPlan) -> tuple[str, ...]:
     if (not isinstance(plan.run_id, str) or not RUN_ID.fullmatch(plan.run_id)
             or d["--run-id"] != plan.run_id or not RUN_ID.fullmatch(d["--task-id"])):
         raise P04Hold("NATIVE_RUN_AND_TASK_ID_MISMATCH")
-    if d.get("--profile", "BALANCED") not in ("ECO", "BALANCED", "MAX"):
+    selected_profile = d.get("--profile", "BALANCED")
+    if selected_profile not in ("ECO", "BALANCED", "MAX", "INTENSIVE"):
         raise P04Hold("UNAPPROVED_GPU_PROFILE")
     if not re.fullmatch(r"[0-9a-fA-F]{40}", d["--model-revision"]):
         raise P04Hold("IMMUTABLE_MODEL_REVISION_REQUIRED")
-    return v
+    # UI calls the highest profile MAX; original train_qlora.py only accepts
+    # INTENSIVE. Map this trusted owner selection, never page-provided args.
+    return tuple("INTENSIVE" if (i % 2 == 1 and v[i-1] == "--profile" and value == "MAX")
+                 else value for i, value in enumerate(v))
 
 class P04OriginalTrainingPorts:
     """Register to existing PACK01 host only after owner native capability proof."""

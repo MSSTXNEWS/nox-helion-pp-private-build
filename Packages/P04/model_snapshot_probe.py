@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import stat
@@ -63,11 +64,21 @@ def _strict_json_object(raw: str | bytes) -> dict:
     def reject_constant(_value):
         raise ValueError("MODEL_NONFINITE_JSON_CONSTANT")
 
-    obj = json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=reject_constant)
+    def reject_nonfinite_number(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("MODEL_NONFINITE_JSON_NUMBER")
+        return value
+
+    obj = json.loads(raw, object_pairs_hook=unique_pairs,
+                     parse_constant=reject_constant, parse_float=reject_nonfinite_number)
     if not isinstance(obj, dict):
         raise ValueError("MODEL_JSON_NOT_OBJECT")
     return obj
 
+
+def _unpaired_surrogate(value: str) -> bool:
+    return any(0xD800 <= ord(c) <= 0xDFFF for c in value)
 
 
 def _regular(path: Path, directory: bool = False) -> bool:
@@ -131,18 +142,19 @@ def _weight_header(path: Path) -> frozenset[str]:
     tensors = [(name, value) for name, value in header.items() if name != "__metadata__"]
     metadata = header.get("__metadata__", {})
     if (not tensors or not isinstance(metadata, dict) or
-        any(not isinstance(v, str) for v in metadata.values())):
+        any(not isinstance(v, str) or _unpaired_surrogate(v) for v in metadata.values())):
         raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
     for name, tensor in tensors:
         if (not name or len(name) > _MAX_TENSOR_NAME or
             any(ord(c) < 32 or ord(c) == 127 for c in name) or
+            _unpaired_surrogate(name) or
             not isinstance(tensor, dict)):
             raise ValueError("MODEL_SAFETENSORS_HEADER_INVALID")
         width = _TENSOR_WIDTH.get(tensor.get("dtype")) if isinstance(tensor.get("dtype"), str) else None
         shape = tensor.get("shape")
         offsets = tensor.get("data_offsets")
         if (width is None or type(shape) is not list or len(shape) > _MAX_TENSOR_RANK or
-            any(type(dim) is not int or dim < 0 for dim in shape) or
+            any(type(dim) is not int or dim < 0 or dim > (1 << 63) - 1 for dim in shape) or
             type(offsets) is not list or len(offsets) != 2 or
             any(type(n) is not int for n in offsets) or
             not (0 <= offsets[0] <= offsets[1] <= capacity)):
@@ -190,7 +202,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("IMMUTABLE_REVISION_REQUIRED")
         base = _safe_root(root)
         config = _json_file(base / "config.json")
-        if not isinstance(config.get("model_type"), str) or not config["model_type"].strip():
+        if (not isinstance(config.get("model_type"), str) or not config["model_type"].strip() or
+                _unpaired_surrogate(config["model_type"])):
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
         index = base / "model.safetensors.index.json"
         if index.exists() or index.is_symlink():
@@ -201,7 +214,8 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             # Linear index-to-shard map; verify actual tensor membership per shard.
             expected_by_shard: dict[str, set[str]] = {}
             for tensor_name, shard_name in weights.items():
-                if not isinstance(tensor_name, str) or not tensor_name.strip():
+                if (not isinstance(tensor_name, str) or not tensor_name.strip() or
+                        _unpaired_surrogate(tensor_name)):
                     raise ValueError("MODEL_SHARD_INDEX_INVALID")
                 if not isinstance(shard_name, str) or not shard_name:
                     raise ValueError("MODEL_SHARD_PATH_UNSAFE")
