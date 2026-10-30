@@ -395,9 +395,11 @@ class ExistingP02Adapter:
             entries["chat.attach"]=self.attach_native_selected
         for route,func in entries.items():
             # Chat quick commands reflect current host route registry, not Ollama status.
-            # STOP is an OS-local cancellation path, not model inventory.
-            # An offline Ollama must never prevent an authorized stop request.
-            ready=(lambda:True) if route in ("chat.commands", "chat.stop") else self.available
+            # STOP and local SQLite history must work with Ollama offline.
+            # NativeSession/ACL/private approval still gates sensitive history.
+            # Model inference and model catalog remain provider-dependent.
+            ready=(lambda:True) if route in (
+                "chat.commands", "chat.stop", "chat.history") else self.available
             dispatcher.bind(route,BoundPort(func,ready,receipt,2))
         return frozenset(entries)
 

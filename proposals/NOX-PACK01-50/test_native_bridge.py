@@ -103,6 +103,21 @@ class BridgeTest(unittest.TestCase):
             self.dispatch.execute("chat.history",{},wrong)
     def test_stop_invokes_actual_owner_stop(self):
         self.assertTrue(self.dispatch.execute("chat.stop",{},self.session)["stopRequested"])
+    def test_offline_history_available_but_requires_native_private_scope(self):
+        # Offline history is not evidence that a model/provider is connected.
+        self.store.add_message("t1","p1","room1","user","Preserved offline")
+        with patch.object(self.client,"models",side_effect=OSError("Ollama offline")):
+            caps=self.dispatch.advertise(self.session)
+            self.assertTrue(caps["chat.history"]["enabled"])
+            self.assertTrue(caps["chat.stop"]["enabled"])
+            self.assertFalse(caps["helion.chat"]["enabled"])
+            rows=self.dispatch.execute("chat.history",{"limit":20},self.session)["messages"]
+            self.assertTrue(any(x["content"]=="Preserved offline" for x in rows))
+            without_approval=bridge.NativeSession("t1","p1","room1",
+                allowed=frozenset({"chat.history"}))
+            with self.assertRaises(bridge.HostDenied):
+                self.dispatch.execute("chat.history",{},without_approval)
+
     def test_stop_remains_ready_when_ollama_model_inventory_is_offline(self):
         # Native ACL/route checks remain in NoxPackHost.execute; only STOP's
         # availability is decoupled from Ollama /api/tags.
