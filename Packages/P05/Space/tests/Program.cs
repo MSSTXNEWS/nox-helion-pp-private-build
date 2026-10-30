@@ -158,10 +158,11 @@ Pass(duplicateRootResult.Status == "OFFLINE" &&
      duplicateRootResult.Data is null && duplicateRootResult.IsStale,
     "duplicate provider source-time key rejected before LIVE cache");
 
-var duplicateNestedJson = JsonSerializer.Serialize(new {
-    source_time = DateTimeOffset.UtcNow,
-    metadata = new { license = 1, LICENSE = 2 }
-});
+// Construct the intentionally duplicate provider member names as raw JSON.
+// JsonSerializer may reject a case-colliding anonymous type BEFORE FetchAsync,
+// which would prevent testing the real parser's fail-closed behavior.
+var duplicateNestedJson = Json[..^1] +
+    ",\"metadata\":{\"license\":1,\"LICENSE\":2}}";
 var duplicateNested = Client(() => Reply(new ByteArrayContent(
     Encoding.UTF8.GetBytes(duplicateNestedJson))));
 var duplicateNestedResult = await Fetch(duplicateNested);
