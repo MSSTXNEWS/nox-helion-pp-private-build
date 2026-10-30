@@ -146,7 +146,7 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   await c.ids.get('cs5-produce').click();
   await c.ids.get('cs5-models').click();
   await c.ids.get('cs5-back').click();
-  assert.deepEqual(c.navEvents,['create','models','create']);
+  assert.deepEqual(c.navEvents,['five','create','models','create']);
   assert.equal(c.ids.get('project').value,'creative01');
   assert.equal(c.ids.get('prompt').value,'Original fictional screenplay');
   await c.ids.get('cs5-stop').click();
