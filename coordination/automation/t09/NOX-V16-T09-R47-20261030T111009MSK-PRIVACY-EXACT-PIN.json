@@ -1,0 +1,133 @@
+{
+  "schema": "NOX_V16_R47_T09_IMMUTABLE_NOLOSS_FREEZE_GATE_V1",
+  "runId": "NOX-V16-T09-R47-20261030T111009MSK-PRIVACY-EXACT-PIN",
+  "existingTaskId": "T09",
+  "role": "QA-2 independent no-loss frozen-source keeper",
+  "startAtMoscow": "2026-10-30T11:10:09+03:00",
+  "observedAtUtc": "2026-10-30T08:15:11.275Z",
+  "existingOwnerBranch": "coordination/t09-manual-gate-20261029-r01",
+  "branchPreHead": "ba1966a72f5392d6997ec27814b0a76ae2af162d",
+  "prestart": {
+    "canonDocRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon": "NOX FIN ZAGR V16 full document read, 56 consolidated §33 and §§54–56/R29",
+    "roleArchiveGitBlob": "be468852e4138c70095ea6d46ccfcc86c4bd981e",
+    "t02ErrorRegisterGitBlob": "9394036666b5283555e65c5aa60f657f3f6c819b",
+    "errors": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2,
+      "total": 11,
+      "blockingId": "ERR-SRC-004"
+    },
+    "masterDocRevision": "AHj4eMQmbBDyK_uzmz4MIAMo14nCKT4x4_V8n70Oqx7yXESpO8XiACsidqUi2vXTjkTUAXJ2TZHWn9cNEeLrHpAHINLWqGpL9PYkamXsytc",
+    "lessonsDocRevision": "AHj4eMRd9ASgmUorY9HJUPtfJw5Ro11VFot4XQRT-iqPuJzO9IaFr-65OmFN_3FrCF_2Iu2CqWc5gNehk4A0Sf7i8Gxs0Hmy3NqICKRtLRE",
+    "e06DocRevision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "issue177LatestChecked": "6517779297",
+    "previousT09ReceiptCommit": "ba1966a72f5392d6997ec27814b0a76ae2af162d",
+    "previousT09ReceiptGitBlob": "9e026a47101964df574e800611e928467083fb47"
+  },
+  "pr162": {
+    "preHead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "verifiedTree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "sourceHeadUnchangedSincePreviousT09": true,
+    "notFrozen": true,
+    "productWrite": false
+  },
+  "physical": {
+    "kind": "TARGETED_EXACT_BLOB_COMPARE_OF_NEW_P1_NATIVE_PERMISSION_BLOCKER_PLUS_SOURCELOCK_ROOT_TREE_REUSE",
+    "archiveRootTreeProof": {
+      "source_00_part": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        20971520
+      ],
+      "source_01_part": [
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        20971520
+      ],
+      "source_02_part": [
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        18421306
+      ],
+      "matchesT07OriginalThreeParts": true,
+      "archiveSha256FromPriorPhysicalT07": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "membersPreviouslyIndependentlyVerified": 729,
+      "rawZipRehashThisRun": "NOT_RUN_IDENTICAL_GIT_BLOBS_AND_SIZES"
+    },
+    "recentT07IsolatedSourceReceipt": "1037d8c2eba9a9941c9c9b7f670a4ad5f0d364b7",
+    "t07LatestPatchIntegratedIntoPR162": false,
+    "independentSecurityEvidence": {
+      "file": "coordination/e06_host50/admission.py",
+      "integratedBlob": "d8d8e898a4984dddbc27a8f2ba4d50a5e5d98dc4",
+      "preparedOwnerBranchHead": "e8287c53a627bb8b740775696a2e2638329e1f4e",
+      "preparedOwnerBlob": "dcd28cf34ee02ad1c5dd8845688f1ef949c72ce6",
+      "actual_admit_method": "native_option_verifier() before SENSITIVE_NATIVE_PERMISSION_REQUIRED in integrated source (offsets 2365 < 3033); PREPARED owner candidate guard first (1417 < 2660)",
+      "sourceStructuralCheck": "PASS_IDENTIFIED_P1_PERMISSION_BEFORE_NATIVE_SIDE_EFFECT_ORDER",
+      "callbackNoSideEffectRuntimeTest": "NOT_RUN",
+      "nativeE07": "NOT_RUN",
+      "reproCorroboratedByIndependentT10": "issue177-comment-6517373384"
+    },
+    "mediaManifestBlob": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+    "fiveApprovedStillShaRightsAndRuntimeBindings": "NOT_PROVEN_ON_INTEGRATED_HEAD",
+    "EVOptionalMotion": "NOT_A_RELEASE_BLOCKER_IF_STRICTLY_OPTIONAL"
+  },
+  "t06": {
+    "owner8of8OnExactlyCurrentHead": "NOT_PROVEN",
+    "ownerAcceptedSignedHeadTreeManifest": false
+  },
+  "t08": {
+    "receiptBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "limitedP03Checks": "28/28_V8_PASS_SOURCE_ONLY",
+    "fullIndependentP01P05SourcePass": false,
+    "nativeSTOPACLConsent": "NOT_RUN"
+  },
+  "gates": {
+    "A_READ": "PASS",
+    "B_PHYSICAL": "PASS_TARGETED_SOURCE_ONLY",
+    "C_IMMUTABLE_RECEIPT": "PENDING_GIT_READBACK",
+    "D_LESSONS": "PASS_DEDUP_PREVIOUS_AND_ONE_NEW_ACTIONABLE",
+    "E_REPORT": "PENDING",
+    "T09_operational": "1/6 historical equal-weight only",
+    "acceptedTaskDelta": 0,
+    "product": "N/D",
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "SOURCE_READY": "HOLD",
+    "FROZEN_HEAD": null
+  },
+  "blocker": {
+    "errorId": "ERR-SRC-004",
+    "primaryOwner": "T06/manual #1",
+    "nextOwner": "T08/manual #2",
+    "specificAction": "T06 first CAS-integrate already-prepared permission-before-native-side-effect patch against exact admission.py PRE blob d8d8e898..., run targeted zero-callback denied-sensitive-scope + STOP/ACL/consent/privacy/NO-LOSS regressions; accept 8/8 on ONE HEAD/tree/manifest with five approved still SHA256/rights/owner-map. T08 independent full SOURCE PASS on same HEAD; only THEN T09 immutable seal and T10/T11 handoff.",
+    "noFalseFreeze": true
+  },
+  "lessons": {
+    "previousApplied": "No 60MB original ZIP redownload when exact three source-part blobs and sizes unchanged; T07 729/729 historical physical PASS retained.",
+    "newActionable": "A native verifier callback may mutate private state before eventual permission Denied; the integrated pre-callback scope guard is a T09 freeze safety prerequisite. Enforce denial before native callbacks and independently test zero callback executions.",
+    "t02SoleSharedWriter": true,
+    "noDuplicateErrorId": true
+  },
+  "safeties": {
+    "NO_LOSS": true,
+    "originalHOME_MENU_WORKPreserved": true,
+    "D02_WOW200": true,
+    "eightCoreIDs": true,
+    "fivePersonaIdentityConserved": true,
+    "originalApprovedPortraitRightsNotPresumed": true,
+    "originalSourceLock_729_3Preserved": true,
+    "Host50NativePending": 14,
+    "STOP_ACL_ConsentDataRollbackRequired": true,
+    "productCodeWrite": false,
+    "sharedJournalWrite": false,
+    "noEXE": true,
+    "noCI": true,
+    "noE07": true,
+    "noT10Signing": true
+  }
+}
