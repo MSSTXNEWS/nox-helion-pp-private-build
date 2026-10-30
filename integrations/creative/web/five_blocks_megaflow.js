@@ -73,7 +73,10 @@
      note(r,'B03_PROOF','storyboard.json SHA-256 '+proof.sha256);
      note(r,'B03_MEDIA','Звуковой план создан; MP4 не заявлен без реального workflow/рендера');
      // One existing catalog call instead of duplicate status RPC.
-     const catalog=await worker(r,'catalog',{},'B04_LOCAL_CATALOG');
+     // Reuse the existing statusless Studio.catalog() contract.
+     check(r);
+     const catalog=await rpc('catalog');
+     check(r);
      if(!catalog || !Array.isArray(catalog.models))throw Error('B04_CATALOG_UNAVAILABLE_HOLD');
      const verified=catalog.models.filter(model=>model.installed===true&&model.checksum==='ON_DEMAND').length;
      note(r,'B04','Creative catalog '+catalog.models.length+'; SHA-receipt candidates '+verified+

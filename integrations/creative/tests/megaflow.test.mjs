@@ -21,7 +21,7 @@ function mount(override={}){
    if(action==='storyboard')return {status:'STORYBOARD_READY',project_id:'creative01',storyboard:{scenes:[1,2,3]}};
    if(action==='create_text')return {status:'CREATED',project_id:'creative01',kind:'sound',bytes:20};
    if(action==='project_files')return {status:'OK',project_id:'creative01',files:[{path:'storyboard.json',bytes:20,sha256:sha}]};
-   if(action==='catalog')return {status:'OK',models:[]};
+   if(action==='catalog')return {models:[],categories:[]};
    if(action==='cs5_export')return {status:'EXPORTED_LOCAL_NOT_PUBLISHED',project_id:'creative01',bytes:120,sha256:sha};
    if(action==='stop')return {status:'STOPPED'};
    throw Error('unexpected '+action);
@@ -37,6 +37,7 @@ test('all five stages use existing worker, preserve draft and verify receipts',a
  assert.equal(actions.filter(x=>x==='cs5_research').length,4);
  assert.equal(actions.filter(x=>x==='cs5_append').length,3);
  assert.ok(actions.includes('catalog')&&!actions.includes('cs5_overview'));
+ assert.equal(actions.filter(action=>action==='catalog').length,1);
  assert.ok(!actions.includes('download')&&!actions.includes('publish'));
  assert.ok(x.status().includes('FINISH'));
 });
