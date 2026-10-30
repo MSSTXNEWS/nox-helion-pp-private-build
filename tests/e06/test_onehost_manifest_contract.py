@@ -13,6 +13,30 @@ class OneHostManifestContract(unittest.TestCase):
     def setUpClass(cls):
         cls.source = BUILDER.read_text(encoding="utf-8")
 
+    def test_t06_run_id_gate_before_any_side_effect(self):
+        """A malformed receipt/build ID must not reach output staging."""
+        guard = self.source.find("E06_BUILD_INVALID_RUN_ID")
+        self.assertGreater(guard, 0)
+        self.assertIn(r"\A[A-Za-z0-9][A-Za-z0-9._:-]{1,127}\z", self.source)
+        for token in (
+            "Assert-E06PlainPathAncestors -Candidate $SourceRoot",
+            "New-Item -ItemType Directory -Path $OutputRoot",
+            "& dotnet publish $project",
+        ):
+            self.assertGreater(self.source.find(token), guard)
+
+    def test_t06_missing_nsis_does_not_leave_disposable_stage(self):
+        """Discover tools before any D02 stage, WPF publish or output write."""
+        nsis = self.source.find("NSIS_BINARY_PATH_HOLD")
+        self.assertGreater(nsis, 0)
+        self.assertEqual(self.source.count("$makensis=Get-Command 'makensis.exe'"), 1)
+        for token in (
+            "if ($wantsCreative) {",
+            "New-Item -ItemType Directory -Path $OutputRoot",
+            "& dotnet publish $project",
+        ):
+            self.assertGreater(self.source.find(token), nsis)
+
     def test_hidden_and_system_payload_files_are_hashed(self):
         self.assertRegex(
             self.source,
