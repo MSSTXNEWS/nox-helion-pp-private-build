@@ -75,7 +75,7 @@ $dotnetSdk = Get-Command dotnet.exe -ErrorAction SilentlyContinue | Select-Objec
 if (-not $dotnetSdk) { throw 'E06_DOTNET8_SDK_REQUIRED_PRECHECK' }
 $installedSdks = @(& $dotnetSdk.Source --list-sdks 2>$null)
 if ($LASTEXITCODE -ne 0 -or
-    @($installedSdks | Where-Object { $_ -match '^8\\.' }).Count -eq 0) {
+    @($installedSdks | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
   throw 'E06_DOTNET8_SDK_REQUIRED_PRECHECK'
 }
 $visualStage='NOT_REQUESTED'
