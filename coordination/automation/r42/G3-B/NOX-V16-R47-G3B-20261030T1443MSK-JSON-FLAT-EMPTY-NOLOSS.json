@@ -1,0 +1,39 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T1443MSK-JSON-FLAT-EMPTY-NOLOSS",
+  "owner": "G3-B",
+  "existing_task_id": "NIP02-29",
+  "route": "data.json.flatten",
+  "error_ref": "ERR-SRC-004",
+  "branch": "auto/r42/g3b-pack02",
+  "branch_head_pre": "defb656d45003ba0ac3f450a8ef1cb6a7b9e49a7",
+  "branch_tree_pre": "38a578dd9f8c1b7dd4cc46b81a8cffd14167b261",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_status": "ISOLATED_SOURCE_PATCH_TESTED_NOT_INTEGRATED_NOT_INDEPENDENT_QA",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "dd8a1427044f0b3b0a7f2bbe67e9d77426e40517",
+      "post_git_blob": "70bfea10b39a30f3897429cd73123d219c958631"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_json_flatten_empty_containers_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "2ccbf33e3c56a9cfb930e928cb6cca2693c2b4de"
+    }
+  ],
+  "root_cause": "JSON flatten recursively traversed Object.entries but silently skipped empty objects and arrays, producing incomplete output rather than an error.",
+  "fix": "Fail closed on empty JSON containers at any depth with JSON_FLATTEN_EMPTY_CONTAINER; preserve nonempty flatten wire shape, collision handling, prototype-safe dictionary and all 50 IDs.",
+  "tests": {
+    "runtime": "V8 exact owner Git source evaluated via Function (not Node/.NET/Windows)",
+    "pre_red": "1/1 nested empty object silently lost; other empty cases observed",
+    "post_green": "11/11 (6 empty root/nested/container cases, 2 prior collisions, 1 nonempty array/object, 1 __proto__, 1 Host50 ID count)",
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN",
+    "independent_qa": "NOT_RUN"
+  },
+  "lesson_applied": "Previous PACK02 no-loss regression extended from path collisions/non-scalar CSV values to empty nested JSON containers.",
+  "new_lesson": "JSON flattening has a silent information-loss case when recursion emits no leaves; reject empty object/array nodes explicitly and test both root and nested shapes.",
+  "preservation": "Only existing PACK02 ops.mjs, one focused test and this immutable receipt; original 729/3, HOME/MENU/WORK, approved still Persona, D02/WOW200, STOP/ACL/consent/privacy/data/rollback untouched; EV motion HOLD.",
+  "next_owner": "T06 sole PR162 integrator: integrate cumulative PACK02 on exact fresh PRE, independent T08 same-SHA QA; T02 sole shared ERROR_REGISTER/Master/E06/Lessons writer."
+}
