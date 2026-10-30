@@ -81,6 +81,25 @@ class FiveBlockContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "CS5_EVENT_CHAIN_HOLD"):
             dispatch_five(self.owner, {"action": "cs5_list", "project_id": "creative01"})
 
+    def test_provenance_url_requires_host_and_no_credentials(self):
+        for url in ("https://", "https://user:secret@example.com",
+                    "https://example.com/a\\nX:1", "ftp://example.com"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "CS5_SOURCE_URL_HOLD"):
+                self.event("B01", "research", source_url=url)
+
+    def test_stop_race_during_fsync_aborts_publish(self):
+        from unittest.mock import patch
+        from nox_fastpack import five_blocks as fb
+        original_fsync = fb.os.fsync
+        def stop_during_flush(fd):
+            original_fsync(fd)
+            self.owner._stop_event.set()
+        with patch.object(fb.os, "fsync", side_effect=stop_during_flush):
+            with self.assertRaisesRegex(ValueError, "CS5_STOP_ACTIVE"):
+                self.event("B02", "idea", text="Must not publish after STOP")
+        result = dispatch_five(self.owner, {"action": "cs5_list", "project_id": "creative01"})
+        self.assertEqual(result["count"], 0)
+
     def test_no_project_escape(self):
         with self.assertRaises(ValueError):
             dispatch_five(self.owner, {"action":"cs5_list","project_id":"../../other"})
