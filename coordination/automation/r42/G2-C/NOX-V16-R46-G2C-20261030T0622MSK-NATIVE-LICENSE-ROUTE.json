@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_V16_R42_OWN_IMMUTABLE_RECEIPT_V1",
+  "run_id": "NOX-V16-R46-G2C-20261030T0622MSK-NATIVE-LICENSE-ROUTE",
+  "role": "G2-C existing P03 / Code1 analogue",
+  "task_id": "P03 ModelCenter / existing Host50 models.licenses",
+  "program": "NOX V16 EXPRESS INTEGRATOR source-only",
+  "source_branch": "auto/r42/g2c-p03",
+  "branch_head_pre": "6aaf06f83fc4cb24f4f59d612f684bc3362a6cd1",
+  "pr162_head_observed": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "pr162_tree_observed": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+  "pr162_modified": false,
+  "pr224_head_observed": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+  "register_git_blob_read": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+  "errors": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "root_cause": "Frozen PACK01 models.licenses (owner3 SAFE) exists but P03 Python OneHost port exposed only three read routes; no bound native callback for licenses. Six owner write routes still require independently attested backend.",
+  "changes": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre_blob": "17bad1e52aa174ff8b1af9d39be3ea2056e7874a",
+      "post_blob": "8237b3868738421de7985e5b4153e00a2b666942",
+      "pre_sha256": "04bf0282ef4a1b13a8a68ff31912310fac1d5a96fb44d53ef973d782efb9b86e",
+      "post_sha256": "4ab31f7a35d59bb1c0ab7b233d7e7ec3d1ff62eb4cb62b59f625a4b0fb8f857e"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
+      "pre_blob": "074a96c99848806c7b20d28fa1c43dc9bf4dedde",
+      "post_blob": "6fe18b7e1323fb124f5cff15a26b7131dfab46e6"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md",
+      "pre_blob": "e56ef799c1d442de1e402f8adc7d36e765d92655",
+      "post_blob": "9944a2d9c0f53fcb81684a99addb815dd87099c6"
+    }
+  ],
+  "tests": {
+    "local_isolated_python": "3/3 PASS against extracted licenses method; not complete repository source",
+    "source_structural": "7/7 PASS against entire fetched source content and frozen PACK01 policy",
+    "full_python_pinned_p02_pack01": "NOT_RUN",
+    "windows_native": "NOT_RUN",
+    "weight_downloads": "NONE"
+  },
+  "lesson_applied": "R35 avoid treating descriptor as native bound; no browser-supplied rights proofs",
+  "new_lesson": "Every fixed owner3 native route must have exactly one executable owner-scoped callback or explicitly remain HOLD; read-only rights discovery must always return null evidence/REVIEW_REQUIRED.",
+  "acceptance": {
+    "source_prepared": true,
+    "source_verified_limited": true,
+    "pr162_integrated": false,
+    "qa_accepted": false,
+    "source_ready": false
+  },
+  "report_gate": "PENDING_GIT_READBACK",
+  "next_owner": "T06 #1 independently verify exact current PR162 PRE and cherry-pick only P03 native license route; then T08 exact-head native QA; T02 sole shared journal CAS"
+}

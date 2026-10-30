@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,99}$")
 TAG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}(?::[A-Za-z0-9][A-Za-z0-9._-]{0,127})?$")
-READ_ROUTES = ("models.catalog", "models.installed", "models.digest")
+READ_ROUTES = ("models.catalog", "models.installed", "models.digest", "models.licenses")
 OWNER_ROUTES = {
     "models.pull": "pull",
     "models.gguf.import": "import_gguf",
@@ -132,6 +132,21 @@ class P03OneHostPort:
         return {"models": [dict(x) for x in self.family_cards
                            if q in x["name"].casefold() or q in x["id"].casefold()],
                 "downloadEligible": False, "source": "P03 discovery only"}
+
+    def licenses(self, session: object, args: dict) -> dict:
+        """Existing PACK01 license route: discovery is never a legal grant."""
+        self._ensure_native_scope(session, "models.licenses", args)
+        if args:
+            raise P03PortDenied("No license assertions accepted from browser")
+        return {
+            "models": [{
+                "id": m["id"], "name": m["name"],
+                "license": None, "licenseEvidenceUrl": None,
+                "reviewStatus": "REVIEW_REQUIRED", "downloadEligible": False,
+            } for m in self.family_cards],
+            "licenseEvidenceVerified": False,
+            "source": "P03 discovery only",
+        }
 
     def installed(self, session: object, args: dict) -> dict:
         self._ensure_native_scope(session, "models.installed", args)
@@ -253,6 +268,7 @@ class P03OneHostPort:
         # and could clash with the separate PACK01 P03OwnerPack donor.
         pending = [
             ("models.catalog", self.catalog, lambda: True),
+            ("models.licenses", self.licenses, lambda: True),
             ("models.installed", self.installed, self._local_ready),
             ("models.digest", self.digest, self._metadata_ready),
         ]
