@@ -11,11 +11,13 @@ import sys
 
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
+ORIGINAL_STORAGE_SHA256="145f23a7df0cff95c5287cf35edfdbac4831af0357c6c5d8cf4c92fbe9c58f93"
 ADDONS=(
-    ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","6beaf43cd7b09d703819bb54eb9c53dc71876f0b"),
+    ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","7ffbcd7247e5d8be2dcdc56e3dd68c1c0e669744"),
     ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","842f3d60f9506a7ed54a4cf4e158254bf6617df6"),
     ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
-    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","50da9975719fb179f33484a35ee7bf15a9d11a18"),
+    ("Packages/P02/worker-python/p02_runtime.py","p02_runtime.py","ac1620ef6584debcea30d9ea169c2cc0a2cd566b"),
+    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","285027675738d3e64d77cfe1c3cdbe28a38a95bc"),
 )
 ARG_ANCHOR="    parser.add_argument('--diagnose',action='store_true',help='headless functional contracts check')"
 PARSE_ANCHOR="    args=parser.parse_args()"
@@ -23,7 +25,7 @@ STAGED_MODE="""    if args.native_stdio:
         if not args.run_id or args.desktop_v23 or args.diagnose or args.infer_local or args.core_runtime_local:
             parser.error('native_stdio_requires_exclusive_trusted_run_id')
         from .e06_native_stdio_owner import serve_existing_store
-        with Store(args.data_dir/'helion.sqlite3') as original_store:
+        with Store(args.data_dir/'helion.sqlite3',native_thread_safe=True) as original_store:
             return serve_existing_store(original_store, args.run_id)
 """
 
@@ -48,6 +50,22 @@ def stage(source:Path)->dict:
     original=app.read_bytes()
     if hashlib.sha256(original).hexdigest()!=ORIGINAL_APP_SHA256:
         raise RuntimeError("E06_ORIGINAL_APP_PREIMAGE_MISMATCH")
+    storage=source/"helion/storage.py"
+    if not storage.is_file() or storage.is_symlink():
+        raise RuntimeError("E06_ORIGINAL_STORE_SOURCE_MISSING")
+    storage_original=storage.read_bytes()
+    if hashlib.sha256(storage_original).hexdigest()!=ORIGINAL_STORAGE_SHA256:
+        raise RuntimeError("E06_ORIGINAL_STORE_SOURCE_SHA_HOLD")
+    original_connect="self.conn = sqlite3.connect(str(self.path), timeout=15)"
+    original_ctor="def __init__(self, path: str | Path):"
+    storage_text=storage_original.decode("utf-8")
+    if storage_text.count(original_connect)!=1 or storage_text.count(original_ctor)!=1:
+        raise RuntimeError("E06_ORIGINAL_STORE_NATIVE_ANCHOR_HOLD")
+    storage_text=storage_text.replace(original_ctor,
+        "def __init__(self, path: str | Path, *, native_thread_safe: bool = False):")
+    storage_text=storage_text.replace(original_connect,
+        "self.conn = sqlite3.connect(str(self.path), timeout=15, check_same_thread=not native_thread_safe)")
+    compile(storage_text,str(storage),"exec")
     text=original.decode("utf-8")
     if text.count(ARG_ANCHOR)!=1 or text.count(PARSE_ANCHOR)!=1 or "--native-stdio" in text:
         raise RuntimeError("E06_ORIGINAL_CLI_ANCHOR_MISMATCH")
@@ -67,10 +85,13 @@ def stage(source:Path)->dict:
     for target,data in sources:
         target.parent.mkdir(parents=True,exist_ok=True)
         with target.open("xb") as f:f.write(data)
+    storage.write_bytes(storage_text.encode("utf-8"))
     app.write_bytes(updated.encode("utf-8"))
-    if app.read_bytes()!=updated.encode("utf-8"):
-        raise RuntimeError("E06_NATIVE_ORIGINAL_APP_READBACK_HOLD")
+    if (app.read_bytes()!=updated.encode("utf-8") or
+            storage.read_bytes()!=storage_text.encode("utf-8")):
+        raise RuntimeError("E06_NATIVE_ORIGINAL_SOURCE_READBACK_HOLD")
     return dict(original_app_sha256=ORIGINAL_APP_SHA256,
+                original_storage_sha256=ORIGINAL_STORAGE_SHA256,
                 staged_app_sha256=hashlib.sha256(app.read_bytes()).hexdigest(),
                 pinned_addons=len(sources),original_archive_modified=False,
                 native_python_source_smoke_verified_separately=True,

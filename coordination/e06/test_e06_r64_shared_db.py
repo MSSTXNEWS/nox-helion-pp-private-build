@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from p02_runtime import P02Store
-from e06_native_stdio_owner import (
+from helion.e06_native_stdio_owner import (
     ORIGINAL_V4_OBJECTS, admit_shared_p02_store,
 )
 
