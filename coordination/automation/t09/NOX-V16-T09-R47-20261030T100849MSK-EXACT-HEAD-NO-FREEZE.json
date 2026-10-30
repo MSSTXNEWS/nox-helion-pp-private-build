@@ -1,0 +1,119 @@
+{
+  "schema": "NOX_V16_T09_R47_EXACT_SOURCE_HOLD_NOLOSS_CHECKPOINT_V1",
+  "runId": "NOX-V16-T09-R47-20261030T100849MSK-EXACT-HEAD-NO-FREEZE",
+  "existingTaskId": "T09",
+  "observedAtUtc": "2026-10-30T07:14:51.155Z",
+  "startAtMoscow": "2026-10-30T10:08:49+03:00",
+  "role": "QA-2/T09 independent frozen-source keeper",
+  "ownerBranch": "coordination/t09-manual-gate-20261029-r01",
+  "ownerBranchHeadPre": "d8cbb8aa53c5d23a993fb660890ed49959b2f44e",
+  "prestart": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonParagraphCount": 705,
+    "consolidatedRules33": 56,
+    "errorRegisterBlob": "c3d53c5a0e9e0548a757792cd294d052d7e8f15c",
+    "errorCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "errorIDs": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "issue177ObservedComments": 548,
+    "source": "GitHub authenticated ref/tree; T07 physical issue #177 comment 6513693455; T08 Git blob 2e4981b...",
+    "masterContinuationDocRevision": "AHj4eMQ5ARJ0wc0NBtILPYlD0nR4yOrKmDgoAGNZmCspseDXs2P-ueDco31ZBHSSNSGIqCO34mygSsrDAM0bYY-9ASNkB1Or2Ltk3Rtji0Q",
+    "lessonsDocRevision": "AHj4eMRUXC5bl9ZWmD_JoEKJGamuARG87wpYmZkWqdC9TpbKTWEwmPk733BvlT87IJUuHqzAhd4cAG1n6rBezCS4zAj59vUCiRhbv9b1rGE",
+    "e06DocRevision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0"
+  },
+  "pr162": {
+    "headPre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "state": "DRAFT",
+    "previousT09Head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "noProductFileDeltaSincePriorT09": true
+  },
+  "physical": {
+    "kind": "INDEPENDENT_CURRENT_REF_AND_ROOT_TREE_RECHECK_WITH_TARGETED_NEW_T07_OWNER_DELTA",
+    "threeOriginalParts": [
+      [
+        "source_00.part",
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        20971520
+      ],
+      [
+        "source_01.part",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        20971520
+      ],
+      [
+        "source_02.part",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        18421306
+      ]
+    ],
+    "originalArchiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalArchivePhysicalMemberEvidence": "T07 729/729 sha256+CRC PASS, preserved unchanged Git blob IDs; no 60MB redownload",
+    "approvedOriginalStillsAndRights": "NOT_PROVEN_FOR_ALL_FIVE; T07 physical receipts show KV+LA not in 729 ZIP and EV still digest null; not proof external assets absent; optional EV motion not required",
+    "latestOwnerSafeDelta": "T07 isolated branch auto/r42/g4a-sourcelock HEAD 08cd861b5c7f263c222e9bdca29f72688f8dd3fb: ZIP namespace path normalization/fail-closed fixes remain OUTSIDE PR162; do not count as integrated or changed original archive bytes",
+    "nativeHost50Pending": 14
+  },
+  "t06": {
+    "ownerEightOfEight": "NOT_PROVEN",
+    "lastIntegratedCommit": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "ownerEvidence": "issue177 comment 6514488153 expressly states none independently signed 8/8; 8 read-only source checks are not owner 8/8"
+  },
+  "t08": {
+    "sourceHead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "receiptBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "disposition": "P03_ONLY_28_OF_28_V8_MOCKED_PASS; FULL_SOURCE_QA_NOT_CONFIRMED",
+    "nativeStopAclConsentPrivacy": "NOT_RUN_OR_NOT_ACCEPTED",
+    "fullIndependentSameSHA_SOURCE_PASS": false
+  },
+  "gates": {
+    "T09": "1/6 operational equal weight, unchanged",
+    "ownerAccepted": false,
+    "independentQAFinal": false,
+    "finalFrozenHead": null,
+    "t10T11Handoff": false,
+    "productProgress": "N/D",
+    "acceptedTaskDelta": 0,
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "build": "NOT_AUTHORIZED_AND_NOT_RUN"
+  },
+  "blocker": {
+    "id": "ERR-SRC-004",
+    "owner": "T06/manual#1 then T08/manual#2",
+    "exactNextAction": "T06 sign current 8/8 HEAD/tree/manifest including approved required still SHA256+rights/owner map and actual STOP/ACL/consent/privacy/rollback Host50 evidence; T08 independent full P01-P05 SOURCE PASS on identical SHA; only then T09 one frozen seal and T10/T11 identical SHA handoff",
+    "staleFreezePrevented": true
+  },
+  "lessons": {
+    "previousApplied": "reuse T07 exact immutable 729/3 only on identical three Git blobs/size; no stale acceptance inheritance",
+    "newEvidence": "T07 improvements to verifier source are isolated from PR162 and do not mutate physically accepted original archive; require owner CAS+independent targeted QA before counting them as integrated",
+    "sendToT02": "No new ERROR_ID; T02 09:54 shared register already indexes persona source evidence, avoid duplicate write to shared docs"
+  },
+  "previousT09ReceiptBlob": "ee5471993700027acb44dfdadf01d61be9607b2f",
+  "security": {
+    "noProductWrite": true,
+    "noSharedRegisterWrite": true,
+    "noEXE": true,
+    "noCI": true,
+    "noE07": true
+  }
+}
