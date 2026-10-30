@@ -19,6 +19,7 @@
       selected.value = originalProject;
     }
     navigate('five');
+    verifyConnection();
   });
   nav.appendChild(tab);
 
@@ -56,6 +57,7 @@
         <input id="cs5-source" maxlength="600" placeholder="https://..." autocomplete="off">
       </label>
       <div class="actions">
+        <button class="action" type="button" id="cs5-status">Проверить подключение</button>
         <button class="action primary" type="button" id="cs5-save">Сохранить в проект</button>
         <button class="action" type="button" id="cs5-list">История и SHA</button>
         <button class="action" type="button" id="cs5-older" disabled>Ранние записи</button>
@@ -119,6 +121,23 @@
     return value;
   }
   let loading = false;
+  let overviewInFlight = false;
+  let overviewReady = false;
+  async function verifyConnection() {
+    if (overviewInFlight || overviewReady) return;
+    overviewInFlight = true;
+    const out = byId('cs5-result');
+    out.textContent = 'Проверка штатного Creative Worker…';
+    try {
+      const result = await rpc('cs5_overview');
+      overviewReady = true;
+      out.textContent = JSON.stringify(result, null, 2);
+    } catch (error) {
+      out.textContent = 'CONTRACT_REQUIRED: ' + String(error?.message || error);
+    } finally {
+      overviewInFlight = false;
+    }
+  }
   let previousBefore = null;
   function updateHistoryControls(result, before) {
     previousBefore = result.next_before;
@@ -153,6 +172,10 @@
       loading = false;
     }
   }
+  byId('cs5-status').addEventListener('click', () => {
+    overviewReady = false;
+    verifyConnection();
+  });
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));
   byId('cs5-older').addEventListener('click', () => {
@@ -191,9 +214,5 @@
   byId('cs5-music').addEventListener('click', () => executeExisting('create_text', {}));
   byId('cs5-files').addEventListener('click', () => executeExisting('project_files', {}));
   byId('cs5-stop').addEventListener('click', () => byId('stop')?.click());
-  rpc('cs5_overview').then(r => {
-    byId('cs5-result').textContent = JSON.stringify(r,null,2);
-  }).catch(e => {
-    byId('cs5-result').textContent = 'CONTRACT_REQUIRED: ' + String(e.message || e);
-  });
+  // No Worker is started during page initialization; explicit action only.
 })();
