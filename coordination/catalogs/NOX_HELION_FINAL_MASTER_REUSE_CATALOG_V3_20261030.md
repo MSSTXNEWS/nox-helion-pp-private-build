@@ -263,3 +263,7 @@ This is the **preferred shortlist for implementation planning**, distinct from r
 - [51 additional work savers across EXE/Web, templates, video, office, business, knowledge, security](NOX_ALL_PROCESS_WORK_SAVERS_50_MORE_20261030.md)
 
 Selection rule: **prefer an existing full app/agent/template that produces a real usable artifact**, then a suitable SDK, only then raw engine/source. Reuse canonical NOX host, model center and data. Pilot one end-to-end workflow with actual output, STOP, consent, version pin and rollback. Count existing apps separately from candidate links, never double count those 101 as unique new URLs in the existing deduplicated A/B/C count.
+
+## 9. ACTIVE PRIORITY CLEANUP · V4 LEAN ACCELERATORS
+
+[Active-filter audit of 101 whole-work accelerators + 15 precision alternatives](NOX_V4_LEAN_ACCELERATOR_AUDIT_20261030.md). The audit keeps 60, holds 24 and removes 17 from the **active shortlist**, without deleting any historical source. It prioritizes native WPF/WebView2/NSIS source reuse, direct official Roblox MCP, existing Ollama/SQLite/FORGE, real editable output workflows and same-SHA QA. This V4 filter supersedes broad P0 markers in the two earlier work-saver lists; it does not replace the full 2,938-URL discovery archive.
