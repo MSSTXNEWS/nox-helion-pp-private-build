@@ -1,0 +1,72 @@
+{
+  "schema": "NOX_V16_M3_FINAL_PHASE_HANDOFF_V1",
+  "run_id": "NOX-V16-M3-20261030-FINAL-ACTUAL",
+  "role": "Manual3 P04/P05 isolated owner-only; T06 sole writer PR162; T08 independent same-SHA QA; T02 sole shared journal writer",
+  "observed_integrator_head": "d7adf1fa9f1609c2a424e447298679b34d03dfab",
+  "owner_head_pre_receipt": "971576ea0f0cf6757139b033b4a09182515bba3a",
+  "real_tests": {
+    "P04_Python": "264/264 PASS",
+    "P05_Node": "27/27 PASS",
+    "P04_Python_log_sha256": "5c448f87cf32bf8b43de265e0ce3c4e18d6dbfa93485ec748c619a0f409377dd",
+    "P05_Node_log_sha256": "bd8363e2e23eec46a6efa20294d16405f4901f69b7f571a8d3bf898e4167688f",
+    "GPU_preflight": "HOLD exit2 WINDOWS_GPU_HOST_REQUIRED + unavailable Torch ecosystem dependencies",
+    "GPU_preflight_log_sha256": "15df38d86e70c544db7944b69b1d3c2563551602c1b8bd349b45650ab42ff432",
+    "P04_P05_dotnet": "NOT_RUN_DOTNET_SDK_UNAVAILABLE",
+    "GPU_training": "NOT_RUN",
+    "QA": "NOT_RUN"
+  },
+  "exact_source_merge_decisions": [
+    {
+      "path": "Packages/P04/model_snapshot_probe.py",
+      "shared_blob": "247fa7306210505744546b7ca87a63aa5c5b2259",
+      "owner_blob": "27d5c850028acc32bb4c677b879b27ec2b8e4d25",
+      "decision": "SKIP_OWNER_WHOLEFILE_SHARED_NEWER; preserves nonfinite JSON, Unicode, tensor shape guards"
+    },
+    {
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "shared_blob": "d54dfdc12febeb1e1ed1230d2a4c0f624a006183",
+      "owner_blob": "8a355191b250d266a1a6190969629a9238239d7a",
+      "decision": "SKIP_OWNER_WHOLEFILE_SHARED_HAS_50_TESTS_VS_OWNER_40; already corrected manifest fixture"
+    },
+    {
+      "path": "Packages/P05/Space/SpaceFeedClient.cs",
+      "shared_blob": "4437f9f111bd206c975f4af30d7b8fa95213af75",
+      "owner_blob": "bc9be82a43bb2cab701f9586fd9fb0e7e7fea99a",
+      "decision": "OWNER_NFC_DUPLICATE_JSON_HARDENING_CANDIDATE; exact PRE CAS then .NET8"
+    },
+    {
+      "path": "Packages/P05/Space/tests/Program.cs",
+      "shared_blob": "3e119720aa2b4a5e91f227f4561f3aa8492e10aa",
+      "owner_blob": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668",
+      "decision": "PAIR_WITH_P05_NFC_SOURCE_CANDIDATE; +1 assertion; .NET8 required"
+    },
+    {
+      "path": "tests/P04/test_e04_rights_identity_binding.py",
+      "shared_blob": "75f19f4390dafd03b088991338e42e8f4ba9f77d",
+      "owner_blob": "eefc16ee9f5deae1a001e76c9ed61a0f1233c4dc",
+      "decision": "OWNER_FIX_CANDIDATE; status mutation case insensitive no false failure"
+    },
+    {
+      "path": "tests/P04/test_rag_fd_path_consistency.py",
+      "shared_blob": "d20283a0d171a3a8dcc60fa5b72d036f4387af7b",
+      "owner_blob": "e7908f4b796a4d2a4700379a2996ea622dadc58e",
+      "decision": "OWNER_EXPECTED_EARLY_SYMLINK_HOLD_CANDIDATE"
+    },
+    {
+      "path": "coordination/manual/no3/verify_p04_p05_components.py",
+      "shared_blob": null,
+      "owner_blob": "da7939560d6726fd38eb8c9dfdc206fb1131e65a",
+      "decision": "OPTIONAL_REUSE_EXISTING_GATE_ONLY_WHEN_T06_APPROVES; no release PASS from stub"
+    },
+    {
+      "path": "tests/P04/test_component_gate_evidence_r36.py",
+      "shared_blob": null,
+      "owner_blob": "da71a0a2d0d381a7f5112e20748c11355b0394f9",
+      "decision": "PAIR_WITH_COMPONENT_GATE; mock tests not independent QA"
+    }
+  ],
+  "source_ready": false,
+  "qa_accepted": false,
+  "no_loss": "Original 729 archive files / 3 parts, D02 WOW200, 8 CoreIDs, 5 Persona, STOP/ACL/consent preserved; original TaskIDs unchanged",
+  "next": "T06 replay only per-path owner-approved CAS into current PR162, .NET8 P04/P05 actual native + GPU licensed training on Windows, T08 same SHA readback QA; GitLab Windows EXE after SOURCE_READY"
+}
