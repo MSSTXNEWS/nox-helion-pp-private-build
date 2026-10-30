@@ -6,6 +6,7 @@ param(
  [Parameter(Mandatory=$true)][string]$PythonExe,
  [Parameter(Mandatory=$true)][string]$OutputRoot,
  [Parameter(Mandatory=$true)][string]$RunId,
+ [string]$PythonNativeSmokeReceipt='',
  [string]$CreativeSourceRoot='',
  [string]$WowSourceRoot='',
  [string]$PersonaBundlePath=''
@@ -43,6 +44,26 @@ Assert-E06PlainPathAncestors -Candidate $OutputRoot -Scope 'OUTPUT'
 $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+$nativeEvidence='DIAGNOSE_ONLY_NOT_RUNTIME_PROOF'
+if (-not [string]::IsNullOrWhiteSpace($PythonNativeSmokeReceipt)) {
+  Assert-E06PlainPathAncestors -Candidate $PythonNativeSmokeReceipt -Scope 'NATIVE_PROOF'
+  $proofPath=(Resolve-Path -LiteralPath $PythonNativeSmokeReceipt).Path
+  $proof=Get-Content -LiteralPath $proofPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($proof.phase -cne 'BUILT_AND_NATIVE_STDIO_SMOKE_PASS' -or
+      $proof.native_windows_exe_request_reply -cne 'PASS' -or
+      $proof.run_id_matched -ne $true -or $proof.request_id_matched -ne $true -or
+      $proof.original_729_unchanged -ne $true -or $proof.release_accepted -ne $false -or
+      $proof.installed_wpf_e07 -ne $false -or
+      $proof.source_original_archive_sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a' -or
+      $proof.supported_route_verified -cne 'chat.model' -or
+      $proof.exe_file -cne 'NOX_HELION_PRIVATE_CANDIDATE.exe' -or
+      [string]$proof.exe_sha256 -cnotmatch '\A[0-9a-f]{64}\z' -or
+      [string]$proof.staged_original_app_sha256 -cnotmatch '\A[0-9a-f]{64}\z') {
+    throw 'E06_NATIVE_STDIO_WINDOWS_RECEIPT_HOLD'
+  }
+  $exeDigest=[string]$proof.exe_sha256
+  $nativeEvidence='WINDOWS_EXE_NATIVE_STDIO_CHAT_MODEL_SOURCE_SMOKE'
+}
 if ((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $exeDigest) { throw 'PYTHON_ORIGINAL_BINARY_SHA_HOLD' }
 $project=Join-Path $source 'NOX.P01.Shell.csproj'
 $installer=Join-Path $source 'Installer'
@@ -217,7 +238,7 @@ foreach ($entry in $p02StageSources) {
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='ab8520c7b277726f38400b9fc9a1ca5bd2571333'},@{p=$t06Addon;sha='0b65fc5ca62788dbde01e669e98769a23ac5e8a9'})) {
+foreach ($part in @(@{p=$t06Stage;sha='34797d99865cf3d8d20d281c073a8f2ec38d83b2'},@{p=$t06Addon;sha='0b65fc5ca62788dbde01e669e98769a23ac5e8a9'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
@@ -226,9 +247,9 @@ foreach ($part in @(@{p=$t06Stage;sha='ab8520c7b277726f38400b9fc9a1ca5bd2571333'
 }
 $stagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $stagePython) { throw 'T06_NATIVE_STAGE_PYTHON_REQUIRED' }
-& $stagePython.Source $t06Stage $source $t06Addon
+& $stagePython.Source $t06Stage $source $t06Addon $exeDigest
 if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_ORIGINAL_MAINWINDOW_STAGE_FAILED' }
-# One native UI process, original Python runtime invoked ONLY by fixed --diagnose, not auto-started.
+# Original WPF uses the attested Python EXE over native framed stdio; E07 remains separately required.
 # T06: fix 17 malformed original P05 C# HTML raw-string fragments in the
 # disposable SHA-verified R11 stage; exact reversible transformation only.
 $p05Repair=Join-Path $repoRoot 'coordination/e06/stage_p05_html_verbatim.py'
@@ -410,7 +431,7 @@ $receipt=[ordered]@{
  persona_stage_receipt_sha256=if ($wantsPersona) {(Get-FileHash -LiteralPath $personaReceiptPath -Algorithm SHA256).Hash.ToLowerInvariant()} else {$null};
  persona_windows_media_accepted=$false;
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
- one_visible_host=$true;native_bridge_scope='ORIGINAL_PYTHON_READ_ONLY_DIAGNOSE';
+ one_visible_host=$true;native_bridge_scope=$nativeEvidence;
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
 }
 $receiptPath=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'

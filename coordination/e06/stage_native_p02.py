@@ -1,11 +1,11 @@
 """T06: activate existing WPF MainWindow on disposable R11 source, never archive."""
 from pathlib import Path
-import hashlib,sys
+import hashlib,sys,re
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
 ADDON_SHA="0b65fc5ca62788dbde01e669e98769a23ac5e8a9"
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
-def run(source,addon):
+def run(source,addon,backend_sha256=None):
     main=source/"MainWindow.xaml.cs"
     output=source/"Integration/MainWindow.NativeP02.cs"
     if not main.is_file() or main.is_symlink() or output.exists() or output.is_symlink():
@@ -16,6 +16,18 @@ def run(source,addon):
     extra=addon.read_bytes()
     if addon.is_symlink() or blob(extra)!=ADDON_SHA:
         raise ValueError("T06_NATIVE_ADDON_GIT_BLOB_HOLD")
+    # Pin the trusted, successfully IPC-tested Python EXE only in a
+    # disposable staged MainWindow. The committed original addon stays exact.
+    if backend_sha256 is not None:
+        if type(backend_sha256) is not str or not re.fullmatch(r"[0-9a-f]{64}",backend_sha256):
+            raise ValueError("T06_NATIVE_EXE_SHA_INVALID")
+        marker='private const string NativePythonSha = "4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3";'
+        decoded=extra.decode("utf-8")
+        if decoded.count(marker)!=1:
+            raise ValueError("T06_NATIVE_ORIGINAL_SHA_MARKER_HOLD")
+        extra=decoded.replace(marker,
+              'private const string NativePythonSha = "'+backend_sha256+'";').encode("utf-8")
+    staged_blob=blob(extra)
     bom=data.startswith(b"\xef\xbb\xbf")
     text=data.decode("utf-8-sig")
     crlf="\r\n" in text
@@ -31,9 +43,10 @@ def run(source,addon):
     # One checked staged copy. Original committed donor bytes remain immutable.
     output.parent.mkdir(parents=True,exist_ok=True)
     output.write_bytes(extra);main.write_bytes(final)
-    if blob(output.read_bytes())!=ADDON_SHA:
+    if blob(output.read_bytes())!=staged_blob:
         raise ValueError("T06_NATIVE_ADDON_STAGE_READBACK_HOLD")
     print("T06_SHA_PINNED_ORIGINAL_MAINWINDOW_P02_SOURCE_WIRED")
 if __name__=="__main__":
-    if len(sys.argv)!=3:raise SystemExit("USAGE: stage_native_p02.py R11 ADDON")
-    run(Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve())
+    if len(sys.argv) not in (3,4):raise SystemExit("USAGE: stage_native_p02.py R11 ADDON [PINNED_NATIVE_EXE_SHA256]")
+    run(Path(sys.argv[1]).resolve(),Path(sys.argv[2]).resolve(),
+        sys.argv[3] if len(sys.argv)==4 else None)
