@@ -224,7 +224,7 @@
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));
   byId('cs5-older').addEventListener('click', () => {
-    if (previousBefore !== null) perform('cs5_list', previousBefore);
+    if (previousBefore !== null) return perform('cs5_list', previousBefore);
   });
   byId('cs5-latest').addEventListener('click', () => perform('cs5_list'));
   function handoffToOriginal(kind) {
