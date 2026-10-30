@@ -175,13 +175,17 @@ class NoxPackHost:
         for route, item in self.routes.items():
             port = self.ports.get(route)
             inspected_ports[route] = port
+            risk = item["risk"]
+            # Do not probe an owner before native scope has authorized that route:
+            # readiness callbacks can perform work even when advertise() says HOLD.
+            # Dangerous actions are never advertised; execute() performs consent.
+            can_probe = (route in session.allowed and risk != "dangerous" and
+                         (risk == "safe" or route in session.private_approved))
             ready = False
-            if port and route in session.allowed:
+            if port and can_probe:
                 try:ready = port.available() is True
                 except Exception:ready = False
-            risk = item["risk"]
-            scoped = ready and (risk == "safe" or route in session.private_approved)
-            if risk == "dangerous":scoped = False
+            scoped = ready
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
