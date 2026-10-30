@@ -47,6 +47,14 @@ In this matrix, `UNCHANGED` means PR #225 has not modified owner graphics, not t
 | U09 shared materials, icons and lighting | UNCHANGED | Addon uses existing `panel`, `action`, `formrow` classes |
 | U10 44px touch, keyboard, ECO/reduced motion/device perf | PARTIAL | 44px source, inherited style; 320/390/G-FLIP/4K FPS and Windows E07 missing |
 
+## Final designer/navigation source fixes (same add-on)
+- The existing NOX Creative parent `entry.js` is kept byte-identical (Git blob `34032ba9cb41bc3d71afcdbe57f690e15fd76755`); five-block script import is inside original Studio HTML.
+- The **five segments are simultaneously visible** as five existing-class `.action` controls (B01–B05); each is keyboard-accessible, uses `aria-pressed`, updates the original select/kind, and does not create a ninth HOME/MENU item.
+- The studio and five-block panel now sync the **same ProjectID**, both when entering CS5 and before native action routing. No second project name is invented on entry.
+- Designer breadcrumb `NOX / ТВОРЧЕСТВО / 5 блоков` and BACK use the existing `navigate('create')` route, not a new router. Original CSS/material tokens are unchanged, 44px target remains.
+- The original `storyboard`, `create_text`, `project_files`, model catalog and native STOP handlers remain the only execution owners; B05 external publishing and real revenue remain blocked without verified provider receipts.
+- Source verification is not Windows art approval. The late 10-world current MENU ↔ 8 legacy groups mapping still requires exact owner/source review on one frozen HEAD.
+
 ## Tests and release gates
 Run `python -m unittest discover -s integrations/creative/tests -p 'test_five_blocks*.py' -v`; `node --test integrations/creative/tests/five_blocks_ui.test.mjs`; `node --check integrations/creative/web/five_blocks.js`. Then test original `studio.js` and `entry.js`, visual screenshots 320/390/800×480/FullHD/4K, STOP/permissions, original routes, independent 10+10+10 and same-EXE E07. Never mark 100% from static source or browser mock.
 
