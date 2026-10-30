@@ -38,6 +38,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private readonly HashSet<string> _usedIds = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _lifetime = new();
     private long _epoch;
+    private int _activeChat;
+    private int _stopPending;
     private int _disposed;
 
     // All values here come from the native host, NEVER from a WebMessage.
@@ -92,7 +94,24 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private void RevokeDocument()
     {
         Interlocked.Increment(ref _epoch);
+        // Navigating away while a model is executing must request a real
+        // owner STOP, not merely suppress its response in WebView2.
+        if (Volatile.Read(ref _activeChat) != 0 &&
+            Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
+            _ = StopRevokedChatAsync();
         // Never clear _usedIds: a page or transport must not replay native writes.
+    }
+
+    private async Task StopRevokedChatAsync()
+    {
+        try
+        {
+            if (NativeSidMatches() && _nativeAcl(_ownerWindowsSid, "chat.stop"))
+                await _existingPipe.RequestAsync("chat.stop", new { },
+                    TimeSpan.FromSeconds(10), _lifetime.Token);
+        }
+        catch { /* Fail closed; the native host still owns process shutdown. */ }
+        finally { Interlocked.Exchange(ref _stopPending, 0); }
     }
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
@@ -177,15 +196,23 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             }
             if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                 !_nativeAcl(_ownerWindowsSid, route)) return;
-            var result = await _existingPipe.RequestAsync(
-                route, payload.Clone(), route == "chat.stop"
-                    ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(60),
-                _lifetime.Token);
-            // Host still re-authorizes after the potentially blocking IPC call.
-            if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
-                !_nativeAcl(_ownerWindowsSid, route)) return;
-            Reply(source, epoch, id, route,
-                  result.Accepted ? "COMPLETED" : "HOLD", result.ErrorCode, result.Result);
+            // Track only actual model calls; native STOP may overtake the
+            // blocking Python worker on navigation, reload or window teardown.
+            var isChat = route is "helion.chat" or "core.chat" or "persona.chat";
+            if (isChat) Interlocked.Increment(ref _activeChat);
+            try
+            {
+                var result = await _existingPipe.RequestAsync(
+                    route, payload.Clone(), route == "chat.stop"
+                        ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(60),
+                    _lifetime.Token);
+                // Host still re-authorizes after the potentially blocking IPC call.
+                if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
+                    !_nativeAcl(_ownerWindowsSid, route)) return;
+                Reply(source, epoch, id, route,
+                      result.Accepted ? "COMPLETED" : "HOLD", result.ErrorCode, result.Result);
+            }
+            finally { if (isChat) Interlocked.Decrement(ref _activeChat); }
         }
         catch (OperationCanceledException) { /* Native STOP/window close: no stale ACK. */ }
         catch (Exception)
