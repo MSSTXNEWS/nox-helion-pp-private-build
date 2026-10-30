@@ -439,6 +439,9 @@ class ExistingP02VoiceAdapter:
         if voice not in self.voice.permitted_voices:
             raise HostDenied("Voice must be one actually installed and approved")
         level=args.get("level","A2")
+        # Match existing P02 LocalVoicePipeline.LEVELS before native mic access.
+        if type(level) is not str or level not in ("A1","A2","B1","B2","C1","C2"):
+            raise HostDenied("Supported CEFR level required")
         # Validate untrusted selections before native identity/microphone callbacks.
         identity=self.native_identity(session)
         captured=self.native_audio(session)

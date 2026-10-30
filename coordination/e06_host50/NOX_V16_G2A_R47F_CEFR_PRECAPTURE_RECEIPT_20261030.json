@@ -1,0 +1,46 @@
+{
+  "schema": "NOX_V16_R47F_G2A_CEFR_PRECAPTURE_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T1251MSK-CEFR-PRECAPTURE",
+  "existing_task_id": "NIP01-32",
+  "owner_branch": "auto/r42/g2a-host50",
+  "owner_branch_pre_head": "76c9bbac74ea99f54052c25f434645ce1bf9dd7b",
+  "pr162_observed_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_observed_tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_git_blob": "f7cbebbae5fd2067ee71354c8763bbb7f60f5499",
+    "post_git_blob": "3f72e56c936429f398c3cd4396613a442a4775ab"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_voice_prevalidation_r47d.py",
+    "pre_git_blob": "304cdd4b8548228f03ee90654c3a1ee9d38775be",
+    "post_git_blob": "79fbaabb872a166ea9f34c19644efb717514d859",
+    "added_tests": 2,
+    "existing_tests_preserved": 3,
+    "local_extracted_python": "RED_PRE_1_OF_4_SAFEGUARDS_GREEN_POST_4_OF_4",
+    "full_private_repo_python": "NOT_RUN",
+    "windows_native": "NOT_RUN"
+  },
+  "p02_contract": {
+    "path": "Packages/P02/worker-python/p02_capabilities.py",
+    "git_blob": "6e0e3ef98c1fcf7c46e4317cc144582f06ce6ff8",
+    "permitted_cefr": [
+      "A1",
+      "A2",
+      "B1",
+      "B2",
+      "C1",
+      "C2"
+    ]
+  },
+  "root_cause": "ExistingP02VoiceAdapter.speak reads page-supplied level and calls native identity/microphone before P02 LocalVoicePipeline validates CEFR; unsupported, unhashable or null levels can trigger privacy-sensitive capture before rejection.",
+  "physical_fix": "Check exact P02 CEFR level allowlist and string type before any native_identity/native_audio callback; preserves permitted voice/STOP/consent and existing host.",
+  "prior_lesson_applied": "R47D MIC_ZERO_SIDE_EFFECT_DENIAL extended to CEFR selector; earlier R47D three component assertions retained.",
+  "new_lesson": "EVERY_VOICE_SELECTOR_BEFORE_MIC: native callback zero-side-effect regression must cover direction, installed voice AND CEFR level, including type-confused payloads.",
+  "stage": "SOURCE_PREPARED_NOT_INTEGRATED",
+  "qa_accepted": false,
+  "source_ready": false,
+  "e07": "NOT_RUN",
+  "no_loss": "Only existing owned native_bridge.py and existing component test modified; no original 729/3 ZIP bytes, D02 HOME/MENU/WORK or five approved portraits touched. No build, CI, changes to PR162/main.",
+  "next_owner": "T06: cherry-pick/rebase only exact level guard against latest PR162 source 1cd8f2d4...; run full exact-source unittest, P02 voice ingress + STOP/ACL/consent/origin regression, independent T08 after frozen HEAD; T02 sole central ledger writer."
+}

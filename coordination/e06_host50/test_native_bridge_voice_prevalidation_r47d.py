@@ -44,6 +44,21 @@ class VoicePreValidationTests(unittest.TestCase):
         with self.assertRaises(bridge.HostDenied):
             adapter.speak("scope", {"direction":"ru-es","voiceId":"not-installed"}, mode="translate")
         self.assertEqual(calls, [])
+    def test_invalid_cefr_is_denied_without_native_capture(self):
+        # P02 LocalVoicePipeline checks CEFR AFTER microphone input: gate first.
+        for level in ("D9", ["A2"], None):
+            with self.subTest(level=repr(level)):
+                adapter, calls = self.adapter()
+                with self.assertRaises(bridge.HostDenied):
+                    adapter.speak("scope", {"direction":"ru-es",
+                        "voiceId":"voice-installed", "level":level}, mode="maestro")
+                self.assertEqual(calls, [])
+    def test_approved_cefr_keeps_single_native_capture(self):
+        adapter, calls = self.adapter()
+        adapter.speak("scope", {"direction":"ru-es", "voiceId":"voice-installed",
+                               "level":"C2"}, mode="maestro")
+        self.assertEqual([x[0] for x in calls], ["identity","microphone","run"])
+        self.assertEqual(calls[-1][1]["level"], "C2")
     def test_valid_voice_preserves_one_native_capture_and_pipeline(self):
         adapter, calls = self.adapter()
         result = adapter.speak("scope", {"direction":"ru-es","voiceId":"voice-installed"}, mode="translate")
