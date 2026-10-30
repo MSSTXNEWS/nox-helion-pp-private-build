@@ -23,7 +23,7 @@ test('Creative add-on is ordered after original Studio and does not change nativ
     'CS5 must reuse the original Studio runtime, never replace HOME/MENU');
 });
 
-function mount() {
+function mount({native=false}={}) {
   const ids = new Map(), calls = [], navEvents = [], actions = [];
   class Element {
     constructor(tag='div') {
@@ -58,6 +58,7 @@ function mount() {
   let stops=0;const stop=new Element();stop.click=()=>{stops++;};ids.set('stop',stop);
   const rpc=async(action,payload)=> {
     calls.push({action,payload});
+    if (action === 'download') return {status:'OWNER_WINDOW_OPEN_REQUESTED',owner:'P03'};
     if (action === 'cs5_list') {
       const last = Number.isInteger(payload?.before) ? payload.before : 45;
       const start = Math.max(0, last - 20);
@@ -73,7 +74,9 @@ function mount() {
   };
   const navigate=what=>{navEvents.push(what);activeScreen=what;};
   const task=async(action,payload,target)=>{actions.push({action,payload,target});return {status:'ACCEPTED'};};
-  runInNewContext(source,{document,rpc,navigate,task,URL});
+  const window={parent:null,chrome:native?{webview:{postMessage(){}}}:undefined};
+  window.parent=window;
+  runInNewContext(source,{document,rpc,navigate,task,URL,window});
   return {ids,calls,nav,main,navEvents,actions,
     setActiveScreen: value=>{activeScreen=value;},
     get stops(){return stops;}};
@@ -157,6 +160,14 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.ids.get('prompt').value,'Original fictional screenplay');
   await c.ids.get('cs5-stop').click();
   assert.equal(c.stops,1);
+});
+
+test('P03 native handoff reuses owner ModelCenter, never starts weight download',async()=>{
+  const c=mount({native:true});
+  await c.ids.get('cs5-models').click();
+  assert.equal(c.calls.at(-1).action,'download');
+  assert.equal(c.ids.get('cs5-result').textContent.includes('не скачиваются автоматически'),true);
+  assert.equal(c.navEvents.length,0,'native P03 opens by owner, no second local model hub');
 });
 
 test('Five segment cinema scenes stay inside original Studio and reuse approved palette tokens',()=>{

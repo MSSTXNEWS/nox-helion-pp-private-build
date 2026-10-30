@@ -429,7 +429,25 @@
   });
   byId('cs5-back').addEventListener('click', () => navigate(previousStudioScreen));
   byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
-  byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
+  // The native owner already exposes P03 ModelCenter via the 'download'
+  // handoff. With no model/weight arguments, it opens P03 WITHOUT downloading.
+  // Browser/local preview retains the existing local catalog screen.
+  async function openExistingModelCenter() {
+    const nativeBridge = typeof window !== 'undefined' &&
+      (Boolean(window.chrome?.webview?.postMessage) || window.parent !== window);
+    if (!nativeBridge) return handoffToOriginal('models');
+    try {
+      const reply = await rpc('download');
+      if (reply?.status !== 'OWNER_WINDOW_OPEN_REQUESTED' || reply.owner !== 'P03')
+        throw Error('P03_MODEL_CENTER_OWNER_HOLD');
+      byId('cs5-result').textContent =
+        'P03 · ModelCenter открыт по запросу. Веса не скачиваются автоматически.';
+    } catch (error) {
+      byId('cs5-result').textContent =
+        'P03 MODEL CENTER HOLD: ' + String(error?.message || error);
+    }
+  }
+  byId('cs5-models').addEventListener('click', openExistingModelCenter);
   byId('cs5-storyboard').addEventListener('click', () =>
     executeExisting('storyboard', {kind:'movie', scenes:3}));
   byId('cs5-music').addEventListener('click', () => executeExisting('create_text', {}));
