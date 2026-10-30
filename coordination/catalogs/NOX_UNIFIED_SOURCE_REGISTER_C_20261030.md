@@ -1,6 +1,6 @@
 # NOX HELION · UNIFIED DEDUPED SOURCE REGISTER · PACK C · 2026-10-30
 
-**338 additional distinct candidate URLs beyond batch A (1272) and B (1329).** Source URL level dedup across the nine listed catalog documents, case-insensitive, trailing slash removed, utm removed. Redirect aliases (e.g. relocated GitHub repositories), package/license verification and matching to every exact RequirementID are not yet fully resolved. Do not claim 2,939 distinct installable products. Each link is only a candidate. Some are documentation, supplier homepages, and model cards. Source context retained.
+**337 additional distinct candidate URLs beyond batch A (1272) and B (1329).** Source URL level dedup across the nine listed catalog documents, case-insensitive, trailing slash removed, utm removed. Redirect aliases (e.g. relocated GitHub repositories), package/license verification and matching to every exact RequirementID are not yet fully resolved. Do not claim 2,938 distinct installable products. Each link is only a candidate. Some are documentation, supplier homepages, and model cards. Source context retained.
 
 | # | Source type | Origin registry | Candidate URL |
 |---:|---|---|---|
@@ -289,58 +289,57 @@
 | 283 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/qdrant/qdrant |
 | 284 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/weaviate/weaviate |
 | 285 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/cline/cline |
-| 286 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/block/goose |
-| 287 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/SWE-agent/SWE-agent |
-| 288 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/microsoft/DeepSpeed |
-| 289 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Lightning-AI/pytorch-lightning |
-| 290 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/huggingface/datasets |
-| 291 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/openai/whisper |
-| 292 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/seamless_communication |
-| 293 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/fairseq |
-| 294 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/QwenLM/Qwen3-TTS |
-| 295 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/fishaudio/fish-speech |
-| 296 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/SWivid/F5-TTS |
-| 297 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/resemble-ai/chatterbox |
-| 298 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/invoke-ai/InvokeAI |
-| 299 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Stability-AI/generative-models |
-| 300 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/black-forest-labs/flux |
-| 301 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Lightricks/LTX-Video |
-| 302 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Tencent/HunyuanVideo |
-| 303 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/THUDM/CogVideo |
-| 304 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/OpenGVLab/InternVideo |
-| 305 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/lucidrains/audiolm-pytorch |
-| 306 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Stability-AI/stable-audio-tools |
-| 307 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/suno-ai/bark |
-| 308 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI |
-| 309 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/deezer/spleeter |
-| 310 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/demucs |
-| 311 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/magenta/magenta |
-| 312 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/NVIDIA/NeMo |
-| 313 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/microsoft/promptflow |
-| 314 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/open-telemetry/opentelemetry-python |
-| 315 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/pydantic/pydantic-ai |
-| 316 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/modelcontextprotocol/python-sdk |
-| 317 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3.5-9B |
-| 318 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-8B |
-| 319 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct |
-| 320 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/google/gemma-3-4b-it |
-| 321 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3 |
-| 322 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/google/gemma-3-12b-it |
-| 323 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct |
-| 324 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-Embedding-0.6B |
-| 325 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/BAAI/bge-m3 |
-| 326 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-Reranker-0.6B |
-| 327 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/intfloat/multilingual-e5-large-instruct |
-| 328 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/openai/whisper-large-v3-turbo |
-| 329 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3 |
-| 330 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/hexgrad/Kokoro-82M |
-| 331 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base |
-| 332 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign |
-| 333 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/black-forest-labs/FLUX.1-schnell |
-| 334 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0 |
-| 335 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B |
-| 336 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/ACE-Step/Ace-Step1.5 |
-| 337 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/facebook/musicgen-small |
-| 338 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct |
+| 286 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/SWE-agent/SWE-agent |
+| 287 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/microsoft/DeepSpeed |
+| 288 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Lightning-AI/pytorch-lightning |
+| 289 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/huggingface/datasets |
+| 290 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/openai/whisper |
+| 291 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/seamless_communication |
+| 292 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/fairseq |
+| 293 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/QwenLM/Qwen3-TTS |
+| 294 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/fishaudio/fish-speech |
+| 295 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/SWivid/F5-TTS |
+| 296 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/resemble-ai/chatterbox |
+| 297 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/invoke-ai/InvokeAI |
+| 298 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Stability-AI/generative-models |
+| 299 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/black-forest-labs/flux |
+| 300 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Lightricks/LTX-Video |
+| 301 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Tencent/HunyuanVideo |
+| 302 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/THUDM/CogVideo |
+| 303 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/OpenGVLab/InternVideo |
+| 304 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/lucidrains/audiolm-pytorch |
+| 305 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/Stability-AI/stable-audio-tools |
+| 306 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/suno-ai/bark |
+| 307 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI |
+| 308 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/deezer/spleeter |
+| 309 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/facebookresearch/demucs |
+| 310 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/magenta/magenta |
+| 311 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/NVIDIA/NeMo |
+| 312 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/microsoft/promptflow |
+| 313 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/open-telemetry/opentelemetry-python |
+| 314 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/pydantic/pydantic-ai |
+| 315 | source_code | NOX_100_AI_ENGINES_20261030.md | https://github.com/modelcontextprotocol/python-sdk |
+| 316 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3.5-9B |
+| 317 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-8B |
+| 318 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct |
+| 319 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/google/gemma-3-4b-it |
+| 320 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3 |
+| 321 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/google/gemma-3-12b-it |
+| 322 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct |
+| 323 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-Embedding-0.6B |
+| 324 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/BAAI/bge-m3 |
+| 325 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-Reranker-0.6B |
+| 326 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/intfloat/multilingual-e5-large-instruct |
+| 327 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/openai/whisper-large-v3-turbo |
+| 328 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3 |
+| 329 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/hexgrad/Kokoro-82M |
+| 330 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base |
+| 331 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign |
+| 332 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/black-forest-labs/FLUX.1-schnell |
+| 333 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0 |
+| 334 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B |
+| 335 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/ACE-Step/Ace-Step1.5 |
+| 336 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/facebook/musicgen-small |
+| 337 | model_weight_or_demo | NOX_22_VERIFIED_MODEL_WEIGHT_CARDS_20261030.md | https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct |
 
-Total unique across A+B+C: 2939 candidate URLs. Product PR162 unchanged.
+Total unique across A+B+C: 2938 candidate URLs. Product PR162 unchanged.
