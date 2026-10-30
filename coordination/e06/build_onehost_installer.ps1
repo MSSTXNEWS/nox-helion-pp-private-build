@@ -189,7 +189,7 @@ $gitTool=Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -Firs
 if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 $p02StageSources=@(
   @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='711644bf4d2052d812bf71a0b679d8531a3ca76e'},
-  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='3239fcb296ecd4687cf5f335792872f922f3ea12'}
+  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='553025dbd98bf812013a7bfb748c0127e42220f9'}
 )
 # Validate every donor BEFORE copying any source into the staged project.
 foreach ($entry in $p02StageSources) {
