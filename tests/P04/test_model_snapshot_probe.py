@@ -408,5 +408,21 @@ class ModelSnapshotProbeTests(unittest.TestCase):
         self.assertEqual(probe.inspect(self.root, REV)["status"],
                          "LOCAL_FILES_PRESENT_ONLY")
 
+    def test_nested_index_metadata_unicode_fails_closed(self):
+        index = self.root / "model.safetensors.index.json"
+        index.write_text(
+            r'{"weight_map":{"q.weight":"model.safetensors"},'
+            r'"extra":{"comment":"\ud800"}}', encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_METADATA_INVALID")
+
+    def test_surrogate_in_index_shard_path_is_path_unsafe(self):
+        index = self.root / "model.safetensors.index.json"
+        index.write_text(json.dumps({"weight_map": {
+            "q.weight": "part-" + chr(0xD800) + ".safetensors"}},
+            ensure_ascii=True), encoding="utf-8")
+        self.assertEqual(probe.inspect(self.root, REV)["reason"],
+                         "MODEL_SHARD_PATH_UNSAFE")
+
 if __name__ == "__main__":
     unittest.main()

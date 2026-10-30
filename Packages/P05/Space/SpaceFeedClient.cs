@@ -87,7 +87,8 @@ public sealed class SpaceFeedClient
                 var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var property in node.EnumerateObject())
                 {
-                    if (!names.Add(property.Name))
+                    // Normalize canonical Unicode equivalents without altering the original payload.
+                    if (!names.Add(property.Name.Normalize(System.Text.NormalizationForm.FormC)))
                         throw new InvalidDataException("DUPLICATE_PROVIDER_JSON_KEY");
                     pending.Push(property.Value);
                 }

@@ -130,7 +130,10 @@ class Tests(unittest.TestCase):
         result = self.port.update("session", {})
         self.assertEqual(len(self.winget_calls), 1)
         argv, kwargs = self.winget_calls[0]
-        self.assertEqual(argv[:4], (str(self.winget), "upgrade", "--id", "Microsoft.EdgeWebView2Runtime"))
+        # Windows 8.3/long path representations can name the same binary.
+        # File identity is required; textual equality is not a security check.
+        self.assertTrue(os.path.samefile(argv[0], self.winget))
+        self.assertEqual(argv[1:4], ("upgrade", "--id", "Microsoft.EdgeWebView2Runtime"))
         self.assertIs(kwargs["shell"], False)
         self.assertIs(result["accepted"], False)
 

@@ -52,7 +52,7 @@ def _valid_shard_filename(name: object) -> bool:
             name.split(".", 1)[0].rstrip(" ").upper() not in _WINDOWS_RESERVED)
 
 
-def _strict_json_object(raw: str | bytes) -> dict:
+def _strict_json_object(raw: str | bytes, *, index: bool = False) -> dict:
     """Reject ambiguous duplicate keys and nonfinite JSON constants at every depth."""
     def unique_pairs(pairs):
         obj = {}
@@ -75,17 +75,24 @@ def _strict_json_object(raw: str | bytes) -> dict:
                      parse_constant=reject_constant, parse_float=reject_nonfinite_number)
     if not isinstance(obj, dict):
         raise ValueError("MODEL_JSON_NOT_OBJECT")
-    # Reject escaped lone UTF-16 surrogates in nested dict keys, list entries
-    # and values before any model or license metadata is admitted.
-    pending = [obj]
+    # The index's weight_map names must report precise fail-closed errors
+    # even if the JSON decoder accepted an escaped unpaired UTF-16 surrogate.
+    pending = [(obj, "root")]
     while pending:
-        value = pending.pop()
+        value, context = pending.pop()
         if type(value) is dict:
-            pending.extend(value.keys())
-            pending.extend(value.values())
+            for key, child in value.items():
+                if _unpaired_surrogate(key):
+                    if index and context == "weight_map":
+                        raise ValueError("MODEL_SHARD_INDEX_INVALID")
+                    raise ValueError("MODEL_INVALID_UNICODE")
+                if index and context == "weight_map" and type(child) is str and _unpaired_surrogate(child):
+                    raise ValueError("MODEL_SHARD_PATH_UNSAFE")
+                child_context = "weight_map" if index and context == "root" and key == "weight_map" else "nested"
+                pending.append((child, child_context))
         elif type(value) is list:
-            pending.extend(value)
-        elif type(value) is str and any(0xD800 <= ord(c) <= 0xDFFF for c in value):
+            pending.extend((child, "nested") for child in value)
+        elif type(value) is str and _unpaired_surrogate(value):
             raise ValueError("MODEL_INVALID_UNICODE")
     return obj
 
@@ -116,12 +123,14 @@ def _safe_root(root: Path) -> Path:
     return original
 
 
-def _json_file(path: Path) -> dict:
+def _json_file(path: Path, *, index: bool = False) -> dict:
     if not _regular(path) or path.stat().st_size > MAX_JSON_BYTES:
         raise ValueError("MODEL_METADATA_INVALID")
     try:
-        obj = _strict_json_object(path.read_text(encoding="utf-8"))
+        obj = _strict_json_object(path.read_text(encoding="utf-8"), index=index)
     except (UnicodeError, ValueError, OSError, RecursionError) as exc:
+        if index and str(exc) in ("MODEL_SHARD_INDEX_INVALID", "MODEL_SHARD_PATH_UNSAFE"):
+            raise
         raise ValueError("MODEL_METADATA_INVALID") from exc
     if not isinstance(obj, dict):
         raise ValueError("MODEL_METADATA_INVALID")
@@ -220,7 +229,7 @@ def inspect(root: Path, expected_revision: str | None) -> dict:
             raise ValueError("MODEL_CONFIG_NOT_LLM_SNAPSHOT")
         index = base / "model.safetensors.index.json"
         if index.exists() or index.is_symlink():
-            metadata = _json_file(index)
+            metadata = _json_file(index, index=True)
             weights = metadata.get("weight_map")
             if not isinstance(weights, dict) or not weights:
                 raise ValueError("MODEL_SHARD_INDEX_INVALID")

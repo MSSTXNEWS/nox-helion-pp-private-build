@@ -170,6 +170,17 @@ Pass(duplicateNestedResult.Status == "OFFLINE" &&
      duplicateNestedResult.Data is null && duplicateNestedResult.IsStale,
     "case-insensitive nested duplicate provider key rejected");
 
+
+var normalizedDuplicateJson = Json[..^1] +
+    ",\"metadata\":{\"caf\u00e9\":1,\"cafe\u0301\":2}}";
+var normalizedDuplicate = Client(() => Reply(new ByteArrayContent(
+    Encoding.UTF8.GetBytes(normalizedDuplicateJson))));
+var normalizedDuplicateResult = await Fetch(normalizedDuplicate);
+Pass(normalizedDuplicateResult.Status == "OFFLINE" &&
+     normalizedDuplicateResult.ErrorCode == "INVALID_JSON" &&
+     normalizedDuplicateResult.Data is null && normalizedDuplicateResult.IsStale,
+    "Unicode-equivalent nested provider keys cannot be treated as distinct provenance");
+
 var badJson = Client(() => Reply(new ByteArrayContent(Encoding.UTF8.GetBytes("{"))));
 var invalid = await Fetch(badJson);
 Pass(invalid.Status == "OFFLINE" && invalid.ErrorCode == "INVALID_JSON",
@@ -206,7 +217,7 @@ var unverified = (ProgressEvidence[])lanes.Clone();
 unverified[2] = unverified[2] with { State = "SOURCE_PREPARED" };
 Pass(EvidenceProgress.WeightedProduct(unverified) is null,
     "source-only TaskID cannot count toward accepted progress");
-Console.WriteLine("P05 R16 smoke: 23 semantic assertions PASS (only after this .NET 8 program actually runs)");
+Console.WriteLine("P05 R16 smoke: 24 semantic assertions PASS (only after this .NET 8 program actually runs)");
 
 sealed class LocalOnlyHandler(Func<HttpResponseMessage> reply) : HttpMessageHandler
 {
