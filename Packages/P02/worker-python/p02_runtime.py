@@ -456,6 +456,32 @@ class P02Store:
         with self._write_transaction():
             self.db.execute("INSERT INTO p02_chats VALUES(?,?,?,?)", (chat, tenant, user, int(time.time())))
 
+    def add_turn(self, tenant: str, user: str, chat: str,
+                 user_text: str, assistant_text: str,
+                 *, stop: threading.Event | None = None) -> tuple[str, str]:
+        """One completed turn, one transaction in the EXISTING host SQLite DB.
+
+        Assistant-write failure, access denial or STOP before COMMIT rolls back
+        both messages. No second database, schema change or provider.
+        """
+        if (type(user_text) is not str or type(assistant_text) is not str
+                or not user_text
+                or len(user_text) > 1_000_000 or len(assistant_text) > 1_000_000):
+            raise ValueError("Valid bounded completed chat turn required")
+        with self._write_transaction(stop=stop):
+            self._owned(tenant, user, chat)
+            ids = (uuid.uuid4().hex, uuid.uuid4().hex)
+            stamp = int(time.time())
+            self.db.execute(
+                "INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",
+                (ids[0], chat, "user", user_text, stamp))
+            if stop is not None and stop.is_set():
+                raise Cancelled("STOP before assistant message")
+            self.db.execute(
+                "INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",
+                (ids[1], chat, "assistant", assistant_text, stamp))
+            return ids
+
     def add_message(self, tenant: str, user: str, chat: str, role: str, content: str,
                     *, stop: threading.Event | None = None) -> str:
         if role not in ("user", "assistant", "tool") or not isinstance(content, str) or len(content) > 1_000_000:
