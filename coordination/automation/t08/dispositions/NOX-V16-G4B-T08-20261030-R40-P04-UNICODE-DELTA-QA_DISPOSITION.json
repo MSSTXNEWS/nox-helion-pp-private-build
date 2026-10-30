@@ -1,0 +1,97 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "runId": "NOX-V16-G4B-T08-20261030-R40-P04-UNICODE-DELTA",
+  "taskId": "T08",
+  "role": "AUTO_G4B_T08_AUXILIARY_INDEPENDENT_SOURCE_QA",
+  "status": "SOURCE_REVIEW_LIMITED_PASS_NOT_QA_ACCEPTED",
+  "source": {
+    "pr": 162,
+    "head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "paths": [
+      {
+        "path": "Packages/P04/model_snapshot_probe.py",
+        "pre": "247fa7306210505744546b7ca87a63aa5c5b2259",
+        "post": "c370a18e058b879681a0b1da63cef3214f03b12a"
+      },
+      {
+        "path": "tests/P04/test_model_snapshot_probe.py",
+        "pre": "d54dfdc12febeb1e1ed1230d2a4c0f624a006183",
+        "post": "0290c3e01a3a3d797f3c4c3aa19668e3b58d870d"
+      }
+    ],
+    "ownerReceipt": "coordination/automation/t06/NOX-V16-T06-R41-P01-P04-P05-OWNER-FINAL-SOURCE-20261030.json",
+    "ownerReceiptBlob": "e2e88a969e1efa0b162bbe9603e8c1c50d76f593"
+  },
+  "checks": {
+    "executed": 10,
+    "pass": 10,
+    "fail": 0,
+    "command": "python /mnt/data/nox_t08_r41/P04_unicode_delta_isolated_check.py -v",
+    "mode": "EXACT_VISIBLE_FUNCTION_EXCERPT_COPIED_FROM_SOURCE; NOT ORIGINAL PROJECT MODULE",
+    "cases": [
+      "index escaped surrogate key => MODEL_SHARD_INDEX_INVALID",
+      "index escaped surrogate shard filename => MODEL_SHARD_PATH_UNSAFE",
+      "ordinary metadata unpaired surrogate => MODEL_INVALID_UNICODE",
+      "nested metadata unpaired surrogate denied",
+      "nested weight_map context not overpromoted",
+      "paired supplementary unicode accepted",
+      "duplicate JSON key denied",
+      "nested nonfinite float denied",
+      "NaN denied",
+      "safe nested metadata accepted"
+    ],
+    "log": "sandbox:/mnt/data/nox_t08_r41/P04_unicode_delta_isolated_check.log",
+    "originalProjectUnitTests": "NOT_RUN",
+    "dotnet": "NOT_RUN",
+    "windowsNative": "NOT_RUN",
+    "realSTOP": "NOT_RUN",
+    "realACL": "NOT_RUN",
+    "realConsent": "NOT_RUN",
+    "noLoss": "NO_PRODUCT_WRITES; 729/3 parts not rehashed",
+    "qaAccepted": false
+  },
+  "finiteGate": {
+    "path": "coordination/manual/no2/finite_acceptance_r33.mjs",
+    "blob": "33b425e0523b71c34d734ce7ab0731fd9b21fce1",
+    "executed": true,
+    "result": "SOURCE_GATES_INCOMPLETE",
+    "criteriaProved": 0,
+    "total": 8,
+    "ready": false,
+    "sourceOnly": true,
+    "holds": [
+      "T06_8_OF_8_NOT_PROVED",
+      "HOST50_NATIVE_PENDING_14",
+      "SOURCELOCK_729_UNVERIFIED",
+      "INDEPENDENT_T08_SAME_HEAD_NOT_ACCEPTED",
+      "T09_FROZEN_SHA_NOT_PROVED",
+      "T10_SOURCE_READY_NOT_PROVED"
+    ]
+  },
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "roleBlob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "errorRegisterBlob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+    "masterRevision": "AHj4eMSmhkyV8jgrIPxGH4_XEJb-YOALiA3lfyi9QIEE1qQ061RJwH9tLuoX9DbkRQXKoYAcxU6BSMNoBZBpnacK18T2Or6Q6GOFNHgNuc4",
+    "e06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessonsRevision": "AHj4eMShszytZLjmywC0Niv3bGrpejlCaAlGTNM9-kYrokyUrXYUTjBghx01yRTV4_uhQrJK6B6ni-kiMx-NzptQdXQGUqUqBo_eRTM00gI"
+  },
+  "errorIds": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "errorStatus": "OPEN; T02 ONLY MAY MUTATE",
+  "progress": {
+    "taskId": "T08",
+    "historicDone": "1/3 unchanged",
+    "newQaAccepted": 0,
+    "product": "N/D",
+    "host50SourceCandidates": "50/50 from earlier owner receipt, not independently retested",
+    "nativePending": 14,
+    "e07": "0/10",
+    "sourceReady": false
+  },
+  "nextOwner": "manual #2 exact-head original Python/Windows source QA; manual #1 resolve failures; T02 deduplicate register without premature closed",
+  "lesson": "An isolated excerpt passing Unicode cases is limited SOURCE evidence, never original Python suite or native acceptance; preserve distinct SHA gates."
+}
