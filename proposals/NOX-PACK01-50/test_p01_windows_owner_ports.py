@@ -185,6 +185,51 @@ class Tests(unittest.TestCase):
             with self.subTest(method=method.__name__), self.assertRaises(m.OwnerDenied):
                 method("session", {"unsafe": "path"})
 
+    def test_bookmark_read_detects_same_size_file_change(self):
+        real_fstat = os.fstat
+        calls = []
+        def drifted_fstat(fd):
+            current = real_fstat(fd)
+            calls.append(current)
+            if len(calls) != 2:
+                return current
+            # Deterministic mid-read metadata drift, without rewriting an
+            # open file (Windows sharing modes may prohibit concurrent writes).
+            return types.SimpleNamespace(st_mode=current.st_mode,
+                st_dev=current.st_dev, st_ino=current.st_ino,
+                st_size=current.st_size, st_mtime_ns=current.st_mtime_ns + 1,
+                st_file_attributes=getattr(current, 'st_file_attributes', 0))
+        with patch.object(m.os, 'fstat', side_effect=drifted_fstat):
+            with self.assertRaises(m.OwnerHold):
+                self.port.bookmarks('session', {})
+        self.assertGreaterEqual(len(calls), 2)
+
+    def test_pc_inspect_revoked_while_scanning_denied(self):
+        def revoke_after_clock():
+            self.allowed=False
+            return time.time()
+        self.port.clock=revoke_after_clock
+        with self.assertRaises(m.OwnerDenied):
+            self.port.pc_control("session", {})
+
+    def test_browser_recheck_after_os_callback_revoked(self):
+        def revoke_after_open(url):
+            self.allowed=False
+            self.browser_calls.append(url)
+            return True
+        self.port.browser_open=revoke_after_open
+        with self.assertRaises(m.OwnerDenied):
+            self.port.open_browser("session", {})
+        self.assertEqual(self.browser_calls,["https://example.org/info"])
+
+    def test_winget_stdstreams_are_bounded_not_captured(self):
+        self.port.update("session", {})
+        _, kwargs=self.winget_calls[0]
+        self.assertIs(kwargs["stdin"], subprocess.DEVNULL)
+        self.assertIs(kwargs["stdout"], subprocess.DEVNULL)
+        self.assertIs(kwargs["stderr"], subprocess.DEVNULL)
+        self.assertNotIn("capture_output", kwargs)
+
     def test_existing_single_host_atomic_binder_is_called_not_new_server(self):
         observed = []
         def bind(host, owner, provider, methods, *, receipt, probe):

@@ -141,6 +141,9 @@ class P01WindowsOwnerPorts:
         self._recheck(session, "browser.open")
         if self.browser_open(target) is not True:
             raise OwnerHold("SYSTEM_BROWSER_LAUNCH_NOT_CONFIRMED")
+        # A launch request is not a page-load proof. If consent was revoked
+        # during the OS callback do not return an affirmative host receipt.
+        self._recheck(session, "browser.open")
         return {"status": "SYSTEM_BROWSER_OPEN_REQUESTED_NOT_PAGE_LOADED", "accepted": False}
 
     def bookmarks(self, session, payload: dict):
@@ -158,12 +161,35 @@ class P01WindowsOwnerPorts:
             not re.fullmatch(r"(?:Default|Profile [0-9]{1,3})", relative.parts[3]) or
             relative.parts[4] != "Bookmarks"):
             raise OwnerDenied("UNAPPROVED_BROWSER_BOOKMARK_PATH")
-        if target.stat().st_size > MAX_BOOKMARK_FILE:
-            raise OwnerHold("BOOKMARK_FILE_SIZE_LIMIT")
-        self._recheck(session, "browser.bookmarks")
-        raw = target.read_bytes()
+        # Do not follow a new symlink or accept a swapped bookmark file between
+        # owner path selection and read. This is source hardening; Windows reparse
+        # and directory TOCTOU still require independent native tests.
+        try:
+            chosen_stat = target.lstat()
+            if chosen_stat.st_size > MAX_BOOKMARK_FILE or not stat.S_ISREG(chosen_stat.st_mode):
+                raise OwnerHold("BOOKMARK_FILE_SIZE_LIMIT")
+            self._recheck(session, "browser.bookmarks")
+            with target.open("rb") as stream:
+                opened_stat = os.fstat(stream.fileno())
+                if (not stat.S_ISREG(opened_stat.st_mode) or
+                    (chosen_stat.st_dev, chosen_stat.st_ino) !=
+                    (opened_stat.st_dev, opened_stat.st_ino) or
+                    getattr(opened_stat, "st_file_attributes", 0) &
+                    getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+                    raise OwnerHold("BOOKMARK_FILE_SWAPPED_BEFORE_READ")
+                raw = stream.read(MAX_BOOKMARK_FILE + 1)
+                finished_stat = os.fstat(stream.fileno())
+            current_stat = target.lstat()
+        except OSError as exc:
+            raise OwnerHold("BOOKMARK_READ_FAILED") from exc
         if len(raw) > MAX_BOOKMARK_FILE:
             raise OwnerHold("BOOKMARK_FILE_SIZE_CHANGED")
+        identity = lambda x: (x.st_dev, x.st_ino, x.st_size, x.st_mtime_ns)
+        if (identity(chosen_stat) != identity(opened_stat) or
+            identity(opened_stat) != identity(finished_stat) or
+            identity(finished_stat) != identity(current_stat) or
+            not stat.S_ISREG(current_stat.st_mode)):
+            raise OwnerHold("BOOKMARK_FILE_CHANGED_DURING_READ")
         try:
             obj = json.loads(raw, object_pairs_hook=_pairs_unique)
         except (ValueError, UnicodeError, RecursionError) as exc:
@@ -209,9 +235,12 @@ class P01WindowsOwnerPorts:
         args = (str(executable), "upgrade", "--id", plan.package_id, "--exact",
                 "--silent", "--accept-package-agreements", "--accept-source-agreements",
                 "--disable-interactivity")
+        # The result contract uses exit code only. Do not buffer unbounded
+        # WinGet stdout/stderr in process memory or expose package logs to JS.
         try:
-            proc = self.winget_run(args, shell=False, capture_output=True,
-                                   text=True, timeout=900, check=False)
+            proc = self.winget_run(args, shell=False, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   timeout=900, check=False)
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise OwnerHold("WINGET_EXECUTION_FAILED_OR_TIMED_OUT") from exc
         self._recheck(session, "system.update")
@@ -257,6 +286,7 @@ class P01WindowsOwnerPorts:
                 raise OwnerHold("CACHE_CLEAN_BOUNDED")
             candidates.append((p, stat1))
         if mode == "inspect":
+            self._recheck(session, "system.pc_control")
             return {"status": "NOX_CACHE_INSPECT_ONLY", "eligibleFiles": len(candidates),
                     "eligibleBytes": budget, "accepted": False}
         cleaned, reclaimed = 0, 0
