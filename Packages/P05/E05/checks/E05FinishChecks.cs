@@ -26,6 +26,29 @@ public static class E05FinishChecks
         Verify(offline.Hardware.RunId == offline.Space.RunId &&
             offline.Hardware.State == "UNAVAILABLE",
             "one native RunID for unavailable sensors and NOX SPACE");
+        // events.v3 run_id is capped at 128; reject 129 before any telemetry or feed side effect.
+        var maxRunId = new string('R', 128);
+        var bounded = E05HostStateAdapter.Capture(maxRunId, now,
+            Array.Empty<ISensorProvider>(), null, null,
+            null, null, "HOLD", "NOT_RUN", CancellationToken.None);
+        Verify(bounded.Hardware.RunId == maxRunId && bounded.Space.RunId == maxRunId,
+            "events.v3 accepts a valid 128-character RunID end to end");
+        var overflowRejected = false;
+        try
+        {
+            E05HostStateAdapter.Capture(new string('R', 129), now,
+                Array.Empty<ISensorProvider>(), null, null,
+                null, null, "HOLD", "NOT_RUN", CancellationToken.None);
+        }
+        catch (ArgumentException) { overflowRejected = true; }
+        Verify(overflowRejected, "events.v3 rejects 129-character RunID at state ingress");
+        var liveGpu = new SensorPoint("gpu.percent", 50, "%", "fixture", now, "LIVE");
+        var boundedEvent = E05CanonicalEventFactory.GpuUtilization(maxRunId, liveGpu, now);
+        Verify(boundedEvent is not null && E05CanonicalEventFactory.IsCanonical(boundedEvent),
+            "events.v3 allows 128-character RunID on verified canonical shape");
+        Verify(E05CanonicalEventFactory.GpuUtilization(new string('R', 129), liveGpu, now) is null &&
+            !E05CanonicalEventFactory.IsCanonical(boundedEvent! with { RunId = new string('R', 129) }),
+            "events.v3 rejects 129-character RunID before event serialization");
         var positive = new FixtureVerifier();
         var lanes = Enumerable.Range(1, 5).Select(i => new E05SealedLane(
             i, new string('a', 64), new[] {
