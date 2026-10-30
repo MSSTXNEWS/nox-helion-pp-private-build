@@ -1,0 +1,89 @@
+{
+  "schema": "NOX_V16_M3_P04_P05_EXACT_SOURCE_COMPONENT_GATE_V1",
+  "run_id": "NOX-V16-M3-20261030-P04P05-ONE-MEGA-REALTEST",
+  "existing_owner_role": "manual_3",
+  "existing_task_ids": [
+    "P04",
+    "P05"
+  ],
+  "new_task_ids": 0,
+  "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+  "owner_pr": 222,
+  "owner_branch": "manual/no3/r26-p04-p05-no-loss-handoff-20261030",
+  "owner_head_before_receipt": "7093a44f70a27d176f570700a42a4a9391af204a",
+  "integrator_pr": 162,
+  "integrator_head_observed": "d7adf1fa9f1609c2a424e447298679b34d03dfab",
+  "integrator_owner": "Manual_1/T06_ONLY",
+  "independent_acceptance_owner": "Manual_2/T08_ONLY",
+  "shared_journal_writer": "T02_ONLY",
+  "source_integrity": {
+    "files": 48,
+    "p04_python_test_files": 36,
+    "p05_js_files": 7,
+    "manifest_sha256": "6a8aa5dc5e1a778dd831054f745984331043bed1330d6fd7f5f4115bcb5de9ed",
+    "git_blobs_pinned": true,
+    "local_not_full_pr_checkout": true
+  },
+  "component_execution": {
+    "p04_python": {
+      "command": "NOX_P02_SOURCE_DIR=$PWD/Packages/P02/worker-python python3 -m unittest discover -s tests/P04 -p 'test_*.py' -v",
+      "tests": 264,
+      "passed": 264,
+      "failed": 0,
+      "errors": 0,
+      "exit_code": 0,
+      "log_sha256": "1707ecf56b4be45d00415d6d370119e2717dce54e744f2b452c3aa043cace33e",
+      "os": "Linux",
+      "python": "3.13.5"
+    },
+    "p05_space_events_node": {
+      "command": "node --test Packages/P05/E05/space/*.test.mjs",
+      "tests": 27,
+      "passed": 27,
+      "failed": 0,
+      "errors": 0,
+      "exit_code": 0,
+      "log_sha256": "980c46e63b496f0f8ef661e24628daf62c12b89999e10eb4e3743d7545889ec3",
+      "node": "v22.16.0"
+    },
+    "real_dotnet8_p04_p05": "NOT_RUN_DOTNET_SDK_NOT_INSTALLED_IN_AVAILABLE_ENVIRONMENT",
+    "real_cuda_gpu": "NOT_RUN_NVIDIA_DEVICE_UNAVAILABLE",
+    "real_qlora": "NOT_RUN_LICENSED_MODEL_AND_DATASET_GPU_APPROVAL_UNAVAILABLE",
+    "native_windows_onehost": "NOT_RUN",
+    "independent_T08": "NOT_RUN",
+    "total_local_pass": 291
+  },
+  "owned_fix_commits": [
+    {
+      "sha": "acad23c354fc7fcf4cc8c0574b29ba7c9e11c40f",
+      "path": "tests/P04/test_model_snapshot_probe.py",
+      "fix": "distinct JSON bytes cause distinct manifest hash"
+    },
+    {
+      "sha": "adbca68c2aed125b9d097fefac2852baacf7c135",
+      "path": "tests/P04/test_e04_rights_identity_binding.py",
+      "fix": "uppercase VERIFIED mutated with swapcase; preserve fail closed"
+    },
+    {
+      "sha": "7093a44f70a27d176f570700a42a4a9391af204a",
+      "path": "tests/P04/test_rag_fd_path_consistency.py",
+      "fix": "test accepts early symlink safety block without relaxing RAG code"
+    }
+  ],
+  "stages": {
+    "SOURCE_VERIFIED": "SELECTED_P04_PYTHON_AND_P05_JS_COMPONENTS_PASS",
+    "INTEGRATED": "HOLD_UNTIL_T06_EXACT_PRE_CAS",
+    "QA_ACCEPTED": false,
+    "SOURCE_READY": false,
+    "GITLAB_WINDOWS_BUILD": "NOT_AUTHORIZED",
+    "E07": "NOT_RUN",
+    "PRODUCT_DONE_DELTA": 0
+  },
+  "existing_error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "lessons": "Fix tests only when failing expectation contradicts immutable real security behavior; never bypass ACL/STOP/consent or overclaim runtime approval.",
+  "next": "T06 exact current PR162 per-path compare and owner-only cherry-pick, authorized .NET8 P04 RAG + P05 tests and licensed CUDA worker, T08 same-SHA independent QA, T02 shared journal CAS/readback. No premature CI or EXE.",
+  "no_loss": "Original 729 sources/3 archive parts, D02/WOW200, 8 CoreID, 5 Personas, STOP/ACL/consent untouched; no alternative engine or database."
+}
