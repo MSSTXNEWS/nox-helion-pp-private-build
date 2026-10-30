@@ -179,3 +179,8 @@ This is a **candidate reuse registry**, not a signed dependency lock, test pass,
 - A GitHub repository being public does NOT prove a model, voice or media weight can be commercially used.
 - All candidate links must be checked against actual current upstream license/version/security before admission. No source code copied in this register.
 - R1 game, social, Work OS, Creative and plugin sections were OMITTED from the previous narrow installer catalog and have now been added.
+
+
+## CREATIVE STUDIO V5 — expansion verified 2026-10-30
+
+[Full addendum: 33 Studio screens/capability slices × three adaptable code candidates (99 mapping entries), source V5 acceptance and 8 separate new WOW proposals](NOX_CREATIVE_STUDIO_V5_READY_CODE_MATRIX_R1_20261030.md). This is a reference/code-candidate matrix, not proof of 99 verified integrations or an authorisation to expand Release 1. Covers writing lab W01–W18, book/world bible, cinema, shorts, music, podcasts, playable games, 3D, model lab, brand/revenue workflows.
