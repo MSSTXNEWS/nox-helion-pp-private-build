@@ -23,6 +23,11 @@ class AtomicTurnTests(unittest.TestCase):
                           self.store.history("tenant","owner","conversation")],
                          [("user","User text"),("assistant","Assistant reply")])
 
+    def test_empty_completed_answer_preserves_old_behavior(self):
+        self.store.add_turn("tenant","owner","conversation","Question","")
+        self.assertEqual([x["content"] for x in self.store.history("tenant","owner","conversation")],
+                         ["Question",""])
+
     def test_failed_assistant_insert_rolls_back_user(self):
         self.db.execute("""CREATE TRIGGER no_assistant BEFORE INSERT ON p02_messages
             WHEN NEW.role='assistant' BEGIN SELECT RAISE(ABORT,'blocked'); END""")

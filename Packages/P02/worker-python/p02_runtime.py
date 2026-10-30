@@ -465,7 +465,7 @@ class P02Store:
         both messages. No second database, schema change or provider.
         """
         if (type(user_text) is not str or type(assistant_text) is not str
-                or not user_text or not assistant_text
+                or not user_text
                 or len(user_text) > 1_000_000 or len(assistant_text) > 1_000_000):
             raise ValueError("Valid bounded completed chat turn required")
         with self._write_transaction(stop=stop):
