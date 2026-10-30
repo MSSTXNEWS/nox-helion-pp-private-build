@@ -55,6 +55,14 @@ In this matrix, `UNCHANGED` means PR #225 has not modified owner graphics, not t
 - The original `storyboard`, `create_text`, `project_files`, model catalog and native STOP handlers remain the only execution owners; B05 external publishing and real revenue remain blocked without verified provider receipts.
 - Source verification is not Windows art approval. The late 10-world current MENU ↔ 8 legacy groups mapping still requires exact owner/source review on one frozen HEAD.
 
+## On-demand / history / real BACK QA addendum
+- The Studio's original `studio.js` continues binding root Creative nav and provider actions. The CS5 addon **does not call any native RPC at page load**. It explicitly queries the original Worker only on first user click into CS5 or the manual status/retry button. No background scheduling or startup workload was added.
+- `cs5_list` now accepts a validated stable integer `before` cursor and returns prior groups of 20 through the bounded original-worker IPC; all 45 test-version examples are reachable in added Python tests. Invalid booleans, negative or out-of-range cursors are rejected. These **new Python cases have not been executed by Windows CI**.
+- Version records render as existing `model` cards with timestamp, `HYPOTHESIS` / `LOCAL_RECORD_ONLY` / `REPORTED_UNVERIFIED`, source and exact SHA. The UI validates stored links with the platform URL parser and blocks non-HTTP protocols/credential-bearing URLs. No HTML from records is interpolated.
+- BACK remembers the last real `create/models/jobs/theater/immersive/about` Studio section, rather than always resetting to Create. No root MENU/WORK element changed.
+- V8 source-level DOM fixture passed on the latest JS for lazy Worker, retry, real BACK, three history pages, provenance cards, original Storyboard/Music/ProjectFiles and STOP. The Node test source was updated, **not run in a real browser/Windows CI**.
+- Required visual 10+10+10 art QA remains NOT_ACCEPTED; latest 10-world current visual → existing historical routes is not remapped by this PR.
+
 ## Tests and release gates
 Run `python -m unittest discover -s integrations/creative/tests -p 'test_five_blocks*.py' -v`; `node --test integrations/creative/tests/five_blocks_ui.test.mjs`; `node --check integrations/creative/web/five_blocks.js`. Then test original `studio.js` and `entry.js`, visual screenshots 320/390/800×480/FullHD/4K, STOP/permissions, original routes, independent 10+10+10 and same-EXE E07. Never mark 100% from static source or browser mock.
 
