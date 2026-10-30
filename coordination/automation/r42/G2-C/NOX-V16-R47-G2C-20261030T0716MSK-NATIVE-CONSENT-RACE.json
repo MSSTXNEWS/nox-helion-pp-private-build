@@ -1,0 +1,37 @@
+{
+  "schema": "NOX_V16_R47_G2C_IMMUTABLE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T0716MSK-NATIVE-CONSENT-RACE",
+  "role": "G2-C P03 existing TaskID",
+  "task_id": "P03 owner native queue/consent; ERR-SRC-004",
+  "source_branch": "auto/r42/g2c-p03",
+  "branch_pre_head": "280f536dce38cddd931095f236df8d098c5d1e08",
+  "product_head_observed": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_modified": false,
+  "error_register_blob": "f837addf069415c94da60b7198e33f95db9003df",
+  "source": {
+    "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+    "pre_blob": "8237b3868738421de7985e5b4153e00a2b666942",
+    "post_blob": "98e2c83288203b8f0cae2d4289e315b9fc71a2c4"
+  },
+  "regression": {
+    "path": "Packages/P03/Source/python-host/test_p03_native_consent_order_r47.py",
+    "post_blob": "f0792fbd42f24223d1b8c0bba211a6ad9349dbf5",
+    "local_copied_function_reproducer": "3/3 RED baseline -> 3/3 GREEN patched",
+    "full_pinned_python": "NOT_RUN",
+    "Windows_native": "NOT_RUN"
+  },
+  "root_cause": "P03 native approval ran before backend.available and a native approval callback could revoke private_approved or swap backend, yet the captured pull method still ran.",
+  "fix": "Check native scope before readiness without invoking consent; after healthy backend invoke one native approval, re-check session permission/identity and backend instance before enqueue.",
+  "lesson_applied": "R42 live callbacks may revoke native permissions; revoke must fail closed.",
+  "lesson_new": "After any native approval callback revalidate same-action route and backend identity before sensitive queue mutation.",
+  "stage": {
+    "prepared": true,
+    "integrated": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "windows_exe": false,
+    "e07": false
+  },
+  "next_owner": "T06 integrator: compare current PR162 exact target blob, integrate only minimal P03 Python port diff via CAS if missing, then T08 same-SHA source/native QA; T02 sole journal writer.",
+  "safety": "No model downloads; NO-LOSS/STOP/ACL/consent preserved; no PR162/main/CI."
+}

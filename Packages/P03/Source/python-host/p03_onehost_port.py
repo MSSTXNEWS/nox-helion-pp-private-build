@@ -92,7 +92,7 @@ class P03OneHostPort:
             result.append(dict(item))
         return tuple(result)
 
-    def _ensure_native_scope(self, session: object, route: str, args: dict):
+    def _ensure_native_scope(self, session: object, route: str, args: dict, *, check_consent: bool = True):
         # Strings and mappings are NOT native route sets: membership would
         # authorize substrings/keys; None and integers would raise TypeError.
         allowed = getattr(session, "allowed", None)
@@ -112,6 +112,9 @@ class P03OneHostPort:
                     or route not in approved
                     or not callable(self.native_approve)):
                 raise P03PortDenied("Fresh out-of-band native approval required")
+            # Route scope may be checked before backend readiness without asking for consent.
+            if not check_consent:
+                return
             # A failing native callback must HOLD before any queue operation.
             # Suppress private callback diagnostics; never infer permission.
             try:
@@ -232,7 +235,8 @@ class P03OneHostPort:
         }
 
     def execute_backend(self, session: object, route: str, args: dict) -> Any:
-        self._ensure_native_scope(session, route, args)
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        identity = tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id"))
         method_name = OWNER_ROUTES.get(route)
         if not method_name:
             raise P03PortHold("Owner3 operation not bound")
@@ -251,6 +255,14 @@ class P03OneHostPort:
             raise
         except Exception as exc:
             raise P03PortHold("Owner3 backend health unavailable") from exc
+        # Fresh approval belongs AFTER owner readiness and before queue mutation.
+        self._ensure_native_scope(session, route, args)
+        # Native approval can synchronously revoke scope or replace the owner.
+        self._ensure_native_scope(session, route, args, check_consent=False)
+        if identity != tuple(getattr(session, key, None) for key in ("tenant", "principal", "chat_id")):
+            raise P03PortDenied("Native session identity changed during approval")
+        if backend is not self.backend:
+            raise P03PortHold("Owner3 backend changed during native approval")
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
