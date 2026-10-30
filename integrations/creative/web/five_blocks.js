@@ -74,7 +74,8 @@
         <button class="action" type="button" id="cs5-files">Реальные файлы проекта</button>
         <button class="action" type="button" id="cs5-stop">STOP · штатная команда</button>
       </div>
-      <pre id="cs5-result" aria-live="polite">Проверка состояния...</pre>
+      <pre id="cs5-result" aria-live="polite">Для проверки подключения открой вкладку или нажми кнопку.</pre>
+      <div id="cs5-history" class="grid" aria-live="polite"></div>
     </div>`;
   content.appendChild(screen);
   const byId = id => document.getElementById(id);
@@ -144,6 +145,32 @@
     }
   }
   let previousBefore = null;
+  function renderHistory(result) {
+    const destination = byId('cs5-history');
+    destination.replaceChildren();
+    for (const item of result.events || []) {
+      const card = document.createElement('article');
+      card.className = 'model'; // Original NOX Studio card material.
+      const heading = document.createElement('h3');
+      heading.textContent = (item.block || '') + ' · ' + (item.kind || '');
+      const description = document.createElement('p');
+      description.textContent = item.text || '';
+      const provenance = document.createElement('small');
+      provenance.textContent = (item.created_at_utc || 'Время не указано') +
+        ' · ' + (item.evidence_status || 'UNKNOWN') +
+        ' · SHA-256 ' + (item.sha256 || 'НЕТ ДАННЫХ');
+      card.append(heading, description, provenance);
+      if (item.source_url) {
+        const source = document.createElement('a');
+        source.href = item.source_url;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        source.textContent = 'Открыть первоисточник';
+        card.append(source);
+      }
+      destination.append(card);
+    }
+  }
   function updateHistoryControls(result, before) {
     previousBefore = result.next_before;
     byId('cs5-older').disabled = result.next_before === null;
@@ -164,13 +191,18 @@
         payload.source_url = byId('cs5-source').value.trim();
       }
       const result = await rpc(action, payload);
-      if (action === 'cs5_list') updateHistoryControls(result, before);
-      else if (action === 'cs5_append') {
+      if (action === 'cs5_list') {
+        updateHistoryControls(result, before);
+        renderHistory(result);
+      } else if (action === 'cs5_append') {
+        byId('cs5-history').replaceChildren();
         previousBefore = null;
         byId('cs5-older').disabled = true;
         byId('cs5-latest').disabled = true;
       }
-      display.textContent = JSON.stringify(result, null, 2);
+      display.textContent = action === 'cs5_list'
+        ? 'История проекта: всего ' + result.count + ' · показано ' + result.showing
+        : JSON.stringify(result, null, 2);
     } catch(e) {
       display.textContent = 'HOLD / ERROR: ' + String(e && e.message || e);
     } finally {
