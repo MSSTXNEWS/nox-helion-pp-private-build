@@ -1445,6 +1445,108 @@
       "next_owner": "T06: exact-PRE authorize integrated NSIS/P01/PACK02 + WPF→Python and approved five portraits; T08 full independent STOP/ACL/consent/privacy/native 14; T09 frozen exact SHA; T10 source-ready & GitHub/GitLab content parity; G5-C/T11 no CI/EXE until approved.",
       "report_gate": "PARTIAL_E06_and_full_QA",
       "build_ci_exe_e07": "NOT_RUN"
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-20261030T0954MSK-CRITICAL-GATES",
+      "existing_task_id": "T02",
+      "observed_at_moscow": "2026-10-30T09:54:42+03:00",
+      "source_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_at_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "registry_pre_blob": "9cd9f3c5a5455b7a4097452b22477ea133f4507c",
+      "source_code_changed_since_previous_T02": false,
+      "new_material_owner_or_independent_receipts": true,
+      "evidence": [
+        {
+          "owner": "T09 independent",
+          "task_id": "T09",
+          "run_id": "NOX-V16-T09-R47-20261030T0910MSK-PERSONA-RIGHTS-SOURCE-HOLD",
+          "receipt_blob": "ee5471993700027acb44dfdadf01d61be9607b2f",
+          "commit": "d8cbb8aa53c5d23a993fb660890ed49959b2f44e",
+          "target_blob": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+          "finding": "Existing persona manifest lists 4 active portrait IDs and EV blocked; five approved still portrait SHA256+rights mapping not established by THIS manifest",
+          "stage": "T09_FREEZE_HOLD",
+          "qa_accepted": false
+        },
+        {
+          "owner": "T10 independent source gate",
+          "task_id": "T10",
+          "issue_comment_id": 6516381839,
+          "source_ci_blob": "240868c6c0624dd974ae6648f417995cd7e93f8b",
+          "finding": "PR162 root .gitlab-ci.yml exists but omits GitLab R41 preflight and immutable seal; protected full T10 and GitLab parity not proven",
+          "stage": "SOURCE_READY_HOLD",
+          "signed_gate": false
+        },
+        {
+          "owner": "G5-C/T11",
+          "task_id": "T11",
+          "run_id": "NOX-V16-R47-G5C-T11-20261030T0933MSK-R41-ATOMIC-SEAL",
+          "receipt_blob": "1a4b2109b7259aed30a6787f5aa839939b02bbb1",
+          "gitlab_commit": "db6cdd80cf431ca513c3dbd52ed6c09762718ab3",
+          "source_path": "coordination/r41/Assert-R41ArtifactHandoff.ps1",
+          "source_pre_blob": "0f7eeb876c1fd1dc6d98acf2ba6e89996f17ee27",
+          "source_post_blob": "bbc52437ebe139ef86d08d385df78896970491f3",
+          "finding": "GitLab-only no-clobber R41 artifact seal prepared with FileMode.CreateNew; no GitHub product parity, no Windows test",
+          "stage": "ISOLATED_BUILDER_SOURCE_PREPARED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G3-B/PACK02",
+          "task_id": "NIP02-22",
+          "run_id": "NOX-V16-R47-G3B-20261030T0943MSK-CSV-SCHEMA-NOLOSS",
+          "receipt_blob": "0a36860f72b9318637b8fb85c085261c171a9ca9",
+          "commit": "0569704146b2eace85bf665a162f8ec9099a6bb1",
+          "source_path": "proposals/NOX-PACK02-50/ops.mjs",
+          "source_pre_blob": "36e02242c7c881e780a9a1712599e8d81356f69c",
+          "source_post_blob": "7324fe69bc7cbd2059e1657ecd06a051fbf1d3ee",
+          "finding": "CSV stringify silently discarded additional second-row columns; fail-closed CSV_SCHEMA_MISMATCH owner patch, V8 6/6; Node/Windows NOT_RUN",
+          "stage": "ISOLATED_SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G4-A/T07",
+          "task_id": "T07",
+          "run_id": "NOX-V16-R47-G4A-T07-20261030094735MSK-PATH-NORMALIZE",
+          "receipt_blob": "41c0ed4344ef93d20aa5cb4909942264ea157a13",
+          "commit": "08cd861b5c7f263c222e9bdca29f72688f8dd3fb",
+          "source_pre_blob": "3a372b8f7a087a24eaac9c0066d342bd1346ee93",
+          "source_post_blob": "9fa327901f71af7ecb9885866de9f13c8ea3d607",
+          "finding": "ZIP member validator rejected repeated trailing slash and >500-character names in isolated branch; full repository/native NOT_RUN",
+          "stage": "ISOLATED_SOURCE_PREPARED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G2-A/Host50",
+          "task_id": "NIP01-05",
+          "run_id": "NOX-V16-R47-G2A-20261030T0851MSK-PRE-SCOPE-PROBE",
+          "receipt_blob": "eb718dd22610efb1b7a460d117fc79820a532f73",
+          "commit": "7291032c38973ad4b5384b3ca977828ef866a6d5",
+          "source_pre_blob": "214c89e621dd51f3a5ae20b587dd92bdce9a59a6",
+          "source_post_blob": "a0c4ba31402182bdf8487720ec9ab569433875c8",
+          "finding": "Native capability readiness callback must not run on withheld private/dangerous scope; extracted Python RED/GREEN only",
+          "stage": "ISOLATED_SOURCE_PREPARED",
+          "qa_accepted": false
+        }
+      ],
+      "existing_error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "error_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "historic_done_preserved": true,
+      "original_source_729_3_preserved": true,
+      "last_lesson_application": "Previous JS replacement-template lesson N/A: no JS-to-Python generator changed in new work; independently verified GitLab R41 seal now uses FileMode.CreateNew and no WriteAllText, but native execution NOT_RUN.",
+      "new_lesson": "Cause: CSV serializer used first row schema without checking subsequent rows, silently dropping private fields. Repair: validate every row's own keys against first-row schema; reject mismatch before output. Regression: prepared exact-source V8 6/6 (Node/native NOT_RUN). Prevention: same-schema positive plus extra/missing/null negative tests on owner integration, independent T08 and NO-LOSS gate.",
+      "qa_accepted_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_authorized": false,
+      "e07": "NOT_RUN",
+      "next_owner": "T06/#1: exact-preimage integrate R41 preflight+seal + P01/NSIS + WPF→Python; prioritize PACK02 CSV no-loss and approved five portrait SHA+rights, current HEAD 8/8; T08 full same-HEAD source/native; T09 freeze; T10 SOURCE_READY; G5-C GitLab byte parity and build only after separate approval."
     }
   ]
 }
