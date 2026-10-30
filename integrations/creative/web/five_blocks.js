@@ -423,70 +423,7 @@
       byId('cs5-result').textContent = 'HOLD / ERROR: ' + String(e?.message || e);
     }
   }
-  // Reuse the real owner task dispatcher; never create a second media engine.
-  // Each stage is explicitly requested by the user, no unattended scheduling.
-  let pipelineBusy = false;
-  let pipelineCancelled = false;
-  const pipelineButton = byId('cs5-pipeline');
-  const originalStop = byId('stop');
-  const cancelPipeline = () => { pipelineCancelled = true; };
-  originalStop?.addEventListener('click', cancelPipeline);
-  pipelineButton.addEventListener('click', async () => {
-    if (pipelineBusy || loading) return;
-    const output = byId('cs5-result');
-    let id, prompt;
-    try {
-      id = projectId();
-      prompt = byId('cs5-text').value.trim();
-      if (prompt.length < 4 || prompt.length > 3000) {
-        throw Error('Нужно описание проекта длиной 4–3000 символов');
-      }
-    } catch (error) {
-      output.textContent = 'HOLD: ' + String(error.message || error);
-      return;
-    }
-    pipelineBusy = true;
-    pipelineCancelled = false;
-    pipelineButton.disabled = true;
-    const stages = [
-      {name:'Сценарий и раскадровка',action:'storyboard',
-       payload:{project_id:id,prompt,kind:'movie',scenes:3}},
-      {name:'Музыкальный план',action:'create_text',
-       payload:{project_id:id,prompt,kind:'sound'}},
-      {name:'Реестр файлов проекта',action:'project_files',
-       payload:{project_id:id}}
-    ];
-    const evidence = [];
-    try {
-      for (const stage of stages) {
-        if (pipelineCancelled) throw Error('CS5_PIPELINE_STOP_REQUESTED');
-        output.textContent = 'Выполнение ' + stage.name + ' (' +
-          (evidence.length+1) + '/3). Штатный STOP доступен.\n' +
-          evidence.join('\n');
-        const result = await task(stage.action, stage.payload, 'cs5-result');
-        if (pipelineCancelled) throw Error('CS5_PIPELINE_STOP_REQUESTED');
-        if (!result || result.error || result.ok === false ||
-            ['ERROR','FAILED','HOLD','CANCELLED','STOPPED'].includes(
-              String(result.status || '').toUpperCase())) {
-          throw Error('Шаг не принят штатным Worker: '+stage.name+' · '+
-            JSON.stringify(result ?? null).slice(0,500));
-        }
-        // QUEUED/ACCEPTED means submitted, not that an output artifact exists.
-        evidence.push(stage.name + ': ' +
-          String(result.status || 'ANSWER_RECEIVED_UNVERIFIED'));
-      }
-      output.textContent = 'Мегамаршрут передан штатным движкам.\n' +
-        evidence.join('\n') +
-        '\nПроверь фактические файлы и задания: это не подтверждение созданного фильма.';
-    } catch (error) {
-      output.textContent = 'Мегамаршрут остановлен / HOLD после '+
-        evidence.length + ' шагов.\n'+evidence.join('\n')+'\n'+
-        String(error.message || error);
-    } finally {
-      pipelineBusy = false;
-      pipelineButton.disabled = false;
-    }
-  });
+  byId('cs5-pipeline').addEventListener('click', () => window.NOXCS5MegaFlow?.run());
   byId('cs5-back').addEventListener('click', () => navigate(previousStudioScreen));
   byId('cs5-produce').addEventListener('click', () => handoffToOriginal('create'));
   byId('cs5-models').addEventListener('click', () => handoffToOriginal('models'));
@@ -494,6 +431,6 @@
     executeExisting('storyboard', {kind:'movie', scenes:3}));
   byId('cs5-music').addEventListener('click', () => executeExisting('create_text', {}));
   byId('cs5-files').addEventListener('click', () => executeExisting('project_files', {}));
-  byId('cs5-stop').addEventListener('click', () => byId('stop')?.click());
+  byId('cs5-stop').addEventListener('click', () => window.NOXCS5MegaFlow?.stop());
   // No Worker is started during page initialization; explicit action only.
 })();
