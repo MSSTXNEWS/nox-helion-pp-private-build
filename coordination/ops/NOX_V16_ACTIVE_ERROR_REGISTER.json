@@ -230,18 +230,16 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "NOX-V16-R42-G5A-T02-20261030T0550MSK-FINITE-OWNER-EVIDENCE",
-    "source_head_observed": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
-    "source_tree_observed": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
-    "registry_pre_blob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+    "run_id": "NOX-V16-R47-G5A-T02-202610300655MSK-P03-CAS",
+    "source_head_observed": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "source_tree_observed": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "registry_pre_blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
     "progress": {
       "historical_t02": "4/4 DONE unchanged",
-      "current_c": "NOT_ACCEPTED",
       "accepted_task_id_delta": 0,
       "product": "N/D"
     },
-    "docs_gate": "REGISTER_ONLY_E06_FAILED_PRECONDITION_NOT_RETRIED",
-    "next": "T06 exact-PRE permitted PR224 and P02 live binding, no repeated denied create_tree; T08 same frozen source full STOP/ACL/consent/privacy/native QA; T09 no-loss+five portraits then T10 SOURCE_READY."
+    "next": "T06 P01 numeric + early NSIS preflight exact owner CAS if compatible, plus real WPF→P02 binding; T08 independent native STOP/ACL/consent/privacy/NO-LOSS; T09 729+five portraits freeze; T10 SOURCE_READY; T11 GitLab build only after approval."
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -1247,6 +1245,44 @@
       "test": "T02 JSON preservation checks; no native tests executed by T02",
       "report_gate": "PARTIAL_E06_REVISION_AND_FINAL_QA",
       "build_exe_ci_e07": "NOT_RUN"
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-202610300655MSK-P03-CAS",
+      "existing_task_id": "T02",
+      "observed_at": "2026-10-30T03:55:33.123Z",
+      "source_head_pre": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+      "source_head_post": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_post": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "source_commit": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "owner": "T06/G3-C",
+      "owner_run_id": "NOX-V16-T06-G3C-20261030T0643MSK-R47-P03-ATOMICITY",
+      "source_paths": [
+        {
+          "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+          "pre_blob": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+          "post_blob": "312d428992aa0cab15a0f597dacd114653064bda"
+        },
+        {
+          "path": "tests/P03/test_g2c_r42_snapshot_atomicity.cjs",
+          "pre_blob": null,
+          "post_blob": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb"
+        }
+      ],
+      "stage": "INTEGRATED_SOURCE_ONLY",
+      "test": "Owner V8 RED 2/3 -> GREEN 3/3; T02 NOT_RUN; T08 current native NOT_VERIFIED",
+      "independent_qa": "Latest T08 PR224 source-only, different HEAD; T10 prior d5bcaad HOLD. NO QA_ACCEPTED on new PR162.",
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "qa_accepted_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_exe_ci_e07": "NOT_RUN",
+      "lesson_applied": "R42 separation enforced: exact source+test blobs are not live WebView2/native consent approval; original 729/3 and 5 Persona rights remain distinct.",
+      "lesson_new": "P03 queue snapshot validated too late, mutating model-rights/licenseAck on malformed job progress. Repair: defer catalogue/consent mutation until state/job validation. Regression: test blob 1f81a794… 3 scenarios; prevention: independent same-HEAD native WebView2 consent and STOP regression before ACCEPT.",
+      "next_owner": "T06 P01 numeric + early NSIS preflight exact owner CAS if compatible, plus real WPF→P02 binding; T08 independent native STOP/ACL/consent/privacy/NO-LOSS; T09 729+five portraits freeze; T10 SOURCE_READY; T11 GitLab build only after approval."
     }
   ]
 }
