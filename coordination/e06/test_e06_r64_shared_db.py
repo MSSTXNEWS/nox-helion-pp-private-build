@@ -16,31 +16,25 @@ if STAGED:
     sys.path.insert(0, str(stage))
     from helion.e06_native_stdio_owner import (
         ORIGINAL_V4_OBJECTS, admit_shared_p02_store,
+        require_original_v4_before_store,
     )
 else:
     ORIGINAL_V4_OBJECTS = frozenset()
     admit_shared_p02_store = None
+    require_original_v4_before_store = None
 
-class ApprovedOriginal:
-    def __init__(self, file):
-        self.path=file
-        self.conn=sqlite3.connect(str(file), check_same_thread=False)
-        for n in ORIGINAL_V4_OBJECTS:
-            if n.startswith("ix_"):
-                continue
-            self.conn.execute(f'CREATE TABLE "{n}" (id INTEGER)')
-        for n in ORIGINAL_V4_OBJECTS:
-            if n.startswith("ix_"):
-                self.conn.execute(f'CREATE INDEX "{n}" ON tasks(id)')
-        self.conn.execute("PRAGMA user_version=4")
-        self.conn.commit()
+# Initialize the REAL original Store. No hand-authored fake table/index layout.
+if STAGED:
+    from helion.storage import Store
 
 @unittest.skipUnless(STAGED, "requires exact stage of approved original 729-file source")
 class OriginalDbTest(unittest.TestCase):
     def setUp(self):
         self.dir=tempfile.TemporaryDirectory()
         self.path=Path(self.dir.name)/"helion.sqlite3"
-        self.owner=ApprovedOriginal(self.path)
+        self.owner=Store(self.path, native_thread_safe=True)
+        self.owner.add_task("preserve original task")
+        self.assertEqual(self.owner.conn.execute("PRAGMA user_version").fetchone(), (4,))
     def tearDown(self):
         self.owner.conn.close()
         self.dir.cleanup()
@@ -51,7 +45,14 @@ class OriginalDbTest(unittest.TestCase):
         self.assertEqual(original.execute("PRAGMA user_version").fetchone(),(4,))
         store.add_turn("local","owner","default","Hi","Hello")
         self.assertEqual(len(store.history("local","owner","default")),2)
-        self.assertTrue((self.path.with_name(self.path.name+".pre-p02-native.sqlite3")).is_file())
+        backup=self.path.with_name(self.path.name+".pre-p02-native.sqlite3")
+        self.assertTrue(backup.is_file())
+        with sqlite3.connect(backup) as read:
+            self.assertEqual(read.execute("PRAGMA quick_check").fetchone(), ("ok",))
+            self.assertEqual(read.execute("SELECT title FROM tasks").fetchone(), ("preserve original task",))
+            self.assertEqual(read.execute("SELECT COUNT(*) FROM p02_chats").fetchone() if
+                             "p02_chats" in [x[0] for x in read.execute(
+                                 "SELECT name FROM sqlite_master WHERE type='table'")] else None, None)
     def test_unknown_original_object_fails_before_p02_schema(self):
         self.owner.conn.execute('CREATE TABLE unexpected_secret(id INTEGER)')
         with self.assertRaisesRegex(RuntimeError,"UNRECOGNIZED_OBJECTS"):
@@ -62,6 +63,22 @@ class OriginalDbTest(unittest.TestCase):
         self.owner.conn.execute("PRAGMA user_version=3")
         with self.assertRaisesRegex(RuntimeError,"V4_SCHEMA_REQUIRED"):
             admit_shared_p02_store(self.owner,"owner")
+    def test_existing_legacy_v3_denied_before_store_migration(self):
+        self.owner.close()
+        with sqlite3.connect(self.path) as raw:
+            raw.execute("PRAGMA user_version=3")
+        with self.assertRaisesRegex(RuntimeError, "PREEXISTING_DB_NOT_V4"):
+            require_original_v4_before_store(self.path)
+        with sqlite3.connect(self.path) as raw:
+            self.assertEqual(raw.execute("PRAGMA user_version").fetchone(), (3,))
+            self.assertEqual(raw.execute("SELECT title FROM tasks").fetchone(), ("preserve original task",))
+        # Mark the already closed owner; tearDown does not reuse this connection.
+        self.owner.conn=sqlite3.connect(":memory:")
+
+    def test_new_db_and_real_v4_preflight(self):
+        require_original_v4_before_store(self.path)
+        require_original_v4_before_store(Path(self.dir.name)/"not-yet-created.sqlite3")
+
     def test_reopen_original_database_preserves_history(self):
         first=admit_shared_p02_store(self.owner,"owner")
         first.add_turn("local","owner","default","Persist","Confirmed")

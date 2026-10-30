@@ -40,6 +40,28 @@ P02_OBJECTS = frozenset((
     "p02_meta", "p02_messages_by_chat", "p02_messages_stable_seq",
 ))
 
+def require_original_v4_before_store(db_path: Path) -> None:
+    """Read-only preflight BEFORE legacy Store.__init__ can auto-upgrade V1–V3.
+
+    Existing owner data must not be migrated as a side effect of native
+    activation. A fresh profile is allowed; CoreRuntime rules stay untouched.
+    """
+    path = Path(db_path)
+    if path.is_symlink():
+        raise RuntimeError("E06_ORIGINAL_DB_SYMLINK_DENIED")
+    if not path.exists():
+        return  # Fresh Store will create the approved original V4 schema.
+    if not path.is_file():
+        raise RuntimeError("E06_ORIGINAL_DB_NOT_FILE")
+    # URI mode=ro never creates/changes a user database.
+    candidate = sqlite3.connect(path.resolve(strict=True).as_uri() + "?mode=ro", uri=True)
+    try:
+        if candidate.execute("PRAGMA user_version").fetchone() != (4,):
+            raise RuntimeError("E06_ORIGINAL_PREEXISTING_DB_NOT_V4")
+    finally:
+        candidate.close()
+
+
 def admit_shared_p02_store(original_store, principal: str) -> P02Store:
     """Reuse original Store.conn; backup before first additive P02 schema write.
 
