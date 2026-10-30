@@ -34,7 +34,17 @@ def _fixture_result(cmd, *, mode="valid", **kwargs):
     if cmd[:2] == ["git", "status"]:
         return subprocess.CompletedProcess(cmd, 0, stdout="")
     if "unittest" in cmd:
-        output = "Ran 40 tests in 0.01s\n\nOK\n"
+        # The discovery total must never stand in for executed named tests.
+        names = [f"test_probe_{n:02d}" for n in range(40)]
+        if mode == "fake_total":
+            output = "Ran 40 tests in 0.01s\n\nOK\n"
+        else:
+            output = "".join(
+                f"{name} (test_model_snapshot_probe.SnapshotProbe.{name}) ... "
+                + ("skipped 'permission'\n" if mode == "skipped_snapshot" and i == 39
+                   else "ok\n")
+                for i, name in enumerate(names)
+            ) + "Ran 40 tests in 0.01s\n\nOK\n"
     elif "RagComponentHarness" in label:
         output = "" if mode == "missing_rag" else "P04_RAG_SYNTHETIC_COMPONENT_PASS: 11 checks; NO_REAL_OLLAMA_OR_GPU\n"
     elif "GpuWorkerReceiptHarness" in label:
@@ -59,6 +69,9 @@ class EvidenceGateTests(unittest.TestCase):
             path = self.root / item
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("offline dummy fixture\n", encoding="utf-8")
+        methods = "".join(f"    def test_probe_{i:02d}(self): pass\n" for i in range(40))
+        (self.root / "tests/P04/test_model_snapshot_probe.py").write_text(
+            "class SnapshotProbe:\n" + methods, encoding="utf-8")
         self.args = argparse.Namespace(repo_root=str(self.root), expected_head=_HEAD, step_timeout=30)
 
     def run_gate(self, mode="valid"):
@@ -88,6 +101,14 @@ class EvidenceGateTests(unittest.TestCase):
     def test_short_freshness_markers_fail(self):
         code, report = self.run_gate("short_freshness")
         self.assertEqual((code, report["reason"]), (1, "P05_FRESHNESS_ASSERTION_COUNT_MISMATCH"))
+
+    def test_all_skipped_or_missing_named_snapshot_results_fail_closed(self):
+        for mode in ("skipped_snapshot", "fake_total"):
+            with self.subTest(mode=mode):
+                code, report = self.run_gate(mode)
+                self.assertEqual(
+                    (code, report["reason"]),
+                    (1, "P04_SNAPSHOT_REGRESSION_MISSING_OR_SKIPPED"))
 
     def test_head_drift_fails_before_component_execution(self):
         self.args.expected_head = "b" * 40
