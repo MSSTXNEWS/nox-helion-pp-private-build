@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_V16_R42_G2A_ONEHOST_RECEIPT_V1",
+  "runId": "NOX-V16-G2A-R42-20261030-CONSENT-PROBE",
+  "role": "G2-A",
+  "taskId": "NIP01-48",
+  "routeId": "system.backup",
+  "owner": "T06/manual1",
+  "timestampUTC": "2026-10-30T02:58:10.574Z",
+  "productHeadPRE": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "productTreePRE": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+  "productHeadPOST": "UNCHANGED",
+  "roleHeadPRE": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "pre": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "gitBlob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62"
+  },
+  "postCandidate": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "gitBlob": "90430b040c2b11d5f80669895c846841592f743f"
+  },
+  "test": {
+    "path": "coordination/e06_host50/test_native_bridge_consent_probe_r42.py",
+    "gitBlob": "7597bab4f18dcdc45fdd69ad11daa9d3760afad8",
+    "python": "NOT_RUN",
+    "staticSourceOrder": "PASS",
+    "windowsNative": "NOT_RUN"
+  },
+  "sourceStage": "SOURCE_PREPARED_NOT_INTEGRATED",
+  "QA_ACCEPTED": false,
+  "reason": "Native dangerous approval was checked BEFORE owner readiness probe; probe can revoke consent before dispatch",
+  "fix": "Approval moved AFTER readiness probe and just BEFORE native owner call; no consent requested on unavailable/unbound route",
+  "lesson": "Revalidate dangerous-route approval after last pre-dispatch callback; Windows host still must guarantee atomic consent/STOP/ACL at dispatch",
+  "errorId": "ERR-SRC-004",
+  "gates": {
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "SOURCE_PREPARED",
+    "E07": "NOT_RUN",
+    "SOURCE_READY": false
+  },
+  "noLoss": "No original ZIP/D02/WOW/portrait/PACK files modified; 729/3 historic DONE preserved",
+  "next": "T06 owner same-SHA CAS from PRE blob then run focused Python and security tests, T08 same-SHA QA, T02 shared journal only",
+  "product": "N/D",
+  "deltaAccepted": 0
+}

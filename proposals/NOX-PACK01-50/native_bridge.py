@@ -205,15 +205,18 @@ class NoxPackHost:
         risk = self.routes[route]["risk"]
         if risk in ("sensitive","dangerous") and route not in session.private_approved:
             raise HostDenied("Native sensitive action scope required")
-        if risk == "dangerous" and (
-            not callable(self.native_approve) or
-            self.native_approve(session,route,json.loads(raw)) is not True):
-            raise HostDenied("Fresh native action approval required")
         port = self.ports.get(route)
         if not port:raise HostHold("Actual owner backend unbound")
         try:ready = port.available() is True
         except Exception:ready = False
         if not ready:raise HostHold("Owner backend unavailable")
+        # The owner readiness probe may revoke a previously granted approval.
+        # Check the ONE native approval after the last pre-dispatch probe;
+        # never prompt for native consent on an unavailable route.
+        if risk == "dangerous" and (
+            not callable(self.native_approve) or
+            self.native_approve(session,route,json.loads(raw)) is not True):
+            raise HostDenied("Fresh native action approval required")
         return port.call(session,frozen_payload)
 
 
