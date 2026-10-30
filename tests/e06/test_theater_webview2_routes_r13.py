@@ -10,7 +10,8 @@ HOST=(ROOT/'integrations/creative/bridge/CreativeHostBridge.cs').read_text(encod
 
 class TheaterRouteContract(unittest.TestCase):
     def test_existing_host_not_replaced(self):
-        self.assertIn('Navigate("https://nox.local/creative/theater.html")',HOST)
+        self.assertIn('var theaterUrl="https://nox.local/creative/theater.html";',HOST)
+        self.assertIn('viewer.CoreWebView2.Navigate(theaterUrl);',HOST)
         self.assertIn('SetVirtualHostNameToFolderMapping("nox.local"',HOST)
     def test_p01_bridge_reuses_exact_existing_nox_virtual_host(self):
         bridge=(ROOT/'stage/proposals/P01/C09/Bridge/P01WebView2NavigationBridge.cs').read_text(encoding='utf-8')
