@@ -1,0 +1,45 @@
+{
+  "schema": "NOX_V16_R47_G3B_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G3B-20261030T1143MSK-CSV-EMPTY-ROW",
+  "owner": "G3-B",
+  "branch": "auto/r42/g3b-pack02",
+  "task_ids": [
+    "NIP02-22"
+  ],
+  "error_id": "ERR-SRC-004",
+  "stage": "SOURCE_COMPONENT_VERIFIED_NOT_INTEGRATED_NOT_QA_ACCEPTED",
+  "source_pre_branch_head": "4f955ec99c6231e147d5871e6adc12fe18f3fc35",
+  "source_pre_tree": "1fcf2b8409d1caca9f504ccf5a35e68ddd95e8ea",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "changes": [
+    {
+      "path": "proposals/NOX-PACK02-50/ops.mjs",
+      "pre_git_blob": "390bab8fbfae5b7826a56e24711dde769aa682fe",
+      "post_git_blob": "77e9abc25c15d51af69601f7dd0f6c46ea613547"
+    },
+    {
+      "path": "proposals/NOX-PACK02-50/test_csv_empty_onecol_r47.mjs",
+      "pre": "ABSENT_NEW_TEST",
+      "post_git_blob": "6ad963ca40fe94f6c318d1cc9365b5b50492f170"
+    }
+  ],
+  "root_cause": "Single-column empty CSV data record serialized as unquoted blank line, parser ignores it and silently loses row.",
+  "fix": "Quote zero-length CSV cells in existing stringify serializer; do not change 50 routes or parse/STOP/ACL/consent.",
+  "tests": {
+    "exact_source_runtime": "V8 Function on full Git source",
+    "red_before": 1,
+    "target_green": 3,
+    "failed": 0,
+    "notes": [
+      "empty one-field row roundtrip",
+      "multicolumn scalar/quoted field roundtrip",
+      "invalid CSV quote rejected and 50 IDs retained"
+    ],
+    "node": "NOT_RUN",
+    "windows": "NOT_RUN"
+  },
+  "lessons_applied": "Earlier CSV no-loss lesson enforced as one-column empty-row roundtrip test.",
+  "new_lesson": "Output and parser must be tested as a pair on cardinality-1 empty records; quoted empty cell is distinct from absent row.",
+  "no_loss": "All other Git tree paths unchanged; original ZIP/visuals/persona and host safety not modified.",
+  "next_owner": "T06 integrate cumulative PACK02 on live product HEAD using exact PRE/CAS; T08 independent same-SHA QA; T02 only shared journal writer"
+}
