@@ -32,6 +32,7 @@
         <span class="muted">NOX / ТВОРЧЕСТВО / 5 блоков</span>
       </nav>
       <h2>CREATIVE STUDIO · Единый проект, пять блоков</h2>
+      <div id="cs5-segments" class="actions" role="group" aria-label="Пять сегментов Creative Studio"></div>
       <p class="muted">Внутри существующего NOX. Исследования и редактура — локальные записи;
       производство — исходный Creative Worker; модели — штатный ModelCenter;
       публикации и доходы без провайдерских квитанций не подтверждены.</p>
@@ -78,7 +79,28 @@
   };
   const block = byId('cs5-block');
   const kind = byId('cs5-kind');
+  const segments = byId('cs5-segments');
+  const segmentLabels = {
+    B01: 'Исследование', B02: 'Истории', B03: 'Медиа',
+    B04: 'Модели', B05: 'Бренды'
+  };
+  for (const [key, name] of Object.entries(segmentLabels)) {
+    const control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'action';
+    control.textContent = name;
+    control.dataset.cs5Segment = key;
+    control.setAttribute('aria-pressed', key === block.value ? 'true' : 'false');
+    control.addEventListener('click', () => {
+      block.value = key;
+      refreshKinds();
+    });
+    segments.appendChild(control);
+  }
   function refreshKinds() {
+    for (const button of segments.children) {
+      button.setAttribute('aria-pressed', button.dataset.cs5Segment === block.value ? 'true' : 'false');
+    }
     kind.replaceChildren();
     for (const [value,label] of kinds[block.value]) {
       const opt = document.createElement('option');
