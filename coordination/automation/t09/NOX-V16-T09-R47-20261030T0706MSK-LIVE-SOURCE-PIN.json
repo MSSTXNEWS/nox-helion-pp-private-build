@@ -1,0 +1,167 @@
+{
+  "schema": "NOX_V16_T09_R47_PIN_HOLD_V1",
+  "taskId": "T09",
+  "runId": "NOX-V16-T09-R47-20261030T0706MSK-LIVE-SOURCE-PIN",
+  "role": "G4-C QA-2 independent no-loss keeper",
+  "observedMoscow": "2026-10-30T07:06:39+03:00",
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonParagraphs": 705,
+    "consolidatedRules": 56,
+    "errorBlob": "f837addf069415c94da60b7198e33f95db9003df",
+    "errorCounts": {
+      "open": 5,
+      "patched": 4,
+      "closed": 2
+    },
+    "MasterRevision": "AHj4eMQRfKESVd7L9UBH4q1eMSyTJUnKG2IDtnG0Sip_qgS0DdZ92lXGsiOQPFScn2GfQJFkQcWs-z2TM9qU78LALE05y5KE6tofY14BNmU",
+    "E06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "LessonsRevision": "AHj4eMSmg85_2_QK9ON8mKpdaStERZKK-zIrg1j8A0mSHk5LYArkmF-mR6a6O9yc8dpqkKfW6YDyVH0MmZVqJQrJMQXwmfhHIcwhZUB2RL0"
+  },
+  "source": {
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "PRE": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "POST": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "ahead": 1,
+    "deletedPaths": 0,
+    "changed": [
+      {
+        "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+        "PRE": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+        "POST": "312d428992aa0cab15a0f597dacd114653064bda"
+      },
+      {
+        "path": "tests/P03/test_g2c_r42_snapshot_atomicity.cjs",
+        "PRE": null,
+        "POST": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb"
+      }
+    ],
+    "frozen": null
+  },
+  "archive": {
+    "preserved3Parts": [
+      {
+        "file": "source_00.part",
+        "blob": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "bytes": 20971520
+      },
+      {
+        "file": "source_01.part",
+        "blob": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "bytes": 20971520
+      },
+      {
+        "file": "source_02.part",
+        "blob": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        "bytes": 18421306
+      }
+    ],
+    "originalZIP_SHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalZIP_bytes": 60364346,
+    "physicalMembers": 729,
+    "reusedT07": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513693455",
+    "rawZIPRehashed": false
+  },
+  "media": {
+    "archivedOriginalAssets8of8": "T07_PHYSICAL_PASS_REUSED",
+    "HOME_SHA256": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+    "MENU8_SHA256_PREFIX": "7d181604f913cf99",
+    "WORK_SHA256_PREFIX": "f8ff2e086fec728c",
+    "approvedFivePersonaPortraitBytesAndRights": "HOLD_NOT_PROVEN",
+    "EV_optional_motion": "IDENTITY_CONFLICT_HOLD",
+    "finalRenderedWin": "NOT_VERIFIED"
+  },
+  "gates": {
+    "T06_owner_8of8": "HOLD",
+    "T04_T05_final_integrated_decisions": "HOLD",
+    "T07_ZIP729": "DONE",
+    "T08_current_HEAD_independent": "HOLD",
+    "T09_immutable_head_tree_manifest": "HOLD",
+    "handoff_T10_T11": "HOLD",
+    "T08_latest_observed_HEAD": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "T08_latest_issue": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6514176861",
+    "T06_new_commit_p03_source_only": true
+  },
+  "progress": {
+    "before": 1,
+    "after": 1,
+    "denominator": 6,
+    "percent": 16.7,
+    "delta_pp": 0,
+    "remaining": 5,
+    "bar": "██░░░░░░░░",
+    "PRODUCT": "N/D",
+    "newAcceptedTaskIDs": 0
+  },
+  "test": {
+    "kind": "PINNED_GIT_TREE_DELTA_AND_ORIGINAL_3PART_POINTER_PARITY",
+    "status": "PASS_LIMITED",
+    "parts": 3,
+    "sourceChangedFiles": 2,
+    "nativeStopAclConsent": "NOT_RUN",
+    "E07": "NOT_RUN"
+  },
+  "errorsAck": [
+    [
+      "ERR-SYS-001",
+      "HANDOFF:T02"
+    ],
+    [
+      "ERR-SYS-002",
+      "APPLY:SHA_PINS"
+    ],
+    [
+      "ERR-SRC-003",
+      "HANDOFF:T06"
+    ],
+    [
+      "ERR-SRC-004",
+      "HANDOFF:T06_T08"
+    ],
+    [
+      "ERR-SRC-005",
+      "NO_IMPACT"
+    ],
+    [
+      "ERR-SYS-006",
+      "ALREADY_VERIFIED"
+    ],
+    [
+      "ERR-SYS-007",
+      "ALREADY_VERIFIED"
+    ],
+    [
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "APPLY:NO_FALSE_FREEZE"
+    ],
+    [
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "APPLY:CHECKPOINT"
+    ],
+    [
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "HANDOFF:T06"
+    ],
+    [
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN",
+      "HANDOFF:T08"
+    ]
+  ],
+  "lesson": {
+    "applied": "No 60MB re-download or 729-member rehash after unchanged original parts; inspect one P03 HEAD delta only and preserve security gates.",
+    "new": "Same source blob may pass isolated V8 tests while new integrated SHA lacks T08 signed approval. Require exact current-head T08 and five approved portrait SHA/rights before T09 seal."
+  },
+  "blocker": {
+    "id": "ERR-SRC-004",
+    "owner": "T06 then T08",
+    "nextAction": "T06 signed 8/8 on current integrated HEAD/tree/manifest plus FIVE approved media byte SHA+rights and native STOP/ACL/consent; T08 independently signs exact same HEAD; T09 then freezes and hands identical SHA to T10/T11."
+  },
+  "sharedJournalWriter": "T02_ONLY",
+  "productWrites": false,
+  "build": false,
+  "exe": false,
+  "gitlabCI": false,
+  "installedE07": false,
+  "status": "INCOMPLETE_NOT_FROZEN"
+}
