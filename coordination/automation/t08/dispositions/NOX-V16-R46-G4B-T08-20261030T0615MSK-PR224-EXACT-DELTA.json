@@ -1,0 +1,148 @@
+{
+  "schema": "NOX_V16_R46_T08_INDEPENDENT_CANDIDATE_SOURCE_QA_DISPOSITION_V1",
+  "run_id": "NOX-V16-R46-G4B-T08-20261030T0615MSK-PR224-EXACT-DELTA",
+  "role": "AUTO G4-B / existing TaskID T08; independent SOURCE ONLY; product read-only",
+  "observed_at_utc": "2026-10-30T03:22:57.969Z",
+  "source_pins": {
+    "live_pr162": {
+      "pr": 162,
+      "head": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+      "tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+      "draft": true,
+      "integrated_candidate": false
+    },
+    "isolated_owner_candidate": {
+      "pr": 224,
+      "head": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+      "tree": "a1ae4a963a6c0bfaf260b76b21722341dce13a8f",
+      "parent_base": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+      "integrated_in_pr162": false
+    },
+    "error_register": {
+      "branch": "coordination/v16-shared-error-ledger-20261029-r01",
+      "path": "coordination/ops/NOX_V16_ACTIVE_ERROR_REGISTER.json",
+      "blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+      "owner": "T02"
+    },
+    "canon": {
+      "document_id": "11EM0qW3PJN0WqV8Euc1A2X4c0UukHiVq_0WfaLYVYpc",
+      "revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+      "paragraphs_read": 705
+    },
+    "lesson_revision": "AHj4eMTUtXpfzs_XCbbrdD785ZSCycLa8qo8G1TdDn2vQcP1D4AvjWYxyHkaIlh6DAKtcrpThPhvNsvYL6UAMJaqbjaxYCKmgyJxVSAT-a4"
+  },
+  "changed_paths": [
+    {
+      "path": "proposals/NOX-PACK01-50/p01_windows_owner_ports.py",
+      "pre": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+      "post": "ecd39b64075b4edfd720dba5ab39f5a71c124b10"
+    },
+    {
+      "path": "proposals/NOX-PACK01-50/test_p01_windows_owner_ports.py",
+      "pre": "41d7f6173d83d2a052ebf74639b2383936a45748",
+      "post": "0278961473740f0d1511e9a4dafade1082c130d4"
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+      "pre": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+      "post": "312d428992aa0cab15a0f597dacd114653064bda"
+    },
+    {
+      "path": "tests/P03/test_g2c_r42_snapshot_atomicity.cjs",
+      "pre": null,
+      "post": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb"
+    },
+    {
+      "path": "coordination/e06/build_onehost_installer.ps1",
+      "pre": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+      "post": "e6bb8455f17f98289a0c308bc0a7c8a8a5d14835"
+    },
+    {
+      "path": "stage/proposals/P01/C09/Installer/tests/no_silent_nsis_bootstrap.test.mjs",
+      "pre": null,
+      "post": "29484b4e5528ce303c7113b4aad4bb6f38f2db34"
+    },
+    {
+      "path": "coordination/release/NOX_V16_R44_REUSE_FIRST_8_COMPONENTS.json",
+      "pre": null,
+      "post": "f595d54b673c5defb3de934b04c5b4abb415932a"
+    }
+  ],
+  "tests": {
+    "p03_atomic_snapshot": {
+      "source_blob": "312d428992aa0cab15a0f597dacd114653064bda",
+      "test_blob": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb",
+      "mode": "original Git CJS test executed via V8 new Function with in-memory fs, DOM/URL shim",
+      "baseline": "FAIL: rejected progress changed license Apache-2.0 to MIT",
+      "candidate": "PASS 3/3"
+    },
+    "p03_snapshot_consent": {
+      "source_blob": "312d428992aa0cab15a0f597dacd114653064bda",
+      "test_blob": "0ec5792321a42a259698aa6aaf53bf9c88ed903c",
+      "mode": "original Git CJS test executed via V8 with DOM/URL shim",
+      "candidate": "PASS 12/12"
+    },
+    "p03_stop_ack": {
+      "source_blob": "312d428992aa0cab15a0f597dacd114653064bda",
+      "test_blob": "3651a606ca168c19ea7351f38bab0c3d06fd619e",
+      "mode": "original Git CJS test executed via V8 with in-memory fs",
+      "candidate": "PASS 13/13"
+    },
+    "nsis_noninteractive_safety": {
+      "source_blob": "e6bb8455f17f98289a0c308bc0a7c8a8a5d14835",
+      "mode": "source assertion parity of provided Git CJS + additional preflight ordering negative",
+      "status": "FAIL 7/8 checks PASS; required NSIS preinstalled verification occurs only after output directory creation and dotnet publish (lines 153, 158 vs 299-307)",
+      "original_node_test": "NOT_RUN",
+      "actual_windows_nsis": "NOT_RUN"
+    },
+    "p01_numeric_whatwg": {
+      "source_blob": "ecd39b64075b4edfd720dba5ab39f5a71c124b10",
+      "test_blob": "0278961473740f0d1511e9a4dafade1082c130d4",
+      "status": "SOURCE_INSPECTED_ONLY; numeric 127.1/0x7f.1 denial branch and test cases present; full Python unittest NOT_RUN"
+    },
+    "r43_native_bridge_classifier": {
+      "classifier_blob": "aa4ab5ce59b11e8d64d32b52b45dacc1e3d95f27",
+      "builder_base_blob": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+      "builder_candidate_blob": "e6bb8455f17f98289a0c308bc0a7c8a8a5d14835",
+      "diagnostic_bridge_blob": "b1bcc1a30c497eb6cae7cf195dc77e427a052e85",
+      "native_ingress_blob": "842f3d60f9506a7ed54a4cf4e158254bf6617df6",
+      "mode": "R43 checker regex parity on fetched exact Git source, original Python classifier TOOL_NOT_RUN",
+      "classification": "HOLD: BUILDER_DECLARES_DIAGNOSTIC_ONLY_NOT_LIVE; DIAGNOSTIC_BRIDGE_NOT_LIVE_FUNCTION_PROOF",
+      "no_native_test": true
+    }
+  },
+  "no_loss": {
+    "pr224_file_delta_count": 7,
+    "modified_protected_original_zip_parts": 0,
+    "modified_original_image_paths": 0,
+    "not_rehashed_in_this_run": true,
+    "prior_t07_evidence_reused": "issue #177 comment 6513693455",
+    "home_menu_work_persona_rights": "do not infer from changed-path absence that all 5 portraits accepted"
+  },
+  "blocked": {
+    "reason": "PR224 is isolated candidate, not integrated PR162; NSIS toolchain precheck after expensive publish; live WPF/Python bridge still diagnostic-only, 14 native route tests not run",
+    "owner": "G1-B NSIS owner (early preflight); G3-C/T06 integration; manual #2 for native independent acceptance; T02 journal"
+  },
+  "disposition": "SOURCE_QA_CANDIDATE_PARTIAL_PASS__RELEASE_HOLD",
+  "stages": {
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN"
+  },
+  "metrics": {
+    "P01_P05_WEIGHTED": "N/D",
+    "T06_OWNER_8_OF_8": "NOT_PROVEN",
+    "source_ready": "HOLD",
+    "native_routes_pending": 14,
+    "QA_ACCEPTED_DELTA": 0,
+    "DONE_DELTA": 0
+  },
+  "prior_lesson_applied": "R35/R37: candidate source PASS never equals native acceptance; compare dependency blobs, do not rerun unchanged suites.",
+  "new_lesson": "Installer source regression must assert preinstalled NSIS toolchain BEFORE output-root creation/dotnet publish; forbidding package-manager install alone misses costly deterministic failure. G1-B already reported root cause, so append to ERR-SRC-004 only; do not create duplicate ERROR_ID.",
+  "next_handoff": "G1-B owner patch on existing branch (preflight ordering) -> T06 same-SHA selective CAS of PR224 into PR162 -> T08 independent integrated-head delta QA -> T09 freeze -> T10 SOURCE_READY -> authorized G5-C build/E07 only when permitted.",
+  "immutable_receipt_note": "This own-branch Git file is evidence, not shared T02 Error/Master/E06/Lessons CAS or source acceptance."
+}
