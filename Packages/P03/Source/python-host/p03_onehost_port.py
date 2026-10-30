@@ -316,7 +316,12 @@ class P03OneHostPort:
         # The original backend, not this port, owns files, digests, receipts and queue.
         # No raw worker exception may escape as a false native success ACK.
         try:
-            return func(session, args)
+            result = func(session, args)
+            # A nullable retry/cancel owner result is not an execution ACK.
+            # Do not let a native bridge treat JSON null as a queued/successful job.
+            if result is None:
+                raise P03PortHold("Owner3 backend returned no operation acknowledgement")
+            return result
         except (P03PortDenied, P03PortHold):
             raise
         except Exception:

@@ -1,0 +1,38 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T1322MSK-NULL-RETRY-ACK",
+  "role": "G2-C P03",
+  "task_id": "P03_EXISTING",
+  "error_id": "ERR-SRC-004",
+  "branch": "auto/r42/g2c-p03",
+  "branch_head_pre": "f4752cd4daa3be4929384187a05685143eb06a4d",
+  "branch_tree_pre": "50491f78fe75fccd1c4777d1623ad3ade3de8eaa",
+  "pr162_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "changed_paths": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre": "e552e8fce5bd7fdbff5b9b845084210592e541a6",
+      "post": "8ae1535301e742e9f67f6b6c53de46cd9792137d"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_retry_null_ack_r47.py",
+      "pre": null,
+      "post": "6ca099409d125d20117da0ed76c1bbc0989e96b2"
+    }
+  ],
+  "root_cause": "P03 execute_backend returns owner method result unchanged; C# ModelDownloadQueueWorker.RetryAsync returns nullable ModelJob?, so a non-eligible retry can surface as JSON null without an explicit HOLD.",
+  "repair": "Fail closed only when owner result is None; preserve false and valid job payload unchanged; no downloader, server, queue or authorization change.",
+  "evidence": "Matched source branch exact PRE; C# ModelDownloadQueueWorker.RetryAsync nullable; isolated Python pre/post return-guard reproduction: old None, guarded 3/3 PASS. Full committed module unittest NOT_RUN; Windows/Ollama NOT_RUN.",
+  "lesson_applied": "Fail-close source evidence and avoid false ACK; reuse C# existing worker rather than create new queue.",
+  "lesson_new": "Native owner bridge must never turn a nullable C# RetryAsync result into an apparent successful job. Pin an explicit no-ACK regression.",
+  "stages": {
+    "source_prepared": true,
+    "source_verified": "ISOLATED_GUARD_ONLY",
+    "integrated_pr162": false,
+    "qa_accepted": false,
+    "source_ready": false,
+    "windows_build": false,
+    "E07": "NOT_RUN"
+  },
+  "next_owner": "T06 compare exact owner preimage against live PR162; minimal CAS integration only after ensuring no conflicting patch; T08 same-SHA QA; T02 sole shared ledger writer."
+}
