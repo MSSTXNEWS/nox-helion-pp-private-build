@@ -1,0 +1,149 @@
+{
+  "schema": "NOX_V16_T09_R47_NOLOSS_MEDIA_RIGHTS_EXACT_HEAD_VERDICT_V1",
+  "runId": "NOX-V16-T09-R47-20261030T0910MSK-PERSONA-RIGHTS-SOURCE-HOLD",
+  "existingTaskId": "T09",
+  "startedAtMoscow": "2026-10-30T09:10:41+03:00",
+  "evidenceObservedAtMoscow": "2026-10-30T09:15:32+03:00",
+  "role": "G4-C QA-2 independent frozen-source keeper; no product write, no downstream signing",
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canonParagraphs": 705,
+    "canonAllConsolidated33RulesRead": true,
+    "canonicalRuleCount": 56,
+    "currentErrorRegisterBlob": "9cd9f3c5a5455b7a4097452b22477ea133f4507c",
+    "activeErrorIds": [
+      "ERR-SYS-001",
+      "ERR-SYS-002",
+      "ERR-SRC-003",
+      "ERR-SRC-004",
+      "ERR-SRC-005",
+      "ERR-SYS-006",
+      "ERR-SYS-007",
+      "ERR-T09-20261029-PREMATURE-CLOSEOUT-NOT-IN-CANONICAL-JOURNALS",
+      "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "NOX-V16-T06-ROOT-STOP-20261029-R01",
+      "ERR-T08-20261029-HOST50-SOURCELOCK-AUTOFIX-CHAIN-BROKEN"
+    ],
+    "errorCounts": {
+      "OPEN": 5,
+      "FIX_APPLIED_UNVERIFIED": 4,
+      "VERIFIED_CLOSED": 2
+    },
+    "issue177CommentCount": 540,
+    "masterRevision": "AHj4eMReK340AIPM3dvKeakGXeVtCWNJYTjEDxsZiT5cRok0IBjF-nNgMP3od4ajRMsUZ6CJkIasqQalR6_uLNqCeTpz3hUm3aADMANAYHM",
+    "E06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "LessonsRevision": "AHj4eMTshW3RqDSEscutvmx3EAKhr5MvGXrKzb9gmcpXSbRYy5B2MhvLghwOSqepHVYXGqai1_NzTvE7RTIVulxrwFIQFDe1hoxqL65yOys",
+    "sharedErrorsDocRevision": "AHj4eMSpC9gCMB7EB1HluL9_Fb3iTAHRkNDQ7bX4RKghRHQXnNim4x7uIkSzPK1DYnMm-In4vp1lsVgh_Tjcg0AbY4t4lZXAtrQ8RSTAUFk",
+    "previousT09ReceiptBlob": "c71c06a097ef336b8d9c51cbd27cf37aa5ff3760",
+    "previousT09BranchHead": "eb4bb36792812d1feaa318e53d4feeb05076c6f4"
+  },
+  "source": {
+    "pr": 162,
+    "sourceBranch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "headPre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+    "headChangedSincePreviousT09": false,
+    "productFilesChanged": [],
+    "finalFrozenHead": null,
+    "originalParts": [
+      [
+        "source_00.part",
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        20971520
+      ],
+      [
+        "source_01.part",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        20971520
+      ],
+      [
+        "source_02.part",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de",
+        18421306
+      ]
+    ],
+    "T07OriginalReceiptBlob": "8573ee3d062ad078268db66d9b68c582c2287a62",
+    "sourceZipBytes": 60364346,
+    "sourceZipSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalRaw729": "HISTORICAL_PHYSICAL_PASS_REUSED_EXACT_SOURCE_PART_GIT_POINTERS;NOT_REHASHED",
+    "protectedMediaStillOriginalSha256": {
+      "HOME": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+      "MENU": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
+      "WORK": "f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14"
+    }
+  },
+  "newIndependentCheck": {
+    "path": "integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+    "gitBlob": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+    "rawFieldsRead": [
+      "schema",
+      "bundle_sha256",
+      "owner_source_archive",
+      "active_portrait_media",
+      "blocked_persona",
+      "camera_motion",
+      "actual_lip_sync",
+      "windows_e07_accepted",
+      "media_archive_external"
+    ],
+    "activePortraitMedia": [
+      "KV",
+      "AM",
+      "LA",
+      "KW"
+    ],
+    "blockedPersona": [
+      "EV"
+    ],
+    "sourceArchive": "NOX_REBUILD_04_PERSONAS_LOCKED.zip",
+    "approvedMediaArchiveExternal": true,
+    "testAssertions": {
+      "activeMediaCountExactly4": "PASS",
+      "EVexplicitlyBlocked": "PASS",
+      "thisSourceManifestContainsNoFiveApprovedStillPortraitDigestAndRightsBinding": "PASS"
+    },
+    "result": "LIMITED_SOURCE_EVIDENCE_ONLY: THIS manifest cannot prove all five approved portrait SHA256/rights/runtime owner bindings; does NOT prove these rights absent in all external artifacts, and optional EV motion is not mandatory",
+    "tests": "EXACT_GIT_BLOB_JSON_SOURCE_ASSERTIONS_3_3_PASS;NATIVE_WINDOWS_NOT_RUN",
+    "whyNew": "Previous T09 recorded a generic five-portrait evidence HOLD; this RunID pins the exact canonical 4-active/EV-blocked source blob, preventing mistaken fifth media approval or unfair EV optional release blocker."
+  },
+  "T06": {
+    "latestOwnerAccepted8of8": "NOT_PROVEN_ON_CURRENT_HEAD",
+    "proof": "PR162 draft, issue177 and source T06 receipts do not provide signed full 8/8 same-HEAD accepted manifest; historical selective Windows source tests were not full tree equality",
+    "owner": "T06/manual#1"
+  },
+  "T08": {
+    "sameHeadReceiptBlob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+    "sameHead": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "evidence": "P03_ONLY_SOURCE_28_OF_28_LIMITED_PASS",
+    "fullP01P05SourceVerdict": "HOLD_NOT_CONFIRMED",
+    "nativeSTOP_ACL_consent_privacy_rollback": "NOT_RUN_OR_UNACCEPTED",
+    "isFullSourcePASS": false
+  },
+  "assessment": {
+    "blockerId": "ERR-SRC-004",
+    "status": "INCOMPLETE_FREEZE_HOLD",
+    "t09Accepted": "1/6",
+    "percentageOperationalEqualWeight": 16.7,
+    "acceptedDelta": 0,
+    "productProgress": "N/D",
+    "fullCodeComplete": "HOLD",
+    "integrated": "HOLD",
+    "sourceReady": "HOLD",
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "noEXE_NSIS_CI_Release": true,
+    "reportGate": "PENDING_OWN_GIT_READBACK"
+  },
+  "lesson": {
+    "previousApplied": "Reused T07 physical 729 archive verification only after exact three source part pointer/size match; kept P03 28/28 same-head limited T08 result distinct from native/full SOURCE PASS.",
+    "newEvidenceBased": "A four-active/EV-blocked persona bridge manifest is not a five-portrait SHA256+rights approval; require separately owner-approved five still SHA/right-to-use plus runtime bindings. Do not turn optional EV motion into mandatory release gate.",
+    "T02Handoff": "Index this exact-source media evidentiary gap under EXISTING ERR-SRC-004; T02 is sole shared register/Master/E06/Lessons writer, no new ERROR_ID."
+  },
+  "nextAction": "T06 signed exact 8/8 owner HEAD/tree/manifest with five original still rights+SHA and actual owner-map/native security, T08 full independent P01-P05 SOURCE PASS on unchanged SHA; T09 then seals ONE exact HEAD/tree and identical T10/T11 handoff. Do not require T10 PASS before freeze.",
+  "notes": "No product code changes or external archive redownload; 729/3 and historic DONE preserved. No final freeze asserted."
+}
