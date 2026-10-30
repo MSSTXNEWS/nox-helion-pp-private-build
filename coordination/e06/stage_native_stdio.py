@@ -13,10 +13,11 @@ ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ORIGINAL_STORAGE_SHA256="145f23a7df0cff95c5287cf35edfdbac4831af0357c6c5d8cf4c92fbe9c58f93"
 ADDONS=(
-    ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","7ffbcd7247e5d8be2dcdc56e3dd68c1c0e669744"),
+    ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","34eeed29e19e98db83f8e5d03028f8b969b5c16e"),
     ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","842f3d60f9506a7ed54a4cf4e158254bf6617df6"),
     ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
     ("Packages/P02/worker-python/p02_runtime.py","p02_runtime.py","ac1620ef6584debcea30d9ea169c2cc0a2cd566b"),
+    ("Packages/P02/worker-python/p02_history_stable.py","p02_history_stable.py","0ec3a074b17c618b3665b126419d5625d84b99f5"),
     ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","285027675738d3e64d77cfe1c3cdbe28a38a95bc"),
 )
 ARG_ANCHOR="    parser.add_argument('--diagnose',action='store_true',help='headless functional contracts check')"
