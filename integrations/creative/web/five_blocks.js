@@ -86,6 +86,10 @@
         </div>
         <button class="action primary" id="cs5-research" type="button">Исследовать по запросу</button>
         <button class="action" id="cs5-research-all" type="button">МЕГА-ПОИСК · 4 открытых каталога</button>
+        <div class="actions" aria-label="Управление результатами исследования">
+          <button class="action" type="button" id="cs5-research-clear">Очистить результаты</button>
+          <span id="cs5-research-count" class="muted" role="status">Источники ещё не запрошены</span>
+        </div>
         <div class="grid" id="cs5-research-results" aria-live="polite"></div>
       </div>
       <div class="actions">
@@ -267,51 +271,101 @@
     return verifyConnection();
   });
   byId('cs5-export').addEventListener('click', () => perform('cs5_export'));
+  const researchState = {generation:0,records:[],busy:false};
+  function sourceLink(raw) {
+    if (typeof raw !== 'string' || raw.length > 600 || /[\\x00-\\x1f]/.test(raw)) return '';
+    try {
+      const value = new URL(raw);
+      if (!['https:','http:'].includes(value.protocol) || !value.hostname ||
+          value.username || value.password) return '';
+      return value.href;
+    } catch {return '';}
+  }
+  function stageResearchItem(item, source) {
+    const record = {
+      provider:source,
+      title:String(item.title || 'Без названия').slice(0,200),
+      detail:String(item.detail || '').slice(0,500),
+      url:sourceLink(item.source_url)
+    };
+    const text = [record.title,record.detail,'Источник: '+record.provider].filter(Boolean).join(' · ').slice(0,3000);
+    return {record,text};
+  }
+  function showResearchRecord(item, source, generation) {
+    if (generation !== researchState.generation) return;
+    const {record,text} = stageResearchItem(item,source);
+    researchState.records.push(record);
+    const card = document.createElement('article');
+    card.className = 'model';
+    const title = document.createElement('h3');title.textContent = record.title;
+    const detail = document.createElement('p');detail.textContent = record.detail;
+    const metadata = document.createElement('small');
+    metadata.textContent = source + ' · публичные метаданные, не фактчек и не продажи';
+    const adopt = document.createElement('button');
+    adopt.type='button';adopt.className='action';
+    adopt.textContent='В проект · подготовить запись';
+    adopt.addEventListener('click',()=>{
+      byId('cs5-text').value=text;
+      byId('cs5-source').value=record.url;
+      block.value='B01';
+      refreshKinds();
+      kind.value='research';
+      byId('cs5-result').textContent='Материал подготовлен в B01. Проверь его и нажми «Сохранить в проект». Автосохранения нет.';
+      byId('cs5-text').focus();
+    });
+    card.append(title,detail,metadata,adopt);
+    if(record.url) {
+      const link=document.createElement('a');
+      link.href=record.url;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent='Первоисточник';card.append(link);
+    }
+    byId('cs5-research-results').append(card);
+    byId('cs5-research-count').textContent=researchState.records.length+' записей из открытых каталогов';
+  }
+  byId('cs5-research-clear').addEventListener('click',()=>{
+    researchState.generation++;
+    researchState.records=[];
+    byId('cs5-research-results').replaceChildren();
+    byId('cs5-research-count').textContent='Результаты очищены';
+  });
   byId('cs5-research').addEventListener('click', async () => {
     const dest = byId('cs5-research-results');
+    if (researchState.busy) return;
     dest.replaceChildren();
+    researchState.records=[];
+    const generation=++researchState.generation;
     const source = byId('cs5-research-source').value;
     const query = byId('cs5-research-query').value.trim();
     if (!query || query.length > 160) {
       byId('cs5-result').textContent = 'Нужен запрос от 1 до 160 символов';
       return;
     }
-    const result = await task('cs5_research', {source,query,project_id:projectId()}, 'cs5-result');
-    if (!result || !Array.isArray(result.items)) return;
-    for (const item of result.items) {
-      const card = document.createElement('article');
-      card.className = 'model';
-      const title = document.createElement('h3');
-      title.textContent = item.title || 'Нет названия';
-      const detail = document.createElement('p');
-      detail.textContent = item.detail || '';
-      const metric = document.createElement('small');
-      metric.textContent = item.metric == null ? source : item.metric + ' ' + (item.unit || '') + ' · НЕ ПРОДАЖИ';
-      card.append(title,detail,metric);
-      if (item.source_url) {
-        try {
-          const url = new URL(item.source_url);
-          if (['https:','http:'].includes(url.protocol) && url.hostname && !url.username && !url.password) {
-            const link = document.createElement('a');
-            link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
-            link.textContent='Открыть источник';card.append(link);
-          }
-        } catch {}
-      }
-      dest.append(card);
-    }
+    researchState.busy=true;
+    let result;
+    try {
+      result=await task('cs5_research',{source,query,project_id:projectId()},'cs5-result');
+    } catch(e) {
+      byId('cs5-result').textContent='HOLD: '+String(e?.message || e);
+      return;
+    } finally {researchState.busy=false;}
+    if(generation!==researchState.generation || !result || !Array.isArray(result.items)) return;
+    for (const item of result.items) showResearchRecord(item,source,generation);
   });
   byId('cs5-research-all').addEventListener('click', async () => {
-    if (loading) return;
+    if (loading || researchState.busy) return;
+    researchState.busy=true;
     const query = byId('cs5-research-query').value.trim();
     if (!query || query.length > 160) {
       byId('cs5-result').textContent = 'Нужен запрос длиной 1–160 символов';
+      researchState.busy=false;
       return;
     }
     const id = projectId();
     const sources = ['books','openlibrary','crossref','openalex'];
     const dest = byId('cs5-research-results');
     dest.replaceChildren();
+    researchState.records=[];
+    const generation=++researchState.generation;
     const results = [];
     const button = byId('cs5-research-all');
     button.disabled = true;
@@ -327,31 +381,7 @@
             continue;
           }
           results.push(source + ': ' + result.items.length + ' записей');
-          for (const item of result.items) {
-            const card = document.createElement('article');
-            card.className = 'model';
-            const title = document.createElement('h3');
-            title.textContent = item.title || 'Без названия';
-            const note = document.createElement('p');
-            note.textContent = source + ' · ' + (item.detail || '') +
-              ' · ПУБЛИЧНЫЕ МЕТАДАННЫЕ, НЕ ФАКТЧЕК';
-            card.append(title,note);
-            if (typeof item.source_url === 'string') {
-              try {
-                const linkURL = new URL(item.source_url);
-                if (['https:','http:'].includes(linkURL.protocol) &&
-                    linkURL.hostname && !linkURL.username && !linkURL.password) {
-                  const link = document.createElement('a');
-                  link.href = linkURL.href;
-                  link.rel = 'noopener noreferrer';
-                  link.target = '_blank';
-                  link.textContent = 'Первоисточник';
-                  card.append(link);
-                }
-              } catch {}
-            }
-            dest.append(card);
-          }
+          for (const item of result.items) showResearchRecord(item,source,generation);
         } catch (e) {
           results.push(source + ': HOLD · ' + String(e?.message || e));
         }
@@ -360,6 +390,7 @@
         results.join('\n') + '\nПоказатели не являются продажами или проверенными фактами.';
     } finally {
       button.disabled = false;
+      researchState.busy = false;
     }
   });
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
