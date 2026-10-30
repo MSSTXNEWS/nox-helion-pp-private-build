@@ -100,5 +100,27 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
                 self.assertTrue(canonical.safe_name(name))
 
 
+    def test_canonical_rejects_double_directory_separator_and_overlong_path(self):
+        """Windows ZIP canonical names allow one directory slash, never repeated."""
+        canonical_spec = importlib.util.spec_from_file_location(
+            "nox_original_archive_under_test", module.CANONICAL_VALIDATOR)
+        canonical = importlib.util.module_from_spec(canonical_spec)
+        canonical_spec.loader.exec_module(canonical)
+        malformed = (("folder//", True), ("folder///", True),
+                     ("nested/folder//", True), ("x" * 501, False))
+        for name, is_directory in malformed:
+            with self.subTest(unsafe=name[:32]):
+                self.assertFalse(canonical.safe_name(name))
+                with self.assertRaises(module.SourceHold):
+                    module.safe_member(name, is_directory)
+        valid = (("folder/", True), ("nested/folder/", True),
+                 ("x" * 500, False), ("home/menu/work", False))
+        for name, is_directory in valid:
+            with self.subTest(valid=name[:32]):
+                self.assertTrue(canonical.safe_name(name))
+                self.assertEqual(module.safe_member(name, is_directory),
+                                 name[:-1] if is_directory else name)
+
+
 if __name__ == "__main__":
     unittest.main()

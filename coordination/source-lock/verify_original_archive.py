@@ -16,7 +16,8 @@ BAD = re.compile(r'[<>:"|?*\x00-\x1f]')
 RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$', re.I)
 
 def safe_name(name: str) -> bool:
-    if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
+    if (not name or len(name) > 500 or name.startswith("/") or "\\" in name
+            or name.endswith("//") or BAD.search(name)
             or unicodedata.normalize("NFC", name) != name):
         return False
     parts = name.rstrip("/").split("/")

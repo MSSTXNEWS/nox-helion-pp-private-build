@@ -1,0 +1,57 @@
+{
+  "schema": "NOX_V16_G4A_T07_SOURCELOCK_DIRECTORY_ALIAS_GATE_R47",
+  "runId": "NOX-V16-R47-G4A-T07-20261030094735MSK-PATH-NORMALIZE",
+  "atMoscow": "2026-10-30 09:47:35",
+  "branch": "auto/r42/g4a-sourcelock",
+  "ownerBranchPRE": "ef117e68f20947392bf10aa633ffa668537d4159",
+  "ownerBranchPRETree": "34da9edbc7ee6add412a7de404161090c82f5fb7",
+  "pr162HEADAtPreflight": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "taskId": "T07",
+  "stage": "ISOLATED_SOURCE_PATCH_UNACCEPTED",
+  "changed": [
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "preGitBlob": "3a372b8f7a087a24eaac9c0066d342bd1346ee93",
+      "postGitBlob": "9fa327901f71af7ecb9885866de9f13c8ea3d607"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "preGitBlob": "00611bc7e70197e8b7d74dad3f15ad3298adb7b9",
+      "postGitBlob": "742f7ef3b9c1c3219689cc91ff1ebec26cbbe3d5"
+    }
+  ],
+  "rootCause": "The canonical standalone ZIP namespace validator used name.rstrip('/'), which accepted repeated trailing directory separators and lacked the 500-character bound already enforced by the E06 wrapper; this allowed inconsistent Windows archive member acceptance.",
+  "fix": "Reject names >500 chars and multiple trailing '/' in existing canonical safe_name; retain single trailing slash for valid directory entries and all existing security checks. Add exact guard regression to existing test suite.",
+  "tests": {
+    "redOriginal": "4/4 malformed names previously accepted by canonical safe_name",
+    "greenProposed": "4/4 malformed rejected + 4/4 valid accepted in local Python function smoke",
+    "historicalNames": "729/729 from saved R42 physical manifest accepted under proposed function; no raw archive read",
+    "fullUnittest": "NOT_RUN"
+  },
+  "originalEvidence": {
+    "archiveBytes": 60364346,
+    "archiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "members": 729,
+    "proofComment": 6513693455
+  },
+  "noLoss": {
+    "originalPartsModified": false,
+    "originalMediaModified": false,
+    "personaRightsAccepted": false,
+    "originalMemberHashesReused": true
+  },
+  "selfImprovement": {
+    "previous": "ERR-SYS-002 pinned PRE blob, reused 729 byte receipt without ZIP re-download",
+    "new": "Canonical and wrapper ZIP namespace rules must share path-length and separator invariants; assert malformed aliases and allowed controls on exact Git blobs"
+  },
+  "owners": {
+    "T06": "CAS-integrate the two owner source/test files only after live PR162 HEAD/PRE recheck, execute the existing unittest, accept source contract",
+    "T08": "Independent source + security QA on same integrated HEAD, no Windows native claim",
+    "T09": "Seal only after owner-accepted T06 and T08 same-SHA",
+    "T02": "Index ERR-SYS-002/ERR-SRC-004 process delta; only T02 may CAS shared journals"
+  },
+  "sourceReady": false,
+  "qaAccepted": false,
+  "build": "NOT_RUN",
+  "e07": "NOT_RUN"
+}
