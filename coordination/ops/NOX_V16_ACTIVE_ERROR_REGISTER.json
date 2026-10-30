@@ -230,18 +230,18 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "250e208a-66c0-832a-b343-8be44682f84f",
-    "source_head_observed": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
-    "source_tree_observed": "29efa2ee3b9d05eefd7bbfa696a8d753176490f8",
-    "registry_pre_blob": "69b9f0432a08d6fa31cb2468a3ad1d1533bdd4fe",
+    "run_id": "NOX-V16-R42-G5A-T02-20261030T0550MSK-FINITE-OWNER-EVIDENCE",
+    "source_head_observed": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "source_tree_observed": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "registry_pre_blob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
     "progress": {
       "historical_t02": "4/4 DONE unchanged",
-      "current_c": "0/4 QA accepted",
+      "current_c": "NOT_ACCEPTED",
       "accepted_task_id_delta": 0,
       "product": "N/D"
     },
-    "docs_gate": "GIT_ONLY; DOCS_NOT_UPDATED_IN_THIS_CAS",
-    "next": "manual#1/T06 finish 8/8 and pin exact HEAD+visual/media/729 proof; manual#2/T08 independently test R41 exact-HEAD including STOP/ACL/consent/privacy/NO-LOSS+14 native; T09→T10 only after T08."
+    "docs_gate": "REGISTER_ONLY_E06_FAILED_PRECONDITION_NOT_RETRIED",
+    "next": "T06 exact-PRE permitted PR224 and P02 live binding, no repeated denied create_tree; T08 same frozen source full STOP/ACL/consent/privacy/native QA; T09 no-loss+five portraits then T10 SOURCE_READY."
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -1143,6 +1143,110 @@
       "build_authorized_by_T10": false,
       "lesson": "Never transfer Windows QA on mismatched GitLab SHA or old GitHub HEAD to new R41 code. Physical POST blobs 5/5 verified, but P01/P02/P04 Windows tests after patch are NOT_RUN. Preserve original 729/3, STOP/ACL/consent/privacy/NO-LOSS, no new TaskID; no release.",
       "next_owner": "manual#1/T06 finish 8/8 and pin exact HEAD+visual/media/729 proof; manual#2/T08 independently test R41 exact-HEAD including STOP/ACL/consent/privacy/NO-LOSS+14 native; T09→T10 only after T08."
+    },
+    {
+      "run_id": "NOX-V16-R42-G5A-T02-20261030T0550MSK-FINITE-OWNER-EVIDENCE",
+      "existing_task_id": "T02",
+      "observed_at": "2026-10-30T02:56:15.256Z",
+      "scope": "Sole shared journal writer; coordination branch, no PR162 mutation",
+      "source_head_pre": "553eb2255915678cbe6ecad48ed7920bfecf14ff",
+      "source_head_post": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+      "source_tree_post": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+      "registry_pre_blob": "9c4a7f8c214a93e78564a72282b33d827532fc35",
+      "integrated_source_delta": {
+        "owner": "T06",
+        "path": "Packages/P05/Space/tests/Program.cs",
+        "pre_blob": "c1ef83f7a7bb179e6d11881a5e81e2b7a4c26668",
+        "post_blob": "15cf95c15e65720460a66743c4145dfae8839fc4",
+        "source_commit": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+        "stage": "INTEGRATED_SOURCE_ONLY_DOTNET_WINDOWS_NOT_RUN"
+      },
+      "isolated_receipts": [
+        {
+          "owner": "G1-A",
+          "task": "P01 numeric IPv4",
+          "run_id": "NOX-V16-G1A-R42-20261030T050130MSK-P01-NUMERIC-HOST",
+          "receipt_blob": "62553522785edf9a4b264567e2300c6bbdfb1009",
+          "source_pre": "550df2d4653990c5d981c8faf99a0761ffae97c7",
+          "source_post": "ecd39b64075b4edfd720dba5ab39f5a71c124b10",
+          "test_post": "0278961473740f0d1511e9a4dafade1082c130d4",
+          "stage": "PREPARED_FOCUSED_LOGIC_ONLY",
+          "integrated": false,
+          "qa_accepted": false
+        },
+        {
+          "owner": "G1-B",
+          "task": "P01 NSIS",
+          "run_id": "NOX-V16-R42-G1B-20261030T0500MSK-NSIS-NO-AUTO-BOOTSTRAP",
+          "receipt_blob": "0a2df306173126befe13128bb28a670101eea15d",
+          "source_pre": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+          "source_post": "e6bb8455f17f98289a0c308bc0a7c8a8a5d14835",
+          "test_post": "29484b4e5528ce303c7113b4aad4bb6f38f2db34",
+          "stage": "PREPARED_SOURCE_STATIC_ONLY",
+          "integrated": false,
+          "qa_accepted": false
+        },
+        {
+          "owner": "G2-C",
+          "task": "P03 snapshot atomicity",
+          "run_id": "NOX-V16-R42-G2C-20261030T0520MSK-P03-SNAPSHOT-ATOMICITY",
+          "receipt_blob": "99737d9c3224b3b9cc423f58b146c99611d69265",
+          "source_pre": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+          "source_post": "312d428992aa0cab15a0f597dacd114653064bda",
+          "test_post": "1f81a794aa65ecb3c64fcc4175686e458c3fd5cb",
+          "stage": "PREPARED_FOCUSED_V8_ONLY",
+          "integrated": false,
+          "qa_accepted": false
+        }
+      ],
+      "QA_T09": {
+        "run_id": "NOX-V16-T09-R43-20261030T0540MSK-NOLOSS-SOURCE-PARITY",
+        "receipt_blob": "764f5075e8ec29b79d0326b4cff3be60d09b1155",
+        "stage": "PARTIAL_1_OF_6_NOT_FROZEN",
+        "zip_three_parts": "GIT_SOURCE_POINTERS_PINNED",
+        "qa_accepted": false
+      },
+      "T07_report_not_own_receipt": {
+        "issue": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513693455",
+        "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+        "raw_729_check": "REPORTED_PHYSICAL_729_729",
+        "git_receipt": "DENIED",
+        "portrait_approval": "EV_IDENTITY_CONFLICT_HOLD"
+      },
+      "T06_git_write": "DENIED_CREATE_TREE_DO_NOT_RETRY",
+      "PR224_donor_head": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+      "PR224_stage": "DRAFT_NOT_INTEGRATED",
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002",
+        "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01"
+      ],
+      "new_error_ids": 0,
+      "qa_accepted_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "stages": {
+        "E01": "HOLD",
+        "E02": "HOLD",
+        "E03": "HOLD",
+        "E04": "HOLD",
+        "E05": "HOLD",
+        "E06": "HOLD",
+        "E07": "NOT_RUN"
+      },
+      "lesson_applied": "Unchanged PR162 QA is not transferred from isolated patch branches; no false QA_ACCEPTED.",
+      "lesson_new": "729 raw ZIP source parity and all five approved portrait-media SHA/rights require separate final-head evidence; Markdown passports alone are insufficient.",
+      "blockers": [
+        "P02 original WPF-to-Python NativeIngress live wiring not proven; --diagnose only",
+        "NSIS auto-install patch isolated pending owner CAS",
+        "P01 numeric host alias patch isolated pending owner CAS",
+        "fifth persona EV motion/identity approval HOLD",
+        "729/3 and five portrait media final-head signoff + T06 8/8 + T08/T09/T10 frozen gates pending"
+      ],
+      "next_owner": "T06 exact-PRE permitted PR224 and P02 live binding, no repeated denied create_tree; T08 same frozen source full STOP/ACL/consent/privacy/native QA; T09 no-loss+five portraits then T10 SOURCE_READY.",
+      "test": "T02 JSON preservation checks; no native tests executed by T02",
+      "report_gate": "PARTIAL_E06_REVISION_AND_FINAL_QA",
+      "build_exe_ci_e07": "NOT_RUN"
     }
   ]
 }
