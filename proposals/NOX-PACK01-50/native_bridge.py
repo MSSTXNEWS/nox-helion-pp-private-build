@@ -255,7 +255,20 @@ class NoxPackHost:
         if route not in session.allowed or (risk in ("sensitive", "dangerous")
                 and route not in session.private_approved):
             raise HostDenied("Native scope revoked before dispatch")
-        return port.call(session,frozen_payload)
+        result = port.call(session,frozen_payload)
+        # A native owner may be revoked or rebound while its provider is running.
+        # Do not publish the stale result; only the same approved owner port can
+        # complete this request. No second readiness callback or side effect.
+        session.validate()
+        if self.ports.get(route) is not port:
+            raise HostHold("Native route owner changed during dispatch")
+        if ((session.tenant, session.principal, session.chat_id,
+             session.allowed, session.private_approved) != admitted_scope
+                or route not in session.allowed
+                or (risk in ("sensitive","dangerous")
+                    and route not in session.private_approved)):
+            raise HostDenied("Native identity or grants changed during dispatch")
+        return result
 
 
 class ExistingP02Adapter:
