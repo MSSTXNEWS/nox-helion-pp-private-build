@@ -38,7 +38,7 @@ Date: 2026-10-30. **Candidate technical pack, not 100 installed/benchmarked engi
 | 32 | Autonomous agents & coding | aider | [source](https://github.com/Aider-AI/aider) | Sandbox agent |
 | 33 | Autonomous agents & coding | opencode | [source](https://github.com/anomalyco/opencode) | Sandbox agent |
 | 34 | Autonomous agents & coding | cline | [source](https://github.com/cline/cline) | Sandbox agent |
-| 35 | Autonomous agents & coding | goose | [source](https://github.com/block/goose) | Sandbox agent |
+| 35 | Autonomous agents & coding | goose | [source](https://github.com/aaif-goose/goose) | Sandbox agent |
 | 36 | Autonomous agents & coding | langgraph | [source](https://github.com/langchain-ai/langgraph) | Sandbox agent |
 | 37 | Autonomous agents & coding | autogen | [source](https://github.com/microsoft/autogen) | Sandbox agent |
 | 38 | Autonomous agents & coding | crewAI | [source](https://github.com/crewAIInc/crewAI) | Sandbox agent |
