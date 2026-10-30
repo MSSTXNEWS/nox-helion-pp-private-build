@@ -4,18 +4,18 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 
 const source = readFileSync(new URL('../web/five_blocks.js', import.meta.url), 'utf8');
 
 test('Creative add-on is ordered after original Studio and does not change native menu entry', () => {
   const html = readFileSync(new URL('../web/studio.html', import.meta.url), 'utf8');
-  const entry = readFileSync(new URL('../web/entry.js', import.meta.url));
   const expected = '34032ba9cb41bc3d71afcdbe57f690e15fd76755';
-  const hash = createHash('sha1')
-    .update(Buffer.from('blob ' + entry.length + '\0', 'utf8'))
-    .update(entry).digest('hex');
-  assert.equal(hash, expected, 'original Creative launcher must remain byte-identical');
+  // Windows Git may use CRLF in the checkout; compare the CANONICAL Git blob.
+  const hash = execFileSync('git', [
+    'rev-parse', 'HEAD:integrations/creative/web/entry.js'
+  ], {encoding:'utf8'}).trim();
+  assert.equal(hash, expected, 'original Creative launcher Git blob must remain byte-identical');
   const first = html.indexOf('<script src="studio.js"></script>');
   const addon = html.indexOf('<script src="five_blocks.js"></script>');
   const last = html.indexOf('<script src="persona-media.js"></script>');
@@ -106,11 +106,10 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   assert.equal(c.calls.length,0,'Creative Worker must not start at page mount');
   // Selecting a Creative project before opening CS5 must not switch projects.
   c.ids.get('project').value='owner-project-42';
-  c.nav.children[0].click();
+  await c.nav.children[0].click();
   assert.equal(c.calls[0].action,'cs5_overview');
   assert.equal(c.ids.get('cs5-project').value,'owner-project-42');
-  await Promise.resolve();
-  c.ids.get('cs5-status').click();
+  await c.ids.get('cs5-status').click();
   assert.equal(c.calls.length,2,'explicit retry uses the same Worker, no eager call');
   c.ids.get('cs5-project').value='creative01';
   c.ids.get('cs5-text').value='Original fictional screenplay';
