@@ -19,18 +19,18 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class NestedUnicodeR40(unittest.TestCase):
     def test_nested_object_value_rejected(self):
         with self.assertRaises(ValueError):
-            m._strict_json_object(r'{"model_type":"qwen3","extra":{"note":"\\ud800"}}')
+            m._strict_json_object(r'{"model_type":"qwen3","extra":{"note":"\ud800"}}')
 
     def test_nested_object_key_rejected(self):
         with self.assertRaises(ValueError):
-            m._strict_json_object(r'{"model_type":"qwen3","extra":{"\\ud800":"bad"}}')
+            m._strict_json_object(r'{"model_type":"qwen3","extra":{"\ud800":"bad"}}')
 
     def test_nested_list_surrogate_rejected(self):
         with self.assertRaises(ValueError):
-            m._strict_json_object(r'{"model_type":"qwen3","tags":["ok","\\udfff"]}')
+            m._strict_json_object(r'{"model_type":"qwen3","tags":["ok","\udfff"]}')
 
     def test_valid_supplementary_unicode_pair(self):
-        good=m._strict_json_object(r'{"model_type":"qwen3","tags":["\\ud83d\\ude80"]}')
+        good=m._strict_json_object(r'{"model_type":"qwen3","tags":["\ud83d\ude80"]}')
         self.assertEqual(good["tags"], ["🚀"])
 
     def test_overflow_still_rejected(self):
