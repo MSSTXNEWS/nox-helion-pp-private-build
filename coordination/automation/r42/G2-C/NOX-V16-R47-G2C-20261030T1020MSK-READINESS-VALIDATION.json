@@ -1,0 +1,33 @@
+{
+  "schema": "NOX_V16_R47_G2C_OWNER_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2C-20261030T1020MSK-READINESS-VALIDATION",
+  "role": "G2-C P03 existing owner analogue",
+  "task_id": "P03_EXISTING",
+  "error_id": "ERR-SRC-004",
+  "branch": "auto/r42/g2c-p03",
+  "branch_head_pre": "5bce09193cfdb3058614e953051cec5db05459a2",
+  "pr162_head_at_pre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162_untouched": true,
+  "files": [
+    {
+      "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
+      "pre": "d879f329160b58e8f42759bed961eaa0df30777e",
+      "post": "7e6711d9588e00660c95904fec0ae7c71d827382"
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_installed_readiness_r47.py",
+      "pre": null,
+      "post": "eaa3127b62516b2aa34803618340b23e0c0a5f05"
+    }
+  ],
+  "finding": "models.installed() rejects malformed/duplicate/>4096 tags but _local_ready() previously advertised the native installed/digest route as ready for any list.",
+  "repair": "Make route readiness enforce exact installed() tags shape/size/uniqueness, without another host/downloader.",
+  "test_evidence": "Local Python exact-method-body fixture: 4/4 PASS (before incorrectly ready on 3 invalid variants, after not ready); exact full repository Python runner NOT_RUN; Windows/Ollama NOT_RUN.",
+  "previous_lesson_applied": "R47 post-consent fail-closed principle applied to readiness fail-closed; approval/STOP/ACL untouched.",
+  "new_lesson": "Advertised route readiness and real callback input validation must share the same fail-closed criteria; regression verify valid, malformed, duplicate and oversized evidence.",
+  "source_stage": "ISOLATED_SOURCE_PATCHED_PENDING_INDEPENDENT_QA",
+  "qa_accepted": false,
+  "integrated_pr162": false,
+  "product_percent": null,
+  "next_owner": "T06: review exact P03 owner source POST, integrate only if canonical /api/tags readiness still mismatched; T08 full same-SHA/native QA; T02 CAS central register."
+}

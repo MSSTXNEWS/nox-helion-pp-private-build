@@ -349,8 +349,13 @@ class P03OneHostPort:
         return frozenset(ids)
 
     def _local_ready(self) -> bool:
+        # Readiness must apply the same bounds/shape rules as installed().
+        # Never advertise an unusable /api/tags response as a live native route.
         try:
-            return isinstance(self.ollama.models(), list)
+            tags = self.ollama.models()
+            return (isinstance(tags, list) and len(tags) <= 4096
+                    and all(isinstance(t, str) and TAG.fullmatch(t) for t in tags)
+                    and len(tags) == len(set(tags)))
         except Exception:
             return False
 
