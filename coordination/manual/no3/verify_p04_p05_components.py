@@ -85,9 +85,25 @@ def probe(args: argparse.Namespace) -> tuple[int, dict]:
                     report["status"] = "FAILED"
                     return 1, report
                 if label == "P04-PYTHON":
-                    counts = re.findall(r"Ran (\d+) tests?", log)
-                    if not counts or int(counts[-1]) < 40:
-                        report["reason"] = "P04_TEST_DISCOVERY_INCOMPLETE"
+                    # A successful exit and "Ran 40 tests" also includes skipped tests.
+                    # Accept only the forty actual pinned snapshot tests reported
+                    # individually as OK; no synthetic completion from a total count.
+                    snapshot_file = root / "tests/P04/test_model_snapshot_probe.py"
+                    try:
+                        snapshot_source = snapshot_file.read_text(encoding="utf-8")
+                    except (OSError, UnicodeError):
+                        report["reason"] = "P04_SNAPSHOT_TEST_SOURCE_UNREADABLE"
+                        report["status"] = "FAILED"
+                        return 1, report
+                    required_tests = set(re.findall(
+                        r"(?m)^\\s*def (test_[A-Za-z0-9_]+)\\(", snapshot_source))
+                    verified_tests = set(re.findall(
+                        r"(?m)^(test_[A-Za-z0-9_]+) \\(test_model_snapshot_probe\\.[^\\n)]+\\) \\.\\.\\. ok\\s*$", log))
+                    counts = re.findall(r"Ran (\\d+) tests?", log)
+                    if (len(required_tests) < 40 or not counts or
+                            int(counts[-1]) < len(required_tests) or
+                            not required_tests.issubset(verified_tests)):
+                        report["reason"] = "P04_SNAPSHOT_REGRESSION_MISSING_OR_SKIPPED"
                         report["status"] = "FAILED"
                         return 1, report
                 if label == "P04-RAG" and not re.search(
