@@ -171,8 +171,10 @@ class NoxPackHost:
             raise HostDenied("Existing native session type required")
         session.validate()
         out = {}
+        inspected_ports = {}
         for route, item in self.routes.items():
             port = self.ports.get(route)
+            inspected_ports[route] = port
             ready = False
             if port and route in session.allowed:
                 try:ready = port.available() is True
@@ -183,6 +185,11 @@ class NoxPackHost:
             out[route] = {"state":"CONNECTED" if scoped else "HOLD",
                           "enabled":bool(scoped),
                           "sourceId":port.evidence_id if scoped else None}
+        # A later readiness callback can revoke any previously probed route.
+        # The existing native Windows host still owns cross-thread locking.
+        for route, cap in out.items():
+            if cap["enabled"] and self.ports.get(route) is not inspected_ports[route]:
+                out[route] = {"state":"HOLD", "enabled":False, "sourceId":None}
         return out
 
     def execute(self, route:str, payload:dict, session:NativeSession):

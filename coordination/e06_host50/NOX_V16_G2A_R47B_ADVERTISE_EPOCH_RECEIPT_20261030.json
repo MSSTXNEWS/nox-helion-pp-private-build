@@ -1,0 +1,44 @@
+{
+  "schema": "NOX_V16_G2A_R47B_ADVERTISE_EPOCH_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T0748MSK-ADVERTISE-EPOCH",
+  "task_id": "NIP01-10",
+  "owner_branch": "auto/r42/g2a-host50",
+  "branch_pre": "d70da34171ac7bc74ee73a3ce6438f4d035236a4",
+  "product_pr162_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "product_pre_source_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "root_cause": "NoxPackHost.advertise cached source-ready BoundPort while later owner availability callback can revoke/replace it before capability list return",
+  "fix": "Two-phase capability assembly with final identity verification, stale bindings downgraded to HOLD; existing native mutation lock still required",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_blob": "f0b4ca2e005acdf98e97e6f1705c23e67890e6cb",
+    "post_blob": "214c89e621dd51f3a5ae20b587dd92bdce9a59a6",
+    "pre_sha256": "6ed3b7ccad677887e1a7663604e59d9c71b6b3c9e136408008a29995d4af393b",
+    "post_sha256": "f392fc615bb8ec92efdd40b35ab776efd29c466dc33436f13825660c1618f84d"
+  },
+  "regression": {
+    "path": "coordination/e06_host50/test_native_bridge_advertise_epoch_r47b.py",
+    "blob": "938b26e540d37dd6347da26bfe38161fe6559cfc",
+    "sha256": "978d0fb2ecfe93c7c7e9cf0a6e2320f0fc5ff02727fbb362ff71e86dd7dabeb6",
+    "scenarios": [
+      "self-revocation during readiness",
+      "later route invalidates earlier route",
+      "stable sensitive plus dangerous/native scope"
+    ],
+    "extracted_method_local": "RED_PRE_GREEN_POST_PASS (2 tests, local Python)",
+    "full_repo_python": "NOT_RUN (authenticated repo not mounted in Python runner)",
+    "windows_native": "NOT_RUN"
+  },
+  "lessons": {
+    "applied": "R47 exact-object identity check for execute and no false native PASS",
+    "new": "CAPABILITY_REVOKED_DURING_LATER_PROBE: reread all enabled owner identities after full advertisement probe pass"
+  },
+  "integrated_pr162": false,
+  "qa_accepted": false,
+  "source_ready": false,
+  "no_loss": "No changes to original 729 files in 3 ZIP parts, D02 HOME/MENU/WORK, portraits, WPF, user data or model assets",
+  "next_owner": "T06 PR162 sole writer: exact owner PRE product source blob; integrate minimal advertise guard; run in-repo component test + STOP/ACL/consent/origin regression; then T08 independent same HEAD"
+}
