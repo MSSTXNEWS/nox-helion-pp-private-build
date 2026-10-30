@@ -11,6 +11,7 @@ from types import MappingProxyType
 from typing import Callable, Any
 import json
 import re
+import threading
 
 MAX_TEXT = 20000
 MAX_ANSWER = 60000
@@ -276,11 +277,13 @@ class ExistingP02Adapter:
     def __init__(self, client, store, *, event_sink=None, native_selected_file=None):
         if not all(callable(getattr(client,n,None)) for n in ("models","stream","stop")):
             raise ValueError("Existing P02 OllamaClient required")
-        if not all(callable(getattr(store,n,None)) for n in ("history","add_message","store_file")):
-            raise ValueError("Existing P02Store required")
+        if not all(callable(getattr(store,n,None)) for n in ("history","add_message","add_turn","store_file")):
+            raise ValueError("Existing P02Store with atomic turns required")
         self.client = client
         self.store = store
         self.event_sink = event_sink
+        self._chat_lock = threading.Lock()
+        self._active_chat_stop = None
         # Native file picker callback returns (MIME, binary stream); never page JSON.
         self.native_selected_file = native_selected_file
 
@@ -298,40 +301,65 @@ class ExistingP02Adapter:
         return {"messages":self.store.history(session.tenant,session.principal,session.chat_id,limit)}
 
     def stop(self,session,args):
+        # Keep STOP responsive even after the last token and before SQLite commit.
+        with self._chat_lock:
+            active = self._active_chat_stop
+            if active is not None:
+                active.set()
         self.client.stop()
-        return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
+        return {"stopRequested":True}  # Does not prove provider drain.
 
     def chat(self, session, args):
         message = args.get("text")
         model = args.get("model")
         if not isinstance(message,str) or not 0 < len(message) <= MAX_TEXT:
             raise HostDenied("Bounded nonempty chat text required")
-        installed = self.client.models()
-        if model not in installed:raise HostHold("Selected model not installed")
-        conversation = self.store.history(session.tenant,session.principal,session.chat_id,80)
-        conversation = conversation + [{"role":"user","content":message}]
-        answer = []
-        bytes_seen = 0
-        done = False
-        for chunk in self.client.stream(model,conversation):
-            if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
-                raise HostHold("Invalid Ollama chunk")
-            delta = chunk["delta"]
-            bytes_seen += len(delta.encode("utf-8"))
-            if bytes_seen > MAX_ANSWER:
-                self.client.stop()
-                raise HostHold("Answer too large")
-            answer.append(delta)
-            if self.event_sink:
-                self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
-            if chunk.get("done") is True:done = True
-        if not done:raise HostHold("Missing Ollama terminal completion")
-        text = "".join(answer)
-        # Persist messages only after real terminal success.
-        # One SQLite transaction: no orphaned user message on assistant failure.
-        self.store.add_turn(session.tenant,session.principal,session.chat_id,
-                            message,text)
-        return {"answer":text,"done":True}
+        # Register cancellation BEFORE blocking model discovery, history, stream.
+        stop = threading.Event()
+        with self._chat_lock:
+            if self._active_chat_stop is not None:
+                raise HostHold("Another native chat is already active")
+            self._active_chat_stop = stop
+        try:
+            installed = self.client.models()
+            if stop.is_set():
+                raise HostHold("STOP before chat model admission")
+            if model not in installed:
+                raise HostHold("Selected model not installed")
+            conversation = self.store.history(session.tenant,session.principal,session.chat_id,80)
+            if stop.is_set():
+                raise HostHold("STOP before inference")
+            conversation = conversation + [{"role":"user","content":message}]
+            answer = []
+            bytes_seen = 0
+            done = False
+            for chunk in self.client.stream(model,conversation,stop):
+                if stop.is_set():
+                    raise HostHold("STOP during inference")
+                if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
+                    raise HostHold("Invalid Ollama chunk")
+                delta = chunk["delta"]
+                bytes_seen += len(delta.encode("utf-8"))
+                if bytes_seen > MAX_ANSWER:
+                    stop.set()
+                    self.client.stop()
+                    raise HostHold("Answer too large")
+                answer.append(delta)
+                if self.event_sink:
+                    self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
+                if chunk.get("done") is True:
+                    done = True
+            if not done or stop.is_set():
+                raise HostHold("Missing completion or STOP before persistence")
+            text = "".join(answer)
+            # One host SQLite transaction; STOP before commit rolls back both.
+            self.store.add_turn(session.tenant,session.principal,session.chat_id,
+                                message,text,stop=stop)
+            return {"answer":text,"done":True}
+        finally:
+            with self._chat_lock:
+                if self._active_chat_stop is stop:
+                    self._active_chat_stop = None
 
     def attach_native_selected(self,session,args):
         if not callable(self.native_selected_file):
