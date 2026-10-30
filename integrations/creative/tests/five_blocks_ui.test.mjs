@@ -62,13 +62,18 @@ function mount() {
       const last = Number.isInteger(payload?.before) ? payload.before : 45;
       const start = Math.max(0, last - 20);
       return {status:'LOCAL_RECORDS_NOT_E11',count:45,showing:last-start,
-        start_index:start,next_before:start>0?start:null,events:[]};
+        start_index:start,next_before:start>0?start:null,events:[
+          {block:'B02',kind:'idea',text:'Original idea',created_at_utc:'2026-10-30T01:00:00Z',
+            evidence_status:'LOCAL_RECORD_ONLY',sha256:'abcdef01',source_url:'https://example.org/source'},
+          {block:'B05',kind:'receipt',text:'Unverified source',created_at_utc:'2026-10-30T01:01:00Z',
+            evidence_status:'REPORTED_UNVERIFIED',sha256:'abcdef02',source_url:'javascript:alert(1)'}
+        ]};
     }
     return {status:'LOCAL',action};
   };
   const navigate=what=>{navEvents.push(what);activeScreen=what;};
   const task=async(action,payload,target)=>{actions.push({action,payload,target});return {status:'ACCEPTED'};};
-  runInNewContext(source,{document,rpc,navigate,task});
+  runInNewContext(source,{document,rpc,navigate,task,URL});
   return {ids,calls,nav,main,navEvents,actions,
     setActiveScreen: value=>{activeScreen=value;},
     get stops(){return stops;}};
@@ -115,6 +120,10 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   c.ids.get('cs5-kind').value='production';
   await c.ids.get('cs5-save').click();
   await c.ids.get('cs5-list').click();
+  const cards = c.ids.get('cs5-history').children;
+  assert.equal(cards.length,2,'history renders existing-style evidence cards');
+  assert.equal(cards[0].children.length,4,'valid source has real external link');
+  assert.equal(cards[1].children.length,3,'unsafe stored source is never clickable');
   assert.equal(c.ids.get('cs5-older').disabled,false);
   assert.equal(c.ids.get('cs5-latest').disabled,true);
   await c.ids.get('cs5-older').click();
