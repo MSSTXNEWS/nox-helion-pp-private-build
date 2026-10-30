@@ -63,7 +63,20 @@ def main(argv=None):
         with THREADS_LOCK:
             THREADS.difference_update(t for t in tuple(THREADS) if not t.is_alive())
             if len(THREADS)>=16:
-                emit(None,False,error='Worker task limit reached')
+                # Preserve the native correlation ID on overload; otherwise
+                # the awaiting WPF/WebView2 request times out instead of
+                # receiving an immediate, explicit capacity rejection.
+                request_id = None
+                if len(line.encode('utf-8')) <= MAX_REQUEST:
+                    try:
+                        envelope = json.loads(line)
+                        if isinstance(envelope, dict):
+                            candidate = envelope.get('request_id')
+                            if isinstance(candidate, str) and len(candidate) <= 70:
+                                request_id = candidate
+                    except (ValueError, TypeError):
+                        pass
+                emit(request_id, False, error='Worker task limit reached')
                 continue
             thread=threading.Thread(target=serve_line,args=(studio,line),daemon=True)
             THREADS.add(thread)
