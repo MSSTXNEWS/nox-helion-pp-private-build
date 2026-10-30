@@ -1,0 +1,76 @@
+{
+  "schema": "NOX_V16_R47_G4A_T07_NTFS_COMPONENT_GATE_R1",
+  "runId": "NOX-V16-R47-G4A-T07-20261030T1141MSK-NTFS-UTF16",
+  "role": "G4-A / T07 SourceLock",
+  "existingTaskId": "T07",
+  "branch": "auto/r42/g4a-sourcelock",
+  "ownerPRE": "1037d8c2eba9a9941c9c9b7f670a4ad5f0d364b7",
+  "ownerPRETree": "932e64106856d5e04f5de06f36c849de24af7730",
+  "pr162ObservedHEAD": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "pr162ObservedTree": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+  "sourceStage": "ISOLATED_SOURCE_PATCH_PREPARED",
+  "rootCause": "SourceLock permitted ZIP paths with an individual NTFS component over 255 UTF-16 code units (e.g. 256 ASCII or 128 non-BMP symbols), despite overall 500-character cap; unpaired surrogate names also escaped fail-closed validation.",
+  "physicalFix": "Reject individual components >255 UTF-16 code units and ill-formed surrogate sequences in both existing ZIP validators; adjust existing 500-char positive regression to split into safe components and add focused negative UTF16 test. No new validator, backend, host, package pipeline or product function.",
+  "files": [
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "pre": "9fa327901f71af7ecb9885866de9f13c8ea3d607",
+      "post": "93e48fe2cf4b0326331f7a0bd42267b17539d7d6"
+    },
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "pre": "83babf78c9129e79f9215d0972f1b92b19eaac88",
+      "post": "a42cc41b095c5997388274b3b4030aea4280cb6b"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "pre": "daf76f25d3238a0bcc92c7dfc7fa2cd3a99ecc91",
+      "post": "c6452591e167ac49e1bfb907a6fe02efbce7c02b"
+    }
+  ],
+  "localRegression": {
+    "kind": "synthetic Python policy copy plus immutable historic 729 name manifest; full exact-checkout unittest NOT_RUN",
+    "preInvalidAccepted": "4/4",
+    "postInvalidRejected": "4/4",
+    "postValidAccepted": "4/4",
+    "original729PathCompatibility": "729/729",
+    "fullRepositoryUnittest": "NOT_RUN",
+    "WindowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "originalArchiveBytes": 60364346,
+    "originalCombinedZipSHA256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalProof": "issue #177 comment 6513693455, reused same-ZIP immutable source pins; 60MB not re-downloaded",
+    "parts": [
+      {
+        "path": "source_00.part",
+        "gitBlob": "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b"
+      },
+      {
+        "path": "source_01.part",
+        "gitBlob": "7853cb43ff4ba0ed3023e8d794d8222eedea56a6"
+      },
+      {
+        "path": "source_02.part",
+        "gitBlob": "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      }
+    ],
+    "approvedPortraits": "5 distinct image pin/rights mapping remains HOLD",
+    "originalMediaTouched": false
+  },
+  "lesson": {
+    "applied": "ERR-SYS-002 read live exact target blob preimages; do not repeat unchanged raw 729 archive checks",
+    "new": "Windows path safety must measure each component in UTF-16 code units, not just Python str length or total path size",
+    "regression": "test_ntfs_utf16_component_limit_and_surrogates"
+  },
+  "handoff": {
+    "T06": "On current PR162 exact PRE, integrate existing isolated SourceLock files as compatible, run python -m unittest coordination/source-lock/test_atomic_e06_receipt_r47.py and original 729 owner manifest validation, plus mandatory security regression.",
+    "T08": "Independently QA exact integrated HEAD for Windows NTFS UTF-16 limits, archive/pins/STOP/ACL/consent/privacy.",
+    "T09": "Seal manifest only after same-HEAD T06/T08 signed acceptance.",
+    "T02": "Index under existing ERR-SYS-002 / ERR-SRC-004; do not duplicate TaskID or mutate shared registry"
+  },
+  "newAcceptedTaskIds": 0,
+  "product": "N/D",
+  "sourceReady": "HOLD",
+  "WindowsE07": "NOT_RUN"
+}

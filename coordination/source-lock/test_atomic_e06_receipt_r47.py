@@ -114,7 +114,7 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
                 with self.assertRaises(module.SourceHold):
                     module.safe_member(name, is_directory)
         valid = (("folder/", True), ("nested/folder/", True),
-                 ("x" * 500, False), ("home/menu/work", False))
+                 ("x" * 255 + "/" + "y" * 244, False), ("home/menu/work", False))
         for name, is_directory in valid:
             with self.subTest(valid=name[:32]):
                 self.assertTrue(canonical.safe_name(name))
@@ -141,6 +141,27 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
             self.assertEqual(status, 2)
             self.assertIn("SOURCELOCK_RECEIPT_READBACK_MISMATCH", message)
             self.assertEqual(json.loads(out.read_bytes())["fileCount"], 729)
+
+
+    def test_ntfs_utf16_component_limit_and_surrogates(self):
+        """Fail closed on >255 UTF-16 units per Windows filename component."""
+        canonical_spec = importlib.util.spec_from_file_location(
+            "nox_original_archive_under_test", module.CANONICAL_VALIDATOR)
+        canonical = importlib.util.module_from_spec(canonical_spec)
+        canonical_spec.loader.exec_module(canonical)
+        rejected = ("x" * 256, "😀" * 128, "nested/" + "😀" * 128,
+                    "bad\ud800")
+        accepted = ("x" * 255, "😀" * 127,
+                    "x" * 255 + "/" + "y" * 244, "home/menu/work")
+        for name in rejected:
+            with self.subTest(rejected=name[:24].encode("ascii", "backslashreplace")):
+                self.assertFalse(canonical.safe_name(name))
+                with self.assertRaises(module.SourceHold):
+                    module.safe_member(name, False)
+        for name in accepted:
+            with self.subTest(accepted=name[:24].encode("ascii", "backslashreplace")):
+                self.assertTrue(canonical.safe_name(name))
+                self.assertEqual(module.safe_member(name, False), name)
 
 
 if __name__ == "__main__":

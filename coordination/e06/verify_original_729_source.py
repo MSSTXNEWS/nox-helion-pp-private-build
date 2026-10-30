@@ -72,6 +72,12 @@ def safe_member(name: str, directory: bool) -> str:
     if not path or path.startswith("/") or path.startswith("//") or ":" in path:
         raise SourceHold("ZIP_ABSOLUTE_OR_ADS_PATH")
     segments = path.split("/")
+    try:
+        component_lengths_ok = all(len(s.encode("utf-16-le")) <= 510 for s in segments)
+    except UnicodeEncodeError as exc:
+        raise SourceHold("ZIP_WINDOWS_UTF16_COMPONENT_INVALID") from exc
+    if not component_lengths_ok:
+        raise SourceHold("ZIP_WINDOWS_COMPONENT_TOO_LONG")
     if any(s in ("", ".", "..") or s.endswith(" ") or s.endswith(".") or DEVICE.fullmatch(s)
            or any(ord(c) < 32 for c in s) for s in segments):
         raise SourceHold("ZIP_WINDOWS_PATH_COLLISION_OR_TRAVERSAL")

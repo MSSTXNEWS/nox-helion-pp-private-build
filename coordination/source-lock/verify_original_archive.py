@@ -21,7 +21,13 @@ def safe_name(name: str) -> bool:
             or unicodedata.normalize("NFC", name) != name):
         return False
     parts = name.rstrip("/").split("/")
-    return bool(parts) and all(p not in ("", ".", "..")
+    # NTFS names have a 255-UTF-16-code-unit limit PER path component.
+    # A short Python string may still exceed it with non-BMP characters.
+    try:
+        component_lengths_ok = all(len(p.encode("utf-16-le")) <= 510 for p in parts)
+    except UnicodeEncodeError:
+        return False
+    return bool(parts) and component_lengths_ok and all(p not in ("", ".", "..")
                                and not p.endswith((" ", "."))
                                and not RESERVED.match(p) for p in parts)
 
