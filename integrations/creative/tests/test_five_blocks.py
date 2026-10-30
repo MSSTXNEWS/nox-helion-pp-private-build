@@ -110,6 +110,33 @@ class FiveBlockContract(unittest.TestCase):
         self.assertEqual(dispatch_five(self.owner,
                          {"action": "cs5_list", "project_id": "creative01"})["count"], 0)
 
+    def test_paged_history_reaches_all_versions_without_duplicates(self):
+        for index in range(45):
+            self.event("B02", "editorial", text=f"version-{index:02d}")
+        before = None
+        observed = []
+        while True:
+            query = {"action": "cs5_list", "project_id": "creative01"}
+            if before is not None:
+                query["before"] = before
+            page = dispatch_five(self.owner, query)
+            self.assertEqual(page["count"], 45)
+            self.assertLessEqual(page["showing"], 20)
+            observed.extend(e["text"] for e in page["events"])
+            before = page["next_before"]
+            if before is None:
+                break
+        self.assertEqual(len(observed), 45)
+        self.assertEqual(set(observed), {f"version-{i:02d}" for i in range(45)})
+
+    def test_pagination_cursor_fail_closed(self):
+        self.event("B01", "hypothesis", text="example")
+        for bad in (-1, 2, "1", True, 1.5, [], {}):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "CS5_HISTORY_CURSOR_HOLD"):
+                dispatch_five(self.owner, {
+                    "action": "cs5_list", "project_id": "creative01", "before": bad
+                })
+
     def test_no_project_escape(self):
         with self.assertRaises(ValueError):
             dispatch_five(self.owner, {"action":"cs5_list","project_id":"../../other"})
