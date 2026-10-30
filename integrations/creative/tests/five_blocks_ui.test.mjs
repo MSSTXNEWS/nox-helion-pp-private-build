@@ -13,7 +13,7 @@ test('Creative add-on is ordered after original Studio and does not change nativ
   const entry = readFileSync(new URL('../web/entry.js', import.meta.url));
   const expected = '34032ba9cb41bc3d71afcdbe57f690e15fd76755';
   const hash = createHash('sha1')
-    .update(Buffer.from('blob ' + entry.length + '\\0', 'utf8'))
+    .update(Buffer.from('blob ' + entry.length + '\0', 'utf8'))
     .update(entry).digest('hex');
   assert.equal(hash, expected, 'original Creative launcher must remain byte-identical');
   const first = html.indexOf('<script src="studio.js"></script>');
