@@ -1,0 +1,48 @@
+{
+  "schema": "NOX_V16_G2A_R47_OWNER_SOURCE_RECEIPT_V1",
+  "run_id": "NOX-V16-R47-G2A-20261030T0650MSK-PORT-REVOKE",
+  "task": "NIP01-48",
+  "owner": "G2-A R42 hourly isolated; T06 sole PR162 integrator",
+  "error_ids": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "date_msk": "2026-10-30",
+  "scope": "Existing one Host50 native_bridge only; no new Host or product PR change",
+  "base_branch": "auto/r42/g2a-host50",
+  "branch_pre": "92c8f8357c021acbcf62e453eced024f24de5709",
+  "branch_base_tree": "4b68abc36cbd1ef2ed136000a33b1dc756ed3845",
+  "pr162_observed": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+  "source": {
+    "path": "proposals/NOX-PACK01-50/native_bridge.py",
+    "pre_blob": "90430b040c2b11d5f80669895c846841592f743f",
+    "pre_sha256": "2988f5dcb8ed37028e7ea0311e7a355bba614b092d7ef397e2188e5ee095890c",
+    "post_blob": "f0b4ca2e005acdf98e97e6f1705c23e67890e6cb",
+    "post_sha256": "6ed3b7ccad677887e1a7663604e59d9c71b6b3c9e136408008a29995d4af393b"
+  },
+  "regression": {
+    "path": "coordination/e06_host50/test_native_bridge_epoch_guard_r47.py",
+    "blob": "a36bd40cfecf00f33b16ab5646d5d6153bc9cb6f",
+    "sha256": "d454f6f2cf0ecda3fce4878630f7144853d1fce2a20bea3c7d31feee38677c75",
+    "scenarios": [
+      "probe revokes port",
+      "native consent revokes port",
+      "native consent replaces port",
+      "unchanged port happy path"
+    ],
+    "python_syntax": "NOT_RUN_ON_AUTHENTICATED_FULL_REPO",
+    "python_component": "NOT_RUN_ON_AUTHENTICATED_FULL_REPO",
+    "static_source_guard": "PASS",
+    "windows_native": "NOT_RUN"
+  },
+  "root_cause": "execute() retains BoundPort through callback side effects; callback can revoke/rebind route while stale port.call remains callable",
+  "fix": "final exact-object port identity check after readiness and consent before handler call; fail closed HostHold",
+  "prevention": "r47 component test covers removal/rebinding during native callbacks; native mutation lock and original native consent still required",
+  "lessons": "R35/R42 SHA/QA separation applied; no QA_ACCEPTED or E07 claim",
+  "status": "SOURCE_PREPARED_ONLY",
+  "integrated_pr162": false,
+  "qa_accepted": false,
+  "source_ready": false,
+  "handoff": "T06: CAS exact source PRE from owner PR162 1cd8f2d49a440775401e4ad0a3721d2ef36c8b62; adapt minimal epoch guard; run Python unittest + STOP/ACL/consent/origin before T08",
+  "no_loss": "no original HOME/MENU/WORK, five portraits, 729/3 ZIP source files, data, WPF UI, D02 or other original assets edited"
+}

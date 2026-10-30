@@ -217,6 +217,10 @@ class NoxPackHost:
             not callable(self.native_approve) or
             self.native_approve(session,route,json.loads(raw)) is not True):
             raise HostDenied("Fresh native action approval required")
+        # Readiness and consent callbacks can synchronously revoke/rebind a port.
+        # A previously captured owner method must never dispatch after removal.
+        if self.ports.get(route) is not port:
+            raise HostHold("Native route owner binding changed before dispatch")
         return port.call(session,frozen_payload)
 
 
