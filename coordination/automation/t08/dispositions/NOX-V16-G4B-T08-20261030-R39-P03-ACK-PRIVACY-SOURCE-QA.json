@@ -1,0 +1,83 @@
+{
+  "schema": "NOX_V16_COMPONENT_QA_DISPOSITION_V1",
+  "role": "AUTO_G4B_T08_AUXILIARY_INDEPENDENT_SOURCE_QA",
+  "runId": "NOX-V16-G4B-T08-20261030-R39-P03-ACK-PRIVACY-SOURCE-QA",
+  "taskId": "T08",
+  "source": {
+    "pr": 162,
+    "head": "d7adf1fa9f1609c2a424e447298679b34d03dfab",
+    "tree": "7e67b432f12ecfaad0b56a76d90191db812e4626",
+    "sourcePath": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
+    "sourceBlobPreAtR38": "1498d6049de9dd641cabb1b049f68a4f57ee0b85",
+    "sourceBlobPost": "20a5e48d4ec44cae804756bb648cf1ab7836cc68",
+    "testPath": "coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs",
+    "testBlob": "e910d1778c9807df8b5530c72926e332b84b1bb0",
+    "t06OwnerReceiptPath": "coordination/automation/t06/NOX-V16-T06-20261030-M1-R06-P01-LINEAR-BOOKMARKS.json",
+    "t06OwnerReceiptBlob": "becbaba479a9db2857d493faf0db7706a8025f33"
+  },
+  "delta": "Previous R38 P03 1498d604 -> integrated new 20a5e48; compare R38 source HEAD to current 5 commits/17 paths, including P03 and P01/P04/Host50. No global retest performed.",
+  "checks": {
+    "engine": "V8 exact fetched 27646-byte JS evaluated using original 3732-byte G3-B test functions and mocked DOM/WebView2; Node-native test runner NOT_RUN",
+    "executed": 5,
+    "pass": 5,
+    "fail": 0,
+    "caseNames": [
+      "invalid snapshot retains consent",
+      "raw host status and event redacted",
+      "failed ACK reason redacted",
+      "foreign job and tag ACK cannot unlock STOP",
+      "STOP Cancelling beats stale Installed"
+    ],
+    "nativeWindows": "NOT_RUN",
+    "realACL": "NOT_RUN",
+    "realConsent": "NOT_RUN",
+    "realSTOP": "NOT_RUN",
+    "privacy": "SOURCE_MOCKED_PASS",
+    "noLoss": "NO_PRODUCT_MODIFICATIONS"
+  },
+  "finiteGate": {
+    "path": "coordination/manual/no2/finite_acceptance_r33.mjs",
+    "blob": "33b425e0523b71c34d734ce7ab0731fd9b21fce1",
+    "executed": true,
+    "phase": "SOURCE_GATES_INCOMPLETE",
+    "criteriaProved": 0,
+    "total": 8,
+    "ready": false,
+    "signer": false
+  },
+  "readProof": {
+    "canonRevision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "roleBlob": "baadb8deb20270180ea6aa5d7235753edd49b7f1",
+    "errorRegisterBlob": "f55a4207d8e22ea55e567f79b3b02482995a15c8",
+    "masterRevision": "AHj4eMRliz7zaao07uIMrHct27QdVsCatLFUMvaDjZbIC5Z6ji0qrLD-87MzadGOshq7Am5ASVC4FMRQ7rVxtqqsW7cGoZJAfHbFO-m4d2s",
+    "e06Revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessonsRevision": "AHj4eMShszytZLjmywC0Niv3bGrpejlCaAlGTNM9-kYrokyUrXYUTjBghx01yRTV4_uhQrJK6B6ni-kiMx-NzptQdXQGUqUqBo_eRTM00gI"
+  },
+  "stages": {
+    "sourcePrepared": true,
+    "sourceVerifiedLimited": true,
+    "integratedOnPinnedHead": true,
+    "independentQaAccepted": false,
+    "t09Frozen": false,
+    "t10SourceReady": false,
+    "e07Accepted": false
+  },
+  "host50": {
+    "sourceDescriptors": 50,
+    "sourceUnbound": 0,
+    "nativePending": 14,
+    "nativeAccepted": 0,
+    "sourceDescriptorBlob": "f1c36357bc7791f9d7624b72cf9ba2a4d967847b",
+    "note": "50/50 source descriptors is NOT native acceptance"
+  },
+  "errorIds": [
+    "ERR-SRC-004",
+    "ERR-SYS-002"
+  ],
+  "newAcceptedTaskIds": 0,
+  "productPercent": null,
+  "qaDisposition": "SOURCE_CONTRACT_VERIFIED_LIMITED_NATIVE_NOT_RUN",
+  "lesson": "Use current source/test Git blobs and only five changed P03 tests; Do NOT inherit owner mocked PASS as native or allow foreign ACK to clear STOP; do not copy journal CAS. 50 source mappings are not 50 signed native routes.",
+  "nextManualOwner": "Manual #2 independent exact-SHA source/native STOP/ACL/consent/privacy QA, manual #1 T06 owner integration remaining obligations; T02 is sole Error/Master/E06/Lessons writer.",
+  "build": false
+}
