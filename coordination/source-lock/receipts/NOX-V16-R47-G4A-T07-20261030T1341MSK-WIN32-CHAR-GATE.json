@@ -1,0 +1,56 @@
+{
+  "schema": "NOX_V16_R47_T07_WIN32_FORBIDDEN_CHAR_CAS_V1",
+  "runId": "NOX-V16-R47-G4A-T07-20261030T1341MSK-WIN32-CHAR-GATE",
+  "role": "G4-A",
+  "taskId": "T07",
+  "branch": "auto/r42/g4a-sourcelock",
+  "ownerPre": "c07cf388d6234302d5622d5b70178a2d3c2ae7da",
+  "ownerPreTree": "f3dda5fe362507df15fa8180833560f0a961fd1c",
+  "pr162Observed": {
+    "head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+    "tree": "e0b1f0c031bd77f3453a93180ceb500071529bc6"
+  },
+  "stage": "ISOLATED_SOURCE_PATCH_PREPARED_NOT_INTEGRATED",
+  "files": [
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "pre": "a42cc41b095c5997388274b3b4030aea4280cb6b",
+      "post": "502aa45b794557d13439a25a79d4a0657773d84e"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "pre": "e28bfcfb256c317a2f81cb8fe4d736dc6e795cde",
+      "post": "b1647119198119b135b5f9ed1d443e7bb55a6b5b"
+    }
+  ],
+  "rootCause": "E06 safe_member independently accepted < > double-quote pipe ? * Windows-invalid ZIP path characters; canonical validator rejected these only during later namespace scan. Direct safe_member callers could receive unsafe path.",
+  "fix": "Add fail-closed Win32 forbidden character gate immediately before path segment validation in existing E06 function; align two existing validators without changing original ZIP data.",
+  "regression": {
+    "source": "exact authenticated safe_member function transcription + original previously verified manifest; original ZIP not re-read",
+    "pre": "7 of 7 illegal names passed E06 safe_member (RED)",
+    "post": "7 of 7 illegal names rejected (PASS); 4 of 4 valid names allowed; 729/729 historical manifest names compatible",
+    "checkedAgainstCanonical": true,
+    "repositoryUnittest": "NOT_RUN",
+    "windowsNative": "NOT_RUN"
+  },
+  "noLoss": {
+    "archiveSha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "originalMembers": 729,
+    "originalParts": 3,
+    "originalBytesChanged": false,
+    "originalVisualsChanged": false,
+    "approvedPortraits": "HOLD separate approved stills/rights"
+  },
+  "errorId": "ERR-SRC-004",
+  "priorLessonApplied": "ERR-SYS-002 pin exact live ref and Git blob before patch; do not redo 60MB verification",
+  "newLesson": "Preflight helper must enforce its own complete unsafe-path contract when exported to other consumers; regression compare wrapper and canonical for all forbidden Windows characters.",
+  "ownerHandoff": [
+    "T06 sole PR162 integrator",
+    "T08 independent QA",
+    "T09 freeze",
+    "T02 central ledger"
+  ],
+  "qaAcceptedDelta": 0,
+  "sourceReady": false,
+  "e07": "NOT_RUN"
+}

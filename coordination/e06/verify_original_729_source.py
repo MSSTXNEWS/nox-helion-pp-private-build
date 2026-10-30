@@ -71,6 +71,9 @@ def safe_member(name: str, directory: bool) -> str:
     path = name[:-1] if directory else name
     if not path or path.startswith("/") or path.startswith("//") or ":" in path:
         raise SourceHold("ZIP_ABSOLUTE_OR_ADS_PATH")
+    # Match the canonical Win32 namespace gate before returning a safe path.
+    if any(ch in '<>"|?*' for ch in path):
+        raise SourceHold("ZIP_WINDOWS_FORBIDDEN_CHARACTER")
     segments = path.split("/")
     try:
         component_lengths_ok = all(len(s.encode("utf-16-le")) <= 510 for s in segments)

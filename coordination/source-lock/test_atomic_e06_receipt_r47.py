@@ -100,6 +100,28 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
                 self.assertTrue(canonical.safe_name(name))
 
 
+    def test_forbidden_windows_filename_characters_match_both_gates(self):
+        """E06 safe_member must reject forbidden Win32 chars BEFORE ZIP scanning."""
+        canonical_spec = importlib.util.spec_from_file_location(
+            "nox_win32_invalid_chars_under_test", module.CANONICAL_VALIDATOR)
+        canonical = importlib.util.module_from_spec(canonical_spec)
+        canonical_spec.loader.exec_module(canonical)
+        forbidden = ("a<b.txt", "a>b.txt", 'a"b.txt', "a|b.txt",
+                     "a?b.txt", "a*b.txt", "folder/what?.txt")
+        valid = ("home/menu/work", "source_00.part",
+                 "assets/approved.png", "folders/name-2026.txt")
+        for name in forbidden:
+            with self.subTest(unsafe=name):
+                with self.assertRaisesRegex(
+                        module.SourceHold, "ZIP_WINDOWS_FORBIDDEN_CHARACTER"):
+                    module.safe_member(name, False)
+                self.assertFalse(canonical.safe_name(name))
+        for name in valid:
+            with self.subTest(valid=name):
+                self.assertEqual(module.safe_member(name, False), name)
+                self.assertTrue(canonical.safe_name(name))
+
+
     def test_canonical_rejects_double_directory_separator_and_overlong_path(self):
         """Windows ZIP canonical names allow one directory slash, never repeated."""
         canonical_spec = importlib.util.spec_from_file_location(
