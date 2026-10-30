@@ -1,0 +1,203 @@
+{
+  "schema": "NOX_V16_R42_R46_T10_INDEPENDENT_SOURCE_READY_HOLD_V1",
+  "run_id": "NOX-V16-R46-G5B-T10-20261030T0600MSK-SAME-SHA-FINAL-GATE",
+  "task_id": "T10",
+  "role": "G5-B / QA-3 independent final source signer",
+  "planned_msk": "2026-10-30T06:00:00+03:00",
+  "observed_start_msk": "2026-10-30T05:59:24+03:00",
+  "prepared_at_utc": "2026-10-30T03:06:15.351Z",
+  "scope": "NOX HELION EXPRESS INTEGRATOR Windows / SOURCE ONLY",
+  "prestart": {
+    "canon_revision": "AHj4eMQQwUIMQ7qd3uoVLTRlYMTgJSKncwiwP0QWNYAkse6tstwifhyHBNQK7B2X0dtV6UjTXV6_2bviTbPs-jFcFvewW-5DvsEQyUh9-QI",
+    "canon_paragraphs": 705,
+    "canon_consolidated_33_rules": 56,
+    "shared_error_register_blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+    "shared_error_counts": {
+      "open": 5,
+      "fix_applied_unverified": 4,
+      "verified_closed": 2
+    },
+    "master_revision": "AHj4eMQ6xmTyvZWL3Oo8iT477zBBrsCPBwVPVstHgAqFB6vDxzBTK1NEJgXAUko5hZnYz6aN6x6RW0BiK5_NpWOQzg205oXEZxmIt1JBbKc",
+    "e06_revision": "AHj4eMTXHqFZ3WgI1MJ5wSLNM_pfvYZX1qBjVVnY_8Fx6TFBt9JQkBnHxKih8dovkMNyQFvE66zh9HrS2HMwbxoOcSuBflkRLpLYl9Q9JF0",
+    "lessons_revision": "AHj4eMTUtXpfzs_XCbbrdD785ZSCycLa8qo8G1TdDn2vQcP1D4AvjWYxyHkaIlh6DAKtcrpThPhvNsvYL6UAMJaqbjaxYCKmgyJxVSAT-a4",
+    "c34_revision": "AHj4eMTYjSLimS9IJiKymJLjP5O6wtJX4fqjq6fv5kQc2yhZa4bTP6lNHTbKDWy629JrAgj8yxW441sW78U9jTcOKsbEZHJUcDhpW4AGe1M"
+  },
+  "source": {
+    "repo": "MSSTXNEWS/nox-helion-pp-private-build",
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "head_pre": "d5bcaad156b38e95ed2d15c6d96a1b08a907eba8",
+    "tree": "b9b7a49ec1120c7b7c5969da4e1536dfbbbd1e4d",
+    "draft": true,
+    "product_code_modified_by_T10": false,
+    "stable_receipt_branch_pre": "5335634fd64aad07946779b3803e08d020e23da4"
+  },
+  "evidence": {
+    "t06_owner_8_of_8": "NOT_PROVEN",
+    "t06_owner_report": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513584672",
+    "t09_receipt_git_blob": "764f5075e8ec29b79d0326b4cff3be60d09b1155",
+    "t09_receipt_commit": "6b06d4ba507ddc90b185e90f12c06b5993eead79",
+    "t09_criteria": "1/6, frozenSource missing, same HEAD/tree",
+    "t09_receipt_path": "coordination/automation/t09/NOX-V16-T09-R43-20261030T0540MSK-NOLOSS-SOURCE-PARITY.json",
+    "t07_physical_729": "https://github.com/MSSTXNEWS/nox-helion-pp-private-build/issues/177#issuecomment-6513693455",
+    "original_729": {
+      "state": "PHYSICAL_PASS_REUSED_UNCHANGED",
+      "members": 729,
+      "parts": 3,
+      "zip_bytes": 60364346,
+      "zip_sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "part_blob_sha1": [
+        "e484e10d7b4ec9badeaae4c9d3a7e3aee5faa16b",
+        "7853cb43ff4ba0ed3023e8d794d8222eedea56a6",
+        "cbd9deb30860737f15e2adbaef2eaaf5d607a0de"
+      ]
+    },
+    "original_stills_sha256": {
+      "HOME": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+      "MENU": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
+      "WORK": "f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14"
+    },
+    "persona_registry_path": "integrations/creative/PERSONA_R15_MEDIA_SOURCE.json",
+    "persona_registry_blob": "00d3e044ebce96c0cc7a938d2c6a96e5def701a8",
+    "persona_optional_active": [
+      "KV",
+      "AM",
+      "LA",
+      "KW"
+    ],
+    "persona_optional_blocked": [
+      "EV"
+    ],
+    "persona_5_approved_portrait_SHA_live_paths": "NOT_PROVEN",
+    "five_persona_identity_passports_preserved": true,
+    "ev_identity_conflict": "HOLD",
+    "t08_exact_current_integrated_native_qa": "NOT_PROVEN",
+    "host50_source_descriptors": 50,
+    "host50_native_pending": 14,
+    "pr224_head": "1adf2ac7f9ec9ee9b02e640d2cdd0e43c2a57459",
+    "pr224_owner_fixes": "ISOLATED_PR_NOT_ADMITTED_TO_PR162",
+    "p02_wpf_to_python_native_ingress": "DIAGNOSTIC_ONLY_LIVE_BINDING_NOT_PROVEN",
+    "gitlab_project": "s-grouptwet/nox-helion-pp-private-build",
+    "gitlab_main_head": "0b3a7d435be735148d64171deb9027093a89646e",
+    "gitlab_full_tracked_content_parity": "NOT_PROVEN",
+    "gitlab_builder_branch": "build/r41-windows-preparation-20261030",
+    "gitlab_parity_helper": "PREPARED_UNWIRED_NOT_RUN"
+  },
+  "criteria": [
+    {
+      "id": 1,
+      "name": "one T09 frozen HEAD/tree",
+      "status": "HOLD",
+      "evidence": "T09 immutable 05:40 receipt has frozenSource null, 1/6"
+    },
+    {
+      "id": 2,
+      "name": "full P01-P05 owner-accepted ledger",
+      "status": "HOLD",
+      "evidence": "T06 05:37 owner 8/8 not signed; live P02 path pending"
+    },
+    {
+      "id": 3,
+      "name": "original 3-part ZIP729 SHA/CRC",
+      "status": "DONE_RETAINED",
+      "evidence": "T07 original physical hash and T09 current 3/3 Git pointers"
+    },
+    {
+      "id": 4,
+      "name": "D02/WOW/8 CoreID/5 Persona/PACK no-loss",
+      "status": "HOLD",
+      "evidence": "Original stills preserved; 5 approved portrait bytes/paths/rights not independently proven; EV conflict"
+    },
+    {
+      "id": 5,
+      "name": "Host50 Voice STOP ACL consent GPU RAG SPACE live source contracts",
+      "status": "HOLD",
+      "evidence": "14 Host50 native pending; P02 WPF↔Python NativeIngress unproven"
+    },
+    {
+      "id": 6,
+      "name": "no critical P0/P1 source regression",
+      "status": "HOLD",
+      "evidence": "Unresolved mandatory runtime/rights and consent native evidence, not a proven absence of defects"
+    },
+    {
+      "id": 7,
+      "name": "independent exact SHA SOURCE_READY signature",
+      "status": "HOLD",
+      "evidence": "prerequisite 1/2/4/5/6 HOLD"
+    }
+  ],
+  "progress": {
+    "own_equal_weight_operational": {
+      "done_before": 1,
+      "denominator": 7,
+      "done_after": 1,
+      "percent_before": 14.3,
+      "percent_after": 14.3,
+      "delta_pp": 0,
+      "remaining": 6,
+      "bar": "█░░░░░░░░░"
+    },
+    "new_unique_qa_accepted": 0,
+    "weighted_product": "N/D"
+  },
+  "stages": {
+    "E01": "HOLD",
+    "E02": "HOLD",
+    "E03": "HOLD",
+    "E04": "HOLD",
+    "E05": "HOLD",
+    "E06": "HOLD",
+    "E07": "NOT_RUN",
+    "code_complete": "HOLD",
+    "integrated": "HOLD",
+    "source_ready": "HOLD",
+    "windows_exe": "NOT_RUN",
+    "installed_windows_e07": "NOT_RUN",
+    "release": "HOLD"
+  },
+  "gate": {
+    "A": "PASS_CANON_REGISTER_PR_T09_GITLAB_AND_DOCS_READ",
+    "B": "PASS_SCOPED_INDEPENDENT_CURRENT_TREE_PREREQUISITE_CROSS_CHECK",
+    "C": "PENDING_GIT_WRITE_READBACK",
+    "D": "APPLIED_EXACT_SHA_NO_LOSS_MUST_NOT_PROMOTE_PORTRAIT_RIGHTS",
+    "E": "REPORT_AFTER_READBACK"
+  },
+  "errors": [
+    {
+      "id": "ERR-SRC-004",
+      "action": "HANDOFF",
+      "owner": "T06=>T08=>T09",
+      "root": "source/portrait/native acceptance missing"
+    },
+    {
+      "id": "ERR-SYS-002",
+      "action": "APPLY",
+      "owner": "T10",
+      "root": "do not carry old per-file QA to mutable source HEAD"
+    },
+    {
+      "id": "NOX-V16-INCIDENT-PREMATURE-STOP-20261029-R01",
+      "action": "APPLY",
+      "owner": "T10",
+      "root": "never sign from report or original ZIP only"
+    }
+  ],
+  "lesson": {
+    "applied": "Preserved T07 729/3 DONE but refused to transfer original ZIP hash to absent live 5-portrait permissions and current P02 native QA.",
+    "new": "SOURCE_READY evidence tuple must include separate five approved portrait file SHA256+rights and authenticated full GitLab tracked-path content parity, not only 3 ZIP-part pointers or matching 40-hex commit text."
+  },
+  "handoff": {
+    "T06": "Owner-admit PR224 only exact PRE via authorized CAS; close live WPF→P02 NativeIngress + Host50 14 native + five licensed portrait SHA paths; publish owner 8/8 pinned SHA/tree/manifest.",
+    "T08": "Independently verify targeted latest changed source plus native STOP/ACL/consent/privacy/rights and 50-route contracts on exact T06 SHA.",
+    "T09": "Only after T06/T08 PASS publish immutable frozen HEAD/tree/manifest; preserve original 729 physical evidence.",
+    "T02": "Index this own receipt under existing ERR-SRC-004 / ERR-SYS-002; sole shared journal CAS/readback.",
+    "T11": "Keep GitLab content-parity preflight and build stage on HOLD until signed T10 and separate owner approval."
+  },
+  "prohibited_executed": {
+    "EXE": false,
+    "NSIS": false,
+    "GitLab_CI": false,
+    "E07": false,
+    "release": false
+  }
+}
