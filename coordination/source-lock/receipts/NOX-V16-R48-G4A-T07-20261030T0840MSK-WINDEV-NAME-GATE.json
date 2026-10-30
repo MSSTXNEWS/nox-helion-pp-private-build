@@ -1,0 +1,55 @@
+{
+  "schema": "NOX_V16_G4A_T07_OWNER_SAFE_DEVICE_NAMESPACE_PATCH_V1",
+  "runId": "NOX-V16-R48-G4A-T07-20261030T0840MSK-WINDEV-NAME-GATE",
+  "branch": "auto/r42/g4a-sourcelock",
+  "sourcePr162HeadAtPreflight": "678ce7365c641a143225d5dfc90ce5f44776b470",
+  "ownerBranchPreHead": "7e86e926c164346871a932ba5f4779140507d6be",
+  "ownerBranchPreTree": "b996b3f5b2ff9198107cb3010556717bcacc497e",
+  "sourceFiles": [
+    {
+      "path": "coordination/e06/verify_original_729_source.py",
+      "preGitBlobSha1": "61eb4864b067350f588d4f7521aa1b0e269651d7",
+      "postGitBlobSha1": "674cb3a8d675c8eac7475288333ccd0721ab7c2f"
+    },
+    {
+      "path": "coordination/source-lock/verify_original_archive.py",
+      "preGitBlobSha1": "5145f069cfc7a885f4ac63e888d2532837d4cd8e",
+      "postGitBlobSha1": "3a372b8f7a087a24eaac9c0066d342bd1346ee93"
+    },
+    {
+      "path": "coordination/source-lock/test_atomic_e06_receipt_r47.py",
+      "preGitBlobSha1": "b3e972a9a61a9fb9df2c868a36037aebc58c9457",
+      "postGitBlobSha1": "00611bc7e70197e8b7d74dad3f15ad3298adb7b9"
+    }
+  ],
+  "rootCause": "Both existing Windows ZIP member-name validators accepted reserved Win32 DOS alias names COM¹/COM²/COM³, LPT¹/LPT²/LPT³, CONIN$ and CONOUT$, allowing archive namespace ambiguity on Windows",
+  "actualPatch": "Extend existing DEVICE and RESERVED regexes, reuse existing canonical logic; one focused negative/positive regression added to existing test file; no binaries/media/ZIP touched",
+  "localRegressionBeforeRemoteSave": "Isolated Python regex smoke: 9/9 unsafe names RED on original regex, 9/9 rejected by proposed regex, 7/7 normal names allowed, 729 historical archive member names unaffected. Full exact checkout unittest NOT_RUN.",
+  "externalSpec": "https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file",
+  "historicZip": {
+    "archiveBytes": 60364346,
+    "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+    "memberCount": 729,
+    "proofIssueComment": 6513693455,
+    "rawRehash": "NOT_RUN (unchanged input)"
+  },
+  "noLoss": {
+    "originalPartsUnchanged": true,
+    "originalMediaUnchanged": true,
+    "personaFiveApprovedRights": "HOLD",
+    "sourcePr162Unmodified": true
+  },
+  "previousLessonApplied": "ERR-SYS-002 exact source SHA pins verified before update; existing 729 byte receipts reused",
+  "newLesson": "ZIP namespace safety must include Win32 superscript serial/parallel DOS aliases in BOTH canonical validator and owner E06 wrapper, with positive controls to avoid false HOLD",
+  "handoff": {
+    "T06": "Review exact 3-file owner candidate; CAS into PR162 only at live PRE SHA; run focused repository unittest",
+    "T08": "Independent current HEAD negative ZIP namespace acceptance plus STOP/ACL/consent/privacy as relevant",
+    "T09": "Use only post-T06/T08 frozen same-HEAD source seal; original ZIP proof alone not SOURCE_READY",
+    "T02": "Index under ERR-SRC-004 and ERR-SYS-002 with same-HEAD evidence, no shared edit by G4-A"
+  },
+  "stage": "ISOLATED_OWNER_SOURCE_CANDIDATE_UNACCEPTED",
+  "qaAccepted": false,
+  "sourceReady": false,
+  "executableBuild": "NOT_RUN",
+  "nativeE07": "NOT_RUN"
+}

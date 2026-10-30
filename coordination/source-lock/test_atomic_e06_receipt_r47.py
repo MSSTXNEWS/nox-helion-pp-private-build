@@ -74,5 +74,31 @@ class AtomicSourceLockReceiptTests(unittest.TestCase):
             self.assertEqual(list(Path(tmp).glob(".nox-source-audit-*")), [])
 
 
+    def test_reserved_windows_device_names_fail_both_source_gates(self):
+        """Reject Win32 device aliases before ZIP read; retain normal names."""
+        canonical_spec = importlib.util.spec_from_file_location(
+            "nox_original_archive_under_test", module.CANONICAL_VALIDATOR)
+        self.assertIsNotNone(canonical_spec)
+        canonical = importlib.util.module_from_spec(canonical_spec)
+        canonical_spec.loader.exec_module(canonical)
+        prohibited = (
+            "COM¹", "COM².txt", "COM³", "LPT¹", "LPT².dat", "LPT³",
+            "CONIN$", "CONOUT$.log", "nested/COM¹.txt",
+        )
+        allowed = (
+            "COM10.txt", "COMx.txt", "LPT10", "CONSOLE.txt",
+            "home/menu/work", "AUXILIARY.txt", "user.txt",
+        )
+        for name in prohibited:
+            with self.subTest(name=name):
+                with self.assertRaises(module.SourceHold):
+                    module.safe_member(name, False)
+                self.assertFalse(canonical.safe_name(name))
+        for name in allowed:
+            with self.subTest(name=name):
+                self.assertEqual(module.safe_member(name, False), name)
+                self.assertTrue(canonical.safe_name(name))
+
+
 if __name__ == "__main__":
     unittest.main()

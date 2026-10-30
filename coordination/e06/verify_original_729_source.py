@@ -30,7 +30,7 @@ EXPECTED_FILES = 729
 CHUNK = 1 << 20
 MAX_FILES = 4096
 MAX_UNCOMPRESSED = 4 * 1024**3
-DEVICE = re.compile(r"^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$", re.I)
+DEVICE = re.compile(r"^(?:CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$", re.I)
 
 
 class SourceHold(RuntimeError):
