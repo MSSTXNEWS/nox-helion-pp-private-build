@@ -61,7 +61,7 @@ def main(argv=None):
         if not line.strip():continue
         # STOP must not wait behind long FFmpeg / Ollama jobs.
         with THREADS_LOCK:
-            THREADS.difference_update(t for t in THREADS if not t.is_alive())
+            THREADS.difference_update(t for t in tuple(THREADS) if not t.is_alive())
             if len(THREADS)>=16:
                 emit(None,False,error='Worker task limit reached')
                 continue
