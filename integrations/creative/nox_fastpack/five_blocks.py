@@ -10,6 +10,7 @@ import os
 import tempfile
 import threading
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 _LOCK = threading.RLock()
@@ -102,7 +103,7 @@ def dispatch_five(studio, request):
         state = _read(path)
         if action == "cs5_list":
             return {"status": "LOCAL_RECORDS_NOT_E11", "project_id": project_id,
-                    "events": state["events"], "count": len(state["events"])}
+                    "events": state["events"][-20:], "count": len(state["events"]), "showing": min(len(state["events"]), 20)}
         if studio._stop_event.is_set():
             raise ValueError("CS5_STOP_ACTIVE")
         block = request.get("block")
@@ -124,6 +125,7 @@ def dispatch_five(studio, request):
         previous = state["events"][-1]["sha256"] if state["events"] else ""
         event = {
             "event_id": uuid.uuid4().hex,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
             "block": block, "kind": kind, "text": text.strip(),
             "source_url": url, "evidence_status": evidence, "prev_sha256": previous,
         }
