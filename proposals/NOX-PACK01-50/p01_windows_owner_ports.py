@@ -71,6 +71,10 @@ def _https_url(value: str) -> str:
                 value.startswith("https:////") or "\\" in value or url.fragment):
             raise ValueError("not a trusted HTTPS URL")
         ascii_host = host.encode("idna").decode("ascii")
+        # WHATWG/Chromium decode percent-encoded host labels before navigation.
+        # Reject rather than accept an encoded loopback alias as public DNS.
+        if "%" in ascii_host:
+            raise ValueError("percent-encoded hostname rejected")
         if ascii_host == "localhost" or ascii_host.endswith(".localhost") or ascii_host.endswith(".local"):
             raise ValueError("local destination blocked")
         try:

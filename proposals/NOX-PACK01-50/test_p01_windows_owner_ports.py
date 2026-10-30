@@ -85,6 +85,18 @@ class Tests(unittest.TestCase):
         self.assertIs(self.port.open_browser("trusted-session", {})["accepted"], False)
         self.assertEqual(self.browser_calls, [self.url])
 
+    def test_browser_rejects_percent_encoded_whatwg_loopback_hosts(self):
+        # Browser URL parsing decodes these numeric labels into loopback IPs.
+        # Python urlsplit + idna alone retain the %, so reject before DNS.
+        for url in ("https://%31%32%37.1/admin", "https://127.%31/admin",
+                    "https://0x7f.%31/", "https://%31%32%37.0.0.1/",
+                    "https://%30x7f.1/", "https://127.0.%30.1/",
+                    "https://0x7f.%30x1/"):
+            self.url = url
+            with self.subTest(url=url), self.assertRaises(m.OwnerDenied):
+                self.port.open_browser("trusted-session", {})
+        self.assertEqual(self.browser_calls, [])
+
     def test_browser_native_consent_and_stop_revocation(self):
         self.allowed = False
         with self.assertRaises(m.OwnerDenied):
