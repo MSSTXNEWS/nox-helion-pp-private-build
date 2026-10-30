@@ -232,6 +232,12 @@ class NoxPackHost:
         # A previously captured owner method must never dispatch after removal.
         if self.ports.get(route) is not port:
             raise HostHold("Native route owner binding changed before dispatch")
+        # Privileged native callbacks can revoke the session scope during
+        # readiness/consent. The one-host caller still owns cross-thread locking.
+        session.validate()
+        if route not in session.allowed or (risk in ("sensitive", "dangerous")
+                and route not in session.private_approved):
+            raise HostDenied("Native scope revoked before dispatch")
         return port.call(session,frozen_payload)
 
 
