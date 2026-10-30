@@ -24,7 +24,7 @@
       selected.value = originalProject;
     }
     navigate('five');
-    verifyConnection();
+    return verifyConnection();
   });
   nav.appendChild(tab);
 
@@ -219,7 +219,7 @@
   }
   byId('cs5-status').addEventListener('click', () => {
     overviewReady = false;
-    verifyConnection();
+    return verifyConnection();
   });
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
   byId('cs5-list').addEventListener('click', () => perform('cs5_list'));
