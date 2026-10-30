@@ -96,10 +96,10 @@ def probe(args: argparse.Namespace) -> tuple[int, dict]:
                         report["status"] = "FAILED"
                         return 1, report
                     required_tests = set(re.findall(
-                        r"(?m)^\\s*def (test_[A-Za-z0-9_]+)\\(", snapshot_source))
+                        r"(?m)^\s*def (test_[A-Za-z0-9_]+)\(", snapshot_source))
                     verified_tests = set(re.findall(
-                        r"(?m)^(test_[A-Za-z0-9_]+) \\(test_model_snapshot_probe\\.[^\\n)]+\\) \\.\\.\\. ok\\s*$", log))
-                    counts = re.findall(r"Ran (\\d+) tests?", log)
+                        r"(?m)^(test_[A-Za-z0-9_]+) \(test_model_snapshot_probe\.[^\n)]+\) \.\.\. ok\s*$", log))
+                    counts = re.findall(r"Ran (\d+) tests?", log)
                     if (len(required_tests) < 40 or not counts or
                             int(counts[-1]) < len(required_tests) or
                             not required_tests.issubset(verified_tests)):
