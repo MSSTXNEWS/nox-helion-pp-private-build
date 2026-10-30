@@ -50,12 +50,11 @@ class RagImportConsistencyTests(unittest.TestCase):
 
         return changed
 
-    def _assert_import_denied_without_embedding(self, changed):
+    def _assert_import_denied_without_embedding(self, changed, expected="RAG_FILE_CHANGED_DURING_READ"):
         with mock.patch.object(rag.os, "stat", side_effect=changed):
             with mock.patch.object(self.index, "_embeddings",
                                    side_effect=AssertionError("must not embed")):
-                with self.assertRaisesRegex(rag.RagHold,
-                                            "RAG_FILE_CHANGED_DURING_READ"):
+                with self.assertRaisesRegex(rag.RagHold, expected):
                     self.index.ingest_file(OWNER, "chat-1", self.source)
         self.assertFalse(self.index_path.exists(), "Denied import must not be indexed")
 
@@ -81,7 +80,8 @@ class RagImportConsistencyTests(unittest.TestCase):
 
     def test_simulated_replacement_with_nonregular_path_blocks_provenance(self):
         self._assert_import_denied_without_embedding(
-            self._metadata_switch(st_mode=stat.S_IFLNK))
+            self._metadata_switch(st_mode=stat.S_IFLNK),
+            expected="RAG_FILE_SYMLINK_BLOCKED")
 
     def test_simulated_inode_swap_blocks_provenance_when_supported(self):
         old = self.source.stat()
