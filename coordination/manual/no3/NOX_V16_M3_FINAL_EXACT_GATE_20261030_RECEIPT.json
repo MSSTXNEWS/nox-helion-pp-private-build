@@ -1,0 +1,58 @@
+{
+  "schema": "NOX_V16_M3_FINAL_EXACT_COMPONENT_GATE_EVIDENCE_V1",
+  "run_id": "NOX_V16_M3_FINAL100_EXACT_GITBLOBS_ONE_MEGABLOCK_20261030",
+  "executed_utc": "2026-10-30T00:02:21.274927+00:00",
+  "role": "MANUAL3_P04_P05_OWNER_ONLY",
+  "source_pr": 222,
+  "source_commit": "998e5726587e3a77dff13eb8646cac6e743e3702",
+  "parents": [
+    "187bbd28b13277a3084707053a7b4e1b528cbb49",
+    "852ccc1611d99afaf48e7fc4c33a5509d385f9a9"
+  ],
+  "source_gate": {
+    "path": "coordination/manual/no3/verify_p04_p05_components.py",
+    "blob_sha1": "cbd25993a02c4f8362dbd52b20092c6972ab400c",
+    "sha256": "1ec71bae854a975365952014401c5f3848ae7f76462a5f24a207f4f4db5e0613"
+  },
+  "tests": {
+    "path": "tests/P04/test_component_gate_evidence_r36.py",
+    "blob_sha1": "e5102985ebe2814bd5b66a3395ebf32106d991cb",
+    "sha256": "cca5ab8fa0b79ab56149c959e68589ec7a9a995d728489a3bd96f23c5400182c"
+  },
+  "execution": {
+    "python": "3.13.5",
+    "mode": "LOCAL_EXACT_GITHUB_BLOBS",
+    "passed": 6,
+    "ran": 6,
+    "failed": 0,
+    "errors": 0,
+    "exit_code": 0,
+    "log_sha256": "4cb6199b0965ec9b7ae1df8056c24d517db5a27efdcbdc6cf7b1392aaa025c79",
+    "coverage": [
+      "positive_component_only",
+      "wrong_head_rejected",
+      "missing_RAG_marker_rejected",
+      "missing_GPU_ACK_marker_rejected",
+      "short_P05_feed_rejected",
+      "short_P05_freshness_rejected"
+    ]
+  },
+  "baseline_source_integrity": {
+    "owner_only_differences": 14,
+    "unauthorized_paths": 0,
+    "original_archive_parts_preserved": 3
+  },
+  "limitations": {
+    "full_P04_40_tests": "NOT_RUN",
+    "dotnet8_P04_P05": "NOT_RUN",
+    "OneHost_ACL_STOP_events_v3": "NOT_RUN",
+    "CUDA_QLoRA_licensed": "NOT_RUN",
+    "independent_T08": "NOT_RUN",
+    "T06_same_source_integration": "NOT_APPLIED_TO_PR162",
+    "SOURCE_READY": false,
+    "QA_ACCEPTED_delta": 0,
+    "GitLab_pipeline": "NOT_STARTED"
+  },
+  "error_register_single_writer": "T02_ONLY",
+  "no_loss": "Original archive 729/3 and D02/WOW200, 8 CoreID, 5 Persona, STOP/ACL/consent preserved; no product source edits"
+}
