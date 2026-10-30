@@ -87,8 +87,9 @@ test('CS5 mounts only inside the original Creative nav/content, not HOME/MENU',a
   c.nav.children[0].click();
   assert.equal(c.calls[0].action,'cs5_overview');
   assert.equal(c.ids.get('cs5-project').value,'owner-project-42');
+  await Promise.resolve();
   c.ids.get('cs5-status').click();
-  assert.equal(c.calls.at(-1).action,'cs5_overview');
+  assert.equal(c.calls.length,2,'explicit retry uses the same Worker, no eager call');
   c.ids.get('cs5-project').value='creative01';
   c.ids.get('cs5-text').value='Original fictional screenplay';
   c.ids.get('cs5-block').value='B03';
