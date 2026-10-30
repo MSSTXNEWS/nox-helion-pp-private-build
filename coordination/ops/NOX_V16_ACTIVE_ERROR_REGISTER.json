@@ -1729,6 +1729,128 @@
       "build_authorized": false,
       "e07": "NOT_RUN",
       "next_owner": "P0 T06 sole PR162 writer: exact-preimage integrate one-line STOP donor (product 1cd8f2d4 -> approved patch); run full Python STOP/ACL/consent/privacy + offline model tests and owner 8/8, then independent T08. Coordinate permission-before-native, cumulative SourceLock/CSV fixes without overwriting donor chains. T09 freeze/5 portraits, T10 SOURCE_READY; G5-C frozen GitLab parity only after gates."
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-20261030T1350MSK-OWNER-BATCH",
+      "existing_task_id": "T02",
+      "observed_at_moscow": "2026-10-30T13:50:00+03:00",
+      "source_head_at_read": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_at_read": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "registry_pre_blob": "b9d87651889cf75b313d63eaea1626e03b2761be",
+      "source_code_changed_since_previous_T02": false,
+      "new_material_owner_or_independent_receipts": 9,
+      "evidence": [
+        {
+          "owner": "G2-A/Host50",
+          "task_id": "NIP01-32",
+          "issue_comment_id": 6519887902,
+          "receipt_blob": "67f8e76f566ff2db6b197f960db18572b988c5cb",
+          "owner_commit": "bba367097b00c58d694b23415b71a7f351d01dbe",
+          "source_or_donor_blob": "3f72e56c936429f398c3cd4396613a442a4775ab",
+          "finding": "CEFR pre-capture invalid-level native side effect repaired in isolated donor, extracted 4/4, full Python/Windows NOT_RUN; superseded by later cumulative donor.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G2-A/Host50",
+          "task_id": "NIP01-48",
+          "issue_comment_id": 6520877190,
+          "receipt_blob": "031bca60fc561508d4440aec20b99bab1557dd0a",
+          "owner_commit": "7e7c3036d1f85bbdafbc84cd10e18032ad8a7ed8",
+          "source_or_donor_blob": "f48c90ef5be00335b7f158388c33d0a6896c6ad5",
+          "finding": "Post-native-readiness session/consent revocation race, donor revalidation immediately before port call, extracted RED2/2 GREEN3/3; current PR162 still source 1cd8f2d4, Windows/native NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "T10 independent",
+          "task_id": "T10",
+          "issue_comment_id": 6520517125,
+          "source_or_donor_blob": "1cd8f2d49a440775401e4ad0a3721d2ef36c8b62",
+          "finding": "Current PR162 denied voice selectors invoke native callbacks 4/4 in extracted test; donor 4/4 fail-closed; real Windows QA NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G1-C/P05",
+          "task_id": "E05-02",
+          "issue_comment_id": 6520547094,
+          "source_or_donor_blob": "5c51eeb8319b5c809d62d84250ac9dd607b70550",
+          "finding": "events.v3 contract run_id maxLength128 vs P05 publisher accepts <=160; static mismatch at exact blobs, .NET test NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G3-A/P04",
+          "task_id": "P04 existing",
+          "issue_comment_id": 6520613255,
+          "source_or_donor_blob": "9e355db0aee7eea1baa446048cf10626f2de1884",
+          "finding": "Integration tests all five skipped if env var absent despite packaged P02 source; candidate blob 0bcad9b8 unpersisted, full test NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G1-B/NSIS",
+          "task_id": "E06 existing",
+          "issue_comment_id": 6520264069,
+          "source_or_donor_blob": "ca8ce5d046452d8f2ad0730293171da3f9797f85",
+          "finding": "Consolidated preflight patch: no auto-NSIS, no overwritten output, path reparse validation; candidate blob 4190c44e; Git write previously DENIED, actual Windows NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G5-C/T11",
+          "task_id": "T11",
+          "issue_comment_id": 6520682436,
+          "owner_commit": "6a2f24a2e93821b51f94aa14bccda53b7ef190d5",
+          "source_or_donor_blob": "afdbf697a611bd6ef09f13eb586e75417e7f6f27",
+          "finding": "GitLab builder uses existing preinstalled makensis, no Chocolatey; authenticated branch now 254b1e129659621ceb3fb54122d3cca597af77b3 due to later test-only correction, no parity/CI/EXE.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G4-A/T07",
+          "task_id": "T07",
+          "issue_comment_id": 6520769417,
+          "receipt_blob": "b7aa65a8e8bb51737cedb47e476dc8d953d4b534",
+          "owner_commit": "f931e0b1bec905116e3c0ab5c7b71ada1d5f79b3",
+          "source_or_donor_blob": "502aa45b794557d13439a25a79d4a0657773d84e",
+          "finding": "Donor SourceLock early Win32 invalid ZIP member gate, extracted RED7/7->GREEN, full unittest/Windows NOT_RUN; originals intact.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        },
+        {
+          "owner": "G3-B/PACK02",
+          "task_id": "NIP02-29",
+          "issue_comment_id": 6520904418,
+          "receipt_blob": "5baa0f26a4063dda1d8ddf41d92d785b0b48c65c",
+          "owner_commit": "defb656d45003ba0ac3f450a8ef1cb6a7b9e49a7",
+          "source_or_donor_blob": "dd8a1427044f0b3b0a7f2bbe67e9d77426e40517",
+          "finding": "Donor data.json.flatten dotted-key collision and __proto__ data loss, exact V8 RED2/2 GREEN4/4, full Node/Windows NOT_RUN.",
+          "stage": "ISOLATED_OR_INDEPENDENT_EVIDENCE_NOT_INTEGRATED",
+          "qa_accepted": false
+        }
+      ],
+      "existing_error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "error_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "historic_done_preserved": true,
+      "original_source_729_3_preserved": true,
+      "last_lesson_application": "NOT_APPLIED in integrated unchanged PR162: previous STOP/privacy guard not present in product blob 1cd8f2d4; independent T10 negative source-extracted test 4/4 denied cases still invoke native callbacks. Donor checks not counted as native QA.",
+      "new_lesson": "Cause: synchronous native readiness callback can revoke authenticated session after initial ACL/consent check (TOCTOU). Repair: G2-A cumulative donor source 3f72e56c->f48c90ef rechecks session/scope immediately before BoundPort.call. Regression: extracted RED2/2 denied revoke -> GREEN3/3 incl authorized route. Prevention: T06 same-HEAD integration plus full STOP/ACL/consent/privacy tests with post-readiness revocation, independent T08; no E07 claim.",
+      "qa_accepted_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_authorized": false,
+      "e07": "NOT_RUN",
+      "next_owner": "T06 P0: single compatible exact-preimage merge native_bridge offline STOP + cumulative pre-callback and post-callback ACL/consent guards; full Python STOP/ACL/consent/privacy including revoked-session test; next P05 RunID max128 gate and P04 skip test; preserve 729/3, HOME/MENU/WORK/5 original portrait SHA+rights; then T08→T09→T10 frozen same-SHA; GitLab T11 parity first, CI/EXE only separately authorized."
     }
   ]
 }
