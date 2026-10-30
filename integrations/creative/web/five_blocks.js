@@ -85,6 +85,7 @@
           <label>Запрос<input id="cs5-research-query" maxlength="160" placeholder="Название / ES / es|España"></label>
         </div>
         <button class="action primary" id="cs5-research" type="button">Исследовать по запросу</button>
+        <button class="action" id="cs5-research-all" type="button">МЕГА-ПОИСК · 4 открытых каталога</button>
         <div class="grid" id="cs5-research-results" aria-live="polite"></div>
       </div>
       <div class="actions">
@@ -298,6 +299,67 @@
         } catch {}
       }
       dest.append(card);
+    }
+  });
+  byId('cs5-research-all').addEventListener('click', async () => {
+    if (loading) return;
+    const query = byId('cs5-research-query').value.trim();
+    if (!query || query.length > 160) {
+      byId('cs5-result').textContent = 'Нужен запрос длиной 1–160 символов';
+      return;
+    }
+    const id = projectId();
+    const sources = ['books','openlibrary','crossref','openalex'];
+    const dest = byId('cs5-research-results');
+    dest.replaceChildren();
+    const results = [];
+    const button = byId('cs5-research-all');
+    button.disabled = true;
+    try {
+      for (const source of sources) {
+        byId('cs5-result').textContent = 'Открытые каталоги: ' +
+          (results.length + 1) + '/4 · ' + source;
+        try {
+          const result = await task('cs5_research',
+            {source,query,project_id:id},'cs5-result');
+          if (!result || !Array.isArray(result.items)) {
+            results.push(source + ': результат не подтверждён');
+            continue;
+          }
+          results.push(source + ': ' + result.items.length + ' записей');
+          for (const item of result.items) {
+            const card = document.createElement('article');
+            card.className = 'model';
+            const title = document.createElement('h3');
+            title.textContent = item.title || 'Без названия';
+            const note = document.createElement('p');
+            note.textContent = source + ' · ' + (item.detail || '') +
+              ' · ПУБЛИЧНЫЕ МЕТАДАННЫЕ, НЕ ФАКТЧЕК';
+            card.append(title,note);
+            if (typeof item.source_url === 'string') {
+              try {
+                const linkURL = new URL(item.source_url);
+                if (['https:','http:'].includes(linkURL.protocol) &&
+                    linkURL.hostname && !linkURL.username && !linkURL.password) {
+                  const link = document.createElement('a');
+                  link.href = linkURL.href;
+                  link.rel = 'noopener noreferrer';
+                  link.target = '_blank';
+                  link.textContent = 'Первоисточник';
+                  card.append(link);
+                }
+              } catch {}
+            }
+            dest.append(card);
+          }
+        } catch (e) {
+          results.push(source + ': HOLD · ' + String(e?.message || e));
+        }
+      }
+      byId('cs5-result').textContent = 'МЕГА-ПОИСК · результат по источникам:\n' +
+        results.join('\n') + '\nПоказатели не являются продажами или проверенными фактами.';
+    } finally {
+      button.disabled = false;
     }
   });
   byId('cs5-save').addEventListener('click', () => perform('cs5_append'));
