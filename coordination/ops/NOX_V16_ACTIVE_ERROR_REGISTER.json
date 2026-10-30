@@ -230,16 +230,16 @@
     "report": "Show progress BAR █░ x/n % before,during(after actual accepted criteria),end; before%→after% Δ; cite all relevant ERROR_ID and actions, exact source/registry SHA, one code megablock, one check, one save, applied lesson. Historical DONE preserved."
   },
   "last_checkpoint": {
-    "run_id": "NOX-V16-R47-G5A-T02-202610300655MSK-P03-CAS",
+    "run_id": "NOX-V16-R47-G5A-T02-20261030T0753MSK-GITLAB-PARITY-GATE",
     "source_head_observed": "678ce7365c641a143225d5dfc90ce5f44776b470",
     "source_tree_observed": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
-    "registry_pre_blob": "edcc2e26ea5f672c29adce635df3abd888502fd6",
+    "registry_pre_blob": "f837addf069415c94da60b7198e33f95db9003df",
     "progress": {
       "historical_t02": "4/4 DONE unchanged",
       "accepted_task_id_delta": 0,
       "product": "N/D"
     },
-    "next": "T06 P01 numeric + early NSIS preflight exact owner CAS if compatible, plus real WPF→P02 binding; T08 independent native STOP/ACL/consent/privacy/NO-LOSS; T09 729+five portraits freeze; T10 SOURCE_READY; T11 GitLab build only after approval."
+    "next": "T06/#1 current-HEAD 8/8, P01 NSIS WPF-P02 and approved portrait rights; T08 independent native STOP/ACL/consent/privacy; T09 freeze; G5-C/T11 content parity after T10 SOURCE_READY, no CI/EXE before separate approval."
   },
   "old_ids_preserved": true,
   "full_canon_preserved": true,
@@ -1283,6 +1283,96 @@
       "lesson_applied": "R42 separation enforced: exact source+test blobs are not live WebView2/native consent approval; original 729/3 and 5 Persona rights remain distinct.",
       "lesson_new": "P03 queue snapshot validated too late, mutating model-rights/licenseAck on malformed job progress. Repair: defer catalogue/consent mutation until state/job validation. Regression: test blob 1f81a794… 3 scenarios; prevention: independent same-HEAD native WebView2 consent and STOP regression before ACCEPT.",
       "next_owner": "T06 P01 numeric + early NSIS preflight exact owner CAS if compatible, plus real WPF→P02 binding; T08 independent native STOP/ACL/consent/privacy/NO-LOSS; T09 729+five portraits freeze; T10 SOURCE_READY; T11 GitLab build only after approval."
+    },
+    {
+      "run_id": "NOX-V16-R47-G5A-T02-20261030T0753MSK-GITLAB-PARITY-GATE",
+      "existing_task_id": "T02",
+      "observed_at": "2026-10-30T07:53:57+03:00",
+      "scope": "Sole shared register coordination branch; no PR162/main mutation",
+      "source_head_pre": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_head_post": "678ce7365c641a143225d5dfc90ce5f44776b470",
+      "source_tree_post": "e0b1f0c031bd77f3453a93180ceb500071529bc6",
+      "registry_pre_blob": "f837addf069415c94da60b7198e33f95db9003df",
+      "source_code_changed_since_prior_T02": false,
+      "new_independent_evidence": true,
+      "receipts": [
+        {
+          "owner": "T08",
+          "run_id": "NOX-V16-R47-G4B-T08-20261030T0655MSK-P03-INTEGRATED-EXACT",
+          "blob": "2e4981b68a3731d9cf4f1050a916cbbe80a8dc79",
+          "commit": "909a9e870c98263abce794f1939bbcd3a3a57fb2",
+          "stage": "P03_SOURCE_QA_PASS_LIMITED_SAME_HEAD",
+          "test": "V8 28/28; Windows/.NET/native NOT_RUN",
+          "qa_accepted": false
+        },
+        {
+          "owner": "T09",
+          "run_id": "NOX-V16-T09-R47-20261030T0706MSK-LIVE-SOURCE-PIN",
+          "blob": "465c35f40feaf08800c42f2461f09b43a6219bfa",
+          "commit": "5a2088c0b2f619a62bd243e1981b07fd3e90907d",
+          "stage": "HOLD_NOT_FROZEN",
+          "zip729_3": "prior byte-exact T07 evidence reused after unchanged part pointers",
+          "portrait_sha_rights": "HOLD"
+        },
+        {
+          "owner": "T10",
+          "run_id": "NOX-V16-R47-G5B-T10-20261030T0718MSK-GITLAB-PARITY-HOLD",
+          "blob": "0513cd701127a20cb4ccc2ce592a8c0c89c03f70",
+          "commit": "f7f5c0e11a6f17b4dee1c706d07f24160c23a9b1",
+          "stage": "SOURCE_READY_HOLD",
+          "github_head": "678ce7365c641a143225d5dfc90ce5f44776b470",
+          "gitlab_head": "eb38c599709cafeac9d64f374b43628df04a18be",
+          "gitlab_branch_head_readback": "CONFIRMED_BY_T02_AUTHENTICATED_GITLAB_GET_COMMIT",
+          "ui_js_bytes_divergence": "REPORTED_IN_T10_SIGNED_RECEIPT; full GitLab-vs-GitHub bytes NOT recomputed by T02",
+          "t10_accepted": false
+        },
+        {
+          "owner": "T07/G4-A",
+          "run_id": "NOX-V16-R47-G4A-T07-20261030T0742MSK-ATOMIC-RECEIPT",
+          "blob": "93fba9d87868057413df1934f87d7484a403fb61",
+          "commit": "7e86e926c164346871a932ba5f4779140507d6be",
+          "pre_blob": "ecd17af8609f84baa191f12d7faaad2fa5e42ce8",
+          "post_blob": "61eb4864b067350f588d4f7521aa1b0e269651d7",
+          "stage": "ISOLATED_SOURCE_PREPARED",
+          "test": "Algorithm smoke 4/4; original repository/native NOT_RUN"
+        },
+        {
+          "owner": "G3-B",
+          "run_id": "NOX-V16-R47-G3B-20261030T0745MSK-PACK02-CSV-QUOTING",
+          "blob": "f32e238e42f0ff941bf6afc07950ffc7a582a773",
+          "commit": "622fc48406598a3c7e62463312da151211869d9d",
+          "pre_blob": "d40000fa226087e01bced6520a3b7a9481e8ffee",
+          "post_blob": "bd0d4f421cb7ae5e940667bc3d39227b3d852999",
+          "stage": "ISOLATED_SOURCE_VERIFIED_LIMITED_NOT_PR162_INTEGRATED",
+          "test": "V8 3/3; native NOT_RUN",
+          "dependency": "Earlier NIP02-24/25 owner donor 376d... -> d400... must be reconciled before CAS into PR162"
+        }
+      ],
+      "error_refs": [
+        "ERR-SRC-004",
+        "ERR-SYS-002"
+      ],
+      "new_error_ids": 0,
+      "error_counts": {
+        "OPEN": 5,
+        "FIX_APPLIED_UNVERIFIED": 4,
+        "VERIFIED_CLOSED": 2
+      },
+      "lesson_applied": "Last R47 Lessons: exact same SHA P03 V8 evidence remains source-limited; T10 GitLab bytes parity unverified by owner and signed SOURCE_READY HOLD. No acceptance inferred from single-source commit.",
+      "lesson_new": "Cause: GitLab branch content lags GitHub PR162 despite same branch name; repair: G5-C/T11 must reconcile approved frozen file bytes and protected entrypoint; regression: compare actual content hashes for P03 reviewedDigest/consent and other critical paths; prevention: require authenticated cross-provider content parity before BUILD and independent T10 gate.",
+      "stage": {
+        "P03": "INTEGRATED_SOURCE_AND_LIMITED_INDEPENDENT_QA",
+        "P01": "ISOLATED_FIX_NOT_INTEGRATED",
+        "PACK02": "ISOLATED_DONOR_NOT_INTEGRATED",
+        "T09": "HOLD",
+        "T10": "HOLD_GITLAB_PARITY",
+        "E07": "NOT_RUN"
+      },
+      "accepted_task_ids_delta": 0,
+      "product_percent": null,
+      "source_ready": false,
+      "build_authorized": false,
+      "next_owner": "T06/#1 current-HEAD 8/8, P01 NSIS WPF-P02 and approved portrait rights; T08 independent native STOP/ACL/consent/privacy; T09 freeze; G5-C/T11 content parity after T10 SOURCE_READY, no CI/EXE before separate approval."
     }
   ]
 }
