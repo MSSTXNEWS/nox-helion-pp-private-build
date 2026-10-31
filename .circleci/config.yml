@@ -1,76 +1,44 @@
-# I0: isolate failing source assertion in original R11 MainWindow/HTML (#88).
+# I0 original owner UI stage recovery test: owner Pack01 callback preserved, no new UI.
 version: 2.1
 orbs:
   win: circleci/windows@5.0
 jobs:
-  i0-creative-pack-router-anchor:
+  i0-creative-fixed-onehost-source-stage:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Reconstruct exact immutable R11 owner candidate
+          name: Original R11 stage plus minimally compatible Creative and original WOW200
+          no_output_timeout: 20m
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
-      - run:
-          name: Original Creative Stage required anchor - separately checked
-          command: |
-            $ErrorActionPreference='Stop'
-            $main=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
-            $exact='case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
-            $found=[regex]::Matches($main,[regex]::Escape($exact)).Count
-            if ($found -ne 1) { throw 'I0_R11_CREATIVE_PACK_EXACT_ANCHOR_DRIFT' }
-            Write-Host 'I0_PACK_ROUTER_ANCHOR_PASS'
-  i0-creative-lifecycle-anchor:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: Reconstruct exact immutable R11 owner candidate
-          command: |
-            $ErrorActionPreference='Stop'
-            python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
-      - run:
-          name: Original Creative Stage required anchor - separately checked
-          command: |
-            $ErrorActionPreference='Stop'
-            $main=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
-            $exact='Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
-            $found=[regex]::Matches($main,[regex]::Escape($exact)).Count
-            if ($found -ne 1) { throw 'I0_R11_CREATIVE_LIFECYCLE_ANCHOR_DRIFT' }
-            Write-Host 'I0_CREATIVE_LIFECYCLE_ANCHOR_PASS'
-  i0-creative-index-footer:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: Reconstruct exact immutable R11 owner candidate
-          command: |
-            $ErrorActionPreference='Stop'
-            python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
-      - run:
-          name: Original Creative Stage required anchor - separately checked
-          command: |
-            $ErrorActionPreference='Stop'
-            $html=Get-Content 'work/e06/staged/R11/Assets/index.html' -Raw -Encoding UTF8
-            if ([regex]::Matches($html,[regex]::Escape('</body>')).Count -ne 1) { throw 'I0_R11_HTML_BODY_ANCHOR_DRIFT' }
-            if ($html.Contains('creative/entry.js')) { throw 'I0_R11_CREATIVE_ALREADY_IMPORTED' }
-            Write-Host 'I0_CREATIVE_HTML_FOOTER_PASS'
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_OWNER_STAGE_FAIL' }
+            python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
+            if ($LASTEXITCODE -ne 0) { throw 'I0_OWNER_CREATIVE_PATCH_STAGE_FAIL' }
+            $original='work/e06/staged/R11/MainWindow.xaml.cs'
+            $code=Get-Content $original -Raw -Encoding UTF8
+            if ([regex]::Matches($code,'case "creativeInvoke"').Count -ne 1 -or
+                [regex]::Matches($code,'case "creativeProjector"').Count -ne 1 -or
+                [regex]::Matches($code,'case "packInvoke"').Count -ne 1) {
+              throw 'I0_PACK_CREATIVE_DISPATCHER_CONTRACT_FAIL'
+            }
+            python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+            if ($LASTEXITCODE -ne 0) { throw 'I0_ORIGINAL_WOW200_STAGE_FAIL' }
+            $p=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($p.count -ne 65 -or $p.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+                $p.legacy_d02_runtime_imported -ne $false -or
+                $p.pack01_catalog_routes -ne 50 -or $p.release_accepted -ne $false) {
+              throw 'I0_ORIGINAL_WOW200_RECEIPT_FAIL'
+            }
+            Write-Host 'I0_OWNER_CREATIVE_AND_WOW200_STAGING_PASS_NOT_WINDOWS_E07'
+      - store_artifacts:
+          path: work/e06/staged/WOW200_STAGE_RECEIPT.json
+          destination: I0-ORIGINAL-CREATIVE-WOW-SOURCE-NOT-E07
 workflows:
-  i0_creative_anchor_diagnosis:
+  i0_approved_owner_route_stage_fix:
     jobs:
-      - i0-creative-pack-router-anchor:
-          filters:
-            branches:
-              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-creative-lifecycle-anchor:
-          filters:
-            branches:
-              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-creative-index-footer:
+      - i0-creative-fixed-onehost-source-stage:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
