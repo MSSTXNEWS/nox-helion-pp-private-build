@@ -204,8 +204,10 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_PERMISSION_DENIED");
                 return;
             }
-            // STOP must overtake active chat without waiting for a consent dialog.
-            if (route != "chat.stop" &&
+            // A previously authorized queued-model STOP must overtake
+            // transfers just like chat.stop. SID/ACL and bounded jobId remain
+            // enforced by this bridge and by the native P03 owner.
+            if (route is not ("chat.stop" or "models.cancel") &&
                 !await _nativeConsent(route, payload.Clone(), cancel))
             {
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_CONSENT_DENIED");
@@ -225,8 +227,38 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);
                 if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                     !_nativeAcl(_ownerWindowsSid, route)) return;
-                Reply(source, epoch, id, route, ownerResult.Accepted ?
-                      (route=="chat.stop"?"STOP_REQUESTED":"COMPLETED") : "HOLD",
+                // Owner ACK means a durable job was accepted, NOT that the
+                // entire model has been downloaded, imported or installed.
+                // Never claim cancellation when the owner reports false.
+                var ownerState = ownerResult.Accepted ? "COMPLETED" : "HOLD";
+                if (route is "models.pull" or "models.retry" or "models.gguf.import")
+                {
+                    ownerState = "HOLD";
+                    if (ownerResult.Accepted && ownerResult.Result is JsonElement job &&
+                        job.ValueKind == JsonValueKind.Object &&
+                        job.TryGetProperty("state", out var jobState) &&
+                        jobState.ValueKind == JsonValueKind.String)
+                    {
+                        ownerState = jobState.GetString() switch
+                        {
+                            "Queued" => "QUEUED",
+                            "Running" or "Cancelling" => "IN_PROGRESS",
+                            "Completed" => "COMPLETED",
+                            _ => "HOLD"
+                        };
+                    }
+                }
+                else if (route == "models.cancel")
+                {
+                    ownerState = ownerResult.Accepted &&
+                        ownerResult.Result is JsonElement cancelled &&
+                        cancelled.ValueKind == JsonValueKind.Object &&
+                        cancelled.TryGetProperty("cancelled", out var flag) &&
+                        flag.ValueKind == JsonValueKind.True ? "STOP_REQUESTED" : "HOLD";
+                }
+                else if (route == "chat.stop")
+                    ownerState = ownerResult.Accepted ? "STOP_REQUESTED" : "HOLD";
+                Reply(source, epoch, id, route, ownerState,
                       ownerResult.ErrorCode, ownerResult.Result);
                 return;
             }
