@@ -3,7 +3,8 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   if (!(target instanceof HTMLElement)) throw new TypeError('CANONICAL_HOST_REQUIRED');
   if (target.dataset.noxScreen !== 'opportunity-engine') throw new Error('NOX_ROUTE_NOT_APPROVED');
   const abort = new AbortController();
-  if (signal) signal.addEventListener('abort', () => abort.abort(), { once: true });
+  if (signal?.aborted) abort.abort();
+  else signal?.addEventListener('abort', () => abort.abort(), { once: true });
   const root = target.shadowRoot || target.attachShadow({ mode: 'open' });
   if (root.childNodes.length) throw new Error('ALREADY_MOUNTED');
   const style = document.createElement('style');
@@ -28,7 +29,7 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   const emit=(type,detail={})=>{ try { onEvent?.({contract:'nox.oie.ui.v1',type,...detail}); } catch (_) { /* telemetry is noncritical */ } };
   const theme=panel.querySelector("[data-theme]");
   async function get(path) {
-    if (typeof apiBase !== 'string' || (apiBase && !apiBase.startsWith('/'))) throw Error('SAME_ORIGIN_API_REQUIRED');
+    if (typeof apiBase !== 'string' || !/^(?:|\/(?!\/)[a-zA-Z0-9/_-]*)$/.test(apiBase) || apiBase.includes('..')) throw Error('SAME_ORIGIN_API_REQUIRED');
     const response=await fetch(apiBase+path,{signal:abort.signal,credentials:'omit',cache:'no-store'});
     if(!response.ok)throw Error('HTTP_'+response.status);
     const payload=await response.json();if(!payload.ok)throw Error(payload.error||'API_ERROR');return payload.result;
@@ -54,7 +55,7 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   }
   panel.addEventListener('click',async e=>{
     const action=e.target.closest('button');if(!action)return;
-    if(action.dataset.action==='back'){try { onBack?.();emit('navigation.back'); } catch(err){status.textContent='HOLD · '+err.message;}return;}
+    if(action.dataset.action==='back'){try { if(typeof onBack!=='function')throw Error('HOST_BACK_NOT_CONNECTED');onBack();emit('navigation.back'); } catch(err){status.textContent='HOLD · '+err.message;}return;}
     if(action.dataset.action==='generate'){await post('/api/mission');return;}
     if(action.dataset.action==='megablock'){await post('/api/megablock1');return;}
     if(action.dataset.action==='clear'){input.value='';limit=9;detail.hidden=true;render();return;}
