@@ -452,6 +452,7 @@ public partial class MainWindow
         // playback and reveal it on pointer-at-top, preserving a way back to windowed.
         string? device=null;
         bool expanded=false;
+        Rect? previousWindowBounds=null;
         var chromeTimer=new System.Windows.Threading.DispatcherTimer{
             Interval=TimeSpan.FromMilliseconds(250)};
         chromeTimer.Tick+=(_,_)=>{
@@ -459,7 +460,7 @@ public partial class MainWindow
             if(expanded)
             {
                 var y=Mouse.GetPosition(theater).Y;
-                bar.Visibility=y<=72?Visibility.Visible:Visibility.Collapsed;
+                bar.Visibility=y>=0 && y<=72?Visibility.Visible:Visibility.Collapsed;
             }
         };
         chromeTimer.Start();
@@ -505,6 +506,12 @@ public partial class MainWindow
                 theater.ResizeMode=ResizeMode.CanResize;
                 fullscreen.Content="Полный экран";
                 bar.Visibility=Visibility.Visible;
+                if(previousWindowBounds is { } saved)
+                {
+                    theater.Left=saved.Left;theater.Top=saved.Top;
+                    theater.Width=saved.Width;theater.Height=saved.Height;
+                    previousWindowBounds=null;
+                }
                 if(viewer.CoreWebView2 is not null)
                     _=viewer.CoreWebView2.ExecuteScriptAsync("document.body.classList.remove('projector-fullscreen')");
                 state.Text="Обычное окно кинотеатра";
@@ -524,6 +531,7 @@ public partial class MainWindow
                 }
             }
             if(monitor is null){state.Text="DISPLAY_HOLD: монитор не найден";return;}
+            previousWindowBounds=new Rect(theater.Left,theater.Top,theater.Width,theater.Height);
             theater.WindowState=WindowState.Normal;
             theater.WindowStyle=WindowStyle.None;
             theater.ResizeMode=ResizeMode.NoResize;
@@ -531,6 +539,7 @@ public partial class MainWindow
             {
                 theater.WindowStyle=WindowStyle.SingleBorderWindow;
                 theater.ResizeMode=ResizeMode.CanResize;
+                previousWindowBounds=null;
                 return;
             }
             expanded=true;
