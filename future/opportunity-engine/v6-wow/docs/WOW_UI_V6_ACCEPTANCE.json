@@ -1,0 +1,53 @@
+{
+  "version": "V6",
+  "scope": "FUTURE_OIE_SOURCE_ONLY",
+  "source_tests": "100/100 PASS",
+  "browser_real_pointer_viewports": [
+    {
+      "viewport": "desktop",
+      "width": 1440,
+      "worlds_clicked": 10,
+      "all_worlds_clickable": true,
+      "horizontal_overflow": false,
+      "js_errors": [],
+      "generated": 3,
+      "mb1": 3
+    },
+    {
+      "viewport": "tablet",
+      "width": 800,
+      "worlds_clicked": 10,
+      "all_worlds_clickable": true,
+      "horizontal_overflow": false,
+      "js_errors": [],
+      "generated": 3,
+      "mb1": 3
+    },
+    {
+      "viewport": "mobile",
+      "width": 390,
+      "worlds_clicked": 10,
+      "all_worlds_clickable": true,
+      "horizontal_overflow": false,
+      "js_errors": [],
+      "generated": 3,
+      "mb1": 3
+    },
+    {
+      "viewport": "small",
+      "width": 320,
+      "worlds_clicked": 10,
+      "all_worlds_clickable": true,
+      "horizontal_overflow": false,
+      "js_errors": [],
+      "generated": 3,
+      "mb1": 3
+    }
+  ],
+  "previous_60_passports": "BYTE_IDENTICAL",
+  "original_NOX_R1": "UNMODIFIED",
+  "approved_media": "NOT_ALTERED",
+  "R75_donor": "DRAFT_REVIEW_ONLY",
+  "installed_Windows_E07": "HOLD",
+  "Rule1_10_10_10": "HOLD"
+}
