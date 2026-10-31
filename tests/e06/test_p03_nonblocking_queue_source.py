@@ -254,6 +254,13 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
         self.assertIn("ModelLocalAttestation.VerifyReceiptAsync", self.data)
 
+    def test_20_gguf_import_requires_selected_reviewed_model(self):
+        # Source-only negative guard: a reviewed OTHER model must not enable import.
+        ui = (ROOT / "Packages/P03/Source/P03.ModelCenter.Wow/ui.js").read_text("utf-8")
+        self.assertIn("cap.importGguf===true&&verified&&$('licenseAck').checked", ui)
+        self.assertIn("if(action==='importGguf'&&(!hasEvidence(current())||!$('licenseAck').checked))return;", ui)
+        self.assertIn("blob='" + git_blob((ROOT / "Packages/P03/Source/P03.ModelCenter.Wow/ui.js").read_bytes()) + "'", self.build)
+
 
 if __name__ == "__main__":
     unittest.main()

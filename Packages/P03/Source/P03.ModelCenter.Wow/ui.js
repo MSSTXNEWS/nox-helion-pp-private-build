@@ -154,7 +154,7 @@ function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvid
   const canStop=state.hostReady&&cap.stop===true&&queue&&['Queued','Running'].includes(queue.state);
   const canRetry=state.hostReady&&cap.retry===true&&queue&&['Failed','Cancelled'].includes(queue.state);
   $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
-  $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&$('licenseAck').checked&&!state.pending.has('importGguf'));
+  $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&verified&&$('licenseAck').checked&&!state.pending.has('importGguf'));
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
   $('retryBtn').disabled=!(canRetry&&!state.pending.has('retry'));
   $('diagBtn').disabled=!(state.hostReady&&cap.diagnose===true&&!state.pending.has('diagnose'));
@@ -197,7 +197,7 @@ function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retr
  const job=isQueue?state.activeJob:currentJob(),targetModel=isQueue?queueJobModel():current();
  if(!state.hostReady||c[action]!==true)return;
  if(action==='pull'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
- if(action==='importGguf'&&!$('licenseAck').checked)return;
+ if(action==='importGguf'&&(!hasEvidence(current())||!$('licenseAck').checked))return;
  // Queue commands need the durable jobId, not a card in the discovery catalog.
  if(isQueue&&(!job||!job.jobId))return;
  if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
