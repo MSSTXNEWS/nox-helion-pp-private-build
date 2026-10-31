@@ -14,7 +14,7 @@ public static class E05HostGpuPublisher
         DateTimeOffset now, CancellationToken stop)
     {
         stop.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 160)
+        if (string.IsNullOrWhiteSpace(runId) || runId.Length > 128)
             return new(runId ?? string.Empty, "HOLD_INVALID_RUNID", null);
         if (host is null) return new(runId, "HOLD_HOST_UNBOUND", null);
         if (reading is null) return new(runId, "HOLD_SENSOR_UNAVAILABLE", null);
