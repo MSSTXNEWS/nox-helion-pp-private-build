@@ -54,16 +54,19 @@ public partial class MainWindow
         public async ValueTask PublishToP01Async(ModelLifecycleEvent item, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            await owner.Dispatcher.InvokeAsync(() => owner.PostMessage(new {
-                kind="modelLifecycle", eventId=item.EventId, jobId=item.JobId,
-                phase=item.Phase,state=item.Status,completedBytes=item.CompletedBytes,
-                totalBytes=item.TotalBytes,observedAt=item.AtUtc
-            }));
-            // Same WebView2, same durable P03 owner; no synthetic progress.
-            if (owner._nativeP02Core is { } core && IsP03Document(core.Source)) {
-                try { core.PostWebMessageAsJson(ModelWowBridgeContract.EventJson(item)); }
-                catch (Exception ex) { Trace.TraceError("P03_EVENT_UI_DROP {0}", ex.GetType().Name); }
-            }
+            // Both owner sinks publish on the original WPF STA dispatcher.
+            // WebView2 Core must never be called on the download-worker thread.
+            await owner.Dispatcher.InvokeAsync(() => {
+                owner.PostMessage(new {
+                    kind="modelLifecycle", eventId=item.EventId, jobId=item.JobId,
+                    phase=item.Phase,state=item.Status,completedBytes=item.CompletedBytes,
+                    totalBytes=item.TotalBytes,observedAt=item.AtUtc
+                });
+                if (owner._nativeP02Core is { } core && IsP03Document(core.Source)) {
+                    try { core.PostWebMessageAsJson(ModelWowBridgeContract.EventJson(item)); }
+                    catch (Exception ex) { Trace.TraceError("P03_EVENT_UI_DROP {0}", ex.GetType().Name); }
+                }
+            });
         }
         public async ValueTask PublishToP05Async(ModelLifecycleEvent item, CancellationToken ct)
         {
