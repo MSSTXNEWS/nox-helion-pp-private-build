@@ -33,10 +33,46 @@ function Exec-Setup([string]$exe,[string[]]$SetupArgs){
   $p=Start-Process -FilePath $exe -ArgumentList $SetupArgs -Wait -PassThru
   if($p.ExitCode -ne 0){throw "NSIS_EXIT_$($p.ExitCode):$exe $($SetupArgs -join ' ')"}
 }
+# G5A: BuildID is the immutable runId sealed in each installed payload manifest.
+# This reads the ACTUAL installed files on the disposable Windows runner;
+# installer source-only tests must never substitute for this evidence.
+function Get-InstalledBuildEvidence([string]$Phase) {
+  $manifestFile=Join-Path $root 'payload.sha256.json'
+  if (-not (Test-Path -LiteralPath $manifestFile -PathType Leaf)) { throw "NSIS_$($Phase)_MANIFEST_MISSING" }
+  $m=Get-Content -LiteralPath $manifestFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
+  if ($m.schema -cne 'NOX_P01_PAYLOAD_SHA256_V1' -or
+      $m.entrypoint -cne 'NOX.P01.Shell.exe' -or
+      [string]$m.runId -cnotmatch '\A[A-Za-z0-9][A-Za-z0-9._:-]{1,127}\z') {
+    throw "NSIS_$($Phase)_BUILDID_CONTRACT_INVALID"
+  }
+  $actual=@{}
+  foreach($rel in @('NOX.P01.Shell.exe','Backend/NOX_HELION_PRIVATE_CANDIDATE.exe')) {
+    $matches=@($m.files | Where-Object { [string]$_.path -ieq $rel })
+    if ($matches.Count -ne 1) { throw "NSIS_$($Phase)_SINGLE_PAYLOAD_ENTRY_REQUIRED:$rel" }
+    $expected=[string]$matches[0].sha256
+    if ($expected -cnotmatch '\A[a-fA-F0-9]{64}\z') { throw "NSIS_$($Phase)_SHA_MALFORMED:$rel" }
+    $file=Join-Path $root ($rel.Replace('/','\'))
+    if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "NSIS_$($Phase)_FILE_MISSING:$rel" }
+    $digest=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($digest -cne $expected.ToLowerInvariant()) { throw "NSIS_$($Phase)_FILE_SHA_DRIFT:$rel" }
+    $actual[$rel]=$digest
+  }
+  return [pscustomobject]@{
+    BuildId=([string]$m.runId)
+    ManifestSha256=(Get-FileHash -LiteralPath $manifestFile -Algorithm SHA256).Hash.ToLowerInvariant()
+    WpfExeSha256=$actual['NOX.P01.Shell.exe']
+    BackendExeSha256=$actual['Backend/NOX_HELION_PRIVATE_CANDIDATE.exe']
+  }
+}
 try {
   Exec-Setup $InitialSetup @('/S')
   if (-not (Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt'))) {throw 'FIRST_INSTALL_MARKER_MISSING'}
   $firstManifest=(Get-FileHash -LiteralPath (Join-Path $root 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+  $initialEvidence=Get-InstalledBuildEvidence 'INSTALL'
+  if ($initialEvidence.ManifestSha256 -cne $firstManifest) {throw 'INITIAL_MANIFEST_EVIDENCE_DRIFT'}
+  $results.initialBuildId=$initialEvidence.BuildId
+  $results.initialWpfExeSha256=$initialEvidence.WpfExeSha256
+  $results.initialBackendExeSha256=$initialEvidence.BackendExeSha256
   $results.install='PASS'
   New-Item -ItemType Directory -Path $userData -Force | Out-Null
   $sentinel=Join-Path $userData 'E01_C5_NSDATA_KEEP.txt'
@@ -49,6 +85,12 @@ try {
   if ((Get-FileHash -LiteralPath (Join-Path $backup 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant() -cne $firstManifest){throw 'BACKUP_MANIFEST_DRIFT'}
   $upgradeManifest=(Get-FileHash -LiteralPath (Join-Path $root 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant()
   if ($upgradeManifest -ceq $firstManifest) { throw 'UPGRADE_PAYLOAD_NOT_DISTINCT' }
+  $upgradeEvidence=Get-InstalledBuildEvidence 'UPDATE'
+  if ($upgradeEvidence.ManifestSha256 -cne $upgradeManifest) {throw 'UPGRADE_MANIFEST_EVIDENCE_DRIFT'}
+  if ($upgradeEvidence.BuildId -ceq $initialEvidence.BuildId) {throw 'UPDATE_REUSED_INITIAL_BUILDID'}
+  $results.upgradeBuildId=$upgradeEvidence.BuildId
+  $results.upgradeWpfExeSha256=$upgradeEvidence.WpfExeSha256
+  $results.upgradeBackendExeSha256=$upgradeEvidence.BackendExeSha256
   $results.update='PASS'
   # Negative regression: a corrupt prior payload MUST NOT be activated.
   # Mutate one byte in this disposable CI install, restore it in finally.
@@ -95,6 +137,16 @@ try {
   if ((Get-FileHash -LiteralPath (Join-Path $rollbackSaved 'payload.sha256.json') -Algorithm SHA256).Hash.ToLowerInvariant() -cne $upgradeManifest) {
     throw 'ROLLBACK_SAVED_NEW_VERSION_DRIFT'
   }
+  $rollbackEvidence=Get-InstalledBuildEvidence 'ROLLBACK'
+  if ($rollbackEvidence.BuildId -cne $initialEvidence.BuildId -or
+      $rollbackEvidence.ManifestSha256 -cne $firstManifest -or
+      $rollbackEvidence.WpfExeSha256 -cne $initialEvidence.WpfExeSha256 -or
+      $rollbackEvidence.BackendExeSha256 -cne $initialEvidence.BackendExeSha256) {
+    throw 'ROLLBACK_BUILDID_OR_BINARY_SHA_MISMATCH'
+  }
+  $results.rollbackBuildId=$rollbackEvidence.BuildId
+  $results.rollbackWpfExeSha256=$rollbackEvidence.WpfExeSha256
+  $results.rollbackBackendExeSha256=$rollbackEvidence.BackendExeSha256
   $results.rollback='PASS'
   Exec-Setup (Join-Path $root 'Uninstall.exe') @('/S')
   if(Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt')) {throw 'UNINSTALL_OWNERSHIP_MARKER_REMAINS'}
