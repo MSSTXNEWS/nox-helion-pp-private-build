@@ -289,9 +289,27 @@ jobs:
             python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
             if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
             $exe=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
-            $receipt=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json').Path
+            $global:OneHostDiagStep='C_EXACT_FROZEN_SOURCE_PROOF'
+            $env:NOX_ONEHOST_RUN_ID="NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM"
+            python coordination/e06/t06_verify_frozen_candidate.py seal
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_BINARY_SOURCE_PROOF_HOLD' }
+            $buildReceipt=(Resolve-Path 'work/e06/ONEHOST_PYTHON_BUILD_RECEIPT.json').Path
+            $nativeReceipt='work/e06/NATIVE_ONEHOST_SMOKE.json'
+            $global:OneHostDiagStep='C_ACTUAL_WINDOWS_NATIVE_SMOKE_V2'
+            python coordination/e06/native_onehost_smoke.py --exe $exe --build-receipt $buildReceipt --source-head $env:CIRCLE_SHA1 --output $nativeReceipt
+            $smokeExit=$LASTEXITCODE
+            if ($smokeExit -notin @(0,2)) { throw "NOX_R66_REAL_NATIVE_SMOKE_FAILED:$smokeExit" }
+            $smoke=Get-Content -LiteralPath $nativeReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($smoke.schema -cne 'NOX_NATIVE_ONEHOST_SMOKE_V2' -or
+                $smoke.transport_status -cne 'PASS' -or
+                $smoke.offline_backbone_status -cne 'PASS' -or
+                $smoke.source_commit -cne $env:CIRCLE_SHA1 -or
+                $smoke.original_729_unchanged -ne $true -or
+                $smoke.installed_wpf_e07 -ne $false -or $smoke.release_accepted -ne $false) {
+              throw 'NOX_R66_NATIVE_SMOKE_PROOF_REJECTED'
+            }
             $global:OneHostDiagStep='C_ORIGINAL_ONEHOST_BUILDER'
-            & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId "NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM" -PythonNativeSmokeReceipt $receipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
+            & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId $env:NOX_ONEHOST_RUN_ID -PythonNativeSmokeReceipt $nativeReceipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
             if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_ONEHOST_NSIS_FAILED' }
             $setup='work/e06/onehost-r66/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
             $published='work/e06/onehost-r66/payload/NOX.P01.Shell.exe'
@@ -300,6 +318,12 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
             Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
             Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+      - store_artifacts:
+          path: work/e06/ONEHOST_PYTHON_BUILD_RECEIPT.json
+          destination: NOX-R66-ONEHOST-EXACT-BUILD-RECEIPT
+      - store_artifacts:
+          path: work/e06/NATIVE_ONEHOST_SMOKE.json
+          destination: NOX-R66-REAL-WINDOWS-NATIVE-V2-NOT-E07
       - store_artifacts:
           path: work/e06/ONEHOST_FIRST_FAILURE.txt
           destination: NOX-R66-FIRST-FAILED-STEP-AND-EXCEPTION
