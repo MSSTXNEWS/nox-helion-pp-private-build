@@ -233,7 +233,7 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     def test_18_donor_micro_wow_assets_are_exactly_pinned(self):
         owner_ui = ROOT / "Packages/P03/Source/P03.ModelCenter.Wow"
         content = self.build.split("$microwowFiles=@(", 1)[1].split("\n  )", 1)[0]
-        entries = re.findall(r"@\\{relative='([^']+)';blob='([0-9a-f]{40})'\\}", content)
+        entries = re.findall(r"@\{relative='([^']+)';blob='([0-9a-f]{40})'\}", content)
         self.assertEqual(len(entries), 8)
         for name, expected in entries:
             with self.subTest(name=name):
