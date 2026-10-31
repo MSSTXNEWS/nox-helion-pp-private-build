@@ -417,17 +417,51 @@ public partial class MainWindow
     private void AttachNoxProjectorControls(Window theater,WebView2 viewer)
     {
         var layout=new DockPanel{LastChildFill=true};
-        var bar=new StackPanel{Orientation=Orientation.Horizontal,MinHeight=44,Background=Brushes.Black};
-        var picker=new ComboBox{Width=265,Margin=new Thickness(6),VerticalAlignment=VerticalAlignment.Center};
+        // Reuse the obsidian/amber visual language of the approved NOX WORK screen.
+        // A WrapPanel preserves controls on 350px mini windows and high-DPI layouts.
+        var bar=new WrapPanel{Orientation=Orientation.Horizontal,MinHeight=52,
+            Background=new LinearGradientBrush(
+                System.Windows.Media.Color.FromRgb(17,27,38),
+                System.Windows.Media.Color.FromRgb(4,8,15),90)};
+        var picker=new ComboBox{Width=235,MinHeight=44,Margin=new Thickness(6,4,4,4),
+            VerticalAlignment=VerticalAlignment.Center};
         var refresh=new Button{Content="Обновить экраны",Margin=new Thickness(3)};
         var select=new Button{Content="Показать на экране",Margin=new Thickness(3)};
         var fullscreen=new Button{Content="Полный экран",Margin=new Thickness(3)};
-        var state=new TextBlock{Text="Выберите монитор или проектор",Foreground=Brushes.White,
-                                Margin=new Thickness(8,0,4,0),VerticalAlignment=VerticalAlignment.Center};
+        var state=new TextBlock{Text="Выберите монитор или проектор",Foreground=new SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(178,207,220)),
+                Margin=new Thickness(8,4,8,4),VerticalAlignment=VerticalAlignment.Center,
+                MaxWidth=280,TextWrapping=TextWrapping.Wrap};
+        foreach(Control chrome in new Control[]{picker,refresh,select,fullscreen})
+        {
+            chrome.Background=new SolidColorBrush(System.Windows.Media.Color.FromRgb(24,33,44));
+            chrome.Foreground=new SolidColorBrush(System.Windows.Media.Color.FromRgb(247,224,193));
+            chrome.BorderBrush=new SolidColorBrush(System.Windows.Media.Color.FromRgb(171,117,63));
+            chrome.BorderThickness=new Thickness(1);
+            chrome.Padding=new Thickness(9,5,9,5);
+            chrome.MinHeight=44;
+        }
+        var accent=new SolidColorBrush(System.Windows.Media.Color.FromRgb(222,157,82));
+        select.BorderBrush=accent;
+        fullscreen.BorderBrush=accent;
         bar.Children.Add(picker);bar.Children.Add(refresh);bar.Children.Add(select);
         bar.Children.Add(fullscreen);bar.Children.Add(state);
         DockPanel.SetDock(bar,Dock.Top);layout.Children.Add(bar);layout.Children.Add(viewer);
         theater.Content=layout;
+        // The native window is the fullscreen owner. Collapse the chrome during
+        // playback and reveal it on pointer-at-top, preserving a way back to windowed.
+        var chromeTimer=new System.Windows.Threading.DispatcherTimer{
+            Interval=TimeSpan.FromMilliseconds(250)};
+        chromeTimer.Tick+=(_,_)=>{
+            if(!theater.IsVisible)return;
+            if(expanded)
+            {
+                var y=Mouse.GetPosition(theater).Y;
+                bar.Visibility=y<=72?Visibility.Visible:Visibility.Collapsed;
+            }
+        };
+        chromeTimer.Start();
+        theater.Closed+=(_,_)=>chromeTimer.Stop();
         string? device=null;
         bool expanded=false;
 
@@ -471,6 +505,9 @@ public partial class MainWindow
                 theater.WindowStyle=WindowStyle.SingleBorderWindow;
                 theater.ResizeMode=ResizeMode.CanResize;
                 fullscreen.Content="Полный экран";
+                bar.Visibility=Visibility.Visible;
+                if(viewer.CoreWebView2 is not null)
+                    _=viewer.CoreWebView2.ExecuteScriptAsync("document.body.classList.remove('projector-fullscreen')");
                 state.Text="Обычное окно кинотеатра";
                 return;
             }
@@ -499,6 +536,9 @@ public partial class MainWindow
             }
             expanded=true;
             fullscreen.Content="Вернуть окно";
+            bar.Visibility=Visibility.Collapsed;
+            if(viewer.CoreWebView2 is not null)
+                _=viewer.CoreWebView2.ExecuteScriptAsync("document.body.classList.add('projector-fullscreen')");
         }
 
         refresh.Click+=(_,_)=>UpdateList();
@@ -641,14 +681,14 @@ public partial class MainWindow
             };
             viewer.CoreWebView2.SetVirtualHostNameToFolderMapping("nox.local",
                 Path.Combine(AppContext.BaseDirectory,"Assets"),CoreWebView2HostResourceAccessKind.DenyCors);
-            var theaterUrl="https://nox.local/creative/theater.html";
+            var theaterUrl="https://nox.local/creative/theater.html?nox_native_viewer=1";
             if(projectId is not null && projectRoot is not null)
             {
                 // Separate virtual origin: media as <video src> only; CORS fetch denied.
                 // No Python server, unrestricted file:// access, or privileged JS bridge.
                 viewer.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     "nox-projects.invalid",projectRoot,CoreWebView2HostResourceAccessKind.DenyCors);
-                theaterUrl += "?local_project_media=1&project="+Uri.EscapeDataString(projectId);
+                theaterUrl += "&local_project_media=1&project="+Uri.EscapeDataString(projectId);
             }
             viewer.CoreWebView2.Navigate(theaterUrl);
         }
