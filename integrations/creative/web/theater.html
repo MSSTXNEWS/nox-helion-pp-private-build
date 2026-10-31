@@ -39,7 +39,7 @@ footer{padding:5px 16px;font-size:10px;color:#889fad;border-top:1px solid rgba(2
 body.projector-fullscreen header,body.projector-fullscreen footer{display:none}
 body.projector-fullscreen main{background:#000}
 body.projector-fullscreen main::before,body.projector-fullscreen main::after{display:none}
-body.projector-fullscreen #poster{display:none}
+body.projector-fullscreen #poster{display:block} /* Keep the approved NOX scene when no video has been chosen. */
 body.projector-fullscreen video{width:100%;height:100%;max-width:100%;max-height:100%}
 [hidden]{display:none!important}
 @media(max-width:800px){header{padding:8px;gap:7px}.brand{min-width:120px}.controls{flex-basis:auto;gap:6px}button,.file-button{padding:7px 9px}#status{flex-basis:100%}}
