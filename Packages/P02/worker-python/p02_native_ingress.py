@@ -182,6 +182,17 @@ class NativeIngress:
                 # STOP is deliberately not queued behind this lock.
                 with self._serial:
                     result = self._dispatch.execute(route, payload, trusted_session)
+            # A trusted owner's negative result is NOT a completed native
+            # operation, even when that owner returns a JSON object instead
+            # of raising. Keep the existing protocol and 50-route registry.
+            if type(result) is dict:
+                state = result.get("status")
+                if (result.get("ok") is False or
+                    (type(state) is str and
+                     (state.upper().startswith(("HOLD", "ERROR")) or
+                      state.upper() in ("FAILED", "DENIED", "REJECTED",
+                                        "CANCELLED", "OFFLINE", "NEEDS_AUTH")))):
+                    raise ProtocolHold("NATIVE_OWNER_RESULT_HOLD")
             answer = {"protocol": "NOX-P02-NATIVE-v1", "runId": self.run_id,
                       "requestId": nonce, "status": "OK", "result": result}
             out = json.dumps(answer, allow_nan=False, ensure_ascii=False,
