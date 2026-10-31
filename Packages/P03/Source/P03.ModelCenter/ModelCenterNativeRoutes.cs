@@ -71,7 +71,15 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 result=new { models=ModelCatalog.OfficialFamilies.Select(f=>{
                     var exact=reviewed.Where(x=>x.Id==f.Id && x.CanOfferOneClickPull).ToArray();
                     return new { id=f.Id,name=f.Name,source=f.OfficialLibraryPage.AbsoluteUri,
-                        artifacts=exact,downloadEligible=exact.Length>0,
+                        // The renderer may select a reviewed tag, never receive
+                        // owner-only receipts, immutable locks or private evidence.
+                        artifacts=exact.Select(a=>new {
+                            tag=a.ExactTag, version=a.Version, license=a.License,
+                            bytes=a.ArtifactBytes, requiredDiskBytes=a.RequiredDiskBytes,
+                            recommendedRamBytes=a.RecommendedRamBytes,
+                            recommendedVramBytes=a.RecommendedVramBytes,
+                            licenseEvidenceUrl=a.LicenseEvidenceUri?.AbsoluteUri
+                        }).ToArray(),downloadEligible=exact.Length>0,
                         status=exact.Length>0?"ARTIFACT_VERIFIED":"REVIEW_REQUIRED" }; }).ToArray() };
                 break;
             case "models.preflight": result=WindowsHardwareFacts.Capture(); break;
