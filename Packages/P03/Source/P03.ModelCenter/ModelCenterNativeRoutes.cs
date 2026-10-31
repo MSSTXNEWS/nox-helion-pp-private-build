@@ -45,6 +45,16 @@ public sealed class ModelCenterNativeRoutes : IDisposable
         Func<IReadOnlyCollection<ModelCatalogEntry>> reviewed,
         Func<CancellationToken,Task<string?>>? nativeGgufPicker=null) => new(dataDirectory,sink,reviewed,nativeGgufPicker);
 
+    // Read-only view for the EXISTING OneHost Micro-WOW adapter. Neither the
+    // page nor a second downloader may mutate the durable queue or its rights.
+    public Task<IReadOnlyList<ModelJob>> ReadJobsAsync(CancellationToken ct) =>
+        ReadJobsCoreAsync(ct);
+
+    private async Task<IReadOnlyList<ModelJob>> ReadJobsCoreAsync(CancellationToken ct) =>
+        await _queue.ReadAsync(ct);
+
+    public IReadOnlyCollection<ModelCatalogEntry> ReadReviewed() => _reviewed();
+
     public async Task<JsonElement> ExecuteAsync(string route, JsonElement payload,
         bool nativeConsent, CancellationToken ct)
     {
