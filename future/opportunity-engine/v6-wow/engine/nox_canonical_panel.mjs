@@ -1,5 +1,5 @@
 /* NOX OIE · canonical-shell-only panel. No HOME/MENU/WORK overrides, no invented asteroids/personas. */
-export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, onEvent, hostAction } = {}) {
+export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, onEvent, requestJob } = {}) {
   if (!(target instanceof HTMLElement)) throw new TypeError('CANONICAL_HOST_REQUIRED');
   if (target.dataset.noxScreen !== 'opportunity-engine') throw new Error('NOX_ROUTE_NOT_APPROVED');
   const abort = new AbortController();
@@ -35,8 +35,9 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   async function post(endpoint){
     if(busy)return;busy=true;status.textContent='Выполняется локальный расчёт…';
     try {
-      const response=await fetch(apiBase+endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-NOX-OIE-Token':target.dataset.oieToken||''},body:JSON.stringify({theme:theme.value,count:3}),signal:abort.signal,credentials:'omit',cache:'no-store'});
-      const payload=await response.json();if(!response.ok||!payload.ok)throw Error(payload.error||'API_ERROR');
+      if(typeof requestJob!=='function')throw Error('HOST_ACTION_NOT_CONNECTED');
+      const payload=await requestJob(endpoint==='/api/megablock1'?'megablock1.preview':'mission.run',{theme:theme.value,count:3},abort.signal);
+      if(!payload?.ok)throw Error(payload?.error||'HOST_ACTION_FAILED');
       detail.textContent=JSON.stringify(payload.result,null,2);detail.hidden=false;status.textContent='Локальный результат создан · коммерческая проверка HOLD';emit('job.done',{endpoint});
     } catch(err){if(!abort.signal.aborted){status.textContent='HOLD · '+err.message;emit('job.error',{endpoint,error:err.message});}}
     finally{busy=false;}
