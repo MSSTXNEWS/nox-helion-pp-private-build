@@ -1,282 +1,116 @@
-# NOX HELION V16 R66 · Reuse exact owner T06 native builder + R11 WPF/D02/NSIS.
-# Strictly experimental Windows build; never replace Release 1 or approve E07 from CI build alone.
+# NOX R66 I0 Windows OneHost failure isolation only (no product code or release branch changes).
+# On this disposable diagnostic branch run exactly one job, not the 8 already PASS.
 version: 2.1
-
 orbs:
   win: circleci/windows@5.0
-
 jobs:
-  r66-windows-host-preflight:
+  r66-i0-onehost-preflight-diagnostic:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Verify hosted Windows, .NET 8 and Python before costly build
-          command: |
-            $ErrorActionPreference = 'Stop'
-            if ($env:OS -ne 'Windows_NT') { throw 'NOX_WINDOWS_NOT_AVAILABLE' }
-            if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'NOX_COMMIT_DRIFT' }
-            python --version
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_PYTHON_NOT_AVAILABLE' }
-            $sdk=@(dotnet --list-sdks)
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_DOTNET_CLI_UNAVAILABLE' }
-            # CircleCI stable images may ship .NET without the 8.x SDK.
-            # The disposable build job provisions exact 8.0.425, not this read-only host gate.
-            Write-Host 'NOX_WINDOWS_HOST_PREFLIGHT_PASS'
-  r66-original-source-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: Verify 729 immutable owner files and R66 source contracts
-          command: |
-            $ErrorActionPreference = 'Stop'
-            New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
-            python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_729_ORIGINAL_ARCHIVE_REJECTED' }
-            python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-SOURCE-$env:CIRCLE_BUILD_NUM"
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_729_OWNER_ARCHIVE_REJECTED' }
-            python -m unittest discover -v -s Packages/P02/worker-python -p test_p02_native_ingress.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_P02_TESTS_FAILED' }
-            Write-Host 'NOX_R66_SOURCE_LOCK_AND_NATIVE_INGRESS_PASS'
-  r66-native-routes-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: R66 real PACK01 owner STOP ACL and history routing source tests
-          command: |
-            $ErrorActionPreference = 'Stop'
-            # Existing owner test explicitly REQUIRES NOX_P02_OWNER_PATH and
-            # refuses to use invented P02 substitutes. Bind exact checkout.
-            $env:NOX_P02_OWNER_PATH=(Resolve-Path 'Packages/P02/worker-python').Path
-            python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_OWNER_NATIVE_ROUTES_FAILED' }
-            Write-Host 'NOX_R66_NATIVE_ROUTES_PASS'
-  r66-native-source-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: P02 source process exact original 729 and authenticated framed IPC
-          command: |
-            $ErrorActionPreference = 'Stop'
-            $env:NOX_T06_SOURCE_ONLY='YES'
-            python coordination/e06/t06_native_proven_builder.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_SOURCE_IPC_PROCESS_FAILED' }
-            $receipt='work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json'
-            if (!(Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'NOX_NATIVE_SOURCE_IPC_RECEIPT_MISSING' }
-            $s=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($s.native_process_exit_code -ne 0 -or $s.run_id_matched -ne $true -or
-                $s.request_id_matched -ne $true -or $s.release_accepted -ne $false) { throw 'NOX_NATIVE_SOURCE_IPC_RECEIPT_HOLD' }
-            Write-Host 'NOX_R66_ORIGINAL_SOURCE_NATIVE_IPC_PASS_NOT_EXE'
-  r66-pyinstaller-binary-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - run:
-          name: Reuse owner T06 to BUILD exactly one original frozen Python EXE
-          no_output_timeout: 35m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            $env:NOX_T06_BUILD_ONLY='YES'
-            python coordination/e06/t06_native_proven_builder.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_PYINSTALLER_BUILD_FAILED' }
-            $built='work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYINSTALLER_BINARY_RECEIPT.json'
-            if (!(Test-Path -LiteralPath $built -PathType Leaf)) { throw 'NOX_R66_FROZEN_BINARY_RECEIPT_MISSING' }
-            Write-Host 'NOX_R66_PYINSTALLER_REAL_EXE_BUILT_PENDING_IPC'
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/native-runtime
-            - work/t06-manual-source-inspect/python-exe-candidate
-            - work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYINSTALLER_BINARY_RECEIPT.json
-          destination: NOX-R66-BUILT-BINARY-SHA-NOT-NATIVE-ACCEPTED
-  r66-frozen-chat-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Verify SAME frozen EXE CHAT model signed-frame protocol
+          name: OneHost PRE/A/early-C with durable phase and exact error marker
           no_output_timeout: 20m
           command: |
             $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_verify_frozen_candidate.py chat
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_CHAT_IPC_FAILED' }
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/python-exe-candidate/R66_FROZEN_CHAT_MODEL_PROOF.json
-  r66-frozen-modelcenter-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Verify same frozen model inventory and immutable binary SHA
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_verify_frozen_candidate.py models
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_MODELCENTER_FAILED' }
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate
-          destination: NOX-R66-NATIVE-EXE-CANDIDATE-NOT-RELEASE
-  r66-sqlite-gate:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Exact R66 SQLite history STOP and same original V4 database
-          command: |
-            $ErrorActionPreference = 'Stop'
-            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
-            python -m unittest -v coordination.e06.test_e06_r64_shared_db
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_ORIGINAL_SQLITE_SHARED_DB_HOLD' }
-            Write-Host 'NOX_R66_SAME_ORIGINAL_SQLITE_PASS'
-  r66-onehost-windows:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: PRE · exact approved source, Windows host, native dependencies
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
-            if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
-            $sdk = @(dotnet --list-sdks)
-            if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
-              # Existing official Microsoft CI installer, exact version, only in CircleCI VM.
-              $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
-              $installer=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
-              Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
-              & $installer -Version '8.0.425' -InstallDir $sdkRoot -NoPath
-              if ($LASTEXITCODE -ne 0) { throw 'NOX_OFFICIAL_DOTNET8_PROVISION_FAILED' }
-              $env:DOTNET_ROOT=$sdkRoot
-              $env:PATH="$sdkRoot;$env:PATH"
-              $sdk=@(dotnet --list-sdks)
-              if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
+            $diag = 'work/e06/i0-onehost-preflight-diagnostic'
+            New-Item -ItemType Directory -Force -Path $diag | Out-Null
+            $phase = 'INIT'
+            $failure = $null
+            $steps = New-Object System.Collections.ArrayList
+            function Set-I0Phase {
+              param([string]$Name)
+              $script:phase = $Name
+              [void]$script:steps.Add($Name)
+              Write-Host "NOX_I0_PHASE_BEGIN:$Name"
+              [IO.File]::WriteAllText((Join-Path $diag 'last-phase.txt'),$Name)
             }
-            python --version
-            if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
-            $nsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
-            $nsisPath='C:\Program Files (x86)\NSIS\makensis.exe'
-            if (!$nsis -and !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) {
-              if (!(Get-Command choco.exe -ErrorAction SilentlyContinue)) { throw 'T06_NSIS_AND_CHOCOLATEY_MISSING' }
-              choco install nsis --yes --no-progress --limit-output
-              if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_INSTALL_FAILED' }
+            try {
+              Set-I0Phase 'PRE_OS_SHA'
+              if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
+              if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
+              Set-I0Phase 'PRE_DOTNET_DISCOVERY'
+              $sdk = @(dotnet --list-sdks)
+              if ($LASTEXITCODE -ne 0) { throw 'T06_DOTNET_NOT_AVAILABLE' }
+              if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
+                Set-I0Phase 'PRE_DOTNET8_INSTALL'
+                $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
+                $installer=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
+                Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
+                & $installer -Version '8.0.425' -InstallDir $sdkRoot -NoPath
+                if ($LASTEXITCODE -ne 0) { throw 'NOX_OFFICIAL_DOTNET8_PROVISION_FAILED' }
+                $env:DOTNET_ROOT=$sdkRoot
+                $env:PATH="$sdkRoot;$env:PATH"
+                $sdk=@(dotnet --list-sdks)
+                if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
+              }
+              Set-I0Phase 'PRE_PYTHON'
+              python --version
+              if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
+              Set-I0Phase 'PRE_NSIS'
+              $nsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
+              $nsisPath='C:\Program Files (x86)\NSIS\makensis.exe'
+              if (!$nsis -and !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) {
+                if (!(Get-Command choco.exe -ErrorAction SilentlyContinue)) { throw 'T06_NSIS_AND_CHOCOLATEY_MISSING' }
+                Set-I0Phase 'PRE_NSIS_CHOCO_INSTALL'
+                choco install nsis --yes --no-progress --limit-output
+                if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_INSTALL_FAILED' }
+              }
+              Write-Host 'NOX_I0_PRE_PASS'
+              Set-I0Phase 'A_SOURCELOCK_ORIGINAL_729'
+              python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
+              if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
+              python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-I0-DIAG-$env:CIRCLE_BUILD_NUM"
+              if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
+              Write-Host 'NOX_I0_SOURCELOCK_PASS'
+              Set-I0Phase 'C_R11_STAGE'
+              python coordination/e06/stage_p01.py
+              if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
+              Set-I0Phase 'C_WOW_UNIT'
+              python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
+              if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
+              Set-I0Phase 'C_HOST_TOOLS_FINAL'
+              if (!(Get-Command makensis.exe -ErrorAction SilentlyContinue) -and
+                  !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) { throw 'NOX_I0_NSIS_POSTINSTALL_MISSING' }
+              if (@(dotnet --list-sdks | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
+                throw 'NOX_I0_DOTNET8_NOT_PERSISTED_IN_PROCESS'
+              }
+              Write-Host 'NOX_I0_PRE_A_EARLY_C_PASS / WPF_NSIS_NOT_BUILT'
+              Set-I0Phase 'DONE'
             }
-            New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
-            Write-Host "NOX_R66_WINDOWS_START_SHA=$env:CIRCLE_SHA1"
-      - run:
-          name: A · one original 729 SourceLock plus verified 8 Core native ingress
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
-            if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
-            python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-$env:CIRCLE_BUILD_NUM"
-            if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
-      - run:
-          name: C · approved D02 HOME MENU WORK + one original WPF/WebView2 NSIS
-          no_output_timeout: 40m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
-            if (Test-Path -LiteralPath (Join-Path $sdkRoot 'dotnet.exe') -PathType Leaf) {
-              $env:DOTNET_ROOT=$sdkRoot
-              $env:PATH="$sdkRoot;$env:PATH"
+            catch {
+              $failure=[ordered]@{
+                phase=$phase
+                type=$_.Exception.GetType().FullName
+                message=$_.Exception.Message
+                invocation=$_.InvocationInfo.PositionMessage
+                category=[string]$_.CategoryInfo.Category
+              }
+              Write-Host "NOX_I0_DIAG_FAILED_PHASE:$phase"
+              Write-Host "NOX_I0_DIAG_ERROR:$($_.Exception.Message)"
             }
-            python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
-            python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
-            $exe=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
-            $receipt=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json').Path
-            & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId "NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM" -PythonNativeSmokeReceipt $receipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
-            if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_ONEHOST_NSIS_FAILED' }
-            $setup='work/e06/onehost-r66/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
-            $published='work/e06/onehost-r66/payload/NOX.P01.Shell.exe'
-            & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 -Original729Receipt 'work/e06/original-729-manifest.json' -Owner729Receipt 'work/e06/original-729-owner-pinned.json' -OneHostReceipt 'work/e06/onehost-r66/ONEHOST_DIAGNOSTIC_RECEIPT.json' -SetupExe $setup -PublishedExe $published -SourceCommitSha $env:CIRCLE_SHA1 -Output 'work/e06/onehost-r66/E07_BUILT_HANDOFF.json' -Phase BUILT
-            if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
-            Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
-            Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+            finally {
+              $report=[ordered]@{
+                schema='NOX-I0-ONEHOST-PRE-DIAGNOSTIC-v1'
+                source_sha=$env:CIRCLE_SHA1
+                phase=$phase
+                observed_phases=@($steps)
+                failure=$failure
+                original_pinned_sources_unchanged=$true
+                production_build_executed=$false
+                release_accepted=$false
+              }
+              $report | ConvertTo-Json -Depth 10 | Out-File (Join-Path $diag 'phase-report.json') -Encoding utf8
+              Write-Host "NOX_I0_DIAG_REPORT_PATH:$diag/phase-report.json"
+            }
+            if ($null -ne $failure) { throw "NOX_I0_DIAG_FAIL_IN_$phase" }
       - store_artifacts:
-          path: work/e06/onehost-r66
-          destination: NOX-R66-NATIVE-ONEHOST-BUILD-ONLY-NOT-RELEASE
-      - store_artifacts:
-          path: work/e06/original-729-manifest.json
-          destination: source-lock/original-729-manifest.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate
-          destination: NOX-R66-TRUE-PYTHON-NATIVE-IPC
-
+          path: work/e06/i0-onehost-preflight-diagnostic
+          destination: NOX-I0-ONEHOST-PHASE-NOT-PRODUCT
 workflows:
-  nox_r66_onehost_windows:
+  r66_i0_onehost_diagnostic_only:
     jobs:
-      - r66-windows-host-preflight:
+      - r66-i0-onehost-preflight-diagnostic:
           filters:
             branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-original-source-gate:
-          requires:
-            - r66-windows-host-preflight
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-native-routes-gate:
-          requires:
-            - r66-original-source-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-native-source-gate:
-          requires:
-            - r66-native-routes-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-pyinstaller-binary-gate:
-          requires:
-            - r66-native-source-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-frozen-chat-gate:
-          requires:
-            - r66-pyinstaller-binary-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-frozen-modelcenter-gate:
-          requires:
-            - r66-frozen-chat-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-sqlite-gate:
-          requires:
-            - r66-frozen-modelcenter-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-onehost-windows:
-          requires:
-            - r66-sqlite-gate
-          filters:
-            branches:
-              only: ci/nox-r66-circleci-windows-onehost-20261031
+              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
