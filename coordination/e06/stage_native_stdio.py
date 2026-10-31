@@ -15,7 +15,7 @@ ADDONS=(
     ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","6beaf43cd7b09d703819bb54eb9c53dc71876f0b"),
     ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","842f3d60f9506a7ed54a4cf4e158254bf6617df6"),
     ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
-    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","63f32a41ee7bc72d248e9b9c26407fa738d9a0f4"),
+    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","f26648755a6efa9cbc047ab481af1ba38bb9dc55"),
 )
 ARG_ANCHOR="    parser.add_argument('--diagnose',action='store_true',help='headless functional contracts check')"
 PARSE_ANCHOR="    args=parser.parse_args()"
