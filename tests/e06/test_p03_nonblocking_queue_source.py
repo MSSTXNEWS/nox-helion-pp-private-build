@@ -11,6 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 ROUTES = ROOT / "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs"
 BUILDER = ROOT / "coordination/e06/build_onehost_installer.ps1"
+WEBVIEW = ROOT / "coordination/e06/OneHostP02WebView2Bridge.cs"
 
 
 def git_blob(raw):
@@ -116,6 +117,7 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     def setUpClass(cls):
         cls.data = ROUTES.read_text("utf-8-sig")
         cls.build = BUILDER.read_text("utf-8-sig")
+        cls.webview = WEBVIEW.read_text("utf-8-sig")
 
     def test_01_ui_returns_persisted_job_without_waiting_for_transfer(self):
         assert_nonblocking(self.data)
@@ -192,6 +194,29 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             original, "            _transferStop.Dispose();\n            _ownedHttp?.Dispose();", 1)
         with self.assertRaisesRegex(AssertionError, "P03_TERMINATION_OWNERSHIP_LOST"):
             assert_background_lifetime(broken)
+
+    def test_14_bridge_reports_queued_transfer_not_fake_completion(self):
+        self.assertIn('ownerState = jobState.GetString() switch', self.webview)
+        self.assertIn('"Queued" => "QUEUED"', self.webview)
+        self.assertIn('"Running" or "Cancelling" => "IN_PROGRESS"', self.webview)
+        self.assertIn('"Completed" => "COMPLETED"', self.webview)
+        self.assertIn('ownerState = "HOLD";', self.webview)
+        self.assertNotIn('route=="chat.stop"?"STOP_REQUESTED":"COMPLETED"', self.webview)
+
+    def test_15_model_cancel_bypasses_consent_not_native_acl(self):
+        self.assertIn('route is not ("chat.stop" or "models.cancel")', self.webview)
+        self.assertIn('!_nativeAcl(_ownerWindowsSid, route)', self.webview)
+        self.assertIn('flag.ValueKind == JsonValueKind.True ? "STOP_REQUESTED" : "HOLD"',
+                      self.webview)
+        self.assertIn('_nativeOwnerAction(route, payload.Clone(), cancel)', self.webview)
+
+    def test_16_existing_builder_pins_correct_bridge_blob(self):
+        actual = git_blob(WEBVIEW.read_bytes())
+        self.assertIn(
+            "relative='coordination/e06/OneHostP02WebView2Bridge.cs';"
+            "dest='Integration/OneHostP02WebView2Bridge.cs';blob='" + actual + "'",
+            self.build
+        )
 
     def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
