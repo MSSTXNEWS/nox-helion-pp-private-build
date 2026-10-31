@@ -15,12 +15,12 @@ export function makeOwnerOieDonor(owner,oie){
  const embedded=oie.replace('export function mountOpportunityPanel','function mountOpportunityPanel');
  const addon=[
   '  // Existing W02 PROJECTS only: no new menu, host or extra assets.',
-  '  if(selected.id==="W02" && typeof window.chrome?.webview?.noxOwnerOieRequestJob==="function"){',
+  '  if(selected.id==="W02" && probe?.oieAvailable===true && typeof probe?.requestOie==="function"){',
   '    const slot=node("section",undefined,"mega814-oie-slot");',
   '    slot.dataset.noxScreen="opportunity-engine";body.append(slot);',
   '    try{oieHandle=mountOpportunityPanel(slot,{apiBase:"",',
   '      onBack:()=>{const original=document.querySelector(\'#tiles [data-menu-index="0"]\');if(original&&!original.disabled)original.click();},',
-  '      requestJob:window.chrome.webview.noxOwnerOieRequestJob.bind(window.chrome.webview)',
+  '      requestJob:probe.requestOie.bind(probe)',
   '    });}catch{note(body,"HOLD · owner OIE mount failed");}',
   '  }',
  ].join('\n');
