@@ -263,7 +263,7 @@ class ExistingP02Adapter:
     def __init__(self, client, store, *, event_sink=None, native_selected_file=None):
         if not all(callable(getattr(client,n,None)) for n in ("models","stream","stop")):
             raise ValueError("Existing P02 OllamaClient required")
-        if not all(callable(getattr(store,n,None)) for n in ("history","add_message","store_file")):
+        if not all(callable(getattr(store,n,None)) for n in ("history","add_message","add_exchange","store_file")):
             raise ValueError("Existing P02Store required")
         self.client = client
         self.store = store
