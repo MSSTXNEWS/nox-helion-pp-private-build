@@ -156,8 +156,35 @@ jobs:
           no_output_timeout: 20m
           command: |
             $ErrorActionPreference = 'Stop'
+            $global:OneHostDiagStep='INITIAL'
+            trap {
+              $noXFailure=$_
+              $details=@(
+                ('NOX_ONEHOST_FIRST_FAILED_STEP=' + $global:OneHostDiagStep),
+                ('CIRCLE_SHA1=' + $env:CIRCLE_SHA1),
+                ('CIRCLE_BUILD_NUM=' + $env:CIRCLE_BUILD_NUM),
+                ('LASTEXITCODE=' + $LASTEXITCODE),
+                ('EXCEPTION=' + $noXFailure.Exception.ToString()),
+                ('POSITION=' + $noXFailure.InvocationInfo.PositionMessage),
+                ('SCRIPT_STACK=' + $noXFailure.ScriptStackTrace)
+              ) -join [Environment]::NewLine
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_BEGIN'
+              Write-Host $details
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_END'
+              try {
+                $diagDir=Join-Path (Get-Location) 'work/e06'
+                New-Item -ItemType Directory -Path $diagDir -Force | Out-Null
+                $diagFile=Join-Path $diagDir 'ONEHOST_FIRST_FAILURE.txt'
+                if (!(Test-Path -LiteralPath $diagFile -PathType Leaf)) {
+                  Set-Content -LiteralPath $diagFile -Value $details -Encoding UTF8 -ErrorAction Stop
+                }
+              } catch { Write-Host ('NOX_ONEHOST_DIAG_ARTIFACT_WRITE_HOLD=' + $_.Exception.Message) }
+              throw $noXFailure
+            }
+            $global:OneHostDiagStep='PRE_WINDOWS_HOST'
             if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
             if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
+            $global:OneHostDiagStep='PRE_DOTNET8_DISCOVERY'
             $sdk = @(dotnet --list-sdks)
             if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
               # Existing official Microsoft CI installer, exact version, only in CircleCI VM.
@@ -173,6 +200,7 @@ jobs:
             }
             python --version
             if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
+            $global:OneHostDiagStep='PRE_NSIS_PROVISION'
             $nsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
             $nsisPath='C:\Program Files (x86)\NSIS\makensis.exe'
             if (!$nsis -and !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) {
@@ -187,8 +215,36 @@ jobs:
           no_output_timeout: 20m
           command: |
             $ErrorActionPreference = 'Stop'
+            $global:OneHostDiagStep='INITIAL'
+            trap {
+              $noXFailure=$_
+              $details=@(
+                ('NOX_ONEHOST_FIRST_FAILED_STEP=' + $global:OneHostDiagStep),
+                ('CIRCLE_SHA1=' + $env:CIRCLE_SHA1),
+                ('CIRCLE_BUILD_NUM=' + $env:CIRCLE_BUILD_NUM),
+                ('LASTEXITCODE=' + $LASTEXITCODE),
+                ('EXCEPTION=' + $noXFailure.Exception.ToString()),
+                ('POSITION=' + $noXFailure.InvocationInfo.PositionMessage),
+                ('SCRIPT_STACK=' + $noXFailure.ScriptStackTrace)
+              ) -join [Environment]::NewLine
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_BEGIN'
+              Write-Host $details
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_END'
+              try {
+                $diagDir=Join-Path (Get-Location) 'work/e06'
+                New-Item -ItemType Directory -Path $diagDir -Force | Out-Null
+                $diagFile=Join-Path $diagDir 'ONEHOST_FIRST_FAILURE.txt'
+                if (!(Test-Path -LiteralPath $diagFile -PathType Leaf)) {
+                  Set-Content -LiteralPath $diagFile -Value $details -Encoding UTF8 -ErrorAction Stop
+                }
+              } catch { Write-Host ('NOX_ONEHOST_DIAG_ARTIFACT_WRITE_HOLD=' + $_.Exception.Message) }
+              throw $noXFailure
+            }
+            $global:OneHostDiagStep='A_SOURCELOCK_729'
+            $global:OneHostDiagStep='A_VERIFY_ORIGINAL_729'
             python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
             if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
+            $global:OneHostDiagStep='A_VERIFY_OWNER_729'
             python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-$env:CIRCLE_BUILD_NUM"
             if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
       - run:
@@ -196,6 +252,32 @@ jobs:
           no_output_timeout: 40m
           command: |
             $ErrorActionPreference = 'Stop'
+            $global:OneHostDiagStep='INITIAL'
+            trap {
+              $noXFailure=$_
+              $details=@(
+                ('NOX_ONEHOST_FIRST_FAILED_STEP=' + $global:OneHostDiagStep),
+                ('CIRCLE_SHA1=' + $env:CIRCLE_SHA1),
+                ('CIRCLE_BUILD_NUM=' + $env:CIRCLE_BUILD_NUM),
+                ('LASTEXITCODE=' + $LASTEXITCODE),
+                ('EXCEPTION=' + $noXFailure.Exception.ToString()),
+                ('POSITION=' + $noXFailure.InvocationInfo.PositionMessage),
+                ('SCRIPT_STACK=' + $noXFailure.ScriptStackTrace)
+              ) -join [Environment]::NewLine
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_BEGIN'
+              Write-Host $details
+              Write-Host 'NOX_ONEHOST_FAILURE_TRACE_END'
+              try {
+                $diagDir=Join-Path (Get-Location) 'work/e06'
+                New-Item -ItemType Directory -Path $diagDir -Force | Out-Null
+                $diagFile=Join-Path $diagDir 'ONEHOST_FIRST_FAILURE.txt'
+                if (!(Test-Path -LiteralPath $diagFile -PathType Leaf)) {
+                  Set-Content -LiteralPath $diagFile -Value $details -Encoding UTF8 -ErrorAction Stop
+                }
+              } catch { Write-Host ('NOX_ONEHOST_DIAG_ARTIFACT_WRITE_HOLD=' + $_.Exception.Message) }
+              throw $noXFailure
+            }
+            $global:OneHostDiagStep='C_P01_STAGE'
             $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
             if (Test-Path -LiteralPath (Join-Path $sdkRoot 'dotnet.exe') -PathType Leaf) {
               $env:DOTNET_ROOT=$sdkRoot
@@ -203,18 +285,24 @@ jobs:
             }
             python coordination/e06/stage_p01.py
             if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
+            $global:OneHostDiagStep='C_WOW200_TEST'
             python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
             if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
             $exe=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
             $receipt=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json').Path
+            $global:OneHostDiagStep='C_ORIGINAL_ONEHOST_BUILDER'
             & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId "NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM" -PythonNativeSmokeReceipt $receipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
             if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_ONEHOST_NSIS_FAILED' }
             $setup='work/e06/onehost-r66/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
             $published='work/e06/onehost-r66/payload/NOX.P01.Shell.exe'
+            $global:OneHostDiagStep='C_E07_BUILT_HANDOFF'
             & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 -Original729Receipt 'work/e06/original-729-manifest.json' -Owner729Receipt 'work/e06/original-729-owner-pinned.json' -OneHostReceipt 'work/e06/onehost-r66/ONEHOST_DIAGNOSTIC_RECEIPT.json' -SetupExe $setup -PublishedExe $published -SourceCommitSha $env:CIRCLE_SHA1 -Output 'work/e06/onehost-r66/E07_BUILT_HANDOFF.json' -Phase BUILT
             if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
             Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
             Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+      - store_artifacts:
+          path: work/e06/ONEHOST_FIRST_FAILURE.txt
+          destination: NOX-R66-FIRST-FAILED-STEP-AND-EXCEPTION
       - store_artifacts:
           path: work/e06/onehost-r66
           destination: NOX-R66-NATIVE-ONEHOST-BUILD-ONLY-NOT-RELEASE
