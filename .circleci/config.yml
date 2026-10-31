@@ -1,108 +1,76 @@
-# I0 diagnostic of original Creative source stage #86 FAILED; exact predicate contexts.
+# I0: isolate failing source assertion in original R11 MainWindow/HTML (#88).
 version: 2.1
 orbs:
   win: circleci/windows@5.0
 jobs:
-  i0-creative-d02-asset-contract:
+  i0-creative-pack-router-anchor:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Original R11 donor source stage for isolated owner predicate
+          name: Reconstruct exact immutable R11 owner candidate
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_REQUIRED_STAGE_FAIL' }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
       - run:
-          name: Canonical original 4/4 D02 byte SHA
+          name: Original Creative Stage required anchor - separately checked
           command: |
             $ErrorActionPreference='Stop'
-            $assets=@{
-              'home.png'='382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a'
-              'menu.png'='4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9'
-              'core01.png'='343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97'
-              'menu_sections.png'='7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4'
-            }
-            foreach($n in $assets.Keys) {
-              $p=Join-Path 'work/e06/staged/R11/Assets' $n
-              if (!(Test-Path -LiteralPath $p -PathType Leaf)) { throw "I0_CREATIVE_D02_ASSET_MISSING:$n" }
-              if ((Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant() -cne $assets[$n]) {
-                throw "I0_CREATIVE_D02_ASSET_SHA_MISMATCH:$n"
-              }
-            }
-            Write-Host 'I0_CREATIVE_D02_4_4_SHA_PASS'
-  i0-creative-mainwindow-anchors:
+            $main=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
+            $exact='case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
+            $found=[regex]::Matches($main,[regex]::Escape($exact)).Count
+            if ($found -ne 1) { throw 'I0_R11_CREATIVE_PACK_EXACT_ANCHOR_DRIFT' }
+            Write-Host 'I0_PACK_ROUTER_ANCHOR_PASS'
+  i0-creative-lifecycle-anchor:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Original R11 donor source stage for isolated owner predicate
+          name: Reconstruct exact immutable R11 owner candidate
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_REQUIRED_STAGE_FAIL' }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
       - run:
-          name: Exact original Creative MainWindow router and lifecycle anchors
+          name: Original Creative Stage required anchor - separately checked
           command: |
             $ErrorActionPreference='Stop'
-            $source='work/e06/staged/R11'
-            $main=Get-Content (Join-Path $source 'MainWindow.xaml.cs') -Raw -Encoding UTF8
-            $html=Get-Content (Join-Path $source 'Assets/index.html') -Raw -Encoding UTF8
-            $anchor='case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
-            $lifecycle='Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
-            if ([regex]::Matches($main,[regex]::Escape($anchor)).Count -ne 1) { throw 'I0_CREATIVE_PACK_ROUTER_ANCHOR_DRIFT' }
-            if ([regex]::Matches($main,[regex]::Escape($lifecycle)).Count -ne 1) { throw 'I0_CREATIVE_LIFECYCLE_ANCHOR_DRIFT' }
-            if ([regex]::Matches($html,[regex]::Escape('</body>')).Count -ne 1) { throw 'I0_CREATIVE_HTML_BODY_ANCHOR_DRIFT' }
-            if ($html.Contains('creative/entry.js')) { throw 'I0_CREATIVE_ALREADY_IMPORTED' }
-            Write-Host 'I0_CREATIVE_ROUTER_LIFECYCLE_HTML_ANCHOR_PASS'
-  i0-creative-donor-structure:
+            $main=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
+            $exact='Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
+            $found=[regex]::Matches($main,[regex]::Escape($exact)).Count
+            if ($found -ne 1) { throw 'I0_R11_CREATIVE_LIFECYCLE_ANCHOR_DRIFT' }
+            Write-Host 'I0_CREATIVE_LIFECYCLE_ANCHOR_PASS'
+  i0-creative-index-footer:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Original R11 donor source stage for isolated owner predicate
+          name: Reconstruct exact immutable R11 owner candidate
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_REQUIRED_STAGE_FAIL' }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAILED' }
       - run:
-          name: Original Web/Bridge donor assets and no collision
+          name: Original Creative Stage required anchor - separately checked
           command: |
             $ErrorActionPreference='Stop'
-            $source='work/e06/staged/R11'
-            if (!(Test-Path (Join-Path $source 'MainWindow.xaml.cs') -PathType Leaf) -or
-                !(Test-Path (Join-Path $source 'NOX.P01.Shell.csproj') -PathType Leaf) -or
-                !(Test-Path (Join-Path $source 'Assets/index.html') -PathType Leaf)) {
-              throw 'I0_CREATIVE_REQUIRED_OWNER_SOURCE_MISSING'
-            }
-            if (Test-Path (Join-Path $source 'Integration/CreativeHostBridge.cs')) {
-              throw 'I0_CREATIVE_EXISTING_BRIDGE_COLLISION'
-            }
-            if (Test-Path (Join-Path $source 'Assets/creative')) {
-              throw 'I0_CREATIVE_EXISTING_ASSETS_COLLISION'
-            }
-            if (!(Test-Path 'integrations/creative/bridge/CreativeHostBridge.cs' -PathType Leaf)) {
-              throw 'I0_CREATIVE_DONOR_BRIDGE_MISSING'
-            }
-            $req=@('entry.js','studio.js','studio.html','studio.css','theater.html','theater.js','manifest.webmanifest')
-            foreach($name in $req) {
-              if (!(Test-Path -LiteralPath (Join-Path 'integrations/creative/web' $name) -PathType Leaf)) {
-                throw "I0_CREATIVE_WEB_DONOR_MISSING:$name"
-              }
-            }
-            Write-Host 'I0_CREATIVE_DONORS_AND_COLLISION_PASS'
+            $html=Get-Content 'work/e06/staged/R11/Assets/index.html' -Raw -Encoding UTF8
+            if ([regex]::Matches($html,[regex]::Escape('</body>')).Count -ne 1) { throw 'I0_R11_HTML_BODY_ANCHOR_DRIFT' }
+            if ($html.Contains('creative/entry.js')) { throw 'I0_R11_CREATIVE_ALREADY_IMPORTED' }
+            Write-Host 'I0_CREATIVE_HTML_FOOTER_PASS'
 workflows:
-  i0_creative_failing_predicate_only:
+  i0_creative_anchor_diagnosis:
     jobs:
-      - i0-creative-d02-asset-contract:
+      - i0-creative-pack-router-anchor:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-creative-mainwindow-anchors:
+      - i0-creative-lifecycle-anchor:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-creative-donor-structure:
+      - i0-creative-index-footer:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
