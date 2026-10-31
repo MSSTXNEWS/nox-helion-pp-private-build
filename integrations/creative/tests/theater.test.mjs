@@ -10,7 +10,7 @@ function harness() {
   function el(id) {
     const value = { id, style:{}, textContent:id==='status'?'Выберите разрешённый локальный фильм':'', src:'', files:[], textTracks:[], events:{},
       play(){value.played=true;return Promise.resolve()},pause(){value.paused=true},
-      addEventListener(name,fn){value.events[name]=fn},removeEventListener(name){delete value.events[name]},load(){value.loaded=true},
+      addEventListener(name,fn){value.events[name]=fn},removeEventListener(name){delete value.events[name]},removeAttribute(name){if(name==='src')value.src=''},load(){value.loaded=true},
       appendChild(child){value.child=child;value.textTracks.push(child.track);},
       remove(){value.removed=true}, requestFullscreen(){return Promise.resolve()}};
     objects.set(id,value);return value;
@@ -21,7 +21,7 @@ function harness() {
     createElement:()=>({track:{mode:'disabled'},remove(){this.removed=true},addEventListener(name,fn){if(name==='load')fn()}}),
     fullscreenElement:null,exitFullscreen(){document.fullscreenElement=null;document.exited=true;return Promise.resolve()}};
   const sandbox = { document,
-    window:{addEventListener(name,fn){events[name]=fn},getScreenDetails:null}, location:{search:'?project=demo_1'},
+    window:{location:{search:'?project=demo_1'},addEventListener(name,fn){events[name]=fn}},
     URL:{createObjectURL:obj=>{created.push(obj);return 'blob:media'+(++next)},revokeObjectURL:url=>revoked.push(url)},
     URLSearchParams, Blob, Promise, String, RegExp, Error};
   vm.runInNewContext(source,sandbox,{filename:'theater.js'});
@@ -108,7 +108,7 @@ test('unsupported fullscreen button emits accessible status, never silent fake s
   const {objects}=harness();
   objects.get('stage').requestFullscreen=undefined;
   objects.get('full').onclick();
-  assert.match(objects.get('status').textContent,/недоступен/);
+  assert.match(objects.get('status').textContent,/[Нн]едоступен/);
 });
 test('non-fullscreen Escape is not hijacked',()=>{
   const {events}=harness();let prevented=false;
