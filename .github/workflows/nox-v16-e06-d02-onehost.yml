@@ -1,6 +1,11 @@
 name: NOX V16 E06 exact D02 visual stage into ONEHOST diagnostic installer
 on:
   workflow_dispatch:
+    inputs:
+      native_smoke_model:
+        description: 'Explicit approved model already installed on the native runner; never downloaded by smoke'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'coordination/e06/build_onehost_installer.ps1'
@@ -61,6 +66,8 @@ jobs:
   diagnostic-onehost:
     if: github.event_name == 'workflow_dispatch'
     needs: visual-source-stage
+    env:
+      NOX_NATIVE_SMOKE_MODEL: ${{ inputs.native_smoke_model }}
     runs-on: windows-2025
     timeout-minutes: 60
     steps:
@@ -77,7 +84,14 @@ jobs:
       - name: Build original trusted Python candidate and stage original owner1 R11
         shell: pwsh
         run: |
-          & ./private_build.ps1
+          function py {
+            $arguments=@($args)
+            if ($arguments.Count -lt 1 -or $arguments[0] -cne '-3.12') { throw 'NATIVE_BUILD_PY_SELECTOR_HOLD' }
+            $pythonArgs=@($arguments | Select-Object -Skip 1)
+            & python @pythonArgs
+            if ($LASTEXITCODE -ne 0) { throw 'NATIVE_BUILD_PINNED_PY_LAUNCH_FAILED' }
+          }
+          & ./private_build.ps1 -OneHostNative -RunId "NOX-E06-D02-${{ github.run_id }}"
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_CANDIDATE_BUILD_HOLD' }
           python coordination/e06/stage_p01.py
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_R11_SOURCELOCK_HOLD' }
@@ -89,13 +103,96 @@ jobs:
       - name: Build one diagnostic WPF + Python + pinned owner1 D02 / Creative NSIS
         shell: pwsh
         run: |
-          $expected='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
-          $candidates=@(Get-ChildItem -LiteralPath 'work/candidate' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe')
-          $matches=@($candidates | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $expected })
-          if ($matches.Count -ne 1) { throw 'EXACT_ORIGINAL_PYTHON_EXE_SHA_NOT_FOUND' }
-          & ./coordination/e06/build_onehost_installer.ps1 `
+          $buildReceipt='work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json'
+          $backend=(Resolve-Path -LiteralPath 'work/candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
+          $build=Get-Content -LiteralPath $buildReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
+          $tree=(& git rev-parse 'HEAD^{tree}' | Out-String).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0) { throw 'NATIVE_BUILD_SOURCE_TREE_UNAVAILABLE' }
+          if ($build.schema -cne 'NOX-ONEHOST-PYTHON-BUILD-V1' -or
+              $build.release_accepted -isnot [bool] -or $build.bundled_runtime_data_verified -isnot [bool] -or
+              $build.source_commit -cne '${{ github.sha }}' -or $build.source_tree -cne $tree -or
+              $build.release_accepted -ne $false -or $build.bundled_runtime_data_verified -ne $true -or
+              @($build.runtime_data_files).Count -lt 1 -or
+              [IO.Path]::GetFullPath([string]$build.python_exe) -ine $backend -or
+              $build.python_exe_sha256 -cne (Get-FileHash -LiteralPath $backend -Algorithm SHA256).Hash.ToLowerInvariant()) {
+            throw 'NATIVE_BUILD_RECEIPT_CURRENT_SOURCE_OR_BYTES_MISMATCH'
+          }
+          $nativeProof='work/candidate/NATIVE_ONEHOST_SMOKE.json'
+          $smokeArgs=@('coordination/e06/native_onehost_smoke.py','--exe',$backend,
+              '--build-receipt',$buildReceipt,'--source-head','${{ github.sha }}','--output',$nativeProof)
+          if (-not [string]::IsNullOrWhiteSpace($env:NOX_NATIVE_SMOKE_MODEL)) {
+            $smokeArgs+=@('--model',$env:NOX_NATIVE_SMOKE_MODEL)
+          }
+          & python @smokeArgs
+          $nativeSmokeExit=$LASTEXITCODE
+          if ($nativeSmokeExit -notin @(0,2)) { throw "NATIVE_ONEHOST_SMOKE_FAILED:$nativeSmokeExit" }
+          $smoke=Get-Content -LiteralPath $nativeProof -Raw -Encoding UTF8 | ConvertFrom-Json
+          foreach ($flag in @('run_id_matched','request_id_matched','original_729_unchanged',
+              'release_accepted','installed_wpf_e07','process_restart_verified','isolated_test_data',
+              'history_persistence_verified')) {
+            if ($smoke.$flag -isnot [bool]) { throw 'NATIVE_ONEHOST_PROOF_BOOLEAN_TYPE_REQUIRED' }
+          }
+          if (($smoke.concurrent_native_executables_max -isnot [int] -and
+               $smoke.concurrent_native_executables_max -isnot [long]) -or
+               $smoke.concurrent_native_executables_max -ne 1) {
+            throw 'NATIVE_ONEHOST_PROOF_SINGLE_PROCESS_INTEGER_REQUIRED'
+          }
+          $fullNative=($nativeSmokeExit -eq 0 -and $smoke.phase -ceq 'BUILT_AND_NATIVE_STDIO_SMOKE_PASS' -and
+              $smoke.live_model_status -ceq 'PASS' -and $smoke.native_windows_exe_request_reply -ceq 'PASS')
+          $offlineNative=($nativeSmokeExit -eq 2 -and $smoke.phase -ceq 'BUILT_AND_NATIVE_STDIO_SMOKE_HOLD' -and
+              $smoke.live_model_status -ceq 'HOLD' -and $smoke.native_windows_exe_request_reply -ceq 'HOLD')
+          if ($smoke.schema -cne 'NOX_NATIVE_ONEHOST_SMOKE_V2' -or $smoke.platform -cne 'win32' -or
+              $smoke.transport_status -cne 'PASS' -or $smoke.offline_backbone_status -cne 'PASS' -or
+              $smoke.run_id_matched -ne $true -or $smoke.request_id_matched -ne $true -or
+              $smoke.process_restart_verified -ne $true -or $smoke.original_729_unchanged -ne $true -or
+              $smoke.isolated_test_data -ne $true -or $smoke.concurrent_native_executables_max -ne 1 -or
+              $smoke.release_accepted -ne $false -or $smoke.installed_wpf_e07 -ne $false -or
+              $smoke.source_commit -cne $build.source_commit -or $smoke.source_tree -cne $tree -or
+              $smoke.build_run_id -cne $build.run_id -or
+              $smoke.exe_sha256 -cne (Get-FileHash -LiteralPath $backend -Algorithm SHA256).Hash.ToLowerInvariant() -or
+              $smoke.build_receipt_sha256 -cne (Get-FileHash -LiteralPath $buildReceipt -Algorithm SHA256).Hash.ToLowerInvariant() -or
+              $smoke.source_original_archive_sha256 -cne $build.source_original_archive_sha256 -or
+              $smoke.staged_original_app_sha256 -cne $build.staged_original_app_sha256 -or
+              -not ($fullNative -or $offlineNative)) {
+            throw 'NATIVE_ONEHOST_EXACT_WINDOWS_BACKBONE_PROOF_REQUIRED'
+          }
+          # Source/build admission only. A real offline candidate may be packaged so
+          # Model Center can install an approved model; it remains HOLD for release/E07.
+          Write-Host ("NATIVE_DIAGNOSTIC_CANDIDATE LIVE_MODEL="+$smoke.live_model_status+" RELEASE_ACCEPTED=False")
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and
+              -not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) {
+            & choco install nsis --yes --no-progress --limit-output
+            if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_NSIS_PREREQUISITE_HOLD' }
+          }
+          # Reuse original Creative owner worker and installer patch, on a disposable CI copy.
+          # The ONEHOST packager must include the real worker BEFORE payload.sha256.json.
+          $creativeRoot=(Resolve-Path -LiteralPath 'integrations/creative').Path
+          $workerRoot=Join-Path (Resolve-Path -LiteralPath '.').Path 'work/e06/github-creative-worker'
+          if (Test-Path -LiteralPath $workerRoot) { throw 'GITHUB_CREATIVE_WORKER_OUTPUT_EXISTS_HOLD' }
+          New-Item -ItemType Directory -Path $workerRoot -Force | Out-Null
+          python -m venv (Join-Path $workerRoot '.venv')
+          if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_VENV_HOLD' }
+          $workerPython=Join-Path $workerRoot '.venv/Scripts/python.exe'
+          # Fixed original owner dependency versions in isolated build venv (no global pip).
+          & $workerPython -m pip install --disable-pip-version-check --no-input 'pyinstaller==6.16.0' 'huggingface_hub==0.36.0' 'trimesh==4.8.2' 'numpy==2.3.4'
+          if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_DEPS_HOLD' }
+          $env:PYTHONPATH=$creativeRoot
+          & $workerPython -m unittest discover -s (Join-Path $creativeRoot 'tests') -v
+          if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_PROTOCOL_HOLD' }
+          & $workerPython -m PyInstaller --noconfirm --clean --onedir --console --name NOX_CreativeWorker --paths $creativeRoot --collect-all huggingface_hub --collect-all trimesh --distpath (Join-Path $workerRoot 'dist') --workpath (Join-Path $workerRoot 'build') (Join-Path $creativeRoot 'creative_worker.py')
+          if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_WORKER_COMPILE_HOLD' }
+          $workerDist=Join-Path $workerRoot 'dist/NOX_CreativeWorker'
+          if (!(Test-Path -LiteralPath (Join-Path $workerDist 'NOX_CreativeWorker.exe') -PathType Leaf)) { throw 'GITHUB_CREATIVE_WORKER_BINARY_MISSING_HOLD' }
+          $builderCopy=Join-Path $workerRoot 'build_onehost_creative_disposable.ps1'
+          Copy-Item -LiteralPath 'coordination/e06/build_onehost_installer.ps1' -Destination $builderCopy -ErrorAction Stop
+          & $workerPython (Join-Path $creativeRoot 'patch_installer.py') $builderCopy $workerDist
+          if ($LASTEXITCODE -ne 0) { throw 'GITHUB_CREATIVE_INSTALLER_STAGE_HOLD' }
+          $patchedBuilder=Get-Content -LiteralPath $builderCopy -Raw -Encoding UTF8
+          if ($patchedBuilder -notmatch 'CREATIVE_PAYLOAD_MISSING_HOLD' -or $patchedBuilder -notmatch 'NOX_CreativeWorker.exe') { throw 'GITHUB_CREATIVE_BUILDER_COPY_NOT_PATCHED_HOLD' }
+          & $builderCopy `
             -SourceRoot work/e06/staged/R11 `
-            -PythonExe $matches[0].FullName `
+            -PythonExe $backend `
+            -PythonNativeSmokeReceipt $nativeProof `
             -OutputRoot work/e06/onehost-wow-diagnostic `
             -RunId "NOX-E06-D02-${{ github.run_id }}" `
             -CreativeSourceRoot integrations/creative `
@@ -154,6 +251,8 @@ jobs:
             work/e06/staged/WOW200_STAGE_RECEIPT.json
             work/e06/original-729-manifest.json
             work/e06/original-729-owner-pinned.json
+            work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json
+            work/candidate/NATIVE_ONEHOST_SMOKE.json
             work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json

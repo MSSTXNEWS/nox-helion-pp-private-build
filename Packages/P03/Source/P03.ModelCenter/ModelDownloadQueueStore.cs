@@ -86,7 +86,7 @@ public sealed class ModelDownloadQueueStore
         string licenseSource, CancellationToken ct = default)
     {
         ValidateTag(tag);
-        if (expectedBytes <= 4 || !ShaPattern.IsMatch(expectedSha256 ?? string.Empty)
+        if (expectedBytes <= 4 || expectedSha256 is null || !ShaPattern.IsMatch(expectedSha256)
             || string.IsNullOrWhiteSpace(rightsReceiptId))
             throw new InvalidDataException("REVIEW_REQUIRED: GGUF expected bytes/SHA-256/rights receipt.");
         if (string.IsNullOrWhiteSpace(localPath) ||

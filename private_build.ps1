@@ -1,5 +1,13 @@
+[CmdletBinding()]
+param(
+    [switch]$OneHostNative,
+    [string]$RunId = ''
+)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($OneHostNative -and ($RunId -cnotmatch '^[\x20-\x7e]{1,128}$')) {
+    throw 'ONEHOST_NATIVE_RUN_ID_REQUIRED'
+}
 
 $root = (Resolve-Path -LiteralPath $PSScriptRoot).Path
 $evidence = Join-Path $root 'ci-evidence'
@@ -30,7 +38,7 @@ $baseTree = $null
 $patchedTree = $null
 $sourceQaStatus = 'NOT_RECORDED'
 $nativeSmokeStatus = 'NOT_RECORDED'
-$fastCandidateSelected = $true
+$fastCandidateSelected = -not [bool]$OneHostNative
 $cReceipt = $null
 $receiptValid = $false
 $fastCandidateComplete = $false
@@ -39,6 +47,8 @@ $qaLockSha = $null
 $qaWheels = $null
 $qaDependencyFailure = $null
 $qaDependenciesReady = $false
+$oneHostReceipt = $null
+$oneHostData = @()
 
 New-Item -ItemType Directory -Path $evidence -Force | Out-Null
 New-Item -ItemType Directory -Path $work -Force | Out-Null
@@ -320,8 +330,92 @@ try {
     }
 
     New-Item -ItemType Directory -Path $output | Out-Null
-    & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM -FastCandidate
-    if ($LASTEXITCODE -ne 0) { throw "C_RELEASE_SPRINT_BUILD_FAILED:$LASTEXITCODE" }
+    if ($OneHostNative) {
+        # OneHost uses the original CLI entrypoint, not the windowed diagnostic
+        # entrypoint which does not route --native-stdio and has no stdout.
+        $stageTool = Join-Path $root 'coordination/e06/stage_native_stdio.py'
+        $stageCode = 'import importlib.util,json,sys,pathlib; p=pathlib.Path(sys.argv[1]); spec=importlib.util.spec_from_file_location("e06_native_stage",p); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); print(json.dumps(m.stage(pathlib.Path(sys.argv[2]))))'
+        $stageOutput = @(& $venvPython -I -c $stageCode $stageTool $source)
+        if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_NATIVE_STAGE_FAILED' }
+        $nativeStage = ($stageOutput -join "`n") | ConvertFrom-Json
+        if ($nativeStage.original_archive_modified -ne $false -or
+            $nativeStage.installed_windows_exe_accepted -ne $false -or
+            @($nativeStage.runtime_data_files).Count -lt 5) {
+            throw 'ONEHOST_NATIVE_STAGE_RECEIPT_INVALID'
+        }
+        $oneHostData = @($nativeStage.runtime_data_files)
+        $seenRuntime = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        $nativeArgs = @('-I','-m','PyInstaller','--noconfirm','--onefile','--console',
+            '--noupx','--name','NOX_HELION_PRIVATE_CANDIDATE','--distpath',$output,
+            '--workpath',(Join-Path $work 'onehost-pyinstaller-work'),
+            '--specpath',(Join-Path $work 'onehost-pyinstaller-spec'),'--paths',$source,
+            '--add-data',((Join-Path $source 'assets')+';assets'),
+            '--add-data',((Join-Path $source 'helion/data/traits_seed_64.json')+';helion/data'),
+            '--add-data',((Join-Path $source 'helion/ai_weights/weights')+';helion/ai_weights/weights'))
+        foreach ($record in $oneHostData) {
+            $rel = [string]$record.runtime_path
+            $destination = [string]$record.pyinstaller_destination
+            if ($rel -cnotmatch '^[A-Za-z0-9_.\/-]+$' -or $rel.StartsWith('/') -or
+                @($rel.Split('/') | Where-Object { $_ -in @('','..','.') }).Count -gt 0 -or
+                -not $seenRuntime.Add($rel) -or [string]$record.sha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'ONEHOST_NATIVE_DATA_PATH_OR_SHA_INVALID'
+            }
+            $expectedDestination = [IO.Path]::GetDirectoryName($rel).Replace('\','/')
+            if ([string]::IsNullOrEmpty($expectedDestination)) { $expectedDestination = '.' }
+            if ($destination.Replace('\','/') -cne $expectedDestination) {
+                throw 'ONEHOST_NATIVE_DATA_DESTINATION_MISMATCH'
+            }
+            $dataPath = Join-Path $source $rel
+            $cursor = Get-Item -LiteralPath $dataPath -Force
+            while ($null -ne $cursor -and $cursor.FullName -cne $source) {
+                if (($cursor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                    throw 'ONEHOST_NATIVE_DATA_REPARSE_DENIED'
+                }
+                $cursor = [IO.Directory]::GetParent($cursor.FullName)
+            }
+            Assert-Sha256 $dataPath ([string]$record.sha256) ('OneHost runtime data '+$rel)
+            # Original assets are already included as a complete directory.
+            if (-not $rel.StartsWith('assets/',[StringComparison]::Ordinal)) {
+                $nativeArgs += @('--add-data',($dataPath+';'+$destination))
+            }
+        }
+        foreach ($required in @('catalog30.discovery.json',
+            'assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip',
+            'Packages/P04/train_qlora.py','Packages/P04/preflight_local_gpu.py',
+            'Packages/P04/merge_qlora_adapter.py')) {
+            if (-not $seenRuntime.Contains($required)) { throw ('ONEHOST_RUNTIME_DATA_MISSING:'+ $required) }
+        }
+        $nativeArgs += @((Join-Path $source 'run_helion.py'))
+        & $venvPython @nativeArgs
+        if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_NATIVE_PYINSTALLER_FAILED' }
+        $nativeExe = Join-Path $output 'NOX_HELION_PRIVATE_CANDIDATE.exe'
+        if (-not (Test-Path -LiteralPath $nativeExe -PathType Leaf)) { throw 'ONEHOST_NATIVE_EXE_MISSING' }
+        $dataReceipt = Join-Path $evidence 'onehost-native-stage.json'
+        $nativeStage | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $dataReceipt -Encoding UTF8
+        # Check the actual built archive entries, not just the staging folder.
+        $archiveCheck = 'import hashlib,json,sys; from PyInstaller.archive.readers import CArchiveReader; a=CArchiveReader(sys.argv[1]); r=json.load(open(sys.argv[2],encoding="utf-8-sig")); names={n.replace(chr(92),"/"):n for n in a.toc}; [(None if x["runtime_path"] in names and hashlib.sha256(a.extract(names[x["runtime_path"]])).hexdigest()==x["sha256"] else (_ for _ in ()).throw(RuntimeError("BUNDLED_RUNTIME_DATA_SHA_MISMATCH:"+x["runtime_path"]))) for x in r["runtime_data_files"]]; print("ONEHOST_BUNDLED_RUNTIME_DATA_SHA_PASS")'
+        & $venvPython -I -c $archiveCheck $nativeExe $dataReceipt
+        if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_BUNDLED_RUNTIME_DATA_HOLD' }
+        $oneHostReceipt = [ordered]@{
+            schema = 'NOX-ONEHOST-PYTHON-BUILD-V1'
+            source_commit = $checkoutCommit; source_tree = $checkoutTree; run_id = $RunId
+            original_archive_sha256 = $sourceExpectedSha
+            source_original_archive_sha256 = $sourceExpectedSha
+            original_archive_path = $sourceZip
+            staged_original_app_sha256 = $nativeStage.staged_app_sha256
+            staged_original_app_path = (Join-Path $source 'helion/app.py')
+            python_exe = $nativeExe
+            python_exe_sha256 = (Get-FileHash -LiteralPath $nativeExe -Algorithm SHA256).Hash.ToLowerInvariant()
+            entrypoint = 'run_helion.py'; console_stdio = $true; python_host_count = 1
+            native_stage = $nativeStage; runtime_data_files = $oneHostData
+            bundled_runtime_data_verified = $true
+            native_stdio_smoke = 'NOT_RUN'; release_accepted = $false
+        }
+        $oneHostReceipt | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $output 'ONEHOST_PYTHON_BUILD_RECEIPT.json') -Encoding UTF8
+    } else {
+        & (Join-Path $source 'C_RELEASE_SPRINT_BUILD.ps1') -OutputDirectory $output -AuthorizedIsolatedWindowsVM -FastCandidate
+        if ($LASTEXITCODE -ne 0) { throw "C_RELEASE_SPRINT_BUILD_FAILED:$LASTEXITCODE" }
+    }
 } catch {
     $failure = ($_ | Out-String).Trim()
     Write-Error $failure
@@ -362,6 +456,7 @@ try {
         $nativeSmokeStatus -eq 'NOT_RUN' -and $exeRecords.Count -eq 2)
     $finished = [DateTime]::UtcNow
     if ($null -ne $failure) { $runStatus = 'INCOMPLETE_OR_FAILED' }
+    elseif ($OneHostNative -and $null -ne $oneHostReceipt) { $runStatus = 'ONEHOST_NATIVE_BACKEND_BUILT_SMOKE_NOT_RUN' }
     elseif ($fastCandidateComplete) { $runStatus = 'PREPRE_FAST_CANDIDATE_BUILT_QA_NOT_RUN' }
     elseif ($receiptValid) { $runStatus = 'BUILD_SCRIPT_RETURNED_SUCCESS' }
     else { $runStatus = 'INCOMPLETE_OR_FAILED' }
@@ -384,6 +479,8 @@ try {
         source_qa_status=$sourceQaStatus
         native_smoke_status=$nativeSmokeStatus
         fast_candidate_mode=$fastCandidateSelected
+        onehost_native_mode=[bool]$OneHostNative
+        onehost_runtime_data=$oneHostData
         qa_wheels=if ($null -ne $qaWheels -and (Test-Path -LiteralPath $qaWheels -PathType Container)) {@(Get-ChildItem -LiteralPath $qaWheels -Filter '*.whl' -File | ForEach-Object {[ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}})} else {@()}
         exes=$exeRecords
         release_accepted=$false
@@ -397,7 +494,7 @@ try {
     if (Test-Path -LiteralPath $qaNotices -PathType Leaf) { Copy-Item -LiteralPath $qaNotices -Destination (Join-Path $output 'QA_DEPENDENCY_NOTICES.txt') -Force }
     if (Test-Path -LiteralPath $qaRequirements -PathType Leaf) { Copy-Item -LiteralPath $qaRequirements -Destination (Join-Path $output 'requirements-qa-win64-hashed.txt') -Force }
     $statusText = @(
-        'PRE-RELEASE WINDOWS CANDIDATE BUILD'
+        $(if ($OneHostNative) { 'ONEHOST NATIVE PYTHON BACKEND; WINDOWS ACCEPTANCE PENDING' } else { 'PRE-RELEASE WINDOWS CANDIDATE BUILD' })
         "status: $runStatus"
         "release_accepted: false"
         "SOURCE_QA=$sourceQaStatus"
@@ -410,7 +507,7 @@ try {
     ) -join [Environment]::NewLine
     Set-Content -LiteralPath (Join-Path $output 'BUILD_STATUS.txt') -Value $statusText -Encoding UTF8
     $candidateReadme = @(
-        'PRE-PRE fast diagnostic candidate; release_accepted=false.'
+        $(if ($OneHostNative) { 'Single OneHost native-stdio Python backend; release_accepted=false.' } else { 'PRE-PRE fast diagnostic candidate; release_accepted=false.' })
         "SOURCE_QA=$sourceQaStatus"
         "NATIVE_SMOKE=$nativeSmokeStatus"
         "fast_candidate_mode=$fastCandidateSelected"
@@ -420,7 +517,7 @@ try {
         "qa_requirements_sha256: $qaLockSha"
         "qa_dependencies_ready: $qaDependenciesReady"
         "qa_dependency_failure: $qaDependencyFailure"
-        'Check C_RELEASE_SPRINT_BUILD_RECEIPT.json and build-attempt.json for exact gates and EXE SHA values.'
+        $(if ($OneHostNative) { 'Check ONEHOST_PYTHON_BUILD_RECEIPT.json and build-attempt.json for runtime data and actual EXE SHA; separate native smoke is mandatory.' } else { 'Check C_RELEASE_SPRINT_BUILD_RECEIPT.json and build-attempt.json for exact gates and EXE SHA values.' })
         'Real local-model inference through the GUI, Persona/history/STOP, full rights and independent acceptance remain unverified unless separately evidenced.'
     ) -join [Environment]::NewLine
     Set-Content -LiteralPath (Join-Path $output 'CANDIDATE_README.txt') -Value $candidateReadme -Encoding UTF8

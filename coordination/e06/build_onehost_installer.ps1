@@ -47,24 +47,68 @@ $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
 $nativeEvidence='DIAGNOSE_ONLY_NOT_RUNTIME_PROOF'
+$nativeLiveStatus='NOT_RUN'
+$nativeProofSha=$null
 if (-not [string]::IsNullOrWhiteSpace($PythonNativeSmokeReceipt)) {
   Assert-E06PlainPathAncestors -Candidate $PythonNativeSmokeReceipt -Scope 'NATIVE_PROOF'
   $proofPath=(Resolve-Path -LiteralPath $PythonNativeSmokeReceipt).Path
   $proof=Get-Content -LiteralPath $proofPath -Raw -Encoding UTF8 | ConvertFrom-Json
-  if ($proof.phase -cne 'BUILT_AND_NATIVE_STDIO_SMOKE_PASS' -or
-      $proof.native_windows_exe_request_reply -cne 'PASS' -or
+  $proofRepo=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
+  $proofGit=Get-Command git.exe -ErrorAction Stop
+  $proofHead=(& $proofGit.Source -C $proofRepo rev-parse HEAD).Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'E06_PROOF_SOURCE_HEAD_REQUIRED' }
+  $proofTree=(& $proofGit.Source -C $proofRepo rev-parse 'HEAD^{tree}').Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'E06_PROOF_SOURCE_TREE_REQUIRED' }
+  foreach ($flag in @('run_id_matched','request_id_matched','original_729_unchanged',
+      'release_accepted','installed_wpf_e07','process_restart_verified','isolated_test_data',
+      'history_persistence_verified')) {
+    if ($proof.$flag -isnot [bool]) { throw 'E06_NATIVE_PROOF_BOOLEAN_TYPE_REQUIRED' }
+  }
+  if (($proof.concurrent_native_executables_max -isnot [int] -and
+       $proof.concurrent_native_executables_max -isnot [long]) -or
+       $proof.concurrent_native_executables_max -ne 1) {
+    throw 'E06_NATIVE_PROOF_PROCESS_COUNT_TYPE_REQUIRED'
+  }
+  if ($proof.schema -cne 'NOX_NATIVE_ONEHOST_SMOKE_V2' -or
+      $proof.platform -cne 'win32' -or
+      $proof.source_commit -cne $proofHead -or $proof.source_tree -cne $proofTree -or
+      $proof.build_run_id -cne $RunId -or
+      $proof.phase -cnotin @('BUILT_AND_NATIVE_STDIO_SMOKE_PASS','BUILT_AND_NATIVE_STDIO_SMOKE_HOLD') -or
+      $proof.transport_status -cne 'PASS' -or $proof.offline_backbone_status -cne 'PASS' -or
       $proof.run_id_matched -ne $true -or $proof.request_id_matched -ne $true -or
       $proof.original_729_unchanged -ne $true -or $proof.release_accepted -ne $false -or
-      $proof.installed_wpf_e07 -ne $false -or
+      $proof.installed_wpf_e07 -ne $false -or $proof.process_restart_verified -ne $true -or
+      $proof.isolated_test_data -ne $true -or $proof.concurrent_native_executables_max -ne 1 -or
       $proof.source_original_archive_sha256 -cne 'ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a' -or
-      $proof.supported_route_verified -cne 'chat.model' -or
       $proof.exe_file -cne 'NOX_HELION_PRIVATE_CANDIDATE.exe' -or
       [string]$proof.exe_sha256 -cnotmatch '\A[0-9a-f]{64}\z' -or
+      [string]$proof.build_receipt_sha256 -cnotmatch '\A[0-9a-f]{64}\z' -or
       [string]$proof.staged_original_app_sha256 -cnotmatch '\A[0-9a-f]{64}\z') {
     throw 'E06_NATIVE_STDIO_WINDOWS_RECEIPT_HOLD'
   }
+  foreach ($route in @('chat.model','chat.history','chat.stop')) {
+    if ($proof.routes.$route.status -cne 'PASS' -or $route -cnotin $proof.supported_routes_verified) {
+      throw 'E06_NATIVE_OFFLINE_BACKBONE_INCOMPLETE'
+    }
+  }
+  $nativeLiveStatus=[string]$proof.live_model_status
+  if ($nativeLiveStatus -ceq 'PASS') {
+    if ($proof.phase -cne 'BUILT_AND_NATIVE_STDIO_SMOKE_PASS' -or
+        $proof.native_windows_exe_request_reply -cne 'PASS' -or
+        $proof.routes.'helion.chat'.status -cne 'PASS' -or
+        $proof.routes.'chat.stop'.live_cancel -cne 'PASS' -or
+        $proof.history_persistence_verified -ne $true) {
+      throw 'E06_NATIVE_LIVE_PROOF_INCONSISTENT'
+    }
+    $nativeEvidence='WINDOWS_EXE_NATIVE_BACKBONE_AND_LIVE_MODEL_PASS_NOT_E07'
+  } elseif ($nativeLiveStatus -ceq 'HOLD' -and
+            $proof.phase -ceq 'BUILT_AND_NATIVE_STDIO_SMOKE_HOLD' -and
+            $proof.native_windows_exe_request_reply -ceq 'HOLD') {
+    # A diagnostic installer can provision a real model later. It is never a release.
+    $nativeEvidence='WINDOWS_EXE_OFFLINE_BACKBONE_PASS_LIVE_MODEL_HOLD'
+  } else { throw 'E06_NATIVE_LIVE_STATUS_INVALID' }
   $exeDigest=[string]$proof.exe_sha256
-  $nativeEvidence='WINDOWS_EXE_NATIVE_STDIO_CHAT_MODEL_SOURCE_SMOKE'
+  $nativeProofSha=(Get-FileHash -LiteralPath $proofPath -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 if ((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $exeDigest) { throw 'PYTHON_ORIGINAL_BINARY_SHA_HOLD' }
 $project=Join-Path $source 'NOX.P01.Shell.csproj'
@@ -216,7 +260,7 @@ $p02StageSources=@(
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='12fc98f4b910b1760427ad73d077cdf382d525f3'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='dd2d3f656262d951c0fcfb885ecd7b577f96ff95'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='e68bf33c49152d1737ac94ff7e33915ae7e57394'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='7c9a83d9b683090f12b058ac4c8907d388e4b6a5'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='6dd5ceec428ec71a426d785304001a2d269a666f'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed'},
@@ -476,6 +520,7 @@ $receipt=[ordered]@{
  persona_windows_media_accepted=$false;
  status='WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED';real_ollama_gpu_sip_tested=$false;
  one_visible_host=$true;native_bridge_scope=$nativeEvidence;
+ native_live_model_status=$nativeLiveStatus;native_smoke_receipt_sha256=$nativeProofSha;
  installer_lifecycle_tested=$false;release_accepted=$false;owner_1_5_accepted=$false
 }
 $receiptPath=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'

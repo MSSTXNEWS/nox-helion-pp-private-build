@@ -112,6 +112,13 @@ try {
         throw 'GITLAB_E07_SINGLE_SEAL_PART_PARITY_HOLD'
     }
     Write-Host 'GITLAB_E07_SOURCE_PREFLIGHT_PASS_NOT_NATIVE_ACCEPTANCE'
+    # Parse the existing build owners before provisioning or executing stages.
+    foreach ($ownerScript in @('private_build.ps1','coordination/e06/build_onehost_installer.ps1')) {
+        $ownerTokens=$null; $ownerErrors=$null
+        [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $repo $ownerScript),[ref]$ownerTokens,[ref]$ownerErrors) | Out-Null
+        if ($ownerErrors.Count -ne 0) { throw "GITLAB_BUILD_OWNER_SYNTAX_HOLD:$ownerScript" }
+    }
     # The GitLab hosted runner has Chocolatey; own runners may install prerequisites
     # themselves. No network credential or token is printed or persisted.
     $python=Find-Python31210
@@ -197,6 +204,13 @@ try {
             throw "GITLAB_CANONICAL_STAGE_OWNER_DRIFT:$i"
         }
     }
+    if (-not $blocks[1].Contains('-OneHostNative') -or
+        -not $blocks[2].Contains('ONEHOST_PYTHON_BUILD_RECEIPT.json') -or
+        -not $blocks[2].Contains('native_onehost_smoke.py') -or
+        -not $blocks[2].Contains('-PythonNativeSmokeReceipt') -or
+        $blocks[2].Contains('4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3')) {
+        throw 'GITLAB_CURRENT_NATIVE_BUILD_AND_SMOKE_WIRING_REQUIRED'
+    }
     # The four original stages are intentionally executed as separate pwsh
     # processes exactly as Azure does: no cross-stage PowerShell local leakage.
     $replace=[ordered]@{
@@ -245,6 +259,30 @@ try {
     Write-Host ("GITLAB_DIAGNOSTIC_HOLD " + $reason)
     throw
 } finally {
+    # Even a native-smoke HOLD must retain its real evidence. Stage four is
+    # intentionally not reached on failure, so preserve bounded receipts here.
+    $nativeEvidence=@()
+    $nativeSmokeSummary=$null
+    foreach ($name in @('ONEHOST_PYTHON_BUILD_RECEIPT.json','NATIVE_ONEHOST_SMOKE.json')) {
+        $inputFile=Join-Path (Join-Path $repo 'work/candidate') $name
+        if (-not (Test-Path -LiteralPath $inputFile -PathType Leaf)) { continue }
+        $info=Get-Item -LiteralPath $inputFile -Force
+        if (($info.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            $info.Length -gt 1048576) { continue }
+        $digest=(Get-FileHash -LiteralPath $inputFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        $evidenceTarget=Join-Path $logroot $name
+        Copy-Item -LiteralPath $inputFile -Destination $evidenceTarget -Force -ErrorAction Stop
+        if ((Get-FileHash -LiteralPath $evidenceTarget -Algorithm SHA256).Hash.ToLowerInvariant() -cne $digest) {
+            throw 'GITLAB_NATIVE_EVIDENCE_COPY_SHA_HOLD'
+        }
+        $nativeEvidence+=([ordered]@{file=$name;sha256=$digest;bytes=$info.Length})
+        if ($name -ceq 'NATIVE_ONEHOST_SMOKE.json') {
+            $observed=Get-Content -LiteralPath $evidenceTarget -Raw -Encoding UTF8 | ConvertFrom-Json
+            $nativeSmokeSummary=[ordered]@{schema=$observed.schema;phase=$observed.phase;
+                transport_status=$observed.transport_status;offline_backbone_status=$observed.offline_backbone_status;
+                live_model_status=$observed.live_model_status;release_accepted=$false;installed_wpf_e07=$false}
+        }
+    }
     $receipt=[ordered]@{
         schema='NOX_V16_GITLAB_FREE_WINDOWS_RUN_V1'
         original_repository='MSSTXNEWS/nox-helion-pp-private-build'
@@ -254,6 +292,8 @@ try {
         start_utc=$started
         end_utc=[DateTime]::UtcNow.ToString('o')
         canonical_azure_stages_completed=$blocksCompleted
+        current_native_build_evidence=$nativeEvidence
+        native_smoke=$nativeSmokeSummary
         state=$state
         reason=$reason
         independent_e07_installed_cases=0

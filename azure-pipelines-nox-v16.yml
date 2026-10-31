@@ -130,7 +130,7 @@ jobs:
       python -m unittest discover -s tests/e06 -p 'test_onehost_wire_type_r08.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_E06_JSON_WIRE_REGRESSION_HOLD' }
       Write-Host 'E06_MOCK_CONTRACT_GATE_ONLY_NOT_E07_NATIVE_ACCEPTANCE'
-      # private_build.ps1 is byte-preserved. Its py -3.12 launcher must resolve
+      # Reuse the existing private builder native mode. Its py -3.12 launcher must resolve
       # to THIS tool-cache Python, never an unrelated preinstalled patch version.
       & python -c 'import sys,struct; assert sys.version_info[:3] == (3,12,10); assert struct.calcsize("P") == 8'
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_EXACT_PYTHON_3_12_10_OR_X64_HOLD' }
@@ -143,7 +143,7 @@ jobs:
         & python @pythonArgs
         if ($LASTEXITCODE -ne 0) { throw 'AZURE_PINNED_PY_LAUNCH_FAILED' }
       }
-      & ./private_build.ps1
+      & ./private_build.ps1 -OneHostNative -RunId 'NOX-AZURE-$(Build.BuildId)'
       if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_BUILD_HOLD' }
       python -m unittest discover -s tests/e06 -p 'test_azure_visual_single_stage.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'AZURE_VISUAL_SINGLE_STAGE_CONTRACT_HOLD' }
@@ -159,9 +159,67 @@ jobs:
     displayName: 'Original Python candidate + approved P01/Creative/WOW source staging'
   - pwsh: |
       $ErrorActionPreference='Stop'
-      $pin='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
-      $m=@(Get-ChildItem -LiteralPath 'work/candidate' -File -Recurse -Filter 'NOX_HELION_PRIVATE_CANDIDATE.exe' | Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ceq $pin })
-      if ($m.Count -ne 1) { throw 'PINNED_ORIGINAL_EXE_MISSING' }
+      $buildReceipt='work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json'
+      $backend=(Resolve-Path -LiteralPath 'work/candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
+      $build=Get-Content -LiteralPath $buildReceipt -Raw -Encoding UTF8 | ConvertFrom-Json
+      $tree=(& git rev-parse 'HEAD^{tree}' | Out-String).Trim().ToLowerInvariant()
+      if ($LASTEXITCODE -ne 0) { throw 'NATIVE_BUILD_SOURCE_TREE_UNAVAILABLE' }
+      if ($build.schema -cne 'NOX-ONEHOST-PYTHON-BUILD-V1' -or
+          $build.release_accepted -isnot [bool] -or $build.bundled_runtime_data_verified -isnot [bool] -or
+          $build.source_commit -cne '$(Build.SourceVersion)' -or $build.source_tree -cne $tree -or
+          $build.release_accepted -ne $false -or $build.bundled_runtime_data_verified -ne $true -or
+          @($build.runtime_data_files).Count -lt 1 -or
+          [IO.Path]::GetFullPath([string]$build.python_exe) -ine $backend -or
+          $build.python_exe_sha256 -cne (Get-FileHash -LiteralPath $backend -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw 'NATIVE_BUILD_RECEIPT_CURRENT_SOURCE_OR_BYTES_MISMATCH'
+      }
+      $nativeProof='work/candidate/NATIVE_ONEHOST_SMOKE.json'
+      $smokeArgs=@('coordination/e06/native_onehost_smoke.py','--exe',$backend,
+          '--build-receipt',$buildReceipt,'--source-head','$(Build.SourceVersion)','--output',$nativeProof)
+      if (-not [string]::IsNullOrWhiteSpace($env:NOX_NATIVE_SMOKE_MODEL)) {
+        $smokeArgs+=@('--model',$env:NOX_NATIVE_SMOKE_MODEL)
+      }
+      & python @smokeArgs
+      $nativeSmokeExit=$LASTEXITCODE
+      if ($nativeSmokeExit -notin @(0,2)) { throw "NATIVE_ONEHOST_SMOKE_FAILED:$nativeSmokeExit" }
+      $smoke=Get-Content -LiteralPath $nativeProof -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($flag in @('run_id_matched','request_id_matched','original_729_unchanged',
+          'release_accepted','installed_wpf_e07','process_restart_verified','isolated_test_data',
+          'history_persistence_verified')) {
+        if ($smoke.$flag -isnot [bool]) { throw 'NATIVE_ONEHOST_PROOF_BOOLEAN_TYPE_REQUIRED' }
+      }
+      if (($smoke.concurrent_native_executables_max -isnot [int] -and
+           $smoke.concurrent_native_executables_max -isnot [long]) -or
+           $smoke.concurrent_native_executables_max -ne 1) {
+        throw 'NATIVE_ONEHOST_PROOF_SINGLE_PROCESS_INTEGER_REQUIRED'
+      }
+      $fullNative=($nativeSmokeExit -eq 0 -and $smoke.phase -ceq 'BUILT_AND_NATIVE_STDIO_SMOKE_PASS' -and
+          $smoke.live_model_status -ceq 'PASS' -and $smoke.native_windows_exe_request_reply -ceq 'PASS')
+      $offlineNative=($nativeSmokeExit -eq 2 -and $smoke.phase -ceq 'BUILT_AND_NATIVE_STDIO_SMOKE_HOLD' -and
+          $smoke.live_model_status -ceq 'HOLD' -and $smoke.native_windows_exe_request_reply -ceq 'HOLD')
+      if ($smoke.schema -cne 'NOX_NATIVE_ONEHOST_SMOKE_V2' -or $smoke.platform -cne 'win32' -or
+          $smoke.transport_status -cne 'PASS' -or $smoke.offline_backbone_status -cne 'PASS' -or
+          $smoke.run_id_matched -ne $true -or $smoke.request_id_matched -ne $true -or
+          $smoke.process_restart_verified -ne $true -or $smoke.original_729_unchanged -ne $true -or
+          $smoke.isolated_test_data -ne $true -or $smoke.concurrent_native_executables_max -ne 1 -or
+          $smoke.release_accepted -ne $false -or $smoke.installed_wpf_e07 -ne $false -or
+          $smoke.source_commit -cne $build.source_commit -or $smoke.source_tree -cne $tree -or
+          $smoke.build_run_id -cne $build.run_id -or
+          $smoke.exe_sha256 -cne (Get-FileHash -LiteralPath $backend -Algorithm SHA256).Hash.ToLowerInvariant() -or
+          $smoke.build_receipt_sha256 -cne (Get-FileHash -LiteralPath $buildReceipt -Algorithm SHA256).Hash.ToLowerInvariant() -or
+          $smoke.source_original_archive_sha256 -cne $build.source_original_archive_sha256 -or
+          $smoke.staged_original_app_sha256 -cne $build.staged_original_app_sha256 -or
+          -not ($fullNative -or $offlineNative)) {
+        throw 'NATIVE_ONEHOST_EXACT_WINDOWS_BACKBONE_PROOF_REQUIRED'
+      }
+      # Source/build admission only. A real offline candidate may be packaged so
+      # Model Center can install an approved model; it remains HOLD for release/E07.
+      Write-Host ("NATIVE_DIAGNOSTIC_CANDIDATE LIVE_MODEL="+$smoke.live_model_status+" RELEASE_ACCEPTED=False")
+      if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and
+          -not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) {
+        & choco install nsis --yes --no-progress --limit-output
+        if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_NSIS_PREREQUISITE_HOLD' }
+      }
       # Reuse original Creative owner worker and installer patch, on a disposable CI copy.
       # The ONEHOST packager must include the real worker BEFORE payload.sha256.json.
       $creativeRoot=(Resolve-Path -LiteralPath 'integrations/creative').Path
@@ -188,7 +246,7 @@ jobs:
       $patchedBuilder=Get-Content -LiteralPath $builderCopy -Raw -Encoding UTF8
       if ($patchedBuilder -notmatch 'CREATIVE_PAYLOAD_MISSING_HOLD' -or $patchedBuilder -notmatch 'NOX_CreativeWorker.exe') { throw 'AZURE_CREATIVE_BUILDER_COPY_NOT_PATCHED_HOLD' }
       $out='work/e06/azure-onehost-diagnostic'
-      & $builderCopy -SourceRoot 'work/e06/staged/R11' -PythonExe $m[0].FullName -OutputRoot $out -RunId 'NOX-AZURE-$(Build.BuildId)' -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
+      & $builderCopy -SourceRoot 'work/e06/staged/R11' -PythonExe $backend -PythonNativeSmokeReceipt $nativeProof -OutputRoot $out -RunId 'NOX-AZURE-$(Build.BuildId)' -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
       if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_ONEHOST_NSIS_BUILD_HOLD' }
       $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
       $exe=Join-Path $out 'payload/NOX.P01.Shell.exe'
@@ -208,6 +266,8 @@ jobs:
       $files=@(
         @('$(Agent.TempDirectory)/nox-original-729-sha256.json','original-729-sha256.json'),
         @('$(Agent.TempDirectory)/nox-original-729-owner-pinned.json','original-729-owner-pinned.json'),
+        @('work/candidate/ONEHOST_PYTHON_BUILD_RECEIPT.json','ONEHOST_PYTHON_BUILD_RECEIPT.json'),
+        @('work/candidate/NATIVE_ONEHOST_SMOKE.json','NATIVE_ONEHOST_SMOKE.json'),
         @('work/e06/azure-onehost-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json','ONEHOST_DIAGNOSTIC_RECEIPT.json'),
         @('work/e06/azure-onehost-diagnostic/E07_BUILT_HANDOFF.json','E07_BUILT_HANDOFF.json'),
         @('work/e06/azure-onehost-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json','D02_VISUAL_PUBLISH_RECEIPT.json'),
@@ -224,7 +284,7 @@ jobs:
       }
       # PublishSingleFile=false: the WPF EXE requires its DLLs and runtime payload.
       # Keep the diagnostic bundle in the PRIVATE pipeline artifact, never public release.
-      $payloadSource='work/e06/azure-onehost-diagnostic/payload'
+      $payloadSource=[IO.Path]::GetFullPath('work/e06/azure-onehost-diagnostic/payload')
       if (Test-Path -LiteralPath $payloadSource -PathType Container) {
         $nodes=@(Get-Item -LiteralPath $payloadSource -Force)+@(Get-ChildItem -LiteralPath $payloadSource -Recurse -Force)
         foreach ($node in $nodes) {
@@ -255,7 +315,11 @@ jobs:
               ([string]$handoff.published_exe_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -or
               ([string]$handoff.setup_sha256).ToLowerInvariant() -cne (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'AZURE_E07_BUILT_SHA_HOLD' }
         }
-        $manifest=[ordered]@{schema='NOX_AZURE_PRIVATE_DIAGNOSTIC_SHA_V1';source_commit='$(Build.SourceVersion)';azure_build_id='$(Build.BuildId)';release_accepted=$false;files=$digestRows}
+        $publishedSmoke=Get-Content -LiteralPath (Join-Path $dst 'NATIVE_ONEHOST_SMOKE.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $manifest=[ordered]@{schema='NOX_AZURE_PRIVATE_DIAGNOSTIC_SHA_V1';source_commit='$(Build.SourceVersion)';azure_build_id='$(Build.BuildId)';release_accepted=$false;files=$digestRows;
+          native_smoke_receipt_sha256=(Get-FileHash -LiteralPath (Join-Path $dst 'NATIVE_ONEHOST_SMOKE.json') -Algorithm SHA256).Hash.ToLowerInvariant();
+          native_transport_status=$publishedSmoke.transport_status;native_offline_backbone_status=$publishedSmoke.offline_backbone_status;
+          native_live_model_status=$publishedSmoke.live_model_status;installed_wpf_e07=$false}
         [IO.File]::WriteAllText((Join-Path $dst 'PUBLISHED_PRIVATE_PAYLOAD_SHA256.json'),($manifest | ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
       }
       Write-Host 'Private diagnostic bundle with complete WPF runtime SHA-checked, NOT E07 accepted.'
