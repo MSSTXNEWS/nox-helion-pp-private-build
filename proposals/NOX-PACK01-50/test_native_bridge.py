@@ -117,6 +117,18 @@ class BridgeTest(unittest.TestCase):
             with self.assertRaises(bridge.HostDenied):
                 self.dispatch.execute("chat.stop",{},bridge.NativeSession(
                     "t1","p1","room1",allowed=frozenset()))
+    def test_revoked_native_scope_during_stream_never_persists_chat(self):
+        # Regression: trusted Ollama/owner callback revokes current principal's
+        # chat route AFTER NoxPackHost pre-dispatch approval but BEFORE commit.
+        before=self.store.history("t1","p1","room1")
+        def revoked_stream(*_):
+            object.__setattr__(self.session,"allowed",frozenset({"chat.history"}))
+            yield {"delta":"must-not-persist","done":True}
+        with patch.object(self.client,"stream",side_effect=revoked_stream):
+            with self.assertRaisesRegex(bridge.HostDenied,"revoked during streaming"):
+                self.dispatch.execute("helion.chat",{"model":"qwen3:4b","text":"Hi"},self.session)
+        self.assertEqual(self.store.history("t1","p1","room1"),before)
+
     def test_owner_p02_same_second_history_order_is_stable(self):
         # P02 owner fixed the same-second ordering bug with SQLite insertion
         # order (rowid for V1, stable_seq for approved V2). Never keep this
