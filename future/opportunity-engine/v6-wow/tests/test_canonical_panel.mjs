@@ -15,7 +15,7 @@ class FakeElement {
   focus(){this.focused=true}
   set innerHTML(html){
     this.html=html;this.refs=new Map();
-    for(const key of ['input','.grid','[role=status]','[data-action=more]','.detail','[data-theme]'])this.refs.set(key,new FakeElement(key));
+    for(const key of ['input','.grid','[role=status]','[data-action=more]','.detail','[data-theme]','[data-action=generate]','[data-action=megablock]','[data-action=back]'])this.refs.set(key,new FakeElement(key));
   }
   querySelector(selector){return this.refs.get(selector)}
 }
@@ -68,6 +68,8 @@ test('canonical OIE mounts only inside owner host; actions and lifecycle work',a
     assert.equal(root.childNodes.length,0);
     const second=mountOpportunityPanel(host,{apiBase:'//external.invalid'});
     await tick();
+    assert.equal(root.childNodes[1].querySelector('[data-action=generate]').disabled,true);
+    assert.equal(root.childNodes[1].querySelector('[data-action=back]').disabled,true);
     assert.match(root.childNodes[1].querySelector('[role=status]').textContent,/SAME_ORIGIN_API_REQUIRED/);
     second.dispose();
   } finally {
