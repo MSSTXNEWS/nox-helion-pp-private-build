@@ -120,6 +120,9 @@ try {
     Invoke-SourceCheck 'L01_RELEASE_MANIFEST_FAILCLOSED_PYTHON' 'python' @(
       '-m','unittest','discover','-s','tests/e06',
       '-p','test_l01_manifest_bridge.py','-v')
+    Invoke-SourceCheck 'P03_NONBLOCKING_NATIVE_QUEUE_SOURCE' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_p03_nonblocking_queue_source.py','-v')
     Invoke-SourceCheck 'P03_PRIVACY_NODE' 'node' @(
       '--test','coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs')
     Invoke-SourceCheck 'PACK02_CSV_NODE' 'node' @(
@@ -136,7 +139,7 @@ try {
       'run','--project','Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj',
       '--configuration','Release','--no-launch-profile')
     if (@($cases | Where-Object {$_.status -ne 'PASS'}).Count -gt 0 -or
-        $cases.Count -ne 15) {
+        $cases.Count -ne 16) {
         $reason = 'SOME_SOURCE_SUITES_FAILED_OR_NOT_RUN'
         Write-QAReceipt 'SOURCE_QA_HOLD' $reason
         exit 2
