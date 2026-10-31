@@ -450,6 +450,8 @@ public partial class MainWindow
         theater.Content=layout;
         // The native window is the fullscreen owner. Collapse the chrome during
         // playback and reveal it on pointer-at-top, preserving a way back to windowed.
+        string? device=null;
+        bool expanded=false;
         var chromeTimer=new System.Windows.Threading.DispatcherTimer{
             Interval=TimeSpan.FromMilliseconds(250)};
         chromeTimer.Tick+=(_,_)=>{
@@ -462,9 +464,6 @@ public partial class MainWindow
         };
         chromeTimer.Start();
         theater.Closed+=(_,_)=>chromeTimer.Stop();
-        string? device=null;
-        bool expanded=false;
-
         void UpdateList()
         {
             var previous=(picker.SelectedItem as ComboBoxItem)?.Tag as NoxMonitor;
