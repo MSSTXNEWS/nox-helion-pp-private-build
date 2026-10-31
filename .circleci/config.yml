@@ -1,173 +1,103 @@
-# I0 isolated OneHost end-to-end build. Exact original R66 builder, frozen binary & tests;
-# preflight/source/SQLite redundant gates skipped. Approved product sources byte-unchanged.
+# I0 OneHost #78/#83 isolation: the existing PRE/A/R11 stage passed #79;
+# original frozen CHAT/MODEL passes #80-82; split only unfinished C source/WPF build.
 version: 2.1
-
 orbs:
   win: circleci/windows@5.0
-
 jobs:
-  i0-original-frozen-builder:
+  i0-d02-creative-exact-stage:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Reuse owner T06 to BUILD exactly one original frozen Python EXE
-          no_output_timeout: 35m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            $env:NOX_T06_BUILD_ONLY='YES'
-            python coordination/e06/t06_native_proven_builder.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_PYINSTALLER_BUILD_FAILED' }
-            $built='work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYINSTALLER_BINARY_RECEIPT.json'
-            if (!(Test-Path -LiteralPath $built -PathType Leaf)) { throw 'NOX_R66_FROZEN_BINARY_RECEIPT_MISSING' }
-            Write-Host 'NOX_R66_PYINSTALLER_REAL_EXE_BUILT_PENDING_IPC'
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/native-runtime
-            - work/t06-manual-source-inspect/python-exe-candidate
-            - work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYINSTALLER_BINARY_RECEIPT.json
-          destination: NOX-R66-BUILT-BINARY-SHA-NOT-NATIVE-ACCEPTED
-  i0-original-chat-proof:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Verify SAME frozen EXE CHAT model signed-frame protocol
+          name: C1 source-only real R11 Creative plus WOW staging
           no_output_timeout: 20m
           command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_verify_frozen_candidate.py chat
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_CHAT_IPC_FAILED' }
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/python-exe-candidate/R66_FROZEN_CHAT_MODEL_PROOF.json
-  i0-original-model-proof:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Verify same frozen model inventory and immutable binary SHA
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_verify_frozen_candidate.py models
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_MODELCENTER_FAILED' }
-      - persist_to_workspace:
-          root: .
-          paths:
-            - work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate
-          destination: NOX-R66-NATIVE-EXE-CANDIDATE-NOT-RELEASE
-  i0-original-onehost-windows:
-    executor: win/server-2022
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: PRE · exact approved source, Windows host, native dependencies
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
-            if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
-            $sdk = @(dotnet --list-sdks)
-            if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
-              # Existing official Microsoft CI installer, exact version, only in CircleCI VM.
-              $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
-              $installer=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
-              Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
-              & $installer -Version '8.0.425' -InstallDir $sdkRoot -NoPath
-              if ($LASTEXITCODE -ne 0) { throw 'NOX_OFFICIAL_DOTNET8_PROVISION_FAILED' }
-              $env:DOTNET_ROOT=$sdkRoot
-              $env:PATH="$sdkRoot;$env:PATH"
-              $sdk=@(dotnet --list-sdks)
-              if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
+            $ErrorActionPreference='Stop'
+            python coordination/e06/stage_p01.py
+            if ($LASTEXITCODE -ne 0) { throw 'C1_R11_STAGE_FAIL' }
+            python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
+            if ($LASTEXITCODE -ne 0) { throw 'C1_OWNER_CREATIVE_STAGE_FAIL' }
+            python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+            if ($LASTEXITCODE -ne 0) { throw 'C1_OWNER_WOW200_STAGE_FAIL' }
+            $proof=Get-Content 'work/e06/staged/WOW200_STAGE_RECEIPT.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($proof.count -ne 65 -or $proof.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+                $proof.legacy_d02_runtime_imported -ne $false -or
+                $proof.pack01_catalog_routes -ne 50 -or $proof.release_accepted -ne $false) {
+              throw 'C1_OWNER_WOW200_RECEIPT_FAIL'
             }
-            python --version
-            if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
-            $nsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
-            $nsisPath='C:\Program Files (x86)\NSIS\makensis.exe'
-            if (!$nsis -and !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) {
-              if (!(Get-Command choco.exe -ErrorAction SilentlyContinue)) { throw 'T06_NSIS_AND_CHOCOLATEY_MISSING' }
-              choco install nsis --yes --no-progress --limit-output
-              if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_INSTALL_FAILED' }
-            }
-            New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
-            Write-Host "NOX_R66_WINDOWS_START_SHA=$env:CIRCLE_SHA1"
+            Write-Host 'NOX_I0_CREATIVE_D02_OWNER_STAGE_PASS_NOT_GUI'
+      - persist_to_workspace:
+          root: .
+          paths:
+            - work/e06/staged
+      - store_artifacts:
+          path: work/e06/staged/WOW200_STAGE_RECEIPT.json
+          destination: I0-C1-REAL-OWNER-WOW-NOT-GUI
+  i0-wpf-original-compile-only:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
       - run:
-          name: A · one original 729 SourceLock plus verified 8 Core native ingress
-          no_output_timeout: 20m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
-            if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
-            python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-$env:CIRCLE_BUILD_NUM"
-            if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
-      - run:
-          name: C · approved D02 HOME MENU WORK + one original WPF/WebView2 NSIS
+          name: C2 exact original E06 P02 P05 compatibility then dotnet WPF publish, no Setup
           no_output_timeout: 40m
           command: |
-            $ErrorActionPreference = 'Stop'
-            $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
-            if (Test-Path -LiteralPath (Join-Path $sdkRoot 'dotnet.exe') -PathType Leaf) {
-              $env:DOTNET_ROOT=$sdkRoot
-              $env:PATH="$sdkRoot;$env:PATH"
+            $ErrorActionPreference='Stop'
+            $source=(Resolve-Path 'work/e06/staged/R11').Path
+            $donors=@(
+              @{path='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';sha='711644bf4d2052d812bf71a0b679d8531a3ca76e'},
+              @{path='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';sha='553025dbd98bf812013a7bfb748c0127e42220f9'}
+            )
+            foreach ($item in $donors) {
+              $gitsha=(git hash-object -- $item.path).Trim().ToLowerInvariant()
+              if ($LASTEXITCODE -ne 0 -or $gitsha -cne $item.sha) { throw 'C2_APPROVED_P02_SOURCE_SHA_MISMATCH' }
+              if (!(Test-Path -LiteralPath (Join-Path $source 'Integration') -PathType Container)) { throw 'C2_ORIGINAL_R11_INTEGRATION_DIR_MISSING' }
+              if (Test-Path -LiteralPath (Join-Path $source $item.dest)) { throw 'C2_P02_STAGE_COLLISION' }
+              Copy-Item -LiteralPath $item.path -Destination (Join-Path $source $item.dest) -ErrorAction Stop
             }
-            python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
-            python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
-            $exe=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
-            $receipt=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json').Path
-            & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId "NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM" -PythonNativeSmokeReceipt $receipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
-            if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_ONEHOST_NSIS_FAILED' }
-            $setup='work/e06/onehost-r66/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
-            $published='work/e06/onehost-r66/payload/NOX.P01.Shell.exe'
-            & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 -Original729Receipt 'work/e06/original-729-manifest.json' -Owner729Receipt 'work/e06/original-729-owner-pinned.json' -OneHostReceipt 'work/e06/onehost-r66/ONEHOST_DIAGNOSTIC_RECEIPT.json' -SetupExe $setup -PublishedExe $published -SourceCommitSha $env:CIRCLE_SHA1 -Output 'work/e06/onehost-r66/E07_BUILT_HANDOFF.json' -Phase BUILT
-            if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
-            Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
-            Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+            $addon='coordination/e06/MainWindow.NativeP02.cs'
+            if ((git hash-object -- $addon).Trim().ToLowerInvariant() -cne '0b65fc5ca62788dbde01e669e98769a23ac5e8a9') {
+              throw 'C2_NATIVE_ADDON_SHA_FAIL'
+            }
+            python coordination/e06/stage_native_p02.py $source $addon '4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
+            if ($LASTEXITCODE -ne 0) { throw 'C2_NATIVE_MAINWINDOW_STAGE_FAIL' }
+            python coordination/e06/stage_p05_html_verbatim.py $source
+            if ($LASTEXITCODE -ne 0) { throw 'C2_P05_VERBATIM_STAGE_FAIL' }
+            python coordination/e06/stage_wpf_compat_no_loss.py $source
+            if ($LASTEXITCODE -ne 0) { throw 'C2_WPF_COMPAT_STAGE_FAIL' }
+            python coordination/e06/stage_wpf_final8_no_loss.py $source
+            if ($LASTEXITCODE -ne 0) { throw 'C2_FINAL8_WPF_STAGE_FAIL' }
+            $sdk=@(dotnet --list-sdks)
+            if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
+              $root=Join-Path $env:TEMP 'nox-dotnet-sdk8'
+              $script=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
+              Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $script -UseBasicParsing
+              & $script -Version '8.0.425' -InstallDir $root -NoPath
+              if ($LASTEXITCODE -ne 0) { throw 'C2_DOTNET8_PROVISION_FAIL' }
+              $env:DOTNET_ROOT=$root
+              $env:PATH="$root;$env:PATH"
+            }
+            $project=Join-Path $source 'NOX.P01.Shell.csproj'
+            $payload='work/e06/i0-diagnostic-wpf-publish'
+            & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
+            if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe') -PathType Leaf)) {
+              throw 'C2_ORIGINAL_WPF_PUBLISH_FAIL'
+            }
+            Write-Host 'NOX_I0_EXACT_WPF_SOURCE_PUBLISH_PASS_NOT_SETUP_NOT_E07'
       - store_artifacts:
-          path: work/e06/onehost-r66
-          destination: NOX-R66-NATIVE-ONEHOST-BUILD-ONLY-NOT-RELEASE
-      - store_artifacts:
-          path: work/e06/original-729-manifest.json
-          destination: source-lock/original-729-manifest.json
-      - store_artifacts:
-          path: work/t06-manual-source-inspect/python-exe-candidate
-          destination: NOX-R66-TRUE-PYTHON-NATIVE-IPC
+          path: work/e06/i0-diagnostic-wpf-publish
+          destination: I0-C2-UNINSTALLED-WPF-SOURCE-CANDIDATE
 workflows:
-  i0_onehost_original_source_proof:
+  i0_only_remaining_onehost_stages:
     jobs:
-      - i0-original-frozen-builder:
+      - i0-d02-creative-exact-stage:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-original-chat-proof:
+      - i0-wpf-original-compile-only:
           requires:
-            - i0-original-frozen-builder
-          filters:
-            branches:
-              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-original-model-proof:
-          requires:
-            - i0-original-chat-proof
-          filters:
-            branches:
-              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-original-onehost-windows:
-          requires:
-            - i0-original-model-proof
+            - i0-d02-creative-exact-stage
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
