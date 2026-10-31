@@ -91,7 +91,10 @@ def assert_background_lifetime(source):
         "private static void RequireHardware(", 1)[0]
     create = block.index("pending = Task.Run")
     record = block.index("_transferTasks.Add(jobId, pending);")
-    release = block.index("\n        }\n        // Register completion AFTER")
+    boundary = "\n        }\n        // Register completion AFTER"
+    if boundary not in block:
+        raise AssertionError("P03_SYNCHRONOUS_COMPLETION_BEFORE_REGISTRATION")
+    release = block.index(boundary)
     continuation = block.index("_ = pending.ContinueWith(")
     if not (create < record < release < continuation):
         raise AssertionError("P03_SYNCHRONOUS_COMPLETION_BEFORE_REGISTRATION")
