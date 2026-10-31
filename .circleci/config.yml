@@ -51,7 +51,7 @@ jobs:
             if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
             if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
             $sdk = @(dotnet --list-sdks)
-            if (@($sdk | Where-Object { $_ -match '^8\\.' }).Count -eq 0) {
+            if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
               # Existing official Microsoft CI installer, exact version, only in CircleCI VM.
               $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
               $installer=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
@@ -61,7 +61,7 @@ jobs:
               $env:DOTNET_ROOT=$sdkRoot
               $env:PATH="$sdkRoot;$env:PATH"
               $sdk=@(dotnet --list-sdks)
-              if (@($sdk | Where-Object { $_ -match '^8\\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
+              if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
             }
             python --version
             if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
