@@ -289,18 +289,30 @@ class ExistingP02Adapter:
         return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
 
     def chat(self, session, args):
+        # Owner callbacks can revoke native identity/ACL during long Ollama streaming.
+        # The pre-dispatch NoxPackHost gate alone is not sufficient at commit time.
+        admitted_scope = (session.tenant, session.principal, session.chat_id,
+                          session.allowed, session.private_approved)
+        def require_current_scope():
+            session.validate()
+            if ((session.tenant, session.principal, session.chat_id,
+                 session.allowed, session.private_approved) != admitted_scope):
+                raise HostDenied("Native chat scope revoked during streaming")
         message = args.get("text")
         model = args.get("model")
         if not isinstance(message,str) or not 0 < len(message) <= MAX_TEXT:
             raise HostDenied("Bounded nonempty chat text required")
         installed = self.client.models()
+        require_current_scope()
         if model not in installed:raise HostHold("Selected model not installed")
         conversation = self.store.history(session.tenant,session.principal,session.chat_id,80)
+        require_current_scope()
         conversation = conversation + [{"role":"user","content":message}]
         answer = []
         bytes_seen = 0
         done = False
         for chunk in self.client.stream(model,conversation):
+            require_current_scope()
             if not isinstance(chunk,dict) or not isinstance(chunk.get("delta"),str):
                 raise HostHold("Invalid Ollama chunk")
             delta = chunk["delta"]
@@ -310,12 +322,16 @@ class ExistingP02Adapter:
                 raise HostHold("Answer too large")
             answer.append(delta)
             if self.event_sink:
+                require_current_scope()
                 self.event_sink({"route":"helion.chat","state":"streaming","delta":delta})
+                require_current_scope()
             if chunk.get("done") is True:done = True
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
-        # Persist messages only after real terminal success.
+        # Persist only after terminal success AND revalidated owner/native ACL.
+        require_current_scope()
         self.store.add_message(session.tenant,session.principal,session.chat_id,"user",message)
+        require_current_scope()
         self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
         return {"answer":text,"done":True}
 
