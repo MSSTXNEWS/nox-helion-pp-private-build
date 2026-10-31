@@ -1,0 +1,47 @@
+# NOX HELION V16 | isolated Windows fallback to diagnose GitHub/GitLab CI capacity.
+# Candidate SOURCE gate only; NEVER owner-approved EXE/E07 acceptance.
+# No tokens, no privileged services, no changes to original HOME/MENU/WORK/729 assets.
+version: 2.1
+
+orbs:
+  win: circleci/windows@5.0
+
+jobs:
+  windows-source-preflight:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Windows runner and source identity
+          command: |
+            $ErrorActionPreference = 'Stop'
+            if ($env:OS -ne 'Windows_NT') { throw 'NOX_WINDOWS_RUNNER_REQUIRED' }
+            Write-Host "NOX_CIRCLECI_WINDOWS_READY=true"
+            Write-Host "NOX_COMMIT=$env:CIRCLE_SHA1"
+            python --version
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_PYTHON_WINDOWS_UNAVAILABLE' }
+            git rev-parse HEAD
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_GIT_SOURCE_MISSING' }
+            dotnet --list-sdks
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_DOTNET_SDK_UNAVAILABLE' }
+      - run:
+          name: Original archive and D02 staged source tests (not EXE)
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/e06/stage_p01.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_PINNED_SOURCELOCK_FAILED' }
+            python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_WOW200_STAGE_TEST_FAILED' }
+            Write-Host 'NOX_WINDOWS_SOURCE_PREFLIGHT_PASS_NOT_E07'
+      - store_artifacts:
+          path: work/e06/staged/source_lock.json
+          destination: nox-source-only/immutable-original-lock.json
+
+workflows:
+  nox_windows_fallback:
+    jobs:
+      - windows-source-preflight:
+          filters:
+            branches:
+              only:
+                - ci/nox-circleci-windows-fallback-20261031
