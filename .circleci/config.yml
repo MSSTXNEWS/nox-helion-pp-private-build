@@ -20,7 +20,7 @@ jobs:
             $code=Get-Content $original -Raw -Encoding UTF8
             if ([regex]::Matches($code,'case "creativeInvoke"').Count -ne 1 -or
                 [regex]::Matches($code,'case "creativeProjector"').Count -ne 1 -or
-                [regex]::Matches($code,'case\\s+"packInvoke"').Count -ne 1) {
+                [regex]::Matches($code,'case\s+"packInvoke"').Count -ne 1) {
               throw 'I0_PACK_CREATIVE_DISPATCHER_CONTRACT_FAIL'
             }
             python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
