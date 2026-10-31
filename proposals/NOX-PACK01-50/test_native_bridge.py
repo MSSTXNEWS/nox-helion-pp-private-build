@@ -78,6 +78,14 @@ class BridgeTest(unittest.TestCase):
             allowed=frozenset(self.bound),private_approved=frozenset({"chat.history","chat.attach"}))
     def tearDown(self):
         self.client.stop();self.db.close();self.temp.cleanup()
+    def test_p02_store_without_atomic_exchange_fails_before_registration(self):
+        # Native acceptance must reject old P02Store contracts before live chat.
+        old_store=SimpleNamespace(history=lambda *a:[],add_message=lambda *a:None,
+                                  store_file=lambda *a:None)
+        with self.assertRaisesRegex(ValueError,"Existing P02Store required"):
+            bridge.ExistingP02Adapter(self.client,old_store)
+        self.assertEqual(len(self.dispatch.ports),8)
+
     def test_catalog_fifty_and_only_eight_real_bindings(self):
         self.assertEqual(len(self.dispatch.routes),50)
         self.assertEqual(len(self.bound),8)
