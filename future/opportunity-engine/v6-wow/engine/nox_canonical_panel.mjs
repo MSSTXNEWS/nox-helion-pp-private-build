@@ -34,6 +34,14 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
     if(!response.ok)throw Error('HTTP_'+response.status);
     const payload=await response.json();if(!payload.ok)throw Error(payload.error||'API_ERROR');return payload.result;
   }
+  async function read(action,params,path){
+    if(typeof requestJob==='function'){
+      const payload=await requestJob(action,params,abort.signal);
+      if(!payload?.ok)throw Error(payload?.error||'HOST_READ_FAILED');
+      return payload.result;
+    }
+    return get(path);
+  }
   async function post(endpoint){
     if(busy)return;busy=true;status.textContent='Выполняется локальный расчёт…';
     try {
@@ -60,11 +68,11 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
     if(action.dataset.action==='megablock'){await post('/api/megablock1');return;}
     if(action.dataset.action==='clear'){input.value='';limit=9;detail.hidden=true;render();return;}
     if(action.dataset.action==='more'){limit+=9;render();return;}
-    if(action.dataset.ideaId){try{const result=await get('/api/inspect?id='+encodeURIComponent(action.dataset.ideaId));detail.textContent=JSON.stringify(result.idea,null,2);detail.hidden=false;detail.setAttribute('tabindex','-1');detail.focus();emit('idea.inspect',{ideaId:action.dataset.ideaId});}catch(err){if(!abort.signal.aborted)status.textContent='Инспектор: '+err.message;}}
+    if(action.dataset.ideaId){try{const result=await read('idea.inspect',{idea_id:action.dataset.ideaId},'/api/inspect?id='+encodeURIComponent(action.dataset.ideaId));detail.textContent=JSON.stringify(result.idea,null,2);detail.hidden=false;detail.setAttribute('tabindex','-1');detail.focus();emit('idea.inspect',{ideaId:action.dataset.ideaId});}catch(err){if(!abort.signal.aborted)status.textContent='Инспектор: '+err.message;}}
   },{signal:abort.signal});
   input.addEventListener('input',()=>{limit=9;render();},{signal:abort.signal});
-  get('/api/ideas').then(result=>{data=result.ideas||[];render();}).catch(err=>{if(!abort.signal.aborted)status.textContent='HOLD · '+err.message;});
+  read('idea.list',{},'/api/ideas').then(result=>{data=result.ideas||[];render();}).catch(err=>{if(!abort.signal.aborted)status.textContent='HOLD · '+err.message;});
   const keyboard=e=>{if(e.key==='Escape'&&detail.hidden===false){detail.hidden=true;emit('inspector.close');}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();input.focus();}};
   root.addEventListener('keydown',keyboard,{signal:abort.signal});
-  return {dispose(){abort.abort();root.replaceChildren();emit('panel.dispose');},refresh:()=>get('/api/ideas').then(result=>{data=result.ideas||[];render();})};
+  return {dispose(){abort.abort();root.replaceChildren();emit('panel.dispose');},refresh:()=>read('idea.list',{},'/api/ideas').then(result=>{data=result.ideas||[];render();})};
 }
