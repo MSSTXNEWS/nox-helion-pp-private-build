@@ -4,6 +4,17 @@ import ast
 import unittest
 ROOT=Path(__file__).resolve().parents[2]
 class NativeOwnerSourceTest(unittest.TestCase):
+    def test_all_staged_addons_are_exact_current_git_blobs(self):
+        # Prevent the recurrent source-only fix vs stale OneHost pin split.
+        import importlib.util
+        script = ROOT / "coordination/e06/stage_native_stdio.py"
+        spec = importlib.util.spec_from_file_location("nox_e06_stager", script)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for relative, _destination, exact_blob in module.ADDONS:
+            with self.subTest(source=relative):
+                self.assertEqual(module.git_blob((ROOT / relative).read_bytes()), exact_blob)
+
     def test_existing_original_backend_not_second_host(self):
         stage=(ROOT/"coordination/e06/stage_native_stdio.py").read_text("utf-8")
         owner=(ROOT/"coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")
