@@ -9,7 +9,9 @@ param(
  [string]$PythonNativeSmokeReceipt='',
  [string]$CreativeSourceRoot='',
  [string]$WowSourceRoot='',
- [string]$PersonaBundlePath=''
+ [string]$PersonaBundlePath='',
+ [string]$L01ApprovedInstallerUrl='',
+ [int]$L01BootstrapVersion=0
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
@@ -446,4 +448,22 @@ $receipt=[ordered]@{
 }
 $receiptPath=Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json'
 [IO.File]::WriteAllText($receiptPath,($receipt | ConvertTo-Json -Depth 9),(New-Object System.Text.UTF8Encoding($false)))
+# L02 additive bridge to the existing L01 downloader. No new installer or trust override.
+# Owner-supplied HTTPS release asset URL is optional; absent URL means no manifest.
+# Existing E06 diagnostic receipt stays HOLD until independent installed acceptance.
+if (-not [string]::IsNullOrWhiteSpace($L01ApprovedInstallerUrl)) {
+  if ($L01BootstrapVersion -le 0 -or $L01BootstrapVersion -gt 2147483647) {
+    throw 'L01_BOOTSTRAP_VERSION_MUST_BE_OWNER_APPROVED'
+  }
+  $bridge=Join-Path $PSScriptRoot 'l01_manifest_bridge.py'
+  if (!(Test-Path -LiteralPath $bridge -PathType Leaf)) { throw 'L02_PINNED_BRIDGE_SOURCE_MISSING' }
+  $python=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (!$python) { throw 'L02_PYTHON_TOOLCHAIN_UNAVAILABLE' }
+  $l01Candidate=Join-Path $out 'NOX-HELION-RELEASE.txt'
+  & $python.Source $bridge --setup $setup --receipt $receiptPath --approved-url $L01ApprovedInstallerUrl --version $L01BootstrapVersion --out $l01Candidate
+  if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $l01Candidate -PathType Leaf)) {
+    throw 'L02_L01_MANIFEST_SOURCE_GATE_HOLD'
+  }
+  Write-Host 'L02_L01_MANIFEST_CANDIDATE_CREATED_NOT_RELEASE_APPROVED'
+}
 Write-Host "E06_ONEHOST_NSIS_CANDIDATE_BUILT $sha"
