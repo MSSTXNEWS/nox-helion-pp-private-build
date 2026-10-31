@@ -19,9 +19,9 @@ jobs:
             python --version
             if ($LASTEXITCODE -ne 0) { throw 'NOX_PYTHON_NOT_AVAILABLE' }
             $sdk=@(dotnet --list-sdks)
-            if ($LASTEXITCODE -ne 0 -or @($sdk | Where-Object { $_ -match '^8\\.' }).Count -lt 1) {
-              throw 'NOX_DOTNET8_NOT_AVAILABLE'
-            }
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_DOTNET_CLI_UNAVAILABLE' }
+            # CircleCI stable images may ship .NET without the 8.x SDK.
+            # The disposable build job provisions exact 8.0.425, not this read-only host gate.
             Write-Host 'NOX_WINDOWS_HOST_PREFLIGHT_PASS'
   r66-onehost-windows:
     executor: win/server-2022
@@ -36,7 +36,16 @@ jobs:
             if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
             $sdk = @(dotnet --list-sdks)
             if (@($sdk | Where-Object { $_ -match '^8\\.' }).Count -eq 0) {
-              throw 'NOX_DOTNET8_SDK_MISSING_REQUIRES_WIN_IMAGE'
+              # Existing official Microsoft CI installer, exact version, only in CircleCI VM.
+              $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
+              $installer=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
+              Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
+              & $installer -Version '8.0.425' -InstallDir $sdkRoot -NoPath
+              if ($LASTEXITCODE -ne 0) { throw 'NOX_OFFICIAL_DOTNET8_PROVISION_FAILED' }
+              $env:DOTNET_ROOT=$sdkRoot
+              $env:PATH="$sdkRoot;$env:PATH"
+              $sdk=@(dotnet --list-sdks)
+              if (@($sdk | Where-Object { $_ -match '^8\\.' }).Count -eq 0) { throw 'NOX_PINNED_DOTNET8_MISSING' }
             }
             python --version
             if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
@@ -78,6 +87,11 @@ jobs:
           no_output_timeout: 40m
           command: |
             $ErrorActionPreference = 'Stop'
+            $sdkRoot=Join-Path $env:TEMP 'nox-dotnet-sdk8'
+            if (Test-Path -LiteralPath (Join-Path $sdkRoot 'dotnet.exe') -PathType Leaf) {
+              $env:DOTNET_ROOT=$sdkRoot
+              $env:PATH="$sdkRoot;$env:PATH"
+            }
             python coordination/e06/stage_p01.py
             if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
             python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
