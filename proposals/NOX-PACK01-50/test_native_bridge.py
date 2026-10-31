@@ -129,12 +129,16 @@ class BridgeTest(unittest.TestCase):
         # Regression: trusted Ollama/owner callback revokes current principal's
         # chat route AFTER NoxPackHost pre-dispatch approval but BEFORE commit.
         before=self.store.history("t1","p1","room1")
+        callbacks=[]
         def revoked_stream(*_):
+            callbacks.append("scope-revoked")
             object.__setattr__(self.session,"allowed",frozenset({"chat.history"}))
             yield {"delta":"must-not-persist","done":True}
         with patch.object(self.client,"stream",side_effect=revoked_stream):
-            with self.assertRaisesRegex(bridge.HostDenied,"revoked during streaming"):
+            with self.assertRaises(bridge.HostDenied) as denied:
                 self.dispatch.execute("helion.chat",{"model":"qwen3:4b","text":"Hi"},self.session)
+        self.assertEqual(callbacks,["scope-revoked"])
+        self.assertIn(str(denied.exception), ("revoked during streaming", "Invalid route scopes"))
         self.assertEqual(self.store.history("t1","p1","room1"),before)
 
     def test_atomic_exchange_rolls_back_if_native_revoke_between_rows(self):
