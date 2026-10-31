@@ -6,7 +6,6 @@ modify the preserved owner-approved D02 art or original source archive.
 from __future__ import annotations
 import hashlib
 import json
-import re
 import shutil
 import sys
 from pathlib import Path
@@ -17,7 +16,7 @@ D02 = {
     'core01.png':'343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97',
     'menu_sections.png':'7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4',
 }
-ANCHOR = 'case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
+ANCHOR = 'case "openModelCenter": OpenModelCenter(); break;'
 LIFECYCLE = 'Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
 
 def sha(p:Path)->str:
@@ -26,29 +25,6 @@ def sha(p:Path)->str:
 def safe_source_file(p:Path)->None:
     if not p.is_file() or p.is_symlink():
         raise ValueError('CREATIVE_SOURCE_MISSING_OR_SYMLINK:'+str(p.name))
-
-def unique_pack_anchor(native: str) -> str:
-    """Pin the ONE existing trusted Pack01 owner route, tolerating formatting only.
-
-    The R11 donor may format the existing case statement across multiple lines.
-    Never invent a new native route or attach to another case.
-    """
-    if native.count(ANCHOR) == 1:
-        return ANCHOR
-    # Same route, handler, and break semantics, without requiring one-line C#.
-    case = re.compile(
-        r'case\s+"packInvoke"\s*:\s*(?:(?!\bcase\s+").){1,480}?\bbreak\s*;',
-        re.DOTALL,
-    )
-    matches = [
-        match.group(0) for match in case.finditer(native)
-        if re.search(r'\bDispatchPack01Async\s*\(', match.group(0))
-    ]
-    if len(matches) != 1 or any(
-        native.count('case "' + name + '"') for name in ('creativeInvoke', 'creativeProjector')
-    ):
-        raise ValueError('R13_ROUTER_OR_LIFECYCLE_DRIFT')
-    return matches[0]
 
 def stage(root:Path, source:Path)->dict:
     root=root.resolve();source=source.resolve()
@@ -66,8 +42,7 @@ def stage(root:Path, source:Path)->dict:
         if sha(f)!=expected:raise ValueError('CANONICAL_D02_SHA_HOLD:'+name)
     main_raw=main.read_bytes();html_raw=html.read_bytes()
     native=main_raw.decode('utf-8-sig'); page=html_raw.decode('utf-8-sig')
-    anchor=unique_pack_anchor(native)
-    if native.count(LIFECYCLE)!=1:
+    if native.count(ANCHOR)!=1 or native.count(LIFECYCLE)!=1:
         raise ValueError('R13_ROUTER_OR_LIFECYCLE_DRIFT')
     if page.count('</body>')!=1 or 'creative/entry.js' in page:
         raise ValueError('R13_HTML_PREIMAGE_DRIFT')
@@ -79,7 +54,7 @@ def stage(root:Path, source:Path)->dict:
         raise ValueError('CREATIVE_WEB_ASSETS_INCOMPLETE_HOLD')
     for name in found:
         safe_source_file(web/name)
-    patched=native.replace(anchor,anchor+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;')
+    patched=native.replace(ANCHOR,ANCHOR+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;')
     patched=patched.replace(LIFECYCLE,LIFECYCLE+'\n        Closing += (_, _) => StopCreativeWorker();')
     patched_html=page.replace('</body>','<script src="creative/entry.js"></script></body>')
     # No original D02, R13 owner archive, installer, P03/P04/P05 source is overwritten.
