@@ -218,6 +218,38 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             self.build
         )
 
+    def test_17_existing_micro_ui_uses_same_authenticated_wpf(self):
+        owner = (ROOT / "coordination/e06/MainWindow.NativeP02.cs").read_text("utf-8")
+        self.assertIn("core.WebMessageReceived += OnP03WebMessageReceived;", owner)
+        self.assertIn("web.WebMessageReceived -= OnP03WebMessageReceived;", owner)
+        self.assertIn("ModelWowBridgeContract.TryParseCommand", owner)
+        self.assertIn("NativeP02Acl(sid, route)", owner)
+        self.assertIn("Interlocked.Read(ref _nativeDocumentEpoch) != epoch", owner)
+        self.assertIn("await ConfirmP02NativeAsync(route, root, CancellationToken.None)", owner)
+        self.assertIn("ModelWowBridgeContract.SnapshotJson", owner)
+        self.assertIn("ModelWowBridgeContract.EventJson(item)", owner)
+        self.assertNotIn("new ModelDownloadQueueStore(", owner)
+
+    def test_18_donor_micro_wow_assets_are_exactly_pinned(self):
+        owner_ui = ROOT / "Packages/P03/Source/P03.ModelCenter.Wow"
+        content = self.build.split("$microwowFiles=@(", 1)[1].split("\n  )", 1)[0]
+        entries = re.findall(r"@\\{relative='([^']+)';blob='([0-9a-f]{40})'\\}", content)
+        self.assertEqual(len(entries), 8)
+        for name, expected in entries:
+            with self.subTest(name=name):
+                self.assertEqual(git_blob((owner_ui / name).read_bytes()), expected)
+        js = (owner_ui / "ui.js").read_text("utf-8")
+        self.assertIn("postMessage({type:'p03.ready.v1'})", js)
+        self.assertIn("p03.command.ack.v1", js)
+
+    def test_19_stager_pins_current_owner_and_p03_read_queue(self):
+        stager = (ROOT / "coordination/e06/stage_native_p02.py").read_text("utf-8")
+        owner = ROOT / "coordination/e06/MainWindow.NativeP02.cs"
+        self.assertIn('ADDON_SHA="' + git_blob(owner.read_bytes()) + '"', stager)
+        self.assertIn("sha='" + git_blob(owner.read_bytes()) + "'", self.build)
+        self.assertIn("sha='" + git_blob((ROOT / "coordination/e06/stage_native_p02.py").read_bytes()) + "'", self.build)
+        self.assertIn("public Task<IReadOnlyList<ModelJob>> ReadJobsAsync", self.data)
+
     def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
         self.assertIn("ModelLocalAttestation.VerifyReceiptAsync", self.data)
