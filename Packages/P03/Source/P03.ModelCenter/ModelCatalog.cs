@@ -25,7 +25,8 @@ public sealed record ModelCatalogEntry(
     Uri? CompatibilityEvidenceUri = null,
     string? ImmutableRevision = null,
     bool CompatibilityReviewed = false,
-    string? ExpectedManifestDigestSha256 = null)
+    string? ExpectedManifestDigestSha256 = null,
+    string? ReviewedRightsReceiptId = null)
 {
     public bool CanOfferOneClickPull => EvidenceStatus == CatalogEvidenceStatus.ArtifactVerified
         && IsCanonicalOfficialFamilyPage(Id, OfficialLibraryPage)

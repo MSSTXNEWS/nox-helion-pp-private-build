@@ -1,0 +1,37 @@
+{
+  "schema": "NOX-SELFBUILDER-ONE-OWNER-R3",
+  "directive_date": "2026-10-31",
+  "developer_count": 1,
+  "sole_integrator": "1",
+  "independent_release_acceptor": "2",
+  "roles_7_are_logical_not_agents": true,
+  "auto_helpers": "OPTIONAL_ON_DEMAND_ONLY",
+  "required_sources": [
+    "V16",
+    "MASTER",
+    "PR162_CURRENT_HEAD",
+    "READY_COMPONENTS_REV4",
+    "ERROR_REGISTER_DELTA",
+    "LESSONS_DELTA"
+  ],
+  "hard_sequence": [
+    "REUSE_EXISTING_CODE",
+    "PATCH_SINGLE_SOURCE_SCOPE",
+    "TARGETED_REGRESSION",
+    "OWNER1_INTEGRATION_CAS",
+    "SOURCE_READY",
+    "ONE_WINDOWS_BUILD",
+    "INDEPENDENT_E07_SAME_SHA",
+    "RELEASE_ACCEPTED"
+  ],
+  "full_e07_only_after_source_ready": true,
+  "allow_windows_runner_readiness_preflight_in_parallel": true,
+  "max_competing_installers": 0,
+  "existing_installers_only": true,
+  "source_only_patch": true,
+  "do_not_authorize_generated_code_execution": true,
+  "metrics": {
+    "time_to_accepted_feature": "NOT_MEASURED",
+    "measured_speedup": "UNKNOWN"
+  }
+}

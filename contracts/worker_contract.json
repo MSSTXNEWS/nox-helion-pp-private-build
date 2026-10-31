@@ -1,0 +1,27 @@
+{
+  "schema": "NOX-SELFBUILDER-WINDOWS-EVOLUTION-WORKER-V2",
+  "status": "SOURCE_COMPOSED_NATIVE_E07_DEFERRED",
+  "host": "EXISTING OneHost shared P02 client + original S03 Store actor; one bounded task thread",
+  "owner_controls": {
+    "user_opt_in": true,
+    "stop_each_tick": true,
+    "no_auto_download": true,
+    "no_auto_trained_weights": true,
+    "no_auto_exe_merge": true
+  },
+  "continuous_behavior": "explicit native task submit/resume on original S03 tasks/audit; persisted queued jobs restart only with fresh native admission",
+  "allowed_kinds": [
+    "SELF_WRITE",
+    "REFLECT",
+    "FORGE_REVIEW",
+    "REVIEW_LESSON"
+  ],
+  "self_write_output": "multilanguage source candidates + exact candidate.patch SHA + receipt in approved staging outside source tree",
+  "forge_output": "handoff only to existing Packages/P04/train_qlora.py",
+  "requirement": "Native owner config supplies Git source_root, source_paths and staging workspace; no renderer paths",
+  "windows_autostart": "Uses existing OneHost lifetime; no second scheduled worker installed by this integration",
+  "optional_proactive_discovery": {
+    "requires": "existing ATLAS/S03 discovery_due and durable save callbacks",
+    "effect": "at most 2 verified suggestions per due tick; no auto execution"
+  }
+}

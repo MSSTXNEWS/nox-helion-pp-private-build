@@ -235,7 +235,14 @@ public static class ModelLocalAttestation
             stored.LocalBytes != expected.LocalBytes ||
             stored.OllamaDigest != expected.OllamaDigest ||
             stored.LicenseSource != expected.LicenseSource ||
-            stored.OllamaEndpoint != expected.OllamaEndpoint)
+            stored.OllamaEndpoint != expected.OllamaEndpoint ||
+            stored.MergedPayloadSha256 != expected.MergedPayloadSha256 ||
+            stored.MergeReceiptSha256 != expected.MergeReceiptSha256 ||
+            stored.TrainingReceiptSha256 != expected.TrainingReceiptSha256 ||
+            stored.RightsAttestationId != expected.RightsAttestationId ||
+            stored.RightsAttestationSha256 != expected.RightsAttestationSha256 ||
+            stored.NativeApprovalId != expected.NativeApprovalId ||
+            JsonSerializer.Serialize(stored.ImportedFiles) != JsonSerializer.Serialize(expected.ImportedFiles))
             throw new InvalidDataException("INSTALL_RECEIPT_READBACK_MISMATCH");
     }
 }

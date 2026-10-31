@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,sys,re
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
-ADDON_SHA="0b65fc5ca62788dbde01e669e98769a23ac5e8a9"
+ADDON_SHA="17292c15fabf309cd4d8b9e2d77f205c319e907b"
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def run(source,addon,backend_sha256=None):
@@ -38,6 +38,14 @@ def run(source,addon,backend_sha256=None):
     if text.count(anchor)!=1 or text.count(close)!=1:
         raise ValueError("T06_ORIGINAL_MAINWINDOW_WEBVIEW2_ANCHOR_HOLD")
     text=text.replace(anchor,next_anchor).replace(close,close+'\n        Closing += (_, _) => ShutdownNativeP02();')
+    # Keep the original provider code and controls, but route local entrypoints
+    # through the same native Python/P03 services. This prevents old WebView
+    # messages from creating an independent chat transport or model queue.
+    dispatch='            switch (type)'
+    if text.count(dispatch)!=1:
+        raise ValueError("K01_LEGACY_WEBVIEW_DISPATCH_ANCHOR_HOLD")
+    text=text.replace(dispatch,
+        '            if (TryDispatchLegacyNative(json.RootElement, e.Source)) return;\n'+dispatch,1)
     rewritten=text.replace("\n","\r\n") if crlf else text
     final=(b"\xef\xbb\xbf" if bom else b"")+rewritten.encode("utf-8")
     # One checked staged copy. Original committed donor bytes remain immutable.

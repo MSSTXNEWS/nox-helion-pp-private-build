@@ -8,7 +8,11 @@ namespace Nox.P03;
 public sealed record OllamaStreamUpdate(string Status, long? Completed, long? Total, string? Digest, string? Error);
 public sealed record ModelInstallReceipt(string Schema, Guid JobId, string ModelTag, string Operation,
     DateTimeOffset CompletedAtUtc, long? LocalBytes, string? LocalSha256, string? OllamaDigest,
-    string LicenseSource, string OllamaEndpoint);
+    string LicenseSource, string OllamaEndpoint,
+    string? MergedPayloadSha256=null, string? MergeReceiptSha256=null,
+    string? TrainingReceiptSha256=null, string? RightsAttestationId=null,
+    string? RightsAttestationSha256=null, string? NativeApprovalId=null,
+    IReadOnlyList<ImportedModelFile>? ImportedFiles=null);
 
 /// <summary>Thin adapter over the official Ollama HTTP API; no second downloader is implemented.</summary>
 public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
@@ -127,6 +131,76 @@ public sealed class OllamaModelAdapter(HttpClient http, string receiptDirectory)
             job.ModelTag, "gguf-import", DateTimeOffset.UtcNow, bytes, sha, ollamaDigest,
             job.LicenseSource, http.BaseAddress?.ToString() ?? "http://localhost:11434/"), ct);
         return (bytes, sha);
+    }
+
+    /// <summary>Import only P04's attested MERGED Safetensors snapshot through
+    /// this existing Ollama HTTP client. Unsupported architectures remain HOLD.</summary>
+    public async Task<string> ImportMergedSafetensorsAsync(ModelJob job,
+        Func<OllamaStreamUpdate,CancellationToken,ValueTask> progress,CancellationToken ct)
+    {
+        EnsureLocalOllama();
+        if(job.Kind!=ModelJobKind.SafetensorsImport || job.MergedImport is not { } approval ||
+            job.LocalPath!=approval.Directory || job.ExpectedLocalSha256!=approval.MergedPayloadSha256 ||
+            job.ModelTag!="nox-forge-"+approval.MergedPayloadSha256[..12]+":"+job.Id.ToString("N"))
+            throw new SafetensorsImportHold("P03_MERGED_JOB_BINDING_INVALID");
+        var files=await ModelSafetensorsImport.ValidateAsync(approval,ct);
+        if(files.Sum(x=>x.SizeBytes)!=job.ExpectedLocalBytes)
+            throw new SafetensorsImportHold("P03_MERGED_BYTES_MISMATCH");
+        if(await GetLocalModelDigestAsync(job.ModelTag,ct) is not null)
+            throw new SafetensorsImportHold("P03_CANDIDATE_TAG_ALREADY_EXISTS");
+        var mappings=new Dictionary<string,string>(StringComparer.Ordinal);
+        long uploadedBytes=0;var total=files.Sum(x=>x.SizeBytes);
+        foreach(var item in files)
+        {
+            ct.ThrowIfCancellationRequested();var path=Path.Combine(approval.Directory,item.Path);
+            ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+            await using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read,1<<20,true);
+            var hash=Convert.ToHexString(await SHA256.HashDataAsync(file,ct)).ToLowerInvariant();
+            if(hash!=item.Sha256 || file.Length!=item.SizeBytes)
+                throw new SafetensorsImportHold("P03_MERGED_FILE_CHANGED");
+            file.Position=0;var digest="sha256:"+hash;
+            using(var presence=await http.SendAsync(new HttpRequestMessage(HttpMethod.Head,"api/blobs/"+digest),ct))
+            {
+                if(presence.StatusCode==System.Net.HttpStatusCode.NotFound)
+                {
+                    using var body=new StreamContent(file);
+                    using var upload=await http.PostAsync("api/blobs/"+digest,body,ct);
+                    if(!upload.IsSuccessStatusCode)throw new SafetensorsImportHold("P03_SAFETENSORS_BLOB_UPLOAD_FAILED");
+                }
+                else presence.EnsureSuccessStatusCode();
+            }
+            using(var proof=await http.SendAsync(new HttpRequestMessage(HttpMethod.Head,"api/blobs/"+digest),ct))
+                proof.EnsureSuccessStatusCode();
+            mappings.Add(item.Path,digest);uploadedBytes=checked(uploadedBytes+item.SizeBytes);
+            await progress(new OllamaStreamUpdate("copying layer",uploadedBytes,total,digest,null),ct);
+        }
+        // Verify every original byte/proof again before creating a model. The
+        // previously selected tag is untouched, even if create later fails.
+        await ModelSafetensorsImport.ValidateAsync(approval,ct);
+        if(await GetLocalModelDigestAsync(job.ModelTag,ct) is not null)
+            throw new SafetensorsImportHold("P03_CANDIDATE_TAG_ALREADY_EXISTS");
+        using var create=await SendStreamingJsonAsync("api/create",new {model=job.ModelTag,files=mappings,stream=true},ct);
+        if(!create.IsSuccessStatusCode)
+            throw new SafetensorsImportHold("P03_SAFETENSORS_CREATE_HTTP_"+(int)create.StatusCode);
+        var done=false;
+        await foreach(var update in ReadEventsAsync(create,ct))
+        {
+            if(update.Error is not null)
+                throw new SafetensorsImportHold(update.Error.Contains("architecture",StringComparison.OrdinalIgnoreCase)
+                    && update.Error.Contains("support",StringComparison.OrdinalIgnoreCase)
+                    ? "P03_SAFETENSORS_ARCHITECTURE_UNSUPPORTED" : "P03_SAFETENSORS_CREATE_REJECTED");
+            if(update.Status.Equals("success",StringComparison.OrdinalIgnoreCase))done=true;
+            await progress(update,ct);
+        }
+        if(!done)throw new SafetensorsImportHold("P03_SAFETENSORS_CREATE_TRUNCATED");
+        ct.ThrowIfCancellationRequested();
+        var installed=RequireOllamaDigest(await GetLocalModelDigestAsync(job.ModelTag,ct));
+        await WriteReceiptAsync(new ModelInstallReceipt("NOX_P03_INSTALL_RECEIPT_V1",job.Id,
+            job.ModelTag,"safetensors-import",DateTimeOffset.UtcNow,total,approval.MergedPayloadSha256,
+            installed,job.LicenseSource,http.BaseAddress!.ToString(),approval.MergedPayloadSha256,
+            approval.MergeReceiptSha256,approval.TrainingReceiptSha256,approval.RightsAttestationId,
+            approval.RightsAttestationSha256,approval.NativeApprovalId,files),ct);
+        return installed;
     }
 
     // C41 source semantics re-bound to C40. A success event is not install proof.

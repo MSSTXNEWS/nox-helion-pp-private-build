@@ -24,7 +24,9 @@ public sealed class NativePythonPipe : IAsyncDisposable
     private const int MaxRequests = 8192;
     private static readonly HashSet<string> Routes = new(StringComparer.Ordinal) {
         "helion.chat", "core.chat", "persona.chat", "chat.model", "chat.history",
-        "chat.rag", "chat.voice", "chat.stop", "calls.history"
+        "chat.rag", "chat.voice", "chat.stop", "calls.history", "chat.commands",
+        "models.catalog", "models.installed", "models.digest", "gpu.preflight",
+        "training.start", "training.pause", "training.resume", "training.checkpoints", "training.evaluate"
     };
     private static readonly Regex Nonce = new("^[a-f0-9]{32}$", RegexOptions.CultureInvariant);
     private static readonly Regex ErrorCode = new("^[A-Z][A-Z0-9_]{0,99}$", RegexOptions.CultureInvariant);
@@ -34,6 +36,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly ConcurrentDictionary<string, TaskCompletionSource<NativePipeResult>> _pending = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Action<JsonElement>> _events = new(StringComparer.Ordinal);
     private readonly Task _reader;
     private int _count;
     private int _busy;
@@ -51,7 +54,8 @@ public sealed class NativePythonPipe : IAsyncDisposable
     }
 
     public async Task<NativePipeResult> RequestAsync(string route, object payload,
-        TimeSpan? timeout = null, CancellationToken cancel = default)
+        TimeSpan? timeout = null, CancellationToken cancel = default,
+        Action<JsonElement>? onEvent = null)
     {
         if (Volatile.Read(ref _closed) != 0) throw new NativePipeHold("NATIVE_PIPE_CLOSED");
         if (route is null || !Routes.Contains(route)) throw new NativePipeHold("NATIVE_ROUTE_DENIED");
@@ -69,7 +73,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 or "private_approved" or "native_approve" or "nativeConsent" or "admin")
                 throw new NativePipeHold("PAGE_AUTHORITY_CLAIM_DENIED");
 
-        bool regular = route != "chat.stop";
+        bool regular = route is not ("chat.stop" or "training.pause");
         if (regular && Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
             throw new NativePipeHold("NATIVE_BUSY");
         var nonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
@@ -87,6 +91,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 throw new NativePipeHold("NATIVE_FRAME_TOO_LARGE_OR_EMPTY");
             inserted = _pending.TryAdd(nonce, completion);
             if (!inserted) throw new NativePipeHold("NATIVE_NONCE_COLLISION");
+            if (onEvent is not null) _events.TryAdd(nonce, onEvent);
             // Only the short framed WRITE is serialized; STOP can overtake an active response.
             await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
             try
@@ -110,6 +115,9 @@ public sealed class NativePythonPipe : IAsyncDisposable
         }
         finally
         {
+            // A timed-out/cancelled UI no longer receives private deltas. The
+            // pending terminal stays tracked to avoid retrying uncertain work.
+            _events.TryRemove(nonce, out _);
             // Busy means one request may be active, not just one caller waiting.
             // It is released by the reader upon receiving that request's reply.
             if (!wrote && inserted) _pending.TryRemove(nonce, out _);
@@ -142,6 +150,18 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 if (!root.TryGetProperty("status", out var status) || status.ValueKind != JsonValueKind.String)
                     throw new NativePipeHold("NATIVE_RESPONSE_STATUS_INVALID");
                 var value = status.GetString();
+                if (value == "EVENT")
+                {
+                    if (!root.TryGetProperty("event", out var item) ||
+                        item.ValueKind != JsonValueKind.Object)
+                        throw new NativePipeHold("NATIVE_EVENT_INVALID");
+                    if (_events.TryGetValue(nonce, out var deliver))
+                    {
+                        try { deliver(item.Clone()); }
+                        catch { /* Consumer failure cannot replay/finish the native action. */ }
+                    }
+                    continue; // An event never releases BUSY or completes a request.
+                }
                 NativePipeResult outcome;
                 if (value == "OK" && root.TryGetProperty("result", out var result))
                     outcome = new NativePipeResult(nonce, true, result.Clone(), null);
@@ -151,6 +171,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 else throw new NativePipeHold("NATIVE_RESPONSE_STATUS_INVALID");
                 if (!_pending.TryRemove(nonce, out var waiter))
                     throw new NativePipeHold("NATIVE_RESPONSE_NONCE_MISMATCH");
+                _events.TryRemove(nonce, out _);
                 waiter.TrySetResult(outcome);
                 // Peer may return STOP before a chat; never release chat on STOP.
                 if (_pending.IsEmpty) Interlocked.Exchange(ref _busy, 0);
@@ -163,6 +184,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
     private void FaultAll(string code)
     {
         Interlocked.Exchange(ref _closed, 1);
+        _events.Clear();
         foreach (var kv in _pending)
             if (_pending.TryRemove(kv.Key, out var task)) task.TrySetException(new NativePipeHold(code));
         Interlocked.Exchange(ref _busy, 0);

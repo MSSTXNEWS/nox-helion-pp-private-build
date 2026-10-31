@@ -8,12 +8,12 @@ public sealed class ModelDownloadQueueWorker(
     private readonly Dictionary<Guid, CancellationTokenSource> _running = [];
     private readonly SemaphoreSlim _singleWorker = new(1, 1);
 
-    public async Task RunNextAsync(CancellationToken ct = default)
+    public async Task RunNextAsync(CancellationToken ct = default, Guid? requestedJobId = null)
     {
         await _singleWorker.WaitAsync(ct);
         try
         {
-            var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued);
+            var job = (await store.ReadAsync(ct)).FirstOrDefault(x => x.State == ModelJobState.Queued && (requestedJobId is null || x.Id==requestedJobId));
             if (job is null) return;
             // Legacy unpinned jobs remain preserved in the queue, but cannot execute.
             if (job.Kind == ModelJobKind.OllamaPull &&
@@ -76,6 +76,8 @@ public sealed class ModelDownloadQueueWorker(
                 string? digest;
                 if (current.Kind == ModelJobKind.OllamaPull)
                     digest = await ollama.PullAsync(current, OnProgress, linked.Token);
+                else if(current.Kind==ModelJobKind.SafetensorsImport)
+                    digest=await ollama.ImportMergedSafetensorsAsync(current,OnProgress,linked.Token);
                 else
                 {
                     var imported = await ollama.ImportGgufAsync(current, OnProgress, linked.Token);
@@ -120,7 +122,7 @@ public sealed class ModelDownloadQueueWorker(
             {
                 // Adapter exceptions may embed paths, URLs or credentials. Never
                 // store their raw messages in durable queue JSON or UI events.
-                const string publicError = "P03_TRANSFER_FAILED";
+                var publicError = ex is SafetensorsImportHold hold ? hold.Code : "P03_TRANSFER_FAILED";
                 System.Diagnostics.Trace.TraceError(
                     "P03_TRANSFER_FAILED job={0} kind={1}", job.Id, ex.GetType().Name);
                 // A second NOX window may persist STOP before our local 250 ms

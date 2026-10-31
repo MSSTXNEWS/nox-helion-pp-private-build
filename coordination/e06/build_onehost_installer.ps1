@@ -130,7 +130,7 @@ if ($wantsCreative) {
   $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
   $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
   if ($creativeScriptBlob -cne '9d6b22198bd57362477afa1a7132c982793c1a64' -or
-      $wowScriptBlob -cne 'a3b25309edd4e86962d2fb4687f96b887d4dca87') {
+      $wowScriptBlob -cne '9c738f8b539500cb2fb9fd3bf3423f0a715039d8') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
   }
   if (Test-Path -LiteralPath (Join-Path $source 'Assets/creative')) {
@@ -143,7 +143,7 @@ if ($wantsCreative) {
   $wowReceiptPath=Join-Path (Split-Path -Parent $source) 'WOW200_STAGE_RECEIPT.json'
   if (!(Test-Path -LiteralPath $wowReceiptPath -PathType Leaf)) { throw 'D02_WOW_STAGE_RECEIPT_MISSING' }
   $wowReceipt=Get-Content -LiteralPath $wowReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
-  if ($wowReceipt.count -ne 65 -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+  if ($wowReceipt.count -ne 69 -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
       $wowReceipt.legacy_d02_runtime_imported -ne $false -or
       $wowReceipt.pack01_catalog_routes -ne 50 -or
       $wowReceipt.source_only -ne $true -or $wowReceipt.release_accepted -ne $false) {
@@ -211,8 +211,22 @@ $repoRoot=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
 $gitTool=Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 $p02StageSources=@(
-  @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='711644bf4d2052d812bf71a0b679d8531a3ca76e'},
-  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='553025dbd98bf812013a7bfb748c0127e42220f9'}
+  @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='20c64c62c5b2c3f72c73ad106351d3af54cf0bd8'},
+  @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='6f6d0da6e98b7bce5b0d66261398f0183ce7981f'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='12fc98f4b910b1760427ad73d077cdf382d525f3'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='dd2d3f656262d951c0fcfb885ecd7b577f96ff95'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='e68bf33c49152d1737ac94ff7e33915ae7e57394'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='6dd5ceec428ec71a426d785304001a2d269a666f'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelLocalAttestation.cs';dest='Integration/P03/ModelLocalAttestation.cs';blob='e55bd2ec0e13a50ef026ae4055fe71b5f7a4e4ed'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs';dest='Integration/P03/ModelQuickActions.cs';blob='66d6f05c8f2deea7fab110f4c024d762d71af390'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs';dest='Integration/P03/ModelSafetensorsImport.cs';blob='6364e3ae1a525b6ec836be98eea7bcd5f268afc0'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs';dest='Integration/P03/ModelTagReviewLeads.cs';blob='439aa3cf82e20a77d12755c9ac4a7c5ef04c2f79'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelWowBridgeContract.cs';dest='Integration/P03/ModelWowBridgeContract.cs';blob='0c8fa6b409e64ac5a6636a4ae2f46b36f79f1ced'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaLoopbackHttpClientFactory.cs';dest='Integration/P03/OllamaLoopbackHttpClientFactory.cs';blob='9785e258c563027567e83b76d22ee66bf350f064'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/OllamaModelAdapter.cs';dest='Integration/P03/OllamaModelAdapter.cs';blob='ed4d55e053fd88f6e69911889981b566d3701661'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/WindowsHardwareFacts.cs';dest='Integration/P03/WindowsHardwareFacts.cs';blob='401f2cf9b318575542fce77db6571dd3ce2ee8f4'}
 )
 # Validate every donor BEFORE copying any source into the staged project.
 foreach ($entry in $p02StageSources) {
@@ -230,6 +244,7 @@ foreach ($entry in $p02StageSources) {
 foreach ($entry in $p02StageSources) {
   $origin=Join-Path $repoRoot $entry.relative
   $target=Join-Path $source $entry.dest
+  New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
   Copy-Item -LiteralPath $origin -Destination $target -ErrorAction Stop
   $post=(& $gitTool.Source hash-object -- $target).Trim().ToLowerInvariant()
   if ($LASTEXITCODE -ne 0 -or $post -cne $entry.blob) {
@@ -240,7 +255,7 @@ foreach ($entry in $p02StageSources) {
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='34797d99865cf3d8d20d281c073a8f2ec38d83b2'},@{p=$t06Addon;sha='0b65fc5ca62788dbde01e669e98769a23ac5e8a9'})) {
+foreach ($part in @(@{p=$t06Stage;sha='845a4bf3e83dc06289d80ff8c92c05cbe1c45346'},@{p=$t06Addon;sha='17292c15fabf309cd4d8b9e2d77f205c319e907b'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
@@ -282,9 +297,26 @@ if (!(Test-Path -LiteralPath $finalWpfCompat -PathType Leaf) -or
 }
 & $stagePython.Source $finalWpfCompat $source
 if ($LASTEXITCODE -ne 0) { throw 'E06_R51_WPF_OWNER_COMPAT_STAGE_HOLD' }
+# The native ModelCenter reads an owner-pinned registry, never browser-supplied
+# rights or digests. Empty reviewed items stay REVIEW_REQUIRED without downloads.
+$p03Registry=Join-Path $repoRoot 'contracts/p03_reviewed_artifacts.json'
+Assert-E06PlainPathAncestors -Candidate $p03Registry -Scope 'P03_REVIEW_REGISTRY'
+$p03RegistrySha='3b47af8b85aefd88408dd5cc63ad9615da87427d4d0cb2b56b0f5a4246ffbd60'
+if (!(Test-Path -LiteralPath $p03Registry -PathType Leaf) -or
+    (Get-FileHash -LiteralPath $p03Registry -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p03RegistrySha) {
+  throw 'P03_REVIEW_REGISTRY_SOURCE_SHA_HOLD'
+}
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
 if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_WPF_SELFCONTAINED_PUBLISH_HOLD' }
 if (!(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe'))) { throw 'WPF_ENTRYPOINT_MISSING' }
+$p03PublishedRegistry=Join-Path $payload 'contracts/p03_reviewed_artifacts.json'
+Assert-E06PlainPathAncestors -Candidate $p03PublishedRegistry -Scope 'P03_REVIEW_PAYLOAD'
+if (Test-Path -LiteralPath $p03PublishedRegistry) { throw 'P03_REVIEW_PAYLOAD_COLLISION' }
+New-Item -ItemType Directory -Path (Split-Path -Parent $p03PublishedRegistry) -Force | Out-Null
+Copy-Item -LiteralPath $p03Registry -Destination $p03PublishedRegistry -ErrorAction Stop
+if ((Get-FileHash -LiteralPath $p03PublishedRegistry -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p03RegistrySha) {
+  throw 'P03_REVIEW_REGISTRY_PAYLOAD_SHA_HOLD'
+}
 # Do not trust dotnet publish to copy newly staged visual Content assets.
 # PRECHECK every file; copy only canonical disposable R11 visual bytes, never an
 # unknown prior renderer or unrelated original owner asset.

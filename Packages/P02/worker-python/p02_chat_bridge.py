@@ -8,7 +8,7 @@ import unicodedata
 import urllib.parse
 import uuid
 from typing import Callable, Iterator
-from p02_runtime import OllamaClient, P02Store, Cancelled, P02Error
+from p02_runtime import OllamaClient, P02Store, Cancelled, P02Error, P02Timeout
 
 class ChatBridge:
     def __init__(self, store: P02Store, ollama: OllamaClient,
@@ -229,6 +229,7 @@ class ChatBridge:
         except (Cancelled, P02Error) as exc:
             # Do not store incomplete assistant text as a successful answer.
             yield {"type": "chat.error", "run_id": run,
-                   "code": "STOP" if isinstance(exc, Cancelled) else "OLLAMA_ERROR",
+                   "code": "STOP" if isinstance(exc, Cancelled) else (
+                       "TIMEOUT" if isinstance(exc, P02Timeout) else "OLLAMA_ERROR"),
                    "detail": str(exc)[:256]}
             return

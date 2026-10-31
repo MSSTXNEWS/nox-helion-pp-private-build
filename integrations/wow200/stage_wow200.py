@@ -47,6 +47,26 @@ REQUIRED_DONORS = frozenset({
     "proposals/NOX-SUPER-CINEMA-3D/comfy_video_bridge.py",
 })
 
+# One immutable commit admits the R4 MENU module, matching CSS and native adapter.
+# Keep all these pins together; a partial UI publication must fail before copy.
+MENU_V2_SHA256 = {
+    'ui/selfbuilder-menu-v2.mjs': 'e8f020723209da94ad8c87acde573994fafd333f2b03179126a525ae1e371b54',
+    'ui/selfbuilder-menu-v2.css': 'af78f7785d070a5f290139f0ff5c6c66644ef852342443573c7d93f57e7b3cde',
+    'ui/onehost-menu-bindings.mjs': 'f04d67f436d8ed3c2ea5e51fc3ac020da92f0defaea9002157f2151eaeab496b',
+    'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
+}
+
+def menu_stage_plan(repo: Path, destination: Path) -> list:
+    plans=[]
+    for relative, expected in MENU_V2_SHA256.items():
+        origin=repo/relative
+        if (not origin.is_file() or origin.is_symlink() or
+                any(parent.is_symlink() for parent in origin.parents if parent != repo) or
+                hashlib.sha256(origin.read_bytes()).hexdigest()!=expected):
+            raise ValueError("MENU_V2_ATOMIC_SOURCE_PIN_HOLD:"+relative)
+        plans.append((origin,destination/"ui"/origin.name))
+    return plans
+
 def digest(path:Path)->str:return hashlib.sha256(path.read_bytes()).hexdigest()
 def gitsha(raw:bytes)->str:
     h=hashlib.sha1();h.update(f"blob {len(raw)}\0".encode());h.update(raw);return h.hexdigest()
@@ -100,6 +120,7 @@ def stage(root:Path, source:Path)->dict:
     dest=root/"Assets/creative/wow200"
     if dest.exists():raise ValueError("WOW200_ALREADY_INSTALLED_HOLD")
     plans=[(pack01_catalog,dest/"pack01-catalog.json")]
+    plans.extend(menu_stage_plan(owner1_root,dest))
     for rel, expected in files.items():
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
             raise ValueError("UNSAFE_WOW_SOURCE_PATH")
@@ -141,9 +162,11 @@ def stage(root:Path, source:Path)->dict:
     new=new.replace("</body>",'<script type="module" src="wow200/runtime/loader.mjs"></script></body>')
     new_home=old_home.replace('</head>',
         '<link rel="stylesheet" href="creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css">'
-        '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css"></head>')
+        '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css">'
+        '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-menu-v2.css"></head>')
     new_home=new_home.replace('</body>',
-        '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script></body>')
+        '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
+        '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
     copied=[];out=root.parent/"WOW200_STAGE_RECEIPT.json"
     if out.exists():raise ValueError("WOW200_RECEIPT_CONFLICT_HOLD")
     try:
@@ -165,6 +188,8 @@ def stage(root:Path, source:Path)->dict:
           "source_only":True,"release_accepted":False,"donor_file_count":DONOR_FILE_COUNT,
           "pack01_catalog_blob":PACK01_CATALOG_BLOB,"pack01_catalog_routes":50,
           "home_pr30_renderer_staged":True,
+          "menu_v2_atomic_source_sha256":MENU_V2_SHA256,
+          "menu_v2_native_ui_staged":True,"menu_v2_native_acceptance":"NOT_RUN",
           "active_d02_engine":"OWNER1_PR144_PINNED",
           "active_d02_git_blobs":{rel:p["active_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
           "retained_legacy_d02_git_blobs":{rel:p["legacy_blob"] for rel,p in OWNER1_D02_ENGINE.items()},

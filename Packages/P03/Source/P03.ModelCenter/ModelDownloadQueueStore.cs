@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Nox.P03;
 
-public enum ModelJobKind { OllamaPull, GgufImport }
+public enum ModelJobKind { OllamaPull, GgufImport, SafetensorsImport }
 public enum ModelJobState { Queued, Running, Cancelling, Completed, Cancelled, Failed }
 
 public sealed record ModelJob(
@@ -29,7 +29,8 @@ public sealed record ModelJob(
     string? RightsReceiptId = null,
     string? ExpectedOllamaDigest = null,
     string? ImmutableRevision = null,
-    Guid? RetryOfJobId = null);
+    Guid? RetryOfJobId = null,
+    P04MergedImportApproval? MergedImport = null);
 
 public sealed class ModelDownloadQueueStore
 {
@@ -111,6 +112,27 @@ public sealed class ModelDownloadQueueStore
             return job;
         }
         finally { _gate.Release(); }
+    }
+
+    /// <summary>Only an authenticated, verified P04 merge can enter this queue.
+    /// Unique candidate tags never replace the previously active installed model.</summary>
+    public async Task<ModelJob> EnqueueVerifiedMergedAsync(P04MergedImportApproval approval,
+        bool nativeConsent,CancellationToken ct=default)
+    {
+        if (!nativeConsent)throw new UnauthorizedAccessException("P03_NATIVE_MERGE_IMPORT_CONSENT_REQUIRED");
+        approval=approval with {Directory=Path.GetFullPath(approval.Directory),TrainingReceiptPath=Path.GetFullPath(approval.TrainingReceiptPath)};
+        var files=await ModelSafetensorsImport.ValidateAsync(approval,ct);
+        var id=Guid.NewGuid();var tag="nox-forge-"+approval.MergedPayloadSha256[..12]+":"+id.ToString("N");
+        await _gate.WaitAsync(ct);
+        try {
+            using var lease=await AcquireFileLeaseAsync(ct);
+            var jobs=(await ReadCoreAsync(ct)).ToList();var now=DateTimeOffset.UtcNow;
+            var job=new ModelJob(id,ModelJobKind.SafetensorsImport,tag,Path.GetFullPath(approval.Directory),
+                true,approval.LicenseSource,now,now,ExpectedLocalBytes:files.Sum(x=>x.SizeBytes),
+                ExpectedLocalSha256:approval.MergedPayloadSha256,RightsReceiptId:approval.RightsAttestationId,
+                MergedImport:approval);
+            jobs.Add(job);await SaveCoreAsync(jobs,ct);return job;
+        } finally {_gate.Release();}
     }
 
     /// <summary>Queue only one exact, approved catalog artifact; family discovery alone
@@ -224,7 +246,8 @@ public sealed class ModelDownloadQueueStore
                 proposed.ExpectedLocalBytes != previous.ExpectedLocalBytes ||
                 proposed.ExpectedLocalSha256 != previous.ExpectedLocalSha256 ||
                 proposed.RightsReceiptId != previous.RightsReceiptId ||
-                proposed.RetryOfJobId != previous.RetryOfJobId)
+                proposed.RetryOfJobId != previous.RetryOfJobId ||
+                proposed.MergedImport != previous.MergedImport)
                 throw new InvalidOperationException("Job identity/provenance is immutable.");
             if (proposed.CompletedBytes < 0 || proposed.TotalBytes < 0 ||
                 (proposed.CompletedBytes is { } done && proposed.TotalBytes is { } total && done > total))
@@ -327,7 +350,11 @@ public sealed class ModelDownloadQueueStore
                 (j.State is ModelJobState.Queued or ModelJobState.Running or ModelJobState.Cancelling or ModelJobState.Completed));
             if (existingRetry is not null) return existingRetry;
             var now = DateTimeOffset.UtcNow;
-            var retry = failed with { Id = Guid.NewGuid(), State = ModelJobState.Queued, Attempts = 0,
+            var retryId = Guid.NewGuid();
+            var retry = failed with { Id = retryId,
+                ModelTag = failed.Kind==ModelJobKind.SafetensorsImport
+                    ? "nox-forge-"+failed.ExpectedLocalSha256![..12]+":"+retryId.ToString("N") : failed.ModelTag,
+                State = ModelJobState.Queued, Attempts = 0,
                 CreatedAtUtc = now, UpdatedAtUtc = now, Status = "Retry queued", Error = null,
                 RetryOfJobId = failed.Id,
                 CompletedBytes = null, TotalBytes = null, ComputedSha256 = null, ReceiptPath = null };
@@ -430,9 +457,13 @@ public sealed class ModelDownloadQueueStore
                     string.IsNullOrWhiteSpace(j.ModelTag) || string.IsNullOrWhiteSpace(j.LicenseSource) ||
                     !j.LicenseAcknowledged ||
                     (j.ExpectedOllamaDigest is not null && !ShaPattern.IsMatch(j.ExpectedOllamaDigest)) ||
-                    (j.Kind == ModelJobKind.GgufImport &&
+                    ((j.Kind is ModelJobKind.GgufImport or ModelJobKind.SafetensorsImport) &&
                      (j.ExpectedLocalBytes is not > 4 || !ShaPattern.IsMatch(j.ExpectedLocalSha256 ?? "") ||
-                      string.IsNullOrWhiteSpace(j.RightsReceiptId)))))
+                      string.IsNullOrWhiteSpace(j.RightsReceiptId))) ||
+                (j.Kind==ModelJobKind.SafetensorsImport && (j.MergedImport is null ||
+                    j.MergedImport.NativeRightsVerified is not true ||
+                    j.MergedImport.MergedPayloadSha256!=j.ExpectedLocalSha256 ||
+                    j.MergedImport.Directory!=j.LocalPath || j.MergedImport.RightsAttestationId!=j.RightsReceiptId))))
                 throw new InvalidDataException("Queue contains duplicate/invalid jobs; original bytes preserved.");
     }
 

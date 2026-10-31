@@ -66,6 +66,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
     workers: list[threading.Thread] = []
     count = 0
     fatal_errors: list[Exception] = []
+    event_context = threading.local()
 
     def send(payload: bytes) -> None:
         if not isinstance(payload, bytes) or not 0 < len(payload) <= MAX_OUTPUT:
@@ -82,8 +83,23 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
                     remaining = remaining[written:]
             writer.flush()
 
+    def publish_event(event: dict) -> None:
+        nonce = getattr(event_context, "nonce", None)
+        if nonce is None or type(event) is not dict:
+            raise ProtocolHold("NATIVE_EVENT_OUTSIDE_REQUEST")
+        encoded = json.dumps({"protocol": "NOX-P02-NATIVE-v1",
+            "runId": ingress.run_id, "requestId": nonce, "status": "EVENT",
+            "event": event}, ensure_ascii=False, allow_nan=False,
+            separators=(",", ":")).encode("utf-8")
+        send(encoded)
+
+    bind_events = getattr(ingress, "bind_event_sink", None)
+    if callable(bind_events):
+        bind_events(publish_event)
+
     def dispatch(data: bytes, nonce: str | None) -> None:
         nonlocal active
+        event_context.nonce = nonce
         try:
             try:
                 result = ingress.handle(data)
@@ -100,6 +116,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
         except Exception as exc:
             fatal_errors.append(exc)
         finally:
+            event_context.nonce = None
             with active_lock:
                 active = False
 
@@ -137,7 +154,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
                 continue
             # Let NativeIngress validate even malformed STOP envelopes; it
             # independently verifies run ID, nonce, capabilities and session.
-            if route == "chat.stop":
+            if route in ("chat.stop", "training.pause"):
                 try:
                     send(ingress.handle(data))
                 except ProtocolHold as exc:
@@ -160,6 +177,8 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
     finally:
         for worker in workers:
             worker.join(timeout=drain_timeout)
+        if callable(bind_events):
+            bind_events(None)
         if any(worker.is_alive() for worker in workers):
             raise ProtocolHold("NATIVE_WORKER_NOT_DRAINED")
         if fatal_errors:

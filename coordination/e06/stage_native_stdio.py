@@ -12,10 +12,35 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","6beaf43cd7b09d703819bb54eb9c53dc71876f0b"),
-    ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","d14893d69cb8fbdf318acf628afe2bc91b555d37"),
-    ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
-    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","f26648755a6efa9cbc047ab481af1ba38bb9dc55"),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'd66ccbc4f33fc7c78118c61f1ce0669cb07a10ca'),
+    ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
+    ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '0cd0de3e691638d7f3005471409bab240cf97382'),
+    ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
+    ('Packages/P02/worker-python/p02_chat_bridge.py', 'p02_chat_bridge.py', '0b83e0a391b4cda18b9cb7726607927013c3fa4e'),
+    ('Packages/P02/worker-python/p02_onehost.py', 'p02_onehost.py', 'f799e7600e10bc5cd900350527cb40d78ed78bdd'),
+    ('proposals/NOX-PACK01-50/native_bridge.py', 'nox_native_bridge.py', 'f26648755a6efa9cbc047ab481af1ba38bb9dc55'),
+    ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', 'c987034ba8b0d5102503b979b150858cfa655c26'),
+    ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', '5ee7213492c9a082a86a54332a36141d239a4a84'),
+    ('src/nox_selfbuilder/__init__.py', 'nox_selfbuilder/__init__.py', '1d0670e51efab53271385c13c156f2809a25adf1'),
+    ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '9ee9bf7696cd95f9bae0f5b4410b9012910e7cae'),
+    ('src/nox_selfbuilder/builder.py', 'nox_selfbuilder/builder.py', '974d383bd2180908d7f343821dd16e6a93925675'),
+    ('src/nox_selfbuilder/complete_builder.py', 'nox_selfbuilder/complete_builder.py', '616aedc351171d3c0365b3c6814d9d22c6cd7227'),
+    ('src/nox_selfbuilder/evolution.py', 'nox_selfbuilder/evolution.py', '9c38ca9b1063cda7b0569af7ce622b739213adf4'),
+    ('src/nox_selfbuilder/learning.py', 'nox_selfbuilder/learning.py', '3e1cf4f26cfab2505558d67fd5a5bd76ea172e06'),
+    ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', '27abfefec3b7347dab008396524bf94dd8c0e0bd'),
+    ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', '056109eff9a926f084781c7084b04a068f67b01a'),
+    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '0342506d58c3c078292d1f25e4cb1ae124b71cee'),
+    ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
+    ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '01dabfd999c64d825a979d92240d5c2c6f0f3676'),
+    ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),
+    ('src/nox_selfbuilder/p04_forge_bridge.py', 'nox_selfbuilder/p04_forge_bridge.py', 'a65c0f4bf5e04d18d5e90eec56a7ed46b3a3accf'),
+    ('src/nox_selfbuilder/release_governor.py', 'nox_selfbuilder/release_governor.py', '451d5c17f3ef9ea0a83670ed90fface36512fc36'),
+    ('src/nox_selfbuilder/release_learning.py', 'nox_selfbuilder/release_learning.py', '331cb6f6b1d2a403d6134afbd27770585961018b'),
+    ('src/nox_selfbuilder/seed.py', 'nox_selfbuilder/seed.py', '9b3a19cbd985620e9527cf168b02cae0ee12453a'),
+    ('Packages/P04/train_qlora.py', 'Packages/P04/train_qlora.py', '82fad1f4aec3bc9ebb34958ece3fd5786e1adbea'),
+    ('Packages/P04/preflight_local_gpu.py', 'Packages/P04/preflight_local_gpu.py', '15d6807033040711ac54c4c9f63432c5653e62bd'),
+    ('Packages/P04/merge_qlora_adapter.py', 'Packages/P04/merge_qlora_adapter.py', '51a27181e94cf5e766e2faf943f8aa17ec6418c7'),
+    ('assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip', 'assets/NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip', '35ee9b4ad6500af6cd219becc4244333c7c5f618'),
 )
 ARG_ANCHOR="    parser.add_argument('--diagnose',action='store_true',help='headless functional contracts check')"
 PARSE_ANCHOR="    args=parser.parse_args()"
@@ -23,8 +48,9 @@ STAGED_MODE="""    if args.native_stdio:
         if not args.run_id or args.desktop_v23 or args.diagnose or args.infer_local or args.core_runtime_local:
             parser.error('native_stdio_requires_exclusive_trusted_run_id')
         from .e06_native_stdio_owner import serve_existing_store
-        with Store(args.data_dir/'helion.sqlite3') as original_store:
-            return serve_existing_store(original_store, args.run_id)
+        from nox_selfbuilder.onehost_store import OneHostStoreActor
+        with OneHostStoreActor(lambda: Store(args.data_dir/'helion.sqlite3')) as original_store:
+            return serve_existing_store(original_store, args.run_id, args.data_dir)
 """
 
 def git_blob(raw:bytes)->str:
@@ -73,6 +99,11 @@ def stage(source:Path)->dict:
     return dict(original_app_sha256=ORIGINAL_APP_SHA256,
                 staged_app_sha256=hashlib.sha256(app.read_bytes()).hexdigest(),
                 pinned_addons=len(sources),original_archive_modified=False,
+                runtime_data_files=[dict(source=rel, runtime_path=dest,
+                    sha256=hashlib.sha256((source/dest).read_bytes()).hexdigest(),
+                    pyinstaller_destination=str(Path(dest).parent))
+                    for rel,dest,_blob in ADDONS
+                    if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")],
                 native_python_source_smoke_verified_separately=True,
                 installed_windows_exe_accepted=False)
 

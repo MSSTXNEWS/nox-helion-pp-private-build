@@ -37,6 +37,10 @@ class P02Error(Exception):
     pass
 
 
+class P02Timeout(P02Error):
+    """Provider deadline expired; this is not user cancellation."""
+
+
 class Cancelled(P02Error):
     pass
 
@@ -72,6 +76,8 @@ class OllamaClient:
             detail = e.read(1024).decode("utf-8", "replace")
             raise P02Error(f"Ollama HTTP {e.code}: {detail}") from e
         except (urllib.error.URLError, TimeoutError, OSError) as e:
+            if isinstance(e, TimeoutError) or isinstance(getattr(e, 'reason', None), TimeoutError):
+                raise P02Timeout("Ollama request deadline expired") from e
             raise P02Error(f"Ollama unavailable: {type(e).__name__}: {e}") from e
 
     def models(self) -> list[str]:
@@ -185,8 +191,9 @@ class OllamaClient:
                 if not done_seen and not cancel.is_set() and not stop.is_set():
                     raise P02Error("Ollama stream truncated before done=true")
             except (TimeoutError, OSError, urllib.error.URLError) as exc:
-                emit("error", P02Error("Ollama streaming timeout/connection error: " +
-                                        type(exc).__name__))
+                error_type = P02Timeout if (isinstance(exc, TimeoutError) or
+                    isinstance(getattr(exc, 'reason', None), TimeoutError)) else P02Error
+                emit("error", error_type("Ollama stream connection/deadline: " + type(exc).__name__))
             except Exception as exc:
                 emit("error", exc if isinstance(exc, P02Error) else
                      P02Error("Ollama transport exception: " + type(exc).__name__))

@@ -1,0 +1,47 @@
+{
+  "run_id": "NOX-K01-K06-20261031-MEGABLOCK",
+  "pre_head": "21b943a9b0cc7370216fa69c7ad5914ee5501472",
+  "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+  "gate_1": "PASS",
+  "donors": [
+    {
+      "donor": "r4",
+      "drive_id": "16d72a1mvZ7BJRjAHQ51Q8SDPl4AU1bRw",
+      "sha256": "b803221d9b0d56043e7c0b088e296141e6a36a04d7d9818d5a8b5f0e466799d2",
+      "bytes": 921431
+    },
+    {
+      "donor": "patch23",
+      "drive_id": "1vsiduYops2oX9dvCsCJ2xh7-T3Ak69lv",
+      "sha256": "b1357fcdd8d8f347627a2ed7477d531cb17ef1670366e372a2892397d45aad1f",
+      "bytes": 8807
+    },
+    {
+      "donor": "original",
+      "drive_id": "14SWJzNFgBSuLdSTdPmM2O1ckQ4D4DnDn",
+      "sha256": "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+      "bytes": 60364346
+    }
+  ],
+  "agents": [
+    "k01_onehost",
+    "k02_memory",
+    "k03_llm",
+    "k04_ui",
+    "k05_selfbuilder",
+    "k06_forge"
+  ],
+  "integrator": "root",
+  "original_archive_unchanged": true,
+  "seed_sha256": "b1bc0c27997d76b4c654842101d28738080e8c83d3b077b12585aaa28b500c9f",
+  "no_agents_md_in_pre_tree": true,
+  "windows_build": "DEFERRED",
+  "independent_e07": "DEFERRED",
+  "release": "HOLD",
+  "p01_c07": {
+    "drive_id": "1G6FJ8ZE9RKq84jTnlLfQFRuS1BSxxx3m",
+    "sha256": "90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52",
+    "bytes": 21867377,
+    "original_mainwindow_sha256": "6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
+  }
+}

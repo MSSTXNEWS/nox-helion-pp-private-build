@@ -20,7 +20,7 @@ MAX_JSON_NESTING = 512  # Independent of the host Python recursion limit.
 NONCE = re.compile(r"[0-9a-f]{32}\Z")
 P02_ROUTES = frozenset({
     "helion.chat", "core.chat", "persona.chat", "chat.model", "chat.history",
-    "chat.rag", "chat.voice", "chat.stop", "calls.history",
+    "chat.rag", "chat.voice", "chat.stop", "chat.commands", "calls.history",
 })
 # Optional P03 read-only admission. Sensitive model actions stay outside this
 # ingress until the native owner explicitly binds and authorizes them.
@@ -81,6 +81,12 @@ def _enforce_json_depth(raw: str) -> None:
 
 
 
+OWNER_CONTROL_ROUTES = frozenset({
+    "gpu.preflight", "training.start", "training.pause", "training.resume",
+    "training.checkpoints", "training.evaluate",
+})
+
+
 class ProtocolHold(Exception):
     """The native host must not treat this request as successful."""
 
@@ -95,7 +101,12 @@ class NativeIngress:
     """
 
     def __init__(self, existing_dispatcher: Any, native_session: Callable[[], Any],
-                 *, expected_run_id: str, allow_modelcenter_reads: bool = False):
+                 *, expected_run_id: str, allow_modelcenter_reads: bool = False,
+                 allow_owner_routes: frozenset[str] = frozenset()):
+        if (type(allow_owner_routes) is not frozenset or
+                not allow_owner_routes.issubset(OWNER_CONTROL_ROUTES)):
+            raise ValueError('Native owner route allowlist required')
+        self._owner_routes = allow_owner_routes
         if type(allow_modelcenter_reads) is not bool:
             raise ValueError("Explicit native ModelCenter read gate required")
         if not callable(native_session) or not (isinstance(expected_run_id, str)
@@ -140,17 +151,20 @@ class NativeIngress:
             # ModelCenter read routes need BOTH a host-side opt-in and the
             # existing PACK01 owner's concrete, receipt-bound P03 port.
             # No page data can opt in; no downloads, imports or retries here.
-            if not self._modelcenter_reads or route not in P03_NATIVE_READ_ROUTES:
+            is_model_read = self._modelcenter_reads and route in P03_NATIVE_READ_ROUTES
+            is_owner_route = route in self._owner_routes
+            if not is_model_read and not is_owner_route:
                 raise ProtocolHold("NATIVE_ROUTE_OR_PAYLOAD_INVALID")
+            expected_owner = 3 if is_model_read else 4
             routes = getattr(self._dispatch, "routes", None)
             ports = getattr(self._dispatch, "ports", None)
             route_info = routes.get(route) if isinstance(routes, Mapping) else None
             port = ports.get(route) if isinstance(ports, dict) else None
             if (not isinstance(route_info, Mapping)
                     or type(route_info.get("owner")) is not int
-                    or route_info["owner"] != 3
+                    or route_info["owner"] != expected_owner
                     or type(getattr(port, "owner", None)) is not int
-                    or port.owner != 3
+                    or port.owner != expected_owner
                     or not isinstance(getattr(port, "evidence_id", None), str)
                     or not port.evidence_id.strip()
                     or not callable(getattr(port, "call", None))
@@ -175,7 +189,7 @@ class NativeIngress:
             trusted_session = self._session()
             if trusted_session is None:
                 raise ProtocolHold("NATIVE_AUTHENTICATED_SESSION_REQUIRED")
-            if route == "chat.stop":
+            if route in ("chat.stop", "training.pause"):
                 result = self._dispatch.execute(route, payload, trusted_session)
             else:
                 # Shared native SQLite connections may not be thread safe.

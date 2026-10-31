@@ -43,6 +43,52 @@ public static class ModelArtifactReviewRegistry
         }
         return result;
     }
+    /// <summary>Load the owner-reviewed, SourceLock-pinned artifact registry.
+    /// expectedSha256 MUST come from authenticated native/build policy; never
+    /// compute it from the supplied file or accept it from JavaScript.</summary>
+    public static IReadOnlyCollection<ModelCatalogEntry> LoadReviewedArtifacts(
+        string path, string expectedSha256)
+    {
+        if (!Sha(expectedSha256) || expectedSha256.All(c=>c=='0'))
+            throw new InvalidDataException("P03_NATIVE_REGISTRY_PIN_REQUIRED");
+        ModelLocalAttestation.RequireRegularUnlinkedFile(path);
+        using var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);
+        if (input.Length<2 || input.Length>2*1024*1024)
+            throw new InvalidDataException("P03_REGISTRY_SIZE_INVALID");
+        using var memory=new MemoryStream(); input.CopyTo(memory);
+        var bytes=memory.ToArray();
+        var actual=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        if (!actual.Equals(expectedSha256,StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("P03_REGISTRY_SOURCELOCK_MISMATCH");
+        using var doc=JsonDocument.Parse(bytes);
+        var root=doc.RootElement;
+        if (root.ValueKind!=JsonValueKind.Object ||
+            root.EnumerateObject().Count()!=2 ||
+            !root.TryGetProperty("schema",out var schema) ||
+            schema.GetString()!="NOX-P03-REVIEWED-ARTIFACTS-V1" ||
+            !root.TryGetProperty("items",out var items) ||
+            items.ValueKind!=JsonValueKind.Array || items.GetArrayLength()>250)
+            throw new InvalidDataException("P03_REGISTRY_SCHEMA_INVALID");
+        var result=new List<ModelCatalogEntry>();
+        var tags=new HashSet<string>(StringComparer.Ordinal);
+        var options=new JsonSerializerOptions(JsonSerializerDefaults.Web) {
+            UnmappedMemberHandling=System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow };
+        foreach (var item in items.EnumerateArray())
+        {
+            if (item.ValueKind!=JsonValueKind.Object ||
+                item.EnumerateObject().Select(x=>x.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                    !=item.EnumerateObject().Count())
+                throw new InvalidDataException("P03_REGISTRY_AMBIGUOUS_ENTRY");
+            var candidate=item.Deserialize<ModelArtifactReviewCandidate>(options);
+            // The exact registry bytes were admitted by the native SourceLock.
+            if (!TryPromote(candidate,true,out var model) || model is null ||
+                !tags.Add(model.ExactTag!))
+                throw new InvalidDataException("P03_REGISTRY_UNREVIEWED_ARTIFACT");
+            result.Add(model);
+        }
+        return result.AsReadOnly();
+    }
+
     public static bool TryPromote(ModelArtifactReviewCandidate? c, bool ownerReceiptVerified, out ModelCatalogEntry? result)
     {
         result=null;
@@ -67,7 +113,8 @@ public static class ModelArtifactReviewRegistry
             RecommendedRamBytes=c.RecommendedRamBytes, RecommendedVramBytes=c.RecommendedVramBytes,
             ExpectedSha256=c.ArtifactSha256, ExpectedManifestDigestSha256=c.ManifestSha256,
             LicenseEvidenceUri=license, CompatibilityEvidenceUri=compat,
-            ImmutableRevision=c.ImmutableRevision, CompatibilityReviewed=true
+            ImmutableRevision=c.ImmutableRevision, CompatibilityReviewed=true,
+            ReviewedRightsReceiptId=c.ReviewerReceiptId
         };
         return result.CanOfferOneClickPull;
     }

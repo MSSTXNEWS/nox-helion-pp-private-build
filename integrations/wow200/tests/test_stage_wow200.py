@@ -15,6 +15,11 @@ class WowStageTests(unittest.TestCase):
   (self.stage/'Assets/creative/studio.html').write_text('<html><head></head><body><section id="screen-immersive"></section></body></html>')
   (self.stage/'Assets/creative/studio.js').write_text('// original')
   (self.stage/'Assets/index.html').write_text('<html><head></head><body>nox-orbit-stage nox-eclipse nox-orbit-core CONSCIOUSNESS FORGE</body></html>')
+  # MENU uses the actual same-commit JS/CSS/contract bytes, not placeholder fixtures.
+  repository=Path(__file__).resolve().parents[3]
+  for relative in eng.MENU_V2_SHA256:
+   origin=repository/relative;target=self.root/relative
+   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(origin.read_bytes())
   self.preimages=dict(D02)
   self.old_engine_pins={k:dict(v) for k,v in eng.OWNER1_D02_ENGINE.items()}
   # Simulate exact owner1-vs-legacy Git blobs with distinct fixture bytes.
@@ -60,7 +65,14 @@ class WowStageTests(unittest.TestCase):
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
-  self.assertEqual(len(receipt['files']),65)
+  self.assertEqual(len(receipt['files']),69)
+  self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
+  for relative in eng.MENU_V2_SHA256:
+   staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
+   self.assertEqual(staged.read_bytes(),(self.root/relative).read_bytes())
+  home=(self.stage/'Assets/index.html').read_text()
+  self.assertIn('creative/wow200/ui/onehost-menu-bindings.mjs',home)
+  self.assertIn('creative/wow200/ui/selfbuilder-menu-v2.css',home)
   self.assertEqual(receipt['pack01_catalog_routes'],50)
   self.assertEqual((self.stage/'Assets/creative/wow200/pack01-catalog.json').read_bytes(),(self.root/'proposals/NOX-PACK01-50/catalog.json').read_bytes())
   for rel in eng.OWNER1_D02_ENGINE:
@@ -132,3 +144,4 @@ class WowStageTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'REQUIRED_ENGINE_MISSING_HOLD'):stage(self.stage,self.src)
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
 if __name__=='__main__':unittest.main()
+

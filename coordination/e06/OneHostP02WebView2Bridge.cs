@@ -22,7 +22,11 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private static readonly HashSet<string> Routes = new(StringComparer.Ordinal)
     {
         "helion.chat", "core.chat", "persona.chat", "chat.model",
-        "chat.history", "chat.rag", "chat.voice", "chat.stop", "calls.history"
+        "chat.history", "chat.rag", "chat.voice", "chat.stop", "calls.history",
+        "chat.commands", "models.catalog", "models.installed", "models.queue",
+        "models.pull", "models.cancel", "models.retry", "models.digest", "models.gguf.import",
+        "models.preflight", "models.licenses", "gpu.preflight", "training.start",
+        "training.pause", "training.resume", "training.checkpoints", "training.evaluate"
     };
     private static readonly HashSet<string> AuthorityFields = new(StringComparer.Ordinal)
     {
@@ -34,13 +38,17 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private readonly NativePythonPipe _existingPipe;
     private readonly string _ownerWindowsSid;
     private readonly Func<string, string, bool> _nativeAcl;
-    private readonly Func<string, CancellationToken, Task<bool>> _nativeConsent;
+    private readonly Func<string, JsonElement, CancellationToken, Task<bool>> _nativeConsent;
+    private readonly SynchronizationContext _uiContext;
+    private readonly Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? _nativeOwnerAction;
     private readonly HashSet<string> _usedIds = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource _lifetime = new();
+    private CancellationTokenSource _document = new();
     private long _epoch;
     private int _activeChat;
     private int _stopPending;
     private int _disposed;
+    private long _streamEpoch;
 
     // All values here come from the native host, NEVER from a WebMessage.
     internal OneHostP02WebView2Bridge(
@@ -49,13 +57,17 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         NativePythonPipe existingHostOwnedPipe,
         string authenticatedWindowsSid,
         Func<string, string, bool> nativeAcl,
-        Func<string, CancellationToken, Task<bool>> nativeConsent)
+        Func<string, JsonElement, CancellationToken, Task<bool>> nativeConsent,
+        Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? nativeOwnerAction = null)
     {
         _web = existingCore ?? throw new ArgumentNullException(nameof(existingCore));
         _virtualOrigin = trustedMappedOrigin ?? throw new ArgumentNullException(nameof(trustedMappedOrigin));
         _existingPipe = existingHostOwnedPipe ?? throw new ArgumentNullException(nameof(existingHostOwnedPipe));
         _nativeAcl = nativeAcl ?? throw new ArgumentNullException(nameof(nativeAcl));
         _nativeConsent = nativeConsent ?? throw new ArgumentNullException(nameof(nativeConsent));
+        _nativeOwnerAction = nativeOwnerAction;
+        _uiContext = SynchronizationContext.Current ??
+            throw new InvalidOperationException("E06_NATIVE_UI_CONTEXT_REQUIRED");
         if (_virtualOrigin.Scheme != Uri.UriSchemeHttps ||
             !_virtualOrigin.IsDefaultPort || _virtualOrigin.UserInfo.Length != 0 ||
             !string.Equals(_virtualOrigin.Host, "nox.local", StringComparison.OrdinalIgnoreCase) ||
@@ -93,11 +105,15 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private void RevokeDocument()
     {
+        if (Volatile.Read(ref _disposed) != 0) return;
         Interlocked.Increment(ref _epoch);
+        Interlocked.Increment(ref _streamEpoch);
+        _document.Cancel();
+        _document.Dispose();
+        _document = new CancellationTokenSource();
         // Navigating away while a model is executing must request a real
         // owner STOP, not merely suppress its response in WebView2.
-        if (Volatile.Read(ref _activeChat) != 0 &&
-            Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
+        if (Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
             _ = StopRevokedChatAsync();
         // Never clear _usedIds: a page or transport must not replay native writes.
     }
@@ -151,6 +167,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             return;
         var source = e.Source;
         var epoch = Interlocked.Read(ref _epoch);
+        var cancel = _document.Token;
         string id = "", route = "";
         try
         {
@@ -189,23 +206,54 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             }
             // STOP must overtake active chat without waiting for a consent dialog.
             if (route != "chat.stop" &&
-                !await _nativeConsent(route, _lifetime.Token))
+                !await _nativeConsent(route, payload.Clone(), cancel))
             {
                 Reply(source, epoch, id, route, "HOLD", "NATIVE_CONSENT_DENIED");
                 return;
             }
             if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                 !_nativeAcl(_ownerWindowsSid, route)) return;
+            if (route == "chat.stop") Interlocked.Increment(ref _streamEpoch);
+            // P03's existing C# queue stays in this WPF host; it must not be
+            // replaced by a Python downloader or sent through a second IPC.
+            if (_nativeOwnerAction is not null &&
+                (route.StartsWith("models.", StringComparison.Ordinal) ||
+                 route=="chat.stop" ||
+                 route=="chat.commands" && payload.TryGetProperty("action",out var command) &&
+                 command.ValueKind==JsonValueKind.String && command.GetString()=="training.import"))
+            {
+                var ownerResult = await _nativeOwnerAction(route, payload.Clone(), cancel);
+                if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
+                    !_nativeAcl(_ownerWindowsSid, route)) return;
+                Reply(source, epoch, id, route, ownerResult.Accepted ?
+                      (route=="chat.stop"?"STOP_REQUESTED":"COMPLETED") : "HOLD",
+                      ownerResult.ErrorCode, ownerResult.Result);
+                return;
+            }
             // Track only actual model calls; native STOP may overtake the
             // blocking Python worker on navigation, reload or window teardown.
             var isChat = route is "helion.chat" or "core.chat" or "persona.chat";
+            var streamEpoch = Interlocked.Read(ref _streamEpoch);
             if (isChat) Interlocked.Increment(ref _activeChat);
             try
             {
                 var result = await _existingPipe.RequestAsync(
                     route, payload.Clone(), route == "chat.stop"
                         ? TimeSpan.FromSeconds(10) : TimeSpan.FromSeconds(60),
-                    _lifetime.Token);
+                    cancel, onEvent: item => _uiContext.Post(_ =>
+                    {
+                        // The reader runs off-thread. Recheck native grants on
+                        // the UI thread and suppress every stale/revoked delta.
+                        if (Interlocked.Read(ref _streamEpoch) != streamEpoch ||
+                            !IsCurrent(source, epoch) || !NativeSidMatches() ||
+                            !_nativeAcl(_ownerWindowsSid, route)) return;
+                        try {
+                            _web.PostWebMessageAsJson(JsonSerializer.Serialize(new {
+                                kind = "p02NativeEvent", requestId = id,
+                                routeId = route, state = "STREAMING", data = item
+                            }));
+                        } catch { /* Disposed native view: no stale delivery. */ }
+                    }, null));
                 // Host still re-authorizes after the potentially blocking IPC call.
                 if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                     !_nativeAcl(_ownerWindowsSid, route)) return;
@@ -219,6 +267,14 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             finally { if (isChat) Interlocked.Decrement(ref _activeChat); }
         }
         catch (OperationCanceledException) { /* Native STOP/window close: no stale ACK. */ }
+        catch (NativePipeHold hold)
+        {
+            if (RequestId.IsMatch(id)) Reply(source, epoch, id, route, "HOLD", hold.Code);
+        }
+        catch (TimeoutException)
+        {
+            if (RequestId.IsMatch(id)) Reply(source, epoch, id, route, "HOLD", "NATIVE_CHAT_TIMEOUT");
+        }
         catch (Exception)
         {
             if (id.Length == 32 && RequestId.IsMatch(id))
@@ -230,6 +286,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _lifetime.Cancel();
+        _document.Cancel();_document.Dispose();
         _web.WebMessageReceived -= OnWebMessageReceived;
         _web.NavigationStarting -= OnNavigationStarting;
         _web.SourceChanged -= OnSourceChanged;
