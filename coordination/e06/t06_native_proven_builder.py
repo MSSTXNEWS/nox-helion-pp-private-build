@@ -95,6 +95,14 @@ print("T06_NATIVE_ORIGINAL_SOURCE_PROCESS_FRAMED_REPLY",response["status"],flush
     "installed_wpf_e07":False,
     "release_accepted":False},indent=2),encoding="utf-8")
 
+# CI diagnostic only: prove exact original 729 archive + live native framed IPC
+# without pretending a source process is a PyInstaller EXE. No output
+# mutation or success-fake in the normal build path.
+import os
+if os.environ.get("NOX_T06_SOURCE_ONLY") == "YES":
+    print("NOX_T06_VERIFIED_ORIGINAL_NATIVE_SOURCE_IPC_ONLY_NOT_EXE",flush=True)
+    raise SystemExit(0)
+
 # One REAL Windows native EXE candidate from the verified original 729-member
 # source copy, with the original CLI patched ONLY inside this disposable copy.
 # This is build-evidence, not release or independent E07 acceptance.
