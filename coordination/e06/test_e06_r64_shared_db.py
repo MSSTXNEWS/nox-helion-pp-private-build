@@ -1,5 +1,6 @@
 """R64 source QA: NOX global P02 on one original-v4 SQLite file."""
 import os
+from contextlib import closing
 import sqlite3
 import sys
 import tempfile
@@ -47,7 +48,7 @@ class OriginalDbTest(unittest.TestCase):
         self.assertEqual(len(store.history("local","owner","default")),2)
         backup=self.path.with_name(self.path.name+".pre-p02-native.sqlite3")
         self.assertTrue(backup.is_file())
-        with sqlite3.connect(backup) as read:
+        with closing(sqlite3.connect(backup)) as read:
             self.assertEqual(read.execute("PRAGMA quick_check").fetchone(), ("ok",))
             self.assertEqual(read.execute("SELECT title FROM tasks").fetchone(), ("preserve original task",))
             self.assertEqual(read.execute("SELECT COUNT(*) FROM p02_chats").fetchone() if
@@ -65,11 +66,12 @@ class OriginalDbTest(unittest.TestCase):
             admit_shared_p02_store(self.owner,"owner")
     def test_existing_legacy_v3_denied_before_store_migration(self):
         self.owner.close()
-        with sqlite3.connect(self.path) as raw:
-            raw.execute("PRAGMA user_version=3")
+        with closing(sqlite3.connect(self.path)) as raw:
+            with raw:
+                raw.execute("PRAGMA user_version=3")
         with self.assertRaisesRegex(RuntimeError, "PREEXISTING_DB_NOT_V4"):
             require_original_v4_before_store(self.path)
-        with sqlite3.connect(self.path) as raw:
+        with closing(sqlite3.connect(self.path)) as raw:
             self.assertEqual(raw.execute("PRAGMA user_version").fetchone(), (3,))
             self.assertEqual(raw.execute("SELECT title FROM tasks").fetchone(), ("preserve original task",))
         # Mark the already closed owner; tearDown does not reuse this connection.
