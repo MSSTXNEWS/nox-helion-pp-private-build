@@ -55,6 +55,21 @@ def assert_nonblocking(source):
         raise AssertionError("P03_NATIVE_LIFECYCLE_OR_P04_INTEGRITY_LOST")
 
 
+def assert_crash_recovery(source):
+    if not all(mark in source for mark in (
+        "await _recoveryGate.WaitAsync(ct);",
+        "if (_queueRecovered) return;",
+        "await _queue.RecoverInterruptedAsync(ct);",
+        "if (route is \"models.queue\" or \"models.cancel\" or \"models.retry\" or",
+        "finally { _recoveryGate.Release(); }",
+    )):
+        raise AssertionError("P03_CRASH_RECOVERY_NOT_ADMITTED")
+    recovery = source.split("private async Task RecoverInterruptedOnceAsync", 1)[1].split(
+        "private void StartQueuedTransfer", 1)[0]
+    if "State = ModelJobState.Queued" in recovery or "StartQueuedTransfer(" in recovery:
+        raise AssertionError("P03_CRASH_RECOVERY_AUTO_DOWNLOAD_DENIED")
+
+
 class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -76,16 +91,13 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             assert_nonblocking(broken)
 
     def test_04_interrupted_downloads_recover_before_queue_mutation(self):
-        self.assertIn("await _queue.RecoverInterruptedAsync(ct);", self.data)
-        self.assertIn("if (_queueRecovered) return;", self.data)
-        self.assertIn("await _recoveryGate.WaitAsync(ct);", self.data)
-        self.assertIn("if (route is \"models.queue\" or \"models.cancel\" or \"models.retry\" or", self.data)
-        self.assertNotIn("State = ModelJobState.Queued", self.data)
+        assert_crash_recovery(self.data)
 
     def test_05_missing_crash_recovery_is_rejected(self):
         broken = self.data.replace("await _queue.RecoverInterruptedAsync(ct);",
                                    "/* old stalled state */", 1)
-        self.assertNotIn("await _queue.RecoverInterruptedAsync(ct);", broken)
+        with self.assertRaisesRegex(AssertionError, "P03_CRASH_RECOVERY_NOT_ADMITTED"):
+            assert_crash_recovery(broken)
 
     def test_06_existing_onehost_builder_pins_exact_updated_blob(self):
         actual = git_blob(ROUTES.read_bytes())
