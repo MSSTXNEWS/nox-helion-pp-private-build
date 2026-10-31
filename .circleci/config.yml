@@ -1,44 +1,71 @@
-# I0 original owner UI stage recovery test: owner Pack01 callback preserved, no new UI.
+# I0 current cause isolation only: packInvoke case, trusted method, adapted Creative stage.
 version: 2.1
 orbs:
   win: circleci/windows@5.0
 jobs:
-  i0-creative-fixed-onehost-source-stage:
+  i0-packinvoke-case-exists:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Original R11 stage plus minimally compatible Creative and original WOW200
-          no_output_timeout: 20m
+          name: Recreate only original immutable R11 donor
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_OWNER_STAGE_FAIL' }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAIL' }
+      - run:
+          name: i0-packinvoke-case-exists only
+          command: |
+            $ErrorActionPreference='Stop'
+            $c=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
+            if ([regex]::Matches($c,'case\s+"packInvoke"\s*:').Count -ne 1) { throw 'I0_OWNER_PACKINVOKE_CASE_NOT_UNIQUE' }
+            Write-Host 'I0_OWNER_PACKINVOKE_CASE_UNIQUE_PASS'
+  i0-dispatchpack01-handler-exists:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Recreate only original immutable R11 donor
+          command: |
+            $ErrorActionPreference='Stop'
+            python coordination/e06/stage_p01.py
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAIL' }
+      - run:
+          name: i0-dispatchpack01-handler-exists only
+          command: |
+            $ErrorActionPreference='Stop'
+            $c=Get-Content 'work/e06/staged/R11/MainWindow.xaml.cs' -Raw -Encoding UTF8
+            if ([regex]::Matches($c,'DispatchPack01Async').Count -lt 1) { throw 'I0_OWNER_DISPATCHPACK01_HANDLER_ABSENT' }
+            Write-Host 'I0_OWNER_DISPATCHPACK01_HANDLER_PRESENT'
+  i0-adapted-creative-stage-only:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Recreate only original immutable R11 donor
+          command: |
+            $ErrorActionPreference='Stop'
+            python coordination/e06/stage_p01.py
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_STAGE_FAIL' }
+      - run:
+          name: i0-adapted-creative-stage-only only
+          command: |
+            $ErrorActionPreference='Stop'
             python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
-            if ($LASTEXITCODE -ne 0) { throw 'I0_OWNER_CREATIVE_PATCH_STAGE_FAIL' }
-            $original='work/e06/staged/R11/MainWindow.xaml.cs'
-            $code=Get-Content $original -Raw -Encoding UTF8
-            if ([regex]::Matches($code,'case "creativeInvoke"').Count -ne 1 -or
-                [regex]::Matches($code,'case "creativeProjector"').Count -ne 1 -or
-                [regex]::Matches($code,'case\s+"packInvoke"').Count -ne 1) {
-              throw 'I0_PACK_CREATIVE_DISPATCHER_CONTRACT_FAIL'
-            }
-            python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
-            if ($LASTEXITCODE -ne 0) { throw 'I0_ORIGINAL_WOW200_STAGE_FAIL' }
-            $p=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($p.count -ne 65 -or $p.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
-                $p.legacy_d02_runtime_imported -ne $false -or
-                $p.pack01_catalog_routes -ne 50 -or $p.release_accepted -ne $false) {
-              throw 'I0_ORIGINAL_WOW200_RECEIPT_FAIL'
-            }
-            Write-Host 'I0_OWNER_CREATIVE_AND_WOW200_STAGING_PASS_NOT_WINDOWS_E07'
-      - store_artifacts:
-          path: work/e06/staged/WOW200_STAGE_RECEIPT.json
-          destination: I0-ORIGINAL-CREATIVE-WOW-SOURCE-NOT-E07
+            if ($LASTEXITCODE -ne 0) { throw 'I0_ADAPTED_CREATIVE_SOURCE_STAGE_FAILED' }
+            Write-Host 'I0_ADAPTED_CREATIVE_SOURCE_STAGE_PASS'
 workflows:
-  i0_approved_owner_route_stage_fix:
+  i0_creative_semantic_route_contract:
     jobs:
-      - i0-creative-fixed-onehost-source-stage:
+      - i0-packinvoke-case-exists:
+          filters:
+            branches:
+              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
+      - i0-dispatchpack01-handler-exists:
+          filters:
+            branches:
+              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
+      - i0-adapted-creative-stage-only:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
