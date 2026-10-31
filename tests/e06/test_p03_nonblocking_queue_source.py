@@ -86,6 +86,28 @@ def assert_catalog_privacy(source):
         raise AssertionError("P03_PUBLIC_CATALOG_FIELDS_MISSING")
 
 
+def assert_background_lifetime(source):
+    block = source.split("private void StartQueuedTransfer(Guid jobId)", 1)[1].split(
+        "private static void RequireHardware(", 1)[0]
+    create = block.index("pending = Task.Run")
+    record = block.index("_transferTasks.Add(jobId, pending);")
+    release = block.index("\n        }\n        // Register completion AFTER")
+    continuation = block.index("_ = pending.ContinueWith(")
+    if not (create < record < release < continuation):
+        raise AssertionError("P03_SYNCHRONOUS_COMPLETION_BEFORE_REGISTRATION")
+    if "_ownedHttp?.Dispose();" not in block.split("_transferTasks.Remove(jobId);", 1)[1]:
+        raise AssertionError("P03_HTTP_DISPOSED_BEFORE_TRANSFER_COMPLETION")
+    dispose = source.split("public void Dispose()", 1)[1]
+    if not all(x in dispose for x in (
+        "_transferStop.Cancel();",
+        "if (_transferTasks.Count == 0)",
+        "_transferStop.Dispose();",
+        "_ownedHttp?.Dispose();",
+        "StopMergedImport();",
+    )):
+        raise AssertionError("P03_TERMINATION_OWNERSHIP_LOST")
+
+
 class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -146,6 +168,27 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             "license=a.License,", "license=a.License, receipt=a.ReviewedRightsReceiptId,", 1)
         with self.assertRaisesRegex(AssertionError, "P03_OWNER_PROOF_EXPOSED_TO_RENDERER"):
             assert_catalog_privacy(broken)
+
+    def test_11_continuation_starts_after_tracked_task_and_gate_unlock(self):
+        assert_background_lifetime(self.data)
+
+    def test_12_old_inline_execute_synchronously_race_is_rejected(self):
+        broken = self.data.replace(
+            "        }\n        // Register completion AFTER", "        // Register completion AFTER", 1)
+        with self.assertRaisesRegex(AssertionError,
+                                    "P03_SYNCHRONOUS_COMPLETION_BEFORE_REGISTRATION"):
+            assert_background_lifetime(broken)
+
+    def test_13_disposing_http_during_active_transfer_is_rejected(self):
+        original = """            if (_transferTasks.Count == 0)
+            {
+                _transferStop.Dispose();
+                _ownedHttp?.Dispose();
+            }"""
+        broken = self.data.replace(
+            original, "            _transferStop.Dispose();\n            _ownedHttp?.Dispose();", 1)
+        with self.assertRaisesRegex(AssertionError, "P03_TERMINATION_OWNERSHIP_LOST"):
+            assert_background_lifetime(broken)
 
     def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
