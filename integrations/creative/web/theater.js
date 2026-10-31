@@ -65,7 +65,7 @@ async function chooseSubtitle(file){
   const loadedTrack=track;
   loadedTrack.addEventListener('load',()=>{if(track===loadedTrack&&loadedTrack.track)loadedTrack.track.mode='showing'});
   note('Субтитры загружены: '+file.name);
- }catch(error){if(selectedGeneration===subtitleGeneration)note('Субтитры не подключены: '+String(error.message||error))}
+ }catch(error){if(selectedGeneration===subtitleGeneration)note('HOLD: Субтитры не подключены: '+String(error.message||error))}
 }
 async function toggleFullscreen(){
  if(nativeViewer){note('Полный экран управляется панелью Windows NOX или F11');return}
