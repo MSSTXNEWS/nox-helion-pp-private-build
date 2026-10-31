@@ -22,6 +22,7 @@ function releaseVideo(){if(videoUrl){URL.revokeObjectURL(videoUrl);videoUrl=null
 function releaseSubtitle(){if(track){track.remove();track=null}if(subtitleUrl){URL.revokeObjectURL(subtitleUrl);subtitleUrl=null}}
 function chooseVideo(file){
  if(!file)return;
+ if(!/\.(mp4|webm|mov)$/i.test(file.name||'') || !(file.size>0) || file.size>16*1024*1024*1024){note('MEDIA_HOLD: выберите непустой MP4/WebM/MOV');return;}
  // Switching to a user-selected file must disarm the old project's error listener.
  if(nativeErrorHandler){video.removeEventListener('error',nativeErrorHandler);nativeErrorHandler=null;}
  // A new film invalidates the previous film's captions and pending file reads.
@@ -83,12 +84,8 @@ $('subtitles').onchange=e=>{const input=e.target,file=input.files?.[0];input.val
 $('play').onclick=()=>void play();
 $('pause').onclick=pause;
 $('full').onclick=()=>void toggleFullscreen();
-$('screens').onclick=async()=>{
- try{
-  if(typeof window.getScreenDetails!=='function'){note('Для проектора перенесите окно на нужный монитор Windows');return}
-  const details=await window.getScreenDetails();
-  note('Экранов обнаружено: '+details.screens.length+'. Перенесите окно и нажмите ⛶');
- }catch(error){note('Доступ к списку экранов не выдан; переносите окно средствами Windows')}
+$('screens').onclick=()=>{
+ note('Выбор физического проектора/монитора выполняется через нативную панель NOX Windows.');
 };
 window.addEventListener('keydown',event=>{
  if(event.key==='F11'&&!event.repeat){event.preventDefault();void toggleFullscreen()}
