@@ -38,7 +38,7 @@ test('actual HTML and JS share the same control IDs and native projector policy'
 
 test('real local video route, never guessed /api/media',()=>{
   const {objects}=harness(), video=objects.get('video'), input=objects.get('file');
-  assert.match(objects.get('status').textContent,/Выберите разрешённый локальный фильм/);
+  assert.match(objects.get('status').textContent,/Проект demo_1: выберите MP4\/WebM/);
   assert.equal(video.src,'');
   input.onchange({target:{files:[{name:'clip.mp4',size:120}]}});
   assert.equal(video.src,'blob:media1');
