@@ -39,7 +39,7 @@ def request(exe, route, run_id, nonce, data_dir):
          reply.get("requestId")==nonce,"R66_FROZEN_IDENTITY_HOLD")
     return reply
 
-def main():
+def main(gate: str):
     built = json.loads((DIST/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json").read_text("utf-8"))
     source = json.loads((OUT/"NATIVE_STDIO_SOURCE_SMOKE.json").read_text("utf-8"))
     need(built.get("phase")=="BUILT_NOT_NATIVE_VERIFIED" and
@@ -57,18 +57,37 @@ def main():
          built.get("exe_file")==exe.name and
          built.get("exe_size")==exe.stat().st_size and
          digest(exe)==built.get("exe_sha256"),"R66_FROZEN_BINARY_SHA_HOLD")
-    # chat.model may legitimately return provider HOLD on CI with Ollama offline.
-    a = request(exe,"chat.model","NOX-P02-R66-FROZEN-E2E",
-                "fedcba0987654321fedcba0987654321",OUT/"exe-user-data")
-    need(a.get("status") in ("OK","HOLD"),"R66_MODEL_STATUS_INVALID")
-    if a["status"]=="OK":
-        need(type(a.get("result")) is dict and
-             type(a["result"].get("models")) is list,"R66_MODEL_LIST_SHAPE")
-    else:
-        need(a.get("errorCode")=="NATIVE_PROVIDER_HOLD" and
-             a.get("result") is None and
-             source.get("framed_reply_status")=="HOLD","R66_UNEXPECTED_MODEL_HOLD")
-    # Installed local model discovery is independent of Ollama HTTP reachability.
+
+    chat_path = DIST/"R66_FROZEN_CHAT_MODEL_PROOF.json"
+    if gate=="chat":
+        a = request(exe,"chat.model","NOX-P02-R66-FROZEN-E2E",
+                    "fedcba0987654321fedcba0987654321",OUT/"exe-user-data")
+        need(a.get("status") in ("OK","HOLD"),"R66_MODEL_STATUS_INVALID")
+        if a["status"]=="OK":
+            need(type(a.get("result")) is dict and
+                 type(a["result"].get("models")) is list,"R66_MODEL_LIST_SHAPE")
+        else:
+            need(a.get("errorCode")=="NATIVE_PROVIDER_HOLD" and
+                 a.get("result") is None and
+                 source.get("framed_reply_status")=="HOLD","R66_UNEXPECTED_MODEL_HOLD")
+        need(not chat_path.exists() and not chat_path.is_symlink(),
+             "R66_FROZEN_CHAT_PROOF_COLLISION")
+        chat_path.write_text(json.dumps({
+            "phase":"FROZEN_CHAT_MODEL_IPC_PASS_NOT_REAL_INFERENCE",
+            "exe_sha256":built["exe_sha256"],
+            "source_zip_sha256":PINNED_ORIGINAL,
+            "chat_model_response_status":a["status"],
+            "release_accepted":False},indent=2),encoding="utf-8")
+        print("NOX_R66_FROZEN_CHAT_MODEL_IPC_PASS",a["status"],flush=True)
+        return
+
+    need(gate=="models","R66_INVALID_VERIFIER_GATE")
+    chat = json.loads(chat_path.read_text("utf-8"))
+    need(chat.get("phase")=="FROZEN_CHAT_MODEL_IPC_PASS_NOT_REAL_INFERENCE" and
+         chat.get("exe_sha256")==built["exe_sha256"] and
+         chat.get("source_zip_sha256")==PINNED_ORIGINAL and
+         chat.get("chat_model_response_status") in ("OK","HOLD") and
+         chat.get("release_accepted") is False,"R66_FROZEN_CHAT_PREVIOUS_SHA_HOLD")
     b = request(exe,"models.installed","NOX-P03-R66-MODELCENTER",
                 "789abcde1234567089abcdef12345670",OUT/"p03-native-data")
     need(b.get("status")=="OK" and type(b.get("result")) is dict and
@@ -83,7 +102,7 @@ def main():
           "supported_route_verified":"chat.model",
           "native_modelcenter_installed_read_only":"PASS",
           "models_installed_uses_original_local_discovery":True,
-          "frozen_chat_model_response_status":a["status"],
+          "frozen_chat_model_response_status":chat["chat_model_response_status"],
           "real_ollama_model_inference_tested":False,
           "original_729_unchanged":True,"installed_wpf_e07":False,
           "release_accepted":False}
@@ -92,4 +111,7 @@ def main():
     receipt.write_text(json.dumps(data,indent=2),encoding="utf-8")
     print("NOX_R66_FROZEN_EXE_NATIVE_IPC_PASS_NOT_RELEASE",built["exe_sha256"],flush=True)
 if __name__=="__main__":
-    main()
+    import sys
+    need(len(sys.argv)==2 and sys.argv[1] in ("chat","models"),
+         "R66_EXPLICIT_VERIFICATION_GATE_REQUIRED")
+    main(sys.argv[1])

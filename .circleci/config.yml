@@ -88,27 +88,42 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - work/t06-manual-source-inspect
+            - work/t06-manual-source-inspect/native-runtime
+            - work/t06-manual-source-inspect/python-exe-candidate
+            - work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json
       - store_artifacts:
           path: work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYINSTALLER_BINARY_RECEIPT.json
           destination: NOX-R66-BUILT-BINARY-SHA-NOT-NATIVE-ACCEPTED
-  r66-native-exe-gate:
+  r66-frozen-chat-gate:
     executor: win/server-2022
     steps:
       - checkout
       - attach_workspace:
           at: .
       - run:
-          name: Verify SAME frozen EXE framed P02 ModelCenter and SQLite without rebuilding
+          name: Verify SAME frozen EXE CHAT model signed-frame protocol
           no_output_timeout: 20m
           command: |
             $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_verify_frozen_candidate.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_REAL_FROZEN_IPC_FAILED' }
-            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
-            python -m unittest -v coordination.e06.test_e06_r64_shared_db
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_ORIGINAL_SQLITE_SHARED_DB_HOLD' }
-            Write-Host 'NOX_R66_FROZEN_EXE_AND_SQLITE_PASS'
+            python coordination/e06/t06_verify_frozen_candidate.py chat
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_CHAT_IPC_FAILED' }
+      - persist_to_workspace:
+          root: .
+          paths:
+            - work/t06-manual-source-inspect/python-exe-candidate/R66_FROZEN_CHAT_MODEL_PROOF.json
+  r66-frozen-modelcenter-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Verify same frozen model inventory and immutable binary SHA
+          no_output_timeout: 20m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/e06/t06_verify_frozen_candidate.py models
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_MODELCENTER_FAILED' }
       - persist_to_workspace:
           root: .
           paths:
@@ -116,6 +131,20 @@ jobs:
       - store_artifacts:
           path: work/t06-manual-source-inspect/python-exe-candidate
           destination: NOX-R66-NATIVE-EXE-CANDIDATE-NOT-RELEASE
+  r66-sqlite-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Exact R66 SQLite history STOP and same original V4 database
+          command: |
+            $ErrorActionPreference = 'Stop'
+            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
+            python -m unittest -v coordination.e06.test_e06_r64_shared_db
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_ORIGINAL_SQLITE_SHARED_DB_HOLD' }
+            Write-Host 'NOX_R66_SAME_ORIGINAL_SQLITE_PASS'
   r66-onehost-windows:
     executor: win/server-2022
     steps:
@@ -227,15 +256,27 @@ workflows:
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-native-exe-gate:
+      - r66-frozen-chat-gate:
           requires:
             - r66-pyinstaller-binary-gate
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-frozen-modelcenter-gate:
+          requires:
+            - r66-frozen-chat-gate
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-sqlite-gate:
+          requires:
+            - r66-frozen-modelcenter-gate
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
       - r66-onehost-windows:
           requires:
-            - r66-native-exe-gate
+            - r66-sqlite-gate
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
