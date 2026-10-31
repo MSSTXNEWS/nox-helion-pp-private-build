@@ -100,6 +100,13 @@ class ExistingDriveDonorRegression(unittest.TestCase):
     def test_approved_p01_c08_no_loss_uninstall(self):
         validate_c08(self.uninstaller)
 
+    def test_source_only_qa_never_fabricates_native_route_counts(self):
+        qa = (ROOT / "coordination/e06/gitlab_windows_source_qa.ps1").read_text("utf-8-sig")
+        self.assertIn("nativeRoutesAccepted = $null", qa)
+        self.assertIn("nativeRoutesPending = $null", qa)
+        self.assertIn("nativeRoutesEvidence = 'NOT_ASSESSED_BY_SOURCE_QA'", qa)
+        self.assertNotIn("nativeRoutesPending = 14", qa)
+
     def test_old_uninstall_that_deletes_before_validation_is_blocked(self):
         broken = self.uninstaller.replace(
             "# PHASE 3", "Remove-Item -LiteralPath $entry.Full\n# PHASE 3", 1)
