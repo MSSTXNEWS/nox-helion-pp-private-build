@@ -1,103 +1,63 @@
-# I0 OneHost #78/#83 isolation: the existing PRE/A/R11 stage passed #79;
-# original frozen CHAT/MODEL passes #80-82; split only unfinished C source/WPF build.
+# I0 narrow C1 split. #84 combined Creative/WOW FAILED; identify exact failing owner stage.
 version: 2.1
 orbs:
   win: circleci/windows@5.0
 jobs:
-  i0-d02-creative-exact-stage:
+  i0-r11-creative-owner-stage:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: C1 source-only real R11 Creative plus WOW staging
-          no_output_timeout: 20m
+          name: R11 original donor plus exact existing Creative patch
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'C1_R11_STAGE_FAIL' }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_R11_DONOR_STAGE_FAILED' }
             python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
-            if ($LASTEXITCODE -ne 0) { throw 'C1_OWNER_CREATIVE_STAGE_FAIL' }
-            python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
-            if ($LASTEXITCODE -ne 0) { throw 'C1_OWNER_WOW200_STAGE_FAIL' }
-            $proof=Get-Content 'work/e06/staged/WOW200_STAGE_RECEIPT.json' -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($proof.count -ne 65 -or $proof.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
-                $proof.legacy_d02_runtime_imported -ne $false -or
-                $proof.pack01_catalog_routes -ne 50 -or $proof.release_accepted -ne $false) {
-              throw 'C1_OWNER_WOW200_RECEIPT_FAIL'
+            if ($LASTEXITCODE -ne 0) { throw 'I0_ORIGINAL_CREATIVE_STAGE_FAILED' }
+            if (!(Test-Path 'work/e06/staged/CREATIVE_STAGE_RECEIPT.json' -PathType Leaf)) {
+              throw 'I0_CREATIVE_SOURCE_RECEIPT_ABSENT'
             }
-            Write-Host 'NOX_I0_CREATIVE_D02_OWNER_STAGE_PASS_NOT_GUI'
+            Write-Host 'I0_ORIGINAL_CREATIVE_STAGE_PASS'
       - persist_to_workspace:
           root: .
           paths:
             - work/e06/staged
       - store_artifacts:
-          path: work/e06/staged/WOW200_STAGE_RECEIPT.json
-          destination: I0-C1-REAL-OWNER-WOW-NOT-GUI
-  i0-wpf-original-compile-only:
+          path: work/e06/staged/CREATIVE_STAGE_RECEIPT.json
+          destination: I0-ORIGINAL-CREATIVE-SOURCE-NOT-GUI
+  i0-wow200-owner-stage:
     executor: win/server-2022
     steps:
       - checkout
       - attach_workspace:
           at: .
       - run:
-          name: C2 exact original E06 P02 P05 compatibility then dotnet WPF publish, no Setup
-          no_output_timeout: 40m
+          name: Existing exact original WOW200 stage after Creative
           command: |
             $ErrorActionPreference='Stop'
-            $source=(Resolve-Path 'work/e06/staged/R11').Path
-            $donors=@(
-              @{path='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';sha='711644bf4d2052d812bf71a0b679d8531a3ca76e'},
-              @{path='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';sha='553025dbd98bf812013a7bfb748c0127e42220f9'}
-            )
-            foreach ($item in $donors) {
-              $gitsha=(git hash-object -- $item.path).Trim().ToLowerInvariant()
-              if ($LASTEXITCODE -ne 0 -or $gitsha -cne $item.sha) { throw 'C2_APPROVED_P02_SOURCE_SHA_MISMATCH' }
-              if (!(Test-Path -LiteralPath (Join-Path $source 'Integration') -PathType Container)) { throw 'C2_ORIGINAL_R11_INTEGRATION_DIR_MISSING' }
-              if (Test-Path -LiteralPath (Join-Path $source $item.dest)) { throw 'C2_P02_STAGE_COLLISION' }
-              Copy-Item -LiteralPath $item.path -Destination (Join-Path $source $item.dest) -ErrorAction Stop
+            python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
+            if ($LASTEXITCODE -ne 0) { throw 'I0_ORIGINAL_WOW200_STAGE_FAILED' }
+            $p=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($p.count -ne 65 -or $p.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+                $p.legacy_d02_runtime_imported -ne $false -or
+                $p.pack01_catalog_routes -ne 50 -or $p.release_accepted -ne $false) {
+              throw 'I0_WOW200_RECEIPT_CONTRACT_REJECTED'
             }
-            $addon='coordination/e06/MainWindow.NativeP02.cs'
-            if ((git hash-object -- $addon).Trim().ToLowerInvariant() -cne '0b65fc5ca62788dbde01e669e98769a23ac5e8a9') {
-              throw 'C2_NATIVE_ADDON_SHA_FAIL'
-            }
-            python coordination/e06/stage_native_p02.py $source $addon '4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
-            if ($LASTEXITCODE -ne 0) { throw 'C2_NATIVE_MAINWINDOW_STAGE_FAIL' }
-            python coordination/e06/stage_p05_html_verbatim.py $source
-            if ($LASTEXITCODE -ne 0) { throw 'C2_P05_VERBATIM_STAGE_FAIL' }
-            python coordination/e06/stage_wpf_compat_no_loss.py $source
-            if ($LASTEXITCODE -ne 0) { throw 'C2_WPF_COMPAT_STAGE_FAIL' }
-            python coordination/e06/stage_wpf_final8_no_loss.py $source
-            if ($LASTEXITCODE -ne 0) { throw 'C2_FINAL8_WPF_STAGE_FAIL' }
-            $sdk=@(dotnet --list-sdks)
-            if (@($sdk | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
-              $root=Join-Path $env:TEMP 'nox-dotnet-sdk8'
-              $script=Join-Path $env:TEMP 'nox-dotnet-install.ps1'
-              Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $script -UseBasicParsing
-              & $script -Version '8.0.425' -InstallDir $root -NoPath
-              if ($LASTEXITCODE -ne 0) { throw 'C2_DOTNET8_PROVISION_FAIL' }
-              $env:DOTNET_ROOT=$root
-              $env:PATH="$root;$env:PATH"
-            }
-            $project=Join-Path $source 'NOX.P01.Shell.csproj'
-            $payload='work/e06/i0-diagnostic-wpf-publish'
-            & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
-            if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath (Join-Path $payload 'NOX.P01.Shell.exe') -PathType Leaf)) {
-              throw 'C2_ORIGINAL_WPF_PUBLISH_FAIL'
-            }
-            Write-Host 'NOX_I0_EXACT_WPF_SOURCE_PUBLISH_PASS_NOT_SETUP_NOT_E07'
+            Write-Host 'I0_ORIGINAL_WOW200_STAGE_PASS_NOT_GUI'
       - store_artifacts:
-          path: work/e06/i0-diagnostic-wpf-publish
-          destination: I0-C2-UNINSTALLED-WPF-SOURCE-CANDIDATE
+          path: work/e06/staged/WOW200_STAGE_RECEIPT.json
+          destination: I0-ORIGINAL-WOW-SOURCE-NOT-GUI
 workflows:
-  i0_only_remaining_onehost_stages:
+  i0_isolate_c1_owner_stages:
     jobs:
-      - i0-d02-creative-exact-stage:
+      - i0-r11-creative-owner-stage:
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
-      - i0-wpf-original-compile-only:
+      - i0-wow200-owner-stage:
           requires:
-            - i0-d02-creative-exact-stage
+            - i0-r11-creative-owner-stage
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
