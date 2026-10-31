@@ -75,7 +75,19 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "P03_NO_DURABLE_JOB_HANDOFF"):
             assert_nonblocking(broken)
 
-    def test_04_existing_onehost_builder_pins_exact_updated_blob(self):
+    def test_04_interrupted_downloads_recover_before_queue_mutation(self):
+        self.assertIn("await _queue.RecoverInterruptedAsync(ct);", self.data)
+        self.assertIn("if (_queueRecovered) return;", self.data)
+        self.assertIn("await _recoveryGate.WaitAsync(ct);", self.data)
+        self.assertIn("if (route is \"models.queue\" or \"models.cancel\" or \"models.retry\" or", self.data)
+        self.assertNotIn("State = ModelJobState.Queued", self.data)
+
+    def test_05_missing_crash_recovery_is_rejected(self):
+        broken = self.data.replace("await _queue.RecoverInterruptedAsync(ct);",
+                                   "/* old stalled state */", 1)
+        self.assertNotIn("await _queue.RecoverInterruptedAsync(ct);", broken)
+
+    def test_06_existing_onehost_builder_pins_exact_updated_blob(self):
         actual = git_blob(ROUTES.read_bytes())
         self.assertIn(
             "relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';"
@@ -83,7 +95,7 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             self.build,
         )
 
-    def test_05_real_merge_evidence_still_synchronous(self):
+    def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
         self.assertIn("ModelLocalAttestation.VerifyReceiptAsync", self.data)
 
