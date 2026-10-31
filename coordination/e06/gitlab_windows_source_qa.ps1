@@ -100,6 +100,11 @@ try {
     Invoke-SourceCheck 'P04_SNAPSHOT_PYTHON' 'python' @(
       '-m','unittest','discover','-s','tests/P04',
       '-p','test_model_snapshot_probe.py','-v')
+    # Reuse gate: Drive P03 C37 / P01 C08 fixes already live in the single owner tree.
+    # Source-only regression; never promote as native install or E07.
+    Invoke-SourceCheck 'P03_C37_P01_C08_NOLOSS_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_drive_c37_c08_contract.py','-v')
     Invoke-SourceCheck 'P03_PRIVACY_NODE' 'node' @(
       '--test','coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs')
     Invoke-SourceCheck 'PACK02_CSV_NODE' 'node' @(
@@ -116,7 +121,7 @@ try {
       'run','--project','Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj',
       '--configuration','Release','--no-launch-profile')
     if (@($cases | Where-Object {$_.status -ne 'PASS'}).Count -gt 0 -or
-        $cases.Count -ne 10) {
+        $cases.Count -ne 11) {
         $reason = 'SOME_SOURCE_SUITES_FAILED_OR_NOT_RUN'
         Write-QAReceipt 'SOURCE_QA_HOLD' $reason
         exit 2
