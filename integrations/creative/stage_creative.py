@@ -30,19 +30,19 @@ def safe_source_file(p:Path)->None:
 def unique_pack_anchor(native: str) -> str:
     """Pin the ONE existing trusted Pack01 owner route, tolerating formatting only.
 
-    The R11 donor uses noncanonical whitespace for the existing case statement.
+    The R11 donor may format the existing case statement across multiple lines.
     Never invent a new native route or attach to another case.
     """
     if native.count(ANCHOR) == 1:
         return ANCHOR
     # Same route, handler, and break semantics, without requiring one-line C#.
     case = re.compile(
-        r'case\\s+"packInvoke"\\s*:\\s*(?:(?!\\bcase\\s+").){1,480}?\\bbreak\\s*;',
+        r'case\s+"packInvoke"\s*:\s*(?:(?!\bcase\s+").){1,480}?\bbreak\s*;',
         re.DOTALL,
     )
     matches = [
         match.group(0) for match in case.finditer(native)
-        if re.search(r'\\bDispatchPack01Async\\s*\\(', match.group(0))
+        if re.search(r'\bDispatchPack01Async\s*\(', match.group(0))
     ]
     if len(matches) != 1 or any(
         native.count('case "' + name + '"') for name in ('creativeInvoke', 'creativeProjector')
