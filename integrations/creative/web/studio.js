@@ -100,7 +100,7 @@ function openTheater(){
  }
  // Browser preview does not claim access to native Windows project files.
  theater=window.open('theater.html','nox-helion-projector','popup,width=1100,height=700');
- if(!theater)showToast('Разреши всплывающее окно для проектора',true);else showToast('Окно открыто — перенеси на проектор');
+ if(!theater)showToast('Разреши всплывающее окно для проектора',true);else showToast('Браузерный предпросмотр: вывод на физический проектор управляется только NOX Windows');
 }
 function wowOptions(){for(let i=0;i<20;i++)for(let j=0;j<10;j++){let o=document.createElement('option');o.value=i*10+j+1;o.textContent=`WOW ${String(i*10+j+1).padStart(3,'0')} · ${MATERIALS[i]} · ${MODES[j]}`;$('wow-preset').append(o)}}
 function applyWow(){let value=Number($('wow-preset').value)||1;let i=Math.floor((value-1)/10),j=(value-1)%10;let perf=$('quality').value;document.body.className='mode-'+perf;document.documentElement.style.setProperty('--edge',j>6?'rgba(255,173,86,.65)':'rgba(223,147,64,.33)');document.documentElement.style.setProperty('--fx-hue',String(i*17)+'deg');document.documentElement.style.setProperty('--fx-intensity',String(.18+j*.07));document.documentElement.style.setProperty('--fx-speed',String(17-j)+'s');document.documentElement.style.setProperty('--fx-drift',String(2+i%8)+'px');$('fx-details').textContent=MATERIALS[i]+' / '+MODES[j]+'; профиль '+perf+'. Процедурный пресет (не новый GPU-движок).'}
@@ -125,9 +125,9 @@ $('upload-asset').onclick=async()=>{
 $('list-assets').onclick=()=>task('project_files',{project_id:$('project').value.trim()},'asset-output');
 $('make-3d').onclick=async()=>{const r=await task('make_3d',{project_id:$('project').value.trim(),form:$('shape').value,color:$('shape-color').value},'3d-output');if(r?.project_id)$('project').value=r.project_id};
 $('speak').onclick=async()=>{const r=await task('speak',{text:$('voice-text').value,language:$('voice-language').value,project_id:$('project').value.trim()},'voice-output');if(r?.project_id)$('project').value=r.project_id};
-$('preview-movie').onclick=()=>{openTheater();showToast('Открой созданный MP4 в окне проектора через «Выбрать видео»')};
+$('preview-movie').onclick=()=>{openTheater();showToast('Локальный фильм открывается через утверждённый NOX плеер; при отсутствии файла будет HOLD')};
 $('theater-open').onclick=openTheater;$('theater-title').oninput=()=>popup('title',$('theater-title').value); $('theater-play').onclick=()=>popup('play');$('theater-pause').onclick=()=>popup('pause');$('theater-full').onclick=()=>{popup('fullscreen');showToast('Полный экран должен быть подтверждён в окне проектора')};
-const spaces=$('spaces');for(const s of SPACES){const b=document.createElement('button');b.className='tile';b.textContent=s;b.onclick=()=>{popup('space',s);showToast('Выбрана сцена: '+s)};spaces.append(b)}$('open-space').onclick=openTheater;$('apply-fx').onclick=applyWow;applyWow();
+const spaces=$('spaces');for(const s of SPACES){const b=document.createElement('button');b.className='tile';b.textContent=s;b.onclick=()=>{popup('space',s);showToast('Сцена '+s+': название передано плееру; полноценный 3D backend пока HOLD')};spaces.append(b)}$('open-space').onclick=openTheater;$('apply-fx').onclick=applyWow;applyWow();
 try{let response=await fetch('/api/bootstrap');if(response.ok){const b=await response.json();csrf=b.csrf}}catch{};
 await refresh();await renderModels();}
 
