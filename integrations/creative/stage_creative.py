@@ -16,7 +16,7 @@ D02 = {
     'core01.png':'343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97',
     'menu_sections.png':'7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4',
 }
-ANCHOR = 'case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
+ANCHOR = 'case "openModelCenter": OpenModelCenter(); break;'
 LIFECYCLE = 'Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
 
 def sha(p:Path)->str:
