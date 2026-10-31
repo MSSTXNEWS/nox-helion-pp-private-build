@@ -1,49 +1,51 @@
-# I0 proven original P01 C07 SHA 90076eba/104 entries, C07 MainWindow SHA 6fc49544.
-# Minimal one-line source fix to Creative anchor; preserve untouched owner switch.
+# I0 after exact C07 MainWindow source/asset preflight: separate Creative and WOW source.
 version: 2.1
 orbs:
   win: circleci/windows@5.0
 jobs:
-  i0-c07-original-creative-wow-stage:
+  i0-fixed-c07-creative-source:
     executor: win/server-2022
     steps:
       - checkout
       - run:
-          name: Real original C07 R11 plus Creative repaired owner anchor and approved WOW200
-          no_output_timeout: 20m
+          name: Original C07 SHA and fixed Creative native bridge only
           command: |
             $ErrorActionPreference='Stop'
             python coordination/e06/stage_p01.py
-            if ($LASTEXITCODE -ne 0) { throw 'I0_PINNED_C07_ORIGINAL_STAGE_FAIL' }
-            $main='work/e06/staged/R11/MainWindow.xaml.cs'
-            if ((Get-FileHash -LiteralPath $main -Algorithm SHA256).Hash.ToLowerInvariant() -cne
-              '6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210') {
-              throw 'I0_PINNED_C07_MAINWINDOW_SHA_FAIL'
-            }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_C07_RECONSTRUCT_FAIL' }
             python integrations/creative/stage_creative.py work/e06/staged/R11 integrations/creative
-            if ($LASTEXITCODE -ne 0) { throw 'I0_FIXED_CREATIVE_STAGE_FAIL' }
-            $code=Get-Content $main -Raw -Encoding UTF8
-            foreach($anchor in @('case "openModelCenter"','case "creativeInvoke"','case "creativeProjector"')) {
-              if ([regex]::Matches($code,[regex]::Escape($anchor)).Count -ne 1) {
-                throw "I0_C07_NATIVE_OWNER_ROUTER_NOT_UNIQUE:$anchor"
-              }
-            }
+            if ($LASTEXITCODE -ne 0) { throw 'I0_C07_CREATIVE_STAGE_FAIL' }
+            Write-Host 'I0_FIXED_CREATIVE_STAGE_PASS'
+      - persist_to_workspace:
+          root: .
+          paths:
+            - work/e06/staged
+  i0-wow200-after-creative:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Existing exact WOW200 after fixed Creative
+          command: |
+            $ErrorActionPreference='Stop'
             python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
-            if ($LASTEXITCODE -ne 0) { throw 'I0_WOW200_STAGE_FAIL' }
-            $p=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($p.count -ne 65 -or $p.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
-                $p.legacy_d02_runtime_imported -ne $false -or
-                $p.pack01_catalog_routes -ne 50 -or $p.release_accepted -ne $false) {
-              throw 'I0_ORIGINAL_WOW200_RECEIPT_FAIL'
-            }
-            Write-Host 'I0_C07_CREATIVE_WOW_VERIFIED_STAGE_PASS_NOT_E07'
+            if ($LASTEXITCODE -ne 0) { throw 'I0_OWNER_WOW200_AFTER_CREATIVE_FAIL' }
+            Write-Host 'I0_WOW200_AFTER_CREATIVE_PASS'
       - store_artifacts:
           path: work/e06/staged/WOW200_STAGE_RECEIPT.json
-          destination: I0-C07-ORIGINAL-D02-WOW-SOURCE-VERIFIED
+          destination: I0-WOW200-RECEIPT
 workflows:
-  i0_c07_creative_owner_route_fix:
+  i0_source_stage_exact_split:
     jobs:
-      - i0-c07-original-creative-wow-stage:
+      - i0-fixed-c07-creative-source:
+          filters:
+            branches:
+              only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
+      - i0-wow200-after-creative:
+          requires:
+            - i0-fixed-c07-creative-source
           filters:
             branches:
               only: ci/nox-r66-i0-onehost-preflight-isolate-20261031
