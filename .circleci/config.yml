@@ -39,10 +39,45 @@ jobs:
             python -m unittest discover -v -s Packages/P02/worker-python -p test_p02_native_ingress.py
             if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_P02_TESTS_FAILED' }
             Write-Host 'NOX_R66_SOURCE_LOCK_AND_NATIVE_INGRESS_PASS'
+  r66-native-routes-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: R66 real PACK01 owner STOP ACL and history routing source tests
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_OWNER_NATIVE_ROUTES_FAILED' }
+            Write-Host 'NOX_R66_NATIVE_ROUTES_PASS'
+  r66-native-exe-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Real frozen R66 original Python EXE plus framed IPC and original SQLite
+          no_output_timeout: 35m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/e06/t06_native_proven_builder.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_NATIVE_EXE_BUILD_FAILED' }
+            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
+            python -m unittest -v coordination.e06.test_e06_r64_shared_db
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_ORIGINAL_SQLITE_SHARED_DB_HOLD' }
+            Write-Host 'NOX_R66_NATIVE_EXE_AND_SQLITE_PASS'
+      - persist_to_workspace:
+          root: .
+          paths:
+            - work/t06-manual-source-inspect/python-exe-candidate
+      - store_artifacts:
+          path: work/t06-manual-source-inspect/python-exe-candidate
+          destination: NOX-R66-NATIVE-EXE-CANDIDATE-NOT-RELEASE
   r66-onehost-windows:
     executor: win/server-2022
     steps:
       - checkout
+      - attach_workspace:
+          at: .
       - run:
           name: PRE · exact approved source, Windows host, native dependencies
           no_output_timeout: 20m
@@ -83,21 +118,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
             python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-$env:CIRCLE_BUILD_NUM"
             if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
-            python -m unittest discover -v -s Packages/P02/worker-python -p test_p02_native_ingress.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_INGRESS_FAILED' }
-            python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_PACK01_NATIVE_ROUTING_FAILED' }
-      - run:
-          name: B · exact R66 P02/Ollama/SQLite native Windows EXE and IPC test
-          no_output_timeout: 30m
-          command: |
-            $ErrorActionPreference = 'Stop'
-            python coordination/e06/t06_native_proven_builder.py
-            if ($LASTEXITCODE -ne 0) { throw 'T06_R66_PYTHON_EXE_FAILED' }
-            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
-            python -m unittest -v coordination.e06.test_e06_r64_shared_db
-            if ($LASTEXITCODE -ne 0) { throw 'T06_R66_SQLITE_OWNERSHIP_FAILED' }
-            Write-Host 'NOX_R66_PYTHON_NATIVE_EXE_IPC_SOURCE_QA_PASS'
       - run:
           name: C · approved D02 HOME MENU WORK + one original WPF/WebView2 NSIS
           no_output_timeout: 40m
@@ -145,9 +165,21 @@ workflows:
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-onehost-windows:
+      - r66-native-routes-gate:
           requires:
             - r66-original-source-gate
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-native-exe-gate:
+          requires:
+            - r66-native-routes-gate
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-onehost-windows:
+          requires:
+            - r66-native-exe-gate
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
