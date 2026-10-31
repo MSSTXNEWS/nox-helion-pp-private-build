@@ -129,6 +129,28 @@ class BridgeTest(unittest.TestCase):
                 self.dispatch.execute("helion.chat",{"model":"qwen3:4b","text":"Hi"},self.session)
         self.assertEqual(self.store.history("t1","p1","room1"),before)
 
+    def test_atomic_exchange_rolls_back_if_native_revoke_between_rows(self):
+        before=self.store.history("t1","p1","room1")
+        calls=[]
+        def scope():
+            calls.append(True)
+            if len(calls)==2:
+                raise bridge.HostDenied("native revoke between rows")
+        with self.assertRaisesRegex(bridge.HostDenied,"revoke between rows"):
+            self.store.add_exchange("t1","p1","room1","question","answer",authorize=scope)
+        self.assertEqual(self.store.history("t1","p1","room1"),before)
+        self.assertEqual(len(calls),2)
+
+    def test_stop_in_stream_never_persists_exchange(self):
+        before=self.store.history("t1","p1","room1")
+        def cancelled_stream(*_):
+            self.dispatch.execute("chat.stop",{},self.session)
+            yield {"delta":"late answer","done":True}
+        with patch.object(self.client,"stream",side_effect=cancelled_stream):
+            with self.assertRaisesRegex(bridge.HostDenied,"STOP revoked"):
+                self.dispatch.execute("helion.chat",{"model":"qwen3:4b","text":"question"},self.session)
+        self.assertEqual(self.store.history("t1","p1","room1"),before)
+
     def test_owner_p02_same_second_history_order_is_stable(self):
         # P02 owner fixed the same-second ordering bug with SQLite insertion
         # order (rowid for V1, stable_seq for approved V2). Never keep this
