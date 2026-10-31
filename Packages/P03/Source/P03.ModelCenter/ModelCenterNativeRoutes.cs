@@ -207,31 +207,38 @@ public sealed class ModelCenterNativeRoutes : IDisposable
 
     private void StartQueuedTransfer(Guid jobId)
     {
+        Task pending;
         lock (_transferGate)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(ModelCenterNativeRoutes));
-            // Each job was explicitly admitted and persisted by the native owner.
-            // The existing worker serializes actual transfers with _singleWorker.
+            // One durable queue and one worker: the UI receives the job receipt
+            // immediately, while the existing worker serializes all transfers.
             if (_transferTasks.ContainsKey(jobId)) return;
             var token = _transferStop.Token;
-            var pending = Task.Run(() => _worker.RunNextAsync(token, jobId),
+            pending = Task.Run(() => _worker.RunNextAsync(token, jobId),
                 CancellationToken.None);
             _transferTasks.Add(jobId, pending);
-            _ = pending.ContinueWith(completed =>
-            {
-                if (completed.IsFaulted)
-                    System.Diagnostics.Trace.TraceError(
-                        "P03_BACKGROUND_TRANSFER_FAILED job={0} exception={1}",
-                        jobId, completed.Exception?.GetBaseException().GetType().Name);
-                lock (_transferGate)
-                {
-                    _transferTasks.Remove(jobId);
-                    if (_disposed && _transferTasks.Count == 0)
-                        _transferStop.Dispose();
-                }
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
-               TaskScheduler.Default);
         }
+        // Register completion AFTER the job is entered in the dictionary and
+        // AFTER releasing its gate. ExecuteSynchronously can otherwise observe
+        // an already-completed task before Add and leave a permanently stale job.
+        _ = pending.ContinueWith(completed =>
+        {
+            if (completed.IsFaulted)
+                System.Diagnostics.Trace.TraceError(
+                    "P03_BACKGROUND_TRANSFER_FAILED job={0} exception={1}",
+                    jobId, completed.Exception?.GetBaseException().GetType().Name);
+            lock (_transferGate)
+            {
+                _transferTasks.Remove(jobId);
+                if (_disposed && _transferTasks.Count == 0)
+                {
+                    _transferStop.Dispose();
+                    _ownedHttp?.Dispose();
+                }
+            }
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
+           TaskScheduler.Default);
     }
 
     private static void RequireHardware(ModelCatalogEntry model)
@@ -257,10 +264,15 @@ public sealed class ModelCenterNativeRoutes : IDisposable
         {
             if (_disposed) return;
             _disposed = true;
+            // Owner STOP precedes disposal. The HTTP client remains alive
+            // until the last already-admitted transfer has terminated.
             _transferStop.Cancel();
-            if (_transferTasks.Count == 0) _transferStop.Dispose();
+            if (_transferTasks.Count == 0)
+            {
+                _transferStop.Dispose();
+                _ownedHttp?.Dispose();
+            }
         }
         StopMergedImport();
-        _ownedHttp?.Dispose();
     }
 }
