@@ -332,3 +332,7 @@ $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();$('search').focus();}});
 if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>processMessage(e.data));
 render();
+// Ask the authenticated existing WPF owner for real catalog/queue/hardware
+// only after this page has installed its listener. No browser-supplied rights.
+if(window.chrome?.webview?.postMessage)
+  window.chrome.webview.postMessage({type:'p03.ready.v1'});
