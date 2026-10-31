@@ -28,15 +28,24 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   let data=[],limit=9,filtered=[],busy=false;
   const emit=(type,detail={})=>{ try { onEvent?.({contract:'nox.oie.ui.v1',type,...detail}); } catch (_) { /* telemetry is noncritical */ } };
   const theme=panel.querySelector("[data-theme]");
+  for(const id of ['generate','megablock']){
+    const b=panel.querySelector('[data-action='+id+']');
+    if(typeof requestJob!=='function') { b.disabled=true; b.title='HOLD · доверенный обработчик NOX не подключён'; }
+  }
+  if(typeof onBack!=='function'){
+    const b=panel.querySelector('[data-action=back]');b.disabled=true;b.title='HOLD · маршрут возврата не подключён';
+  }
   async function get(path) {
     if (typeof apiBase !== 'string' || !/^(?:|\/(?!\/)[a-zA-Z0-9/_-]*)$/.test(apiBase) || apiBase.includes('..')) throw Error('SAME_ORIGIN_API_REQUIRED');
     const response=await fetch(apiBase+path,{signal:abort.signal,credentials:'omit',cache:'no-store'});
+    if(abort.signal.aborted)throw Error('ABORTED');
     if(!response.ok)throw Error('HTTP_'+response.status);
     const payload=await response.json();if(!payload.ok)throw Error(payload.error||'API_ERROR');return payload.result;
   }
   async function read(action,params,path){
     if(typeof requestJob==='function'){
       const payload=await requestJob(action,params,abort.signal);
+      if(abort.signal.aborted)throw Error('ABORTED');
       if(!payload?.ok)throw Error(payload?.error||'HOST_READ_FAILED');
       return payload.result;
     }
@@ -47,6 +56,7 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
     try {
       if(typeof requestJob!=='function')throw Error('HOST_ACTION_NOT_CONNECTED');
       const payload=await requestJob(endpoint==='/api/megablock1'?'megablock1.preview':'mission.run',{theme:theme.value,count:3},abort.signal);
+      if(abort.signal.aborted)throw Error('ABORTED');
       if(!payload?.ok)throw Error(payload?.error||'HOST_ACTION_FAILED');
       detail.textContent=JSON.stringify(payload.result,null,2);detail.hidden=false;status.textContent='Локальный результат создан · коммерческая проверка HOLD';emit('job.done',{endpoint});
     } catch(err){if(!abort.signal.aborted){status.textContent='HOLD · '+err.message;emit('job.error',{endpoint,error:err.message});}}
