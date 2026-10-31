@@ -148,6 +148,37 @@ cmd=[sys.executable,"-m","PyInstaller","--noconfirm","--clean",
      # Do NOT replace this live proof with a constant or synthetic receipt.
      "--add-data",str(native_root/"helion/e06_native_stdio_owner.py")+os.pathsep+"helion",
      str(native_root/"run_helion.py")]
+# Preserve the real dynamically loaded OneHost modules and source-pinned
+# non-Python resources in this SINGLE original PyInstaller executable.
+for hidden in (
+    "p02_onehost", "p02_runtime", "p02_chat_bridge", "p03_onehost_port",
+    "nox_selfbuilder.original_store_adapter", "nox_selfbuilder.onehost_builder",
+    "nox_selfbuilder.onehost_queue", "nox_selfbuilder.background_forge",
+    "nox_selfbuilder.p04_forge_bridge",
+):
+    cmd[-1:-1] = ["--hidden-import", hidden]
+data_files = overlay_receipt.get("runtime_data_files")
+if type(data_files) is not list or not data_files:
+    raise RuntimeError("T06_RUNTIME_DATA_SOURCELOCK_MISSING")
+for record in data_files:
+    if type(record) is not dict:
+        raise RuntimeError("T06_RUNTIME_DATA_RECORD_INVALID")
+    rel, destination, expected = (record.get("runtime_path"),
+        record.get("pyinstaller_destination"), record.get("sha256"))
+    if not all(type(value) is str and value for value in (rel, destination, expected)):
+        raise RuntimeError("T06_RUNTIME_DATA_RECORD_INVALID")
+    rel_path, dest_path = PurePosixPath(rel), PurePosixPath(destination.replace("\\", "/"))
+    if (rel_path.is_absolute() or dest_path.is_absolute() or
+        ".." in rel_path.parts or ".." in dest_path.parts):
+        raise RuntimeError("T06_RUNTIME_DATA_PATH_ESCAPE")
+    candidate = native_root / pathlib.Path(*rel_path.parts)
+    if (not candidate.is_file() or candidate.is_symlink() or
+        not candidate.resolve().is_relative_to(native_root.resolve())):
+        raise RuntimeError("T06_RUNTIME_DATA_SOURCE_NOT_REGULAR")
+    if hashlib.sha256(candidate.read_bytes()).hexdigest() != expected:
+        raise RuntimeError("T06_RUNTIME_DATA_SHA_DRIFT")
+    cmd[-1:-1] = ["--add-data", str(candidate.resolve()) + os.pathsep + destination]
+print("T06_RUNTIME_DATA_SHA_PINNED", len(data_files), flush=True)
 built=subprocess.run(cmd,cwd=native_root,capture_output=True,text=True,timeout=900)
 (out/"PYINSTALLER_WINDOWS_BUILD_LOG.txt").write_text(
     built.stdout+"\nSTDERR:\n"+built.stderr,encoding="utf-8",errors="replace")

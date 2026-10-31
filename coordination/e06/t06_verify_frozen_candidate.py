@@ -27,7 +27,10 @@ def request(exe, route, run_id, nonce, data_dir):
         [str(exe),"--native-stdio","--run-id",run_id,
          "--data-dir",str(data_dir)],input=wire,cwd=NATIVE,
         capture_output=True,timeout=120)
-    need(result.returncode==0,"R66_FROZEN_PROCESS_EXIT")
+    if result.returncode != 0:
+        print("R66_FROZEN_PROCESS_EXIT", result.returncode,
+              "STDERR_TAIL", repr(result.stderr[-1800:]), flush=True)
+        raise RuntimeError("R66_FROZEN_PROCESS_EXIT")
     raw = result.stdout
     need(len(raw)>=5,"R66_FROZEN_NO_REPLY")
     count = struct.unpack(">I",raw[:4])[0]
@@ -62,6 +65,8 @@ def main(gate: str):
     if gate=="chat":
         a = request(exe,"chat.model","NOX-P02-R66-FROZEN-E2E",
                     "fedcba0987654321fedcba0987654321",OUT/"exe-user-data")
+        print("R66_FROZEN_MODEL_REPLY_STATUS", a.get("status"),
+              "CODE", a.get("errorCode"), "SOURCE_STATUS", source.get("framed_reply_status"), flush=True)
         need(a.get("status") in ("OK","HOLD"),"R66_MODEL_STATUS_INVALID")
         if a["status"]=="OK":
             need(type(a.get("result")) is dict and
