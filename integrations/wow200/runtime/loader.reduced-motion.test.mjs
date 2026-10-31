@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 const source=readFileSync(new URL('./loader.mjs',import.meta.url),'utf8')
  .replace(/^import .+;\s*$/gm,'').replace('export const ownerAudit=','const ownerAudit=');
-function fixture({reduced=false,noMedia=false,legacy=false,bodyClass=''}={}){
+function fixture({reduced=false,noMedia=false,legacy=false,bodyClass='',invalidCatalog=false}={}){
  const nodes=[];
  class El{constructor(tag){this.tag=tag;this.id='';this.value='';this.dataset={};this.children=[];this.className='';this.textContent='';this.classList={contains:v=>v===bodyClass};}
  append(...xs){this.children.push(...xs);}appendChild(x){this.children.push(x);}closest(){return null;}}
@@ -16,7 +16,7 @@ function fixture({reduced=false,noMedia=false,legacy=false,bodyClass=''}={}){
  const out={mount:null,scene:[],pack:[],preview:[]};
  const mountUnifiedCinema=(_,options)=>{out.mount=options;return {setMode:v=>{out.scene.push(v);return true;},preview:id=>{out.preview.push(id);return {name:'FX'};},current:()=>({active:out.scene.at(-1)||options.mode})}};
  const mountCinematic=()=>({decorate(){},setMode:v=>out.pack.push(v)});
- const fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({actions:Array.from({length:50},(_,i)=>({routeId:'R'+i,title:'Route '+i}))})});
+ const fetch=()=>Promise.resolve({ok:true,json:()=>Promise.resolve({version:invalidCatalog?'UNREVIEWED':'NOX-INTEGRATION-PACK-01',actions:Array.from({length:50},(_,i)=>({taskId:'NIP01-'+String(i+1).padStart(2,'0'),routeId:'route.test'+String(i+1),title:'Test route '+(i+1),category:'chat',owner:2}))})});
  runInNewContext(source,{document,window,fetch,mountUnifiedCinema,mountCinematic,reviewWowScopes:()=>{},CUES:[],SHOTS:[],COMPOSITIONS:[]},{timeout:1000});
  return {out,find:id=>document.getElementById(id),async ready(){for(let i=0;i<7;i++)await Promise.resolve();},
  reduced(v){motion.matches=v;callbacks.forEach(cb=>cb({matches:v}));}};
@@ -30,4 +30,9 @@ test('E01-W2-R14-06 OS reduces OFF restores chosen MAX in both engines',async()=
 test('E01-W2-R14-07 OS reduces ON disables both engines',async()=>{const x=fixture();await x.ready();x.reduced(true);assert.equal(x.out.scene.at(-1),'REDUCED');assert.equal(x.out.pack.at(-1),'reduced');});
 test('E01-W2-R14-08 ordinary ECO selector synchronizes scene and PACK01',async()=>{const x=fixture();await x.ready();x.find('nox-wow200-mode').value='ECO';x.find('nox-wow200-mode').onchange();assert.equal(x.out.scene.at(-1),'ECO');assert.equal(x.out.pack.at(-1),'eco');});
 test('E01-W2-R14-09 untrusted selector falls back BALANCED',async()=>{const x=fixture();await x.ready();x.find('nox-wow200-mode').value='UNKNOWN';x.find('nox-wow200-mode').onchange();assert.equal(x.out.scene.at(-1),'BALANCED');assert.equal(x.out.pack.at(-1),'balanced');});
+test('E01-W2-R14-11 invalid PACK01 catalog cannot activate routes or effects',async()=>{
+ const x=fixture({invalidCatalog:true});await x.ready();
+ assert.equal(x.out.pack.length,0);
+ assert.match(x.find('nox-wow200-routes').textContent,/HOLD/);
+});
 test('E01-W2-R14-10 missing and legacy matchMedia remain safe',async()=>{const n=fixture({noMedia:true});await n.ready();assert.equal(n.out.mount.mode,'BALANCED');const l=fixture({legacy:true});await l.ready();l.reduced(true);assert.equal(l.out.scene.at(-1),'REDUCED');assert.equal(l.out.pack.at(-1),'reduced');});
