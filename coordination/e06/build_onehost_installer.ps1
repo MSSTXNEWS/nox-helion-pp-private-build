@@ -333,7 +333,7 @@ foreach ($entry in $p02StageSources) {
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='beb96d99c2debb3eebaa65f98975129a2a7c0744'},@{p=$t06Addon;sha='614472c418c616328e9c8421423eaee355557d49'})) {
+foreach ($part in @(@{p=$t06Stage;sha='990971ed8e803b3fb46eec42190a9112024f3151'},@{p=$t06Addon;sha='d52538e7cbaff8cd4d5c178494a2582ee7243111'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
