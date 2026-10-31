@@ -321,6 +321,15 @@ class P03OneHostPort:
             # Do not let a native bridge treat JSON null as a queued/successful job.
             if result is None:
                 raise P03PortHold("Owner3 backend returned no operation acknowledgement")
+            # A backend HOLD/error is a factual refusal, not a successful native
+            # operation ACK. Preserve the existing owner backend and queue.
+            if type(result) is dict:
+                state = result.get("status")
+                if (result.get("ok") is False or
+                    (type(state) is str and
+                     (state.upper().startswith(("HOLD", "ERROR")) or
+                      state.upper() in ("FAILED", "DENIED")))):
+                    raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
             return result
         except (P03PortDenied, P03PortHold):
             raise
