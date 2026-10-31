@@ -49,6 +49,23 @@ class NativeConsentR47(unittest.TestCase):
         with self.assertRaises(P03PortDenied):
             p.execute_backend(session(), ROUTE, {"modelTag":"approved","options":{"digest":"original"}})
         self.assertEqual(b.calls, 0)
+    def test_existing_backend_hold_is_not_promoted_to_native_success(self):
+        b=Backend()
+        def refused(*_): return {"status":"HOLD_EXTERNAL_OWNER_EXECUTION"}
+        b.pull=refused
+        p=port(b,lambda *_:True)
+        with self.assertRaisesRegex(P03PortHold,"HOLD/error"):
+            p.execute_backend(session(), ROUTE, {})
+        self.assertEqual(b.calls,0)
+
+    def test_existing_backend_error_ack_is_not_promoted(self):
+        b=Backend()
+        b.pull=lambda *_: {"ok":False,"reason":"NO_PERMISSION"}
+        p=port(b,lambda *_:True)
+        with self.assertRaisesRegex(P03PortHold,"HOLD/error"):
+            p.execute_backend(session(), ROUTE, {})
+        self.assertEqual(b.calls,0)
+
     def test_unmodified_approved_payload_still_queues(self):
         b=Backend(); p=port(b, lambda *_: True)
         self.assertEqual(p.execute_backend(session(), ROUTE, {"modelTag":"approved"}), {"status":"QUEUED"})
