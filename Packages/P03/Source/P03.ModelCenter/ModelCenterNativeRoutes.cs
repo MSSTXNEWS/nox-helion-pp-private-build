@@ -18,6 +18,8 @@ public sealed class ModelCenterNativeRoutes : IDisposable
     private readonly object _transferGate = new();
     private readonly Dictionary<Guid, Task> _transferTasks = new();
     private bool _disposed;
+    private readonly SemaphoreSlim _recoveryGate = new(1, 1);
+    private bool _queueRecovered;
     public static readonly IReadOnlySet<string> Routes = new HashSet<string>(StringComparer.Ordinal)
     { "models.catalog", "models.licenses", "models.preflight", "models.queue",
       "models.pull", "models.gguf.import", "models.cancel", "models.retry" };
@@ -55,6 +57,11 @@ public sealed class ModelCenterNativeRoutes : IDisposable
         if (fields.Any(x=>!allowed.Contains(x.Name,StringComparer.Ordinal)) ||
             fields.Select(x=>x.Name).Distinct(StringComparer.Ordinal).Count()!=fields.Length)
             throw new UnauthorizedAccessException("P03_PAGE_AUTHORITY_DENIED");
+        // Restore the SAME durable queue on first owner operation. Read-only
+        // discovery and preflight remain usable even when local storage is HOLD.
+        if (route is "models.queue" or "models.cancel" or "models.retry" or
+                     "models.pull" or "models.gguf.import")
+            await RecoverInterruptedOnceAsync(ct);
         object result;
         switch(route)
         {
@@ -174,6 +181,20 @@ public sealed class ModelCenterNativeRoutes : IDisposable
         await ModelLocalAttestation.VerifyReceiptAsync(actual.ReceiptPath,receipt,ct);
         return JsonSerializer.SerializeToElement(new {status="IMPORTED",jobId=job.Id,
             receiptPath=actual.ReceiptPath,receipt},new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    }
+
+    private async Task RecoverInterruptedOnceAsync(CancellationToken ct)
+    {
+        await _recoveryGate.WaitAsync(ct);
+        try
+        {
+            if (_queueRecovered) return;
+            // Existing store holds an OS lease: another live NOX window's
+            // transfer must NOT be marked crashed. No auto-requeue/download.
+            await _queue.RecoverInterruptedAsync(ct);
+            _queueRecovered = true;
+        }
+        finally { _recoveryGate.Release(); }
     }
 
     private void StartQueuedTransfer(Guid jobId)
