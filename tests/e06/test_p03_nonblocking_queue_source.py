@@ -107,6 +107,23 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
             self.build,
         )
 
+    def test_08_catalog_exposes_only_public_reviewed_artifact_fields(self):
+        self.assertIn("artifacts=exact.Select(a=>new {", self.data)
+        self.assertIn("tag=a.ExactTag", self.data)
+        self.assertIn("licenseEvidenceUrl=a.LicenseEvidenceUri?.AbsoluteUri", self.data)
+        self.assertNotIn("artifacts=exact,", self.data)
+        catalog = self.data.split('case "models.catalog":', 1)[1].split(
+            'case "models.preflight":', 1)[0]
+        for private in ("ReviewedRightsReceiptId", "ImmutableRevision",
+                        "ExpectedSha256", "ExpectedManifestDigestSha256"):
+            self.assertNotIn("a." + private, catalog)
+
+    def test_09_full_owner_record_exposure_rejected(self):
+        broken = self.data.replace(
+            "artifacts=exact.Select(a=>new {", "artifacts=exact, /* exposed */ //", 1)
+        self.assertIn("artifacts=exact,", broken)
+        self.assertNotEqual(broken, self.data)
+
     def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
         self.assertIn("ModelLocalAttestation.VerifyReceiptAsync", self.data)
