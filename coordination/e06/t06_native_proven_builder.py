@@ -159,6 +159,18 @@ exe=candidate_dir/(exe_name+".exe")
 if not exe.is_file() or exe.stat().st_size<1000000:
     raise RuntimeError("T06_NATIVE_PYTHON_EXE_MISSING_OR_TRUNCATED")
 exe_hash=hashlib.sha256(exe.read_bytes()).hexdigest()
+# R66 CI: build only the real frozen EXE, with NO claim of IPC or a model.
+# The next CircleCI job attaches this SAME binary by SHA and runs the real
+# framed-IPC / SQLite acceptance. Normal builder behavior is unchanged.
+if os.environ.get("NOX_T06_BUILD_ONLY")=="YES":
+    (candidate_dir/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json").write_text(
+        json.dumps({"phase":"BUILT_NOT_NATIVE_VERIFIED",
+            "exe_file":exe.name,"exe_size":exe.stat().st_size,
+            "exe_sha256":exe_hash,"source_original_archive_sha256":original_expected,
+            "original_729_unchanged":True,"release_accepted":False},indent=2),
+        encoding="utf-8")
+    print("NOX_R66_FROZEN_BINARY_BUILT_NOT_IPC_VERIFIED",exe_hash,flush=True)
+    raise SystemExit(0)
 # EXACT binary P02 request/response on Windows, not an imported Python module.
 binary_run_id="NOX-P02-EXE-E2E-20261030"
 binary_request=dict(request,runId=binary_run_id,
