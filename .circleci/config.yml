@@ -6,6 +6,23 @@ orbs:
   win: circleci/windows@5.0
 
 jobs:
+  r66-windows-host-preflight:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Verify hosted Windows, .NET 8 and Python before costly build
+          command: |
+            $ErrorActionPreference = 'Stop'
+            if ($env:OS -ne 'Windows_NT') { throw 'NOX_WINDOWS_NOT_AVAILABLE' }
+            if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'NOX_COMMIT_DRIFT' }
+            python --version
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_PYTHON_NOT_AVAILABLE' }
+            $sdk=@(dotnet --list-sdks)
+            if ($LASTEXITCODE -ne 0 -or @($sdk | Where-Object { $_ -match '^8\\.' }).Count -lt 1) {
+              throw 'NOX_DOTNET8_NOT_AVAILABLE'
+            }
+            Write-Host 'NOX_WINDOWS_HOST_PREFLIGHT_PASS'
   r66-onehost-windows:
     executor: win/server-2022
     steps:
@@ -88,7 +105,13 @@ jobs:
 workflows:
   nox_r66_onehost_windows:
     jobs:
+      - r66-windows-host-preflight:
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
       - r66-onehost-windows:
+          requires:
+            - r66-windows-host-preflight
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
