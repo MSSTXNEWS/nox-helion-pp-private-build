@@ -332,6 +332,13 @@ $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();$('search').focus();}});
 if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>processMessage(e.data));
 render();
+// Return to the unchanged original D02 HOME, never to a second application.
+const p03Home = document.createElement('a');
+p03Home.href = '/';
+p03Home.className = 'source-link';
+p03Home.textContent = '← HOME';
+p03Home.setAttribute('aria-label', 'Вернуться в NOX');
+document.querySelector('.topbar')?.append(p03Home);
 // Ask the authenticated existing WPF owner for real catalog/queue/hardware
 // only after this page has installed its listener. No browser-supplied rights.
 if(window.chrome?.webview?.postMessage)
