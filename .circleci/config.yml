@@ -47,6 +47,9 @@ jobs:
           name: R66 real PACK01 owner STOP ACL and history routing source tests
           command: |
             $ErrorActionPreference = 'Stop'
+            # Existing owner test explicitly REQUIRES NOX_P02_OWNER_PATH and
+            # refuses to use invented P02 substitutes. Bind exact checkout.
+            $env:NOX_P02_OWNER_PATH=(Resolve-Path 'Packages/P02/worker-python').Path
             python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
             if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_OWNER_NATIVE_ROUTES_FAILED' }
             Write-Host 'NOX_R66_NATIVE_ROUTES_PASS'
