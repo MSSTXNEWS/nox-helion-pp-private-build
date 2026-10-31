@@ -467,6 +467,31 @@ class P02Store:
                             (message_id, chat, role, content, int(time.time())))
             return message_id
 
+    def add_exchange(self, tenant: str, user: str, chat: str,
+                     user_text: str, assistant_text: str, *, authorize):
+        """Atomically persist one accepted Ollama turn in the EXISTING SQLite DB.
+
+        A revoked native scope/STOP between the first and second insert must
+        roll back both rows, rather than leaving an orphaned user message.
+        The host supplies authorize() from its authenticated native session.
+        """
+        if not callable(authorize) or any(
+                type(value) is not str or len(value) > 1_000_000
+                for value in (user_text, assistant_text)):
+            raise ValueError('P02_EXCHANGE_SCOPE_OR_CONTENT_INVALID')
+        with self._write_transaction():
+            self._owned(tenant, user, chat)
+            result = []
+            for role, content in (('user', user_text), ('assistant', assistant_text)):
+                authorize()  # Native STOP/revoke can happen inside this transaction.
+                message_id = uuid.uuid4().hex
+                self.db.execute(
+                    "INSERT INTO p02_messages(id,chat_id,role,content,created_at) VALUES(?,?,?,?,?)",
+                    (message_id, chat, role, content, int(time.time())))
+                result.append(message_id)
+            authorize()  # Last validation before original SQLite COMMIT.
+            return tuple(result)
+
     def history(self, tenant: str, user: str, chat: str, limit: int = 250) -> list[dict]:
         # bool is an int subclass; accepting it as a page size hides UI/host mistakes.
         if type(limit) is not int or not (1 <= limit <= 1000):
