@@ -105,6 +105,19 @@ try {
     Invoke-SourceCheck 'P03_C37_P01_C08_NOLOSS_PYTHON' 'python' @(
       '-m','unittest','discover','-s','tests/e06',
       '-p','test_drive_c37_c08_contract.py','-v')
+    # Existing release-critical source contracts: use current HEAD only, no synthetic E07.
+    Invoke-SourceCheck 'E06_ONEHOST_SOURCE_PINS_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_native_stdio_owner_source.py','-v')
+    Invoke-SourceCheck 'E06_ONEHOST_SMOKE_LOGIC_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_native_onehost_smoke.py','-v')
+    Invoke-SourceCheck 'P01_NSIS_POWERSHELL_CONTRACT_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_t06_p01_nsis_powershell_contract_r15.py','-v')
+    Invoke-SourceCheck 'L01_RELEASE_MANIFEST_FAILCLOSED_PYTHON' 'python' @(
+      '-m','unittest','discover','-s','tests/e06',
+      '-p','test_l01_manifest_bridge.py','-v')
     Invoke-SourceCheck 'P03_PRIVACY_NODE' 'node' @(
       '--test','coordination/automation/r30/G3-B/tests/G3B-20261030T013611MSK-R26-P03-ACK-PRIVACY.test.mjs')
     Invoke-SourceCheck 'PACK02_CSV_NODE' 'node' @(
@@ -121,7 +134,7 @@ try {
       'run','--project','Packages/P05/Space/tests/SpaceFeedClientR16Smoke.csproj',
       '--configuration','Release','--no-launch-profile')
     if (@($cases | Where-Object {$_.status -ne 'PASS'}).Count -gt 0 -or
-        $cases.Count -ne 11) {
+        $cases.Count -ne 15) {
         $reason = 'SOME_SOURCE_SUITES_FAILED_OR_NOT_RUN'
         Write-QAReceipt 'SOURCE_QA_HOLD' $reason
         exit 2
