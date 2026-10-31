@@ -18,7 +18,7 @@ ADDONS=(
     ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
     ("Packages/P02/worker-python/p02_runtime.py","p02_runtime.py","ac1620ef6584debcea30d9ea169c2cc0a2cd566b"),
     ("Packages/P02/worker-python/p02_history_stable.py","p02_history_stable.py","0ec3a074b17c618b3665b126419d5625d84b99f5"),
-    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","285027675738d3e64d77cfe1c3cdbe28a38a95bc"),
+    ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","1708ae1b187a9716878c49dfcdb420821cb134df"),
 )
 ARG_ANCHOR="    parser.add_argument('--diagnose',action='store_true',help='headless functional contracts check')"
 PARSE_ANCHOR="    args=parser.parse_args()"
