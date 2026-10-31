@@ -407,6 +407,11 @@ public partial class MainWindow
                 (command.Action is "stop" or "diagnose" ||
                  await ConfirmP02NativeAsync(route, root, CancellationToken.None)))
             {
+                // Native consent may show a modal dialog. Reject a stale
+                // document, revoked SID or changed ACL BEFORE any mutation.
+                if (Interlocked.Read(ref _nativeDocumentEpoch) != epoch ||
+                    _nativeP02Core is null || !IsP03Document(_nativeP02Core.Source) ||
+                    !NativeP02Acl(sid, route)) return;
                 JsonElement payload = JsonSerializer.SerializeToElement(new {});
                 if (command.Action is "stop" or "retry")
                     payload = JsonSerializer.SerializeToElement(new { jobId = command.JobId!.Value.ToString("D") });
