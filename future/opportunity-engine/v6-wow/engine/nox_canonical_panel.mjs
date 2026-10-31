@@ -4,8 +4,8 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   if (target.dataset.noxScreen !== 'opportunity-engine') throw new Error('NOX_ROUTE_NOT_APPROVED');
   const abort = new AbortController();
   if (signal) signal.addEventListener('abort', () => abort.abort(), { once: true });
-  if (target.shadowRoot) throw new Error('ALREADY_MOUNTED');
-  const root = target.attachShadow({ mode: 'open' });
+  const root = target.shadowRoot || target.attachShadow({ mode: 'open' });
+  if (root.childNodes.length) throw new Error('ALREADY_MOUNTED');
   const style = document.createElement('style');
   style.textContent = `
     :host{display:block}*{box-sizing:border-box}.panel{color:#eee0ce;font:14px/1.5 'Segoe UI',sans-serif}
@@ -25,9 +25,10 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   root.append(panel);
   const input=panel.querySelector('input'),grid=panel.querySelector('.grid'),status=panel.querySelector('[role=status]'),more=panel.querySelector('[data-action=more]'),detail=panel.querySelector('.detail');
   let data=[],limit=9,filtered=[],busy=false;
-  const emit=(type,detail={})=>{ onEvent?.({contract:"nox.oie.ui.v1",type,...detail}); };
+  const emit=(type,detail={})=>{ try { onEvent?.({contract:'nox.oie.ui.v1',type,...detail}); } catch (_) { /* telemetry is noncritical */ } };
   const theme=panel.querySelector("[data-theme]");
   async function get(path) {
+    if (typeof apiBase !== 'string' || (apiBase && !apiBase.startsWith('/'))) throw Error('SAME_ORIGIN_API_REQUIRED');
     const response=await fetch(apiBase+path,{signal:abort.signal,credentials:'omit',cache:'no-store'});
     if(!response.ok)throw Error('HTTP_'+response.status);
     const payload=await response.json();if(!payload.ok)throw Error(payload.error||'API_ERROR');return payload.result;
@@ -53,16 +54,16 @@ export function mountOpportunityPanel(target, { apiBase = '', signal, onBack, on
   }
   panel.addEventListener('click',async e=>{
     const action=e.target.closest('button');if(!action)return;
-    if(action.dataset.action==='back'){onBack?.();emit('navigation.back');return;}
+    if(action.dataset.action==='back'){try { onBack?.();emit('navigation.back'); } catch(err){status.textContent='HOLD · '+err.message;}return;}
     if(action.dataset.action==='generate'){await post('/api/mission');return;}
     if(action.dataset.action==='megablock'){await post('/api/megablock1');return;}
     if(action.dataset.action==='clear'){input.value='';limit=9;detail.hidden=true;render();return;}
     if(action.dataset.action==='more'){limit+=9;render();return;}
-    if(action.dataset.ideaId){try{const result=await get('/api/inspect?id='+encodeURIComponent(action.dataset.ideaId));detail.textContent=JSON.stringify(result.idea,null,2);detail.hidden=false;detail.focus();}catch(err){status.textContent='Инспектор: '+err.message;}}
+    if(action.dataset.ideaId){try{const result=await get('/api/inspect?id='+encodeURIComponent(action.dataset.ideaId));detail.textContent=JSON.stringify(result.idea,null,2);detail.hidden=false;detail.setAttribute('tabindex','-1');detail.focus();emit('idea.inspect',{ideaId:action.dataset.ideaId});}catch(err){if(!abort.signal.aborted)status.textContent='Инспектор: '+err.message;}}
   },{signal:abort.signal});
   input.addEventListener('input',()=>{limit=9;render();},{signal:abort.signal});
   get('/api/ideas').then(result=>{data=result.ideas||[];render();}).catch(err=>{if(!abort.signal.aborted)status.textContent='HOLD · '+err.message;});
   const keyboard=e=>{if(e.key==='Escape'&&detail.hidden===false){detail.hidden=true;emit('inspector.close');}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();input.focus();}};
-  target.addEventListener('keydown',keyboard,{signal:abort.signal});
+  root.addEventListener('keydown',keyboard,{signal:abort.signal});
   return {dispose(){abort.abort();root.replaceChildren();emit('panel.dispose');},refresh:()=>get('/api/ideas').then(result=>{data=result.ideas||[];render();})};
 }
