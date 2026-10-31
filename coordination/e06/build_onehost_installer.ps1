@@ -173,7 +173,7 @@ if ($wantsCreative) {
   if (!$git -or !$py) { throw 'D02_PINNED_GIT_PYTHON_TOOLS_REQUIRED' }
   $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
   $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
-  if ($creativeScriptBlob -cne '9d6b22198bd57362477afa1a7132c982793c1a64' -or
+  if ($creativeScriptBlob -cne '06d99085c8e2bc6d8873fbfa06317691d3ccc4ff' -or
       $wowScriptBlob -cne '9c738f8b539500cb2fb9fd3bf3423f0a715039d8') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
   }

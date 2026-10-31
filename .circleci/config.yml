@@ -323,6 +323,12 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
             Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
             Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+      - persist_to_workspace:
+          root: .
+          paths:
+            - work/e06/onehost-r66
+            - work/e06/staged/R11
+            - work/e06/NATIVE_ONEHOST_SMOKE.json
       - store_artifacts:
           path: work/e06/ONEHOST_PYTHON_BUILD_RECEIPT.json
           destination: NOX-R66-ONEHOST-EXACT-BUILD-RECEIPT
@@ -341,6 +347,24 @@ jobs:
       - store_artifacts:
           path: work/t06-manual-source-inspect/python-exe-candidate
           destination: NOX-R66-TRUE-PYTHON-NATIVE-IPC
+
+  r66-installed-smoke-qa:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Independent Windows same-SHA original NSIS install GUI IPC update rollback no-loss proof
+          no_output_timeout: 35m
+          command: |
+            $ErrorActionPreference='Stop'
+            $env:NOX_M1_CI_INSTALL_WEBVIEW2='YES'
+            python coordination/e06/t06_samevm_installed_smoke.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_INDEPENDENT_INSTALLED_SMOKE_HOLD' }
+      - store_artifacts:
+          path: work/e06/onehost-r66/T06_INSTALLED_SMOKE.json
+          destination: NOX-R66-INDEPENDENT-INSTALLED-NOT-E07
 
 workflows:
   nox_r66_onehost_windows:
@@ -394,6 +418,12 @@ workflows:
       - r66-onehost-windows:
           requires:
             - r66-sqlite-gate
+          filters:
+            branches:
+              only: integration/nox-v16-unified-candidate-20261028-r01
+      - r66-installed-smoke-qa:
+          requires:
+            - r66-onehost-windows
           filters:
             branches:
               only: integration/nox-v16-unified-candidate-20261028-r01
