@@ -23,6 +23,22 @@ jobs:
             # CircleCI stable images may ship .NET without the 8.x SDK.
             # The disposable build job provisions exact 8.0.425, not this read-only host gate.
             Write-Host 'NOX_WINDOWS_HOST_PREFLIGHT_PASS'
+  r66-original-source-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: Verify 729 immutable owner files and R66 source contracts
+          command: |
+            $ErrorActionPreference = 'Stop'
+            New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
+            python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_729_ORIGINAL_ARCHIVE_REJECTED' }
+            python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-SOURCE-$env:CIRCLE_BUILD_NUM"
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_729_OWNER_ARCHIVE_REJECTED' }
+            python -m unittest discover -v -s Packages/P02/worker-python -p test_p02_native_ingress.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_P02_TESTS_FAILED' }
+            Write-Host 'NOX_R66_SOURCE_LOCK_AND_NATIVE_INGRESS_PASS'
   r66-onehost-windows:
     executor: win/server-2022
     steps:
@@ -123,9 +139,15 @@ workflows:
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-onehost-windows:
+      - r66-original-source-gate:
           requires:
             - r66-windows-host-preflight
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-onehost-windows:
+          requires:
+            - r66-original-source-gate
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
