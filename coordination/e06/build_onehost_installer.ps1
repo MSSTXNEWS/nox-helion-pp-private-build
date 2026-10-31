@@ -258,18 +258,18 @@ if ($wantsCreative) {
   )
   if (Test-Path -LiteralPath $microwowTarget) { throw 'P03_MICROWOW_STAGE_COLLISION' }
   foreach ($entry in $microwowFiles) {
-    $original=Join-Path $microwowRoot $entry.relative
-    Assert-E06PlainPathAncestors -Candidate $original -Scope 'P03_MICROWOW'
-    if (!(Test-Path -LiteralPath $original -PathType Leaf) -or
-        (& $git.Source hash-object -- $original).Trim().ToLowerInvariant() -cne $entry.blob) {
+    $microwowDonor=Join-Path $microwowRoot $entry.relative
+    Assert-E06PlainPathAncestors -Candidate $microwowDonor -Scope 'P03_MICROWOW'
+    if (!(Test-Path -LiteralPath $microwowDonor -PathType Leaf) -or
+        (& $git.Source hash-object -- $microwowDonor).Trim().ToLowerInvariant() -cne $entry.blob) {
       throw 'P03_MICROWOW_EXACT_DONOR_SHA_HOLD'
     }
   }
   foreach ($entry in $microwowFiles) {
-    $original=Join-Path $microwowRoot $entry.relative
+    $microwowDonor=Join-Path $microwowRoot $entry.relative
     $dest=Join-Path $microwowTarget $entry.relative
     New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force | Out-Null
-    Copy-Item -LiteralPath $original -Destination $dest -ErrorAction Stop
+    Copy-Item -LiteralPath $microwowDonor -Destination $dest -ErrorAction Stop
     if ((& $git.Source hash-object -- $dest).Trim().ToLowerInvariant() -cne $entry.blob) {
       throw 'P03_MICROWOW_STAGE_READBACK_HOLD'
     }
