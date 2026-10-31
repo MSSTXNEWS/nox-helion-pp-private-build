@@ -53,6 +53,23 @@ jobs:
             python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
             if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_OWNER_NATIVE_ROUTES_FAILED' }
             Write-Host 'NOX_R66_NATIVE_ROUTES_PASS'
+  r66-native-source-gate:
+    executor: win/server-2022
+    steps:
+      - checkout
+      - run:
+          name: P02 source process exact original 729 and authenticated framed IPC
+          command: |
+            $ErrorActionPreference = 'Stop'
+            $env:NOX_T06_SOURCE_ONLY='YES'
+            python coordination/e06/t06_native_proven_builder.py
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_NATIVE_SOURCE_IPC_PROCESS_FAILED' }
+            $receipt='work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json'
+            if (!(Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'NOX_NATIVE_SOURCE_IPC_RECEIPT_MISSING' }
+            $s=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($s.native_process_exit_code -ne 0 -or $s.run_id_matched -ne $true -or
+                $s.request_id_matched -ne $true -or $s.release_accepted -ne $false) { throw 'NOX_NATIVE_SOURCE_IPC_RECEIPT_HOLD' }
+            Write-Host 'NOX_R66_ORIGINAL_SOURCE_NATIVE_IPC_PASS_NOT_EXE'
   r66-native-exe-gate:
     executor: win/server-2022
     steps:
@@ -174,9 +191,15 @@ workflows:
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
-      - r66-native-exe-gate:
+      - r66-native-source-gate:
           requires:
             - r66-native-routes-gate
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
+      - r66-native-exe-gate:
+          requires:
+            - r66-native-source-gate
           filters:
             branches:
               only: ci/nox-r66-circleci-windows-onehost-20261031
