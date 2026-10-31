@@ -13,6 +13,8 @@ using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using Nox.P02;
 using Nox.P03;
+using Nox.P03.Wow;
+using System.Linq;
 namespace NoxP01;
 public partial class MainWindow
 {
@@ -30,6 +32,7 @@ public partial class MainWindow
     private CancellationTokenSource _nativeModelsStop = new();
     private CoreWebView2? _nativeP02Core;
     private long _nativeDocumentEpoch;
+    private readonly HashSet<string> _nativeP03Nonces = new(StringComparer.Ordinal);
 
     private Task<string?> PickNativeGgufAsync(CancellationToken cancel)
     {
@@ -56,6 +59,11 @@ public partial class MainWindow
                 phase=item.Phase,state=item.Status,completedBytes=item.CompletedBytes,
                 totalBytes=item.TotalBytes,observedAt=item.AtUtc
             }));
+            // Same WebView2, same durable P03 owner; no synthetic progress.
+            if (owner._nativeP02Core is { } core && IsP03Document(core.Source)) {
+                try { core.PostWebMessageAsJson(ModelWowBridgeContract.EventJson(item)); }
+                catch (Exception ex) { Trace.TraceError("P03_EVENT_UI_DROP {0}", ex.GetType().Name); }
+            }
         }
         public async ValueTask PublishToP05Async(ModelLifecycleEvent item, CancellationToken ct)
         {
@@ -185,6 +193,9 @@ public partial class MainWindow
                     message="Модели из единого локального P02; история доступна в выбранной Persona."});
             } else if (action=="openModelCenter") {
                 PostMessage(new {kind="p02NativeResult",routeId=route,state="COMPLETED",result=result.Result});
+                // Approved secondary page inside the SAME original WebView2.
+                if (_nativeP02Core is { } web && LegacyDocumentCurrent(source,epoch))
+                    web.Navigate("https://nox.local/creative/modelcenter/index.html");
             } else PostMessage(new {kind="chatFinished",chatId,
                 state=action=="chatStop"?"STOP_REQUESTED":"COMPLETED"});
         } catch (Exception error) {
@@ -295,6 +306,7 @@ public partial class MainWindow
                     Path.Combine(AppContext.BaseDirectory,"contracts","p03_reviewed_artifacts.json"),
                     "3b47af8b85aefd88408dd5cc63ad9615da87427d4d0cb2b56b0f5a4246ffbd60"),
                 PickNativeGgufAsync);
+            core.WebMessageReceived += OnP03WebMessageReceived;
             WriteLog("P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK");
         } catch(Exception exception) {
             WriteLog("P02_ORIGINAL_NATIVE_HOLD "+exception.GetType().Name);
@@ -309,10 +321,132 @@ public partial class MainWindow
             // No synthetic ready state; existing original UI/chat remain unchanged.
         }
     }
+    private static bool IsP03Document(string? source) =>
+        Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
+        uri.UserInfo.Length == 0 && uri.Host.Equals("nox.local", StringComparison.OrdinalIgnoreCase) &&
+        uri.AbsolutePath.Equals("/creative/modelcenter/index.html", StringComparison.Ordinal) &&
+        uri.Query.Length == 0 && uri.Fragment.Length == 0;
+
+    private async Task PublishP03SnapshotAsync(long epoch, CancellationToken ct)
+    {
+        var core = _nativeP02Core;
+        var models = _nativeModels;
+        if (models is null || core is null || !IsP03Document(core.Source)) return;
+        var reviewed = models.ReadReviewed();
+        var jobs = await models.ReadJobsAsync(ct);
+        var hardware = WindowsHardwareFacts.Capture();
+        var families = ModelCatalog.OfficialFamilies.Select(f =>
+            reviewed.FirstOrDefault(x => x.Id == f.Id && x.CanOfferOneClickPull) ?? f).ToArray();
+        var mostRecent = jobs.OrderByDescending(x => x.UpdatedAtUtc).FirstOrDefault();
+        var caps = new ModelWowBridgeContract.Capabilities(
+            Stop: true, Retry: true, Diagnose: true,
+            Pull: reviewed.Any(x => x.CanOfferOneClickPull),
+            ImportGguf: reviewed.Any(x => x.CanOfferOneClickPull &&
+                !string.IsNullOrWhiteSpace(x.ReviewedRightsReceiptId)));
+        var snapshot = ModelWowBridgeContract.SnapshotJson(families, jobs, mostRecent?.Id,
+            new ModelWowBridgeContract.DeviceSnapshot(null,
+                hardware.AvailableMemoryBytes is long ram ? ram / 1073741824d : null,
+                hardware.SystemDiskFreeBytes is long disk ? disk / 1073741824d : null), caps);
+        if (_nativeP02Core is { } current && IsP03Document(current.Source) &&
+            Interlocked.Read(ref _nativeDocumentEpoch) == epoch)
+            current.PostWebMessageAsJson(snapshot);
+    }
+
+    // Source identity and authority are validated on the original WPF owner.
+    // Never create another WebView, HTTP server, queue, downloader or model.
+    private async void OnP03WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        if (_nativeModels is null || !IsP03Document(e.Source) ||
+            _nativeP02Core is null || !IsP03Document(_nativeP02Core.Source) ||
+            !string.Equals(e.Source, _nativeP02Core.Source, StringComparison.Ordinal))
+            return;
+        var epoch = Interlocked.Read(ref _nativeDocumentEpoch);
+        if (e.WebMessageAsJson.Length > 2048) return;
+        try
+        {
+            using var json = JsonDocument.Parse(e.WebMessageAsJson,
+                new JsonDocumentOptions { MaxDepth = 8 });
+            var root = json.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("type", out var kind) ||
+                kind.ValueKind != JsonValueKind.String) return;
+            var type = kind.GetString();
+            var sid = WindowsIdentity.GetCurrent().User?.Value;
+            if (string.IsNullOrEmpty(sid) || !NativeP02Acl(sid, "models.queue")) return;
+            if (type == "p03.ready.v1")
+            {
+                if (root.EnumerateObject().Count() != 1) return;
+                await PublishP03SnapshotAsync(epoch, CancellationToken.None);
+                return;
+            }
+            if (type != "p03.command.v1") return;
+            var reviewed = _nativeModels.ReadReviewed();
+            var jobs = await _nativeModels.ReadJobsAsync(CancellationToken.None);
+            var caps = new ModelWowBridgeContract.Capabilities(
+                Stop: true, Retry: true, Diagnose: true,
+                Pull: reviewed.Any(x => x.CanOfferOneClickPull),
+                ImportGguf: reviewed.Any(x => x.CanOfferOneClickPull &&
+                    !string.IsNullOrWhiteSpace(x.ReviewedRightsReceiptId)));
+            if (!ModelWowBridgeContract.TryParseCommand(e.WebMessageAsJson, jobs,
+                    reviewed, caps, out var command) || command is null ||
+                _nativeP03Nonces.Count >= 8192 ||
+                !_nativeP03Nonces.Add(command.CommandId)) return;
+            var route = command.Action switch
+            {
+                "pull" => "models.pull", "importGguf" => "models.gguf.import",
+                "stop" => "models.cancel", "retry" => "models.retry",
+                "diagnose" => "models.preflight", _ => ""
+            };
+            var accepted = false;
+            var reason = "NOT_AUTHORIZED";
+            if (NativeP02Acl(sid, route) &&
+                (command.Action is "stop" or "diagnose" ||
+                 await ConfirmP02NativeAsync(route, root, CancellationToken.None)))
+            {
+                JsonElement payload = JsonSerializer.SerializeToElement(new {});
+                if (command.Action is "stop" or "retry")
+                    payload = JsonSerializer.SerializeToElement(new { jobId = command.JobId!.Value.ToString("D") });
+                else if (command.Action is "pull" or "importGguf")
+                {
+                    var id = command.Action == "pull" ? command.ModelId :
+                        root.TryGetProperty("modelId", out var selected) && selected.ValueKind == JsonValueKind.String ?
+                            selected.GetString() : null;
+                    var allowed = reviewed.Where(x => x.Id == id && x.CanOfferOneClickPull).Take(2).ToArray();
+                    if (allowed.Length == 1)
+                        payload = JsonSerializer.SerializeToElement(new { modelTag = allowed[0].ExactTag });
+                    else reason = "REVIEW_REQUIRED";
+                }
+                if (reason != "REVIEW_REQUIRED")
+                {
+                    var result = await _nativeModels.ExecuteAsync(route, payload,
+                        command.Action is not ("stop" or "diagnose"), CancellationToken.None);
+                    accepted = command.Action != "stop" ||
+                        result.TryGetProperty("cancelled", out var flag) &&
+                        flag.ValueKind == JsonValueKind.True;
+                    reason = accepted ? "" : "STOP_PENDING";
+                }
+            }
+            if (_nativeP02Core is { } web && IsP03Document(web.Source) &&
+                Interlocked.Read(ref _nativeDocumentEpoch) == epoch &&
+                NativeP02Acl(sid, "models.queue"))
+            {
+                web.PostWebMessageAsJson(ModelWowBridgeContract.AckJson(command, accepted, reason));
+                await PublishP03SnapshotAsync(epoch, CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceError("P03_MICROWOW_COMMAND_HOLD {0}", ex.GetType().Name);
+            // No false ACK or connection state on an unverified owner failure.
+        }
+    }
+
     private void ShutdownNativeP02()
     {
         try{_nativeModelsStop.Cancel();}catch(ObjectDisposedException){}
         _nativeModelsStop.Dispose();
+        if (_nativeP02Core is { } web) web.WebMessageReceived -= OnP03WebMessageReceived;
         Interlocked.Increment(ref _nativeDocumentEpoch);_nativeP02Core=null;
         _nativeP02Bridge?.Dispose();_nativeP02Bridge=null;
         _nativeModels?.Dispose();_nativeModels=null;
