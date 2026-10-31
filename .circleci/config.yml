@@ -141,17 +141,15 @@ jobs:
           name: Exact R66 SQLite history STOP and same original V4 database
           command: |
             $ErrorActionPreference = 'Stop'
-            # Current owner is OneHostStoreActor + OriginalStoreChatAdapter.
-            # R64's retired admit_shared_p02_store API is absent in this HEAD.
-            # Exercise existing owner tests on the SAME staged original Store;
-            # no second database, schema migration, artificial chat, or bypass.
-            $nativeRoot=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
-            $env:PYTHONPATH=$nativeRoot + [IO.Path]::PathSeparator + $env:PYTHONPATH
-            python -m unittest discover -v -s tests/k02 -p test_original_store_adapter.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_REAL_ORIGINAL_STORE_ADAPTER_HOLD' }
-            python -m unittest discover -v -s tests/k02 -p test_patch02_store_actor.py
-            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_REAL_SINGLE_SQLITE_ACTOR_HOLD' }
-            Write-Host 'NOX_R66_CURRENT_ORIGINAL_SQLITE_ACTOR_AND_HISTORY_PASS'
+            # Current owner: prove the SAME frozen EXE uses the original V4
+            # SQLite, can reopen/read it in a new process, and ACK native STOP.
+            # Avoid obsolete R64 imports and unmounted source fixture paths.
+            python coordination/e06/t06_verify_frozen_candidate.py sqlite
+            if ($LASTEXITCODE -ne 0) { throw 'NOX_R66_FROZEN_ORIGINAL_V4_SQLITE_HOLD' }
+            Write-Host 'NOX_R66_REAL_FROZEN_SQLITE_RESTART_STOP_PASS'
+      - store_artifacts:
+          path: work/t06-manual-source-inspect/R66_NATIVE_SQLITE_HISTORY_RECEIPT.json
+          destination: NOX-R66-REAL-SQLITE-RESTART-NOT-E07
   r66-onehost-windows:
     executor: win/server-2022
     steps:

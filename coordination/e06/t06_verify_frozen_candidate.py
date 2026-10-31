@@ -87,6 +87,59 @@ def main(gate: str):
         print("NOX_R66_FROZEN_CHAT_MODEL_IPC_PASS",a["status"],flush=True)
         return
 
+    if gate=="sqlite":
+        # Real Windows EXE + original V4 Store: two separate native processes,
+        # one isolated SQLite database, authenticated framed history and STOP.
+        import sqlite3
+        prior = json.loads((DIST/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json").read_text("utf-8"))
+        need(prior.get("exe_sha256")==built["exe_sha256"] and
+             prior.get("original_729_unchanged") is True and
+             prior.get("release_accepted") is False,
+             "R66_SQLITE_FROZEN_BINARY_IDENTITY_HOLD")
+        data_dir=OUT/"r66-original-sqlite-data"
+        first=request(exe,"chat.history","NOX-R66-ORIGINAL-STORE-A",
+                      "da000000000000000000000000000001",data_dir)
+        second=request(exe,"chat.history","NOX-R66-ORIGINAL-STORE-B",
+                       "da000000000000000000000000000002",data_dir)
+        stop=request(exe,"chat.stop","NOX-R66-ORIGINAL-STORE-C",
+                     "da000000000000000000000000000003",data_dir)
+        for response in (first,second):
+            need(response.get("status")=="OK" and
+                 type(response.get("result")) is dict and
+                 type(response["result"].get("messages")) is list,
+                 "R66_NATIVE_SQLITE_HISTORY_NOT_AVAILABLE")
+        need(first["result"]["messages"]==second["result"]["messages"]==[],
+             "R66_SQLITE_ISOLATED_HISTORY_DRIFT")
+        need(stop.get("status")=="OK" and type(stop.get("result")) is dict and
+             stop["result"].get("stopRequested") is True,
+             "R66_SQLITE_NATIVE_STOP_NOT_ACKNOWLEDGED")
+        db=data_dir/"helion.sqlite3"
+        need(db.is_file() and not db.is_symlink() and db.stat().st_size>0,
+             "R66_ORIGINAL_V4_SQLITE_FILE_MISSING")
+        with sqlite3.connect("file:"+db.as_posix()+"?mode=ro",uri=True) as conn:
+            version=conn.execute("PRAGMA user_version").fetchone()[0]
+            health=conn.execute("PRAGMA quick_check").fetchone()[0]
+            names={row[0] for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+        need(version==4 and health=="ok" and "core_chat_turns" in names,
+             "R66_ORIGINAL_V4_SQLITE_SCHEMA_OR_HEALTH_HOLD")
+        need(digest(exe)==built["exe_sha256"],"R66_SQLITE_BINARY_CHANGED")
+        record={"schema":"NOX_R66_WINDOWS_FROZEN_ORIGINAL_SQLITE_V1",
+            "source_original_archive_sha256":PINNED_ORIGINAL,
+            "frozen_exe_sha256":built["exe_sha256"],
+            "original_sqlite_v4":True,"original_core_chat_table":True,
+            "sqlite_quick_check":"ok",
+            "separate_process_history_restart":"PASS",
+            "isolated_empty_history":"PASS","native_stop":"PASS",
+            "actual_model_inference":"NOT_RUN","independent_e07":"NOT_RUN",
+            "release_accepted":False}
+        result=OUT/"R66_NATIVE_SQLITE_HISTORY_RECEIPT.json"
+        need(not result.exists() and not result.is_symlink(),"R66_SQLITE_RECEIPT_COLLISION")
+        result.write_text(json.dumps(record,indent=2),encoding="utf-8")
+        print("NOX_R66_REAL_WINDOWS_FROZEN_SQLITE_V4_RESTART_STOP_PASS_NOT_E07",
+              built["exe_sha256"],flush=True)
+        return
+
     need(gate=="models","R66_INVALID_VERIFIER_GATE")
     chat = json.loads(chat_path.read_text("utf-8"))
     need(chat.get("phase")=="FROZEN_CHAT_MODEL_IPC_PASS_NOT_REAL_INFERENCE" and
@@ -218,7 +271,7 @@ def seal_for_original_v2_smoke():
 
 if __name__=="__main__":
     import sys
-    need(len(sys.argv)==2 and sys.argv[1] in ("chat","models","seal"),
+    need(len(sys.argv)==2 and sys.argv[1] in ("chat","models","sqlite","seal"),
          "R66_EXPLICIT_VERIFICATION_GATE_REQUIRED")
     if sys.argv[1]=="seal":
         seal_for_original_v2_smoke()
