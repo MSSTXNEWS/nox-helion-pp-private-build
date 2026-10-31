@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
     ("coordination/e06/e06_native_stdio_owner.py","helion/e06_native_stdio_owner.py","6beaf43cd7b09d703819bb54eb9c53dc71876f0b"),
-    ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","842f3d60f9506a7ed54a4cf4e158254bf6617df6"),
+    ("Packages/P02/worker-python/p02_native_ingress.py","p02_native_ingress.py","d14893d69cb8fbdf318acf628afe2bc91b555d37"),
     ("Packages/P02/worker-python/p02_framed_worker.py","p02_framed_worker.py","8af1338bee7ebb03ffbb0dd4bfdeed7af7870bc1"),
     ("proposals/NOX-PACK01-50/native_bridge.py","nox_native_bridge.py","f26648755a6efa9cbc047ab481af1ba38bb9dc55"),
 )
