@@ -108,8 +108,16 @@ if ($onehost.schema -cne 'NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1' -or
  throw 'E07_SETUP_EXE_RECEIPT_SHA_DRIFT'
 }
 $identity="$($source.zip_sha256)|$commit|$setupSha|$exeSha"
-$hash=[Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($identity))
-$buildId='NOX-V16-'+([Convert]::ToHexString($hash).ToLowerInvariant().Substring(0,24))
+# Windows CircleCI defaults to Windows PowerShell 5.1 / .NET Framework:
+# SHA256.HashData and Convert.ToHexString require newer .NET APIs.
+# Keep the SAME UTF-8 SHA256 bytes and lower-case BuildID algorithm.
+$sha256=[Security.Cryptography.SHA256]::Create()
+try {
+ $hash=$sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity))
+} finally {
+ $sha256.Dispose()
+}
+$buildId='NOX-V16-'+([BitConverter]::ToString($hash).Replace('-','').ToLowerInvariant().Substring(0,24))
 $installedSha=$null
 $logs=[ordered]@{}
 if ($Phase -ceq 'INSTALLED') {
