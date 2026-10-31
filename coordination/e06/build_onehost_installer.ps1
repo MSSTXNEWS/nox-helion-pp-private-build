@@ -240,6 +240,40 @@ if ($wantsCreative) {
       throw 'PERSONA_APPROVED_STAGE_RECEIPT_HOLD'
     }
   }
+  # Existing P03 Micro-WOW screen: NO second app/renderer/queue. Strictly
+  # copy exact Git-owned source bytes into the original disposable WPF Assets.
+  # It is staged after the canonical D02 scripts to preserve their 69-file
+  # locked receipt and the untouched HOME/MENU/WORK visual baseline.
+  $microwowRoot=Join-Path (Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path 'Packages/P03/Source/P03.ModelCenter.Wow'
+  $microwowTarget=Join-Path $source 'Assets/creative/modelcenter'
+  $microwowFiles=@(
+    @{relative='index.html';blob='e44efa7b5e2ffdfda6481c734f92c064fe1f458b'},
+    @{relative='ui.css';blob='52757928eab65e474b9f500ab95b49adf3abe340'},
+    @{relative='ui.js';blob='051cfcecd490b830962df12b08cc8e91a07568a1'},
+    @{relative='THIRD_PARTY_LICENSES.txt';blob='4661952f5f4c9888c759ec94a3a28a31d26fc81f'},
+    @{relative='icons/checkmark.svg';blob='e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6'},
+    @{relative='icons/info.svg';blob='bd8e0cf27356e76acc68780ba6fd80cbfffbdf4f'},
+    @{relative='icons/play.svg';blob='51b2a42674227622aa0b7af30a84a83b62faba49'},
+    @{relative='icons/search.svg';blob='6c20f167dd93773c7a6e0b7aba9e054f4c07aedd'}
+  )
+  if (Test-Path -LiteralPath $microwowTarget) { throw 'P03_MICROWOW_STAGE_COLLISION' }
+  foreach ($entry in $microwowFiles) {
+    $original=Join-Path $microwowRoot $entry.relative
+    Assert-E06PlainPathAncestors -Candidate $original -Scope 'P03_MICROWOW'
+    if (!(Test-Path -LiteralPath $original -PathType Leaf) -or
+        (& $git.Source hash-object -- $original).Trim().ToLowerInvariant() -cne $entry.blob) {
+      throw 'P03_MICROWOW_EXACT_DONOR_SHA_HOLD'
+    }
+  }
+  foreach ($entry in $microwowFiles) {
+    $original=Join-Path $microwowRoot $entry.relative
+    $dest=Join-Path $microwowTarget $entry.relative
+    New-Item -ItemType Directory -Path (Split-Path -Parent $dest) -Force | Out-Null
+    Copy-Item -LiteralPath $original -Destination $dest -ErrorAction Stop
+    if ((& $git.Source hash-object -- $dest).Trim().ToLowerInvariant() -cne $entry.blob) {
+      throw 'P03_MICROWOW_STAGE_READBACK_HOLD'
+    }
+  }
   $visualStage='D02_OWNER1_CANONICAL_STAGE_SHA_VERIFIED_SOURCE_ONLY'
 }
 if (Test-Path -LiteralPath $OutputRoot) { throw 'OUTPUT_ALREADY_EXISTS_NO_OVERWRITE' }
@@ -259,7 +293,7 @@ $p02StageSources=@(
   @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='35d0a1c811f133d0b9e649f650e8b4929aa8a356'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='ddc473ef4082c484a99c8d0681d0a3bb2e86e3bb'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs';dest='Integration/P03/ModelCatalog.cs';blob='12fc98f4b910b1760427ad73d077cdf382d525f3'},
-  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='3d6886e5c0647b6a61dca1b88f0449925e3cc4a9'},
+  @{relative='Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs';dest='Integration/P03/ModelCenterNativeRoutes.cs';blob='b63d20f9b5a7551d47d48cf96fa56569398602b4'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs';dest='Integration/P03/ModelDownloadQueueStore.cs';blob='7c9a83d9b683090f12b058ac4c8907d388e4b6a5'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueWorker.cs';dest='Integration/P03/ModelDownloadQueueWorker.cs';blob='6dd5ceec428ec71a426d785304001a2d269a666f'},
   @{relative='Packages/P03/Source/P03.ModelCenter/ModelLifecycleEvents.cs';dest='Integration/P03/ModelLifecycleEvents.cs';blob='bfc2030334f78e78b35f510fc7f58ad19d1e75e4'},
@@ -299,7 +333,7 @@ foreach ($entry in $p02StageSources) {
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='845a4bf3e83dc06289d80ff8c92c05cbe1c45346'},@{p=$t06Addon;sha='17292c15fabf309cd4d8b9e2d77f205c319e907b'})) {
+foreach ($part in @(@{p=$t06Stage;sha='beb96d99c2debb3eebaa65f98975129a2a7c0744'},@{p=$t06Addon;sha='614472c418c616328e9c8421423eaee355557d49'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
