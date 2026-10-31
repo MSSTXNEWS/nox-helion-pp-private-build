@@ -267,6 +267,7 @@ class ExistingP02Adapter:
             raise ValueError("Existing P02Store required")
         self.client = client
         self.store = store
+        self._stop_epoch = 0  # Local monotonic cancellation fence; no new queue.
         self.event_sink = event_sink
         # Native file picker callback returns (MIME, binary stream); never page JSON.
         self.native_selected_file = native_selected_file
@@ -285,6 +286,7 @@ class ExistingP02Adapter:
         return {"messages":self.store.history(session.tenant,session.principal,session.chat_id,limit)}
 
     def stop(self,session,args):
+        self._stop_epoch += 1
         self.client.stop()
         return {"stopRequested":True}  # No claim that remote Ollama hard-aborted.
 
@@ -293,7 +295,10 @@ class ExistingP02Adapter:
         # The pre-dispatch NoxPackHost gate alone is not sufficient at commit time.
         admitted_scope = (session.tenant, session.principal, session.chat_id,
                           session.allowed, session.private_approved)
+        admitted_stop_epoch = self._stop_epoch
         def require_current_scope():
+            if self._stop_epoch != admitted_stop_epoch:
+                raise HostDenied("Native chat STOP revoked pending exchange")
             session.validate()
             if ((session.tenant, session.principal, session.chat_id,
                  session.allowed, session.private_approved) != admitted_scope):
@@ -328,11 +333,11 @@ class ExistingP02Adapter:
             if chunk.get("done") is True:done = True
         if not done:raise HostHold("Missing Ollama terminal completion")
         text = "".join(answer)
-        # Persist only after terminal success AND revalidated owner/native ACL.
-        require_current_scope()
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"user",message)
-        require_current_scope()
-        self.store.add_message(session.tenant,session.principal,session.chat_id,"assistant",text)
+        # Commit BOTH rows together through the existing P02Store transaction.
+        # Native revoke/STOP during commit aborts without orphan messages.
+        self.store.add_exchange(session.tenant,session.principal,
+                                session.chat_id,message,text,
+                                authorize=require_current_scope)
         return {"answer":text,"done":True}
 
     def attach_native_selected(self,session,args):
