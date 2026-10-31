@@ -12,6 +12,12 @@ public sealed class ModelCenterNativeRoutes : IDisposable
     private readonly HttpClient? _ownedHttp;
     private readonly Func<CancellationToken,Task<string?>>? _nativeGgufPicker;
     private CancellationTokenSource? _mergedImportStop;
+    // Native UI requests must not wait for multi-GB Ollama transfers. Reuse
+    // the ONE existing ModelDownloadQueueWorker; no second transport or queue.
+    private readonly CancellationTokenSource _transferStop = new();
+    private readonly object _transferGate = new();
+    private readonly Dictionary<Guid, Task> _transferTasks = new();
+    private bool _disposed;
     public static readonly IReadOnlySet<string> Routes = new HashSet<string>(StringComparer.Ordinal)
     { "models.catalog", "models.licenses", "models.preflight", "models.queue",
       "models.pull", "models.gguf.import", "models.cancel", "models.retry" };
@@ -78,7 +84,7 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 RequireHardware(retryModels[0]);
                 var retry=await _worker.RetryAsync(JobId(payload),ct)
                     ?? throw new InvalidOperationException("P03_JOB_NOT_RETRYABLE");
-                await _worker.RunNextAsync(ct);
+                StartQueuedTransfer(retry.Id);
                 result=PublicJob((await _queue.ReadAsync(ct)).Single(x=>x.Id==retry.Id)); break;
             case "models.gguf.import":
                 if (!nativeConsent || _nativeGgufPicker is null)
@@ -101,7 +107,7 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 var imported=await _queue.EnqueueVerifiedGgufAsync(importTag!,selected,
                     importModel.ArtifactBytes!.Value,importModel.ExpectedSha256!,
                     importModel.ReviewedRightsReceiptId!,importModel.LicenseEvidenceUri!.AbsoluteUri,ct);
-                await _worker.RunNextAsync(ct);
+                StartQueuedTransfer(imported.Id);
                 result=PublicJob((await _queue.ReadAsync(ct)).Single(x=>x.Id==imported.Id)); break;
             case "models.pull":
                 if (!nativeConsent) throw new UnauthorizedAccessException("P03_NATIVE_CONSENT_REQUIRED");
@@ -111,7 +117,7 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 var model=artifacts[0];
                 RequireHardware(model);
                 var job=await _queue.EnqueueVerifiedPullAsync(model,true,ct);
-                await _worker.RunNextAsync(ct);
+                StartQueuedTransfer(job.Id);
                 result=PublicJob((await _queue.ReadAsync(ct)).Single(x=>x.Id==job.Id)); break;
             default: throw new InvalidOperationException("P03_NATIVE_ROUTE_HOLD");
         }
@@ -170,6 +176,35 @@ public sealed class ModelCenterNativeRoutes : IDisposable
             receiptPath=actual.ReceiptPath,receipt},new JsonSerializerOptions(JsonSerializerDefaults.Web));
     }
 
+    private void StartQueuedTransfer(Guid jobId)
+    {
+        lock (_transferGate)
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(ModelCenterNativeRoutes));
+            // Each job was explicitly admitted and persisted by the native owner.
+            // The existing worker serializes actual transfers with _singleWorker.
+            if (_transferTasks.ContainsKey(jobId)) return;
+            var token = _transferStop.Token;
+            var pending = Task.Run(() => _worker.RunNextAsync(token, jobId),
+                CancellationToken.None);
+            _transferTasks.Add(jobId, pending);
+            _ = pending.ContinueWith(completed =>
+            {
+                if (completed.IsFaulted)
+                    System.Diagnostics.Trace.TraceError(
+                        "P03_BACKGROUND_TRANSFER_FAILED job={0} exception={1}",
+                        jobId, completed.Exception?.GetBaseException().GetType().Name);
+                lock (_transferGate)
+                {
+                    _transferTasks.Remove(jobId);
+                    if (_disposed && _transferTasks.Count == 0)
+                        _transferStop.Dispose();
+                }
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
+               TaskScheduler.Default);
+        }
+    }
+
     private static void RequireHardware(ModelCatalogEntry model)
     {
         var hardware=WindowsHardwareFacts.Capture();
@@ -187,5 +222,16 @@ public sealed class ModelCenterNativeRoutes : IDisposable
         throw new ArgumentException("P03_EXISTING_JOB_ID_REQUIRED");
     private static object PublicJob(ModelJob job) => new { job.Id,job.ModelTag,
         state=job.State.ToString(),job.Status,job.CompletedBytes,job.TotalBytes,job.Attempts,job.Error };
-    public void Dispose() { StopMergedImport(); _ownedHttp?.Dispose(); }
+    public void Dispose()
+    {
+        lock (_transferGate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _transferStop.Cancel();
+            if (_transferTasks.Count == 0) _transferStop.Dispose();
+        }
+        StopMergedImport();
+        _ownedHttp?.Dispose();
+    }
 }
