@@ -28,8 +28,10 @@ function Write-QAReceipt([string]$Disposition, [string]$Reason) {
       reason = $Reason
       checks = @($cases.ToArray())
       independentT08Accepted = $false
-      nativeRoutesAccepted = 0
-      nativeRoutesPending = 14
+      # This source-only job cannot attest current Windows host route counts.
+      nativeRoutesAccepted = $null
+      nativeRoutesPending = $null
+      nativeRoutesEvidence = 'NOT_ASSESSED_BY_SOURCE_QA'
       sourceReady = $false
       e07Accepted = $false
       windowsInstalledExe = 'NOT_RUN'
