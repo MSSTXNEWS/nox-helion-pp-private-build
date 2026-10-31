@@ -228,6 +228,24 @@ class IngressTests(unittest.TestCase):
             enabled.handle(packet(117, "models.installed"))
         self.assertEqual(self.provider.seen, [])
 
+    def test_owner_negative_result_never_becomes_native_ok(self):
+        # Negative ACKs from a real owner must not be marked status=OK by IPC.
+        for n, result in enumerate((
+                {"status": "HOLD_EXTERNAL_OWNER_EXECUTION"},
+                {"status": "FAILED"}, {"status": "CANCELLED"},
+                {"status": "NEEDS_AUTH"}, {"ok": False},
+                {"status": "ERROR_PROVIDER"}), 230):
+            with self.subTest(result=result):
+                self.provider.execute = lambda route, payload, session, result=result: result
+                with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
+                    self.router.handle(packet(n))
+
+    def test_owner_success_result_still_roundtrips(self):
+        self.provider.execute = lambda *_: {"status": "QUEUED", "id": "owner-job"}
+        reply = json.loads(self.router.handle(packet(247)))
+        self.assertEqual(reply["status"], "OK")
+        self.assertEqual(reply["result"]["id"], "owner-job")
+
     def test_missing_session_fails_closed(self):
         ingress = NativeIngress(self.provider, lambda: None, expected_run_id=R)
         with self.assertRaisesRegex(ProtocolHold, "AUTHENTICATED"):
