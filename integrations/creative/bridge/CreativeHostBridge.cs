@@ -665,8 +665,10 @@ public partial class MainWindow
                 // A new selected movie must not leave the old projector playing.
                 current.Close();
             }
-            var theater=new Window{Title="NOX HELION · CINEMA / PROJECTOR",Width=1100,Height=700,
-                MinWidth=350,MinHeight=300,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+            var theater=new Window{Title="NOX HELION · CINEMA / PROJECTOR",
+                Width=Math.Max(320,Math.Min(1100,SystemParameters.WorkArea.Width-20)),
+                Height=Math.Max(260,Math.Min(700,SystemParameters.WorkArea.Height-20)),
+                MinWidth=320,MinHeight=260,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner};
             var viewer=new Microsoft.Web.WebView2.Wpf.WebView2();
             AttachNoxProjectorControls(theater,viewer);
             _creativeProjector=theater;
