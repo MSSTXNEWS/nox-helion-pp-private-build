@@ -12,6 +12,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using Microsoft.Web.WebView2.Wpf;
 
 namespace NoxP01;
 public partial class MainWindow
@@ -358,6 +365,188 @@ public partial class MainWindow
         }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NoxRect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+    private struct NoxMonitorInfo
+    {
+        public uint Size;
+        public NoxRect Bounds, Work;
+        public uint Flags;
+        [MarshalAs(UnmanagedType.ByValTStr,SizeConst=32)] public string Device;
+    }
+    private sealed record NoxMonitor(string Device, NoxRect Bounds, bool Primary);
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    private delegate bool NoxEnumMonitor(IntPtr monitor,IntPtr hdc,ref NoxRect bounds,IntPtr data);
+    [DllImport("user32.dll",SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumDisplayMonitors(IntPtr hdc,IntPtr clip,NoxEnumMonitor callback,IntPtr data);
+    [DllImport("user32.dll",EntryPoint="GetMonitorInfoW",CharSet=CharSet.Unicode,SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfoW(IntPtr monitor,ref NoxMonitorInfo info);
+    [DllImport("user32.dll",SetLastError=true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr hwnd,IntPtr insertAfter,int x,int y,int width,int height,uint flags);
+    [DllImport("user32.dll",SetLastError=true)]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd,uint flags);
+
+    private static List<NoxMonitor> NoxConnectedMonitors()
+    {
+        var screens=new List<NoxMonitor>();
+        NoxEnumMonitor callback=(IntPtr monitor,IntPtr hdc,ref NoxRect ignored,IntPtr data)=>{
+            var info=new NoxMonitorInfo{Size=(uint)Marshal.SizeOf<NoxMonitorInfo>(),Device=string.Empty};
+            if(GetMonitorInfoW(monitor,ref info) && info.Bounds.Right>info.Bounds.Left &&
+               info.Bounds.Bottom>info.Bounds.Top && !string.IsNullOrWhiteSpace(info.Device))
+                screens.Add(new NoxMonitor(info.Device.TrimEnd('\0'),info.Bounds,(info.Flags&1u)!=0));
+            return true;
+        };
+        if(!EnumDisplayMonitors(IntPtr.Zero,IntPtr.Zero,callback,IntPtr.Zero))
+            return new List<NoxMonitor>();
+        screens.Sort((a,b)=>b.Primary.CompareTo(a.Primary));
+        return screens;
+    }
+
+    private static WebView2? FindNoxTheaterViewer(Window theater)
+    {
+        if(theater.Content is DockPanel container)
+            foreach(UIElement child in container.Children)
+                if(child is WebView2 viewer) return viewer;
+        return theater.Content as WebView2;
+    }
+
+    private void AttachNoxProjectorControls(Window theater,WebView2 viewer)
+    {
+        var layout=new DockPanel{LastChildFill=true};
+        var bar=new StackPanel{Orientation=Orientation.Horizontal,MinHeight=44,Background=Brushes.Black};
+        var picker=new ComboBox{Width=265,Margin=new Thickness(6),VerticalAlignment=VerticalAlignment.Center};
+        var refresh=new Button{Content="Обновить экраны",Margin=new Thickness(3)};
+        var select=new Button{Content="Показать на экране",Margin=new Thickness(3)};
+        var fullscreen=new Button{Content="Полный экран",Margin=new Thickness(3)};
+        var state=new TextBlock{Text="Выберите монитор или проектор",Foreground=Brushes.White,
+                                Margin=new Thickness(8,0,4,0),VerticalAlignment=VerticalAlignment.Center};
+        bar.Children.Add(picker);bar.Children.Add(refresh);bar.Children.Add(select);
+        bar.Children.Add(fullscreen);bar.Children.Add(state);
+        DockPanel.SetDock(bar,Dock.Top);layout.Children.Add(bar);layout.Children.Add(viewer);
+        theater.Content=layout;
+        string? device=null;
+        bool expanded=false;
+
+        void UpdateList()
+        {
+            var previous=(picker.SelectedItem as ComboBoxItem)?.Tag as NoxMonitor;
+            var list=NoxConnectedMonitors();
+            picker.Items.Clear();
+            foreach(var item in list)
+                picker.Items.Add(new ComboBoxItem{Tag=item,
+                    Content=(item.Primary?"Основной · ":"Внешний · ")+item.Device+" · "+
+                       (item.Bounds.Right-item.Bounds.Left)+"×"+(item.Bounds.Bottom-item.Bounds.Top)});
+            if(list.Count==0){state.Text="DISPLAY_HOLD: Windows не обнаружила экранов";return;}
+            var index=previous is null?0:list.FindIndex(x=>x.Device==previous.Device);
+            picker.SelectedIndex=index<0?0:index;
+        }
+
+        bool Move(NoxMonitor requested)
+        {
+            // Re-read Windows state on each click. Never honor a raw JS monitor index.
+            var current=NoxConnectedMonitors().Find(x=>x.Device==requested.Device);
+            if(current is null){state.Text="DISPLAY_HOLD: экран отключён";UpdateList();return false;}
+            var handle=new WindowInteropHelper(theater).Handle;
+            if(handle==IntPtr.Zero){state.Text="DISPLAY_HOLD: окно не готово";return false;}
+            var rect=current.Bounds;
+            const uint noZOrderNoActivateShow=0x0004u|0x0010u|0x0040u;
+            if(!SetWindowPos(handle,IntPtr.Zero,rect.Left,rect.Top,
+                  rect.Right-rect.Left,rect.Bottom-rect.Top,noZOrderNoActivateShow))
+            {state.Text="DISPLAY_HOLD: перенос отклонён Windows";return false;}
+            device=current.Device;
+            state.Text="Выбран экран "+current.Device+"; управление фильмом — в плеере";
+            return true;
+        }
+
+        void ToggleFullscreen()
+        {
+            if(expanded)
+            {
+                expanded=false;
+                theater.WindowState=WindowState.Normal;
+                theater.WindowStyle=WindowStyle.SingleBorderWindow;
+                theater.ResizeMode=ResizeMode.CanResize;
+                fullscreen.Content="Полный экран";
+                state.Text="Обычное окно кинотеатра";
+                return;
+            }
+            var handle=new WindowInteropHelper(theater).Handle;
+            if(handle==IntPtr.Zero){state.Text="DISPLAY_HOLD: окно не готово";return;}
+            NoxMonitor? monitor=device is null?null:NoxConnectedMonitors().Find(x=>x.Device==device);
+            if(monitor is null)
+            {
+                var nearest=MonitorFromWindow(handle,2u);
+                if(nearest!=IntPtr.Zero)
+                {
+                    var info=new NoxMonitorInfo{Size=(uint)Marshal.SizeOf<NoxMonitorInfo>(),Device=string.Empty};
+                    if(GetMonitorInfoW(nearest,ref info))
+                        monitor=NoxConnectedMonitors().Find(x=>x.Device==info.Device.TrimEnd('\0'));
+                }
+            }
+            if(monitor is null){state.Text="DISPLAY_HOLD: монитор не найден";return;}
+            theater.WindowState=WindowState.Normal;
+            theater.WindowStyle=WindowStyle.None;
+            theater.ResizeMode=ResizeMode.NoResize;
+            if(!Move(monitor))
+            {
+                theater.WindowStyle=WindowStyle.SingleBorderWindow;
+                theater.ResizeMode=ResizeMode.CanResize;
+                return;
+            }
+            expanded=true;
+            fullscreen.Content="Вернуть окно";
+        }
+
+        refresh.Click+=(_,_)=>UpdateList();
+        picker.DropDownOpened+=(_,_)=>UpdateList();
+        select.Click+=(_,_)=>{
+            if(picker.SelectedItem is not ComboBoxItem entry || entry.Tag is not NoxMonitor monitor)
+            {state.Text="DISPLAY_HOLD: сначала выберите экран";return;}
+            if(expanded)ToggleFullscreen();
+            Move(monitor);
+        };
+        fullscreen.Click+=(_,_)=>ToggleFullscreen();
+        theater.PreviewKeyDown+=(_,e)=>{
+            if(e.Key==Key.F11){ToggleFullscreen();e.Handled=true;}
+            else if(e.Key==Key.Escape && expanded){ToggleFullscreen();e.Handled=true;}
+        };
+
+        HwndSource? source=null;
+        HwndSourceHook? hook=null;
+        hook=(IntPtr hwnd,int message,IntPtr wparam,IntPtr lparam,ref bool handled)=>{
+            if(message==0x007E) // WM_DISPLAYCHANGE
+                _=theater.Dispatcher.BeginInvoke(new Action(()=>{
+                    if(!theater.IsVisible)return;
+                    var current=NoxConnectedMonitors();
+                    if(device is not null && !current.Exists(x=>x.Device==device))
+                    {
+                        device=null;
+                        if(expanded)ToggleFullscreen();
+                        theater.WindowState=WindowState.Normal;
+                        theater.WindowStyle=WindowStyle.SingleBorderWindow;
+                        theater.ResizeMode=ResizeMode.CanResize;
+                        theater.Width=1100;theater.Height=700;
+                        theater.Left=Left+30;theater.Top=Top+30;
+                        state.Text="DISPLAY_HOLD: проектор отключён, окно восстановлено";
+                        WriteLog("CREATIVE_PROJECTOR_DISPLAY_DISCONNECTED");
+                    }
+                    UpdateList();
+                }));
+            return IntPtr.Zero;
+        };
+        theater.SourceInitialized+=(_,_)=>{
+            source=HwndSource.FromHwnd(new WindowInteropHelper(theater).Handle);
+            if(source is not null && hook is not null)source.AddHook(hook);
+        };
+        theater.Closed+=(_,_)=>{
+            if(source is not null && hook is not null)source.RemoveHook(hook);
+        };
+        UpdateList();
+    }
     // Reuse the EXISTING WebView2 cinema projector and its local subtitle picker.
     // Caller: trusted WPF/native owner after ACL; this method is NOT a JS endpoint.
     // Opening a window never proves playback or subtitle import.
@@ -375,7 +564,7 @@ public partial class MainWindow
             await OpenCreativeProjectorAsync();
         stop.ThrowIfCancellationRequested();
         if (_creativeProjector is not { IsVisible: true } projector ||
-            projector.Content is not Microsoft.Web.WebView2.Wpf.WebView2 viewer ||
+            FindNoxTheaterViewer(projector) is not { } viewer ||
             viewer.CoreWebView2 is null)
             return "MEDIA_OWNER_UI_NOT_READY";
         // Existing theater navigations stay under the original exact mapped
@@ -431,7 +620,7 @@ public partial class MainWindow
             var theater=new Window{Title="NOX HELION · CINEMA / PROJECTOR",Width=1100,Height=700,
                 MinWidth=350,MinHeight=300,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner};
             var viewer=new Microsoft.Web.WebView2.Wpf.WebView2();
-            theater.Content=viewer;
+            AttachNoxProjectorControls(theater,viewer);
             _creativeProjector=theater;
             _creativeProjectorProjectId=projectId;
             theater.Closed+=(_,_)=>{
