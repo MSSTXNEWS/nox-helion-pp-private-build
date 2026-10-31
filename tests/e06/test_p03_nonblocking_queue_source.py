@@ -70,6 +70,22 @@ def assert_crash_recovery(source):
         raise AssertionError("P03_CRASH_RECOVERY_AUTO_DOWNLOAD_DENIED")
 
 
+def assert_catalog_privacy(source):
+    if 'artifacts=exact.Select(a=>new {' not in source:
+        raise AssertionError("P03_UNTRUSTED_WEBVIEW_RECEIVED_RAW_OWNER_ARTIFACT")
+    catalog = source.split('case "models.catalog":', 1)[1].split(
+        'case "models.preflight":', 1)[0]
+    for private in ("ReviewedRightsReceiptId", "ImmutableRevision",
+                    "ExpectedSha256", "ExpectedManifestDigestSha256"):
+        if "a." + private in catalog:
+            raise AssertionError("P03_OWNER_PROOF_EXPOSED_TO_RENDERER")
+    if not all(field in catalog for field in (
+        "tag=a.ExactTag", "license=a.License",
+        "licenseEvidenceUrl=a.LicenseEvidenceUri?.AbsoluteUri",
+    )):
+        raise AssertionError("P03_PUBLIC_CATALOG_FIELDS_MISSING")
+
+
 class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -121,8 +137,15 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
     def test_09_full_owner_record_exposure_rejected(self):
         broken = self.data.replace(
             "artifacts=exact.Select(a=>new {", "artifacts=exact, /* exposed */ //", 1)
-        self.assertIn("artifacts=exact,", broken)
-        self.assertNotEqual(broken, self.data)
+        with self.assertRaisesRegex(
+                AssertionError, "P03_UNTRUSTED_WEBVIEW_RECEIVED_RAW_OWNER_ARTIFACT"):
+            assert_catalog_privacy(broken)
+
+    def test_10_owner_rights_receipt_exposure_rejected(self):
+        broken = self.data.replace(
+            "license=a.License,", "license=a.License, receipt=a.ReviewedRightsReceiptId,", 1)
+        with self.assertRaisesRegex(AssertionError, "P03_OWNER_PROOF_EXPOSED_TO_RENDERER"):
+            assert_catalog_privacy(broken)
 
     def test_07_real_merge_evidence_still_synchronous(self):
         self.assertIn("await _worker.RunNextAsync(ct,job.Id);", self.data)
