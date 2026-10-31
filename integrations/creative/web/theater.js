@@ -8,6 +8,8 @@ const note=t=>{status.textContent=t};
 const query=new URLSearchParams(window.location.search);
 const project=query.get('project');
 const nativeMedia=query.get('local_project_media')==='1';
+// WPF owns the physical projector; WebView2 theater has no native privileges.
+const nativeViewer=query.get('nox_native_viewer')==='1';
 // Only WPF's scoped virtual host may enable this media mapping.
 if(nativeMedia && project && /^[a-z0-9_-]{1,48}$/i.test(project)){
  video.src='https://nox-projects.invalid/'+encodeURIComponent(project)+'/NOX_MOVIE_FINAL.mp4';
@@ -49,21 +51,24 @@ async function chooseSubtitle(file){
  if(!file)return;
  // Last selected subtitle wins even when file.text() resolves out of order.
  const selectedGeneration=++subtitleGeneration;
- // Never show stale captions while a new file is pending or rejected.
- releaseSubtitle();
+ // Keep the last valid track while parsing a replacement; invalid input does not discard it.
  if(file.size>2*1024*1024){note('Субтитры больше 2 МиБ — HOLD');return}
  try{
   const source=await file.text();
   if(selectedGeneration!==subtitleGeneration)return;
   const vtt=toWebVtt(source,file.name);
+  releaseSubtitle();
   subtitleUrl=URL.createObjectURL(new Blob([vtt],{type:'text/vtt'}));
-  track=document.createElement('track');track.kind='subtitles';track.label=file.name;track.srclang='ru';track.default=true;track.src=subtitleUrl;video.appendChild(track);
+  track=document.createElement('track');track.kind='subtitles';track.label=file.name;
+  const lang=/(?:^|[._ -])(es|ru|en|fr|de|it|pt|uk|pl)(?=[._ -]|\.(?:srt|vtt)$)/i.exec(file.name);
+  track.srclang=(lang?.[1]||document.documentElement?.lang||'ru').toLowerCase();track.default=true;track.src=subtitleUrl;video.appendChild(track);
   const loadedTrack=track;
   loadedTrack.addEventListener('load',()=>{if(track===loadedTrack&&loadedTrack.track)loadedTrack.track.mode='showing'});
   note('Субтитры загружены: '+file.name);
  }catch(error){if(selectedGeneration===subtitleGeneration)note('Субтитры не подключены: '+String(error.message||error))}
 }
 async function toggleFullscreen(){
+ if(nativeViewer){note('Полный экран управляется панелью Windows NOX или F11');return}
  try{if(document.fullscreenElement){await document.exitFullscreen();note('Обычный режим')}
  else{if(typeof stage.requestFullscreen!=='function')throw Error('Недоступен в WebView2');await stage.requestFullscreen();note('Полный экран')}}
  catch(error){note('Полный экран отклонён: '+String(error.message||error)+'; используйте кнопку окна')}
@@ -79,6 +84,8 @@ function command(data){
  if(data.action==='fullscreen')void toggleFullscreen();
 }
 if(bc)bc.onmessage=e=>command(e.data);
+// A single fullscreen owner: native WPF for the projector, DOM for browser preview.
+if(nativeViewer){$('full').hidden=true;$('full').disabled=true;}
 $('file').onchange=e=>{const input=e.target,file=input.files?.[0];input.value='';chooseVideo(file)};
 $('subtitles').onchange=e=>{const input=e.target,file=input.files?.[0];input.value='';void chooseSubtitle(file)};
 $('play').onclick=()=>void play();
@@ -88,6 +95,7 @@ $('screens').onclick=()=>{
  note('Выбор физического проектора/монитора выполняется через нативную панель NOX Windows.');
 };
 window.addEventListener('keydown',event=>{
+ if(nativeViewer)return;
  if(event.key==='F11'&&!event.repeat){event.preventDefault();void toggleFullscreen()}
  if(event.key==='Escape'&&document.fullscreenElement){event.preventDefault();void document.exitFullscreen().catch(()=>{})}
 });
