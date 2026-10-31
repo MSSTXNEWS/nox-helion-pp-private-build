@@ -27,6 +27,8 @@ test('canonical OIE mounts only inside owner host; actions and lifecycle work',a
   globalThis.HTMLElement=FakeElement;
   globalThis.document={createElement:(tag)=>new FakeElement(tag)};
   let fetchCount=0,backCount=0,jobCount=0,dispatched=0;
+  const actions=[];
+  const ideas=Array.from({length:21},(_,i)=>({id:'idea-'+i,name:'Idea '+i,status:'IDEA_UNVERIFIED'}));
   globalThis.fetch=async url=>{
     fetchCount++;
     return {ok:true,json:async()=>({ok:true,result:url.startsWith('/api/inspect')
@@ -37,7 +39,7 @@ test('canonical OIE mounts only inside owner host; actions and lifecycle work',a
     const host=new FakeElement('section');
     assert.throws(()=>mountOpportunityPanel(host),/NOX_ROUTE_NOT_APPROVED/);
     host.dataset.noxScreen='opportunity-engine';
-    const instance=mountOpportunityPanel(host,{apiBase:'',onBack:()=>{backCount++},onEvent:()=>{dispatched++},requestJob:async(action,params)=>{jobCount++;assert.equal(params.count,3);return {ok:true,result:{action}}}});
+    const instance=mountOpportunityPanel(host,{apiBase:'',onBack:()=>{backCount++},onEvent:()=>{dispatched++},requestJob:async(action,params)=>{jobCount++;actions.push(action);if(action==='idea.list')return {ok:true,result:{ideas}};if(action==='idea.inspect')return {ok:true,result:{idea:{id:params.idea_id,name:'Idea 1'}}};assert.equal(params.count,3);return {ok:true,result:{action}}}});
     await tick();
     const root=host.shadowRoot,panel=root.childNodes[1],grid=panel.querySelector('.grid');
     assert.equal(grid.childNodes.length,9);
@@ -56,11 +58,12 @@ test('canonical OIE mounts only inside owner host; actions and lifecycle work',a
     assert.equal(input.focused,true);
     await panel.fire('click',button({action:'generate'}));
     await panel.fire('click',button({action:'megablock'}));
-    assert.equal(jobCount,2);
+    assert.deepEqual(actions,['idea.list','idea.inspect','mission.run','megablock1.preview']);
+    assert.equal(jobCount,4);
     await panel.fire('click',button({action:'back'}));
     assert.equal(backCount,1);
     assert.ok(dispatched>0);
-    assert.ok(fetchCount>=2);
+    assert.equal(fetchCount,0);
     instance.dispose();
     assert.equal(root.childNodes.length,0);
     const second=mountOpportunityPanel(host,{apiBase:'//external.invalid'});
