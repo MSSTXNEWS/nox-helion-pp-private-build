@@ -1,0 +1,95 @@
+# NOX HELION V16 R66 · Reuse exact owner T06 native builder + R11 WPF/D02/NSIS.
+# Strictly experimental Windows build; never replace Release 1 or approve E07 from CI build alone.
+version: 2.1
+
+orbs:
+  win: circleci/windows@5.0
+
+jobs:
+  r66-onehost-windows:
+    executor: win/server-2022
+    resource_class: windows.medium
+    steps:
+      - checkout
+      - run:
+          name: PRE · exact approved source, Windows host, native dependencies
+          no_output_timeout: 20m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            if ($env:OS -ne 'Windows_NT') { throw 'T06_WINDOWS_VM_REQUIRED' }
+            if ((git rev-parse HEAD).Trim() -cne $env:CIRCLE_SHA1) { throw 'T06_CHECKOUT_SHA_DRIFT' }
+            $sdk = @(dotnet --list-sdks)
+            if (@($sdk | Where-Object { $_ -match '^8\\.' }).Count -eq 0) {
+              throw 'NOX_DOTNET8_SDK_MISSING_REQUIRES_WIN_IMAGE'
+            }
+            python --version
+            if ($LASTEXITCODE -ne 0) { throw 'T06_PYTHON_NOT_INSTALLED' }
+            $nsis=Get-Command makensis.exe -ErrorAction SilentlyContinue
+            $nsisPath='C:\Program Files (x86)\NSIS\makensis.exe'
+            if (!$nsis -and !(Test-Path -LiteralPath $nsisPath -PathType Leaf)) {
+              if (!(Get-Command choco.exe -ErrorAction SilentlyContinue)) { throw 'T06_NSIS_AND_CHOCOLATEY_MISSING' }
+              choco install nsis --yes --no-progress --limit-output
+              if ($LASTEXITCODE -ne 0) { throw 'T06_WINDOWS_NSIS_INSTALL_FAILED' }
+            }
+            New-Item -ItemType Directory -Force -Path work/e06 | Out-Null
+            Write-Host "NOX_R66_WINDOWS_START_SHA=$env:CIRCLE_SHA1"
+      - run:
+          name: A · one original 729 SourceLock plus verified 8 Core native ingress
+          no_output_timeout: 20m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/source-lock/verify_original_archive.py --parts-dir . --output work/e06/original-729-manifest.json --expected-files 729
+            if ($LASTEXITCODE -ne 0) { throw 'T06_SOURCE_729_FAIL' }
+            python coordination/e06/verify_original_729_source.py --parts-dir . --out work/e06/original-729-owner-pinned.json --run-id "NOX-R66-$env:CIRCLE_BUILD_NUM"
+            if ($LASTEXITCODE -ne 0) { throw 'T06_OWNER_SOURCELOCK_FAIL' }
+            python -m unittest discover -v -s Packages/P02/worker-python -p test_p02_native_ingress.py
+            if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_INGRESS_FAILED' }
+            python -m unittest discover -v -s proposals/NOX-PACK01-50 -p test_native_bridge.py
+            if ($LASTEXITCODE -ne 0) { throw 'T06_PACK01_NATIVE_ROUTING_FAILED' }
+      - run:
+          name: B · exact R66 P02/Ollama/SQLite native Windows EXE and IPC test
+          no_output_timeout: 30m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/e06/t06_native_proven_builder.py
+            if ($LASTEXITCODE -ne 0) { throw 'T06_R66_PYTHON_EXE_FAILED' }
+            $env:NOX_R64_STAGED_ROOT=(Resolve-Path 'work/t06-manual-source-inspect/native-runtime').Path
+            python -m unittest -v coordination.e06.test_e06_r64_shared_db
+            if ($LASTEXITCODE -ne 0) { throw 'T06_R66_SQLITE_OWNERSHIP_FAILED' }
+            Write-Host 'NOX_R66_PYTHON_NATIVE_EXE_IPC_SOURCE_QA_PASS'
+      - run:
+          name: C · approved D02 HOME MENU WORK + one original WPF/WebView2 NSIS
+          no_output_timeout: 40m
+          command: |
+            $ErrorActionPreference = 'Stop'
+            python coordination/e06/stage_p01.py
+            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_R11_D02_STAGE_FAILED' }
+            python -m unittest discover -v -s integrations/wow200/tests -p test_stage_wow200.py
+            if ($LASTEXITCODE -ne 0) { throw 'T06_APPROVED_D02_REGRESSION_FAILED' }
+            $exe=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe').Path
+            $receipt=(Resolve-Path 'work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json').Path
+            & ./coordination/e06/build_onehost_installer.ps1 -SourceRoot 'work/e06/staged/R11' -PythonExe $exe -OutputRoot 'work/e06/onehost-r66' -RunId "NOX-R66-CIRCLECI-$env:CIRCLE_BUILD_NUM" -PythonNativeSmokeReceipt $receipt -CreativeSourceRoot 'integrations/creative' -WowSourceRoot 'integrations/wow200'
+            if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_ONEHOST_NSIS_FAILED' }
+            $setup='work/e06/onehost-r66/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
+            $published='work/e06/onehost-r66/payload/NOX.P01.Shell.exe'
+            & ./coordination/e06/Emit-E07ImmutableHandoff.ps1 -Original729Receipt 'work/e06/original-729-manifest.json' -Owner729Receipt 'work/e06/original-729-owner-pinned.json' -OneHostReceipt 'work/e06/onehost-r66/ONEHOST_DIAGNOSTIC_RECEIPT.json' -SetupExe $setup -PublishedExe $published -SourceCommitSha $env:CIRCLE_SHA1 -Output 'work/e06/onehost-r66/E07_BUILT_HANDOFF.json' -Phase BUILT
+            if ($LASTEXITCODE -ne 0) { throw 'T06_E07_BUILT_HANDOFF_FAILED' }
+            Write-Host "NOX_R66_NATIVE_INSTALLER_CANDIDATE_SHA=$((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant())"
+            Write-Host 'NOX_RELEASE_ACCEPTED=false / E07_INDEPENDENT_QA_REQUIRED'
+      - store_artifacts:
+          path: work/e06/onehost-r66
+          destination: NOX-R66-NATIVE-ONEHOST-BUILD-ONLY-NOT-RELEASE
+      - store_artifacts:
+          path: work/e06/original-729-manifest.json
+          destination: source-lock/original-729-manifest.json
+      - store_artifacts:
+          path: work/t06-manual-source-inspect/python-exe-candidate
+          destination: NOX-R66-TRUE-PYTHON-NATIVE-IPC
+
+workflows:
+  nox_r66_onehost_windows:
+    jobs:
+      - r66-onehost-windows:
+          filters:
+            branches:
+              only: ci/nox-r66-circleci-windows-onehost-20261031
