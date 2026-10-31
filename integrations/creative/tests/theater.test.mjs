@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../web/theater.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../web/theater.html', import.meta.url), 'utf8');
-function harness() {
+function harness(query='?project=demo_1') {
   const objects = new Map();
   function el(id) {
     const value = { id, style:{}, textContent:id==='status'?'Выберите разрешённый локальный фильм':'', src:'', files:[], textTracks:[], events:{},
@@ -21,7 +21,7 @@ function harness() {
     createElement:()=>({track:{mode:'disabled'},remove(){this.removed=true},addEventListener(name,fn){if(name==='load')fn()}}),
     fullscreenElement:null,exitFullscreen(){document.fullscreenElement=null;document.exited=true;return Promise.resolve()}};
   const sandbox = { document,
-    window:{location:{search:'?project=demo_1'},addEventListener(name,fn){events[name]=fn}},
+    window:{location:{search:query},addEventListener(name,fn){events[name]=fn}},
     URL:{createObjectURL:obj=>{created.push(obj);return 'blob:media'+(++next)},revokeObjectURL:url=>revoked.push(url)},
     URLSearchParams, Blob, Promise, String, RegExp, Error};
   vm.runInNewContext(source,sandbox,{filename:'theater.js'});
@@ -114,4 +114,25 @@ test('non-fullscreen Escape is not hijacked',()=>{
   const {events}=harness();let prevented=false;
   events.keydown({key:'Escape',preventDefault(){prevented=true}});
   assert.equal(prevented,false);
+});
+
+test('native viewer delegates fullscreen to WPF with no second DOM F11 handler',()=>{
+  const {objects,events}=harness('?nox_native_viewer=1');
+  assert.equal(objects.get('full').hidden,true);
+  assert.equal(objects.get('full').disabled,true);
+  let prevented=false;
+  events.keydown({key:'F11',preventDefault(){prevented=true}});
+  assert.equal(prevented,false);
+  assert.match(objects.get('status').textContent,/выберите|Выберите/);
+});
+test('VTT language derives from a scoped file name, invalid replacement keeps last track',async()=>{
+  const {objects}=harness();
+  objects.get('file').onchange({target:{files:[{name:'episode.mp4',size:700}]}});
+  const sub=objects.get('subtitles');
+  await sub.onchange({target:{files:[{name:'episode.fr.vtt',size:65,text:async()=> 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nSalut'}]}});
+  const previous=objects.get('video').child;
+  assert.equal(previous.srclang,'fr');
+  await sub.onchange({target:{files:[{name:'corrupt.fr.srt',size:40,text:async()=> 'invalid'}]}});
+  assert.equal(objects.get('video').child,previous);
+  assert.match(objects.get('status').textContent,/HOLD/);
 });
