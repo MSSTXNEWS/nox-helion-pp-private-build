@@ -1,5 +1,6 @@
 import test from "node:test";import assert from "node:assert/strict";
 import {createP01ModeController as create} from "./p01-mode-controller.mjs";
+import {effectiveP01MotionMode} from "./mount-p01.mjs";
 function fixture(){let fxMode="BALANCED",wowMode="BALANCED";
  const fx={setProfile(m){fxMode=m;return true}};
  const wow={setMode(m){wowMode=m}};
@@ -18,3 +19,14 @@ test("C5.09 closed controller rejects mutation",()=>{const x=fixture();const c=c
 test("C5.10 read-only status does not manufacture sensor state",()=>{const x=fixture();
  const c=create(x.fx,x.wow);assert.equal(c.get().telemetry,"UNMODIFIED");
  assert.equal(Object.isFrozen(c.get()),true);});
+
+test("C5.11 OS Reduced Motion overrides MAX before original D02 FX mounts",()=>{
+ for(const mode of ["MAX","BALANCED","ECO","REDUCED"])
+   assert.equal(effectiveP01MotionMode(mode,true),"REDUCED");
+});
+test("C5.12 user mode resumes only when system Reduced Motion is disabled",()=>{
+ assert.equal(effectiveP01MotionMode("MAX",false),"MAX");
+ assert.equal(effectiveP01MotionMode("ECO",false),"ECO");
+ assert.equal(effectiveP01MotionMode("MAX",true),"REDUCED");
+ assert.equal(effectiveP01MotionMode("MAX",false),"MAX");
+});
