@@ -40,6 +40,18 @@ class StagingSafety(unittest.TestCase):
         self.assertIn('creativeInvoke',self.main.read_text())
         self.assertEqual({n:source.sha(self.asset/n) for n in source.D02},before)
         self.assertFalse(receipt['release_accepted'])
+    def test_legacy_exact_owner_route_without_packinvoke(self):
+        self.main.write_text('NATIVE PRE\\n'+source.LEGACY_ANCHOR+'\\n'+source.LIFECYCLE+'\\nAFTER')
+        receipt=source.stage(self.root,self.web.parent)
+        self.assertIn('creativeInvoke',self.main.read_text())
+        self.assertEqual(receipt['release_accepted'],False)
+        self.assertIn(source.LEGACY_ANCHOR,self.main.read_text())
+    def test_duplicate_owner_router_anchor_holds_no_mutation(self):
+        self.main.write_text(source.ANCHOR+'\\n'+source.ANCHOR+'\\n'+source.LIFECYCLE)
+        with self.assertRaisesRegex(ValueError,'ROUTER_OR_LIFECYCLE_DRIFT'):
+            source.stage(self.root,self.web.parent)
+        self.assertFalse((self.root/'Assets/creative').exists())
+        self.assertFalse((self.root/'Integration/CreativeHostBridge.cs').exists())
     def test_corrupt_d02_preflight(self):
         (self.asset/'home.png').write_bytes(b'drift')
         with self.assertRaisesRegex(ValueError,'CANONICAL_D02_SHA_HOLD'):source.stage(self.root,self.web.parent)

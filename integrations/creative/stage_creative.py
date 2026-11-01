@@ -17,6 +17,7 @@ D02 = {
     'menu_sections.png':'7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4',
 }
 ANCHOR = 'case "packInvoke": _ = DispatchPack01Async(json.RootElement.Clone()); break;'
+LEGACY_ANCHOR = 'case "openModelCenter": OpenModelCenter(); break;'
 LIFECYCLE = 'Closing += (_, _) => { _openAiProvider.Dispose(); _trainingMonitorCts?.Cancel(); };'
 
 def sha(p:Path)->str:
@@ -49,7 +50,12 @@ def stage(root:Path, source:Path)->dict:
             raise ValueError('CANONICAL_WORK_ART_SHA_HOLD')
     main_raw=main.read_bytes();html_raw=html.read_bytes()
     native=main_raw.decode('utf-8-sig'); page=html_raw.decode('utf-8-sig')
-    if native.count(ANCHOR)!=1 or native.count(LIFECYCLE)!=1:
+    # Two exact owner-approved R11 router vintages; never accept a fuzzy anchor.
+    # Prefer PACK01 when present, fall back only to the historic owner route.
+    if native.count(LIFECYCLE)!=1 or native.count(ANCHOR)>1 or native.count(LEGACY_ANCHOR)>1:
+        raise ValueError('R13_ROUTER_OR_LIFECYCLE_DRIFT')
+    router_anchor = ANCHOR if native.count(ANCHOR)==1 else LEGACY_ANCHOR
+    if native.count(router_anchor)!=1:
         raise ValueError('R13_ROUTER_OR_LIFECYCLE_DRIFT')
     if page.count('</body>')!=1 or 'creative/entry.js' in page:
         raise ValueError('R13_HTML_PREIMAGE_DRIFT')
@@ -61,7 +67,7 @@ def stage(root:Path, source:Path)->dict:
         raise ValueError('CREATIVE_WEB_ASSETS_INCOMPLETE_HOLD')
     for name in found:
         safe_source_file(web/name)
-    patched=native.replace(ANCHOR,ANCHOR+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;')
+    patched=native.replace(router_anchor,router_anchor+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;',1)
     patched=patched.replace(LIFECYCLE,LIFECYCLE+'\n        Closing += (_, _) => StopCreativeWorker();')
     patched_html=page.replace('</body>','<script src="creative/entry.js"></script></body>')
     # No original D02, R13 owner archive, installer, P03/P04/P05 source is overwritten.
