@@ -127,18 +127,35 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                     throw new InvalidOperationException("P03_GGUF_RIGHTS_SHA_REVIEW_REQUIRED");
                 var importModel=reviewedImports[0];
                 RequireHardware(importModel);
+                // Pin immutable evidence BEFORE the OS picker can yield control;
+                // reviewed registry may be revoked or acquire duplicate tags meanwhile.
+                var pinnedImportBytes=importModel.ArtifactBytes;
+                var pinnedImportSha=importModel.ExpectedSha256;
+                var pinnedImportRights=importModel.ReviewedRightsReceiptId;
+                var pinnedImportLicense=importModel.LicenseEvidenceUri?.AbsoluteUri;
                 // Native callback shows the file picker and confirms this chosen file.
                 // No browser-supplied path, bytes, hash, license or rights are consumed.
                 var selected=await _nativeGgufPicker(ct);
                 if (string.IsNullOrWhiteSpace(selected))
                     throw new OperationCanceledException("P03_NATIVE_FILE_SELECTION_CANCELLED",ct);
                 ct.ThrowIfCancellationRequested();
-                // Re-read the native pinned registry after an interactive callback.
-                if (!_reviewed().Any(x=>x==importModel))
+                // A surviving old record is NOT enough: a newly duplicated tag or
+                // changed rights/digest/size/license must fail closed after the picker.
+                var currentImportReview=_reviewed().Where(x=>x.ExactTag==importTag &&
+                    x.CanOfferOneClickPull).ToArray();
+                if (currentImportReview.Length!=1 || currentImportReview[0]!=importModel ||
+                    currentImportReview[0].ArtifactBytes!=pinnedImportBytes ||
+                    !string.Equals(currentImportReview[0].ExpectedSha256,pinnedImportSha,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(currentImportReview[0].ReviewedRightsReceiptId,pinnedImportRights,
+                        StringComparison.Ordinal) ||
+                    !string.Equals(currentImportReview[0].LicenseEvidenceUri?.AbsoluteUri,pinnedImportLicense,
+                        StringComparison.Ordinal))
                     throw new InvalidOperationException("P03_REVIEW_CHANGED_DURING_SELECTION");
+                ct.ThrowIfCancellationRequested();
                 var imported=await _queue.EnqueueVerifiedGgufAsync(importTag!,selected,
-                    importModel.ArtifactBytes!.Value,importModel.ExpectedSha256!,
-                    importModel.ReviewedRightsReceiptId!,importModel.LicenseEvidenceUri!.AbsoluteUri,ct);
+                    pinnedImportBytes!.Value,pinnedImportSha!,
+                    pinnedImportRights!,pinnedImportLicense!,ct);
                 StartQueuedTransfer(imported.Id);
                 result=PublicJob((await _queue.ReadAsync(ct)).Single(x=>x.Id==imported.Id)); break;
             case "models.pull":
@@ -148,6 +165,14 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 if (artifacts.Length!=1) throw new InvalidOperationException("P03_PINNED_ARTIFACT_REVIEW_REQUIRED");
                 var model=artifacts[0];
                 RequireHardware(model);
+                ct.ThrowIfCancellationRequested();
+                // A native hardware check can outlive the exact approved registry.
+                // Recheck the single reviewed entry before committing a network queue job.
+                var currentPullReview=_reviewed().Where(x=>x.ExactTag==tag &&
+                    x.CanOfferOneClickPull).ToArray();
+                if (currentPullReview.Length!=1 || currentPullReview[0]!=model)
+                    throw new InvalidOperationException("P03_PULL_REVIEW_CHANGED");
+                ct.ThrowIfCancellationRequested();
                 var job=await _queue.EnqueueVerifiedPullAsync(model,true,ct);
                 StartQueuedTransfer(job.Id);
                 result=PublicJob((await _queue.ReadAsync(ct)).Single(x=>x.Id==job.Id)); break;

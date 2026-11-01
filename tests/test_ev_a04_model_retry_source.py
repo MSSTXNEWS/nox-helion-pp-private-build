@@ -24,8 +24,19 @@ class ReviewedRetrySourceTest(unittest.TestCase):
         self.assertIn('!MatchesRetryProvenance(previous,retryModels[0])', self.route)
 
     def test_stale_registry_fails_closed(self):
-        self.assertIn('_reviewed().Any(x=>x==retryModels[0] && x.CanOfferOneClickPull)', self.route)
+        self.assertIn('currentReview.Length!=1', self.route)
         self.assertIn('P03_REVIEW_CHANGED', self.route)
+
+    def test_gguf_picker_rechecks_unique_registry_and_pinned_evidence(self):
+        gguf = self.source.split('case "models.gguf.import":', 1)[1].split('case "models.pull":', 1)[0]
+        self.assertIn('currentImportReview.Length!=1', gguf)
+        self.assertIn('currentImportReview[0]!=importModel', gguf)
+        self.assertIn('currentImportReview[0].ExpectedSha256,pinnedImportSha', gguf)
+        self.assertIn('currentImportReview[0].ArtifactBytes!=pinnedImportBytes', gguf)
+        self.assertIn('currentImportReview[0].ReviewedRightsReceiptId,pinnedImportRights', gguf)
+        self.assertIn('currentImportReview[0].LicenseEvidenceUri?.AbsoluteUri,pinnedImportLicense', gguf)
+        self.assertLess(gguf.index('currentImportReview.Length!=1'), gguf.index('EnqueueVerifiedGgufAsync'))
+        self.assertIn('ct.ThrowIfCancellationRequested();', gguf)
 
     def test_stop_before_native_retry(self):
         self.assertLess(self.route.index('ct.ThrowIfCancellationRequested();'), self.route.index('_worker.RetryAsync('))

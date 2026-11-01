@@ -25,7 +25,7 @@ ADDONS=(
     ('Packages/P02/worker-python/p02_chat_bridge.py', 'p02_chat_bridge.py', '0b83e0a391b4cda18b9cb7726607927013c3fa4e'),
     ('Packages/P02/worker-python/p02_onehost.py', 'p02_onehost.py', 'f799e7600e10bc5cd900350527cb40d78ed78bdd'),
     ('proposals/NOX-PACK01-50/native_bridge.py', 'nox_native_bridge.py', 'f26648755a6efa9cbc047ab481af1ba38bb9dc55'),
-    ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', 'f8992171f6d3e39d449fac4c2103d7530f6f79e2'),
+    ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', '49eea0726233e23b4671f9b14a4584e9f0d194aa'),
     ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', 'dea8fb4bfbea61ce845d3ced17b0ef3596f6ae8a'),
     ('src/nox_selfbuilder/__init__.py', 'nox_selfbuilder/__init__.py', '1d0670e51efab53271385c13c156f2809a25adf1'),
     ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '9ee9bf7696cd95f9bae0f5b4410b9012910e7cae'),
