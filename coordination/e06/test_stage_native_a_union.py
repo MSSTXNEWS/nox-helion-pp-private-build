@@ -19,6 +19,9 @@ class NativeAUnion(unittest.TestCase):
         self.assertIn("$a1StageJson=@(& $venvPython -I $a1Script $source)",build)
         self.assertIn('$a1Stage.source_count -ne 10',build)
         self.assertIn('ONEHOST_NATIVE_DATA_PATH_OR_SHA_INVALID',build)
+        self.assertIn('$bundleStage.runtime_data_files = $oneHostData',build)
+        self.assertIn('A1_BUNDLED_SOURCE_COVERAGE_HOLD',build)
+        self.assertIn('BUNDLED_RUNTIME_DATA_SHA_MISMATCH',build)
         self.assertIn("'--hidden-import','nox_selfbuilder.a1_initiative_bridge'",build)
     def test_a1_source_lock_exact_ten_current_blobs(self):
         spec=importlib.util.spec_from_file_location('stage_a1_owner',A1)

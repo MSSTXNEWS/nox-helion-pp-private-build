@@ -425,8 +425,16 @@ try {
         $nativeExe = Join-Path $output 'NOX_HELION_PRIVATE_CANDIDATE.exe'
         if (-not (Test-Path -LiteralPath $nativeExe -PathType Leaf)) { throw 'ONEHOST_NATIVE_EXE_MISSING' }
         $dataReceipt = Join-Path $evidence 'onehost-native-stage.json'
-        $nativeStage | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $dataReceipt -Encoding UTF8
-        # Check the actual built archive entries, not just the staging folder.
+        # The original stage receipt is immutable, but the archive proof must
+        # include BOTH original runtime data and the ten A1 modules; otherwise
+        # an EXE can appear verified while the new A1 code is absent.
+        $bundleStage = $nativeStage | ConvertTo-Json -Depth 8 | ConvertFrom-Json
+        $bundleStage.runtime_data_files = $oneHostData
+        if (@($bundleStage.runtime_data_files).Count -ne @($nativeStage.runtime_data_files).Count + 10) {
+            throw 'A1_BUNDLED_SOURCE_COVERAGE_HOLD'
+        }
+        $bundleStage | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $dataReceipt -Encoding UTF8
+        # Check the actual built archive entries, including A1 SHA, not just staging.
         $archiveCheck = 'import hashlib,json,sys; from PyInstaller.archive.readers import CArchiveReader; a=CArchiveReader(sys.argv[1]); r=json.load(open(sys.argv[2],encoding="utf-8-sig")); names={n.replace(chr(92),"/"):n for n in a.toc}; [(None if x["runtime_path"] in names and hashlib.sha256(a.extract(names[x["runtime_path"]])).hexdigest()==x["sha256"] else (_ for _ in ()).throw(RuntimeError("BUNDLED_RUNTIME_DATA_SHA_MISMATCH:"+x["runtime_path"]))) for x in r["runtime_data_files"]]; print("ONEHOST_BUNDLED_RUNTIME_DATA_SHA_PASS")'
         & $venvPython -I -c $archiveCheck $nativeExe $dataReceipt
         if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_BUNDLED_RUNTIME_DATA_HOLD' }
