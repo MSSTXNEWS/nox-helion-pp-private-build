@@ -224,8 +224,13 @@ if ($wantsCreative) {
     if (!(Test-Path -LiteralPath $active -PathType Leaf) -or
         !(Test-Path -LiteralPath $canonical -PathType Leaf) -or
         !(Test-Path -LiteralPath $legacy -PathType Leaf)) { throw 'D02_ACTIVE_OR_ARCHIVE_MISSING' }
-    if ((Get-FileHash -LiteralPath $active -Algorithm SHA256).Hash -cne
-        (Get-FileHash -LiteralPath $canonical -Algorithm SHA256).Hash) {
+    # Windows checkout may expand original LF to CRLF. Compare the exact
+    # staged bytes with the canonical immutable Git blob, not checkout bytes.
+    $stageBlob=(& $gitTool.Source hash-object -- $active).Trim().ToLowerInvariant()
+    if ($LASTEXITCODE -ne 0) { throw 'D02_ACTIVE_ENGINE_STAGE_GIT_BLOB_HOLD' }
+    $sourceRevision='HEAD:proposals/NOX-CINEMA-FX/'+$name
+    $sourceBlob=(& $gitTool.Source -C $repoRoot rev-parse $sourceRevision).Trim().ToLowerInvariant()
+    if ($LASTEXITCODE -ne 0 -or $stageBlob -cne $sourceBlob) {
       throw 'D02_ACTIVE_ENGINE_BYTES_MISMATCH'
     }
   }
