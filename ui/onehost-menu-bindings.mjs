@@ -53,10 +53,19 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       if(route==='system.autostart' &&
         (Object.keys(payload).length!==1 || typeof payload.enabled!=='boolean'))
         return Promise.reject(Error('NOX_AUTOSTART_BOOLEAN_REQUIRED'));
-      if(route==='browser.open' && (Object.keys(payload).length!==1 ||
-         typeof payload.url!=='string' || payload.url.length>2048 ||
-         !/^https:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(payload.url)))
-        return Promise.reject(Error('NOX_BROWSER_URL_POLICY_HOLD'));
+      if(route==='browser.open') {
+        // Syntax gate only; native Windows owner still enforces exact host/ACL.
+        let accepted=false;
+        if(Object.keys(payload).length===1 && typeof payload.url==='string' &&
+           payload.url.length<=2048 && !/\s/.test(payload.url)) {
+          try {
+            const target=new URL(payload.url);
+            accepted=target.protocol==='https:' && target.port==='' &&
+              !target.username && !target.password && !!target.hostname;
+          } catch { /* Malformed URL is never forwarded. */ }
+        }
+        if(!accepted)return Promise.reject(Error('NOX_BROWSER_URL_POLICY_HOLD'));
+      }
       if(route==='chat.commands' && !ACTIONS.has(payload.action) && payload.action!=='selfbuilder.capabilities')
         return Promise.reject(Error('NOX_MENU_ACTION_DENIED'));
       const modelKey=['models.pull','models.gguf.import'].includes(route)?'modelTag':

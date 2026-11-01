@@ -85,9 +85,15 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
   add(browserOpen,'click',async()=>{
     if(dead||busy.has('browser.open'))return;
     const url=String(browserInput.value||'').trim();
-    if(!/^https:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(url)||url.length>2048){
-      feedback.textContent='HOLD · разрешён только HTTPS';return;
+    let valid=false;
+    if(url.length<=2048 && !/\s/.test(url)){
+      try {
+        const target=new URL(url);
+        valid=target.protocol==='https:' && target.port==='' &&
+          !target.username && !target.password && !!target.hostname;
+      } catch { /* Native owner must never receive malformed URLs. */ }
     }
+    if(!valid){ feedback.textContent='HOLD · только HTTPS без внешнего порта';return; }
     busy.add('browser.open');browserOpen.disabled=true;
     feedback.textContent='REQUESTED · подтвердите точный адрес в Windows';
     try { await request('browser.open',{url}); }
