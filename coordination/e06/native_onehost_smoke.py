@@ -212,17 +212,32 @@ class NativeExe:
         return frame
 
     def request(self, route, payload, timeout):
-        nonce = self.send(route, payload)
+        """Retry only a side-effect-free native read rejected as transient NATIVE_BUSY.
+
+        Never replay chat, STOP, training, model selection or any write.
+        Every attempt gets a fresh requestId and the original bounded deadline.
+        Persistent busy is still a hard failure, never a synthetic PASS.
+        """
+        read_only = route == "chat.history" or (route == "chat.model" and payload == {})
         deadline = time.monotonic() + timeout
-        events = []
-        while True:
-            frame = self.receive(deadline)
-            if frame["requestId"] != nonce:
-                raise SmokeFailed("NATIVE_UNEXPECTED_CONCURRENT_REPLY")
-            if frame["status"] == "EVENT":
-                events.append(frame["event"])
-            else:
+        for attempt in range(4 if read_only else 1):
+            nonce = self.send(route, payload)
+            events = []
+            while True:
+                frame = self.receive(deadline)
+                if frame["requestId"] != nonce:
+                    raise SmokeFailed("NATIVE_UNEXPECTED_CONCURRENT_REPLY")
+                if frame["status"] == "EVENT":
+                    events.append(frame["event"])
+                else:
+                    break
+            if not (read_only and frame["status"] == "HOLD" and
+                    frame.get("errorCode") == "NATIVE_BUSY"):
                 return frame, events
+            if attempt == 3 or deadline - time.monotonic() < 1.5:
+                raise SmokeFailed("NATIVE_READONLY_BUSY_PERSISTED_" + route.replace(".", "_").upper())
+            time.sleep(min(0.30 * (2 ** attempt), 1.2))
+        raise SmokeFailed("NATIVE_READONLY_RETRY_EXHAUSTED")
 
     def close(self):
         if self.process.poll() is None:
