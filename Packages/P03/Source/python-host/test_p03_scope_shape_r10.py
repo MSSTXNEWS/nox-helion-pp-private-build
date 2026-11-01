@@ -146,7 +146,10 @@ class NativeOwnerRouteMapR11Tests(unittest.TestCase):
 
     def test_r11_04_valid_owner_rows_still_register_four_read_only_routes(self):
         host = self.host()
-        registered = self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
+        # Real BoundPort accepts four constructor arguments. A tuple type is
+        # not a port constructor; use a no-side-effect source-only fixture.
+        registered = self.port.register(host, lambda *fields: fields,
+                                        receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
         self.assertEqual(registered, frozenset(host.routes))
         self.assertEqual(set(host.ports), set(host.routes))
 
