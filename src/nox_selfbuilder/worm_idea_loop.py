@@ -36,13 +36,19 @@ class NativeIdeaLoop:
         self._calls = 0
         self._saved = 0
         self._processed = set()
+        self._owner_session = None
 
     def tick(self, session, *, now, max_calls=MAX_P02_CALLS_PER_TICK):
         if not isinstance(now, datetime) or now.tzinfo is None or \
            type(max_calls) is not int or not 1 <= max_calls <= MAX_P02_CALLS_PER_TICK:
             raise WormHold("GROWTH_BOUNDED_IDEA_TICK_REQUIRED")
-        if self._stop() or self._authorized(session, "worm.brainstorm.read") is not True:
+        if self._stop() is not False or self._authorized(session, "worm.brainstorm.read") is not True:
             return self.status(reason="NATIVE_STOP_OR_POLICY_DENIED")
+        # One authenticated native owner per runtime: no cross-tenant quota/dedupe.
+        if self._owner_session is None:
+            self._owner_session = session
+        elif session != self._owner_session:
+            raise WormHold("GROWTH_NATIVE_SESSION_SCOPE_CHANGED")
         day = now.astimezone(timezone.utc).date().isoformat()
         if day != self._day:
             self._day = day
@@ -77,18 +83,22 @@ class NativeIdeaLoop:
             key = (head, role, tuple(x.get("source_sha256") for x in subset))
             if key in self._processed:
                 continue
-            if self._stop() or self._authorized(session, "worm.brainstorm.read") is not True:
-                break
+            if self._stop() is not False or self._authorized(session, "worm.brainstorm.read") is not True:
+                return self.status(reason="NATIVE_STOP_OR_POLICY_DENIED")
             brief = design_brief(role, subset, source_head=head)
             # The original P02 adapter is invoked only by native owner.
             ideas = generate_ideas(brief, self._model, subset,
                                    authorize=self._authorized, session=session, limit=8)
             self._calls += 1
             max_calls -= 1
+            if (self._stop() is not False or self._head() != head or
+                    self._authorized(session, "worm.brainstorm.read") is not True):
+                return self.status(reason="NATIVE_STOP_HEAD_OR_GRANT_CHANGED_AFTER_P02")
             # Candidate generation does not change installed menu, weights or EXE.
             for c in ideas:
-                if self._stop() or self._authorized(session, "worm.candidate.persist") is not True:
-                    break
+                if (self._stop() is not False or self._head() != head or
+                        self._authorized(session, "worm.candidate.persist") is not True):
+                    return self.status(reason="NATIVE_STOP_HEAD_OR_GRANT_CHANGED_BEFORE_S03")
                 if self._saved >= MAX_S03_REVIEW_CANDIDATES_PER_DAY:
                     break
                 if self._save(session, c) is not True:

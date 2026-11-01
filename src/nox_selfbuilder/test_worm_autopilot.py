@@ -97,5 +97,21 @@ class AutonomousBootTests(unittest.TestCase):
                          "STOP_OR_SCOPE_HOLD")
 
 
+    def test_native_stop_unknown_blocks_boot_and_tick(self):
+        self.native_policy()
+        self.stop_requested = None
+        self.assertEqual(self.engine.boot("owner", now=NOW)["state"], "STOPPED_BEFORE_BOOT")
+        self.stop_requested = False
+        self.engine.boot("owner", now=NOW)
+        self.stop_requested = None
+        self.assertEqual(self.engine.tick("owner", now=NOW)["reason"], "STOP_OR_SCOPE_HOLD")
+
+    def test_native_stop_during_s03_blocks_worm_enable(self):
+        self.native_policy()
+        self.engine._persist=lambda session, row: setattr(self,"stop_requested",True) or True
+        self.assertEqual(self.engine.boot("owner", now=NOW)["state"],
+                         "NATIVE_STOP_OR_HEAD_CHANGED_AFTER_S03")
+        self.assertEqual(self.reads, [])
+
 if __name__ == "__main__":
     unittest.main()

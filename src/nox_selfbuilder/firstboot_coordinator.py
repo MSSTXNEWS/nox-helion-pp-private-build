@@ -167,7 +167,7 @@ class FirstBootCoordinator:
             if type(epoch) is not int or epoch < 0:
                 raise FirstBootHold("NATIVE_STOP_EPOCH_REQUIRED")
             def cancelled():
-                return self.callbacks.stopped() or self.callbacks.stop_epoch() != epoch
+                return self.callbacks.stopped() is not False or self.callbacks.stop_epoch() != epoch
             if cancelled():
                 raise FirstBootHold("NATIVE_STOP")
             native = self.callbacks.policy(session)

@@ -94,5 +94,26 @@ class AutonomousIdeaTests(unittest.TestCase):
             self.agent.tick("owner", now=NOW)
 
 
+    def test_unknown_stop_is_fail_closed(self):
+        self.stopped = None
+        self.assertEqual(self.agent.tick("owner", now=NOW)["reason"],
+                         "NATIVE_STOP_OR_POLICY_DENIED")
+        self.assertEqual(self.messages, [])
+
+    def test_scope_change_requires_another_native_runtime(self):
+        self.agent.tick("owner", now=NOW)
+        with self.assertRaisesRegex(WormHold, "SESSION_SCOPE_CHANGED"):
+            self.agent.tick("other-owner", now=NOW)
+
+    def test_stop_after_p02_cannot_save_or_consume_dedupe(self):
+        def revoking_model(brief):
+            self.stopped=True
+            return fake_idea(brief)
+        self.agent._model=revoking_model
+        result=self.agent.tick("owner", now=NOW)
+        self.assertIn("AFTER_P02", result["reason"])
+        self.assertEqual(self.receipts, [])
+        self.assertEqual(result["distinct_p02_groups"], 0)
+
 if __name__ == "__main__":
     unittest.main()

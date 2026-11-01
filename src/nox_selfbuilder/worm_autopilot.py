@@ -38,7 +38,7 @@ class WormAutopilot:
         head = self._source_head()
         agenda = daily_initiatives(now, source_head=head)
         # Always prepare agenda even without internet / GPU / user account.
-        if self._stop():
+        if self._stop() is not False:
             return {**agenda, "state": "STOPPED_BEFORE_BOOT", "research_started": False}
         policy = self._policy(session)
         if not isinstance(policy, dict) or policy.get("schema") != "NOX-NATIVE-WORMS-POLICY-v1":
@@ -68,6 +68,13 @@ class WormAutopilot:
                         "research_started": False}
             self._boot_receipt = agenda
             self._booted_scope = session
+        # STOP, source HEAD or policy may change during native S03 write.
+        if self._stop() is not False or self._source_head() != head:
+            return {**agenda, "state": "NATIVE_STOP_OR_HEAD_CHANGED_AFTER_S03",
+                    "research_started": False}
+        if self._policy(session) != policy:
+            return {**agenda, "state": "NATIVE_POLICY_CHANGED_AFTER_S03",
+                    "research_started": False}
         # WormSwarm.set_enabled independently re-checks native ACL + consent.
         try:
             self._swarm.set_enabled(session, True)
@@ -79,7 +86,7 @@ class WormAutopilot:
 
     def tick(self, session, *, now=None):
         """Called by the EXISTING OneHost idle loop; no hidden activity."""
-        if self._stop() or self._booted_scope != session:
+        if self._stop() is not False or self._booted_scope != session:
             return {**self._swarm.status(), "reason": "STOP_OR_SCOPE_HOLD"}
         policy = self._policy(session)
         now = now or datetime.now(timezone.utc)
@@ -93,7 +100,7 @@ class WormAutopilot:
             expires = datetime.fromisoformat(policy["expires_at_utc"])
         except (TypeError, ValueError, KeyError):
             return {**self._swarm.status(), "reason": "NATIVE_POLICY_EXPIRED"}
-        if expires.tzinfo is None or expires <= now:
+        if expires.tzinfo is None or expires.astimezone(timezone.utc) <= now.astimezone(timezone.utc):
             return {**self._swarm.status(), "reason": "NATIVE_POLICY_EXPIRED"}
         return self._swarm.tick(session, now=now, max_tasks=MAX_NATIVE_TICK)
 
