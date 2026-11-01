@@ -3,6 +3,7 @@
  */
 import {mountSelfBuilderMenuV2, SELFBUILDER_MENU} from './selfbuilder-menu-v2.mjs';
 import {mountWowDesignWorkbench} from './selfbuilder-wow-workbench.mjs';
+import {mountR11WowMenu} from './nox-r11-wow.mjs';
 
 export const CORE_RUNTIME_IDS=Object.freeze(Object.fromEntries(
   ['consciousness','atlas','reflection','nexus','forge','core','voice','persona'].map(x=>[x,'core.'+x])));
@@ -160,6 +161,16 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
           ...(request.task?{task:request.task}:{}),...(request.job_id?{job_id:request.job_id}:{})});display(result);
         return result.state==='COMPLETED'?{...result.result,ack:true}:{ack:false,errorCode:result.errorCode};
       }});
+  }
+  // R11: one cosmetic cockpit on existing, already-mounted MENU10 DOM. No second host.
+  // All functional requests are forwarded to the ONE native P02 client with its ACL/consent.
+  let r11=null;
+  if(root){
+    try{r11=mountR11WowMenu({root,documentRef:doc,windowRef:view,
+      request:(route,payload)=>client.request(route,payload),
+      scope:()=>canonicalChatContext(doc.getElementById('chat-core')?.value||'',
+        doc.getElementById('chat-persona')?.value||'')});}
+    catch(error){console.warn('NOX_R11_WOW_HOLD',error?.message||'NATIVE_MENU_NOT_READY');}
   }
   const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();}):null;
   const title=doc.getElementById('detail-title');
@@ -334,7 +345,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   doc.addEventListener('click',click,true);doc.addEventListener('change',change,true);
   const close=()=>{
     if(disposed)return;disposed=true;doc.removeEventListener('click',click,true);doc.removeEventListener('change',change,true);
-    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();menu?.destroy();wow?.destroy();wowObserver?.disconnect();status.remove();detail.remove();actions.remove();client.destroy();
+    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();r11?.destroy();menu?.destroy();wow?.destroy();wowObserver?.disconnect();status.remove();detail.remove();actions.remove();client.destroy();
   };
   view.addEventListener('pagehide',close,{once:true});
   refresh();models();
