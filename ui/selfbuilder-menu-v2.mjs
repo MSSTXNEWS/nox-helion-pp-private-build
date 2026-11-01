@@ -62,8 +62,10 @@ export function p01ReadinessResult(action,receipt){
   if(action==='selfbuilder.capabilities'){
     const available=Object.values(receipt.actions||{}).filter(x=>x?.available===true).length;
     const configured=typeof receipt.source_head==='string' && /^[a-f0-9]{40,64}$/.test(receipt.source_head);
+    const training=receipt.actions?.['selfbuilder.train.request']?.available===true;
     return Object.freeze({state:configured?'AVAILABLE':'HOLD',
-      message:available+' нативных действий; Git HEAD '+(configured?'проверен':'не настроен')});
+      message:available+' нативных действий; Git HEAD '+(configured?'проверен':'не настроен')+
+      '; QLoRA route '+(training?'настроен, обучение НЕ запущено':'HOLD — требуется одобренное GPU-задание')});
   }
   if(action==='selfbuilder.coding.models'){
     const n=Array.isArray(receipt.models)?receipt.models.length:0;
@@ -83,9 +85,11 @@ export function p01ReadinessResult(action,receipt){
     return Object.freeze({state:state==='READY_FOR_OWNER_TASK'?'AVAILABLE':'HOLD',
       message:tasks+' задач в S03; состояние '+state+'; автозапуск не выполнялся'});
   }
-  const n=receipt.status==='S03_READ'&&Array.isArray(receipt.tasks)?receipt.tasks.length:0;
-  return Object.freeze({state:n>0?'AVAILABLE':'HOLD',
-    message:n+' подтверждённых результатов S03; веса не изменялись'});
+  const responded=receipt.status==='S03_READ'&&Array.isArray(receipt.tasks);
+  const n=responded?receipt.tasks.length:0;
+  return Object.freeze({state:responded?'AVAILABLE':'HOLD',
+    message:n+' подтверждённых результатов S03; память '+(responded?'отвечает':'недоступна')+
+      '; веса не изменялись'});
 }
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
@@ -149,6 +153,24 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   const task=make(doc,'textarea','nox-sb-task');task.maxLength=3000;task.minLength=15;task.placeholder='Задача для локальной модели программиста';task.setAttribute('aria-label','Задача программисту');
   const jobs=make(doc,'select','nox-sb-job');jobs.setAttribute('aria-label','Подтверждённое задание FORGE');
   const buttons=[];let destroyed=false;let diagnosticBusy=false;const busy=new Set();
+  // Zero download / zero new agent: owner-approved task primers feed the existing
+  // SELF-BUILDER proposer after a separate explicit click and native consent.
+  const taskPresets=Object.freeze([
+    Object.freeze({label:'Подготовить улучшение MENU / WOW',task:
+      'Проверь подтверждённые источники текущего Git HEAD для существующего NOX HELION EXPRESS INTEGRATOR. Предложи ровно один минимальный обратимый патч MENU/D02/WOW/кнопок с тестом и SHA, сохрани исходную графику и native consent. Ничего не устанавливай и не объединяй автоматически.'}),
+    Object.freeze({label:'Подготовить самоулучшение кода',task:
+      'Изучи только проверенные исходники текущего HEAD и подтверждённые ошибки существующего загрузчика NOX HELION EXPRESS INTEGRATOR. Подготовь один безопасный кандидат кода в изолированной папке с тестом, откатом и источниками. Не изменяй основной EXE и не повышай статус без приёмки.'})
+  ]);
+  for(const preset of taskPresets){
+    const button=make(doc,'button','nox-sb-tile',preset.label);button.type='button';
+    button.dataset.noxOwnerTaskPreset='true';
+    button.addEventListener('click',()=>{
+      if(destroyed)return;
+      task.value=preset.task;task.focus();
+      feedback.textContent='Задача подготовлена. Запуск — только отдельной кнопкой «Создать кандидат кода» с нативным согласием.';
+    });
+    sourceGrid.append(button);
+  }
   diagnostic.addEventListener('click',async()=>{
     if(destroyed||diagnosticBusy)return;
     diagnosticBusy=true;diagnostic.disabled=true;diagnostic.dataset.state='PENDING';
