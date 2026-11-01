@@ -1,12 +1,12 @@
 {
   "schema": "NOX-A1-ONEHOST-STAGE-LOCK-v1",
   "sources": {
-    "worms.py": "2bc66e52f9ec7e587142f56f68de5bebfa7f8f5f",
+    "worms.py": "28d788ee753665785ec56f81b7b577b2a3ba4d07",
     "worm_providers.py": "5afaff045522382c720f325dcd0c5e099352e38e",
     "worm_idea_loop.py": "2b1aadd1b8880d38af8b4a3498a090c7e83de08e",
     "growth_sandbox.py": "363b6f3827a0d4e3d3db0a059bb84133e31da04c",
     "growth_forge.py": "ffdb0239ae54c4c1ac27d0eaceac5153ff6f8069",
-    "worm_autopilot.py": "88e7ec4c923ea981fd8bde38b8bbaeb202bf5e01",
+    "worm_autopilot.py": "7f71acc6836826ed1a04b566486adbd43eba3f95",
     "a1_initiative_bridge.py": "e11b9e2921368f32e76b859f64994312c4ac012d",
     "a1_official_catalog.py": "1833e786023e06ef7a8b8a1abda134224d08601b",
     "firstboot_coordinator.py": "aaa2f660fe7345c96137c8a7775f223eada45eb6",
