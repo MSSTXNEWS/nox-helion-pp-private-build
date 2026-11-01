@@ -148,3 +148,15 @@ test('payload manifest enumerates hidden and system files, matching owner P01 ex
   assert.ok(script.includes('E06_PAYLOAD_FINAL_VERIFY_BEFORE_NSIS_HOLD'));
   assert.ok(!script.includes('Remove-Item -Recurse'));
 });
+
+// Regression: final chat ACK must respect the same revocation epoch as streamed deltas.
+const nativeBridge = fs.readFileSync(new URL('../OneHostP02WebView2Bridge.cs', import.meta.url),'utf8');
+test('P02 STOP revokes final chat COMPLETED as well as streamed tokens',()=>{
+  const request = nativeBridge.indexOf('var result = await _existingPipe.RequestAsync(');
+  const guard = nativeBridge.indexOf('if (isChat && Interlocked.Read(ref _streamEpoch) != streamEpoch) return;', request);
+  const terminal = nativeBridge.indexOf('var state = !result.Accepted', request);
+  assert.ok(request>=0 && guard>request && terminal>guard);
+  assert.ok(nativeBridge.includes('if (route == "chat.stop") Interlocked.Increment(ref _streamEpoch);'));
+  assert.ok(nativeBridge.includes('if (Interlocked.Read(ref _streamEpoch) != streamEpoch ||'));
+  assert.ok(script.includes("blob='2a655af31eadf19c179a40310f1b480a481af990'"));
+});

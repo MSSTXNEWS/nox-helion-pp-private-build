@@ -289,6 +289,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                 // Host still re-authorizes after the potentially blocking IPC call.
                 if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                     !_nativeAcl(_ownerWindowsSid, route)) return;
+                // E-F2: STOP invalidates stale final chat replies, not only deltas.
+                if (isChat && Interlocked.Read(ref _streamEpoch) != streamEpoch) return;
                 // STOP acknowledged by the Python owner only means requested.
                 // Never misreport a remote model as fully aborted before proof.
                 var state = !result.Accepted ? "HOLD" :
