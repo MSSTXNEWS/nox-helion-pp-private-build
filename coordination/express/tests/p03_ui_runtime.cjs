@@ -14,7 +14,7 @@ assert.equal(sent.shift()?.type,'p03.ready.v1');
 const evalCode=s=>vm.runInContext(s,ctx),post=data=>callback({data});let total=0;
 function ok(value,msg){assert.ok(value,msg);total++}
 const seed=JSON.parse(JSON.stringify(evalCode('state.models'))),uuid='12345678-1234-1234-1234-123456789abc';
-const model={...seed.find(m=>m.id==='qwen3'),artifactVerified:true,exactTag:'qwen3:0.6b',immutableRevision:'a'.repeat(40),license:'synthetic',licenseEvidenceUrl:'https://ollama.com/library/qwen3',artifactBytes:10000,sha256:'b'.repeat(64),manifestSha256:'c'.repeat(64),requiredDiskGiB:1,requiredVramGiB:1,compatibilityReviewed:true};
+const model={...seed.find(m=>m.id==='qwen3'),artifactVerified:true,exactTag:'qwen3:0.6b',immutableRevision:'a'.repeat(64),license:'synthetic',licenseEvidenceUrl:'https://ollama.com/library/qwen3',artifactBytes:10000,sha256:'b'.repeat(64),manifestSha256:'c'.repeat(64),requiredDiskGiB:1,requiredVramGiB:1,compatibilityReviewed:true};
 const job={jobId:uuid,modelId:'qwen3',modelTag:'qwen3:0.6b',state:'Running',completedBytes:10,totalBytes:100};
 const snap=(m=model)=>({type:'p03.snapshot.v1',models:seed.map(x=>x.id==='qwen3'?m:x),activeJob:job,hardware:{diskFreeGiB:20,vramFreeGiB:12,ramFreeGiB:32},capabilities:{pull:true,stop:true,retry:true,diagnose:true,importGguf:true}});
 post(snap());evalCode('state.activeId="qwen3";render()');els.get('licenseAck').checked=true;els.get('licenseAck').handlers.change();
@@ -22,7 +22,7 @@ ok(!els.get('pullBtn').disabled,'verified fixture enables host action');
 evalCode("sendAction('pull')");ok(sent.length===1,'one host command only');ok(evalCode('state.pending.has("pull")'),'await ACK');
 post({type:'p03.command.ack.v1',action:'pull',commandId:'wrong',accepted:true});ok(evalCode('state.pending.has("pull")'),'wrong ACK denied');
 post({type:'p03.command.ack.v1',action:'pull',commandId:sent[0].commandId,accepted:true});ok(!evalCode('state.pending.has("pull")'),'matching ACK accepted');ok(els.get('toast').textContent.includes('receipt'),'ACK not install');
-post(snap({...model,immutableRevision:'z'.repeat(40)}));ok(!els.get('licenseAck').checked,'revision change revokes consent');
+post(snap({...model,immutableRevision:'d'.repeat(64)}));ok(!els.get('licenseAck').checked,'revision change revokes consent');
 post({...snap(),models:[model,model]});ok(evalCode('state.models.length')===seed.length,'duplicate catalog rejected');
 post(snap());
 post({type:'p03.event.v1',event:{jobId:uuid,modelTag:'qwen3:0.6b',phase:'progress',status:'x'.repeat(3000),completedBytes:20,totalBytes:100}});
