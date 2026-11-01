@@ -45,6 +45,48 @@ export const SELFBUILDER_MENU = Object.freeze([
   {section:'РАЗВИТИЕ',routeId:'progress',label:'Мои задания',actionId:'selfbuilder.worker.status',mode:'read',subview:'code'},
   {section:'РАЗВИТИЕ',routeId:'commands',label:'STOP самодописания',actionId:'selfbuilder.worker.stop',mode:'restricted',subview:'code'}
 ]);
+// One read-only, native capability dashboard: no downloads, code execution
+// or weight modification. Reuse the existing OneHost/P02/S03 actions.
+export const P01_READINESS_ACTIONS=Object.freeze([
+  Object.freeze({action:'selfbuilder.capabilities',label:'Локальный ИИ и разрешения'}),
+  Object.freeze({action:'selfbuilder.coding.models',label:'Установленные модели'}),
+  Object.freeze({action:'selfbuilder.sources.inspect',label:'Исходники и интеграции'}),
+  Object.freeze({action:'selfbuilder.worker.status',label:'Самодописание и задания'}),
+  Object.freeze({action:'selfbuilder.learning.proofs',label:'Память S03 и подтверждённое обучение'})
+]);
+export function p01ReadinessResult(action,receipt){
+  if(!P01_READINESS_ACTIONS.some(x=>x.action===action))
+    return Object.freeze({state:'HOLD',message:'Неизвестная проверка'});
+  if(receipt?.ack!==true)
+    return Object.freeze({state:'HOLD',message:'Нет подтверждённого native ACK'});
+  if(action==='selfbuilder.capabilities'){
+    const available=Object.values(receipt.actions||{}).filter(x=>x?.available===true).length;
+    const configured=typeof receipt.source_head==='string' && /^[a-f0-9]{40,64}$/.test(receipt.source_head);
+    return Object.freeze({state:configured?'AVAILABLE':'HOLD',
+      message:available+' нативных действий; Git HEAD '+(configured?'проверен':'не настроен')});
+  }
+  if(action==='selfbuilder.coding.models'){
+    const n=Array.isArray(receipt.models)?receipt.models.length:0;
+    return Object.freeze({state:n>0?'AVAILABLE':'HOLD',
+      message:n+' локальных моделей обнаружено; наличие модели не равно обучению'});
+  }
+  if(action==='selfbuilder.sources.inspect'){
+    const ok=receipt.status==='SOURCE_INVENTORY_READ_ONLY';
+    const n=ok&&Number.isInteger(receipt.owner_admitted_total)?receipt.owner_admitted_total:0;
+    return Object.freeze({state:ok?'AVAILABLE':'HOLD',
+      message:ok?n+' источников допущено владельцем; импорт в S03 отдельно':
+        'Нет проверенного управляемого Git-источника'});
+  }
+  if(action==='selfbuilder.worker.status'){
+    const state=typeof receipt.status==='string'?receipt.status:'HOLD';
+    const tasks=Array.isArray(receipt.tasks)?receipt.tasks.length:0;
+    return Object.freeze({state:state==='READY_FOR_OWNER_TASK'?'AVAILABLE':'HOLD',
+      message:tasks+' задач в S03; состояние '+state+'; автозапуск не выполнялся'});
+  }
+  const n=receipt.status==='S03_READ'&&Array.isArray(receipt.tasks)?receipt.tasks.length:0;
+  return Object.freeze({state:n>0?'AVAILABLE':'HOLD',
+    message:n+' подтверждённых результатов S03; веса не изменялись'});
+}
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
 function make(doc,tag,cls,text){const x=doc.createElement(tag);if(cls)x.className=cls;if(text)x.textContent=text;return x;}
@@ -97,12 +139,42 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   const sourceStatus=make(doc,'p','nox-sb-feedback','Библиотека · ожидает проверки текущего Git HEAD');
   sourceStatus.setAttribute('role','status');sourceStatus.setAttribute('aria-live','polite');
   const sourceList=make(doc,'ul','nox-sb-sourcehub__list');
-  sourceHub.append(sourceTitle,sourceLead,sourceGrid,sourceStatus,sourceList);
+  const diagnostic=make(doc,'button','nox-sb-tile','Проверить локальный ИИ · память · модели · исходники');
+  diagnostic.type='button';diagnostic.dataset.noxReadiness='native-only';
+  const diagnosticList=make(doc,'ul','nox-sb-sourcehub__list');
+  diagnosticList.setAttribute('aria-label','Результаты проверки локального ИИ');
+  sourceHub.append(sourceTitle,sourceLead,diagnostic,diagnosticList,sourceGrid,sourceStatus,sourceList);
   const feedback=make(doc,'p','nox-sb-feedback','Ожидание состояния ядра · HOLD');
   feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
   const task=make(doc,'textarea','nox-sb-task');task.maxLength=3000;task.minLength=15;task.placeholder='Задача для локальной модели программиста';task.setAttribute('aria-label','Задача программисту');
   const jobs=make(doc,'select','nox-sb-job');jobs.setAttribute('aria-label','Подтверждённое задание FORGE');
-  const buttons=[];let destroyed=false;const busy=new Set();
+  const buttons=[];let destroyed=false;let diagnosticBusy=false;const busy=new Set();
+  diagnostic.addEventListener('click',async()=>{
+    if(destroyed||diagnosticBusy)return;
+    diagnosticBusy=true;diagnostic.disabled=true;diagnostic.dataset.state='PENDING';
+    diagnosticList.replaceChildren();
+    sourceStatus.textContent='REQUESTED · опрос существующего нативного ядра';
+    try{
+      // Sequential, bounded existing commands; never invent an extra provider,
+      // grant, background agent, model download or a training run.
+      for(const check of P01_READINESS_ACTIONS){
+        if(destroyed)break;
+        let receipt;
+        try{receipt=await invokeNative({routeId:'evolution',actionId:check.action,
+          source:'NOX_MENU_V2_OWNER',userGesture:true});}
+        catch(_){receipt={ack:false};}
+        if(destroyed)break;
+        const result=p01ReadinessResult(check.action,receipt);
+        const item=make(doc,'li','nox-sb-sourcehub__entry',
+          check.label+' · '+result.state+' · '+result.message);
+        item.dataset.state=result.state;diagnosticList.append(item);
+      }
+      if(!destroyed)sourceStatus.textContent='Проверка окончена · функции доступны только с native ACK';
+    }finally{
+      diagnosticBusy=false;
+      if(!destroyed){diagnostic.disabled=false;diagnostic.dataset.state='IDLE';}
+    }
+  });
   function showSourceInventory(receipt){
     sourceList.replaceChildren();
     const items=Array.isArray(receipt?.items)?receipt.items:[];
