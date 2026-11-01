@@ -13,6 +13,7 @@ import threading
 from .evolution import EvolutionWorker, EvolutionHold
 from .seed import attest_seed
 from .onehost_queue import scope_key
+from .source_catalog import inspect_managed_sources
 
 _HEAD=re.compile(r'^[a-f0-9]{40}(?:[a-f0-9]{24})?$')
 
@@ -101,6 +102,9 @@ class OneHostSelfBuilder:
         for action in ('selfbuilder.worker.status','selfbuilder.study.queue','selfbuilder.learning.proofs','selfbuilder.coding.models'):
             available=action!='selfbuilder.coding.models' or callable(self.model_inventory)
             actions[action]={'available':available,'status':'AVAILABLE' if available else 'HOLD','ownerConsent':False}
+        # Read-only owner inventory stays callable even when source configuration
+        # is absent; the response then explicitly reports HOLD, not fake loading.
+        actions['selfbuilder.sources.inspect']={'available':True,'status':'NATIVE_REQUEST_AVAILABLE','ownerConsent':False}
         seed_ok=self.seed_archive is not None and self.seed_archive.is_file()
         actions['selfbuilder.seed.inspect']={'available':seed_ok,'status':'AVAILABLE' if seed_ok else 'HOLD','ownerConsent':False}
         permit=reason is None and not self._stopped()
@@ -115,6 +119,8 @@ class OneHostSelfBuilder:
         if type(args) is not dict or type(args.get('action')) is not str:raise ValueError('EXACT_SELFBUILDER_ACTION_REQUIRED')
         action=args['action']
         if action=='selfbuilder.capabilities':return self._capabilities(session)
+        if action=='selfbuilder.sources.inspect':
+            return inspect_managed_sources(self.source,self.source_paths)
         if action=='selfbuilder.worker.status':
             return {'status':'STOPPED' if self._stopped() else 'READY_FOR_OWNER_TASK',
                     'tasks':self.queue.list(session),'weights_updated':False}
