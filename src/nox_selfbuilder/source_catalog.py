@@ -13,6 +13,7 @@ SUFFIXES = frozenset({'.py', '.cs', '.mjs', '.js', '.css', '.html', '.json',
                       '.md', '.patch', '.diff', '.ps1', '.yml', '.yaml'})
 MAX_DISPLAY = 120
 MAX_TREE = 12000
+CATEGORY_KEYS = ('code_modules', 'templates', 'patches', 'integrations', 'contracts_docs')
 # These are Git *object* identities, not per-file SHA256 or rights receipts.
 _TREE_ENTRY = re.compile(r'^(100644|100755|120000|160000) (blob|commit) ([0-9a-f]{40}|[0-9a-f]{64})$')
 
@@ -69,10 +70,14 @@ def _regular_blobs(tree):
     return found
 
 
-def inspect_managed_sources(source, source_paths=()):
-    """Only regular blobs from a clean immutable Git HEAD; never page paths."""
+def inspect_managed_sources(source, source_paths=(), *, category=None, offset=0):
+    """Page regular blobs of a clean exact Git HEAD without importing or writing."""
     if getattr(source, 'root', None) is None:
         return {'status': 'HOLD', 'reason': 'MANAGED_GIT_SOURCE_NOT_CONFIGURED',
+                'items': [], 'imported_into_s03': False}
+    if (category is not None and (type(category) is not str or category not in CATEGORY_KEYS)) or (
+            type(offset) is not int or not 0 <= offset <= MAX_TREE):
+        return {'status': 'HOLD', 'reason': 'SOURCE_CATALOG_FILTER_INVALID',
                 'items': [], 'imported_into_s03': False}
     try:
         head = source.head()
@@ -97,19 +102,24 @@ def inspect_managed_sources(source, source_paths=()):
                 'items': [], 'imported_into_s03': False}
     approved = set(source_paths)
     valid = list(blobs)
-    selected = sorted(valid, key=lambda p: (p not in approved, p.lower(), p))
-    display = selected[:MAX_DISPLAY]
-    counts = {key: 0 for key in ('code_modules', 'templates', 'patches', 'integrations', 'contracts_docs')}
+    selected = sorted((p for p in valid if category is None or classify(p) == category),
+                      key=lambda p: (p not in approved, p.lower(), p))
+    display = selected[offset:offset + MAX_DISPLAY]
+    counts = {key: 0 for key in CATEGORY_KEYS}
     for path in valid:
         counts[classify(path)] += 1
     items = [{'path': p, 'category': classify(p),
               'source_ref': 'git:' + head + ':' + p,
               'git_blob_sha': blobs[p][0], 'git_blob_mode': blobs[p][1],
               'owner_admitted': p in approved} for p in display]
+    next_offset = offset + len(display)
+    has_more = next_offset < len(selected)
     return {'status': 'SOURCE_INVENTORY_READ_ONLY',
             'source_head': head, 'items': items, 'categories': counts,
             'supported_total': len(valid), 'displayed': len(items),
-            'truncated': len(valid) > MAX_DISPLAY,
+            'truncated': has_more, 'category_filter': category, 'offset': offset,
+            'matching_total': len(selected), 'next_offset': next_offset if has_more else None,
+            'has_more': has_more,
             'owner_admitted_total': sum(p in approved for p in valid),
             'all_sources_loaded': False, 'imported_into_s03': False,
             'licence_and_hash_review': 'REQUIRED_BEFORE_USE',
