@@ -17,7 +17,13 @@ export const SELFBUILDER_MENU = Object.freeze([
   {section:'СИСТЕМА',routeId:'model-library',label:'Модель программиста',actionId:'selfbuilder.coding.models',mode:'read'},
   {section:'СИСТЕМА',routeId:'core-status',label:'Статус ядер',actionId:'selfbuilder.worker.status',mode:'read'},
   {section:'РАБОТА',routeId:'commands',label:'Задания программиста',actionId:'selfbuilder.propose',mode:'restricted'},
-  {section:'РАБОТА',routeId:'progress',label:'Проверенные улучшения',actionId:'selfbuilder.worker.status',mode:'read'}
+  {section:'РАБОТА',routeId:'progress',label:'Проверенные улучшения',actionId:'selfbuilder.worker.status',mode:'read'},
+  // Native-only source/code subsection under the existing eight MENU tiles.
+  {section:'РАЗВИТИЕ',routeId:'evolution',label:'Библиотека исходников',actionId:'selfbuilder.sources.inspect',mode:'read',subview:'code'},
+  {section:'РАЗВИТИЕ',routeId:'model-library',label:'Проверить модели программиста',actionId:'selfbuilder.coding.models',mode:'read',subview:'code'},
+  {section:'РАЗВИТИЕ',routeId:'commands',label:'Создать кандидат кода',actionId:'selfbuilder.propose',mode:'restricted',subview:'code'},
+  {section:'РАЗВИТИЕ',routeId:'progress',label:'Мои задания',actionId:'selfbuilder.worker.status',mode:'read',subview:'code'},
+  {section:'РАЗВИТИЕ',routeId:'commands',label:'STOP самодописания',actionId:'selfbuilder.worker.stop',mode:'restricted',subview:'code'}
 ]);
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
@@ -33,11 +39,38 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   wrapper.dataset.noxView='source-candidate';
   const heading=make(doc,'h2','nox-sb-heading','NOX · Эволюция и программирование');
   const info=make(doc,'p','nox-sb-subtitle','Настоящие задания, модели и обучение. Данные только из подтверждённого ядра.');
-  const grid=make(doc,'div','nox-sb-grid');const feedback=make(doc,'p','nox-sb-feedback','Ожидание состояния ядра · HOLD');
+  const grid=make(doc,'div','nox-sb-grid');
+  const sourceHub=make(doc,'section','nox-sb-sourcehub');
+  sourceHub.dataset.noxSubview='selfbuilder-source-v1';
+  const sourceTitle=make(doc,'h3','nox-sb-sourcehub__title','Самодописание ИИ · исходники и код');
+  const sourceLead=make(doc,'p','nox-sb-subtitle','Один P02/S03. Исходники, модули, шаблоны, патчи и интеграции — только проверенные данные. Код сначала кандидат, затем согласование.');
+  const sourceGrid=make(doc,'div','nox-sb-grid');
+  const sourceStatus=make(doc,'p','nox-sb-feedback','Библиотека · ожидает проверки текущего Git HEAD');
+  sourceStatus.setAttribute('role','status');sourceStatus.setAttribute('aria-live','polite');
+  const sourceList=make(doc,'ul','nox-sb-sourcehub__list');
+  sourceHub.append(sourceTitle,sourceLead,sourceGrid,sourceStatus,sourceList);
+  const feedback=make(doc,'p','nox-sb-feedback','Ожидание состояния ядра · HOLD');
   feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
   const task=make(doc,'textarea','nox-sb-task');task.maxLength=3000;task.minLength=15;task.placeholder='Задача для локальной модели программиста';task.setAttribute('aria-label','Задача программисту');
   const jobs=make(doc,'select','nox-sb-job');jobs.setAttribute('aria-label','Подтверждённое задание FORGE');
   const buttons=[];let destroyed=false;const busy=new Set();
+  function showSourceInventory(receipt){
+    sourceList.replaceChildren();
+    const items=Array.isArray(receipt?.items)?receipt.items:[];
+    if(receipt?.status!=='SOURCE_INVENTORY_READ_ONLY'){
+      sourceStatus.textContent='HOLD · '+(typeof receipt?.reason==='string'?receipt.reason:'Нет подтверждённого управляемого Git');
+      return;
+    }
+    sourceStatus.textContent='Только чтение · '+items.length+' показано из '+receipt.supported_total+
+      ' · допущено владельцем: '+receipt.owner_admitted_total+
+      ' · S03 не заполняется без согласия';
+    for(const item of items.slice(0,120)){
+      if(typeof item?.path!=='string'||typeof item?.category!=='string')continue;
+      const row=make(doc,'li','nox-sb-sourcehub__entry',
+        item.category+' · '+item.path+(item.owner_admitted?' · OWNER SOURCE':' · REVIEW REQUIRED'));
+      sourceList.append(row);
+    }
+  }
   for(const item of SELFBUILDER_MENU){
     const b=make(doc,'button','nox-sb-tile',item.label);b.type='button';b.dataset.routeId=item.routeId;
     b.dataset.actionId=item.actionId;b.dataset.section=item.section;
@@ -60,6 +93,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
       try{
         const receipt=await invokeNative({routeId:item.routeId,actionId:item.actionId,source:'NOX_MENU_V2_OWNER',
              userGesture:true,...(training?{job_id:jobs.value}:{}),...(item.actionId==='selfbuilder.propose'?{task:task.value.trim()}:{} )});
+        if(item.actionId==='selfbuilder.sources.inspect')showSourceInventory(receipt);
         feedback.textContent=receipt?.ack===true
           ?(item.mode==='read'?'ПОЛУЧЕНО · '+item.label:
              typeof receipt.run_id==='string'?'QUEUED · '+item.label+' · '+receipt.run_id:training?'ОТВЕТ FORGE · '+(receipt.status||'ПОЛУЧЕНО'):'HOLD · задача не принята')
@@ -67,17 +101,19 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
       }catch(_){feedback.textContent='HOLD · ошибка соединения с ядром';}
       finally{busy.delete(item.actionId);if(!destroyed)refresh();}
     });
-    grid.append(b);buttons.push({b,item,permitted});
+    (item.subview==='code'?sourceGrid:grid).append(b);buttons.push({b,item,permitted});
   }
-  wrapper.append(heading,info,task,jobs,grid,feedback);root.append(wrapper);
+  wrapper.append(heading,info,task,jobs,grid,sourceHub,feedback);root.append(wrapper);
   function refresh(){
     const selected=jobs.value;const known=getTrainingJobs().filter(x=>typeof x?.id==='string'&&x.id.length>0);
     jobs.replaceChildren?.();
     const empty=make(doc,'option','',known.length?'Выберите задание FORGE':'Нет подтверждённых заданий FORGE');empty.value='';jobs.append(empty);
     for(const job of known){const option=make(doc,'option','',job.id+' · '+(job.status||'HOLD'));option.value=job.id;jobs.append(option);}
     jobs.value=known.some(x=>x.id===selected)?selected:'';
-    jobs.hidden=typeof getCurrentSection==='function'&&getCurrentSection()!=='РАЗВИТИЕ';
-    task.hidden=typeof getCurrentSection==='function'&&getCurrentSection()!=='РАБОТА';
+    const section=typeof getCurrentSection==='function'?getCurrentSection():null;
+    jobs.hidden=section!==null&&section!=='РАЗВИТИЕ';
+    task.hidden=section!==null&&!['РАБОТА','РАЗВИТИЕ'].includes(section);
+    sourceHub.hidden=section!==null&&section!=='РАЗВИТИЕ';
     for(const {b,item,permitted} of buttons){
       if(destroyed)return;
       b.hidden=typeof getCurrentSection==='function'&&getCurrentSection()!==item.section;
