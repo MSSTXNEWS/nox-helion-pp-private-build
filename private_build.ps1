@@ -258,10 +258,20 @@ try {
 
     $requirements = Join-Path $deps 'requirements-build-win64-hashed.txt'
     $wheels = Join-Path $deps 'wheels'
-    $pyLauncher = Get-Command py -ErrorAction Stop
-    if ($pyLauncher.CommandType -ne 'Application') { throw 'PY_LAUNCHER_NAME_COLLISION' }
+    # Use only a real installed executable, never a PowerShell function named py.
+    # Hosted Windows runners may provide setup-python without the py.exe launcher.
+    $pyLauncher = Get-Command py.exe -CommandType Application -ErrorAction SilentlyContinue
     $venv = Join-Path $work 'build-venv'
-    & py -3.12 -m venv $venv
+    if ($pyLauncher) {
+        & $pyLauncher.Source -3.12 -m venv $venv
+    } else {
+        $pyExe = Get-Command python.exe -CommandType Application -ErrorAction Stop
+        $pyVersion = (& $pyExe.Source -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")').Trim()
+        if ($LASTEXITCODE -ne 0 -or $pyVersion -cne '3.12') {
+            throw 'PYTHON_312_EXECUTABLE_REQUIRED'
+        }
+        & $pyExe.Source -m venv $venv
+    }
     if ($LASTEXITCODE -ne 0) { throw "BUILD_VENV_CREATE_FAILED:$LASTEXITCODE" }
     $venvPython = Join-Path $venv 'Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) { throw 'BUILD_VENV_PYTHON_MISSING' }
