@@ -174,7 +174,7 @@ if ($wantsCreative) {
   $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
   $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
   if ($creativeScriptBlob -cne 'd5ad8f62eb0c143bfbe54fb0a71ec371d6c571f4' -or
-      $wowScriptBlob -cne '9c738f8b539500cb2fb9fd3bf3423f0a715039d8') {
+      $wowScriptBlob -cne '32b7da298a8cd4787e53195969dfade116921f48') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
   }
   if (Test-Path -LiteralPath (Join-Path $source 'Assets/creative')) {
@@ -187,7 +187,7 @@ if ($wantsCreative) {
   $wowReceiptPath=Join-Path (Split-Path -Parent $source) 'WOW200_STAGE_RECEIPT.json'
   if (!(Test-Path -LiteralPath $wowReceiptPath -PathType Leaf)) { throw 'D02_WOW_STAGE_RECEIPT_MISSING' }
   $wowReceipt=Get-Content -LiteralPath $wowReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
-  if ($wowReceipt.count -ne 69 -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+  if ($wowReceipt.count -ne 71 -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
       $wowReceipt.legacy_d02_runtime_imported -ne $false -or
       $wowReceipt.pack01_catalog_routes -ne 50 -or
       $wowReceipt.source_only -ne $true -or $wowReceipt.release_accepted -ne $false) {

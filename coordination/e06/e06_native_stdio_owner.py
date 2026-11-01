@@ -147,6 +147,7 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         config_hold = "E06_NATIVE_CONFIG_INVALID"
     from nox_selfbuilder.onehost_queue import NativeWorkQueue
     from nox_selfbuilder.onehost_builder import OneHostSelfBuilder
+    from nox_selfbuilder.wow_owner_binding import OneHostWowRuntime
     lease_lock = threading.Lock()
     leases = {}
 
@@ -188,6 +189,9 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         seed_archive=seed_archive, model_inventory=adapter.client.models,
         source_paths=config.get("source_paths", ()), stop_epoch=lambda: adapter._stop_epoch,
         request_stop=lambda session: stop(session, {}))
+    wow_runtime = OneHostWowRuntime(actor=store, builder=builder, adapter=adapter,
+        queue=queue, authorize=authorize, native_approve=native_approve,
+        stop_requested=adapter.stop_requested)
     forge_commands = None
     background = None
     forge_hold = ("GPU_TRAINING_HOLD_APPROVED_PYTHON_INTERPRETER_REQUIRED"
@@ -197,6 +201,18 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     def command(session, args):
         session, args = select_scope(session, args)
         action = args.get("action")
+        if action in ("selfbuilder.background.status",
+                      "selfbuilder.background.enable",
+                      "selfbuilder.background.disable",
+                      "selfbuilder.design.suggest",
+                      "selfbuilder.design.review",
+                      "selfbuilder.design.approve"):
+            if action in ("selfbuilder.background.enable",
+                          "selfbuilder.background.disable",
+                          "selfbuilder.design.suggest",
+                          "selfbuilder.design.approve"):
+                grant(session, action, args)
+            return wow_runtime.command(session, args)
         if type(action) is str and action.startswith("training."):
             if forge_commands is None:
                 raise RuntimeError("E06_APPROVED_NATIVE_FORGE_CONFIG_REQUIRED")
@@ -317,7 +333,10 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     ingress.p02 = adapter  # Same client for the existing SELF-BUILDER; not a second runtime.
     ingress.forge = background
     ingress.configuration_hold = config_hold
-    ingress.close = queue.close
+    def close_original_owner():
+        wow_runtime.close()
+        queue.close()
+    ingress.close = close_original_owner
     return ingress
 
 

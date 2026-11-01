@@ -12,7 +12,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'd66ccbc4f33fc7c78118c61f1ce0669cb07a10ca'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '35fdee27b9675609ce0dabfc791ad88d7be7d72d'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '0cd0de3e691638d7f3005471409bab240cf97382'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
@@ -37,6 +37,10 @@ ADDONS=(
     ('src/nox_selfbuilder/release_governor.py', 'nox_selfbuilder/release_governor.py', '451d5c17f3ef9ea0a83670ed90fface36512fc36'),
     ('src/nox_selfbuilder/release_learning.py', 'nox_selfbuilder/release_learning.py', '331cb6f6b1d2a403d6134afbd27770585961018b'),
     ('src/nox_selfbuilder/seed.py', 'nox_selfbuilder/seed.py', '9b3a19cbd985620e9527cf168b02cae0ee12453a'),
+    ('src/nox_selfbuilder/wow_background.py', 'nox_selfbuilder/wow_background.py', 'dc5c1272116163fedf18851eba21d1c69bca7f1a'),
+    ('src/nox_selfbuilder/wow_design.py', 'nox_selfbuilder/wow_design.py', '7135576489151bb90dfd1c552746fd723c0ea729'),
+    ('src/nox_selfbuilder/wow_onehost_port.py', 'nox_selfbuilder/wow_onehost_port.py', '8101bfb4657e776d519e8a98cfc862709fee1e1c'),
+    ('src/nox_selfbuilder/wow_owner_binding.py', 'nox_selfbuilder/wow_owner_binding.py', 'b9dadf87f02b1e3345efb20523a6799f1586423d'),
     ('Packages/P04/train_qlora.py', 'Packages/P04/train_qlora.py', '82fad1f4aec3bc9ebb34958ece3fd5786e1adbea'),
     ('Packages/P04/preflight_local_gpu.py', 'Packages/P04/preflight_local_gpu.py', '15d6807033040711ac54c4c9f63432c5653e62bd'),
     ('Packages/P04/merge_qlora_adapter.py', 'Packages/P04/merge_qlora_adapter.py', '51a27181e94cf5e766e2faf943f8aa17ec6418c7'),

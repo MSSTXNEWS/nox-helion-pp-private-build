@@ -2,6 +2,7 @@
  * No HTTP transport, second host, data store, permissions or simulated sensors.
  */
 import {mountSelfBuilderMenuV2, SELFBUILDER_MENU} from './selfbuilder-menu-v2.mjs';
+import {mountWowDesignWorkbench} from './selfbuilder-wow-workbench.mjs';
 
 export const CORE_RUNTIME_IDS=Object.freeze(Object.fromEntries(
   ['consciousness','atlas','reflection','nexus','forge','core','voice','persona'].map(x=>[x,'core.'+x])));
@@ -13,7 +14,9 @@ export function canonicalChatContext(core,persona){
   const personaId=PERSONA_RUNTIME_IDS[persona]||Object.values(PERSONA_RUNTIME_IDS).find(x=>x===persona)||'';
   return {core_id:coreId,persona_id:personaId};
 }
-const ACTIONS = new Set(SELFBUILDER_MENU.map(x => x.actionId));
+const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
+  'selfbuilder.background.status','selfbuilder.background.enable','selfbuilder.background.disable',
+  'selfbuilder.design.suggest','selfbuilder.design.review','selfbuilder.design.approve']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
   'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
@@ -156,6 +159,46 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   ]);
   const value=id=>doc.getElementById(id)?.value||'';
   const context=()=>canonicalChatContext(value('chat-core'),value('chat-persona'));
+
+  // R5: native S03 toggle & proposal review, secondary MENU only, never HOME.
+  let wow=null,wowObserver=null;
+  if(root){
+    const r5request=async(action,extra={})=>{
+      const scope=context();
+      if(!scope.core_id||!scope.persona_id)throw Error('SELECT_CORE_AND_PERSONA');
+      const reply=await client.request('chat.commands',{action,...scope,...extra});
+      if(reply.state!=='COMPLETED')throw Error('R5_NATIVE_HOLD');
+      return reply.result;
+    };
+    wow=mountWowDesignWorkbench({
+      root,documentRef:doc,
+      getProposal:async()=>{
+        const data=await r5request('selfbuilder.design.review');
+        return data?.schema==='NOX-WOW-DESIGN-REVIEW-v1'?data:null;
+      },
+      ownerApprove:({proposal_sha256,variant_id})=>{
+        if(!/^[a-f0-9]{64}$/.test(proposal_sha256)||
+           !/^[a-z][a-z0-9-]{1,79}$/.test(variant_id))
+          throw Error('R5_UNVERIFIED_REVIEW_CHOICE');
+        return r5request('selfbuilder.design.approve',{proposal_sha256,variant_id});
+      },
+      getBackgroundState:()=>r5request('selfbuilder.background.status'),
+      setBackgroundEnabled:(enabled)=>r5request(enabled?'selfbuilder.background.enable':'selfbuilder.background.disable'),
+      onError:()=>{status.textContent='HOLD · саморазвитие: требуется подтверждение NOX';}
+    });
+    const viewR5=()=>{
+      const visible=doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ';
+      const panel=root.querySelector('[data-nox-wow-studio="owner-v1"]');
+      if(panel)panel.hidden=!visible;
+      if(visible)void wow.refresh();
+    };
+    viewR5();
+    if(view.MutationObserver && doc.getElementById('detail-title')){
+      wowObserver=new view.MutationObserver(viewR5);
+      wowObserver.observe(doc.getElementById('detail-title'),
+        {childList:true,characterData:true,subtree:true});
+    }
+  }
   const chatStatus=message=>{const target=doc.getElementById('chat-state');if(target)target.textContent=message;};
   let chatBusy=false;
   async function sendChat(){
@@ -226,7 +269,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   doc.addEventListener('click',click,true);doc.addEventListener('change',change,true);
   const close=()=>{
     if(disposed)return;disposed=true;doc.removeEventListener('click',click,true);doc.removeEventListener('change',change,true);
-    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();menu?.destroy();status.remove();detail.remove();actions.remove();client.destroy();
+    view.removeEventListener('pagehide',close);sectionObserver?.disconnect();menu?.destroy();wow?.destroy();wowObserver?.disconnect();status.remove();detail.remove();actions.remove();client.destroy();
   };
   view.addEventListener('pagehide',close,{once:true});
   refresh();models();
