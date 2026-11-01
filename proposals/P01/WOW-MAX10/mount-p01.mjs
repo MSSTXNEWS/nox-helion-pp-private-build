@@ -9,6 +9,10 @@ import {nativeVisualApproval} from "./p01-visual-approval.mjs";
 import {createD02NativeVisualBus} from "./d02-native-events.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
 const mounted=new WeakSet();
+// OS-level reduced motion always outranks the user-selected quality profile.
+export function effectiveP01MotionMode(requested,reduced){
+  return reduced===true?"REDUCED":requested;
+}
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
   const {root,orbs,menu,buttons,hostPort,secondary=null,
@@ -24,7 +28,7 @@ export function mountP01Owner(spec){
   const win=root.ownerDocument.defaultView;
   const motionQuery=typeof win?.matchMedia==="function"?
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
-  const effectiveMode=()=>motionQuery?.matches?"REDUCED":requestedMode;
+  const effectiveMode=()=>effectiveP01MotionMode(requestedMode,motionQuery?.matches===true);
   const saved=new Map([...menu,...buttons].map(x=>[x.element,{
     ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
     hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
@@ -39,7 +43,7 @@ export function mountP01Owner(spec){
   };
   try {
     // Existing approved renderer and original DOM; NO replacement assets.
-    fx=installNoxCinemaFX({root,orbs,controls,panels,profile:mode});
+    fx=installNoxCinemaFX({root,orbs,controls,panels,profile:effectiveMode()});
     // One host-owned subscription: exact CoreIDs + the existing secondary WOW.
     nativeBus=createD02NativeVisualBus(hostPort,fx,orbs.slice(1).map(x=>x.id));
     if(secondary){
@@ -83,7 +87,15 @@ export function mountP01Owner(spec){
     if(motionQuery){
       const onMotion=()=>{
         if(disposed)return;
-        try{wow?.setMode(effectiveMode());}catch{/* native UI stays fail-closed */}
+        const profile=effectiveMode();
+        // Never leave the original D02 particle renderer in MAX when the OS
+        // requests reduced motion, even if a secondary WOW layer errors.
+        try{
+          if(fx.setProfile(profile)!==true)return;
+          wow?.setMode(profile);
+        }catch{
+          try{fx.setProfile("REDUCED");wow?.setMode("REDUCED");}catch{}
+        }
       };
       if(typeof motionQuery.addEventListener==="function"){
         motionQuery.addEventListener("change",onMotion);
@@ -99,12 +111,14 @@ export function mountP01Owner(spec){
       setMode(next){
         if(disposed||!validateMode(next))return false;
         const previous=requestedMode;
-        if(!fx.setProfile(next))return false;
-        try{wow?.setMode(motionQuery?.matches?"REDUCED":next);
+        const effective=effectiveP01MotionMode(next,motionQuery?.matches===true);
+        if(!fx.setProfile(effective))return false;
+        try{wow?.setMode(effective);
           requestedMode=next;return true;
         }catch{
-          fx.setProfile(previous);
-          try{wow?.setMode(motionQuery?.matches?"REDUCED":previous);}catch{}
+          const restore=effectiveP01MotionMode(previous,motionQuery?.matches===true);
+          fx.setProfile(restore);
+          try{wow?.setMode(restore);}catch{}
           return false;
         }
       },
