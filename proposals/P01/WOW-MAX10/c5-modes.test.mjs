@@ -30,3 +30,11 @@ test("C5.12 user mode resumes only when system Reduced Motion is disabled",()=>{
  assert.equal(effectiveP01MotionMode("MAX",true),"REDUCED");
  assert.equal(effectiveP01MotionMode("MAX",false),"MAX");
 });
+
+test("C5.13 page background pauses visual rendering without changing native work",async()=>{
+ const {shouldRunP01Visuals}=await import("./mount-p01.mjs");
+ assert.equal(shouldRunP01Visuals(true,true),true);
+ assert.equal(shouldRunP01Visuals(true,false),false);
+ assert.equal(shouldRunP01Visuals(false,true),false);
+ assert.equal(shouldRunP01Visuals("yes",true),false);
+});
