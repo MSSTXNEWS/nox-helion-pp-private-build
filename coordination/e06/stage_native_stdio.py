@@ -17,7 +17,7 @@ ADDONS=(
     ('contracts/p03_download_candidates.json', 'nox_selfbuilder/p03_download_candidates.json', '17053ed67af3bd74c9f767b9d6cc33d66c3eab73'),
     ('contracts/p04_module_candidates.json', 'nox_selfbuilder/p04_module_candidates.json', '3b034ba129c0ed434fe858ac132b1a15ea222d3b'),
     ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'eca9d6a51a1b2f16c07f0d511f926d10c32b5549'),
-    ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'e60431d7ef93402016b2bed04f81945895db8092'),
+    ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'a8f9a39a5b41dd8f8b8d70e1182c88df049d1cfd'),
     ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '0113b3e857f2ba55b74a02fcc3a76a24453b14e0'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),

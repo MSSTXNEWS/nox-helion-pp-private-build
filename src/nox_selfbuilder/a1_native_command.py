@@ -44,6 +44,7 @@ class A1NativeCommand:
         self._head = source_head
         self._owner_scope = None
         self._bound = False
+        self._binding_verified = False
         self._boot_receipt = None
         self._bound_head = None
         self._bound_epoch = None
@@ -102,7 +103,7 @@ class A1NativeCommand:
                           self._boot_receipt is not None and
                           self._boot_receipt.get('state') ==
                           'READY_FOR_EXISTING_IDLE_TICK' else 'HOLD'),
-                'native_bound': bool(valid),
+                'native_bound': bool(valid and self._binding_verified),
                 'boot_state': self._boot_receipt.get('state') if valid and
                               self._boot_receipt else 'NOT_VERIFIED',
                 'last_tick_state': self._last_tick.get('state') if valid and
@@ -118,6 +119,13 @@ class A1NativeCommand:
             if self._consent(session, action) is not True:
                 raise A1NativeHold('A1_FRESH_NATIVE_WPF_CONSENT_REQUIRED')
             epoch, head = self._gate(session, 'evolution.autonomy.read')
+            # Reserve this owner/HEAD/STOP epoch BEFORE any native factory or
+            # builder callback can partially bind and raise (or re-enter boot).
+            # Recovery requires a new authenticated OneHost session, not replay.
+            self._bound = True
+            self._owner_scope = scope
+            self._bound_epoch = epoch
+            self._bound_head = head
             owner_components = self._components(session)
             if (type(owner_components) is not dict or
                     set(owner_components) != {'initiative_bridge', 'firstboot'}):
@@ -130,11 +138,8 @@ class A1NativeCommand:
             if (not isinstance(result, dict) or
                     result.get('state') != 'PORTS_BOUND_AWAITING_NATIVE_STARTUP'):
                 raise A1NativeHold('A1_ORIGINAL_BUILDER_BINDING_NOT_PROVEN')
-            # Partial native binding is one-way: never reuse after failure/STOP.
-            self._bound = True
-            self._owner_scope = scope
-            self._bound_epoch = epoch
-            self._bound_head = head
+            # Only the original builder's exact receipt proves native binding.
+            self._binding_verified = True
             self._gate(session, 'evolution.autonomy.read')
             boot = self._builder.native_a_boot(session, now=now)
             if not isinstance(boot, dict) or boot.get('schema') != 'NOX-A-NATIVE-BOOT-v1':
