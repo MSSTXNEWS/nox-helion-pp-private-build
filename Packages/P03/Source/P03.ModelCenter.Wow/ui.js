@@ -14,6 +14,8 @@ const unknown = 'Н/Д';
 // Only timestamped native events may be called LIVE; a catalog snapshot is not telemetry.
 let latestStampedEventAt = null;
 const maxNativeEventAgeMs = 30000;
+// An advisory historical frame must never advance the durable host queue.
+const lastAppliedNativeJobAt = new Map();
 function refreshNativeEventSignal(){
  const age = latestStampedEventAt===null ? Infinity : Date.now()-latestStampedEventAt;
  const fresh = age>=-5000 && age<=maxNativeEventAgeMs;
@@ -200,7 +202,19 @@ function renderComparison(){const root=$('comparison');root.replaceChildren();if
 }
 function renderEvents(){const feed=$('eventFeed');feed.replaceChildren();if(state.events.length===0){feed.append(el('li','empty','Нет событий от host.'));return;}
  for(const evt of state.events.slice(0,10)){const li=el('li');const date=new Date(evt.atUtc||evt.AtUtc||'');const time=isNaN(date.getTime())?'--:--':date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  li.append(el('span','event-time',time),el('span','',ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150)));feed.append(li);}
+  const label=ellipsis(`${evt.modelTag||evt.ModelTag||'MODEL'} · ${evt.phase||evt.Phase||'event'} · ${evt.status||evt.Status||''}`,150);
+  li.append(el('span','event-time',time));
+  // Native event is advisory; only the durable active queue job can be opened.
+  if(state.activeJob && evt.jobId===state.activeJob.jobId){
+    const jump=el('button','event-job-link',label);jump.type='button';
+    jump.setAttribute('aria-label','Показать текущий статус задания');
+    jump.addEventListener('click',()=>{
+      if(state.activeJob?.jobId!==evt.jobId)return;
+      const target=$('jobState');target.setAttribute('tabindex','-1');target.focus();
+    });
+    li.append(jump);
+  }else li.append(el('span','',label));
+  feed.append(li);}
 }
 function render(){renderCatalog();renderHero();renderDna();renderPreflight();renderComparison();renderEvents();renderQuick20();renderWeightLeads();}
 function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retry'].includes(action);
@@ -293,12 +307,16 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
   const sourceAt=typeof evt.atUtc==='string' && evt.atUtc.length<=64 ? Date.parse(evt.atUtc) : NaN;
-  const validAt=Number.isFinite(sourceAt)&&sourceAt>0&&sourceAt<=Date.now()+60000 ? sourceAt : null;
+  const validAt=Number.isFinite(sourceAt)&&sourceAt>0&&sourceAt<=Date.now() ? sourceAt : null;
   const safe={jobId:evt.jobId,phase:evt.phase,modelTag:publicModelTag(evt.modelTag),
     status:publicQueueStatus(evt.status),atUtc:validAt===null?null:new Date(validAt).toISOString()};
   // The active queue job is independent of the selected catalog card.
   const job=state.activeJob;
   const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
+  const priorAppliedAt=lastAppliedNativeJobAt.get(evt.jobId);
+  const freshNativeQueueFrame=!!sameJob&&validAt!==null&&validAt<=Date.now()&&
+    Date.now()-validAt<=maxNativeEventAgeMs&&
+    (priorAppliedAt===undefined||validAt>priorAppliedAt);
   // Out-of-order host messages must neither erase durable STOP nor display
   // a false "Installed"/"Failed"/"Starting" in the lifecycle event feed.
   if(sameJob&&(
@@ -308,7 +326,10 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
   if(validAt!==null && (latestStampedEventAt===null || validAt>latestStampedEventAt))latestStampedEventAt=validAt;
   refreshNativeEventSignal();
-  if(sameJob){
+  if(freshNativeQueueFrame){
+    if(lastAppliedNativeJobAt.size>=32&&!lastAppliedNativeJobAt.has(evt.jobId))
+      lastAppliedNativeJobAt.delete(lastAppliedNativeJobAt.keys().next().value);
+    lastAppliedNativeJobAt.set(evt.jobId,validAt);
     if(typeof evt.status==='string')job.status=publicQueueStatus(evt.status);
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
