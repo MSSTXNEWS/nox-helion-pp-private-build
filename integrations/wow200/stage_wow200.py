@@ -59,7 +59,7 @@ MENU_V2_SHA256 = {
 }
 
 P01_OWNER_BLOBS = {
-    "proposals/P01/WOW-MAX10/mount-p01.mjs": "d59b75dd7a3812f681fc5347875e4e5349b49241",
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "8f5a3d8e7719ac38f48acf4ce70add6b54a6720a",
     "proposals/P01/WOW-MAX10/scene-contract.mjs": "360fb1ba61b0e58af837c4e1ce62024f484c5852",
     "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
