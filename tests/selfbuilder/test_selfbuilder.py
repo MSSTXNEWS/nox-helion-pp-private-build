@@ -30,6 +30,15 @@ class Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             r=self.adapter().propose(session=object(),task='Create a real status command inside the existing NOX UI',source_head=HEAD,workspace=t)
             self.assertFalse(r['integrated'])
+            preview=r['preview']
+            self.assertEqual(preview['schema'],'NOX-SELFBUILDER-SOURCE-PREVIEW-v1')
+            self.assertIn('def status()',preview['candidate_source'])
+            self.assertIn('unittest',preview['regression_test_source'])
+            self.assertIn('extensions/health_status/view.py',preview['unified_diff'])
+            self.assertFalse(preview['tests_executed'])
+            self.assertFalse(preview['installed'])
+            self.assertEqual(preview['owner_approval'],'REQUIRED_NOT_GRANTED')
+            self.assertNotIn('preview',json.loads((Path(t)/r['run_id']/'receipt.json').read_text()))
             self.assertTrue((Path(t)/r['run_id']/'candidate.py').is_file())
             self.assertEqual(len(list(Path(t).iterdir())),1)
             lesson=make_learning_record(run_id=r['run_id'],receipt=r,outcome='ACCEPTED',reviewer_source_id='owner-review-1',native_approve=True)

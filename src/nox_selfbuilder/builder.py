@@ -141,4 +141,19 @@ class SelfBuilder:
                  "native_windows_tests":"NOT_RUN","integrated":False,"release_accepted":False,
                  "requires_owner_review":True,"requires_independent_E07":True}
         _atomic_new(folder/"receipt.json",(json.dumps(receipt,ensure_ascii=False,sort_keys=True,indent=2)+"\n").encode("utf-8"))
-        return receipt
+        # Transient, bounded-to-the-validated-model-size preview for the existing
+        # MENU10 native response. Do not duplicate candidate code in S03/receipt.
+        # AST parsing is not execution; a separate native test/approval is required.
+        preview = {
+            "schema": "NOX-SELFBUILDER-SOURCE-PREVIEW-v1",
+            "source_head": source_head,
+            "target": proposal.module_path,
+            "candidate_source": proposal.code,
+            "regression_test_source": proposal.tests,
+            "unified_diff": patch,
+            "tests_executed": False,
+            "owner_approval": "REQUIRED_NOT_GRANTED",
+            "installed": False,
+            "rollback": "NO_CHANGES_APPLIED"
+        }
+        return {**receipt, "preview": preview}

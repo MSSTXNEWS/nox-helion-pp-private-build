@@ -117,4 +117,23 @@ class CompleteBuilder:
                 'status':'CANDIDATES_ONLY_NEED_OWNER_TEST_AND_E07','merge':False,'native_windows_e07':'NOT_RUN',
                 'updated_weights':False,'timestamp_utc':datetime.now(timezone.utc).isoformat()}
         _atomic_new(folder/'receipt.json',(json.dumps(record,ensure_ascii=False,indent=2)+'\n').encode())
-        return record
+        # The model-generated files remain inert in owner staging. Return a
+        # bounded source/diff preview to the existing WebView2 response only;
+        # do not copy this payload into S03 or imply executed tests.
+        preview_files = []
+        for path, body in files:
+            preview_files.append({
+                'target': path, 'source_excerpt': body[:4096],
+                'source_truncated': len(body) > 4096
+            })
+        return {**record, 'preview': {
+            'schema': 'NOX-SELFBUILDER-SOURCE-PREVIEW-v1',
+            'source_head': source_head,
+            'files': preview_files,
+            'diff_excerpt': patch_bytes.decode('utf-8')[:8192],
+            'diff_truncated': len(patch_bytes.decode('utf-8')) > 8192,
+            'tests_executed': False,
+            'owner_approval': 'REQUIRED_NOT_GRANTED',
+            'installed': False,
+            'rollback': 'NO_CHANGES_APPLIED'
+        }}
