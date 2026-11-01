@@ -160,3 +160,16 @@ test('P02 STOP revokes final chat COMPLETED as well as streamed tokens',()=>{
   assert.ok(nativeBridge.includes('if (Interlocked.Read(ref _streamEpoch) != streamEpoch ||'));
   assert.ok(script.includes("blob='2a655af31eadf19c179a40310f1b480a481af990'"));
 });
+
+// W10: display a LIVE state only for fresh timestamped native host events.
+const p03Ui = fs.readFileSync(new URL('../../../Packages/P03/Source/P03.ModelCenter.Wow/ui.js',import.meta.url),'utf8');
+test('P03 event ticker preserves host UTC and expires LIVE after 30 seconds',()=>{
+  const start=p03Ui.indexOf("if(data.type==='p03.snapshot.v1')");
+  const event=p03Ui.indexOf("}else if(data.type==='p03.event.v1')",start);
+  assert.ok(start>=0 && event>start);
+  assert.ok(!p03Ui.slice(start,event).includes("classList.add('live')"));
+  assert.ok(p03Ui.includes('atUtc:validAt===null?null:new Date(validAt).toISOString()'));
+  assert.ok(p03Ui.includes('age>=-5000 && age<=maxNativeEventAgeMs'));
+  assert.ok(p03Ui.includes('setInterval(refreshNativeEventSignal,5000)'));
+  assert.ok(script.includes("blob='f97965f6e0c25d677a6cc58ee547bcf5f4345ae2'"));
+});

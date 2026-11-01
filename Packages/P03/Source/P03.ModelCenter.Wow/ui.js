@@ -11,6 +11,16 @@ const state = {
   activeJob:null, hardware:null, capabilities:{}, diagnostics:[], events:[], pending:new Map()
 };
 const unknown = 'Н/Д';
+// Only timestamped native events may be called LIVE; a catalog snapshot is not telemetry.
+let latestStampedEventAt = null;
+const maxNativeEventAgeMs = 30000;
+function refreshNativeEventSignal(){
+ const age = latestStampedEventAt===null ? Infinity : Date.now()-latestStampedEventAt;
+ const fresh = age>=-5000 && age<=maxNativeEventAgeMs;
+ $('eventSignal').textContent = latestStampedEventAt===null ? '● —' : fresh ? '● LIVE' : '● STALE';
+ $('eventSignal').classList.toggle('live',fresh);
+}
+
 const numeric = x => typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : null;
 const bytes = x => {const n=numeric(x);if(n===null)return unknown;
   if(n===0)return '0 Б';const units=['Б','КБ','МБ','ГБ','ТБ'];const i=Math.min(4,Math.floor(Math.log(n)/Math.log(1024)));
@@ -274,7 +284,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
   state.diagnostics=Array.isArray(data.diagnostics)?data.diagnostics.slice(0,30):[];
   state.externalLeads=Array.isArray(data.externalLeads)?data.externalLeads.filter(x=>x.downloadAllowed===false&&x.status==='REVIEW_REQUIRED').slice(0,40):[];
-  $('hostStatus').textContent='Синхронизировано с Windows host';$('hostLight').classList.add('online');$('eventSignal').textContent='● LIVE';$('eventSignal').classList.add('live');render();
+  $('hostStatus').textContent='Получен снимок Windows host';$('hostLight').classList.add('online');refreshNativeEventSignal();render();
  }else if(data.type==='p03.event.v1'){
   const evt=data.event;
   if(!evt||typeof evt!=='object'||typeof evt.jobId!=='string'||typeof evt.phase!=='string')return;
@@ -282,8 +292,10 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     !['started','progress','completed','failed','cancelled'].includes(evt.phase)||
     (evt.modelTag!==undefined&&(typeof evt.modelTag!=='string'||evt.modelTag.length>160))||
     (evt.status!==undefined&&(typeof evt.status!=='string'||evt.status.length>512)))return;
+  const sourceAt=typeof evt.atUtc==='string' && evt.atUtc.length<=64 ? Date.parse(evt.atUtc) : NaN;
+  const validAt=Number.isFinite(sourceAt)&&sourceAt>0&&sourceAt<=Date.now()+60000 ? sourceAt : null;
   const safe={jobId:evt.jobId,phase:evt.phase,modelTag:publicModelTag(evt.modelTag),
-    status:publicQueueStatus(evt.status)};
+    status:publicQueueStatus(evt.status),atUtc:validAt===null?null:new Date(validAt).toISOString()};
   // The active queue job is independent of the selected catalog card.
   const job=state.activeJob;
   const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
@@ -294,6 +306,8 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
      (job.state==='Cancelling'&&evt.phase!=='cancelled')||
      (evt.phase==='started'&&job.state!=='Queued')))return;
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
+  if(validAt!==null && (latestStampedEventAt===null || validAt>latestStampedEventAt))latestStampedEventAt=validAt;
+  refreshNativeEventSignal();
   if(sameJob){
     if(typeof evt.status==='string')job.status=publicQueueStatus(evt.status);
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
@@ -331,6 +345,7 @@ $('retryBtn').addEventListener('click',()=>sendAction('retry'));
 $('diagBtn').addEventListener('click',()=>sendAction('diagnose'));
 document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();$('search').focus();}});
 if(window.chrome?.webview?.addEventListener)window.chrome.webview.addEventListener('message',e=>processMessage(e.data));
+setInterval(refreshNativeEventSignal,5000);
 render();
 // Return to the unchanged original D02 HOME, never to a second application.
 const p03Home = document.createElement('a');
