@@ -16,3 +16,13 @@
 .nox-sb-task{box-sizing:border-box;width:100%;min-height:96px;padding:12px;margin-bottom:12px;color:inherit;background:#101820;border:1px solid #697786;border-radius:10px;font:inherit}.nox-sb-task[hidden]{display:none}
 .nox-sb-result{white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto;color:inherit;background:#101820;border:1px solid #697786;padding:12px;border-radius:10px}
 .nox-sb-job{box-sizing:border-box;width:100%;min-height:44px;padding:10px;margin-bottom:12px;color:inherit;background:#101820;border:1px solid #697786;border-radius:10px;font:inherit}.nox-sb-job[hidden]{display:none}
+
+/* Same existing secondary NOX menu — no new HOME tile, second shell or overlay. */
+.nox-sb-sourcehub{margin-top:18px;padding:clamp(12px,2vw,20px);border:1px solid rgba(109,202,206,.27);border-radius:15px;background:linear-gradient(145deg,rgba(15,31,40,.85),rgba(12,17,27,.88));box-shadow:inset 0 0 24px rgba(45,116,129,.07);}
+.nox-sb-sourcehub[hidden]{display:none!important}
+.nox-sb-sourcehub__title{font:inherit;font-size:clamp(1rem,1.8vw,1.25rem);font-weight:650;margin:0 0 8px;color:#eac18a;}
+.nox-sb-sourcehub__list{list-style:none;display:grid;gap:6px;padding:0;margin:10px 0 0;max-height:30vh;overflow:auto;}
+.nox-sb-sourcehub__entry{padding:7px 10px;border-left:2px solid rgba(106,214,220,.6);background:rgba(5,14,23,.45);font-size:.85rem;overflow-wrap:anywhere;}
+.nox-sb-sourcehub .nox-sb-tile{min-height:52px;}
+@media(max-width:390px){.nox-sb-sourcehub{padding:10px}.nox-sb-sourcehub .nox-sb-grid{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.nox-sb-sourcehub,.nox-sb-sourcehub *{animation:none!important;transition:none!important}}
