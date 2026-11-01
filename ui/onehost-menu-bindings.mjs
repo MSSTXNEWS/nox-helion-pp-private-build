@@ -17,7 +17,9 @@ export function canonicalChatContext(core,persona){
 }
 const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
   'selfbuilder.background.status','selfbuilder.background.enable','selfbuilder.background.disable',
-  'selfbuilder.design.suggest','selfbuilder.design.review','selfbuilder.design.approve']);
+  'selfbuilder.design.suggest','selfbuilder.design.review','selfbuilder.design.approve',
+  'selfbuilder.activator.status','selfbuilder.a1.status','selfbuilder.a1.boot',
+  'selfbuilder.a1.tick','selfbuilder.propose']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
   'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
@@ -124,6 +126,19 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const detail=doc.createElement('pre');detail.className='nox-sb-result';detail.hidden=true;
   const actions=doc.createElement('div');actions.className='nox-sb-grid';actions.dataset.noxNativeActions='true';
   const statusRoot=root||doc.getElementById('status');statusRoot?.append(status,detail,actions);
+  const activatorSection=()=>/(?:развитие|интеллект|систем)/i.test(
+    doc.getElementById('detail-title')?.textContent||'');
+  const appendActivatorShortcut=()=>{
+    for(const button of actions.querySelectorAll?.('[data-nox-activator-shortcut]')||[])button.remove();
+    if(!activatorSection())return;
+    const button=doc.createElement('button');button.type='button';
+    button.className='nox-sb-tile';button.textContent='✦ АКТИВАТОР · найти ИИ, веса, GPU';
+    button.dataset.noxActivatorShortcut='1';
+    button.dataset.nativeRoute='chat.commands';
+    button.dataset.nativeKey='action';
+    button.dataset.nativeValue='selfbuilder.activator.status';
+    actions.append(button);
+  };
   const appendSystemAutostartButtons=()=>{
     for(const button of actions.querySelectorAll?.('[data-native-route="system.autostart"]')||[])button.remove();
     const currentWorld=doc.getElementById('detail-title')?.textContent||'';
@@ -154,12 +169,32 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(['queued','running','downloading'].includes(String(job.state).toLowerCase()))action('Отменить · '+job.id,'models.cancel','jobId',job.id);
       if(['failed','cancelled','canceled'].includes(String(job.state).toLowerCase()))action('Повторить · '+job.id,'models.retry','jobId',job.id);
     }
+    if(v.state==='COMPLETED'&&data?.schema==='NOX-ACTIVATOR-WORM-STATUS-v1'){
+      for(const item of (Array.isArray(data.models)?data.models:[]).slice(0,40)){
+        if(typeof item?.tag!=='string'||typeof item.official_page!=='string')continue;
+        action((item.observed_locally?'Обнаружена · ':'Открыть загрузку · ')+item.tag,
+          'browser.open','url',item.official_page);
+        if(item.download_eligible===true)action('Скачать · '+item.tag,
+          'models.pull','modelTag',item.tag);
+      }
+      for(const item of (Array.isArray(data.modules)?data.modules:[]).slice(0,40)){
+        if(typeof item?.name!=='string'||typeof item.official_page!=='string')continue;
+        action('Готовый модуль · '+item.name,'browser.open','url',item.official_page);
+      }
+      action('Проверить очередь P03','models.queue','','');
+      action('Проверить GPU','gpu.preflight','','');
+      action('Активировать ИИ · согласие владельца','chat.commands','action','selfbuilder.a1.boot');
+      action('Саморазвитие · запустить цикл','chat.commands','action','selfbuilder.a1.tick');
+      action('Саморазвитие · статус','chat.commands','action','selfbuilder.a1.status');
+      action('Первый патч · MENU10/D02/WOW','chat.commands','action','selfbuilder.propose');
+    }
     if(v.routeId?.startsWith('models.'))action('Обновить очередь загрузки','models.queue','','');
     appendSystemAutostartButtons();
+    appendActivatorShortcut();
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
     status.textContent=v.state==='HOLD'?'HOLD · '+(v.errorCode||'NATIVE_HANDLER_UNAVAILABLE'):
       v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
-      'NOX · '+(data?.status||v.state);
+      'NOX · '+(data?.status||data?.state||v.state);
   };
   if(root){
     menu=mountSelfBuilderMenuV2({root,documentRef:doc,getCurrentSection:()=>doc.getElementById('detail-title')?.textContent?.trim(),
@@ -202,9 +237,13 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         doc.getElementById('chat-persona')?.value||'')});}
     catch(error){console.warn('NOX_R11_WOW_HOLD',error?.message||'NATIVE_MENU_NOT_READY');}
   }
-  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();}):null;
+  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();appendActivatorShortcut();}):null;
   const title=doc.getElementById('detail-title');
   if(title)sectionObserver?.observe(title,{childList:true,characterData:true,subtree:true});
+  // One passive local probe on first MENU mount. No download, training or patch.
+  if(root)void client.request('chat.commands',{action:'selfbuilder.activator.status'})
+    .then(reply=>{if(!disposed&&activatorSection())display(reply);})
+    .catch(()=>{if(!disposed&&activatorSection())status.textContent='ACTIVATOR HOLD · локальная проверка недоступна';});
   async function refresh(){
     const epoch=selectionEpoch,run=++capabilityEpoch,scope=context();
     try{
@@ -340,8 +379,11 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(button.id==='chat-stop'&&stopRequestPending)return;
     if(button.id==='chat-stop')stopRequestPending=true;
     button.disabled=true;status.textContent='REQUESTED · ожидается ответ ядра';
+    const task='Сверь существующие D02/HOME/MENU10/WOW и журнал ошибок с текущим SourceLock. Создай ОДИН безопасный дополнительный исходный патч для живой кнопки, раздела или графического эффекта: точный путь, рабочий обработчик, разрешения, STOP, регрессионный тест, SHA и откат. Сохрани исходные 8 астероидов, 10 миров, personas, WebView2, S03/P03, без изменения EXE без независимой приёмки.';
     const payload=generated&&route==='system.autostart'
       ?{enabled:button.dataset.nativeValue==='true'}
+      :generated&&route==='chat.commands'&&button.dataset.nativeValue==='selfbuilder.propose'
+      ?{action:'selfbuilder.propose',task}
       :generated?(button.dataset.nativeKey?{[button.dataset.nativeKey]:button.dataset.nativeValue}:{})
       :route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
     try{display(await client.request(route,payload));}

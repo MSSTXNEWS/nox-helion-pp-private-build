@@ -52,7 +52,7 @@ REQUIRED_DONORS = frozenset({
 MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.mjs': '5fd912a8ddba30ca6797f786e7b538571c11d8baf615077e50c8cc7db8978274',
     'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
-    'ui/onehost-menu-bindings.mjs': '296ee2cd3118d130556c8804b2eda0dcc102048b5d877792e5b2a652092f6132',
+    'ui/onehost-menu-bindings.mjs': '69a5db44eb3166ffa4d0e5d0d1ae91ec700c7b72f0c3989f0cefc6ed411ec4a6',
     'ui/nox-r11-wow.mjs': 'fe720ffc42962799a896f755cd297ef05bb6fee463d3636cf69d5172731117b5',
     'ui/nox-r11-wow.css': 'aadd7d633a65609ea24467bb6d39442cc0d94d748c1712f5d2b54c72ff13489a',
     'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
