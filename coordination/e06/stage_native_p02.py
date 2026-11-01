@@ -13,9 +13,17 @@ def run(source,addon,backend_sha256=None):
     data=main.read_bytes()
     if hashlib.sha256(data).hexdigest()!=MAIN_SHA:
         raise ValueError("T06_ORIGINAL_MAINWINDOW_SHA_HOLD")
-    extra=addon.read_bytes()
-    if addon.is_symlink() or blob(extra)!=ADDON_SHA:
+    # Accept only the identical canonical Git blob despite Windows CRLF checkout.
+    if addon.is_symlink():
         raise ValueError("T06_NATIVE_ADDON_GIT_BLOB_HOLD")
+    extra=addon.read_bytes()
+    if blob(extra)!=ADDON_SHA:
+        if b"\r\n" not in extra or b"\r" in extra.replace(b"\r\n",b""):
+            raise ValueError("T06_NATIVE_ADDON_GIT_BLOB_HOLD")
+        canonical=extra.replace(b"\r\n",b"\n")
+        if blob(canonical)!=ADDON_SHA:
+            raise ValueError("T06_NATIVE_ADDON_GIT_BLOB_HOLD")
+        extra=canonical
     # Pin the trusted, successfully IPC-tested Python EXE only in a
     # disposable staged MainWindow. The committed original addon stays exact.
     if backend_sha256 is not None:

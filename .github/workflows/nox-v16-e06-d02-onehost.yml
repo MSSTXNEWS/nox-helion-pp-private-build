@@ -9,9 +9,14 @@ on:
   pull_request:
     paths:
       - 'coordination/e06/build_onehost_installer.ps1'
+      - 'coordination/e06/stage_native_p02.py'
+      - 'private_build.ps1'
       - '.github/workflows/nox-v16-e06-d02-onehost.yml'
 permissions:
   contents: read
+concurrency:
+  group: nox-e06-onehost-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   visual-source-stage:
     runs-on: windows-2025
@@ -87,13 +92,7 @@ jobs:
       - name: Build original trusted Python candidate and stage original owner1 R11
         shell: pwsh
         run: |
-          function py {
-            $arguments=@($args)
-            if ($arguments.Count -lt 1 -or $arguments[0] -cne '-3.12') { throw 'NATIVE_BUILD_PY_SELECTOR_HOLD' }
-            $pythonArgs=@($arguments | Select-Object -Skip 1)
-            & python @pythonArgs
-            if ($LASTEXITCODE -ne 0) { throw 'NATIVE_BUILD_PINNED_PY_LAUNCH_FAILED' }
-          }
+          # private_build.ps1 uses a version-checked external Python 3.12 executable.
           & ./private_build.ps1 -OneHostNative -RunId "NOX-E06-D02-${{ github.run_id }}"
           if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_PYTHON_CANDIDATE_BUILD_HOLD' }
           python coordination/e06/stage_p01.py
