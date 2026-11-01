@@ -117,6 +117,81 @@ Assert-E06PlainPathAncestors -Candidate $project -Scope 'WPF_PROJECT'
 Assert-E06PlainPathAncestors -Candidate (Join-Path $installer 'NOX-HELION-Setup.nsi') -Scope 'NSIS_OWNER'
 if (!(Test-Path -LiteralPath $project -PathType Leaf)) { throw 'EXISTING_WPF_SOURCE_MISSING' }
 if (!(Test-Path -LiteralPath (Join-Path $installer 'NOX-HELION-Setup.nsi') -PathType Leaf)) { throw 'ORIGINAL_NSIS_OWNER_SOURCE_MISSING' }
+
+# E-F1 I0: correct only the disposable owner's WebView2 registry-view probe.
+# Windows E06 41326203067 proved native HKLM Registry32 pv=156.0.4314.58
+# while original Registry:: provider paths returned RUNTIME_MISSING.
+# Preserve original runtime GUID, nonzero semantic version gate, installer
+# ownership/reparse guards and fail-closed behavior. Source ZIP is untouched.
+$webviewPreflight=Join-Path $installer 'Preflight-InstallPath.ps1'
+Assert-E06PlainPathAncestors -Candidate $webviewPreflight -Scope 'P01_PREFLIGHT'
+if (!(Test-Path -LiteralPath $webviewPreflight -PathType Leaf)) {
+  throw 'E06_WEBVIEW2_ORIGINAL_PREFLIGHT_MISSING_HOLD'
+}
+$preflightOriginal=[IO.File]::ReadAllText($webviewPreflight)
+$webviewStart='# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence.'
+$webviewEnd="if (-not `$installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }"
+$webviewBegin=$preflightOriginal.IndexOf($webviewStart,[StringComparison]::Ordinal)
+$webviewFinish=$preflightOriginal.IndexOf($webviewEnd,[StringComparison]::Ordinal)
+if ($webviewBegin -lt 0 -or $webviewFinish -le $webviewBegin -or
+    $preflightOriginal.LastIndexOf($webviewStart,[StringComparison]::Ordinal) -ne $webviewBegin -or
+    $preflightOriginal.LastIndexOf($webviewEnd,[StringComparison]::Ordinal) -ne $webviewFinish) {
+  throw 'E06_WEBVIEW2_PREFLIGHT_ATOMIC_PREIMAGE_HOLD'
+}
+$webviewLegacy=$preflightOriginal.Substring($webviewBegin,$webviewFinish-$webviewBegin)
+foreach ($mustContain in @('Registry::HKEY_CURRENT_USER','Registry::HKEY_LOCAL_MACHINE',
+                          'Get-ItemProperty','[version]','pv')) {
+  if (!$webviewLegacy.Contains($mustContain)) { throw 'E06_WEBVIEW2_PREFLIGHT_UNKNOWN_SOURCE_HOLD' }
+}
+$webviewReplacement=@'
+# Official Microsoft WebView2 Evergreen Runtime: inspect the explicit 32/64-bit
+# Windows registry views. Registry provider redirection is not relied upon.
+# Microsoft Edge Stable alone is NOT an accepted runtime.
+$clientPath='SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+$installed=$false
+foreach ($hive in @([Microsoft.Win32.RegistryHive]::LocalMachine,
+                    [Microsoft.Win32.RegistryHive]::CurrentUser)) {
+  foreach ($view in @([Microsoft.Win32.RegistryView]::Registry32,
+                      [Microsoft.Win32.RegistryView]::Registry64)) {
+    $base=$null
+    $key=$null
+    try {
+      $base=[Microsoft.Win32.RegistryKey]::OpenBaseKey($hive,$view)
+      $key=$base.OpenSubKey($clientPath,$false)
+      if ($null -ne $key) {
+        $pv=$key.GetValue('pv',$null)
+        if ($pv -is [string] -and $pv -cmatch '\A[0-9]+(?:\.[0-9]+){3}\z') {
+          $runtimeVersion=[version]$pv
+          if ($runtimeVersion.Major -gt 0) { $installed=$true }
+        }
+      }
+    }
+    finally {
+      if ($null -ne $key) { $key.Dispose() }
+      if ($null -ne $base) { $base.Dispose() }
+    }
+    if ($installed) { break }
+  }
+  if ($installed) { break }
+}
+'@
+$eol=if ($preflightOriginal.Contains("`r`n")) { "`r`n" } else { "`n" }
+$webviewReplacement=[regex]::Replace($webviewReplacement,'\r?\n',$eol)
+$webviewPatched=$preflightOriginal.Substring(0,$webviewBegin)+
+                $webviewReplacement+$eol+
+                $preflightOriginal.Substring($webviewFinish)
+if ($webviewPatched -ceq $preflightOriginal -or
+    $webviewPatched -notmatch '\[Microsoft\.Win32\.RegistryView\]::Registry32' -or
+    $webviewPatched -notmatch '\[Microsoft\.Win32\.RegistryView\]::Registry64' -or
+    $webviewPatched -notmatch 'P01_WEBVIEW2_RUNTIME_MISSING') {
+  throw 'E06_WEBVIEW2_PREFLIGHT_REPLACEMENT_GUARD_HOLD'
+}
+$preflightBefore=(Get-FileHash -LiteralPath $webviewPreflight -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText($webviewPreflight,$webviewPatched,(New-Object System.Text.UTF8Encoding($false)))
+$preflightAfter=(Get-FileHash -LiteralPath $webviewPreflight -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($preflightBefore -ceq $preflightAfter) { throw 'E06_WEBVIEW2_PREFLIGHT_PATCH_NOT_APPLIED_HOLD' }
+Write-Host "E06_WEBVIEW2_REGISTRY_VIEW_GUARDED_STAGE before_sha256=$preflightBefore after_sha256=$preflightAfter owner=I0"
+
 # The original diagnostic builder keeps its existing behavior unless BOTH visual
 # sources are explicitly supplied. Never silently use an old D02 donor.
 $wantsCreative= -not [string]::IsNullOrWhiteSpace($CreativeSourceRoot)
