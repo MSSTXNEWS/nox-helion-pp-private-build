@@ -30,6 +30,18 @@ class WormAutopilot:
         self._booted_scope = None
         self._boot_receipt = None
 
+    def _native_stop_status(self):
+        """Fail closed if native STOP is unavailable or has an unknown state."""
+        try:
+            state = self._stop()
+        except Exception:
+            return "NATIVE_STOP_UNAVAILABLE"
+        if state is False:
+            return None
+        if state is True:
+            return "STOPPED_BEFORE_BOOT"
+        return "NATIVE_STOP_UNAVAILABLE"
+
     def boot(self, session, *, now=None):
         """Roles generate original ideas at boot; only approved providers fetch."""
         now = now or datetime.now(timezone.utc)
@@ -38,8 +50,9 @@ class WormAutopilot:
         head = self._source_head()
         agenda = daily_initiatives(now, source_head=head)
         # Always prepare agenda even without internet / GPU / user account.
-        if self._stop() is not False:
-            return {**agenda, "state": "STOPPED_BEFORE_BOOT", "research_started": False}
+        stop_state = self._native_stop_status()
+        if stop_state is not None:
+            return {**agenda, "state": stop_state, "research_started": False}
         policy = self._policy(session)
         if not isinstance(policy, dict) or policy.get("schema") != "NOX-NATIVE-WORMS-POLICY-v1":
             return {**agenda, "state": "NATIVE_POLICY_NOT_CONFIGURED",
@@ -61,6 +74,13 @@ class WormAutopilot:
         if self._booted_scope is not None and self._booted_scope != session:
             return {**agenda, "state": "NATIVE_SCOPE_CHANGED",
                     "research_started": False}
+        # STOP/head/policy may be revoked before the durable S03 append.
+        if self._native_stop_status() is not None or self._source_head() != head:
+            return {**agenda, "state": "NATIVE_STOP_OR_HEAD_CHANGED_BEFORE_S03",
+                    "research_started": False}
+        if self._policy(session) != policy:
+            return {**agenda, "state": "NATIVE_POLICY_CHANGED_BEFORE_S03",
+                    "research_started": False}
         # The existing native owner S03 thread records the one boot agenda.
         if self._boot_receipt is None:
             if self._persist(session, agenda) is not True:
@@ -69,7 +89,10 @@ class WormAutopilot:
             self._boot_receipt = agenda
             self._booted_scope = session
         # STOP, source HEAD or policy may change during native S03 write.
-        if self._stop() is not False or self._source_head() != head:
+        stop_state = self._native_stop_status()
+        if stop_state is not None:
+            return {**agenda, "state": stop_state, "research_started": False}
+        if self._source_head() != head:
             return {**agenda, "state": "NATIVE_STOP_OR_HEAD_CHANGED_AFTER_S03",
                     "research_started": False}
         if self._policy(session) != policy:
@@ -86,8 +109,11 @@ class WormAutopilot:
 
     def tick(self, session, *, now=None):
         """Called by the EXISTING OneHost idle loop; no hidden activity."""
-        if self._stop() is not False or self._booted_scope != session:
-            return {**self._swarm.status(), "reason": "STOP_OR_SCOPE_HOLD"}
+        stop_state = self._native_stop_status()
+        if stop_state is not None or self._booted_scope != session:
+            return {**self._swarm.status(), "reason": (
+                "STOP_OR_SCOPE_HOLD" if stop_state in (None, "STOPPED_BEFORE_BOOT")
+                else stop_state)}
         policy = self._policy(session)
         now = now or datetime.now(timezone.utc)
         if not isinstance(policy, dict) or policy.get("schema") != "NOX-NATIVE-WORMS-POLICY-v1":
@@ -102,6 +128,9 @@ class WormAutopilot:
             return {**self._swarm.status(), "reason": "NATIVE_POLICY_EXPIRED"}
         if expires.tzinfo is None or expires.astimezone(timezone.utc) <= now.astimezone(timezone.utc):
             return {**self._swarm.status(), "reason": "NATIVE_POLICY_EXPIRED"}
+        stop_state = self._native_stop_status()
+        if stop_state is not None:
+            return {**self._swarm.status(), "reason": stop_state}
         return self._swarm.tick(session, now=now, max_tasks=MAX_NATIVE_TICK)
 
     def stop(self, session):

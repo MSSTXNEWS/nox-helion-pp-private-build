@@ -61,3 +61,29 @@ class OfficialCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(WormHold,'EXISTING_NATIVE_PORTS_REQUIRED'):
             self.run_probe([('pypi','ruff')],fetch_json=None)
 if __name__=='__main__':unittest.main()
+
+class A1CatalogEpochTests(OfficialCatalogTests):
+    def test_epoch_changed_after_network_denies_candidate(self):
+        epoch=[4]
+        def fetch(url, *, host):
+            value=self.fetch(url,host=host)
+            epoch[0]+=1
+            return value
+        with self.assertRaisesRegex(WormHold,'STOP_GRANT_OR_HEAD_CHANGED'):
+            self.run_probe([('pypi','ruff')],fetch_json=fetch,
+                           stop_epoch=lambda:epoch[0], expected_stop_epoch=4)
+
+    def test_invalid_epoch_contract_denied_before_network(self):
+        with self.assertRaisesRegex(WormHold,'NATIVE_EPOCH_REQUIRED'):
+            self.run_probe([('pypi','ruff')],stop_epoch=lambda:0,expected_stop_epoch=None)
+        self.assertEqual(self.calls,[])
+
+class A1LiveNpmEndpointContractTests(OfficialCatalogTests):
+    def test_small_latest_version_endpoint(self):
+        def fetch(url, *, host):
+            self.assertEqual(url, 'https://registry.npmjs.org/motion/latest')
+            self.assertEqual(host, 'registry.npmjs.org')
+            return {'name': 'motion', 'version': '14.9.0'}
+        x=self.run_probe([('npm','motion')], fetch_json=fetch)['candidates'][0]
+        self.assertEqual(x['version_candidate'],'14.9.0')
+        self.assertFalse(x['installed'])

@@ -22,6 +22,8 @@ _ERROR = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{3,127}\Z")
 MAX_NATIVE_LESSONS_PER_TICK = 4
 MAX_NATIVE_LESSONS_PER_DAY = 24
 MAX_NATIVE_LESSON_SOURCE_BYTES = 2048
+MAX_CATALOG_REQUESTS_PER_DAY = 30
+MAX_CATALOG_CANDIDATES_PER_DAY = 48
 
 
 class A1InitiativeBridge:
@@ -57,7 +59,11 @@ class A1InitiativeBridge:
             raise WormHold("A1_CATALOG_NATIVE_CALLBACK_PAIR_REQUIRED")
         self._catalog_queries, self._catalog_fetch = native_catalog_queries, catalog_fetch_json
         self._catalog_seen = set()
+        self._catalog_seen_queries = set()
+        self._forge_review_seen = set()
         self._catalog_saved = 0
+        self._catalog_requests = 0
+        self._boot_epoch = None
         self._session = None
         self._boot_head = None
         self._day = None
@@ -86,6 +92,10 @@ class A1InitiativeBridge:
                 "reason": reason, "source_head": self._boot_head,
                 "verified_lesson_proposals_saved_today": self._saved_today,
                 "reviewed_catalog_candidates_saved_today": self._catalog_saved,
+                "catalog_network_attempts_today": self._catalog_requests,
+                "forge_review_tickets_confirmed": len(self._forge_review_seen),
+                "catalog_daily_network_cap": MAX_CATALOG_REQUESTS_PER_DAY,
+                "catalog_candidate_daily_cap": MAX_CATALOG_CANDIDATES_PER_DAY,
                 "lesson_daily_cap": MAX_NATIVE_LESSONS_PER_DAY,
                 "worm": worm, "ideas": ideas,
                 "production_code_changed": False, "weights_updated": False,
@@ -108,6 +118,7 @@ class A1InitiativeBridge:
                 return self._snapshot("HOLD", reason=status.get("state"), worm=status)
             self._session = session
             self._boot_head = head
+            self._boot_epoch = epoch
             return self._snapshot("READY_FOR_EXISTING_IDLE_TICK", worm=status)
         except WormHold as exc:
             return self._snapshot("HOLD", reason=str(exc))
@@ -159,15 +170,17 @@ class A1InitiativeBridge:
         head = self._boot_head
         try:
             epoch = self._epoch()
-            if type(epoch) is not int or epoch < 0:
-                raise WormHold("A1_NATIVE_STOP_EPOCH_REQUIRED")
+            if type(epoch) is not int or epoch < 0 or epoch != self._boot_epoch:
+                raise WormHold("A1_NATIVE_STOP_EPOCH_REBOOT_REQUIRED")
             self._live(session, epoch, head, "evolution.autonomy.read")
             date = clock.date().isoformat()
             if self._day != date:
                 self._day, self._saved_today = date, 0
                 self._catalog_saved = 0
+                self._catalog_requests = 0
                 self._seen.clear()
                 self._catalog_seen.clear()
+                self._catalog_seen_queries.clear()
             worms = self._worms.tick(session, now=now)
             self._live(session, epoch, head, "evolution.autonomy.read")
             if worms.get("status") != "READY_FOR_NATIVE_APPROVED_TICK":
@@ -181,20 +194,48 @@ class A1InitiativeBridge:
             if self._catalog_queries is not None:
                 self._live(session, epoch, head, "worm.official_catalog.read")
                 queries = self._catalog_queries(session, head)
-                catalog = probe_official_catalog(
-                    session, queries, source_head=head, current_head=self._head,
-                    authorize=self._authorize, native_stop=self._stop,
-                    fetch_json=self._catalog_fetch)
-                self._live(session, epoch, head, "worm.official_catalog.read")
-                for observation in catalog["candidates"]:
-                    if observation["source_id"] in self._catalog_seen:
-                        continue
-                    self._live(session, epoch, head, "worm.official_catalog.read")
-                    if self._save(session, observation) is not True:
-                        raise WormHold("A1_CATALOG_S03_READBACK_REQUIRED")
-                    self._live(session, epoch, head, "worm.official_catalog.read")
-                    self._catalog_seen.add(observation["source_id"])
-                    self._catalog_saved += 1
+                # Charge the bounded daily budget BEFORE any real network I/O.
+                # Invalid native inputs are not an excuse to retry infinitely.
+                if not isinstance(queries, (list, tuple)) or not 1 <= len(queries) <= 3:
+                    raise WormHold("A1_CATALOG_NATIVE_BOUNDED_QUERIES_REQUIRED")
+                if any(not isinstance(x, (tuple, list)) or len(x) != 2 or
+                       any(type(part) is not str for part in x) for x in queries):
+                    raise WormHold("A1_CATALOG_NATIVE_QUERY_SCHEMA_REQUIRED")
+                # Do not contact the same official provider for the same package
+                # again during this native UTC day once the result was saved in S03.
+                # This reduces API quota and repeated work, not a permanent cache.
+                pending = []
+                keys = set()
+                for registry, name in queries:
+                    key = (registry, name.lower())
+                    if key not in keys and key not in self._catalog_seen_queries:
+                        pending.append((registry, name))
+                        keys.add(key)
+                if pending:
+                    if self._catalog_requests + len(pending) > MAX_CATALOG_REQUESTS_PER_DAY:
+                        return self._snapshot('HOLD', reason='A1_CATALOG_DAILY_NETWORK_LIMIT', worm=worms, ideas=ideas)
+                    if self._catalog_saved >= MAX_CATALOG_CANDIDATES_PER_DAY:
+                        return self._snapshot('HOLD', reason='A1_CATALOG_DAILY_CANDIDATE_LIMIT', worm=worms, ideas=ideas)
+                    # Charge BEFORE network; failures do not allow unlimited retries.
+                    self._catalog_requests += len(pending)
+                    catalog = probe_official_catalog(
+                        session, pending, source_head=head, current_head=self._head,
+                        authorize=self._authorize, native_stop=self._stop,
+                        fetch_json=self._catalog_fetch, stop_epoch=self._epoch,
+                        expected_stop_epoch=epoch)
+                    self._live(session, epoch, head, 'worm.official_catalog.read')
+                    for observation in catalog['candidates']:
+                        if observation['source_id'] in self._catalog_seen:
+                            continue
+                        if self._catalog_saved >= MAX_CATALOG_CANDIDATES_PER_DAY:
+                            raise WormHold('A1_CATALOG_DAILY_CANDIDATE_LIMIT')
+                        self._live(session, epoch, head, 'worm.official_catalog.read')
+                        if self._save(session, observation) is not True:
+                            raise WormHold('A1_CATALOG_S03_READBACK_REQUIRED')
+                        self._live(session, epoch, head, 'worm.official_catalog.read')
+                        self._catalog_seen.add(observation['source_id'])
+                        self._catalog_saved += 1
+                    self._catalog_seen_queries.update(keys)
             lessons = self._lessons(session, head)
             if not isinstance(lessons, list) or len(lessons) > 64:
                 raise WormHold("A1_BOUNDED_S03_LESSONS_REQUIRED")
@@ -218,3 +259,56 @@ class A1InitiativeBridge:
             return self._snapshot("HOLD", reason=str(exc))
         except Exception:
             return self._snapshot("HOLD", reason="A1_NATIVE_CALLBACK_OR_RUNTIME_HOLD")
+
+    def stage_competency_for_forge(self, session, candidate, *, native_forge_review):
+        """Hand one S03-verified competency to the existing FORGE owner for review.
+
+        No code compilation, installation, sandbox execution, or live host write.
+        Native callback owns ACL/consent and returns an attested QUEUED receipt.
+        A model-proposed candidate cannot be self-certified as S03-persisted.
+        """
+        if session != self._session or self._boot_epoch is None:
+            raise WormHold('A1_FORGE_EXISTING_NATIVE_BOOT_REQUIRED')
+        if not isinstance(candidate, dict) or candidate.get('schema') != 'NOX-A1-COMPETENCY-CANDIDATE-v1':
+            raise WormHold('A1_FORGE_VERIFIED_COMPETENCY_REQUIRED')
+        digest = candidate.get('candidate_sha256')
+        if (not isinstance(digest, str) or not _SHA.fullmatch(digest) or
+                digest not in self._seen or candidate.get('source_head') != self._boot_head or
+                candidate.get('state') != 'OWNER_REVIEW_REQUIRED' or
+                candidate.get('code_merged') is not False or
+                candidate.get('skill_installed') is not False):
+            raise WormHold('A1_FORGE_NATIVE_S03_RECEIPT_REQUIRED')
+        if not callable(native_forge_review):
+            raise WormHold('A1_FORGE_NATIVE_REVIEW_PORT_REQUIRED')
+        if digest in self._forge_review_seen:
+            return {'state': 'ALREADY_QUEUED_FOR_OWNER_REVIEW',
+                    'candidate_sha256': digest, 'production_merged': False}
+        epoch, head = self._boot_epoch, self._boot_head
+        self._live(session, epoch, head, 'forge.candidate.review')
+        ticket = {'schema': 'NOX-A1-FORGE-OWNER-REVIEW-v1',
+                  'candidate_sha256': digest, 'source_head': head,
+                  'error_id': candidate['error_id'],
+                  'source_sha256': candidate['source_sha256'],
+                  'regression_sha256': candidate['regression_sha256'],
+                  'sandbox_run': False, 'installation_authorized': False}
+        try:
+            ack = native_forge_review(session, ticket)
+        except Exception as exc:
+            raise WormHold('A1_FORGE_NATIVE_REVIEW_UNAVAILABLE') from exc
+        self._live(session, epoch, head, 'forge.candidate.review')
+        if (not isinstance(ack, dict) or
+                ack.get('schema') != 'NOX-FORGE-NATIVE-REVIEW-ACK-v1' or
+                ack.get('state') != 'ACK_QUEUED_FOR_OWNER_REVIEW' or
+                ack.get('candidate_sha256') != digest or
+                not isinstance(ack.get('receipt_sha256'), str) or
+                not _SHA.fullmatch(ack['receipt_sha256'])):
+            raise WormHold('A1_FORGE_REVIEW_ACK_REQUIRED')
+        receipt = {**ticket, 'state': 'QUEUED_FOR_OWNER_REVIEW',
+                   'native_receipt_sha256': ack['receipt_sha256'],
+                   'production_merged': False, 'weights_updated': False}
+        self._live(session, epoch, head, 'forge.candidate.review')
+        if self._save(session, receipt) is not True:
+            raise WormHold('A1_FORGE_NATIVE_S03_READBACK_REQUIRED')
+        self._live(session, epoch, head, 'forge.candidate.review')
+        self._forge_review_seen.add(digest)
+        return receipt

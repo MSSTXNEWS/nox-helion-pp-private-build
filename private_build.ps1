@@ -353,7 +353,25 @@ try {
             @($nativeStage.runtime_data_files).Count -lt 5) {
             throw 'ONEHOST_NATIVE_STAGE_RECEIPT_INVALID'
         }
-        $oneHostData = @($nativeStage.runtime_data_files)
+        # A.1 V3.1 stages into existing OneHost Python, no separate backend.
+        $a1Script=Join-Path $root 'coordination/e06/stage_a1_owner.py'
+        $a1OwnerPin='43b898d3aee04dd6244e8d17755d7d37dfc388a0'
+        if (!(Test-Path -LiteralPath $a1Script -PathType Leaf)) { throw 'A1_ONEHOST_STAGE_SOURCE_MISSING' }
+        $a1ActualPin=(& git hash-object -- $a1Script)
+        if ($LASTEXITCODE -ne 0 -or ([string]$a1ActualPin).Trim().ToLowerInvariant() -cne $a1OwnerPin) {
+            throw 'A1_ONEHOST_STAGE_SOURCE_PIN_HOLD'
+        }
+        $a1StageJson=@(& $venvPython -I $a1Script $source)
+        if ($LASTEXITCODE -ne 0) { throw 'A1_ONEHOST_NATIVE_STAGE_FAILED' }
+        $a1Stage=($a1StageJson -join "`n") | ConvertFrom-Json
+        if ($a1Stage.schema -cne 'NOX-A1-ONEHOST-SOURCE-STAGE-v1' -or
+            $a1Stage.source_count -ne 10 -or
+            @($a1Stage.runtime_data_files).Count -ne 10 -or
+            $a1Stage.native_activation_verified -ne $false -or
+            $a1Stage.installed_exe_accepted -ne $false) {
+            throw 'A1_ONEHOST_SOURCE_RECEIPT_HOLD'
+        }
+        $oneHostData = @($nativeStage.runtime_data_files)+@($a1Stage.runtime_data_files)
         $seenRuntime = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
         $nativeArgs = @('-I','-m','PyInstaller','--noconfirm','--onefile','--console',
             '--noupx','--name','NOX_HELION_PRIVATE_CANDIDATE','--distpath',$output,
@@ -399,6 +417,8 @@ try {
             'Packages/P04/merge_qlora_adapter.py')) {
             if (-not $seenRuntime.Contains($required)) { throw ('ONEHOST_RUNTIME_DATA_MISSING:'+ $required) }
         }
+        # The ten A.1 imports compile inside the original PyInstaller EXE.
+        $nativeArgs += @('--hidden-import','nox_selfbuilder.worms','--hidden-import','nox_selfbuilder.worm_providers','--hidden-import','nox_selfbuilder.worm_idea_loop','--hidden-import','nox_selfbuilder.growth_sandbox','--hidden-import','nox_selfbuilder.growth_forge','--hidden-import','nox_selfbuilder.worm_autopilot','--hidden-import','nox_selfbuilder.a1_initiative_bridge','--hidden-import','nox_selfbuilder.a1_official_catalog','--hidden-import','nox_selfbuilder.firstboot_coordinator','--hidden-import','nox_selfbuilder.acquisition_library')
         $nativeArgs += @((Join-Path $source 'run_helion.py'))
         & $venvPython @nativeArgs
         if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_NATIVE_PYINSTALLER_FAILED' }

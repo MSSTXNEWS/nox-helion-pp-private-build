@@ -23,16 +23,17 @@ MAX_RESULTS = 4
 # by a website, search result, model output, package manifest or user prompt.
 OFFICIAL = {
     'pypi': ('pypi.org', 'https://pypi.org/pypi/{name}/json'),
-    'npm': ('registry.npmjs.org', 'https://registry.npmjs.org/{name}'),
+    'npm': ('registry.npmjs.org', 'https://registry.npmjs.org/{name}/latest'),
     'nuget': ('api-v2v3search-0.nuget.org',
               'https://api-v2v3search-0.nuget.org/query?q={name}&take=4&prerelease=false'),
 }
 
 
-def _checked(stop, authorize, session, head, current_head):
+def _checked(stop, authorize, session, head, current_head, stop_epoch=None, expected_stop_epoch=None):
     try:
         if (stop() is not False or authorize(session, 'worm.official_catalog.read') is not True
-                or current_head() != head):
+                or current_head() != head or
+                (stop_epoch is not None and stop_epoch() != expected_stop_epoch)):
             raise WormHold('A1_CATALOG_STOP_GRANT_OR_HEAD_CHANGED')
     except WormHold:
         raise
@@ -80,11 +81,16 @@ def _parse(registry, name, data):
     if registry == 'npm':
         if str(data.get('name', '')).lower() != name.lower():
             raise WormHold('A1_CATALOG_IDENTITY_MISMATCH')
-        tags = data.get('dist-tags')
-        version = _text(tags.get('latest') if isinstance(tags, dict) else None, 128)
-        versions = data.get('versions')
-        if not isinstance(versions, dict) or version not in versions:
-            raise WormHold('A1_CATALOG_VERSION_MISSING')
+        # /{name}/latest is a small official version document, not the giant
+        # all-versions packument (which exceeds the existing A3 128KiB quota).
+        if 'version' in data:
+            version = _text(data['version'], 128)
+        else:
+            tags = data.get('dist-tags')
+            version = _text(tags.get('latest') if isinstance(tags, dict) else None, 128)
+            versions = data.get('versions')
+            if not isinstance(versions, dict) or version not in versions:
+                raise WormHold('A1_CATALOG_VERSION_MISSING')
         return [_record(registry, data['name'], version)]
     rows = data.get('data')
     if not isinstance(rows, list) or len(rows) > 100:
@@ -103,7 +109,8 @@ def _parse(registry, name, data):
 
 
 def probe_official_catalog(session, queries, *, source_head, current_head,
-                           authorize, native_stop, fetch_json):
+                           authorize, native_stop, fetch_json,
+                           stop_epoch=None, expected_stop_epoch=None):
     """Owner-approved queries to 3 official catalogs; data-only review receipts.
 
     fetch_json(url, host=...) is injected from original A3 adapter and must
@@ -111,6 +118,11 @@ def probe_official_catalog(session, queries, *, source_head, current_head,
     """
     if not all(callable(fn) for fn in (authorize, native_stop, current_head, fetch_json)):
         raise WormHold('A1_CATALOG_EXISTING_NATIVE_PORTS_REQUIRED')
+    if (stop_epoch is None) != (expected_stop_epoch is None) or (
+            stop_epoch is not None and (not callable(stop_epoch) or
+                                         type(expected_stop_epoch) is not int or
+                                         expected_stop_epoch < 0)):
+        raise WormHold('A1_CATALOG_NATIVE_EPOCH_REQUIRED')
     if not isinstance(source_head, str) or not _HEAD.fullmatch(source_head):
         raise WormHold('A1_CATALOG_EXACT_SOURCE_HEAD_REQUIRED')
     if (not isinstance(queries, (tuple, list)) or not 1 <= len(queries) <= MAX_QUERIES
@@ -124,7 +136,8 @@ def probe_official_catalog(session, queries, *, source_head, current_head,
         if key in seen:
             continue
         seen.add(key)
-        _checked(native_stop, authorize, session, source_head, current_head)
+        _checked(native_stop, authorize, session, source_head, current_head,
+                 stop_epoch, expected_stop_epoch)
         host, template = OFFICIAL[registry]
         url = template.format(name=quote(name, safe=''))
         try:
@@ -133,7 +146,8 @@ def probe_official_catalog(session, queries, *, source_head, current_head,
             raise
         except Exception as exc:
             raise WormHold('A1_CATALOG_ORIGINAL_PROVIDER_UNAVAILABLE') from exc
-        _checked(native_stop, authorize, session, source_head, current_head)
+        _checked(native_stop, authorize, session, source_head, current_head,
+                 stop_epoch, expected_stop_epoch)
         out.extend(_parse(registry, name, payload))
         if len(out) > MAX_RESULTS:
             raise WormHold('A1_CATALOG_RESULT_LIMIT')
