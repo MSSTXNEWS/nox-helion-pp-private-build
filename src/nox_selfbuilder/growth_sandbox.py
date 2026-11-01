@@ -164,6 +164,24 @@ def accept_sandbox_receipt(ticket, receipt):
             ticket.get("schema") != "NOX-GROWTH-SANDBOX-TICKET-v1" or
             not isinstance(receipt, dict)):
         raise WormHold("GROWTH_SANDBOX_RECEIPT_REQUIRED")
+    # A rejected/unsafe ticket cannot be promoted by a matching forged receipt.
+    if (ticket.get("state") != "READY_FOR_EXTERNAL_NATIVE_SANDBOX_RUN" or
+            not isinstance(ticket.get("source_head"), str) or
+            not _HEAD.fullmatch(ticket["source_head"]) or
+            not isinstance(ticket.get("candidate_sha256"), str) or
+            not _SHA.fullmatch(ticket["candidate_sha256"]) or
+            not isinstance(ticket.get("artifact_sha256"), str) or
+            not _SHA.fullmatch(ticket["artifact_sha256"]) or
+            type(ticket.get("time_limit_seconds")) is not int or
+            not 1 <= ticket["time_limit_seconds"] <= 180 or
+            type(ticket.get("memory_limit_mib")) is not int or
+            not 64 <= ticket["memory_limit_mib"] <= 2048 or
+            ticket.get("network_disabled") is not True or
+            ticket.get("host_execution") is not False or
+            ticket.get("host_mutation_allowed") is not False or
+            ticket.get("live_install_allowed") is not False or
+            ticket.get("weights_updated") is not False):
+        raise WormHold("GROWTH_UNTRUSTED_SANDBOX_TICKET_HOLD")
     required = {"candidate_id", "artifact_sha256", "isolation_verified",
                 "environment_destroyed", "network_disabled", "host_written",
                 "passed_tests", "failed_tests"}
@@ -180,6 +198,9 @@ def accept_sandbox_receipt(ticket, receipt):
                 type(fails) is int and fails == 0)
     return {"schema": "NOX-GROWTH-SANDBOX-REVIEW-v1",
             "candidate_id": ticket["candidate_id"],
+            "source_head": ticket["source_head"],
+            "candidate_sha256": ticket["candidate_sha256"],
+            "artifact_sha256": ticket["artifact_sha256"],
             "state": "SANDBOX_TESTED_AWAITING_I0" if verified else "HOLD",
             "tests_passed": tests if type(tests) is int else 0,
             "production_merged": False, "installed_exe": False,
@@ -282,9 +303,12 @@ def bind_growth_sandbox(diff_ticket, sandbox_ticket, sandbox_review, *, session,
             sandbox_ticket.get('candidate_id') != diff_ticket['candidate_id'] or
             sandbox_ticket.get('artifact_sha256') != diff_ticket['post_sha256'] or
             sandbox_review.get('candidate_id') != diff_ticket['candidate_id'] or
+            sandbox_review.get('source_head') != diff_ticket['source_head'] or
+            sandbox_review.get('candidate_sha256') != sandbox_ticket.get('candidate_sha256') or
+            sandbox_review.get('artifact_sha256') != diff_ticket['post_sha256'] or
             sandbox_review.get('state') != 'SANDBOX_TESTED_AWAITING_I0' or
             type(sandbox_review.get('tests_passed')) is not int or
-            sandbox_review['tests_passed'] < 1 or
+            not 1 <= sandbox_review['tests_passed'] <= _MAX_TESTS or
             sandbox_review.get('production_merged') is not False):
         raise WormHold('GROWTH_SANDBOX_CROSS_RECEIPT_HOLD')
     # Untrusted model/text may forge a matching dictionary. Only the original
@@ -292,6 +316,7 @@ def bind_growth_sandbox(diff_ticket, sandbox_ticket, sandbox_review, *, session,
     proof = {'ticket_sha256': diff_ticket['ticket_sha256'],
              'candidate_id': diff_ticket['candidate_id'],
              'artifact_sha256': diff_ticket['post_sha256'],
+             'candidate_sha256': sandbox_ticket['candidate_sha256'],
              'source_head': diff_ticket['source_head'],
              'tests_passed': sandbox_review['tests_passed']}
     if native_verify(session, 'growth.sandbox.receipt.verify', proof) is not True:
