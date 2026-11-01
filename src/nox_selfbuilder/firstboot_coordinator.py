@@ -262,6 +262,13 @@ class FirstBootCoordinator:
                 if (isinstance(receipt, Mapping) and receipt.get("ack") is True and
                     receipt.get("s03_readback") is True and receipt.get("sha256") == digest):
                     ingested.append(digest)
+        # STOP+RESET may arrive in the final S03 callback while there are NO
+        # queued P03 actions to iterate. Never publish ALREADY_PRESENT then.
+        # Native owner must independently read back any durable S03 write.
+        if cancelled():
+            return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "STOPPED",
+                    "reason": "NATIVE_STOP_DURING_S03_INGEST_READBACK_REQUIRED",
+                    "downloaded": 0, "release_accepted": False}
         dispatched, denied, already_queued = [], [], []
         for action in planned:
             i = action["artifact"]["id"]

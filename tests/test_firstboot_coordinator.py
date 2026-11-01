@@ -200,6 +200,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(r["local_knowledge_ingested"],0)
         self.assertEqual(s.ingested,[])
 
+    def test_stop_during_final_s03_ingest_without_pending_queue_fails_closed(self):
+        s=State(); digest="f"*64
+        s.present={"11":True,"31":True,"32":True,"49":True}
+        s.p=policy(allow_local_knowledge_ingest=True,
+                   reviewed_local_artifacts={digest:{"rights_verified":True,
+                                                     "content_safe_for_s03":True}})
+        s.rows=[{"sha256":digest,"kind":"SOURCE_CANDIDATE","size_bytes":100}]
+        native_ingest=s.ingest
+        def ingest_then_stop(session, artifact):
+            ack=native_ingest(session, artifact)
+            s.epoch += 1 # STOP then fast RESET: boolean is false again
+            return ack
+        s.app.callbacks=replace(s.app.callbacks, ingest=ingest_then_stop)
+        receipt=s.app.run("owner_A", now=NOW)
+        self.assertEqual(receipt["status"], "STOPPED")
+        self.assertEqual(receipt["reason"], "NATIVE_STOP_DURING_S03_INGEST_READBACK_REQUIRED")
+        self.assertFalse(receipt["release_accepted"])
+        self.assertEqual(s.calls, [])
+
     def test_policy_rejects_fake_authority(self):
         s=State();s.p=policy(signed_by_native_owner=False)
         r=s.app.run('S',now=NOW)
