@@ -8,10 +8,14 @@ import {createP01RouteDispatcher} from "./route-dispatch.mjs";
 import {nativeVisualApproval} from "./p01-visual-approval.mjs";
 import {createD02NativeVisualBus} from "./d02-native-events.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
+import {installP01Adaptive} from "./p01-responsive.mjs";
 const mounted=new WeakSet();
 // OS-level reduced motion always outranks the user-selected quality profile.
 export function effectiveP01MotionMode(requested,reduced){
   return reduced===true?"REDUCED":requested;
+}
+export function shouldRunP01Visuals(homeIsActive,documentVisible){
+  return homeIsActive===true && documentVisible===true;
 }
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
@@ -43,7 +47,21 @@ export function mountP01Owner(spec){
   };
   try {
     // Existing approved renderer and original DOM; NO replacement assets.
+    // Reuse the canonical scene, and attach the existing adaptive observer.
+    // Both listeners and dataset flags are torn down with the ONE mount.
+    const adaptive=installP01Adaptive(root);
+    cleanups.push(()=>adaptive.destroy());
     fx=installNoxCinemaFX({root,orbs,controls,panels,profile:effectiveMode()});
+    const doc=root.ownerDocument;
+    const syncVisibility=()=>{
+      if(disposed)return;
+      let home=false;
+      try{home=homeActive()===true;}catch{return;}
+      const visible=doc.visibilityState!=="hidden" && doc.hidden!==true;
+      fx.setVisible(shouldRunP01Visuals(home,visible));
+    };
+    watch(doc,"visibilitychange",syncVisibility);
+    syncVisibility();
     // One host-owned subscription: exact CoreIDs + the existing secondary WOW.
     nativeBus=createD02NativeVisualBus(hostPort,fx,orbs.slice(1).map(x=>x.id));
     if(secondary){
@@ -125,6 +143,8 @@ export function mountP01Owner(spec){
       status(){
         return Object.freeze({...summary,profile:fx.snapshot().profile,
           wowSourceMounted:!!wow,nativeCoreFeed:nativeBus.snapshot(),
+          viewportLayout:root.dataset?.noxP01Layout||"unknown",
+          viewportDpi:root.dataset?.noxP01Dpi||"unknown",
           hostIntegrationVerified:false,windowsExeAccepted:false});
       },
       destroy(){
