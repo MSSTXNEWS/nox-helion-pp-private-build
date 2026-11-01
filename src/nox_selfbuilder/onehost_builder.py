@@ -14,6 +14,8 @@ from .evolution import EvolutionWorker, EvolutionHold
 from .seed import attest_seed
 from .onehost_queue import scope_key
 from .source_catalog import inspect_managed_sources
+from .a1_initiative_bridge import A1InitiativeBridge
+from .firstboot_coordinator import FirstBootCoordinator
 
 _HEAD=re.compile(r'^[a-f0-9]{40}(?:[a-f0-9]{24})?$')
 
@@ -65,6 +67,73 @@ class OneHostSelfBuilder:
                 for p in source_paths) or len(set(source_paths))!=len(source_paths):
             raise ValueError('BOUNDED_NATIVE_SOURCE_PATHS_REQUIRED')
         self.source_paths=tuple(source_paths)
+        # The original OneHost owner MAY attach existing A ports after native
+        # SID/ACL/policy setup. No scheduler, thread, service or S03 DB is made.
+        self._a_native_bridge = None
+        self._a_firstboot = None
+        self._a_owner_session = None
+        self._a_native_epoch = None
+
+    def bind_native_megapat_a(self, session, *, initiative_bridge, firstboot):
+        """Connect already-reviewed A1–A6 callbacks to this existing owner.
+
+        This method must be called by authenticated native startup code,
+        never by renderer JSON or generated model/website text.
+        """
+        self._read_scope(session)
+        if (not isinstance(initiative_bridge, A1InitiativeBridge) or
+                not isinstance(firstboot, FirstBootCoordinator) or
+                self._a_native_bridge is not None or
+                self._a_firstboot is not None or
+                self.native_stop() is not False or self._stop.is_set() or
+                self.authorize(session, 'evolution.autonomy.read', {}) is not True):
+            raise PermissionError('A_EXISTING_NATIVE_OWNER_BINDING_REQUIRED')
+        epoch = self.stop_epoch()
+        if type(epoch) is not int or epoch < 0:
+            raise PermissionError('A_NATIVE_STOP_EPOCH_REQUIRED')
+        self._a_native_bridge = initiative_bridge
+        self._a_firstboot = firstboot
+        self._a_owner_session = session
+        self._a_native_epoch = epoch
+        return {'schema': 'NOX-A-NATIVE-OWNER-BINDING-v1',
+                'state': 'PORTS_BOUND_AWAITING_NATIVE_STARTUP',
+                'native_windows_acceptance': False,
+                'firstboot_executed': False,
+                'existing_idle_tick_invoked': False}
+
+    def native_a_boot(self, session, *, now):
+        """Native startup hook; use ORIGINAL FirstBoot and A.1 only."""
+        self._a_guard(session)
+        first = self._a_firstboot.run(session, now=now)
+        self._a_guard(session)
+        if first.get('status') in ('HOLD', 'STOPPED'):
+            return {'schema': 'NOX-A-NATIVE-BOOT-v1',
+                    'state': 'HOLD', 'firstboot': first,
+                    'initiative': None, 'e07': False}
+        initiative = self._a_native_bridge.boot(session, now=now)
+        self._a_guard(session)
+        return {'schema': 'NOX-A-NATIVE-BOOT-v1',
+                'state': 'READY_FOR_EXISTING_IDLE_TICK' if
+                    initiative.get('state') == 'READY_FOR_EXISTING_IDLE_TICK' else 'HOLD',
+                'firstboot': first, 'initiative': initiative, 'e07': False}
+
+    def native_a_tick(self, session, *, now):
+        """Called ONLY by preexisting OneHost idle scheduler, not a new agent."""
+        self._a_guard(session)
+        result = self._a_native_bridge.tick(session, now=now)
+        self._a_guard(session)
+        return result
+
+    def _a_guard(self, session):
+        self._read_scope(session)
+        if (self._a_native_bridge is None or
+                self._a_firstboot is None or
+                session != self._a_owner_session or
+                self.native_stop() is not False or
+                self._stop.is_set() or
+                self.stop_epoch() != self._a_native_epoch or
+                self.authorize(session, 'evolution.autonomy.read', {}) is not True):
+            raise PermissionError('A_NATIVE_STOP_SCOPE_OR_POLICY_HOLD')
     def _read_scope(self,session):
         scope_key(session)
         validate=getattr(session,'validate',None)
