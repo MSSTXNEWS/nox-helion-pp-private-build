@@ -361,11 +361,18 @@ public partial class MainWindow
                 "selfbuilder.study.queue" or "selfbuilder.learning.proofs" or
                 "selfbuilder.seed.inspect" or "selfbuilder.coding.models" or "selfbuilder.worker.start" or
                 "training.merge" or "training.import" or "training.activate" or "training.rollback" or
-                "selfbuilder.a1.status" or "selfbuilder.a1.boot" or "selfbuilder.a1.tick"))
+                "selfbuilder.a1.status" or "selfbuilder.a1.boot" or "selfbuilder.a1.tick" or
+                "selfbuilder.activator.status"))
                 return Task.FromResult(false);
             if ((command == "selfbuilder.a1.status" || command == "selfbuilder.a1.boot" ||
                  command == "selfbuilder.a1.tick") && payload.EnumerateObject().Count() != 1)
                 return Task.FromResult(false);
+            if (command == "selfbuilder.activator.status") {
+                // Read-only local inventory from the trusted NOX virtual origin.
+                // SID, origin, ACL and exact payload are still checked natively.
+                if (payload.EnumerateObject().Count() != 1) return Task.FromResult(false);
+                return Task.FromResult(!cancel.IsCancellationRequested);
+            }
             label += " / " + command;
         }
         var answer=MessageBox.Show(this, "Разрешить локальный маршрут NOX: "+label+"?",
