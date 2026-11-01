@@ -69,7 +69,7 @@ class WowStageTests(unittest.TestCase):
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
   for relative in eng.MENU_V2_SHA256:
    staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
-   self.assertEqual(staged.read_bytes(),(self.root/relative).read_bytes())
+   self.assertEqual(staged.read_bytes(),eng.canonical_menu_bytes(self.root/relative))
   home=(self.stage/'Assets/index.html').read_text()
   self.assertIn('creative/wow200/ui/onehost-menu-bindings.mjs',home)
   self.assertIn('creative/wow200/ui/selfbuilder-menu-v2.css',home)
@@ -94,7 +94,7 @@ class WowStageTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
  def test_windows_menu_crlf_normalizes_to_exact_pinned_content(self):
   path=self.root/'ui/selfbuilder-menu-v2.mjs'
-  original=path.read_bytes()
+  original=eng.canonical_menu_bytes(path)
   windows_bytes=original.replace(b'\n',b'\r\n')
   path.write_bytes(windows_bytes)
   stage(self.stage,self.src)
