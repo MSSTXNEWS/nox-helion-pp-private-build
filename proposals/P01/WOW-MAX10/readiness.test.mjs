@@ -21,6 +21,9 @@ test('native capabilities report clean Git HEAD requirement, not fictitious read
  assert.equal(p01ReadinessResult(a,{ack:true,actions:{x:{available:true}},source_head:null}).state,'HOLD');
  assert.equal(p01ReadinessResult(a,{ack:true,actions:{x:{available:true}},
     source_head:'a'.repeat(40)}).state,'AVAILABLE');
+ const training=p01ReadinessResult(a,{ack:true,source_head:'a'.repeat(40),
+  actions:{'selfbuilder.train.request':{available:true}}});
+ assert.match(training.message,/обучение НЕ запущено/);
 });
 test('real local model inventory 0 is HOLD and 1 is discovery only',()=>{
  const a='selfbuilder.coding.models';
@@ -42,7 +45,8 @@ test('worker READY_FOR_OWNER_TASK is not running autonomously',()=>{
 });
 test('learning only accepts genuine S03 proof rows, never equates to weight training',()=>{
  const a='selfbuilder.learning.proofs';
- assert.equal(p01ReadinessResult(a,{ack:true,status:'S03_READ',tasks:[]}).state,'HOLD');
+ assert.equal(p01ReadinessResult(a,{ack:true,status:'S03_READ',tasks:[]}).state,'AVAILABLE');
+ assert.equal(p01ReadinessResult(a,{ack:true,status:'HOLD',tasks:[]}).state,'HOLD');
  const x=p01ReadinessResult(a,{ack:true,status:'S03_READ',tasks:[{result:'hash'}]});
  assert.equal(x.state,'AVAILABLE');
  assert.match(x.message,/веса не изменялись/);
