@@ -635,6 +635,7 @@ public partial class MainWindow
 
     private async Task OpenCreativeProjectorAsync(string? requestedProjectId = null)
     {
+        Window? openingProjector = null;
         try
         {
             // Never accept a path, URL, encoded slash, or arbitrary Windows file.
@@ -669,6 +670,7 @@ public partial class MainWindow
                 Width=Math.Max(320,Math.Min(1100,SystemParameters.WorkArea.Width-20)),
                 Height=Math.Max(260,Math.Min(700,SystemParameters.WorkArea.Height-20)),
                 MinWidth=320,MinHeight=260,Owner=this,WindowStartupLocation=WindowStartupLocation.CenterOwner};
+            openingProjector=theater;
             var viewer=new Microsoft.Web.WebView2.Wpf.WebView2();
             AttachNoxProjectorControls(theater,viewer);
             _creativeProjector=theater;
@@ -702,7 +704,22 @@ public partial class MainWindow
             }
             viewer.CoreWebView2.Navigate(theaterUrl);
         }
-        catch(Exception ex){WriteLog("CREATIVE_PROJECTOR "+ex.GetType().Name);}
+        catch(Exception ex)
+        {
+            WriteLog("CREATIVE_PROJECTOR "+ex.GetType().Name);
+            // A failed WebView2 setup must not leave a blank window marked ready.
+            // Only close THIS attempt: a concurrent owner projector may exist.
+            if (openingProjector is not null)
+            {
+                try { openingProjector.Close(); }
+                catch(Exception closeEx) { WriteLog("CREATIVE_PROJECTOR_CLOSE "+closeEx.GetType().Name); }
+                if (ReferenceEquals(_creativeProjector,openingProjector))
+                {
+                    _creativeProjector=null;
+                    _creativeProjectorProjectId=null;
+                }
+            }
+        }
     }
 
     private async Task<string> StopCreativeWorkerAsync()
