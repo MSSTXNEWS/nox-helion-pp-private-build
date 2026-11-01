@@ -20,14 +20,14 @@ class FakeElement {
 function fixture(){
   const root=new FakeElement(),status=new FakeElement();
   const worlds=R11_WORLD_IDS.map(id=>{const e=new FakeElement('button');e.dataset.noxWorld=id;e.textContent=id;root.append(e);return e});
-  let requests=[],queue=[],timerFns=new Map(),next=1;
+  let requests=[],queue=[],timerFns=new Map(),next=1;const eventSource=new FakeElement('webview');
   const doc=new FakeElement('document');doc.createElement=x=>new FakeElement(x);doc.getElementById=x=>x==='status'?status:null;
   let currentScope={core_id:'core.atlas',persona_id:'persona.kairen_voss'};
   const windowRef={matchMedia:()=>({matches:false})};
   const make=()=>mountR11WowMenu({root,documentRef:doc,windowRef,scope:()=>currentScope,
-    request:async(route,payload)=>{requests.push({route,payload});return queue.shift()||{state:'HOLD',errorCode:'OFFLINE'}},
+    nativeEventSource:eventSource,request:async(route,payload)=>{requests.push({route,payload});return queue.shift()||{state:'HOLD',errorCode:'OFFLINE'}},
     now:()=>10000,schedule:fn=>{const id=next++;timerFns.set(id,fn);return id;},cancel:id=>timerFns.delete(id)});
-  return {root,status,worlds,doc,make,requests,queue,timerFns,setScope:v=>{currentScope=v}};
+  return {root,status,worlds,doc,eventSource,make,requests,queue,timerFns,setScope:v=>{currentScope=v}};
 }
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 test('exact 10 approved logical worlds, 8 physical parents remain external',()=>{
@@ -99,4 +99,15 @@ test('duplicate mount rejected, cleanup restores all visual classes',()=>{
 test('incomplete approved MENU DOM fails closed before any DOM changes',()=>{
   const f=fixture();f.worlds.at(-1).remove();assert.throws(()=>f.make(),/TEN_ORIGINAL_SUBWORLDS_REQUIRED/);
   assert.equal(f.status.children.length,0);
+});
+
+test('native v3 event only after coherent verified evidence, monotonic run sequence and 30-second expiry',()=>{
+  const f=fixture(),r=f.make();const ticker=f.status.querySelector('[data-nox-r11-ticker]');
+  const good={schema:'NOX-INSTALLER-EVENT-v3',evidence_verified:true,event_id:'id1',run_id:'run1',task_id:'task1',action_id:'model.pull',event_type:'task.progress',state:'RUNNING',package_id:'P03',event_sequence:1,receipt_sha256:'f'.repeat(64),timestamp_utc:new Date(10000).toISOString(),numerator:2,denominator:4};
+  f.eventSource.dispatch('message',{data:{installerEvent:{...good,state:'FAILED'}}});assert.equal(ticker.dataset.state,'unknown');
+  f.eventSource.dispatch('message',{data:{installerEvent:good}});assert.equal(ticker.dataset.state,'verified');assert.ok(ticker.children[1].textContent.includes('50%'));
+  f.eventSource.dispatch('message',{data:{installerEvent:{...good,event_sequence:1,numerator:4}}});assert.ok(ticker.children[1].textContent.includes('50%'));
+  f.eventSource.dispatch('message',{data:{installerEvent:{...good,event_sequence:2,numerator:4,receipt_sha256:'bad'}}});assert.ok(ticker.children[1].textContent.includes('50%'));
+  for(const fn of f.timerFns.values())fn();assert.equal(ticker.dataset.state,'stale');
+  r.destroy();assert.equal((f.eventSource.listeners.get('message')||[]).length,0);
 });

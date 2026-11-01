@@ -166,7 +166,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   // All functional requests are forwarded to the ONE native P02 client with its ACL/consent.
   let r11=null;
   if(root){
-    try{r11=mountR11WowMenu({root,documentRef:doc,windowRef:view,
+    try{r11=mountR11WowMenu({root,documentRef:doc,windowRef:view,nativeEventSource:native,
       request:(route,payload)=>client.request(route,payload),
       scope:()=>canonicalChatContext(doc.getElementById('chat-core')?.value||'',
         doc.getElementById('chat-persona')?.value||'')});}

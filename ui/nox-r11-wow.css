@@ -23,3 +23,17 @@
 @media(min-width:1920px){.nox-r11-cockpit{max-width:1500px}.nox-r11-actions{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.nox-r11-enhanced .nox-r11-world,.nox-r11-cockpit:before,.nox-r11-action,.nox-r11-stop{animation:none!important;transition:none!important;transform:none!important;translate:none!important}}
 @media(forced-colors:active){.nox-r11-cockpit,.nox-r11-ticker,.nox-r11-action,.nox-r11-stop{background:Canvas;color:CanvasText;border-color:CanvasText}}
+/* Same cinematic language throughout existing secondary AI/submenu views; originals are untouched. */
+.nox-r11-enhanced .nox-sb-panel,.nox-r11-enhanced .nox-sb-sourcehub,.nox-r11-enhanced .nox-wow-workbench{position:relative;border:1px solid rgba(213,155,104,.32);background:radial-gradient(ellipse at 90% 5%,rgba(212,141,90,.13),transparent 42%),radial-gradient(ellipse at 18% 92%,rgba(58,117,151,.19),transparent 57%),linear-gradient(145deg,rgba(23,25,34,.95),rgba(5,12,23,.98));box-shadow:inset 0 1px rgba(247,200,150,.12),0 17px 48px rgba(0,0,0,.35)}
+.nox-r11-enhanced .nox-sb-heading,.nox-r11-enhanced .nox-sb-sourcehub__title{color:#f2c591;text-shadow:0 0 18px rgba(212,120,64,.2)}
+.nox-r11-enhanced .nox-sb-tile{border:1px solid rgba(211,169,119,.3);border-radius:13px;min-height:55px;background:linear-gradient(110deg,rgba(31,30,36,.9),rgba(16,25,35,.93));box-shadow:inset 0 1px rgba(250,209,162,.12),0 7px 20px rgba(0,0,0,.2)}
+.nox-r11-enhanced .nox-sb-tile:hover:not(:disabled),.nox-r11-enhanced .nox-sb-tile:focus-visible{border-color:#f0c08b;box-shadow:0 0 22px rgba(245,177,117,.23)}
+.nox-r11-enhanced .nox-r11-cockpit{background:radial-gradient(ellipse at 81% -5%,rgba(219,143,89,.15),transparent 51%),radial-gradient(ellipse at 2% 90%,rgba(105,137,168,.12),transparent 50%),linear-gradient(149deg,#151925,#060e18);border-color:rgba(217,169,118,.4);box-shadow:inset 0 1px rgba(248,210,164,.13),0 16px 50px rgba(0,0,0,.48)}
+.nox-r11-enhanced .nox-r11-world{min-height:97px;border:1px solid rgba(240,194,143,.52);background:radial-gradient(circle at 22% 17%,rgba(240,188,133,.28),transparent 32%),radial-gradient(circle at 78% 74%,rgba(101,157,183,.23),transparent 60%),linear-gradient(142deg,#302b2b,#0a121d 72%);box-shadow:inset -15px -16px 26px rgba(0,0,0,.48),inset 5px 5px 10px rgba(234,194,143,.11),0 10px 25px rgba(0,0,0,.4),0 0 16px rgba(211,150,87,.13)}
+.nox-r11-enhanced .nox-r11-world:hover:not(:disabled),.nox-r11-enhanced .nox-r11-world:focus-visible{filter:drop-shadow(0 0 18px rgba(244,180,100,.52));box-shadow:inset -11px -9px 20px rgba(0,0,0,.28),0 0 28px rgba(222,154,85,.27)}
+.nox-r11-enhanced[data-nox-r11-native="verified"] .nox-r11-cockpit{border-color:rgba(146,226,225,.62);box-shadow:0 0 32px rgba(84,196,203,.15),inset 0 1px rgba(213,249,243,.16)}
+.nox-r11-enhanced .nox-r11-action{background:radial-gradient(circle at 90% 10%,rgba(243,184,124,.14),transparent 42%),linear-gradient(145deg,#272c37,#0e1a29);border-color:rgba(222,177,126,.35)}
+.nox-r11-enhanced .nox-r11-action:hover:not(:disabled){box-shadow:0 0 23px rgba(241,181,108,.25)}
+.nox-r11-enhanced .nox-r11-title{letter-spacing:.11em}
+@media(max-width:390px){.nox-r11-enhanced .nox-r11-world{min-height:78px}}
+@media(prefers-reduced-motion:reduce){.nox-r11-enhanced .nox-r11-world{animation:none!important;transform:none!important}}
