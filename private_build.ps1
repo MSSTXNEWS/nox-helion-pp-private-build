@@ -361,6 +361,10 @@ try {
             '--specpath',(Join-Path $work 'onehost-pyinstaller-spec'),'--paths',$source,
             '--add-data',((Join-Path $source 'assets')+';assets'),
             '--add-data',((Join-Path $source 'helion/data/traits_seed_64.json')+';helion/data'),
+            # The original native owner authenticates its own source bytes via
+            # Path(__file__).read_bytes(); PyInstaller's .pyc is not a .py file.
+            # Preserve the already SHA-pinned staged owner source as bundled data.
+            '--add-data',((Join-Path $source 'helion/e06_native_stdio_owner.py')+';helion'),
             '--add-data',((Join-Path $source 'helion/ai_weights/weights')+';helion/ai_weights/weights'))
         foreach ($record in $oneHostData) {
             $rel = [string]$record.runtime_path
