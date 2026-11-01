@@ -49,8 +49,9 @@ jobs:
           }
           $active='work/e06/staged/R11/Assets/creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs'
           $canonical='proposals/NOX-CINEMA-FX/nox-cinema.mjs'
-          if ((Get-FileHash $active -Algorithm SHA256).Hash -cne
-              (Get-FileHash $canonical -Algorithm SHA256).Hash) { throw 'D02_ACTIVE_BYTES_HOLD' }
+          $stagedBlob=(& git hash-object -- $active).Trim().ToLowerInvariant()
+          $canonicalBlob=(& git rev-parse 'HEAD:proposals/NOX-CINEMA-FX/nox-cinema.mjs').Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $stagedBlob -cne $canonicalBlob) { throw 'D02_ACTIVE_GIT_BLOB_HOLD' }
           Write-Host 'D02_STAGED_SOURCE_PIN_PASS (NOT WINDOWS E07 ACCEPTED)'
       - name: Preserve original and staged receipts
         if: always()
