@@ -257,6 +257,37 @@ jobs:
           python coordination/e06/t06_samevm_installed_smoke.py
           if ($LASTEXITCODE -ne 0) { throw 'T06_INSTALLED_NATIVE_LIFECYCLE_HOLD' }
           Write-Host 'T06_INSTALLED_SAME_VM_SMOKE_PASS (NOT INDEPENDENT E07)'
+      - name: Download exact Microsoft.WindowsAppSDK NuGet to Windows CI evidence cache (no install)
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $cache='work/e06/prereq-cache'
+          New-Item -ItemType Directory -Path $cache -Force | Out-Null
+          $name='microsoft.windowsappsdk.1.8.260921001.nupkg'
+          $url='https://api.nuget.org/v3-flatcontainer/microsoft.windowsappsdk/1.8.260921001/'+$name
+          $pkg=Join-Path $cache $name
+          $receipt=[ordered]@{schema='NOX-EFINAL-NUGET-PIN-V1'; package='Microsoft.WindowsAppSDK'; version='1.8.260921001'; source=$url; sha256=$null; bytes=$null; source_sha512_match=$false; nuget_signature_exit=$null; status='HOLD'; error=$null; execute_or_install=$false}
+          try {
+            Invoke-WebRequest -Uri $url -OutFile $pkg -TimeoutSec 90 -ErrorAction Stop
+            $size=(Get-Item -LiteralPath $pkg).Length
+            if ($size -lt 1000 -or $size -gt 20971520) { throw 'NUGET_PINNED_PACKAGE_SIZE_HOLD' }
+            $receipt.bytes=$size
+            $receipt.sha256=(Get-FileHash -LiteralPath $pkg -Algorithm SHA256).Hash.ToLowerInvariant()
+            $sha512Official=([string](Invoke-WebRequest -Uri ($url+'.sha512') -TimeoutSec 45 -ErrorAction Stop).Content).Trim()
+            $sha512Actual=[Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $pkg -Algorithm SHA512).Hash))
+            if (-not $sha512Official -or $sha512Actual -cne $sha512Official) { throw 'NUGET_PINNED_PACKAGE_SHA512_MISMATCH' }
+            $receipt.source_sha512_match=$true
+            $signatureOutput=(& dotnet nuget verify $pkg --all 2>&1 | Out-String)
+            $receipt.nuget_signature_exit=$LASTEXITCODE
+            if ($LASTEXITCODE -ne 0) { throw ('NUGET_PINNED_PACKAGE_SIGNATURE_HOLD '+$signatureOutput.Substring(0,[Math]::Min(400,$signatureOutput.Length))) }
+            $receipt.status='VERIFIED_DOWNLOADED_NO_INSTALL'
+          } catch {
+            $receipt.error=[string]$_.Exception.Message
+            if (Test-Path -LiteralPath $pkg -PathType Leaf) { Remove-Item -LiteralPath $pkg -Force }
+          }
+          $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $cache 'windowsappsdk-1.8.260921001-receipt.json') -Encoding utf8
+          Write-Host ("NUGET_PINNED_PACKAGE_1_8_260921001 "+($receipt | ConvertTo-Json -Compress -Depth 4))
       - name: Preserve full build receipt; do not claim E07 release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -276,5 +307,7 @@ jobs:
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
             work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
             work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
+            work/e06/prereq-cache/windowsappsdk-1.8.260921001-receipt.json
+            work/e06/prereq-cache/microsoft.windowsappsdk.1.8.260921001.nupkg
           if-no-files-found: warn
           retention-days: 14
