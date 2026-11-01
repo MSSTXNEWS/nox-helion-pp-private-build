@@ -107,6 +107,20 @@ class WowStageTests(unittest.TestCase):
   with self.assertRaisesRegex(ValueError,'MENU_V2_UNEXPECTED_CARRIAGE_RETURN'):
    stage(self.stage,self.src)
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
+ def test_checkout_crlf_donor_manifest_still_exact_git_blob(self):
+  p=self.src/'DONOR_BLOBS.json'
+  normalized=(json.dumps(json.loads(p.read_text()),indent=2)+'\n').encode()
+  p.write_bytes(normalized.replace(b'\n',b'\r\n'))
+  eng.DONOR_MANIFEST_BLOB=gitsha(normalized)
+  result=stage(self.stage,self.src)
+  self.assertEqual(len(result['files']),71)
+ def test_checkout_crlf_donor_script_uses_pinned_canonical_bytes(self):
+  p=self.src/'proposals/NOX-WOW51-100/catalog.mjs'
+  normalized=p.read_bytes()
+  p.write_bytes(normalized.replace(b'\n',b'\r\n'))
+  stage(self.stage,self.src)
+  staged=self.stage/'Assets/creative/wow200/proposals/NOX-WOW51-100/catalog.mjs'
+  self.assertEqual(staged.read_bytes(),normalized)
  def test_original_pack01_catalog_is_pinned(self):
   file=self.root/'proposals/NOX-PACK01-50/catalog.json'
   file.write_text(file.read_text(encoding='utf-8')+'\\n',encoding='utf-8')

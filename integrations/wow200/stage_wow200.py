@@ -81,6 +81,20 @@ def digest(path:Path)->str:return hashlib.sha256(path.read_bytes()).hexdigest()
 def gitsha(raw:bytes)->str:
     h=hashlib.sha1();h.update(f"blob {len(raw)}\0".encode());h.update(raw);return h.hexdigest()
 
+def pinned_source_bytes(path: Path, expected: str):
+    # Do NOT weaken source lock: accept raw bytes OR the exact approved
+    # Git blob after normalizing checkout-only CRLF on text sources.
+    raw = path.read_bytes()
+    if gitsha(raw) == expected:
+        return raw
+    if path.suffix.lower() not in ('.json','.mjs','.js','.css','.html','.py'):
+        return None
+    try:
+        canon = canonical_menu_bytes(path)
+    except ValueError:
+        return None
+    return canon if gitsha(canon) == expected else None
+
 def stage(root:Path, source:Path)->dict:
     root=root.resolve();source=source.resolve()
     if not (root/"NOX.P01.Shell.csproj").is_file():raise ValueError("R13_SOURCE_ROOT_HOLD")
@@ -91,9 +105,9 @@ def stage(root:Path, source:Path)->dict:
     if any(not (root/"Assets"/name).is_file() or digest(root/"Assets"/name)!=sha for name,sha in D02.items()):
         raise ValueError("CANONICAL_D02_SHA_HOLD")
     manifest_path=source/"DONOR_BLOBS.json"
-    if not manifest_path.is_file() or manifest_path.is_symlink() or gitsha(manifest_path.read_bytes())!=DONOR_MANIFEST_BLOB:
+    if not manifest_path.is_file() or manifest_path.is_symlink() or pinned_source_bytes(manifest_path,DONOR_MANIFEST_BLOB) is None:
         raise ValueError("DONOR_MANIFEST_PIN_HOLD")
-    manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest=json.loads(pinned_source_bytes(manifest_path,DONOR_MANIFEST_BLOB).decode("utf-8"))
     if manifest.get("schema")!="NOX_WOW200_OWNER_BLOB_PIN_V1":raise ValueError("DONOR_MANIFEST_SCHEMA_HOLD")
     files=manifest.get("files")
     if not isinstance(files,dict) or manifest.get("count")!=DONOR_FILE_COUNT or len(files)!=DONOR_FILE_COUNT:
@@ -105,9 +119,9 @@ def stage(root:Path, source:Path)->dict:
     owner1_root=source.parents[1]
     pack01_catalog=owner1_root/"proposals/NOX-PACK01-50/catalog.json"
     if (not pack01_catalog.is_file() or pack01_catalog.is_symlink() or
-        gitsha(pack01_catalog.read_bytes())!=PACK01_CATALOG_BLOB):
+        pinned_source_bytes(pack01_catalog,PACK01_CATALOG_BLOB) is None):
         raise ValueError("PACK01_CATALOG_PIN_HOLD")
-    catalog=json.loads(pack01_catalog.read_text(encoding="utf-8"))
+    catalog=json.loads(pinned_source_bytes(pack01_catalog,PACK01_CATALOG_BLOB).decode("utf-8"))
     actions=catalog.get("actions")
     if (catalog.get("status")!="SOURCE_CANDIDATE_NOT_INTEGRATED" or
         not isinstance(actions,list) or len(actions)!=50 or
@@ -118,17 +132,21 @@ def stage(root:Path, source:Path)->dict:
         len({a["routeId"] for a in actions})!=50 or
         len({a["taskId"] for a in actions})!=50):
         raise ValueError("PACK01_CATALOG_50_ROUTES_HOLD")
+    pinned_content={pack01_catalog:pinned_source_bytes(pack01_catalog,PACK01_CATALOG_BLOB)}
     for rel,pins in OWNER1_D02_ENGINE.items():
         archived=source/rel
         active=owner1_root/rel
         if (not archived.is_file() or archived.is_symlink() or
-            gitsha(archived.read_bytes())!=pins["legacy_blob"]):
+            pinned_source_bytes(archived,pins["legacy_blob"]) is None):
             raise ValueError("D02_LEGACY_ENGINE_SHA_HOLD:"+rel)
         if (not active.is_file() or active.is_symlink() or
-            gitsha(active.read_bytes())!=pins["active_blob"]):
+            pinned_source_bytes(active,pins["active_blob"]) is None):
             raise ValueError("OWNER1_D02_ENGINE_SHA_HOLD:"+rel)
     dest=root/"Assets/creative/wow200"
     if dest.exists():raise ValueError("WOW200_ALREADY_INSTALLED_HOLD")
+    for rel,pins in OWNER1_D02_ENGINE.items():
+        pinned_content[source/rel]=pinned_source_bytes(source/rel,pins["legacy_blob"])
+        pinned_content[owner1_root/rel]=pinned_source_bytes(owner1_root/rel,pins["active_blob"])
     plans=[(pack01_catalog,dest/"pack01-catalog.json")]
     menu_plans=menu_stage_plan(owner1_root,dest)
     plans.extend(menu_plans)
@@ -137,8 +155,9 @@ def stage(root:Path, source:Path)->dict:
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
             raise ValueError("UNSAFE_WOW_SOURCE_PATH")
         origin=source/rel
-        if not origin.is_file() or origin.is_symlink() or gitsha(origin.read_bytes())!=expected:
+        if not origin.is_file() or origin.is_symlink() or pinned_source_bytes(origin,expected) is None:
             raise ValueError("WOW_DONOR_BLOB_IDENTITY_HOLD:"+rel)
+        pinned_content[origin]=pinned_source_bytes(origin,expected)
         if rel in OWNER1_D02_ENGINE:
             # Active runtime import stays inside wow200/proposals/ and loads ONLY owner1.
             # Archive the original PR30 donor under a non-imported legacy directory.
@@ -188,6 +207,8 @@ def stage(root:Path, source:Path)->dict:
             target.parent.mkdir(parents=True,exist_ok=True)
             if origin in menu_origins:
                 target.write_bytes(canonical_menu_bytes(origin))
+            elif origin in pinned_content:
+                target.write_bytes(pinned_content[origin])
             else:
                 shutil.copyfile(origin,target)
             copied.append({"path":str(target.relative_to(root)).replace("\\","/"),

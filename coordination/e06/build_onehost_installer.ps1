@@ -174,7 +174,7 @@ if ($wantsCreative) {
   $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
   $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
   if ($creativeScriptBlob -cne 'd5ad8f62eb0c143bfbe54fb0a71ec371d6c571f4' -or
-      $wowScriptBlob -cne 'abda324e41a82e891a7ece76bd67ba8c725ba0cc') {
+      $wowScriptBlob -cne '266da71ac0412e1fa5b2f832eb4680191bfb2282') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
   }
   if (Test-Path -LiteralPath (Join-Path $source 'Assets/creative')) {
