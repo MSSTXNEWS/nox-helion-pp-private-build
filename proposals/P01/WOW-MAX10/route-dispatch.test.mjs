@@ -71,11 +71,12 @@ test("T10: forged number/object ACK receipts are never accepted",async()=>{
  }
 });
 
-test("T06 R26: immutable Host50 risk floor blocks all 21 protected routes without native consent", async()=>{
+test("T06 R26: immutable Host50 risk floor blocks all 25 protected routes without native consent", async()=>{
  const protectedRoutes=[
   "chat.history","chat.attach","chat.voice","models.pull","models.gguf.import",
   "models.retry","rag.import","memory.manage","training.start","training.resume",
-  "training.checkpoints","translate.ru_es","calls.dial","calls.history",
+  "training.checkpoints","training.merge","training.import",
+  "training.activate","training.rollback","translate.ru_es","calls.dial","calls.history",
   "media.player","browser.open","images.generate","system.update",
   "system.backup","system.pc_control","mobile.connect"
  ];

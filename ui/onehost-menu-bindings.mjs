@@ -152,6 +152,23 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     menu=mountSelfBuilderMenuV2({root,documentRef:doc,getCurrentSection:()=>doc.getElementById('detail-title')?.textContent?.trim(),
       ownerApprovedRoute:(section,route,action)=>SELFBUILDER_MENU.some(x=>x.section===section&&x.routeId===route&&x.actionId===action),
       getTrustedState:action=>states[action],getTrainingJobs:()=>trainingJobs,
+      invokeP03Queue:async()=>{
+        root.append(status,detail,actions);detail.hidden=true;
+        const reply=await client.request('models.queue',{});
+        if(!disposed&&doc.getElementById('detail-title')?.textContent?.trim()==='РАЗВИТИЕ')display(reply);
+        return reply.routeId==='models.queue'&&reply.state==='COMPLETED'&&Array.isArray(reply.result?.jobs)
+          ? {ack:true,jobs:reply.result.jobs}
+          : {ack:false,errorCode:reply.errorCode||'P03_QUEUE_UNAVAILABLE'};
+      },
+      invokeP03Cancel:async jobId=>{
+        const reply=await client.request('models.cancel',{jobId});
+        // Native ACK confirms STOP request acceptance, not job termination.
+        return reply.routeId==='models.cancel'&&
+          (reply.state==='STOP_REQUESTED'||
+           (reply.state==='COMPLETED'&&reply.result?.cancelled===true))
+          ? {ack:true,state:'STOP_REQUESTED'}
+          : {ack:false,errorCode:reply.errorCode||'P03_STOP_UNVERIFIED'};
+      },
       invokeNative:async request=>{
         root.append(status,detail,actions);detail.hidden=true;
         const scope=context();

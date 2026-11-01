@@ -321,7 +321,7 @@ export function installNoxCinemaFX({root,orbs,controls=[],panels=[],profile="BAL
       }
       particleCount=particles.length;
       // A slower ECO policy must not inherit MAX's imminent burst.
-      if(PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
+      if(newPolicy.fps>0 && PROFILES[next].minimumBurstMs>PROFILES[mode].minimumBurstMs){
         for(const orb of each)orb.nextBurst=Math.max(orb.nextBurst,
           (lastFrame||initialNow)+newPolicy.minimumBurstMs);
       }

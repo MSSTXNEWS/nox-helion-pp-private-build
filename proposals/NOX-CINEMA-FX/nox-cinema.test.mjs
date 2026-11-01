@@ -294,3 +294,31 @@ test("E01-W2-R16-01 hostile native event getters cannot crash the host bus",()=>
   fx.destroy();
   assert.equal(o.root.dataset.noxFxState,undefined);
 });
+
+test("EV-B05 REGRESSION: REDUCED to MAX resumes original D02 orbital bursts",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});
+  assert.equal(fx.setProfile("REDUCED"),true);
+  assert.equal(o.pending,0);
+  assert.equal(fx.setProfile("MAX"),true);
+  o.tick(12000);
+  assert.ok(fx.snapshot().emitted>=2,"REDUCED must not poison nextBurst with Infinity");
+  assert.ok(fx.snapshot().particles<=PROFILES.MAX.maxParticles);
+  fx.destroy();
+});
+test("EV-B05 REGRESSION: multiple REDUCED transitions retain original GPU cap",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});
+  for(let i=0;i<3;i++){assert.equal(fx.setProfile("REDUCED"),true);assert.equal(fx.setProfile("MAX"),true);}
+  o.tick(12000);
+  assert.ok(fx.snapshot().emitted>=2);
+  assert.ok(fx.snapshot().particles<=PROFILES.MAX.maxParticles);
+  fx.destroy();
+});
+test("EV-B05 REGRESSION: OS reduced-motion still prevents decorative RAF",()=>{
+  const o=fakeScene(),fx=installNoxCinemaFX({root:o.root,orbs:o.orbs,profile:"MAX",random:()=>.25});
+  o.reduced(true);fx.setProfile("MAX");
+  o.tick(12000);
+  assert.equal(o.pending,0);
+  assert.equal(fx.snapshot().profile,"REDUCED");
+  assert.equal(fx.snapshot().particles,0);
+  fx.destroy();
+});

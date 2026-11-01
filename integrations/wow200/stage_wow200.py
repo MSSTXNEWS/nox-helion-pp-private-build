@@ -65,7 +65,7 @@ P01_OWNER_BLOBS = {
     "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "6f86e6ac92f3e3b55d71f4298eb2269eb7cdd0ee",
     "proposals/P01/WOW-MAX10/p01-cinematic-menu.css": "7205f4b747ed6b95856e0207a9b52cce29f9d118",
     "proposals/P01/WOW-MAX10/scene-contract.mjs": "4f273275113b4f2045f5249f1b93067512c13b22",
-    "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
+    "proposals/P01/WOW-MAX10/route-dispatch.mjs": "c03eee70d77a38f76c3a0307a8fee5932065c153",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
     "proposals/P01/WOW-MAX10/p01-visual-approval.mjs": "1f8a55ac2f579f544a9f00471aa187555c8e6dcd",
     "proposals/P01/WOW-MAX10/p01-mode-controller.mjs": "9301c32300cc64614fc8530b40bd3b3bd2cb1e65",

@@ -94,7 +94,7 @@ export function p01ReadinessResult(action,receipt){
 const VALID=new Set(['VERIFIED','RUNNING','IDLE','PAUSED','HOLD','OFFLINE','NOT_INSTALLED','ERROR','PENDING','AVAILABLE','NATIVE_REQUEST_AVAILABLE']);
 function status(value){return VALID.has(value)?value:'HOLD';}
 function make(doc,tag,cls,text){const x=doc.createElement(tag);if(cls)x.className=cls;if(text)x.textContent=text;return x;}
-export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerApprovedRoute,documentRef,getCurrentSection,getTrainingJobs=()=>[]}){
+export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerApprovedRoute,documentRef,getCurrentSection,getTrainingJobs=()=>[],invokeP03Queue=null,invokeP03Cancel=null}){
   if(!root || typeof invokeNative!=='function' || typeof getTrustedState!=='function'||
      typeof ownerApprovedRoute!=='function')throw Error('NOX_NATIVE_MENU_HOST_REQUIRED');
   const doc=documentRef||root.ownerDocument;
@@ -147,12 +147,66 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   diagnostic.type='button';diagnostic.dataset.noxReadiness='native-only';
   const diagnosticList=make(doc,'ul','nox-sb-sourcehub__list');
   diagnosticList.setAttribute('aria-label','Результаты проверки локального ИИ');
-  sourceHub.append(sourceTitle,sourceLead,diagnostic,diagnosticList,sourceGrid,sourceStatus,sourceList);
+  const queueButton=make(doc,'button','nox-sb-tile','Проверить очередь моделей · P03');
+  queueButton.type='button';queueButton.dataset.noxP03Queue='native-only';
+  queueButton.disabled=typeof invokeP03Queue!=='function';
+  queueButton.dataset.state=queueButton.disabled?'HOLD':'IDLE';
+  const queueStatus=make(doc,'p','nox-sb-feedback','P03 · ожидание native ACK');
+  queueStatus.setAttribute('role','status');queueStatus.setAttribute('aria-live','polite');
+  const queueStops=make(doc,'div','nox-sb-grid');queueStops.dataset.noxP03StopList='native-only';
+  sourceHub.append(sourceTitle,sourceLead,diagnostic,diagnosticList,queueButton,queueStatus,queueStops,sourceGrid,sourceStatus,sourceList);
   const feedback=make(doc,'p','nox-sb-feedback','Ожидание состояния ядра · HOLD');
   feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
   const task=make(doc,'textarea','nox-sb-task');task.maxLength=3000;task.minLength=15;task.placeholder='Задача для локальной модели программиста';task.setAttribute('aria-label','Задача программисту');
   const jobs=make(doc,'select','nox-sb-job');jobs.setAttribute('aria-label','Подтверждённое задание FORGE');
-  const buttons=[];let destroyed=false;let diagnosticBusy=false;const busy=new Set();
+  const buttons=[];let destroyed=false;let diagnosticBusy=false;let queueBusy=false;const busy=new Set();
+  let queueViewEpoch=0;
+  queueButton.addEventListener('click',async()=>{
+    if(destroyed||queueBusy||typeof invokeP03Queue!=='function')return;
+    const epoch=++queueViewEpoch;
+    queueBusy=true;queueButton.disabled=true;queueButton.dataset.state='PENDING';
+    queueStops.replaceChildren();
+    queueStatus.textContent='REQUESTED · P03 · ожидается native ACK';
+    try{
+      const receipt=await invokeP03Queue();
+      if(destroyed||epoch!==queueViewEpoch)return;
+      if(receipt?.ack!==true||!Array.isArray(receipt.jobs)){
+        queueStatus.textContent='HOLD · P03 · '+(receipt?.errorCode||'NATIVE_QUEUE_UNAVAILABLE');return;
+      }
+      queueStatus.textContent='P03 · '+receipt.jobs.length+' заданий · STOP только по native ACK';
+      if(typeof invokeP03Cancel!=='function')return;
+      const seen=new Set();
+      for(const job of receipt.jobs.slice(0,16)){
+        const jobId=job?.id;
+        if(typeof jobId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(jobId)||
+           seen.has(jobId)||!['queued','running','downloading'].includes(String(job.state).toLowerCase()))continue;
+        seen.add(jobId);
+        const stop=make(doc,'button','nox-sb-tile','STOP · '+jobId);
+        stop.type='button';stop.dataset.noxP03Stop=jobId;stop.dataset.state='IDLE';
+        stop.addEventListener('click',async()=>{
+          if(destroyed||stop.disabled)return;
+          const stopEpoch=queueViewEpoch;
+          stop.disabled=true;stop.dataset.state='PENDING';
+          queueStatus.textContent='STOP REQUESTED · P03 · ожидается native ACK';
+          try{
+            const result=await invokeP03Cancel(jobId);
+            if(destroyed||stopEpoch!==queueViewEpoch)return;
+            if(result?.ack===true&&result.state==='STOP_REQUESTED'){
+              stop.dataset.state='STOP_REQUESTED';
+              queueStatus.textContent='STOP REQUESTED · '+jobId+' · обновите очередь для проверки';
+            }else{
+              stop.disabled=false;stop.dataset.state='HOLD';
+              queueStatus.textContent='HOLD · P03 STOP · '+(result?.errorCode||'NATIVE_STOP_UNVERIFIED');
+            }
+          }catch(_){if(!destroyed&&stopEpoch===queueViewEpoch){
+            stop.disabled=false;stop.dataset.state='HOLD';queueStatus.textContent='HOLD · P03 STOP · нет ACK';
+          }}
+        });
+        queueStops.append(stop);
+      }
+    }catch(_){if(!destroyed&&epoch===queueViewEpoch)queueStatus.textContent='HOLD · P03 · native не ответил';}
+    finally{queueBusy=false;if(!destroyed){queueButton.disabled=false;queueButton.dataset.state='IDLE';}}
+  });
   // Zero download / zero new agent: owner-approved task primers feed the existing
   // SELF-BUILDER proposer after a separate explicit click and native consent.
   const taskPresets=Object.freeze([

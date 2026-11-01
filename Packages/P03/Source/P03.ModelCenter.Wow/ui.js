@@ -316,6 +316,9 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
        (numeric(job.totalBytes)===null||total>=job.totalBytes)){
       job.completedBytes=done;job.totalBytes=total;
     }
+    // A real native started/progress event advances Queued to Running; never infer installation.
+    // Terminal and Cancelling protections above still reject stale lifecycle frames.
+    if(['started','progress'].includes(evt.phase)&&job.state==='Queued')job.state='Running';
     const terminal={completed:'Completed',failed:'Failed',cancelled:'Cancelled'}[evt.phase];
     if(terminal)job.state=terminal;
   }
