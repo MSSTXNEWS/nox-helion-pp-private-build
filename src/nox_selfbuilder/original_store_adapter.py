@@ -169,7 +169,7 @@ class OriginalStoreChatAdapter:
                 'optimizer_sha256': seed['optimizer_sha256'],
                 'weights_changed': False, 'native_acceptance': False}
 
-def ingest_verified_knowledge(self, tenant, principal, chat_id, *, evidence, text,
+    def ingest_verified_knowledge(self, tenant, principal, chat_id, *, evidence, text,
                                   authorize, stopped, find_saved, write_saved):
         """Admit reviewed DATA to the native S03 owner, never create a second DB.
         The OneHost caller binds its existing original-S03 find/write primitives.
