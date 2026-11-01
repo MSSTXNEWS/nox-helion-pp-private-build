@@ -270,6 +270,30 @@ exit 0"""
     fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
                "-ExecutionPolicy","Bypass","-File",str(script),
                "-InstallRoot",str(install)],80)
+    report["installer_lifecycle"]["webview2_first_postinstall_preflight"]=fresh
+    if fresh["code"]!=0:
+        reason=fresh["stdout_tail"]+"\n"+fresh["stderr_tail"]
+        require("P01_WEBVIEW2_RUNTIME_MISSING" in reason,
+                "T06_WEBVIEW2_POSTINSTALL_UNRELATED_PREFLIGHT_HOLD")
+        if kind=="evergreen-bootstrapper":
+            # Signed bootstrapper can exit successfully before runtime is usable.
+            # Retry only with the *different* official x64 standalone, also
+            # verifying its Authenticode chain and Microsoft Corporation signer.
+            target=download_microsoft(
+                "https://go.microsoft.com/fwlink/?linkid=2124701",
+                "MicrosoftEdgeWebView2RuntimeInstallerX64.exe",20000000,350000000)
+            require(verify_official_installer(target,"evergreen-standalone-x64"),
+                    "T06_WEBVIEW2_MICROSOFT_SIGNATURE_HOLD")
+            fallback=run([str(target),"/silent","/install"],290)
+            report["installer_lifecycle"]["webview2_standalone_fallback"]={
+                "exit_code":fallback["code"],"signed_microsoft":True,
+                "kind":"evergreen-standalone-x64"}
+            require(fallback["code"]==0,
+                    "T06_WEBVIEW2_STANDALONE_RUNTIME_PROVISION_FAILED")
+            fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
+                       "-ExecutionPolicy","Bypass","-File",str(script),
+                       "-InstallRoot",str(install)],80)
+    report["installer_lifecycle"]["webview2_final_postinstall_preflight"]=fresh
     require(fresh["code"]==0,"T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL")
     return fresh
 
