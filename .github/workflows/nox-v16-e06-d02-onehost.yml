@@ -267,17 +267,15 @@ jobs:
           $name='microsoft.windowsappsdk.1.8.260921001.nupkg'
           $url='https://api.nuget.org/v3-flatcontainer/microsoft.windowsappsdk/1.8.260921001/'+$name
           $pkg=Join-Path $cache $name
-          $receipt=[ordered]@{schema='NOX-EFINAL-NUGET-PIN-V1'; package='Microsoft.WindowsAppSDK'; version='1.8.260921001'; source=$url; sha256=$null; bytes=$null; source_sha512_match=$false; nuget_signature_exit=$null; status='HOLD'; error=$null; execute_or_install=$false}
+          $receipt=[ordered]@{schema='NOX-EFINAL-NUGET-PIN-V1'; package='Microsoft.WindowsAppSDK'; version='1.8.260921001'; source=$url; sha256=$null; bytes=$null; source_sha256_pin_matched=$false; nuget_signature_exit=$null; status='HOLD'; error=$null; execute_or_install=$false}
           try {
             Invoke-WebRequest -Uri $url -OutFile $pkg -TimeoutSec 90 -ErrorAction Stop
             $size=(Get-Item -LiteralPath $pkg).Length
             if ($size -lt 1000 -or $size -gt 20971520) { throw 'NUGET_PINNED_PACKAGE_SIZE_HOLD' }
             $receipt.bytes=$size
             $receipt.sha256=(Get-FileHash -LiteralPath $pkg -Algorithm SHA256).Hash.ToLowerInvariant()
-            $sha512Official=([string](Invoke-WebRequest -Uri ($url+'.sha512') -TimeoutSec 45 -ErrorAction Stop).Content).Trim()
-            $sha512Actual=[Convert]::ToBase64String([Convert]::FromHexString((Get-FileHash -LiteralPath $pkg -Algorithm SHA512).Hash))
-            if (-not $sha512Official -or $sha512Actual -cne $sha512Official) { throw 'NUGET_PINNED_PACKAGE_SHA512_MISMATCH' }
-            $receipt.source_sha512_match=$true
+            if ($receipt.sha256 -cne 'ee0c5218ded2dff2b5a40bd2fd15a5d91ae66fc612ab1ad0b9c66bf13fc6193a') { throw 'NUGET_PINNED_PACKAGE_SHA256_MISMATCH' }
+            $receipt.source_sha256_pin_matched=$true
             $signatureOutput=(& dotnet nuget verify $pkg --all 2>&1 | Out-String)
             $receipt.nuget_signature_exit=$LASTEXITCODE
             if ($LASTEXITCODE -ne 0) { throw ('NUGET_PINNED_PACKAGE_SIGNATURE_HOLD '+$signatureOutput.Substring(0,[Math]::Min(400,$signatureOutput.Length))) }
