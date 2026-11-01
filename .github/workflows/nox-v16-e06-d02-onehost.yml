@@ -50,8 +50,8 @@ jobs:
           python integrations/wow200/stage_wow200.py work/e06/staged/R11 integrations/wow200
           if ($LASTEXITCODE -ne 0) { throw 'SAME_R11_D02_STAGE_HOLD' }
           $receipt=Get-Content work/e06/staged/WOW200_STAGE_RECEIPT.json -Raw | ConvertFrom-Json
-          # Same-source E01 stage unit test proves 71 copied receipt entries, including the atomic MENU V2 bundle.
-          if ($receipt.count -ne 71 -or $receipt.menu_v2_native_ui_staged -ne $true -or $receipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+          # Stage 78 exact sources: legacy WOW200 + MENU V2 + seven P01 MENU10 modules; native activation still NOT_RUN.
+          if ($receipt.count -ne 78 -or $receipt.p01_owner_source_staged -ne $true -or $receipt.p01_owner_native_mount_activated -ne $false -or $receipt.p01_owner_native_route_e2e -cne 'NOT_RUN' -or $receipt.menu_v2_native_ui_staged -ne $true -or $receipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
               $receipt.legacy_d02_runtime_imported -ne $false -or $receipt.release_accepted -ne $false) {
             throw 'D02_STAGE_ACTIVE_IMPORT_RECEIPT_HOLD'
           }
