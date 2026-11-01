@@ -28,10 +28,18 @@ class A1NativeSource(unittest.TestCase):
             self.assertIn(action, wpf)
         self.assertIn("payload.EnumerateObject().Count() != 1", wpf)
         self.assertIn("or dest == \"nox_selfbuilder/a1_native_command.py\"", stage)
+        self.assertIn("or dest == \"nox_selfbuilder/a1_existing_components.py\"", stage)
+        self.assertIn("build_existing_a1_command(builder, owner_ports)", owner)
+        self.assertIn("A1_NATIVE_SIGNED_OWNER_PORTS_HOLD", owner)
+        self.assertIn("native_a_owner_components=native_a_owner_components", owner)
+        self.assertIn("A1_R2_NATIVE_COMPONENTS_SOURCE_SHA_REQUIRED", builder)
+        self.assertIn("'--hidden-import','nox_selfbuilder.a1_existing_components'", builder)
         owner_pin = re.findall(r"\('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '([0-9a-f]{40})'\)", stage)
         donor_pin = re.findall(r"\('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '([0-9a-f]{40})'\)", stage)
         self.assertEqual(owner_pin, [blob(ROOT / "coordination/e06/e06_native_stdio_owner.py")])
         self.assertEqual(donor_pin, [blob(ROOT / "src/nox_selfbuilder/a1_native_command.py")])
+        factory_pin = re.findall(r"\('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '([0-9a-f]{40})'\)", stage)
+        self.assertEqual(factory_pin, [blob(ROOT / "src/nox_selfbuilder/a1_existing_components.py")])
 
 if __name__ == "__main__":
     unittest.main()

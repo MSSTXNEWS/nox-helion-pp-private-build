@@ -12,8 +12,9 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '4d88533a9d9a776d6e6911099e6c146f76d9976b'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '7976dbe03bd6392cb2c502c3f97c81aa8cb288a8'),
     ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'e60431d7ef93402016b2bed04f81945895db8092'),
+    ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '0113b3e857f2ba55b74a02fcc3a76a24453b14e0'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
@@ -110,7 +111,8 @@ def stage(source:Path)->dict:
                     pyinstaller_destination=str(Path(dest).parent))
                     for rel,dest,_blob in ADDONS
                     if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")
-                    or dest == "nox_selfbuilder/a1_native_command.py"],
+                    or dest == "nox_selfbuilder/a1_native_command.py"
+                    or dest == "nox_selfbuilder/a1_existing_components.py"],
                 native_python_source_smoke_verified_separately=True,
                 installed_windows_exe_accepted=False)
 

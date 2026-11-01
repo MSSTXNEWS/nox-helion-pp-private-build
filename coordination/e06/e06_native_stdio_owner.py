@@ -15,6 +15,7 @@ from dataclasses import fields, replace
 from pathlib import Path
 from datetime import datetime, timezone
 from nox_selfbuilder.a1_native_command import A1NativeCommand, A1NativeHold
+from nox_selfbuilder.a1_existing_components import ExistingA1OwnerPorts, build_existing_a1_command
 
 from nox_native_bridge import NoxPackHost, NativeSession, BoundPort, APPROVED_NATIVE_POLICY
 from p02_native_ingress import NativeIngress
@@ -196,9 +197,16 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     # A signed Windows-native components factory is mandatory for boot; the
     # existing Python pipe MUST NOT invent signed policy or install a scheduler.
     def exact_native_a_components(session):
+        # Only the original, out-of-band Windows owner may supply native ports.
+        # A renderer dictionary or user-authored config can never become policy.
         if not callable(native_a_owner_components):
             raise A1NativeHold("A1_NATIVE_SIGNED_COMPONENTS_FACTORY_HOLD")
-        return native_a_owner_components(session)
+        owner_ports = native_a_owner_components(session)
+        if type(owner_ports) is not ExistingA1OwnerPorts:
+            raise A1NativeHold("A1_NATIVE_SIGNED_OWNER_PORTS_HOLD")
+        # Reuse the reviewed R2 assembly of ORIGINAL A1/FirstBoot objects. The
+        # command adapter here retains the existing single owner boot latch.
+        return build_existing_a1_command(builder, owner_ports)._components(session)
     a1_command = A1NativeCommand(
         builder=builder, components=exact_native_a_components,
         consent=lambda session, action: callable(native_approve) and
@@ -366,7 +374,7 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     return ingress
 
 
-def serve_existing_store(store, run_id: str, data_dir=None) -> int:
+def serve_existing_store(store, run_id: str, data_dir=None, *, native_a_owner_components=None) -> int:
     # This entry is invoked only by the original WPF private pipe. Its native
     # SID/origin/ACL bridge already obtained fresh per-action consent BEFORE
     # sending a frame; no page-supplied consent field is accepted by ingress.
@@ -375,7 +383,8 @@ def serve_existing_store(store, run_id: str, data_dir=None) -> int:
         session.validate()
         return session.tenant == "local" and session.principal == principal
     ingress = create_existing_ingress(store, run_id, data_dir=data_dir,
-                                       native_approve=private_pipe_approval)
+                                       native_approve=private_pipe_approval,
+                                       native_a_owner_components=native_a_owner_components)
     # stdout must contain ONLY authenticated binary P02 frames.
     try:
         serve_native_frames(ingress, sys.stdin.buffer, sys.stdout.buffer)
