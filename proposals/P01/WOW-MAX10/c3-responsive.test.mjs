@@ -24,3 +24,18 @@ test("C3 reduced motion change",()=>{const x=fixture();const h=installP01Adaptiv
 test("C3 restore data and handlers",()=>{const x=fixture();x.root.dataset.noxP01Layout="owner";
  const h=installP01Adaptive(x.root);h.destroy();assert.equal(x.root.dataset.noxP01Layout,"owner");
  assert.equal(x.listeners.size,0);assert.equal(x.motion.size,0);});
+
+test("C3 768px tablet / 1024px desktop class",()=>{
+ assert.equal(viewportClass(768,1024),"tablet");
+ assert.equal(viewportClass(1024,768),"tablet");
+});
+test("C3 DPI 200% and viewport switch remain metadata only",()=>{
+ const x=fixture();x.win.devicePixelRatio=2;
+ const h=installP01Adaptive(x.root);
+ assert.equal(x.root.dataset.noxP01Dpi,"200");
+ x.win.innerWidth=390;x.win.innerHeight=844;x.listeners.get("resize")();
+ assert.equal(x.root.dataset.noxP01Layout,"phone");
+ assert.equal(x.root.dataset.noxP01Orientation,"portrait");
+ h.destroy();
+ assert.equal(Object.hasOwn(x.root.dataset,"noxP01Dpi"),false);
+});
