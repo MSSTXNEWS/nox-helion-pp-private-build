@@ -169,6 +169,33 @@ def candidate_gate()->dict:
             "native_source_receipt":"OFFLINE_BACKBONE_PASS_LIVE_MODEL_"+native["live_model_status"],
             "manifest_files_checked":len(seen)}
 
+def webview2_registration_diagnostic()->dict:
+    """Read-only, non-authoritative registry evidence on the SAME Windows CI VM.
+
+    The original owner Preflight-InstallPath.ps1 alone decides PASS. This
+    probe distinguishes installed runtime vs a stale/incorrect registry view,
+    without adding new install attempts or accepting Microsoft Edge Stable.
+    """
+    import winreg
+    guid="{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+    suffix="Microsoft\\EdgeUpdate\\Clients\\"+guid
+    targets=(
+        ("HKLM_32_VIEW",winreg.HKEY_LOCAL_MACHINE,"SOFTWARE\\"+suffix,winreg.KEY_WOW64_32KEY),
+        ("HKLM_64_VIEW",winreg.HKEY_LOCAL_MACHINE,"SOFTWARE\\"+suffix,winreg.KEY_WOW64_64KEY),
+        ("HKCU_USER",winreg.HKEY_CURRENT_USER,"Software\\"+suffix,0),
+    )
+    result={}
+    for label,root,path,view in targets:
+        try:
+            with winreg.OpenKey(root,path,0,winreg.KEY_READ|view) as handle:
+                value,value_type=winreg.QueryValueEx(handle,"pv")
+            result[label]={"present":True,
+                           "pv":str(value)[:64] if value_type==winreg.REG_SZ else "",
+                           "value_type":value_type}
+        except OSError as exc:
+            result[label]={"present":False,"winerror":getattr(exc,"winerror",None)}
+    return result
+
 def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
                                    report:dict)->dict:
     """Only an opt-in disposable Windows CI host can provision official WebView2.
@@ -271,6 +298,12 @@ exit 0"""
                              "strict_preflight_status":status})
             if status!="RUNTIME_MISSING": break
         report["installer_lifecycle"]["webview2_"+label+"_strict_preflight_poll"]=attempts
+        # Explicit scope/readback before FAIL, no change to strict preflight.
+        registration=webview2_registration_diagnostic()
+        report["installer_lifecycle"]["webview2_"+label+"_registration_diagnostic"]=registration
+        print("T06_WEBVIEW2_REGISTRATION_DIAGNOSTIC "+json.dumps(
+            {"kind":label,"registry":registration,"strict_result":result["code"]},
+            sort_keys=True),flush=True)
         return result
 
     target=download_microsoft("https://go.microsoft.com/fwlink/p/?LinkId=2124703",
