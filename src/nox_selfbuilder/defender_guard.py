@@ -2,7 +2,7 @@
 
 Static PowerShell script, file path via process environment, no shell commands
 from scraped web pages, no exclusions, policy changes or auto-execution.
-A completed scan does NOT prove downloaded code is benign or license-cleared.
+A requested scan does NOT prove downloaded code is benign or license-cleared.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ try {
    @{state='DEFENDER_DETECTIONS_REQUIRE_REVIEW';count=$threats.Count}|ConvertTo-Json -Compress
    exit 8
  }
- @{state='DEFENDER_SCAN_COMPLETED_REVIEW_REQUIRED'}|ConvertTo-Json -Compress
+ @{state='DEFENDER_SCAN_REQUESTED_REVIEW_REQUIRED'}|ConvertTo-Json -Compress
  exit 0
 } catch {
  @{state='DEFENDER_UNAVAILABLE'}|ConvertTo-Json -Compress
@@ -58,7 +58,7 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
         platform = os.name
     if platform != "nt":
         return {"status": "HOLD", "reason": "DEFENDER_WINDOWS_ONLY",
-                "scan_completed": False, "source_executed": False}
+                "scan_requested": False, "source_executed": False}
     root = Path(staging_root)
     target = Path(path)
     if not root.is_dir() or root.is_symlink():
@@ -83,7 +83,7 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
                 timeout=120, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return {"status": "HOLD", "reason": "DEFENDER_SCAN_UNAVAILABLE",
-                "scan_completed": False, "source_executed": False,
+                "scan_requested": False, "source_executed": False,
                 "sha256": before}
     if _sha(safe) != before:
         raise DefenderHold("DEFENDER_POSTSCAN_SOURCE_CHANGED")
@@ -93,10 +93,10 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
     except (ValueError, UnicodeError, AttributeError):
         result = {}
     completed = (p.returncode == 0 and
-                 result.get("state") == "DEFENDER_SCAN_COMPLETED_REVIEW_REQUIRED")
+                 result.get("state") == "DEFENDER_SCAN_REQUESTED_REVIEW_REQUIRED")
     return {"schema": "NOX-DEFENDER-DONOR-RECEIPT-v1",
-            "status": "SCAN_COMPLETED_REVIEW_REQUIRED" if completed else "HOLD",
+            "status": "SCAN_REQUESTED_REVIEW_REQUIRED" if completed else "HOLD",
             "reason": None if completed else result.get("state", "DEFENDER_UNVERIFIED"),
-            "sha256": before, "scan_completed": completed,
+            "sha256": before, "scan_requested": completed,
             "malware_free_proven": False, "license_approved": False,
             "production_admitted": False, "source_executed": False}
