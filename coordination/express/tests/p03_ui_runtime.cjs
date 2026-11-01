@@ -4,10 +4,13 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const src=fs.readFileSync(path.resolve(__dirname,'../../../Packages/P03/Source/P03.ModelCenter.Wow/ui.js'),'utf8');
 class El{constructor(t='div'){this.tagName=t.toUpperCase();this.children=[];this.handlers={};this.textContent='';this.value='';this.checked=false;this.disabled=false;this.hidden=false;this.style={setProperty(){}};this.classList={add(){},remove(){},toggle(){}};this.dataset={}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(){}removeAttribute(){}addEventListener(k,fn){this.handlers[k]=fn}focus(){}}
 const els=new Map(),timers=new Map(),sent=[];let callback;let tick=0;
-const doc={getElementById(k){if(!els.has(k))els.set(k,new El());return els.get(k)},createElement:t=>new El(t),querySelectorAll:()=>[],addEventListener(){},activeElement:{tagName:'BODY'}};
+const doc={getElementById(k){if(!els.has(k))els.set(k,new El());return els.get(k)},createElement:t=>new El(t),querySelector:s=>s==='.topbar'?doc.getElementById('__fixture_topbar'):null,querySelectorAll:()=>[],addEventListener(){},activeElement:{tagName:'BODY'}};
 const win={chrome:{webview:{postMessage(x){sent.push(x)},addEventListener(k,fn){callback=fn}}}};
 const ctx=vm.createContext({document:doc,window:win,URL,setTimeout:(fn,ms)=>{timers.set(++tick,{fn,ms});return tick},clearTimeout:n=>timers.delete(n),console,Date,Math,Set,Map,JSON,Number});
 vm.runInContext(src,ctx,{filename:'P03.ModelCenter.Wow/ui.js'});
+// The real UI announces readiness after registering its native listener.
+// This is a lifecycle notification, not a user action or install command.
+assert.equal(sent.shift()?.type,'p03.ready.v1');
 const evalCode=s=>vm.runInContext(s,ctx),post=data=>callback({data});let total=0;
 function ok(value,msg){assert.ok(value,msg);total++}
 const seed=JSON.parse(JSON.stringify(evalCode('state.models'))),uuid='12345678-1234-1234-1234-123456789abc';
