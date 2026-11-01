@@ -103,6 +103,11 @@ class NativeIdeaLoop:
                     break
                 if self._save(session, c) is not True:
                     raise WormHold("GROWTH_S03_CANDIDATE_READBACK_REQUIRED")
+                # The callback may durably commit while STOP/reset arrives.
+                # Do not claim success or consume dedupe after the boundary.
+                if (self._stop() is not False or self._head() != head or
+                        self._authorized(session, "worm.candidate.persist") is not True):
+                    return self.status(reason="S03_COMMIT_AFTER_REVOKE_READBACK_REQUIRED")
                 self._saved += 1
             self._processed.add(key)
         return self.status()

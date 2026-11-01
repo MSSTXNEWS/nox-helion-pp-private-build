@@ -113,5 +113,16 @@ class AutonomousBootTests(unittest.TestCase):
                          "NATIVE_STOP_OR_HEAD_CHANGED_AFTER_S03")
         self.assertEqual(self.reads, [])
 
+    def test_native_stop_during_provider_research_requires_readback(self):
+        self.native_policy()
+        self.engine.boot("owner",now=NOW)
+        def provider_then_stop(task):
+            self.stop_requested=True
+            return []
+        self.swarm.providers['github_api']=provider_then_stop
+        state=self.engine.tick("owner",now=NOW)
+        self.assertEqual(state["status"],"HOLD")
+        self.assertTrue(state["native_readback_required"])
+
 if __name__ == "__main__":
     unittest.main()

@@ -131,7 +131,15 @@ class WormAutopilot:
         stop_state = self._native_stop_status()
         if stop_state is not None:
             return {**self._swarm.status(), "reason": stop_state}
-        return self._swarm.tick(session, now=now, max_tasks=MAX_NATIVE_TICK)
+        receipt = self._swarm.tick(session, now=now, max_tasks=MAX_NATIVE_TICK)
+        # A native STOP/reset or source update during provider I/O invalidates
+        # the cycle's success. Durable rows require original-S03 reconciliation.
+        if (self._stop() is not False or self._source_head() !=
+                policy["approved_source_head"]):
+            return {**receipt, "status": "HOLD",
+                    "reason": "NATIVE_STOP_OR_HEAD_CHANGED_DURING_RESEARCH",
+                    "native_readback_required": True}
+        return receipt
 
     def stop(self, session):
         return self._swarm.set_enabled(session, False)

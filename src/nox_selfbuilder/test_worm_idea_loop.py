@@ -115,5 +115,16 @@ class AutonomousIdeaTests(unittest.TestCase):
         self.assertEqual(self.receipts, [])
         self.assertEqual(result["distinct_p02_groups"], 0)
 
+    def test_s03_stop_after_commit_never_reports_saved(self):
+        def save_then_stop(session, row):
+            self.receipts.append(row)
+            self.stopped=True
+            return True
+        self.agent._save=save_then_stop
+        result=self.agent.tick("owner",now=NOW)
+        self.assertEqual(result["reason"],"S03_COMMIT_AFTER_REVOKE_READBACK_REQUIRED")
+        self.assertEqual(result["review_candidates_saved"],0)
+        self.assertEqual(result["distinct_p02_groups"],0)
+
 if __name__ == "__main__":
     unittest.main()
