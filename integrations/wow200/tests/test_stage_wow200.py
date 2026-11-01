@@ -65,7 +65,7 @@ class WowStageTests(unittest.TestCase):
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
-  self.assertEqual(len(receipt['files']),69)
+  self.assertEqual(len(receipt['files']),71)
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
   for relative in eng.MENU_V2_SHA256:
    staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
@@ -73,6 +73,7 @@ class WowStageTests(unittest.TestCase):
   home=(self.stage/'Assets/index.html').read_text()
   self.assertIn('creative/wow200/ui/onehost-menu-bindings.mjs',home)
   self.assertIn('creative/wow200/ui/selfbuilder-menu-v2.css',home)
+  self.assertIn('creative/wow200/ui/selfbuilder-wow-workbench.css',home)
   self.assertEqual(receipt['pack01_catalog_routes'],50)
   self.assertEqual((self.stage/'Assets/creative/wow200/pack01-catalog.json').read_bytes(),(self.root/'proposals/NOX-PACK01-50/catalog.json').read_bytes())
   for rel in eng.OWNER1_D02_ENGINE:
@@ -91,6 +92,21 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
+ def test_windows_menu_crlf_normalizes_to_exact_pinned_content(self):
+  path=self.root/'ui/selfbuilder-menu-v2.mjs'
+  original=path.read_bytes()
+  windows_bytes=original.replace(b'\n',b'\r\n')
+  path.write_bytes(windows_bytes)
+  stage(self.stage,self.src)
+  published=self.stage/'Assets/creative/wow200/ui/selfbuilder-menu-v2.mjs'
+  self.assertEqual(published.read_bytes(),original)
+  self.assertEqual(path.read_bytes(),windows_bytes)
+ def test_bare_carriage_return_is_rejected(self):
+  path=self.root/'ui/selfbuilder-menu-v2.mjs'
+  path.write_bytes(path.read_bytes().replace(b'\n',b'\r',1))
+  with self.assertRaisesRegex(ValueError,'MENU_V2_UNEXPECTED_CARRIAGE_RETURN'):
+   stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_original_pack01_catalog_is_pinned(self):
   file=self.root/'proposals/NOX-PACK01-50/catalog.json'
   file.write_text(file.read_text(encoding='utf-8')+'\\n',encoding='utf-8')

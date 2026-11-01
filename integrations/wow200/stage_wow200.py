@@ -53,10 +53,18 @@ MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.mjs': 'e8f020723209da94ad8c87acde573994fafd333f2b03179126a525ae1e371b54',
     'ui/selfbuilder-menu-v2.css': 'af78f7785d070a5f290139f0ff5c6c66644ef852342443573c7d93f57e7b3cde',
     'ui/onehost-menu-bindings.mjs': 'a6eb05562527e8fd9fbd8f637253146cb7593f7d8e9a18b4916a6cf38128db0d',
-    'ui/selfbuilder-wow-workbench.mjs': '7bdb916a89d71d508692e0e5a82396eb9bc459fc46e48c5c8f1e6cc29d509e35',
-    'ui/selfbuilder-wow-workbench.css': '5ff9b149903254adb6c22f4cf9f7fb8b73dcfa0f39e282f09321cecc18b169e2',
+    'ui/selfbuilder-wow-workbench.mjs': '95d3c8866c434b4118643c067321782e74acebcf40f3d3becf7d1cd5803fb4e0',
+    'ui/selfbuilder-wow-workbench.css': 'bad615430856cb1ce0201bc21b77f33258d0d5fd3cbc7fa12b1f63af086dea24',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
 }
+
+def canonical_menu_bytes(path: Path) -> bytes:
+    # Windows checkout may transcode LF to CRLF. Accept ONLY exact newline
+    # normalization of SHA-pinned text; reject bare CR and ALL other drift.
+    raw = path.read_bytes()
+    if b'\r' in raw.replace(b'\r\n', b''):
+        raise ValueError("MENU_V2_UNEXPECTED_CARRIAGE_RETURN")
+    return raw.replace(b'\r\n', b'\n')
 
 def menu_stage_plan(repo: Path, destination: Path) -> list:
     plans=[]
@@ -64,7 +72,7 @@ def menu_stage_plan(repo: Path, destination: Path) -> list:
         origin=repo/relative
         if (not origin.is_file() or origin.is_symlink() or
                 any(parent.is_symlink() for parent in origin.parents if parent != repo) or
-                hashlib.sha256(origin.read_bytes()).hexdigest()!=expected):
+                hashlib.sha256(canonical_menu_bytes(origin)).hexdigest()!=expected):
             raise ValueError("MENU_V2_ATOMIC_SOURCE_PIN_HOLD:"+relative)
         plans.append((origin,destination/"ui"/origin.name))
     return plans
@@ -122,7 +130,9 @@ def stage(root:Path, source:Path)->dict:
     dest=root/"Assets/creative/wow200"
     if dest.exists():raise ValueError("WOW200_ALREADY_INSTALLED_HOLD")
     plans=[(pack01_catalog,dest/"pack01-catalog.json")]
-    plans.extend(menu_stage_plan(owner1_root,dest))
+    menu_plans=menu_stage_plan(owner1_root,dest)
+    plans.extend(menu_plans)
+    menu_origins={origin for origin,_ in menu_plans}
     for rel, expected in files.items():
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
             raise ValueError("UNSAFE_WOW_SOURCE_PATH")
@@ -176,7 +186,10 @@ def stage(root:Path, source:Path)->dict:
         dest.mkdir(parents=True)
         for origin,target in plans:
             target.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copyfile(origin,target)
+            if origin in menu_origins:
+                target.write_bytes(canonical_menu_bytes(origin))
+            else:
+                shutil.copyfile(origin,target)
             copied.append({"path":str(target.relative_to(root)).replace("\\","/"),
                            "sha256":digest(target),"bytes":target.stat().st_size})
         pre=digest(html);old_home_pre=digest(home_html)
