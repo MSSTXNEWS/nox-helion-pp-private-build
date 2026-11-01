@@ -65,7 +65,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
   diagnostic-onehost:
-    if: github.event_name == 'workflow_dispatch'
+    # Reuse the existing Windows job for canonical PR162 so that the first
+    # real WPF/NSIS failure and receipts are visible in GitHub Actions.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.number == 162)
     needs: visual-source-stage
     env:
       NOX_NATIVE_SMOKE_MODEL: ${{ inputs.native_smoke_model }}
