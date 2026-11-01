@@ -76,7 +76,7 @@ class WowStageTests(unittest.TestCase):
   self.assertEqual(receipt['p01_owner_source_git_blobs'],eng.P01_OWNER_BLOBS)
   for relative in eng.P01_OWNER_BLOBS:
    target=self.stage/'Assets/creative/wow200'/relative
-   self.assertEqual(target.read_bytes(),(self.root/relative).read_bytes())
+   self.assertEqual(target.read_bytes(),eng.pinned_source_bytes(self.root/relative,eng.P01_OWNER_BLOBS[relative]))
   for relative in eng.MENU_V2_SHA256:
    staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
    self.assertEqual(staged.read_bytes(),eng.canonical_menu_bytes(self.root/relative))
@@ -110,7 +110,8 @@ class WowStageTests(unittest.TestCase):
   self.assertFalse((self.stage/'Assets/creative/wow200').exists())
  def test_p01_menu10_crlf_preserves_exact_approved_modules(self):
   file=self.root/'proposals/P01/WOW-MAX10/scene-contract.mjs'
-  original=file.read_bytes()
+  original=eng.pinned_source_bytes(file,eng.P01_OWNER_BLOBS['proposals/P01/WOW-MAX10/scene-contract.mjs'])
+  self.assertIsNotNone(original)
   file.write_bytes(original.replace(b'\n',b'\r\n'))
   receipt=stage(self.stage,self.src)
   target=self.stage/'Assets/creative/wow200/proposals/P01/WOW-MAX10/scene-contract.mjs'
