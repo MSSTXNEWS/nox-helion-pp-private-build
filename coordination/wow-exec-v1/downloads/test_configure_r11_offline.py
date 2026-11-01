@@ -37,4 +37,5 @@ class Offline(unittest.TestCase):
    self.assertFalse(r['installed_onehost']);self.assertFalse(r['windows_installers_executed']);self.assertEqual(r['runtime_js_engines_activated'],[])
    import xml.etree.ElementTree as ET
    u=ET.parse(out/'NuGet.Config').getroot();self.assertEqual(u.find('packageSources/add').attrib['key'],'NOX_R11_PINNED_LOCAL')
+   self.assertEqual(u.find('packageSources/add').attrib['value'],'./nuget-feed')
 if __name__=='__main__':unittest.main()

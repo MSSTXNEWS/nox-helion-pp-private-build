@@ -108,7 +108,7 @@ def provision(cache:Path,lock:dict,out:Path,archive:Path|None=None):
         config=ET.Element('configuration')
         sources=ET.SubElement(config,'packageSources')
         ET.SubElement(sources,'clear')
-        ET.SubElement(sources,'add',{'key':'NOX_R11_PINNED_LOCAL','value':str(out/'nuget-feed')})
+        ET.SubElement(sources,'add',{'key':'NOX_R11_PINNED_LOCAL','value':'./nuget-feed'})
         ET.ElementTree(config).write(tmp/'NuGet.Config',encoding='utf-8',xml_declaration=True)
         receipt={'schema':'NOX_R11_OFFLINE_READY_V1','source_count':len(checked),'local_nuget_count':16,
                  'fluent_icons':6,'npm_source_cache':archive is not None,
