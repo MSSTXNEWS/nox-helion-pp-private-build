@@ -4,6 +4,7 @@
 import {validateScene} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MODES=new Set(["ECO","BALANCED","MAX","REDUCED"]);
+const APPROVED_MENU_TILES=Object.freeze(["work","intelligence","knowledge","creative","people","development","world","system"]);
 const OWNER_MENU_WORLDS=Object.freeze(["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"]);
 const validId=x=>typeof x==="string"&&ID.test(x);
 const inside=(root,node)=>!!node&&node.nodeType===1&&root.contains(node);
@@ -20,18 +21,25 @@ function checkEntries(root,items,expected,kind){
   return {elements,routes};
 }
 export function validateOwnerP01(spec){
-  const {root,orbs,menu,buttons,secondary,hostPort}=spec||{};
+  const {root,orbs,menu,logicalMenu,buttons,secondary,hostPort}=spec||{};
   if(!root||root.nodeType!==1||typeof root.contains!=="function"||
      !root.ownerDocument?.addEventListener)throw Error("ORIGINAL_ROOT_REQUIRED");
   validateScene(orbs);
   if(orbs.some(x=>!inside(root,x.element)))throw Error("ORIGINAL_NINE_ORBS_REQUIRED");
-  const m=checkEntries(root,menu,10,"TEN_MENU");
-  if(menu.some((entry,index)=>entry.id!==OWNER_MENU_WORLDS[index]))
-    throw Error("TEN_MENU_OWNER_WORLD_IDENTITY_HOLD");
+  // Eight approved visual tiles are immutable; ten old navigation worlds
+  // remain real submenu DOM nodes, not two invented top-level graphics.
+  const m=checkEntries(root,menu,8,"EIGHT_MENU_TILES");
+  if(menu.some((entry,index)=>entry.id!==APPROVED_MENU_TILES[index]))
+    throw Error("EIGHT_MENU_OWNER_TILE_IDENTITY_HOLD");
+  const l=checkEntries(root,logicalMenu,10,"TEN_LOGICAL_ROUTES");
+  if(logicalMenu.some((entry,index)=>entry.id!==OWNER_MENU_WORLDS[index] ||
+      !APPROVED_MENU_TILES.includes(entry.parentTileId)))
+    throw Error("TEN_LOGICAL_MENU_PARENT_OR_WORLD_HOLD");
   const b=checkEntries(root,buttons,5,"FIVE_BUTTONS");
-  if([...b.routes].some(route=>m.routes.has(route)))
+  const allRoutes=[...m.routes,...l.routes,...b.routes];
+  if(new Set(allRoutes).size!==allRoutes.length)
     throw Error("MENU_BUTTON_ROUTE_COLLIDE");
-  const nodes=[...orbs.map(x=>x.element),...m.elements,...b.elements];
+  const nodes=[...orbs.map(x=>x.element),...m.elements,...l.elements,...b.elements];
   if(new Set(nodes).size!==nodes.length)throw Error("ORIGINAL_NODES_COLLIDE");
   if(secondary!=null&&(!inside(root,secondary)||
      secondary.dataset?.noxWowSlot!=="secondary"||
@@ -41,7 +49,7 @@ export function validateOwnerP01(spec){
      typeof hostPort?.invokeRoute!=="function"||
      typeof hostPort?.subscribeNative!=="function")
     throw Error("E06_NATIVE_PORT_REQUIRED");
-  return Object.freeze({helion:1,cores:8,menu:10,buttons:5,
+  return Object.freeze({helion:1,cores:8,menuTiles:8,logicalMenuRoutes:10,buttons:5,
     wow51to200:secondary!=null,existingNodesPreserved:true});
 }
 export function shortcutRoute(e,{homeActive=false,searchRoute,fullscreenRoute,escapeRoute}={}){
