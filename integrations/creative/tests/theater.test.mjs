@@ -30,8 +30,11 @@ function harness(query='?project=demo_1') {
 test('actual HTML and JS share the same control IDs and native projector policy',()=>{
   for(const id of ['file','subtitles','play','pause','full','screens','status','video','poster','stage','title','space'])
     assert.match(html,new RegExp('id="'+id+'"'));
-  assert.match(html,/work\.png/);
-  assert.doesNotMatch(html,/menu_sections\.png/);
+  // WORK/MENU/HOME PNGs are composed screenshots with their own buttons/text.
+  // A secondary cinema scene must not paint those interfaces behind live controls.
+  assert.doesNotMatch(html,/url\(\s*["']?\.\.\/(?:work|home|menu_sections)\.png/i);
+  assert.match(html,/--glass:/);
+  assert.match(html,/radial-gradient/);
   assert.match(html,/prefers-reduced-motion/);
   assert.match(source,/nox_native_viewer/);
 });
