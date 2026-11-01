@@ -129,7 +129,11 @@ jobs:
           </Project>
           '@
             [IO.File]::WriteAllText((Join-Path $probe 'Block1Restore.csproj'),$project,(New-Object Text.UTF8Encoding($false)))
-            & dotnet restore (Join-Path $probe 'Block1Restore.csproj') --packages $cache --source $feed --source $source --disable-parallel --force --verbosity minimal
+            $nugetConfig = Join-Path $probe 'NuGet.Config'
+            $feedEscaped = [System.Security.SecurityElement]::Escape($feed)
+            $configXml = '<configuration><packageSources><clear/><add key="pinned-root" value="' + $feedEscaped + '"/><add key="nuget-org" value="https://api.nuget.org/v3/index.json" protocolVersion="3"/></packageSources></configuration>'
+            [IO.File]::WriteAllText($nugetConfig,$configXml,(New-Object Text.UTF8Encoding($false)))
+            & dotnet restore (Join-Path $probe 'Block1Restore.csproj') --packages $cache --configfile $nugetConfig --disable-parallel --force --verbosity minimal
             if($LASTEXITCODE -ne 0){throw 'OFFICIAL_NUGET_RESTORE_FAILED'}
             $required = @{
               'microsoft.windowsappsdk.base'='1.8.251216001'
@@ -153,7 +157,7 @@ jobs:
             foreach($p in $all){
               & dotnet nuget verify --all $p.FullName
               if($LASTEXITCODE -ne 0){throw "UNTRUSTED_NUGET_PACKAGE:$($p.Name)"}
-              $rel=$p.FullName.Substring($cache.Length+1).Replace('\\','/')
+              $rel=$p.FullName.Substring($cache.Length+1).Replace('\','/')
               $parts=$rel.Split('/')
               $url="https://api.nuget.org/v3-flatcontainer/$($parts[0])/$($parts[1])/$($p.Name)"
               $receipt.packages+= [ordered]@{path=$rel;bytes=$p.Length;sha256=(Get-FileHash -LiteralPath $p.FullName -Algorithm SHA256).Hash.ToLowerInvariant();verified='dotnet_nuget_verify_all_PASS';officialUrl=$url}
