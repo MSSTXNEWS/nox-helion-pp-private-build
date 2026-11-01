@@ -2,6 +2,7 @@
 // No second browser engine. No permission can be granted by external page content.
 using System;
 using System.Collections.Generic;
+using System.Net;
 
 namespace NoxHelion.P02;
 
@@ -50,6 +51,55 @@ public sealed class SpaceBrowserBoundary
     /// mappings, custom privileges, cookies, app-storage IDs or the chat principal.
     /// Host #6 must explicitly disable privileges for all external navigations/iframes.</summary>
     public static bool MayExposeHostObjects(Uri? documentSource) => false;
+
+    /// <summary>
+    /// Native-owner reviewed navigation policy for the ONE existing WebView2.
+    /// The caller must first detach every host object and native IPC bridge,
+    /// attest an isolated network boundary, and verify a fresh native gesture.
+    /// It must reapply this policy on EVERY redirect. This method never opens
+    /// a browser, mints consent, or trusts DOM-supplied allowlists.
+    /// </summary>
+    public static bool MayNavigateReviewedExternal(
+        Uri? target, IReadOnlyCollection<string>? nativeApprovedHttpsHosts,
+        bool freshNativeGesture, bool ipcDetached, bool hostObjectsRemoved,
+        bool networkIsolationAttested)
+    {
+        if (!freshNativeGesture || !ipcDetached || !hostObjectsRemoved ||
+            !networkIsolationAttested || target is null ||
+            !target.IsAbsoluteUri || !target.IsDefaultPort ||
+            !string.IsNullOrEmpty(target.UserInfo) ||
+            !string.Equals(target.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+            Classify(target) != SpaceOriginClass.ExternalWeb ||
+            nativeApprovedHttpsHosts is null || nativeApprovedHttpsHosts.Count == 0)
+            return false;
+
+        var host = target.IdnHost;
+        if (!IsReviewedPublicDnsHost(host)) return false;
+        foreach (var approved in nativeApprovedHttpsHosts)
+        {
+            if (IsReviewedPublicDnsHost(approved) &&
+                string.Equals(host, approved, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool IsReviewedPublicDnsHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host) || host.Length > 253 ||
+            host.StartsWith(".", StringComparison.Ordinal) ||
+            host.EndsWith(".", StringComparison.Ordinal) ||
+            host.Contains("..", StringComparison.Ordinal) ||
+            host.IndexOf('.') < 1 || IPAddress.TryParse(host, out _))
+            return false;
+        if (Uri.CheckHostName(host) != UriHostNameType.Dns) return false;
+        string[] reserved = { ".localhost", ".local", ".internal", ".invalid",
+            ".test", ".example", ".onion", ".arpa", ".lan", ".home" };
+        foreach (var suffix in reserved)
+            if (host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
+    }
 
     public static bool CanRenderInline(string mime) => mime switch
     {
