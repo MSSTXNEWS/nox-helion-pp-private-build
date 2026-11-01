@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def git_blob(path):
     data = path.read_bytes()
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\\0" + data).hexdigest()
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 class NativePinChain(unittest.TestCase):
     def test_native_addon_and_stage_pins_match_current_bytes(self):
@@ -21,8 +21,8 @@ class NativePinChain(unittest.TestCase):
         addon_sha = git_blob(addon_path)
         stage_sha = git_blob(stage_path)
         source_pin = re.findall(r'^ADDON_SHA="([0-9a-f]{40})"$', stage, re.M)
-        stage_pin = re.findall(r"@\\{p=\\$t06Stage;sha='([0-9a-f]{40})'", build)
-        addon_pin = re.findall(r"@\\{p=\\$t06Addon;sha='([0-9a-f]{40})'", build)
+        stage_pin = re.findall(r"@\{p=\$t06Stage;sha='([0-9a-f]{40})'", build)
+        addon_pin = re.findall(r"@\{p=\$t06Addon;sha='([0-9a-f]{40})'", build)
         self.assertEqual(source_pin, [addon_sha])
         self.assertEqual(stage_pin, [stage_sha])
         self.assertEqual(addon_pin, [addon_sha])
