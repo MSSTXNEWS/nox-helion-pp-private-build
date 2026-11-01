@@ -28,7 +28,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = a0bc34add0990b3f70bdbfd94fe52615193a4c08
+          # Owner1 D02 R09 accepted reduced-motion fix: retain exact Git source pin.
+          # Legacy a0bc34a is superseded only for this single renderer module.
+          # Do not relax CSS, WOW200 or SourceLock pins.
+          node --check proposals/NOX-CINEMA-FX/nox-cinema.mjs
+          test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = 7e4acf43c287b3578e38e0acab0266e0343132e3
+          grep -Fq 'root.dataset.noxFxMode=(preference?"REDUCED":mode).toLowerCase();' proposals/NOX-CINEMA-FX/nox-cinema.mjs
           test "$(git hash-object proposals/NOX-CINEMA-FX/nox-cinema.css)" = 77417160147607f2d7350209b865d86bfe49abd0
           test "$(git hash-object integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.mjs)" = f7724e99b37ccbc84f1756dc797980267d58ec4e
           test "$(git hash-object integrations/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css)" = 95b2562e8b6f5c07b785d3a381661d0dbfe5de83
