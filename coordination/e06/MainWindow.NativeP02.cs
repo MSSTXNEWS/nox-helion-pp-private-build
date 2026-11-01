@@ -23,7 +23,8 @@ public partial class MainWindow
         "helion.chat","core.chat","persona.chat","chat.model","chat.history",
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
-        "training.pause","training.resume","training.checkpoints","training.evaluate"
+        "training.pause","training.resume","training.checkpoints","training.evaluate",
+        "system.autostart"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -81,6 +82,20 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if(route=="system.autostart") {
+            if(payload.ValueKind != JsonValueKind.Object || payload.EnumerateObject().Count()!=1 ||
+                !payload.TryGetProperty("enabled",out var requested) ||
+                requested.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return new NativePipeResult("",false,null,"NOX_AUTOSTART_BOOLEAN_REQUIRED");
+            try {
+                cancel.ThrowIfCancellationRequested();
+                var path=Environment.ProcessPath ?? "";
+                var enabled=NoXAutostart.SetEnabled(path,requested.GetBoolean(),nativeConsent:true);
+                return new NativePipeResult("",true,
+                    JsonSerializer.SerializeToElement(new {enabled}),null);
+            } catch(OperationCanceledException) {throw;}
+              catch {return new NativePipeResult("",false,null,"NOX_AUTOSTART_NATIVE_HOLD");}
+        }
         if(route=="chat.stop") {
             _nativeModels?.StopMergedImport();
             _nativeModelsStop.Cancel();_nativeModelsStop.Dispose();
@@ -239,6 +254,14 @@ public partial class MainWindow
         if (route == "chat.stop" || route == "chat.model") return Task.FromResult(true);
         // Existing WPF native window, never browser-supplied consent.
         var label = route;
+        if(route=="system.autostart") {
+            if(payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("enabled",out var on) ||
+                on.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return Task.FromResult(false);
+            label=on.GetBoolean()?"Автозапуск NOX при входе в Windows: ВКЛ":
+                "Автозапуск NOX при входе в Windows: ВЫКЛ";
+        }
         if (route == "chat.commands") {
             if (!payload.TryGetProperty("action", out var action) ||
                 action.ValueKind != JsonValueKind.String) return Task.FromResult(false);

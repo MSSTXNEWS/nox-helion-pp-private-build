@@ -18,7 +18,7 @@ const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
   'selfbuilder.background.status','selfbuilder.background.enable','selfbuilder.background.disable',
   'selfbuilder.design.suggest','selfbuilder.design.review','selfbuilder.design.approve']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
-  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start']);
+  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
   'private_approved','native_approve','nativeConsent','admin']);
 
@@ -49,6 +49,9 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       if(disposed)return Promise.reject(Error('NOX_NATIVE_CLIENT_DISPOSED'));
       if(!ROUTES.has(route) || !payload || typeof payload!=='object' || Array.isArray(payload) ||
         Object.keys(payload).some(k=>AUTHORITY.has(k)))return Promise.reject(Error('NOX_NATIVE_REQUEST_DENIED'));
+      if(route==='system.autostart' &&
+        (Object.keys(payload).length!==1 || typeof payload.enabled!=='boolean'))
+        return Promise.reject(Error('NOX_AUTOSTART_BOOLEAN_REQUIRED'));
       if(route==='chat.commands' && !ACTIONS.has(payload.action) && payload.action!=='selfbuilder.capabilities')
         return Promise.reject(Error('NOX_MENU_ACTION_DENIED'));
       const modelKey=['models.pull','models.gguf.import'].includes(route)?'modelTag':
@@ -107,6 +110,16 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const detail=doc.createElement('pre');detail.className='nox-sb-result';detail.hidden=true;
   const actions=doc.createElement('div');actions.className='nox-sb-grid';actions.dataset.noxNativeActions='true';
   const statusRoot=root||doc.getElementById('status');statusRoot?.append(status,detail,actions);
+  const appendSystemAutostartButtons=()=>{
+    for(const button of actions.querySelectorAll?.('[data-native-route="system.autostart"]')||[])button.remove();
+    const currentWorld=doc.getElementById('detail-title')?.textContent||'';
+    if(!/(?:system|систем)/i.test(currentWorld))return;
+    for(const [label,value] of [['Автозапуск NOX · ВКЛ','true'],['Автозапуск NOX · ВЫКЛ','false']]){
+      const button=doc.createElement('button');button.type='button';button.className='nox-sb-tile';
+      button.textContent=label;button.dataset.nativeRoute='system.autostart';
+      button.dataset.nativeKey='enabled';button.dataset.nativeValue=value;actions.append(button);
+    }
+  };
   const display=v=>{
     if(disposed)return;
     const data=v.result;actions.replaceChildren();
@@ -128,6 +141,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       if(['failed','cancelled','canceled'].includes(String(job.state).toLowerCase()))action('Повторить · '+job.id,'models.retry','jobId',job.id);
     }
     if(v.routeId?.startsWith('models.'))action('Обновить очередь загрузки','models.queue','','');
+    appendSystemAutostartButtons();
     detail.hidden=!data;detail.textContent=data?JSON.stringify(data,null,2):'';
     status.textContent=v.state==='HOLD'?'HOLD · '+(v.errorCode||'NATIVE_HANDLER_UNAVAILABLE'):
       v.state==='STOP_REQUESTED'?'STOP REQUESTED · ожидается завершение ядра':
@@ -147,7 +161,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         return result.state==='COMPLETED'?{...result.result,ack:true}:{ack:false,errorCode:result.errorCode};
       }});
   }
-  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>menu?.refresh()):null;
+  const sectionObserver=root&&view.MutationObserver?new view.MutationObserver(()=>{menu?.refresh();appendSystemAutostartButtons();}):null;
   const title=doc.getElementById('detail-title');
   if(title)sectionObserver?.observe(title,{childList:true,characterData:true,subtree:true});
   async function refresh(){
@@ -285,7 +299,10 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(button.id==='chat-stop'&&stopRequestPending)return;
     if(button.id==='chat-stop')stopRequestPending=true;
     button.disabled=true;status.textContent='REQUESTED · ожидается ответ ядра';
-    const payload=generated?(button.dataset.nativeKey?{[button.dataset.nativeKey]:button.dataset.nativeValue}:{}):route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
+    const payload=generated&&route==='system.autostart'
+      ?{enabled:button.dataset.nativeValue==='true'}
+      :generated?(button.dataset.nativeKey?{[button.dataset.nativeKey]:button.dataset.nativeValue}:{})
+      :route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
     try{display(await client.request(route,payload));}
     catch(error){if(!disposed)status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';}
     finally{if(button.id==='chat-stop')stopRequestPending=false;if(!disposed)button.disabled=false;}

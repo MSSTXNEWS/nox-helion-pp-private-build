@@ -26,7 +26,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         "chat.commands", "models.catalog", "models.installed", "models.queue",
         "models.pull", "models.cancel", "models.retry", "models.digest", "models.gguf.import",
         "models.preflight", "models.licenses", "gpu.preflight", "training.start",
-        "training.pause", "training.resume", "training.checkpoints", "training.evaluate"
+        "training.pause", "training.resume", "training.checkpoints", "training.evaluate",
+        "system.autostart"
     };
     private static readonly HashSet<string> AuthorityFields = new(StringComparer.Ordinal)
     {
@@ -221,6 +222,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             if (_nativeOwnerAction is not null &&
                 (route.StartsWith("models.", StringComparison.Ordinal) ||
                  route=="chat.stop" ||
+                 route=="system.autostart" ||
                  route=="chat.commands" && payload.TryGetProperty("action",out var command) &&
                  command.ValueKind==JsonValueKind.String && command.GetString()=="training.import"))
             {
