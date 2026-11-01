@@ -24,7 +24,7 @@ PACK01_CATALOG_BLOB = "c8c9b19e44d9b5ff3af00a38e8446d8c0507b69d"
 # Keep the old WOW200 donor *unchanged* as a separate legacy payload.
 OWNER1_D02_ENGINE = {
     "proposals/NOX-CINEMA-FX/nox-cinema.mjs": {
-        "active_blob": "7e4acf43c287b3578e38e0acab0266e0343132e3",
+        "active_blob": "7847ade31047b2534f929487ada9df02b14fb413",
         "legacy_blob": "f7724e99b37ccbc84f1756dc797980267d58ec4e",
     },
     "proposals/NOX-CINEMA-FX/nox-cinema.css": {
@@ -50,9 +50,9 @@ REQUIRED_DONORS = frozenset({
 # One immutable commit admits the R4 MENU module, matching CSS and native adapter.
 # Keep all these pins together; a partial UI publication must fail before copy.
 MENU_V2_SHA256 = {
-    'ui/selfbuilder-menu-v2.mjs': '1d2aad894e4f5d03ae341a24c39a56e8e9e8bc00c3c39e504cc2ae2227f6a6bb',
+    'ui/selfbuilder-menu-v2.mjs': '5fd912a8ddba30ca6797f786e7b538571c11d8baf615077e50c8cc7db8978274',
     'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
-    'ui/onehost-menu-bindings.mjs': '97024691bacc339987c0662a632868499783e4a18dfba64285ca425ef77cd09e',
+    'ui/onehost-menu-bindings.mjs': '4d6b695c332527f4fe13ed101d811ba72fcb80740e70819c324650d5a7fe77b4',
     'ui/nox-r11-wow.mjs': '55f533f8a8cd523b658107d1d472a9d0a421b78344b21c203a3f4624a6986250',
     'ui/nox-r11-wow.css': 'aadd7d633a65609ea24467bb6d39442cc0d94d748c1712f5d2b54c72ff13489a',
     'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
