@@ -75,6 +75,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'A2_ACQUISITION_FTS5_SHA_TEST_HOLD' }
           python -m unittest discover -s tests -p 'test_firstboot_coordinator.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'A2_NATIVE_FIRSTBOOT_REGRESSION_HOLD' }
+      - name: A1 + P03 source regressions before Windows setup
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p 'test_a1_native_command.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'A1_ORIGINAL_NATIVE_REGRESSION_HOLD' }
+          python -m unittest discover -s tests -p 'test_c05_a1_partial_binding_fence.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'A1_FIRSTBOOT_PARTIAL_BINDING_HOLD' }
+          python -m unittest discover -s tests -p 'test_c04_pull_registry_race.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_PULL_REVIEW_RACE_HOLD' }
+          python -m unittest discover -s tests -p 'test_c04_p03_ack_scalar_rejection.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_SCALAR_ACK_REGRESSION_HOLD' }
+          python -m unittest discover -s tests -p 'test_ev_a04_model_retry_source.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'P03_GGUF_RETRY_REGRESSION_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_ci_windows_runner_selector.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_WINDOWS_RUNNER_SELECTOR_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
