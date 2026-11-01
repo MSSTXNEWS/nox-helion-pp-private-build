@@ -220,6 +220,19 @@ class OriginalStoreChatAdapter:
                          'text_sha256', 'rights_receipt_id', 'content')):
                     raise StoreActorHold('S03_NATIVE_READBACK_MISMATCH')
                 require_live_permission()  # STOP or ACL change rolls back INSERT.
+            # Read back from ORIGINAL SQLite after COMMIT, not merely while a
+            # transaction is still open. A failed receipt never asserts ACK.
+            if store.conn.in_transaction:
+                raise StoreActorHold('S03_POSTCOMMIT_TRANSACTION_STILL_OPEN')
+            durable = find_saved(store, record)
+            if type(durable) is not dict or any(
+                    durable.get(key) != record[key] for key in
+                    ('project_id', 'core_id', 'chat_id', 'source_sha256',
+                     'text_sha256', 'rights_receipt_id', 'content')):
+                raise StoreActorHold('S03_POSTCOMMIT_READBACK_UNCONFIRMED')
+            # STOP after commit cannot undo the row; caller gets HOLD and
+            # must reconcile by readback rather than retrying a blind write.
+            require_live_permission()
             return {'state': 'S03_COMMITTED_READBACK' if before is None else
                     'S03_DEDUPLICATED_READBACK',
                     'source_sha256': record['source_sha256'],
