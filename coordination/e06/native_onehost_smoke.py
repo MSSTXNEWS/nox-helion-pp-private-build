@@ -117,7 +117,22 @@ def safe_native_stderr_hint(path):
     if "Failed to load Python DLL" in tail:
         return "PYTHON_DLL_LOAD_FAILED"
     if "Traceback (most recent call last)" in tail:
-        return "PYTHON_TRACEBACK_PRESENT"
+        # The exception class and last Python basename/line are bounded metadata.
+        # Do not expose exception messages, raw stderr, or host file paths.
+        classes = re.findall(
+            r"(?m)^(?:[A-Za-z_][A-Za-z_0-9.]*[.])?([A-Za-z_][A-Za-z_0-9]*(?:Error|Exception)|SystemExit|KeyboardInterrupt):",
+            tail)
+        locations = re.findall(
+            r'File "([^"\\r\\n]{1,500}\\.py)", line ([1-9][0-9]{0,6})', tail)
+        detail = "PYTHON_TRACEBACK"
+        if classes:
+            detail += ":" + classes[-1]
+        if locations:
+            filename, lineno = locations[-1]
+            filename = filename.replace("\\\\", "/").split("/")[-1]
+            if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9.-]{0,99}\\.py", filename):
+                detail += ":" + filename + ":" + lineno
+        return detail
     if "FATAL" in tail.upper():
         return "NATIVE_FATAL_DIAGNOSTIC_PRESENT"
     return "STDERR_PRESENT_UNCLASSIFIED" if tail else "STDERR_EMPTY"
