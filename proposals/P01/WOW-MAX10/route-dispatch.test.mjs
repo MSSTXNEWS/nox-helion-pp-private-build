@@ -112,3 +112,13 @@ test("T06 R26: approved safe routes retain their prior path", async()=>{
  assert.equal((await d.invoke("models.catalog")).ok,true);
  assert.equal(approvals,0);
 });
+
+test("P01-ROUTE-03 disabled native handlers produce explicit HOLD not fake ACK",async()=>{
+ const {nativeP01Feedback}=await import("./mount-p01.mjs");
+ assert.deepEqual(nativeP01Feedback({ok:false,reason:"NATIVE_CAPABILITY_HOLD"}),
+   {state:"hold",reason:"NATIVE_CAPABILITY_HOLD"});
+ assert.deepEqual(nativeP01Feedback({ok:true,receiptId:"signed-native-1"}),
+   {state:"confirmed",receiptId:"signed-native-1"});
+ assert.equal(nativeP01Feedback({ok:true,receiptId:{}}).state,"hold");
+ assert.equal(nativeP01Feedback({ok:false,reason:"<script>"}).reason,"ACK_MISSING");
+});
