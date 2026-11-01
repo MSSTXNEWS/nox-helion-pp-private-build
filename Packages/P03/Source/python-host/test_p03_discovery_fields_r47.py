@@ -20,9 +20,11 @@ class DiscoveryFieldSchemaR47(unittest.TestCase):
             path.write_text(json.dumps(data), encoding="utf-8")
             return P03OneHostPort._validate_catalog(path)
 
-    def test_original_thirty_discovery_cards_remain_valid(self):
+    def test_original_thirty_discovery_cards_plus_embedding_remain_valid(self):
         cards = self.load()
-        self.assertEqual(len(cards), 30)
+        self.assertEqual(len(cards), 31)
+        self.assertEqual(cards[-1]["id"], "qwen3-embedding")
+        self.assertEqual(cards[-1]["reviewStatus"], "REVIEW_REQUIRED")
         self.assertTrue(all(set(card) ==
             {"id", "name", "url", "reviewStatus", "downloadEligible"}
             and card["downloadEligible"] is False for card in cards))

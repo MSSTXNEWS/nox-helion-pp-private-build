@@ -81,7 +81,7 @@ class P03HostPortTests(unittest.TestCase):
         self.assertGreater(len(r["models"]), 0)
         self.assertTrue(all(not x["downloadEligible"] and
                             x["reviewStatus"] == "REVIEW_REQUIRED" for x in r["models"]))
-        self.assertEqual(len(self.dispatch.execute("models.catalog", {}, self.session)["models"]),30)
+        self.assertEqual(len(self.dispatch.execute("models.catalog", {}, self.session)["models"]),31)
 
     def test_02_existing_p02_ollama_actual_tags(self):
         r = self.dispatch.execute("models.installed",{},self.session)
@@ -255,7 +255,7 @@ class P03HostPortTests(unittest.TestCase):
 
     def test_20_native_licenses_readonly_review_required(self):
         result = self.dispatch.execute("models.licenses", {}, self.session)
-        self.assertEqual(len(result["models"]), 30)
+        self.assertEqual(len(result["models"]), 31)
         self.assertFalse(result["licenseEvidenceVerified"])
         self.assertTrue(all(
             m["license"] is None and m["licenseEvidenceUrl"] is None
