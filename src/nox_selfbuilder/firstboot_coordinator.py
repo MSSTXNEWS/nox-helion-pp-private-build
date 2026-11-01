@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable, Mapping
 import re
+from .acquisition_library import AcquisitionHold, audit_library
 
 ACTION_IDS = frozenset({11, 31, 32, 49})
 MODEL_IDS = frozenset({31, 32})
@@ -172,6 +173,31 @@ class FirstBootCoordinator:
             discovered = _asset_observations(self.callbacks.discover(session, roots))
             if cancelled():
                 raise FirstBootHold("NATIVE_STOP")
+            # Acquisition V2 is an OPTIONAL owner-signed, SHA-pinned local
+            # library. It is a read-only observation, not another queue or an
+            # authorization to install tools/model weights.
+            acquisition = {"schema": "NOX-ACQUISITION-AUDIT-v1",
+                           "status": "NOT_CONFIGURED", "physical_files_verified": 0,
+                           "models_installed": False, "tools_installed": False}
+            if "acquisition_library" in native:
+                spec = native["acquisition_library"]
+                allowed = {"schema", "db_path", "db_sha256", "manifest_path",
+                           "manifest_sha256", "assets_root"}
+                if (type(spec) is not dict or set(spec) - allowed or
+                    spec.get("schema") != "NOX-ACQUISITION-NATIVE-CONFIG-v1" or
+                    type(spec.get("db_path")) is not str or
+                    type(spec.get("db_sha256")) is not str):
+                    raise FirstBootHold("NATIVE_ACQUISITION_POLICY_INVALID")
+                try:
+                    acquisition = audit_library(
+                        spec["db_path"], spec["db_sha256"], approved_roots=roots,
+                        manifest_path=spec.get("manifest_path"),
+                        manifest_sha256=spec.get("manifest_sha256"),
+                        assets_root=spec.get("assets_root"))
+                except (AcquisitionHold, OSError, TypeError, ValueError) as exc:
+                    raise FirstBootHold("ACQUISITION_V2_AUDIT_HOLD") from exc
+                if cancelled():
+                    raise FirstBootHold("NATIVE_STOP")
         except FirstBootHold as ex:
             return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1",
                     "status": "STOPPED" if str(ex) == "NATIVE_STOP" else "HOLD",
@@ -190,6 +216,7 @@ class FirstBootCoordinator:
         # Record intent before invoking native download queue; on failure no dispatch.
         intent = {"schema": "NOX-FIRSTBOOT-INTENT-v1", "utc": now.isoformat(),
                   "approved_scan_roots_count": len(roots), "found": discovered,
+                  "acquisition": acquisition,
                   "already_installed_ids": already, "held": held, "planned": planned,
                   "executed_code": False, "weights_changed": False,
                   "installer_changed": False, "auto_merge": False}
@@ -261,5 +288,7 @@ class FirstBootCoordinator:
                 "found_candidates": len(discovered), "already_installed_ids": already,
                 "enqueued_ids": dispatched, "already_queued_ids": already_queued,
                 "local_knowledge_ingested": len(ingested), "held": held + denied,
+                "acquisition_library": {"status": acquisition["status"],
+                    "physical_files_verified": acquisition["physical_files_verified"]},
                 "downloaded": 0, "installed": len(already),
                 "release_accepted": False, "e07_same_sha": False}

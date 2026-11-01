@@ -9,6 +9,10 @@ on:
   pull_request:
     paths:
       - 'coordination/e06/build_onehost_installer.ps1'
+      - 'src/nox_selfbuilder/acquisition_library.py'
+      - 'src/nox_selfbuilder/firstboot_coordinator.py'
+      - 'tests/test_acquisition_library.py'
+      - 'tests/test_firstboot_coordinator.py'
       - 'coordination/e06/stage_native_p02.py'
       - 'coordination/e06/native_onehost_smoke.py'
       - 'coordination/e06/t06_samevm_installed_smoke.py'
@@ -38,6 +42,13 @@ jobs:
         run: |
           python coordination/express/block2/test_catalog_consistency.py
           if ($LASTEXITCODE -ne 0) { throw 'BLOCK2_P03_CATALOG_PIN_HOLD' }
+      - name: MEGAPATCH_A_ACQUISITION_LIB_V2 signed local catalog and native firstboot
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p 'test_acquisition_library.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'A2_ACQUISITION_FTS5_SHA_TEST_HOLD' }
+          python -m unittest discover -s tests -p 'test_firstboot_coordinator.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'A2_NATIVE_FIRSTBOOT_REGRESSION_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
