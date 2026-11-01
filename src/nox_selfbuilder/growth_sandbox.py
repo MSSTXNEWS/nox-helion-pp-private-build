@@ -127,8 +127,8 @@ def compose_experiment(candidate, *, owner_policy, source_checks, artifact_sha25
     host mounts, network/secret access, or shell authority from P02.
     """
     decision = decide_candidate(candidate, owner_policy=owner_policy, checks=source_checks)
-    if decision["decision"] not in ("AUTO_STAGE_SANDBOX_CANDIDATE", "OWNER_REVIEW_REQUIRED"):
-        return {"state": "HOLD", "reason": decision.get("reason", "NATIVE_POLICY_REQUIRED"),
+    if decision["decision"] != "AUTO_STAGE_SANDBOX_CANDIDATE":
+        return {"state": "HOLD", "reason": decision.get("reason", "NATIVE_SANDBOX_APPROVAL_REQUIRED"),
                 "host_execution": False}
     if not isinstance(artifact_sha256, str) or not _SHA.fullmatch(artifact_sha256):
         raise WormHold("GROWTH_EXACT_CANDIDATE_ARTIFACT_REQUIRED")
