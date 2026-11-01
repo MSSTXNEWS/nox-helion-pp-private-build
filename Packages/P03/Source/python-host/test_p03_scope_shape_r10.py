@@ -71,14 +71,19 @@ class NativeScopeShapeTests(unittest.TestCase):
                 "models.pull", {})
         self.assertEqual(str(caught.exception), "Native consent provider unavailable")
 
-    def test_r14_02_cancel_callback_exception_holds(self):
+    def test_r14_02_stop_requires_native_scope_not_download_consent(self):
         def broken(*_args):
             raise ValueError("private device failure")
         self.port.native_approve = broken
-        with self.assertRaises(P03PortHold):
+        # STOP/cancel is intentionally not a sensitive download route. Existing
+        # authenticated scope must remain able to cancel even if the
+        # *download-consent* callback is broken or permission was revoked.
+        self.port._ensure_native_scope(
+            self.session(frozenset({"models.cancel"})),
+            "models.cancel", {})
+        with self.assertRaises(P03PortDenied):
             self.port._ensure_native_scope(
-                self.session(frozenset({"models.cancel"}), frozenset({"models.cancel"})),
-                "models.cancel", {})
+                self.session(frozenset()), "models.cancel", {})
 
     def test_r14_03_explicit_native_denial_remains_denied(self):
         def explicit_denial(*_args):
@@ -106,7 +111,7 @@ class NativeOwnerRouteMapR11Tests(unittest.TestCase):
 
     @staticmethod
     def host():
-        routes = {r: {"owner": 3} for r in ("models.catalog", "models.installed", "models.digest")}
+        routes = {r: {"owner": 3} for r in ("models.catalog", "models.licenses", "models.installed", "models.digest")}
         ports = {}
         host = SimpleNamespace(routes=routes, ports=ports)
         host.bind = lambda route, port: ports.__setitem__(route, port)
@@ -139,7 +144,7 @@ class NativeOwnerRouteMapR11Tests(unittest.TestCase):
         self.assertIs(host.ports["models.catalog"], foreign)
         self.assertEqual(len(host.ports), 1)
 
-    def test_r11_04_valid_owner_rows_still_register_three_read_only_routes(self):
+    def test_r11_04_valid_owner_rows_still_register_four_read_only_routes(self):
         host = self.host()
         registered = self.port.register(host, tuple, receipt="LOCAL_FIXTURE_NOT_SOURCELOCK")
         self.assertEqual(registered, frozenset(host.routes))
@@ -237,11 +242,13 @@ class OwnerBackendExceptionR15Tests(unittest.TestCase):
         self.assertEqual(called, [])
     def test_r15_previous_r14_native_callback_lesson_applies(self):
         called = []
-        self.port.backend = SimpleNamespace(available=lambda: True, cancel=lambda *_: called.append(True))
+        self.port.backend = SimpleNamespace(available=lambda: True, pull=lambda *_: called.append(True))
         def broken(*_): raise RuntimeError("private consent diagnostic")
         self.port.native_approve = broken
+        # A broken native callback still blocks *sensitive* downloads before
+        # reaching the owner backend; STOP does not require download consent.
         with self.assertRaisesRegex(P03PortHold, "Native consent provider unavailable"):
-            self.port.execute_backend(self.session("models.cancel"), "models.cancel", {})
+            self.port.execute_backend(self.session("models.pull"), "models.pull", {})
         self.assertEqual(called, [])
 
 if __name__ == "__main__":
