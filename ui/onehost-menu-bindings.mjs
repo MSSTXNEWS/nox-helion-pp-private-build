@@ -33,16 +33,19 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
     const p=pending.get(v.requestId);
     if(!p || v.routeId!==p.route)return;
     if(v.kind==='p02NativeEvent'){
-      if(v.state==='STREAMING'&&v.data?.route===p.route&&typeof v.data.delta==='string'&&v.data.delta.length<=65536)p.onEvent?.(v.data);
+      if(!p.timedOut&&v.state==='STREAMING'&&v.data?.route===p.route&&typeof v.data.delta==='string'&&v.data.delta.length<=65536)p.onEvent?.(v.data);
       return;
     }
-    if(!['COMPLETED','STOP_REQUESTED','HOLD'].includes(v.state))return;
+    const queueAck=['models.pull','models.retry','models.gguf.import'].includes(p.route) &&
+      ['QUEUED','IN_PROGRESS'].includes(v.state);
+    if(!queueAck && !['COMPLETED','STOP_REQUESTED','HOLD'].includes(v.state))return;
     pending.delete(v.requestId);clearTimer(p.timer);
+    if(p.timedOut){p.onTerminal?.(v);return;}
     p.resolve(v);
   }
   webview.addEventListener('message',receive);
   return Object.freeze({
-    request(route,payload={},onEvent=null) {
+    request(route,payload={},onEvent=null,onTerminal=null) {
       if(disposed)return Promise.reject(Error('NOX_NATIVE_CLIENT_DISPOSED'));
       if(!ROUTES.has(route) || !payload || typeof payload!=='object' || Array.isArray(payload) ||
         Object.keys(payload).some(k=>AUTHORITY.has(k)))return Promise.reject(Error('NOX_NATIVE_REQUEST_DENIED'));
@@ -60,10 +63,14 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       const id=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
       if(pending.has(id))return Promise.reject(Error('NOX_NATIVE_NONCE_COLLISION'));
       return new Promise((resolve,reject)=>{
-        const timer=setTimer(()=>{pending.delete(id);reject(Error('TIMEOUT'));},timeoutMs);
-        pending.set(id,{route,resolve,reject,timer,onEvent});
+        const timer=setTimer(()=>{
+          const p=pending.get(id);
+          if(route==='helion.chat'&&p){p.timedOut=true;reject(Error('TIMEOUT'));}
+          else {pending.delete(id);reject(Error('TIMEOUT'));}
+        },timeoutMs);
+        pending.set(id,{route,resolve,reject,timer,onEvent,onTerminal,timedOut:false});
         try{webview.postMessage({kind:'p02.native',requestId:id,routeId:route,payload});}
-        catch(error){pending.delete(id);clearTimer(timer);reject(error);}
+        catch(error){pending.delete(id);clearTimer(timer);reject(Error('NOX_NATIVE_POST_FAILED'));}
       });
     },
     destroy(){
@@ -83,6 +90,16 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   if(!native)return null;
   const client=createNativeMenuClient({webview:native,cryptoRef:view.crypto});
   let states=Object.create(null),trainingJobs=[],disposed=false,menu=null;
+  let selectionEpoch=0,capabilityEpoch=0,historyEpoch=0,chatBusy=false,stopRequestPending=false;
+  const sameSelection=(epoch,scope,model=null)=>{
+    const now=context();
+    return !disposed&&epoch===selectionEpoch&&value('chat-provider')!=='OPENAI'&&
+      scope.core_id===now.core_id&&scope.persona_id===now.persona_id&&
+      (model===null||value('chat-model')===model);
+  };
+  const chatTerminal=reply=>reply?.state==='COMPLETED'&&reply?.result?.done===true ||
+    reply?.state==='HOLD'&&['PAGE_AUTHORITY_CLAIM_DENIED','NATIVE_PERMISSION_DENIED',
+      'NATIVE_CONSENT_DENIED'].includes(reply.errorCode);
   const root=doc.getElementById('menu-detail');
   const status=doc.createElement('p');status.className='nox-sb-feedback';
   status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -100,9 +117,9 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     if(v.state==='COMPLETED'&&Array.isArray(data?.models))for(const model of data.models){
       if(model?.downloadEligible!==true||!Array.isArray(model.artifacts))continue;
       for(const artifact of model.artifacts){
-        if(typeof artifact?.exactTag!=='string'||!artifact.exactTag)continue;
-        action('Скачать · '+artifact.exactTag,'models.pull','modelTag',artifact.exactTag);
-        action('Импортировать GGUF · '+artifact.exactTag,'models.gguf.import','modelTag',artifact.exactTag);
+        if(typeof artifact?.tag!=='string'||!artifact.tag)continue;
+        action('Скачать · '+artifact.tag,'models.pull','modelTag',artifact.tag);
+        action('Импортировать GGUF · '+artifact.tag,'models.gguf.import','modelTag',artifact.tag);
       }
     }
     if(v.state==='COMPLETED'&&Array.isArray(data?.jobs))for(const job of data.jobs){
@@ -134,11 +151,11 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const title=doc.getElementById('detail-title');
   if(title)sectionObserver?.observe(title,{childList:true,characterData:true,subtree:true});
   async function refresh(){
+    const epoch=selectionEpoch,run=++capabilityEpoch,scope=context();
     try{
-      const scope=context();
       if(!scope.core_id||!scope.persona_id)throw Error('SELECT_CORE_AND_PERSONA');
       const reply=await client.request('chat.commands',{action:'selfbuilder.capabilities',...scope});
-      if(disposed)return;
+      if(run!==capabilityEpoch||!sameSelection(epoch,scope))return;
       states=Object.create(null);trainingJobs=[];
       if(reply.state==='COMPLETED'&&Array.isArray(reply.result?.trainingJobs))trainingJobs=reply.result.trainingJobs.filter(x=>typeof x?.id==='string');
       if(reply.state==='COMPLETED' && reply.result?.actions && typeof reply.result.actions==='object')
@@ -148,7 +165,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
             status:typeof s.status==='string'?s.status:'HOLD',ownerConsent:s.ownerConsent===true,requiresNativeConsent:s.requiresNativeConsent===true};
         }
       menu?.refresh();display(reply);
-    }catch(error){if(!disposed){states=Object.create(null);menu?.refresh();status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · нет ответа ядра';}}
+    }catch(error){if(run===capabilityEpoch&&sameSelection(epoch,scope)){states=Object.create(null);menu?.refresh();status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · нет ответа ядра';}}
   }
   // Bind only explicit existing controls; keep their source geometry and art.
   // Capture avoids double dispatch to the old diagnostic placeholder handler.
@@ -200,24 +217,42 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
     }
   }
   const chatStatus=message=>{const target=doc.getElementById('chat-state');if(target)target.textContent=message;};
-  let chatBusy=false;
   async function sendChat(){
-    const scope=context(),text=value('chat-input').trim(),model=value('chat-model');
+    const scope=context(),text=value('chat-input').trim(),model=value('chat-model'),epoch=selectionEpoch;
     if(!scope.core_id||!scope.persona_id||!text||!model){chatStatus('HOLD · выберите ядро, персону, модель и введите сообщение');return;}
     if(chatBusy)return;chatBusy=true;
     const send=doc.getElementById('chat-send'),stop=doc.getElementById('chat-stop');
+    const visible=()=>sameSelection(epoch,scope,model);
+    const release=reply=>{
+      if(!chatTerminal(reply))return;
+      chatBusy=false;
+      if(!disposed){
+        if(send)send.disabled=!value('chat-model');
+        if(stop)stop.disabled=false;
+        if(visible()&&reply.state==='COMPLETED'){
+          if(typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
+          chatStatus('COMPLETED · локальная модель');
+        }
+      }
+    };
     if(send)send.disabled=true;if(stop)stop.disabled=false;
     const row=doc.createElement('p');row.dataset.noxNativeChat='answer';
-    doc.getElementById('chat-log')?.append(row);chatStatus('REQUESTED · локальное ядро');
+    doc.getElementById('chat-log')?.append(row);if(visible())chatStatus('REQUESTED · локальное ядро');
     try{
       const reply=await client.request('helion.chat',{text,model,...scope},event=>{
-        if(!disposed){row.textContent+=event.delta;chatStatus('STREAMING · локальная модель');}
-      });
+        if(visible()&&row.isConnected){row.textContent+=event.delta;chatStatus('STREAMING · локальная модель');}
+      },release);
       if(disposed)return;
-      if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
-      chatStatus(reply.state==='HOLD'?'HOLD · '+(reply.errorCode||'NO_MODEL_REPLY'):reply.result?.done===true?'COMPLETED':'HOLD · ответ не завершён');
-    }catch(error){if(!disposed)chatStatus(error.message==='TIMEOUT'?'TIMEOUT · результат не подтверждён, STOP доступен':'HOLD · соединение с ядром');}
-    finally{chatBusy=false;if(!disposed){if(send)send.disabled=false;if(stop)stop.disabled=false;}}
+      release(reply);
+      if(visible()){
+        if(reply.state==='COMPLETED'&&typeof reply.result?.answer==='string')row.textContent=reply.result.answer;
+        chatStatus(reply.state==='HOLD'?'HOLD · '+(reply.errorCode||'NO_MODEL_REPLY'):reply.result?.done===true?'COMPLETED':'HOLD · ответ не завершён');
+      }
+    }catch(error){
+      if(['NOX_NATIVE_REQUEST_DENIED','NOX_NATIVE_CLIENT_DISPOSED','NOX_NATIVE_REQUEST_LIMIT',
+        'NOX_NATIVE_NONCE_COLLISION','NOX_NATIVE_POST_FAILED'].includes(error.message))chatBusy=false;
+      if(visible())chatStatus(error.message==='TIMEOUT'?'HOLD · native не завершён, STOP доступен':'HOLD · соединение с ядром');
+    }finally{if(!disposed){if(send)send.disabled=chatBusy||!value('chat-model');if(stop)stop.disabled=false;}}
   }
   async function models(){
     const select=doc.getElementById('chat-model');if(!select)return;
@@ -233,29 +268,42 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   }
   async function click(event){
     const button=event.target?.closest?.('button');if(!button||button.disabled)return;
-    if(['chat-send','chat-stop'].includes(button.id)&&value('chat-provider')==='OPENAI')return;
+    if(button.id==='chat-stop'&&value('chat-provider')==='OPENAI'){
+      // Keep legacy OPENAI STOP; additionally signal existing native owner while local execution is UNKNOWN.
+      if(chatBusy&&!stopRequestPending){
+        stopRequestPending=true;
+        void client.request('chat.stop',{}).catch(()=>{}).finally(()=>{stopRequestPending=false;});
+      }
+      return;
+    }
+    if(button.id==='chat-send'&&value('chat-provider')==='OPENAI')return;
     if(button.id==='chat-send'){event.preventDefault();event.stopImmediatePropagation();await sendChat();return;}
     const generated=button.parentElement===actions||button.parentNode===actions;
     const route=controls.get(button.id)||(generated?button.dataset.nativeRoute:null);if(!route)return;
     event.preventDefault();event.stopImmediatePropagation();
     button.closest('section')?.append(status,detail,actions);detail.hidden=true;
+    if(button.id==='chat-stop'&&stopRequestPending)return;
+    if(button.id==='chat-stop')stopRequestPending=true;
     button.disabled=true;status.textContent='REQUESTED · ожидается ответ ядра';
     const payload=generated?(button.dataset.nativeKey?{[button.dataset.nativeKey]:button.dataset.nativeValue}:{}):route==='chat.commands'?{action:'selfbuilder.worker.status',...context()}:{};
     try{display(await client.request(route,payload));}
     catch(error){if(!disposed)status.textContent=(error.message==='TIMEOUT'?'TIMEOUT':'HOLD')+' · запрос не подтверждён';}
-    finally{if(!disposed)button.disabled=false;}
+    finally{if(button.id==='chat-stop')stopRequestPending=false;if(!disposed)button.disabled=false;}
   }
   async function change(event){
-    if(!['chat-core','chat-persona','chat-model'].includes(event.target?.id)||value('chat-provider')==='OPENAI')return;
+    if(!['chat-core','chat-persona','chat-model','chat-provider'].includes(event.target?.id))return;
+    ++selectionEpoch;const historyRun=++historyEpoch,epoch=selectionEpoch;
+    if(value('chat-provider')==='OPENAI')return;
     const scope=context();if(!scope.core_id||!scope.persona_id)return;
     event.stopImmediatePropagation();
     try{
       if(event.target.id==='chat-model'){
         const chosen=await client.request('chat.model',{model:value('chat-model'),...scope});
+        if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
         if(chosen.state!=='COMPLETED'){chatStatus('HOLD · модель не выбрана');return;}
       }
       const reply=await client.request('chat.history',{limit:100,...scope});
-      if(disposed)return;
+      if(historyRun!==historyEpoch||!sameSelection(epoch,scope))return;
       if(reply.state!=='COMPLETED'||!Array.isArray(reply.result?.messages)){chatStatus('HOLD · история недоступна');return;}
       const log=doc.getElementById('chat-log');if(log){
         log.replaceChildren();for(const row of reply.result.messages){
@@ -264,7 +312,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
         }
       }
       chatStatus('История выбранного ядра и персоны');await refresh();
-    }catch(error){if(!disposed)chatStatus(error.message==='TIMEOUT'?'TIMEOUT':'HOLD · история недоступна');}
+    }catch(error){if(historyRun===historyEpoch&&sameSelection(epoch,scope))chatStatus(error.message==='TIMEOUT'?'TIMEOUT':'HOLD · история недоступна');}
   }
   doc.addEventListener('click',click,true);doc.addEventListener('change',change,true);
   const close=()=>{

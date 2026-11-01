@@ -52,8 +52,8 @@ REQUIRED_DONORS = frozenset({
 MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.mjs': 'e8f020723209da94ad8c87acde573994fafd333f2b03179126a525ae1e371b54',
     'ui/selfbuilder-menu-v2.css': 'af78f7785d070a5f290139f0ff5c6c66644ef852342443573c7d93f57e7b3cde',
-    'ui/onehost-menu-bindings.mjs': 'a6eb05562527e8fd9fbd8f637253146cb7593f7d8e9a18b4916a6cf38128db0d',
-    'ui/selfbuilder-wow-workbench.mjs': '95d3c8866c434b4118643c067321782e74acebcf40f3d3becf7d1cd5803fb4e0',
+    'ui/onehost-menu-bindings.mjs': '3d930636f5dabb84be9ecad0ea1ca6170d879bf5369b8d78131e10d1404de952',
+    'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
     'ui/selfbuilder-wow-workbench.css': 'bad615430856cb1ce0201bc21b77f33258d0d5fd3cbc7fa12b1f63af086dea24',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
 }

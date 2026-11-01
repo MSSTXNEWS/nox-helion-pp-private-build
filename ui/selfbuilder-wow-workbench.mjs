@@ -79,7 +79,7 @@ export function mountWowDesignWorkbench({root,documentRef,getProposal,ownerAppro
  const refresh=el(doc,'button','nox-wow-workbench__refresh','Обновить предложения');refresh.type='button';
  wrap.append(options,stage,approve,refresh,message);root.append(wrap);
  let current=null,selection=null,working=false,disposed=false;
- let backgroundReceipt=null,backgroundBusy=false;
+ let backgroundReceipt=null,backgroundBusy=false,backgroundEpoch=0,proposalEpoch=0;
  const hasBackground=typeof getBackgroundState==='function'&&typeof setBackgroundEnabled==='function';
  function drawBackground(){
    const view=backgroundToggleState(backgroundReceipt);
@@ -90,16 +90,21 @@ export function mountWowDesignWorkbench({root,documentRef,getProposal,ownerAppro
    background.dataset.state=!view.ready?'HOLD':view.enabled?'ON':'OFF';
  }
  async function refreshBackground(){
-   if(disposed||!hasBackground)return;
+   if(disposed||backgroundBusy||!hasBackground)return;
+   const epoch=++backgroundEpoch;
    try{
-     const receipt=await getBackgroundState();if(disposed)return;
+     const receipt=await getBackgroundState();
+     if(disposed||backgroundBusy||epoch!==backgroundEpoch)return;
      backgroundReceipt=receipt;drawBackground();
-   }catch(error){if(!disposed){backgroundReceipt=null;drawBackground();onError(error);}}
+   }catch(error){
+     if(disposed||backgroundBusy||epoch!==backgroundEpoch)return;
+     backgroundReceipt=null;drawBackground();onError(error);
+   }
  }
  bgSwitch.addEventListener('click',async()=>{
    const old=backgroundToggleState(backgroundReceipt);
    if(disposed||backgroundBusy||!old.ready||!hasBackground)return;
-   backgroundBusy=true;drawBackground();
+   backgroundBusy=true;++backgroundEpoch;drawBackground();
    try{
      const requested=!old.enabled;
      const ack=await setBackgroundEnabled(requested);
@@ -151,8 +156,15 @@ export function mountWowDesignWorkbench({root,documentRef,getProposal,ownerAppro
  }
  async function reload(){
    if(disposed||working)return;
-   try{const p=await getProposal();if(disposed)return;current=p;selection=p?.variants?.[0]?.id||null;render();}
-   catch(ex){current=null;render();onError(ex);message.textContent='HOLD · нет подтверждённой связи с S03';}
+   const epoch=++proposalEpoch;
+   try{
+     const p=await getProposal();
+     if(disposed||working||epoch!==proposalEpoch)return;
+     current=p;selection=p?.variants?.[0]?.id||null;render();
+   }catch(ex){
+     if(disposed||working||epoch!==proposalEpoch)return;
+     current=null;render();onError(ex);message.textContent='HOLD · нет подтверждённой связи с S03';
+   }
  }
  approve.addEventListener('click',async()=>{
    if(disposed||working||!current||!selection)return;

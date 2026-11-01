@@ -47,7 +47,6 @@ export function createD02NativeVisualBus(hostPort,fx,coreIds,options={}){
       lastRunSequence.delete(lastRunSequence.keys().next().value);
     lastRunSequence.set(mapped.runId,mapped.sequence);
     // One validated, monotonic event fans out to the existing secondary scene.
-    for(const fn of [...observers]){try{fn(raw);}catch{/* isolated panel failure */}}
     if(timers.has(core))cancel(timers.get(core));
     const stamp=Object.freeze({runId:mapped.runId,timeMs:mapped.timeMs,sequence:mapped.sequence});
     stateByCore.set(core,stamp);
@@ -55,6 +54,8 @@ export function createD02NativeVisualBus(hostPort,fx,coreIds,options={}){
       if(stateByCore.get(core)===stamp)resetCore(core);
     },30000));
     accepted++;
+    // Notify observers only after native event state is committed.
+    for(const fn of [...observers]){try{fn(raw);}catch{/* isolated panel failure */}}
   };
   const unsubscribe=hostPort.subscribeNative(onNative);
   if(typeof unsubscribe!=="function")
