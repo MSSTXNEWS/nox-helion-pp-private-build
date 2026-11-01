@@ -20,7 +20,7 @@ test('E01-04: denied user confirmation never calls host action',async()=>{
  assert.equal((await d.invoke('system.backup')).reason,'NATIVE_CONSENT_DENIED');assert.equal(calls,0);
 });
 test('E01-05: wrong ACK is not success',async()=>{
- const d=create(host({invokeRoute:async()=>({ok:true,routeId:'other',receiptId:'r1'})}));
+ const d=create(host({authorizeSensitive:async ({routeId})=>routeId==='models.pull',invokeRoute:async()=>({ok:true,routeId:'other',receiptId:'r1'})}));
  assert.equal((await d.invoke('models.pull')).reason,'ACK_MISSING');
 });
 test('E01-06: duplicate click during consent stays pending',async()=>{
