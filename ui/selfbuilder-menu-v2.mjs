@@ -3,6 +3,26 @@
  *  Receives verified native state and sends requests through the EXISTING host;
  *  no direct privileged bridge, simulated GPU training or autostart.
  */
+import {LOGICAL_MENU_PARENTS} from '../proposals/P01/WOW-MAX10/scene-contract.mjs';
+// Use the approved original eight sections as physical navigation; ten logical
+// worlds are child views of those EXISTING tiles, not new top-level graphics.
+const P01_TILE_LABELS=Object.freeze({
+ work:'РАБОТА',intelligence:'ИНТЕЛЛЕКТ',knowledge:'ЗНАНИЯ',
+ creative:'ТВОРЧЕСТВО',people:'ЛЮДИ',development:'РАЗВИТИЕ',
+ world:'МИР',system:'СИСТЕМА'
+});
+const P01_WORLD_LABELS=Object.freeze({
+ work:'Проекты и задачи',intelligence:'Исследования и модели',
+ knowledge:'Память и источники',learning:'Обучение и развитие',
+ entertainment:'Кино и развлечения',people:'Люди и общение',
+ creative:'Студия творчества',business:'Бизнес и проекты',
+ world:'Мир и сценарии',pc:'Мой ПК и NOX'
+});
+export const P01_MENU_WORLD_NAV=Object.freeze(Object.entries(LOGICAL_MENU_PARENTS)
+ .map(([id,parent])=>Object.freeze({id,label:P01_WORLD_LABELS[id],section:P01_TILE_LABELS[parent]})));
+export function menuWorldsForSection(section){
+ return P01_MENU_WORLD_NAV.filter(world=>world.section===section);
+}
 export const MENU_V2_SECTIONS = Object.freeze(['РАБОТА','ИНТЕЛЛЕКТ','ЗНАНИЯ','ТВОРЧЕСТВО','ЛЮДИ','РАЗВИТИЕ','МИР','СИСТЕМА']);
 export const SELFBUILDER_MENU = Object.freeze([
   {section:'РАЗВИТИЕ', routeId:'evolution', label:'Саморазвитие',actionId:'selfbuilder.worker.status',mode:'read'},
@@ -39,6 +59,35 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   wrapper.dataset.noxView='source-candidate';
   const heading=make(doc,'h2','nox-sb-heading','NOX · Эволюция и программирование');
   const info=make(doc,'p','nox-sb-subtitle','Настоящие задания, модели и обучение. Данные только из подтверждённого ядра.');
+  // Reuse the existing ONE menu-detail panel, native client, and tile styles.
+  // Sub-world selection is navigation only; it does not claim a backend action.
+  const worldSection=make(doc,'section','nox-sb-sourcehub');
+  worldSection.dataset.noxWorlds='canonical-10-within-8';
+  const worldHeading=make(doc,'h3','nox-sb-sourcehub__title','Подразделы NOX');
+  const worldGrid=make(doc,'div','nox-sb-grid');
+  const worldFeedback=make(doc,'p','nox-sb-feedback','Выберите подраздел');
+  worldFeedback.setAttribute('role','status');worldFeedback.setAttribute('aria-live','polite');
+  const backWorld=make(doc,'button','nox-sb-tile','← Все подразделы');
+  backWorld.type='button';backWorld.hidden=true;
+  worldSection.append(worldHeading,worldGrid,backWorld,worldFeedback);
+  let activeWorld=null;
+  const worldButtons=[];
+  for(const world of P01_MENU_WORLD_NAV){
+    const b=make(doc,'button','nox-sb-tile',world.label);
+    b.type='button';b.dataset.noxWorld=world.id;b.dataset.noxWorldParent=world.section;
+    b.addEventListener('click',()=>{
+      if(destroyed)return;
+      activeWorld=world.id;
+      worldFeedback.textContent='ОТКРЫТ ПОДРАЗДЕЛ · '+world.label+
+        ' · действия ниже требуют отдельного подтверждения NOX';
+      backWorld.hidden=false;refresh();
+    });
+    worldGrid.append(b);worldButtons.push({world,button:b});
+  }
+  backWorld.addEventListener('click',()=>{
+    if(destroyed)return;activeWorld=null;backWorld.hidden=true;
+    worldFeedback.textContent='Выберите подраздел';refresh();
+  });
   const grid=make(doc,'div','nox-sb-grid');
   const sourceHub=make(doc,'section','nox-sb-sourcehub');
   sourceHub.dataset.noxSubview='selfbuilder-source-v1';
@@ -103,7 +152,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     });
     (item.subview==='code'?sourceGrid:grid).append(b);buttons.push({b,item,permitted});
   }
-  wrapper.append(heading,info,task,jobs,grid,sourceHub,feedback);root.append(wrapper);
+  wrapper.append(heading,info,worldSection,task,jobs,grid,sourceHub,feedback);root.append(wrapper);
   function refresh(){
     const selected=jobs.value;const known=getTrainingJobs().filter(x=>typeof x?.id==='string'&&x.id.length>0);
     jobs.replaceChildren?.();
@@ -111,6 +160,18 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     for(const job of known){const option=make(doc,'option','',job.id+' · '+(job.status||'HOLD'));option.value=job.id;jobs.append(option);}
     jobs.value=known.some(x=>x.id===selected)?selected:'';
     const section=typeof getCurrentSection==='function'?getCurrentSection():null;
+    if(activeWorld&&!P01_MENU_WORLD_NAV.some(w=>w.id===activeWorld&&w.section===section)){
+      activeWorld=null;backWorld.hidden=true;worldFeedback.textContent='Выберите подраздел';
+    }
+    worldSection.hidden=section!==null&&!MENU_V2_SECTIONS.includes(section);
+    const availableWorlds=menuWorldsForSection(section);
+    for(const {world,button} of worldButtons){
+      button.hidden=world.section!==section||(activeWorld!==null&&world.id!==activeWorld);
+      button.setAttribute('aria-pressed',String(world.id===activeWorld));
+    }
+    worldHeading.textContent=activeWorld
+      ?'Подраздел · '+(P01_MENU_WORLD_NAV.find(w=>w.id===activeWorld)?.label||'NOX')
+      :'Подразделы NOX · '+availableWorlds.length;
     jobs.hidden=section!==null&&section!=='РАЗВИТИЕ';
     task.hidden=section!==null&&!['РАБОТА','РАЗВИТИЕ'].includes(section);
     sourceHub.hidden=section!==null&&section!=='РАЗВИТИЕ';
