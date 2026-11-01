@@ -11,6 +11,15 @@ import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs"
 import {installP01Adaptive} from "./p01-responsive.mjs";
 import {mountCanonicalMenuCinematics} from "./p01-cinematic-menu.mjs";
 const mounted=new WeakSet();
+// Only the innermost approved route may dispatch a bubbling click.
+// DOM ancestry is not route authority: the native host still owns ACK/ACL.
+export function isP01PrimaryRouteTarget(item,target,entries){
+  const owner=item?.element;
+  if(!owner||!target||!owner.contains?.(target)||!Array.isArray(entries))return false;
+  return !entries.some(other=>other?.element&&other.element!==owner&&
+    owner.contains(other.element)&&other.element.contains?.(target));
+}
+
 // OS-level reduced motion always outranks the user-selected quality profile.
 export function effectiveP01MotionMode(requested,reduced){
   return reduced===true?"REDUCED":requested;
@@ -36,6 +45,7 @@ export function mountP01Owner(spec){
      !Array.isArray(controls)||!Array.isArray(panels)||
      [...controls,...panels].some(el=>!root.contains(el)))
     throw Error("P01_DUPLICATE_MOUNT_OR_UNTRUSTED_DECORATION");
+  const routeEntries=[...menu,...logicalMenu,...buttons];
   const dispatcher=createP01RouteDispatcher(hostPort);
   const cleanups=[];let fx=null,wow=null,nativeBus=null,cinemaMenu=null,disposed=false;
   let requestedMode=mode;
@@ -108,6 +118,7 @@ export function mountP01Owner(spec){
     for(const [items,kind] of [[menu,"MENU_TILE"],[logicalMenu,"MENU_SUBMENU"],[buttons,"BUTTON"]]){
       for(const item of items){
         const handler=async(event)=>{
+          if(!isP01PrimaryRouteTarget(item,event?.target,routeEntries))return;
           event?.preventDefault?.();
           if(disposed||dispatcher.isPending(item.routeId))return;
           item.element.dataset.noxNativeState="pending";
@@ -130,7 +141,16 @@ export function mountP01Owner(spec){
         // Native ACK and ACL remain the only authority for an asteroid route.
         // Semantic buttons/links already dispatch a browser-generated click on Enter.
         const target=item.element;
-        if(!target.matches?.('button,input,select,textarea,summary,a[href]')){
+        // Anchors already dispatch Enter as click, but Space otherwise scrolls.
+        // Use exactly the same native handler/ACK route with no URL navigation.
+        if(target.matches?.('a[href]')){
+          watch(target,'keydown',e=>{
+            if(e.target!==target||e.defaultPrevented||e.isComposing||e.repeat||
+               e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||
+               ![' ','Spacebar'].includes(e.key))return;
+            e.preventDefault?.();void handler(e);
+          });
+        }else if(!target.matches?.('button,input,select,textarea,summary,a[href]')){
           const attrs=['tabindex','role','aria-label'];
           const original=attrs.map(name=>[name,target.getAttribute(name)]);
           if(!target.hasAttribute('tabindex'))target.setAttribute('tabindex','0');
