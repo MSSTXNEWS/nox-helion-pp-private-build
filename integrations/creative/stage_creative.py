@@ -41,13 +41,9 @@ def stage(root:Path, source:Path)->dict:
         f=root/'Assets'/name
         safe_source_file(f)
         if sha(f)!=expected:raise ValueError('CANONICAL_D02_SHA_HOLD:'+name)
-    # An approved WORK visual is optional in older original R11 donors.
-    # Never silently accept a same-name visual from another vintage.
-    work_art=root/'Assets/work.png'
-    if work_art.exists() or work_art.is_symlink():
-        safe_source_file(work_art)
-        if sha(work_art)!='f8ff2e086fec728cd228fa942294d79e3ff1c63df81e989ec43419128cd4dd14':
-            raise ValueError('CANONICAL_WORK_ART_SHA_HOLD')
+    # Creative secondary UI is constructed from NOX visual tokens, not an
+    # approved WORK screenshot (which already contains rendered controls).
+    # Original owner-approved D02 assets remain read-only and SHA-locked above.
     main_raw=main.read_bytes();html_raw=html.read_bytes()
     native=main_raw.decode('utf-8-sig'); page=html_raw.decode('utf-8-sig')
     # Two exact owner-approved R11 router vintages; never accept a fuzzy anchor.
