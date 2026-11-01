@@ -19,7 +19,7 @@ const ACTIONS = new Set([...SELFBUILDER_MENU.map(x=>x.actionId),
   'selfbuilder.background.status','selfbuilder.background.enable','selfbuilder.background.disable',
   'selfbuilder.design.suggest','selfbuilder.design.review','selfbuilder.design.approve']);
 const ROUTES = new Set(['helion.chat','chat.history','chat.stop','chat.model','chat.commands',
-  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart']);
+  'models.catalog','models.queue','models.preflight','models.pull','models.cancel','models.retry','models.gguf.import','gpu.preflight','training.start','system.autostart','browser.open']);
 const AUTHORITY = new Set(['tenant','principal','windows_sid','session_id','scopes',
   'private_approved','native_approve','nativeConsent','admin']);
 
@@ -53,6 +53,10 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       if(route==='system.autostart' &&
         (Object.keys(payload).length!==1 || typeof payload.enabled!=='boolean'))
         return Promise.reject(Error('NOX_AUTOSTART_BOOLEAN_REQUIRED'));
+      if(route==='browser.open' && (Object.keys(payload).length!==1 ||
+         typeof payload.url!=='string' || payload.url.length>2048 ||
+         !/^https:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(payload.url)))
+        return Promise.reject(Error('NOX_BROWSER_URL_POLICY_HOLD'));
       if(route==='chat.commands' && !ACTIONS.has(payload.action) && payload.action!=='selfbuilder.capabilities')
         return Promise.reject(Error('NOX_MENU_ACTION_DENIED'));
       const modelKey=['models.pull','models.gguf.import'].includes(route)?'modelTag':

@@ -28,7 +28,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         "models.pull", "models.cancel", "models.retry", "models.digest", "models.gguf.import",
         "models.preflight", "models.licenses", "gpu.preflight", "training.start",
         "training.pause", "training.resume", "training.checkpoints", "training.evaluate",
-        "system.autostart"
+        "system.autostart", "browser.open"
     };
     private static readonly HashSet<string> AuthorityFields = new(StringComparer.Ordinal)
     {
@@ -54,6 +54,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private bool _externalMode;
     private bool _nativeReturnPending;
     private string? _externalHost;
+    internal bool BrowserExternalActive => _externalMode;
+    internal bool BrowserAllowsRequest(string? url) => _externalMode && ((_nativeReturnPending && Trusted(url)) || (!_nativeReturnPending && IsApprovedExternal(url)));
 
     // All values here come from the native host, NEVER from a WebMessage.
     internal OneHostP02WebView2Bridge(
@@ -150,7 +152,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         foreach (var entry in approvedHosts)
             if (PublicHost(entry) && string.Equals(target.IdnHost, entry,
                 StringComparison.OrdinalIgnoreCase)) { approved = true; break; }
-        if (!approved) return false;
+        if (!approved || _web.Settings.IsWebMessageEnabled || _web.Settings.AreHostObjectsAllowed)
+            return false; // actual host settings, never only caller-supplied booleans
         _externalHost = target.IdnHost;
         _externalMode = true;  // Native IPC is rejected before navigation.
         _nativeReturnPending = false;
@@ -165,8 +168,16 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             _nativeReturnPending || !NativeSidMatches()) return false;
         _nativeReturnPending = true;
         RevokeDocument();
-        try { _web.Navigate(_virtualOrigin.AbsoluteUri); return true; }
-        catch { return false; } // Do not restore IPC until trusted ContentLoading.
+        try {
+            // Existing bridge still rejects external native messages while the
+            // original NOX local document prepares its new channel.
+            // IPC stays off until the trusted NOX shell ContentLoading event.
+            _web.Navigate(_virtualOrigin.AbsoluteUri); return true;
+        } catch {
+            _nativeReturnPending = false; // permit another real native Back
+            _web.Settings.IsWebMessageEnabled = false; // external quarantine stays
+            return false;
+        }
     }
 
     private static bool PublicHost(string? host)
@@ -303,6 +314,19 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             }
             if (!IsCurrent(source, epoch) || !NativeSidMatches() ||
                 !_nativeAcl(_ownerWindowsSid, route)) return;
+            if (route == "browser.open") {
+                if (_nativeOwnerAction is null) {
+                    Reply(source, epoch, id, route, "HOLD", "BROWSER_NATIVE_OWNER_UNAVAILABLE");
+                    return;
+                }
+                // Only the original native owner can start a browser session.
+                // Navigation revokes the source document; do not send false
+                // COMPLETED after the page becomes untrusted.
+                var navigation = await _nativeOwnerAction(route, payload.Clone(), cancel);
+                if (!navigation.Accepted && IsCurrent(source, epoch))
+                    Reply(source, epoch, id, route, "HOLD", navigation.ErrorCode ?? "BROWSER_NATIVE_HOLD");
+                return;
+            }
             if (route == "chat.stop") Interlocked.Increment(ref _streamEpoch);
             // P03's existing C# queue stays in this WPF host; it must not be
             // replaced by a Python downloader or sent through a second IPC.

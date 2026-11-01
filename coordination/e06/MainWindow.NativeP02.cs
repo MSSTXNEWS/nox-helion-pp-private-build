@@ -24,7 +24,7 @@ public partial class MainWindow
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
         "training.pause","training.resume","training.checkpoints","training.evaluate",
-        "system.autostart"
+        "system.autostart", "browser.open"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -34,6 +34,49 @@ public partial class MainWindow
     private CoreWebView2? _nativeP02Core;
     private long _nativeDocumentEpoch;
     private readonly HashSet<string> _nativeP03Nonces = new(StringComparer.Ordinal);
+    private System.Windows.Controls.Button? _nativeBrowserBack;
+    private bool _nativeBrowserFenceInstalled;
+    private EventHandler<CoreWebView2WebResourceRequestedEventArgs>? _nativeBrowserFilter;
+    private EventHandler<CoreWebView2ContentLoadingEventArgs>? _nativeBrowserOnShell;
+
+    private bool ShowNativeBrowserBack()
+    {
+        // Native Windows control, not a WebView host object or a second browser.
+        if (_nativeBrowserBack is not null) return true;
+        if (Content is not System.Windows.Controls.Panel panel) return false;
+        var button = new System.Windows.Controls.Button {
+            Content = "← HOME NOX", Width = 142, Height = 36,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(9)
+        };
+        button.Click += (_, _) => _nativeP02Bridge?.ReturnToReviewedShell();
+        System.Windows.Controls.Panel.SetZIndex(button, 9999);
+        panel.Children.Add(button); _nativeBrowserBack = button;
+        return true;
+    }
+    private void HideNativeBrowserBack()
+    {
+        if (_nativeBrowserBack is not { } button) return;
+        if (button.Parent is System.Windows.Controls.Panel panel) panel.Children.Remove(button);
+        _nativeBrowserBack = null;
+    }
+    private bool EnsureNativeBrowserNetworkFence(CoreWebView2 core)
+    {
+        if (_nativeBrowserFenceInstalled) return true;
+        try {
+            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            _nativeBrowserFilter = (_, e) => {
+                if (_nativeP02Bridge?.BrowserExternalActive != true) return;
+                if (_nativeP02Bridge.BrowserAllowsRequest(e.Request.Uri)) return;
+                e.Response = core.Environment.CreateWebResourceResponse(
+                    null, 403, "NOX_BLOCKED", "Content-Type: text/plain");
+            };
+            core.WebResourceRequested += _nativeBrowserFilter;
+            _nativeBrowserFenceInstalled = true;
+            return true;
+        } catch { return false; }
+    }
 
     private Task<string?> PickNativeGgufAsync(CancellationToken cancel)
     {
@@ -82,6 +125,41 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if (route == "browser.open") {
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge ||
+                payload.ValueKind != JsonValueKind.Object ||
+                payload.EnumerateObject().Count() != 1 ||
+                !payload.TryGetProperty("url", out var field) ||
+                field.ValueKind != JsonValueKind.String ||
+                field.GetString() is not string address || address.Length > 2048 ||
+                !Uri.TryCreate(address, UriKind.Absolute, out var target) ||
+                !NoxHelion.P02.SpaceBrowserBoundary.MayNavigateReviewedExternal(
+                    target, new[]{target.IdnHost}, true, true, true, true) ||
+                !EnsureNativeBrowserNetworkFence(core) || !ShowNativeBrowserBack())
+                return new NativePipeResult("",false,null,"BROWSER_NATIVE_POLICY_HOLD");
+            try {
+                core.Settings.IsWebMessageEnabled = false;
+                core.Settings.AreHostObjectsAllowed = false;
+                if (cancel.IsCancellationRequested || !bridge.TryOpenReviewedExternal(
+                    target, new[]{target.IdnHost}, nativeGestureVerified:true,
+                    ipcDetached:!core.Settings.IsWebMessageEnabled,
+                    hostObjectsRemoved:!core.Settings.AreHostObjectsAllowed,
+                    networkIsolationAttested:_nativeBrowserFenceInstalled)) {
+                    if (!bridge.BrowserExternalActive) {
+                        HideNativeBrowserBack();
+                        core.Settings.IsWebMessageEnabled = true; // trusted source only
+                    }
+                    return new NativePipeResult("",false,null,"BROWSER_NAVIGATION_HOLD");
+                }
+                return new NativePipeResult("",true,
+                    JsonSerializer.SerializeToElement(new { status="NAVIGATION_REQUESTED" }),null);
+            } catch {
+                // Never restore the IPC channel while an external document
+                // may be active; retain the native Back action for recovery.
+                return new NativePipeResult("",false,null,"BROWSER_NAVIGATION_EXCEPTION_HOLD");
+            }
+        }
         if(route=="system.autostart") {
             if(payload.ValueKind != JsonValueKind.Object || payload.EnumerateObject().Count()!=1 ||
                 !payload.TryGetProperty("enabled",out var requested) ||
@@ -254,6 +332,18 @@ public partial class MainWindow
         if (route == "chat.stop" || route == "chat.model") return Task.FromResult(true);
         // Existing WPF native window, never browser-supplied consent.
         var label = route;
+        if (route == "browser.open") {
+            if (payload.ValueKind != JsonValueKind.Object ||
+                payload.EnumerateObject().Count() != 1 ||
+                !payload.TryGetProperty("url", out var u) ||
+                u.ValueKind != JsonValueKind.String ||
+                u.GetString() is not string address || address.Length > 2048 ||
+                !Uri.TryCreate(address, UriKind.Absolute, out var target) ||
+                !NoxHelion.P02.SpaceBrowserBoundary.MayNavigateReviewedExternal(
+                    target, new[]{target.IdnHost}, true, true, true, true))
+                return Task.FromResult(false);
+            label = "Открыть проверенный HTTPS только в NOX: " + target.AbsoluteUri;
+        }
         if(route=="system.autostart") {
             if(payload.ValueKind != JsonValueKind.Object ||
                 !payload.TryGetProperty("enabled",out var on) ||
@@ -331,6 +421,16 @@ public partial class MainWindow
             _nativeP02Bridge=new OneHostP02WebView2Bridge(core,
                 new Uri("https://nox.local/"),transport,sid,
                 NativeP02Acl,ConfirmP02NativeAsync,DispatchNativeOwnerAsync);
+            _nativeBrowserOnShell = (_, _) => {
+                if (_nativeP02Bridge is { BrowserExternalActive: false } &&
+                    Uri.TryCreate(core.Source, UriKind.Absolute, out var source) &&
+                    source.Scheme == Uri.UriSchemeHttps && source.IsDefaultPort &&
+                    string.Equals(source.IdnHost,"nox.local",StringComparison.OrdinalIgnoreCase)) {
+                    core.Settings.IsWebMessageEnabled = true;
+                    HideNativeBrowserBack();
+                }
+            };
+            core.ContentLoading += _nativeBrowserOnShell;
             _nativeP02Pipe=transport;
             _nativeModels=ModelCenterNativeRoutes.Create(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NOX_HELION"),
@@ -483,8 +583,14 @@ public partial class MainWindow
     {
         try{_nativeModelsStop.Cancel();}catch(ObjectDisposedException){}
         _nativeModelsStop.Dispose();
-        if (_nativeP02Core is { } web) web.WebMessageReceived -= OnP03WebMessageReceived;
+        if (_nativeP02Core is { } web) {
+            web.WebMessageReceived -= OnP03WebMessageReceived;
+            if (_nativeBrowserFilter is not null) web.WebResourceRequested -= _nativeBrowserFilter;
+            if (_nativeBrowserOnShell is not null) web.ContentLoading -= _nativeBrowserOnShell;
+        }
+        _nativeBrowserFilter=null;_nativeBrowserOnShell=null;_nativeBrowserFenceInstalled=false;
         Interlocked.Increment(ref _nativeDocumentEpoch);_nativeP02Core=null;
+        HideNativeBrowserBack();
         _nativeP02Bridge?.Dispose();_nativeP02Bridge=null;
         _nativeModels?.Dispose();_nativeModels=null;
         var child=_nativeP02Process;_nativeP02Process=null;

@@ -71,13 +71,29 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
   const tickerText=node('span','nox-r11-ticker-text','NOX · нет подтверждённых событий');tickerText.setAttribute('role','status');tickerText.setAttribute('aria-live','polite');
   const tickerOpen=node('button','nox-r11-ticker-open','К панели');tickerOpen.type='button';tickerOpen.hidden=true;
   ticker.append(led,tickerText,tickerOpen);
+  // One original native browser, URL entered in the existing cockpit.
+  const browserInput=node('input','nox-r11-palette-input');browserInput.type='url';
+  browserInput.placeholder='https://';browserInput.setAttribute('aria-label','HTTPS адрес');
+  const browserOpen=node('button','nox-r11-search','Открыть HTTPS');browserOpen.type='button';
   const searchButton=node('button','nox-r11-search','⌕ Быстрый поиск · Ctrl+K');searchButton.type='button';
   const palette=node('section','nox-r11-palette');palette.dataset.noxR11Palette='true';palette.hidden=true;
   const search=node('input','nox-r11-palette-input');search.type='search';search.placeholder='Поиск по существующим разделам';search.setAttribute('aria-label','Поиск разделов NOX');
   const results=node('div','nox-r11-palette-results');
   const close=node('button','nox-r11-palette-close','Закрыть · Esc');close.type='button';
   palette.append(search,results,close);
-  panel.append(head,lead,searchButton,metrics,grid,feedback,palette);
+  panel.append(head,lead,browserInput,browserOpen,searchButton,metrics,grid,feedback,palette);
+  add(browserOpen,'click',async()=>{
+    if(dead||busy.has('browser.open'))return;
+    const url=String(browserInput.value||'').trim();
+    if(!/^https:\/\/[^\s/@?#]+(?:[/?#]|$)/i.test(url)||url.length>2048){
+      feedback.textContent='HOLD · разрешён только HTTPS';return;
+    }
+    busy.add('browser.open');browserOpen.disabled=true;
+    feedback.textContent='REQUESTED · подтвердите точный адрес в Windows';
+    try { await request('browser.open',{url}); }
+    catch { if(!dead)feedback.textContent='HOLD · Browser не подтверждён'; }
+    finally { busy.delete('browser.open');if(!dead)browserOpen.disabled=false; }
+  });
   root.prepend(panel);statusHost.append(ticker);
   root.classList.add('nox-r11-enhanced');
   for(const world of worlds)world.classList.add('nox-r11-world');
