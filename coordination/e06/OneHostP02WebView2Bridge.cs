@@ -84,6 +84,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             throw new UnauthorizedAccessException("E06_AUTHENTICATED_WINDOWS_SID_REQUIRED");
         _web.WebMessageReceived += OnWebMessageReceived;
         _web.NavigationStarting += OnNavigationStarting;
+        _web.NewWindowRequested += OnNewWindowRequested;
         _web.SourceChanged += OnSourceChanged;
         _web.ContentLoading += OnContentLoading;
         _web.ProcessFailed += OnProcessFailed;
@@ -206,6 +207,12 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         }
         if (!Trusted(e.Uri)) e.Cancel = true;
     }
+    private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
+    {
+        // window.open / target=_blank must never bypass exact-host navigation.
+        e.Handled = true;
+    }
+
     private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
         => RevokeDocument();
     private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs e)
@@ -405,6 +412,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         _document.Cancel();_document.Dispose();
         _web.WebMessageReceived -= OnWebMessageReceived;
         _web.NavigationStarting -= OnNavigationStarting;
+        _web.NewWindowRequested -= OnNewWindowRequested;
         _web.SourceChanged -= OnSourceChanged;
         _web.ContentLoading -= OnContentLoading;
         _web.ProcessFailed -= OnProcessFailed;
