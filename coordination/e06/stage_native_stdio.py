@@ -12,7 +12,8 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '2dce8b8a1d68c6ca801e56741aba5d3705674566'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '4d88533a9d9a776d6e6911099e6c146f76d9976b'),
+    ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'e60431d7ef93402016b2bed04f81945895db8092'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
@@ -108,7 +109,8 @@ def stage(source:Path)->dict:
                     sha256=hashlib.sha256((source/dest).read_bytes()).hexdigest(),
                     pyinstaller_destination=str(Path(dest).parent))
                     for rel,dest,_blob in ADDONS
-                    if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")],
+                    if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")
+                    or dest == "nox_selfbuilder/a1_native_command.py"],
                 native_python_source_smoke_verified_separately=True,
                 installed_windows_exe_accepted=False)
 

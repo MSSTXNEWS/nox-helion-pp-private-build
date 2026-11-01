@@ -13,6 +13,8 @@ import stat
 import threading
 from dataclasses import fields, replace
 from pathlib import Path
+from datetime import datetime, timezone
+from nox_selfbuilder.a1_native_command import A1NativeCommand, A1NativeHold
 
 from nox_native_bridge import NoxPackHost, NativeSession, BoundPort, APPROVED_NATIVE_POLICY
 from p02_native_ingress import NativeIngress
@@ -106,7 +108,8 @@ def load_native_config(data_dir):
 
 
 def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
-                            owner_ports=(), native_approve=None, data_dir=None):
+                            owner_ports=(), native_approve=None, data_dir=None,
+                            native_a_owner_components=None):
     """Bind approved P02 methods to the original host and original Store actor.
 
     The actor is created by the original CLI on its connection-owning thread.
@@ -189,6 +192,20 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         seed_archive=seed_archive, model_inventory=adapter.client.models,
         source_paths=config.get("source_paths", ()), stop_epoch=lambda: adapter._stop_epoch,
         request_stop=lambda session: stop(session, {}))
+    # Reuse existing A.1 owner hooks, original source HEAD and original STOP epoch.
+    # A signed Windows-native components factory is mandatory for boot; the
+    # existing Python pipe MUST NOT invent signed policy or install a scheduler.
+    def exact_native_a_components(session):
+        if not callable(native_a_owner_components):
+            raise A1NativeHold("A1_NATIVE_SIGNED_COMPONENTS_FACTORY_HOLD")
+        return native_a_owner_components(session)
+    a1_command = A1NativeCommand(
+        builder=builder, components=exact_native_a_components,
+        consent=lambda session, action: callable(native_approve) and
+            native_approve(session, "chat.commands", {"action": action}) is True,
+        authorize=lambda session, action: authorize(session, action, {}),
+        stopped=adapter.stop_requested, stop_epoch=lambda: adapter._stop_epoch,
+        source_head=builder.source.head)
     wow_runtime = OneHostWowRuntime(actor=store, builder=builder, adapter=adapter,
         queue=queue, authorize=authorize, native_approve=native_approve,
         stop_requested=adapter.stop_requested)
@@ -201,6 +218,15 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     def command(session, args):
         session, args = select_scope(session, args)
         action = args.get("action")
+        if action in ("selfbuilder.a1.status", "selfbuilder.a1.boot",
+                      "selfbuilder.a1.tick"):
+            # Original WPF chat.commands consent precedes this private-pipe
+            # callback; only the already-authenticated OneHost may grant it.
+            if action == "selfbuilder.a1.status":
+                grant(session, action, args)
+            else:
+                grant(session, "evolution.autonomy.read", {})
+            return a1_command.invoke(session, args, now=datetime.now(timezone.utc))
         if action in ("selfbuilder.background.status",
                       "selfbuilder.background.enable",
                       "selfbuilder.background.disable",

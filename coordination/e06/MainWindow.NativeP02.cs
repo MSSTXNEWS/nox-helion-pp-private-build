@@ -360,7 +360,11 @@ public partial class MainWindow
                 "selfbuilder.propose" or "selfbuilder.feedback" or "selfbuilder.worker.stop" or
                 "selfbuilder.study.queue" or "selfbuilder.learning.proofs" or
                 "selfbuilder.seed.inspect" or "selfbuilder.coding.models" or "selfbuilder.worker.start" or
-                "training.merge" or "training.import" or "training.activate" or "training.rollback"))
+                "training.merge" or "training.import" or "training.activate" or "training.rollback" or
+                "selfbuilder.a1.status" or "selfbuilder.a1.boot" or "selfbuilder.a1.tick"))
+                return Task.FromResult(false);
+            if ((command == "selfbuilder.a1.status" || command == "selfbuilder.a1.boot" ||
+                 command == "selfbuilder.a1.tick") && payload.EnumerateObject().Count() != 1)
                 return Task.FromResult(false);
             label += " / " + command;
         }
