@@ -50,7 +50,7 @@ REQUIRED_DONORS = frozenset({
 # One immutable commit admits the R4 MENU module, matching CSS and native adapter.
 # Keep all these pins together; a partial UI publication must fail before copy.
 MENU_V2_SHA256 = {
-    'ui/selfbuilder-menu-v2.mjs': '2022a97325dfa638d9d43b2fb1261b2be6bde4c769885bfd80ab24f926ce32e5',
+    'ui/selfbuilder-menu-v2.mjs': '776199ff71b0157e092b762c81af83486822143fd7ffec5656a2986a95203f0b',
     'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
     'ui/onehost-menu-bindings.mjs': '3d930636f5dabb84be9ecad0ea1ca6170d879bf5369b8d78131e10d1404de952',
     'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
