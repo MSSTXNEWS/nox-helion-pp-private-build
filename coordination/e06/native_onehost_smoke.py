@@ -100,6 +100,29 @@ def decode_frame(raw, run_id, pending):
     return result
 
 
+def safe_native_stderr_hint(path):
+    """Only stable exception class/module names; never log arbitrary stderr or PII."""
+    try:
+        tail = Path(path).read_bytes()[-65536:].decode("utf-8", errors="replace")
+    except (OSError, UnicodeError):
+        return "STDERR_UNAVAILABLE"
+    patterns = (
+        ("PY_MODULE_MISSING", r"""ModuleNotFoundError:\s+No module named ['"]([A-Za-z_][A-Za-z_0-9.]{0,99})['"]"""),
+        ("PY_IMPORT_MISSING", r"""ImportError:\s+cannot import name ['"]([A-Za-z_][A-Za-z_0-9]{0,99})['"]"""),
+    )
+    for kind, regex in patterns:
+        found = re.search(regex, tail)
+        if found:
+            return kind + ":" + found.group(1)
+    if "Failed to load Python DLL" in tail:
+        return "PYTHON_DLL_LOAD_FAILED"
+    if "Traceback (most recent call last)" in tail:
+        return "PYTHON_TRACEBACK_PRESENT"
+    if "FATAL" in tail.upper():
+        return "NATIVE_FATAL_DIAGNOSTIC_PRESENT"
+    return "STDERR_PRESENT_UNCLASSIFIED" if tail else "STDERR_EMPTY"
+
+
 class NativeExe:
     """Exactly one actual executable child; STOP can overtake its chat request."""
     def __init__(self, exe, data_dir, run_id, stderr_file):
@@ -359,6 +382,7 @@ def main(argv=None):
                     returncode = client.close()
                     proof["frames"]=list(client.frames)
                     proof["first_stderr_sha256"]=sha256(root / "stderr-first.log")
+                    proof["first_stderr_hint"]=safe_native_stderr_hint(root / "stderr-first.log")
                 if returncode != 0:
                     raise SmokeFailed("NATIVE_EXECUTABLE_SHUTDOWN_FAILED")
                 first_frames = client.frames
@@ -402,7 +426,8 @@ def main(argv=None):
         stream.write("\n")
     print(json.dumps({"schema": SCHEMA, "phase": proof["phase"],
         "native_windows_exe_request_reply": proof["native_windows_exe_request_reply"],
-        "receipt_sha256": sha256(output)}))
+        "receipt_sha256": sha256(output),
+        "first_stderr_hint": proof.get("first_stderr_hint", "NOT_APPLICABLE")}))
     return exit_code
 
 
