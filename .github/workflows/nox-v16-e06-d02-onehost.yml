@@ -26,6 +26,27 @@ concurrency:
   # Keep the running exact-SHA Windows job alive; queue only the newest PR head.
   cancel-in-progress: false
 jobs:
+  activator-portable-source:
+    # Cross-platform code check, deliberately NOT Windows EXE/E07 evidence.
+    # A Linux runner also diagnoses whether the CI failure is runner-wide.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12.10'
+      - name: Run existing ACTIVATOR and selfbuilder regressions
+        env:
+          PYTHONPATH: 'src:.'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests/selfbuilder -p 'test_activator_worm.py' -v
+          python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
+          python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
   visual-source-stage:
     runs-on: windows-2022
     timeout-minutes: 25
