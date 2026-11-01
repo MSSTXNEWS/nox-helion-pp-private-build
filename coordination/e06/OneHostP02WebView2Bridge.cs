@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Principal;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -50,6 +51,9 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private int _stopPending;
     private int _disposed;
     private long _streamEpoch;
+    private bool _externalMode;
+    private bool _nativeReturnPending;
+    private string? _externalHost;
 
     // All values here come from the native host, NEVER from a WebMessage.
     internal OneHostP02WebView2Bridge(
@@ -130,20 +134,95 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         catch { /* Fail closed; the native host still owns process shutdown. */ }
         finally { Interlocked.Exchange(ref _stopPending, 0); }
     }
+    // Native WPF owner only. Reuse THIS bridge and THIS WebView2.
+    // Untrusted pages cannot create grants or modify native host permissions.
+    internal bool TryOpenReviewedExternal(Uri target, IReadOnlyCollection<string> approvedHosts,
+        bool nativeGestureVerified, bool ipcDetached, bool hostObjectsRemoved,
+        bool networkIsolationAttested)
+    {
+        if (Volatile.Read(ref _disposed) != 0 || _externalMode ||
+            !Trusted(_web.Source) || !NativeSidMatches() ||
+            !nativeGestureVerified || !ipcDetached || !hostObjectsRemoved ||
+            !networkIsolationAttested || !ReviewedExternal(target) ||
+            approvedHosts is null) return false;
+        bool approved = false;
+        foreach (var entry in approvedHosts)
+            if (PublicHost(entry) && string.Equals(target.IdnHost, entry,
+                StringComparison.OrdinalIgnoreCase)) { approved = true; break; }
+        if (!approved) return false;
+        _externalHost = target.IdnHost;
+        _externalMode = true;  // Native IPC is rejected before navigation.
+        _nativeReturnPending = false;
+        RevokeDocument();     // Cancel stale model/chat jobs and request STOP.
+        try { _web.Navigate(target.AbsoluteUri); return true; }
+        catch { return false; } // Retain locked external mode on failure.
+    }
+
+    internal bool ReturnToReviewedShell()
+    {
+        if (Volatile.Read(ref _disposed) != 0 || !_externalMode ||
+            _nativeReturnPending || !NativeSidMatches()) return false;
+        _nativeReturnPending = true;
+        RevokeDocument();
+        try { _web.Navigate(_virtualOrigin.AbsoluteUri); return true; }
+        catch { return false; } // Do not restore IPC until trusted ContentLoading.
+    }
+
+    private static bool PublicHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host) || host.Length > 253 ||
+            host.StartsWith(".", StringComparison.Ordinal) ||
+            host.EndsWith(".", StringComparison.Ordinal) ||
+            host.Contains("..", StringComparison.Ordinal) || host.IndexOf('.') < 1 ||
+            IPAddress.TryParse(host, out _) ||
+            Uri.CheckHostName(host) != UriHostNameType.Dns) return false;
+        foreach (var suffix in new[]{ ".localhost", ".local", ".internal",
+            ".invalid", ".test", ".example", ".onion", ".arpa", ".lan", ".home" })
+            if (host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
+    }
+    private static bool ReviewedExternal(Uri? target) =>
+        target is not null && target.IsAbsoluteUri && target.IsDefaultPort &&
+        target.UserInfo.Length == 0 &&
+        target.Scheme == Uri.UriSchemeHttps && PublicHost(target.IdnHost);
+
+    private bool IsApprovedExternal(string? raw)
+    {
+        return Uri.TryCreate(raw, UriKind.Absolute, out var uri) &&
+               ReviewedExternal(uri) &&
+               string.Equals(uri.IdnHost, _externalHost, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
         RevokeDocument();
+        if (_externalMode)
+        {
+            if (_nativeReturnPending && Trusted(e.Uri)) return;
+            // Recheck EVERY redirect; no DNS suffix spoof, insecure scheme or port.
+            if (!IsApprovedExternal(e.Uri)) e.Cancel = true;
+            return;
+        }
         if (!Trusted(e.Uri)) e.Cancel = true;
     }
     private void OnSourceChanged(object? sender, CoreWebView2SourceChangedEventArgs e)
         => RevokeDocument();
     private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs e)
-        => RevokeDocument();
+    {
+        if (_nativeReturnPending && Trusted(_web.Source))
+        {
+            _externalMode = false;
+            _nativeReturnPending = false;
+            _externalHost = null;
+        }
+        RevokeDocument();
+    }
     private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
         => RevokeDocument();
 
     private bool IsCurrent(string source, long epoch) =>
-        Volatile.Read(ref _disposed) == 0 && !_lifetime.IsCancellationRequested &&
+        Volatile.Read(ref _disposed) == 0 && !_externalMode && !_lifetime.IsCancellationRequested &&
         Interlocked.Read(ref _epoch) == epoch && Trusted(source) && Trusted(_web.Source) &&
         string.Equals(source, _web.Source, StringComparison.Ordinal);
 
@@ -164,7 +243,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (Volatile.Read(ref _disposed) != 0 || !Trusted(e.Source) || !Trusted(_web.Source))
+        if (Volatile.Read(ref _disposed) != 0 || _externalMode ||
+            !Trusted(e.Source) || !Trusted(_web.Source))
             return;
         var source = e.Source;
         var epoch = Interlocked.Read(ref _epoch);
