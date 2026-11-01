@@ -208,7 +208,7 @@ if ($wantsCreative) {
   $wowReceiptPath=Join-Path (Split-Path -Parent $source) 'WOW200_STAGE_RECEIPT.json'
   if (!(Test-Path -LiteralPath $wowReceiptPath -PathType Leaf)) { throw 'D02_WOW_STAGE_RECEIPT_MISSING' }
   $wowReceipt=Get-Content -LiteralPath $wowReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
-  if ($wowReceipt.count -ne 71 -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
+  if ($wowReceipt.count -ne 78 -or $wowReceipt.p01_owner_source_staged -ne $true -or $wowReceipt.p01_owner_native_mount_activated -ne $false -or $wowReceipt.p01_owner_native_route_e2e -cne 'NOT_RUN' -or $wowReceipt.menu_v2_native_ui_staged -ne $true -or $wowReceipt.active_d02_engine -cne 'OWNER1_PR144_PINNED' -or
       $wowReceipt.legacy_d02_runtime_imported -ne $false -or
       $wowReceipt.pack01_catalog_routes -ne 50 -or
       $wowReceipt.source_only -ne $true -or $wowReceipt.release_accepted -ne $false) {
