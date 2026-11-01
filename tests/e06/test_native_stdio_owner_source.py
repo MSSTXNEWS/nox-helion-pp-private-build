@@ -15,6 +15,18 @@ class NativeOwnerSourceTest(unittest.TestCase):
             with self.subTest(source=relative):
                 self.assertEqual(module.git_blob((ROOT / relative).read_bytes()), exact_blob)
 
+    def test_r5_wow_is_explicitly_preserved_in_one_frozen_exe(self):
+        stage=(ROOT/"coordination/e06/stage_native_stdio.py").read_text("utf-8")
+        build=(ROOT/"coordination/e06/t06_native_proven_builder.py").read_text("utf-8")
+        owner=(ROOT/"coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")
+        ast.parse(stage);ast.parse(build);ast.parse(owner)
+        self.assertIn("from nox_selfbuilder.wow_owner_binding import OneHostWowRuntime",owner)
+        for name in ("wow_background","wow_design","wow_onehost_port","wow_owner_binding"):
+            with self.subTest(name=name):
+                self.assertIn(f"('src/nox_selfbuilder/{name}.py'",stage)
+                self.assertIn(f'"nox_selfbuilder.{name}"',build)
+        self.assertIn('"--collect-data","helion"',build)
+
     def test_existing_original_backend_not_second_host(self):
         stage=(ROOT/"coordination/e06/stage_native_stdio.py").read_text("utf-8")
         owner=(ROOT/"coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")

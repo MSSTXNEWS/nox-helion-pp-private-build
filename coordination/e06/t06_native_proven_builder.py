@@ -155,6 +155,8 @@ for hidden in (
     "nox_selfbuilder.original_store_adapter", "nox_selfbuilder.onehost_builder",
     "nox_selfbuilder.onehost_queue", "nox_selfbuilder.background_forge",
     "nox_selfbuilder.p04_forge_bridge",
+    "nox_selfbuilder.wow_background", "nox_selfbuilder.wow_design",
+    "nox_selfbuilder.wow_onehost_port", "nox_selfbuilder.wow_owner_binding",
 ):
     cmd[-1:-1] = ["--hidden-import", hidden]
 data_files = overlay_receipt.get("runtime_data_files")
