@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {MENU_V2_SECTIONS,P01_MENU_WORLD_NAV,menuWorldsForSection}
-  from '../../ui/selfbuilder-menu-v2.mjs';
+  from '../../../ui/selfbuilder-menu-v2.mjs';
 import {LOGICAL_MENU_PARENTS} from './scene-contract.mjs';
 
 test('existing 8 top-level physical tiles, not 10 generated graphics',()=>{
