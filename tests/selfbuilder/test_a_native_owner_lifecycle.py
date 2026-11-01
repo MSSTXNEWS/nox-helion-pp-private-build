@@ -9,7 +9,10 @@ from src.nox_selfbuilder.firstboot_coordinator import FirstBootCoordinator
 NOW = datetime(2026, 11, 2, tzinfo=timezone.utc)
 
 class Session:
-    allowed={'chat.commands'}
+    tenant='local'
+    principal='test-owner'
+    chat_id='test-chat'
+    allowed=frozenset({'chat.commands'})
     def validate(self): return None
 
 class NativeMegapatABinding(unittest.TestCase):
