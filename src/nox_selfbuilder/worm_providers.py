@@ -156,6 +156,7 @@ def github_repositories(task: WormTask, *, fetch=fetch_official_json, stop=None)
             # at the exact revision before any code is approved or executed.
             "license": "REVIEW_REQUIRED",
         })
+    _check_native_stop(stop)  # Reject native revocation during result formatting.
     return records
 
 
@@ -197,6 +198,7 @@ def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official
         if isinstance(published, str) and 0 < len(published) <= 50:
             rec["published"] = _safe(published, 50)
         records.append(rec)
+    _check_native_stop(stop)  # Reject native revocation during result formatting.
     return records
 
 
@@ -284,6 +286,7 @@ def official_feed(task: WormTask, *, feed_url, source_host, fetch=fetch_official
         if published:
             item["published"] = published
         out.append(item)
+    _check_native_stop(stop)  # Reject native revocation during result formatting.
     return out
 
 
@@ -296,6 +299,11 @@ def approved_provider_map(*, github_enabled=False, youtube_api_key=None,
     TikTok Research API requires approved research access and is NEVER implied
     by a public account or app's general-purpose OAuth login.
     """
+    # Every enabled network provider must be bound to the live native STOP.
+    # A missing callback must never authorize a remote fetch.
+    if (github_enabled is True or youtube_api_key is not None or
+            approved_feed_url is not None) and not callable(native_stop):
+        raise WormHold("WORM_NATIVE_STOP_REQUIRED")
     providers = {}
     hosts = {}
     if github_enabled is True:

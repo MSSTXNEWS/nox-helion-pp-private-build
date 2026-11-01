@@ -28,6 +28,7 @@ class Tests(unittest.TestCase):
 
     def test_explicit_owner_feed_map(self):
         mapping, hosts = p.approved_provider_map(approved_feed_url=self.FEED,
+                         native_stop=lambda: False,
                          feed_fetch=lambda u, host: p.fetch_official_feed(u, host=host,
                              read_urlopen=lambda req, timeout: Response(req.full_url, self.ATOM)))
         self.assertIn('approved_feeds', mapping)
@@ -102,7 +103,7 @@ class Tests(unittest.TestCase):
                 p._approved_url('https://'+host+'/feed',host)
 
     def test_owner_feed_not_configured(self):
-        mapping, hosts=p.approved_provider_map(github_enabled=True)
+        mapping, hosts=p.approved_provider_map(github_enabled=True, native_stop=lambda: False)
         self.assertNotIn('approved_feeds', mapping)
         self.assertEqual(hosts['github_api'],'github.com')
 
@@ -164,6 +165,35 @@ class Tests(unittest.TestCase):
             providers['github_api'](task('github_api'))
         self.assertEqual(checks,[True])
         self.assertEqual(hosts['github_api'],'github.com')
+
+
+    def test_enabled_network_sources_require_native_stop(self):
+        for options in ({'github_enabled': True},
+                        {'youtube_api_key': 'a'*24},
+                        {'approved_feed_url': self.FEED}):
+            with self.subTest(options=options), self.assertRaisesRegex(
+                    WormHold, 'WORM_NATIVE_STOP_REQUIRED'):
+                p.approved_provider_map(**options)
+        providers, hosts = p.approved_provider_map()
+        self.assertEqual((providers, hosts), ({}, {}))
+
+    def test_native_stop_revoked_while_rendering_github(self):
+        checks = iter((False, False, True))
+        data = {'items': [{'html_url': 'https://github.com/foo/bar',
+                           'full_name': 'foo/bar',
+                           'description': 'Review source'}]}
+        with self.assertRaisesRegex(WormHold, 'WORM_NATIVE_STOP_REVOKED'):
+            p.github_repositories(task('github_api'),
+                                  fetch=lambda *a, **kw: data,
+                                  stop=lambda: next(checks))
+
+    def test_native_stop_revoked_while_rendering_feed(self):
+        checks = iter((False, False, False, True))
+        with self.assertRaisesRegex(WormHold, 'WORM_NATIVE_STOP_REVOKED'):
+            p.official_feed(task('approved_feeds'), feed_url=self.FEED,
+                            source_host='github.com',
+                            fetch=lambda *a, **kw: p.ET.fromstring(self.ATOM),
+                            stop=lambda: next(checks))
 
     def test_json_strict_default_transport(self):
         original=p.build_opener
