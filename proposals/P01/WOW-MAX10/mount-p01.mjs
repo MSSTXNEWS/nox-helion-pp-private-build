@@ -9,6 +9,7 @@ import {nativeVisualApproval} from "./p01-visual-approval.mjs";
 import {createD02NativeVisualBus} from "./d02-native-events.mjs";
 import {validateOwnerP01,shortcutRoute,validateMode} from "./scene-contract.mjs";
 import {installP01Adaptive} from "./p01-responsive.mjs";
+import {mountCanonicalMenuCinematics} from "./p01-cinematic-menu.mjs";
 const mounted=new WeakSet();
 // OS-level reduced motion always outranks the user-selected quality profile.
 export function effectiveP01MotionMode(requested,reduced){
@@ -36,7 +37,7 @@ export function mountP01Owner(spec){
      [...controls,...panels].some(el=>!root.contains(el)))
     throw Error("P01_DUPLICATE_MOUNT_OR_UNTRUSTED_DECORATION");
   const dispatcher=createP01RouteDispatcher(hostPort);
-  const cleanups=[];let fx=null,wow=null,nativeBus=null,disposed=false;
+  const cleanups=[];let fx=null,wow=null,nativeBus=null,cinemaMenu=null,disposed=false;
   let requestedMode=mode;
   const win=root.ownerDocument.defaultView;
   const motionQuery=typeof win?.matchMedia==="function"?
@@ -85,6 +86,16 @@ export function mountP01Owner(spec){
     syncVisibility();
     // One host-owned subscription: exact CoreIDs + the existing secondary WOW.
     nativeBus=createD02NativeVisualBus(hostPort,fx,orbs.slice(1).map(x=>x.id));
+    // Exact eight approved original visual tiles and ten existing submenu nodes.
+    // Cosmetic only: the original native dispatcher owns every click/ACK/ACL.
+    try {
+      cinemaMenu=mountCanonicalMenuCinematics({
+        root,tiles:menu,worlds:logicalMenu,mode:effectiveMode()
+      });
+      cleanups.push(()=>cinemaMenu?.destroy());
+    } catch(error) {
+      console.warn("NOX_R11_CINEMATIC_SKIN_HOLD",error?.message||"SOURCE_MISMATCH");
+    }
     if(secondary){
       reviewWowScopes();
       wow=mountUnifiedCinema(secondary,{
@@ -156,9 +167,9 @@ export function mountP01Owner(spec){
         // requests reduced motion, even if a secondary WOW layer errors.
         try{
           if(fx.setProfile(profile)!==true)return;
-          wow?.setMode(profile);
+          wow?.setMode(profile);cinemaMenu?.setMode(profile);
         }catch{
-          try{fx.setProfile("REDUCED");wow?.setMode("REDUCED");}catch{}
+          try{fx.setProfile("REDUCED");wow?.setMode("REDUCED");cinemaMenu?.setMode("REDUCED");}catch{}
         }
       };
       if(typeof motionQuery.addEventListener==="function"){
@@ -178,6 +189,7 @@ export function mountP01Owner(spec){
         const effective=effectiveP01MotionMode(next,motionQuery?.matches===true);
         if(!fx.setProfile(effective))return false;
         try{wow?.setMode(effective);
+          cinemaMenu?.setMode(effective);
           requestedMode=next;return true;
         }catch{
           const restore=effectiveP01MotionMode(previous,motionQuery?.matches===true);
@@ -188,7 +200,7 @@ export function mountP01Owner(spec){
       },
       status(){
         return Object.freeze({...summary,profile:fx.snapshot().profile,
-          wowSourceMounted:!!wow,nativeCoreFeed:nativeBus.snapshot(),
+          wowSourceMounted:!!wow,cinematicOriginalMenuMounted:!!cinemaMenu,nativeCoreFeed:nativeBus.snapshot(),
           viewportLayout:root.dataset?.noxP01Layout||"unknown",
           viewportDpi:root.dataset?.noxP01Dpi||"unknown",
           hostIntegrationVerified:false,windowsExeAccepted:false});

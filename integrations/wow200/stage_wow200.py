@@ -61,7 +61,9 @@ MENU_V2_SHA256 = {
 }
 
 P01_OWNER_BLOBS = {
-    "proposals/P01/WOW-MAX10/mount-p01.mjs": "ed9af4d6723a9b5584dc3b36feceeff7264aa5bc",
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "abd66dd76c23aeae31f3b03513ab374a165e9852",
+    "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "6f86e6ac92f3e3b55d71f4298eb2269eb7cdd0ee",
+    "proposals/P01/WOW-MAX10/p01-cinematic-menu.css": "7205f4b747ed6b95856e0207a9b52cce29f9d118",
     "proposals/P01/WOW-MAX10/scene-contract.mjs": "4f273275113b4f2045f5249f1b93067512c13b22",
     "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
@@ -233,7 +235,7 @@ def stage(root:Path, source:Path)->dict:
         '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css">'
         '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-menu-v2.css">'
         '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-wow-workbench.css">'
-        '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css"></head>')
+        '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css"><link rel="stylesheet" href="creative/wow200/proposals/P01/WOW-MAX10/p01-cinematic-menu.css"></head>')
     new_home=new_home.replace('</body>',
         '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>'
         '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script></body>')
