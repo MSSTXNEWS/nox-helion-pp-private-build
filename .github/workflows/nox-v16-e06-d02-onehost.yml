@@ -29,6 +29,8 @@ jobs:
   activator-portable-source:
     # Cross-platform code check, deliberately NOT Windows EXE/E07 evidence.
     # A Linux runner also diagnoses whether the CI failure is runner-wide.
+    # Hosted Linux gate is diagnostic only; disabled when approved self-hosted Windows is selected.
+    if: vars.NOX_WINDOWS_RUNNER != 'self-hosted'
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
@@ -48,7 +50,10 @@ jobs:
           python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
   visual-source-stage:
-    runs-on: windows-2022
+    # Repository-owner variable only; user/model/page cannot select a runner.
+    # The owner must register a trusted Windows x64 runner with label nox-win-x64.
+    # Default hosted path is unchanged, and all original E06 gates remain.
+    runs-on: ${{ vars.NOX_WINDOWS_RUNNER == 'self-hosted' && fromJSON('["self-hosted","Windows","X64","nox-win-x64"]') || 'windows-2022' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -117,7 +122,10 @@ jobs:
     needs: visual-source-stage
     env:
       NOX_NATIVE_SMOKE_MODEL: ${{ inputs.native_smoke_model }}
-    runs-on: windows-2022
+    # Repository-owner variable only; user/model/page cannot select a runner.
+    # The owner must register a trusted Windows x64 runner with label nox-win-x64.
+    # Default hosted path is unchanged, and all original E06 gates remain.
+    runs-on: ${{ vars.NOX_WINDOWS_RUNNER == 'self-hosted' && fromJSON('["self-hosted","Windows","X64","nox-win-x64"]') || 'windows-2022' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
