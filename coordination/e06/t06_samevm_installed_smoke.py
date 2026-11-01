@@ -1,6 +1,6 @@
 """NOX HELION T06 Â· Same-VM installed candidate smoke, NOT independent E07.
 
-Reuse original P01 NSIS silently on a disposable Windows GitLab runner.
+Reuse original P01 NSIS silently on a disposable Windows CircleCI runner.
 No second VM, no download of artifacts or app assets, no source rewrite,
 no paid service, and no changes to a pre-existing installed NOX.
 
@@ -26,8 +26,8 @@ BUILD=OUTPUT
 CANDIDATE=BUILD/"ONEHOST_DIAGNOSTIC_RECEIPT.json"
 SETUP=BUILD/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
 PAYLOAD=BUILD/"payload"
-NATIVE_ROOT=ROOT/"work/t06-manual-source-inspect/python-exe-candidate"
 NATIVE_PROOF=ROOT/"work/e06/NATIVE_ONEHOST_SMOKE.json"
+BUILT_HANDOFF=BUILD/"E07_BUILT_HANDOFF.json"
 NSIS_PROOF=OUTPUT/"T06_INSTALLED_SMOKE.json"
 
 def require(condition:bool,code:str)->None:
@@ -46,4 +46,340 @@ def regular(path:Path)->bool:
 
 def plain_parents(path:Path,base:Path)->bool:
     try:
-        c¶»§q«^
+        cursor=path
+        while cursor!=base:
+            if cursor.exists() and (cursor.is_symlink() or getattr(cursor,"is_junction",lambda:False)()):
+                return False
+            parent=cursor.parent
+            if parent==cursor: return False
+            cursor=parent
+        return base.is_dir() and not base.is_symlink()
+    except (OSError,ValueError):return False
+
+def run(args:list[str],timeout:int)->dict:
+    start=time.monotonic()
+    try:
+        result=subprocess.run(args,capture_output=True,timeout=timeout,
+                              cwd=ROOT,check=False)
+        return {"code":result.returncode,
+                "elapsed":round(time.monotonic()-start,2),
+                "stdout_tail":result.stdout[-650:].decode("utf-8",errors="replace"),
+                "stderr_tail":result.stderr[-650:].decode("utf-8",errors="replace")}
+    except subprocess.TimeoutExpired:
+        return {"code":124,"elapsed":round(time.monotonic()-start,2),
+                "stdout_tail":"","stderr_tail":"TIMEOUT"}
+
+def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
+    request={
+        "protocol":"NOX-P02-NATIVE-v1",
+        "requestId":"aa55bb66cc77dd88ee99ff0011223344",
+        "route":"chat.model",
+        "payload":{},
+        "runId":"NOX-P02-INSTALLED-CANDIDATE-20261030"
+    }
+    raw=json.dumps(request,separators=(",",":")).encode("utf-8")
+    start=time.monotonic()
+    response=subprocess.run([str(binary),"--native-stdio","--run-id",request["runId"],
+                             "--data-dir",str(data_dir)],input=struct.pack(">I",len(raw))+raw,
+                            stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                            timeout=95,cwd=binary.parent,check=False)
+    require(response.returncode==0,"T06_INSTALLED_BACKEND_PROCESS_FAILED")
+    content=response.stdout
+    require(len(content)>=5,"T06_INSTALLED_BACKEND_FRAME_ABSENT")
+    n=struct.unpack(">I",content[:4])[0]
+    require(1<=n<=1048576 and len(content)==n+4,"T06_INSTALLED_BACKEND_FRAME_BOUNDS")
+    answer=json.loads(content[4:].decode("utf-8"))
+    require(answer.get("protocol")==request["protocol"] and
+            answer.get("runId")==request["runId"] and
+            answer.get("requestId")==request["requestId"] and
+            answer.get("status")=="OK" and
+            type(answer.get("result")) is dict and
+            type(answer["result"].get("models")) is list,
+            "T06_INSTALLED_BACKEND_FRAME_IDENTITY_OR_MODEL_HOLD")
+    return {"status":"PASS","route":"chat.model",
+            "run_id_matched":True,"request_id_matched":True,
+            "duration_seconds":round(time.monotonic()-start,2),
+            "binary_sha256":sha(binary)}
+
+def candidate_gate()->dict:
+    require(all(regular(x) for x in (CANDIDATE,SETUP,NATIVE_PROOF,BUILT_HANDOFF)),
+            "T06_CANDIDATE_EVIDENCE_MISSING")
+    source=json.loads(CANDIDATE.read_text("utf-8"))
+    native=json.loads(NATIVE_PROOF.read_text("utf-8"))
+    handoff=json.loads(BUILT_HANDOFF.read_text("utf-8"))
+    require(source.get("schema")=="NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1" and
+            source.get("release_accepted") is False and source.get("one_visible_host") is True and
+            source.get("status")=="WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED" and
+            type(source.get("installer_bytes")) is int and
+            source["installer_bytes"]==SETUP.stat().st_size and
+            re.fullmatch("[0-9a-f]{64}",str(source.get("installer_sha256",""))) and
+            sha(SETUP)==source["installer_sha256"],
+            "T06_INSTALLER_IDENTITY_SHA_HOLD")
+    require(native.get("schema")=="NOX_NATIVE_ONEHOST_SMOKE_V2" and
+            native.get("phase") in ("BUILT_AND_NATIVE_STDIO_SMOKE_PASS","BUILT_AND_NATIVE_STDIO_SMOKE_HOLD") and
+            native.get("offline_backbone_status")=="PASS" and
+            native.get("transport_status")=="PASS" and
+            native.get("original_729_unchanged") is True and
+            native.get("release_accepted") is False and
+            native.get("exe_sha256")==source.get("python_backend_sha256") and
+            ((native.get("live_model_status")=="HOLD" and native.get("native_windows_exe_request_reply")=="HOLD") or
+             (native.get("live_model_status")=="PASS" and native.get("native_windows_exe_request_reply")=="PASS")),
+            "T06_NATIVE_OFFLINE_BACKBONE_IDENTITY_HOLD")
+    require(handoff.get("schema")=="NOX_V16_E07_IMMUTABLE_HANDOFF_V1" and
+            handoff.get("phase")=="BUILT" and handoff.get("release_accepted") is False and
+            handoff.get("independent_e07_cases_accepted")==0 and
+            handoff.get("source_receipts_729_parity_verified") is True and
+            handoff.get("setup_sha256")==source["installer_sha256"] and
+            handoff.get("published_exe_sha256")==source.get("wpf_exe_sha256") and
+            handoff.get("source_commit_sha1")==native.get("source_commit") and
+            handoff.get("installed_exe_sha256") is None and
+            handoff.get("original_zip_sha256")=="ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a",
+            "T06_E07_BUILT_HANDOFF_IDENTITY_HOLD")
+    wpf=PAYLOAD/"NOX.P01.Shell.exe"
+    py=PAYLOAD/"Backend/NOX_HELION_PRIVATE_CANDIDATE.exe"
+    manifest=PAYLOAD/"payload.sha256.json"
+    require(all(regular(x) for x in (wpf,py,manifest)) and
+            sha(wpf)==source.get("wpf_exe_sha256") and
+            sha(py)==source.get("python_backend_sha256") and
+            sha(manifest)==source.get("payload_manifest_sha256"),
+            "T06_PAYLOAD_ORIGINAL_WPF_NATIVE_SHA_HOLD")
+    inventory=json.loads(manifest.read_text("utf-8"))
+    require(inventory.get("schema")=="NOX_P01_PAYLOAD_SHA256_V1" and
+            inventory.get("entrypoint")=="NOX.P01.Shell.exe" and
+            type(inventory.get("files")) is list and len(inventory["files"])>=12,
+            "T06_ORIGINAL_NSIS_MANIFEST_SCHEMA_HOLD")
+    seen=set()
+    for item in inventory["files"]:
+        name=item.get("path")
+        require(type(name) is str and name and "\\" not in name and "\x00" not in name,
+                "T06_PAYLOAD_FILE_PATH_INVALID")
+        parts=Path(name).parts
+        require(not Path(name).is_absolute() and not any(p in (".","..") for p in parts) and
+                name.casefold() not in seen,"T06_PAYLOAD_PATH_ESCAPE_OR_DUPLICATE")
+        seen.add(name.casefold())
+        file=PAYLOAD.joinpath(*parts)
+        require(regular(file) and file.resolve(strict=True).is_relative_to(PAYLOAD.resolve(strict=True)) and
+                item.get("sha256")==sha(file) and item.get("bytes")==file.stat().st_size,
+                "T06_PAYLOAD_MANIFEST_FILE_HASH_HOLD")
+    return {"setup_sha256":source["installer_sha256"],"wpf_sha256":source["wpf_exe_sha256"],
+            "backend_sha256":source["python_backend_sha256"],
+            "manifest_sha256":source["payload_manifest_sha256"],
+            "build_id":handoff["build_id"],
+            "native_source_receipt":"OFFLINE_BACKBONE_PASS_LIVE_MODEL_"+native["live_model_status"],
+            "manifest_files_checked":len(seen)}
+
+def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
+                                   report:dict)->dict:
+    """Only the ephemeral Windows CI VM can opt-in to Microsoft's signed runtime.
+    Never install it behind the user's back in production NOX Setup."""
+    if preflight["code"]==0:
+        return preflight
+    reason=preflight["stdout_tail"]+"\n"+preflight["stderr_tail"]
+    require("P01_WEBVIEW2_RUNTIME_MISSING" in reason,
+            "T06_PREFLIGHT_FAILED_FOR_UNRELATED_SECURITY_CAUSE")
+    require(os.environ.get("NOX_M1_CI_INSTALL_WEBVIEW2")=="YES",
+            "T06_OFFICIAL_WEBVIEW2_RUNTIME_REQUIRED_CI_OPT_IN")
+    from urllib.request import urlopen
+    from urllib.parse import urlsplit
+    url="https://go.microsoft.com/fwlink/p/?LinkId=2124703"
+    target=OUTPUT/"MicrosoftEdgeWebview2Setup.exe"
+    require(not target.exists(),"T06_WEBVIEW2_BOOTSTRAPPER_COLLISION")
+    with urlopen(url,timeout=90) as response:
+        final=urlsplit(response.geturl())
+        host=(final.hostname or "").lower()
+        require(final.scheme=="https" and
+                (host=="microsoft.com" or host.endswith(".microsoft.com")),
+                "T06_WEBVIEW2_UNTRUSTED_DOWNLOAD_REDIRECT")
+        with target.open("xb") as dest:
+            total=0
+            while chunk:=response.read(65536):
+                total+=len(chunk)
+                require(total<=15000000,"T06_WEBVIEW2_BOOTSTRAPPER_OVERSIZE")
+                dest.write(chunk)
+    require(target.stat().st_size>=100000 and
+            target.open("rb").read(2)==b"MZ",
+            "T06_WEBVIEW2_MICROSOFT_BOOTSTRAPPER_INVALID")
+    # Authenticode must chain to a valid Microsoft signer, without trusting URL.
+    ps=r"""$ErrorActionPreference='Stop'
+$p=$env:NOX_WEBVIEW2_SIGNED_INSTALLER_PATH
+if ([string]::IsNullOrWhiteSpace($p) -or -not (Test-Path -LiteralPath $p -PathType Leaf)) {exit 8}
+$s=Get-AuthenticodeSignature -LiteralPath $p
+if ($s.Status -ne 'Valid' -or
+    $s.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {exit 7}
+exit 0"""
+    signature_env=dict(os.environ)
+    signature_env["NOX_WEBVIEW2_SIGNED_INSTALLER_PATH"]=str(target)
+    check=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
+           "-Command",ps],env=signature_env,capture_output=True,timeout=50)
+    require(check.returncode==0,"T06_WEBVIEW2_MICROSOFT_SIGNATURE_HOLD")
+    provision=run([str(target),"/silent","/install"],290)
+    report["installer_lifecycle"]["microsoft_webview2_provision_ci"]={
+        "exit_code":provision["code"],"signed_microsoft":True}
+    require(provision["code"]==0,"T06_WEBVIEW2_RUNTIME_PROVISION_FAILED")
+    fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
+               "-ExecutionPolicy","Bypass","-File",str(script),
+               "-InstallRoot",str(install)],80)
+    require(fresh["code"]==0,"T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL")
+    return fresh
+
+def live_original_wpf_probe(exe:Path,local:Path)->dict:
+    """Real WPF start and NEW log evidence, not a visual-source assertion."""
+    log=local/"NOX_HELION/P01/logs/shell.log"
+    offset=log.stat().st_size if log.is_file() else 0
+    process=None
+    observed=""
+    try:
+        process=subprocess.Popen([str(exe)],cwd=exe.parent,
+            stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+        deadline=time.monotonic()+35
+        while time.monotonic()<deadline:
+            if log.is_file():
+                with log.open("rb") as stream:
+                    stream.seek(offset)
+                    observed=stream.read(262144).decode("utf-8",errors="replace")
+            if ("NAV_OK" in observed and
+                "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK" in observed):
+                break
+            if process.poll() is not None:
+                break
+            time.sleep(0.7)
+        return {"pid_started":process.pid>0,
+                "new_nav_ok":"NAV_OK" in observed,
+                "new_python_ipc_handshake":
+                    "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK" in observed,
+                "init_error":"INIT_ERROR" in observed,
+                "native_hold":"P02_ORIGINAL_NATIVE_HOLD" in observed,
+                "proof":"CURRENT_WINDOWS_PROCESS_NEW_SHELL_LOG",
+                "independent_visual_e07":"NOT_RUN"}
+    finally:
+        if process is not None:
+            try:
+                if process.poll() is None:
+                    process.terminate()
+                    try:process.wait(timeout=8)
+                    except subprocess.TimeoutExpired:
+                        subprocess.run(["taskkill.exe","/PID",str(process.pid),
+                                        "/T","/F"],capture_output=True,timeout=20)
+            finally:
+                try:process.wait(timeout=8)
+                except (subprocess.TimeoutExpired,OSError):pass
+
+def main()->int:
+    started=time.monotonic()
+    report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
+            "environment":"CIRCLECI_WINDOWS_EPHEMERAL_ONLY",
+            "setup_sha256":None,"installed_wpf_sha256":None,
+            "installed_backend_sha256":None,
+            "installed_process_gui_webview2":"NOT_TESTED",
+            "chat_stream_stop_rag":"NOT_TESTED",
+            "e07_independent_acceptance":"NOT_RUN",
+            "release_accepted":False,"installer_lifecycle":{}}
+    code=1
+    try:
+        require(sys.platform=="win32" and
+                os.environ.get("CIRCLECI")=="true" and
+                bool(os.environ.get("CIRCLE_BUILD_NUM")),
+                "T06_INSTALL_SMOKE_REQUIRES_DISPOSABLE_CIRCLECI_WINDOWS")
+        evidence=candidate_gate()
+        report.update(evidence)
+        local=os.getenv("LOCALAPPDATA","")
+        require(local and Path(local).is_dir() and
+                plain_parents(Path(local),Path(Path(local).anchor)),
+                "T06_WINDOWS_LOCALAPPDATA_UNTRUSTED")
+        install=Path(local)/"Programs"/"NOX HELION"
+        relatives=(install,Path(str(install)+".__p01_stage"),
+                   Path(str(install)+".__p01_previous"),
+                   Path(str(install)+".__p01_rollback_saved"))
+        require(all(not p.exists() and not p.is_symlink() for p in relatives),
+                "T06_CI_USER_HAS_EXISTING_NOX_INSTALL_SKIP")
+        origin=ROOT/"work/e06/staged/R11/Installer"
+        preflight=origin/"Preflight-InstallPath.ps1"
+        verify=origin/"Verify-Payload.ps1"
+        require(all(regular(p) for p in (preflight,verify)),
+                "T06_ORIGINAL_INSTALLER_OWNER_SCRIPTS_MISSING")
+        prep=run(["powershell.exe","-NoProfile","-NonInteractive",
+                  "-ExecutionPolicy","Bypass","-File",str(preflight),
+                  "-InstallRoot",str(install)],70)
+        report["installer_lifecycle"]["preflight_original"]=prep
+        prep=ensure_official_webview2_on_ci(prep,preflight,install,report)
+        report["installer_lifecycle"]["preflight_final"]=prep
+        installed=run([str(SETUP),"/S"],260)
+        report["installer_lifecycle"]["install"]=installed
+        require(installed["code"]==0 and install.is_dir(),"T06_NSIS_SILENT_INSTALL_FAILED")
+        mark=install/"nox-p01-owned.txt"
+        wpf=install/"NOX.P01.Shell.exe"
+        backend=install/"Backend/NOX_HELION_PRIVATE_CANDIDATE.exe"
+        require(regular(mark) and mark.read_text("utf-8-sig").strip()=="NOXHELION.P01 V16" and
+                regular(wpf) and regular(backend) and
+                sha(wpf)==evidence["wpf_sha256"] and
+                sha(backend)==evidence["backend_sha256"],
+                "T06_INSTALLED_BINARY_OR_OWNERSHIP_SHA_HOLD")
+        report["installed_wpf_sha256"]=sha(wpf)
+        report["installed_backend_sha256"]=sha(backend)
+        verify_result=run(["powershell.exe","-NoProfile","-NonInteractive",
+                      "-ExecutionPolicy","Bypass","-File",str(verify),
+                      "-Root",str(install),
+                      "-Manifest",str(install/"payload.sha256.json"),
+                      "-AllowInstalledMetadata"],130)
+        report["installer_lifecycle"]["verify"]=verify_result
+        require(verify_result["code"]==0,"T06_INSTALLED_OWNER_MANIFEST_VERIFY_FAILED")
+        report["installer_lifecycle"]["native_ipc"]=framed(
+            backend,OUTPUT/"native-ipc-data",report)
+        # All approved HOME pixels remain frozen before the native GUI probe.
+        approved={"home.png":"382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
+                  "core01.png":"343e5c73539358fe2c086706b4155cc0f9cd9702fcd40a98b4aab130585bec97"}
+        for name,expected in approved.items():
+            actual=install/"Assets"/name
+            require(regular(actual) and sha(actual)==expected,
+                    "T06_APPROVED_HOME_CORE_SOURCE_SHA_DRIFT:"+name)
+        report["original_home_and_core01_sha_verified"]=True
+        gui=live_original_wpf_probe(wpf,Path(local))
+        report["installer_lifecycle"]["original_wpf_gui"]=gui
+        require(gui["new_nav_ok"] and gui["new_python_ipc_handshake"],
+                "T06_ORIGINAL_WPF_WEBVIEW2_AND_PYTHON_RUNTIME_NOT_PROVEN")
+        # User data lives OUTSIDE the program install location.
+        persistent=Path(local)/"NOX_HELION"/"P01"
+        persistent.mkdir(parents=True,exist_ok=True)
+        marker=persistent/("m1-e07-no-loss-"+os.environ["CIRCLE_BUILD_NUM"]+".txt")
+        require(not marker.exists() and not marker.is_symlink(),
+                "T06_USER_DATA_PROOF_COLLISION")
+        signature=b"NOX_M1_PERSISTENT_STATE_NOLOSS\n"
+        marker.write_bytes(signature)
+        update=run([str(SETUP),"/S"],250)
+        report["installer_lifecycle"]["update"]=update
+        backup=Path(str(install)+".__p01_previous")
+        require(update["code"]==0 and backup.is_dir(),
+                "T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD")
+        require(sha(wpf)==evidence["wpf_sha256"] and
+                marker.read_bytes()==signature,
+                "T06_UPDATE_MUST_PRESERVE_BINARY_AND_DATA")
+        rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
+        report["installer_lifecycle"]["rollback"]=rollback
+        require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
+                marker.read_bytes()==signature,
+                "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
+        uninstall=install/"Uninstall.exe"
+        require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
+        uninstalled=run([str(uninstall),"/S"],220)
+        report["installer_lifecycle"]["uninstall"]=uninstalled
+        require(uninstalled["code"]==0 and not wpf.exists() and not backend.exists(),
+                "T06_CONSERVATIVE_UNINSTALL_PROGRAM_FILES_REMAIN")
+        require(marker.is_file() and marker.read_bytes()==signature,
+                "T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
+        report["phase"]="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"
+        print("T06_SAME_VM_INSTALL_NATIVE_UNINSTALL_PASS",
+              evidence["setup_sha256"],flush=True)
+        code=0
+    except Exception as exc:
+        report["reason"]=str(exc)[:260]
+        print("T06_SAME_VM_INSTALLED_SMOKE_HOLD",report["reason"],flush=True)
+    finally:
+        report["elapsed_seconds"]=round(time.monotonic()-started,2)
+        OUTPUT.mkdir(parents=True,exist_ok=True)
+        with NSIS_PROOF.open("x",encoding="utf-8") as stream:
+            json.dump(report,stream,ensure_ascii=False,indent=2)
+    return code
+
+if __name__=="__main__":
+    raise SystemExit(main())

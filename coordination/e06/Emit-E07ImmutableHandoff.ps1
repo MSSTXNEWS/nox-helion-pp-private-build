@@ -112,6 +112,7 @@ $hash=[Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($i
 $buildId='NOX-V16-'+([Convert]::ToHexString($hash).ToLowerInvariant().Substring(0,24))
 $installedSha=$null
 $logs=[ordered]@{}
+$logPaths=[ordered]@{}
 if ($Phase -ceq 'INSTALLED') {
  if ([string]::IsNullOrWhiteSpace($InstalledExe)) { throw 'E07_INSTALLED_EXE_MISSING' }
  $installedSha=FileSha $InstalledExe
@@ -124,6 +125,7 @@ if ($Phase -ceq 'INSTALLED') {
  @{name='uninstall';file=$UninstallLog})) {
   if ([string]::IsNullOrWhiteSpace($entry.file)) { throw "E07_LIFECYCLE_LOG_MISSING:$($entry.name)" }
   $logs[$entry.name]=FileSha $entry.file
+  $logPaths[$entry.name]=$entry.file
   if ((Get-Item -LiteralPath $entry.file).Length -le 0) {
    throw "E07_LIFECYCLE_LOG_EMPTY:$($entry.name)"
   }
@@ -140,6 +142,14 @@ if ((FileSha $Original729Receipt) -cne $manifestSha -or
 if ($Phase -ceq 'INSTALLED' -and
     (FileSha $InstalledExe) -cne $installedSha) {
  throw 'E07_INSTALLED_EXE_MUTATED_DURING_HANDOFF'
+}
+if ($Phase -ceq 'INSTALLED') {
+ foreach ($name in @('install','launch','update','rollback','uninstall')) {
+  if (!$logPaths.Contains($name) -or
+      (FileSha ([string]$logPaths[$name])) -cne [string]$logs[$name]) {
+   throw "E07_LIFECYCLE_LOG_MUTATED_DURING_HANDOFF:$name"
+  }
+ }
 }
 $receipt=[ordered]@{
  schema='NOX_V16_E07_IMMUTABLE_HANDOFF_V1'
@@ -182,5 +192,14 @@ $actual=Get-Content -LiteralPath $Output -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($actual.build_id -cne $buildId -or $actual.setup_sha256 -cne $setupSha -or
  $actual.published_exe_sha256 -cne $exeSha -or $actual.release_accepted -ne $false) {
  throw 'E07_HANDOFF_READBACK_DRIFT'
+}
+if ($Phase -ceq 'INSTALLED') {
+ foreach ($name in @('install','launch','update','rollback','uninstall')) {
+  $stored=[string]$actual.lifecycle_log_sha256.$name
+  if ($stored -cne [string]$logs[$name] -or
+      (FileSha ([string]$logPaths[$name])) -cne $stored) {
+   throw "E07_LIFECYCLE_LOG_READBACK_DRIFT:$name"
+  }
+ }
 }
 Write-Host "E07_BUILDID_SEALED $buildId PHASE=$Phase RELEASE_NOT_ACCEPTED"
