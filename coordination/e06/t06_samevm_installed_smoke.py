@@ -251,6 +251,28 @@ exit 0"""
                 "T06_WEBVIEW2_OFFICIAL_INSTALLER_INVALID")
         return target
 
+    def strict_postinstall_preflight(label:str)->dict:
+        """Boundedly wait for signed EdgeUpdate child registration; no safety bypass.
+
+        Original immutable R11 Preflight-InstallPath.ps1 remains the sole PASS
+        authority. An unrelated failure stops polling immediately.
+        """
+        attempts=[]
+        for delay in (0,2,4,8,12):
+            if delay: time.sleep(delay)
+            result=run(["powershell.exe","-NoProfile","-NonInteractive",
+                        "-ExecutionPolicy","Bypass","-File",str(script),
+                        "-InstallRoot",str(install)],80)
+            reason=result["stdout_tail"]+"\n"+result["stderr_tail"]
+            status=("PASS" if result["code"]==0 else
+                    "RUNTIME_MISSING" if "P01_WEBVIEW2_RUNTIME_MISSING" in reason
+                    else "UNRELATED_HOLD")
+            attempts.append({"delay_seconds":delay,"exit_code":result["code"],
+                             "strict_preflight_status":status})
+            if status!="RUNTIME_MISSING": break
+        report["installer_lifecycle"]["webview2_"+label+"_strict_preflight_poll"]=attempts
+        return result
+
     target=download_microsoft("https://go.microsoft.com/fwlink/p/?LinkId=2124703",
                               "MicrosoftEdgeWebview2Setup.exe",100000,15000000)
     kind="evergreen-bootstrapper"
@@ -267,9 +289,7 @@ exit 0"""
     report["installer_lifecycle"]["microsoft_webview2_provision_ci"]={
         "exit_code":provision["code"],"signed_microsoft":True,"kind":kind}
     require(provision["code"]==0,"T06_WEBVIEW2_RUNTIME_PROVISION_FAILED")
-    fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
-               "-ExecutionPolicy","Bypass","-File",str(script),
-               "-InstallRoot",str(install)],80)
+    fresh=strict_postinstall_preflight(kind)
     report["installer_lifecycle"]["webview2_first_postinstall_preflight"]=fresh
     if fresh["code"]!=0:
         reason=fresh["stdout_tail"]+"\n"+fresh["stderr_tail"]
@@ -290,9 +310,7 @@ exit 0"""
                 "kind":"evergreen-standalone-x64"}
             require(fallback["code"]==0,
                     "T06_WEBVIEW2_STANDALONE_RUNTIME_PROVISION_FAILED")
-            fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
-                       "-ExecutionPolicy","Bypass","-File",str(script),
-                       "-InstallRoot",str(install)],80)
+            fresh=strict_postinstall_preflight("evergreen-standalone-x64")
     report["installer_lifecycle"]["webview2_final_postinstall_preflight"]=fresh
     require(fresh["code"]==0,"T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL")
     return fresh
