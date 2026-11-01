@@ -59,8 +59,8 @@ MENU_V2_SHA256 = {
 }
 
 P01_OWNER_BLOBS = {
-    "proposals/P01/WOW-MAX10/mount-p01.mjs": "5f4abda73d96af9d3786e2ce84455fd1f3ba49ca",
-    "proposals/P01/WOW-MAX10/scene-contract.mjs": "a9d7314c5ad45c3d156fb3a020323c104b14b918",
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "d59b75dd7a3812f681fc5347875e4e5349b49241",
+    "proposals/P01/WOW-MAX10/scene-contract.mjs": "360fb1ba61b0e58af837c4e1ce62024f484c5852",
     "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
     "proposals/P01/WOW-MAX10/p01-visual-approval.mjs": "1f8a55ac2f579f544a9f00471aa187555c8e6dcd",
@@ -111,8 +111,8 @@ def pinned_source_bytes(path: Path, expected: str):
 
 def p01_owner_stage_plan(repo: Path, dest: Path) -> tuple[list, dict]:
     # Admit the ONE existing E01 P01 mount/route implementation as a complete,
-    # path-pinned source unit. Not activated until a native host and ten real
-    # owner-approved MENU DOM elements are attested.
+    # path-pinned source unit. Not activated until a native host, eight approved
+    # visual tiles and ten actual submenu DOM elements are attested.
     plans=[]
     content={}
     for relative, blob in P01_OWNER_BLOBS.items():
