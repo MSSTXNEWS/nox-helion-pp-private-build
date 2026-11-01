@@ -6,7 +6,6 @@ replace user data, spin up another backend, or imply a released EXE.
 """
 from __future__ import annotations
 import hashlib
-import json
 from pathlib import Path
 import sys
 
@@ -90,67 +89,21 @@ def stage(source:Path)->dict:
         if target.exists() or target.is_symlink() or not target.resolve(strict=False).is_relative_to(source):
             raise RuntimeError("E06_NATIVE_SOURCE_COLLISION_OR_ESCAPE")
         sources.append((target,pinned_bytes(src,blob)))
-    # A1 is part of the SAME staged Python process. Its 10 files are
-    # preflighted against the existing exact Git lock before ANY source write.
-    # The separate A1 staging entry stays available for independent auditing,
-    # but is NOT called here (would lose atomicity or cause path collisions).
-    from stage_a1_owner import REQUIRED as a_required, MANIFEST as a_manifest
-    from stage_a1_owner import git_blob as a_blob, regular_owned
-    manifest=json.loads(a_manifest.read_text(encoding='utf-8'))
-    pins=manifest.get('sources')
-    if (manifest.get('schema') != 'NOX-A1-ONEHOST-STAGE-LOCK-v1' or
-            not isinstance(pins,dict) or set(pins)!=set(a_required)):
-        raise RuntimeError('E06_A1_EXACT_SOURCE_LOCK_HOLD')
-    from re import fullmatch
-    for name in a_required:
-        expected=pins[name]
-        original_a=ROOT/'src'/'nox_selfbuilder'/name
-        destination=source/'nox_selfbuilder'/name
-        regular_owned(original_a, ROOT)
-        regular_owned(destination, source)
-        if (not isinstance(expected,str) or not fullmatch('[0-9a-f]{40}',expected) or
-                not original_a.is_file() or original_a.is_symlink() or
-                destination.exists() or destination.is_symlink()):
-            raise RuntimeError('E06_A1_SOURCE_PREIMAGE_OR_DESTINATION_HOLD:'+name)
-        payload=original_a.read_bytes()
-        if (not payload or len(payload)>256_000 or b'\\x00' in payload or
-                a_blob(payload)!=expected):
-            raise RuntimeError('E06_A1_SOURCE_SHA_HOLD:'+name)
-        compile(payload,str(original_a),'exec')
-        sources.append((destination,payload))
     updated=text.replace(ARG_ANCHOR,ARG_ANCHOR+"\n"+
         "    parser.add_argument('--native-stdio',action='store_true')\n"+
         "    parser.add_argument('--run-id',type=str)")
     updated=updated.replace(PARSE_ANCHOR,PARSE_ANCHOR+"\n"+STAGED_MODE)
     compile(updated,str(app),"exec")
-    # All source checks happened before any write. On a failed stage undo only
-    # exact files created here and the original app bytes; do not touch legacy.
-    created=[]
-    updated_bytes=updated.encode("utf-8")
-    try:
-        for target,data in sources:
-            target.parent.mkdir(parents=True,exist_ok=True)
-            regular_owned(target,source)
-            with target.open("xb") as dest:
-                created.append((target,data))
-                dest.write(data)
-                dest.flush()
-            if target.read_bytes()!=data:
-                raise RuntimeError("E06_NATIVE_STAGE_SOURCE_READBACK_HOLD")
-        app.write_bytes(updated_bytes)
-        if app.read_bytes()!=updated_bytes:
-            raise RuntimeError("E06_NATIVE_ORIGINAL_APP_READBACK_HOLD")
-    except BaseException:
-        if app.is_file() and app.read_bytes()==updated_bytes:
-            app.write_bytes(original)
-        for target,data in reversed(created):
-            if target.is_file() and not target.is_symlink() and target.read_bytes()==data:
-                target.unlink()
-        raise
+    # All source/addon checks complete before writing any disposable output.
+    for target,data in sources:
+        target.parent.mkdir(parents=True,exist_ok=True)
+        with target.open("xb") as f:f.write(data)
+    app.write_bytes(updated.encode("utf-8"))
+    if app.read_bytes()!=updated.encode("utf-8"):
+        raise RuntimeError("E06_NATIVE_ORIGINAL_APP_READBACK_HOLD")
     return dict(original_app_sha256=ORIGINAL_APP_SHA256,
                 staged_app_sha256=hashlib.sha256(app.read_bytes()).hexdigest(),
-                pinned_addons=len(ADDONS),a1_source_staged_count=len(a_required),
-                a1_native_activation_verified=False,original_archive_modified=False,
+                pinned_addons=len(sources),original_archive_modified=False,
                 runtime_data_files=[dict(source=rel, runtime_path=dest,
                     sha256=hashlib.sha256((source/dest).read_bytes()).hexdigest(),
                     pyinstaller_destination=str(Path(dest).parent))
