@@ -6,6 +6,12 @@ const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MODES=new Set(["ECO","BALANCED","MAX","REDUCED"]);
 const APPROVED_MENU_TILES=Object.freeze(["work","intelligence","knowledge","creative","people","development","world","system"]);
 const OWNER_MENU_WORLDS=Object.freeze(["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"]);
+// 10 logical worlds are mapped to 8 existing approved physical tiles.
+export const LOGICAL_MENU_PARENTS=Object.freeze({
+ work:"work",intelligence:"intelligence",knowledge:"knowledge",
+ learning:"development",entertainment:"creative",people:"people",
+ creative:"creative",business:"work",world:"world",pc:"system"
+});
 const validId=x=>typeof x==="string"&&ID.test(x);
 const inside=(root,node)=>!!node&&node.nodeType===1&&root.contains(node);
 function checkEntries(root,items,expected,kind){
@@ -33,7 +39,7 @@ export function validateOwnerP01(spec){
     throw Error("EIGHT_MENU_OWNER_TILE_IDENTITY_HOLD");
   const l=checkEntries(root,logicalMenu,10,"TEN_LOGICAL_ROUTES");
   if(logicalMenu.some((entry,index)=>entry.id!==OWNER_MENU_WORLDS[index] ||
-      !APPROVED_MENU_TILES.includes(entry.parentTileId)))
+      entry.parentTileId!==LOGICAL_MENU_PARENTS[entry.id]))
     throw Error("TEN_LOGICAL_MENU_PARENT_OR_WORLD_HOLD");
   const b=checkEntries(root,buttons,5,"FIVE_BUTTONS");
   const allRoutes=[...m.routes,...l.routes,...b.routes];
