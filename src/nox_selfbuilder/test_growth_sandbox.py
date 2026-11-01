@@ -130,8 +130,7 @@ class WormGrowthSandboxTests(unittest.TestCase):
                 owner_policy={"native_signed": True, "allow_disposable_sandbox": True},
                 source_checks={**green_checks(), "defender_reviewed": False},
                 artifact_sha256=ARTIFACT, sandbox_attestation=sandbox_attest())
-        self.assertEqual(result["state"], "READY_FOR_EXTERNAL_NATIVE_SANDBOX_RUN" if False else "READY_FOR_EXTERNAL_NATIVE_SANDBOX_RUN")
-        # The staging decision is a REVIEW, never a license to execute code.
+        self.assertEqual(result["state"], "HOLD")
         self.assertFalse(result["host_execution"])
 
     def test_receipt_pass_still_never_installs_production(self):
