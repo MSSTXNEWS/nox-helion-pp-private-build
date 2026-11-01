@@ -2,6 +2,7 @@
 // Source candidate: this is not a new MainWindow, web server or permission grant.
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -32,6 +33,10 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private int _epochRevocationDepth;
     private readonly CancellationTokenSource _lifetime = new();
     private int _disposed;
+    // Only native owner may grant an external browsing session in the same WebView2.
+    private bool _externalNavigationActive;
+    private bool _returnToShellPending;
+    private string? _approvedExternalHost;
 
     // Call on the WPF UI thread after EnsureCoreWebView2Async, using the host's
     // already mapped virtual origin and existing route/consent callbacks.
@@ -76,6 +81,75 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
                string.Equals(uri.Host, _trustedVirtualOrigin.Host, StringComparison.OrdinalIgnoreCase);
     }
 
+    // This native-only entrypoint is never exposed to web scripts.
+    // Owner must attest that IPC and host objects are detached BEFORE calling.
+    // The existing WebView2 is reused; untrusted pages can never invoke routes.
+    internal bool TryOpenReviewedExternal(Uri target,
+        IReadOnlyCollection<string> ownerApprovedHttpsHosts, bool verifiedNativeGesture,
+        bool nativeIpcDetached, bool hostObjectsRemoved, bool networkIsolationAttested)
+    {
+        if (Volatile.Read(ref _disposed) != 0 || _externalNavigationActive ||
+            !IsTrustedSource(_webView.Source) || !verifiedNativeGesture ||
+            !nativeIpcDetached || !hostObjectsRemoved || !networkIsolationAttested ||
+            !IsReviewedExternalUrl(target) || ownerApprovedHttpsHosts is null)
+            return false;
+        var host = target.IdnHost;
+        bool approved = false;
+        foreach (string candidate in ownerApprovedHttpsHosts)
+        {
+            if (IsPublicDnsHost(candidate) &&
+                string.Equals(candidate, host, StringComparison.OrdinalIgnoreCase))
+            {
+                approved = true;
+                break;
+            }
+        }
+        if (!approved) return false;
+        // Fail closed before any network request or document transition.
+        _externalNavigationActive = true;
+        _returnToShellPending = false;
+        _approvedExternalHost = host;
+        AdvanceDocumentEpoch(newDocument: false);
+        try { _webView.Navigate(target.AbsoluteUri); return true; }
+        catch (Exception) { return false; } // Keep external mode locked.
+    }
+
+    // Called by the same native WPF owner; never by JavaScript or a page link.
+    internal bool ReturnToTrustedShell()
+    {
+        if (Volatile.Read(ref _disposed) != 0 || !_externalNavigationActive ||
+            _returnToShellPending) return false;
+        _returnToShellPending = true;
+        AdvanceDocumentEpoch(newDocument: false);
+        try { _webView.Navigate(_trustedVirtualOrigin.AbsoluteUri); return true; }
+        catch (Exception) { return false; } // Do not re-enable IPC on failure.
+    }
+
+    private static bool IsPublicDnsHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host) || host.Length > 253 ||
+            host.StartsWith(".", StringComparison.Ordinal) ||
+            host.EndsWith(".", StringComparison.Ordinal) || host.Contains("..", StringComparison.Ordinal) ||
+            host.IndexOf('.') < 1 || IPAddress.TryParse(host, out _) ||
+            Uri.CheckHostName(host) != UriHostNameType.Dns) return false;
+        foreach (var suffix in new[] { ".localhost", ".local", ".internal", ".invalid",
+            ".test", ".example", ".onion", ".arpa", ".lan", ".home" })
+            if (host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
+    }
+
+    private static bool IsReviewedExternalUrl(Uri? uri) =>
+        uri is not null && uri.IsAbsoluteUri && uri.IsDefaultPort &&
+        string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
+        string.IsNullOrEmpty(uri.UserInfo) && IsPublicDnsHost(uri.IdnHost);
+
+    private bool IsCurrentReviewedExternalUrl(string raw)
+    {
+        if (!Uri.TryCreate(raw, UriKind.Absolute, out var uri)) return false;
+        return IsReviewedExternalUrl(uri) &&
+            string.Equals(uri.IdnHost, _approvedExternalHost, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool TryString(JsonElement root, string key, out string value)
     {
         value = "";
@@ -97,6 +171,14 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         // External documents belong to native host routing, never this bridge.
         // Revoke pending native work even when an unsafe navigation is cancelled.
         AdvanceDocumentEpoch(newDocument: false);
+        if (_externalNavigationActive)
+        {
+            // Exact host, scheme and port must remain valid at every redirect.
+            // No external->trusted transition unless explicitly initiated by owner.
+            if (_returnToShellPending && IsTrustedSource(args.Uri)) return;
+            if (!IsCurrentReviewedExternalUrl(args.Uri)) args.Cancel = true;
+            return;
+        }
         if (!IsTrustedSource(args.Uri))
             args.Cancel = true;
     }
@@ -118,7 +200,16 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     // Same-URL reloads can skip SourceChanged. ContentLoading is the document
     // boundary at which a new page may legitimately reuse request IDs.
     private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs args)
-        => AdvanceDocumentEpoch(newDocument: true);
+    {
+        // Restore native route handling only after a NEW trusted shell document.
+        if (_returnToShellPending && IsTrustedSource(_webView.Source))
+        {
+            _externalNavigationActive = false;
+            _returnToShellPending = false;
+            _approvedExternalHost = null;
+        }
+        AdvanceDocumentEpoch(newDocument: true);
+    }
 
     // WebView2 process failure may leave Source unchanged while native consent
     // or a route callback is awaiting. Fail closed: invalidate its document
@@ -149,7 +240,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
     {
         if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
-            !IsTrustedSource(args.Source)) return;
+            _externalNavigationActive || !IsTrustedSource(args.Source)) return;
         // Bind this request to the exact source document, not a later same-origin navigation.
         var documentSource = args.Source;
         var documentEpoch = Interlocked.Read(ref _documentEpoch);
@@ -272,7 +363,7 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
     private bool IsCurrent(string documentSource, long documentEpoch)
     {
         if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _epochRevocationDepth) != 0 ||
-            _lifetime.IsCancellationRequested) return false;
+            _externalNavigationActive || _lifetime.IsCancellationRequested) return false;
         try
         {
             var current = _webView.Source;
@@ -326,6 +417,8 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
             _lifetime.Dispose();
             _pending.Clear();
             _seenRequestIds.Clear();
+            _externalNavigationActive = true; // Shutdown must never restore privileges.
+            _approvedExternalHost = null;
         }
     }
 }
