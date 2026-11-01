@@ -17,6 +17,15 @@ export function effectiveP01MotionMode(requested,reduced){
 export function shouldRunP01Visuals(homeIsActive,documentVisible){
   return homeIsActive===true && documentVisible===true;
 }
+export function nativeP01Feedback(result){
+  // Browser clicks and pending promises are NEVER a completed native action.
+  if(result?.ok===true && typeof result.receiptId==="string" &&
+     /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(result.receiptId))
+    return Object.freeze({state:"confirmed",receiptId:result.receiptId});
+  const reason=typeof result?.reason==="string"&&/^[A-Z_]{1,80}$/.test(result.reason)
+    ?result.reason:"ACK_MISSING";
+  return Object.freeze({state:"hold",reason});
+}
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
   const {root,orbs,menu,logicalMenu,buttons,hostPort,secondary=null,
@@ -35,11 +44,16 @@ export function mountP01Owner(spec){
   const effectiveMode=()=>effectiveP01MotionMode(requestedMode,motionQuery?.matches===true);
   const saved=new Map([...menu,...logicalMenu,...buttons].map(x=>[x.element,{
     ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
+    state:x.element.dataset?.noxNativeState,reason:x.element.dataset?.noxNativeReason,
     hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
-    hadReceipt:Object.hasOwn(x.element.dataset||{},"noxNativeReceipt")}]));
+    hadReceipt:Object.hasOwn(x.element.dataset||{},"noxNativeReceipt"),
+    hadState:Object.hasOwn(x.element.dataset||{},"noxNativeState"),
+    hadReason:Object.hasOwn(x.element.dataset||{},"noxNativeReason")}]));
   const restore=()=>{for(const [el,s] of saved){
     if(s.hadAck)el.dataset.noxNativeAck=s.ack;else delete el.dataset.noxNativeAck;
     if(s.hadReceipt)el.dataset.noxNativeReceipt=s.receipt;else delete el.dataset.noxNativeReceipt;
+    if(s.hadState)el.dataset.noxNativeState=s.state;else delete el.dataset.noxNativeState;
+    if(s.hadReason)el.dataset.noxNativeReason=s.reason;else delete el.dataset.noxNativeReason;
   }};
   const watch=(element,type,handler)=>{
     element.addEventListener(type,handler);
@@ -84,15 +98,20 @@ export function mountP01Owner(spec){
       for(const item of items){
         const handler=async()=>{
           if(disposed||dispatcher.isPending(item.routeId))return;
-          const result=await dispatcher.invoke(item.routeId);
-          // Click is not success. Only verified native receipt can mark ACK.
+          item.element.dataset.noxNativeState="pending";
+          delete item.element.dataset.noxNativeReason;
+          const result=nativeP01Feedback(await dispatcher.invoke(item.routeId));
           if(disposed)return;
-          if(result.ok===true){
+          item.element.dataset.noxNativeState=result.state;
+          if(result.state==="confirmed"){
             item.element.dataset.noxNativeAck="true";
             item.element.dataset.noxNativeReceipt=result.receiptId;
+            delete item.element.dataset.noxNativeReason;
           }else{
+            // Do not make an unavailable route look like a successful button.
             delete item.element.dataset.noxNativeAck;
             delete item.element.dataset.noxNativeReceipt;
+            item.element.dataset.noxNativeReason=result.reason;
           }
         };
         watch(item.element,"click",handler);
