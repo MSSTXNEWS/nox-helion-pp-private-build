@@ -110,16 +110,21 @@ def decide_candidate(candidate: dict, *, owner_policy: dict, checks: dict):
     sealed = owner_policy.get("native_signed") is True
     source_ok = checks.get("sha256") is True and checks.get("provenance") is True
     licence_ok = candidate.get("license_checked") is True and checks.get("license") is True
-    scanned = checks.get("defender_reviewed") is True
-    if not (sealed and source_ok and licence_ok and scanned):
+    # Research text is inert data: exact provenance + licence + native policy
+    # permit automatic scoped S03 learning, without downloaded binaries.
+    if not (sealed and source_ok and licence_ok):
         return {"decision": "HOLD", "reason": "SOURCE_LICENSE_OR_SECURITY_HOLD",
                 "live_install": False, "training_started": False}
     if owner_policy.get("allow_research_memory") is True and candidate["kind"] in {"market", "benchmark", "learning_plan", "design"}:
         return {"decision": "AUTO_ADMIT_RESEARCH_TO_EXISTING_S03",
                 "requires_native_s03_readback": True, "live_install": False,
                 "training_started": False}
+    # Source-code candidates need additional quarantine, Defender review,
+    # isolated tests and explicit release-owner authority; not mere AV pass.
     if owner_policy.get("allow_disposable_sandbox") is True:
-        if checks.get("isolated_tests_passed") is True and checks.get("source_diff") is True:
+        if (checks.get("defender_reviewed") is True and
+                checks.get("isolated_tests_passed") is True and
+                checks.get("source_diff") is True):
             return {"decision": "AUTO_STAGE_SANDBOX_CANDIDATE",
                     "requires_owner_release_merge": True, "live_install": False,
                     "training_started": False}
