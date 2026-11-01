@@ -235,7 +235,9 @@ def make_growth_diff(candidate, *, path, old_source, new_source, source_head, so
             not isinstance(source_head, str) or not _HEAD.fullmatch(source_head)):
         raise WormHold('GROWTH_EXACT_BASE_HEAD_REQUIRED')
     if (not isinstance(path, str) or len(path) > 200 or '\\' in path or
-            not path.startswith(('src/nox_selfbuilder/', 'ui/', 'Packages/P04/')) or
+            not path.startswith(('src/nox_selfbuilder/', 'ui/',
+                                 'integrations/wow200/runtime/',
+                                 'integrations/creative/web/', 'Packages/P04/')) or
             PurePosixPath(path).as_posix() != path or
             any(part in ('.', '..', '') for part in path.split('/')) or
             not path.endswith(('.py', '.mjs', '.js', '.css', '.json', '.cs'))):
@@ -396,3 +398,72 @@ def rollback_sandbox_source(approval, *, candidate_bytes, original_bytes,
             'expected_current_sha256': approval['post_sha256'],
             'production_rolled_back': False, 'host_written': False,
             'state': 'SANDBOX_RESTORE_BYTES_READY'}
+
+# Reuse approved internet/local art as bytes, not as remote scripts or authority.
+# Binary assets are staged by existing native owner only; never replace D02.
+def make_reviewed_ui_asset_candidate(source, payload, *, session, source_head,
+                                      current_head, native_authorize,
+                                      stop_requested):
+    """Create an add-only graphics candidate with exact rights and byte receipt.
+
+    The original UI/OneHost and existing updater retain all install decisions.
+    A website/model cannot select an arbitrary destination, signed policy or
+    native rights receipt. Scriptable SVG is deliberately not an input format.
+    """
+    import struct
+    from pathlib import PurePosixPath
+    if not isinstance(source, dict) or source.get('schema') != 'NOX-UI-REVIEWED-ASSET-v1':
+        raise WormHold('UI_ASSET_NATIVE_REVIEW_REQUIRED')
+    if not isinstance(source_head, str) or not _HEAD.fullmatch(source_head):
+        raise WormHold('UI_ASSET_EXACT_HEAD_REQUIRED')
+    if not callable(current_head) or not callable(native_authorize) or not callable(stop_requested):
+        raise WormHold('UI_ASSET_NATIVE_OWNER_PORTS_REQUIRED')
+    if stop_requested() is not False or current_head() != source_head:
+        raise WormHold('UI_ASSET_STOP_OR_HEAD_DRIFT')
+    name = source.get('name')
+    kind = source.get('media_type')
+    if (type(name) is not str or
+            not re.fullmatch(r'[a-z0-9][a-z0-9_-]{1,63}\\.(png|webp)', name) or
+            kind not in ('image/png','image/webp') or
+            name.rsplit('.', 1)[-1] != ('png' if kind == 'image/png' else 'webp')):
+        raise WormHold('UI_ASSET_NAME_TYPE_HOLD')
+    digest = source.get('sha256')
+    rights = source.get('rights_receipt_id')
+    origin = source.get('provenance')
+    if (type(digest) is not str or not _SHA.fullmatch(digest) or
+            type(rights) is not str or
+            not re.fullmatch(r'[A-Za-z0-9._:-]{8,128}', rights) or
+            origin not in ('OFFICIAL_OPEN_SOURCE', 'USER_LICENSED', 'LOCAL_GENERATED') or
+            source.get('native_rights_verified') is not True or
+            source.get('derivative_use_approved') is not True):
+        raise WormHold('UI_ASSET_RIGHTS_AND_PROVENANCE_REQUIRED')
+    if type(payload) is not bytes or not 32 <= len(payload) <= 8_000_000:
+        raise WormHold('UI_ASSET_BYTES_QUOTA_HOLD')
+    if hashlib.sha256(payload).hexdigest() != digest:
+        raise WormHold('UI_ASSET_SHA256_MISMATCH')
+    if kind == 'image/png':
+        if (payload[:8] != b'\\x89PNG\\r\\n\\x1a\\n' or
+                payload[12:16] != b'IHDR' or len(payload) < 33):
+            raise WormHold('UI_ASSET_PNG_MAGIC_HOLD')
+        width, height = struct.unpack('>II', payload[16:24])
+        if not 1 <= width <= 8192 or not 1 <= height <= 8192:
+            raise WormHold('UI_ASSET_IMAGE_DIMENSIONS_HOLD')
+    elif not (payload[:4] == b'RIFF' and payload[8:12] == b'WEBP' and
+              int.from_bytes(payload[4:8], 'little') + 8 == len(payload)):
+        raise WormHold('UI_ASSET_WEBP_MAGIC_HOLD')
+    dest = 'integrations/wow200/runtime/reviewed/' + name
+    if str(PurePosixPath(dest)) != dest:
+        raise WormHold('UI_ASSET_PATH_HOLD')
+    permit = {'source_head': source_head, 'path': dest, 'sha256': digest,
+              'rights_receipt_id': rights}
+    if native_authorize(session, 'selfbuilder.assets.stage', permit) is not True:
+        raise WormHold('UI_ASSET_NATIVE_OWNER_APPROVAL_REQUIRED')
+    if stop_requested() is not False or current_head() != source_head:
+        raise WormHold('UI_ASSET_STOP_AFTER_APPROVAL')
+    return {'schema': 'NOX-UI-ASSET-CANDIDATE-v1', 'state': 'SANDBOX_ASSET_ONLY',
+            'source_head': source_head, 'path': dest, 'sha256': digest,
+            'bytes_count': len(payload), 'media_type': kind, 'provenance': origin,
+            'rights_receipt_id': rights, 'native_reviewed': True,
+            'payload_for_isolated_stage': payload, 'original_d02_overwritten': False,
+            'menu_buttons_changed': False, 'production_merged': False,
+            'installed_exe': False, 'e07_required': True}
