@@ -20,6 +20,9 @@ class WowStageTests(unittest.TestCase):
   for relative in eng.MENU_V2_SHA256:
    origin=repository/relative;target=self.root/relative
    target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(origin.read_bytes())
+  for relative in eng.P01_OWNER_BLOBS:
+   origin=repository/relative;target=self.root/relative
+   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(origin.read_bytes())
   self.preimages=dict(D02)
   self.old_engine_pins={k:dict(v) for k,v in eng.OWNER1_D02_ENGINE.items()}
   # Simulate exact owner1-vs-legacy Git blobs with distinct fixture bytes.
@@ -65,8 +68,15 @@ class WowStageTests(unittest.TestCase):
  def test_additive_preimage_and_readback(self):
   original={n:digest(self.stage/'Assets'/n) for n in D02}
   receipt=stage(self.stage,self.src)
-  self.assertEqual(len(receipt['files']),71)
+  self.assertEqual(len(receipt['files']),78)
   self.assertEqual(receipt['menu_v2_atomic_source_sha256'],eng.MENU_V2_SHA256)
+  self.assertTrue(receipt['p01_owner_source_staged'])
+  self.assertFalse(receipt['p01_owner_native_mount_activated'])
+  self.assertEqual(receipt['p01_owner_native_route_e2e'],'NOT_RUN')
+  self.assertEqual(receipt['p01_owner_source_git_blobs'],eng.P01_OWNER_BLOBS)
+  for relative in eng.P01_OWNER_BLOBS:
+   target=self.stage/'Assets/creative/wow200'/relative
+   self.assertEqual(target.read_bytes(),(self.root/relative).read_bytes())
   for relative in eng.MENU_V2_SHA256:
    staged=self.stage/'Assets/creative/wow200/ui'/Path(relative).name
    self.assertEqual(staged.read_bytes(),eng.canonical_menu_bytes(self.root/relative))
@@ -92,6 +102,20 @@ class WowStageTests(unittest.TestCase):
   self.assertIn('wow200/proposals/NOX-WOW51-100/wow51-100.css',html)
   self.assertTrue((self.stage.parent/'WOW200_STAGE_RECEIPT.json').is_file())
   with self.assertRaisesRegex(ValueError,'ALREADY_INSTALLED'):stage(self.stage,self.src)
+ def test_p01_menu10_source_drift_rejected_before_all_staging(self):
+  file=self.root/'proposals/P01/WOW-MAX10/mount-p01.mjs'
+  file.write_bytes(file.read_bytes()+b'// unapproved change\n')
+  with self.assertRaisesRegex(ValueError,'P01_MENU10_SOURCE_BLOB_HOLD'):
+   stage(self.stage,self.src)
+  self.assertFalse((self.stage/'Assets/creative/wow200').exists())
+ def test_p01_menu10_crlf_preserves_exact_approved_modules(self):
+  file=self.root/'proposals/P01/WOW-MAX10/scene-contract.mjs'
+  original=file.read_bytes()
+  file.write_bytes(original.replace(b'\n',b'\r\n'))
+  receipt=stage(self.stage,self.src)
+  target=self.stage/'Assets/creative/wow200/proposals/P01/WOW-MAX10/scene-contract.mjs'
+  self.assertEqual(target.read_bytes(),original)
+  self.assertTrue(receipt['p01_owner_source_staged'])
  def test_windows_menu_crlf_normalizes_to_exact_pinned_content(self):
   path=self.root/'ui/selfbuilder-menu-v2.mjs'
   original=eng.canonical_menu_bytes(path)
@@ -113,7 +137,7 @@ class WowStageTests(unittest.TestCase):
   p.write_bytes(normalized.replace(b'\n',b'\r\n'))
   eng.DONOR_MANIFEST_BLOB=gitsha(normalized)
   result=stage(self.stage,self.src)
-  self.assertEqual(len(result['files']),71)
+  self.assertEqual(len(result['files']),78)
  def test_checkout_crlf_donor_script_uses_pinned_canonical_bytes(self):
   p=self.src/'proposals/NOX-WOW51-100/catalog.mjs'
   normalized=p.read_bytes()
