@@ -162,9 +162,9 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         # Only entered after private-pipe native consent, not from a page flag.
         if not callable(native_approve) or native_approve(session, action, args) is not True:
             raise PermissionError("E06_FRESH_NATIVE_ACTION_CONSENT_REQUIRED")
-        if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge"} and queue.is_busy():
+        if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge", "selfbuilder.background.enable"} and queue.is_busy():
             raise RuntimeError("E06_NATIVE_WORKER_BUSY")
-        if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge"}:
+        if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge", "selfbuilder.background.enable"}:
             adapter.stop_event.clear()  # Fresh consent only; the revocation epoch NEVER resets.
         actions = {action}
         if action in {"selfbuilder.propose", "selfbuilder.worker.start"}:

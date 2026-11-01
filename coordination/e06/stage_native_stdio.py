@@ -12,7 +12,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '35fdee27b9675609ce0dabfc791ad88d7be7d72d'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '2dce8b8a1d68c6ca801e56741aba5d3705674566'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '0cd0de3e691638d7f3005471409bab240cf97382'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
