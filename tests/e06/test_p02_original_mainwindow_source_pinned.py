@@ -3,6 +3,14 @@ from pathlib import Path
 import unittest
 ROOT=Path(__file__).resolve().parents[2]
 class MainWindowP02Activation(unittest.TestCase):
+    def test_native_preimage_before_creative(self):
+        builder=(ROOT/"coordination/e06/build_onehost_installer.ps1").read_text("utf-8")
+        native=builder.index("& $stagePython.Source $t06Stage $source $t06Addon $exeDigest")
+        creative=builder.index("& $py.Source $creativeScript $source $creative")
+        self.assertLess(native,creative)
+        self.assertEqual(builder.count("& $stagePython.Source $t06Stage $source $t06Addon $exeDigest"),1)
+        self.assertEqual(builder.count("E06_P02_GIT_BLOB_PROVENANCE_REQUIRED"),1)
+
     def test_original_source_and_no_second_host(self):
         s=(ROOT/"coordination/e06/stage_native_p02.py").read_text("utf-8")
         a=(ROOT/"coordination/e06/MainWindow.NativeP02.cs").read_text("utf-8")

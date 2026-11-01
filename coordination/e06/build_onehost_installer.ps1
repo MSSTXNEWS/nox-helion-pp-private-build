@@ -145,6 +145,27 @@ if ($LASTEXITCODE -ne 0 -or
     @($installedSdks | Where-Object { $_ -match '^8\.' }).Count -eq 0) {
   throw 'E06_DOTNET8_SDK_REQUIRED_PRECHECK'
 }
+$repoRoot=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
+$gitTool=Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
+# Preserve the exact original MainWindow SHA: native binding precedes Creative/WOW.
+# Stage native WebView2/P02 activation only in the SHA-pinned original
+# MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
+$t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
+$t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
+foreach ($part in @(@{p=$t06Stage;sha='e7aa81e621c27d0673f4450a400f117dd84d6796'},@{p=$t06Addon;sha='ca037ea2a83a0a3fb0448b798de1a6dce96e26a4'})) {
+  Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
+  if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
+      (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
+    throw 'T06_ORIGINAL_MAINWINDOW_ADDON_SHA_HOLD'
+  }
+}
+$stagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $stagePython) { throw 'T06_NATIVE_STAGE_PYTHON_REQUIRED' }
+& $stagePython.Source $t06Stage $source $t06Addon $exeDigest
+if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_ORIGINAL_MAINWINDOW_STAGE_FAILED' }
+# Original WPF uses the attested Python EXE over native framed stdio; E07 remains separately required.
+
 $visualStage='NOT_REQUESTED'
 $wowReceiptPath=$null
 $personaReceiptPath=$null
@@ -285,9 +306,6 @@ $payload=Join-Path $out 'payload'
 # adapter into the DISPOSABLE R11 source. Never alter approved original archives.
 # This is compilable source only: live Python session and UI activation still
 # require native Windows E2E, not a --diagnose receipt.
-$repoRoot=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
-$gitTool=Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 $p02StageSources=@(
   @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='20c64c62c5b2c3f72c73ad106351d3af54cf0bd8'},
   @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='35d0a1c811f133d0b9e649f650e8b4929aa8a356'},
@@ -329,22 +347,6 @@ foreach ($entry in $p02StageSources) {
     throw 'E06_P02_DISPOSABLE_STAGE_SHA_MISMATCH'
   }
 }
-# Stage native WebView2/P02 activation only in the SHA-pinned original
-# MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
-$t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
-$t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='e7aa81e621c27d0673f4450a400f117dd84d6796'},@{p=$t06Addon;sha='ca037ea2a83a0a3fb0448b798de1a6dce96e26a4'})) {
-  Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
-  if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
-      (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
-    throw 'T06_ORIGINAL_MAINWINDOW_ADDON_SHA_HOLD'
-  }
-}
-$stagePython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $stagePython) { throw 'T06_NATIVE_STAGE_PYTHON_REQUIRED' }
-& $stagePython.Source $t06Stage $source $t06Addon $exeDigest
-if ($LASTEXITCODE -ne 0) { throw 'T06_NATIVE_ORIGINAL_MAINWINDOW_STAGE_FAILED' }
-# Original WPF uses the attested Python EXE over native framed stdio; E07 remains separately required.
 # T06: fix 17 malformed original P05 C# HTML raw-string fragments in the
 # disposable SHA-verified R11 stage; exact reversible transformation only.
 $p05Repair=Join-Path $repoRoot 'coordination/e06/stage_p05_html_verbatim.py'
