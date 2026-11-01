@@ -117,7 +117,9 @@ public static class ModelCatalog
         Family("stable-code", "Stable Code"), Family("wizard-math", "Wizard Math"),
         Family("llama-guard3", "Llama Guard 3"), Family("internlm2", "InternLM 2"),
         Family("devstral", "Devstral"), Family("granite3.1-dense", "Granite 3.1 Dense"),
-        Family("phi4", "Phi 4"), Family("muse-glimmer", "Muse Glimmer")
+        Family("phi4", "Phi 4"), Family("muse-glimmer", "Muse Glimmer"),
+        // Block 2: official embedding discovery; artifact/rights review still mandatory.
+        Family("qwen3-embedding", "Qwen 3 Embedding")
     ];
 
     // Catalog integrity is independent of actual source-page or license review.

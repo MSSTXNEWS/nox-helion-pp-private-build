@@ -72,5 +72,26 @@ class CatalogJsonContractR13(unittest.TestCase):
             P03OneHostPort._validate_catalog(self.path)
 
 
+    def test_10_qwen3_embedding_discovery_only(self):
+        """Retain 30 owner cards; admit only a non-downloadable 31st family."""
+        document = fixture()
+        family = {"id": "qwen3-embedding", "name": "Qwen 3 Embedding",
+                  "url": "https://ollama.com/library/qwen3-embedding",
+                  "reviewStatus": "REVIEW_REQUIRED", "downloadEligible": False}
+        document["models"].append(family)
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        cards = P03OneHostPort._validate_catalog(self.path)
+        self.assertEqual(len(cards), 31)
+        self.assertEqual(cards[-1], family)
+        self.assertTrue(all(card["downloadEligible"] is False for card in cards))
+
+    def test_11_embedded_model_cannot_bypass_review(self):
+        document = fixture()
+        document["models"].append({"id": "qwen3-embedding", "name": "Qwen 3 Embedding",
+             "url": "https://ollama.com/library/qwen3-embedding",
+             "reviewStatus": "OWNER_VERIFIED", "downloadEligible": True})
+        self.hold(json.dumps(document))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "schema": "NOX-P03-PYTHON-ONEHOST-CATALOG-V1",
   "sourceFile": "Packages/P03/Source/P03.ModelCenter/ModelCatalog.cs",
-  "sourceGitBlobSha1": "9b9e293be5a785369764fe378ee69c6c88c86b46",
+  "sourceGitBlobSha1": "e565efa8ad53ed811f0d77158eec55b1f078ddb8",
   "sourceType": "discovery_only",
   "models": [
     {
@@ -211,6 +211,13 @@
       "id": "muse-glimmer",
       "name": "Muse Glimmer",
       "url": "https://ollama.com/library/muse-glimmer",
+      "reviewStatus": "REVIEW_REQUIRED",
+      "downloadEligible": false
+    },
+    {
+      "id": "qwen3-embedding",
+      "name": "Qwen 3 Embedding",
+      "url": "https://ollama.com/library/qwen3-embedding",
       "reviewStatus": "REVIEW_REQUIRED",
       "downloadEligible": false
     }

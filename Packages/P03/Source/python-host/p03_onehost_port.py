@@ -74,8 +74,8 @@ class P03OneHostPort:
         if doc.get("schema") != "NOX-P03-PYTHON-ONEHOST-CATALOG-V1" or doc.get("sourceType") != "discovery_only":
             raise P03PortHold("P03 catalog schema drift")
         data = doc.get("models")
-        if not isinstance(data, list) or len(data) != 30:
-            raise P03PortHold("Approved 30 family discovery cards missing")
+        if not isinstance(data, list) or len(data) not in (30, 31):
+            raise P03PortHold("Approved 30/31 family discovery cards missing")
         result, used = [], set()
         for item in data:
             if not isinstance(item, dict):
