@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {R11_WORLD_IDS,R11_READ_ACTIONS,projectNativeReply,isTrustedInstallerEvent,mountR11WowMenu} from './nox-r11-wow.mjs';
+import {R11_WORLD_IDS,R11_READ_ACTIONS,projectNativeReply,isTrustedInstallerEvent,mountR11WowMenu} from '../ui/nox-r11-wow.mjs';
 class FakeElement {
   constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.parentElement=null;this.dataset={};this.hidden=false;this.disabled=false;this.value='';this.textContent='';this.listeners=new Map();this.attrs={};this.style={};this.classes=new Set();this.classList={add:x=>this.classes.add(x),remove:x=>this.classes.delete(x),contains:x=>this.classes.has(x)};}
   append(...nodes){for(const n of nodes){if(n.parentElement)n.remove();n.parentElement=this;this.children.push(n)}}
@@ -110,4 +110,37 @@ test('native v3 event only after coherent verified evidence, monotonic run seque
   f.eventSource.dispatch('message',{data:{installerEvent:{...good,event_sequence:2,numerator:4,receipt_sha256:'bad'}}});assert.ok(ticker.children[1].textContent.includes('50%'));
   for(const fn of f.timerFns.values())fn();assert.equal(ticker.dataset.state,'stale');
   r.destroy();assert.equal((f.eventSource.listeners.get('message')||[]).length,0);
+});
+
+test('STOP fence excludes a late native completion even after ACK',async()=>{
+  const f=fixture(),r=f.make();const panel=f.root.querySelector('[data-nox-r11="mounted"]');
+  const actions=panel.children.find(x=>x.className==='nox-r11-actions').children;
+  let finish;f.queue.push(new Promise(resolve=>{finish=resolve}));actions[0].click();await flush();
+  f.queue.push({state:'STOP_REQUESTED'});actions.at(-1).click();await flush();
+  const ticker=f.status.querySelector('[data-nox-r11-ticker]');
+  assert.equal(ticker.dataset.state,'pending');
+  assert.match(ticker.children[1].textContent,/STOP/);
+  finish({state:'COMPLETED',result:{models:['old'],status:'READY'}});await flush();
+  assert.match(ticker.children[1].textContent,/STOP/);
+  assert.notEqual(ticker.dataset.state,'verified');r.destroy();
+});
+test('bad counter does not reserve native event sequence and block corrected input',()=>{
+  const f=fixture(),r=f.make();const ticker=f.status.querySelector('[data-nox-r11-ticker]');
+  const ev={schema:'NOX-INSTALLER-EVENT-v3',evidence_verified:true,event_id:'valid-1',run_id:'r11',task_id:'t11',
+    action_id:'model.pull',event_type:'task.progress',state:'RUNNING',package_id:'P03',event_sequence:4,
+    receipt_sha256:'e'.repeat(64),timestamp_utc:new Date(10000).toISOString(),numerator:10,denominator:0};
+  f.eventSource.dispatch('message',{data:{installerEvent:ev}});
+  assert.equal(ticker.dataset.state,'unknown');
+  f.eventSource.dispatch('message',{data:{installerEvent:{...ev,denominator:20}}});
+  assert.equal(ticker.dataset.state,'verified');assert.match(ticker.children[1].textContent,/50%/);r.destroy();
+});
+test('ticker button opens corresponding existing read-only native action on user click',async()=>{
+  const f=fixture(),r=f.make();const ticker=f.status.querySelector('[data-nox-r11-ticker]');
+  const ev={schema:'NOX-INSTALLER-EVENT-v3',evidence_verified:true,event_id:'native-1',run_id:'r11',task_id:'t11',
+    action_id:'model.pull',event_type:'task.progress',state:'RUNNING',package_id:'P03',event_sequence:1,
+    receipt_sha256:'e'.repeat(64),timestamp_utc:new Date(10000).toISOString(),numerator:5,denominator:20};
+  f.eventSource.dispatch('message',{data:{installerEvent:ev}});
+  const button=ticker.children[2];assert.equal(button.hidden,false);
+  f.queue.push({state:'COMPLETED',result:{jobs:[]}});button.click();await flush();
+  assert.equal(f.requests.at(-1).route,'models.queue');r.destroy();
 });

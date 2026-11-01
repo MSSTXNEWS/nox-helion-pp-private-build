@@ -53,7 +53,7 @@ MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.mjs': '1d2aad894e4f5d03ae341a24c39a56e8e9e8bc00c3c39e504cc2ae2227f6a6bb',
     'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
     'ui/onehost-menu-bindings.mjs': '97024691bacc339987c0662a632868499783e4a18dfba64285ca425ef77cd09e',
-    'ui/nox-r11-wow.mjs': '272825918775db38b095ba1e0353740c2e8bc9ac0d0385040017809d6f89eb16',
+    'ui/nox-r11-wow.mjs': '55f533f8a8cd523b658107d1d472a9d0a421b78344b21c203a3f4624a6986250',
     'ui/nox-r11-wow.css': 'aadd7d633a65609ea24467bb6d39442cc0d94d748c1712f5d2b54c72ff13489a',
     'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
     'ui/selfbuilder-wow-workbench.css': 'bad615430856cb1ce0201bc21b77f33258d0d5fd3cbc7fa12b1f63af086dea24',

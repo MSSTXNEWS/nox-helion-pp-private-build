@@ -131,7 +131,7 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
     'training.step':['RUNNING','Обучение · шаг'],
     'checkpoint.saved':['COMPLETED','Контрольная точка'],
     'task.completed':['COMPLETED','Задание завершено'],
-    'model.stopped':['STOP_REQUESTED','Модель остановлена']
+    'model.stopped':['STOP_REQUESTED','STOP запрошен']
   });
   const nativeEvent=event=>{
     const raw=event?.data?.installerEvent||event?.data;
@@ -146,17 +146,19 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
     const prev=eventSeq.get(raw.run_id);
     if(prev!==undefined&&raw.event_sequence<=prev)return;
     if(eventSeq.size>=64&&!eventSeq.has(raw.run_id))eventSeq.delete(eventSeq.keys().next().value);
-    eventSeq.set(raw.run_id,raw.event_sequence);
     let progress='';
     const n=raw.numerator,d=raw.denominator;
     if(n!==undefined||d!==undefined){
       if(!Number.isSafeInteger(n)||!Number.isSafeInteger(d)||d<=0||n<0||n>d)return;
       progress=' · '+Math.round(100*n/d)+'%';
     }
+    eventSeq.set(raw.run_id,raw.event_sequence);
     ticker.dataset.state='verified';root.dataset.noxR11Native='verified';
     tickerText.textContent=type[1]+progress+' · '+raw.package_id;
     tickerOpen.hidden=false;
-    last={id:'native-event',label:type[1]};
+    const destinations={'task.started':'tasks','task.progress':'queue','training.step':'learning',
+      'checkpoint.saved':'learning','task.completed':'learning','model.stopped':'tasks'};
+    last={id:'native-event',label:type[1],destination:destinations[raw.event_type]};
     if(staleTimer!==null)cancel(staleTimer);
     staleTimer=schedule(stale,30000);
   };
@@ -171,9 +173,17 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
   const stop=node('button','nox-r11-stop','STOP · остановить локальный ответ');stop.type='button';
   add(stop,'click',async()=>{
     if(dead||busy.has('stop'))return;
+    // STOP has priority over every outstanding AI read: no late COMPLETED may repaint it.
+    const stopEpoch=++epoch;
     busy.add('stop');stop.disabled=true;
-    try{displayNative(await request('chat.stop',{}),{label:'STOP',id:'stop'});}
-    catch{if(!dead){feedback.textContent='HOLD · STOP не подтверждён нативным ядром';ticker.dataset.state='hold';}}
+    feedback.dataset.state='STOP_REQUESTED';feedback.textContent='STOP REQUESTED · ожидаем native ACK';
+    ticker.dataset.state='pending';tickerText.textContent='STOP REQUESTED · нет подтверждения завершения';
+    tickerOpen.hidden=true;last=null;
+    if(staleTimer!==null){cancel(staleTimer);staleTimer=null;}
+    try{
+      const reply=await request('chat.stop',{});
+      if(!dead&&stopEpoch===epoch)displayNative(reply,{label:'STOP',id:'stop'});
+    }catch{if(!dead&&stopEpoch===epoch){feedback.textContent='HOLD · STOP не подтверждён нативным ядром';ticker.dataset.state='hold';tickerText.textContent=feedback.textContent;}}
     finally{busy.delete('stop');if(!dead)stop.disabled=false;}
   });grid.append(stop);
   function findWorlds(query){
@@ -199,7 +209,16 @@ export function mountR11WowMenu({root,documentRef,windowRef,request,scope,native
     }
     if(event.key==='Escape'&&!palette.hidden){event.preventDefault();togglePalette(false);}
   });
-  add(tickerOpen,'click',()=>{if(dead||!last)return;root.scrollIntoView?.({behavior:view.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'instant':'smooth',block:'start'});});
+  add(tickerOpen,'click',()=>{
+    if(dead||!last)return;
+    // An explicit user click opens the matching EXISTING read-only native route.
+    // No side-effecting operation, new host, custom URL, or synthetic completion.
+    const id=last.id==='native-event'?last.destination:last.id;
+    const action=R11_READ_ACTIONS.find(item=>item.id===id);
+    if(action){if(!buttons.get(id)?.disabled)void execute(action);return;}
+    if(last.id==='stop'){stop.focus();return;}
+    root.scrollIntoView?.({behavior:view.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'instant':'smooth',block:'start'});
+  });
   return Object.freeze({snapshot:()=>Object.freeze({worldCount:worlds.length,actions:buttons.size,verified:ticker.dataset.state==='verified',hasNativeProof:ticker.dataset.state==='verified'}),
     destroy(){if(dead)return;dead=true;if(staleTimer!==null)cancel(staleTimer);for(const un of clean.reverse())try{un()}catch{};
       for(const w of worlds)w.classList.remove('nox-r11-world');root.classList.remove('nox-r11-enhanced');delete root.dataset.noxR11Native;eventSeq.clear();panel.remove();ticker.remove();}});
