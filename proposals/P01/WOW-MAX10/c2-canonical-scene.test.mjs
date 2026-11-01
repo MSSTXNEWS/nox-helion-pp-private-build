@@ -5,7 +5,10 @@ function make(){
  const root={nodeType:1,ownerDocument:{addEventListener(){}},contains:n=>n?.nodeType===1&&n.inside===true&&n!==root};
  const orbs=["HELION",...Array.from({length:8},(_,i)=>"CORE"+(i+1))].map(id=>({id,element:node()}));
  const entries=(n,p)=>Array.from({length:n},(_,i)=>({id:p+i,routeId:p+"."+i,element:node()}));
- return {root,orbs,menu:["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"].map((id,i)=>({id,routeId:"menu."+(i+1),element:node()})),buttons:entries(5,"button"),
+ const tiles=["work","intelligence","knowledge","creative","people","development","world","system"];
+ const worlds=["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"];
+ return {root,orbs,menu:tiles.map((id,i)=>({id,routeId:"menu.tile."+(i+1),element:node()})),
+   logicalMenu:worlds.map((id,i)=>({id,parentTileId:tiles[i%8],routeId:"menu.world."+(i+1),element:node()})),buttons:entries(5,"button"),
    hostPort:{isAvailable(){},invokeRoute(){},subscribeNative(){}},secondary:null};
 }
 test("C2.01 nine untouched original elements",()=>assert.equal(validateOwnerP01(make()).cores,8));
