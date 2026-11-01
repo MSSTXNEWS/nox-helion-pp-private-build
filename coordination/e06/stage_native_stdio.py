@@ -12,7 +12,11 @@ import sys
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
 ADDONS=(
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '7976dbe03bd6392cb2c502c3f97c81aa8cb288a8'),
+    ('src/nox_selfbuilder/activator_worm.py', 'nox_selfbuilder/activator_worm.py', 'e19eb797aceb4d102bae27bf41783802a0438656'),
+    ('coordination/e06/nox_foundation_readiness.py', 'nox_selfbuilder/foundation_readiness.py', '7d20cb6f750610d2e8122698cdcc190db31ce106'),
+    ('contracts/p03_download_candidates.json', 'nox_selfbuilder/p03_download_candidates.json', '17053ed67af3bd74c9f767b9d6cc33d66c3eab73'),
+    ('contracts/p04_module_candidates.json', 'nox_selfbuilder/p04_module_candidates.json', '3b034ba129c0ed434fe858ac132b1a15ea222d3b'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'eca9d6a51a1b2f16c07f0d511f926d10c32b5549'),
     ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'e60431d7ef93402016b2bed04f81945895db8092'),
     ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '0113b3e857f2ba55b74a02fcc3a76a24453b14e0'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
@@ -112,7 +116,9 @@ def stage(source:Path)->dict:
                     for rel,dest,_blob in ADDONS
                     if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")
                     or dest == "nox_selfbuilder/a1_native_command.py"
-                    or dest == "nox_selfbuilder/a1_existing_components.py"],
+                    or dest == "nox_selfbuilder/a1_existing_components.py"
+                    or dest in ("nox_selfbuilder/activator_worm.py",
+                                "nox_selfbuilder/foundation_readiness.py")],
                 native_python_source_smoke_verified_separately=True,
                 installed_windows_exe_accepted=False)
 

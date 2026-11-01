@@ -223,9 +223,39 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
                   if config.get("forge_root") is not None and getattr(sys,"frozen",False) and
                   "forge_python_exe" not in config else None)
     training_lease = [None]
+
+    def activator_status(session):
+        """Only original owner may obtain bounded local inventory and download cards."""
+        session.validate()
+        if session.tenant != "local" or session.principal != principal:
+            raise PermissionError("ACTIVATOR_WINDOWS_OWNER_SCOPE_REQUIRED")
+        from nox_selfbuilder.activator_worm import plan_activation
+        from nox_selfbuilder.foundation_readiness import inspect as inspect_local
+        base = Path(__file__).resolve().parents[1] / "nox_selfbuilder"
+        def load_pinned(name):
+            path = base / name
+            if not path.is_file() or path.is_symlink() or path.stat().st_size > 50000:
+                raise RuntimeError("ACTIVATOR_BUNDLED_CATALOG_MISSING")
+            return json.loads(path.read_text("utf-8"))
+        model_catalog = load_pinned("p03_download_candidates.json")
+        module_catalog = load_pinned("p04_module_candidates.json")
+        observed = inspect_local(str(data_dir) if data_dir is not None else None)
+        try:
+            source_head = builder.source.head()
+        except (ValueError, OSError, RuntimeError):
+            source_head = None
+        return plan_activation(
+            foundation=observed, models=model_catalog, modules=module_catalog,
+            source_head=source_head, owner_scope_verified=True)
+
     def command(session, args):
         session, args = select_scope(session, args)
         action = args.get("action")
+        if action == "selfbuilder.activator.status":
+            if set(args) != {"action"}:
+                raise PermissionError("ACTIVATOR_UNTRUSTED_PAGE_FIELDS")
+            grant(session, action, {})
+            return activator_status(session)
         if action in ("selfbuilder.a1.status", "selfbuilder.a1.boot",
                       "selfbuilder.a1.tick"):
             # Original WPF chat.commands consent precedes this private-pipe
