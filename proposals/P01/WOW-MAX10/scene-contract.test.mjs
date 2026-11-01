@@ -12,7 +12,7 @@ function fixture(){
    id:prefix+(i+1),routeId:prefix+".action."+(i+1),element:node()}));
  const hostPort={isAvailable:()=>true,invokeRoute:async()=>({ok:false}),
    subscribeNative:()=>()=>{}};
- return {root,orbs,menu:entries(8,"menu"),buttons:entries(5,"action"),
+ return {root,orbs,menu:["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"].map((id,i)=>({id,routeId:"menu.action."+(i+1),element:node()})),buttons:entries(5,"action"),
    secondary:null,hostPort};
 }
 test("T01 original 9 nodes and T02 unique 8 CoreID",()=>{
@@ -20,9 +20,9 @@ test("T01 original 9 nodes and T02 unique 8 CoreID",()=>{
  const x=fixture();x.orbs[1].id="HELION";
  assert.throws(()=>validateOwnerP01(x),/CORE_IDS/);
 });
-test("T03 eight MENU routes are required",()=>{
+test("T03 ten approved MENU worlds are required",()=>{
  const x=fixture();x.menu.pop();
- assert.throws(()=>validateOwnerP01(x),/EIGHT_MENU_COUNT/);
+ assert.throws(()=>validateOwnerP01(x),/TEN_MENU_COUNT/);
 });
 test("T04 five real function buttons are required",()=>{
  const x=fixture();x.buttons.pop();
@@ -61,7 +61,7 @@ test("T10 one WOW 51-200 source registry, not EXE acceptance",()=>{
 
 test("T01 duplicate MENU route IDs are blocked even when labels differ",()=>{
  const x=fixture();x.menu[1].routeId=x.menu[0].routeId;
- assert.throws(()=>validateOwnerP01(x),/EIGHT_MENU_IDENTITY_OR_DOM/);
+ assert.throws(()=>validateOwnerP01(x),/TEN_MENU_IDENTITY_OR_DOM/);
 });
 test("T02 a privileged button must not shadow a MENU action",()=>{
  const x=fixture();x.buttons[0].routeId=x.menu[0].routeId;
@@ -92,8 +92,17 @@ test("T05 editable controls and modified/repeated keys never hijack text input",
 
 test("T01: missing/non-string menu IDs and route IDs must fail without coercion",()=>{
  const x=fixture();delete x.menu[0].routeId;
- assert.throws(()=>validateOwnerP01(x),/EIGHT_MENU_IDENTITY_OR_DOM/);
+ assert.throws(()=>validateOwnerP01(x),/TEN_MENU_IDENTITY_OR_DOM/);
  const y=fixture();y.buttons[0].id=123;
  assert.throws(()=>validateOwnerP01(y),/FIVE_BUTTONS_IDENTITY_OR_DOM/);
  assert.equal(shortcutRoute({key:"k",ctrlKey:true},{searchRoute:123}),null);
+});
+
+test("T03 owner-approved world identities and order are mandatory",()=>{
+ const arbitrary=fixture();arbitrary.menu[0].id="fake";
+ assert.throws(()=>validateOwnerP01(arbitrary),/TEN_MENU_OWNER_WORLD_IDENTITY_HOLD/);
+ const swapped=fixture();[swapped.menu[0],swapped.menu[1]]=[swapped.menu[1],swapped.menu[0]];
+ assert.throws(()=>validateOwnerP01(swapped),/TEN_MENU_OWNER_WORLD_IDENTITY_HOLD/);
+ const valid=fixture();assert.equal(validateOwnerP01(valid).menu,10);
+ assert.equal(validateOwnerP01(valid).cores,8);
 });

@@ -1,9 +1,10 @@
 /* E01 WOW MAX10: T01 original 9 orbs, T02 8 distinct CoreID,
-   T03 exact 8 MENU + 5 function controls, T04 preserve original nodes,
+   T03 exactly 10 approved MENU worlds + 5 function controls, T04 preserve original nodes,
    T05 secondary WOW must never replace D02 HOME. */
 import {validateScene} from "../../NOX-CINEMA-FX/nox-cinema.mjs";
 const ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const MODES=new Set(["ECO","BALANCED","MAX","REDUCED"]);
+const OWNER_MENU_WORLDS=Object.freeze(["work","intelligence","knowledge","learning","entertainment","people","creative","business","world","pc"]);
 const validId=x=>typeof x==="string"&&ID.test(x);
 const inside=(root,node)=>!!node&&node.nodeType===1&&root.contains(node);
 function checkEntries(root,items,expected,kind){
@@ -24,7 +25,9 @@ export function validateOwnerP01(spec){
      !root.ownerDocument?.addEventListener)throw Error("ORIGINAL_ROOT_REQUIRED");
   validateScene(orbs);
   if(orbs.some(x=>!inside(root,x.element)))throw Error("ORIGINAL_NINE_ORBS_REQUIRED");
-  const m=checkEntries(root,menu,8,"EIGHT_MENU");
+  const m=checkEntries(root,menu,10,"TEN_MENU");
+  if(menu.some((entry,index)=>entry.id!==OWNER_MENU_WORLDS[index]))
+    throw Error("TEN_MENU_OWNER_WORLD_IDENTITY_HOLD");
   const b=checkEntries(root,buttons,5,"FIVE_BUTTONS");
   if([...b.routes].some(route=>m.routes.has(route)))
     throw Error("MENU_BUTTON_ROUTE_COLLIDE");
@@ -38,7 +41,7 @@ export function validateOwnerP01(spec){
      typeof hostPort?.invokeRoute!=="function"||
      typeof hostPort?.subscribeNative!=="function")
     throw Error("E06_NATIVE_PORT_REQUIRED");
-  return Object.freeze({helion:1,cores:8,menu:8,buttons:5,
+  return Object.freeze({helion:1,cores:8,menu:10,buttons:5,
     wow51to200:secondary!=null,existingNodesPreserved:true});
 }
 export function shortcutRoute(e,{homeActive=false,searchRoute,fullscreenRoute,escapeRoute}={}){
