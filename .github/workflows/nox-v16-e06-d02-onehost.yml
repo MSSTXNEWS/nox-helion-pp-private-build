@@ -33,6 +33,11 @@ jobs:
         with:
           python-version: '3.12.10'
           architecture: x64
+      - name: Block 2 P03 native/preview catalog source-pin consistency
+        shell: pwsh
+        run: |
+          python coordination/express/block2/test_catalog_consistency.py
+          if ($LASTEXITCODE -ne 0) { throw 'BLOCK2_P03_CATALOG_PIN_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |

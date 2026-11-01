@@ -402,12 +402,13 @@
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.js",
       "owner": 3,
-      "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
+      "run_id": "NOX-BLOCK2-P03-UI-SEED-PIN-FIX-20261101",
       "pre_git_blob_sha1": "52e789074fff96464f4ef5af033ebcfa35c98924",
-      "post_git_blob_sha1": "08d0e2d22ce2bd7b21d669804bf6a1577fbf7b17",
-      "post_bytes": 29771,
+      "post_git_blob_sha1": "30e836b47df04229c9c06141a2dd99c1c77453eb",
+      "post_bytes": 30697,
       "source_commit": "3ec73f893961a8dce0dc3bdbc202afd4a54773a0",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "acceptance": "SOURCE_CATALOG_UI_PIN_CONSISTENCY_NOT_MODEL_DOWNLOAD_OR_WINDOWS_E07",
+      "reconciliation_parent_sha1": "d7cce548ce3fc3ca977e60e5fd9f841de3eff345"
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs",
