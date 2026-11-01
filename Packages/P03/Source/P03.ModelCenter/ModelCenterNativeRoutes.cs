@@ -102,11 +102,13 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 var previous=(await _queue.ReadAsync(ct)).SingleOrDefault(x=>x.Id==JobId(payload))
                     ?? throw new InvalidOperationException("P03_EXISTING_JOB_REQUIRED");
                 var retryModels=_reviewed().Where(x=>x.ExactTag==previous.ModelTag && x.CanOfferOneClickPull).ToArray();
-                if (retryModels.Length!=1 ||
-                    previous.Kind==ModelJobKind.OllamaPull && previous.ExpectedOllamaDigest!=retryModels[0].ExpectedManifestDigestSha256 ||
-                    previous.Kind==ModelJobKind.GgufImport && previous.ExpectedLocalSha256!=retryModels[0].ExpectedSha256)
+                if (retryModels.Length!=1 || !MatchesRetryProvenance(previous,retryModels[0]))
                     throw new InvalidOperationException("P03_RETRY_REVIEW_REQUIRED");
                 RequireHardware(retryModels[0]);
+                ct.ThrowIfCancellationRequested();
+                // Prevent reviewed-registry drift during the hardware/native gate.
+                if (!_reviewed().Any(x=>x==retryModels[0] && x.CanOfferOneClickPull))
+                    throw new InvalidOperationException("P03_REVIEW_CHANGED");
                 var retry=await _worker.RetryAsync(JobId(payload),ct)
                     ?? throw new InvalidOperationException("P03_JOB_NOT_RETRYABLE");
                 StartQueuedTransfer(retry.Id);
@@ -249,6 +251,29 @@ public sealed class ModelCenterNativeRoutes : IDisposable
             }
         }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously,
            TaskScheduler.Default);
+    }
+
+    // A retry retains the original rights and immutable review; a matching model tag
+    // or content digest by itself never grants new permissions.
+    private static bool MatchesRetryProvenance(ModelJob prior, ModelCatalogEntry review)
+    {
+        if (!string.Equals(prior.LicenseSource, review.LicenseEvidenceUri?.AbsoluteUri,
+            StringComparison.Ordinal)) return false;
+        return prior.Kind switch
+        {
+            ModelJobKind.OllamaPull =>
+                string.Equals(prior.ExpectedOllamaDigest, review.ExpectedManifestDigestSha256,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(prior.ImmutableRevision, review.ImmutableRevision,
+                    StringComparison.Ordinal),
+            ModelJobKind.GgufImport =>
+                string.Equals(prior.ExpectedLocalSha256, review.ExpectedSha256,
+                    StringComparison.OrdinalIgnoreCase) &&
+                prior.ExpectedLocalBytes == review.ArtifactBytes &&
+                string.Equals(prior.RightsReceiptId, review.ReviewedRightsReceiptId,
+                    StringComparison.Ordinal),
+            _ => false
+        };
     }
 
     private static void RequireHardware(ModelCatalogEntry model)

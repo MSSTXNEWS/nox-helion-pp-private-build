@@ -166,6 +166,24 @@ class Tests(unittest.TestCase):
         s=State();s.rows=[{"sha256":"f"*64,"kind":"SOURCE_CANDIDATE","size_bytes":123}]*2
         self.assertEqual(s.app.run('S',now=NOW)['found_candidates'],1)
 
+    def test_conflicting_digest_metadata_holds_before_native_ingest_or_queue(self):
+        s = State()
+        digest = "f" * 64
+        s.p = policy(allow_local_knowledge_ingest=True,
+                     reviewed_local_artifacts={digest: {"rights_verified": True,
+                                                        "content_safe_for_s03": True}})
+        for mismatched in (
+            {"sha256": digest, "kind": "DESIGN_CANDIDATE", "size_bytes": 123},
+            {"sha256": digest, "kind": "SOURCE_CANDIDATE", "size_bytes": 124},
+        ):
+            s.rows = [{"sha256": digest, "kind": "SOURCE_CANDIDATE", "size_bytes": 123}, mismatched]
+            r = s.app.run("owner_A", now=NOW)
+            self.assertEqual(r["status"], "HOLD")
+            self.assertEqual(r["reason"], "LOCAL_SCAN_CONFLICTING_DIGEST_METADATA")
+            self.assertEqual(s.persisted, [])
+            self.assertEqual(s.calls, [])
+            self.assertEqual(s.ingested, [])
+
     def test_auto_ingest_only_owner_reviewed_s03_safe_materials(self):
         s=State()
         digest="f"*64

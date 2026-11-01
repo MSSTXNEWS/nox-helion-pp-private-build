@@ -199,3 +199,175 @@ def daily_initiatives(now, *, source_head):
         "s03_readback_required": True,
         "personality_state": "CURIOUS_SEARCHING" if agenda["planned_tasks"] else "IDLE",
     }
+
+# EV-A06 · FORGE review-only diff -> attested sandbox -> owner -> rollback.
+# This block is appended to existing growth_sandbox.py; NEVER writes host code.
+def make_growth_diff(candidate, *, path, old_source, new_source, source_head, source_receipt,
+                     session, native_registry_verify, stop_requested):
+    """Compute an exact, bounded one-file candidate diff with Git blob evidence."""
+    import difflib
+    from pathlib import PurePosixPath
+
+    if (not isinstance(candidate, dict) or
+            candidate.get('schema') != 'NOX-GROWTH-CANDIDATE-v1' or
+            candidate.get('source_head') != source_head or
+            not isinstance(source_head, str) or not _HEAD.fullmatch(source_head)):
+        raise WormHold('GROWTH_EXACT_BASE_HEAD_REQUIRED')
+    if (not isinstance(path, str) or len(path) > 200 or '\\' in path or
+            not path.startswith(('src/nox_selfbuilder/', 'ui/', 'Packages/P04/')) or
+            PurePosixPath(path).as_posix() != path or
+            any(part in ('.', '..', '') for part in path.split('/')) or
+            not path.endswith(('.py', '.mjs', '.js', '.css', '.json', '.cs'))):
+        raise WormHold('GROWTH_SCOPED_REGULAR_SOURCE_REQUIRED')
+    if not isinstance(old_source, str) or not isinstance(new_source, str):
+        raise WormHold('GROWTH_TEXT_ONLY_REQUIRED')
+    old, new = old_source.encode('utf-8'), new_source.encode('utf-8')
+    if (not old or not new or len(old) > _MAX_CODE_BYTES or len(new) > _MAX_CODE_BYTES or
+            old == new or b'\x00' in old or b'\x00' in new or
+            b'\r' in old or b'\r' in new or
+            not old.endswith(b'\n') or not new.endswith(b'\n')):
+        raise WormHold('GROWTH_BOUNDED_CHANGED_SOURCE_REQUIRED')
+    def gitblob(b):
+        return hashlib.sha1(b'blob '+str(len(b)).encode('ascii')+b'\0'+b).hexdigest()
+    if (not isinstance(source_receipt, dict) or
+            source_receipt.get('source_head') != source_head or
+            source_receipt.get('path') != path or
+            source_receipt.get('regular_file') is not True or
+            source_receipt.get('snapshot_verified') is not True or
+            source_receipt.get('pre_blob_sha1') != gitblob(old) or
+            source_receipt.get('pre_sha256') != hashlib.sha256(old).hexdigest()):
+        raise WormHold('GROWTH_TRUSTED_EXACT_HEAD_PREIMAGE_REQUIRED')
+    if not callable(native_registry_verify) or not callable(stop_requested):
+        raise WormHold('GROWTH_NATIVE_REGISTRY_GATE_REQUIRED')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_SOURCE_DIFF_STOPPED')
+    provenance = {'source_head': source_head, 'path': path,
+                  'pre_blob_sha1': gitblob(old),
+                  'pre_sha256': hashlib.sha256(old).hexdigest()}
+    if native_registry_verify(session, 'growth.source.exact_head', provenance) is not True:
+        raise WormHold('GROWTH_NATIVE_REGISTRY_NOT_VERIFIED')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_SOURCE_DIFF_STOPPED')
+    patch = ''.join(difflib.unified_diff(old_source.splitlines(keepends=True),
+        new_source.splitlines(keepends=True), fromfile='a/'+path,
+        tofile='b/'+path, n=3))
+    patch_bytes = patch.encode('utf-8')
+    if not patch or len(patch_bytes) > _MAX_CODE_BYTES:
+        raise WormHold('GROWTH_BOUNDED_SOURCE_DIFF_REQUIRED')
+    case = (source_head+'\n'+candidate['candidate_sha256']+'\n'+path+'\n'+
+            hashlib.sha256(old).hexdigest()+'\n'+hashlib.sha256(new).hexdigest())
+    return {'schema': 'NOX-GROWTH-DIFF-TICKET-v1',
+            'ticket_sha256': hashlib.sha256(case.encode('utf-8')).hexdigest(),
+            'candidate_id': candidate['candidate_id'], 'source_head': source_head,
+            'path': path, 'pre_blob_sha1': gitblob(old),
+            'post_blob_sha1': gitblob(new),
+            'pre_sha256': hashlib.sha256(old).hexdigest(),
+            'post_sha256': hashlib.sha256(new).hexdigest(),
+            'diff_sha256': hashlib.sha256(patch_bytes).hexdigest(),
+            'diff': patch, 'state': 'SANDBOX_INPUT_ONLY',
+            'host_modified': False, 'production_merged': False}
+
+
+def bind_growth_sandbox(diff_ticket, sandbox_ticket, sandbox_review, *, session, native_verify):
+    """Match exact tested bytes and source HEAD; no review without native receipt."""
+    if (not callable(native_verify) or not isinstance(diff_ticket, dict) or
+            diff_ticket.get('schema') != 'NOX-GROWTH-DIFF-TICKET-v1' or
+            not isinstance(sandbox_ticket, dict) or
+            sandbox_ticket.get('schema') != 'NOX-GROWTH-SANDBOX-TICKET-v1' or
+            not isinstance(sandbox_review, dict) or
+            sandbox_review.get('schema') != 'NOX-GROWTH-SANDBOX-REVIEW-v1'):
+        raise WormHold('GROWTH_SANDBOX_SOURCE_BINDING_REQUIRED')
+    if (sandbox_ticket.get('state') != 'READY_FOR_EXTERNAL_NATIVE_SANDBOX_RUN' or
+            sandbox_ticket.get('source_head') != diff_ticket['source_head'] or
+            sandbox_ticket.get('candidate_id') != diff_ticket['candidate_id'] or
+            sandbox_ticket.get('artifact_sha256') != diff_ticket['post_sha256'] or
+            sandbox_review.get('candidate_id') != diff_ticket['candidate_id'] or
+            sandbox_review.get('state') != 'SANDBOX_TESTED_AWAITING_I0' or
+            type(sandbox_review.get('tests_passed')) is not int or
+            sandbox_review['tests_passed'] < 1 or
+            sandbox_review.get('production_merged') is not False):
+        raise WormHold('GROWTH_SANDBOX_CROSS_RECEIPT_HOLD')
+    # Untrusted model/text may forge a matching dictionary. Only the original
+    # native OneHost verifier can authenticate the sandbox's audit receipt.
+    proof = {'ticket_sha256': diff_ticket['ticket_sha256'],
+             'candidate_id': diff_ticket['candidate_id'],
+             'artifact_sha256': diff_ticket['post_sha256'],
+             'source_head': diff_ticket['source_head'],
+             'tests_passed': sandbox_review['tests_passed']}
+    if native_verify(session, 'growth.sandbox.receipt.verify', proof) is not True:
+        raise WormHold('GROWTH_UNATTESTED_SANDBOX_RESULT_HOLD')
+    return {'schema': 'NOX-GROWTH-OWNER-REVIEW-v1',
+            'ticket_sha256': diff_ticket['ticket_sha256'],
+            'source_head': diff_ticket['source_head'],
+            'path': diff_ticket['path'],
+            'pre_blob_sha1': diff_ticket['pre_blob_sha1'],
+            'post_blob_sha1': diff_ticket['post_blob_sha1'],
+            'pre_sha256': diff_ticket['pre_sha256'],
+            'post_sha256': diff_ticket['post_sha256'],
+            'diff_sha256': diff_ticket['diff_sha256'],
+            'sandbox_tests': sandbox_review['tests_passed'],
+            'state': 'WAIT_NATIVE_OWNER_APPROVAL',
+            'production_merged': False}
+
+
+def owner_approve_growth_review(review, *, session, native_authorize,
+                                stop_requested, current_head):
+    """Issue a one-candidate I0 integration request, not an autonomous host edit."""
+    if (not isinstance(review, dict) or
+            review.get('schema') != 'NOX-GROWTH-OWNER-REVIEW-v1' or
+            not callable(native_authorize) or not callable(stop_requested)):
+        raise WormHold('GROWTH_NATIVE_OWNER_CALLBACKS_REQUIRED')
+    if current_head != review.get('source_head'):
+        raise WormHold('GROWTH_STALE_SOURCE_HEAD_DENIED')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_STOP_REVOKED')
+    decision = {'ticket_sha256': review['ticket_sha256'],
+                'path': review['path'], 'pre_blob_sha1': review['pre_blob_sha1'],
+                'post_blob_sha1': review['post_blob_sha1'],
+                'diff_sha256': review['diff_sha256'],
+                'current_head': current_head}
+    if native_authorize(session, 'growth.owner.review', decision) is not True:
+        raise WormHold('GROWTH_FRESH_NATIVE_OWNER_APPROVAL_REQUIRED')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_STOP_DURING_OWNER_REVIEW')
+    return {**review, 'state': 'APPROVED_TO_REQUEST_I0_CAS_ONLY',
+            'native_owner_authorized': True,
+            'production_merged': False, 'installed_exe': False,
+            'rollback_preimage_sha256': review['pre_sha256'],
+            'rollback_expected_current_sha256': review['post_sha256']}
+
+
+def rollback_sandbox_source(approval, *, candidate_bytes, original_bytes,
+                            stop_requested, native_authorize, session):
+    """Recreate verified preimage bytes for SANDBOX only; I0 handles live undo.
+
+    Does not write files. A native isolated-sandbox writer may use returned bytes
+    only after original ACL and ephemeral-root checks; no live rollback claimed.
+    """
+    if (not isinstance(approval, dict) or
+            approval.get('schema') != 'NOX-GROWTH-OWNER-REVIEW-v1' or
+            approval.get('state') != 'APPROVED_TO_REQUEST_I0_CAS_ONLY' or
+            not callable(stop_requested) or not callable(native_authorize) or
+            not isinstance(candidate_bytes, bytes) or
+            not isinstance(original_bytes, bytes)):
+        raise WormHold('GROWTH_REVIEWED_ROLLBACK_REQUIRED')
+    if (hashlib.sha256(candidate_bytes).hexdigest() !=
+            approval.get('rollback_expected_current_sha256') or
+            hashlib.sha256(original_bytes).hexdigest() !=
+            approval.get('rollback_preimage_sha256')):
+        raise WormHold('GROWTH_ROLLBACK_PREIMAGE_MISMATCH')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_ROLLBACK_STOPPED')
+    if native_authorize(session, 'growth.sandbox.rollback',
+                        {'ticket_sha256': approval['ticket_sha256'],
+                         'expected_current_sha256': approval['post_sha256'],
+                         'restore_sha256': approval['pre_sha256']}) is not True:
+        raise WormHold('GROWTH_ROLLBACK_OWNER_CONSENT_REQUIRED')
+    if stop_requested() is not False:
+        raise WormHold('GROWTH_ROLLBACK_STOPPED')
+    return {'schema': 'NOX-GROWTH-SANDBOX-ROLLBACK-v1',
+            'bytes_for_isolated_sandbox': original_bytes,
+            'restore_sha256': approval['pre_sha256'],
+            'expected_current_sha256': approval['post_sha256'],
+            'production_rolled_back': False, 'host_written': False,
+            'state': 'SANDBOX_RESTORE_BYTES_READY'}

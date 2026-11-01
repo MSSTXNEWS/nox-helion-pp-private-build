@@ -99,7 +99,7 @@ def _native_installed(snapshot):
 def _asset_observations(rows):
     if not isinstance(rows, list) or len(rows) > MAX_FOUND_ITEMS:
         raise FirstBootHold("LOCAL_ASSET_SCAN_BOUNDED_REQUIRED")
-    output = []
+    by_digest = {}
     for row in rows:
         # Native scanner reads user-approved directories only. Do not import
         # a raw executable, ZIP, or model weight without explicit admission.
@@ -113,10 +113,17 @@ def _asset_observations(rows):
                         "SOURCE_CANDIDATE", "DESIGN_CANDIDATE", "INSTALLER_CANDIDATE") or
             type(size) is not int or not 0 < size <= 200_000_000_000):
             raise FirstBootHold("LOCAL_SCAN_HASH_TYPE_SIZE_REQUIRED")
-        output.append({"sha256": digest, "kind": typ, "size_bytes": size,
-                       "status": "DISCOVERED_UNTRUSTED_NOT_IMPORTED"})
+        previous = by_digest.get(digest)
+        if previous is not None:
+            # A native scan may encounter the same bytes through multiple approved
+            # roots. Conflicting metadata must not silently change S03 admission.
+            if previous["kind"] != typ or previous["size_bytes"] != size:
+                raise FirstBootHold("LOCAL_SCAN_CONFLICTING_DIGEST_METADATA")
+            continue
+        by_digest[digest] = {"sha256": digest, "kind": typ, "size_bytes": size,
+                             "status": "DISCOVERED_UNTRUSTED_NOT_IMPORTED"}
     # A digest identifies candidates only; it does not authorize loading.
-    return sorted({x["sha256"]: x for x in output}.values(), key=lambda x: x["sha256"])
+    return sorted(by_digest.values(), key=lambda x: x["sha256"])
 
 
 def _reviewed(native, item_id: int):

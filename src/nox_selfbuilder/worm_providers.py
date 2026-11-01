@@ -6,14 +6,19 @@ providers are omitted, not simulated. Public source text is untrusted.
 """
 from __future__ import annotations
 
+import hashlib
+import html
+import ipaddress
 import json
 import re
+import xml.etree.ElementTree as ET
 from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .worms import WormHold, WormTask
 
 MAX_JSON_BYTES = 128 * 1024
+MAX_FEED_BYTES = 128 * 1024
 MAX_RECORDS = 4
 MAX_QUERY = 160
 YOUTUBE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -27,30 +32,69 @@ def _safe(value, cap):
     return value
 
 
-def fetch_official_json(url, *, host, timeout=9, read_urlopen=urlopen):
-    """Only a pinned official hostname and HTTPS, including redirects."""
+class _NoRedirect(HTTPRedirectHandler):
+    """Do not contact a redirect target before validating its origin."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise WormHold("WORM_PROVIDER_REDIRECT_DENIED")
+
+
+def _strict_urlopen(request, *, timeout):
+    # urllib.urlopen follows redirects before response.geturl() can inspect
+    # them. Prohibit all redirects: the owner must reapprove a new feed URL.
+    return build_opener(_NoRedirect()).open(request, timeout=timeout)
+
+
+def _approved_url(url, host):
+    if (type(host) is not str or not re.fullmatch(r"[a-z0-9.-]{4,120}", host)
+            or host.startswith(".") or host.endswith(".") or ".." in host
+            or host == "localhost" or host.endswith((".localhost", ".local", ".internal"))):
+        raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
     parsed = urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != host or parsed.username is not None:
+    if (type(url) is not str or len(url) > 2048 or parsed.scheme != "https"
+            or parsed.hostname != host or parsed.netloc != host
+            or parsed.port is not None or parsed.fragment):
         raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
-    if parsed.port not in (None, 443) or parsed.fragment:
-        raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
-    request = Request(url, headers={"Accept": "application/json",
+    return parsed
+
+
+def _read_pinned(url, *, host, accept, limit, timeout, read_urlopen=None):
+    _approved_url(url, host)
+    if type(timeout) not in (int, float) or not 0 < timeout <= 9:
+        raise WormHold("WORM_PROVIDER_TIMEOUT_INVALID")
+    request = Request(url, headers={"Accept": accept,
                                     "User-Agent": "NOX-WORMS-SOURCE-RESEARCH/1.0"})
     try:
-        with read_urlopen(request, timeout=timeout) as response:
-            final = urlparse(response.geturl())
-            if final.scheme != "https" or final.hostname != host or final.port not in (None, 443):
+        transport = _strict_urlopen if read_urlopen is None else read_urlopen
+        with transport(request, timeout=timeout) as response:
+            # This post-check also protects injected transport test doubles;
+            # real default network transport never follows redirects at all.
+            if response.geturl() != url:
                 raise WormHold("WORM_PROVIDER_REDIRECT_DENIED")
             declared = response.headers.get("Content-Length")
-            if declared is not None and int(declared) > MAX_JSON_BYTES:
+            if declared is not None and int(declared) > limit:
                 raise WormHold("WORM_PROVIDER_RESPONSE_QUOTA")
-            raw = response.read(MAX_JSON_BYTES + 1)
+            raw = response.read(limit + 1)
     except WormHold:
         raise
     except (OSError, ValueError, TimeoutError) as exc:
         raise WormHold("WORM_PROVIDER_NETWORK_OR_JSON_HOLD") from exc
-    if len(raw) > MAX_JSON_BYTES:
+    if len(raw) > limit:
         raise WormHold("WORM_PROVIDER_RESPONSE_QUOTA")
+    return raw
+
+
+def fetch_official_json(url, *, host, timeout=9, read_urlopen=None):
+    """Exact official endpoint. No automatic cross-origin redirect requests."""
+    raw = _read_pinned(url, host=host, accept="application/json",
+                       limit=MAX_JSON_BYTES, timeout=timeout,
+                       read_urlopen=read_urlopen)
     try:
         data = json.loads(raw.decode("utf-8"))
     except (ValueError, UnicodeError) as exc:
@@ -60,14 +104,34 @@ def fetch_official_json(url, *, host, timeout=9, read_urlopen=urlopen):
     return data
 
 
-def github_repositories(task: WormTask, *, fetch=fetch_official_json):
+def _check_native_stop(stop):
+    """Fail closed on an untrusted or unavailable native STOP indication.
+
+    The actual native epoch remains owned by OneHost/WormSwarm; an adapter
+    never resets it or assumes a failed cancellation probe means CONTINUE.
+    """
+    if stop is None:
+        return
+    if not callable(stop):
+        raise WormHold("WORM_NATIVE_STOP_REQUIRED")
+    try:
+        revoked = stop()
+    except Exception as exc:
+        raise WormHold("WORM_NATIVE_STOP_UNAVAILABLE") from exc
+    if type(revoked) is not bool or revoked:
+        raise WormHold("WORM_NATIVE_STOP_REVOKED")
+
+
+def github_repositories(task: WormTask, *, fetch=fetch_official_json, stop=None):
     if not isinstance(task, WormTask) or task.provider != "github_api":
         raise WormHold("WORM_PROVIDER_TASK_NOT_ALLOWED")
+    _check_native_stop(stop)
     query = _safe(task.query, MAX_QUERY)
     # Exact GitHub official search API, no untrusted target domains.
     qs = urlencode({"q": query + " archived:false", "sort": "stars",
                     "order": "desc", "per_page": MAX_RECORDS})
     data = fetch("https://api.github.com/search/repositories?" + qs, host="api.github.com")
+    _check_native_stop(stop)  # Late native STOP must not produce accepted findings.
     rows = data.get("items")
     if not isinstance(rows, list):
         raise WormHold("WORM_PROVIDER_REPO_RESULT_INVALID")
@@ -95,9 +159,11 @@ def github_repositories(task: WormTask, *, fetch=fetch_official_json):
     return records
 
 
-def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official_json):
+def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official_json,
+                                stop=None):
     if not isinstance(task, WormTask) or task.provider != "youtube_api":
         raise WormHold("WORM_PROVIDER_TASK_NOT_ALLOWED")
+    _check_native_stop(stop)
     # The API key must come from the existing native connector secrets vault.
     if not isinstance(api_key, str) or not 10 <= len(api_key) <= 180 or \
        not re.fullmatch(r"[A-Za-z0-9_-]+", api_key):
@@ -107,6 +173,7 @@ def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official
                     "q": query, "key": api_key})
     data = fetch("https://www.googleapis.com/youtube/v3/search?" + qs,
                  host="www.googleapis.com")
+    _check_native_stop(stop)
     rows = data.get("items")
     if not isinstance(rows, list):
         raise WormHold("YOUTUBE_OFFICIAL_RESPONSE_REQUIRED")
@@ -133,8 +200,97 @@ def youtube_public_video_search(task: WormTask, *, api_key, fetch=fetch_official
     return records
 
 
+def fetch_official_feed(url, *, host, timeout=9, read_urlopen=None):
+    """Fetch owner-pinned RSS/Atom XML, limited bytes, no DTD or redirects."""
+    raw = _read_pinned(url, host=host, accept="application/rss+xml, application/atom+xml, application/xml",
+                       limit=MAX_FEED_BYTES, timeout=timeout,
+                       read_urlopen=read_urlopen)
+    if re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b", raw, flags=re.I):
+        raise WormHold("WORM_FEED_DTD_DENIED")
+    try:
+        return ET.fromstring(raw)
+    except ET.ParseError as exc:
+        raise WormHold("WORM_FEED_XML_INVALID") from exc
+
+
+def _feed_text(element, cap):
+    if element is None:
+        return None
+    value = " ".join(element.itertext())
+    if "<script" in value.lower():
+        raise WormHold("WORM_PROVIDER_UNTRUSTED_CONTENT")
+    # RSS descriptions often contain escaped markup: treat as plain text only.
+    value = html.unescape(value)
+    value = re.sub(r"<[^>]*>", " ", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    if not value:
+        return None
+    return _safe(value[:cap], cap)
+
+
+def official_feed(task: WormTask, *, feed_url, source_host, fetch=fetch_official_feed,
+                  stop=None):
+    """One explicitly admitted official feed; findings are citations, not imports.
+
+    The native owner pins feed_url AND source_host. Distinct feed/article hosts
+    are allowed only when source_host is also owner-approved; arbitrary article
+    links are dropped. WormSwarm supplies the quota, native read ACL and S03 ACK.
+    """
+    if not isinstance(task, WormTask) or task.provider != "approved_feeds":
+        raise WormHold("WORM_PROVIDER_TASK_NOT_ALLOWED")
+    _check_native_stop(stop)
+    if type(feed_url) is not str:
+        raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
+    feed_host = urlparse(feed_url).hostname
+    _approved_url(feed_url, feed_host)
+    _approved_url("https://" + source_host + "/", source_host)
+    root = fetch(feed_url, host=feed_host)
+    _check_native_stop(stop)
+    ATOM = "{http://www.w3.org/2005/Atom}"
+    if root.tag == "rss":
+        rows = root.findall("./channel/item")
+        def unpack(item):
+            return (item.findtext("link"), _feed_text(item.find("title"), 300),
+                    _feed_text(item.find("description"), 900),
+                    _feed_text(item.find("pubDate"), 50))
+    elif root.tag == ATOM + "feed":
+        rows = root.findall(ATOM + "entry")
+        def unpack(item):
+            links = item.findall(ATOM + "link")
+            url = next((x.get("href") for x in links
+                        if x.get("rel", "alternate") == "alternate"
+                        and x.get("href")), None)
+            summary = item.find(ATOM + "summary")
+            if summary is None:
+                summary = item.find(ATOM + "content")
+            return (url, _feed_text(item.find(ATOM + "title"), 300),
+                    _feed_text(summary, 900),
+                    _feed_text(item.find(ATOM + "updated"), 50))
+    else:
+        raise WormHold("WORM_FEED_FORMAT_DENIED")
+    out = []
+    for row in rows[:MAX_RECORDS]:
+        _check_native_stop(stop)
+        url, title, excerpt, published = unpack(row)
+        try:
+            _approved_url(url, source_host)
+        except (WormHold, ValueError, TypeError):
+            continue  # no forged or unapproved source citation
+        if not title or not excerpt:
+            continue
+        item = {"url": url, "title": title, "excerpt": excerpt,
+                "source_id": "rss:" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:32],
+                "license": "REVIEW_REQUIRED"}
+        if published:
+            item["published"] = published
+        out.append(item)
+    return out
+
+
 def approved_provider_map(*, github_enabled=False, youtube_api_key=None,
-                          official_fetch=fetch_official_json):
+                          official_fetch=fetch_official_json, approved_feed_url=None,
+                          approved_source_host=None, feed_fetch=fetch_official_feed,
+                          native_stop=None):
     """Native owner assembles capabilities; unavailable APIs remain omitted.
 
     TikTok Research API requires approved research access and is NEVER implied
@@ -143,10 +299,24 @@ def approved_provider_map(*, github_enabled=False, youtube_api_key=None,
     providers = {}
     hosts = {}
     if github_enabled is True:
-        providers["github_api"] = lambda t: github_repositories(t, fetch=official_fetch)
+        providers["github_api"] = lambda t: github_repositories(
+            t, fetch=official_fetch, stop=native_stop)
         hosts["github_api"] = "github.com"
     if youtube_api_key is not None:
         providers["youtube_api"] = lambda t: youtube_public_video_search(
-            t, api_key=youtube_api_key, fetch=official_fetch)
+            t, api_key=youtube_api_key, fetch=official_fetch, stop=native_stop)
         hosts["youtube_api"] = "www.youtube.com"
+    if approved_feed_url is not None:
+        if native_stop is not None and not callable(native_stop):
+            raise WormHold("WORM_NATIVE_STOP_REQUIRED")
+        if type(approved_feed_url) is not str:
+            raise WormHold("WORM_PROVIDER_ORIGIN_DENIED")
+        feed_host = urlparse(approved_feed_url).hostname
+        _approved_url(approved_feed_url, feed_host)
+        citation_host = approved_source_host or feed_host
+        _approved_url("https://" + citation_host + "/", citation_host)
+        providers["approved_feeds"] = lambda t: official_feed(
+            t, feed_url=approved_feed_url, source_host=citation_host,
+            fetch=feed_fetch, stop=native_stop)
+        hosts["approved_feeds"] = citation_host
     return providers, hosts

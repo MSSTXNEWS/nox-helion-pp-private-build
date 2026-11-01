@@ -169,6 +169,65 @@ class OriginalStoreChatAdapter:
                 'optimizer_sha256': seed['optimizer_sha256'],
                 'weights_changed': False, 'native_acceptance': False}
 
+def ingest_verified_knowledge(self, tenant, principal, chat_id, *, evidence, text,
+                                  authorize, stopped, find_saved, write_saved):
+        """Admit reviewed DATA to the native S03 owner, never create a second DB.
+        The OneHost caller binds its existing original-S03 find/write primitives.
+        This method does not claim a backend exists merely because a callback
+        was supplied; it requires transactional readback before returning ACK.
+        """
+        project, core, chat = self._scope(tenant, principal, chat_id)
+        if (type(evidence) is not dict or
+                evidence.get('status') != 'NATIVE_S03_RIGHTS_REVIEWED' or
+                evidence.get('owner_consented') is not True or
+                type(evidence.get('source_sha256')) is not str or
+                not re.fullmatch(r'[0-9a-f]{64}', evidence['source_sha256']) or
+                type(evidence.get('text_sha256')) is not str or
+                not re.fullmatch(r'[0-9a-f]{64}', evidence['text_sha256']) or
+                type(evidence.get('rights_receipt_id')) is not str or
+                not re.fullmatch(r'[A-Za-z0-9._:-]{8,128}', evidence['rights_receipt_id']) or
+                type(text) is not str or not 1 <= len(text.encode('utf-8')) <= 16384 or
+                '\x00' in text or
+                hashlib.sha256(text.encode('utf-8')).hexdigest() != evidence['text_sha256']):
+            raise StoreActorHold('S03_VERIFIED_CONTENT_OR_RIGHTS_REQUIRED')
+        if not all(callable(x) for x in (authorize, stopped, find_saved, write_saved)):
+            raise StoreActorHold('S03_NATIVE_OWNER_CALLBACKS_REQUIRED')
+        record = {'project_id': project, 'core_id': core, 'chat_id': chat,
+                  'source_sha256': evidence['source_sha256'],
+                  'text_sha256': evidence['text_sha256'],
+                  'rights_receipt_id': evidence['rights_receipt_id'],
+                  'content': text}
+        def require_live_permission():
+            if authorize() is not True or stopped() is not False:
+                raise PermissionError('S03_INGEST_REVOKED_OR_STOPPED')
+        require_live_permission()
+        def ingest(store):
+            require_live_permission()
+            if store.conn.in_transaction:
+                raise StoreActorHold('ORIGINAL_STORE_TRANSACTION_ACTIVE')
+            with store.conn:
+                store.conn.execute('BEGIN IMMEDIATE')
+                before = find_saved(store, record)
+                if before is None:
+                    require_live_permission()
+                    write_saved(store, record)
+                elif type(before) is not dict:
+                    raise StoreActorHold('S03_NATIVE_READBACK_SCHEMA_HOLD')
+                saved = find_saved(store, record)
+                if type(saved) is not dict or any(
+                        saved.get(key) != record[key] for key in
+                        ('project_id', 'core_id', 'chat_id', 'source_sha256',
+                         'text_sha256', 'rights_receipt_id', 'content')):
+                    raise StoreActorHold('S03_NATIVE_READBACK_MISMATCH')
+                require_live_permission()  # STOP or ACL change rolls back INSERT.
+            return {'state': 'S03_COMMITTED_READBACK' if before is None else
+                    'S03_DEDUPLICATED_READBACK',
+                    'source_sha256': record['source_sha256'],
+                    'text_sha256': record['text_sha256'],
+                    'rights_receipt_id': record['rights_receipt_id'],
+                    'native_acceptance': False, 'weights_updated': False}
+        return self.actor.call(ingest)
+
     def assert_model_switch_safe(self):
         status = self.lineage_status()
         if status['SEED'] == 'SEED_LINEAGE_HOLD':
