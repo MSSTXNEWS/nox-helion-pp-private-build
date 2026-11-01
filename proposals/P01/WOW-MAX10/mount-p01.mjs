@@ -61,6 +61,13 @@ export function mountP01Owner(spec){
       fx.setVisible(shouldRunP01Visuals(home,visible));
     };
     watch(doc,"visibilitychange",syncVisibility);
+    // Observe ONLY navigation state changes, never particle animation frames.
+    const home=doc.getElementById?.("home");
+    if(home&&typeof win?.MutationObserver==="function"){
+      const navObserver=new win.MutationObserver(syncVisibility);
+      navObserver.observe(home,{attributes:true,attributeFilter:["class"]});
+      cleanups.push(()=>navObserver.disconnect());
+    }
     syncVisibility();
     // One host-owned subscription: exact CoreIDs + the existing secondary WOW.
     nativeBus=createD02NativeVisualBus(hostPort,fx,orbs.slice(1).map(x=>x.id));
