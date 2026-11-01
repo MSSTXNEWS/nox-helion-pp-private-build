@@ -37,7 +37,7 @@ ADDONS=(
     ('src/nox_selfbuilder/release_governor.py', 'nox_selfbuilder/release_governor.py', '451d5c17f3ef9ea0a83670ed90fface36512fc36'),
     ('src/nox_selfbuilder/release_learning.py', 'nox_selfbuilder/release_learning.py', '331cb6f6b1d2a403d6134afbd27770585961018b'),
     ('src/nox_selfbuilder/seed.py', 'nox_selfbuilder/seed.py', '9b3a19cbd985620e9527cf168b02cae0ee12453a'),
-    ('src/nox_selfbuilder/source_catalog.py', 'nox_selfbuilder/source_catalog.py', '86d79d3447d0021e4f416a4835993d2d876b505e'),
+    ('src/nox_selfbuilder/source_catalog.py', 'nox_selfbuilder/source_catalog.py', '6c2ccccb46085a0e2152dbe989ee95ef3244f8a0'),
     ('src/nox_selfbuilder/wow_background.py', 'nox_selfbuilder/wow_background.py', 'dc5c1272116163fedf18851eba21d1c69bca7f1a'),
     ('src/nox_selfbuilder/wow_design.py', 'nox_selfbuilder/wow_design.py', '7135576489151bb90dfd1c552746fd723c0ea729'),
     ('src/nox_selfbuilder/wow_onehost_port.py', 'nox_selfbuilder/wow_onehost_port.py', '8101bfb4657e776d519e8a98cfc862709fee1e1c'),
