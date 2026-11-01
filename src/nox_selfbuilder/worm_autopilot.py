@@ -25,6 +25,8 @@ class WormAutopilot:
         self._policy = native_signed_policy
         self._source_head = source_head
         self._swarm = swarm
+        # The provider tick must observe STOP even DURING a blocking fetch.
+        self._swarm.bind_native_stop(native_stop)
         self._stop = native_stop
         self._persist = s03_append_readback
         self._booted_scope = None

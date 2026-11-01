@@ -149,7 +149,7 @@ class WormSwarm:
     """
     def __init__(self, *, provider_map: dict[str, Callable], admit: Callable,
                  persist: Callable, source_hosts: dict[str, str],
-                 max_fetches_day=MAX_FETCHES_DAY):
+                 max_fetches_day=MAX_FETCHES_DAY, native_stop=None):
         if (not isinstance(provider_map, dict) or
                 not isinstance(source_hosts, dict) or
                 not callable(admit) or not callable(persist) or
@@ -176,9 +176,24 @@ class WormSwarm:
         self._findings = 0
         self._errors = 0
         self._revoked = False
+        self._native_stop = None
+        if native_stop is not None:
+            self.bind_native_stop(native_stop)
+
+    def bind_native_stop(self, callback):
+        """Attach the original native owner's STOP before any network tick."""
+        if (not callable(callback) or self._enabled or
+                (self._native_stop is not None and self._native_stop is not callback)):
+            raise WormHold("WORM_ORIGINAL_NATIVE_STOP_BINDING_REQUIRED")
+        self._native_stop = callback
+
+    def _native_stopped(self):
+        return self._native_stop is not None and self._native_stop() is not False
 
     def set_enabled(self, session, enabled: bool):
-        if type(enabled) is not bool or self.admit(session, "worm.autonomy.toggle") is not True:
+        if (type(enabled) is not bool or
+                self.admit(session, "worm.autonomy.toggle") is not True or
+                (enabled and self._native_stopped())):
             raise WormHold("WORM_NATIVE_OWNER_CONSENT_REQUIRED")
         self._enabled = enabled
         if not enabled:
@@ -197,12 +212,13 @@ class WormSwarm:
             "source_observations_saved": self._findings,
             "errors": self._errors, "weights_updated": False,
             "code_executed": False,
-            "status": "READY_FOR_NATIVE_APPROVED_TICK" if self._enabled else "OFF",
+            "status": ("HOLD_NATIVE_STOP" if self._native_stopped() else
+                       "READY_FOR_NATIVE_APPROVED_TICK" if self._enabled else "OFF"),
         }
 
     def tick(self, session, *, now: datetime, max_tasks=MAX_FETCHES_TICK):
-        if not self._enabled or self._revoked:
-            return {**self.status(), "reason": "OWNER_AUTONOMY_DISABLED"}
+        if not self._enabled or self._revoked or self._native_stopped():
+            return {**self.status(), "reason": "OWNER_AUTONOMY_DISABLED_OR_STOPPED"}
         if (not isinstance(now, datetime) or now.tzinfo is None or
                 type(max_tasks) is not int or not 1 <= max_tasks <= MAX_FETCHES_TICK):
             raise WormHold("WORM_BOUNDED_TICK_REQUIRED")
@@ -223,16 +239,22 @@ class WormSwarm:
             self._attempted.add(task.task_id)
             if task.provider not in self.providers:
                 continue
-            if self.admit(session, "worm.autonomy.read") is not True or self._revoked:
+            if (self.admit(session, "worm.autonomy.read") is not True or
+                    self._revoked or self._native_stopped()):
                 break
             max_tasks -= 1
             self._fetches += 1
             try:
                 records = self.providers[task.provider](task)
+                # A stop raised inside blocking provider I/O revokes its reply.
+                if self._native_stopped() or self._revoked:
+                    return {**self.status(), "status": "HOLD",
+                            "reason": "WORM_STOP_DURING_PROVIDER_NO_PERSIST"}
                 if not isinstance(records, (list, tuple)) or len(records) > MAX_ITEMS_RESPONSE:
                     raise WormHold("WORM_PROVIDER_RECORD_LIMIT")
                 for raw in records:
-                    if self._revoked or self.admit(session, "worm.autonomy.read") is not True:
+                    if (self._revoked or self._native_stopped() or
+                            self.admit(session, "worm.autonomy.read") is not True):
                         break
                     finding = inspect_evidence(task, raw, source_host=self.hosts[task.provider])
                     if finding["source_sha256"] in self._seen_source:
@@ -240,8 +262,14 @@ class WormSwarm:
                     if self._findings >= MAX_FINDINGS_DAY:
                         break
                     # Return true only for an authorized native S03 write/readback.
+                    if self._native_stopped():
+                        return {**self.status(), "status": "HOLD",
+                                "reason": "WORM_STOP_BEFORE_S03"}
                     if self.persist(session, finding) is not True:
                         raise WormHold("WORM_S03_PERSIST_READBACK_REQUIRED")
+                    if self._native_stopped() or self._revoked:
+                        return {**self.status(), "status": "HOLD",
+                                "reason": "WORM_STOP_AFTER_S03_READBACK_REQUIRED"}
                     self._seen_source.add(finding["source_sha256"])
                     self._findings += 1
             except (ValueError, TypeError, OSError, WormHold):

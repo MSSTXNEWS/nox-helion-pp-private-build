@@ -124,5 +124,38 @@ class AutonomousBootTests(unittest.TestCase):
         self.assertEqual(state["status"],"HOLD")
         self.assertTrue(state["native_readback_required"])
 
+    def test_stop_during_provider_reply_discards_untrusted_records(self):
+        self.native_policy()
+        self.engine.boot("owner",now=NOW)
+        writes=[]
+        self.swarm.persist=lambda session,row:writes.append(row) or True
+        def stopped_provider(task):
+            self.stop_requested=True
+            return [{"url":"https://github.com/researched/x",
+                     "title":"X","excerpt":"test","source_id":"x","license":"MIT"}]
+        self.swarm.providers['github_api']=stopped_provider
+        out=self.engine.tick("owner",now=NOW)
+        self.assertEqual(out["status"],"HOLD")
+        self.assertEqual(out["reason"],"NATIVE_STOP_OR_HEAD_CHANGED_DURING_RESEARCH")
+        self.assertEqual(writes,[])
+
+    def test_stop_during_s03_write_never_counted_as_clean_persist(self):
+        self.native_policy()
+        self.engine.boot("owner",now=NOW)
+        from src.nox_selfbuilder.worms import plan_day, inspect_evidence
+        def provider(task):
+            return [{"url":"https://github.com/verified/example",
+                     "title":"Useful model source",
+                     "excerpt":"Verified test for resource provenance",
+                     "source_id":"gh:test", "license":"MIT"}]
+        def saved_then_stopped(session,row):
+            self.stop_requested=True
+            return True
+        self.swarm.providers['github_api']=provider
+        self.swarm.persist=saved_then_stopped
+        out=self.engine.tick("owner",now=NOW)
+        self.assertEqual(out["status"],"HOLD")
+        self.assertEqual(out["source_observations_saved"],0)
+
 if __name__ == "__main__":
     unittest.main()
