@@ -126,6 +126,12 @@ public partial class MainWindow
             try {
                 var value=await _nativeModels.ExecuteAsync(route,payload,true,cancel);
                 return new NativePipeResult("",true,value,null);
+            } catch(OperationCanceledException ex) when (
+                !cancel.IsCancellationRequested &&
+                string.Equals(ex.Message,"P03_NATIVE_FILE_SELECTION_CANCELLED",StringComparison.Ordinal)) {
+                // Voluntary GGUF picker decline is a terminal HOLD, not a lost native ACK.
+                // Real STOP, host shutdown and revoked document cancellation still propagate.
+                return new NativePipeResult("",false,null,"P03_NATIVE_FILE_SELECTION_CANCELLED");
             } catch(OperationCanceledException) { throw; }
             catch { return new NativePipeResult("",false,null,"P03_NATIVE_OWNER_HOLD"); }
         }
