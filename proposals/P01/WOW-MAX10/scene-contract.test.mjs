@@ -39,6 +39,10 @@ test("T03 ten worlds must have approved parent tiles, not floating menu graphics
  const x=fixture();x.logicalMenu[3].parentTileId="unapproved";
  assert.throws(()=>validateOwnerP01(x),/TEN_LOGICAL_MENU_PARENT_OR_WORLD_HOLD/);
 });
+test("T03 reject misrouting a world to the wrong approved tile",()=>{
+ const x=fixture();x.logicalMenu[3].parentTileId="world";
+ assert.throws(()=>validateOwnerP01(x),/TEN_LOGICAL_MENU_PARENT_OR_WORLD_HOLD/);
+});
 test("T04 five real function buttons are required",()=>{
  const x=fixture();x.buttons.pop();
  assert.throws(()=>validateOwnerP01(x),/FIVE_BUTTONS_COUNT/);
