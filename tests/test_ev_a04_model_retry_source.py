@@ -53,5 +53,13 @@ class ReviewedRetrySourceTest(unittest.TestCase):
     def test_other_kind_denied(self):
         self.assertIn('_ => false', self.guard)
 
+    def test_retry_unique_current_registry_and_rights(self):
+        self.assertIn('currentReview.Length!=1', self.route)
+        self.assertIn('!MatchesRetryProvenance(previous,currentReview[0])', self.route)
+        self.assertIn('evidence.Scheme != Uri.UriSchemeHttps', self.guard)
+        self.assertIn('string.IsNullOrWhiteSpace(prior.LicenseSource)', self.guard)
+        self.assertIn('string.IsNullOrWhiteSpace(prior.ImmutableRevision)', self.guard)
+        self.assertIn('string.IsNullOrWhiteSpace(prior.RightsReceiptId)', self.guard)
+
 if __name__ == '__main__':
     unittest.main()

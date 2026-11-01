@@ -107,7 +107,12 @@ public sealed class ModelCenterNativeRoutes : IDisposable
                 RequireHardware(retryModels[0]);
                 ct.ThrowIfCancellationRequested();
                 // Prevent reviewed-registry drift during the hardware/native gate.
-                if (!_reviewed().Any(x=>x==retryModels[0] && x.CanOfferOneClickPull))
+                // Re-check uniqueness and provenance AFTER hardware preflight.
+                // A newly duplicated reviewed tag must not authorize a retry.
+                var currentReview=_reviewed().Where(x=>x.ExactTag==previous.ModelTag &&
+                    x.CanOfferOneClickPull).ToArray();
+                if (currentReview.Length!=1 ||
+                    !MatchesRetryProvenance(previous,currentReview[0]))
                     throw new InvalidOperationException("P03_REVIEW_CHANGED");
                 var retry=await _worker.RetryAsync(JobId(payload),ct)
                     ?? throw new InvalidOperationException("P03_JOB_NOT_RETRYABLE");
@@ -257,16 +262,25 @@ public sealed class ModelCenterNativeRoutes : IDisposable
     // or content digest by itself never grants new permissions.
     private static bool MatchesRetryProvenance(ModelJob prior, ModelCatalogEntry review)
     {
-        if (!string.Equals(prior.LicenseSource, review.LicenseEvidenceUri?.AbsoluteUri,
-            StringComparison.Ordinal)) return false;
+        if (review.LicenseEvidenceUri is not Uri evidence ||
+            !evidence.IsAbsoluteUri || evidence.Scheme != Uri.UriSchemeHttps ||
+            string.IsNullOrWhiteSpace(prior.LicenseSource) ||
+            !string.Equals(prior.LicenseSource, evidence.AbsoluteUri, StringComparison.Ordinal) ||
+            !string.Equals(prior.ModelTag, review.ExactTag, StringComparison.Ordinal))
+            return false;
         return prior.Kind switch
         {
             ModelJobKind.OllamaPull =>
+                !string.IsNullOrWhiteSpace(prior.ExpectedOllamaDigest) &&
+                !string.IsNullOrWhiteSpace(prior.ImmutableRevision) &&
                 string.Equals(prior.ExpectedOllamaDigest, review.ExpectedManifestDigestSha256,
                     StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(prior.ImmutableRevision, review.ImmutableRevision,
                     StringComparison.Ordinal),
             ModelJobKind.GgufImport =>
+                !string.IsNullOrWhiteSpace(prior.ExpectedLocalSha256) &&
+                prior.ExpectedLocalBytes is > 0 &&
+                !string.IsNullOrWhiteSpace(prior.RightsReceiptId) &&
                 string.Equals(prior.ExpectedLocalSha256, review.ExpectedSha256,
                     StringComparison.OrdinalIgnoreCase) &&
                 prior.ExpectedLocalBytes == review.ArtifactBytes &&
