@@ -127,11 +127,15 @@ def safe_native_stderr_hint(path):
         detail = "PYTHON_TRACEBACK"
         if classes:
             detail += ":" + classes[-1]
-        if locations:
-            filename, lineno = locations[-1]
-            filename = filename.replace("\\", "/").split("/")[-1]
-            if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9.-]{0,99}\.py", filename):
-                detail += ":" + filename + ":" + lineno
+        # Return a bounded chain of Python source basename:line only.
+        # User paths, exception texts, and full traceback remain private.
+        frames = []
+        for filename, lineno in locations[-6:]:
+            base = filename.replace("\\", "/").split("/")[-1]
+            if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9.-]{0,99}\.py", base):
+                frames.append(base + ":" + lineno)
+        if frames:
+            detail += ":" + ">".join(frames[-5:])
         return detail
     if "FATAL" in tail.upper():
         return "NATIVE_FATAL_DIAGNOSTIC_PRESENT"
