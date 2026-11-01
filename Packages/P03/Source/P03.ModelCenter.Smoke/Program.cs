@@ -23,7 +23,7 @@ try
         ArtifactBytes = 128, RequiredDiskBytes = 256, RecommendedRamBytes = 512,
         ExpectedSha256 = new string('b', 64),
         ExpectedManifestDigestSha256 = new string('a', 64),
-        ImmutableRevision = "test-immutable-revision", CompatibilityReviewed = true,
+        ImmutableRevision = new string('d', 64), CompatibilityReviewed = true,
         LicenseEvidenceUri = new Uri("https://ollama.com/library/tinyllama"),
         CompatibilityEvidenceUri = new Uri("https://ollama.com/library/tinyllama")
     };
