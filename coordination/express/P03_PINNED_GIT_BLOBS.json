@@ -115,16 +115,6 @@
       "bytes": 761
     },
     {
-      "path": "Packages/P03/Source/P03.ModelCenter.Wow/README.md",
-      "git_blob_sha1": "ff66cd1a9140a668ffe9eb88441b52bc06cd92a4",
-      "bytes": 3348
-    },
-    {
-      "path": "Packages/P03/Source/P03.ModelCenter.Wow/THIRD_PARTY_LICENSES.txt",
-      "git_blob_sha1": "4661952f5f4c9888c759ec94a3a28a31d26fc81f",
-      "bytes": 1285
-    },
-    {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/icons/checkmark.svg",
       "git_blob_sha1": "e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6",
       "bytes": 445
@@ -148,6 +138,16 @@
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/index.html",
       "git_blob_sha1": "e44efa7b5e2ffdfda6481c734f92c064fe1f458b",
       "bytes": 8087
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/README.md",
+      "git_blob_sha1": "ff66cd1a9140a668ffe9eb88441b52bc06cd92a4",
+      "bytes": 3348
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter.Wow/THIRD_PARTY_LICENSES.txt",
+      "git_blob_sha1": "4661952f5f4c9888c759ec94a3a28a31d26fc81f",
+      "bytes": 1285
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter.Wow/ui.css",
@@ -175,6 +175,11 @@
       "bytes": 4153
     },
     {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
+      "git_blob_sha1": "b63d20f9b5a7551d47d48cf96fa56569398602b4",
+      "bytes": 17184
+    },
+    {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "git_blob_sha1": "2b2d57962b7aeb4b3e5bec828388784835de4261",
       "bytes": 24098
@@ -198,6 +203,11 @@
       "path": "Packages/P03/Source/P03.ModelCenter/ModelQuickActions.cs",
       "git_blob_sha1": "66d6f05c8f2deea7fab110f4c024d762d71af390",
       "bytes": 6494
+    },
+    {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelSafetensorsImport.cs",
+      "git_blob_sha1": "6364e3ae1a525b6ec836be98eea7bcd5f268afc0",
+      "bytes": 9539
     },
     {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelTagReviewLeads.cs",
@@ -240,14 +250,14 @@
       "bytes": 2006
     },
     {
-      "path": "Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md",
-      "git_blob_sha1": "e56ef799c1d442de1e402f8adc7d36e765d92655",
-      "bytes": 3620
-    },
-    {
       "path": "Packages/P03/Source/python-host/catalog30.discovery.json",
       "git_blob_sha1": "5ee7213492c9a082a86a54332a36141d239a4a84",
       "bytes": 5970
+    },
+    {
+      "path": "Packages/P03/Source/python-host/OWNER6_P03_ONEHOST_ADMISSION.md",
+      "git_blob_sha1": "e56ef799c1d442de1e402f8adc7d36e765d92655",
+      "bytes": 3620
     },
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
@@ -255,13 +265,98 @@
       "bytes": 12366
     },
     {
+      "path": "Packages/P03/Source/python-host/test_p03_cancel_acl_stop_r47.py",
+      "git_blob_sha1": "4e42d186610032fdbff12a50ecd4fed92aa1a92d",
+      "bytes": 2473
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_catalog_json_contract_r13.py",
+      "git_blob_sha1": "e511b6c2d57fb52895efd8a6587cab2aa7b59212",
+      "bytes": 2829
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_digest_strict_r16.py",
+      "git_blob_sha1": "078a6f34d035c12151dfbcd544728f905aaca3d0",
+      "bytes": 2841
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_discovery_fields_r47.py",
+      "git_blob_sha1": "da4a72075962966085b736ba006b966a05644cb1",
+      "bytes": 1560
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_installed_readiness_r47.py",
+      "git_blob_sha1": "eaa3127b62516b2aa34803618340b23e0c0a5f05",
+      "bytes": 1751
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_native_consent_order_r47.py",
+      "git_blob_sha1": "ebcb275e949815feac672cb01e116be8b3beb97f",
+      "bytes": 3500
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_native_health_after_consent_r47.py",
+      "git_blob_sha1": "6cdb21f9fba7050a1729a94aca1585d4023147c1",
+      "bytes": 2130
+    },
+    {
       "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",
       "git_blob_sha1": "c18a1dcbb543de7ab00172ad0b9b585c9b26bf92",
       "bytes": 12683
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_posthealth_consent_r47.py",
+      "git_blob_sha1": "8907f1fe473084ee46fceec58aecf78ab9bc277b",
+      "bytes": 2380
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_retry_null_ack_r47.py",
+      "git_blob_sha1": "6ca099409d125d20117da0ed76c1bbc0989e96b2",
+      "bytes": 1891
+    },
+    {
+      "path": "Packages/P03/Source/python-host/test_p03_scope_shape_r10.py",
+      "git_blob_sha1": "4e3d8c25e65c1573fdd25e9c03e6a1464e6d3366",
+      "bytes": 13131
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R10_20261028.json",
+      "git_blob_sha1": "3c1e192de7d063c49f126f893e8e75cad0b51990",
+      "bytes": 2727
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R11_20261028.json",
+      "git_blob_sha1": "3467e53ddb2460665a66ed15c3464e05ec64cbdf",
+      "bytes": 4687
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R12_20261028.json",
+      "git_blob_sha1": "b8484df04db2b43d82ccda31b69ae2440f2f0a25",
+      "bytes": 1986
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R13_20261028.json",
+      "git_blob_sha1": "afa8293dc3dfc9e19457c281dd77c3724049946d",
+      "bytes": 2007
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R14_20261028.json",
+      "git_blob_sha1": "28cf6cace5ccd4bdcbb8ab0008e79a31c2d296dc",
+      "bytes": 2365
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R15_20261029.json",
+      "git_blob_sha1": "de7a03fd64fdd1ca26562a0c04885d5d17f83a13",
+      "bytes": 1958
+    },
+    {
+      "path": "Packages/P03/Source/receipts/NOX_V16_E03_W3_02_R16_20261029.json",
+      "git_blob_sha1": "1d6aa6f8574ff44208eb5fc0262a6389381b7763",
+      "bytes": 2592
     }
   ],
   "count": 50,
-  "source_files": 44,
+  "source_files": 63,
   "verified_installed_weights": 0,
   "onehost_accepted": false,
   "release_accepted": false,
@@ -410,5 +505,14 @@
       "post_git_blob_sha1": "be8cd136b74a9efd08ea2349cb6bd1ba2d75cffc",
       "run_id": "NOX-V16-E03-EXPRESS-R03-20261028"
     }
-  ]
+  ],
+  "source_expansion": {
+    "schema": "NOX_E03_ADDITIVE_SOURCE_PIN_EXPANSION_V1",
+    "source_commit": "dab066be8b950c142aeac62b6efc1d9537058f8c",
+    "added_files": 19,
+    "source_files_before": 44,
+    "source_files_after": 63,
+    "source_integrity_only": true,
+    "release_accepted": false
+  }
 }
