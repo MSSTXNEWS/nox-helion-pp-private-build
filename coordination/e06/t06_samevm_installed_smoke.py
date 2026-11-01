@@ -171,9 +171,13 @@ def candidate_gate()->dict:
 
 def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
                                    report:dict)->dict:
-    """Only the ephemeral Windows CI VM can opt-in to Microsoft's signed runtime.
-    Never install it behind the user's back in production NOX Setup."""
-    if preflight["code"]==0:
+    """Only an opt-in disposable Windows CI host can provision official WebView2.
+
+    Preserve strict valid Microsoft Authenticode; on a failed online bootstrapper
+    signature, try the DIFFERENT official x64 Evergreen standalone installer.
+    Never execute either unsigned payload and never provision on customer systems.
+    """
+    if preflight["code"] == 0:
         return preflight
     reason=preflight["stdout_tail"]+"\n"+preflight["stderr_tail"]
     require("P01_WEBVIEW2_RUNTIME_MISSING" in reason,
@@ -182,40 +186,70 @@ def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
             "T06_OFFICIAL_WEBVIEW2_RUNTIME_REQUIRED_CI_OPT_IN")
     from urllib.request import urlopen
     from urllib.parse import urlsplit
-    url="https://go.microsoft.com/fwlink/p/?LinkId=2124703"
-    target=OUTPUT/"MicrosoftEdgeWebview2Setup.exe"
-    require(not target.exists(),"T06_WEBVIEW2_BOOTSTRAPPER_COLLISION")
-    with urlopen(url,timeout=90) as response:
-        final=urlsplit(response.geturl())
-        host=(final.hostname or "").lower()
-        require(final.scheme=="https" and
-                (host=="microsoft.com" or host.endswith(".microsoft.com")),
-                "T06_WEBVIEW2_UNTRUSTED_DOWNLOAD_REDIRECT")
-        with target.open("xb") as dest:
-            total=0
-            while chunk:=response.read(65536):
-                total+=len(chunk)
-                require(total<=15000000,"T06_WEBVIEW2_BOOTSTRAPPER_OVERSIZE")
-                dest.write(chunk)
-    require(target.stat().st_size>=100000 and
-            target.open("rb").read(2)==b"MZ",
-            "T06_WEBVIEW2_MICROSOFT_BOOTSTRAPPER_INVALID")
-    # Authenticode must chain to a valid Microsoft signer, without trusting URL.
+
     ps=r"""$ErrorActionPreference='Stop'
 $p=$env:NOX_WEBVIEW2_SIGNED_INSTALLER_PATH
 if ([string]::IsNullOrWhiteSpace($p) -or -not (Test-Path -LiteralPath $p -PathType Leaf)) {exit 8}
 $s=Get-AuthenticodeSignature -LiteralPath $p
-if ($s.Status -ne 'Valid' -or
-    $s.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {exit 7}
+$subject=if ($null -ne $s.SignerCertificate) {[string]$s.SignerCertificate.Subject} else {''}
+@{status=[string]$s.Status;subject=$subject;message=[string]$s.StatusMessage} |
+  ConvertTo-Json -Compress
+if ($s.Status -ne 'Valid' -or $subject -notmatch 'Microsoft Corporation') {exit 7}
 exit 0"""
-    signature_env=dict(os.environ)
-    signature_env["NOX_WEBVIEW2_SIGNED_INSTALLER_PATH"]=str(target)
-    check=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
-           "-Command",ps],env=signature_env,capture_output=True,timeout=50)
-    require(check.returncode==0,"T06_WEBVIEW2_MICROSOFT_SIGNATURE_HOLD")
+
+    def verify_official_installer(target:Path,kind:str)->bool:
+        env=dict(os.environ)
+        env["NOX_WEBVIEW2_SIGNED_INSTALLER_PATH"]=str(target)
+        check=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
+              "-Command",ps],env=env,capture_output=True,timeout=50,check=False)
+        evidence={"kind":kind,"signature_exit":check.returncode,
+                  "download_sha256":sha(target),
+                  "bytes":target.stat().st_size,
+                  "authenticode":check.stdout[-1200:].decode("utf-8",errors="replace").strip(),
+                  "diagnostic_error":check.stderr[-300:].decode("utf-8",errors="replace").strip()}
+        report["installer_lifecycle"].setdefault("webview2_signature_attempts",[]).append(evidence)
+        print("T06_WEBVIEW2_AUTHENTICODE "+json.dumps(evidence,sort_keys=True),flush=True)
+        return check.returncode==0
+
+    def download_microsoft(url:str,name:str,min_bytes:int,max_bytes:int)->Path:
+        target=OUTPUT/name
+        require(not target.exists() and not target.is_symlink(),
+                "T06_WEBVIEW2_DOWNLOAD_COLLISION")
+        with urlopen(url,timeout=90) as response:
+            final=urlsplit(response.geturl())
+            host=(final.hostname or "").lower()
+            require(final.scheme=="https" and
+                    (host=="microsoft.com" or host.endswith(".microsoft.com")),
+                    "T06_WEBVIEW2_UNTRUSTED_DOWNLOAD_REDIRECT")
+            size=0
+            with target.open("xb") as dest:
+                while chunk:=response.read(65536):
+                    size+=len(chunk)
+                    require(size<=max_bytes,"T06_WEBVIEW2_INSTALLER_OVERSIZE")
+                    dest.write(chunk)
+                dest.flush()
+                os.fsync(dest.fileno())
+        with target.open("rb") as stream:
+            magic=stream.read(2)
+        require(min_bytes<=size<=max_bytes and magic==b"MZ",
+                "T06_WEBVIEW2_OFFICIAL_INSTALLER_INVALID")
+        return target
+
+    target=download_microsoft("https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+                              "MicrosoftEdgeWebview2Setup.exe",100000,15000000)
+    kind="evergreen-bootstrapper"
+    if not verify_official_installer(target,kind):
+        # Official alternative, not a bypass: it must independently chain to a
+        # valid Microsoft signer. Never run the failed bootstrapper.
+        target=download_microsoft("https://go.microsoft.com/fwlink/?linkid=2124701",
+                        "MicrosoftEdgeWebView2RuntimeInstallerX64.exe",20000000,350000000)
+        kind="evergreen-standalone-x64"
+        require(verify_official_installer(target,kind),
+                "T06_WEBVIEW2_MICROSOFT_SIGNATURE_HOLD")
+    report["installer_lifecycle"]["webview2_selected_verified_source"]=kind
     provision=run([str(target),"/silent","/install"],290)
     report["installer_lifecycle"]["microsoft_webview2_provision_ci"]={
-        "exit_code":provision["code"],"signed_microsoft":True}
+        "exit_code":provision["code"],"signed_microsoft":True,"kind":kind}
     require(provision["code"]==0,"T06_WEBVIEW2_RUNTIME_PROVISION_FAILED")
     fresh=run(["powershell.exe","-NoProfile","-NonInteractive",
                "-ExecutionPolicy","Bypass","-File",str(script),
