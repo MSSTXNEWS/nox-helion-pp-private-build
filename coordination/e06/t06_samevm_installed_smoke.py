@@ -1,6 +1,6 @@
 """NOX HELION T06 · Same-VM installed candidate smoke, NOT independent E07.
 
-Reuse original P01 NSIS silently on a disposable Windows CircleCI runner.
+Reuse original P01 NSIS silently on an explicitly disposable CircleCI or GitHub Actions Windows runner.
 No second VM, no download of artifacts or app assets, no source rewrite,
 no paid service, and no changes to a pre-existing installed NOX.
 
@@ -21,12 +21,13 @@ import sys
 import time
 
 ROOT=Path(__file__).resolve().parents[2]
-OUTPUT=ROOT/"work/e06/onehost-r66"
+ON_GITHUB=os.environ.get("GITHUB_ACTIONS")=="true"
+OUTPUT=ROOT/("work/e06/onehost-wow-diagnostic" if ON_GITHUB else "work/e06/onehost-r66")
 BUILD=OUTPUT
 CANDIDATE=BUILD/"ONEHOST_DIAGNOSTIC_RECEIPT.json"
 SETUP=BUILD/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
 PAYLOAD=BUILD/"payload"
-NATIVE_PROOF=ROOT/"work/e06/NATIVE_ONEHOST_SMOKE.json"
+NATIVE_PROOF=ROOT/("work/candidate/NATIVE_ONEHOST_SMOKE.json" if ON_GITHUB else "work/e06/NATIVE_ONEHOST_SMOKE.json")
 BUILT_HANDOFF=BUILD/"E07_BUILT_HANDOFF.json"
 NSIS_PROOF=OUTPUT/"T06_INSTALLED_SMOKE.json"
 
@@ -268,7 +269,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
-            "environment":"CIRCLECI_WINDOWS_EPHEMERAL_ONLY",
+            "environment":"GITHUB_WINDOWS_EPHEMERAL_ONLY" if ON_GITHUB else "CIRCLECI_WINDOWS_EPHEMERAL_ONLY",
             "setup_sha256":None,"installed_wpf_sha256":None,
             "installed_backend_sha256":None,
             "installed_process_gui_webview2":"NOT_TESTED",
@@ -277,10 +278,13 @@ def main()->int:
             "release_accepted":False,"installer_lifecycle":{}}
     code=1
     try:
-        require(sys.platform=="win32" and
-                os.environ.get("CIRCLECI")=="true" and
-                bool(os.environ.get("CIRCLE_BUILD_NUM")),
-                "T06_INSTALL_SMOKE_REQUIRES_DISPOSABLE_CIRCLECI_WINDOWS")
+        circle_ci=(os.environ.get("CIRCLECI")=="true" and bool(os.environ.get("CIRCLE_BUILD_NUM")))
+        github_ci=(ON_GITHUB and os.environ.get("RUNNER_OS")=="Windows" and
+                   bool(os.environ.get("GITHUB_RUN_ID")) and
+                   os.environ.get("NOX_E07_CI_WINDOWS_DISPOSABLE")=="YES")
+        require(sys.platform=="win32" and (circle_ci or github_ci),
+                "T06_INSTALL_SMOKE_REQUIRES_AUTHORIZED_DISPOSABLE_WINDOWS")
+        ci_run_id=os.environ.get("CIRCLE_BUILD_NUM") if circle_ci else os.environ["GITHUB_RUN_ID"]
         evidence=candidate_gate()
         report.update(evidence)
         local=os.getenv("LOCALAPPDATA","")
@@ -341,7 +345,7 @@ def main()->int:
         # User data lives OUTSIDE the program install location.
         persistent=Path(local)/"NOX_HELION"/"P01"
         persistent.mkdir(parents=True,exist_ok=True)
-        marker=persistent/("m1-e07-no-loss-"+os.environ["CIRCLE_BUILD_NUM"]+".txt")
+        marker=persistent/("m1-e07-no-loss-"+ci_run_id+".txt")
         require(not marker.exists() and not marker.is_symlink(),
                 "T06_USER_DATA_PROOF_COLLISION")
         signature=b"NOX_M1_PERSISTENT_STATE_NOLOSS\n"

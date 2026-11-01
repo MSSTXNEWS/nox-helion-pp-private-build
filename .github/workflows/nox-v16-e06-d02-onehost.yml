@@ -245,6 +245,17 @@ jobs:
           if (!(Test-Path -LiteralPath (Join-Path $out 'E07_BUILT_HANDOFF.json') -PathType Leaf)) {
             throw 'E07_BUILDID_HANDOFF_NOT_EMITTED'
           }
+      - name: Same-VM actual installed WPF / NSIS lifecycle smoke (NOT independent E07)
+        shell: pwsh
+        env:
+          NOX_E07_CI_WINDOWS_DISPOSABLE: 'YES'
+          NOX_M1_CI_INSTALL_WEBVIEW2: 'YES'
+        run: |
+          python -m py_compile coordination/e06/t06_samevm_installed_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'T06_SMOKE_PYTHON_SYNTAX_HOLD' }
+          python coordination/e06/t06_samevm_installed_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'T06_INSTALLED_NATIVE_LIFECYCLE_HOLD' }
+          Write-Host 'T06_INSTALLED_SAME_VM_SMOKE_PASS (NOT INDEPENDENT E07)'
       - name: Preserve full build receipt; do not claim E07 release
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -260,6 +271,7 @@ jobs:
             work/candidate/NATIVE_ONEHOST_SMOKE.json
             work/e06/onehost-wow-diagnostic/ONEHOST_DIAGNOSTIC_RECEIPT.json
             work/e06/onehost-wow-diagnostic/E07_BUILT_HANDOFF.json
+            work/e06/onehost-wow-diagnostic/T06_INSTALLED_SMOKE.json
             work/e06/onehost-wow-diagnostic/D02_VISUAL_PUBLISH_RECEIPT.json
             work/e06/onehost-wow-diagnostic/D02_ORIGINAL_PUBLISHED_INDEX_BACKUP.html
             work/e06/onehost-wow-diagnostic/NOX-HELION-V16-DIAGNOSTIC-SETUP.exe
