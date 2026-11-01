@@ -505,6 +505,9 @@ public partial class MainWindow
             !string.Equals(e.Source, _nativeP02Core.Source, StringComparison.Ordinal))
             return;
         var epoch = Interlocked.Read(ref _nativeDocumentEpoch);
+        // Pin the original owner STOP generation across asynchronous P03 preflight.
+        // A subsequent chat.stop cancels this token, even after CTS rotation.
+        var stopGeneration = _nativeModelsStop.Token;
         if (e.WebMessageAsJson.Length > 2048) return;
         try
         {
@@ -541,15 +544,18 @@ public partial class MainWindow
                 "stop" => "models.cancel", "retry" => "models.retry",
                 "diagnose" => "models.preflight", _ => ""
             };
+            // A native cancellation request must overtake a pending STOP.
+            var activeStopToken = command.Action == "stop" ? CancellationToken.None : stopGeneration;
             var accepted = false;
             var reason = "NOT_AUTHORIZED";
             if (NativeP02Acl(sid, route) &&
                 (command.Action is "stop" or "diagnose" ||
-                 await ConfirmP02NativeAsync(route, root, CancellationToken.None)))
+                 await ConfirmP02NativeAsync(route, root, activeStopToken)))
             {
                 // Native consent may show a modal dialog. Reject a stale
                 // document, revoked SID or changed ACL BEFORE any mutation.
-                if (Interlocked.Read(ref _nativeDocumentEpoch) != epoch ||
+                if (activeStopToken.IsCancellationRequested ||
+                    Interlocked.Read(ref _nativeDocumentEpoch) != epoch ||
                     _nativeP02Core is null || !IsP03Document(_nativeP02Core.Source) ||
                     !NativeP02Acl(sid, route)) return;
                 JsonElement payload = JsonSerializer.SerializeToElement(new {});
@@ -567,15 +573,17 @@ public partial class MainWindow
                 }
                 if (reason != "REVIEW_REQUIRED")
                 {
+                    activeStopToken.ThrowIfCancellationRequested();
                     var result = await _nativeModels.ExecuteAsync(route, payload,
-                        command.Action is not ("stop" or "diagnose"), CancellationToken.None);
+                        command.Action is not ("stop" or "diagnose"), activeStopToken);
                     accepted = command.Action != "stop" ||
                         result.TryGetProperty("cancelled", out var flag) &&
                         flag.ValueKind == JsonValueKind.True;
                     reason = accepted ? "" : "STOP_PENDING";
                 }
             }
-            if (_nativeP02Core is { } web && IsP03Document(web.Source) &&
+            if (!activeStopToken.IsCancellationRequested &&
+                _nativeP02Core is { } web && IsP03Document(web.Source) &&
                 Interlocked.Read(ref _nativeDocumentEpoch) == epoch &&
                 NativeP02Acl(sid, "models.queue"))
             {
