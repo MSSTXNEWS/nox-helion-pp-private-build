@@ -96,7 +96,8 @@ export function mountP01Owner(spec){
     }
     for(const [items,kind] of [[menu,"MENU_TILE"],[logicalMenu,"MENU_SUBMENU"],[buttons,"BUTTON"]]){
       for(const item of items){
-        const handler=async()=>{
+        const handler=async(event)=>{
+          event?.preventDefault?.();
           if(disposed||dispatcher.isPending(item.routeId))return;
           item.element.dataset.noxNativeState="pending";
           delete item.element.dataset.noxNativeReason;
@@ -115,6 +116,25 @@ export function mountP01Owner(spec){
           }
         };
         watch(item.element,"click",handler);
+        // Native ACK and ACL remain the only authority for an asteroid route.
+        // Semantic buttons/links already dispatch a browser-generated click on Enter.
+        const target=item.element;
+        if(!target.matches?.('button,input,select,textarea,summary,a[href]')){
+          const attrs=['tabindex','role','aria-label'];
+          const original=attrs.map(name=>[name,target.getAttribute(name)]);
+          if(!target.hasAttribute('tabindex'))target.setAttribute('tabindex','0');
+          if(!target.hasAttribute('role'))target.setAttribute('role','button');
+          if(!target.hasAttribute('aria-label'))target.setAttribute('aria-label',String(item.label||item.id));
+          cleanups.push(()=>{for(const [name,value] of original){
+            if(value===null)target.removeAttribute(name);else target.setAttribute(name,value);
+          }});
+          watch(target,'keydown',e=>{
+            if(e.target!==target||e.defaultPrevented||e.isComposing||e.repeat||
+               e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||
+               !['Enter',' ','Spacebar'].includes(e.key))return;
+            e.preventDefault?.();void handler(e);
+          });
+        }
       }
     }
     const onKey=async event=>{
