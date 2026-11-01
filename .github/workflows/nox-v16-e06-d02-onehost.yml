@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   visual-source-stage:
-    runs-on: windows-2025
+    runs-on: windows-2022
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -80,7 +80,7 @@ jobs:
     needs: visual-source-stage
     env:
       NOX_NATIVE_SMOKE_MODEL: ${{ inputs.native_smoke_model }}
-    runs-on: windows-2025
+    runs-on: windows-2022
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
