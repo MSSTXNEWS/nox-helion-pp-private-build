@@ -45,6 +45,10 @@ Assert-E06PlainPathAncestors -Candidate $PythonExe -Scope 'PYTHON'
 Assert-E06PlainPathAncestors -Candidate $OutputRoot -Scope 'OUTPUT'
 $source=(Resolve-Path -LiteralPath $SourceRoot).Path
 $original=(Resolve-Path -LiteralPath $PythonExe).Path
+# Freeze actual canonical checkout before compiling existing OneHost/NSIS.
+$e06RepoRoot=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
+$e06SourceHead=((& git -C $e06RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $e06SourceHead -cnotmatch '\A[0-9a-f]{40}\z') { throw 'E06_SOURCE_HEAD_UNAVAILABLE' }
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
 $nativeEvidence='DIAGNOSE_ONLY_NOT_RUNTIME_PROOF'
 $nativeLiveStatus='NOT_RUN'
@@ -650,13 +654,55 @@ $manifestPath=Join-Path $payload 'payload.sha256.json'
 [IO.File]::WriteAllText($manifestPath,($manifest | ConvertTo-Json -Depth 7),(New-Object System.Text.UTF8Encoding($false)))
 & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $installer 'Verify-Payload.ps1') -Root $payload -Manifest $manifestPath
 if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
+# C11: patch ONLY the disposable ORIGINAL NSIS source before makensis.
+# An update must never rename an unverified current install into the sole
+# rollback slot.  Original 729-file archive and Git source remain untouched.
+$c11NsiPath=Join-Path $installer 'NOX-HELION-Setup.nsi'
+Assert-E06PlainPathAncestors -Candidate $c11NsiPath -Scope 'NSIS_ROLLBACK'
+$c11NsiOriginal=[IO.File]::ReadAllText($c11NsiPath)
+$c11Anchor='  SetOutPath "$TEMP" ; release current working directory before Rename'
+$c11Pos=$c11NsiOriginal.IndexOf($c11Anchor,[StringComparison]::Ordinal)
+if ($c11Pos -lt 0 -or
+    $c11NsiOriginal.LastIndexOf($c11Anchor,[StringComparison]::Ordinal) -ne $c11Pos -or
+    !$c11NsiOriginal.Contains('Verify-Payload.ps1') -or
+    !$c11NsiOriginal.Contains('Rename "$INSTDIR" "$BackupDir"') -or
+    $c11NsiOriginal.Contains('C11OldPayloadChecked')) {
+  throw 'C11_NSIS_OWNER_PREIMAGE_HOLD'
+}
+$c11Guard=@'
+  ; C11: only save a SHA-verified installed version as rollback.
+  ; Reuse the original verifier, marker and manifest; preserve user data.
+  IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 C11OldPayloadChecked
+  nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata'
+  Pop $ExitCode
+  Pop $CheckResult
+  ${If} $ExitCode != "0"
+    DetailPrint "$CheckResult"
+    Abort "Existing application payload is not rollback-safe; update refused."
+  ${EndIf}
+  C11OldPayloadChecked:
+'@
+$c11Eol=if ($c11NsiOriginal.Contains("`r`n")) { "`r`n" } else { "`n" }
+$c11Guard=[regex]::Replace($c11Guard,'\r?\n',$c11Eol)
+$c11NsiPatched=$c11NsiOriginal.Substring(0,$c11Pos)+
+                $c11Guard+$c11Eol+
+                $c11NsiOriginal.Substring($c11Pos)
+if ($c11NsiPatched.IndexOf('C11OldPayloadChecked:',[StringComparison]::Ordinal) -lt 0) {
+  throw 'C11_NSIS_ROLLBACK_FENCE_STAGE_HOLD'
+}
+[IO.File]::WriteAllText($c11NsiPath,$c11NsiPatched,(New-Object System.Text.UTF8Encoding($false)))
+Write-Host "C11_NSIS_ROLLBACK_OLD_PAYLOAD_SHA_GATE_STAGED"
 $setup=Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe'
 & $makensisPath /V2 "/DPAYLOAD_DIR=$payload" "/DVERIFY_SCRIPT=$(Join-Path $installer 'Verify-Payload.ps1')" "/DPREFLIGHT_SCRIPT=$(Join-Path $installer 'Preflight-InstallPath.ps1')" "/DREMOVE_SCRIPT=$(Join-Path $installer 'Remove-InstalledPayload.ps1')" "/DOUTPUT_SETUP=$setup" '/DAPP_VERSION=16.0.0' (Join-Path $installer 'NOX-HELION-Setup.nsi')
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'EXISTING_OWNER_NSIS_COMPILER_HOLD' }
 $sha=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 $wpf=Join-Path $payload 'NOX.P01.Shell.exe'
+# A receipt may not relabel an older binary after another owner moves HEAD.
+$e06HeadAtReceipt=((& git -C $e06RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $e06HeadAtReceipt -cne $e06SourceHead) { throw 'E06_SOURCE_HEAD_CHANGED_DURING_BUILD' }
 $receipt=[ordered]@{
  schema='NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1';run_id=$RunId;owner=6;
+ source_commit_sha1=$e06SourceHead;
  wpf_exe_sha256=(Get-FileHash -LiteralPath $wpf -Algorithm SHA256).Hash.ToLowerInvariant();
  python_backend_sha256=$exeDigest;installer_sha256=$sha;installer_bytes=(Get-Item $setup).Length;
  payload_manifest_sha256=(Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant();

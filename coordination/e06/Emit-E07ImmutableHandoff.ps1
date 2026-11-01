@@ -28,7 +28,9 @@ function FileSha([string]$path) {
 }
 $commit=$SourceCommitSha.ToLowerInvariant()
 if ($commit -cnotmatch '^[0-9a-f]{40}$') { throw 'E07_SOURCE_COMMIT_INVALID' }
-$head=((& git rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
+# Resolve HEAD from this immutable in-repository entrypoint, never caller CWD.
+$e07RepoRoot=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
+$head=((& git -C $e07RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
 if ($LASTEXITCODE -ne 0 -or $head -cne $commit) { throw 'E07_CHECKOUT_SHA_DRIFT' }
 $manifestSha=FileSha $Original729Receipt
 $ownerSha=FileSha $Owner729Receipt
@@ -103,6 +105,7 @@ foreach ($expected in @($source.parts)) {
 }
 if ($onehost.schema -cne 'NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1' -or
  $onehost.release_accepted -ne $false -or
+ ([string]$onehost.source_commit_sha1) -cne $commit -or
  ([string]$onehost.installer_sha256).ToLowerInvariant() -cne $setupSha -or
  ([string]$onehost.wpf_exe_sha256).ToLowerInvariant() -cne $exeSha) {
  throw 'E07_SETUP_EXE_RECEIPT_SHA_DRIFT'
@@ -187,6 +190,9 @@ function WriteReceiptNoClobber([string]$path, [string]$content) {
   $stream.Dispose()
  }
 }
+# Owner branch may advance while hashing/logging; never issue a stale BuildID.
+$e07HeadAtSeal=((& git -C $e07RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
+if ($LASTEXITCODE -ne 0 -or $e07HeadAtSeal -cne $commit) { throw 'E07_CHECKOUT_SHA_DRIFT_BEFORE_SEAL' }
 WriteReceiptNoClobber $Output (($receipt | ConvertTo-Json -Depth 8)+[Environment]::NewLine)
 $actual=Get-Content -LiteralPath $Output -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($actual.build_id -cne $buildId -or $actual.setup_sha256 -cne $setupSha -or
