@@ -55,7 +55,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private bool _nativeReturnPending;
     private string? _externalHost;
     internal bool BrowserExternalActive => _externalMode;
-    internal bool BrowserAllowsRequest(string? url) => _externalMode && ((_nativeReturnPending && Trusted(url)) || (!_nativeReturnPending && IsApprovedExternal(url)));
+    internal bool BrowserAllowsRequest(string? url) => _externalMode && ((_nativeReturnPending && ExactShellReturn(url)) || (!_nativeReturnPending && IsApprovedExternal(url)));
 
     // All values here come from the native host, NEVER from a WebMessage.
     internal OneHostP02WebView2Bridge(
@@ -86,6 +86,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             throw new UnauthorizedAccessException("E06_AUTHENTICATED_WINDOWS_SID_REQUIRED");
         _web.WebMessageReceived += OnWebMessageReceived;
         _web.NavigationStarting += OnNavigationStarting;
+        _web.NavigationCompleted += OnNavigationCompleted;
         _web.NewWindowRequested += OnNewWindowRequested;
         _web.SourceChanged += OnSourceChanged;
         _web.ContentLoading += OnContentLoading;
@@ -111,14 +112,24 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                string.Equals(uri.Host, _virtualOrigin.Host, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Native Back may restore IPC ONLY on the original, exact mapped HOME.
+    // Non-HOME local paths remain quarantined during external navigation.
+    private bool ExactShellReturn(string? raw) =>
+        Trusted(raw) && Uri.TryCreate(raw, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.AbsoluteUri, _virtualOrigin.AbsoluteUri, StringComparison.Ordinal);
+
     private void RevokeDocument()
     {
         if (Volatile.Read(ref _disposed) != 0) return;
         Interlocked.Increment(ref _epoch);
         Interlocked.Increment(ref _streamEpoch);
-        _document.Cancel();
-        _document.Dispose();
+        // Exchange the lifetime before Cancel: reentrant callbacks must not
+        // reuse a revoked token or prevent the existing owner STOP.
+        var revoked = _document;
         _document = new CancellationTokenSource();
+        try { revoked.Cancel(); }
+        catch (AggregateException) { /* callbacks cannot restore authority */ }
+        finally { revoked.Dispose(); }
         // Navigating away while a model is executing must request a real
         // owner STOP, not merely suppress its response in WebView2.
         if (Interlocked.CompareExchange(ref _stopPending, 1, 0) == 0)
@@ -211,12 +222,20 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         RevokeDocument();
         if (_externalMode)
         {
-            if (_nativeReturnPending && Trusted(e.Uri)) return;
+            if (_nativeReturnPending && ExactShellReturn(e.Uri)) return;
             // Recheck EVERY redirect; no DNS suffix spoof, insecure scheme or port.
             if (!IsApprovedExternal(e.Uri)) e.Cancel = true;
             return;
         }
         if (!Trusted(e.Uri)) e.Cancel = true;
+    }
+    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        // A failed/redirected Back must allow native retry, NEVER unlock IPC.
+        // The original HOME's ContentLoading alone restores local mode.
+        if (_externalMode && _nativeReturnPending &&
+            (!e.IsSuccess || !ExactShellReturn(_web.Source)))
+            _nativeReturnPending = false;
     }
     private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
@@ -228,7 +247,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         => RevokeDocument();
     private void OnContentLoading(object? sender, CoreWebView2ContentLoadingEventArgs e)
     {
-        if (_nativeReturnPending && Trusted(_web.Source))
+        if (_nativeReturnPending && ExactShellReturn(_web.Source))
         {
             _externalMode = false;
             _nativeReturnPending = false;
@@ -436,6 +455,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         _document.Cancel();_document.Dispose();
         _web.WebMessageReceived -= OnWebMessageReceived;
         _web.NavigationStarting -= OnNavigationStarting;
+        _web.NavigationCompleted -= OnNavigationCompleted;
         _web.NewWindowRequested -= OnNewWindowRequested;
         _web.SourceChanged -= OnSourceChanged;
         _web.ContentLoading -= OnContentLoading;
