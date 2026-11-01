@@ -10,6 +10,8 @@ on:
     paths:
       - 'coordination/e06/build_onehost_installer.ps1'
       - 'coordination/e06/stage_native_p02.py'
+      - 'coordination/e06/native_onehost_smoke.py'
+      - 'tests/e06/test_native_busy_retry_r12.py'
       - 'private_build.ps1'
       - '.github/workflows/nox-v16-e06-d02-onehost.yml'
 permissions:
