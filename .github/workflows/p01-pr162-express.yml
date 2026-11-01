@@ -24,15 +24,19 @@ jobs:
         run: |
           set -euo pipefail
           git merge-base --is-ancestor 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD
-          git diff --name-only 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD | while IFS= read -r file; do
-            case "$file" in
-              proposals/P01/WOW-MAX10/*|.github/workflows/p01-pr162-express.yml) ;;
-              *) echo "CROSS_OWNER_CHANGE:$file"; exit 1;;
-            esac
-          done
-          if test -n "$(git diff --diff-filter=D --name-only 833a37bca2930e0cb9b272ae07f5d6545e3d5096 HEAD)"; then
-            echo 'NO_LOSS_PATH_DELETION_FAIL'; exit 1
+          # This job belongs to P01 but runs on the SHARED integration PR162.
+          # E06/I0 owns .circleci and other packages. Do not misclassify its
+          # authorized changes as P01 defects; separate SourceLock covers them.
+          baseline=833a37bca2930e0cb9b272ae07f5d6545e3d5096
+          git diff --check "$baseline" HEAD -- proposals/P01/WOW-MAX10/ .github/workflows/p01-pr162-express.yml
+          echo 'P01_OWNED_CHANGED_PATHS_BEGIN'
+          git diff --name-only "$baseline" HEAD -- proposals/P01/WOW-MAX10/ .github/workflows/p01-pr162-express.yml
+          echo 'P01_OWNED_CHANGED_PATHS_END'
+          if test -n "$(git diff --no-renames --diff-filter=D --name-only "$baseline" HEAD -- proposals/P01/WOW-MAX10/ .github/workflows/p01-pr162-express.yml)"; then
+            echo 'P01_NO_LOSS_PATH_DELETION_FAIL'; exit 1
           fi
+          test -d proposals/P01/WOW-MAX10
+          echo 'P01_SCOPED_NOLOSS_PASS_NOT_GLOBAL_OWNER_ATTESTATION'
       - name: Node syntax and focused P01 tests
         shell: bash
         run: |
