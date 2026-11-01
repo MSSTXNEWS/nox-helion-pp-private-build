@@ -190,7 +190,21 @@ def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
     ps=r"""$ErrorActionPreference='Stop'
 $p=$env:NOX_WEBVIEW2_SIGNED_INSTALLER_PATH
 if ([string]::IsNullOrWhiteSpace($p) -or -not (Test-Path -LiteralPath $p -PathType Leaf)) {exit 8}
-$s=Get-AuthenticodeSignature -LiteralPath $p
+$moduleManifest=Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1'
+try {
+  if (-not (Test-Path -LiteralPath $moduleManifest -PathType Leaf)) { throw 'SECURITY_MODULE_MANIFEST_MISSING' }
+  Import-Module -Name $moduleManifest -ErrorAction Stop
+  $signatureCmd=Get-Command -Name 'Get-AuthenticodeSignature' -CommandType Cmdlet -ErrorAction Stop
+} catch {
+  [Console]::Error.WriteLine("T06_AUTHENTICODE_MODULE_UNAVAILABLE ps=$($PSVersionTable.PSVersion) module=$moduleManifest error=$($_.Exception.Message)")
+  exit 9
+}
+try {
+  $s=& $signatureCmd -LiteralPath $p -ErrorAction Stop
+} catch {
+  [Console]::Error.WriteLine("T06_AUTHENTICODE_EXECUTION_UNAVAILABLE error=$($_.Exception.Message)")
+  exit 9
+}
 $subject=if ($null -ne $s.SignerCertificate) {[string]$s.SignerCertificate.Subject} else {''}
 @{status=[string]$s.Status;subject=$subject;message=[string]$s.StatusMessage} |
   ConvertTo-Json -Compress
@@ -209,6 +223,8 @@ exit 0"""
                   "diagnostic_error":check.stderr[-300:].decode("utf-8",errors="replace").strip()}
         report["installer_lifecycle"].setdefault("webview2_signature_attempts",[]).append(evidence)
         print("T06_WEBVIEW2_AUTHENTICODE "+json.dumps(evidence,sort_keys=True),flush=True)
+        if check.returncode==9:
+            require(False,"T06_WEBVIEW2_AUTHENTICODE_VERIFIER_UNAVAILABLE")
         return check.returncode==0
 
     def download_microsoft(url:str,name:str,min_bytes:int,max_bytes:int)->Path:
