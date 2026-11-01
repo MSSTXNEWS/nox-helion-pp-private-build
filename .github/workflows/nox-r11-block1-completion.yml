@@ -16,6 +16,7 @@ permissions:
   actions: read
 jobs:
   ollama:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
     timeout-minutes: 55
     steps:
@@ -41,6 +42,7 @@ jobs:
           compression-level: 0
           if-no-files-found: warn
   signatures:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
@@ -76,3 +78,102 @@ jobs:
           path: ${{ runner.temp }}\nox-r11-webview2-proof
           retention-days: 14
           if-no-files-found: warn
+  nuget_closure:
+    # BLOCK1-only: one authorised Windows download/verify job, no installer or product changes.
+    if: github.event_name == 'push'
+    runs-on: windows-2022
+    timeout-minutes: 55
+    steps:
+      - name: Reuse previously downloaded pinned root NuGet without redownloading binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: nox-r11-block1-download-41324187733
+          run-id: 41324187733
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}\\nox-block1-prior
+      - name: Restore complete signed NuGet closure and create exact SHA receipt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          $out = Join-Path $env:RUNNER_TEMP 'nox-block1-nuget-closure'
+          $cache = Join-Path $out 'nuget-packages'
+          $feed = Join-Path $out 'root-feed'
+          $probe = Join-Path $out '_disposable-restore-probe'
+          $source = 'https://api.nuget.org/v3/index.json'
+          $expected = 'ee0c5218ded2dff2b5a40bd2fd15a5d91ae66fc612ab1ad0b9c66bf13fc6193a'
+          $version = '1.8.260921001'
+          $receipt = [ordered]@{schema='NOX-EFINAL-BLOCK1-NUGET-CLOSURE-v2'; status='HOLD'; scope='DOWNLOAD_VERIFY_ONLY'; installed=$false; merged=$false; sourceRun=41324187733; officialNugetSource=$source; rootVersion=$version; expectedRootSha256=$expected; packages=@(); requiredDirect=@(); error=$null}
+          New-Item -ItemType Directory -Path $feed,$probe,$cache -Force | Out-Null
+          try {
+            $original = Join-Path $env:RUNNER_TEMP 'nox-block1-prior\\official\\microsoft.windowsappsdk.1.8.260921001.nupkg'
+            if(!(Test-Path -LiteralPath $original -PathType Leaf)) {throw 'PINNED_ORIGINAL_ARTIFACT_NOT_FOUND'}
+            $root = Join-Path $feed 'microsoft.windowsappsdk.1.8.260921001.nupkg'
+            Copy-Item -LiteralPath $original -Destination $root
+            $rootSha = (Get-FileHash -LiteralPath $root -Algorithm SHA256).Hash.ToLowerInvariant()
+            if($rootSha -cne $expected){throw 'ROOT_SHA256_MISMATCH'}
+            $receipt.rootSha256 = $rootSha
+            $receipt.rootBytes = (Get-Item -LiteralPath $root).Length
+            & dotnet nuget verify --all $root
+            if($LASTEXITCODE -ne 0){throw 'ROOT_NUGET_SIGNATURE_VERIFY_FAILED'}
+            $project = @'
+          <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+            <PropertyGroup>
+              <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+              <EnableWindowsTargeting>true</EnableWindowsTargeting>
+              <UseWPF>true</UseWPF>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" />
+            </ItemGroup>
+          </Project>
+          '@
+            [IO.File]::WriteAllText((Join-Path $probe 'Block1Restore.csproj'),$project,(New-Object Text.UTF8Encoding($false)))
+            & dotnet restore (Join-Path $probe 'Block1Restore.csproj') --packages $cache --source $feed --source $source --disable-parallel --force --verbosity minimal
+            if($LASTEXITCODE -ne 0){throw 'OFFICIAL_NUGET_RESTORE_FAILED'}
+            $required = @{
+              'microsoft.windowsappsdk.base'='1.8.251216001'
+              'microsoft.windowsappsdk.foundation'='1.8.260803002'
+              'microsoft.windowsappsdk.interactiveexperiences'='1.8.260708001'
+              'microsoft.windowsappsdk.winui'='1.8.260803003'
+              'microsoft.windowsappsdk.dwrite'='1.8.25122902'
+              'microsoft.windowsappsdk.widgets'='1.8.251231004'
+              'microsoft.windowsappsdk.ai'='1.8.79'
+              'microsoft.windowsappsdk.ml'='1.8.2223'
+              'microsoft.windowsappsdk.runtime'='1.8.260921001'
+            }
+            foreach($id in ($required.Keys|Sort-Object)){
+              $ver=$required[$id]
+              $fn=Join-Path $cache "$id\\$ver\\$id.$ver.nupkg"
+              if(!(Test-Path -LiteralPath $fn -PathType Leaf)){throw "DIRECT_NUGET_DEPENDENCY_MISSING:$id/$ver"}
+              $receipt.requiredDirect+= "$id/$ver"
+            }
+            $all = @(Get-ChildItem -LiteralPath $cache -Recurse -Filter '*.nupkg' -File | Sort-Object FullName)
+            if($all.Count -lt 10){throw "TRANSITIVE_CLOSURE_TOO_SMALL:$($all.Count)"}
+            foreach($p in $all){
+              & dotnet nuget verify --all $p.FullName
+              if($LASTEXITCODE -ne 0){throw "UNTRUSTED_NUGET_PACKAGE:$($p.Name)"}
+              $rel=$p.FullName.Substring($cache.Length+1).Replace('\\','/')
+              $parts=$rel.Split('/')
+              $url="https://api.nuget.org/v3-flatcontainer/$($parts[0])/$($parts[1])/$($p.Name)"
+              $receipt.packages+= [ordered]@{path=$rel;bytes=$p.Length;sha256=(Get-FileHash -LiteralPath $p.FullName -Algorithm SHA256).Hash.ToLowerInvariant();verified='dotnet_nuget_verify_all_PASS';officialUrl=$url}
+            }
+            $receipt.packageCount=$all.Count
+            $receipt.status='PASS_SIGNED_TRANSITIVE_CLOSURE'
+          } catch {
+            $receipt.status='HOLD'
+            $receipt.error=$_.Exception.Message
+          } finally {
+            $receipt | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $out 'BLOCK1_NUGET_CLOSURE_RECEIPT.json') -Encoding utf8
+            Write-Output "BLOCK1_STATUS=$($receipt.status); PACKAGES=$($receipt.packages.Count); ERROR=$($receipt.error)"
+          }
+          if($receipt.status -ne 'PASS_SIGNED_TRANSITIVE_CLOSURE'){exit 2}
+      - name: Publish immutable closure packages and signed receipt even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nox-e-final-block1-nuget-closure-${{ github.run_id }}
+          path: ${{ runner.temp }}\\nox-block1-nuget-closure
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
