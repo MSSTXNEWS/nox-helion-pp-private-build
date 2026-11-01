@@ -57,6 +57,9 @@ def stage(root:Path, source:Path)->dict:
         raise ValueError('R13_HTML_PREIMAGE_DRIFT')
     web=source/'web';sidecar=source/'bridge/CreativeHostBridge.cs'
     safe_source_file(sidecar)
+    # Require the real owner stop contract before touching the disposable R11 tree.
+    if sidecar.read_text(encoding='utf-8').count('private async Task<string> StopCreativeWorkerAsync()') != 1:
+        raise ValueError('CREATIVE_STOP_CONTRACT_HOLD')
     required={'entry.js','studio.js','studio.html','studio.css','theater.html','theater.js','manifest.webmanifest'}
     found={p.name for p in web.iterdir() if p.is_file() and not p.is_symlink()}
     if not required.issubset(found) or any(not (web/name).is_file() or (web/name).is_symlink() for name in required):
@@ -64,7 +67,7 @@ def stage(root:Path, source:Path)->dict:
     for name in found:
         safe_source_file(web/name)
     patched=native.replace(router_anchor,router_anchor+'\n                case "creativeInvoke": _ = DispatchCreativeAsync(json.RootElement.Clone()); break;\n                case "creativeProjector": _ = OpenCreativeProjectorAsync(GetString(json.RootElement,"projectId")); break;',1)
-    patched=patched.replace(LIFECYCLE,LIFECYCLE+'\n        Closing += (_, _) => StopCreativeWorker();')
+    patched=patched.replace(LIFECYCLE,LIFECYCLE+'\n        Closing += async (_, _) => { try { var status = await StopCreativeWorkerAsync(); if (status == "STOP_UNCONFIRMED") WriteLog("CREATIVE_SHUTDOWN_HOLD"); } catch (Exception ex) { WriteLog("CREATIVE_SHUTDOWN_HOLD "+ex.GetType().Name); } };')
     patched_html=page.replace('</body>','<script src="creative/entry.js"></script></body>')
     # No original D02, R13 owner archive, installer, P03/P04/P05 source is overwritten.
     receipt={'schema':'NOX_R13_CREATIVE_STAGE_V2_FAILCLOSED','canonical_d02_sha256':dict(D02),

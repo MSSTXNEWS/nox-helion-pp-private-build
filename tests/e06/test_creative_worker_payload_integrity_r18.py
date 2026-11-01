@@ -25,7 +25,9 @@ class CreativeWorkerIntegrityTests(unittest.TestCase):
     def test_existing_worker_not_replaced(self):
         self.assertIn('new ProcessStartInfo(path)', self.start)
         self.assertIn('Process.Start(start)', self.start)
-        self.assertIn('StopCreativeWorker()', self.source)
+        self.assertIn('private async Task<string> StopCreativeWorkerAsync()', self.source)
+        self.assertIn('await worker.WaitForExitAsync(timeout.Token)', self.source)
+        self.assertIn('return "STOP_UNCONFIRMED"', self.source)
 
     def test_worker_verified_before_start(self):
         self.assertLess(self.start.index('HoldApprovedCreativeWorker(path)'),

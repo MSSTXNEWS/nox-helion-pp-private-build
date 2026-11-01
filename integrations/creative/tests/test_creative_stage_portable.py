@@ -19,7 +19,7 @@ class StagingSafety(unittest.TestCase):
         self.main.write_text('NATIVE PRE\n'+source.ANCHOR+'\n'+source.LIFECYCLE+'\nAFTER')
         self.html=self.asset/'index.html';self.html.write_text('<html><head></head><body><main></main></body></html>')
         (self.web.parent/'bridge').mkdir()
-        (self.web.parent/'bridge/CreativeHostBridge.cs').write_text('// approved owner scoped')
+        (self.web.parent/'bridge/CreativeHostBridge.cs').write_text('// approved owner scoped\nprivate async Task<string> StopCreativeWorkerAsync()')
         for n in ['entry.js','studio.js','studio.html','studio.css','theater.html','theater.js','manifest.webmanifest']:
             (self.web/n).write_text('// '+n)
         self.original_sha={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in (self.main,self.html)}
@@ -38,6 +38,8 @@ class StagingSafety(unittest.TestCase):
         receipt=source.stage(self.root,self.web.parent)
         self.assertEqual(receipt['schema'],'NOX_R13_CREATIVE_STAGE_V2_FAILCLOSED')
         self.assertIn('creativeInvoke',self.main.read_text())
+        self.assertIn('await StopCreativeWorkerAsync()',self.main.read_text())
+        self.assertNotIn('StopCreativeWorker();',self.main.read_text())
         self.assertEqual({n:source.sha(self.asset/n) for n in source.D02},before)
         self.assertFalse(receipt['release_accepted'])
     def test_legacy_exact_owner_route_without_packinvoke(self):
@@ -64,6 +66,11 @@ class StagingSafety(unittest.TestCase):
         self.main.write_text('modified C# router without trusted anchor')
         with self.assertRaisesRegex(ValueError,'ROUTER_OR_LIFECYCLE_DRIFT'):source.stage(self.root,self.web.parent)
         self.assertFalse((self.root/'Assets/creative').exists())
+    def test_missing_native_async_stop_holds_before_mutation(self):
+        (self.web.parent/'bridge/CreativeHostBridge.cs').write_text('// bridge without owner STOP')
+        with self.assertRaisesRegex(ValueError,'CREATIVE_STOP_CONTRACT_HOLD'):
+            source.stage(self.root,self.web.parent)
+        self.unchanged()
     def test_rollback_on_receipt_conflict(self):
         (self.root.parent/'CREATIVE_STAGE_RECEIPT.json').write_text('owner receipt already exists')
         with self.assertRaisesRegex(ValueError,'RECEIPT_CONFLICT'):source.stage(self.root,self.web.parent)
