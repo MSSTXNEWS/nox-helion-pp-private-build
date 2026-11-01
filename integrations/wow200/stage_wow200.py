@@ -87,7 +87,11 @@ def pinned_source_bytes(path: Path, expected: str):
     raw = path.read_bytes()
     if gitsha(raw) == expected:
         return raw
-    if path.suffix.lower() not in ('.json','.mjs','.js','.css','.html','.py'):
+    if b'\r\n' not in raw:
+        return None
+    try:
+        raw.decode('utf-8', 'strict')  # never normalize arbitrary binary payloads
+    except UnicodeDecodeError:
         return None
     try:
         canon = canonical_menu_bytes(path)
