@@ -4,60 +4,6 @@
  *  no direct privileged bridge, simulated GPU training or autostart.
  */
 import {LOGICAL_MENU_PARENTS} from '../proposals/P01/WOW-MAX10/scene-contract.mjs';
-/*
- * Bundled exact SVG paths from Tabler Icons (MIT), official source:
- * https://github.com/tabler/tabler-icons/tree/main/icons/outline
- * Individual Git blobs: code 282fd111276a24b140314421b8d7e0629395c9b1;
- * arrow-left 182b91c5efc24129dd14bd29d31a842f2e5362d2;
- * player-stop f292282b73d38f2d175b3918a38906ea6bd3a91f.
- * MIT License. Copyright (c) 2020-2026 Paweł Kuna.
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-export const P01_TABLER_PATHS=Object.freeze({
- code:Object.freeze(['M7 8l-4 4l4 4','M17 8l4 4l-4 4','M14 4l-4 16']),
- back:Object.freeze(['M5 12l14 0','M5 12l6 6','M5 12l6 -6']),
- stop:Object.freeze(['M5 7a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -10'])
-});
-function p01Icon(doc,key){
- if(typeof doc?.createElementNS!=='function'||!Object.hasOwn(P01_TABLER_PATHS,key))return null;
- const ns='http://www.w3.org/2000/svg',svg=doc.createElementNS(ns,'svg');
- for(const [k,v] of Object.entries({viewBox:'0 0 24 24',width:'20',height:'20',
-   fill:'none',stroke:'currentColor','stroke-width':'1.65',
-   'stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',focusable:'false'}))
-   svg.setAttribute(k,v);
- svg.setAttribute('class','nox-sb-icon');
- for(const d of P01_TABLER_PATHS[key]){
-   const path=doc.createElementNS(ns,'path');path.setAttribute('d',d);svg.append(path);
- }
- return svg;
-}
-// Native Web Animations API already ships in WebView2. No second rendering engine.
-function animateSelectedWorld(doc,button){
- const view=doc?.defaultView;
- if(view?.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return false;
- if(typeof button?.animate!=='function')return false;
- button.animate([
-  {transform:'translateY(0) scale(1)',filter:'brightness(1)'},
-  {transform:'translateY(-3px) scale(1.015)',filter:'brightness(1.16)'},
-  {transform:'translateY(0) scale(1)',filter:'brightness(1)'}
- ],{duration:320,easing:'cubic-bezier(.22,1,.36,1)',iterations:1});
- return true;
-}
-
 // Use the approved original eight sections as physical navigation; ten logical
 // worlds are child views of those EXISTING tiles, not new top-level graphics.
 const P01_TILE_LABELS=Object.freeze({
@@ -123,7 +69,6 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   worldFeedback.setAttribute('role','status');worldFeedback.setAttribute('aria-live','polite');
   const backWorld=make(doc,'button','nox-sb-tile','← Все подразделы');
   backWorld.type='button';backWorld.hidden=true;
-  const backIcon=p01Icon(doc,'back');if(backIcon)backWorld.prepend(backIcon);
   worldSection.append(worldHeading,worldGrid,backWorld,worldFeedback);
   let activeWorld=null;
   const worldButtons=[];
@@ -133,7 +78,6 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     b.addEventListener('click',()=>{
       if(destroyed)return;
       activeWorld=world.id;
-      animateSelectedWorld(doc,b);
       worldFeedback.textContent='ОТКРЫТ ПОДРАЗДЕЛ · '+world.label+
         ' · действия ниже требуют отдельного подтверждения NOX';
       backWorld.hidden=false;refresh();
@@ -148,7 +92,6 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
   const sourceHub=make(doc,'section','nox-sb-sourcehub');
   sourceHub.dataset.noxSubview='selfbuilder-source-v1';
   const sourceTitle=make(doc,'h3','nox-sb-sourcehub__title','Самодописание ИИ · исходники и код');
-  const codeIcon=p01Icon(doc,'code');if(codeIcon)sourceTitle.prepend(codeIcon);
   const sourceLead=make(doc,'p','nox-sb-subtitle','Один P02/S03. Исходники, модули, шаблоны, патчи и интеграции — только проверенные данные. Код сначала кандидат, затем согласование.');
   const sourceGrid=make(doc,'div','nox-sb-grid');
   const sourceStatus=make(doc,'p','nox-sb-feedback','Библиотека · ожидает проверки текущего Git HEAD');
@@ -178,10 +121,7 @@ export function mountSelfBuilderMenuV2({root,invokeNative,getTrustedState,ownerA
     }
   }
   for(const item of SELFBUILDER_MENU){
-    const b=make(doc,'button','nox-sb-tile',item.label);b.type='button';
-    if(item.actionId==='selfbuilder.worker.stop'){
-      const stopIcon=p01Icon(doc,'stop');if(stopIcon)b.prepend(stopIcon);
-    }b.dataset.routeId=item.routeId;
+    const b=make(doc,'button','nox-sb-tile',item.label);b.type='button';b.dataset.routeId=item.routeId;
     b.dataset.actionId=item.actionId;b.dataset.section=item.section;
     const permitted=ownerApprovedRoute(item.section,item.routeId,item.actionId)===true;
     b.disabled=!permitted;b.dataset.state=permitted?'HOLD':'CONTRACT_REQUIRED';
