@@ -100,6 +100,7 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
     def dispatch(data: bytes, nonce: str | None) -> None:
         nonlocal active
         event_context.nonce = nonce
+        released = False
         try:
             try:
                 result = ingress.handle(data)
@@ -112,13 +113,24 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
                 result = _encode_status(ingress, nonce, code)
             except Exception:
                 result = _encode_status(ingress, nonce, "NATIVE_PROVIDER_HOLD")
-            send(result)
+            # Keep the active gate held until the terminal reply has been
+            # written and flushed. Otherwise the reader can observe active=True
+            # *after* the client receives OK and reject its next request BUSY.
+            # STOP bypasses active_lock and remains interruptible.
+            with active_lock:
+                try:
+                    send(result)
+                finally:
+                    active = False
+                    released = True
         except Exception as exc:
             fatal_errors.append(exc)
         finally:
             event_context.nonce = None
-            with active_lock:
-                active = False
+            if not released:
+                # Unexpected pre-reply exceptions must not strand the slot.
+                with active_lock:
+                    active = False
 
     try:
         while True:
