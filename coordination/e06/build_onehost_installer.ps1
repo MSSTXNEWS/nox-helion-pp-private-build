@@ -192,8 +192,25 @@ if ($wantsCreative) {
   $git=Get-Command 'git.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
   $py=Get-Command 'python.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
   if (!$git -or !$py) { throw 'D02_PINNED_GIT_PYTHON_TOOLS_REQUIRED' }
-  $creativeScriptBlob=(& $git.Source hash-object -- $creativeScript).Trim().ToLowerInvariant()
-  $wowScriptBlob=(& $git.Source hash-object -- $wowScript).Trim().ToLowerInvariant()
+  # The repository pins Git blobs in LF form. Windows checkout may convert
+  # text to CRLF; verify the exact LF-normalized Git blob without weakening pins.
+  function Get-E06CanonicalGitBlobSha([string] $Path) {
+    $raw=[IO.File]::ReadAllBytes($Path)
+    $utf8=New-Object System.Text.UTF8Encoding($false,$true)
+    $body=$utf8.GetString($raw)
+    if ($body.Replace("`r`n",'').Contains("`r")) {
+      throw 'D02_STAGE_SCRIPT_BARE_CR_HOLD'
+    }
+    $normalized=$utf8.GetBytes($body.Replace("`r`n","`n"))
+    $header=[Text.Encoding]::ASCII.GetBytes("blob $($normalized.Length)`0")
+    $all=New-Object byte[] ($header.Length+$normalized.Length)
+    [Array]::Copy($header,0,$all,0,$header.Length)
+    [Array]::Copy($normalized,0,$all,$header.Length,$normalized.Length)
+    $sha=[Security.Cryptography.SHA1]::HashData($all)
+    return [Convert]::ToHexString($sha).ToLowerInvariant()
+  }
+  $creativeScriptBlob=Get-E06CanonicalGitBlobSha $creativeScript
+  $wowScriptBlob=Get-E06CanonicalGitBlobSha $wowScript
   if ($creativeScriptBlob -cne '151caf9bdaabdcd24965fa2b030c5c700663cdf9' -or
       $wowScriptBlob -cne 'c9036b96eb8921f91be583180dbb879192ef5e16') {
     throw 'D02_PINNED_STAGE_SCRIPT_SHA_HOLD'
