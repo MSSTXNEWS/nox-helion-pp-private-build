@@ -131,22 +131,28 @@ class OriginalStoreChatAdapter:
             raise StoreActorHold('MODEL_AND_HISTORY_CONTEXT_REQUIRED')
         model = generation['model_id']; epoch = generation['epochs'][scope]
         request_id = uuid.uuid4().hex
+        def require_native_authorization():
+            # Legacy callbacks raise on denial and may return None on success;
+            # explicit negative native results must never be silently ignored.
+            result = authorize()
+            if result is not None and result is not True:
+                raise PermissionError('ORIGINAL_CHAT_NATIVE_AUTH_REVOKED')
         def persist(store):
-            authorize()
+            require_native_authorization()
             if store.conn.in_transaction:
                 raise StoreActorHold('ORIGINAL_STORE_TRANSACTION_ACTIVE')
             with store.conn:
                 store.conn.execute('BEGIN IMMEDIATE')
                 if CoreRuntime._history_epoch_in(store.conn, project, core, chat) != epoch:
                     raise PermissionError('ORIGINAL_HISTORY_CONTEXT_REVOKED')
-                authorize()
+                require_native_authorization()
                 store.conn.execute('''INSERT INTO core_chat_turns
                     (project_id,core_id,chat_id,request_id,model_id,user_prompt,model_reply)
                     VALUES(?,?,?,?,?,?,?)''', (project, core, chat, request_id, model, prompt, answer))
                 store._audit('P02_CHAT_EXCHANGE_SAVED', 0,
                              {'request_id': request_id, 'project_id': project,
                               'core_id': core, 'chat_id': chat, 'model_id': model})
-                authorize()
+                require_native_authorization()
             return request_id
         return self.actor.call(persist)
 

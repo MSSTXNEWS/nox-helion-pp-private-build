@@ -37,7 +37,7 @@ ADDONS=(
     ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'f2085971020b4288403cc1409ee755693679df37'),
     ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '0342506d58c3c078292d1f25e4cb1ae124b71cee'),
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
-    ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', 'e01bd595b32977582fef410abd83de2bd21fc537'),
+    ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '6fcbd9b2f90dc54767728d7ee120ffb7595c019b'),
     ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),
     ('src/nox_selfbuilder/p04_forge_bridge.py', 'nox_selfbuilder/p04_forge_bridge.py', 'a65c0f4bf5e04d18d5e90eec56a7ed46b3a3accf'),
     ('src/nox_selfbuilder/release_governor.py', 'nox_selfbuilder/release_governor.py', '451d5c17f3ef9ea0a83670ed90fface36512fc36'),
