@@ -58,6 +58,16 @@ MENU_V2_SHA256 = {
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
 }
 
+P01_OWNER_BLOBS = {
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "5f4abda73d96af9d3786e2ce84455fd1f3ba49ca",
+    "proposals/P01/WOW-MAX10/scene-contract.mjs": "a9d7314c5ad45c3d156fb3a020323c104b14b918",
+    "proposals/P01/WOW-MAX10/route-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
+    "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
+    "proposals/P01/WOW-MAX10/p01-visual-approval.mjs": "1f8a55ac2f579f544a9f00471aa187555c8e6dcd",
+    "proposals/P01/WOW-MAX10/p01-mode-controller.mjs": "9301c32300cc64614fc8530b40bd3b3bd2cb1e65",
+    "proposals/P01/WOW-MAX10/p01-responsive.mjs": "0f206239670272f2b026be8391622c3cc9a77db7",
+}
+
 def canonical_menu_bytes(path: Path) -> bytes:
     # Windows checkout may transcode LF to CRLF. Accept ONLY exact newline
     # normalization of SHA-pinned text; reject bare CR and ALL other drift.
@@ -98,6 +108,24 @@ def pinned_source_bytes(path: Path, expected: str):
     except ValueError:
         return None
     return canon if gitsha(canon) == expected else None
+
+def p01_owner_stage_plan(repo: Path, dest: Path) -> tuple[list, dict]:
+    # Admit the ONE existing E01 P01 mount/route implementation as a complete,
+    # path-pinned source unit. Not activated until a native host and ten real
+    # owner-approved MENU DOM elements are attested.
+    plans=[]
+    content={}
+    for relative, blob in P01_OWNER_BLOBS.items():
+        origin=repo/relative
+        if (not origin.is_file() or origin.is_symlink() or
+                any(parent.is_symlink() for parent in origin.parents if parent != repo)):
+            raise ValueError("P01_MENU10_SOURCE_PATH_HOLD:"+relative)
+        verified=pinned_source_bytes(origin,blob)
+        if verified is None:
+            raise ValueError("P01_MENU10_SOURCE_BLOB_HOLD:"+relative)
+        plans.append((origin,dest/relative))
+        content[origin]=verified
+    return plans, content
 
 def stage(root:Path, source:Path)->dict:
     root=root.resolve();source=source.resolve()
@@ -154,6 +182,9 @@ def stage(root:Path, source:Path)->dict:
     plans=[(pack01_catalog,dest/"pack01-catalog.json")]
     menu_plans=menu_stage_plan(owner1_root,dest)
     plans.extend(menu_plans)
+    p01_plans,p01_content=p01_owner_stage_plan(owner1_root,dest)
+    plans.extend(p01_plans)
+    pinned_content.update(p01_content)
     menu_origins={origin for origin,_ in menu_plans}
     for rel, expected in files.items():
         if not rel.startswith(("proposals/", "legacy/")) or ".." in Path(rel).parts or Path(rel).is_absolute():
@@ -231,6 +262,10 @@ def stage(root:Path, source:Path)->dict:
           "home_pr30_renderer_staged":True,
           "menu_v2_atomic_source_sha256":MENU_V2_SHA256,
           "menu_v2_native_ui_staged":True,"menu_v2_native_acceptance":"NOT_RUN",
+          "p01_owner_source_staged":True,
+          "p01_owner_source_git_blobs":P01_OWNER_BLOBS,
+          "p01_owner_native_mount_activated":False,
+          "p01_owner_native_route_e2e":"NOT_RUN",
           "active_d02_engine":"OWNER1_PR144_PINNED",
           "active_d02_git_blobs":{rel:p["active_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
           "retained_legacy_d02_git_blobs":{rel:p["legacy_blob"] for rel,p in OWNER1_D02_ENGINE.items()},
