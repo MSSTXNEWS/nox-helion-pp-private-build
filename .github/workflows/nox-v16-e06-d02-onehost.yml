@@ -18,7 +18,8 @@ permissions:
   contents: read
 concurrency:
   group: nox-e06-onehost-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Keep the running exact-SHA Windows job alive; queue only the newest PR head.
+  cancel-in-progress: false
 jobs:
   visual-source-stage:
     runs-on: windows-2025
