@@ -15,7 +15,7 @@ export function effectiveP01MotionMode(requested,reduced){
 }
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
-  const {root,orbs,menu,buttons,hostPort,secondary=null,
+  const {root,orbs,menu,logicalMenu,buttons,hostPort,secondary=null,
     controls=[],panels=[],mode="BALANCED",shortcuts={},homeActive}=spec;
   if(mounted.has(root)||!validateMode(mode)||
      typeof homeActive!=="function"||
@@ -29,7 +29,7 @@ export function mountP01Owner(spec){
   const motionQuery=typeof win?.matchMedia==="function"?
     win.matchMedia("(prefers-reduced-motion: reduce)"):null;
   const effectiveMode=()=>effectiveP01MotionMode(requestedMode,motionQuery?.matches===true);
-  const saved=new Map([...menu,...buttons].map(x=>[x.element,{
+  const saved=new Map([...menu,...logicalMenu,...buttons].map(x=>[x.element,{
     ack:x.element.dataset?.noxNativeAck, receipt:x.element.dataset?.noxNativeReceipt,
     hadAck:Object.hasOwn(x.element.dataset||{},"noxNativeAck"),
     hadReceipt:Object.hasOwn(x.element.dataset||{},"noxNativeReceipt")}]));
@@ -55,7 +55,7 @@ export function mountP01Owner(spec){
         nativeAuthorizeComposition:item=>nativeVisualApproval(hostPort,"composition",item)
       });
     }
-    for(const [items,kind] of [[menu,"MENU"],[buttons,"BUTTON"]]){
+    for(const [items,kind] of [[menu,"MENU_TILE"],[logicalMenu,"MENU_SUBMENU"],[buttons,"BUTTON"]]){
       for(const item of items){
         const handler=async()=>{
           if(disposed||dispatcher.isPending(item.routeId))return;
