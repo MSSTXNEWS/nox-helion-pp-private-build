@@ -387,8 +387,23 @@ if ($LASTEXITCODE -ne 0) { throw 'E06_R51_WPF_OWNER_COMPAT_STAGE_HOLD' }
 $p03Registry=Join-Path $repoRoot 'contracts/p03_reviewed_artifacts.json'
 Assert-E06PlainPathAncestors -Candidate $p03Registry -Scope 'P03_REVIEW_REGISTRY'
 $p03RegistrySha='3b47af8b85aefd88408dd5cc63ad9615da87427d4d0cb2b56b0f5a4246ffbd60'
-if (!(Test-Path -LiteralPath $p03Registry -PathType Leaf) -or
-    (Get-FileHash -LiteralPath $p03Registry -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p03RegistrySha) {
+if (!(Test-Path -LiteralPath $p03Registry -PathType Leaf)) {
+  throw 'P03_REVIEW_REGISTRY_SOURCE_SHA_HOLD'
+}
+# Git LF sources may be checked out with CRLF on Windows. Admit only the
+# exact pinned UTF-8 LF bytes and publish those bytes, never a normalized
+# but unverified different model-rights manifest.
+$registryUtf8=[System.Text.UTF8Encoding]::new($false,$true)
+$registryText=$registryUtf8.GetString([IO.File]::ReadAllBytes($p03Registry))
+$registryCanonicalText=$registryText.Replace("`r`n","`n")
+if ($registryCanonicalText.Contains("`r") -or
+    $registryCanonicalText.Contains([char]0xFEFF)) {
+  throw 'P03_REVIEW_REGISTRY_UNSAFE_ENCODING'
+}
+$registryCanonicalBytes=$registryUtf8.GetBytes($registryCanonicalText)
+$registryCanonicalSha=[Convert]::ToHexString(
+    [Security.Cryptography.SHA256]::HashData($registryCanonicalBytes)).ToLowerInvariant()
+if ($registryCanonicalSha -cne $p03RegistrySha) {
   throw 'P03_REVIEW_REGISTRY_SOURCE_SHA_HOLD'
 }
 & dotnet publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:PublishTrimmed=false -o $payload --nologo --verbosity minimal
@@ -398,7 +413,7 @@ $p03PublishedRegistry=Join-Path $payload 'contracts/p03_reviewed_artifacts.json'
 Assert-E06PlainPathAncestors -Candidate $p03PublishedRegistry -Scope 'P03_REVIEW_PAYLOAD'
 if (Test-Path -LiteralPath $p03PublishedRegistry) { throw 'P03_REVIEW_PAYLOAD_COLLISION' }
 New-Item -ItemType Directory -Path (Split-Path -Parent $p03PublishedRegistry) -Force | Out-Null
-Copy-Item -LiteralPath $p03Registry -Destination $p03PublishedRegistry -ErrorAction Stop
+[IO.File]::WriteAllBytes($p03PublishedRegistry,$registryCanonicalBytes)
 if ((Get-FileHash -LiteralPath $p03PublishedRegistry -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p03RegistrySha) {
   throw 'P03_REVIEW_REGISTRY_PAYLOAD_SHA_HOLD'
 }
