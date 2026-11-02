@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed, read-only SHA-256 audit of the original three NOX ZIP parts."""
 from __future__ import annotations
-import argparse, hashlib, json, os, pathlib, re, stat, sys, tempfile, unicodedata, zipfile
+import argparse, contextlib, hashlib, json, os, pathlib, re, stat, sys, tempfile, unicodedata, zipfile
 
 PARTS = ("source_00.part", "source_01.part", "source_02.part")
 EXPECTED_SIZE = 60364346
@@ -14,6 +14,67 @@ EXPECTED_PART_GIT_BLOBS = (
 EXPECTED_SHA256 = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
 BAD = re.compile(r'[<>:"|?*\x00-\x1f]')
 RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$', re.I)
+
+
+def _trusted_part_parent(part: pathlib.Path) -> None:
+    """Reject symlink/junction ancestry before opening an original ZIP part."""
+    parent = part.absolute().parent
+    for node in (parent, *parent.parents):
+        try:
+            attrs = node.lstat()
+        except OSError as exc:
+            raise ValueError("SOURCE_PART_PARENT_UNAVAILABLE") from exc
+        if (not stat.S_ISDIR(attrs.st_mode) or stat.S_ISLNK(attrs.st_mode) or
+                getattr(attrs, "st_file_attributes", 0) &
+                getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+            raise ValueError("SOURCE_PART_PARENT_REPARSE_OR_UNSAFE")
+
+
+@contextlib.contextmanager
+def _trusted_part_stream(part: pathlib.Path):
+    """Pin a regular descriptor and its live name through the entire read."""
+    _trusted_part_parent(part)
+    reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    try:
+        initial = part.lstat()
+    except OSError as exc:
+        raise ValueError("SOURCE_PART_LEAF_UNAVAILABLE") from exc
+    if (not stat.S_ISREG(initial.st_mode) or stat.S_ISLNK(initial.st_mode)
+            or getattr(initial, "st_file_attributes", 0) & reparse):
+        raise ValueError("SOURCE_PART_LEAF_NOT_REGULAR")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(part, flags)
+    except OSError as exc:
+        raise ValueError("SOURCE_PART_UNTRUSTED_OPEN") from exc
+    try:
+        reader = os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
+
+    def identity(attrs):
+        return (attrs.st_dev, attrs.st_ino, attrs.st_size,
+                attrs.st_mtime_ns, attrs.st_ctime_ns)
+
+    with reader:
+        opened = os.fstat(reader.fileno())
+
+        def same_path():
+            try:
+                _trusted_part_parent(part)
+                live = part.lstat()
+            except (OSError, ValueError):
+                return False
+            return (stat.S_ISREG(live.st_mode) and not stat.S_ISLNK(live.st_mode)
+                    and not (getattr(live, "st_file_attributes", 0) & reparse)
+                    and identity(live) == identity(opened))
+
+        if identity(initial) != identity(opened) or not same_path():
+            raise ValueError("SOURCE_PART_OPEN_IDENTITY_MISMATCH")
+        yield reader
+        if identity(os.fstat(reader.fileno())) != identity(opened) or not same_path():
+            raise ValueError("SOURCE_PART_CHANGED_DURING_READ")
 
 def safe_name(name: str) -> bool:
     if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
@@ -61,6 +122,7 @@ def validate_members(infos) -> None:
 
 def audit(directory: pathlib.Path, expected_files: int):
     paths = [directory / p for p in PARTS]
+    _trusted_part_parent(paths[0])
     if any(not p.is_file() or p.is_symlink() for p in paths):
         raise ValueError("Missing or nonregular part / symlink detected")
     sizes = [p.stat().st_size for p in paths]
@@ -74,7 +136,7 @@ def audit(directory: pathlib.Path, expected_files: int):
             for index, p in enumerate(paths):
                 part_git = hashlib.sha1(f"blob {sizes[index]}\0".encode("ascii"))
                 part_sha256 = hashlib.sha256()
-                with p.open("rb") as stream:
+                with _trusted_part_stream(p) as stream:
                     for chunk in iter(lambda: stream.read(1024*1024), b""):
                         sha.update(chunk)
                         part_git.update(chunk)
