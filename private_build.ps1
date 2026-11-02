@@ -423,6 +423,9 @@ try {
         if (-not $seenRuntime.Contains('nox_selfbuilder/a1_existing_components.py')) {
             throw 'A1_R2_NATIVE_COMPONENTS_SOURCE_SHA_REQUIRED'
         }
+        if (-not $seenRuntime.Contains('nox_selfbuilder/a1_wpf_owner_proof.py')) {
+            throw 'A1_NATIVE_WPF_OWNER_PROOF_SHA_REQUIRED'
+        }
         foreach ($activatorFile in @('nox_selfbuilder/activator_worm.py',
             'nox_selfbuilder/foundation_readiness.py',
             'nox_selfbuilder/p03_download_candidates.json',
@@ -432,7 +435,7 @@ try {
             }
         }
         # The ten A.1 imports compile inside the original PyInstaller EXE.
-        $nativeArgs += @('--hidden-import','nox_selfbuilder.worms','--hidden-import','nox_selfbuilder.worm_providers','--hidden-import','nox_selfbuilder.worm_idea_loop','--hidden-import','nox_selfbuilder.growth_sandbox','--hidden-import','nox_selfbuilder.growth_forge','--hidden-import','nox_selfbuilder.worm_autopilot','--hidden-import','nox_selfbuilder.a1_initiative_bridge','--hidden-import','nox_selfbuilder.a1_official_catalog','--hidden-import','nox_selfbuilder.firstboot_coordinator','--hidden-import','nox_selfbuilder.acquisition_library','--hidden-import','nox_selfbuilder.a1_native_command','--hidden-import','nox_selfbuilder.a1_existing_components','--hidden-import','nox_selfbuilder.activator_worm','--hidden-import','nox_selfbuilder.foundation_readiness')
+        $nativeArgs += @('--hidden-import','nox_selfbuilder.worms','--hidden-import','nox_selfbuilder.worm_providers','--hidden-import','nox_selfbuilder.worm_idea_loop','--hidden-import','nox_selfbuilder.growth_sandbox','--hidden-import','nox_selfbuilder.growth_forge','--hidden-import','nox_selfbuilder.worm_autopilot','--hidden-import','nox_selfbuilder.a1_initiative_bridge','--hidden-import','nox_selfbuilder.a1_official_catalog','--hidden-import','nox_selfbuilder.firstboot_coordinator','--hidden-import','nox_selfbuilder.acquisition_library','--hidden-import','nox_selfbuilder.a1_native_command','--hidden-import','nox_selfbuilder.a1_existing_components','--hidden-import','nox_selfbuilder.a1_wpf_owner_proof','--hidden-import','nox_selfbuilder.activator_worm','--hidden-import','nox_selfbuilder.foundation_readiness')
         $nativeArgs += @((Join-Path $source 'run_helion.py'))
         & $venvPython @nativeArgs
         if ($LASTEXITCODE -ne 0) { throw 'ONEHOST_NATIVE_PYINSTALLER_FAILED' }

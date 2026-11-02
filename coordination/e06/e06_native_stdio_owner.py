@@ -8,6 +8,7 @@ from __future__ import annotations
 import getpass
 import hashlib
 import json
+import os
 import sys
 import stat
 import threading
@@ -15,6 +16,7 @@ from dataclasses import fields, replace
 from pathlib import Path
 from datetime import datetime, timezone
 from nox_selfbuilder.a1_native_command import A1NativeCommand, A1NativeHold
+from nox_selfbuilder.a1_wpf_owner_proof import A1WpfOwnerProof, A1OwnerProofHold
 from nox_selfbuilder.a1_existing_components import ExistingA1OwnerPorts, build_existing_a1_command
 
 from nox_native_bridge import NoxPackHost, NativeSession, BoundPort, APPROVED_NATIVE_POLICY
@@ -110,7 +112,7 @@ def load_native_config(data_dir):
 
 def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
                             owner_ports=(), native_approve=None, data_dir=None,
-                            native_a_owner_components=None):
+                            native_a_owner_components=None, a1_wpf_proof=None):
     """Bind approved P02 methods to the original host and original Store actor.
 
     The actor is created by the original CLI on its connection-owning thread.
@@ -258,13 +260,19 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
             return activator_status(session)
         if action in ("selfbuilder.a1.status", "selfbuilder.a1.boot",
                       "selfbuilder.a1.tick"):
-            # Original WPF chat.commands consent precedes this private-pipe
-            # callback; only the already-authenticated OneHost may grant it.
+            # Private WPF-only one-use proof, not a renderer-authorized flag.
             if action == "selfbuilder.a1.status":
+                if set(args) != {"action"}:
+                    raise A1NativeHold("A1_STATUS_EXACT_PAYLOAD_REQUIRED")
                 grant(session, action, args)
             else:
+                ticket = args.get("a1_wpf_ticket")
+                if set(args) != {"action", "a1_wpf_ticket"}:
+                    raise A1NativeHold("A1_WPF_OWNER_RECEIPT_REQUIRED")
+                if a1_wpf_proof is None or a1_wpf_proof.verify(ticket, action) is not True:
+                    raise A1NativeHold("A1_WPF_OWNER_PROOF_HOLD")
                 grant(session, "evolution.autonomy.read", {})
-            return a1_command.invoke(session, args, now=datetime.now(timezone.utc))
+            return a1_command.invoke(session, {"action": action}, now=datetime.now(timezone.utc))
         if action in ("selfbuilder.background.status",
                       "selfbuilder.background.enable",
                       "selfbuilder.background.disable",
@@ -412,9 +420,19 @@ def serve_existing_store(store, run_id: str, data_dir=None, *, native_a_owner_co
     def private_pipe_approval(session, route, args):
         session.validate()
         return session.tenant == "local" and session.principal == principal
+    # Child-only WPF key is removed from its environment before other work.
+    # It proves private WPF consent but NOT P01/P03 download authorization.
+    owner_key = os.environ.pop("NOX_A1_WPF_OWNER_KEY", None)
+    owner_proof = None
+    if owner_key is not None:
+        try:
+            owner_proof = A1WpfOwnerProof(owner_key, run_id, sys.executable)
+        except (A1OwnerProofHold, OSError, ValueError):
+            owner_proof = None  # Original chat survives; A.1 boot stays HOLD.
     ingress = create_existing_ingress(store, run_id, data_dir=data_dir,
                                        native_approve=private_pipe_approval,
-                                       native_a_owner_components=native_a_owner_components)
+                                       native_a_owner_components=native_a_owner_components,
+                                       a1_wpf_proof=owner_proof)
     # stdout must contain ONLY authenticated binary P02 frames.
     try:
         serve_native_frames(ingress, sys.stdin.buffer, sys.stdout.buffer)

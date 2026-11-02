@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +35,11 @@ public partial class MainWindow
     private CoreWebView2? _nativeP02Core;
     private long _nativeDocumentEpoch;
     private readonly HashSet<string> _nativeP03Nonces = new(StringComparer.Ordinal);
+    // One child-only WPF consent key; never included in renderer JSON.
+    private byte[]? _a1OwnerProofKey;
+    private string? _a1OwnerProofRunId;
+    private string? _a1OwnerApprovedAction;
+    private long _a1OwnerApprovedEpoch;
     private System.Windows.Controls.Button? _nativeBrowserBack;
     private bool _nativeBrowserFenceInstalled;
     private EventHandler<CoreWebView2WebResourceRequestedEventArgs>? _nativeBrowserFilter;
@@ -122,6 +128,30 @@ public partial class MainWindow
         }
     }
 
+    private object CreateA1PrivateConsentReceipt(string action)
+    {
+        var secret=_a1OwnerProofKey;
+        var runId=_a1OwnerProofRunId;
+        if (secret is not { Length: 32 } || runId is null ||
+            _nativeP02Process is not { HasExited: false } ||
+            _nativeModelsStop.IsCancellationRequested)
+            throw new UnauthorizedAccessException("A1_WPF_OWNER_PROOF_UNAVAILABLE");
+        var sid=WindowsIdentity.GetCurrent().User?.Value;
+        if (string.IsNullOrEmpty(sid) || !NativeP02Acl(sid,"chat.commands"))
+            throw new UnauthorizedAccessException("A1_WINDOWS_SID_OR_ACL_DENIED");
+        var now=DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var expiry=now+20;
+        var nonce=Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+        var sidHash=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sid))).ToLowerInvariant();
+        const string schema="NOX-A1-WPF-OWNER-CONSENT-v1";
+        var transcript=string.Join("\n",schema,runId,action,NativePythonSha,
+            sidHash,now.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            expiry.ToString(System.Globalization.CultureInfo.InvariantCulture),nonce);
+        var mac=Convert.ToHexString(HMACSHA256.HashData(secret,Encoding.ASCII.GetBytes(transcript))).ToLowerInvariant();
+        return new {schema,run_id=runId,action,backend_sha256=NativePythonSha,
+            sid_sha256=sidHash,nonce,issued_unix=now,expires_unix=expiry,mac};
+    }
+
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
@@ -175,6 +205,11 @@ public partial class MainWindow
               catch {return new NativePipeResult("",false,null,"NOX_AUTOSTART_NATIVE_HOLD");}
         }
         if(route=="chat.stop") {
+            _a1OwnerApprovedAction=null;
+            if (_a1OwnerProofKey is not null) {
+                CryptographicOperations.ZeroMemory(_a1OwnerProofKey);
+                _a1OwnerProofKey=null;
+            }
             _nativeModels?.StopMergedImport();
             _nativeModelsStop.Cancel();_nativeModelsStop.Dispose();
             _nativeModelsStop=new CancellationTokenSource();
@@ -229,6 +264,24 @@ public partial class MainWindow
             catch { return new NativePipeResult("",false,null,"P03_NATIVE_OWNER_HOLD"); }
         }
         if (_nativeP02Pipe is null) return new NativePipeResult("",false,null,"NATIVE_PIPE_CLOSED");
+        if (route=="chat.commands" && payload.ValueKind==JsonValueKind.Object &&
+            payload.TryGetProperty("action",out var a1Action) &&
+            a1Action.ValueKind==JsonValueKind.String &&
+            a1Action.GetString() is string a1Name &&
+            (a1Name=="selfbuilder.a1.boot" || a1Name=="selfbuilder.a1.tick")) {
+            var nativeApproved=_a1OwnerApprovedAction==a1Name &&
+                _a1OwnerApprovedEpoch==Interlocked.Read(ref _nativeDocumentEpoch);
+            _a1OwnerApprovedAction=null; // WPF approval is consumed once.
+            if (!nativeApproved || cancel.IsCancellationRequested ||
+                payload.EnumerateObject().Count()!=1)
+                return new NativePipeResult("",false,null,"A1_WPF_FRESH_CONSENT_REQUIRED");
+            try {
+                var ticket=CreateA1PrivateConsentReceipt(a1Name);
+                return await _nativeP02Pipe.RequestAsync("chat.commands",
+                    new {action=a1Name,a1_wpf_ticket=ticket},TimeSpan.FromSeconds(20),cancel);
+            } catch (OperationCanceledException) { throw; }
+              catch { return new NativePipeResult("",false,null,"A1_WPF_OWNER_PROOF_HOLD"); }
+        }
         return await _nativeP02Pipe.RequestAsync(route,payload,TimeSpan.FromSeconds(60),cancel);
     }
 
@@ -378,7 +431,15 @@ public partial class MainWindow
         var answer=MessageBox.Show(this, "Разрешить локальный маршрут NOX: "+label+"?",
             "NOX HELION · Native consent",MessageBoxButton.YesNo,
             MessageBoxImage.Question,MessageBoxResult.No);
-        return Task.FromResult(!cancel.IsCancellationRequested && answer==MessageBoxResult.Yes);
+        var approved=!cancel.IsCancellationRequested && answer==MessageBoxResult.Yes;
+        if (approved && route=="chat.commands" &&
+            payload.TryGetProperty("action",out var attestedCommand) &&
+            attestedCommand.GetString() is string a1Command &&
+            (a1Command=="selfbuilder.a1.boot" || a1Command=="selfbuilder.a1.tick")) {
+            _a1OwnerApprovedAction=a1Command;
+            _a1OwnerApprovedEpoch=Interlocked.Read(ref _nativeDocumentEpoch);
+        }
+        return Task.FromResult(approved);
     }
     private static bool PlainBackendPath(string path)
     {
@@ -422,7 +483,11 @@ public partial class MainWindow
             args.ArgumentList.Add("--run-id");args.ArgumentList.Add(runId);
             args.ArgumentList.Add("--data-dir");
             args.ArgumentList.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NOX_HELION"));
+            var a1Secret=RandomNumberGenerator.GetBytes(32);
+            args.Environment["NOX_A1_WPF_OWNER_KEY"]=Convert.ToHexString(a1Secret).ToLowerInvariant();
             child=Process.Start(args)??throw new IOException("P02_ORIGINAL_PROCESS_HOLD");
+            _a1OwnerProofKey=a1Secret;
+            _a1OwnerProofRunId=runId;
             _nativeP02Process=child;
             transport=new NativePythonPipe(child.StandardOutput.BaseStream,
                 child.StandardInput.BaseStream,runId);
@@ -452,6 +517,12 @@ public partial class MainWindow
             core.WebMessageReceived += OnP03WebMessageReceived;
             WriteLog("P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK");
         } catch(Exception exception) {
+            _a1OwnerApprovedAction=null;
+            _a1OwnerProofRunId=null;
+            if (_a1OwnerProofKey is not null) {
+                CryptographicOperations.ZeroMemory(_a1OwnerProofKey);
+                _a1OwnerProofKey=null;
+            }
             WriteLog("P02_ORIGINAL_NATIVE_HOLD "+exception.GetType().Name);
             _nativeP02Bridge?.Dispose();_nativeP02Bridge=null;
             _nativeModels?.Dispose();_nativeModels=null;

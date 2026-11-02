@@ -23,6 +23,7 @@ P02=ROOT/"Packages"/"P02"/"worker-python"
 P03=ROOT/"Packages"/"P03"/"Source"/"python-host"
 PACK=ROOT/"proposals"/"NOX-PACK01-50"
 E06_TESTS=ROOT/"tests"/"e06"
+A1_TESTS=ROOT/"tests"/"a1"
 ADAPTER_TESTS=E06_TESTS/"adapters"
 HOST50_TESTS=ROOT/"coordination"/"e06_host50"
 G2_ADAPTERS=ROOT/"coordination"/"e06"/"adapters"
@@ -50,6 +51,7 @@ SUITES=(
     ("P03 ModelCenter real owner adapter",P03,"test_p03_onehost_port.py"),
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
     ("FASTLANE2 existing task selection and immutable handoff ERR25",E06_TESTS,"test_fastlane2_accelerator.py"),
+    ("A1 WPF native owner MAC/SID/run/nonce proof (source only)",A1_TESTS,"test_a1_wpf_owner_proof.py"),
 
 )
 
