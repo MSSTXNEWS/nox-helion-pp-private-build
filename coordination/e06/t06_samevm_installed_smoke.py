@@ -96,12 +96,15 @@ def plain_parents(path:Path,base:Path)->bool:
     try:
         cursor=path
         while cursor!=base:
-            if cursor.exists() and (cursor.is_symlink() or getattr(cursor,"is_junction",lambda:False)()):
+            # A dangling Windows junction can report exists() == False.
+            # Check the reparse identity before trusting any ancestor.
+            if cursor.is_symlink() or getattr(cursor,"is_junction",lambda:False)():
                 return False
             parent=cursor.parent
             if parent==cursor: return False
             cursor=parent
-        return base.is_dir() and not base.is_symlink()
+        return (base.is_dir() and not base.is_symlink() and
+                not getattr(base,"is_junction",lambda:False)())
     except (OSError,ValueError):return False
 
 def run(args:list[str],timeout:int)->dict:
@@ -693,15 +696,19 @@ def main()->int:
         evidence=candidate_gate()
         report.update(evidence)
         local=os.getenv("LOCALAPPDATA","")
+        local_base=Path(Path(local).anchor)
         require(local and Path(local).is_dir() and
-                plain_parents(Path(local),Path(Path(local).anchor)),
+                plain_parents(Path(local),local_base),
                 "T06_WINDOWS_LOCALAPPDATA_UNTRUSTED")
         install=Path(local)/"Programs"/"NOX HELION"
         relatives=(install,Path(str(install)+".__p01_stage"),
                    Path(str(install)+".__p01_previous"),
                    Path(str(install)+".__p01_rollback_saved"))
-        require(all(not p.exists() and not p.is_symlink() for p in relatives),
+        require(all(not p.exists() and not p.is_symlink() and
+                    not getattr(p,"is_junction",lambda:False)() for p in relatives),
                 "T06_CI_USER_HAS_EXISTING_NOX_INSTALL_SKIP")
+        require(all(plain_parents(p,local_base) for p in relatives),
+                "T06_CI_INSTALL_REPARSE_ANCESTOR_HOLD")
         origin=(ROOT/"work/t06-wpf-p02-compile/R11/Installer" if ON_LOCAL_BRIDGE else
                 ROOT/"work/e06/staged/R11/Installer")
         preflight=origin/"Preflight-InstallPath.ps1"
@@ -714,6 +721,13 @@ def main()->int:
         report["installer_lifecycle"]["preflight_original"]=prep
         prep=ensure_official_webview2_on_ci(prep,preflight,install,report)
         report["installer_lifecycle"]["preflight_final"]=prep
+        # Recheck immediately before launching the privileged-to-install
+        # Setup: no preflight or EdgeUpdate side effect may redirect the root.
+        require(all(plain_parents(p,local_base) and not p.exists() and
+                    not p.is_symlink() and
+                    not getattr(p,"is_junction",lambda:False)()
+                    for p in relatives),
+                "T06_CI_INSTALL_PATH_CHANGED_AFTER_PREFLIGHT_HOLD")
         installed=run([str(SETUP),"/S"],260)
         report["installer_lifecycle"]["install"]=installed
         require(installed["code"]==0 and install.is_dir(),"T06_NSIS_SILENT_INSTALL_FAILED")
@@ -750,9 +764,12 @@ def main()->int:
                 "T06_ORIGINAL_WPF_WEBVIEW2_AND_PYTHON_RUNTIME_NOT_PROVEN")
         # User data lives OUTSIDE the program install location.
         persistent=Path(local)/"NOX_HELION"/"P01"
+        require(plain_parents(persistent,local_base),
+                "T06_USER_DATA_REPARSE_ANCESTOR_HOLD")
         persistent.mkdir(parents=True,exist_ok=True)
         marker=persistent/("m1-e07-no-loss-"+ci_run_id+".txt")
-        require(not marker.exists() and not marker.is_symlink(),
+        require(not marker.exists() and not marker.is_symlink() and
+                not getattr(marker,"is_junction",lambda:False)(),
                 "T06_USER_DATA_PROOF_COLLISION")
         signature=b"NOX_M1_PERSISTENT_STATE_NOLOSS\n"
         marker.write_bytes(signature)
