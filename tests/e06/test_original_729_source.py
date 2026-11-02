@@ -47,6 +47,27 @@ class Original729SourceLockTests(unittest.TestCase):
             return mod.verify_original(root, part_pins=pins, archive_sha=sha,
                                        expected_files=len(files), run_id='NOX-R10-20261028')
 
+    def test_symlinked_input_ancestor_rejected_before_resolve(self):
+        # The final parts directory itself is not a symlink; its parent is.
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            physical = home / 'physical'
+            parts = physical / 'parts'
+            parts.mkdir(parents=True)
+            pins, digest = fixture(parts, [('one', b'original')])
+            alias = home / 'alias'
+            try:
+                alias.symlink_to(physical, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f'symlinks not permitted: {exc}')
+            redirected = alias / 'parts'
+            self.assertFalse(redirected.is_symlink())
+            with self.assertRaisesRegex(mod.SourceHold, 'OUTPUT_PARENT_REPARSE_OR_UNSAFE'):
+                mod.verify_original(
+                    redirected, part_pins=pins, archive_sha=digest,
+                    expected_files=1, run_id='NOX-R10-20261028'
+                )
+
     def test_valid_zip_produces_file_hashes_not_release_claim(self):
         result = self.check([('a/p01.cs', b'123'), ('assets/wow.png', b'PNG')])
         self.assertEqual(result['fileCount'], 2)

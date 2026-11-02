@@ -91,6 +91,9 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
         raise SourceHold("INVALID_RUN_ID")
     if len(part_pins) != 3 or expected_files < 1 or expected_files > MAX_FILES:
         raise SourceHold("INVALID_ARCHIVE_PIN_CONTRACT")
+    # Input ancestry is a trust boundary too: reject links/junctions BEFORE resolve().
+    # Reuse the existing lstat/reparse directory-ancestor guard; preserve 729 pins.
+    _trusted_output_parent(parts_dir / PARTS[0][0])
     root = parts_dir.resolve(strict=True)
     if not root.is_dir() or parts_dir.is_symlink():
         raise SourceHold("UNSAFE_SOURCE_DIRECTORY")
