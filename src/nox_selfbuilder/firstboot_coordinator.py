@@ -167,7 +167,13 @@ class FirstBootCoordinator:
             if type(epoch) is not int or epoch < 0:
                 raise FirstBootHold("NATIVE_STOP_EPOCH_REQUIRED")
             def cancelled():
-                return self.callbacks.stopped() is not False or self.callbacks.stop_epoch() != epoch
+                # A broken native STOP witness must fail closed, including
+                # after S03/persist/dispatch. Never interpret callback failure
+                # as STOP=False or allow an unverified queue acknowledgement.
+                try:
+                    return self.callbacks.stopped() is not False or self.callbacks.stop_epoch() != epoch
+                except Exception:
+                    return True
             if cancelled():
                 raise FirstBootHold("NATIVE_STOP")
             native = self.callbacks.policy(session)
@@ -210,6 +216,12 @@ class FirstBootCoordinator:
                     "status": "STOPPED" if str(ex) == "NATIVE_STOP" else "HOLD",
                     "reason": str(ex), "downloaded": 0, "installed": 0,
                     "release_accepted": False}
+        except Exception:
+            # Do not reveal exception text or fabricate a signed native
+            # provider/installation receipt when the Windows owner is offline.
+            return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "HOLD",
+                    "reason": "NATIVE_FIRSTBOOT_CALLBACK_EXCEPTION",
+                    "downloaded": 0, "installed": 0, "release_accepted": False}
         planned, held, already = [], [], []
         for i in sorted(ACTION_IDS):
             if installed.get(str(i)) is True:
@@ -230,7 +242,11 @@ class FirstBootCoordinator:
         if cancelled():
             return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "STOPPED",
                     "downloaded": 0, "release_accepted": False}
-        if self.callbacks.persist(session, intent) is not True:
+        try:
+            persisted = self.callbacks.persist(session, intent)
+        except Exception:
+            persisted = None  # Native write outcome unknown; do not retry.
+        if persisted is not True:
             return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "HOLD",
                     "reason": "NATIVE_S03_INTENT_READBACK_REQUIRED", "downloaded": 0,
                     "release_accepted": False}
@@ -255,8 +271,15 @@ class FirstBootCoordinator:
                     continue
                 if cancelled():
                     break
-                receipt = self.callbacks.ingest(session, {"sha256": digest,
-                    "kind": found["kind"], "action": "S03_NATIVE_REVIEWED_KNOWLEDGE_IMPORT"})
+                try:
+                    receipt = self.callbacks.ingest(session, {"sha256": digest,
+                        "kind": found["kind"], "action": "S03_NATIVE_REVIEWED_KNOWLEDGE_IMPORT"})
+                except Exception:
+                    # The owner may already have persisted; independent S03
+                    # readback is mandatory. Do not dispatch models afterwards.
+                    return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "HOLD",
+                            "reason": "NATIVE_S03_INGEST_EXCEPTION_READBACK_REQUIRED",
+                            "downloaded": 0, "release_accepted": False}
                 if cancelled():
                     break  # Late native ACK is not an import completion receipt.
                 if (isinstance(receipt, Mapping) and receipt.get("ack") is True and
@@ -277,7 +300,13 @@ class FirstBootCoordinator:
                 break
             # Native callback must re-check signed installer consent, current SID,
             # SourceLock, license, STOP epoch and digest atomically at enqueue.
-            receipt = self.callbacks.dispatch(session, action["route"], dict(action["artifact"]))
+            try:
+                receipt = self.callbacks.dispatch(session, action["route"], dict(action["artifact"]))
+            except Exception:
+                # Atomic owner enqueue may have completed before IPC failure.
+                # Stop immediately; read real P03 queue on the next invocation.
+                denied.append({"id": i, "reason": "NATIVE_QUEUE_EXCEPTION_READBACK_REQUIRED"})
+                break
             if cancelled():
                 # Native enqueue outcome may already be durable: NEVER infer
                 # cancellation or accept a late ACK. Next run reads native queue.
