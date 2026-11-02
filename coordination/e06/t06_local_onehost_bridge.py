@@ -4,6 +4,9 @@ The only completed status is a diagnostic installer candidate, NOT an E07 pass.
 """
 from __future__ import annotations
 import hashlib,json,os,pathlib,subprocess,sys,time
+from t06_compile_original_wpf_p02 import verified_source_head
+from t06_package_original_onehost import EXPECTED_ZIP_SHA
+from t06_source_receipt_guard import attest_candidate
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 OUT=ROOT/"work/t06-local-bridge"
@@ -40,6 +43,7 @@ def main():
           "original_archives_modified":False,
           "wpf_interactive_qa":"NOT_RUN","independent_e07":"NOT_RUN"}
     try:
+        source_head=verified_source_head()
         env=dict(os.environ);env["PYTHONUNBUFFERED"]="1"
         # Stage and SHA-verify the immutable 729-file original Python once.
         first=run("01_NATIVE_PYINSTALLER",PRODUCER,env,900)
@@ -66,6 +70,12 @@ def main():
            onehost.get("wpf_source_compilation")!="PASS" or \
            onehost.get("release_accepted") is not False:
             raise RuntimeError("T06_LOCAL_SAME_BINARY_SHA_OR_SOURCE_HOLD")
+        # Bind current checkout, original 729 files, WPF compile and real NSIS
+        # bytes BEFORE any installed smoke, never borrow a historical receipt.
+        setup_path=ROOT/"work/t06-wpf-p02-compile/NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
+        frozen_setup_sha=attest_candidate(
+            source_head,ROOT/"work/t06-wpf-p02-compile/T06_COMPILE_EVIDENCE.json",
+            RESULT,setup_path,EXPECTED_ZIP_SHA)
         # E07 preflight at zero extra runner startups: original owner NSIS
         # silent install, exact same binary SHA, framed IPC, conservative remove.
         # A missing WebView2 runtime marks an explicit hold, never fake PASS.
@@ -138,8 +148,12 @@ def main():
               "e07_gui_visual":"HOLD"
             }
             print("NOX_MEGA814_SETUP_PAYLOAD_PINNED",item_count,"files",flush=True)
+        if (verified_source_head()!=source_head or not setup_path.is_file() or
+            setup_path.is_symlink() or digest(setup_path)!=frozen_setup_sha):
+            raise RuntimeError("T06_SOURCE_OR_SETUP_CHANGED_AFTER_NATIVE_SMOKE")
         data["phase"]="ONEHOST_NSIS_CANDIDATE_SOURCE_ONLY"
-        data["setup_sha256"]=onehost["setup_sha256"]
+        data["source_git_sha"]=source_head
+        data["setup_sha256"]=frozen_setup_sha
         data["backend_sha256"]=py["exe_sha256"]
         print("T06_LOCAL_BRIDGE_ONEHOST_NSIS_CANDIDATE_PASS",
               data["setup_sha256"],flush=True)
