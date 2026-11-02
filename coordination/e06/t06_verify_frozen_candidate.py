@@ -1,6 +1,6 @@
 """R66 T06: verify ONE already-built frozen original EXE, no second build."""
 from __future__ import annotations
-import hashlib, json, pathlib, struct, subprocess
+import hashlib, json, math, pathlib, struct, subprocess
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "work/t06-manual-source-inspect"
 NATIVE = OUT / "native-runtime"
@@ -17,6 +17,41 @@ def digest(path):
         while part := stream.read(1024*1024):
             h.update(part)
     return h.hexdigest()
+
+
+def strict_json_object(raw: bytes, hold_code: str) -> dict:
+    """Fail-closed native frame/receipt parser; never use last-wins JSON authority."""
+    need(type(raw) is bytes and 0 < len(raw) <= 1_048_576, hold_code)
+    def unique_pairs(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("duplicate JSON member")
+            value[key] = item
+        return value
+    def finite_number(value):
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise ValueError("non-finite JSON number")
+        return parsed
+    def reject_constant(value):
+        raise ValueError("non-JSON constant")
+    try:
+        decoded = json.loads(raw.decode("utf-8", "strict"),
+                             object_pairs_hook=unique_pairs,
+                             parse_constant=reject_constant,
+                             parse_float=finite_number)
+    except (UnicodeError, ValueError, OverflowError, RecursionError, TypeError) as exc:
+        raise RuntimeError(hold_code) from exc
+    need(type(decoded) is dict, hold_code)
+    return decoded
+
+
+def strict_receipt(path: pathlib.Path, hold_code: str) -> dict:
+    """Only bounded regular JSON evidence files; no symlink or ambiguous fields."""
+    need(path.is_file() and not path.is_symlink() and
+         0 < path.stat().st_size <= 1_048_576, hold_code)
+    return strict_json_object(path.read_bytes(), hold_code)
 
 def request(exe, route, run_id, nonce, data_dir):
     wire_data = {"protocol":"NOX-P02-NATIVE-v1","requestId":nonce,
@@ -35,7 +70,7 @@ def request(exe, route, run_id, nonce, data_dir):
     need(len(raw)>=5,"R66_FROZEN_NO_REPLY")
     count = struct.unpack(">I",raw[:4])[0]
     need(1<=count<=1048576 and len(raw)==count+4,"R66_FROZEN_BAD_FRAME")
-    reply = json.loads(raw[4:].decode("utf-8"))
+    reply = strict_json_object(raw[4:], "R66_FROZEN_REPLY_AMBIGUOUS_JSON_HOLD")
     need(type(reply) is dict and
          reply.get("protocol")==wire_data["protocol"] and
          reply.get("runId")==run_id and
@@ -43,8 +78,10 @@ def request(exe, route, run_id, nonce, data_dir):
     return reply
 
 def main(gate: str):
-    built = json.loads((DIST/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json").read_text("utf-8"))
-    source = json.loads((OUT/"NATIVE_STDIO_SOURCE_SMOKE.json").read_text("utf-8"))
+    built = strict_receipt(DIST/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json",
+                           "R66_BINARY_RECEIPT_JSON_HOLD")
+    source = strict_receipt(OUT/"NATIVE_STDIO_SOURCE_SMOKE.json",
+                            "R66_SOURCE_SMOKE_RECEIPT_JSON_HOLD")
     need(built.get("phase")=="BUILT_NOT_NATIVE_VERIFIED" and
          built.get("release_accepted") is False and
          built.get("source_original_archive_sha256")==PINNED_ORIGINAL and
@@ -91,7 +128,8 @@ def main(gate: str):
         # Real Windows EXE + original V4 Store: two separate native processes,
         # one isolated SQLite database, authenticated framed history and STOP.
         import sqlite3
-        prior = json.loads((DIST/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json").read_text("utf-8"))
+        prior = strict_receipt(DIST/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json",
+                               "R66_NATIVE_EXE_RECEIPT_JSON_HOLD")
         need(prior.get("exe_sha256")==built["exe_sha256"] and
              prior.get("original_729_unchanged") is True and
              prior.get("release_accepted") is False,
@@ -141,7 +179,7 @@ def main(gate: str):
         return
 
     need(gate=="models","R66_INVALID_VERIFIER_GATE")
-    chat = json.loads(chat_path.read_text("utf-8"))
+    chat = strict_receipt(chat_path, "R66_CHAT_PROOF_RECEIPT_JSON_HOLD")
     need(chat.get("phase")=="FROZEN_CHAT_MODEL_IPC_PASS_NOT_REAL_INFERENCE" and
          chat.get("exe_sha256")==built["exe_sha256"] and
          chat.get("source_zip_sha256")==PINNED_ORIGINAL and
@@ -193,10 +231,14 @@ def seal_for_original_v2_smoke():
          len(head)==40 and len(tree)==40 and
          pinned_run.startswith("NOX-R66-CIRCLECI-"),
          "R66_SOURCE_OR_RUN_ID_DRIFT")
-    built=json.loads((DIST/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json").read_text("utf-8"))
-    source=json.loads((OUT/"NATIVE_STDIO_SOURCE_SMOKE.json").read_text("utf-8"))
-    native=json.loads((DIST/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json").read_text("utf-8"))
-    lock=json.loads((root/"work/e06/original-729-manifest.json").read_text("utf-8"))
+    built=strict_receipt(DIST/"NATIVE_PYINSTALLER_BINARY_RECEIPT.json",
+                           "R66_BINARY_RECEIPT_JSON_HOLD")
+    source=strict_receipt(OUT/"NATIVE_STDIO_SOURCE_SMOKE.json",
+                            "R66_SOURCE_SMOKE_RECEIPT_JSON_HOLD")
+    native=strict_receipt(DIST/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json",
+                               "R66_NATIVE_EXE_RECEIPT_JSON_HOLD")
+    lock=strict_receipt(root/"work/e06/original-729-manifest.json",
+                            "R66_ORIGINAL_729_MANIFEST_JSON_HOLD")
     exe=DIST/"NOX_HELION_PRIVATE_CANDIDATE.exe"
     need(exe.is_file() and not exe.is_symlink() and
          built.get("phase")=="BUILT_NOT_NATIVE_VERIFIED" and
