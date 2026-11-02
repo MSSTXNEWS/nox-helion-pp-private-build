@@ -60,7 +60,33 @@ $nativeProofSha=$null
 if (-not [string]::IsNullOrWhiteSpace($PythonNativeSmokeReceipt)) {
   Assert-E06PlainPathAncestors -Candidate $PythonNativeSmokeReceipt -Scope 'NATIVE_PROOF'
   $proofPath=(Resolve-Path -LiteralPath $PythonNativeSmokeReceipt).Path
-  $proof=Get-Content -LiteralPath $proofPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  # Parse the EXACT native evidence bytes through a pinned, bounded strict JSON
+  # admission gate. Windows PowerShell ConvertFrom-Json is last-wins on
+  # duplicate JSON keys; after canonicalization it cannot reinterpret origin,
+  # status, approval or STOP receipts. No new native grant is generated.
+  $nativeVerifier=Join-Path $PSScriptRoot 'verify_native_receipt_json.py'
+  Assert-E06PlainPathAncestors -Candidate $nativeVerifier -Scope 'NATIVE_JSON_VERIFIER'
+  if (!(Test-Path -LiteralPath $nativeVerifier -PathType Leaf)) {
+    throw 'E06_NATIVE_RECEIPT_STRICT_JSON_HOLD'
+  }
+  $expectedNativeVerifierBlob='b83bf8ef085bbcee08bc4aba6f1ac90c6c3fa425'
+  $nativeVerifierBlob=((& git -C $e06RepoRoot hash-object -- $nativeVerifier) | Out-String).Trim().ToLowerInvariant()
+  if ($LASTEXITCODE -ne 0 -or $nativeVerifierBlob -cne $expectedNativeVerifierBlob) {
+    throw 'E06_NATIVE_RECEIPT_VERIFIER_PIN_HOLD'
+  }
+  $nativeStrictPython=Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (!$nativeStrictPython) { throw 'E06_NATIVE_RECEIPT_PYTHON_REQUIRED' }
+  $strictOutput=@(& $nativeStrictPython.Source $nativeVerifier $proofPath 2>$null)
+  if ($LASTEXITCODE -ne 0 -or $strictOutput.Count -ne 1) {
+    throw 'E06_NATIVE_RECEIPT_STRICT_JSON_HOLD'
+  }
+  $strictEntry=[string]$strictOutput[0]
+  if ($strictEntry.Length -lt 67 -or $strictEntry.IndexOf([char]9) -ne 64 -or
+      $strictEntry.Substring(0,64) -cnotmatch '\A[0-9a-f]{64}\z') {
+    throw 'E06_NATIVE_RECEIPT_STRICT_JSON_HOLD'
+  }
+  $nativeProofSha=$strictEntry.Substring(0,64)
+  $proof=$strictEntry.Substring(65) | ConvertFrom-Json
   $proofRepo=(Resolve-Path -LiteralPath (Join-Path $source '../../../..')).Path
   $proofGit=Get-Command git.exe -ErrorAction Stop
   $proofHead=(& $proofGit.Source -C $proofRepo rev-parse HEAD).Trim()
@@ -116,7 +142,7 @@ if (-not [string]::IsNullOrWhiteSpace($PythonNativeSmokeReceipt)) {
     $nativeEvidence='WINDOWS_EXE_OFFLINE_BACKBONE_PASS_LIVE_MODEL_HOLD'
   } else { throw 'E06_NATIVE_LIVE_STATUS_INVALID' }
   $exeDigest=[string]$proof.exe_sha256
-  $nativeProofSha=(Get-FileHash -LiteralPath $proofPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  # SHA-256 above is bound to the single strictly decoded receipt byte stream.
 }
 if ((Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant() -cne $exeDigest) { throw 'PYTHON_ORIGINAL_BINARY_SHA_HOLD' }
 $project=Join-Path $source 'NOX.P01.Shell.csproj'
