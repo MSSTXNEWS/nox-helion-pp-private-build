@@ -158,3 +158,24 @@ test('a new durable job or empty queue revokes LIVE until its own fresh native e
   snapshot(null);
   assert.equal(v.signal(),'● —','empty durable queue cannot show prior job LIVE');
 });
+
+test('nonterminal native status and progress never claim Installed without completed event', () => {
+  const v=mount(), jobId=v.jobId;
+  v.app.processMessage({type:'p03.snapshot.v1',models:[{id:'llama3',name:'Llama 3'}],
+    activeJob:{jobId,modelId:'llama3',modelTag:'llama3',state:'Queued',status:'Installed'}});
+  assert.equal(v.app.state.activeJob.status,'Обновление');
+  assert.doesNotMatch(v.document.getElementById('jobPhase').textContent,/Installed/);
+  v.app.processMessage({type:'p03.event.v1',event:{jobId,modelTag:'llama3',
+    phase:'progress',status:'Installed',atUtc:v.utc()}});
+  assert.equal(v.app.state.activeJob.state,'Running');
+  assert.equal(v.app.state.activeJob.status,'Обновление');
+  const text=v.document.getElementById('eventFeed').children[0].children
+    .map(x=>x.textContent).join(' ');
+  assert.doesNotMatch(text,/Installed/);
+  assert.doesNotMatch(v.document.getElementById('jobPhase').textContent,/Installed/);
+  v.advance(1000);
+  v.app.processMessage({type:'p03.event.v1',event:{jobId,modelTag:'llama3',
+    phase:'completed',status:'Installed',atUtc:v.utc()}});
+  assert.equal(v.app.state.activeJob.state,'Completed');
+  assert.equal(v.app.state.activeJob.status,'Installed','only matching native completion can show Installed');
+});

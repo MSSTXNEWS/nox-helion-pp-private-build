@@ -43,6 +43,9 @@ const publicQueueStatus = value => {
  return typeof value==='string'&&Object.prototype.hasOwnProperty.call(labels,value)
  ? labels[value]:'Обновление';
 };
+// A nonterminal frame is not proof of installation, even if its status says Installed.
+const publicLifecycleStatus = (status,terminal) => status==='Installed' && !terminal
+  ? 'Обновление' : publicQueueStatus(status);
 const publicModelTag = tag => typeof tag==='string' &&
  state.models.some(m=>tag===m.id||tag===m.exactTag)?tag:'MODEL';
 const publicAckReason = reason => {
@@ -265,7 +268,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   // Never retain untrusted host diagnostic keys or raw status in WebView state.
   let next=incoming?{jobId:incoming.jobId,modelTag:incoming.modelTag,
     modelId:typeof incoming.modelId==='string'&&modelId(incoming.modelId)?incoming.modelId:null,
-    state:incoming.state,status:publicQueueStatus(incoming.status),
+    state:incoming.state,status:publicLifecycleStatus(incoming.status,incoming.state==='Completed'),
     completedBytes:incoming.completedBytes,totalBytes:incoming.totalBytes}:null;
   // An absent/null job is not confirmation of the durable STOP request.
   if(next===null&&old?.state==='Cancelling')next={...old};
@@ -314,7 +317,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   const sourceAt=typeof evt.atUtc==='string' && evt.atUtc.length<=64 ? Date.parse(evt.atUtc) : NaN;
   const validAt=Number.isFinite(sourceAt)&&sourceAt>0&&sourceAt<=Date.now() ? sourceAt : null;
   const safe={jobId:evt.jobId,phase:evt.phase,modelTag:publicModelTag(evt.modelTag),
-    status:publicQueueStatus(evt.status),atUtc:validAt===null?null:new Date(validAt).toISOString()};
+    status:publicLifecycleStatus(evt.status,evt.phase==='completed'),atUtc:validAt===null?null:new Date(validAt).toISOString()};
   // The active queue job is independent of the selected catalog card.
   const job=state.activeJob;
   const sameJob=job&&evt.jobId===job.jobId&&(!evt.modelTag||evt.modelTag===job.modelTag);
@@ -341,7 +344,7 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
     if(lastAppliedNativeJobAt.size>=32&&!lastAppliedNativeJobAt.has(evt.jobId))
       lastAppliedNativeJobAt.delete(lastAppliedNativeJobAt.keys().next().value);
     lastAppliedNativeJobAt.set(evt.jobId,validAt);
-    if(typeof evt.status==='string')job.status=publicQueueStatus(evt.status);
+    if(typeof evt.status==='string')job.status=safe.status;
     const done=numeric(evt.completedBytes),total=numeric(evt.totalBytes);
     if(done!==null&&total!==null&&total>0&&done<=total&&
        (numeric(job.completedBytes)===null||done>=job.completedBytes)&&
