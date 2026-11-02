@@ -1,0 +1,28 @@
+"""M09 source regression: failed asynchronous WebView2 theater navigation must retire only this projector."""
+import pathlib
+import unittest
+
+SOURCE = pathlib.Path(__file__).resolve().parents[1] / "bridge" / "CreativeHostBridge.cs"
+
+class ProjectorNavigationFailureSourceTest(unittest.TestCase):
+    def test_async_failure_closes_only_current_projector(self):
+        source = SOURCE.read_text(encoding="utf-8")
+        method = source.split("private async Task OpenCreativeProjectorAsync", 1)[1].split(
+            "private async Task<string> StopCreativeWorkerAsync", 1)[0]
+        self.assertIn("CoreWebView2NavigationCompletedEventArgs", method)
+        self.assertIn("projectorCore.NavigationCompleted -= projectorNavFinished;", method)
+        self.assertIn("result.IsSuccess || !ReferenceEquals(_creativeProjector,theater)", method)
+        self.assertIn('WriteLog("CREATIVE_PROJECTOR_NAVIGATION_HOLD "', method)
+        subscribe = method.index("projectorCore.NavigationCompleted += projectorNavFinished;")
+        navigate = method.index("projectorCore.Navigate(theaterUrl);")
+        self.assertLess(subscribe, navigate)
+        handler = method.split("projectorNavFinished = (_, result) =>", 1)[1].split(
+            "projectorCore.NavigationCompleted += projectorNavFinished;", 1)[0]
+        self.assertIn("try { theater.Close(); }", handler)
+        self.assertIn("if (ReferenceEquals(_creativeProjector,theater))", handler)
+        self.assertIn("_creativeProjector=null;", handler)
+        self.assertIn("_creativeProjectorProjectId=null;", handler)
+        self.assertIn("openingProjector.Close();", method)
+
+if __name__ == "__main__":
+    unittest.main()

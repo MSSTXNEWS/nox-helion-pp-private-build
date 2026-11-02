@@ -702,7 +702,25 @@ public partial class MainWindow
                     "nox-projects.invalid",projectRoot,CoreWebView2HostResourceAccessKind.DenyCors);
                 theaterUrl += "&local_project_media=1&project="+Uri.EscapeDataString(projectId);
             }
-            viewer.CoreWebView2.Navigate(theaterUrl);
+            // A successful WebView2 initialization is not proof that theater.html loaded.
+            // On asynchronous navigation failure, discard only THIS projector owner.
+            var projectorCore = viewer.CoreWebView2;
+            EventHandler<CoreWebView2NavigationCompletedEventArgs>? projectorNavFinished = null;
+            projectorNavFinished = (_, result) =>
+            {
+                projectorCore.NavigationCompleted -= projectorNavFinished;
+                if (result.IsSuccess || !ReferenceEquals(_creativeProjector,theater)) return;
+                WriteLog("CREATIVE_PROJECTOR_NAVIGATION_HOLD " + result.WebErrorStatus);
+                try { theater.Close(); }
+                catch(Exception closeEx) { WriteLog("CREATIVE_PROJECTOR_CLOSE " + closeEx.GetType().Name); }
+                if (ReferenceEquals(_creativeProjector,theater))
+                {
+                    _creativeProjector=null;
+                    _creativeProjectorProjectId=null;
+                }
+            };
+            projectorCore.NavigationCompleted += projectorNavFinished;
+            projectorCore.Navigate(theaterUrl);
         }
         catch(Exception ex)
         {
