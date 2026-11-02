@@ -104,7 +104,13 @@ class A1NativeCommand:
                      and self._head() == self._bound_head)
             if valid:
                 try:
-                    valid = self._authorize(session, 'evolution.autonomy.read') is True
+                    # The native callback may revoke STOP/epoch or switch HEAD
+                    # while authorizing. A pre-callback snapshot cannot assert
+                    # ACTIVE after such a change (status must remain read-only).
+                    valid = (self._authorize(session, 'evolution.autonomy.read') is True
+                             and self._stopped() is False
+                             and self._epoch() == self._bound_epoch
+                             and self._head() == self._bound_head)
                 except Exception:
                     valid = False  # Read-only status remains available as HOLD.
             return {
