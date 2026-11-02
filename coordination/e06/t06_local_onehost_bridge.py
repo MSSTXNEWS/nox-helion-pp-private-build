@@ -31,6 +31,45 @@ def run(label,script,env,timeout):
         except subprocess.TimeoutExpired:
             code=124
     return {"step":label,"return_code":code,"elapsed_seconds":round(time.monotonic()-start,2),"log":log.name}
+def installed_manifest_failure_evidence(lifecycle):
+    """Surface bounded fail-closed owner verification category, never raw path or secrets."""
+    if type(lifecycle) is not dict or type(lifecycle.get("verify")) is not dict:
+        return {"status":"NOT_RUN","reason":"VERIFY_STEP_NOT_OBSERVED","release_accepted":False}
+    proof=lifecycle["verify"]
+    code=proof.get("code")
+    if type(code) is not int:
+        return {"status":"HOLD","reason":"VERIFY_EXIT_CODE_INVALID","release_accepted":False}
+    if code==0:
+        return {"status":"PASS_DIAGNOSTIC_ONLY","exit_code":0,
+                "reason":"NO_VERIFY_FAILURE","release_accepted":False}
+    raw="\n".join(proof.get(key,"")[-650:] if type(proof.get(key,"")) is str else ""
+                  for key in ("stderr_tail","stdout_tail"))
+    lower=raw.casefold()
+    if ("allowinstalledmetadata" in lower and "parameter" in lower):
+        reason="INSTALLED_METADATA_PARAMETER_UNSUPPORTED"
+    elif "invalid backup ownership marker" in lower:
+        reason="INVALID_OWNER_MARKER"
+    elif "invalid generated nsis metadata" in lower:
+        reason="INVALID_NSIS_UNINSTALLER"
+    elif "duplicate or invalid json manifest" in lower:
+        reason="MANIFEST_JSON_AMBIGUOUS"
+    elif "file count mismatch" in lower:
+        reason="MANIFEST_FILE_COUNT_MISMATCH"
+    elif "unexpected file" in lower:
+        reason="UNEXPECTED_INSTALLED_FILE"
+    elif "sha mismatch" in lower or "size mismatch" in lower:
+        reason="INSTALLED_FILE_SHA_OR_SIZE_MISMATCH"
+    elif "reparse" in lower or "junction" in lower:
+        reason="REPARSE_ANCESTOR_REJECTED"
+    elif "p01_payload_verify_failed" in lower:
+        reason="P01_VERIFIER_OTHER_ERROR"
+    else:
+        reason="UNKNOWN_VERIFY_ERROR"
+    return {"status":"HOLD","exit_code":code,"reason":reason,
+            "error_tail_sha256":hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+            "release_accepted":False}
+
+
 def webview2_root_evidence(lifecycle):
     """Bounded allowlisted SAME-VM runtime evidence, never an install or E07 grant.
 
@@ -226,6 +265,11 @@ def main():
         # A 302MB GitLab artifact cannot be a prerequisite for root diagnosis.
         runtime_evidence=webview2_root_evidence(lifecycle)
         data["webview2_root_evidence"]=runtime_evidence
+        owner_manifest_evidence=installed_manifest_failure_evidence(lifecycle)
+        data["installed_manifest_verify"]=owner_manifest_evidence
+        print("T06_INSTALLED_MANIFEST_VERIFY_ROOT_EVIDENCE "+
+              json.dumps(owner_manifest_evidence,sort_keys=True,
+                         separators=(",",":")),flush=True)
         print("T06_WEBVIEW2_RUNTIME_ROOT_EVIDENCE "+
               json.dumps(runtime_evidence,ensure_ascii=False,sort_keys=True,
                          separators=(",",":")),flush=True)
