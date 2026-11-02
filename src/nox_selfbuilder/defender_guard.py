@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import stat
 
 MAX_FILE_BYTES = 64 * 1024 * 1024
 MAX_REPORT_BYTES = 4096
@@ -44,6 +45,27 @@ class DefenderHold(RuntimeError):
     pass
 
 
+def _deny_reparse_ancestors(path: Path) -> None:
+    """Reject links/junctions in the entire lexical path, including ancestors.
+
+    Windows junctions are not reliably reported by Path.is_symlink().  Use
+    lstat on each component and the Windows REPARSE_POINT file attribute.
+    The check is repeated after Defender returns to detect path replacement.
+    """
+    if ".." in path.parts:
+        raise DefenderHold("DEFENDER_NONCANONICAL_PATH_DENIED")
+    absolute = Path(os.path.abspath(os.fspath(path)))
+    for component in (absolute, *absolute.parents):
+        try:
+            info = component.lstat()
+        except (OSError, ValueError) as exc:
+            raise DefenderHold("DEFENDER_PATH_INSPECTION_DENIED") from exc
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))):
+            raise DefenderHold("DEFENDER_PATH_REPARSE_DENIED")
+
+
 def _sha(path: Path):
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -61,6 +83,8 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
                 "scan_requested": False, "source_executed": False}
     root = Path(staging_root)
     target = Path(path)
+    _deny_reparse_ancestors(root)
+    _deny_reparse_ancestors(target)
     if not root.is_dir() or root.is_symlink():
         raise DefenderHold("DEFENDER_APPROVED_STAGING_REQUIRED")
     if not target.is_file() or target.is_symlink():
@@ -75,6 +99,8 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
     if not 0 < size <= MAX_FILE_BYTES:
         raise DefenderHold("DEFENDER_BOUNDED_FILE_REQUIRED")
     before = _sha(safe)
+    _deny_reparse_ancestors(root)
+    _deny_reparse_ancestors(target)
     env = dict(os.environ)
     env["NOX_DONOR_SCAN_FILE"] = str(safe)
     try:
@@ -85,18 +111,27 @@ def scan_donor_file(path, *, staging_root, run=subprocess.run, platform=None):
         return {"status": "HOLD", "reason": "DEFENDER_SCAN_UNAVAILABLE",
                 "scan_requested": False, "source_executed": False,
                 "sha256": before}
+    _deny_reparse_ancestors(root)
+    _deny_reparse_ancestors(target)
     if _sha(safe) != before:
         raise DefenderHold("DEFENDER_POSTSCAN_SOURCE_CHANGED")
+    _deny_reparse_ancestors(root)
+    _deny_reparse_ancestors(target)
     try:
         raw = p.stdout[-MAX_REPORT_BYTES:]
         result = json.loads(raw.decode("utf-8-sig").strip())
     except (ValueError, UnicodeError, AttributeError):
         result = {}
+    # A JSON scalar/list, non-string state, or contradictory success fields
+    # can never certify even a requested scan.
+    if type(result) is not dict or type(result.get("state")) is not str:
+        result = {}
+    state = result.get("state", "DEFENDER_UNVERIFIED")
     completed = (p.returncode == 0 and
-                 result.get("state") == "DEFENDER_SCAN_REQUESTED_REVIEW_REQUIRED")
+                 result == {"state": "DEFENDER_SCAN_REQUESTED_REVIEW_REQUIRED"})
     return {"schema": "NOX-DEFENDER-DONOR-RECEIPT-v1",
             "status": "SCAN_REQUESTED_REVIEW_REQUIRED" if completed else "HOLD",
-            "reason": None if completed else result.get("state", "DEFENDER_UNVERIFIED"),
+            "reason": None if completed else state,
             "sha256": before, "scan_requested": completed,
             "malware_free_proven": False, "license_approved": False,
             "production_admitted": False, "source_executed": False}
