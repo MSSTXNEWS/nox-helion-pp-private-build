@@ -1,0 +1,40 @@
+{
+  "schema": "NOX-MEGA-BOOST-V4-PHYSICAL-VERIFY-V1",
+  "product": "NOX HELION EXPRESS INTEGRATOR existing Windows x64 WPF/WebView2/Python/NSIS",
+  "evidence_scope": "Local independent verification of user's persistent ChatGPT Library /NOX_HELION/BOOST_CACHE",
+  "monolith": {
+    "filename": "NOX_HELION_MEGA_BOOST_MONOLITH_V4.zip",
+    "bytes": 2327776086,
+    "sha256": "2ca2647e46edd1e110db1569cb6a636ceee8e8154b416560ad43a87fb95545bd",
+    "part_count": 6,
+    "sha256_per_part": "PASS_6_OF_6",
+    "full_sha256": "PASS",
+    "zip_crc": "PASS",
+    "entries": 3456
+  },
+  "resources": {
+    "source_archive_r11_bytes": 239029177,
+    "d02_approved_png": 4,
+    "nuget_packages": 16,
+    "webview2_standalone_bytes": 215017168,
+    "ollama_windows_installer_bytes": 1676266440,
+    "original_r9_app_included": true,
+    "nsis_installer_included": true
+  },
+  "provenance": "Original library V4 manifest hashes individually matched physical concatenation; verified ZIP64 CRC on restored archive",
+  "limits": {
+    "complete_current_PR162_source": false,
+    "windows_setup_built_from_current_head": false,
+    "installed_e07": false,
+    "release_accepted": false,
+    "model_license_admission_not_overridden": true
+  },
+  "token_free_workaround": {
+    "gitlab_pipeline": 3019072155,
+    "gitlab_ref": "manual/t06-samevm-installed-smoke-20261030",
+    "gitlab_sha": "0178ebcabc7760eaed5cdd5194cdf8d010453123",
+    "job": "t06_original_wpf_p02_compile",
+    "nature": "diagnostic existing GitLab source compile, not current PR162 SHA"
+  },
+  "fastpath": "Reuse this immutable ZIP64 without repeated downloads; combine with current exact GitHub PR162 source and existing original WPF/NSIS builder, then independent installed E07. Do not create second backend or call this cache an EXE release."
+}
