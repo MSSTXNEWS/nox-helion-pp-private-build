@@ -77,7 +77,10 @@ def _trusted_part_stream(part: pathlib.Path):
             raise ValueError("SOURCE_PART_CHANGED_DURING_READ")
 
 def safe_name(name: str) -> bool:
-    if (not name or name.startswith("/") or "\\" in name or BAD.search(name)
+    # Exactly one trailing slash denotes a directory; // is an ambiguous
+    # Windows archive namespace and must fail before any member extraction.
+    if (not name or name.startswith("/") or name.endswith("//")
+            or "\\" in name or BAD.search(name)
             or unicodedata.normalize("NFC", name) != name):
         return False
     parts = name.rstrip("/").split("/")
