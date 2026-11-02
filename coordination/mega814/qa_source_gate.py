@@ -1,4 +1,7 @@
 """One source-only gate for megablock 8–14; no fake E07."""
+# The original assertions must never vanish when PYTHONOPTIMIZE/-O is set.
+if not __debug__:
+ raise RuntimeError("MEGA814_OPTIMIZED_ASSERTIONS_HOLD")
 import ast,json,hashlib
 from pathlib import Path
 from stage_original_r11 import verified_png

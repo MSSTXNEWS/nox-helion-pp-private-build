@@ -9,6 +9,27 @@ JS='<script type="module" src="mega814/mega814.mjs" data-nox814="approved-owner"
 NAMES=("mega814.mjs","mega814.css","manifest.json","menu-v2-193.json","menu-v2-adapter.mjs","owner-dispatch.mjs","owner-e05.mjs","native-readonly.mjs")
 PNG_SIGNATURE=bytes.fromhex("89504e470d0a1a0a")
 def sha(raw):return hashlib.sha256(raw).hexdigest()
+# Exact Git blob preimages of the eight original GitLab R75 donor sources.
+# A self-generated staging SHA256 receipt is NOT independent provenance.
+OWNER_BLOB_PINS={
+ "mega814.mjs": "c3c91bae4f22214c0e39d0e1b95e1ccef1205bd4",
+ "mega814.css": "24e5eecf7d55994f6b2e1f32c296305503a63d5a",
+ "manifest.json": "2b98f4c4182750eedcec879f5e2e696167aaf4e9",
+ "menu-v2-193.json": "a57ced96e6edb5d77d99a83f945c47dbe97bbaf8",
+ "menu-v2-adapter.mjs": "7cbbea82529259403320bdb7b06b05fd2dc34c8e",
+ "owner-dispatch.mjs": "f4eb000843bc78af116e4015ed06528b032ee991",
+ "owner-e05.mjs": "1dcf0df656cdce6f4231f5f411db9150d0768ead",
+ "native-readonly.mjs": "e698d3605646df0e2d39c7f2943c55d2364778c0"
+}
+def git_blob_sha(raw):
+ return hashlib.sha1(b"blob "+str(len(raw)).encode("ascii")+b"\x00"+raw).hexdigest()
+def approved_source(path,name):
+ if name not in OWNER_BLOB_PINS or not path.is_file() or path.is_symlink():
+  raise RuntimeError("MEGA814_APPROVED_SOURCE_PATH_HOLD:"+name)
+ raw=path.read_bytes()
+ if len(raw)>1048576 or git_blob_sha(raw)!=OWNER_BLOB_PINS[name]:
+  raise RuntimeError("MEGA814_APPROVED_SOURCE_BLOB_HOLD:"+name)
+ return raw
 # Compatible with either original R11 or the exact verified Creative + WOW200
 # additive tags; reconstruct the SAME immutable original HTML before admission.
 D02_TAGS = (
@@ -54,7 +75,7 @@ def run(source,menu=None,personas=None):
  raw=idx.read_bytes();text=raw.decode("utf-8")
  if text.count("</head>")!=1 or text.count("</body>")!=1 or text.count('<section id="menu"')!=1 or text.count('<section id="control"')!=1 or 'nox-mega814-menu' in text:
   raise RuntimeError("MEGA814_ORIGINAL_SCREEN_ANCHOR_HOLD")
- spec=json.loads((SOURCE/"manifest.json").read_text("utf-8"))
+ spec=json.loads(approved_source(SOURCE/"manifest.json","manifest.json").decode("utf-8"))
  if spec["schema"]!="NOX-MEGA814-V16-OWNER-SOURCE-v1" or spec["sourceLock"]["originalIndexSHA256"]!=INDEX_SHA:
   raise RuntimeError("MEGA814_MANIFEST_SOURCELOCK_HOLD")
  target=source/"Assets/mega814"
@@ -63,7 +84,7 @@ def run(source,menu=None,personas=None):
  for name in NAMES:
   p=SOURCE/name
   if not p.is_file() or p.is_symlink():raise RuntimeError("MEGA814_SOURCE_MISSING")
-  asset_raw=p.read_bytes()
+  asset_raw=approved_source(p,name)
   source_pins={"menu-v2-193.json":"0e300d0675930c5f5b83a03fc768868e89fd5f5545fd3ba5009493680c0d743b",
                "menu-v2-adapter.mjs":"83e501025b05c7a1b2d753ab174e6bb5970b277bf1179f07b6a7a7803e452239"}
   if name in source_pins and sha(asset_raw)!=source_pins[name]:
