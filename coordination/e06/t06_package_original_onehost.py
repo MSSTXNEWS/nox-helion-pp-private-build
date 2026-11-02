@@ -21,6 +21,32 @@ def sha(path):
     return h.hexdigest()
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
+def preflight_nsis_compiler(lookup=None, runner=None, candidates=None):
+    """Only reuse an existing NSIS 3.13 compiler; never install tooling in a build."""
+    lookup=lookup or shutil.which
+    runner=runner or subprocess.run
+    on_path=lookup('makensis.exe')
+    locations=([Path(on_path)] if on_path else [])
+    locations.extend(candidates if candidates is not None else (
+        Path('C:/Program Files (x86)/NSIS/makensis.exe'),
+        Path('C:/Program Files/NSIS/makensis.exe')))
+    compiler=next((p for p in locations if p.exists() or p.is_symlink()),None)
+    need(compiler is not None and compiler.is_file() and not compiler.is_symlink(),
+         'T06_NSIS313_PREINSTALLED_COMPILER_REQUIRED_NO_NETWORK')
+    for ancestor in compiler.parents:
+        need(not ancestor.is_symlink(),'T06_NSIS313_COMPILER_REPARSE_HOLD')
+    try:
+        probe=runner([str(compiler),'/VERSION'],capture_output=True,
+                     text=True,timeout=20)
+    except (OSError,subprocess.TimeoutExpired) as exc:
+        raise RuntimeError('T06_NSIS313_VERSION_PROBE_FAILED') from exc
+    need(probe.returncode==0,'T06_NSIS313_VERSION_PROBE_FAILED')
+    need(re.fullmatch(r'v?3\.13',probe.stdout.strip(),flags=re.I) is not None,
+         'T06_NSIS313_EXACT_VERSION_REQUIRED')
+    binary_sha=sha(compiler)
+    print('T06_PREINSTALLED_NSIS313_OFFLINE_SHA256',binary_sha,flush=True)
+    return str(compiler),binary_sha
+
 def verify_nsis_setup(setup: Path) -> dict:
     """Reject redirected or stale PE output; hash the SAME admitted file handle."""
     need(setup.is_file() and not setup.is_symlink(),
@@ -347,19 +373,7 @@ def build(root,staged):
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
         "-Manifest",str(manifest_file)],capture_output=True,text=True,timeout=180)
     need(proof.returncode==0,"T06_ORIGINAL_OWNER_MANIFEST_VERIFY_HOLD:"+proof.stdout[-900:]+proof.stderr[-900:])
-    nsis=shutil.which("makensis.exe") or next((str(p) for p in
-       (Path("C:/Program Files (x86)/NSIS/makensis.exe"),
-        Path("C:/Program Files/NSIS/makensis.exe")) if p.is_file()),None)
-    if nsis is None:
-        chocolatey=shutil.which("choco")
-        need(chocolatey is not None,"T06_FREE_NSIS_WINDOWS_COMPILER_MISSING")
-        installed=subprocess.run([chocolatey,"install","nsis","--yes",
-           "--no-progress","--limit-output"],capture_output=True,text=True,timeout=400)
-        need(installed.returncode==0,"T06_EPHEMERAL_NSIS_INSTALL_HOLD")
-        nsis=next((str(p) for p in
-           (Path("C:/Program Files (x86)/NSIS/makensis.exe"),
-            Path("C:/Program Files/NSIS/makensis.exe")) if p.is_file()),None)
-    need(nsis is not None,"T06_NSIS_PATH_HOLD")
+    nsis,nsis_compiler_sha=preflight_nsis_compiler()
     setup=staged/"NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
     need(not setup.exists() and not setup.is_symlink(),
          "T06_NSIS_OUTPUT_COLLISION")
@@ -382,6 +396,9 @@ def build(root,staged):
          "source_zip_sha256":EXPECTED_ZIP_SHA,
          "wpf_sha256":sha(entry),"backend_sha256":candidate_sha,
          "manifest_sha256":sha(manifest_file),
+         "nsis_compiler_version":"3.13",
+         "nsis_compiler_sha256":nsis_compiler_sha,
+         "nsis_compiler_provenance":"HASHED_BINARY_ONLY_NOT_LICENSE_ATTESTED",
          "setup_sha256":setup_proof["sha256"],"setup_bytes":setup_proof["bytes"],
          "backend_native_stdio_windows_exe_smoke":"PASS",
          "wpf_source_compilation":"PASS","wpf_installed_interactive_qa":"NOT_RUN",
