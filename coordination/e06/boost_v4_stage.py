@@ -11,6 +11,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 EXPECTED_CACHE_SHA = "2ca2647e46edd1e110db1569cb6a636ceee8e8154b416560ad43a87fb95545bd"
+COMPACT_CACHE_SHA = "26d2ed7ca66aaa0ce4d2b695537484f51c2080140f79cc576501f211c2190938"
 APPROVED_D02 = {
     "home.png": "382c1069afcaaaed11c319796f2c553d2bd977d7e46c68ecd7d55af26e132a4a",
     "menu.png": "4c73d137e6d25f496abb006dbb8af08b1fe272d2f935c5006f0f42b6fd9992b9",
@@ -18,6 +19,7 @@ APPROVED_D02 = {
     "menu_sections.png": "7d181604f913cf9956c173c14da3dc7fd0238c389322896588cec4407b4024a4",
 }
 COPY_PREFIX = {"APPROVED_D02/": "approved-d02/", "NUGET_OFFLINE_FEED/": "nuget-feed/", "R11_READY/fluent/": "fluent/"}
+COMPACT_PREFIX = {"approved-d02/": "approved-d02/", "nuget-feed/": "nuget-feed/", "fluent/": "fluent/"}
 LICENSE_FORBIDDEN = {".ttf", ".otf", ".woff", ".woff2", ".eot"}
 
 
@@ -32,8 +34,10 @@ def sha256_file(path: Path) -> str:
 def stage(archive: Path, out: Path) -> dict:
     if not archive.is_file() or archive.is_symlink():
         raise ValueError("BOOST_CACHE_ARCHIVE_UNAVAILABLE")
-    if sha256_file(archive) != EXPECTED_CACHE_SHA:
+    archive_sha = sha256_file(archive)
+    if archive_sha not in (EXPECTED_CACHE_SHA, COMPACT_CACHE_SHA):
         raise ValueError("BOOST_CACHE_SHA_HOLD")
+    mappings = COPY_PREFIX if archive_sha == EXPECTED_CACHE_SHA else COMPACT_PREFIX
     if out.exists() or out.is_symlink():
         raise FileExistsError("BOOST_CACHE_OUTPUT_MUST_NOT_EXIST")
     if not out.parent.is_dir() or out.parent.is_symlink():
@@ -54,7 +58,7 @@ def stage(archive: Path, out: Path) -> dict:
                     if entry.is_dir():
                         continue
                     raise ValueError("BOOST_CACHE_UNSAFE_ENTRY")
-                root = next((k for k in COPY_PREFIX if name.startswith(k)), None)
+                root = next((k for k in mappings if name.startswith(k)), None)
                 if root is None:
                     continue
                 relative = PurePosixPath(name[len(root):])
@@ -70,12 +74,12 @@ def stage(archive: Path, out: Path) -> dict:
                 if len(contents) != entry.file_size:
                     raise ValueError("BOOST_CACHE_TRUNCATED_ENTRY")
                 sha = hashlib.sha256(contents).hexdigest()
-                if root == "APPROVED_D02/" and sha != APPROVED_D02.get(relative.as_posix()):
+                if root in ("APPROVED_D02/", "approved-d02/") and sha != APPROVED_D02.get(relative.as_posix()):
                     raise ValueError("BOOST_CACHE_D02_SOURCELOCK_HOLD")
-                dest = target / COPY_PREFIX[root] / relative.as_posix()
+                dest = target / mappings[root] / relative.as_posix()
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(contents)
-                extracted.append({"path": COPY_PREFIX[root] + relative.as_posix(),
+                extracted.append({"path": mappings[root] + relative.as_posix(),
                                   "sha256": sha, "bytes": len(contents)})
         if {x["path"] for x in extracted if x["path"].startswith("approved-d02/")} != {
             "approved-d02/" + x for x in APPROVED_D02
@@ -83,7 +87,7 @@ def stage(archive: Path, out: Path) -> dict:
             raise ValueError("BOOST_CACHE_D02_SET_INCOMPLETE")
         if len([x for x in extracted if x["path"].startswith("nuget-feed/")]) != 16:
             raise ValueError("BOOST_CACHE_NUGET_SET_INCOMPLETE")
-        receipt = {"schema": "NOX-BOOST-V4-STAGE-V1", "archive_sha256": EXPECTED_CACHE_SHA,
+        receipt = {"schema": "NOX-BOOST-V4-STAGE-V1", "archive_sha256": archive_sha,
                    "stage_only": True, "owner_source_mutated": False,
                    "onehost_executed": False, "e07_pass": False, "files": extracted}
         (target / "BOOST_STAGE_RECEIPT.json").write_text(
