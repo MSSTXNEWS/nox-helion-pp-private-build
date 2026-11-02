@@ -104,6 +104,10 @@ nox_t06_original_onehost_candidate:
       if ($LASTEXITCODE -ne 0 -or $head -cne $env:NOX_T06_FROZEN_SHA) {
         throw 'T06_GITLAB_CHECKOUT_HEAD_DRIFT'
       }
+      & python -m unittest discover -s tests/e06 -p 'test_t06_gitlab_runner_authorization.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'T06_DISPOSABLE_RUNNER_UNIT_GATE_HOLD' }
+      & python -m unittest discover -s tests/e06 -p 'test_i2_local_bridge_receipt_gate.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_RECEIPT_UNIT_GATE_HOLD' }
       & python coordination/e06/t06_local_onehost_bridge.py
       if ($LASTEXITCODE -ne 0) { throw 'T06_GITLAB_SAME_VM_CANDIDATE_BUILD_HOLD' }
   artifacts:
