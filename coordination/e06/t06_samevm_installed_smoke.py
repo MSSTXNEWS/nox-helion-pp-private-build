@@ -601,6 +601,28 @@ exit 0"""
     require(fresh["code"]==0,"T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL")
     return fresh
 
+def summarize_fresh_webview_navigation(window: str) -> dict:
+    """Bounded diagnostics from newly read WPF log bytes; never include raw URLs.
+
+    Does not grant GUI readiness, native capabilities, or release acceptance.
+    Caller must enforce original PID/log identity + HWND evidence separately.
+    """
+    if type(window) is not str:
+        raise TypeError("WPF_NAV_WINDOW_REQUIRED")
+    failures = re.findall(r"\\bNAV_FAIL[ \\t]+([A-Za-z][A-Za-z0-9]{0,63})\\b", window)
+    process_failures = re.findall(
+        r"\\bWEBVIEW_PROCESS_FAILED[ \\t]+([A-Za-z][A-Za-z0-9]{0,63})\\b", window)
+    return {
+        "init_started": "INIT_BEGIN" in window,
+        "nav_started": "NAV_START" in window,
+        "nav_failed": bool(failures),
+        "nav_failure_status": failures[-1] if failures else None,
+        "webview_process_failed": bool(process_failures),
+        "webview_process_failure_kind": process_failures[-1] if process_failures else None,
+        "navigation_blocked": "BLOCK_NAV" in window,
+    }
+
+
 def live_original_wpf_probe(exe:Path,local:Path)->dict:
     """Attest live WPF GUI/IPC from NEW bytes of the original shell log.
 
@@ -616,6 +638,9 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
         "NAV_OK", "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
         "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD")}
     boundary=""
+    navigation={"init_started":False,"nav_started":False,"nav_failed":False,
+                "nav_failure_status":None,"webview_process_failed":False,
+                "webview_process_failure_kind":None,"navigation_blocked":False}
     process=None
     alive_at_proof=False
     hwnd_at_proof=None
@@ -644,6 +669,13 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                     window=boundary+chunk.decode("utf-8",errors="replace")
                     for marker in seen:
                         seen[marker]=seen[marker] or marker in window
+                    fresh=summarize_fresh_webview_navigation(window)
+                    for label in ("init_started","nav_started","nav_failed",
+                                  "webview_process_failed","navigation_blocked"):
+                        navigation[label]=navigation[label] or fresh[label]
+                    for label in ("nav_failure_status","webview_process_failure_kind"):
+                        if fresh[label] is not None:
+                            navigation[label]=fresh[label]
                     boundary=window[-128:]
             if seen["INIT_ERROR"] or seen["P02_ORIGINAL_NATIVE_HOLD"]:
                 break
@@ -679,6 +711,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                 "real_wpf_hwnd_pid":process.pid if accepted else None,
                 "log_replaced":log_replaced,
                 "new_log_bytes_scanned":offset-(original.st_size if original else 0),
+                "navigation_diagnostic":navigation,
                 "proof":"CURRENT_WINDOWS_PROCESS_NEW_SHELL_LOG",
                 "independent_visual_e07":"NOT_RUN"}
     finally:
