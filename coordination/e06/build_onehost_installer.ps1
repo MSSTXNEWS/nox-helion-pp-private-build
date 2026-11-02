@@ -289,8 +289,15 @@ if ($wantsCreative) {
     $all=New-Object byte[] ($header.Length+$normalized.Length)
     [Array]::Copy($header,0,$all,0,$header.Length)
     [Array]::Copy($normalized,0,$all,$header.Length,$normalized.Length)
-    $sha=[Security.Cryptography.SHA1]::HashData($all)
-    return [Convert]::ToHexString($sha).ToLowerInvariant()
+    # Windows PowerShell 5.1/.NET Framework lacks static SHA1.HashData and Convert.ToHexString.
+    # Preserve exact Git blob SHA1 over header + LF-normalized bytes; release on all paths.
+    $gitBlobHasher=[Security.Cryptography.SHA1]::Create()
+    try {
+      $sha=$gitBlobHasher.ComputeHash($all)
+    } finally {
+      $gitBlobHasher.Dispose()
+    }
+    return ([BitConverter]::ToString($sha).Replace('-','')).ToLowerInvariant()
   }
   $creativeScriptBlob=Get-E06CanonicalGitBlobSha $creativeScript
   $wowScriptBlob=Get-E06CanonicalGitBlobSha $wowScript
@@ -503,8 +510,14 @@ if ($registryCanonicalText.Contains("`r") -or
   throw 'P03_REVIEW_REGISTRY_UNSAFE_ENCODING'
 }
 $registryCanonicalBytes=$registryUtf8.GetBytes($registryCanonicalText)
-$registryCanonicalSha=[Convert]::ToHexString(
-    [Security.Cryptography.SHA256]::HashData($registryCanonicalBytes)).ToLowerInvariant()
+# SHA-256 of exact approved LF UTF-8 registry; PS5.1-safe, no digest bypass.
+$registryHasher=[Security.Cryptography.SHA256]::Create()
+try {
+  $registryCanonicalSha=([BitConverter]::ToString(
+      $registryHasher.ComputeHash($registryCanonicalBytes)).Replace('-','')).ToLowerInvariant()
+} finally {
+  $registryHasher.Dispose()
+}
 if ($registryCanonicalSha -cne $p03RegistrySha) {
   throw 'P03_REVIEW_REGISTRY_SOURCE_SHA_HOLD'
 }
