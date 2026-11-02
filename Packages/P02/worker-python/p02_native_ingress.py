@@ -201,11 +201,17 @@ class NativeIngress:
             # of raising. Keep the existing protocol and 50-route registry.
             if type(result) is dict:
                 state = result.get("status")
-                if (result.get("ok") is False or
-                    (type(state) is str and
-                     (state.upper().startswith(("HOLD", "ERROR")) or
-                      state.upper() in ("FAILED", "DENIED", "REJECTED",
-                                        "CANCELLED", "OFFLINE", "NEEDS_AUTH")))):
+                ok = result.get("ok")
+                # The Python-to-native ACK is an authority boundary: a
+                # padded negative status or a string/integer `ok` flag must
+                # never become a success through permissive normalization.
+                normalized = state.strip().upper() if type(state) is str else None
+                if (("ok" in result and type(ok) is not bool) or
+                    ok is False or
+                    (normalized is not None and
+                     (normalized.startswith(("HOLD", "ERROR")) or
+                      normalized in ("FAILED", "DENIED", "REJECTED",
+                                     "CANCELLED", "OFFLINE", "NEEDS_AUTH")))):
                     raise ProtocolHold("NATIVE_OWNER_RESULT_HOLD")
             answer = {"protocol": "NOX-P02-NATIVE-v1", "runId": self.run_id,
                       "requestId": nonce, "status": "OK", "result": result}

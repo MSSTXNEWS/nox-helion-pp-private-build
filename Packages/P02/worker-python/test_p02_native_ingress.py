@@ -234,7 +234,11 @@ class IngressTests(unittest.TestCase):
                 {"status": "HOLD_EXTERNAL_OWNER_EXECUTION"},
                 {"status": "FAILED"}, {"status": "CANCELLED"},
                 {"status": "NEEDS_AUTH"}, {"ok": False},
-                {"status": "ERROR_PROVIDER"}), 230):
+                {"status": "ERROR_PROVIDER"},
+                # Malformed owner ACKs are not positive protocol receipts.
+                {"status": " HOLD_LICENSE"}, {"status": "FAILED "},
+                {"status": "\tDENIED"}, {"status": "needs_auth "},
+                {"ok": "false"}, {"ok": 0}, {"ok": None}), 230):
             with self.subTest(result=result):
                 self.provider.execute = lambda route, payload, session, result=result: result
                 with self.assertRaisesRegex(ProtocolHold, "NATIVE_OWNER_RESULT_HOLD"):
@@ -245,6 +249,11 @@ class IngressTests(unittest.TestCase):
         reply = json.loads(self.router.handle(packet(247)))
         self.assertEqual(reply["status"], "OK")
         self.assertEqual(reply["result"]["id"], "owner-job")
+        self.provider.execute = lambda *_: {
+            "ok": True, "status": "QUEUED", "id": "owner-job-2"}
+        reply = json.loads(self.router.handle(packet(248)))
+        self.assertEqual(reply["status"], "OK")
+        self.assertEqual(reply["result"]["id"], "owner-job-2")
 
     def test_missing_session_fails_closed(self):
         ingress = NativeIngress(self.provider, lambda: None, expected_run_id=R)
