@@ -12,6 +12,7 @@ import json
 import os
 import importlib.util
 from pathlib import Path, PurePosixPath
+from contextlib import contextmanager
 import re
 import stat
 import tempfile
@@ -84,6 +85,50 @@ def safe_member(name: str, directory: bool) -> str:
     return path
 
 
+@contextmanager
+def _trusted_part_reader(candidate: Path):
+    """Pin each immutable SourceLock part to a verified regular descriptor."""
+    _trusted_output_parent(candidate)
+    try:
+        original = candidate.lstat()
+    except OSError as exc:
+        raise SourceHold("SOURCE_PART_UNTRUSTED_PATH") from exc
+    reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    if (not stat.S_ISREG(original.st_mode) or stat.S_ISLNK(original.st_mode)
+            or getattr(original, "st_file_attributes", 0) & reparse):
+        raise SourceHold("SOURCE_PART_UNTRUSTED_PATH")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(candidate, flags)
+    except OSError as exc:
+        raise SourceHold("SOURCE_PART_UNTRUSTED_OPEN") from exc
+    try:
+        stream = os.fdopen(fd, "rb")
+    except BaseException:
+        os.close(fd)
+        raise
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+    with stream:
+        opened = os.fstat(stream.fileno())
+        def same_path():
+            try:
+                _trusted_output_parent(candidate)
+                live = candidate.lstat()
+            except (SourceHold, OSError):
+                return False
+            return (stat.S_ISREG(live.st_mode) and not stat.S_ISLNK(live.st_mode)
+                    and not (getattr(live, "st_file_attributes", 0) & reparse)
+                    and identity(live) == identity(opened))
+        if not same_path() or identity(original) != identity(opened):
+            raise SourceHold("SOURCE_PART_OPEN_IDENTITY_MISMATCH")
+        yield stream
+        after = os.fstat(stream.fileno())
+        if identity(after) != identity(opened) or not same_path():
+            raise SourceHold("SOURCE_PART_CHANGED_DURING_READ")
+
+
 def verify_original(parts_dir: Path, *, part_pins=PARTS,
                     archive_sha=ARCHIVE_SHA256, expected_files=EXPECTED_FILES,
                     run_id: str) -> dict:
@@ -107,22 +152,16 @@ def verify_original(parts_dir: Path, *, part_pins=PARTS,
             candidate = root / name
             if candidate.is_symlink() or not candidate.is_file():
                 raise SourceHold("MISSING_OR_SYMLINK_SOURCE_PART:" + name)
-            before = candidate.stat()
-            if before.st_size != size:
-                raise SourceHold("SOURCE_PART_SIZE_MISMATCH:" + name)
             git = hashlib.sha1(b"blob " + str(size).encode("ascii") + b"\0")
             own = hashlib.sha256()
-            with candidate.open("rb") as stream:
+            with _trusted_part_reader(candidate) as stream:
+                if os.fstat(stream.fileno()).st_size != size:
+                    raise SourceHold("SOURCE_PART_SIZE_MISMATCH:" + name)
                 while block := stream.read(CHUNK):
                     joined.write(block)
                     digest.update(block)
                     own.update(block)
                     git.update(block)
-                after = os.fstat(stream.fileno())
-            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
-                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
-            ):
-                raise SourceHold("SOURCE_PART_CHANGED_DURING_READ:" + name)
             if git.hexdigest() != expected_blob:
                 raise SourceHold("SOURCE_PART_GIT_BLOB_SHA1_MISMATCH:" + name)
             parts_receipts.append({"path": name, "bytes": size, "sha256": own.hexdigest(),
