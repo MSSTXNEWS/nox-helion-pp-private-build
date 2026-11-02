@@ -1,5 +1,6 @@
 """NOX T06 manual one-shot Windows compilation: exact source ONLY, no installed release."""
 import hashlib, io, json, os, pathlib, re, stat, subprocess, sys, zipfile
+from t06_package_original_onehost import stage_reviewed_installed_payload_verifier
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STAGE=ROOT/"work/t06-wpf-p02-compile"
 R11=STAGE/"R11"
@@ -370,6 +371,15 @@ def main():
     # Other owner files, signed installers and original ZIP remain untouched.
     stage_exact_owner_webview2_registry_views(
         R11, ROOT / 'coordination/e06/build_onehost_installer.ps1')
+    # Actual GitLab OneHost compiler path: stage the SAME reviewed C09 P01
+    # verifier as the source-pinned packaging route. Original ZIP stays sealed.
+    # Without this, the installed rollback check sees legacy C07 and rejects
+    # NSIS-owned marker/Uninstall.exe even when the Setup install exits zero.
+    installed_verifier=stage_reviewed_installed_payload_verifier(
+        R11/"Installer"/"Verify-Payload.ps1",
+        ROOT/"stage/proposals/P01/C09/Installer/Verify-Payload.ps1")
+    print("T06_C09_INSTALLED_VERIFIER_ACTIVE_COMPILER_PATH "+
+          json.dumps(installed_verifier,sort_keys=True),flush=True)
     # Preserve the original MainWindow, zero HOME/MENU/WORK modification outside R11.
     # The older imported GitLab 4-file overlay silently stripped current
     # A1 signed consent, native STOP epoch, P03 model queue and Browser ACL.
