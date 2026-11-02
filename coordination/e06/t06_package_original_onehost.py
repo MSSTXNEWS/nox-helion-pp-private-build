@@ -21,6 +21,22 @@ def sha(path):
     return h.hexdigest()
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
+def verify_nsis_setup(setup: Path) -> dict:
+    """Reject tiny, redirected or non-PE NSIS output before candidate evidence."""
+    need(setup.is_file() and not setup.is_symlink(),
+         "T06_NSIS_SETUP_MISSING_OR_REDIRECTED")
+    size=setup.stat().st_size
+    need(size>=1024*1024,"T06_NSIS_SETUP_TOO_SMALL_OR_TRUNCATED")
+    with setup.open("rb") as stream:
+        dos=stream.read(64)
+        need(len(dos)==64 and dos[:2]==b"MZ","T06_NSIS_SETUP_NOT_WINDOWS_PE")
+        pe_offset=int.from_bytes(dos[60:64],"little")
+        need(64<=pe_offset<=min(size-4,1024*1024),
+             "T06_NSIS_SETUP_PE_OFFSET_INVALID")
+        stream.seek(pe_offset)
+        need(stream.read(4)==b"PE\x00\x00","T06_NSIS_SETUP_PE_SIGNATURE_INVALID")
+    return {"bytes":size,"sha256":sha(setup)}
+
 def download_artifact(relative,target):
     """Transfer same-job candidate bytes locally, never via GitLab artifact HTTP.
 
@@ -328,6 +344,8 @@ def build(root,staged):
             Path("C:/Program Files/NSIS/makensis.exe")) if p.is_file()),None)
     need(nsis is not None,"T06_NSIS_PATH_HOLD")
     setup=staged/"NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
+    need(not setup.exists() and not setup.is_symlink(),
+         "T06_NSIS_OUTPUT_COLLISION")
     args=[nsis,"/V2",
        "/DPAYLOAD_DIR="+str(payload),
        "/DVERIFY_SCRIPT="+str(installer_dir/"Verify-Payload.ps1"),
@@ -338,8 +356,8 @@ def build(root,staged):
     compiled=subprocess.run(args,capture_output=True,text=True,timeout=600)
     (staged/"NSIS_CANDIDATE_BUILD_LOG.txt").write_text(
          compiled.stdout+"\n"+compiled.stderr,encoding="utf-8")
-    need(compiled.returncode==0 and setup.is_file(),
-         "T06_ORIGINAL_NSIS_CANDIDATE_BUILD_HOLD")
+    need(compiled.returncode==0,"T06_ORIGINAL_NSIS_CANDIDATE_BUILD_HOLD")
+    setup_proof=verify_nsis_setup(setup)
     need(verified_source_head()==source_sha,
          "T06_PACKAGE_SOURCE_HEAD_MOVED_DURING_BUILD")
     candidate={"schema":"NOX-E06-ONEHOST-CANDIDATE-v1",
@@ -347,7 +365,7 @@ def build(root,staged):
          "source_zip_sha256":EXPECTED_ZIP_SHA,
          "wpf_sha256":sha(entry),"backend_sha256":candidate_sha,
          "manifest_sha256":sha(manifest_file),
-         "setup_sha256":sha(setup),"setup_bytes":setup.stat().st_size,
+         "setup_sha256":setup_proof["sha256"],"setup_bytes":setup_proof["bytes"],
          "backend_native_stdio_windows_exe_smoke":"PASS",
          "wpf_source_compilation":"PASS","wpf_installed_interactive_qa":"NOT_RUN",
          "e07":"NOT_ACCEPTED","release_accepted":False,
