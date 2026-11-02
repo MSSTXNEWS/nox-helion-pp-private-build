@@ -1,5 +1,5 @@
 """NOX T06 manual one-shot Windows compilation: exact source ONLY, no installed release."""
-import hashlib, io, json, pathlib, stat, subprocess, sys, zipfile
+import hashlib, io, json, os, pathlib, re, stat, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STAGE=ROOT/"work/t06-wpf-p02-compile"
 R11=STAGE/"R11"
@@ -14,7 +14,22 @@ def git_blob(raw):
     return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 def require(good,why):
     if not good: raise RuntimeError(why)
+def verified_source_head():
+    """Read the actual checkout commit; never emit a copied historical SourceLock."""
+    try:
+        probe=subprocess.run(["git", "rev-parse", "--verify", "HEAD^{commit}"],
+            cwd=ROOT, capture_output=True, text=True, timeout=15, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError("T06_SOURCE_COMMIT_UNVERIFIED") from exc
+    head=probe.stdout.strip().lower()
+    require(probe.returncode==0 and re.fullmatch(r"[0-9a-f]{40}", head) is not None,
+            "T06_SOURCE_COMMIT_UNVERIFIED")
+    declared=os.environ.get("CI_COMMIT_SHA", "").strip().lower()
+    require(not declared or declared==head, "T06_SOURCE_CI_SHA_MISMATCH")
+    return head
+
 def main():
+    source_git_sha=verified_source_head()
     manifest=json.loads((ROOT/"donors/P01_C07/P01_C07_RECEIPT.json").read_text("utf-8"))
     chunks=io.BytesIO();digest=hashlib.sha256()
     for row in manifest["parts"]:
@@ -382,7 +397,8 @@ def main():
     (STAGE/"BUILD_LOG.txt").write_text(transcript,encoding="utf-8",errors="replace")
     print("T06_DOTNET_BUILD_EXIT",proc.returncode,flush=True)
     print(transcript[-12000:],flush=True)
-    result={"source_git_sha":"74e03bc99d82467e8b9f48f367b8815fb13a0798","original_zip_sha256":digest.hexdigest(),
+    require(verified_source_head()==source_git_sha,"T06_SOURCE_HEAD_MOVED_DURING_BUILD")
+    result={"source_git_sha":source_git_sha,"original_zip_sha256":digest.hexdigest(),
             "original_files_staged":nfiles,"dotnet_build_exit":proc.returncode,
             "native_ingress_e2e":"NOT_RUN","original_python_cli":"NOT_ATTESTED",
             "release_accepted":False}
