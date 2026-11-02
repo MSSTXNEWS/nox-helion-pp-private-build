@@ -100,11 +100,11 @@ class CanonicalOriginalPartFd(unittest.TestCase):
                 (root / "redirect").symlink_to(real, target_is_directory=True)
             except (OSError, NotImplementedError) as exc:
                 self.skipTest(str(exc))
-            pins = tuple(hashlib.sha1(b"blob " + str(len(p)).encode() + b"\\0" + p).hexdigest()
+            pins = tuple(hashlib.sha1(b"blob " + str(len(p)).encode() + b"\0" + p).hexdigest()
                          for p in parts)
-            with mock.patch.object(original, "EXPECTED_SIZE", len(archive_bytes)), \\
-                 mock.patch.object(original, "EXPECTED_PART_SIZES", tuple(map(len, parts))), \\
-                 mock.patch.object(original, "EXPECTED_PART_GIT_BLOBS", pins), \\
+            with mock.patch.object(original, "EXPECTED_SIZE", len(archive_bytes)), \
+                 mock.patch.object(original, "EXPECTED_PART_SIZES", tuple(map(len, parts))), \
+                 mock.patch.object(original, "EXPECTED_PART_GIT_BLOBS", pins), \
                  mock.patch.object(original, "EXPECTED_SHA256", hashlib.sha256(archive_bytes).hexdigest()):
                 self.assertEqual(original.audit(real, 1)["file_count"], 1)
                 with self.assertRaisesRegex(ValueError, "SOURCE_PART_PARENT_REPARSE"):
