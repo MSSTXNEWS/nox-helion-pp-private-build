@@ -105,6 +105,42 @@ def webview2_root_evidence(lifecycle):
         proof["final_preflight_exit"]=final["code"]
     return proof
 
+
+def verify_mega814_payload_files(packaged, summary):
+    """Verify fourteen DISTINCT original NSIS assets, not fourteen manifest rows.
+
+    The receipt is source-only: never infer a rendered GUI or independent E07.
+    Reject Windows case-folded duplicates, reparse redirects and path aliases.
+    """
+    entries = summary.get("files") if type(summary) is dict else None
+    if type(entries) is not list or len(entries) != 14:
+        raise RuntimeError("NOX_MEGA814_MENU14_COUNT_HOLD")
+    if (not packaged.is_dir() or packaged.is_symlink() or
+            getattr(packaged, "is_junction", lambda: False)()):
+        raise RuntimeError("NOX_MEGA814_PACKAGE_PATH_UNTRUSTED")
+    seen = set()
+    for item in entries:
+        if type(item) is not dict:
+            raise RuntimeError("NOX_MEGA814_RESOURCE_ENTRY_INVALID")
+        name = item.get("name")
+        if (type(name) is not str or name in ("", ".", "..") or
+                name.strip() != name or "/" in name or "\\" in name or
+                ":" in name or "\x00" in name or name.casefold() in seen):
+            raise RuntimeError("NOX_MEGA814_RESOURCE_NAME_INVALID_OR_DUPLICATE")
+        file = packaged / name
+        expected_size = item.get("bytes")
+        expected_sha = item.get("sha256")
+        if (not file.is_file() or file.is_symlink() or
+                getattr(file, "is_junction", lambda: False)() or
+                type(expected_size) is not int or expected_size < 0 or
+                type(expected_sha) is not str or
+                re.fullmatch(r"[0-9a-f]{64}", expected_sha) is None or
+                file.stat().st_size != expected_size or
+                digest(file) != expected_sha):
+            raise RuntimeError("NOX_MEGA814_PAYLOAD_SHA_DRIFT:" + name)
+        seen.add(name.casefold())
+    return len(seen)
+
 def main():
     if OUT.exists() or OUT.is_symlink():
         raise SystemExit("T06_LOCAL_BRIDGE_OUTPUT_COLLISION")
@@ -212,20 +248,7 @@ def main():
                summary.get("legacy_routes")!=54 or summary.get("visual_criteria")!=30 or \
                summary.get("release_accepted") is not False:
                 raise RuntimeError("NOX_MEGA814_SOURCE_RECEIPT_NOT_ACCEPTABLE")
-            item_count=0
-            for item in summary.get("files",[]):
-                name=item.get("name")
-                if not isinstance(name,str) or "/" in name or "\\" in name or \
-                   name in ("",".",".."):
-                    raise RuntimeError("NOX_MEGA814_RESOURCE_NAME_INVALID")
-                f=packaged/name
-                if not f.is_file() or f.is_symlink() or \
-                   f.stat().st_size!=item.get("bytes") or \
-                   digest(f)!=item.get("sha256"):
-                    raise RuntimeError("NOX_MEGA814_PAYLOAD_SHA_DRIFT:"+name)
-                item_count+=1
-            if item_count!=14:
-                raise RuntimeError("NOX_MEGA814_MENU14_COUNT_HOLD")
+            item_count=verify_mega814_payload_files(packaged,summary)
             source_index=ROOT/"work/t06-wpf-p02-compile/R11/Assets/index.html"
             packaged_index=ROOT/"work/t06-wpf-p02-compile/payload/Assets/index.html"
             if not source_index.is_file() or not packaged_index.is_file() or \
