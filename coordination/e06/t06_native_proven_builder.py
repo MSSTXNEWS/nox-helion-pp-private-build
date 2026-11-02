@@ -15,14 +15,16 @@ original_expected="ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629
 original_sha=hashlib.sha256(); original_bytes=io.BytesIO()
 for part in original_parts:
     node=root/part
-    assert node.is_file() and not node.is_symlink(), "T06_ORIGINAL_PART_ABSENT"
+    if not node.is_file() or node.is_symlink():
+        raise RuntimeError("T06_ORIGINAL_PART_ABSENT")
     with node.open("rb") as handle:
         while True:
             chunk=handle.read(1024*1024)
             if not chunk:break
             original_sha.update(chunk)
             original_bytes.write(chunk)
-assert original_sha.hexdigest()==original_expected, "T06_ORIGINAL_THREE_PART_SHA_HOLD"
+if original_sha.hexdigest()!=original_expected:
+    raise RuntimeError("T06_ORIGINAL_THREE_PART_SHA_HOLD")
 
 # Run one actual Windows Python source process on an isolated, fully verified
 # source COPY. This is not the frozen PyInstaller EXE or installed E07.
