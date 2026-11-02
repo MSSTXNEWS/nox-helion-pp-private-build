@@ -90,6 +90,20 @@ def main():
             raise RuntimeError("T06_SAME_VM_SMOKE_RECEIPT_MISSING")
         smoke=json.loads(smokePath.read_text("utf-8"))
         data["installed_smoke_phase"]=smoke.get("phase","HOLD")
+        # One physical four-gate run: print the *real* failed installed step
+        # before any generic HOLD. Keep source hashes and release gates unchanged.
+        lifecycle=smoke.get("installer_lifecycle",{})
+        report={
+            "reason":smoke.get("reason",""),
+            "phase":smoke.get("phase","HOLD"),
+            "webview2":lifecycle.get("webview2_signature_attempts",[]),
+            "webview2_preflight":lifecycle.get("preflight_final",{}),
+            "nsis_install":lifecycle.get("install",{}),
+            "native_ipc":lifecycle.get("native_ipc",{}),
+            "wpf_gui":lifecycle.get("original_wpf_gui",{}),
+            "home_media_sha_ok":smoke.get("original_home_and_core01_sha_verified",False),
+        }
+        print("NOX_EXPRESS_GATE_4_INSTALLED_RESULT "+json.dumps(report,ensure_ascii=False,sort_keys=True)[:8000],flush=True)
         if (third["return_code"]!=0 or
             smoke.get("phase")!="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07" or
             smoke.get("installer_lifecycle",{}).get("original_wpf_gui",{}).get("new_nav_ok") is not True or
