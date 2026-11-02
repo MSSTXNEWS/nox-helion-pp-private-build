@@ -455,33 +455,63 @@ exit 0"""
     return fresh
 
 def live_original_wpf_probe(exe:Path,local:Path)->dict:
-    """Real WPF start and NEW log evidence, not a visual-source assertion."""
+    """Attest live WPF GUI/IPC from NEW bytes of the original shell log.
+
+    The same-VM smoke is NOT independent E07. Never accept stale log
+    text, a retired WPF process, a replaced log file, or native hold.
+    """
     log=local/"NOX_HELION/P01/logs/shell.log"
-    offset=log.stat().st_size if log.is_file() else 0
+    original=log.stat() if log.is_file() else None
+    offset=original.st_size if original else 0
+    identity=(original.st_dev,original.st_ino) if original else None
+    seen={mark:False for mark in (
+        "NAV_OK", "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
+        "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD")}
+    boundary=""
     process=None
-    observed=""
+    alive_at_proof=False
+    log_replaced=False
     try:
         process=subprocess.Popen([str(exe)],cwd=exe.parent,
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL)
         deadline=time.monotonic()+35
         while time.monotonic()<deadline:
-            if log.is_file():
-                with log.open("rb") as stream:
-                    stream.seek(offset)
-                    observed=stream.read(262144).decode("utf-8",errors="replace")
-            if ("NAV_OK" in observed and
-                "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK" in observed):
-                break
             if process.poll() is not None:
                 break
+            if log.is_file():
+                current=log.stat()
+                current_identity=(current.st_dev,current.st_ino)
+                if identity is None:
+                    identity=current_identity
+                if current_identity!=identity or current.st_size<offset:
+                    log_replaced=True
+                    break
+                if current.st_size>offset:
+                    with log.open("rb") as stream:
+                        stream.seek(offset)
+                        chunk=stream.read(min(65536,current.st_size-offset))
+                    offset+=len(chunk)
+                    window=boundary+chunk.decode("utf-8",errors="replace")
+                    for marker in seen:
+                        seen[marker]=seen[marker] or marker in window
+                    boundary=window[-128:]
+            if seen["INIT_ERROR"] or seen["P02_ORIGINAL_NATIVE_HOLD"]:
+                break
+            if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
+                alive_at_proof=process.poll() is None
+                break
             time.sleep(0.7)
+        accepted=(process.pid>0 and alive_at_proof and not log_replaced and
+                  not seen["INIT_ERROR"] and not seen["P02_ORIGINAL_NATIVE_HOLD"])
         return {"pid_started":process.pid>0,
-                "new_nav_ok":"NAV_OK" in observed,
-                "new_python_ipc_handshake":
-                    "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK" in observed,
-                "init_error":"INIT_ERROR" in observed,
-                "native_hold":"P02_ORIGINAL_NATIVE_HOLD" in observed,
+                "new_nav_ok":accepted and seen["NAV_OK"],
+                "new_python_ipc_handshake":accepted and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"],
+                "init_error":seen["INIT_ERROR"],
+                "native_hold":seen["P02_ORIGINAL_NATIVE_HOLD"],
+                "live_process_at_receipt":alive_at_proof,
+                "log_replaced":log_replaced,
+                "new_log_bytes_scanned":offset-(original.st_size if original else 0),
                 "proof":"CURRENT_WINDOWS_PROCESS_NEW_SHELL_LOG",
                 "independent_visual_e07":"NOT_RUN"}
     finally:
@@ -496,6 +526,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
             finally:
                 try:process.wait(timeout=8)
                 except (subprocess.TimeoutExpired,OSError):pass
+
 
 def main()->int:
     started=time.monotonic()
