@@ -35,7 +35,7 @@ ADDONS=(
     ('src/nox_selfbuilder/learning.py', 'nox_selfbuilder/learning.py', '3e1cf4f26cfab2505558d67fd5a5bd76ea172e06'),
     ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', '27abfefec3b7347dab008396524bf94dd8c0e0bd'),
     ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'e1d6c26178c900d55789f29429de33f2af46551d'),
-    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '0342506d58c3c078292d1f25e4cb1ae124b71cee'),
+    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', 'fe5a04f330764ff963ae8fdbcfa6d6bd9e2f809d'),
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
     ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '6fcbd9b2f90dc54767728d7ee120ffb7595c019b'),
     ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),

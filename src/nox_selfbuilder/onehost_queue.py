@@ -43,12 +43,18 @@ class NativeWorkQueue:
 
     def enqueue(self, scope, *, kind, payload, permission):
         key=scope_key(scope)
-        if kind not in ('SELF_WRITE','FORGE') or self.authorize(scope,permission,payload) is not True:
+        epoch=self.stop_epoch()
+        if (kind not in ('SELF_WRITE','FORGE') or self.stop_requested() or
+                self.stop_epoch()!=epoch or
+                self.authorize(scope,permission,payload) is not True):
             raise PermissionError('NATIVE_QUEUE_CONSENT_REQUIRED')
         frozen=json.loads(_json(payload))
-        def write(store):
-            if self.stop_requested() or self.authorize(scope,permission,frozen) is not True:
+        def require_live_permission():
+            if (self.stop_requested() or self.stop_epoch()!=epoch or
+                    self.authorize(scope,permission,frozen) is not True):
                 raise PermissionError('NATIVE_QUEUE_REVOKED')
+        def write(store):
+            require_live_permission()
             # Preserve the original tasks schema and DRAFT status until OWNER review.
             title=str(frozen.get('task',kind))[:500].strip()
             if not title:raise ValueError('BOUNDED_TASK_TITLE_REQUIRED')
@@ -57,6 +63,8 @@ class NativeWorkQueue:
                 tid=store.conn.execute('INSERT INTO tasks(title,created_at,updated_at) VALUES(?,?,?)',(title,now,now)).lastrowid
                 store._audit('TASK_DRAFT_CREATED',tid,{})
                 self._event(store,tid,'CREATED',{'scope':key,'kind':kind,'payload':frozen,'state':'QUEUED'})
+                # Revoke within the original SQLite transaction to undo tasks AND audit.
+                require_live_permission()
             return tid
         return self.actor.call(write)
 
