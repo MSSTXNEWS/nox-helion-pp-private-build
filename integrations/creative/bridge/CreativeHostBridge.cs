@@ -709,6 +709,9 @@ public partial class MainWindow
             theater.Show();
             var env=View.CoreWebView2?.Environment ?? throw new InvalidOperationException("WebView2 is offline");
             await viewer.EnsureCoreWebView2Async(env);
+            // The user can close or replace the projector during asynchronous WebView2 startup.
+            // A stale continuation must never configure or navigate the retired window.
+            if (!ReferenceEquals(_creativeProjector,theater) || !theater.IsVisible) return;
             viewer.CoreWebView2.Settings.AreHostObjectsAllowed=false;
             viewer.CoreWebView2.Settings.AreDevToolsEnabled=false;
             viewer.CoreWebView2.Settings.IsWebMessageEnabled=false;

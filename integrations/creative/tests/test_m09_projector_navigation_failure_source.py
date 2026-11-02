@@ -44,5 +44,20 @@ class ProjectorNavigationFailureSourceTest(unittest.TestCase):
                         method.index("projectId = requestedProjectId;"))
         self.assertIn("FileInfo(movie).Attributes & FileAttributes.ReparsePoint", method)
 
+    def test_retired_window_does_not_navigate_after_async_core_initialization(self):
+        # An older EnsureCoreWebView2Async may resume after this window was
+        # closed or superseded. The original owner must remain untouched.
+        source = SOURCE.read_text(encoding="utf-8")
+        method = source.split("private async Task OpenCreativeProjectorAsync", 1)[1].split(
+            "private async Task<string> StopCreativeWorkerAsync", 1)[0]
+        init = "await viewer.EnsureCoreWebView2Async(env);"
+        guard = "if (!ReferenceEquals(_creativeProjector,theater) || !theater.IsVisible) return;"
+        self.assertIn(guard, method)
+        self.assertLess(method.index(init), method.index(guard))
+        self.assertLess(method.index(guard),
+                        method.index("viewer.CoreWebView2.Settings.AreHostObjectsAllowed=false;"))
+        self.assertLess(method.index(guard), method.index("projectorCore.Navigate(theaterUrl);"))
+        self.assertIn("if(ReferenceEquals(_creativeProjector,theater)){", method)
+
 if __name__ == "__main__":
     unittest.main()
