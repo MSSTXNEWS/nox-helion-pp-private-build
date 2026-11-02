@@ -45,6 +45,15 @@ export function nativeP01Feedback(result){
     ?result.reason:"ACK_MISSING";
   return Object.freeze({state:"hold",reason});
 }
+export async function invokeP01NativeRouteFeedback(dispatcher,routeId){
+  // IPC rejection is never native confirmation. Preserve HOLD after a failed
+  // WebView2/OneHost dispatch and never leak host exception details to the UI.
+  try{
+    return nativeP01Feedback(await dispatcher.invoke(routeId));
+  }catch{
+    return nativeP01Feedback({ok:false,reason:"NATIVE_DISPATCH_FAILED"});
+  }
+}
 export function mountP01Owner(spec){
   const summary=validateOwnerP01(spec);
   const {root,orbs,menu,logicalMenu,buttons,hostPort,secondary=null,
@@ -131,7 +140,7 @@ export function mountP01Owner(spec){
           event?.preventDefault?.();
           if(disposed||dispatcher.isPending(item.routeId))return;
           markP01RoutePending(item.element.dataset);
-          const result=nativeP01Feedback(await dispatcher.invoke(item.routeId));
+          const result=await invokeP01NativeRouteFeedback(dispatcher,item.routeId);
           if(disposed)return;
           item.element.dataset.noxNativeState=result.state;
           if(result.state==="confirmed"){
