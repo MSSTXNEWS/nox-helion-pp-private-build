@@ -85,17 +85,23 @@ def owned_payload_paths(install: Path, inventory: dict) -> tuple[Path, ...]:
 
 
 def original_nsis_uninstall_registration_absent(registry=None) -> bool:
-    """Query BOTH Windows registry views; access errors must HOLD, not PASS."""
+    """Verify BOTH Windows registry hives and 32/64-bit views, fail-closed."""
     if registry is None:
         import winreg as registry
-    for view in (registry.KEY_WOW64_32KEY, registry.KEY_WOW64_64KEY):
-        try:
-            key = registry.OpenKey(registry.HKEY_CURRENT_USER, _UNINSTALL_KEY,
-                                   0, registry.KEY_READ | view)
-        except FileNotFoundError:
-            continue
-        registry.CloseKey(key)
-        return False
+    # Real Windows winreg supplies HKLM; legacy offline test doubles model HKCU.
+    hives = [registry.HKEY_CURRENT_USER]
+    machine = getattr(registry, "HKEY_LOCAL_MACHINE", None)
+    if machine is not None:
+        hives.append(machine)
+    for hive in hives:
+        for view in (registry.KEY_WOW64_32KEY, registry.KEY_WOW64_64KEY):
+            try:
+                key = registry.OpenKey(hive, _UNINSTALL_KEY,
+                                       0, registry.KEY_READ | view)
+            except FileNotFoundError:
+                continue
+            registry.CloseKey(key)
+            return False
     return True
 
 
