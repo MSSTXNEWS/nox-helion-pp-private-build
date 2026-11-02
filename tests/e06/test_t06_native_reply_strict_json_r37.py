@@ -51,7 +51,7 @@ class T06NativeReplyStrictJson(unittest.TestCase):
             b'{"status":"OK","value":NaN}',
             b'{"status":"OK","value":Infinity}',
             b'{"status":"OK","value":-Infinity}',
-            b'{"status":"OK"', b"\\xff",
+            b'{"status":"OK"', bytes([0xff]),
         ):
             with self.subTest(raw=raw), self.assertRaises(RuntimeError):
                 self.parse(raw, "T06_UNTRUSTED_NATIVE_JSON")
