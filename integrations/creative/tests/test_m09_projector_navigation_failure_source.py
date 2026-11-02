@@ -65,9 +65,9 @@ class ProjectorNavigationFailureSourceTest(unittest.TestCase):
         source = SOURCE.read_text(encoding="utf-8")
         route = source.split("private async Task<string> OpenOwnerMediaRouteAsync", 1)[1].split(
             "private static bool IsTrustedProjectorMediaTree", 1)[0]
-        guard = ('if (!ReferenceEquals(_creativeProjector, projector) ||\\n'
-                 '                !projector.IsVisible ||\\n'
-                 '                !ReferenceEquals(FindNoxTheaterViewer(projector), viewer))\\n'
+        guard = ('if (!ReferenceEquals(_creativeProjector, projector) ||\n'
+                 '                !projector.IsVisible ||\n'
+                 '                !ReferenceEquals(FindNoxTheaterViewer(projector), viewer))\n'
                  '                return "MEDIA_OWNER_UI_NOT_READY";')
         self.assertEqual(route.count(guard), 2)
         probe = route.index('var found = await viewer.CoreWebView2.ExecuteScriptAsync(')
