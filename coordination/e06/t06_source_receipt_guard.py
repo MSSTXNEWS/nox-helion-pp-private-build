@@ -127,6 +127,7 @@ def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt:
             compile_data["dotnet_build_exit"] != 0):
         raise RuntimeError("T06_SOURCE_COMPILE_EXACT_HEAD_OR_729_HOLD")
     if (candidate.get("schema") != "NOX-E06-ONEHOST-CANDIDATE-v1" or
+            candidate.get("source_git_sha") != source_head or
             candidate.get("source_zip_sha256") != expected_r11_zip_sha256 or
             candidate.get("release_accepted") is not False or
             candidate.get("e07") != "NOT_ACCEPTED" or

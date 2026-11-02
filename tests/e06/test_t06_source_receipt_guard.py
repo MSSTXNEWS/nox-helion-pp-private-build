@@ -27,6 +27,7 @@ class CandidateReceiptTests(unittest.TestCase):
         self.comp = {"source_git_sha": HEAD, "original_zip_sha256": R11,
                      "original_files_staged": 729, "dotnet_build_exit": 0}
         self.cand = {"schema": "NOX-E06-ONEHOST-CANDIDATE-v1",
+                     "source_git_sha": HEAD,
                      "source_zip_sha256": R11, "release_accepted": False,
                      "e07": "NOT_ACCEPTED", "wpf_source_compilation": "PASS",
                      "backend_native_stdio_windows_exe_smoke": "PASS",
@@ -43,6 +44,23 @@ class CandidateReceiptTests(unittest.TestCase):
 
     def test_real_source_and_setup_bytes(self):
         self.assertEqual(self.verify(), self.cand["setup_sha256"])
+
+    def test_borrowed_candidate_from_different_source_head_denied(self):
+        self.cand["source_git_sha"] = "b" * 40
+        self.save()
+        with self.assertRaisesRegex(RuntimeError, "CANDIDATE_SCHEMA"):
+            self.verify()
+
+    def test_candidate_missing_or_malformed_source_head_denied(self):
+        for value in (None, True, 123, ""):
+            self.cand["source_git_sha"] = value
+            self.save()
+            with self.assertRaisesRegex(RuntimeError, "CANDIDATE_SCHEMA"):
+                self.verify()
+        self.cand.pop("source_git_sha")
+        self.save()
+        with self.assertRaisesRegex(RuntimeError, "CANDIDATE_SCHEMA"):
+            self.verify()
 
     def test_stale_source_commit_hold(self):
         self.comp["source_git_sha"] = "b" * 40

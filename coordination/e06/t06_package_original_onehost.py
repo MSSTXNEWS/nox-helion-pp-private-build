@@ -165,6 +165,22 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
 def build(root,staged):
     staged=Path(staged).resolve(strict=True)
     root=Path(root).resolve(strict=True)
+    # Verify this disposable ORIGINAL WPF/NSIS package uses the same real source
+    # as the compiler. A borrowed compile receipt is not a new BuildID.
+    from t06_compile_original_wpf_p02 import verified_source_head
+    source_sha=verified_source_head()
+    compile_path=staged/"T06_COMPILE_EVIDENCE.json"
+    need(compile_path.is_file() and not compile_path.is_symlink(),
+         "T06_PACKAGE_COMPILE_RECEIPT_MISSING")
+    proof=json.loads(compile_path.read_text("utf-8"))
+    need(type(proof) is dict and
+         proof.get("source_git_sha")==source_sha and
+         proof.get("original_zip_sha256")==EXPECTED_ZIP_SHA and
+         type(proof.get("original_files_staged")) is int and
+         proof["original_files_staged"]==729 and
+         type(proof.get("dotnet_build_exit")) is int and
+         proof["dotnet_build_exit"]==0,
+         "T06_PACKAGE_COMPILE_SOURCE_HEAD_OR_729_HOLD")
     receipt_path=staged/"NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json"
     exe_path=staged/"NOX_HELION_PRIVATE_CANDIDATE.exe"
     for relative,target in (
@@ -307,7 +323,10 @@ def build(root,staged):
          compiled.stdout+"\n"+compiled.stderr,encoding="utf-8")
     need(compiled.returncode==0 and setup.is_file(),
          "T06_ORIGINAL_NSIS_CANDIDATE_BUILD_HOLD")
+    need(verified_source_head()==source_sha,
+         "T06_PACKAGE_SOURCE_HEAD_MOVED_DURING_BUILD")
     candidate={"schema":"NOX-E06-ONEHOST-CANDIDATE-v1",
+         "source_git_sha":source_sha,
          "source_zip_sha256":EXPECTED_ZIP_SHA,
          "wpf_sha256":sha(entry),"backend_sha256":candidate_sha,
          "manifest_sha256":sha(manifest_file),
