@@ -294,10 +294,14 @@ class FirstBootCoordinator:
                 already_queued.append(i)
             else:
                 dispatched.append(i)
-        state = ("HOLD" if any(x["reason"].startswith("STOP") for x in denied) else
+        # Any failed/uncertain native ACK keeps the overall FirstBoot in HOLD,
+        # even when other actions were durably queued in the same run.
+        # Keep their IDs in the receipt so the next owner can read back and
+        # resume, never replaying an uncertain action or claiming full success.
+        state = ("HOLD" if denied or held else
                  "QUEUED_NOT_INSTALLED" if dispatched else
                  "ALREADY_QUEUED_NOT_INSTALLED" if already_queued else
-                 "HOLD" if held or denied else "ALREADY_PRESENT")
+                 "ALREADY_PRESENT")
         return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": state,
                 "found_candidates": len(discovered), "already_installed_ids": already,
                 "enqueued_ids": dispatched, "already_queued_ids": already_queued,
