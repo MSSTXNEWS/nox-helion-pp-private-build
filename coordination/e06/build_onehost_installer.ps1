@@ -647,9 +647,31 @@ foreach($name in $assets.Keys) {
  if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "D02_APPROVED_ASSET_MISSING:$name" }
  if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() -cne $assets[$name]) { throw "D02_ASSET_SHA_HOLD:$name" }
 }
+# I0 P01: inspect the entire published directory graph BEFORE enumerating files.
+# File-only inventories may miss a directory junction that NSIS File /r could
+# traverse. Walk one level at a time; reject reparse nodes BEFORE descent.
+Assert-E06PlainPathAncestors -Candidate $payload -Scope 'NSIS_PAYLOAD'
+$payloadRootInfo=Get-Item -LiteralPath $payload -Force -ErrorAction Stop
+if (!$payloadRootInfo.PSIsContainer -or
+    ($payloadRootInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+  throw 'E06_NSIS_PAYLOAD_ROOT_UNSAFE_HOLD'
+}
+$payloadPending=New-Object 'System.Collections.Generic.Stack[string]'
+$payloadPending.Push($payload)
+while ($payloadPending.Count -gt 0) {
+  $payloadDirectory=$payloadPending.Pop()
+  Assert-E06PlainPathAncestors -Candidate $payloadDirectory -Scope 'NSIS_PAYLOAD_DIRECTORY'
+  foreach ($childDirectory in @(Get-ChildItem -LiteralPath $payloadDirectory -Directory -Force -ErrorAction Stop)) {
+    if (($childDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+      throw 'E06_NSIS_PAYLOAD_DIRECTORY_REPARSE_HOLD'
+    }
+    $payloadPending.Push($childDirectory.FullName)
+  }
+}
 # Include the existing program files in the conservative NSIS manifest.
 $entries=@(Get-ChildItem -LiteralPath $payload -File -Recurse -Force | Sort-Object FullName | ForEach-Object {
   if (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'NO_REPARSE_PAYLOAD' }
+  Assert-E06PlainPathAncestors -Candidate $_.FullName -Scope 'NSIS_PAYLOAD_FILE'
   $relative=$_.FullName.Substring($payload.Length).TrimStart('\')
   [ordered]@{path=$relative.Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
 })
