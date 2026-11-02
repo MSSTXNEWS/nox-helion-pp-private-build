@@ -112,3 +112,29 @@ test('stale, missing and reordered terminal notices cannot advertise Installed',
   assert.doesNotMatch(present(v),/Installed|completed/,'reordered event must not spoof completion in feed');
   assert.match(present(v),/STALE/);
 });
+
+test('unmatched native terminal notices never imply Installed or LIVE', () => {
+  const primary='11111111-1111-4111-8111-111111111111';
+  const foreign='22222222-2222-4222-8222-222222222222';
+  for (const variant of [
+    {label:'foreign current',jobId:foreign,tag:'llama3',at:'current',status:/STALE/},
+    {label:'foreign missing',jobId:foreign,tag:'llama3',at:'missing',status:/UNKNOWN/},
+    {label:'foreign future',jobId:foreign,tag:'llama3',at:'future',status:/UNKNOWN/},
+    {label:'foreign old',jobId:foreign,tag:'llama3',at:'old',status:/STALE/},
+    {label:'same job wrong tag',jobId:primary,tag:'mistral',at:'current',status:/STALE/}
+  ]) {
+    const v=mount();
+    v.app.state.activeJob={jobId:primary,modelId:'llama3',modelTag:'llama3',state:'Queued'};
+    const atUtc=variant.at==='current' ? v.utc() :
+      variant.at==='future' ? v.future(60000) :
+      variant.at==='old' ? new Date(v.clock()-3600000).toISOString() : undefined;
+    v.app.processMessage({type:'p03.event.v1',event:{
+      jobId:variant.jobId,modelTag:variant.tag,phase:'completed',status:'Installed',atUtc}});
+    const row=v.document.getElementById('eventFeed').children[0];
+    const visible=row.children.map(x=>x.textContent).join(' ');
+    assert.doesNotMatch(visible,/Installed|completed/,variant.label+' cannot claim terminal result');
+    assert.match(visible,variant.status,variant.label+' must be advisory');
+    assert.equal(v.app.state.activeJob.state,'Queued');
+    assert.equal(v.signal(),'● —',variant.label+' cannot mark native queue LIVE');
+  }
+});

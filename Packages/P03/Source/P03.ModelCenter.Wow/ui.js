@@ -323,14 +323,14 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
      ['Completed','Failed','Cancelled'].includes(job.state)||
      (job.state==='Cancelling'&&evt.phase!=='cancelled')||
      (evt.phase==='started'&&job.state!=='Queued')))return;
-  // Preserve history, but stale/UNKNOWN/reordered events must never claim
-  // terminal native success when the matching durable queue rejected the frame.
-  if(sameJob&&!freshNativeQueueFrame){
+  // Preserve history, but unmatched, stale/UNKNOWN/reordered events must never
+  // claim terminal success without a fresh matching durable queue frame.
+  if(!freshNativeQueueFrame){
     safe.phase='advisory';
     safe.status=validAt===null?'UNKNOWN':'STALE';
   }
   state.events.unshift(safe);state.events.length=Math.min(state.events.length,40);
-  if(validAt!==null && (latestStampedEventAt===null || validAt>latestStampedEventAt))latestStampedEventAt=validAt;
+  if(freshNativeQueueFrame && (latestStampedEventAt===null || validAt>latestStampedEventAt))latestStampedEventAt=validAt;
   refreshNativeEventSignal();
   if(freshNativeQueueFrame){
     if(lastAppliedNativeJobAt.size>=32&&!lastAppliedNativeJobAt.has(evt.jobId))
