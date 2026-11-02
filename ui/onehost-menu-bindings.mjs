@@ -31,6 +31,9 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
     throw Error('NOX_NATIVE_HOST_REQUIRED');
   const pending = new Map(); let disposed=false;
   function receive(event) {
+    // WebView2 host messages have source === chrome.webview and are UA-trusted.
+    // Ignore renderer-dispatched MessageEvents even if they copy a request nonce.
+    if (event?.isTrusted !== true || event.source !== webview) return;
     const v=event?.data;
     if(!v || typeof v!=='object' || !['p02NativeResult','p02NativeEvent'].includes(v.kind))return;
     const p=pending.get(v.requestId);
@@ -104,7 +107,11 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
   const doc=documentRef,view=windowRef;
   if(!doc||!view)throw Error('NOX_MENU_DOCUMENT_REQUIRED');
   // The endpoint is accessible only at the original native virtual origin.
-  if(view.location?.origin!=='https://nox.local')return null;
+  // Same-origin paths are NOT the native-approved mapped HOME (exact https://nox.local/).
+  // Fail closed before subscribing the browser to the existing native IPC transport.
+  const loc=view.location;
+  if(loc?.origin!=='https://nox.local' || loc.pathname!=='/' ||
+     loc.search!=='' || loc.hash!=='')return null;
   const native=view.chrome?.webview;
   if(!native)return null;
   const client=createNativeMenuClient({webview:native,cryptoRef:view.crypto});

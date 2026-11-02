@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createNativeMenuClient,mountOneHostMenu,canonicalChatContext} from '../../ui/onehost-menu-bindings.mjs';
 import {SELFBUILDER_MENU,MENU_V2_SECTIONS} from '../../ui/selfbuilder-menu-v2.mjs';
-function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,reply:x=>listener?.({data:x})};}
+function fixture(){let listener;const sent=[];let next=1;const webview={postMessage:x=>sent.push(x),addEventListener:(n,f)=>listener=f,removeEventListener:()=>{listener=null;}};const client=createNativeMenuClient({webview,cryptoRef:{getRandomValues:b=>{b.fill(next++);return b;}},timeoutMs:10});return {client,sent,webview,reply:x=>listener?.({data:x,source:webview,isTrusted:true}),emit:(x,source,trusted=false)=>listener?.({data:x,source,isTrusted:trusted})};}
 test('native result must correlate route and nonce; stream only that request',async()=>{
  const f=fixture(),events=[];const p=f.client.request('helion.chat',{text:'hi'},e=>events.push(e));const req=f.sent[0];
  f.reply({kind:'p02NativeEvent',requestId:req.requestId,routeId:'chat.model',state:'STREAMING',data:{route:'chat.model',delta:'bad'}});
@@ -71,4 +71,21 @@ test('FORGE controls require native-listed job and pass only its identifier',asy
  await button.listeners.click();assert.equal(last,undefined);
  select.value='native-job-7';await button.listeners.click();
  assert.equal(last.job_id,'native-job-7');assert.equal('path' in last,false);menu.destroy();
+});
+
+test('B06: forged JS MessageEvent cannot impersonate the WebView2 native host',async()=>{
+ const f=fixture();
+ let completed=false;
+ const pending=f.client.request('chat.history',{}).then(v=>{completed=true;return v;});
+ const req=f.sent[0];
+ const ack={kind:'p02NativeResult',requestId:req.requestId,routeId:req.routeId,
+   state:'COMPLETED',result:{verified:true}};
+ // Attack A: dispatchEvent creates isTrusted=false even if source is copied.
+ f.emit(ack,f.webview,false);
+ f.emit(ack,null,true); // Attack B: foreign source, even with trusted flag.
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(completed,false,'renderer ACK must remain pending');
+ f.reply(ack); // Genuine WebView2 host source + trusted event.
+ assert.equal((await pending).result.verified,true);
+ f.client.destroy();
 });
