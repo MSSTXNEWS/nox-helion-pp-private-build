@@ -237,6 +237,52 @@ class Tests(unittest.TestCase):
         self.assertEqual(r["local_knowledge_ingested"],1)
         self.assertEqual(len(s.ingested),1)
 
+    def test_uncertain_s03_ingest_ack_blocks_all_following_p03_dispatch(self):
+        digest = "f" * 64
+        for invalid in (
+            {"ack": True, "s03_readback": False, "sha256": digest},
+            {"ack": True, "s03_readback": True, "sha256": "0" * 64},
+            {"ack": False, "s03_readback": True, "sha256": digest},
+            {},
+            None,
+        ):
+            with self.subTest(invalid=invalid):
+                s = State()
+                s.p = policy(allow_local_knowledge_ingest=True,
+                             reviewed_local_artifacts={
+                                 digest: {"rights_verified": True, "content_safe_for_s03": True}})
+                s.rows = [{"sha256": digest, "kind": "SOURCE_CANDIDATE", "size_bytes": 100}]
+                s.app.callbacks = replace(s.app.callbacks, ingest=lambda _session, _art: invalid)
+                receipt = s.app.run("owner_A", now=NOW)
+                self.assertEqual(receipt["status"], "HOLD")
+                self.assertEqual(receipt["reason"],
+                                 "NATIVE_S03_INGEST_ACK_OR_DIGEST_MISMATCH_READBACK_REQUIRED")
+                self.assertEqual(s.calls, [])
+                self.assertFalse(receipt["release_accepted"])
+
+    def test_uncertain_second_s03_ack_does_not_dispatch_p03_models(self):
+        first, second = "e" * 64, "f" * 64
+        s = State()
+        s.p = policy(allow_local_knowledge_ingest=True,
+                     reviewed_local_artifacts={
+                         first: {"rights_verified": True, "content_safe_for_s03": True},
+                         second: {"rights_verified": True, "content_safe_for_s03": True}})
+        s.rows = [
+            {"sha256": first, "kind": "SOURCE_CANDIDATE", "size_bytes": 100},
+            {"sha256": second, "kind": "SOURCE_CANDIDATE", "size_bytes": 100}]
+        def partial_ack(_session, artifact):
+            s.ingested.append(artifact)
+            return {"ack": True, "s03_readback": True,
+                    "sha256": artifact["sha256"] if len(s.ingested) == 1 else "0" * 64}
+        s.app.callbacks = replace(s.app.callbacks, ingest=partial_ack)
+        receipt = s.app.run("owner_A", now=NOW)
+        self.assertEqual(receipt["status"], "HOLD")
+        self.assertEqual(receipt["reason"],
+                         "NATIVE_S03_INGEST_ACK_OR_DIGEST_MISMATCH_READBACK_REQUIRED")
+        self.assertEqual(len(s.ingested), 2)
+        self.assertEqual(s.calls, [])
+        self.assertFalse(receipt["release_accepted"])
+
     def test_unreviewed_no_ingest(self):
         s=State();s.p=policy(allow_local_knowledge_ingest=True)
         s.rows=[{"sha256":"f"*64,"kind":"SOURCE_CANDIDATE","size_bytes":100}]

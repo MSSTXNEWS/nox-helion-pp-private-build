@@ -282,9 +282,15 @@ class FirstBootCoordinator:
                             "downloaded": 0, "release_accepted": False}
                 if cancelled():
                     break  # Late native ACK is not an import completion receipt.
-                if (isinstance(receipt, Mapping) and receipt.get("ack") is True and
-                    receipt.get("s03_readback") is True and receipt.get("sha256") == digest):
-                    ingested.append(digest)
+                if (not isinstance(receipt, Mapping) or receipt.get("ack") is not True or
+                    receipt.get("s03_readback") is not True or receipt.get("sha256") != digest):
+                    # A native S03 write may already be durable after an uncertain ACK.
+                    # Fail closed: next run must read back the owner S03 state.
+                    # Never ingest more candidates or dispatch P03 after uncertainty.
+                    return {"schema": "NOX-FIRSTBOOT-RECEIPT-v1", "status": "HOLD",
+                            "reason": "NATIVE_S03_INGEST_ACK_OR_DIGEST_MISMATCH_READBACK_REQUIRED",
+                            "downloaded": 0, "release_accepted": False}
+                ingested.append(digest)
         # STOP+RESET may arrive in the final S03 callback while there are NO
         # queued P03 actions to iterate. Never publish ALREADY_PRESENT then.
         # Native owner must independently read back any durable S03 write.
