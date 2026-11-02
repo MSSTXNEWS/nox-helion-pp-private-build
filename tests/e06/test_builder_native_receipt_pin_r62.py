@@ -10,7 +10,7 @@ def blob_sha(raw):
 class SourcePinTests(unittest.TestCase):
     def test_live_verifier_pin(self):
         text = BUILDER.read_text(encoding="utf-8-sig")
-        matches = re.findall("expectedNativeVerifierBlob="+String.fromCharCode(39)+"([0-9a-f]{40})"+String.fromCharCode(39), text)
+        matches = re.findall("expectedNativeVerifierBlob='([0-9a-f]{40})'", text)
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0], blob_sha(VERIFIER.read_bytes()))
 
