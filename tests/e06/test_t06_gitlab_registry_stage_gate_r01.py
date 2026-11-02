@@ -30,7 +30,7 @@ class SameVmGitLabStagePolicy(unittest.TestCase):
                      "payload/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe",
                      "payload/payload.sha256.json",
                      "python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe",
-                     "T06_INSTALLED_SMOKE.json"):
+                     "work/t06-local-bridge/"):
             with self.subTest(item=item):
                 self.assertIn(item, job)
         self.assertIn("This is not E07", job)
