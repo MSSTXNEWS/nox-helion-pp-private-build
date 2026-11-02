@@ -43,7 +43,7 @@ ADDONS=(
     ('src/nox_selfbuilder/complete_builder.py', 'nox_selfbuilder/complete_builder.py', 'f82679bc1ec648135c29abdef964adc3a097e0e6'),
     ('src/nox_selfbuilder/evolution.py', 'nox_selfbuilder/evolution.py', '9c38ca9b1063cda7b0569af7ce622b739213adf4'),
     ('src/nox_selfbuilder/learning.py', 'nox_selfbuilder/learning.py', '3e1cf4f26cfab2505558d67fd5a5bd76ea172e06'),
-    ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', 'e846b79287dfcbd7d802085382700a47f142eb7a'),
+    ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', '17a52f816d9956e43662ed86cc5dbb212d65a5ba'),
     ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'aee6910958973dda68dac601eade3969ac45d500'),
     ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '2347b79dba7108be3a942975a3c3782f3c99e149'),
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),

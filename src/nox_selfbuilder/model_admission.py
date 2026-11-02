@@ -25,6 +25,15 @@ def model_candidates(path:Path)->list[dict]:
         raise ValueError("CATALOG_SCHEMA_INVALID")
     if not isinstance(x.get("models"), list):
         raise ValueError("CATALOG_MODELS_INVALID")
+    for item in x["models"]:
+        # A missing RAM policy previously behaved as permission to skip RAM review.
+        # Validate the whole registry before selecting a candidate or proposing P03 work.
+        if (not isinstance(item, dict) or
+            not isinstance(item.get("tag"), str) or not TAG.fullmatch(item["tag"]) or
+            not isinstance(item.get("commercial_policy"), str)):
+            raise ValueError("CATALOG_MODEL_ENTRY_INVALID")
+        if type(item.get("max_recommended_on_24gb")) is not bool:
+            raise ValueError("CATALOG_RAM_POLICY_INVALID")
     return x["models"]
 
 def p03_review_handoff(*,catalog_path:Path,tag:str,attestation:Mapping,owner_consent:bool)->dict:
@@ -48,7 +57,7 @@ def p03_review_handoff(*,catalog_path:Path,tag:str,attestation:Mapping,owner_con
         if not isinstance(attestation.get(k),str) or not attestation[k]:
             raise ValueError("P03_"+k.upper()+"_MISSING")
     ram_policy = item.get("max_recommended_on_24gb")
-    if "max_recommended_on_24gb" in item and type(ram_policy) is not bool:
+    if type(ram_policy) is not bool:
         raise ValueError("CATALOG_RAM_POLICY_INVALID")
     if ram_policy is False:
         ram_gb = attestation.get("installed_ram_gb")
