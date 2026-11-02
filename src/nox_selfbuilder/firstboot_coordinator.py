@@ -317,8 +317,11 @@ class FirstBootCoordinator:
                     receipt.get("id") != i or
                     receipt.get("sha256") != action["artifact"]["sha256"] or
                     type(receipt.get("already_queued", False)) is not bool):
+                # The native enqueue may already be durable despite a bad ACK.
+                # Stop issuing more actions; next boot must read back the
+                # original per-principal queue before deciding what to resume.
                 denied.append({"id": i, "reason": "NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH"})
-                continue
+                break
             if receipt.get("already_queued", False):
                 already_queued.append(i)
             else:
