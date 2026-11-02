@@ -330,13 +330,20 @@ class P03OneHostPort:
                 raise P03PortHold("Owner3 backend returned non-object acknowledgement")
             # A backend HOLD/error is a factual refusal, not a successful native
             # operation ACK. Preserve the existing owner backend and queue.
-            if type(result) is dict:
-                state = result.get("status")
-                if (result.get("ok") is False or
-                    (type(state) is str and
-                     (state.upper().startswith(("HOLD", "ERROR")) or
-                      state.upper() in ("FAILED", "DENIED")))):
-                    raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
+            # An empty object or a non-Boolean "ok" is not a native ACK.
+            # Preserve existing factual job receipts without mandating a new schema.
+            if not result:
+                raise P03PortHold("Owner3 backend returned empty acknowledgement")
+            if "ok" in result and result["ok"] is not True:
+                raise P03PortHold("Owner3 backend returned non-affirmative acknowledgement")
+            if "status" in result and (type(result["status"]) is not str
+                                      or not result["status"].strip()):
+                raise P03PortHold("Owner3 backend returned malformed status")
+            state = result.get("status")
+            if (type(state) is str and
+                (state.upper().startswith(("HOLD", "ERROR")) or
+                 state.upper() in ("FAILED", "DENIED"))):
+                raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
             return result
         except (P03PortDenied, P03PortHold):
             raise
