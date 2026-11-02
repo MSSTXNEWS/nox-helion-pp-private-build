@@ -3,7 +3,7 @@ No external HTTP artifact fetch, zero new host/server, no SourceLock rewrite.
 The only completed status is a diagnostic installer candidate, NOT an E07 pass.
 """
 from __future__ import annotations
-import hashlib,json,os,pathlib,subprocess,sys,time,re
+import hashlib,json,os,pathlib,subprocess,sys,time,re,stat
 from t06_compile_original_wpf_p02 import verified_source_head
 from t06_package_original_onehost import EXPECTED_ZIP_SHA
 from t06_source_receipt_guard import attest_candidate
@@ -106,6 +106,27 @@ def webview2_root_evidence(lifecycle):
     return proof
 
 
+def _no_reparse_components(path):
+    """Reject redirected ancestors before admitting original NSIS payload bytes.
+
+    Both the packaged directory and each asset must have a trusted full path:
+    a direct child can have correct SHA even when an ancestor junction points
+    to another tree. Windows junction/reparse and POSIX symlinks fail closed.
+    This is source admission, not an E07/TOCTOU-proof installed-file claim.
+    """
+    for node in (path, *path.parents):
+        try:
+            info = node.lstat()
+        except OSError:
+            return False
+        if (stat.S_ISLNK(info.st_mode) or
+                bool(getattr(info, "st_file_attributes", 0) &
+                     getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)) or
+                getattr(node, "is_junction", lambda: False)()):
+            return False
+    return True
+
+
 def verify_mega814_payload_files(packaged, summary):
     """Verify fourteen DISTINCT original NSIS assets, not fourteen manifest rows.
 
@@ -115,8 +136,7 @@ def verify_mega814_payload_files(packaged, summary):
     entries = summary.get("files") if type(summary) is dict else None
     if type(entries) is not list or len(entries) != 14:
         raise RuntimeError("NOX_MEGA814_MENU14_COUNT_HOLD")
-    if (not packaged.is_dir() or packaged.is_symlink() or
-            getattr(packaged, "is_junction", lambda: False)()):
+    if (not packaged.is_dir() or not _no_reparse_components(packaged)):
         raise RuntimeError("NOX_MEGA814_PACKAGE_PATH_UNTRUSTED")
     seen = set()
     for item in entries:
@@ -130,8 +150,7 @@ def verify_mega814_payload_files(packaged, summary):
         file = packaged / name
         expected_size = item.get("bytes")
         expected_sha = item.get("sha256")
-        if (not file.is_file() or file.is_symlink() or
-                getattr(file, "is_junction", lambda: False)() or
+        if (not file.is_file() or not _no_reparse_components(file) or
                 type(expected_size) is not int or expected_size < 0 or
                 type(expected_sha) is not str or
                 re.fullmatch(r"[0-9a-f]{64}", expected_sha) is None or
