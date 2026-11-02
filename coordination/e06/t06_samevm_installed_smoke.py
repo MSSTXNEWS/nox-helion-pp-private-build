@@ -601,6 +601,24 @@ exit 0"""
     require(fresh["code"]==0,"T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL")
     return fresh
 
+def wpf_startup_marker_flags(window: str) -> dict:
+    """Only bracket-prefixed original shell.log events; no text-substring success."""
+    events=("INIT_BEGIN","NAV_START","NAV_OK","NAV_FAIL","BLOCK_NAV",
+            "WEBVIEW_PROCESS_FAILED","P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
+            "INIT_ERROR","P02_ORIGINAL_NATIVE_HOLD")
+    lines=window.splitlines()
+    out={name:False for name in events}
+    for line in lines:
+        if not line.startswith("["):
+            continue
+        prefix,sep,msg=line.partition("] ")
+        if not sep or not 2<=len(prefix)<=160:
+            continue
+        name=msg.split(" ",1)[0].rstrip("\r")
+        if name in out: out[name]=True
+    return out
+
+
 def summarize_fresh_webview_navigation(window: str) -> dict:
     """Bounded diagnostics from newly read WPF log bytes; never include raw URLs.
 
@@ -609,17 +627,18 @@ def summarize_fresh_webview_navigation(window: str) -> dict:
     """
     if type(window) is not str:
         raise TypeError("WPF_NAV_WINDOW_REQUIRED")
-    failures = re.findall(r"\bNAV_FAIL[ \t]+([A-Za-z][A-Za-z0-9]{0,63})\b", window)
+    failures = re.findall(r"(?m)^\[[^\]\r\n]{1,159}\] NAV_FAIL[ \t]+([A-Za-z][A-Za-z0-9]{0,63})(?=[ \t\r\n]|$)", window)
     process_failures = re.findall(
-        r"\bWEBVIEW_PROCESS_FAILED[ \t]+([A-Za-z][A-Za-z0-9]{0,63})\b", window)
+        r"(?m)^\[[^\]\r\n]{1,159}\] WEBVIEW_PROCESS_FAILED[ \t]+([A-Za-z][A-Za-z0-9]{0,63})(?=[ \t\r\n]|$)", window)
+    flags=wpf_startup_marker_flags(window)
     return {
-        "init_started": "INIT_BEGIN" in window,
-        "nav_started": "NAV_START" in window,
-        "nav_failed": bool(failures),
+        "init_started": flags["INIT_BEGIN"],
+        "nav_started": flags["NAV_START"],
+        "nav_failed": flags["NAV_FAIL"],
         "nav_failure_status": failures[-1] if failures else None,
-        "webview_process_failed": bool(process_failures),
+        "webview_process_failed": flags["WEBVIEW_PROCESS_FAILED"],
         "webview_process_failure_kind": process_failures[-1] if process_failures else None,
-        "navigation_blocked": "BLOCK_NAV" in window,
+        "navigation_blocked": flags["BLOCK_NAV"],
     }
 
 
@@ -635,8 +654,9 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
     offset=original.st_size if original else 0
     identity=(original.st_dev,original.st_ino) if original else None
     seen={mark:False for mark in (
-        "NAV_OK", "P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
-        "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD")}
+        "INIT_BEGIN","NAV_START","NAV_OK","NAV_FAIL","BLOCK_NAV",
+        "WEBVIEW_PROCESS_FAILED","P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK",
+        "INIT_ERROR","P02_ORIGINAL_NATIVE_HOLD")}
     boundary=""
     navigation={"init_started":False,"nav_started":False,"nav_failed":False,
                 "nav_failure_status":None,"webview_process_failed":False,
@@ -667,16 +687,22 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                         chunk=stream.read(min(65536,current.st_size-offset))
                     offset+=len(chunk)
                     window=boundary+chunk.decode("utf-8",errors="replace")
-                    for marker in seen:
-                        seen[marker]=seen[marker] or marker in window
-                    fresh=summarize_fresh_webview_navigation(window)
-                    for label in ("init_started","nav_started","nav_failed",
-                                  "webview_process_failed","navigation_blocked"):
-                        navigation[label]=navigation[label] or fresh[label]
-                    for label in ("nav_failure_status","webview_process_failure_kind"):
-                        if fresh[label] is not None:
-                            navigation[label]=fresh[label]
-                    boundary=window[-128:]
+                    complete_lines,separator,tail=window.rpartition("\n")
+                    if separator:
+                        # Never admit partial lines or marker words inside errors.
+                        exact=wpf_startup_marker_flags(complete_lines)
+                        for marker in seen:
+                            seen[marker]=seen[marker] or exact[marker]
+                        fresh=summarize_fresh_webview_navigation(complete_lines)
+                        for label in ("init_started","nav_started","nav_failed",
+                                      "webview_process_failed","navigation_blocked"):
+                            navigation[label]=navigation[label] or fresh[label]
+                        for label in ("nav_failure_status","webview_process_failure_kind"):
+                            if fresh[label] is not None:
+                                navigation[label]=fresh[label]
+                        boundary=tail[-4096:]
+                    else:
+                        boundary=window[-4096:]
             if seen["INIT_ERROR"] or seen["P02_ORIGINAL_NATIVE_HOLD"]:
                 break
             if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
@@ -712,6 +738,9 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                 "log_replaced":log_replaced,
                 "new_log_bytes_scanned":offset-(original.st_size if original else 0),
                 "navigation_diagnostic":navigation,
+                "wpf_shell_exact_event_flags":{name:seen[name] for name in (
+                    "INIT_BEGIN","NAV_START","NAV_OK","NAV_FAIL",
+                    "BLOCK_NAV","WEBVIEW_PROCESS_FAILED","INIT_ERROR")},
                 "proof":"CURRENT_WINDOWS_PROCESS_NEW_SHELL_LOG",
                 "independent_visual_e07":"NOT_RUN"}
     finally:
