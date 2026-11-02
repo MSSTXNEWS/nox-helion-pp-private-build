@@ -274,6 +274,52 @@ def candidate_gate()->dict:
             "native_source_receipt":"OFFLINE_BACKBONE_PASS_LIVE_MODEL_"+native["live_model_status"],
             "manifest_files_checked":len(seen)}
 
+WEBVIEW2_POSTINSTALL_POLL_SECONDS = (0, 2, 4, 8, 12, 18, 24, 30)
+
+
+def valid_webview2_registration(registration: dict) -> bool:
+    """Fail-closed diagnostic, never a substitute for original P01 preflight."""
+    if type(registration) is not dict:
+        return False
+    views = ("HKLM_32_VIEW", "HKLM_64_VIEW", "HKCU_32_VIEW", "HKCU_64_VIEW", "HKCU_USER")
+    for view in views:
+        row = registration.get(view)
+        if type(row) is not dict or row.get("present") is not True:
+            continue
+        pv = row.get("pv")
+        if type(pv) is str and re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}", pv):
+            if int(pv.split(".", 1)[0]) > 0:
+                return True
+    return False
+
+
+def poll_webview2_postinstall(run_preflight, probe_registration, pause,
+                              delays=WEBVIEW2_POSTINSTALL_POLL_SECONDS):
+    """Wait for EdgeUpdate asynchronous registration; P01 owner preflight alone grants PASS."""
+    attempts = []
+    last = None
+    registry = {}
+    for delay in delays:
+        if delay:
+            pause(delay)
+        last = run_preflight()
+        reason = last["stdout_tail"] + "\n" + last["stderr_tail"]
+        state = ("PASS" if last["code"] == 0 else
+                 "RUNTIME_MISSING" if "P01_WEBVIEW2_RUNTIME_MISSING" in reason else
+                 "UNRELATED_HOLD")
+        attempts.append({"delay_seconds": delay,
+                         "exit_code": last["code"],
+                         "strict_preflight_status": state})
+        if state == "PASS":
+            return last, attempts, probe_registration(), "PASS_BY_ORIGINAL_PREFLIGHT"
+        if state == "UNRELATED_HOLD":
+            return last, attempts, probe_registration(), "UNRELATED_HOLD"
+        registry = probe_registration()
+        if valid_webview2_registration(registry):
+            return last, attempts, registry, "REGISTRY_PREFLIGHT_DIVERGENCE"
+    return last, attempts, registry, "RUNTIME_MISSING"
+
+
 def webview2_registration_diagnostic()->dict:
     """Read-only, non-authoritative registry evidence on the SAME Windows CI VM.
 
@@ -287,6 +333,8 @@ def webview2_registration_diagnostic()->dict:
     targets=(
         ("HKLM_32_VIEW",winreg.HKEY_LOCAL_MACHINE,"SOFTWARE\\"+suffix,winreg.KEY_WOW64_32KEY),
         ("HKLM_64_VIEW",winreg.HKEY_LOCAL_MACHINE,"SOFTWARE\\"+suffix,winreg.KEY_WOW64_64KEY),
+        ("HKCU_32_VIEW",winreg.HKEY_CURRENT_USER,"Software\\"+suffix,winreg.KEY_WOW64_32KEY),
+        ("HKCU_64_VIEW",winreg.HKEY_CURRENT_USER,"Software\\"+suffix,winreg.KEY_WOW64_64KEY),
         ("HKCU_USER",winreg.HKEY_CURRENT_USER,"Software\\"+suffix,0),
     )
     result={}
@@ -316,6 +364,12 @@ def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
             "T06_PREFLIGHT_FAILED_FOR_UNRELATED_SECURITY_CAUSE")
     require(os.environ.get("NOX_M1_CI_INSTALL_WEBVIEW2")=="YES",
             "T06_OFFICIAL_WEBVIEW2_RUNTIME_REQUIRED_CI_OPT_IN")
+    initial_registration=webview2_registration_diagnostic()
+    report["installer_lifecycle"]["webview2_initial_registration"]=initial_registration
+    # Never install another signed Runtime when it already has real pv and the
+    # original P01 stage merely probes the wrong registry view.
+    require(not valid_webview2_registration(initial_registration),
+            "T06_WEBVIEW2_STAGED_PREFLIGHT_REGISTRY_DIVERGENCE")
     from urllib.request import urlopen
     from urllib.parse import urlsplit
 
@@ -385,31 +439,25 @@ exit 0"""
         return target
 
     def strict_postinstall_preflight(label:str)->dict:
-        """Boundedly wait for signed EdgeUpdate child registration; no safety bypass.
+        """Wait for async Microsoft EdgeUpdate registration, not for browser Edge.
 
-        Original immutable R11 Preflight-InstallPath.ps1 remains the sole PASS
-        authority. An unrelated failure stops polling immediately.
+        The ORIGINAL signed WebView2 owner preflight exclusively decides PASS.
+        Registry mismatch is an explicit HOLD, never a substitute PASS.
         """
-        attempts=[]
-        for delay in (0,2,4,8,12):
-            if delay: time.sleep(delay)
-            result=run(["powershell.exe","-NoProfile","-NonInteractive",
+        def owner_preflight():
+            return run(["powershell.exe","-NoProfile","-NonInteractive",
                         "-ExecutionPolicy","Bypass","-File",str(script),
                         "-InstallRoot",str(install)],80)
-            reason=result["stdout_tail"]+"\n"+result["stderr_tail"]
-            status=("PASS" if result["code"]==0 else
-                    "RUNTIME_MISSING" if "P01_WEBVIEW2_RUNTIME_MISSING" in reason
-                    else "UNRELATED_HOLD")
-            attempts.append({"delay_seconds":delay,"exit_code":result["code"],
-                             "strict_preflight_status":status})
-            if status!="RUNTIME_MISSING": break
+        result, attempts, registration, verdict = poll_webview2_postinstall(
+            owner_preflight, webview2_registration_diagnostic, time.sleep)
         report["installer_lifecycle"]["webview2_"+label+"_strict_preflight_poll"]=attempts
-        # Explicit scope/readback before FAIL, no change to strict preflight.
-        registration=webview2_registration_diagnostic()
         report["installer_lifecycle"]["webview2_"+label+"_registration_diagnostic"]=registration
+        report["installer_lifecycle"]["webview2_"+label+"_strict_preflight_verdict"]=verdict
         print("T06_WEBVIEW2_REGISTRATION_DIAGNOSTIC "+json.dumps(
-            {"kind":label,"registry":registration,"strict_result":result["code"]},
-            sort_keys=True),flush=True)
+            {"kind":label,"registry":registration,"strict_result":result["code"],
+             "verdict":verdict},sort_keys=True),flush=True)
+        require(verdict!="REGISTRY_PREFLIGHT_DIVERGENCE",
+                "T06_WEBVIEW2_STAGED_PREFLIGHT_REGISTRY_DIVERGENCE")
         return result
 
     target=download_microsoft("https://go.microsoft.com/fwlink/p/?LinkId=2124703",
