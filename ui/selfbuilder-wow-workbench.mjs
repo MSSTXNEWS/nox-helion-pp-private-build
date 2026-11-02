@@ -35,11 +35,16 @@ export function previewDesign(proposal,id){
 }
 /** Never infer an enabled background worker from UI state or local storage. */
 export function backgroundToggleState(receipt){
+ // Original S03 reports RUNNING/ON only while enabled; STOPPING/OFF only while disabled.
+ // A contradictory snapshot must never draw a fake LIVE worker or enable the switch.
+ const statusConsistent=receipt?.enabled===true
+   ? receipt.status==='ON'||receipt.status==='RUNNING'
+   : receipt?.enabled===false&&(receipt.status==='OFF'||receipt.status==='STOPPING');
  if(!receipt||receipt.schema!=='NOX-SELFBUILDER-BACKGROUND-v1'||
     receipt.source!=='ORIGINAL_S03'||typeof receipt.enabled!=='boolean'||
     !Number.isSafeInteger(receipt.revision)||receipt.revision<0||
     !['OFF','ON','RUNNING','STOPPING'].includes(receipt.status)||
-    receipt.auto_code!==false||receipt.auto_merge!==false||receipt.auto_install!==false)
+    receipt.auto_code!==false||receipt.auto_merge!==false||receipt.auto_install!==false||!statusConsistent)
   return {ready:false,enabled:false,label:'Фоновое саморазвитие · HOLD',
     note:'Нет подтверждённого состояния в памяти S03',switchLabel:'Недоступно'};
  return {ready:true,enabled:receipt.enabled,
@@ -110,11 +115,13 @@ export function mountWowDesignWorkbench({root,documentRef,getProposal,ownerAppro
      const ack=await setBackgroundEnabled(requested);
      if(disposed)return;
      // Native result is still only a hint; query persisted S03 state afterwards.
-     if(!backgroundToggleState(ack).ready||ack.enabled!==requested)
+     if(!backgroundToggleState(ack).ready||ack.enabled!==requested||
+        ack.revision<=backgroundReceipt.revision)
        throw Error('S03_BACKGROUND_SWITCH_NOT_CONFIRMED');
      const readback=await getBackgroundState();
      if(disposed)return;
-     if(!backgroundToggleState(readback).ready||readback.enabled!==requested)
+     if(!backgroundToggleState(readback).ready||readback.enabled!==requested||
+        readback.revision<ack.revision)
        throw Error('S03_BACKGROUND_READBACK_MISMATCH');
      backgroundReceipt=readback;
    }catch(error){if(!disposed){backgroundReceipt=null;onError(error);}}
