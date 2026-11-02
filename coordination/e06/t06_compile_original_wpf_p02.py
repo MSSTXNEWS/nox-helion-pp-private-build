@@ -10,7 +10,7 @@ EXPECTED={
 "MainWindow.NativeP02.cs":"0b65fc5ca62788dbde01e669e98769a23ac5e8a9",
 "OneHostP02WebView2Bridge.cs":"06040a277223810759fe9e875e183589c185fa1d",
 "stage_native_p02.py":"ab8520c7b277726f38400b9fc9a1ca5bd2571333",
-"NativePythonPipe.cs":"711644bf4d2052d812bf71a0b679d8531a3ca76e"
+"NativePythonPipe.cs":"9d8b5abe27b49823c90ba75447d190741e6ba075"
 }
 def git_blob(raw):
     return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()

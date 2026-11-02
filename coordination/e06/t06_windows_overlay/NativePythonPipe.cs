@@ -50,6 +50,29 @@ public sealed class NativePythonPipe : IAsyncDisposable
         _reader = Task.Run(ReadPumpAsync);
     }
 
+    // The native/Python boundary must not interpret the same field twice.
+    // JsonElement permits duplicate JSON names while Python dict decoding
+    // silently keeps the last value; deny ambiguity before any framed action
+    // is written or any native reply/event is trusted.
+    private static void RequireUnambiguousJson(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in node.EnumerateObject())
+            {
+                if (!keys.Add(property.Name))
+                    throw new NativePipeHold("NATIVE_JSON_DUPLICATE_FIELD_DENIED");
+                RequireUnambiguousJson(property.Value);
+            }
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in node.EnumerateArray())
+                RequireUnambiguousJson(item);
+        }
+    }
+
     public async Task<NativePipeResult> RequestAsync(string route, object payload,
         TimeSpan? timeout = null, CancellationToken cancel = default)
     {
@@ -64,6 +87,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
         try { data = JsonSerializer.SerializeToElement(payload); }
         catch (Exception e) when (e is JsonException or NotSupportedException) { throw new NativePipeHold("NATIVE_PAYLOAD_INVALID"); }
         if (data.ValueKind != JsonValueKind.Object) throw new NativePipeHold("NATIVE_PAYLOAD_INVALID");
+        RequireUnambiguousJson(data);
         foreach (var prop in data.EnumerateObject())
             if (prop.Name is "tenant" or "principal" or "windows_sid" or "session_id" or "scopes"
                 or "private_approved" or "native_approve" or "nativeConsent" or "admin")
@@ -131,6 +155,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 await _input.ReadExactlyAsync(reply, _lifetime.Token).ConfigureAwait(false);
                 using var doc = JsonDocument.Parse(reply);
                 var root = doc.RootElement;
+                RequireUnambiguousJson(root);
                 if (root.ValueKind != JsonValueKind.Object ||
                     !root.TryGetProperty("protocol", out var p) || p.GetString() != "NOX-P02-NATIVE-v1" ||
                     !root.TryGetProperty("runId", out var r) || r.GetString() != _runId ||
