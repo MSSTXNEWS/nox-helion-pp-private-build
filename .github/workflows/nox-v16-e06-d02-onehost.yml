@@ -20,6 +20,7 @@ on:
       - 'coordination/e06/native_onehost_smoke.py'
       - 'coordination/e06/t06_samevm_installed_smoke.py'
       - 'tests/e06/test_native_busy_retry_r12.py'
+      - 'proposals/P01/WOW-MAX10/**'
       - 'private_build.ps1'
       - '.github/workflows/nox-v16-e06-d02-onehost.yml'
 permissions:
@@ -54,6 +55,8 @@ jobs:
           python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
           python -m unittest discover -s tests/e06 -p 'test_fastlane2_accelerator.py' -v
+          # Real original P01 source tests, not a fake browser/installed E07 receipt.
+          node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs proposals/P01/WOW-MAX10/menu-route-pending.test.mjs
   visual-source-stage:
     # Repository-owner variable only; user/model/page cannot select a runner.
     # The owner must register a trusted Windows x64 runner with label nox-win-x64.
@@ -113,6 +116,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E06_S03_TRANSIENT_PREVIEW_PERSISTENCE_HOLD' }
           python -m unittest discover -s tests/e06 -p 'test_fastlane2_accelerator.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'E06_FASTLANE2_ERR25_SOURCE_REGRESSION_HOLD' }
+      - name: Original P01 MENU10 native ACL and stale-ACK regression (source only)
+        shell: pwsh
+        run: |
+          node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs proposals/P01/WOW-MAX10/menu-route-pending.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'P01_MENU10_NATIVE_ROUTE_SOURCE_REGRESSION_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
