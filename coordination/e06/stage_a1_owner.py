@@ -48,14 +48,66 @@ def regular_owned(path: Path, base: Path) -> None:
         raise ValueError('A1_STAGE_PATH_INSPECTION_HOLD') from exc
 
 
+def trusted_anchor(path: Path, *, is_directory: bool, label: str) -> None:
+    """Never resolve away a symlink/junction at the trusted staging roots."""
+    absolute = path.absolute()
+    for node in (absolute, *absolute.parents):
+        try:
+            info = node.lstat()
+        except OSError as exc:
+            raise ValueError('A1_' + label + '_ROOT_UNAVAILABLE') from exc
+        if (stat.S_ISLNK(info.st_mode) or
+                getattr(info, 'st_file_attributes', 0) & 0x400):
+            raise ValueError('A1_' + label + '_ROOT_REPARSE_HOLD')
+    leaf_mode = absolute.lstat().st_mode
+    if not (stat.S_ISDIR(leaf_mode) if is_directory else stat.S_ISREG(leaf_mode)):
+        raise ValueError('A1_' + label + '_ROOT_TYPE_HOLD')
+
+
+def trusted_manifest_bytes(path: Path) -> bytes:
+    """Pin the lock's descriptor and live pathname, including its ancestors."""
+    trusted_anchor(path, is_directory=False, label='MANIFEST')
+    before = path.lstat()
+    flags = os.O_RDONLY | getattr(os, 'O_BINARY', 0) | getattr(os, 'O_NOFOLLOW', 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError('A1_MANIFEST_OPEN_IDENTITY_HOLD') from exc
+
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+
+    with os.fdopen(fd, 'rb') as stream:
+        opened = os.fstat(stream.fileno())
+        if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
+            raise ValueError('A1_MANIFEST_OPEN_IDENTITY_HOLD')
+        payload = stream.read(65537)
+        if len(payload) > 65536:
+            raise ValueError('A1_MANIFEST_BOUNDED_REQUIRED')
+        trusted_anchor(path, is_directory=False, label='MANIFEST')
+        if (identity(os.fstat(stream.fileno())) != identity(opened) or
+                identity(path.lstat()) != identity(opened)):
+            raise ValueError('A1_MANIFEST_CHANGED_DURING_READ')
+    return payload
+
+
 def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) -> dict:
+    # Security provenance belongs to the *named* checkout and lock file, not
+    # a resolved substitute. A directory/lock symlink could redirect the
+    # owner into an unapproved staging tree or forged ten-source pin ledger.
+    trusted_anchor(repo, is_directory=True, label='REPO')
+    trusted_anchor(source, is_directory=True, label='STAGE')
+    trusted_anchor(manifest_path, is_directory=False, label='MANIFEST')
     repo = repo.resolve(strict=True)
     source = source.resolve(strict=True)
+    if manifest_path.absolute() != repo / 'coordination/e06/A1_BUILD_SOURCES.lock.json':
+        raise ValueError('A1_CANONICAL_SOURCE_LOCK_REQUIRED')
     if source == repo or source.is_relative_to(repo / 'src') or source.is_relative_to(repo / 'coordination'):
         raise ValueError('A1_DISPOSABLE_STAGE_REQUIRED')
     if not source.is_dir():
         raise ValueError('A1_STAGE_DIRECTORY_REQUIRED')
-    data = json.loads(manifest_path.read_text(encoding='utf-8'))
+    data = json.loads(trusted_manifest_bytes(manifest_path).decode('utf-8'))
     if data.get('schema') != 'NOX-A1-ONEHOST-STAGE-LOCK-v1' or set(data.get('sources', {})) != set(REQUIRED):
         raise ValueError('A1_EXACT_TEN_SOURCE_LOCK_REQUIRED')
     staged = []

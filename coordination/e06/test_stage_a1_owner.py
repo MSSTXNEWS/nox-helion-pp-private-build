@@ -36,7 +36,7 @@ class A1StageTests(unittest.TestCase):
     def test_existing_source_prevents_overwrite(self):
         original=self.stage/'nox_selfbuilder'/'worms.py'
         original.parent.mkdir();original.write_text('USER FILE')
-        with self.assertRaisesRegex(ValueError,'DUPLICATE'):
+        with self.assertRaisesRegex(ValueError,'A1_STAGE_REUSED_SOURCE_SHA_HOLD'):
             self.run_stage()
         self.assertEqual(original.read_text(),'USER FILE')
     def test_sourceroot_cannot_be_itself_stage(self):
@@ -50,6 +50,53 @@ class A1StageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'REPARSE'):
             self.run_stage()
         self.assertFalse((self.stage/'nox_selfbuilder').exists())
+    def test_symlinked_disposable_stage_root_fails_before_write(self):
+        redirected=self.repo/'unapproved-root'
+        redirected.mkdir()
+        self.stage.rmdir()
+        try:self.stage.symlink_to(redirected, target_is_directory=True)
+        except OSError:self.skipTest('directory symlinks unavailable')
+        with self.assertRaisesRegex(ValueError,'A1_STAGE_ROOT_REPARSE_HOLD'):
+            self.run_stage()
+        self.assertFalse((redirected/'nox_selfbuilder').exists())
+
+    def test_symlinked_source_lock_fails_before_write(self):
+        redirected=self.repo/'unapproved-pin-source.json'
+        redirected.write_bytes(self.lock.read_bytes())
+        self.lock.unlink()
+        try:self.lock.symlink_to(redirected)
+        except OSError:self.skipTest('symlinks unavailable')
+        with self.assertRaisesRegex(ValueError,'A1_MANIFEST_ROOT_REPARSE_HOLD'):
+            self.run_stage()
+        self.assertFalse((self.stage/'nox_selfbuilder').exists())
+
+    def test_external_pin_source_cannot_override_canonical_manifest(self):
+        redirected=self.repo/'unapproved-pin-source.json'
+        redirected.write_bytes(self.lock.read_bytes())
+        with self.assertRaisesRegex(ValueError,'A1_CANONICAL_SOURCE_LOCK_REQUIRED'):
+            a.stage(self.stage, repo=self.repo, manifest_path=redirected)
+        self.assertFalse((self.stage/'nox_selfbuilder').exists())
+
+    def test_lock_swapped_after_preflight_before_open_fails_closed(self):
+        from unittest.mock import patch
+        external=self.repo/'unapproved-pin-source.json'
+        external.write_bytes(self.lock.read_bytes())
+        original_open=a.os.open
+        events=[]
+        def swap(path, flags, *args, **kwargs):
+            if Path(path)==self.lock:
+                events.append('simulated-race')
+                self.lock.unlink()
+                self.lock.symlink_to(external)
+            return original_open(path, flags, *args, **kwargs)
+        try:
+            with patch.object(a.os, 'open', side_effect=swap):
+                with self.assertRaisesRegex(ValueError, 'A1_MANIFEST_OPEN_IDENTITY_HOLD'):
+                    self.run_stage()
+        except OSError:self.skipTest('symlink tests unavailable')
+        self.assertEqual(events, ['simulated-race'])
+        self.assertFalse((self.stage/'nox_selfbuilder').exists())
+
     def test_rollback_only_written_files_on_failure(self):
         import builtins
         # Trigger a failure after the first new file, verify no orphaned files remain.
