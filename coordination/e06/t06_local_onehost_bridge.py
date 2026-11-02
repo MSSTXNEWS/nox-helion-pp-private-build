@@ -69,6 +69,9 @@ def main():
         # E07 preflight at zero extra runner startups: original owner NSIS
         # silent install, exact same binary SHA, framed IPC, conservative remove.
         # A missing WebView2 runtime marks an explicit hold, never fake PASS.
+        # The original same-VM verifier reads this LOCAL R11/NSIS receipt set,
+        # never the unrelated older e06/onehost-wow diagnostic build.
+        env["NOX_T06_LOCAL_BRIDGE"]="YES"
         third=run("03_INSTALLED_NSIS_NATIVE_SMOKE",
                   ROOT/"coordination/e06/t06_samevm_installed_smoke.py",env,530)
         steps.append(third)

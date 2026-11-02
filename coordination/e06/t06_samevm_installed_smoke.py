@@ -22,12 +22,17 @@ import time
 
 ROOT=Path(__file__).resolve().parents[2]
 ON_GITHUB=os.environ.get("GITHUB_ACTIONS")=="true"
-OUTPUT=ROOT/("work/e06/onehost-wow-diagnostic" if ON_GITHUB else "work/e06/onehost-r66")
-BUILD=OUTPUT
-CANDIDATE=BUILD/"ONEHOST_DIAGNOSTIC_RECEIPT.json"
-SETUP=BUILD/"NOX-HELION-V16-DIAGNOSTIC-SETUP.exe"
+ON_LOCAL_BRIDGE=os.environ.get("NOX_T06_LOCAL_BRIDGE")=="YES"
+# The imported T06 bridge and the original diagnostic builder have different
+# real output paths and incompatible receipt schemas. Never mix their proofs.
+OUTPUT=ROOT/("work/t06-local-bridge" if ON_LOCAL_BRIDGE else
+             "work/e06/onehost-wow-diagnostic" if ON_GITHUB else "work/e06/onehost-r66")
+BUILD=ROOT/"work/t06-wpf-p02-compile" if ON_LOCAL_BRIDGE else OUTPUT
+CANDIDATE=BUILD/("ONEHOST_CANDIDATE_RECEIPT.json" if ON_LOCAL_BRIDGE else "ONEHOST_DIAGNOSTIC_RECEIPT.json")
+SETUP=BUILD/("NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe" if ON_LOCAL_BRIDGE else "NOX-HELION-V16-DIAGNOSTIC-SETUP.exe")
 PAYLOAD=BUILD/"payload"
-NATIVE_PROOF=ROOT/("work/candidate/NATIVE_ONEHOST_SMOKE.json" if ON_GITHUB else "work/e06/NATIVE_ONEHOST_SMOKE.json")
+NATIVE_PROOF=(ROOT/"work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json" if ON_LOCAL_BRIDGE else
+              ROOT/("work/candidate/NATIVE_ONEHOST_SMOKE.json" if ON_GITHUB else "work/e06/NATIVE_ONEHOST_SMOKE.json"))
 BUILT_HANDOFF=BUILD/"E07_BUILT_HANDOFF.json"
 NSIS_PROOF=OUTPUT/"T06_INSTALLED_SMOKE.json"
 
@@ -71,10 +76,13 @@ def run(args:list[str],timeout:int)->dict:
                 "stdout_tail":"","stderr_tail":"TIMEOUT"}
 
 def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
+    # The bridge's verified frozen route is models.installed. Its chat.model
+    # can correctly return provider HOLD on an empty disposable CI machine.
+    route="models.installed" if ON_LOCAL_BRIDGE else "chat.model"
     request={
         "protocol":"NOX-P02-NATIVE-v1",
         "requestId":"aa55bb66cc77dd88ee99ff0011223344",
-        "route":"chat.model",
+        "route":route,
         "payload":{},
         "runId":"NOX-P02-INSTALLED-CANDIDATE-20261030"
     }
@@ -97,12 +105,95 @@ def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
             type(answer.get("result")) is dict and
             type(answer["result"].get("models")) is list,
             "T06_INSTALLED_BACKEND_FRAME_IDENTITY_OR_MODEL_HOLD")
-    return {"status":"PASS","route":"chat.model",
+    return {"status":"PASS","route":route,
             "run_id_matched":True,"request_id_matched":True,
             "duration_seconds":round(time.monotonic()-start,2),
             "binary_sha256":sha(binary)}
 
+def bridge_candidate_gate()->dict:
+    """Admit the ORIGINAL imported T06 OneHost output, never forge E07 evidence."""
+    native_source=ROOT/"work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json"
+    required=(CANDIDATE,SETUP,NATIVE_PROOF,native_source,
+              PAYLOAD/"NOX.P01.Shell.exe",
+              PAYLOAD/"Backend/NOX_HELION_PRIVATE_CANDIDATE.exe",
+              PAYLOAD/"payload.sha256.json")
+    require(all(regular(p) for p in required),"T06_BRIDGE_CANDIDATE_FILE_MISSING")
+    source=json.loads(CANDIDATE.read_text("utf-8"))
+    native=json.loads(NATIVE_PROOF.read_text("utf-8"))
+    original=json.loads(native_source.read_text("utf-8"))
+    source_zip="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
+    original_zip="ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
+    wpf=PAYLOAD/"NOX.P01.Shell.exe"
+    backend=PAYLOAD/"Backend/NOX_HELION_PRIVATE_CANDIDATE.exe"
+    manifest=PAYLOAD/"payload.sha256.json"
+    require(source.get("schema")=="NOX-E06-ONEHOST-CANDIDATE-v1" and
+            source.get("source_zip_sha256")==source_zip and
+            source.get("release_accepted") is False and
+            source.get("e07")=="NOT_ACCEPTED" and
+            source.get("wpf_source_compilation")=="PASS" and
+            source.get("backend_native_stdio_windows_exe_smoke")=="PASS" and
+            type(source.get("setup_bytes")) is int and
+            source["setup_bytes"]==SETUP.stat().st_size and
+            re.fullmatch("[0-9a-f]{64}",str(source.get("setup_sha256",""))) and
+            sha(SETUP)==source["setup_sha256"],
+            "T06_BRIDGE_SETUP_SOURCE_IDENTITY_HOLD")
+    require(native.get("phase")=="BUILT_AND_NATIVE_STDIO_SMOKE_PASS" and
+            native.get("native_windows_exe_request_reply")=="PASS" and
+            native.get("native_modelcenter_installed_read_only")=="PASS" and
+            native.get("models_installed_uses_original_local_discovery") is True and
+            native.get("original_729_unchanged") is True and
+            native.get("source_original_archive_sha256")==original_zip and
+            native.get("installed_wpf_e07") is False and
+            native.get("release_accepted") is False and
+            native.get("exe_file")==backend.name and
+            type(native.get("exe_size")) is int and
+            native["exe_size"]==backend.stat().st_size and
+            native.get("exe_sha256")==source.get("backend_sha256") and
+            sha(backend)==source["backend_sha256"],
+            "T06_BRIDGE_NATIVE_SOURCE_SHA_HOLD")
+    require(original.get("phase")=="ORIGINAL_PYTHON_SOURCE_EXECUTION_WINDOWS" and
+            original.get("source_zip_sha256")==original_zip and
+            original.get("original_archive_unchanged") is True and
+            original.get("run_id_matched") is True and
+            original.get("request_id_matched") is True and
+            original.get("native_process_exit_code")==0 and
+            original.get("release_accepted") is False and
+            sha(wpf)==source.get("wpf_sha256") and
+            sha(manifest)==source.get("manifest_sha256"),
+            "T06_BRIDGE_SOURCE_OR_WPF_SHA_HOLD")
+    inventory=json.loads(manifest.read_text("utf-8"))
+    require(inventory.get("schema")=="NOX_P01_PAYLOAD_SHA256_V1" and
+            inventory.get("entrypoint")=="NOX.P01.Shell.exe" and
+            type(inventory.get("files")) is list and
+            len(inventory["files"])>=12,"T06_BRIDGE_PAYLOAD_MANIFEST_HOLD")
+    seen=set()
+    for item in inventory["files"]:
+        require(type(item) is dict,"T06_BRIDGE_MANIFEST_ENTRY_INVALID")
+        name=item.get("path")
+        require(type(name) is str and name and "\\" not in name and
+                "\x00" not in name and ":" not in name and
+                all(part not in ("",".","..") for part in name.split("/")) and
+                name.casefold() not in seen,"T06_BRIDGE_PAYLOAD_PATH_INVALID")
+        seen.add(name.casefold())
+        path=PAYLOAD.joinpath(*name.split("/"))
+        require(regular(path) and
+                path.resolve(strict=True).is_relative_to(PAYLOAD.resolve(strict=True)) and
+                item.get("bytes")==path.stat().st_size and
+                item.get("sha256")==sha(path),
+                "T06_BRIDGE_PAYLOAD_FILE_SHA_HOLD")
+    require("NOX.P01.Shell.exe".casefold() in seen and
+            "Backend/NOX_HELION_PRIVATE_CANDIDATE.exe".casefold() in seen,
+            "T06_BRIDGE_PAYLOAD_BINARY_UNLISTED")
+    return {"setup_sha256":source["setup_sha256"],
+            "wpf_sha256":source["wpf_sha256"],
+            "backend_sha256":source["backend_sha256"],
+            "manifest_sha256":source["manifest_sha256"],
+            "native_source_receipt":"ORIGINAL_FROZEN_MODELCENTER_PASS_NOT_E07",
+            "manifest_files_checked":len(seen)}
+
 def candidate_gate()->dict:
+    if ON_LOCAL_BRIDGE:
+        return bridge_candidate_gate()
     require(all(regular(x) for x in (CANDIDATE,SETUP,NATIVE_PROOF,BUILT_HANDOFF)),
             "T06_CANDIDATE_EVIDENCE_MISSING")
     source=json.loads(CANDIDATE.read_text("utf-8"))
@@ -422,7 +513,8 @@ def main()->int:
                    Path(str(install)+".__p01_rollback_saved"))
         require(all(not p.exists() and not p.is_symlink() for p in relatives),
                 "T06_CI_USER_HAS_EXISTING_NOX_INSTALL_SKIP")
-        origin=ROOT/"work/e06/staged/R11/Installer"
+        origin=(ROOT/"work/t06-wpf-p02-compile/R11/Installer" if ON_LOCAL_BRIDGE else
+                ROOT/"work/e06/staged/R11/Installer")
         preflight=origin/"Preflight-InstallPath.ps1"
         verify=origin/"Verify-Payload.ps1"
         require(all(regular(p) for p in (preflight,verify)),
