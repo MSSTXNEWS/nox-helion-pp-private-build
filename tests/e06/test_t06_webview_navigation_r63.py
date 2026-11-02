@@ -22,17 +22,23 @@ class WebViewNavigationEvidenceTests(unittest.TestCase):
         self.assertTrue(v["nav_started"])
     def test_process_failure_status_uses_exact_bounded_token(self):
         v = nox.summarize_fresh_webview_navigation(
-            "WEBVIEW_PROCESS_FAILED RenderProcessExited\n")
+            "[t] WEBVIEW_PROCESS_FAILED RenderProcessExited\n")
         self.assertTrue(v["webview_process_failed"])
         self.assertEqual(v["webview_process_failure_kind"], "RenderProcessExited")
     def test_no_raw_untrusted_navigation_url_or_local_path_leaks(self):
-        raw = ("BLOCK_NAV https://evil.example/secret?token=private\n"
-               "NAV_FAIL ConnectionTimeout C:\\Users\\private\\token.txt\n")
+        raw = ("[t] BLOCK_NAV https://evil.example/secret?token=private\n"
+               "[t] NAV_FAIL ConnectionTimeout C:\\Users\\private\\token.txt\n")
         v = nox.summarize_fresh_webview_navigation(raw)
         self.assertTrue(v["navigation_blocked"])
         self.assertEqual(v["nav_failure_status"], "ConnectionTimeout")
         self.assertNotIn("evil.example",str(v))
         self.assertNotIn("private",str(v))
+    def test_missing_event_prefix_cannot_fake_status(self):
+        v = nox.summarize_fresh_webview_navigation(
+            "NAV_FAIL ConnectionTimeout\\nWEBVIEW_PROCESS_FAILED RenderProcessExited\\n")
+        self.assertIsNone(v["nav_failure_status"])
+        self.assertIsNone(v["webview_process_failure_kind"])
+        self.assertFalse(v["nav_failed"])
     def test_empty_and_malformed_cannot_supply_failure_status(self):
         for text in ("", "FAKE_NAV_FAIL BAD", "NAV_FAIL ../../secret",
                      "NAV_FAIL " + "X" * 100):
