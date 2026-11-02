@@ -127,7 +127,7 @@ def _looks_like_windows_pe(stream, length: int) -> bool:
     if pe_offset < 0x40 or pe_offset > min(1048576, length - 64):
         return False
     stream.seek(pe_offset)
-    if stream.read(4) != b"PE\\x00\\x00":
+    if stream.read(4) != b"PE\x00\x00":
         return False
     machine = int.from_bytes(stream.read(2), "little")
     sections = int.from_bytes(stream.read(2), "little")

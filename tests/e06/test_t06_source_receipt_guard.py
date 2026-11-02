@@ -21,7 +21,7 @@ def _synthetic_pe32_fixture(machine=0x14c):
     data = bytearray(65536)
     data[:2] = b"MZ"
     data[0x3c:0x40] = (0x80).to_bytes(4, "little")
-    data[0x80:0x84] = b"PE\\x00\\x00"
+    data[0x80:0x84] = b"PE\x00\x00"
     data[0x84:0x86] = machine.to_bytes(2, "little")
     data[0x86:0x88] = (3).to_bytes(2, "little")
     data[0x94:0x96] = (0xe0 if machine == 0x14c else 0xf0).to_bytes(2, "little")
