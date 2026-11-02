@@ -108,15 +108,32 @@ nox_t06_original_onehost_candidate:
       if ($LASTEXITCODE -ne 0) { throw 'T06_DISPOSABLE_RUNNER_UNIT_GATE_HOLD' }
       & python -m unittest discover -s tests/e06 -p 'test_i2_local_bridge_receipt_gate.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'T06_ORIGINAL_RECEIPT_UNIT_GATE_HOLD' }
+      # Exact frozen source is already checked above. Fail before a costly
+      # signed Windows install if the original R11 WebView2 preflight cannot
+      # stage the reviewed 32/64-bit Microsoft runtime registry probe.
+      $pythonExactVersion = (& python -c 'import platform; print(platform.python_version())' | Out-String).Trim()
+      if ($LASTEXITCODE -ne 0 -or $pythonExactVersion -cne '3.12.10') {
+        throw 'T06_WINDOWS_PYTHON_31210_REQUIRED'
+      }
+      & python -m unittest discover -s tests/e06 -p 'test_t06_samevm_webview2_preflight_stage.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'T06_WEBVIEW2_REGISTRY_STAGE_REGRESSION_HOLD' }
       & python coordination/e06/t06_local_onehost_bridge.py
       if ($LASTEXITCODE -ne 0) { throw 'T06_GITLAB_SAME_VM_CANDIDATE_BUILD_HOLD' }
   artifacts:
     when: always
-    expire_in: 30 days
+    # Keep original candidate bytes for reproducibility. This is not E07
+    # approval and cannot turn a failed native installation into a release.
+    expire_in: never
     paths:
       - work/t06-local-bridge/
       - work/t06-wpf-p02-compile/ONEHOST_CANDIDATE_RECEIPT.json
       - work/t06-wpf-p02-compile/WPF_SELFCONTAINED_PUBLISH_LOG.txt
       - work/t06-wpf-p02-compile/NSIS_CANDIDATE_BUILD_LOG.txt
       - work/t06-wpf-p02-compile/NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe
+      # Preserve separately frozen Windows EXEs + manifest, not just Setup
+      # or the old 168-byte error copy. The bridge verifies actual SHA256.
+      - work/t06-wpf-p02-compile/payload/NOX.P01.Shell.exe
+      - work/t06-wpf-p02-compile/payload/Backend/NOX_HELION_PRIVATE_CANDIDATE.exe
+      - work/t06-wpf-p02-compile/payload/payload.sha256.json
+      - work/t06-manual-source-inspect/python-exe-candidate/NOX_HELION_PRIVATE_CANDIDATE.exe
       - work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json
