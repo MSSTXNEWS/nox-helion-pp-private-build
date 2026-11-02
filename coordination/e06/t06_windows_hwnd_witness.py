@@ -42,13 +42,17 @@ def _visible_window_for_pid(pid: int, user32: object, callback_type: object) -> 
     def inspect(hwnd: int, _lparam: int) -> bool:
         if _same_live_wpf_window(hwnd, pid, user32):
             matches.append(int(hwnd))
-            return False  # intentionally stop EnumWindows on the first match
+        # Continue: the first WPF splash can vanish before final PID/class proof.
         return True
 
     callback = callback_type(inspect)  # retain callback throughout EnumWindows
-    user32.EnumWindows(callback, 0)
-    return (matches[0] if matches and
-            _same_live_wpf_window(matches[0], pid, user32) else None)
+    # A failed/partial Win32 enumeration cannot certify a live GUI.
+    if not user32.EnumWindows(callback, 0):
+        return None
+    for hwnd in matches:
+        if _same_live_wpf_window(hwnd, pid, user32):
+            return hwnd
+    return None
 
 
 def find_visible_wpf_hwnd(pid: int) -> int | None:

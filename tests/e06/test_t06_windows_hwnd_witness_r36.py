@@ -18,14 +18,15 @@ spec.loader.exec_module(witness)
 
 
 class FakeUser32:
-    def __init__(self, windows):
+    def __init__(self, windows, enum_success=True):
         self.windows = windows
+        self.enum_success = enum_success
 
     def EnumWindows(self, callback, unused):
         for hwnd in self.windows:
             if not callback(hwnd, 0):
                 break
-        return 1
+        return int(self.enum_success)
 
     def GetWindowThreadProcessId(self, hwnd, pid_pointer):
         pid = self.windows[hwnd]["pid"]
@@ -42,6 +43,14 @@ class FakeUser32:
         if flag != 4:
             raise AssertionError("unexpected Win32 owner query")
         return int(self.windows[hwnd].get("owner", 0))
+
+    def GetClassNameW(self, hwnd, dest, length):
+        # Real ctypes Win32 call returns a plain int and writes WCHARs.
+        name = self.windows[hwnd].get("class", "HwndWrapper[NOX.EXE;;main]")
+        dest.value = name[:length - 1]
+        if self.windows[hwnd].get("retire_after_class"):
+            self.windows[hwnd]["exists"] = False
+        return len(dest.value)
 
 
 class OriginalWpfHwndContract(unittest.TestCase):
@@ -66,6 +75,27 @@ class OriginalWpfHwndContract(unittest.TestCase):
             14: {"pid": 21, "visible": True},
         }
         self.assertIsNone(self.scan(52, windows))
+
+    def test_first_matching_wpf_window_retired_before_second_pass_uses_stable_main(self):
+        windows = {
+            11: {"pid": 55, "visible": True, "retire_after_class": True},
+            22: {"pid": 55, "visible": True},
+        }
+        # Splash is already gone by final proof; MainWindow remains live.
+        self.assertEqual(self.scan(55, windows), 22)
+
+    def test_failed_enumwindows_must_not_certify_partial_gui(self):
+        windows = {22: {"pid": 55, "visible": True}}
+        api = FakeUser32(windows, enum_success=False)
+        self.assertIsNone(witness._visible_window_for_pid(55, api, lambda cb: cb))
+
+    def test_only_wpf_class_counts_not_a_generic_same_pid_dialog(self):
+        windows = {
+            11: {"pid": 55, "visible": True, "class": "#32770"},
+            22: {"pid": 55, "visible": True, "class": "HwndWrapper[NOX.EXE;;main]"},
+        }
+        self.assertEqual(self.scan(55, windows), 22)
+        self.assertIsNone(self.scan(55, {11: windows[11]}))
 
     def test_invalid_pid_is_denied(self):
         for bad in (0, -1, True, "100", None):
