@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from pathlib import PurePosixPath
 
 SUFFIXES = frozenset({'.py', '.cs', '.mjs', '.js', '.css', '.html', '.json',
@@ -34,12 +35,26 @@ def classify(path: str) -> str:
     return 'contracts_docs'
 
 
-def _safe_source_path(path):
-    return (type(path) is str and 0 < len(path) <= 300 and
-            not any(ord(ch) < 32 or ord(ch) == 127 for ch in path) and
-            '\\' not in path and not PurePosixPath(path).is_absolute() and
-            not any(part in ('', '.', '..') for part in path.split('/')))
+_WINDOWS_RESERVED = frozenset({"CON", "PRN", "AUX", "NUL",
+                               *(f"COM{i}" for i in range(1, 10)),
+                               *(f"LPT{i}" for i in range(1, 10))})
+_WINDOWS_INVALID = frozenset('<>:"|?*')
 
+
+def _safe_source_path(path):
+    """Admit only checkout-stable Windows names to native S03 source inventory."""
+    if (type(path) is not str or not 0 < len(path) <= 300 or
+            "\\" in path or PurePosixPath(path).is_absolute()):
+        return False
+    for component in path.split("/"):
+        if (not component or component in (".", "..") or
+                component.endswith((" ", ".")) or component.casefold() == ".git" or
+                unicodedata.normalize("NFC", component) != component or
+                component.split(".", 1)[0].rstrip(" ").upper() in _WINDOWS_RESERVED or
+                any(ord(ch) < 32 or ord(ch) == 127 or ch in _WINDOWS_INVALID
+                    for ch in component)):
+            return False
+    return True
 
 def _regular_blobs(tree):
     """Parse NUL-delimited Git entries; never confuse symlinks/gitlinks with source."""
@@ -51,6 +66,7 @@ def _regular_blobs(tree):
     if len(rows) > MAX_TREE:
         raise OverflowError('SOURCE_TREE_TOO_LARGE_FOR_BOUNDED_INVENTORY')
     found = {}
+    windows_components = {}
     for row in rows:
         meta, tab, path = row.partition('\t')
         match = _TREE_ENTRY.fullmatch(meta)
@@ -63,8 +79,18 @@ def _regular_blobs(tree):
             continue  # A symlink is a pathname, not reviewed source content.
         if kind != 'blob' or mode not in ('100644', '100755'):
             raise ValueError('GIT_TREE_FILE_MODE_INVALID')
-        if not _safe_source_path(path) or PurePosixPath(path).suffix.lower() not in SUFFIXES:
+        if PurePosixPath(path).suffix.lower() not in SUFFIXES:
             continue
+        if not _safe_source_path(path):
+            raise ValueError('GIT_TREE_WINDOWS_UNSAFE_SOURCE_PATH')
+        # Every component matters: Foo/a.py and foo/b.py share a Windows parent.
+        folded = []
+        for component in path.split('/'):
+            folded.append(component.casefold())
+            alias = '/'.join(folded)
+            previous = windows_components.setdefault(alias, component)
+            if previous != component:
+                raise ValueError('GIT_TREE_WINDOWS_NAMESPACE_COLLISION')
         if path in found:
             raise ValueError('GIT_TREE_DUPLICATE_PATH')
         found[path] = (blob, mode)
