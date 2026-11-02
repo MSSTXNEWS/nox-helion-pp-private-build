@@ -128,8 +128,13 @@ if ($onehost.schema -cne 'NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1' -or
  throw 'E07_SETUP_EXE_RECEIPT_SHA_DRIFT'
 }
 $identity="$($source.zip_sha256)|$commit|$setupSha|$exeSha"
-$hash=[Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($identity))
-$buildId='NOX-V16-'+([Convert]::ToHexString($hash).ToLowerInvariant().Substring(0,24))
+$e07Hasher=[Security.Cryptography.SHA256]::Create()
+try {
+ $hash=$e07Hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity))
+} finally {
+ $e07Hasher.Dispose()
+}
+$buildId='NOX-V16-'+([BitConverter]::ToString($hash).Replace('-','').ToLowerInvariant().Substring(0,24))
 $installedSha=$null
 $logs=[ordered]@{}
 $logPaths=[ordered]@{}
