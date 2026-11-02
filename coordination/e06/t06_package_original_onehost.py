@@ -69,6 +69,51 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
     original=old_bytes.decode("utf-8-sig")
     need(b"\r" not in old_bytes.replace(b"\r\n", b""),
          "T06_WEBVIEW2_ORIGINAL_SOURCE_LINE_ENDINGS_HOLD")
+    # The current T06 compiler already inserts the independently reviewed
+    # E06 Registry32/Registry64 replacement BEFORE this packaging function.
+    # Verify that exact immutable E06 donor instead of overwriting it with a
+    # second logically equivalent preflight (which would break SourceLock).
+    e06_start="# Official Microsoft WebView2 Evergreen Runtime: inspect the explicit 32/64-bit"
+    if P01_WEBVIEW2_START not in original and e06_start in original:
+        e06_path=Path(__file__).resolve().parent/"build_onehost_installer.ps1"
+        need(e06_path.is_file() and not e06_path.is_symlink(),
+             "T06_WEBVIEW2_E06_PINNED_DONOR_MISSING")
+        donor_raw=e06_path.read_bytes()
+        need(b"\r" not in donor_raw.replace(b"\r\n",b""),
+             "T06_WEBVIEW2_E06_DONOR_ENCODING_HOLD")
+        donor=donor_raw.replace(b"\r\n",b"\n")
+        donor_git=hashlib.sha1(
+            b"blob "+str(len(donor)).encode("ascii")+b"\x00"+donor
+        ).hexdigest()
+        need(donor_git=="cd53dcd0171b3082a602e347d73bb311ee2ef370",
+             "T06_WEBVIEW2_E06_DONOR_BLOB_DRIFT")
+        block_start="$webviewReplacement=@'\n"
+        block_end="\n'@"
+        donor_text=donor.decode("utf-8-sig")
+        need(donor_text.count(block_start)==1,
+             "T06_WEBVIEW2_E06_DONOR_BLOCK_AMBIGUOUS")
+        a=donor_text.index(block_start)+len(block_start)
+        b=donor_text.find(block_end,a)
+        need(b>a, "T06_WEBVIEW2_E06_DONOR_BLOCK_UNCLOSED")
+        approved_e06=donor_text[a:b]+"\n"
+        need(original.count(e06_start)==1 and
+             original.count(P01_WEBVIEW2_END)==1,
+             "T06_WEBVIEW2_E06_STAGED_ANCHOR_HOLD")
+        owner_a=original.index(e06_start)
+        owner_b=original.index(P01_WEBVIEW2_END)
+        need(owner_a<owner_b and
+             original[owner_a:owner_b].replace("\r\n","\n")==approved_e06 and
+             "[Microsoft.Win32.RegistryView]::Registry32" in approved_e06 and
+             "[Microsoft.Win32.RegistryView]::Registry64" in approved_e06 and
+             "Microsoft Edge Stable alone is NOT an accepted runtime" in approved_e06,
+             "T06_WEBVIEW2_E06_STAGED_BYTES_DRIFT")
+        return {"sha256":hashlib.sha256(old_bytes).hexdigest(),
+                "source_git_blob":approved_blob,
+                "e06_donor_git_blob":donor_git,
+                "changed":False,
+                "runtime_installed_verified":False,
+                "e07_accepted":False}
+
     def region(text):
         need(text.count(P01_WEBVIEW2_START)==1 and
              text.count(P01_WEBVIEW2_END)==1,
@@ -266,7 +311,8 @@ def build(root,staged):
          "wpf_source_compilation":"PASS","wpf_installed_interactive_qa":"NOT_RUN",
          "e07":"NOT_ACCEPTED","release_accepted":False,
          "webview2_p01_preflight_sha256":webview_proof["sha256"],
-         "webview2_p01_source_git_blob":webview_proof["source_git_blob"]}
+         "webview2_p01_source_git_blob":webview_proof["source_git_blob"],
+         "webview2_e06_donor_git_blob":webview_proof.get("e06_donor_git_blob")}
     if megab_attestation is not None:
         candidate["mega814"]=megab_attestation
     (staged/"ONEHOST_CANDIDATE_RECEIPT.json").write_text(

@@ -76,6 +76,35 @@ class OriginalR11WebView2StagingTests(unittest.TestCase):
             module.stage_reviewed_webview2_preflight(self.owner, APPROVED)
         self.assertEqual(self.owner.read_text("utf-8"), wrong)
 
+    def test_already_e06_staged_registry32_is_byte_verified_not_overwritten(self):
+        donor = (ROOT / "coordination/e06/build_onehost_installer.ps1").read_text("utf-8")
+        begin = "$webviewReplacement=@'\n"
+        end = "\n'@"
+        self.assertEqual(donor.count(begin), 1)
+        inner = donor.split(begin, 1)[1].split(end, 1)[0] + "\n"
+        start = self.legacy.index(module.P01_WEBVIEW2_START)
+        stop = self.legacy.index(module.P01_WEBVIEW2_END)
+        staged = self.legacy[:start] + inner + self.legacy[stop:]
+        self.owner.write_text(staged, encoding="utf-8")
+        result = module.stage_reviewed_webview2_preflight(self.owner, APPROVED)
+        self.assertFalse(result["changed"])
+        self.assertFalse(result["e07_accepted"])
+        self.assertEqual(result["e06_donor_git_blob"],
+                         "cd53dcd0171b3082a602e347d73bb311ee2ef370")
+        self.assertEqual(self.owner.read_text("utf-8"), staged)
+
+    def test_unpinned_alternate_preflight_is_rejected_without_mutation(self):
+        donor = (ROOT / "coordination/e06/build_onehost_installer.ps1").read_text("utf-8")
+        inner = donor.split("$webviewReplacement=@'\n",1)[1].split("\n'@",1)[0] + "\n"
+        start = self.legacy.index(module.P01_WEBVIEW2_START)
+        stop = self.legacy.index(module.P01_WEBVIEW2_END)
+        staged = (self.legacy[:start] + inner + self.legacy[stop:]).replace(
+            "Registry32", "Registry32_TAMPER",1)
+        self.owner.write_text(staged, encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "E06_STAGED_BYTES_DRIFT"):
+            module.stage_reviewed_webview2_preflight(self.owner, APPROVED)
+        self.assertEqual(self.owner.read_text("utf-8"), staged)
+
     def test_source_lock_and_real_t06_nsis_wiring(self):
         source = PKG.read_text("utf-8")
         smoke = SMOKE.read_text("utf-8")
