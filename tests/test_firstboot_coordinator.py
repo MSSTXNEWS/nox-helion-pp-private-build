@@ -176,7 +176,9 @@ class Tests(unittest.TestCase):
         s.fake_digest=True
         r=s.app.run('S',now=NOW)
         self.assertEqual(r['enqueued_ids'],[])
-        self.assertEqual(len(r['held']),2)
+        self.assertEqual(r['status'],'HOLD')
+        self.assertEqual(r['held'],[{'id':31,'reason':'NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH'}])
+        self.assertEqual(len(s.calls),1)  # Never dispatch 32 after uncertain 31.
         self.assertEqual(r['downloaded'],0)
 
     def test_partial_native_ack_holds_but_preserves_queue_receipt(self):
