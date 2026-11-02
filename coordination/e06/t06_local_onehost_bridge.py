@@ -3,7 +3,7 @@ No external HTTP artifact fetch, zero new host/server, no SourceLock rewrite.
 The only completed status is a diagnostic installer candidate, NOT an E07 pass.
 """
 from __future__ import annotations
-import hashlib,json,os,pathlib,subprocess,sys,time,re,stat
+import hashlib,json,os,pathlib,subprocess,sys,time,re,stat,unicodedata
 from t06_compile_original_wpf_p02 import verified_source_head
 from t06_package_original_onehost import EXPECTED_ZIP_SHA
 from t06_source_receipt_guard import attest_candidate
@@ -166,6 +166,26 @@ def _no_reparse_components(path):
     return True
 
 
+def _windows_asset_name_key(name):
+    """Admit one original physical asset, never a Win32 device or alias path.
+
+    Win32 trims trailing dots, reserves DOS device stems even with extensions,
+    and may canonically alias differently normalized Unicode basenames.
+    Fail closed before touching the file or trusting its manifest SHA.
+    """
+    if (type(name) is not str or not name or name in (".", "..") or
+            name[0] == "." or name.strip() != name or name.endswith(".") or
+            unicodedata.normalize("NFC", name) != name or
+            any(ord(ch) < 32 or ord(ch) == 127 for ch in name) or
+            any(ch in name for ch in ("/", "\\", ":", "\x00"))):
+        return None
+    stem = name.split(".", 1)[0].upper()
+    if (stem in {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} or
+            re.fullmatch(r"(?:COM|LPT)[1-9\u00b9\u00b2\u00b3]", stem)):
+        return None
+    return name.casefold()
+
+
 def verify_mega814_payload_files(packaged, summary):
     """Verify fourteen DISTINCT original NSIS assets, not fourteen manifest rows.
 
@@ -182,9 +202,8 @@ def verify_mega814_payload_files(packaged, summary):
         if type(item) is not dict:
             raise RuntimeError("NOX_MEGA814_RESOURCE_ENTRY_INVALID")
         name = item.get("name")
-        if (type(name) is not str or name in ("", ".", "..") or
-                name.strip() != name or "/" in name or "\\" in name or
-                ":" in name or "\x00" in name or name.casefold() in seen):
+        key = _windows_asset_name_key(name)
+        if key is None or key in seen:
             raise RuntimeError("NOX_MEGA814_RESOURCE_NAME_INVALID_OR_DUPLICATE")
         file = packaged / name
         expected_size = item.get("bytes")
@@ -196,7 +215,7 @@ def verify_mega814_payload_files(packaged, summary):
                 file.stat().st_size != expected_size or
                 digest(file) != expected_sha):
             raise RuntimeError("NOX_MEGA814_PAYLOAD_SHA_DRIFT:" + name)
-        seen.add(name.casefold())
+        seen.add(key)
     return len(seen)
 
 def main():
