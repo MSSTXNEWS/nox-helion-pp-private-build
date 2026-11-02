@@ -90,6 +90,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'P03_GGUF_RETRY_REGRESSION_HOLD' }
           python -m unittest discover -s tests/e06 -p 'test_ci_windows_runner_selector.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'E06_WINDOWS_RUNNER_SELECTOR_HOLD' }
+      - name: C06 C09 C11 C12 C13 exact-source integrity before original Setup
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p 'test_c06_unified_back_source.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_BROWSER_EXACT_HOME_SOURCE_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_c06_cancel_reentrancy_source.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_BROWSER_REENTRANT_STOP_HOLD' }
+          python -m unittest discover -s integrations/creative/tests -p 'test_c09_projector_failure_cleanup.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_CINEMA_PROJECTOR_CLEANUP_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_c11_preupdate_rollback_source.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_NSIS_PREUPDATE_ROLLBACK_SHA_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_c12_e07_source_commit_chain.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_E07_SAME_HEAD_ATTESTATION_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_c13_preview_s03_persistence.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_S03_TRANSIENT_PREVIEW_PERSISTENCE_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
