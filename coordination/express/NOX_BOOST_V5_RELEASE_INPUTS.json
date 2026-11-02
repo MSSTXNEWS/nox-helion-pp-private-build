@@ -1,0 +1,79 @@
+{
+  "schema": "NOX_EXPRESS_BOOST_V5_RELEASE_INPUTS",
+  "date_utc": "2026-11-02",
+  "product": "NOX HELION EXPRESS INTEGRATOR",
+  "source": {
+    "repository": "MSSTXNEWS/nox-helion-pp-private-build",
+    "pull_request": 162,
+    "branch": "integration/nox-v16-unified-candidate-20261028-r01",
+    "full_head_snapshot_in_cache": false
+  },
+  "verified_cache": {
+    "monolith": {
+      "library_path": "/NOX_HELION/BOOST_CACHE/NOX_HELION_MEGA_BOOST_MONOLITH_V4.zip.part01..06",
+      "bytes": 2327776086,
+      "sha256": "2ca2647e46edd1e110db1569cb6a636ceee8e8154b416560ad43a87fb95545bd",
+      "volumes": 6,
+      "kind": "source_and_vendor_cache"
+    },
+    "onehost_fast": {
+      "library_path": "/NOX_HELION/BOOST_CACHE/NOX_ONEHOST_CACHE_READY_V4.zip",
+      "bytes": 368174652,
+      "sha256": "26d2ed7ca66aaa0ce4d2b695537484f51c2080140f79cc576501f211c2190938",
+      "files": 29,
+      "nuget_packages": 16,
+      "d02_images": 4,
+      "fluent_svg": 6,
+      "zip_crc": "PASS",
+      "source_lock": "SHA256_PASS",
+      "onehost_executed": false
+    }
+  },
+  "offline_toolchains": {
+    "dotnet": {
+      "version": "8.0.427",
+      "platform": "win-x64",
+      "file": "dotnet-sdk-8.0.427-win-x64.zip",
+      "bytes": 285280040,
+      "sha256": "ab9d4e4275db9683a6b51640122d184c5c6ae5da680d0c0ed82e994662353cc8",
+      "publisher_sha512": "PASS",
+      "gitlab_job": 17674530300,
+      "artifact_expiry": null
+    },
+    "python": {
+      "version": "3.13.2",
+      "platform": "win-x64",
+      "file": "python-3.13.2-amd64.exe",
+      "bytes": 28604208,
+      "sha256": "9aaa1075d0bd3e8abd0623d2d05de692ff00780579e1b232f259028bac19bb51",
+      "authenticode": "PASS",
+      "gitlab_job": 17674530301,
+      "artifact_expiry": null
+    },
+    "python_wheelhouse": {
+      "gitlab_job": 17670514450,
+      "job_status": "SUCCESS",
+      "artifact_expiry": null,
+      "physical_in_library": false
+    }
+  },
+  "integrated_source": [
+    "coordination/e06/boost_v4_stage.py",
+    "coordination/e06/build_onehost_with_boost.ps1",
+    "coordination/e06/build_onehost_installer.ps1",
+    "integrations/creative/stage_creative.py",
+    "integrations/wow200/stage_wow200.py"
+  ],
+  "owner_policy": {
+    "one_native_host": true,
+    "stop_acl_sid_consent": "MUST_BE_REAL",
+    "change_main_only_after_e07": true,
+    "one_integrator": "I0"
+  },
+  "gates": {
+    "G1": "SOURCELOCK_AND_A1_UNVERIFIED_AT_CURRENT_SHA",
+    "G2": "WINDOWS_GUI_IPC_UNVERIFIED",
+    "G3": "CURRENT_SHA_NSIS_SETUP_NOT_VERIFIED",
+    "G4": "INSTALLED_E07_NOT_PASS"
+  }
+}
