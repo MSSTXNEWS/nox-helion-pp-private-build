@@ -90,6 +90,26 @@ class CandidateReceiptTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
             self.verify()
 
+    def test_symlinked_receipt_parent_denied(self):
+        alias = self.compile.parent / "receipt-junction"
+        try:
+            alias.symlink_to(self.compile.parent, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            self.skipTest("directory symlink unavailable")
+        self.compile = alias / self.compile.name
+        with self.assertRaisesRegex(RuntimeError, "RECEIPT_MISSING_OR_UNTRUSTED"):
+            self.verify()
+
+    def test_symlinked_setup_parent_denied(self):
+        alias = self.setup.parent / "setup-junction"
+        try:
+            alias.symlink_to(self.setup.parent, target_is_directory=True)
+        except (NotImplementedError, OSError):
+            self.skipTest("directory symlink unavailable")
+        self.setup = alias / self.setup.name
+        with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+            self.verify()
+
     def test_unbounded_receipt_refused(self):
         self.compile.write_bytes(b" " * 131073)
         with self.assertRaisesRegex(RuntimeError, "RECEIPT_MISSING"):

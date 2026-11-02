@@ -9,14 +9,33 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import stat
 
 _SHA1 = re.compile(r"[0-9a-f]{40}\Z")
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 
 
+def _trusted_regular_path(path: Path) -> bool:
+    """Deny Windows junctions/reparse parents, not only a symlinked leaf.
+
+    An authenticated candidate must never resolve a receipt or Setup outside
+    the native owner's intended path through a reparse ancestor. The caller
+    still pins bytes and source HEAD; this is not an installed-EXE proof.
+    """
+    try:
+        nodes = [path.lstat(), *(parent.lstat() for parent in path.parents)]
+    except OSError:
+        return False
+    return (stat.S_ISREG(nodes[0].st_mode) and
+            all(not stat.S_ISLNK(node.st_mode) and not
+                (getattr(node, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
+                for node in nodes))
+
+
 def _receipt(path: Path) -> dict:
-    """Bounded exact bytes, no reparse endpoint or duplicate JSON properties."""
-    if path.is_symlink() or not path.is_file() or not 0 < path.stat().st_size <= 131072:
+    """Bounded exact bytes, no reparse ancestors or duplicate JSON properties."""
+    if not _trusted_regular_path(path) or not 0 < path.stat().st_size <= 131072:
         raise RuntimeError("T06_SOURCE_RECEIPT_MISSING_OR_UNTRUSTED")
     def reject_duplicate(pairs):
         obj = {}
@@ -65,7 +84,7 @@ def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt:
     size = candidate.get("setup_bytes")
     if (type(sha) is not str or not _SHA256.fullmatch(sha) or
             type(size) is not int or size <= 0 or
-            setup.is_symlink() or not setup.is_file() or setup.stat().st_size != size):
+            not _trusted_regular_path(setup) or setup.stat().st_size != size):
         raise RuntimeError("T06_SOURCE_SETUP_IDENTITY_HOLD")
     digest = hashlib.sha256()
     with setup.open("rb") as stream:
