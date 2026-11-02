@@ -10,8 +10,8 @@ if ($env:CI_PROJECT_PATH -cne 's-grouptwet/nox-helion-pp-private-build') { $scop
 if ($env:CI_PIPELINE_SOURCE -cnotin @('api','web')) { $scopeFailed+= 'CI_PIPELINE_SOURCE' }
 if ($env:CI_RUNNER_EXECUTABLE_ARCH -cne 'windows/amd64') { $scopeFailed+= 'CI_RUNNER_EXECUTABLE_ARCH' }
 if ($env:NOX_T06_LOCAL_BRIDGE -cne 'YES' -and $env:NOX_APPROVE_T06_BRIDGE -cne 'YES') { $scopeFailed+= 'EXPLICIT_T06_APPROVAL' }
-if ($ExpectedSha -cnotmatch '\\A[0-9a-f]{40}\\z') { $scopeFailed+= 'FROZEN_GITHUB_SHA' }
-if ($env:CI_COMMIT_SHA -cnotmatch '\\A[0-9a-f]{40}\\z') { $scopeFailed+= 'CI_COMMIT_SHA' }
+if ($ExpectedSha -cnotmatch '^[0-9a-f]{40}$') { $scopeFailed+= 'FROZEN_GITHUB_SHA' }
+if ($env:CI_COMMIT_SHA -cnotmatch '^[0-9a-f]{40}$') { $scopeFailed+= 'CI_COMMIT_SHA' }
 if ($scopeFailed.Count -gt 0) {
   Write-Host ('T06_GITHUB_CI_SCOPE_FAILED_FIELDS=' + ($scopeFailed -join ','))
   throw 'T06_GITHUB_CI_SCOPE_HOLD'
