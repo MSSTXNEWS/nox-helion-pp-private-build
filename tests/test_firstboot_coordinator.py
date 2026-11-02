@@ -119,6 +119,23 @@ class Tests(unittest.TestCase):
         self.assertEqual(s.app.run('owner_A',now=NOW)['reason'],'NATIVE_STOP_EPOCH_REQUIRED')
         self.assertEqual(s.calls,[])
 
+    def test_native_installed_integer_key_rejected_without_extra_queue(self):
+        s=State()
+        s.present={11:True,"49":True}
+        r=s.app.run("owner_A",now=NOW)
+        self.assertEqual(r["status"],"HOLD")
+        self.assertEqual(r["reason"],"NATIVE_INSTALLED_ITEM_INVALID")
+        self.assertEqual(s.persisted,[])
+        self.assertEqual(s.calls,[])
+
+    def test_native_installed_mixed_key_alias_rejected(self):
+        s=State()
+        s.present={"11":True,11:True,"49":True}
+        r=s.app.run("owner_A",now=NOW)
+        self.assertEqual(r["status"],"HOLD")
+        self.assertEqual(r["reason"],"NATIVE_INSTALLED_ITEM_INVALID")
+        self.assertEqual(s.calls,[])
+
     def test_no_native_consent_no_dispatch(self):
         s=State();s.p=policy(installer_consent_recorded=False)
         r=s.app.run('S',now=NOW)
