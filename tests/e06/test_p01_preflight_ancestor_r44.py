@@ -45,12 +45,14 @@ class P01PreflightVolumeRootR44(unittest.TestCase):
 
     def test_staging_pins_follow_exact_git_blob(self):
         raw = PREFLIGHT.read_bytes()
-        git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + b"\\0" + raw).hexdigest()
+        git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + bytes([0]) + raw).hexdigest()
         package_text = PACKAGE.read_text("utf-8")
         smoke_text = SMOKE.read_text("utf-8")
         self.assertIn('P01_REVIEWED_PREFLIGHT_GIT_BLOB = "' + git_blob + '"', package_text)
-        self.assertIn('source.get("webview2_p01_source_git_blob")==\\n'
-                      '                "' + git_blob + '"', smoke_text)
+        marker = 'source.get("webview2_p01_source_git_blob")=='
+        position = smoke_text.index(marker) + len(marker)
+        self.assertGreaterEqual(smoke_text.index(marker), 0)
+        self.assertTrue(smoke_text[position:position+100].lstrip().startswith('"' + git_blob + '"'))
 
     @unittest.skipUnless(os.name == "nt", "Real PowerShell+junction requires Windows")
     def test_native_parent_junction_denied_even_above_localappdata(self):
@@ -74,7 +76,7 @@ class P01PreflightVolumeRootR44(unittest.TestCase):
                     env=env, capture_output=True, text=True, timeout=30, check=False)
                 self.assertNotEqual(check.returncode, 0)
                 self.assertIn("P01_INSTALL_REPARSE_ANCESTOR",
-                              check.stdout + "\\n" + check.stderr)
+                              check.stdout + chr(10) + check.stderr)
             finally:
                 if junction.exists() or junction.is_symlink():
                     os.rmdir(junction)
