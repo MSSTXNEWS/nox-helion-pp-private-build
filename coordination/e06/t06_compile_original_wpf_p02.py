@@ -28,6 +28,71 @@ def verified_source_head():
     require(not declared or declared==head, "T06_SOURCE_CI_SHA_MISMATCH")
     return head
 
+def stage_exact_owner_webview2_registry_views(r11, canonical_script):
+    """Reuse the existing E06 signed-runtime 32/64-bit gate in disposable R11.
+
+    The same-VM GitLab NSIS path does NOT call build_onehost_installer.ps1.
+    Without this staging step it tests the old provider-redirected preflight.
+    The original immutable ZIP, owner NSIS and non-WebView2 code stay intact.
+    """
+    preflight = r11 / "Installer" / "Preflight-InstallPath.ps1"
+    if (not preflight.is_file() or preflight.is_symlink() or
+            not canonical_script.is_file() or canonical_script.is_symlink()):
+        raise RuntimeError("T06_WEBVIEW2_OWNER_PREFLIGHT_SOURCE_MISSING")
+    raw = preflight.read_bytes()
+    if not raw or len(raw) > 262144:
+        raise RuntimeError("T06_WEBVIEW2_OWNER_PREFLIGHT_BYTES_HOLD")
+    has_bom = raw.startswith(b"\xef\xbb\xbf")
+    try:
+        original = raw.decode("utf-8-sig")
+        donor = canonical_script.read_text(encoding="utf-8-sig")
+    except UnicodeError as exc:
+        raise RuntimeError("T06_WEBVIEW2_PREFLIGHT_ENCODING_HOLD") from exc
+    begin_anchor = "# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence."
+    end_anchor = "if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }"
+    if original.count(begin_anchor) != 1 or original.count(end_anchor) != 1:
+        raise RuntimeError("T06_WEBVIEW2_ORIGINAL_PREFLIGHT_ANCHOR_HOLD")
+    begin = original.index(begin_anchor)
+    end = original.index(end_anchor)
+    if begin >= end:
+        raise RuntimeError("T06_WEBVIEW2_PREFLIGHT_ANCHOR_ORDER_HOLD")
+    legacy = original[begin:end]
+    if any(token not in legacy for token in (
+            "Registry::HKEY_CURRENT_USER", "Registry::HKEY_LOCAL_MACHINE",
+            "Get-ItemProperty", "[version]", "pv")):
+        raise RuntimeError("T06_WEBVIEW2_ORIGINAL_PREFLIGHT_PREIMAGE_HOLD")
+    start_marker = "$webviewReplacement=@'"
+    stop_marker = "\n'@"
+    if donor.count(start_marker) != 1:
+        raise RuntimeError("T06_WEBVIEW2_CANONICAL_DONOR_AMBIGUOUS")
+    start = donor.index(start_marker) + len(start_marker)
+    if donor[start:start + 1] != "\n":
+        raise RuntimeError("T06_WEBVIEW2_CANONICAL_DONOR_FORMAT_HOLD")
+    start += 1
+    stop = donor.find(stop_marker, start)
+    if stop < start:
+        raise RuntimeError("T06_WEBVIEW2_CANONICAL_DONOR_CLOSURE_HOLD")
+    replacement = donor[start:stop]
+    if (not replacement.startswith("# Official Microsoft WebView2 Evergreen Runtime:") or
+            replacement.count("{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}") != 1 or
+            "[Microsoft.Win32.RegistryView]::Registry32" not in replacement or
+            "[Microsoft.Win32.RegistryView]::Registry64" not in replacement or
+            "[Microsoft.Win32.RegistryHive]::CurrentUser" not in replacement or
+            "[Microsoft.Win32.RegistryHive]::LocalMachine" not in replacement or
+            r"\A[0-9]+(?:\.[0-9]+){3}\z" not in replacement or
+            "$runtimeVersion.Major -gt 0" not in replacement):
+        raise RuntimeError("T06_WEBVIEW2_CANONICAL_REGISTRY_GATE_HOLD")
+    eol = "\r\n" if "\r\n" in original else "\n"
+    after = original[:begin] + replacement.replace("\n", eol) + eol + original[end:]
+    if (after == original or after.count(end_anchor) != 1 or
+            after.count("P01_WEBVIEW2_RUNTIME_MISSING") != 1):
+        raise RuntimeError("T06_WEBVIEW2_OWNER_PREFLIGHT_NOLOSS_HOLD")
+    new_bytes = (b"\xef\xbb\xbf" if has_bom else b"") + after.encode("utf-8")
+    preflight.write_bytes(new_bytes)  # disposable CI R11 ONLY, original ZIP untouched
+    if preflight.read_bytes() != new_bytes:
+        raise RuntimeError("T06_WEBVIEW2_STAGED_READBACK_HOLD")
+    print("T06_WEBVIEW2_ORIGINAL_PREFLIGHT_REGISTRY32_64_STAGED_NOT_E07", flush=True)
+
 def main():
     source_git_sha=verified_source_head()
     manifest=json.loads((ROOT/"donors/P01_C07/P01_C07_RECEIPT.json").read_text("utf-8"))
@@ -106,6 +171,10 @@ def main():
                   hashlib.sha256(data).hexdigest(),flush=True)
         print("T06_ORIGINAL_CONFLICT_SOURCE_EXTRACT_PASS",len(targets),flush=True)
         return
+    # Same-VM NSIS source MUST receive existing E06 explicit 32/64-bit runtime gate.
+    # Other owner files, signed installers and original ZIP remain untouched.
+    stage_exact_owner_webview2_registry_views(
+        R11, ROOT / 'coordination/e06/build_onehost_installer.ps1')
     # Preserve the original MainWindow, zero HOME/MENU/WORK modification outside R11.
     ext=R11/"Integration";ext.mkdir(parents=True,exist_ok=True)
     (ext/"NativePythonPipe.cs").write_bytes((SRC/"NativePythonPipe.cs").read_bytes())
