@@ -69,7 +69,7 @@ if (-not [string]::IsNullOrWhiteSpace($PythonNativeSmokeReceipt)) {
   if (!(Test-Path -LiteralPath $nativeVerifier -PathType Leaf)) {
     throw 'E06_NATIVE_RECEIPT_STRICT_JSON_HOLD'
   }
-  $expectedNativeVerifierBlob='b83bf8ef085bbcee08bc4aba6f1ac90c6c3fa425'
+  $expectedNativeVerifierBlob='b14809eb5479d612b78282fd6eb210ad55d72cce'
   $nativeVerifierBlob=((& git -C $e06RepoRoot hash-object -- $nativeVerifier) | Out-String).Trim().ToLowerInvariant()
   if ($LASTEXITCODE -ne 0 -or $nativeVerifierBlob -cne $expectedNativeVerifierBlob) {
     throw 'E06_NATIVE_RECEIPT_VERIFIER_PIN_HOLD'
