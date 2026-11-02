@@ -27,6 +27,15 @@ export function effectiveP01MotionMode(requested,reduced){
 export function shouldRunP01Visuals(homeIsActive,documentVisible){
   return homeIsActive===true && documentVisible===true;
 }
+// A new pending native request must never inherit a previous successful ACK.
+// Only a matching fresh host receipt may restore confirmed state.
+export function markP01RoutePending(dataset){
+  delete dataset.noxNativeAck;
+  delete dataset.noxNativeReceipt;
+  delete dataset.noxNativeReason;
+  dataset.noxNativeState="pending";
+}
+
 export function nativeP01Feedback(result){
   // Browser clicks and pending promises are NEVER a completed native action.
   if(result?.ok===true && typeof result.receiptId==="string" &&
@@ -121,8 +130,7 @@ export function mountP01Owner(spec){
           if(!isP01PrimaryRouteTarget(item,event?.target,routeEntries))return;
           event?.preventDefault?.();
           if(disposed||dispatcher.isPending(item.routeId))return;
-          item.element.dataset.noxNativeState="pending";
-          delete item.element.dataset.noxNativeReason;
+          markP01RoutePending(item.element.dataset);
           const result=nativeP01Feedback(await dispatcher.invoke(item.routeId));
           if(disposed)return;
           item.element.dataset.noxNativeState=result.state;
