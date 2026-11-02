@@ -25,6 +25,8 @@ const NATIVE_SENSITIVE = new Set([
   "media.player",
   "browser.open",
   "images.generate",
+  // Windows autostart changes HKCU startup policy: require fresh native opt-in.
+  "system.autostart",
   "system.update",
   "system.backup",
   "system.pc_control",

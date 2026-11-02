@@ -52,20 +52,20 @@ REQUIRED_DONORS = frozenset({
 MENU_V2_SHA256 = {
     'ui/selfbuilder-menu-v2.mjs': '5fd912a8ddba30ca6797f786e7b538571c11d8baf615077e50c8cc7db8978274',
     'ui/selfbuilder-menu-v2.css': '6c8e37d658e0b6540ddd00ded406f3765481dc3adbe00e869d23404c47526d80',
-    'ui/onehost-menu-bindings.mjs': '9f48f0cac431a1da0eee2fe3345d7ee0794c1f49e372c28a336b404ecca10ac8',
+    'ui/onehost-menu-bindings.mjs': '0591ef1a1b109b2c28632931d9cce905412ff431a3b901a7956461035dae7c71',
     'ui/nox-r11-wow.mjs': 'fe720ffc42962799a896f755cd297ef05bb6fee463d3636cf69d5172731117b5',
     'ui/nox-r11-wow.css': 'aadd7d633a65609ea24467bb6d39442cc0d94d748c1712f5d2b54c72ff13489a',
-    'ui/selfbuilder-wow-workbench.mjs': '1c6570cdb5cbf1a7957e95b0854bcfe2b954fde232a493afe4029427a0731b89',
+    'ui/selfbuilder-wow-workbench.mjs': 'bd65520a6f349439fe2a2b2215520dcc84f3f4254b52aaa277201071423d6f17',
     'ui/selfbuilder-wow-workbench.css': 'bad615430856cb1ce0201bc21b77f33258d0d5fd3cbc7fa12b1f63af086dea24',
     'contracts/menu_v2_existing_routes.json': '7bb81852e3f28a170d94873d603253f89e5017f268d0af6942f4bcba3b55beea',
 }
 
 P01_OWNER_BLOBS = {
-    "proposals/P01/WOW-MAX10/mount-p01.mjs": "5f89dd8e6f6d4b1420f07339e01695ad5de02f95",
-    "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "6f86e6ac92f3e3b55d71f4298eb2269eb7cdd0ee",
+    "proposals/P01/WOW-MAX10/mount-p01.mjs": "11db3fe98e377173c755aeeb837d488dbfca0a10",
+    "proposals/P01/WOW-MAX10/p01-cinematic-menu.mjs": "8de9918b48af2c56582e2c453b80cc0df43cc1e7",
     "proposals/P01/WOW-MAX10/p01-cinematic-menu.css": "7205f4b747ed6b95856e0207a9b52cce29f9d118",
     "proposals/P01/WOW-MAX10/scene-contract.mjs": "4f273275113b4f2045f5249f1b93067512c13b22",
-    "proposals/P01/WOW-MAX10/route-dispatch.mjs": "c03eee70d77a38f76c3a0307a8fee5932065c153",
+    "proposals/P01/WOW-MAX10/route-dispatch.mjs": "6e1d24fe81211c19c9fefa14592753eab8235d41",
     "proposals/P01/WOW-MAX10/d02-native-events.mjs": "085fea4af1c0c8a0982abf4296cf21627e639516",
     "proposals/P01/WOW-MAX10/p01-visual-approval.mjs": "1f8a55ac2f579f544a9f00471aa187555c8e6dcd",
     "proposals/P01/WOW-MAX10/p01-mode-controller.mjs": "9301c32300cc64614fc8530b40bd3b3bd2cb1e65",

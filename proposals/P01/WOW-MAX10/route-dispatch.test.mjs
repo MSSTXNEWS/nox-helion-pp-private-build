@@ -123,3 +123,20 @@ test("P01-ROUTE-03 disabled native handlers produce explicit HOLD not fake ACK",
  assert.equal(nativeP01Feedback({ok:true,receiptId:{}}).state,"hold");
  assert.equal(nativeP01Feedback({ok:false,reason:"<script>"}).reason,"ACK_MISSING");
 });
+
+test("R56: autostart has independent native consent; rejection never invokes Windows", async()=>{
+ let invocations=0,approvals=0;
+ const mockRoute=req=>{invocations++;return {ok:true,routeId:req.routeId,receiptId:"native-startup-1"};};
+ const untrusted=createP01RouteDispatcher({isAvailable:()=>true,invokeRoute:mockRoute});
+ assert.equal((await untrusted.invoke("system.autostart")).reason,"NATIVE_CONSENT_REQUIRED");
+ assert.equal(invocations,0);
+ const denied=createP01RouteDispatcher({isAvailable:()=>true,
+   authorizeSensitive:async()=>{approvals++;return false;},invokeRoute:mockRoute});
+ assert.equal((await denied.invoke("system.autostart")).reason,"NATIVE_CONSENT_DENIED");
+ assert.equal(approvals,1);assert.equal(invocations,0);
+ const allowed=createP01RouteDispatcher({isAvailable:()=>true,
+   authorizeSensitive:async req=>{assert.equal(req.routeId,"system.autostart");return true;},
+   invokeRoute:mockRoute});
+ assert.equal((await allowed.invoke("system.autostart")).ok,true);
+ assert.equal(invocations,1);
+});
