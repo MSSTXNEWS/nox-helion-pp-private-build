@@ -49,9 +49,32 @@ class P03BackendAckReceiptTest(unittest.TestCase):
                 with self.assertRaises(p03.P03PortHold):
                     self.invoke(receipt)
 
+    def test_explicit_native_denials_cannot_be_success_acks(self):
+        denied = (
+            {"ok": True, "error": "LICENSE_REVOKED"},
+            {"error": {"code": "STOP_PENDING"}},
+            {"accepted": False, "status": "QUEUED"},
+            {"success": False, "jobId": "j1"},
+            {"ack": 1, "status": "QUEUED"},
+            {"status": "REVIEW_REQUIRED"},
+            {"status": "CONSENT_REQUIRED"},
+            {"status": "NOT_AUTHORIZED"},
+            {"status": "STOP_PENDING"},
+            {"status": "BUSY"},
+            {"status": "NOT_READY"},
+        )
+        for receipt in denied:
+            with self.subTest(receipt=receipt):
+                with self.assertRaises(p03.P03PortHold):
+                    self.invoke(receipt)
+
     def test_existing_positive_receipts_preserved(self):
         accepted = ({"ok": True}, {"status": "QUEUED", "jobId": "j1"},
-                    {"queued": True, "jobId": "j2"})
+                    {"queued": True, "jobId": "j2"},
+                    {"ack": True, "status": "QUEUED"},
+                    {"accepted": True, "status": "QUEUED"},
+                    {"success": True, "status": "QUEUED"},
+                    {"status": "QUEUED", "error": None})
         for receipt in accepted:
             with self.subTest(receipt=receipt):
                 output, backend = self.invoke(receipt)

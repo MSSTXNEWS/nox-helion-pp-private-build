@@ -339,10 +339,20 @@ class P03OneHostPort:
             if "status" in result and (type(result["status"]) is not str
                                       or not result["status"].strip()):
                 raise P03PortHold("Owner3 backend returned malformed status")
+            # A backend can return a nonempty JSON object that explicitly
+            # denies the operation. Never promote such a denial to native ACK.
+            # Keep existing positive/legacy queue receipts and their schema.
+            for field in ("ack", "accepted", "success"):
+                if field in result and result[field] is not True:
+                    raise P03PortHold("Owner3 backend returned a negative acknowledgement")
+            if result.get("error") not in (None, ""):
+                raise P03PortHold("Owner3 backend returned an explicit error, not an ACK")
             state = result.get("status")
             if (type(state) is str and
-                state.strip().upper().startswith(
-                    ("HOLD", "ERROR", "FAILED", "DENIED", "REJECTED"))):
+                state.strip().upper().startswith((
+                    "HOLD", "ERROR", "FAILED", "DENIED", "REJECTED",
+                    "REVIEW_REQUIRED", "CONSENT_REQUIRED", "NOT_AUTHORIZED",
+                    "STOP_PENDING", "BUSY", "NOT_READY"))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
             return result
         except (P03PortDenied, P03PortHold):
