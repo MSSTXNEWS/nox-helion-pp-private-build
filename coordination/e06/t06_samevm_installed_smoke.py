@@ -485,7 +485,9 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
-            "environment":"GITHUB_WINDOWS_EPHEMERAL_ONLY" if ON_GITHUB else "CIRCLECI_WINDOWS_EPHEMERAL_ONLY",
+            "environment":("GITLAB_WINDOWS_EPHEMERAL_ONLY" if ON_LOCAL_BRIDGE else
+                           "GITHUB_WINDOWS_EPHEMERAL_ONLY" if ON_GITHUB else
+                           "CIRCLECI_WINDOWS_EPHEMERAL_ONLY"),
             "setup_sha256":None,"installed_wpf_sha256":None,
             "installed_backend_sha256":None,
             "installed_process_gui_webview2":"NOT_TESTED",
@@ -494,13 +496,28 @@ def main()->int:
             "release_accepted":False,"installer_lifecycle":{}}
     code=1
     try:
-        circle_ci=(os.environ.get("CIRCLECI")=="true" and bool(os.environ.get("CIRCLE_BUILD_NUM")))
-        github_ci=(ON_GITHUB and os.environ.get("RUNNER_OS")=="Windows" and
+        circle_ci=(not ON_LOCAL_BRIDGE and os.environ.get("CIRCLECI")=="true" and
+                   bool(os.environ.get("CIRCLE_BUILD_NUM")))
+        github_ci=(not ON_LOCAL_BRIDGE and ON_GITHUB and
+                   os.environ.get("RUNNER_OS")=="Windows" and
                    bool(os.environ.get("GITHUB_RUN_ID")) and
                    os.environ.get("NOX_E07_CI_WINDOWS_DISPOSABLE")=="YES")
-        require(sys.platform=="win32" and (circle_ci or github_ci),
+        # R78 is the genuine GitLab same-VM candidate, NOT the GitHub E06
+        # diagnostic candidate. Enforce project, hosted Windows runner, explicit
+        # bridge mode and numeric CI job ID before any installer may execute.
+        gitlab_id=os.environ.get("CI_JOB_ID","")
+        gitlab_ci=(ON_LOCAL_BRIDGE and
+                   os.environ.get("GITLAB_CI")=="true" and
+                   os.environ.get("CI_SERVER_HOST")=="gitlab.com" and
+                   os.environ.get("CI_PROJECT_PATH")=="s-grouptwet/nox-helion-pp-private-build" and
+                   os.environ.get("CI_RUNNER_EXECUTABLE_ARCH","").lower()=="windows/amd64" and
+                   gitlab_id.isascii() and gitlab_id.isdecimal() and
+                   1 <= len(gitlab_id) <= 20)
+        require(sys.platform=="win32" and (circle_ci or github_ci or gitlab_ci),
                 "T06_INSTALL_SMOKE_REQUIRES_AUTHORIZED_DISPOSABLE_WINDOWS")
-        ci_run_id=os.environ.get("CIRCLE_BUILD_NUM") if circle_ci else os.environ["GITHUB_RUN_ID"]
+        ci_run_id=(gitlab_id if gitlab_ci else
+                   os.environ["CIRCLE_BUILD_NUM"] if circle_ci else
+                   os.environ["GITHUB_RUN_ID"])
         evidence=candidate_gate()
         report.update(evidence)
         local=os.getenv("LOCALAPPDATA","")
