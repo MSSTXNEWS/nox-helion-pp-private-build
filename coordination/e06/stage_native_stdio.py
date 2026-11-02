@@ -16,7 +16,7 @@ ADDONS=(
     ('coordination/e06/nox_foundation_readiness.py', 'nox_selfbuilder/foundation_readiness.py', '7d20cb6f750610d2e8122698cdcc190db31ce106'),
     ('contracts/p03_download_candidates.json', 'nox_selfbuilder/p03_download_candidates.json', '17053ed67af3bd74c9f767b9d6cc33d66c3eab73'),
     ('contracts/p04_module_candidates.json', 'nox_selfbuilder/p04_module_candidates.json', '3b034ba129c0ed434fe858ac132b1a15ea222d3b'),
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '037a2c8a2e769779d657df5ccdccf61d1968a992'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'f46893ad141168843d684f471d6ad0f0060da8dc'),
     ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '0520a74aa62c2390082f6f5e4ae3731e77f92f3d'),
     ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', 'eac8f3ffd834e4cf8d5e99996d3b7a55a45b70cc'),
     ('src/nox_selfbuilder/firstboot_coordinator.py', 'nox_selfbuilder/firstboot_coordinator.py', 'aaa2f660fe7345c96137c8a7775f223eada45eb6'),

@@ -218,5 +218,77 @@ class A1BootFailedLeaseRollback(unittest.TestCase):
         self.assertEqual(leases[(session.chat_id, "evolution.autonomy.read")], 7)
 
 
+
+class A1NativeConsentEpochRace(unittest.TestCase):
+    """Exercise the actual nested original native lease grant, not a mock host."""
+
+    def _grant(self, *, interrupted=False, principal="owner", valid=True):
+        import ast
+        import threading
+        from types import SimpleNamespace
+        src = (ROOT / "coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")
+        methods = [n for n in ast.walk(ast.parse(src))
+                   if isinstance(n, ast.FunctionDef) and n.name == "grant"]
+        self.assertEqual(len(methods), 1)
+        adapter = SimpleNamespace(_stop_epoch=7, stop_event=threading.Event())
+        adapter.stop_event.set()
+        leases, prompts = {}, []
+
+        class Session:
+            tenant = "local"
+            chat_id = "real-private-frame"
+            def __init__(self):
+                self.principal = principal
+            def validate(self):
+                if not valid:
+                    raise PermissionError("NATIVE_SESSION_INVALID")
+
+        def native_approve(session, action, args):
+            prompts.append(action)
+            if interrupted:
+                adapter._stop_epoch += 1  # STOP during the real consent callback.
+            return True
+
+        scope = {"native_approve": native_approve, "adapter": adapter,
+                 "queue": SimpleNamespace(is_busy=lambda: False),
+                 "principal": "owner", "lease_lock": threading.Lock(),
+                 "leases": leases}
+        exec(compile(ast.Module(body=methods, type_ignores=[]),
+                     "<original-native-grant>", "exec"), scope)
+        return scope["grant"], Session(), leases, prompts, adapter
+
+    def test_stop_during_consent_cannot_grant_post_stop_lease(self):
+        grant, session, leases, prompts, adapter = self._grant(interrupted=True)
+        with self.assertRaisesRegex(PermissionError, "E06_NATIVE_CONSENT_STOP_RACE_HOLD"):
+            grant(session, "selfbuilder.worker.start", {})
+        self.assertEqual(leases, {})
+        self.assertTrue(adapter.stop_event.is_set())
+        self.assertEqual(prompts, ["selfbuilder.worker.start"])
+
+    def test_foreign_principal_never_reaches_native_approve(self):
+        grant, session, leases, prompts, adapter = self._grant(principal="foreign")
+        with self.assertRaisesRegex(PermissionError, "E06_NATIVE_OWNER_SCOPE_REQUIRED"):
+            grant(session, "selfbuilder.worker.start", {})
+        self.assertEqual(leases, {})
+        self.assertEqual(prompts, [])
+
+    def test_invalid_native_session_never_reaches_native_approve(self):
+        grant, session, leases, prompts, adapter = self._grant(valid=False)
+        with self.assertRaisesRegex(PermissionError, "NATIVE_SESSION_INVALID"):
+            grant(session, "selfbuilder.worker.start", {})
+        self.assertEqual(leases, {})
+        self.assertEqual(prompts, [])
+
+    def test_same_epoch_fresh_consent_keeps_original_worker_actions(self):
+        grant, session, leases, prompts, adapter = self._grant()
+        grant(session, "selfbuilder.worker.start", {})
+        for action in ("selfbuilder.propose", "selfbuilder.worker.start",
+                       "selfbuilder.coding.generate", "selfbuilder.reflect",
+                       "selfbuilder.proposal.persist"):
+            self.assertEqual(leases[(session.chat_id, action)], 7)
+        self.assertFalse(adapter.stop_event.is_set())
+        self.assertEqual(prompts, ["selfbuilder.worker.start"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -169,20 +169,28 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
             return leases.get((session.chat_id, action)) == adapter._stop_epoch
 
     def grant(session, action, args):
-        # Only entered after private-pipe native consent, not from a page flag.
+        # Authenticate the original local owner before requesting WPF consent.
+        session.validate()
+        if session.tenant != "local" or session.principal != principal:
+            raise PermissionError("E06_NATIVE_OWNER_SCOPE_REQUIRED")
+        consent_epoch = adapter._stop_epoch
         if not callable(native_approve) or native_approve(session, action, args) is not True:
             raise PermissionError("E06_FRESH_NATIVE_ACTION_CONSENT_REQUIRED")
+        if adapter._stop_epoch != consent_epoch:
+            raise PermissionError("E06_NATIVE_CONSENT_STOP_RACE_HOLD")
         if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge", "selfbuilder.background.enable"} and queue.is_busy():
             raise RuntimeError("E06_NATIVE_WORKER_BUSY")
-        if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge", "selfbuilder.background.enable"}:
-            adapter.stop_event.clear()  # Fresh consent only; the revocation epoch NEVER resets.
         actions = {action}
         if action in {"selfbuilder.propose", "selfbuilder.worker.start"}:
             actions |= {"selfbuilder.propose", "selfbuilder.coding.generate", "selfbuilder.reflect",
                         "selfbuilder.proposal.persist"}
         with lease_lock:
+            if adapter._stop_epoch != consent_epoch:
+                raise PermissionError("E06_NATIVE_CONSENT_STOP_RACE_HOLD")
+            if action in {"selfbuilder.propose", "selfbuilder.worker.start", "training.start", "training.resume", "training.merge", "selfbuilder.background.enable"}:
+                adapter.stop_event.clear()  # Same-epoch fresh native consent only.
             for permitted in actions:
-                leases[(session.chat_id, permitted)] = adapter._stop_epoch
+                leases[(session.chat_id, permitted)] = consent_epoch
 
     queue = NativeWorkQueue(store, authorize=authorize, stop_requested=adapter.stop_requested,
                            stop_epoch=lambda: adapter._stop_epoch)
