@@ -460,6 +460,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
     The same-VM smoke is NOT independent E07. Never accept stale log
     text, a retired WPF process, a replaced log file, or native hold.
     """
+    from t06_windows_hwnd_witness import find_visible_wpf_hwnd
     log=local/"NOX_HELION/P01/logs/shell.log"
     original=log.stat() if log.is_file() else None
     offset=original.st_size if original else 0
@@ -470,6 +471,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
     boundary=""
     process=None
     alive_at_proof=False
+    hwnd_at_proof=None
     log_replaced=False
     try:
         process=subprocess.Popen([str(exe)],cwd=exe.parent,
@@ -508,18 +510,26 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                     latest.st_size<offset):
                     log_replaced=True
                     break
-                if offset==latest.st_size:
-                    alive_at_proof=process.poll() is None
-                    break
+                if offset==latest.st_size and process.poll() is None:
+                    # A live PID and log markers do not prove real GUI: require
+                    # a visible, unowned HWND of THIS launched WPF PID.
+                    hwnd_at_proof=find_visible_wpf_hwnd(process.pid)
+                    if hwnd_at_proof is not None:
+                        alive_at_proof=process.poll() is None
+                        if alive_at_proof: break
             time.sleep(0.7)
-        accepted=(process.pid>0 and alive_at_proof and not log_replaced and
-                  not seen["INIT_ERROR"] and not seen["P02_ORIGINAL_NATIVE_HOLD"])
+        accepted=(process.pid>0 and alive_at_proof and hwnd_at_proof is not None and
+                  not log_replaced and not seen["INIT_ERROR"] and
+                  not seen["P02_ORIGINAL_NATIVE_HOLD"])
         return {"pid_started":process.pid>0,
                 "new_nav_ok":accepted and seen["NAV_OK"],
                 "new_python_ipc_handshake":accepted and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"],
                 "init_error":seen["INIT_ERROR"],
                 "native_hold":seen["P02_ORIGINAL_NATIVE_HOLD"],
                 "live_process_at_receipt":alive_at_proof,
+                "real_wpf_visible_pid_hwnd":accepted,
+                "real_wpf_hwnd":hex(hwnd_at_proof) if accepted else None,
+                "real_wpf_hwnd_pid":process.pid if accepted else None,
                 "log_replaced":log_replaced,
                 "new_log_bytes_scanned":offset-(original.st_size if original else 0),
                 "proof":"CURRENT_WINDOWS_PROCESS_NEW_SHELL_LOG",
