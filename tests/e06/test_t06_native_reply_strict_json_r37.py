@@ -28,7 +28,8 @@ def parser_from_original_source():
 class T06NativeReplyStrictJson(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.parse, cls.builder_source = parser_from_original_source()
+        parser, cls.builder_source = parser_from_original_source()
+        cls.parse = staticmethod(parser)
 
     def test_valid_explicit_response_preserved(self):
         reply = self.parse(
