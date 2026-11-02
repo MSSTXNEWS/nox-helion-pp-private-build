@@ -121,11 +121,7 @@ nox_t06_original_onehost_candidate:
       }
       & python -m unittest discover -s tests/e06 -p 'test_t06_samevm_webview2_preflight_stage.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'T06_WEBVIEW2_REGISTRY_STAGE_REGRESSION_HOLD' }
-      if ($env:NOX_PR162_EXACT_SHA) {
-        & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File coordination/e06/Run-GitLabExactGithubSource.ps1
-      } else {
-        & python coordination/e06/t06_local_onehost_bridge.py
-      }
+      & python coordination/e06/t06_local_onehost_bridge.py
       if ($LASTEXITCODE -ne 0) { throw 'T06_GITLAB_SAME_VM_CANDIDATE_BUILD_HOLD' }
   artifacts:
     when: always
