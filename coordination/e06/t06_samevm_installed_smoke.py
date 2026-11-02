@@ -642,6 +642,19 @@ def summarize_fresh_webview_navigation(window: str) -> dict:
     }
 
 
+def wpf_startup_fatal_seen(seen: dict) -> bool:
+    """A failed same-PID WebView2 launch cannot be certified by earlier NAV_OK.
+
+    Treat blocking navigation, navigation errors and any WebView2 process
+    failure as terminal for THIS smoke process, even after IPC succeeds.
+    A new, separate installed launch must produce fresh log+HWND evidence.
+    """
+    return any(seen.get(event, False) is True for event in (
+        "NAV_FAIL", "BLOCK_NAV", "WEBVIEW_PROCESS_FAILED",
+        "INIT_ERROR", "P02_ORIGINAL_NATIVE_HOLD",
+    ))
+
+
 def live_original_wpf_probe(exe:Path,local:Path)->dict:
     """Attest live WPF GUI/IPC from NEW bytes of the original shell log.
 
@@ -703,7 +716,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                         boundary=tail[-4096:]
                     else:
                         boundary=window[-4096:]
-            if seen["INIT_ERROR"] or seen["P02_ORIGINAL_NATIVE_HOLD"]:
+            if wpf_startup_fatal_seen(seen):
                 break
             if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
                 # Good markers at the start of a large append cannot outweigh
@@ -724,8 +737,7 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                         if alive_at_proof: break
             time.sleep(0.7)
         accepted=(process.pid>0 and alive_at_proof and hwnd_at_proof is not None and
-                  not log_replaced and not seen["INIT_ERROR"] and
-                  not seen["P02_ORIGINAL_NATIVE_HOLD"])
+                  not log_replaced and not wpf_startup_fatal_seen(seen))
         return {"pid_started":process.pid>0,
                 "new_nav_ok":accepted and seen["NAV_OK"],
                 "new_python_ipc_handshake":accepted and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"],
