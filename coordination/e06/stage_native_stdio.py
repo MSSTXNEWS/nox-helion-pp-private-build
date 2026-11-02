@@ -18,7 +18,7 @@ ADDONS=(
     ('contracts/p03_download_candidates.json', 'nox_selfbuilder/p03_download_candidates.json', '17053ed67af3bd74c9f767b9d6cc33d66c3eab73'),
     ('contracts/p04_module_candidates.json', 'nox_selfbuilder/p04_module_candidates.json', '3b034ba129c0ed434fe858ac132b1a15ea222d3b'),
     ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '3c409ee3b5360a4521aebca95cca5eaa761bbe78'),
-    ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '77a568154b6272176e382dd58e2f8d904e459b96'),
+    ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', 'bbe6d7aada526a97ca1750eb4786780479d0ac52'),
     ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', 'eac8f3ffd834e4cf8d5e99996d3b7a55a45b70cc'),
     ('src/nox_selfbuilder/firstboot_coordinator.py', 'nox_selfbuilder/firstboot_coordinator.py', '837c10aa421432ac13295e03438b6cb8f04d3970'),
     ('src/nox_selfbuilder/acquisition_library.py', 'nox_selfbuilder/acquisition_library.py', 'df8f2c8259efdf3d3fff5a344164bced13144fab'),

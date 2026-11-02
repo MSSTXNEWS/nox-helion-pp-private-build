@@ -7,6 +7,7 @@ A valid installed Windows run is NOT implied by successful source tests.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from threading import Lock
 import re
 from typing import Callable
 
@@ -42,6 +43,7 @@ class A1NativeCommand:
         self._stopped = stopped
         self._epoch = stop_epoch
         self._head = source_head
+        self._boot_mutex = Lock()
         self._owner_scope = None
         self._bound = False
         self._binding_verified = False
@@ -135,46 +137,59 @@ class A1NativeCommand:
             }
 
         if action == 'selfbuilder.a1.boot':
-            if self._bound:
-                raise A1NativeHold('A1_NATIVE_ALREADY_BOUND_NO_DOUBLE_BOOT')
-            # Fresh, real, trusted WPF consent mandatory before instantiating.
-            if self._consent(session, action) is not True:
-                raise A1NativeHold('A1_FRESH_NATIVE_WPF_CONSENT_REQUIRED')
-            epoch, head = self._gate(session, 'evolution.autonomy.read')
-            # Reserve this owner/HEAD/STOP epoch BEFORE any native factory or
-            # builder callback can partially bind and raise (or re-enter boot).
-            # Recovery requires a new authenticated OneHost session, not replay.
-            self._bound = True
-            self._owner_scope = scope
-            self._bound_epoch = epoch
-            self._bound_head = head
-            owner_components = self._components(session)
-            if (type(owner_components) is not dict or
-                    set(owner_components) != {'initiative_bridge', 'firstboot'}):
-                raise A1NativeHold('A1_ORIGINAL_NATIVE_COMPONENTS_REQUIRED')
-            if (self._stopped() is not False or self._epoch() != epoch or
-                    self._head() != head or
-                    self._authorize(session, 'evolution.autonomy.read') is not True):
-                raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BIND')
-            result = self._builder.bind_native_megapat_a(
-                session, initiative_bridge=owner_components['initiative_bridge'],
-                firstboot=owner_components['firstboot'])
-            if (not isinstance(result, dict) or
-                    result.get('state') != 'PORTS_BOUND_AWAITING_NATIVE_STARTUP'):
-                raise A1NativeHold('A1_ORIGINAL_BUILDER_BINDING_NOT_PROVEN')
-            # Only the original builder's exact receipt proves native binding.
-            if self._gate(session, 'evolution.autonomy.read') != (epoch, head):
-                raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BOOT')
-            self._binding_verified = True
-            boot = self._builder.native_a_boot(session, now=now)
-            if not isinstance(boot, dict) or boot.get('schema') != 'NOX-A-NATIVE-BOOT-v1':
-                raise A1NativeHold('A1_ORIGINAL_BOOT_RECEIPT_REQUIRED')
-            if (self._stopped() is not False or self._epoch() != epoch or
-                    self._head() != head or
-                    self._authorize(session, 'evolution.autonomy.read') is not True):
-                raise A1NativeHold('A1_BOOT_REVOKED_RECHECK_S03')
-            self._boot_receipt = boot
-            return {**boot, 'installed_windows_e07': False}
+            # Never allow two concurrent owner IPC requests to enter binding.
+            # Nonblocking also denies recursive/reentrant boot during a prompt.
+            if not self._boot_mutex.acquire(blocking=False):
+                raise A1NativeHold('A1_NATIVE_BOOT_IN_PROGRESS')
+            try:
+                if self._bound:
+                    raise A1NativeHold('A1_NATIVE_ALREADY_BOUND_NO_DOUBLE_BOOT')
+                # Bind the actual WPF decision to the SAME authenticated generation.
+                # STOP->RESET or HEAD rotation while its dialog is open revokes consent.
+                consent_epoch, consent_head = self._gate(session, 'evolution.autonomy.read')
+                if self._consent(session, action) is not True:
+                    raise A1NativeHold('A1_FRESH_NATIVE_WPF_CONSENT_REQUIRED')
+                if self._scope(session) != scope:
+                    raise A1NativeHold('A1_NATIVE_CONSENT_OWNER_CHANGED')
+                epoch, head = self._gate(session, 'evolution.autonomy.read')
+                if (epoch, head) != (consent_epoch, consent_head):
+                    raise A1NativeHold('A1_NATIVE_CONSENT_EPOCH_OR_HEAD_CHANGED')
+                # Reserve this owner/HEAD/STOP epoch BEFORE any native factory or
+                # builder callback can partially bind and raise (or re-enter boot).
+                # Recovery requires a new authenticated OneHost session, not replay.
+                self._bound = True
+                self._owner_scope = scope
+                self._bound_epoch = epoch
+                self._bound_head = head
+                owner_components = self._components(session)
+                if (type(owner_components) is not dict or
+                        set(owner_components) != {'initiative_bridge', 'firstboot'}):
+                    raise A1NativeHold('A1_ORIGINAL_NATIVE_COMPONENTS_REQUIRED')
+                if (self._stopped() is not False or self._epoch() != epoch or
+                        self._head() != head or
+                        self._authorize(session, 'evolution.autonomy.read') is not True):
+                    raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BIND')
+                result = self._builder.bind_native_megapat_a(
+                    session, initiative_bridge=owner_components['initiative_bridge'],
+                    firstboot=owner_components['firstboot'])
+                if (not isinstance(result, dict) or
+                        result.get('state') != 'PORTS_BOUND_AWAITING_NATIVE_STARTUP'):
+                    raise A1NativeHold('A1_ORIGINAL_BUILDER_BINDING_NOT_PROVEN')
+                # Only the original builder's exact receipt proves native binding.
+                if self._gate(session, 'evolution.autonomy.read') != (epoch, head):
+                    raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BOOT')
+                self._binding_verified = True
+                boot = self._builder.native_a_boot(session, now=now)
+                if not isinstance(boot, dict) or boot.get('schema') != 'NOX-A-NATIVE-BOOT-v1':
+                    raise A1NativeHold('A1_ORIGINAL_BOOT_RECEIPT_REQUIRED')
+                if (self._stopped() is not False or self._epoch() != epoch or
+                        self._head() != head or
+                        self._authorize(session, 'evolution.autonomy.read') is not True):
+                    raise A1NativeHold('A1_BOOT_REVOKED_RECHECK_S03')
+                self._boot_receipt = boot
+                return {**boot, 'installed_windows_e07': False}
+            finally:
+                self._boot_mutex.release()
 
         # Tick is allowed ONLY on an authenticated scope with a still-live boot.
         if not self._bound or self._boot_receipt is None or \
