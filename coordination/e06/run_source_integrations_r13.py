@@ -52,6 +52,7 @@ SUITES=(
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
     ("FASTLANE2 existing task selection and immutable handoff ERR25",E06_TESTS,"test_fastlane2_accelerator.py"),
     ("A1 WPF native owner MAC/SID/run/nonce proof (source only)",A1_TESTS,"test_a1_wpf_owner_proof.py"),
+    ("A1 optional FirstBoot vs read-only signed research consent",A1_TESTS,"test_a1_independent_consent.py"),
 
 )
 
