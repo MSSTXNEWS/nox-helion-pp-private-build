@@ -71,17 +71,30 @@ def stage(archive: Path, out: Path) -> dict:
                 mode = (entry.external_attr >> 16) & 0o170000
                 if mode not in (0, 0o100000):
                     raise ValueError("BOOST_CACHE_SPECIAL_FILE_HOLD")
-                contents = handle.read(entry)
-                if len(contents) != entry.file_size:
-                    raise ValueError("BOOST_CACHE_TRUNCATED_ENTRY")
-                sha = hashlib.sha256(contents).hexdigest()
-                if root in ("APPROVED_D02/", "approved-d02/") and sha != APPROVED_D02.get(relative.as_posix()):
-                    raise ValueError("BOOST_CACHE_D02_SOURCELOCK_HOLD")
+                # Never materialize a whole 80/200 MB NuGet or D02 ZIP
+                # member in RAM. The disposable stage stays atomically
+                # unpublished until exact size and official digest are checked.
                 dest = target / mappings[root] / relative.as_posix()
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(contents)
+                digest = hashlib.sha256()
+                size = 0
+                with handle.open(entry) as reader, dest.open("xb") as output:
+                    while True:
+                        chunk = reader.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        size += len(chunk)
+                        if size > entry.file_size or size > limit:
+                            raise ValueError("BOOST_CACHE_TRUNCATED_ENTRY")
+                        digest.update(chunk)
+                        output.write(chunk)
+                if size != entry.file_size:
+                    raise ValueError("BOOST_CACHE_TRUNCATED_ENTRY")
+                sha = digest.hexdigest()
+                if root in ("APPROVED_D02/", "approved-d02/") and sha != APPROVED_D02.get(relative.as_posix()):
+                    raise ValueError("BOOST_CACHE_D02_SOURCELOCK_HOLD")
                 extracted.append({"path": mappings[root] + relative.as_posix(),
-                                  "sha256": sha, "bytes": len(contents)})
+                                  "sha256": sha, "bytes": size})
         if {x["path"] for x in extracted if x["path"].startswith("approved-d02/")} != {
             "approved-d02/" + x for x in APPROVED_D02
         }:
