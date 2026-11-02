@@ -3,7 +3,7 @@ extraction. One private source copy, one local NativeIngress, one exe and proof.
 Manual same-VM build only. Neither published release nor GUI E2E acceptance.
 """
 from __future__ import annotations
-import hashlib,io,json,pathlib,zipfile
+import hashlib,io,json,math,pathlib,zipfile
 
 def strict_native_json(raw:bytes, hold_code:str)->dict:
     """Reject ambiguous/fabricated native replies before claiming a live ACK."""
@@ -16,9 +16,15 @@ def strict_native_json(raw:bytes, hold_code:str)->dict:
         return obj
     def reject_nonfinite(token):
         raise ValueError("non-finite native reply value")
+    def finite_float(token):
+        value=float(token)
+        if not math.isfinite(value):
+            raise ValueError("non-finite native reply JSON exponent")
+        return value
     try:
         decoded=json.loads(raw.decode("utf-8",errors="strict"),
-            object_pairs_hook=unique_pairs,parse_constant=reject_nonfinite)
+            object_pairs_hook=unique_pairs,parse_constant=reject_nonfinite,
+            parse_float=finite_float)
     except (UnicodeError, ValueError, TypeError) as exc:
         raise RuntimeError(hold_code) from exc
     if type(decoded) is not dict:
