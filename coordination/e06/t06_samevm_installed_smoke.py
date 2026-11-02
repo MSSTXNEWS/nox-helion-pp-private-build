@@ -499,8 +499,18 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
             if seen["INIT_ERROR"] or seen["P02_ORIGINAL_NATIVE_HOLD"]:
                 break
             if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
-                alive_at_proof=process.poll() is None
-                break
+                # Good markers at the start of a large append cannot outweigh
+                # unread INIT_ERROR/NATIVE_HOLD bytes already buffered.
+                # Drain through the observed EOF and recheck log identity.
+                latest=log.stat() if log.is_file() else None
+                if (latest is None or identity is None or
+                    (latest.st_dev,latest.st_ino)!=identity or
+                    latest.st_size<offset):
+                    log_replaced=True
+                    break
+                if offset==latest.st_size:
+                    alive_at_proof=process.poll() is None
+                    break
             time.sleep(0.7)
         accepted=(process.pid>0 and alive_at_proof and not log_replaced and
                   not seen["INIT_ERROR"] and not seen["P02_ORIGINAL_NATIVE_HOLD"])
