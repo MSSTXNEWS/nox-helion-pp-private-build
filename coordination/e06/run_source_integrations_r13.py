@@ -49,6 +49,7 @@ SUITES=(
     ("P02 OwnerTwoPorts live PACK01 ACL and native rollback",P02,"test_p02_owner_route_ports.py"),
     ("P03 ModelCenter real owner adapter",P03,"test_p03_onehost_port.py"),
     ("G2 source integration owner fixtures",ADAPTER_TESTS,"test_g2_space_mobile.py"),
+    ("FASTLANE2 existing task selection and immutable handoff ERR25",E06_TESTS,"test_fastlane2_accelerator.py"),
 
 )
 

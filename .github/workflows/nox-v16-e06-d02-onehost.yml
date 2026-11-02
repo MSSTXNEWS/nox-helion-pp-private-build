@@ -14,6 +14,9 @@ on:
       - 'tests/test_acquisition_library.py'
       - 'tests/test_firstboot_coordinator.py'
       - 'coordination/e06/stage_native_p02.py'
+      - 'coordination/e06/fastlane2_accelerator.py'
+      - 'tests/e06/test_fastlane2_accelerator.py'
+      - 'coordination/e06/run_source_integrations_r13.py'
       - 'coordination/e06/native_onehost_smoke.py'
       - 'coordination/e06/t06_samevm_installed_smoke.py'
       - 'tests/e06/test_native_busy_retry_r12.py'
@@ -49,6 +52,7 @@ jobs:
           python -m unittest discover -s tests/selfbuilder -p 'test_activator_worm.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_selfbuilder.py' -v
           python -m unittest discover -s tests/selfbuilder -p 'test_r4_complete.py' -v
+          python -m unittest discover -s tests/e06 -p 'test_fastlane2_accelerator.py' -v
   visual-source-stage:
     # Repository-owner variable only; user/model/page cannot select a runner.
     # The owner must register a trusted Windows x64 runner with label nox-win-x64.
@@ -105,6 +109,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'E06_E07_SAME_HEAD_ATTESTATION_HOLD' }
           python -m unittest discover -s tests/e06 -p 'test_c13_preview_s03_persistence.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'E06_S03_TRANSIENT_PREVIEW_PERSISTENCE_HOLD' }
+          python -m unittest discover -s tests/e06 -p 'test_fastlane2_accelerator.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'E06_FASTLANE2_ERR25_SOURCE_REGRESSION_HOLD' }
       - name: Verify original 28-part immutable R11 donor (no guessed source)
         shell: pwsh
         run: |
