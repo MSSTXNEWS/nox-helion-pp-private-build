@@ -12,6 +12,25 @@ from ctypes import wintypes
 
 
 _GW_OWNER = 4
+_WPF_CLASS_PREFIX = "HwndWrapper["
+
+
+def _same_live_wpf_window(hwnd: int, pid: int, user32: object) -> bool:
+    """A generic dialog/console of the right PID is NOT proof of WPF.
+
+    GetClassNameW checks the real HwndSource class. Repeated after EnumWindows
+    to reject a destroyed/reassigned HWND or a transient wrong-PID witness.
+    """
+    actual_pid = wintypes.DWORD(0)
+    thread_id = user32.GetWindowThreadProcessId(hwnd, ctypes.byref(actual_pid))
+    if (not thread_id or actual_pid.value != pid or
+            not user32.IsWindow(hwnd) or not user32.IsWindowVisible(hwnd) or
+            user32.GetWindow(hwnd, _GW_OWNER)):
+        return False
+    klass = ctypes.create_unicode_buffer(260)
+    length = user32.GetClassNameW(hwnd, klass, len(klass))
+    return (type(length) is int and 0 < length < len(klass) and
+            klass.value.startswith(_WPF_CLASS_PREFIX))
 
 
 def _visible_window_for_pid(pid: int, user32: object, callback_type: object) -> int | None:
@@ -21,18 +40,15 @@ def _visible_window_for_pid(pid: int, user32: object, callback_type: object) -> 
     matches: list[int] = []
 
     def inspect(hwnd: int, _lparam: int) -> bool:
-        actual_pid = wintypes.DWORD(0)
-        thread_id = user32.GetWindowThreadProcessId(hwnd, ctypes.byref(actual_pid))
-        if (thread_id and actual_pid.value == pid and
-                user32.IsWindow(hwnd) and user32.IsWindowVisible(hwnd) and
-                not user32.GetWindow(hwnd, _GW_OWNER)):
+        if _same_live_wpf_window(hwnd, pid, user32):
             matches.append(int(hwnd))
             return False  # intentionally stop EnumWindows on the first match
         return True
 
     callback = callback_type(inspect)  # retain callback throughout EnumWindows
     user32.EnumWindows(callback, 0)
-    return matches[0] if matches else None
+    return (matches[0] if matches and
+            _same_live_wpf_window(matches[0], pid, user32) else None)
 
 
 def find_visible_wpf_hwnd(pid: int) -> int | None:
@@ -52,6 +68,8 @@ def find_visible_wpf_hwnd(pid: int) -> int | None:
         user32.IsWindowVisible.restype = wintypes.BOOL
         user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
         user32.GetWindow.restype = wintypes.HWND
+        user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+        user32.GetClassNameW.restype = ctypes.c_int
         return _visible_window_for_pid(pid, user32, callback_type)
     except (AttributeError, OSError, TypeError, ValueError):
         return None
