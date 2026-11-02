@@ -15,22 +15,79 @@
       "id": 2,
       "name": "WPF Python WebView2 Native IPC",
       "status": "CANDIDATE_BUILT_ON_OLDER_GITLAB_SHA",
-      "evidence": "17 P02 Windows tests passed on older GitLab pipeline; updated Windows pipeline #3018166442 running, not GitHub PR same SHA"
+      "evidence": "Real GitLab Windows T06 pipeline #3018166442 failed T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL after signed Microsoft bootstrapper and standalone downloads; 17 P02 tests passed on the older Windows SHA. Native GUI/IPC still not proven."
     },
     {
       "id": 3,
       "name": "Windows NSIS Setup.exe",
       "status": "DIAGNOSTIC_SETUP_ARTIFACT_EXISTS_RELEASE_HOLD",
-      "evidence": "Previous GitLab job 17666690728 uploaded candidate Setup.exe; physical new BuildID pending"
+      "evidence": "Older 87.68MB candidate archived on different SHA but E07 HOLD. GitLab #3018263691 successfully preserved 252760706-byte OFFICIAL DEPENDENCIES ONLY with expire_at=null, NOT Setup. Empty 168-byte CI copy of old candidate is invalid. New current-HEAD Setup SHA/BuildID pending."
     },
     {
       "id": 4,
       "name": "Installed Windows E07: GUI/IPC/mandatory loader/no-loss/rollback",
       "status": "NOT_ACCEPTED",
-      "evidence": "Previous installed smoke ended T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"
+      "evidence": "No independent same-EXE SHA/BuildID 10/10 installed E07; Windows WebView2 runtime recognition gate blocking actual GUI/IPC lifecycle."
     }
   ],
   "updated_branch_commit_expected": "PR162_HEAD_AT_WRITE",
   "gitlab_candidate_sha": "a9eded983503bd5707efd8cf757275e80f77e108",
-  "release_accepted": false
+  "release_accepted": false,
+  "megablocks": [
+    {
+      "id": "MB1",
+      "title": "SOURCE_LOCK_FIRSTBOOT_A1",
+      "gate_ids": [
+        1
+      ],
+      "exit": "One current HEAD + 729 original parts/50 add-ons+rights and native FirstBoot/S03/P03 consent STOP/ACL/ACK closure; no-loss manifests"
+    },
+    {
+      "id": "MB2",
+      "title": "NATIVE_WPF_WEBVIEW2_ONEHOST",
+      "gate_ids": [
+        2
+      ],
+      "exit": "Real WPF embedded WebView2 runtime recognised on Windows and private Python/OneHost IPC, D02/MENU10 and STOP/ACL; no second host"
+    },
+    {
+      "id": "MB3",
+      "title": "SAME_SHA_NSIS_SETUP",
+      "gate_ids": [
+        3
+      ],
+      "exit": "One current accepted GitHub HEAD compiled on GitLab Windows, real permanent nonempty Setup+EXE SHA256+BuildID, signed prerequisites and update/rollback"
+    },
+    {
+      "id": "MB4",
+      "title": "INDEPENDENT_INSTALLED_E07",
+      "gate_ids": [
+        4
+      ],
+      "exit": "Different available executor independently installs exact immutable Setup/EXE and passes all 10 same-SHA native acceptance scenarios"
+    }
+  ],
+  "fast_coding": {
+    "shared_goal": "EXISTING_WINDOWS_X64_EXPRESS_INTEGRATOR_ONLY",
+    "fifteen_universal_agents": true,
+    "fixed_owners": false,
+    "dynamic_conflict_safe_file_leases": true,
+    "no_changes_to_hourly_12_plus_3_schedules": true,
+    "decision": "Choose first available material blocker on shortest release path; finish a cohesive cross-file megablock before unrelated microfixes",
+    "per_block": "Reuse existing sources and downloaded pinned dependencies; one integrated diff incl staging SHA pins, one necessary check, one nonforce CAS+readback, one concise error lesson",
+    "do_not": "No blind repeated downloads, duplicate model weights, repetitive zero-step GitHub CI, outdated GitLab branch accepted as current SHA, mock E07, fake release percentages",
+    "critical_runtime_error": "T06_WEBVIEW2_RUNTIME_STILL_MISSING_AFTER_INSTALL",
+    "verified_reuse": {
+      "gitlab_dependency_pipeline": 3018263691,
+      "gitlab_dependency_zip_bytes": 252760706,
+      "gitlab_expire_at": null,
+      "dependency_status": "DOWNLOADED_NOT_INSTALLED",
+      "candidate_old_sha_not_release": true
+    },
+    "measurement": {
+      "source_commits_not_equivalent_to_release": true,
+      "product_progress": "UNKNOWN_WITHOUT_ACCEPTED_DENOMINATOR",
+      "next_success_metric": "SIGNED_WEBVIEW2_RUNTIME_REGISTERED_AND_REAL_WPF_IPC_ON_ONE_SHA"
+    }
+  }
 }
