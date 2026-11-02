@@ -138,3 +138,23 @@ test('unmatched native terminal notices never imply Installed or LIVE', () => {
     assert.equal(v.signal(),'● —',variant.label+' cannot mark native queue LIVE');
   }
 });
+
+test('a new durable job or empty queue revokes LIVE until its own fresh native event', () => {
+  const v=mount(), other='22222222-2222-4222-8222-222222222222';
+  const snapshot=jobId=>v.app.processMessage({type:'p03.snapshot.v1',
+    models:[{id:'llama3',name:'Llama 3'}],
+    activeJob:jobId?{jobId,modelId:'llama3',modelTag:'llama3',state:'Queued'}:null});
+  snapshot(v.jobId);
+  v.post(v.jobId,v.utc(),'progress');
+  assert.equal(v.signal(),'● LIVE');
+  snapshot(v.jobId);
+  assert.equal(v.signal(),'● LIVE','same durable job keeps its real fresh event');
+  snapshot(other);
+  assert.equal(v.signal(),'● —','old job telemetry is not live for another job');
+  v.post(v.jobId,v.utc(),'completed');
+  assert.equal(v.signal(),'● —','foreign event cannot revive stale LIVE');
+  v.post(other,v.utc(),'progress');
+  assert.equal(v.signal(),'● LIVE','new native frame enables LIVE for its matching job');
+  snapshot(null);
+  assert.equal(v.signal(),'● —','empty durable queue cannot show prior job LIVE');
+});

@@ -296,6 +296,8 @@ function processMessage(data){if(!data||typeof data!=='object'||!['p03.snapshot.
   if(!before||!after||['officialUrl','exactTag','immutableRevision','sha256','manifestSha256','license','licenseEvidenceUrl','artifactVerified','artifactBytes','requiredDiskGiB','requiredVramGiB','recommendedRamGiB','compatibilityReviewed'].some(k=>before[k]!==after[k]))$('licenseAck').checked=false;
   state.models=models.map(m=>({...m}));
   if(!state.models.some(m=>m.id===state.activeId))state.activeId=state.models[0].id;
+  // LIVE belongs to the current durable host queue, never a previous job.
+  if(old?.jobId!==next?.jobId || old?.modelTag!==next?.modelTag)latestStampedEventAt=null;
   state.hostReady=true;state.activeJob=next;
   state.hardware=data.hardware&&typeof data.hardware==='object'?data.hardware:null;
   state.capabilities=data.capabilities&&typeof data.capabilities==='object'?data.capabilities:{};
