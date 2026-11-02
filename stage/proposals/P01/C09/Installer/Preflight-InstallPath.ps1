@@ -50,5 +50,36 @@ foreach ($p in $regPaths) {
     }
   } catch { }
 }
+# E06: real Windows native winreg found HKLM_32_VIEW pv=156.0.4314.58
+# while provider-only PowerShell preflight reported MISSING. Resolve the same
+# official runtime key through an explicit .NET 32-bit view, independent of
+# current PowerShell process bitness. Keep original probes and fail-closed gate.
+# This is registry presence only: native WPF WebView2 initialization is still
+# mandatory at installed smoke/E07; never accept an Edge browser as runtime.
+if (-not $installed) {
+  $hklm32=$null
+  $client32=$null
+  try {
+    $hklm32=[Microsoft.Win32.RegistryKey]::OpenBaseKey(
+      [Microsoft.Win32.RegistryHive]::LocalMachine,
+      [Microsoft.Win32.RegistryView]::Registry32)
+    $client32=$hklm32.OpenSubKey(
+      'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', $false)
+    if ($null -ne $client32 -and
+        $client32.GetValueKind('pv') -eq [Microsoft.Win32.RegistryValueKind]::String) {
+      $pv32=$client32.GetValue('pv', $null,
+        [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+      if ($pv32 -is [string]) {
+        try {
+          $runtimeVersion32=[version]$pv32
+          if ($runtimeVersion32.Major -gt 0) { $installed=$true }
+        } catch { }
+      }
+    }
+  } catch { } finally {
+    if ($null -ne $client32) { $client32.Dispose() }
+    if ($null -ne $hklm32) { $hklm32.Dispose() }
+  }
+}
 if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }
 'P01_PREFLIGHT_PASS'
