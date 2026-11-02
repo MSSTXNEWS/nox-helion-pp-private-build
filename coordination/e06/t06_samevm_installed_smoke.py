@@ -326,7 +326,8 @@ try {
 $subject=if ($null -ne $s.SignerCertificate) {[string]$s.SignerCertificate.Subject} else {''}
 @{status=[string]$s.Status;subject=$subject;message=[string]$s.StatusMessage} |
   ConvertTo-Json -Compress
-if ($s.Status -ne 'Valid' -or $subject -notmatch 'Microsoft Corporation') {exit 7}
+$publisherOk = $subject -cmatch '\ACN=Microsoft Corporation,\s*O=Microsoft Corporation(?:,|\z)'
+if ($s.Status -ne 'Valid' -or -not $publisherOk) {exit 7}
 exit 0"""
 
     def verify_official_installer(target:Path,kind:str)->bool:
