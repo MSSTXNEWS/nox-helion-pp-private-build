@@ -686,7 +686,7 @@ if ($LASTEXITCODE -ne 0) { throw 'ORIGINAL_NSIS_PAYLOAD_SHA_GATE_HOLD' }
 $c11NsiPath=Join-Path $installer 'NOX-HELION-Setup.nsi'
 Assert-E06PlainPathAncestors -Candidate $c11NsiPath -Scope 'NSIS_ROLLBACK'
 $c11NsiOriginal=[IO.File]::ReadAllText($c11NsiPath)
-$c11Anchor='  SetOutPath "$TEMP" ; release current working directory before Rename'
+$c11Anchor='  StagePayload:'
 $c11Pos=$c11NsiOriginal.IndexOf($c11Anchor,[StringComparison]::Ordinal)
 if ($c11Pos -lt 0 -or
     $c11NsiOriginal.LastIndexOf($c11Anchor,[StringComparison]::Ordinal) -ne $c11Pos -or
@@ -696,9 +696,10 @@ if ($c11Pos -lt 0 -or
   throw 'C11_NSIS_OWNER_PREIMAGE_HOLD'
 }
 $c11Guard=@'
-  ; C11: only save a SHA-verified installed version as rollback.
-  ; Reuse the original verifier, marker and manifest; preserve user data.
+  ; C11: reject corrupt installed payload before extracting a new stage.
+  ; Never strand a verified new StageDir on a failed old-payload check.
   IfFileExists "$INSTDIR\nox-p01-owned.txt" 0 C11OldPayloadChecked
+  File "/oname=$PLUGINSDIR\Verify-Payload.ps1" "${VERIFY_SCRIPT}"
   nsExec::ExecToStack 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\Verify-Payload.ps1" -Root "$INSTDIR" -Manifest "$INSTDIR\payload.sha256.json" -AllowInstalledMetadata'
   Pop $ExitCode
   Pop $CheckResult
