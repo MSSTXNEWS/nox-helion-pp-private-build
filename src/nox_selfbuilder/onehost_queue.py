@@ -92,11 +92,28 @@ class NativeWorkQueue:
             return [self._read(store,scope,tid) for tid in ids]
         return list(self.actor.call(read))
 
-    def record(self,scope,tid,state,result):
+    def record(self,scope,tid,state,result,*,expected_epoch=None,permission=None):
+        # A worker's provisional RESULT is not accepted after native STOP,
+        # epoch change or scoped owner lease revocation. HOLD receipts made by
+        # the exception path intentionally do not claim an owner permission.
+        if expected_epoch is not None and (type(expected_epoch) is not int or
+                                           type(permission) is not str or not permission):
+            raise ValueError('NATIVE_RESULT_EXACT_OWNER_FENCE_REQUIRED')
         frozen=json.loads(_json(result))
+        def require_live_result_owner():
+            if expected_epoch is not None and (
+                    self.stop_requested() or self.stop_epoch()!=expected_epoch or
+                    self.authorize(scope,permission,{'task_id':tid}) is not True):
+                raise NativeQueueHold('NATIVE_RESULT_OWNER_REVOKED')
         def write(store):
+            require_live_result_owner()
             self._read(store,scope,tid)
-            with store.conn:self._event(store,tid,'RESULT',{'scope':scope_key(scope),'state':state,'result':frozen})
+            with store.conn:
+                require_live_result_owner()
+                self._event(store,tid,'RESULT',{'scope':scope_key(scope),'state':state,'result':frozen})
+                # The original S03 audit may block; roll back DONE (and its
+                # audit row) if STOP/ACL/consent was revoked during the insert.
+                require_live_result_owner()
             return True
         return self.actor.call(write)
 
@@ -128,9 +145,9 @@ class NativeWorkQueue:
                     result=callback()
                     if not isinstance(result,dict):raise NativeQueueHold('INVALID_NATIVE_RESULT')
                     state=result.get('status','HOLD')
-                    if self.stop_epoch()!=epoch:
+                    if self.stop_requested() or self.stop_epoch()!=epoch:
                         result={'status':'HOLD','reason':'NATIVE_STOP_EPOCH_CHANGED','weights_updated':False};state='HOLD'
-                    self.record(scope,tid,state,result)
+                    self.record(scope,tid,state,result,expected_epoch=epoch,permission=permission)
                 except Exception as exc:
                     # Public records contain stable class/code only, never source prompts/paths.
                     code=str(exc) if str(exc).replace('_','').isalnum() and len(str(exc))<=100 else type(exc).__name__
