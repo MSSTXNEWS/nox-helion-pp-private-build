@@ -507,7 +507,7 @@ public partial class MainWindow
             if(!handshake.Accepted)throw new IOException("P02_REAL_NATIVE_INGRESS_NOT_READY");
             _nativeP02Bridge=new OneHostP02WebView2Bridge(core,
                 new Uri("https://nox.local/"),transport,sid,
-                NativeP02Acl,ConfirmP02NativeAsync,DispatchNativeOwnerAsync);
+                NativeP02Acl,ConfirmP02NativeAsync,WriteLog,DispatchNativeOwnerAsync);
             _nativeBrowserOnShell = (_, _) => {
                 if (_nativeP02Bridge is { BrowserExternalActive: false } &&
                     Uri.TryCreate(core.Source, UriKind.Absolute, out var source) &&

@@ -36,6 +36,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         "private_approved", "native_approve", "nativeConsent", "admin"
     };
     private readonly CoreWebView2 _web;
+    private readonly Action<string> _writeDiagnostic;
     private readonly Uri _virtualOrigin;
     private readonly NativePythonPipe _existingPipe;
     private readonly string _ownerWindowsSid;
@@ -69,6 +70,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         string authenticatedWindowsSid,
         Func<string, string, bool> nativeAcl,
         Func<string, JsonElement, CancellationToken, Task<bool>> nativeConsent,
+        Action<string> writeDiagnostic,
         Func<string, JsonElement, CancellationToken, Task<NativePipeResult>>? nativeOwnerAction = null)
     {
         _web = existingCore ?? throw new ArgumentNullException(nameof(existingCore));
@@ -76,6 +78,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         _existingPipe = existingHostOwnedPipe ?? throw new ArgumentNullException(nameof(existingHostOwnedPipe));
         _nativeAcl = nativeAcl ?? throw new ArgumentNullException(nameof(nativeAcl));
         _nativeConsent = nativeConsent ?? throw new ArgumentNullException(nameof(nativeConsent));
+        _writeDiagnostic = writeDiagnostic ?? throw new ArgumentNullException(nameof(writeDiagnostic));
         _nativeOwnerAction = nativeOwnerAction;
         _uiContext = SynchronizationContext.Current ??
             throw new InvalidOperationException("E06_NATIVE_UI_CONTEXT_REQUIRED");
@@ -269,6 +272,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
     {
         RevokeDocument();
+        try { _writeDiagnostic("WEBVIEW_PROCESS_FAILED " + e.ProcessFailedKind.ToString()); }
+        catch (Exception) { /* Diagnostics must never interrupt the process-failure fence. */ }
         if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
         {
             _browserProcessLost = true;
