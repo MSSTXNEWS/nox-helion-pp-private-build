@@ -341,8 +341,8 @@ class P03OneHostPort:
                 raise P03PortHold("Owner3 backend returned malformed status")
             state = result.get("status")
             if (type(state) is str and
-                (state.upper().startswith(("HOLD", "ERROR")) or
-                 state.upper() in ("FAILED", "DENIED"))):
+                state.strip().upper().startswith(
+                    ("HOLD", "ERROR", "FAILED", "DENIED", "REJECTED"))):
                 raise P03PortHold("Owner3 backend returned a HOLD/error, not an ACK")
             return result
         except (P03PortDenied, P03PortHold):
