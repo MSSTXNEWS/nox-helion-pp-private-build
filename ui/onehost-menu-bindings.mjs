@@ -109,6 +109,14 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
   });
 }
 
+export function isNativeChatTerminal(reply){
+  // Called only AFTER createNativeMenuClient validates a UA-trusted WebView2
+  // response with the matching request nonce and exact route. A real native
+  // HOLD closes the pending request irrespective of its specific errorCode;
+  // STOP_REQUESTED and partial completion must never unlock concurrent chat.
+  return reply?.routeId==='helion.chat' &&
+    (reply.state==='HOLD'||reply.state==='COMPLETED'&&reply.result?.done===true);
+}
 export function mountOneHostMenu({documentRef=globalThis.document,windowRef=globalThis.window}={}) {
   const doc=documentRef,view=windowRef;
   if(!doc||!view)throw Error('NOX_MENU_DOCUMENT_REQUIRED');
@@ -129,9 +137,7 @@ export function mountOneHostMenu({documentRef=globalThis.document,windowRef=glob
       scope.core_id===now.core_id&&scope.persona_id===now.persona_id&&
       (model===null||value('chat-model')===model);
   };
-  const chatTerminal=reply=>reply?.state==='COMPLETED'&&reply?.result?.done===true ||
-    reply?.state==='HOLD'&&['PAGE_AUTHORITY_CLAIM_DENIED','NATIVE_PERMISSION_DENIED',
-      'NATIVE_CONSENT_DENIED'].includes(reply.errorCode);
+  const chatTerminal=isNativeChatTerminal;
   const root=doc.getElementById('menu-detail');
   const status=doc.createElement('p');status.className='nox-sb-feedback';
   status.setAttribute('role','status');status.setAttribute('aria-live','polite');
