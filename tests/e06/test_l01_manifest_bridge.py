@@ -42,6 +42,27 @@ class OwnerManifest(unittest.TestCase):
     def test_url_query(self):self.assertRaises(Hold,self.run_gate,self.url+'?token=x')
     def test_no_unsafe_downgrade(self):self.assertRaises(Hold,self.run_gate,version=0)
     def test_no_url_encoding_bypass(self):self.assertRaises(Hold,self.run_gate,self.url.replace('NOX-HELION','NOX%2dHELION'))
+    def test_refuse_duplicate_release_acceptance_in_owner_receipt(self):
+        # json.loads would otherwise trust the last conflicting occurrence.
+        self.receipt.write_text('{"release_accepted":true,' + json.dumps(self.proof)[1:], encoding='utf-8')
+        with self.assertRaisesRegex(Hold, "L02_RECEIPT_DUPLICATE_KEY_HOLD"):
+            self.run_gate()
+        self.assertFalse(self.out.exists())
+
+    def test_refuse_duplicate_nested_receipt_key(self):
+        self.receipt.write_text(json.dumps(self.proof)[:-1] + ',"ignored":{"owner":"A","owner":"B"}}', encoding='utf-8')
+        with self.assertRaisesRegex(Hold, "L02_RECEIPT_DUPLICATE_KEY_HOLD"):
+            self.run_gate()
+        self.assertFalse(self.out.exists())
+
+    def test_refuse_nonfinite_owner_receipt_extension(self):
+        for raw in ('NaN', 'Infinity', '-Infinity'):
+            with self.subTest(raw=raw):
+                self.receipt.write_text(json.dumps(self.proof)[:-1] + ',"ignored":' + raw + '}', encoding='utf-8')
+                with self.assertRaisesRegex(Hold, "L02_RECEIPT_NONFINITE_NUMBER_HOLD"):
+                    self.run_gate()
+                self.assertFalse(self.out.exists())
+
     def test_refuse_unauthorized_release_receipt(self):
         self.proof['release_accepted']=True;self.commit_receipt();self.assertRaises(Hold,self.run_gate)
     def test_refuse_unsafe_symlink(self):
