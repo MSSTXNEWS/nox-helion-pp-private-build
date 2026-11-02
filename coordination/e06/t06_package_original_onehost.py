@@ -21,6 +21,26 @@ def sha(path):
     return h.hexdigest()
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
+def attest_nsis_compiler_unchanged(compiler, expected_sha):
+    """Reject replaced/reparsed compiler before and after NSIS execution.
+
+    This detects local substitutions, NOT vendor signature/license approval.
+    """
+    binary=Path(compiler)
+    need(type(expected_sha) is str and
+         re.fullmatch(r"[0-9a-f]{64}",expected_sha) is not None,
+         'T06_NSIS313_COMPILER_SHA_PIN_INVALID')
+    need(binary.is_file() and not binary.is_symlink() and
+         not getattr(binary,'is_junction',lambda:False)(),
+         'T06_NSIS313_COMPILER_REPARSE_HOLD')
+    for ancestor in binary.parents:
+        need(not ancestor.is_symlink() and
+             not getattr(ancestor,'is_junction',lambda:False)(),
+             'T06_NSIS313_COMPILER_REPARSE_HOLD')
+    need(sha(binary)==expected_sha,
+         'T06_NSIS313_COMPILER_CHANGED_SINCE_PREFLIGHT')
+
+
 def preflight_nsis_compiler(lookup=None, runner=None, candidates=None):
     """Only reuse an existing NSIS 3.13 compiler; never install tooling in a build."""
     lookup=lookup or shutil.which
@@ -31,10 +51,13 @@ def preflight_nsis_compiler(lookup=None, runner=None, candidates=None):
         Path('C:/Program Files (x86)/NSIS/makensis.exe'),
         Path('C:/Program Files/NSIS/makensis.exe')))
     compiler=next((p for p in locations if p.exists() or p.is_symlink()),None)
-    need(compiler is not None and compiler.is_file() and not compiler.is_symlink(),
+    need(compiler is not None and compiler.is_file() and not compiler.is_symlink() and
+         not getattr(compiler,'is_junction',lambda:False)(),
          'T06_NSIS313_PREINSTALLED_COMPILER_REQUIRED_NO_NETWORK')
     for ancestor in compiler.parents:
-        need(not ancestor.is_symlink(),'T06_NSIS313_COMPILER_REPARSE_HOLD')
+        need(not ancestor.is_symlink() and
+             not getattr(ancestor,'is_junction',lambda:False)(),
+             'T06_NSIS313_COMPILER_REPARSE_HOLD')
     try:
         probe=runner([str(compiler),'/VERSION'],capture_output=True,
                      text=True,timeout=20)
@@ -44,6 +67,7 @@ def preflight_nsis_compiler(lookup=None, runner=None, candidates=None):
     need(re.fullmatch(r'v?3\.13',probe.stdout.strip(),flags=re.I) is not None,
          'T06_NSIS313_EXACT_VERSION_REQUIRED')
     binary_sha=sha(compiler)
+    attest_nsis_compiler_unchanged(compiler,binary_sha)
     print('T06_PREINSTALLED_NSIS313_OFFLINE_SHA256',binary_sha,flush=True)
     return str(compiler),binary_sha
 
@@ -384,9 +408,11 @@ def build(root,staged):
        "/DREMOVE_SCRIPT="+str(installer_dir/"Remove-InstalledPayload.ps1"),
        "/DOUTPUT_SETUP="+str(setup),
        "/DAPP_VERSION=16.0.0",str(installer_dir/"NOX-HELION-Setup.nsi")]
+    attest_nsis_compiler_unchanged(nsis,nsis_compiler_sha)
     compiled=subprocess.run(args,capture_output=True,text=True,timeout=600)
     (staged/"NSIS_CANDIDATE_BUILD_LOG.txt").write_text(
          compiled.stdout+"\n"+compiled.stderr,encoding="utf-8")
+    attest_nsis_compiler_unchanged(nsis,nsis_compiler_sha)
     need(compiled.returncode==0,"T06_ORIGINAL_NSIS_CANDIDATE_BUILD_HOLD")
     setup_proof=verify_nsis_setup(setup)
     need(verified_source_head()==source_sha,
