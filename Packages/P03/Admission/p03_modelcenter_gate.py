@@ -208,6 +208,10 @@ def admit_for_existing_downloader(
         reasons.append("IMMUTABLE_REVISION_UNVERIFIED")
     if not _sha(evidence.get("ownerRightsReceiptSha256")):
         reasons.append("OWNER_RIGHTS_RECEIPT_MISSING")
+    # Refuse non-boolean native GPU requirements; "true", 1 and null must
+    # never silently bypass the measured VRAM gate below.
+    if "requiresGPU" in evidence and type(evidence["requiresGPU"]) is not bool:
+        reasons.append("GPU_REQUIREMENTS_UNVERIFIED")
     if not callable(trusted_attestor):
         reasons.append("TRUSTED_OWNER_ATTESTOR_MISSING")
     else:
