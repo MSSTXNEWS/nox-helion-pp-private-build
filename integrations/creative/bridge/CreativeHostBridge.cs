@@ -633,6 +633,31 @@ public partial class MainWindow
         return "MEDIA_PLAYER_UI_OPEN_NOT_PLAYING";
     }
 
+    // The selected cinema media root is untrusted until EVERY ancestor from
+    // the project folder back through the existing owner data root is checked.
+    // Checking projects/ and project/ alone misses a redirected creative/ parent.
+    // Windows GUI/E07 must additionally exercise directory-swap races.
+    private static bool IsTrustedProjectorMediaTree(string dataRoot, string selectedFolder)
+    {
+        var root = Path.GetFullPath(dataRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var folder = Path.GetFullPath(selectedFolder);
+        if (!folder.StartsWith(root + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+        for (DirectoryInfo? ancestor = new DirectoryInfo(folder);
+             ancestor is not null; ancestor = ancestor.Parent)
+        {
+            if (!ancestor.Exists || (ancestor.Attributes & FileAttributes.ReparsePoint) != 0)
+                return false;
+            if (string.Equals(ancestor.FullName.TrimEnd(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    root, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
     private async Task OpenCreativeProjectorAsync(string? requestedProjectId = null)
     {
         Window? openingProjector = null;
@@ -651,6 +676,7 @@ public partial class MainWindow
                 var movie = Path.Combine(projectFolder, "NOX_MOVIE_FINAL.mp4");
                 // Fail closed on junction/symlink redirection; don't expose wider data roots.
                 if (Directory.Exists(projectRoot) && Directory.Exists(projectFolder) && File.Exists(movie) &&
+                    IsTrustedProjectorMediaTree(_data,projectFolder) &&
                     (new DirectoryInfo(projectRoot).Attributes & FileAttributes.ReparsePoint) == 0 &&
                     (new DirectoryInfo(projectFolder).Attributes & FileAttributes.ReparsePoint) == 0 &&
                     (new FileInfo(movie).Attributes & FileAttributes.ReparsePoint) == 0 &&

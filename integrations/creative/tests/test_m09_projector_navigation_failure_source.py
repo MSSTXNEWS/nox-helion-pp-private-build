@@ -24,5 +24,25 @@ class ProjectorNavigationFailureSourceTest(unittest.TestCase):
         self.assertIn("_creativeProjectorProjectId=null;", handler)
         self.assertIn("openingProjector.Close();", method)
 
+
+    def test_project_media_mapping_checks_all_owner_data_ancestors(self):
+        # SOURCE-ONLY: a junction at _data/creative is invisible to checks
+        # limited to projects/, selected project/ and the media-file leaf.
+        source = SOURCE.read_text(encoding="utf-8")
+        helper = source.split("private static bool IsTrustedProjectorMediaTree(", 1)[1].split(
+            "private async Task OpenCreativeProjectorAsync", 1)[0]
+        method = source.split("private async Task OpenCreativeProjectorAsync", 1)[1].split(
+            "private async Task<string> StopCreativeWorkerAsync", 1)[0]
+        self.assertIn("Path.GetFullPath(dataRoot)", helper)
+        self.assertIn("Path.GetFullPath(selectedFolder)", helper)
+        self.assertIn("folder.StartsWith(root + Path.DirectorySeparatorChar", helper)
+        self.assertIn("ancestor = ancestor.Parent", helper)
+        self.assertIn("!ancestor.Exists || (ancestor.Attributes & FileAttributes.ReparsePoint) != 0", helper)
+        self.assertIn("StringComparison.OrdinalIgnoreCase", helper)
+        self.assertIn("IsTrustedProjectorMediaTree(_data,projectFolder)", method)
+        self.assertLess(method.index("IsTrustedProjectorMediaTree(_data,projectFolder)"),
+                        method.index("projectId = requestedProjectId;"))
+        self.assertIn("FileInfo(movie).Attributes & FileAttributes.ReparsePoint", method)
+
 if __name__ == "__main__":
     unittest.main()
