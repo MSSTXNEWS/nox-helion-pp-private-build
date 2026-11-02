@@ -3,7 +3,7 @@ No external HTTP artifact fetch, zero new host/server, no SourceLock rewrite.
 The only completed status is a diagnostic installer candidate, NOT an E07 pass.
 """
 from __future__ import annotations
-import hashlib,json,os,pathlib,subprocess,sys,time
+import hashlib,json,os,pathlib,subprocess,sys,time,re
 from t06_compile_original_wpf_p02 import verified_source_head
 from t06_package_original_onehost import EXPECTED_ZIP_SHA
 from t06_source_receipt_guard import attest_candidate
@@ -31,6 +31,80 @@ def run(label,script,env,timeout):
         except subprocess.TimeoutExpired:
             code=124
     return {"step":label,"return_code":code,"elapsed_seconds":round(time.monotonic()-start,2),"log":log.name}
+def webview2_root_evidence(lifecycle):
+    """Bounded allowlisted SAME-VM runtime evidence, never an install or E07 grant.
+
+    Previous Windows job logged signed downloads but hid the actual two install
+    exit codes and explicit registry views inside a >300 MB artifact. This
+    summary contains only non-secret version/error/status fields.
+    """
+    if type(lifecycle) is not dict:
+        return {"status":"LIFECYCLE_ABSENT_NOT_E07"}
+    versions=("HKLM_32_VIEW","HKLM_64_VIEW","HKCU_32_VIEW",
+              "HKCU_64_VIEW","HKCU_USER")
+    stages={"initial":"webview2_initial_registration",
+            "bootstrapper":"webview2_evergreen-bootstrapper_registration_diagnostic",
+            "standalone":"webview2_evergreen-standalone-x64_registration_diagnostic"}
+    statuses={"PASS","RUNTIME_MISSING","UNRELATED_HOLD"}
+    verdicts={"PASS_BY_ORIGINAL_PREFLIGHT","RUNTIME_MISSING",
+              "UNRELATED_HOLD","REGISTRY_PREFLIGHT_DIVERGENCE"}
+    sources={"evergreen-bootstrapper","evergreen-standalone-x64"}
+    source=lifecycle.get("webview2_selected_verified_source")
+    proof={"selected_source":source if type(source) is str and source in sources else "UNKNOWN",
+           "installer":{},"registration":{},"poll":{},"verdict":{},
+           "final_preflight_exit":None,"release_accepted":False}
+    for name,key in (("initial","microsoft_webview2_provision_ci"),
+                     ("standalone","webview2_standalone_fallback")):
+        entry=lifecycle.get(key)
+        if type(entry) is dict:
+            code=entry.get("exit_code")
+            kind=entry.get("kind")
+            proof["installer"][name]={
+                "exit_code":code if type(code) is int and -10000<=code<=10000 else None,
+                "kind":kind if type(kind) is str and kind in sources else "UNKNOWN",
+                "signed_microsoft":entry.get("signed_microsoft") is True}
+    for name,key in stages.items():
+        registry=lifecycle.get(key)
+        if type(registry) is not dict:
+            continue
+        safe={}
+        for view in versions:
+            row=registry.get(view)
+            if type(row) is not dict:
+                continue
+            version=row.get("pv")
+            winerror=row.get("winerror")
+            safe[view]={
+                "present":row.get("present") is True,
+                "pv":version if type(version) is str and
+                     re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}",version) else None,
+                "winerror":winerror if type(winerror) is int and
+                           -100000<=winerror<=100000 else None}
+        proof["registration"][name]=safe
+    for name,label in (("bootstrapper","evergreen-bootstrapper"),
+                       ("standalone","evergreen-standalone-x64")):
+        entries=lifecycle.get("webview2_"+label+"_strict_preflight_poll")
+        safe=[]
+        if type(entries) is list:
+            for row in entries[:8]:
+                if type(row) is not dict:
+                    continue
+                state=row.get("strict_preflight_status")
+                code=row.get("exit_code")
+                delay=row.get("delay_seconds")
+                safe.append({"status":state if type(state) is str and
+                             state in statuses else "UNKNOWN",
+                             "exit_code":code if type(code) is int and -10000<=code<=10000 else None,
+                             "delay_seconds":delay if type(delay) is int and 0<=delay<=120 else None})
+        proof["poll"][name]=safe
+        verdict=lifecycle.get("webview2_"+label+"_strict_preflight_verdict")
+        proof["verdict"][name]=(verdict if type(verdict) is str and
+                                 verdict in verdicts else "UNKNOWN")
+    final=lifecycle.get("webview2_final_postinstall_preflight")
+    if type(final) is dict and type(final.get("code")) is int:
+        proof["final_preflight_exit"]=final["code"]
+    return proof
+
 def main():
     if OUT.exists() or OUT.is_symlink():
         raise SystemExit("T06_LOCAL_BRIDGE_OUTPUT_COLLISION")
@@ -93,6 +167,13 @@ def main():
         # One physical four-gate run: print the *real* failed installed step
         # before any generic HOLD. Keep source hashes and release gates unchanged.
         lifecycle=smoke.get("installer_lifecycle",{})
+        # Persist all *safe* error evidence even if the following G4 gate fails.
+        # A 302MB GitLab artifact cannot be a prerequisite for root diagnosis.
+        runtime_evidence=webview2_root_evidence(lifecycle)
+        data["webview2_root_evidence"]=runtime_evidence
+        print("T06_WEBVIEW2_RUNTIME_ROOT_EVIDENCE "+
+              json.dumps(runtime_evidence,ensure_ascii=False,sort_keys=True,
+                         separators=(",",":")),flush=True)
         report={
             "reason":smoke.get("reason",""),
             "phase":smoke.get("phase","HOLD"),
