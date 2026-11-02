@@ -77,6 +77,20 @@ def url_gate(value: str, setup_name: str):
         raise Hold("L02_SETUP_FILENAME_OR_ESCAPE_MISMATCH")
 
 
+def _unique_receipt_fields(pairs):
+    # Ambiguous upstream owner receipts must never become a loader manifest.
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise Hold("L02_RECEIPT_DUPLICATE_KEY_HOLD")
+        obj[key] = value
+    return obj
+
+
+def _reject_nonfinite_receipt_number(_value):
+    raise Hold("L02_RECEIPT_NONFINITE_NUMBER_HOLD")
+
+
 def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     if type(version) is not int or not 1 <= version <= 2147483647:
         raise Hold("L02_VERSION_INVALID")
@@ -87,7 +101,13 @@ def emit(setup: Path, receipt: Path, url: str, version: int, out: Path) -> dict:
     pe_installer(setup)
     url_gate(url, setup.name)
     try:
-        proof = json.loads(receipt.read_text(encoding="utf-8"))
+        proof = json.loads(
+            receipt.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_receipt_fields,
+            parse_constant=_reject_nonfinite_receipt_number,
+        )
+    except Hold:
+        raise
     except (ValueError, UnicodeError, OSError):
         raise Hold("L02_RECEIPT_NOT_JSON") from None
     if (not isinstance(proof, dict) or proof.get("schema") != SCHEMA or
