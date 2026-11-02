@@ -622,11 +622,19 @@ public partial class MainWindow
             var found = await viewer.CoreWebView2.ExecuteScriptAsync(
                 "Boolean(document.getElementById('subtitles'))");
             stop.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(_creativeProjector, projector) ||
+                !projector.IsVisible ||
+                !ReferenceEquals(FindNoxTheaterViewer(projector), viewer))
+                return "MEDIA_OWNER_UI_NOT_READY";
             if (!string.Equals(found, "true", StringComparison.Ordinal))
                 return "SUBTITLES_FILE_INPUT_NOT_READY";
             await viewer.CoreWebView2.ExecuteScriptAsync(
                 "document.getElementById('subtitles').focus();");
             stop.ThrowIfCancellationRequested();
+            if (!ReferenceEquals(_creativeProjector, projector) ||
+                !projector.IsVisible ||
+                !ReferenceEquals(FindNoxTheaterViewer(projector), viewer))
+                return "MEDIA_OWNER_UI_NOT_READY";
             return "SUBTITLE_PICKER_READY_NOT_IMPORTED";
         }
         projector.Activate();

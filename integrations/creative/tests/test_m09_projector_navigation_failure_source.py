@@ -59,5 +59,29 @@ class ProjectorNavigationFailureSourceTest(unittest.TestCase):
         self.assertLess(method.index(guard), method.index("projectorCore.Navigate(theaterUrl);"))
         self.assertIn("if(ReferenceEquals(_creativeProjector,theater)){", method)
 
+    def test_subtitle_owner_revalidates_projector_after_each_webview2_await(self):
+        # Source-level regression: closed/replaced WebView2 must not receive a
+        # later focus command or a false native READY acknowledgement.
+        source = SOURCE.read_text(encoding="utf-8")
+        route = source.split("private async Task<string> OpenOwnerMediaRouteAsync", 1)[1].split(
+            "private static bool IsTrustedProjectorMediaTree", 1)[0]
+        guard = ('if (!ReferenceEquals(_creativeProjector, projector) ||\\n'
+                 '                !projector.IsVisible ||\\n'
+                 '                !ReferenceEquals(FindNoxTheaterViewer(projector), viewer))\\n'
+                 '                return "MEDIA_OWNER_UI_NOT_READY";')
+        self.assertEqual(route.count(guard), 2)
+        probe = route.index('var found = await viewer.CoreWebView2.ExecuteScriptAsync(')
+        focus = route.index("document.getElementById('subtitles').focus();")
+        ready = route.index('return "SUBTITLE_PICKER_READY_NOT_IMPORTED";')
+        first = route.index(guard, probe)
+        second = route.index(guard, focus)
+        self.assertLess(probe, first)
+        self.assertLess(first, focus)
+        self.assertLess(focus, second)
+        self.assertLess(second, ready)
+        self.assertIn("stop.ThrowIfCancellationRequested();", route[probe:first])
+        self.assertIn("stop.ThrowIfCancellationRequested();", route[focus:second])
+
+
 if __name__ == "__main__":
     unittest.main()
