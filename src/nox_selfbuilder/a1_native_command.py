@@ -97,6 +97,11 @@ class A1NativeCommand:
             valid = (current and self._bound and self._owner_scope == scope
                      and self._epoch() == self._bound_epoch
                      and self._head() == self._bound_head)
+            if valid:
+                try:
+                    valid = self._authorize(session, 'evolution.autonomy.read') is True
+                except Exception:
+                    valid = False  # Read-only status remains available as HOLD.
             return {
                 'schema': 'NOX-A1-NATIVE-COMMAND-STATUS-v1',
                 'state': ('ACTIVE_NATIVE_BOOT_RECEIPT' if valid and
@@ -130,7 +135,9 @@ class A1NativeCommand:
             if (type(owner_components) is not dict or
                     set(owner_components) != {'initiative_bridge', 'firstboot'}):
                 raise A1NativeHold('A1_ORIGINAL_NATIVE_COMPONENTS_REQUIRED')
-            if self._stopped() is not False or self._epoch() != epoch or self._head() != head:
+            if (self._stopped() is not False or self._epoch() != epoch or
+                    self._head() != head or
+                    self._authorize(session, 'evolution.autonomy.read') is not True):
                 raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BIND')
             result = self._builder.bind_native_megapat_a(
                 session, initiative_bridge=owner_components['initiative_bridge'],
@@ -139,12 +146,15 @@ class A1NativeCommand:
                     result.get('state') != 'PORTS_BOUND_AWAITING_NATIVE_STARTUP'):
                 raise A1NativeHold('A1_ORIGINAL_BUILDER_BINDING_NOT_PROVEN')
             # Only the original builder's exact receipt proves native binding.
+            if self._gate(session, 'evolution.autonomy.read') != (epoch, head):
+                raise A1NativeHold('A1_STOP_OR_HEAD_CHANGED_BEFORE_BOOT')
             self._binding_verified = True
-            self._gate(session, 'evolution.autonomy.read')
             boot = self._builder.native_a_boot(session, now=now)
             if not isinstance(boot, dict) or boot.get('schema') != 'NOX-A-NATIVE-BOOT-v1':
                 raise A1NativeHold('A1_ORIGINAL_BOOT_RECEIPT_REQUIRED')
-            if self._stopped() is not False or self._epoch() != epoch or self._head() != head:
+            if (self._stopped() is not False or self._epoch() != epoch or
+                    self._head() != head or
+                    self._authorize(session, 'evolution.autonomy.read') is not True):
                 raise A1NativeHold('A1_BOOT_REVOKED_RECHECK_S03')
             self._boot_receipt = boot
             return {**boot, 'installed_windows_e07': False}
@@ -157,7 +167,9 @@ class A1NativeCommand:
         if epoch != self._bound_epoch or head != self._bound_head:
             raise A1NativeHold('A1_NATIVE_REBOOT_REQUIRED_AFTER_CHANGE')
         result = self._builder.native_a_tick(session, now=now)
-        if self._stopped() is not False or self._epoch() != epoch or self._head() != head:
+        if (self._stopped() is not False or self._epoch() != epoch or
+                self._head() != head or
+                self._authorize(session, 'evolution.autonomy.read') is not True):
             raise A1NativeHold('A1_NATIVE_TICK_REVOKED_S03_READBACK_REQUIRED')
         if not isinstance(result, dict) or result.get('schema') != 'NOX-A1-INITIATIVE-SOURCE-v1':
             raise A1NativeHold('A1_ORIGINAL_TICK_RECEIPT_REQUIRED')
