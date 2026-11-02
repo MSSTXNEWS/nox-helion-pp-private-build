@@ -16,6 +16,12 @@ if ($scopeFailed.Count -gt 0) {
   Write-Host ('T06_GITHUB_CI_SCOPE_FAILED_FIELDS=' + ($scopeFailed -join ','))
   throw 'T06_GITHUB_CI_SCOPE_HOLD'
 }
+# Fetch the immutable expected-SHA owner snapshot; never a moving PR branch.
+if ($env:NOX_T06_GITHUB_FROZEN_REF -cnotmatch '^buildpin/nox-express-20261102-[0-9a-f]{12}$' -or
+    -not $env:NOX_T06_GITHUB_FROZEN_REF.EndsWith($ExpectedSha.Substring(0,12))) {
+  throw 'T06_FROZEN_SOURCE_REF_INVALID'
+}
+$frozenRef='refs/heads/'+$env:NOX_T06_GITHUB_FROZEN_REF
 if ($env:GIT_CONFIG_COUNT -or [string]::IsNullOrWhiteSpace($env:NOX_T06_GITHUB_READ_TOKEN)) {
   throw 'T06_GITHUB_MASKED_READ_TOKEN_REQUIRED'
 }
@@ -24,6 +30,11 @@ if (-not [string]::Equals($checkout,(Get-Location).Path,
     [StringComparison]::OrdinalIgnoreCase)) { throw 'T06_GITHUB_CI_WORKDIR_HOLD' }
 $git=(Get-Command git.exe -CommandType Application -ErrorAction Stop).Source
 $gitlabCommit=$env:CI_COMMIT_SHA.ToLowerInvariant()
+# Guard the existing CI worktree BEFORE force-detach; post-check is too late.
+$preflightDirty=@(& $git status --porcelain --untracked-files=all)
+if ($LASTEXITCODE -ne 0 -or $preflightDirty.Count -gt 0) {
+  throw 'T06_GITHUB_PRECHECKOUT_DIRTY_TREE_NOLOSS_HOLD'
+}
 # Never include credential in URL, argv, git config files, or CI receipts.
 $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(
     'x-access-token:'+$env:NOX_T06_GITHUB_READ_TOKEN))
@@ -33,7 +44,7 @@ $env:GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+$encoded
 $encoded=$null
 $env:GIT_TERMINAL_PROMPT='0'
 try {
-  & $git -c credential.helper= fetch --no-tags --depth=1 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build.git' 'refs/heads/integration/nox-v16-unified-candidate-20261028-r01'
+  & $git -c credential.helper= fetch --no-tags --depth=1 'https://github.com/MSSTXNEWS/nox-helion-pp-private-build.git' $frozenRef
   if ($LASTEXITCODE -ne 0) { throw 'T06_GITHUB_AUTH_FETCH_FAILED' }
 } finally {
   foreach($key in @('GIT_CONFIG_COUNT','GIT_CONFIG_KEY_0',
