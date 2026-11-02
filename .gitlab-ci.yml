@@ -1,16 +1,21 @@
-# NOX V16 · TWO strictly separated, explicit GitLab.com Windows paths:
+# NOX V16 · THREE mutually exclusive, explicit GitLab.com Windows paths:
 # (A) manually approved source-only Windows QA BEFORE T08/T10 (never builds EXE);
 # (B) original final diagnostic build AFTER independent T08 + signed T10.
-# No pipeline on push/PR/mirror. Both modes must never run together.
+# (C) independently approved T06 same-VM original NSIS CANDIDATE (never release).
+# No pipeline on push/PR/mirror. QA, diagnostic and T06 never run together.
 workflow:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web" && $NOX_APPROVE_T06_BRIDGE == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_T06_FROZEN_SHA != null && $NOX_T06_FROZEN_REF != null'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "api" && $NOX_APPROVE_T06_BRIDGE == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_T06_FROZEN_SHA != null && $NOX_T06_FROZEN_REF != null'
       when: always
     - when: never
 
@@ -29,7 +34,7 @@ variables:
 nox_v16_windows_source_qa:
   stage: windows-source-qa
   rules:
-    - if: '$NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
+    - if: '$NOX_APPROVE_WINDOWS_QA == "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_QA_SOURCE_SHA != null && $NOX_QA_SOURCE_REF != null'
       when: on_success
     - when: never
   tags:
@@ -48,7 +53,7 @@ nox_v16_windows_source_qa:
 nox_v16_windows_diagnostic:
   stage: windows-diagnostic
   rules:
-    - if: '$NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
+    - if: '$NOX_APPROVE_WINDOWS_BUILD == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_T06_BRIDGE != "YES" && $NOX_FROZEN_SOURCE_SHA != null && $NOX_FROZEN_SOURCE_REF != null'
       when: on_success
     - when: never
   tags:
@@ -63,3 +68,51 @@ nox_v16_windows_diagnostic:
     expire_in: 7 days
     paths:
       - work/gitlab-artifacts/
+
+# R78 source candidate: reuse the existing Windows same-VM OneHost bridge,
+# the original Python+WPF+NSIS packager, and strict installed-smoke receipts.
+# It is never E07 or permission to merge main. No automatic pipeline triggers.
+nox_t06_original_onehost_candidate:
+  stage: windows-diagnostic
+  rules:
+    - if: '$NOX_APPROVE_T06_BRIDGE == "YES" && $NOX_APPROVE_WINDOWS_QA != "YES" && $NOX_APPROVE_WINDOWS_BUILD != "YES" && $NOX_T06_FROZEN_SHA != null && $NOX_T06_FROZEN_REF != null'
+      when: on_success
+    - when: never
+  tags:
+    - $NOX_WINDOWS_RUNNER_TAG
+  timeout: 1h
+  retry: 0
+  interruptible: false
+  variables:
+    NOX_M1_CI_INSTALL_WEBVIEW2: "YES"
+  script:
+    - |
+      $ErrorActionPreference = 'Stop'
+      if ($env:CI_PROJECT_PATH -cne 's-grouptwet/nox-helion-pp-private-build' -or
+          $env:CI_SERVER_HOST -cne 'gitlab.com' -or
+          $env:CI_RUNNER_EXECUTABLE_ARCH -cne 'windows/amd64' -or
+          $env:NOX_APPROVE_T06_BRIDGE -cne 'YES' -or
+          $env:CI_PIPELINE_SOURCE -notin @('web','api') -or
+          $env:CI_JOB_ID -cnotmatch '^[0-9]{1,20}$' -or
+          $env:NOX_T06_FROZEN_SHA -cnotmatch '^[0-9a-f]{40}$' -or
+          $env:NOX_T06_FROZEN_REF -cnotmatch '^[A-Za-z0-9._/-]{3,128}$' -or
+          $env:CI_COMMIT_REF_NAME -cne $env:NOX_T06_FROZEN_REF -or
+          $env:CI_COMMIT_SHA.ToLowerInvariant() -cne $env:NOX_T06_FROZEN_SHA) {
+        throw 'T06_GITLAB_OWNER_DISPOSABLE_EXACT_SOURCE_HOLD'
+      }
+      $head = (& git rev-parse HEAD | Out-String).Trim().ToLowerInvariant()
+      if ($LASTEXITCODE -ne 0 -or $head -cne $env:NOX_T06_FROZEN_SHA) {
+        throw 'T06_GITLAB_CHECKOUT_HEAD_DRIFT'
+      }
+      & python coordination/e06/t06_local_onehost_bridge.py
+      if ($LASTEXITCODE -ne 0) { throw 'T06_GITLAB_SAME_VM_CANDIDATE_BUILD_HOLD' }
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - work/t06-local-bridge/
+      - work/t06-wpf-p02-compile/ONEHOST_CANDIDATE_RECEIPT.json
+      - work/t06-wpf-p02-compile/WPF_SELFCONTAINED_PUBLISH_LOG.txt
+      - work/t06-wpf-p02-compile/NSIS_CANDIDATE_BUILD_LOG.txt
+      - work/t06-wpf-p02-compile/NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe
+      - work/t06-manual-source-inspect/python-exe-candidate/NATIVE_PYTHON_EXE_CANDIDATE_RECEIPT.json
