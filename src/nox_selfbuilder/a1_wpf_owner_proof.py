@@ -22,7 +22,7 @@ _RUNID = re.compile(r'[ -~]{1,128}\Z')
 _ACTIONS = frozenset({'selfbuilder.a1.boot', 'selfbuilder.a1.tick'})
 _SCHEMA = 'NOX-A1-WPF-OWNER-CONSENT-v1'
 _FIELDS = frozenset({'schema', 'run_id', 'action', 'backend_sha256',
-                     'sid_sha256', 'nonce', 'issued_unix', 'expires_unix', 'mac'})
+                     'sid_sha256', 'native_stop_epoch', 'nonce', 'issued_unix', 'expires_unix', 'mac'})
 
 
 class A1OwnerProofHold(PermissionError):
@@ -95,13 +95,13 @@ def transcript(value):
     """ASCII message, exactly mirrored by original WPF owner HMACSHA256."""
     return '\n'.join((value['schema'], value['run_id'], value['action'],
                       value['backend_sha256'], value['sid_sha256'],
-                      str(value['issued_unix']), str(value['expires_unix']),
+                      str(value['native_stop_epoch']), str(value['issued_unix']), str(value['expires_unix']),
                       value['nonce'])).encode('ascii')
 
 
 class A1WpfOwnerProof:
     def __init__(self, secret_hex, run_id, backend_binary, *, sid_provider=None,
-                 clock=None):
+                 clock=None, stop_epoch=None):
         if type(secret_hex) is not str or not _HEX64.fullmatch(secret_hex):
             raise A1OwnerProofHold('A1_EPHEMERAL_OWNER_KEY_REQUIRED')
         if type(run_id) is not str or not _RUNID.fullmatch(run_id):
@@ -112,6 +112,16 @@ class A1WpfOwnerProof:
         self._sid = sid_provider or _windows_sid
         self._clock = clock or time.time
         self._seen = set()
+        self._stop_epoch = None
+        if stop_epoch is not None:
+            self.bind_stop_epoch(stop_epoch)
+
+    def bind_stop_epoch(self, callback):
+        # Bind ONCE from the original OneHost runtime after P02 is created.
+        # No browser payload, model or S03 record may supply this callback.
+        if self._stop_epoch is not None or not callable(callback):
+            raise A1OwnerProofHold('A1_NATIVE_STOP_EPOCH_BINDING_REQUIRED')
+        self._stop_epoch = callback
 
     @classmethod
     def from_native_child(cls, run_id, backend_binary):
@@ -133,6 +143,17 @@ class A1WpfOwnerProof:
                 type(ticket['expires_unix']) is not int or
                 ticket['expires_unix'] - ticket['issued_unix'] != 20):
             raise A1OwnerProofHold('A1_WPF_OWNER_EXPIRY_HOLD')
+        # Native STOP epoch must match the WPF epoch; a late pre-STOP
+        # consent must not become valid after stop/reset within one process.
+        if self._stop_epoch is None or type(ticket['native_stop_epoch']) is not int:
+            raise A1OwnerProofHold('A1_NATIVE_STOP_EPOCH_REQUIRED')
+        try:
+            current_epoch = self._stop_epoch()
+        except Exception as exc:
+            raise A1OwnerProofHold('A1_NATIVE_STOP_EPOCH_UNAVAILABLE') from exc
+        if (type(current_epoch) is not int or current_epoch < 0 or
+                ticket['native_stop_epoch'] != current_epoch):
+            raise A1OwnerProofHold('A1_STOP_EPOCH_REVOKED')
         now = int(self._clock())
         if not ticket['issued_unix'] - 5 <= now <= ticket['expires_unix']:
             raise A1OwnerProofHold('A1_WPF_OWNER_EXPIRED_OR_CLOCK_HOLD')

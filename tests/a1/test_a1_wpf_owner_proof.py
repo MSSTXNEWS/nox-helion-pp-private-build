@@ -14,11 +14,12 @@ class ReceiptTests(unittest.TestCase):
         self.path=Path(self.temp.name)/'binary.exe'
         self.path.write_bytes(b'real binary bytes test fixture')
         self.t=1700000000
-        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:SID,clock=lambda:self.t)
+        self.epoch=0
+        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:SID,clock=lambda:self.t,stop_epoch=lambda:self.epoch)
     def ticket(self,**updates):
         x=dict(schema='NOX-A1-WPF-OWNER-CONSENT-v1',run_id=RUN,
            action='selfbuilder.a1.boot',backend_sha256=hashlib.sha256(self.path.read_bytes()).hexdigest(),
-           sid_sha256=hashlib.sha256(SID.encode()).hexdigest(),nonce='c3'*16,
+           sid_sha256=hashlib.sha256(SID.encode()).hexdigest(),native_stop_epoch=self.epoch,nonce='c3'*16,
            issued_unix=self.t,expires_unix=self.t+20,mac='')
         x.update(updates)
         x['mac']=hmac.new(bytes.fromhex(KEY),transcript(x),hashlib.sha256).hexdigest()
@@ -41,7 +42,26 @@ class ReceiptTests(unittest.TestCase):
     def test_zero_secret(self):
         with self.assertRaises(A1OwnerProofHold):A1WpfOwnerProof(None,RUN,self.path,sid_provider=lambda:SID)
     def test_different_sid_from_os(self):
-        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:'S-1-2-3',clock=lambda:self.t)
+        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:'S-1-2-3',clock=lambda:self.t,stop_epoch=lambda:self.epoch)
+        self.denies(self.ticket())
+    def test_stop_revokes_unused_signed_ticket(self):
+        signed=self.ticket()
+        self.epoch+=1
+        self.denies(signed)
+    def test_stop_epoch_tamper_invalid_mac(self):
+        ticket=self.ticket()
+        ticket['native_stop_epoch']=1
+        self.denies(ticket)
+    def test_bool_stop_epoch_rejected(self):
+        self.denies(self.ticket(native_stop_epoch=True))
+    def test_missing_native_epoch_callback_denied(self):
+        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:SID,clock=lambda:self.t)
+        self.denies(self.ticket())
+    def test_epoch_callback_single_bind(self):
+        with self.assertRaises(A1OwnerProofHold):
+            self.v.bind_stop_epoch(lambda: 0)
+    def test_late_invalid_epoch_callback_denied(self):
+        self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:SID,clock=lambda:self.t,stop_epoch=lambda:None)
         self.denies(self.ticket())
     def test_no_page_authority(self):self.denies({**self.ticket(),'nativeConsent':True})
     def test_nongenuine_receipt_action(self):self.denies(self.ticket(action='system.pc_control'),'system.pc_control')

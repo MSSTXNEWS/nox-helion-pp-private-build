@@ -40,6 +40,7 @@ public partial class MainWindow
     private string? _a1OwnerProofRunId;
     private string? _a1OwnerApprovedAction;
     private long _a1OwnerApprovedEpoch;
+    private long _a1OwnerStopEpoch; // Mirrors original P02 chat.stop generation.
     private System.Windows.Controls.Button? _nativeBrowserBack;
     private bool _nativeBrowserFenceInstalled;
     private EventHandler<CoreWebView2WebResourceRequestedEventArgs>? _nativeBrowserFilter;
@@ -140,16 +141,18 @@ public partial class MainWindow
         if (string.IsNullOrEmpty(sid) || !NativeP02Acl(sid,"chat.commands"))
             throw new UnauthorizedAccessException("A1_WINDOWS_SID_OR_ACL_DENIED");
         var now=DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var stopEpoch=Interlocked.Read(ref _a1OwnerStopEpoch);
         var expiry=now+20;
         var nonce=Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
         var sidHash=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sid))).ToLowerInvariant();
         const string schema="NOX-A1-WPF-OWNER-CONSENT-v1";
         var transcript=string.Join("\n",schema,runId,action,NativePythonSha,
-            sidHash,now.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            sidHash,stopEpoch.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            now.ToString(System.Globalization.CultureInfo.InvariantCulture),
             expiry.ToString(System.Globalization.CultureInfo.InvariantCulture),nonce);
         var mac=Convert.ToHexString(HMACSHA256.HashData(secret,Encoding.ASCII.GetBytes(transcript))).ToLowerInvariant();
         return new {schema,run_id=runId,action,backend_sha256=NativePythonSha,
-            sid_sha256=sidHash,nonce,issued_unix=now,expires_unix=expiry,mac};
+            sid_sha256=sidHash,native_stop_epoch=stopEpoch,nonce,issued_unix=now,expires_unix=expiry,mac};
     }
 
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
@@ -205,6 +208,7 @@ public partial class MainWindow
               catch {return new NativePipeResult("",false,null,"NOX_AUTOSTART_NATIVE_HOLD");}
         }
         if(route=="chat.stop") {
+            Interlocked.Increment(ref _a1OwnerStopEpoch);
             _a1OwnerApprovedAction=null;
             if (_a1OwnerProofKey is not null) {
                 CryptographicOperations.ZeroMemory(_a1OwnerProofKey);

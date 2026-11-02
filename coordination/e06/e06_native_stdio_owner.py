@@ -143,6 +143,10 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
         "NOX_SOUL_CPU_REAL_WEIGHTS_TRAINED_V1_20261022.zip")
     memory = OriginalStoreChatAdapter(store, seed_archive=seed_archive)
     adapter = create_onehost_p02(memory, client=client, event_sink=event_sink)
+    if a1_wpf_proof is not None:
+        # Bind the ORIGINAL P02 monotonic STOP generation, not a renderer field.
+        # WPF proof signed before STOP must never validate after STOP/RESET.
+        a1_wpf_proof.bind_stop_epoch(lambda: adapter._stop_epoch)
     config_hold = None
     try:
         config = load_native_config(data_dir)
