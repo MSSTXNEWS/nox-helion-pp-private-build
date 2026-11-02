@@ -78,6 +78,11 @@ class A1NativeCommand:
             raise A1NativeHold('A1_NATIVE_EPOCH_OR_SOURCE_HOLD')
         if self._authorize(session, action) is not True:
             raise A1NativeHold('A1_NATIVE_ACL_OR_CONSENT_HOLD')
+        # Native authorization can synchronously observe STOP or a source
+        # change. Never return a lease bound to the pre-approval epoch/HEAD.
+        if (self._stopped() is not False or self._epoch() != epoch or
+                self._head() != head):
+            raise A1NativeHold('A1_NATIVE_STOP_OR_HEAD_CHANGED_DURING_AUTH')
         return epoch, head
 
     def invoke(self, session, payload, *, now):
