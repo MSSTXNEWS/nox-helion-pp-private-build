@@ -47,8 +47,16 @@ def p03_review_handoff(*,catalog_path:Path,tag:str,attestation:Mapping,owner_con
     for k in ("immutable_revision","rights_receipt_id","owner_receipt_id"):
         if not isinstance(attestation.get(k),str) or not attestation[k]:
             raise ValueError("P03_"+k.upper()+"_MISSING")
-    if item.get("max_recommended_on_24gb") is False and attestation.get("installed_ram_gb",0)<48:
-        raise ValueError("MODEL_EXCEEDS_LOCAL_RESOURCE_POLICY")
+    ram_policy = item.get("max_recommended_on_24gb")
+    if "max_recommended_on_24gb" in item and type(ram_policy) is not bool:
+        raise ValueError("CATALOG_RAM_POLICY_INVALID")
+    if ram_policy is False:
+        ram_gb = attestation.get("installed_ram_gb")
+        # NaN/Inf bypass numeric comparisons; bool/string are not RAM receipts.
+        if type(ram_gb) not in (int, float) or not (0 < ram_gb <= 16_384):
+            raise ValueError("P03_INSTALLED_RAM_INVALID")
+        if ram_gb < 48:
+            raise ValueError("MODEL_EXCEEDS_LOCAL_RESOURCE_POLICY")
     return {"schema":"NOX-P03-REVIEWED-MODEL-REQUEST-v3","tag":tag,
         "approved_model_manifest_sha256":digest,"immutable_revision":attestation["immutable_revision"],
         "rights_receipt_id":attestation["rights_receipt_id"],
