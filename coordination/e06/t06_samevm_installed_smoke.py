@@ -119,6 +119,20 @@ def bridge_candidate_gate()->dict:
               PAYLOAD/"payload.sha256.json")
     require(all(regular(p) for p in required),"T06_BRIDGE_CANDIDATE_FILE_MISSING")
     source=json.loads(CANDIDATE.read_text("utf-8"))
+    # Bind exactly the actual NSIS original R11 preflight source before Setup;
+    # registry presence still cannot certify installed GUI or E07.
+    staged_preflight=BUILD/"R11/Installer/Preflight-InstallPath.ps1"
+    require(regular(staged_preflight),
+            "T06_WEBVIEW2_ORIGINAL_NSIS_PREFLIGHT_NOT_STAGED")
+    staged_text=staged_preflight.read_text("utf-8-sig")
+    require(source.get("webview2_p01_source_git_blob")==
+                "62ffd119d5dd4260eb69b9a3cff756f548a78ac1" and
+            re.fullmatch("[0-9a-f]{64}",str(source.get("webview2_p01_preflight_sha256",""))) and
+            source["webview2_p01_preflight_sha256"]==sha(staged_preflight) and
+            "[Microsoft.Win32.RegistryView]::Registry32" in staged_text and
+            "[Microsoft.Win32.RegistryView]::Registry64" in staged_text and
+            "P01_WEBVIEW2_RUNTIME_MISSING" in staged_text,
+            "T06_ORIGINAL_NSIS_WEBVIEW2_PREFLIGHT_SOURCELOCK_HOLD")
     native=json.loads(NATIVE_PROOF.read_text("utf-8"))
     original=json.loads(native_source.read_text("utf-8"))
     source_zip="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"

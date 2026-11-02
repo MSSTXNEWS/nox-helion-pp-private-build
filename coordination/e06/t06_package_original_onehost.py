@@ -43,6 +43,75 @@ def download_artifact(relative,target):
             dest.write(chunk)
     need(sha(origin)==sha(target),"T06_LOCAL_ARTIFACT_COPY_SHA_HOLD")
 
+
+# Exact reviewed P01 32/64-bit WebView2 Evergreen registry-source fix.
+# Stage only into disposable ORIGINAL R11, never into ZIP729 or installed NOX.
+P01_REVIEWED_PREFLIGHT_GIT_BLOB = "62ffd119d5dd4260eb69b9a3cff756f548a78ac1"
+P01_WEBVIEW2_START = "# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence."
+P01_WEBVIEW2_END = "if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }"
+
+
+def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path) -> dict:
+    need(owner_script.is_file() and not owner_script.is_symlink() and
+         reviewed_script.is_file() and not reviewed_script.is_symlink(),
+         "T06_WEBVIEW2_PREFLIGHT_REGULAR_SOURCE_REQUIRED")
+    approved_raw=reviewed_script.read_bytes()
+    need(b"\r" not in approved_raw.replace(b"\r\n", b""),
+         "T06_WEBVIEW2_REVIEWED_SOURCE_LINE_ENDINGS_HOLD")
+    approved_bytes=approved_raw.replace(b"\r\n", b"\n")
+    approved_blob=hashlib.sha1(
+        b"blob "+str(len(approved_bytes)).encode("ascii")+b"\x00"+approved_bytes
+    ).hexdigest()
+    need(approved_blob==P01_REVIEWED_PREFLIGHT_GIT_BLOB,
+         "T06_WEBVIEW2_REVIEWED_SOURCE_GIT_BLOB_DRIFT")
+    approved_text=approved_bytes.decode("utf-8-sig")
+    old_bytes=owner_script.read_bytes()
+    original=old_bytes.decode("utf-8-sig")
+    need(b"\r" not in old_bytes.replace(b"\r\n", b""),
+         "T06_WEBVIEW2_ORIGINAL_SOURCE_LINE_ENDINGS_HOLD")
+    def region(text):
+        need(text.count(P01_WEBVIEW2_START)==1 and
+             text.count(P01_WEBVIEW2_END)==1,
+             "T06_WEBVIEW2_ORIGINAL_ANCHOR_DRIFT")
+        first=text.index(P01_WEBVIEW2_START)
+        last=text.index(P01_WEBVIEW2_END)+len(P01_WEBVIEW2_END)
+        need(first<last, "T06_WEBVIEW2_PREFLIGHT_ANCHOR_ORDER_HOLD")
+        return first,last,text[first:last]
+    _,_,approved_block=region(approved_text)
+    begin,finish,old_block=region(original)
+    need(all(fragment in approved_block for fragment in
+             ("[Microsoft.Win32.RegistryView]::Registry32",
+              "[Microsoft.Win32.RegistryView]::Registry64",
+              "GetValueKind('pv')",
+              "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}")),
+         "T06_WEBVIEW2_REVIEWED_REGISTRY32_CONTRACT_HOLD")
+    if old_block.replace("\r\n", "\n")!=approved_block:
+        # Unknown competing preflight policy must fail closed, never overwrite.
+        need(all(x in old_block for x in
+                 ("Registry::HKEY_CURRENT_USER",
+                  "Registry::HKEY_LOCAL_MACHINE",
+                  "Get-ItemProperty", "pv")) and
+             "[Microsoft.Win32.RegistryView]" not in old_block,
+             "T06_WEBVIEW2_UNKNOWN_OR_PARTIALLY_PATCHED_OWNER_HOLD")
+        eol="\r\n" if b"\r\n" in old_bytes else "\n"
+        candidate=original[:begin]+approved_block.replace("\n",eol)+original[finish:]
+        encoded=(b"\xef\xbb\xbf" if old_bytes.startswith(b"\xef\xbb\xbf") else b"")+candidate.encode("utf-8")
+        need(not owner_script.is_symlink(), "T06_WEBVIEW2_OWNER_REPARSE_HOLD")
+        owner_script.write_bytes(encoded)
+        need(owner_script.read_bytes()==encoded,
+             "T06_WEBVIEW2_OWNER_STAGE_READBACK_HOLD")
+    staged=owner_script.read_bytes()
+    staged_text=staged.decode("utf-8-sig")
+    need(all(x in staged_text for x in
+             ("[Microsoft.Win32.RegistryView]::Registry32",
+              "[Microsoft.Win32.RegistryView]::Registry64", P01_WEBVIEW2_END)),
+         "T06_WEBVIEW2_ORIGINAL_STAGED_RUNTIME_GATE_HOLD")
+    return {"sha256":hashlib.sha256(staged).hexdigest(),
+            "source_git_blob":approved_blob,
+            "changed":staged!=old_bytes,
+            "runtime_installed_verified":False,
+            "e07_accepted":False}
+
 def build(root,staged):
     staged=Path(staged).resolve(strict=True)
     root=Path(root).resolve(strict=True)
@@ -150,6 +219,13 @@ def build(root,staged):
     manifest_file=payload/"payload.sha256.json"
     manifest_file.write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     installer_dir=root/"Installer"
+    # Stage approved native registry32 detection into the ORIGINAL R11 script
+    # actually passed to NSIS; do not modify archive or install anything.
+    webview_proof=stage_reviewed_webview2_preflight(
+        installer_dir/"Preflight-InstallPath.ps1",
+        Path(__file__).resolve().parents[2]/"stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1")
+    print("T06_ORIGINAL_R11_WEBVIEW2_NATIVE_PREFLIGHT_STAGE "+
+          json.dumps(webview_proof,sort_keys=True),flush=True)
     proof=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
         "-ExecutionPolicy","Bypass","-File",
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
@@ -188,7 +264,9 @@ def build(root,staged):
          "setup_sha256":sha(setup),"setup_bytes":setup.stat().st_size,
          "backend_native_stdio_windows_exe_smoke":"PASS",
          "wpf_source_compilation":"PASS","wpf_installed_interactive_qa":"NOT_RUN",
-         "e07":"NOT_ACCEPTED","release_accepted":False}
+         "e07":"NOT_ACCEPTED","release_accepted":False,
+         "webview2_p01_preflight_sha256":webview_proof["sha256"],
+         "webview2_p01_source_git_blob":webview_proof["source_git_blob"]}
     if megab_attestation is not None:
         candidate["mega814"]=megab_attestation
     (staged/"ONEHOST_CANDIDATE_RECEIPT.json").write_text(
