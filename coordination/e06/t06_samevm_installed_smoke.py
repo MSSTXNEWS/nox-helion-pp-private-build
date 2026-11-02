@@ -609,9 +609,9 @@ def summarize_fresh_webview_navigation(window: str) -> dict:
     """
     if type(window) is not str:
         raise TypeError("WPF_NAV_WINDOW_REQUIRED")
-    failures = re.findall(r"\\bNAV_FAIL[ \\t]+([A-Za-z][A-Za-z0-9]{0,63})\\b", window)
+    failures = re.findall(r"\bNAV_FAIL[ \t]+([A-Za-z][A-Za-z0-9]{0,63})\b", window)
     process_failures = re.findall(
-        r"\\bWEBVIEW_PROCESS_FAILED[ \\t]+([A-Za-z][A-Za-z0-9]{0,63})\\b", window)
+        r"\bWEBVIEW_PROCESS_FAILED[ \t]+([A-Za-z][A-Za-z0-9]{0,63})\b", window)
     return {
         "init_started": "INIT_BEGIN" in window,
         "nav_started": "NAV_START" in window,
