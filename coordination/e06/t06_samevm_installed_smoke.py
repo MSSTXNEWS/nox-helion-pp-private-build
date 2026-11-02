@@ -9,6 +9,7 @@ IPC. Actual WPF GUI, Ollama chat/STOP, model downloads and E07 remain HOLD.
 """
 from __future__ import annotations
 
+import platform
 import hashlib
 import json
 import math
@@ -314,6 +315,20 @@ def candidate_gate()->dict:
             "build_id":handoff["build_id"],
             "native_source_receipt":"OFFLINE_BACKBONE_PASS_LIVE_MODEL_"+native["live_model_status"],
             "manifest_files_checked":len(seen)}
+
+def gitlab_native_windows_amd64(reported_arch, platform_name, host_machine, pointer_bits):
+    """Check genuine Windows x64 even if GitLab omits optional runner arch export.
+
+    Explicit mismatches deny; absent env cannot bypass actual platform, bitness
+    and CPU architecture. Other original project/job/consent controls remain.
+    """
+    if (type(reported_arch) is not str or type(platform_name) is not str or
+            type(host_machine) is not str or type(pointer_bits) is not int):
+        return False
+    return (platform_name == 'win32' and pointer_bits == 64 and
+            host_machine.strip().lower() in ('amd64', 'x86_64') and
+            reported_arch.strip().lower() in ('', 'windows/amd64'))
+
 
 WEBVIEW2_POSTINSTALL_POLL_SECONDS = (0, 2, 4, 8, 12, 18, 24, 30)
 
@@ -665,7 +680,9 @@ def main()->int:
                    os.environ.get("GITLAB_CI")=="true" and
                    os.environ.get("CI_SERVER_HOST")=="gitlab.com" and
                    os.environ.get("CI_PROJECT_PATH")=="s-grouptwet/nox-helion-pp-private-build" and
-                   os.environ.get("CI_RUNNER_EXECUTABLE_ARCH","").lower()=="windows/amd64" and
+                   gitlab_native_windows_amd64(
+                       os.environ.get("CI_RUNNER_EXECUTABLE_ARCH",""), sys.platform,
+                       platform.machine(), struct.calcsize("P") * 8) and
                    gitlab_id.isascii() and gitlab_id.isdecimal() and
                    1 <= len(gitlab_id) <= 20)
         require(sys.platform=="win32" and (circle_ci or github_ci or gitlab_ci),
