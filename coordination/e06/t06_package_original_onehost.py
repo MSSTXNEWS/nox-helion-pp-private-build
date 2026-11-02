@@ -47,6 +47,8 @@ def download_artifact(relative,target):
 # Exact reviewed P01 32/64-bit WebView2 Evergreen registry-source fix.
 # Stage only into disposable ORIGINAL R11, never into ZIP729 or installed NOX.
 P01_REVIEWED_PREFLIGHT_GIT_BLOB = "62ffd119d5dd4260eb69b9a3cff756f548a78ac1"
+# Canonical source pin for the original E06 32/64-bit Evergreen registry here-string.
+WEBVIEW2_E06_REGISTRY_BLOCK_SHA256 = "e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 P01_WEBVIEW2_START = "# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence."
 P01_WEBVIEW2_END = "if (-not $installed) { throw 'P01_WEBVIEW2_RUNTIME_MISSING: Install official Microsoft Evergreen WebView2 Runtime first; no silent download.' }"
 
@@ -85,8 +87,7 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
         donor_git=hashlib.sha1(
             b"blob "+str(len(donor)).encode("ascii")+b"\x00"+donor
         ).hexdigest()
-        need(donor_git=="cd53dcd0171b3082a602e347d73bb311ee2ef370",
-             "T06_WEBVIEW2_E06_DONOR_BLOB_DRIFT")
+        # Full builder SHA is provenance only; exact audited registry gate stays pinned.
         block_start="$webviewReplacement=@'\n"
         block_end="\n'@"
         donor_text=donor.decode("utf-8-sig")
@@ -96,6 +97,9 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
         b=donor_text.find(block_end,a)
         need(b>a, "T06_WEBVIEW2_E06_DONOR_BLOCK_UNCLOSED")
         approved_e06=donor_text[a:b]+"\n"
+        need(hashlib.sha256(approved_e06.encode("utf-8")).hexdigest()==
+             WEBVIEW2_E06_REGISTRY_BLOCK_SHA256,
+             "T06_WEBVIEW2_E06_DONOR_BLOCK_SHA_DRIFT")
         need(original.count(e06_start)==1 and
              original.count(P01_WEBVIEW2_END)==1,
              "T06_WEBVIEW2_E06_STAGED_ANCHOR_HOLD")
@@ -110,6 +114,7 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
         return {"sha256":hashlib.sha256(old_bytes).hexdigest(),
                 "source_git_blob":approved_blob,
                 "e06_donor_git_blob":donor_git,
+                "e06_donor_block_sha256":WEBVIEW2_E06_REGISTRY_BLOCK_SHA256,
                 "changed":False,
                 "runtime_installed_verified":False,
                 "e07_accepted":False}

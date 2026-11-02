@@ -89,8 +89,9 @@ class OriginalR11WebView2StagingTests(unittest.TestCase):
         result = module.stage_reviewed_webview2_preflight(self.owner, APPROVED)
         self.assertFalse(result["changed"])
         self.assertFalse(result["e07_accepted"])
-        self.assertEqual(result["e06_donor_git_blob"],
-                         "cd53dcd0171b3082a602e347d73bb311ee2ef370")
+        self.assertRegex(result["e06_donor_git_blob"], r"^[a-f0-9]{40}$")
+        self.assertEqual(result["e06_donor_block_sha256"],
+                         module.WEBVIEW2_E06_REGISTRY_BLOCK_SHA256)
         self.assertEqual(self.owner.read_text("utf-8"), staged)
 
     def test_unpinned_alternate_preflight_is_rejected_without_mutation(self):

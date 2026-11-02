@@ -56,13 +56,24 @@ class WebView2SameVmStageTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "PREIMAGE_HOLD"):
             owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
         self.assertEqual(original, self.preflight.read_text("utf-8"))
+    def test_unrelated_builder_changes_keep_exact_webview2_gate(self):
+        benign = self.root / "changed-builder-scaffolding.ps1"
+        benign.write_text(DONOR.read_text("utf-8") +
+                          "\n# Independent E07/PS5.1 metadata; not part of runtime gate.\n",
+                          encoding="utf-8")
+        owner.stage_exact_owner_webview2_registry_views(self.r11, benign)
+        staged = self.preflight.read_text("utf-8")
+        self.assertIn("[Microsoft.Win32.RegistryView]::Registry32", staged)
+        self.assertIn("[Microsoft.Win32.RegistryView]::Registry64", staged)
+        self.assertIn("P01_WEBVIEW2_RUNTIME_MISSING", staged)
+
     def test_tampered_canonical_donor_fails_without_mutation(self):
         changed = DONOR.read_text("utf-8").replace(
             "[Microsoft.Win32.RegistryView]::Registry32",
             "[Microsoft.Win32.RegistryView]::Registry32_TAMPER", 1)
         tampered = self.root / "tampered.ps1"
         tampered.write_text(changed, "utf-8")
-        with self.assertRaisesRegex(RuntimeError, "CANONICAL_REGISTRY_GATE_HOLD"):
+        with self.assertRaisesRegex(RuntimeError, "CANONICAL_DONOR_BLOCK_SHA_HOLD"):
             owner.stage_exact_owner_webview2_registry_views(self.r11, tampered)
         self.assertEqual(LEGACY.encode("utf-8"), self.preflight.read_bytes())
 

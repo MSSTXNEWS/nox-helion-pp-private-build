@@ -4,6 +4,8 @@ ROOT=pathlib.Path(__file__).resolve().parents[2]
 STAGE=ROOT/"work/t06-wpf-p02-compile"
 R11=STAGE/"R11"
 SRC=ROOT/"coordination/e06/t06_windows_overlay"
+# Exact audited 32/64-bit WebView2 registry gate; unrelated builder lines can evolve.
+WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 EXPECTED={
 "MainWindow.NativeP02.cs":"0b65fc5ca62788dbde01e669e98769a23ac5e8a9",
 "OneHostP02WebView2Bridge.cs":"553025dbd98bf812013a7bfb748c0127e42220f9",
@@ -73,6 +75,8 @@ def stage_exact_owner_webview2_registry_views(r11, canonical_script):
     if stop < start:
         raise RuntimeError("T06_WEBVIEW2_CANONICAL_DONOR_CLOSURE_HOLD")
     replacement = donor[start:stop]
+    if hashlib.sha256((replacement+"\n").encode("utf-8")).hexdigest() != WEBVIEW2_E06_REGISTRY_BLOCK_SHA256:
+        raise RuntimeError("T06_WEBVIEW2_CANONICAL_DONOR_BLOCK_SHA_HOLD")
     if (not replacement.startswith("# Official Microsoft WebView2 Evergreen Runtime:") or
             replacement.count("{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}") != 1 or
             "[Microsoft.Win32.RegistryView]::Registry32" not in replacement or
