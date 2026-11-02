@@ -27,7 +27,17 @@ def verified_source_head():
     require(probe.returncode==0 and re.fullmatch(r"[0-9a-f]{40}", head) is not None,
             "T06_SOURCE_COMMIT_UNVERIFIED")
     declared=os.environ.get("CI_COMMIT_SHA", "").strip().lower()
-    require(not declared or declared==head, "T06_SOURCE_CI_SHA_MISMATCH")
+    if declared and declared!=head:
+        # Preserve GitLab's own CI commit separately from canonical GH source.
+        frozen=os.environ.get("NOX_T06_GITHUB_FROZEN_SHA", "").strip().lower()
+        bootstrap=os.environ.get("NOX_T06_GITLAB_ORIGIN_SHA", "").strip().lower()
+        require(
+            os.environ.get("CI_SERVER_HOST")=="gitlab.com" and
+            os.environ.get("CI_PROJECT_PATH")=="s-grouptwet/nox-helion-pp-private-build" and
+            os.environ.get("NOX_T06_AUTHENTICATED_GITHUB_FETCH")=="PASS" and
+            re.fullmatch(r"[0-9a-f]{40}", frozen) is not None and
+            frozen==head and bootstrap==declared,
+            "T06_SOURCE_CI_SHA_MISMATCH")
     return head
 
 def stage_exact_owner_webview2_registry_views(r11, canonical_script):

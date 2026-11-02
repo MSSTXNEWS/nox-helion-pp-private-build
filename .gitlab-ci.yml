@@ -104,6 +104,10 @@ nox_t06_original_onehost_candidate:
       if ($LASTEXITCODE -ne 0 -or $head -cne $env:NOX_T06_FROZEN_SHA) {
         throw 'T06_GITLAB_CHECKOUT_HEAD_DRIFT'
       }
+      # CI bootstrap GitLab SHA is NOT the canonical PR162 GitHub source.
+      . ./coordination/e06/t06_fetch_canonical_github.ps1 -ExpectedSha $env:NOX_T06_GITHUB_FROZEN_SHA
+      & python -m unittest discover -s tests/e06 -p 'test_t06_crossvcs_canonical_r33.py' -v
+      if ($LASTEXITCODE -ne 0) { throw 'T06_CROSSVCS_SOURCE_REGRESSION_HOLD' }
       & python -m unittest discover -s tests/e06 -p 'test_t06_gitlab_runner_authorization.py' -v
       if ($LASTEXITCODE -ne 0) { throw 'T06_DISPOSABLE_RUNNER_UNIT_GATE_HOLD' }
       & python -m unittest discover -s tests/e06 -p 'test_i2_local_bridge_receipt_gate.py' -v
