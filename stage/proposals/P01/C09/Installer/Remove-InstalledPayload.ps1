@@ -10,15 +10,18 @@ if ($root -ine $expected) { throw 'P01_UNINSTALL_WRONG_ROOT' }
 $localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
 function Assert-DirectoryChain([string]$Path, [string]$StopRoot) {
   $cursor = [IO.Path]::GetFullPath($Path).TrimEnd('\')
-  while ($cursor -and ($cursor -ieq $StopRoot -or $cursor.StartsWith($StopRoot+'\',[StringComparison]::OrdinalIgnoreCase))) {
+  # Keep StopRoot interface but verify physical parents ABOVE LOCALAPPDATA too.
+  # Otherwise an external junction can redirect uninstall outside expected tree.
+  while ($cursor) {
     if (Test-Path -LiteralPath $cursor) {
       $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
       if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
         throw "P01_UNINSTALL_UNSAFE_PARENT:$cursor"
       }
     }
-    if ($cursor -ieq $StopRoot) { break }
-    $cursor = [IO.Path]::GetDirectoryName($cursor)
+    $next = [IO.Path]::GetDirectoryName($cursor)
+    if ([string]::IsNullOrEmpty($next) -or $next -ceq $cursor) { break }
+    $cursor = $next
   }
 }
 Assert-DirectoryChain $root $localRoot

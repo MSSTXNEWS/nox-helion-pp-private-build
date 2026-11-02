@@ -12,13 +12,15 @@ if (-not $rootInfo.PSIsContainer -or (($rootInfo.Attributes -band [IO.FileAttrib
 $rootFull = [IO.Path]::GetFullPath($rootInfo.FullName).TrimEnd('\')
 function Assert-NoReparseAncestors([string]$Target) {
   $cursor = [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Target))
-  while ($cursor -and ($cursor -ieq $rootFull -or $cursor.StartsWith($rootFull+'\',[StringComparison]::OrdinalIgnoreCase))) {
+  # Check every ancestor to volume root, including parent junctions above stage.
+  while ($cursor) {
     $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
     if (-not $node.PSIsContainer -or (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
       Fail "reparse or non-directory ancestor $cursor"
     }
-    if ($cursor -ieq $rootFull) { break }
-    $cursor = [IO.Path]::GetDirectoryName($cursor)
+    $next = [IO.Path]::GetDirectoryName($cursor)
+    if ([string]::IsNullOrEmpty($next) -or $next -ceq $cursor) { break }
+    $cursor = $next
   }
 }
 $manifestFull = [IO.Path]::GetFullPath($Manifest)
