@@ -162,6 +162,31 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(r['held']),2)
         self.assertEqual(r['downloaded'],0)
 
+    def test_partial_native_ack_holds_but_preserves_queue_receipt(self):
+        s=State()
+        original=s.dispatch
+        def partial(session, route, art):
+            result=original(session,route,art)
+            if art['id']==32:
+                result['sha256']='0'*64  # Native ACK is inconsistent.
+            return result
+        s.app.callbacks=replace(s.app.callbacks,dispatch=partial)
+        receipt=s.app.run('owner_A',now=NOW)
+        self.assertEqual(receipt['status'],'HOLD')
+        self.assertEqual(receipt['enqueued_ids'],[31])
+        self.assertEqual(receipt['held'],[{'id':32,'reason':'NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH'}])
+        self.assertFalse(receipt['release_accepted'])
+
+    def test_one_unreviewed_artifact_never_claims_full_firstboot(self):
+        s=State()
+        s.p=policy()
+        s.p['reviewed_artifacts'].pop('32')
+        receipt=s.app.run('owner_A',now=NOW)
+        self.assertEqual(receipt['status'],'HOLD')
+        self.assertEqual(receipt['enqueued_ids'],[31])
+        self.assertEqual(receipt['held'],[{'id':32,'reason':'PINNED_LICENSE_HARDWARE_ARTIFACT_REQUIRED'}])
+        self.assertFalse(receipt['release_accepted'])
+
     def test_normalize_duplicate_asset_hash(self):
         s=State();s.rows=[{"sha256":"f"*64,"kind":"SOURCE_CANDIDATE","size_bytes":123}]*2
         self.assertEqual(s.app.run('S',now=NOW)['found_candidates'],1)
