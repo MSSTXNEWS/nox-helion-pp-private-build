@@ -80,6 +80,43 @@ class Tests(unittest.TestCase):
             with self.subTest(blob=blob[:8]):
                 with self.assertRaises(ProtocolHold):
                     serve_native_frames(self.ingress,io.BytesIO(blob),io.BytesIO())
+    def test_outer_duplicate_stop_route_rejected_before_priority_dispatch(self):
+        # A last-wins route must NOT bypass the strict preflight as STOP.
+        bad = (b'{"protocol":"NOX-P02-NATIVE-v1","requestId":"0000000000000000000000000000000a",'
+               b'"route":"helion.chat","route":"chat.stop","payload":{},"runId":"NOX-FRAME-GATE-C10"}')
+        calls = []
+        original = self.ingress.handle
+        def counted(raw):
+            calls.append(raw)
+            return original(raw)
+        self.ingress.handle = counted
+        n, rows = self.serve(bad, request(16, "chat.stop"))
+        self.assertEqual(n, 2)
+        self.assertEqual([row["status"] for row in rows], ["HOLD", "OK"])
+        self.assertEqual(rows[0]["errorCode"], "NATIVE_FRAME_INVALID_JSON")
+        self.assertIsNone(rows[0]["requestId"])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.d.seen, ["chat.stop"])
+
+    def test_outer_nonfinite_and_nested_duplicate_do_not_reach_owner(self):
+        # Reject malformed data at the framed priority switch, not only
+        # inside NativeIngress.handle. Next authentic STOP must still work.
+        bad_float = request(17).replace(b'"payload":{}', b'"payload":{"x":1e9999}')
+        bad_dup = request(18).replace(b'"payload":{}', b'"payload":{"a":1,"a":2}')
+        bad_nan = request(19).replace(b'"payload":{}', b'"payload":{"a":NaN}')
+        calls = []
+        original = self.ingress.handle
+        def counted(raw):
+            calls.append(raw)
+            return original(raw)
+        self.ingress.handle = counted
+        n, rows = self.serve(bad_float, bad_dup, bad_nan, request(20, "chat.stop"))
+        self.assertEqual(n, 4)
+        self.assertEqual([row["status"] for row in rows], ["HOLD", "HOLD", "HOLD", "OK"])
+        self.assertTrue(all(row["errorCode"] == "NATIVE_FRAME_INVALID_JSON" for row in rows[:3]))
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.d.seen, ["chat.stop"])
+
     def test_foreign_run_stays_denied(self):
         _,rows=self.serve(request(6,runId="not-our-run"))
         self.assertEqual(rows[0]["status"],"HOLD")

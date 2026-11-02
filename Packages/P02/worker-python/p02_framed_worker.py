@@ -17,7 +17,8 @@ import struct
 import threading
 from typing import BinaryIO
 
-from p02_native_ingress import MAX_INPUT, MAX_OUTPUT, NativeIngress, ProtocolHold, _enforce_json_depth
+from p02_native_ingress import (MAX_INPUT, MAX_OUTPUT, NativeIngress, ProtocolHold,
+    _enforce_json_depth, _reject_duplicate_fields, _reject_nonfinite, _finite_json_number)
 
 _NONCE = re.compile(r"[0-9a-f]{32}\Z")
 _HEADER = struct.Struct(">I")
@@ -154,7 +155,8 @@ def serve_native_frames(ingress: NativeIngress, reader: BinaryIO,
                 # Reuse the existing NativeIngress depth limit at the OUTER
                 # parser, before Python's platform-dependent json recursion.
                 _enforce_json_depth(decoded)
-                request = json.loads(decoded)
+                request = json.loads(decoded, object_pairs_hook=_reject_duplicate_fields,
+                    parse_constant=_reject_nonfinite, parse_float=_finite_json_number)
                 if isinstance(request, dict):
                     candidate = request.get("requestId")
                     nonce = candidate if isinstance(candidate, str) and _NONCE.fullmatch(candidate) else None

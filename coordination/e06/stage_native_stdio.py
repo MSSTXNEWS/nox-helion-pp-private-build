@@ -31,7 +31,7 @@ ADDONS=(
     ('src/nox_selfbuilder/a1_official_catalog.py', 'nox_selfbuilder/a1_official_catalog.py', 'efa4f3c6f44875d90f6c74a914f062fa45d09517'),
     ('src/nox_selfbuilder/a1_wpf_owner_proof.py', 'nox_selfbuilder/a1_wpf_owner_proof.py', 'af42b4737be450039ca7f9c8b3c767aa931ccbf2'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', 'b83290c23ffe03d256f94c6cf545bb472230817f'),
-    ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),
+    ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '5e7df6b7b93b4d01f19ca3ece90266b1eb30611c'),
     ('Packages/P02/worker-python/p02_runtime.py', 'p02_runtime.py', 'c4b68f2c7763288a15709e81404d4afa91f2e8e4'),
     ('Packages/P02/worker-python/p02_chat_bridge.py', 'p02_chat_bridge.py', '0b83e0a391b4cda18b9cb7726607927013c3fa4e'),
     ('Packages/P02/worker-python/p02_onehost.py', 'p02_onehost.py', 'f799e7600e10bc5cd900350527cb40d78ed78bdd'),
