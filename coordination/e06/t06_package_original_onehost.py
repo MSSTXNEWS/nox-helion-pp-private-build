@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import re
+import stat
 
 EXPECTED_ZIP_SHA="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
 VALIDATED_OLD_PYTHON_SHA="4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3"
@@ -21,6 +22,35 @@ def sha(path):
     return h.hexdigest()
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
+
+def verify_source_tree_entry(path, root):
+    """Reject unmanifested directory junctions before a directory can be skipped.
+
+    Every component inside the disposable owner root must be a real directory;
+    the leaf must be a regular file or directory, never a reparse point.
+    """
+    path, root = Path(path), Path(root)
+    try:
+        components = path.relative_to(root).parts
+    except ValueError as exc:
+        raise RuntimeError("T06_PAYLOAD_PATH_OUTSIDE_TRUSTED_ROOT") from exc
+    nodes = [root]
+    for component in components:
+        nodes.append(nodes[-1] / component)
+    for index, node in enumerate(nodes):
+        try:
+            info = node.lstat()
+        except OSError as exc:
+            raise RuntimeError("T06_PAYLOAD_PATH_MISSING_OR_UNREADABLE") from exc
+        need(not node.is_symlink() and
+             not getattr(node, "is_junction", lambda: False)() and
+             not (getattr(info, "st_file_attributes", 0) &
+                  getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)),
+             "T06_PAYLOAD_PATH_REPARSE_HOLD")
+        need(stat.S_ISDIR(info.st_mode) if index < len(nodes) - 1 else
+             (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)),
+             "T06_PAYLOAD_NONREGULAR_COMPONENT_HOLD")
+
 def attest_nsis_compiler_unchanged(compiler, expected_sha):
     """Reject replaced/reparsed compiler before and after NSIS execution.
 
@@ -330,15 +360,20 @@ def build(root,staged):
     original_assets=root/"Assets"
     need(original_assets.is_dir() and not original_assets.is_symlink(),
          "T06_APPROVED_ORIGINAL_ASSETS_MISSING")
+    verify_source_tree_entry(original_assets,root)
     for file in original_assets.rglob("*"):
+        verify_source_tree_entry(file,root)
         if file.is_dir():continue
         need(file.is_file() and not file.is_symlink(),"T06_REPARSE_ORIGINAL_ASSET_DENIED")
         out=payload/file.relative_to(root)
         out.parent.mkdir(parents=True,exist_ok=True)
-        if out.exists():
+        verify_source_tree_entry(out.parent,payload)
+        if out.exists() or out.is_symlink():
+            verify_source_tree_entry(out,payload)
             need(out.is_file() and sha(out)==sha(file),
                  "T06_PUBLISHED_ASSET_SOURCE_MISMATCH")
         else:shutil.copy2(file,out)
+        verify_source_tree_entry(out,payload)
     # The EXISTING R76 owner MENU10 integration is verified in the same
     # disposable WPF tree and the SAME published NSIS payload. Do not copy
     # another UI, overwrite approved art, or claim Windows E07 from source QA.
@@ -381,6 +416,7 @@ def build(root,staged):
          "T06_BUNDLED_NATIVE_EXE_SHA_MISMATCH")
     inventory=[]
     for file in sorted(payload.rglob("*")):
+        verify_source_tree_entry(file,payload)
         if file.is_dir():continue
         need(file.is_file() and not file.is_symlink(),"T06_PAYLOAD_REPARSE_HOLD")
         inventory.append({"path":file.relative_to(payload).as_posix(),
