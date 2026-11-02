@@ -91,7 +91,7 @@ def _native_installed(snapshot):
     if not isinstance(items, Mapping):
         raise FirstBootHold("NATIVE_INSTALLED_ITEMS_REQUIRED")
     for k, v in items.items():
-        if str(k) not in {"11", "31", "32", "49"} or type(v) is not bool:
+        if type(k) is not str or k not in {"11", "31", "32", "49"} or type(v) is not bool:
             raise FirstBootHold("NATIVE_INSTALLED_ITEM_INVALID")
     return items
 
