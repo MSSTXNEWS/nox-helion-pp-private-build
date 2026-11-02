@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,sys,re
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
-ADDON_SHA="8304e4750a12457e0441b702088aad9e18214169"
+ADDON_SHA="9be154ae8b87566db8d694add9b2e694329f16f9"
 def blob(b):
     return hashlib.sha1(b"blob "+str(len(b)).encode()+b"\0"+b).hexdigest()
 def run(source,addon,backend_sha256=None):

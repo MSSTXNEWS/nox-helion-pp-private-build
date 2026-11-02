@@ -108,12 +108,20 @@ public partial class MainWindow
             // Both owner sinks publish on the original WPF STA dispatcher.
             // WebView2 Core must never be called on the download-worker thread.
             await owner.Dispatcher.InvokeAsync(() => {
+                // Preserve private model lifecycle data inside the original trusted WebView2.
+                // External/pending-return browser mode must not see job identifiers.
+                var core = owner._nativeP02Core;
+                var bridge = owner._nativeP02Bridge;
+                var sid = WindowsIdentity.GetCurrent().User?.Value;
+                if (core is null || bridge is null || bridge.BrowserExternalActive ||
+                    !IsTrustedNoxDocument(core.Source) ||
+                    string.IsNullOrEmpty(sid) || !owner.NativeP02Acl(sid, "models.queue")) return;
                 owner.PostMessage(new {
                     kind="modelLifecycle", eventId=item.EventId, jobId=item.JobId,
                     phase=item.Phase,state=item.Status,completedBytes=item.CompletedBytes,
                     totalBytes=item.TotalBytes,observedAt=item.AtUtc
                 });
-                if (owner._nativeP02Core is { } core && IsP03Document(core.Source)) {
+                if (IsP03Document(core.Source)) {
                     try { core.PostWebMessageAsJson(ModelWowBridgeContract.EventJson(item)); }
                     catch (Exception ex) { Trace.TraceError("P03_EVENT_UI_DROP {0}", ex.GetType().Name); }
                 }
@@ -538,6 +546,12 @@ public partial class MainWindow
             // No synthetic ready state; existing original UI/chat remain unchanged.
         }
     }
+    private static bool IsTrustedNoxDocument(string? source) =>
+        Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+        uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
+        uri.UserInfo.Length == 0 &&
+        uri.Host.Equals("nox.local", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsP03Document(string? source) =>
         Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
         uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort &&
