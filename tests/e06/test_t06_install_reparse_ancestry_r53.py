@@ -86,7 +86,12 @@ class InstalledReparseAdmissionTests(unittest.TestCase):
             outside = root / "outside"
             outside.mkdir()
             link = root / "Programs"
-            link.symlink_to(outside, target_is_directory=True)
+            try:
+                link.symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                # Windows CI may lack SeCreateSymbolicLinkPrivilege.
+                # Synthetic dangling-junction tests still run and must fail closed.
+                self.skipTest("symlink creation unavailable on this Windows runner")
             self.assertFalse(self.admit(link / "NOX HELION", root))
 
     def test_disposable_setup_and_user_data_guards_wired(self):
