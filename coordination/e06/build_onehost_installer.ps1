@@ -49,6 +49,10 @@ $original=(Resolve-Path -LiteralPath $PythonExe).Path
 $e06RepoRoot=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $e06SourceHead=((& git -C $e06RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
 if ($LASTEXITCODE -ne 0 -or $e06SourceHead -cnotmatch '\A[0-9a-f]{40}\z') { throw 'E06_SOURCE_HEAD_UNAVAILABLE' }
+# I0 frozen original source: HEAD alone does not attest staged/unstaged tracked bytes.
+# Refuse a dirty checkout before invoking the original WPF/Python/NSIS stages.
+& git -C $e06RepoRoot diff --quiet --exit-code HEAD --
+if ($LASTEXITCODE -ne 0) { throw 'E06_TRACKED_CHECKOUT_DIRTY_BEFORE_BUILD' }
 $exeDigest='4e488372cf3f6410d268a7ef72b3e4b359a7a3e6642c7a16ac2e6f7eb06fc5f3'
 $nativeEvidence='DIAGNOSE_ONLY_NOT_RUNTIME_PROOF'
 $nativeLiveStatus='NOT_RUN'
@@ -700,6 +704,10 @@ $wpf=Join-Path $payload 'NOX.P01.Shell.exe'
 # A receipt may not relabel an older binary after another owner moves HEAD.
 $e06HeadAtReceipt=((& git -C $e06RepoRoot rev-parse HEAD) | Out-String).Trim().ToLowerInvariant()
 if ($LASTEXITCODE -ne 0 -or $e06HeadAtReceipt -cne $e06SourceHead) { throw 'E06_SOURCE_HEAD_CHANGED_DURING_BUILD' }
+# A tracked owner edit during compilation invalidates this build's frozen-source claim.
+# Disposable archive and output directories remain outside the tracked source set.
+& git -C $e06RepoRoot diff --quiet --exit-code HEAD --
+if ($LASTEXITCODE -ne 0) { throw 'E06_TRACKED_CHECKOUT_DIRTY_AT_RECEIPT' }
 $receipt=[ordered]@{
  schema='NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1';run_id=$RunId;owner=6;
  source_commit_sha1=$e06SourceHead;
