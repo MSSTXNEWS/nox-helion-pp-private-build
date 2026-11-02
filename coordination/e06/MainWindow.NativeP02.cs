@@ -675,6 +675,16 @@ public partial class MainWindow
 
     private void ShutdownNativeP02()
     {
+        // Revoke any pending one-shot A1 consent and erase the child-only
+        // HMAC material BEFORE tearing down the existing private child pipe.
+        // A later restart must never inherit an old owner ticket or key.
+        _a1OwnerApprovedAction=null;
+        _a1OwnerApprovedEpoch=0;
+        _a1OwnerProofRunId=null;
+        if (_a1OwnerProofKey is not null) {
+            CryptographicOperations.ZeroMemory(_a1OwnerProofKey);
+            _a1OwnerProofKey=null;
+        }
         try{_nativeModelsStop.Cancel();}catch(ObjectDisposedException){}
         _nativeModelsStop.Dispose();
         if (_nativeP02Core is { } web) {
