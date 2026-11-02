@@ -75,6 +75,12 @@ def verify_nsis_setup(setup: Path) -> dict:
     """Reject redirected or stale PE output; hash the SAME admitted file handle."""
     need(setup.is_file() and not setup.is_symlink(),
          "T06_NSIS_SETUP_MISSING_OR_REDIRECTED")
+    need(not getattr(setup, "is_junction", lambda: False)(),
+         "T06_NSIS_SETUP_REPARSE_ANCESTOR_HOLD")
+    for ancestor in setup.parents:
+        need(not ancestor.is_symlink() and
+             not getattr(ancestor, "is_junction", lambda: False)(),
+             "T06_NSIS_SETUP_REPARSE_ANCESTOR_HOLD")
     initial=setup.stat()
     need(initial.st_size>=1024*1024,"T06_NSIS_SETUP_TOO_SMALL_OR_TRUNCATED")
     with setup.open("rb") as stream:
