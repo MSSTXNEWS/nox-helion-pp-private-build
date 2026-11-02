@@ -352,6 +352,14 @@ def valid_webview2_registration(registration: dict) -> bool:
     return False
 
 
+def webview2_registry_access_denied(registration: dict) -> bool:
+    """Do not mistake EdgeUpdate registry access denial for an absent Runtime."""
+    return type(registration) is dict and any(
+        type(row) is dict and row.get("access_denied") is True
+        for row in registration.values()
+    )
+
+
 def poll_webview2_postinstall(run_preflight, probe_registration, pause,
                               delays=WEBVIEW2_POSTINSTALL_POLL_SECONDS):
     """Wait for EdgeUpdate asynchronous registration; P01 owner preflight alone grants PASS."""
@@ -374,6 +382,8 @@ def poll_webview2_postinstall(run_preflight, probe_registration, pause,
         if state == "UNRELATED_HOLD":
             return last, attempts, probe_registration(), "UNRELATED_HOLD"
         registry = probe_registration()
+        if webview2_registry_access_denied(registry):
+            return last, attempts, registry, "REGISTRY_ACCESS_DENIED"
         if valid_webview2_registration(registry):
             return last, attempts, registry, "REGISTRY_PREFLIGHT_DIVERGENCE"
     return last, attempts, registry, "RUNTIME_MISSING"
@@ -405,7 +415,12 @@ def webview2_registration_diagnostic()->dict:
                            "pv":str(value)[:64] if value_type==winreg.REG_SZ else "",
                            "value_type":value_type}
         except OSError as exc:
-            result[label]={"present":False,"winerror":getattr(exc,"winerror",None)}
+            # WinError 5 is not equivalent to ERROR_FILE_NOT_FOUND. Prevent
+            # blind CI re-provisioning when the EdgeUpdate view is unreadable.
+            denied=(isinstance(exc, PermissionError) or
+                    getattr(exc,"winerror",None)==5)
+            result[label]={"present":False,"winerror":getattr(exc,"winerror",None),
+                           "access_denied":denied}
     return result
 
 def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
@@ -425,6 +440,8 @@ def ensure_official_webview2_on_ci(preflight:dict,script:Path,install:Path,
             "T06_OFFICIAL_WEBVIEW2_RUNTIME_REQUIRED_CI_OPT_IN")
     initial_registration=webview2_registration_diagnostic()
     report["installer_lifecycle"]["webview2_initial_registration"]=initial_registration
+    require(not webview2_registry_access_denied(initial_registration),
+            "T06_WEBVIEW2_REGISTRY_ACCESS_DENIED")
     # Never install another signed Runtime when it already has real pv and the
     # original P01 stage merely probes the wrong registry view.
     require(not valid_webview2_registration(initial_registration),
@@ -515,6 +532,8 @@ exit 0"""
         print("T06_WEBVIEW2_REGISTRATION_DIAGNOSTIC "+json.dumps(
             {"kind":label,"registry":registration,"strict_result":result["code"],
              "verdict":verdict},sort_keys=True),flush=True)
+        require(verdict!="REGISTRY_ACCESS_DENIED",
+                "T06_WEBVIEW2_REGISTRY_ACCESS_DENIED")
         require(verdict!="REGISTRY_PREFLIGHT_DIVERGENCE",
                 "T06_WEBVIEW2_STAGED_PREFLIGHT_REGISTRY_DIVERGENCE")
         return result
