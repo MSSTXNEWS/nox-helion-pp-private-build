@@ -15,6 +15,19 @@ HEAD = "a" * 40
 R11 = "90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
 
 
+
+def _synthetic_pe32_fixture(machine=0x14c):
+    """Source-only PE layout fixture, intentionally NOT a real NSIS installer."""
+    data = bytearray(65536)
+    data[:2] = b"MZ"
+    data[0x3c:0x40] = (0x80).to_bytes(4, "little")
+    data[0x80:0x84] = b"PE\\x00\\x00"
+    data[0x84:0x86] = machine.to_bytes(2, "little")
+    data[0x86:0x88] = (3).to_bytes(2, "little")
+    data[0x94:0x96] = (0xe0 if machine == 0x14c else 0xf0).to_bytes(2, "little")
+    data[0x98:0x9a] = (0x10b if machine == 0x14c else 0x20b).to_bytes(2, "little")
+    return bytes(data)
+
 class CandidateReceiptTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -23,7 +36,7 @@ class CandidateReceiptTests(unittest.TestCase):
         self.compile = root / "T06_COMPILE_EVIDENCE.json"
         self.candidate = root / "ONEHOST_CANDIDATE_RECEIPT.json"
         self.setup = root / "NOX-HELION-V16-ONEHOST-CANDIDATE-SETUP.exe"
-        self.setup.write_bytes(b"MZ exact local Windows test fixture, never installed")
+        self.setup.write_bytes(_synthetic_pe32_fixture())
         self.comp = {"source_git_sha": HEAD, "original_zip_sha256": R11,
                      "original_files_staged": 729, "dotnet_build_exit": 0}
         self.cand = {"schema": "NOX-E06-ONEHOST-CANDIDATE-v1",
@@ -78,6 +91,46 @@ class CandidateReceiptTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "EXACT_HEAD_OR_729"):
                 self.verify()
             self.comp[field] = old
+
+
+    def _replace_fake_setup_with_matching_receipt(self, payload):
+        self.setup.write_bytes(payload)
+        self.cand["setup_sha256"] = hashlib.sha256(payload).hexdigest()
+        self.cand["setup_bytes"] = len(payload)
+        self.save()
+
+    def test_tiny_168_byte_saved_copy_is_not_an_nsis_setup(self):
+        self._replace_fake_setup_with_matching_receipt(b"MZ" + b"x" * 166)
+        with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+            self.verify()
+
+    def test_large_non_pe_bytes_are_not_a_setup(self):
+        self._replace_fake_setup_with_matching_receipt(b"MZ" + b"x" * 65534)
+        with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+            self.verify()
+
+    def test_tampered_pe_signature_is_denied_even_if_digest_matches(self):
+        raw = bytearray(_synthetic_pe32_fixture())
+        raw[0x80:0x84] = b"FAKE"
+        self._replace_fake_setup_with_matching_receipt(bytes(raw))
+        with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+            self.verify()
+
+    def test_unsupported_pe_machine_is_denied(self):
+        raw = bytearray(_synthetic_pe32_fixture())
+        raw[0x84:0x86] = (0x7777).to_bytes(2, "little")
+        self._replace_fake_setup_with_matching_receipt(bytes(raw))
+        with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+            self.verify()
+
+    def test_pe32plus_fixture_source_only(self):
+        self._replace_fake_setup_with_matching_receipt(_synthetic_pe32_fixture(0x8664))
+        self.assertEqual(self.verify(), self.cand["setup_sha256"])
+
+    def test_nonfinite_receipt_json_is_denied(self):
+        self.candidate.write_text('{"release_accepted":NaN}', encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "INVALID_JSON"):
+            self.verify()
 
     def test_replaced_setup_bytes_hold(self):
         self.setup.write_bytes(b"MZ replaced payload")

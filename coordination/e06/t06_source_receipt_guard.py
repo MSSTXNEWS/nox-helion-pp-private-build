@@ -97,14 +97,53 @@ def _receipt(path: Path) -> dict:
             raise OSError("receipt length changed")
     except OSError as exc:
         raise RuntimeError("T06_SOURCE_RECEIPT_MISSING_OR_UNTRUSTED") from exc
+    def reject_nonfinite(token):
+        raise ValueError("non-JSON constant: " + token)
     try:
-        result = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate)
+        result = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate,
+                            parse_constant=reject_nonfinite)
     except (ValueError, UnicodeError) as exc:
         raise RuntimeError("T06_SOURCE_RECEIPT_INVALID_JSON") from exc
     if type(result) is not dict:
         raise RuntimeError("T06_SOURCE_RECEIPT_INVALID_OBJECT")
     return result
 
+
+
+def _looks_like_windows_pe(stream, length: int) -> bool:
+    """Reject tiny saved-copy placeholders and non-PE bytes before a Setup receipt.
+
+    This is a structural Windows binary gate, NOT Authenticode verification,
+    native Windows execution, or independently installed E07 acceptance.
+    The existing NSIS bootstrap can be PE32 (x86) for a Windows x64 payload.
+    """
+    if length < 65536:
+        return False
+    stream.seek(0)
+    if stream.read(2) != b"MZ":
+        return False
+    stream.seek(0x3c)
+    pe_offset = int.from_bytes(stream.read(4), "little")
+    if pe_offset < 0x40 or pe_offset > min(1048576, length - 64):
+        return False
+    stream.seek(pe_offset)
+    if stream.read(4) != b"PE\\x00\\x00":
+        return False
+    machine = int.from_bytes(stream.read(2), "little")
+    sections = int.from_bytes(stream.read(2), "little")
+    if machine not in (0x14c, 0x8664) or not (1 <= sections <= 96):
+        return False
+    stream.seek(pe_offset + 20)
+    optional_size = int.from_bytes(stream.read(2), "little")
+    if (optional_size < 96 or optional_size > 1024 or
+            pe_offset + 24 + optional_size + 40 * sections > length):
+        return False
+    stream.seek(pe_offset + 24)
+    magic = int.from_bytes(stream.read(2), "little")
+    if magic != (0x10b if machine == 0x14c else 0x20b):
+        return False
+    stream.seek(0)
+    return True
 
 def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt: Path,
                      setup: Path, expected_r11_zip_sha256: str) -> str:
@@ -142,8 +181,9 @@ def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt:
     digest = hashlib.sha256()
     try:
         with _trusted_binary_reader(setup) as stream:
-            if os.fstat(stream.fileno()).st_size != size:
-                raise OSError("setup length mismatch")
+            if (os.fstat(stream.fileno()).st_size != size or
+                    not _looks_like_windows_pe(stream, size)):
+                raise OSError("setup length or Windows PE structure invalid")
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
     except OSError as exc:
