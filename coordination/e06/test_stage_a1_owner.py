@@ -97,6 +97,51 @@ class A1StageTests(unittest.TestCase):
         self.assertEqual(events, ['simulated-race'])
         self.assertFalse((self.stage/'nox_selfbuilder').exists())
 
+
+    def test_pinned_source_swapped_to_same_bytes_link_during_open_denied(self):
+        from unittest.mock import patch
+        original = self.repo/'src'/'nox_selfbuilder'/'worms.py'
+        replacement = self.repo/'same-bytes-external.py'
+        replacement.write_bytes(original.read_bytes())
+        os_open = a.os.open
+        switched = []
+        def race(path, flags, *args, **kwargs):
+            if Path(path) == original and not switched:
+                original.unlink()
+                try:
+                    original.symlink_to(replacement)
+                except OSError:
+                    self.skipTest('source symlinks unavailable')
+                switched.append(True)
+            return os_open(path, flags, *args, **kwargs)
+        with patch.object(a.os, 'open', side_effect=race):
+            with self.assertRaisesRegex(ValueError, 'A1_SOURCE_OPEN_IDENTITY_HOLD'):
+                self.run_stage()
+        self.assertEqual(switched, [True])
+        self.assertFalse((self.stage/'nox_selfbuilder').exists())
+
+    def test_reused_stage_source_swapped_to_same_bytes_link_denied(self):
+        from unittest.mock import patch
+        self.run_stage()
+        reused = self.stage/'nox_selfbuilder'/'worms.py'
+        replacement = self.repo/'same-bytes-reused.py'
+        replacement.write_bytes(reused.read_bytes())
+        os_open = a.os.open
+        switched = []
+        def race(path, flags, *args, **kwargs):
+            if Path(path) == reused and not switched:
+                reused.unlink()
+                try:
+                    reused.symlink_to(replacement)
+                except OSError:
+                    self.skipTest('stage symlinks unavailable')
+                switched.append(True)
+            return os_open(path, flags, *args, **kwargs)
+        with patch.object(a.os, 'open', side_effect=race):
+            with self.assertRaisesRegex(ValueError, 'A1_SOURCE_OPEN_IDENTITY_HOLD'):
+                self.run_stage()
+        self.assertEqual(switched, [True])
+
     def test_rollback_only_written_files_on_failure(self):
         import builtins
         # Trigger a failure after the first new file, verify no orphaned files remain.

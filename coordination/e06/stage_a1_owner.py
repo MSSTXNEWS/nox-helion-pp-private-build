@@ -92,6 +92,48 @@ def trusted_manifest_bytes(path: Path) -> bytes:
     return payload
 
 
+
+def trusted_source_bytes(path: Path, base: Path) -> bytes:
+    """Read one original or staged A1 source by opened descriptor and live name.
+
+    A matching Git hash alone is insufficient if the approved pathname was
+    replaced between source preflight and read (E06 source-part race lesson).
+    """
+    regular_owned(path, base)
+    try:
+        before = path.lstat()
+    except OSError as exc:
+        raise ValueError('A1_SOURCE_PATH_IDENTITY_HOLD') from exc
+    if (not stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode)
+            or getattr(before, 'st_file_attributes', 0) & 0x400):
+        raise ValueError('A1_SOURCE_REGULAR_FILE_REQUIRED')
+    flags = os.O_RDONLY | getattr(os, 'O_BINARY', 0) | getattr(os, 'O_NOFOLLOW', 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError('A1_SOURCE_OPEN_IDENTITY_HOLD') from exc
+
+    def identity(info):
+        return (info.st_dev, info.st_ino, info.st_size,
+                info.st_mtime_ns, info.st_ctime_ns)
+
+    with os.fdopen(fd, 'rb') as stream:
+        opened = os.fstat(stream.fileno())
+        if not stat.S_ISREG(opened.st_mode) or identity(before) != identity(opened):
+            raise ValueError('A1_SOURCE_OPEN_IDENTITY_HOLD')
+        payload = stream.read(256001)
+        regular_owned(path, base)
+        try:
+            live = path.lstat()
+            end = os.fstat(stream.fileno())
+        except OSError as exc:
+            raise ValueError('A1_SOURCE_CHANGED_DURING_READ') from exc
+        if identity(live) != identity(opened) or identity(end) != identity(opened):
+            raise ValueError('A1_SOURCE_CHANGED_DURING_READ')
+    if len(payload) > 256000:
+        raise ValueError('A1_EXACT_GIT_SOURCE_SHA_HOLD')
+    return payload
+
 def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) -> dict:
     # Security provenance belongs to the *named* checkout and lock file, not
     # a resolved substitute. A directory/lock symlink could redirect the
@@ -126,7 +168,7 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
             raise ValueError('A1_SOURCE_REGULAR_FILE_REQUIRED')
         if target.is_symlink():
             raise ValueError('A1_STAGE_REPARSE_OR_SYMLINK_HOLD')
-        payload = src.read_bytes()
+        payload = trusted_source_bytes(src, repo)
         if b'\x00' in payload or len(payload) > 256_000 or git_blob(payload) != expected:
             raise ValueError('A1_EXACT_GIT_SOURCE_SHA_HOLD:' + name)
         compile(payload, str(src), 'exec')
@@ -136,7 +178,7 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
         if target.exists():
             if (not target.is_file() or
                     not stat.S_ISREG(target.stat().st_mode) or
-                    target.read_bytes() != payload):
+                    trusted_source_bytes(target, source) != payload):
                 raise ValueError('A1_STAGE_REUSED_SOURCE_SHA_HOLD:' + name)
             reused.append(name)
             continue
@@ -151,7 +193,7 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
                 output.flush()
                 os.fsync(output.fileno())
             created.append(target)
-            if target.read_bytes() != payload:
+            if trusted_source_bytes(target, source) != payload:
                 raise ValueError('A1_STAGE_SOURCE_READBACK_HOLD')
     except BaseException:
         # Never remove unrelated files; remove only exact bytes just created.
