@@ -61,6 +61,17 @@ class A1NativeAuthorizeRace(unittest.TestCase):
         pinned = "('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '" + blob + "')"
         self.assertEqual(stage.count(pinned), 1)
 
+    def test_e06_all_50_addon_pins_match_original_checkout(self):
+        """Fail closed on stale original addon Git blobs; source-only evidence."""
+        source = ROOT / "coordination/e06/stage_native_stdio.py"
+        spec = importlib.util.spec_from_file_location("nox_e06_current_pins", source)
+        stager = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(stager)
+        self.assertEqual(len(stager.ADDONS), 50)
+        for rel, destination, expected in stager.ADDONS:
+            with self.subTest(source=rel, stage=destination):
+                self.assertEqual(stager.git_blob((ROOT / rel).read_bytes()), expected)
+
 
 if __name__ == "__main__":
     unittest.main()
