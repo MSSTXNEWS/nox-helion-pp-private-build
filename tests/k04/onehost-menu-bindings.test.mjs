@@ -89,3 +89,43 @@ test('B06: forged JS MessageEvent cannot impersonate the WebView2 native host',a
  assert.equal((await pending).result.verified,true);
  f.client.destroy();
 });
+
+test('P01: timed-out native chats cannot starve two bounded STOP/cancel IPC slots',async()=>{
+  let listener,seq=0,timerSeq=0;
+  const timers=new Map(),sent=[];
+  const webview={
+    postMessage:message=>sent.push(message),
+    addEventListener:(_type,fn)=>{listener=fn;},
+    removeEventListener:()=>{listener=null;}
+  };
+  const client=createNativeMenuClient({
+    webview,cryptoRef:{getRandomValues:bytes=>{bytes.fill(++seq);return bytes;}},
+    setTimer:fn=>{const id=++timerSeq;timers.set(id,fn);return id;},
+    clearTimer:id=>timers.delete(id),timeoutMs:10
+  });
+  let lateTerminal=0;
+  for(let i=0;i<32;i++){
+    const response=client.request('helion.chat',{text:'unresolved'},null,
+      i===0?()=>{lateTerminal++;}:null);
+    timers.get(timerSeq)(); // native timeout without terminal ACK
+    await assert.rejects(response,/TIMEOUT/);
+  }
+  await assert.rejects(client.request('chat.history',{}),/REQUEST_LIMIT/);
+  const stop=client.request('chat.stop',{});
+  const cancel=client.request('models.cancel',{jobId:'existing-job-01'});
+  assert.equal(sent.length,34,'no unbounded page flood beyond two controls');
+  assert.deepEqual(sent.slice(-2).map(x=>x.routeId),['chat.stop','models.cancel']);
+  await assert.rejects(client.request('chat.stop',{}),/REQUEST_LIMIT/);
+  const nativeReply=(request,state)=>listener({
+    source:webview,isTrusted:true,
+    data:{kind:'p02NativeResult',requestId:request.requestId,
+      routeId:request.routeId,state}
+  });
+  nativeReply(sent[32],'STOP_REQUESTED');
+  nativeReply(sent[33],'STOP_REQUESTED');
+  assert.equal((await stop).state,'STOP_REQUESTED');
+  assert.equal((await cancel).state,'STOP_REQUESTED');
+  nativeReply(sent[0],'COMPLETED'); // late terminal correlation is preserved
+  assert.equal(lateTerminal,1);
+  client.destroy();
+});

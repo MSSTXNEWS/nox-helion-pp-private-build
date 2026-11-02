@@ -80,7 +80,13 @@ export function createNativeMenuClient({webview,cryptoRef=globalThis.crypto,
       if((route==='training.start'||route==='chat.commands'&&payload.action?.startsWith('training.'))&&
         (typeof payload.job_id!=='string'||!payload.job_id||Object.keys(payload).some(k=>!['action','job_id','core_id','persona_id'].includes(k))))
         return Promise.reject(Error('NOX_APPROVED_TRAINING_JOB_REQUIRED'));
-      if(pending.size>=32)return Promise.reject(Error('NOX_NATIVE_REQUEST_LIMIT'));
+      // Reserve bounded native STOP/cancel slots when chat timeouts remain
+      // unresolved. A timeout is NOT a native completion or STOP receipt.
+      const controlRoute=route==='chat.stop'||route==='models.cancel';
+      const activeControls=[...pending.values()].filter(p=>
+        p.route==='chat.stop'||p.route==='models.cancel').length;
+      if(pending.size>=32 && (!controlRoute||activeControls>=2))
+        return Promise.reject(Error('NOX_NATIVE_REQUEST_LIMIT'));
       const bytes=new Uint8Array(16);cryptoRef.getRandomValues(bytes);
       const id=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
       if(pending.has(id))return Promise.reject(Error('NOX_NATIVE_NONCE_COLLISION'));
