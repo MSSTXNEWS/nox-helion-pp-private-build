@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -49,6 +50,45 @@ def sha(path:Path)->str:
 def regular(path:Path)->bool:
     return path.is_file() and not path.is_symlink() and (
         not getattr(path,"is_junction",lambda:False)())
+
+def strict_json_object(raw: bytes, code: str, max_bytes: int = 1048576) -> dict:
+    """Only unambiguous, bounded JSON objects may count as native proof."""
+    require(type(raw) is bytes and 2 <= len(raw) <= max_bytes, code)
+    def unique_pairs(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("duplicate proof key")
+            obj[key] = value
+        return obj
+    def finite_float(token):
+        val = float(token)
+        if not math.isfinite(val):
+            raise ValueError("nonfinite proof number")
+        return val
+    def reject_constant(_token):
+        raise ValueError("nonfinite JSON constant")
+    try:
+        decoded = json.loads(
+            raw.decode("utf-8", errors="strict"),
+            object_pairs_hook=unique_pairs,
+            parse_float=finite_float,
+            parse_constant=reject_constant,
+        )
+    except (UnicodeError, ValueError, TypeError, OverflowError) as exc:
+        raise RuntimeError(code) from exc
+    require(type(decoded) is dict, code)
+    return decoded
+
+def strict_receipt(path: Path, code: str) -> dict:
+    """Bound proof input before parsing; never follow a known redirected file."""
+    require(regular(path), code)
+    try:
+        with path.open("rb") as stream:
+            payload = stream.read(4 * 1024 * 1024 + 1)
+    except OSError as exc:
+        raise RuntimeError(code) from exc
+    return strict_json_object(payload, code, max_bytes=4 * 1024 * 1024)
 
 def plain_parents(path:Path,base:Path)->bool:
     try:
@@ -97,7 +137,7 @@ def framed(binary:Path,data_dir:Path,receipt:dict)->dict:
     require(len(content)>=5,"T06_INSTALLED_BACKEND_FRAME_ABSENT")
     n=struct.unpack(">I",content[:4])[0]
     require(1<=n<=1048576 and len(content)==n+4,"T06_INSTALLED_BACKEND_FRAME_BOUNDS")
-    answer=json.loads(content[4:].decode("utf-8"))
+    answer=strict_json_object(content[4:],"T06_INSTALLED_NATIVE_REPLY_JSON_HOLD")
     require(answer.get("protocol")==request["protocol"] and
             answer.get("runId")==request["runId"] and
             answer.get("requestId")==request["requestId"] and
@@ -118,7 +158,7 @@ def bridge_candidate_gate()->dict:
               PAYLOAD/"Backend/NOX_HELION_PRIVATE_CANDIDATE.exe",
               PAYLOAD/"payload.sha256.json")
     require(all(regular(p) for p in required),"T06_BRIDGE_CANDIDATE_FILE_MISSING")
-    source=json.loads(CANDIDATE.read_text("utf-8"))
+    source=strict_receipt(CANDIDATE,"T06_CANDIDATE_RECEIPT_JSON_HOLD")
     # Bind exactly the actual NSIS original R11 preflight source before Setup;
     # registry presence still cannot certify installed GUI or E07.
     staged_preflight=BUILD/"R11/Installer/Preflight-InstallPath.ps1"
@@ -133,8 +173,8 @@ def bridge_candidate_gate()->dict:
             "[Microsoft.Win32.RegistryView]::Registry64" in staged_text and
             "P01_WEBVIEW2_RUNTIME_MISSING" in staged_text,
             "T06_ORIGINAL_NSIS_WEBVIEW2_PREFLIGHT_SOURCELOCK_HOLD")
-    native=json.loads(NATIVE_PROOF.read_text("utf-8"))
-    original=json.loads(native_source.read_text("utf-8"))
+    native=strict_receipt(NATIVE_PROOF,"T06_NATIVE_RECEIPT_JSON_HOLD")
+    original=strict_receipt(native_source,"T06_ORIGINAL_SOURCE_RECEIPT_JSON_HOLD")
     source_zip="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
     original_zip="ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
     wpf=PAYLOAD/"NOX.P01.Shell.exe"
@@ -175,7 +215,7 @@ def bridge_candidate_gate()->dict:
             sha(wpf)==source.get("wpf_sha256") and
             sha(manifest)==source.get("manifest_sha256"),
             "T06_BRIDGE_SOURCE_OR_WPF_SHA_HOLD")
-    inventory=json.loads(manifest.read_text("utf-8"))
+    inventory=strict_receipt(manifest,"T06_PAYLOAD_MANIFEST_JSON_HOLD")
     require(inventory.get("schema")=="NOX_P01_PAYLOAD_SHA256_V1" and
             inventory.get("entrypoint")=="NOX.P01.Shell.exe" and
             type(inventory.get("files")) is list and
@@ -210,9 +250,9 @@ def candidate_gate()->dict:
         return bridge_candidate_gate()
     require(all(regular(x) for x in (CANDIDATE,SETUP,NATIVE_PROOF,BUILT_HANDOFF)),
             "T06_CANDIDATE_EVIDENCE_MISSING")
-    source=json.loads(CANDIDATE.read_text("utf-8"))
-    native=json.loads(NATIVE_PROOF.read_text("utf-8"))
-    handoff=json.loads(BUILT_HANDOFF.read_text("utf-8"))
+    source=strict_receipt(CANDIDATE,"T06_CANDIDATE_RECEIPT_JSON_HOLD")
+    native=strict_receipt(NATIVE_PROOF,"T06_NATIVE_RECEIPT_JSON_HOLD")
+    handoff=strict_receipt(BUILT_HANDOFF,"T06_BUILT_HANDOFF_JSON_HOLD")
     require(source.get("schema")=="NOX-E06-ONEHOST-DIAGNOSTIC-NSIS-v1" and
             source.get("release_accepted") is False and source.get("one_visible_host") is True and
             source.get("status")=="WINDOWS_INSTALLER_CANDIDATE_NOT_E07_ACCEPTED" and
@@ -249,7 +289,7 @@ def candidate_gate()->dict:
             sha(py)==source.get("python_backend_sha256") and
             sha(manifest)==source.get("payload_manifest_sha256"),
             "T06_PAYLOAD_ORIGINAL_WPF_NATIVE_SHA_HOLD")
-    inventory=json.loads(manifest.read_text("utf-8"))
+    inventory=strict_receipt(manifest,"T06_PAYLOAD_MANIFEST_JSON_HOLD")
     require(inventory.get("schema")=="NOX_P01_PAYLOAD_SHA256_V1" and
             inventory.get("entrypoint")=="NOX.P01.Shell.exe" and
             type(inventory.get("files")) is list and len(inventory["files"])>=12,
