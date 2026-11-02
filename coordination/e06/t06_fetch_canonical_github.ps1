@@ -3,13 +3,17 @@
 param([Parameter(Mandatory=$true)][string]$ExpectedSha)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
-if ($env:CI_SERVER_HOST -cne 'gitlab.com' -or
-    $env:CI_PROJECT_PATH -cne 's-grouptwet/nox-helion-pp-private-build' -or
-    $env:CI_PIPELINE_SOURCE -cnotin @('api','web') -or
-    $env:CI_RUNNER_EXECUTABLE_ARCH -cne 'windows/amd64' -or
-    ($env:NOX_T06_LOCAL_BRIDGE -cne 'YES' -and $env:NOX_APPROVE_T06_BRIDGE -cne 'YES') -or
-    $ExpectedSha -cnotmatch '\A[0-9a-f]{40}\z' -or
-    $env:CI_COMMIT_SHA -cnotmatch '\A[0-9a-f]{40}\z') {
+# Fail closed with actionable field NAMES only; never echo masked tokens.
+$scopeFailed=@()
+if ($env:CI_SERVER_HOST -cne 'gitlab.com') { $scopeFailed+= 'CI_SERVER_HOST' }
+if ($env:CI_PROJECT_PATH -cne 's-grouptwet/nox-helion-pp-private-build') { $scopeFailed+= 'CI_PROJECT_PATH' }
+if ($env:CI_PIPELINE_SOURCE -cnotin @('api','web')) { $scopeFailed+= 'CI_PIPELINE_SOURCE' }
+if ($env:CI_RUNNER_EXECUTABLE_ARCH -cne 'windows/amd64') { $scopeFailed+= 'CI_RUNNER_EXECUTABLE_ARCH' }
+if ($env:NOX_T06_LOCAL_BRIDGE -cne 'YES' -and $env:NOX_APPROVE_T06_BRIDGE -cne 'YES') { $scopeFailed+= 'EXPLICIT_T06_APPROVAL' }
+if ($ExpectedSha -cnotmatch '\\A[0-9a-f]{40}\\z') { $scopeFailed+= 'FROZEN_GITHUB_SHA' }
+if ($env:CI_COMMIT_SHA -cnotmatch '\\A[0-9a-f]{40}\\z') { $scopeFailed+= 'CI_COMMIT_SHA' }
+if ($scopeFailed.Count -gt 0) {
+  Write-Host ('T06_GITHUB_CI_SCOPE_FAILED_FIELDS=' + ($scopeFailed -join ','))
   throw 'T06_GITHUB_CI_SCOPE_HOLD'
 }
 if ($env:GIT_CONFIG_COUNT -or [string]::IsNullOrWhiteSpace($env:NOX_T06_GITHUB_READ_TOKEN)) {
