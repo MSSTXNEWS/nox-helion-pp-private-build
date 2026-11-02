@@ -52,14 +52,15 @@ def inspect_release_task(ticket:Mapping, *, current_head:str, seen_task_ids:froz
 def source_ready(*, mandatory_total:int|None, source_verified:int, patch_tests_passed:int,
                  integration_receipts:int, windows_runner_ready:bool) -> dict:
     """Separates SOURCE_READY from actual Windows build ability."""
-    if not isinstance(mandatory_total,int) or mandatory_total <= 0:
+    # Python bool is a subclass of int; never count True as one verified file.
+    if type(mandatory_total) is not int or mandatory_total <= 0:
         return {"status":"HOLD","reason":"UNKNOWN_DENOMINATOR","windows_release":False}
     for n in (source_verified,patch_tests_passed,integration_receipts):
-        if not isinstance(n,int) or n<0:
+        if type(n) is not int or n < 0:
             return {"status":"HOLD","reason":"INVALID_EVIDENCE_COUNTER","windows_release":False}
     if source_verified != mandatory_total or patch_tests_passed != mandatory_total or integration_receipts != mandatory_total:
         return {"status":"HOLD","reason":"INCOMPLETE_SOURCE_READY","windows_release":False}
-    return {"status":"SOURCE_READY", "windows_runner":"READY" if windows_runner_ready else "HOLD",
+    return {"status":"SOURCE_READY", "windows_runner":"READY" if windows_runner_ready is True else "HOLD",
             "windows_release":False,"next":"One owner-controlled Windows build; independent same-SHA E07"}
 
 
