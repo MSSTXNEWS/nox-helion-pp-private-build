@@ -8,7 +8,7 @@ SRC=ROOT/"coordination/e06/t06_windows_overlay"
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 EXPECTED={
 "MainWindow.NativeP02.cs":"0b65fc5ca62788dbde01e669e98769a23ac5e8a9",
-"OneHostP02WebView2Bridge.cs":"553025dbd98bf812013a7bfb748c0127e42220f9",
+"OneHostP02WebView2Bridge.cs":"06040a277223810759fe9e875e183589c185fa1d",
 "stage_native_p02.py":"ab8520c7b277726f38400b9fc9a1ca5bd2571333",
 "NativePythonPipe.cs":"711644bf4d2052d812bf71a0b679d8531a3ca76e"
 }

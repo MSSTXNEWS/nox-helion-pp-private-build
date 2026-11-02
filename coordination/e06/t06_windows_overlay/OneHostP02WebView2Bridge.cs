@@ -91,6 +91,12 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
                string.Equals(uri.Host, _virtualOrigin.Host, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Native messages and late ACK are accepted only from the exact original
+    // mapped HOME. Other same-origin pages may render but have no native IPC.
+    private bool ExactShellHome(string? raw) =>
+        Trusted(raw) && Uri.TryCreate(raw, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.AbsoluteUri, _virtualOrigin.AbsoluteUri, StringComparison.Ordinal);
+
     private void RevokeDocument()
     {
         Interlocked.Increment(ref _epoch);
@@ -127,7 +133,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private bool IsCurrent(string source, long epoch) =>
         Volatile.Read(ref _disposed) == 0 && !_lifetime.IsCancellationRequested &&
-        Interlocked.Read(ref _epoch) == epoch && Trusted(source) && Trusted(_web.Source) &&
+        Interlocked.Read(ref _epoch) == epoch && ExactShellHome(source) && ExactShellHome(_web.Source) &&
         string.Equals(source, _web.Source, StringComparison.Ordinal);
 
     private void Reply(string source, long epoch, string id, string route,
@@ -147,7 +153,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (Volatile.Read(ref _disposed) != 0 || !Trusted(e.Source) || !Trusted(_web.Source))
+        if (Volatile.Read(ref _disposed) != 0 || !ExactShellHome(e.Source) || !ExactShellHome(_web.Source))
             return;
         var source = e.Source;
         var epoch = Interlocked.Read(ref _epoch);
