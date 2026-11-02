@@ -4,6 +4,27 @@ Manual same-VM build only. Neither published release nor GUI E2E acceptance.
 """
 from __future__ import annotations
 import hashlib,io,json,pathlib,zipfile
+
+def strict_native_json(raw:bytes, hold_code:str)->dict:
+    """Reject ambiguous/fabricated native replies before claiming a live ACK."""
+    def unique_pairs(pairs):
+        obj={}
+        for key,value in pairs:
+            if key in obj:
+                raise ValueError("duplicate native reply JSON key")
+            obj[key]=value
+        return obj
+    def reject_nonfinite(token):
+        raise ValueError("non-finite native reply value")
+    try:
+        decoded=json.loads(raw.decode("utf-8",errors="strict"),
+            object_pairs_hook=unique_pairs,parse_constant=reject_nonfinite)
+    except (UnicodeError, ValueError, TypeError) as exc:
+        raise RuntimeError(hold_code) from exc
+    if type(decoded) is not dict:
+        raise RuntimeError(hold_code)
+    return decoded
+
 root=pathlib.Path(__file__).resolve().parents[2]
 out=root/"work/t06-manual-source-inspect"
 out.mkdir(parents=True,exist_ok=False)
@@ -74,7 +95,7 @@ if len(stdout)<4:raise RuntimeError("T06_NATIVE_ORIGINAL_NO_FRAMED_OUTPUT")
 frame_size=int.from_bytes(stdout[:4],"big")
 if not 1<=frame_size<=1048576 or len(stdout)!=frame_size+4:
     raise RuntimeError("T06_NATIVE_ORIGINAL_FRAME_BOUNDS_INVALID")
-response=json.loads(stdout[4:].decode("utf-8"))
+response=strict_native_json(stdout[4:],"T06_NATIVE_ORIGINAL_RESPONSE_JSON_HOLD")
 if (response.get("protocol")!="NOX-P02-NATIVE-v1" or
     response.get("runId")!=run_id or
     response.get("requestId")!=request["requestId"] or
@@ -228,7 +249,7 @@ if len(raw_reply)<5:
 reported=int.from_bytes(raw_reply[:4],"big")
 if not 1<=reported<=1048576 or len(raw_reply)!=4+reported:
     raise RuntimeError("T06_NATIVE_PYTHON_EXE_FRAMING_INVALID")
-answer=json.loads(raw_reply[4:].decode("utf-8"))
+answer=strict_native_json(raw_reply[4:],"T06_NATIVE_PYTHON_EXE_RESPONSE_JSON_HOLD")
 # Model discovery in a fresh Windows CI VM commonly has no Ollama listener.
 # This is NOT a real-model PASS: allow only the exact provider HOLD also
 # observed in the authenticated original Python source probe above.
@@ -262,7 +283,7 @@ if p03_result.returncode!=0 or len(p03_result.stdout)<5:
 p03_size=struct.unpack(">I",p03_result.stdout[:4])[0]
 if not 1<=p03_size<=1048576 or len(p03_result.stdout)!=p03_size+4:
     raise RuntimeError("T06_FROZEN_MODEL_CENTER_FRAMING_HOLD")
-p03_answer=json.loads(p03_result.stdout[4:].decode("utf-8"))
+p03_answer=strict_native_json(p03_result.stdout[4:],"T06_FROZEN_MODEL_CENTER_JSON_HOLD")
 if (p03_answer.get("protocol")!=p03_request["protocol"] or
     p03_answer.get("requestId")!=p03_request["requestId"] or
     p03_answer.get("runId")!=p03_request["runId"] or
