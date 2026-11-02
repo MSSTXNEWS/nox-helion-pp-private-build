@@ -306,7 +306,14 @@ class OneHostSelfBuilder:
         lesson={'schema':'NOX-SELFBUILDER-OWNER-LESSON-v1','task_id':tid,'outcome':outcome,
                 'patch_sha256':receipt['patch_sha256'],'source_head':receipt['source_head'],
                 'reviewer':scope_key(session),'weights_updated':False,'integrated':False}
-        self.queue.record(session,tid,'OWNER_'+outcome,{'status':'OWNER_'+outcome,'receipt':receipt,'lesson':lesson})
+        epoch=self.stop_epoch()
+        if (type(epoch) is not int or epoch < 0 or self._stop.is_set() or
+                self.native_stop() is not False):
+            raise PermissionError('NATIVE_FEEDBACK_STOP_EPOCH_REQUIRED')
+        self.queue.record(session,tid,'OWNER_'+outcome,
+                          {'status':'OWNER_'+outcome,'receipt':receipt,'lesson':lesson},
+                          expected_epoch=epoch,permission='selfbuilder.feedback',
+                          permission_payload={'task_id':tid,'outcome':outcome})
         return {'status':'OWNER_REVIEW_RECORDED','task_id':tid,'S03_WRITE_PERFORMED':True,'integrated':False,'weights_updated':False}
 
 class _EvolutionHost:
@@ -333,7 +340,10 @@ class _EvolutionHost:
     def recall(self,*args):return self.service.recall(*args)
     def generate(self,*args):return self.service.coder(*args)
     def record_result(self,tid,status,receipt):
-        return self.service.queue.record(self.session,self.tid,status,{'status':status,'receipt':_without_transient_preview(receipt),'weights_updated':False})
+        return self.service.queue.record(
+            self.session,self.tid,status,
+            {'status':status,'receipt':_without_transient_preview(receipt),'weights_updated':False},
+            expected_epoch=self.epoch,permission='selfbuilder.propose')
     def finish_task(self,tid,status):
         # Completion is audit-only; original task is never marked OWNER ACCEPTED here.
         return self.service.queue.get(self.session,self.tid).get('state')==status
