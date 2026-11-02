@@ -113,16 +113,31 @@ class OneHostSelfBuilder:
         self._a_guard(session)
         first = self._a_firstboot.run(session, now=now)
         self._a_guard(session)
-        if first.get('status') in ('HOLD', 'STOPPED'):
+        # Installation and public research have INDEPENDENT native consent.
+        # Missing optional P01/P03 download approval must not silently grant
+        # downloads, nor block separately signed read-only research.
+        if (type(first) is not dict or
+                first.get('schema') != 'NOX-FIRSTBOOT-RECEIPT-v1'):
+            raise PermissionError('A_ORIGINAL_FIRSTBOOT_RECEIPT_REQUIRED')
+        first_state = first.get('status')
+        accepted = ('HOLD', 'STOPPED', 'QUEUED_NOT_INSTALLED',
+                    'ALREADY_QUEUED_NOT_INSTALLED', 'ALREADY_PRESENT')
+        if first_state not in accepted or first_state == 'STOPPED':
             return {'schema': 'NOX-A-NATIVE-BOOT-v1',
                     'state': 'HOLD', 'firstboot': first,
-                    'initiative': None, 'e07': False}
+                    'initiative': None, 'e07': False,
+                    'firstboot_download_approved_by_a1': False}
+        # A1InitiativeBridge.boot separately verifies ORIGINAL signed research
+        # policy, exact source HEAD, owner ACL and STOP epoch before enabling.
         initiative = self._a_native_bridge.boot(session, now=now)
         self._a_guard(session)
+        ready = (type(initiative) is dict and
+                 initiative.get('state') == 'READY_FOR_EXISTING_IDLE_TICK')
         return {'schema': 'NOX-A-NATIVE-BOOT-v1',
-                'state': 'READY_FOR_EXISTING_IDLE_TICK' if
-                    initiative.get('state') == 'READY_FOR_EXISTING_IDLE_TICK' else 'HOLD',
-                'firstboot': first, 'initiative': initiative, 'e07': False}
+                'state': 'READY_FOR_EXISTING_IDLE_TICK' if ready else 'HOLD',
+                'firstboot': first, 'initiative': initiative, 'e07': False,
+                'firstboot_pending_separate_consent': first_state == 'HOLD',
+                'firstboot_download_approved_by_a1': False}
 
     def native_a_tick(self, session, *, now):
         """Called ONLY by preexisting OneHost idle scheduler, not a new agent."""
