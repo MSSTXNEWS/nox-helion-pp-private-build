@@ -6,6 +6,7 @@ R11=STAGE/"R11"
 SRC=ROOT/"coordination/e06/t06_windows_overlay"
 # Exact audited 32/64-bit WebView2 registry gate; unrelated builder lines can evolve.
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
+P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
 "MainWindow.NativeP02.cs":"0b65fc5ca62788dbde01e669e98769a23ac5e8a9",
 "OneHostP02WebView2Bridge.cs":"06040a277223810759fe9e875e183589c185fa1d",
@@ -98,6 +99,46 @@ def stage_exact_owner_webview2_registry_views(r11, canonical_script):
         raise RuntimeError("T06_WEBVIEW2_CANONICAL_REGISTRY_GATE_HOLD")
     eol = "\r\n" if "\r\n" in original else "\n"
     after = original[:begin] + replacement.replace("\n", eol) + eol + original[end:]
+    # SourceLock the actual Windows NSIS staging guard, not just the GitHub
+    # donor. The archived original 729-file ZIP stays byte-identical.
+    approved_path = ROOT / "stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1"
+    if not approved_path.is_file() or approved_path.is_symlink():
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_SOURCE_MISSING")
+    approved_raw = approved_path.read_bytes()
+    if not 512 <= len(approved_raw) <= 262144 or git_blob(approved_raw) != P01_PREFLIGHT_ANCESTOR_GIT_BLOB:
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_SOURCE_BLOB_HOLD")
+    approved = approved_raw.decode("utf-8-sig")
+    new_marker = "# Never stage through a junction in the install path OR an upstream"
+    old_marker = "# Never stage through a junction in the user-controlled install path or its parents."
+    end_marker = "# Verify the existing installer-owned marker before allowing an update; a filename alone is not proof."
+    if approved.count(new_marker) != 1 or approved.count(end_marker) != 1:
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_APPROVED_ANCHOR_HOLD")
+    guard_begin, guard_end = approved.index(new_marker), approved.index(end_marker)
+    approved_guard = approved[guard_begin:guard_end]
+    if (guard_begin >= guard_end or
+            "while ($cursor)" not in approved_guard or
+            "[IO.Path]::GetDirectoryName($cursor)" not in approved_guard or
+            "-not $node.PSIsContainer" not in approved_guard or
+            "[IO.FileAttributes]::ReparsePoint" not in approved_guard or
+            "$localRoot" in approved_guard):
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_APPROVED_GUARD_HOLD")
+    if after.count(old_marker) == 1 and after.count(end_marker) == 1:
+        legacy_begin, legacy_end = after.index(old_marker), after.index(end_marker)
+        legacy_guard = after[legacy_begin:legacy_end]
+        if (legacy_begin >= legacy_end or
+                "$localRoot" not in legacy_guard or
+                "P01_INSTALL_REPARSE_ANCESTOR" not in legacy_guard or
+                "[IO.Path]::GetDirectoryName($cursor)" not in legacy_guard):
+            raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_LEGACY_DRIFT_HOLD")
+        after = after[:legacy_begin] + approved_guard.replace("\n", eol) + after[legacy_end:]
+    elif after.count(new_marker) != 1 or after.count(end_marker) != 1:
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_UNKNOWN_PREIMAGE_HOLD")
+    staged_guard_begin = after.index(new_marker)
+    staged_guard_end = after.index(end_marker)
+    if (staged_guard_begin >= staged_guard_end or
+            after[staged_guard_begin:staged_guard_end].replace("\r\n", "\n") != approved_guard or
+            after.count("P01_INSTALL_REPARSE_ANCESTOR") != 1):
+        raise RuntimeError("T06_P01_PREFLIGHT_ANCESTOR_GRAFT_HOLD")
     if (after == original or after.count(end_anchor) != 1 or
             after.count("P01_WEBVIEW2_RUNTIME_MISSING") != 1):
         raise RuntimeError("T06_WEBVIEW2_OWNER_PREFLIGHT_NOLOSS_HOLD")

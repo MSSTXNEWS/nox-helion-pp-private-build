@@ -69,6 +69,23 @@ def stage_reviewed_webview2_preflight(owner_script: Path, reviewed_script: Path)
     approved_text=approved_bytes.decode("utf-8-sig")
     old_bytes=owner_script.read_bytes()
     original=old_bytes.decode("utf-8-sig")
+    # The compiled NSIS preflight must contain the EXACT approved P01
+    # volume-root ancestor guard, not merely the reviewed registry gate.
+    guard_start="# Never stage through a junction in the install path OR an upstream"
+    guard_end="# Verify the existing installer-owned marker before allowing an update; a filename alone is not proof."
+    need(approved_text.count(guard_start)==1 and
+         approved_text.count(guard_end)==1 and
+         original.count(guard_start)==1 and
+         original.count(guard_end)==1,
+         "T06_P01_PREFLIGHT_ANCESTOR_SOURCELOCK_HOLD")
+    approved_guard=approved_text[approved_text.index(guard_start):approved_text.index(guard_end)]
+    staged_guard=original[original.index(guard_start):original.index(guard_end)]
+    need(staged_guard.replace("\r\n","\n")==approved_guard and
+         "while ($cursor)" in staged_guard and
+         "[IO.Path]::GetDirectoryName($cursor)" in staged_guard and
+         "-not $node.PSIsContainer" in staged_guard and
+         "$localRoot" not in staged_guard,
+         "T06_P01_PREFLIGHT_ANCESTOR_SOURCELOCK_HOLD")
     need(b"\r" not in old_bytes.replace(b"\r\n", b""),
          "T06_WEBVIEW2_ORIGINAL_SOURCE_LINE_ENDINGS_HOLD")
     # The current T06 compiler already inserts the independently reviewed

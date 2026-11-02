@@ -54,6 +54,20 @@ class P01PreflightVolumeRootR44(unittest.TestCase):
         self.assertGreaterEqual(smoke_text.index(marker), 0)
         self.assertTrue(smoke_text[position:position+100].lstrip().startswith('"' + git_blob + '"'))
 
+    def test_windows_compiler_grafts_exact_guard_before_nsis_package(self):
+        raw = PREFLIGHT.read_bytes()
+        git_blob = hashlib.sha1(b"blob " + str(len(raw)).encode("ascii") + bytes([0]) + raw).hexdigest()
+        compiler = (ROOT / "coordination/e06/t06_compile_original_wpf_p02.py").read_text("utf-8")
+        packager = PACKAGE.read_text("utf-8")
+        self.assertIn('P01_PREFLIGHT_ANCESTOR_GIT_BLOB="' + git_blob + '"', compiler)
+        for required in ("T06_P01_PREFLIGHT_ANCESTOR_SOURCE_BLOB_HOLD",
+                         "T06_P01_PREFLIGHT_ANCESTOR_GRAFT_HOLD",
+                         "approved_guard.replace", "after.count(old_marker)"):
+            with self.subTest(required=required):
+                self.assertIn(required, compiler)
+        self.assertIn("T06_P01_PREFLIGHT_ANCESTOR_SOURCELOCK_HOLD", packager)
+        self.assertIn('staged_guard.replace', packager)
+
     @unittest.skipUnless(os.name == "nt", "Real PowerShell+junction requires Windows")
     def test_native_parent_junction_denied_even_above_localappdata(self):
         with tempfile.TemporaryDirectory(prefix="nox-p01-r44-") as work:
