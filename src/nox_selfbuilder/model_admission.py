@@ -3,7 +3,7 @@ Published model pages do NOT expose a full independently verified manifest SHA.
 Exact model/digest/license/sizes MUST be reviewed before native P03 accepts a job.
 """
 from __future__ import annotations
-import json,re
+import json,math,re
 from pathlib import Path
 from typing import Mapping
 SHA=re.compile(r"^[a-f0-9]{64}$")
@@ -18,9 +18,20 @@ def _unique_catalog_object(pairs):
         obj[key] = value
     return obj
 
+def _reject_nonfinite_catalog_constant(_value):
+    raise ValueError("CATALOG_NONFINITE_JSON")
+
+def _finite_catalog_float(token):
+    result = float(token)
+    if not math.isfinite(result):
+        raise ValueError("CATALOG_NONFINITE_JSON")
+    return result
+
 def model_candidates(path:Path)->list[dict]:
     x=json.loads(path.read_text(encoding="utf-8"),
-                 object_pairs_hook=_unique_catalog_object)
+                 object_pairs_hook=_unique_catalog_object,
+                 parse_constant=_reject_nonfinite_catalog_constant,
+                 parse_float=_finite_catalog_float)
     if not isinstance(x, dict) or x.get("schema")!="NOX-CODING-LLM-CANDIDATE-REGISTRY-V3":
         raise ValueError("CATALOG_SCHEMA_INVALID")
     if not isinstance(x.get("models"), list):
@@ -48,6 +59,8 @@ def p03_review_handoff(*,catalog_path:Path,tag:str,attestation:Mapping,owner_con
     item=matches[0]
     if item["commercial_policy"]!="APACHE_2_0_CANDIDATE":
         raise PermissionError("RESEARCH_LICENSE_NOT_AUTOADMITTED")
+    if not isinstance(attestation, Mapping):
+        raise ValueError("NATIVE_P03_ATTESTATION_INCOMPLETE")
     digest=attestation.get("full_manifest_sha256")
     if not isinstance(digest,str) or not SHA.fullmatch(digest):
         raise ValueError("FULL_P03_DIGEST_REQUIRED")
