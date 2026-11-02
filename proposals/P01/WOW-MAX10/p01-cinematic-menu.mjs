@@ -39,6 +39,17 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
   const clean=[];let dead=false,requested=mode;
   const remember=new Map();
   let before=null;
+  // Pointer tilt is transient. Always restore owner-authored inline CSS rather
+  // than deleting it on pointerleave, mode changes or reduced-motion signals.
+  const restorePointer=el=>{
+    const base=remember.get(el);
+    if(!base)return;
+    for(const [key,name] of [['x','--nox-r11-px'],['y','--nox-r11-py']]){
+      if(base[key])el.style.setProperty(name,base[key]);
+      else el.style.removeProperty(name);
+    }
+  };
+  const clearPointerTilt=()=>{for(const el of remember.keys())restorePointer(el);};
   // Mount is a reversible transaction: exception paths also restore ORIGINAL
   // D02/MENU10 inline media/style and any preexisting status dataset values.
   const restoreOriginal=()=>{
@@ -56,7 +67,11 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
     target.addEventListener(type,handler,options);
     clean.push(()=>target.removeEventListener(type,handler,options));
   };
-  const addClass=(el,cls)=>{el.classList.add(cls);clean.push(()=>el.classList.remove(cls));};
+  const addClass=(el,cls)=>{
+    // A class owned by the original D02/MENU10 must survive our teardown.
+    if(el.classList.contains(cls))return;
+    el.classList.add(cls);clean.push(()=>el.classList.remove(cls));
+  };
   const scene=doc.createElement('div');scene.className='nox-r11-cinematic-atmosphere';
   scene.dataset.noxR11Scene='true';scene.setAttribute('aria-hidden','true');
   scene.style.pointerEvents='none';
@@ -81,9 +96,7 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
           el.style.setProperty('--nox-r11-px',(nx*2.5).toFixed(1)+'px');
           el.style.setProperty('--nox-r11-py',(ny*2.5).toFixed(1)+'px');
         },{passive:true});
-        attach(el,'pointerleave',()=>{
-          el.style.removeProperty('--nox-r11-px');el.style.removeProperty('--nox-r11-py');
-        });
+        attach(el,'pointerleave',()=>restorePointer(el));
       }
     }
     for(const world of worlds)addClass(world.element,'nox-r11-cinematic-subworld');
@@ -100,6 +113,7 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
       if(dead)return;
       root.dataset.noxR11CinematicMode=motion?.matches===true?'REDUCED':requested;
       root.dataset.noxR11CinematicHidden=doc.hidden?'true':'false';
+      if(root.dataset.noxR11CinematicMode!=='MAX'||doc.hidden)clearPointerTilt();
     };
     attach(doc,'visibilitychange',sync);
     if(motion?.addEventListener)attach(motion,'change',sync);
