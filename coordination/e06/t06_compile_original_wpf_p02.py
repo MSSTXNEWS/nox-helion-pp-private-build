@@ -18,7 +18,7 @@ def git_blob(raw):
 def require(good,why):
     if not good: raise RuntimeError(why)
 def verified_source_head():
-    """Read the actual checkout commit; never emit a copied historical SourceLock."""
+    """GitLab builds ONLY the authenticated, frozen canonical GitHub tree."""
     try:
         probe=subprocess.run(["git", "rev-parse", "--verify", "HEAD^{commit}"],
             cwd=ROOT, capture_output=True, text=True, timeout=15, check=False)
@@ -28,17 +28,23 @@ def verified_source_head():
     require(probe.returncode==0 and re.fullmatch(r"[0-9a-f]{40}", head) is not None,
             "T06_SOURCE_COMMIT_UNVERIFIED")
     declared=os.environ.get("CI_COMMIT_SHA", "").strip().lower()
-    if declared and declared!=head:
-        # Preserve GitLab's own CI commit separately from canonical GH source.
+    ci_host=os.environ.get("CI_SERVER_HOST", "").strip().lower()
+    if declared or ci_host:
+        # Even if GitLab's own HEAD equals CI_COMMIT_SHA, it is NOT proof
+        # that this tree is the owner's frozen canonical GitHub PR source.
         frozen=os.environ.get("NOX_T06_GITHUB_FROZEN_SHA", "").strip().lower()
         bootstrap=os.environ.get("NOX_T06_GITLAB_ORIGIN_SHA", "").strip().lower()
+        frozen_ref=os.environ.get("NOX_T06_GITHUB_FROZEN_REF", "")
         require(
-            os.environ.get("CI_SERVER_HOST")=="gitlab.com" and
+            ci_host=="gitlab.com" and
             os.environ.get("CI_PROJECT_PATH")=="s-grouptwet/nox-helion-pp-private-build" and
             os.environ.get("NOX_T06_AUTHENTICATED_GITHUB_FETCH")=="PASS" and
+            re.fullmatch(r"[0-9a-f]{40}", declared) is not None and
             re.fullmatch(r"[0-9a-f]{40}", frozen) is not None and
+            re.fullmatch(r"buildpin/nox-express-20261102-[0-9a-f]{12}", frozen_ref) is not None and
+            frozen_ref.endswith(head[:12]) and
             frozen==head and bootstrap==declared,
-            "T06_SOURCE_CI_SHA_MISMATCH")
+            "T06_GITLAB_AUTHENTICATED_FROZEN_SOURCE_REQUIRED")
     return head
 
 def stage_exact_owner_webview2_registry_views(r11, canonical_script):
