@@ -155,7 +155,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         bool networkIsolationAttested)
     {
         if (Volatile.Read(ref _disposed) != 0 || _externalMode ||
-            !Trusted(_web.Source) || !NativeSidMatches() ||
+            !ExactShellReturn(_web.Source) || !NativeSidMatches() ||
             !nativeGestureVerified || !ipcDetached || !hostObjectsRemoved ||
             !networkIsolationAttested || !ReviewedExternal(target) ||
             approvedHosts is null) return false;
@@ -260,7 +260,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private bool IsCurrent(string source, long epoch) =>
         Volatile.Read(ref _disposed) == 0 && !_externalMode && !_lifetime.IsCancellationRequested &&
-        Interlocked.Read(ref _epoch) == epoch && Trusted(source) && Trusted(_web.Source) &&
+        Interlocked.Read(ref _epoch) == epoch && ExactShellReturn(source) && ExactShellReturn(_web.Source) &&
         string.Equals(source, _web.Source, StringComparison.Ordinal);
 
     private void Reply(string source, long epoch, string id, string route,
@@ -281,7 +281,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         if (Volatile.Read(ref _disposed) != 0 || _externalMode ||
-            !Trusted(e.Source) || !Trusted(_web.Source))
+            !ExactShellReturn(e.Source) || !ExactShellReturn(_web.Source))
             return;
         var source = e.Source;
         var epoch = Interlocked.Read(ref _epoch);
