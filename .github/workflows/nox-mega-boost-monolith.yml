@@ -1,0 +1,57 @@
+name: NOX MEGA BOOST Monolith
+on:
+  push:
+    branches:
+      - boost/nox-mega-monolith-20261102
+    paths:
+      - .github/workflows/nox-mega-boost-monolith.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  physical-monolith:
+    name: Download pinned assets and build single ZIP64
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout the immutable boost branch
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Download all 10 existing GitHub artifact ZIPs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/nox-downloads"
+          for id in 13089912982 13091816182 13091551815 13092140486 13091167316 13091032633 13090299607 13090519359 13091207322 13091730341; do
+            echo "Downloading previously built artifact $id"
+            curl --fail --location --silent --show-error --retry 4 --retry-all-errors --connect-timeout 30 --max-time 1800 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/MSSTXNEWS/nox-helion-pp-private-build/actions/artifacts/$id/zip" \
+              -o "$RUNNER_TEMP/nox-downloads/$id.zip"
+            stat -c '%n %s bytes' "$RUNNER_TEMP/nox-downloads/$id.zip"
+          done
+      - name: Assemble source, canonical D02, R9 and pinned binary assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 BOOST_CACHE/build_megaboost.py \
+            --downloads "$RUNNER_TEMP/nox-downloads" \
+            --output "$RUNNER_TEMP/NOX_MEGA_BOOST_MONOLITH.zip"
+          cat "$RUNNER_TEMP/NOX_MEGA_BOOST_MONOLITH.sha256"
+      - name: Upload the single verified monolith (not Windows E07)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX_MEGA_BOOST_MONOLITH_SOURCE_AND_BINARIES
+          path: |
+            ${{ runner.temp }}/NOX_MEGA_BOOST_MONOLITH.zip
+            ${{ runner.temp }}/NOX_MEGA_BOOST_MONOLITH.sha256
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
