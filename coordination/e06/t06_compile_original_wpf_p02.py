@@ -3,16 +3,120 @@ import hashlib, io, json, os, pathlib, re, stat, subprocess, sys, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STAGE=ROOT/"work/t06-wpf-p02-compile"
 R11=STAGE/"R11"
-SRC=ROOT/"coordination/e06/t06_windows_overlay"
+SRC=ROOT  # EXACT canonical GitHub owner sources; never the stale imported GitLab overlay.
 # Exact audited 32/64-bit WebView2 registry gate; unrelated builder lines can evolve.
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256="e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
-"MainWindow.NativeP02.cs":"0b65fc5ca62788dbde01e669e98769a23ac5e8a9",
-"OneHostP02WebView2Bridge.cs":"06040a277223810759fe9e875e183589c185fa1d",
-"stage_native_p02.py":"ab8520c7b277726f38400b9fc9a1ca5bd2571333",
-"NativePythonPipe.cs":"9d8b5abe27b49823c90ba75447d190741e6ba075"
+"coordination/e06/MainWindow.NativeP02.cs":"9be154ae8b87566db8d694add9b2e694329f16f9",
+"coordination/e06/OneHostP02WebView2Bridge.cs":"dee767ec4cb4a8210b6a6feb28f13730760521a7",
+"coordination/e06/stage_native_p02.py":"76ce136353f1382288c3d6daee7cb6a5d0df4786",
+"Packages/P02/worker-chat/NativePythonPipe.cs":"e8e4f95106f4d40c29c68d81378c7938e6a7c0f5"
 }
+# The existing E06 owner has ONE reviewed list of the 18 additive WPF/P02/
+# P03 source components. Reuse that manifest, never fork a second overlay list.
+# Its pins are re-verified against the exact authenticated GitHub checkout.
+REQUIRED_NATIVE_DESTINATIONS=frozenset((
+    "Integration/NativePythonPipe.cs",
+    "Integration/OneHostP02WebView2Bridge.cs",
+    "Integration/SpaceBrowserBoundary.cs",
+    "Integration/NoXAutostart.cs",
+    "Integration/P03/ModelArtifactReviewRegistry.cs",
+    "Integration/P03/ModelCatalog.cs",
+    "Integration/P03/ModelCenterNativeRoutes.cs",
+    "Integration/P03/ModelDownloadQueueStore.cs",
+    "Integration/P03/ModelDownloadQueueWorker.cs",
+    "Integration/P03/ModelLifecycleEvents.cs",
+    "Integration/P03/ModelLocalAttestation.cs",
+    "Integration/P03/ModelQuickActions.cs",
+    "Integration/P03/ModelSafetensorsImport.cs",
+    "Integration/P03/ModelTagReviewLeads.cs",
+    "Integration/P03/ModelWowBridgeContract.cs",
+    "Integration/P03/OllamaLoopbackHttpClientFactory.cs",
+    "Integration/P03/OllamaModelAdapter.cs",
+    "Integration/P03/WindowsHardwareFacts.cs",
+))
+
+def canonical_owner_manifest():
+    """Read only the existing original E06 source pins; reject manifest drift."""
+    script=ROOT/"coordination/e06/build_onehost_installer.ps1"
+    require(script.is_file() and not script.is_symlink(),
+            "T06_CANONICAL_ORIGINAL_BUILDER_MISSING")
+    policy=script.read_text("utf-8-sig").replace("\r\n","\n")
+    start="$p02StageSources=@(\n"
+    end="\n)\n# Validate every donor BEFORE copying any source into the staged project."
+    require(policy.count(start)==1 and policy.count(end)==1,
+            "T06_CANONICAL_OWNER_MANIFEST_ANCHOR_HOLD")
+    section=policy.split(start,1)[1].split(end,1)[0]
+    row=re.compile(r"\A@\{relative='([^']+)';dest='([^']+)';blob='([0-9a-f]{40})'\},?\Z")
+    entries=[]
+    for line in section.splitlines():
+        stripped=line.strip()
+        if not stripped:
+            continue
+        match=row.fullmatch(stripped)
+        require(match is not None,"T06_CANONICAL_OWNER_MANIFEST_UNRECOGNIZED_ROW_HOLD")
+        entries.append(match.groups())
+    destinations=[destination for _,destination,_ in entries]
+    require(len(entries)==len(REQUIRED_NATIVE_DESTINATIONS)==18 and
+            set(destinations)==REQUIRED_NATIVE_DESTINATIONS and
+            len(set(destinations))==len(entries) and
+            len(set(source for source,_,_ in entries))==len(entries),
+            "T06_CANONICAL_OWNER_18_COMPONENTS_NOLOSS_HOLD")
+    pins={source:blob for source,_,blob in entries}
+    require(
+        pins.get("Packages/P02/worker-chat/NativePythonPipe.cs")==
+            EXPECTED["Packages/P02/worker-chat/NativePythonPipe.cs"] and
+        pins.get("coordination/e06/OneHostP02WebView2Bridge.cs")==
+            EXPECTED["coordination/e06/OneHostP02WebView2Bridge.cs"] and
+        "sha='"+EXPECTED["coordination/e06/stage_native_p02.py"]+"'" in policy and
+        "sha='"+EXPECTED["coordination/e06/MainWindow.NativeP02.cs"]+"'" in policy,
+        "T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED")
+    return tuple(entries)
+
+def stage_current_owner_components(r11):
+    """Preflight ALL original blobs before adding any file to disposable R11."""
+    entries=canonical_owner_manifest()
+    verified=[]
+    repo=ROOT.resolve(strict=True)
+    for relative,destination,pin in entries:
+        parts=pathlib.PurePosixPath(relative)
+        output=pathlib.PurePosixPath(destination)
+        require(not parts.is_absolute() and not output.is_absolute() and
+                all(x not in (".","..","") for x in parts.parts+output.parts) and
+                "\\" not in relative and "\\" not in destination and
+                relative.endswith(".cs") and destination.endswith(".cs") and
+                destination in REQUIRED_NATIVE_DESTINATIONS and
+                relative.startswith(("Packages/P02/","Packages/P03/","coordination/e06/")),
+                "T06_CANONICAL_OWNER_STAGE_UNTRUSTED_PATH")
+        origin=ROOT.joinpath(*parts.parts)
+        require(origin.is_file() and not origin.is_symlink() and
+                origin.resolve(strict=True).is_relative_to(repo),
+                "T06_CANONICAL_OWNER_COMPONENT_MISSING_OR_REDIRECTED:"+relative)
+        original=origin.read_bytes()
+        staged=original
+        if git_blob(staged)!=pin:
+            require(b"\r\n" in original and
+                    b"\r" not in original.replace(b"\r\n",b""),
+                    "T06_CANONICAL_OWNER_COMPONENT_NON_CRLF_DRIFT:"+relative)
+            staged=original.replace(b"\r\n",b"\n")
+        require(git_blob(staged)==pin,
+                "T06_CANONICAL_OWNER_COMPONENT_SHA_HOLD:"+relative)
+        target=r11.joinpath(*output.parts)
+        require(not target.exists() and not target.is_symlink(),
+                "T06_CANONICAL_OWNER_COMPONENT_STAGE_COLLISION:"+destination)
+        verified.append((target,staged,pin))
+    # Only now write the reviewed complete P02/P03 source set; zero ZIP changes.
+    for target,content,pin in verified:
+        target.parent.mkdir(parents=True,exist_ok=True)
+        with target.open("xb") as destination:
+            destination.write(content)
+        require(git_blob(target.read_bytes())==pin,
+                "T06_CANONICAL_OWNER_COMPONENT_READBACK_HOLD:"+target.name)
+    print("T06_ORIGINAL_E06_CANONICAL_NATIVE_P02_P03_STAGED",
+          len(verified),"NO_ZIP_OR_OWNER_CHECKOUT_WRITE",flush=True)
+    return len(verified)
+
 def git_blob(raw):
     return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 def require(good,why):
@@ -179,7 +283,8 @@ def main():
             require(git_blob(canonical)==sha,
                     "GITHUB_OWNER_OVERLAY_SHA_HOLD:"+name+
                     " raw="+git_blob(data)+" normalized="+git_blob(canonical))
-            owner_file.write_bytes(canonical)  # ephemeral CI checkout only
+            # Preserve the exact authenticated Git checkout: never edit the
+            # source preimages to compensate for runner CRLF normalization.
             data=canonical
         require(git_blob(data)==sha,"GITHUB_OWNER_OVERLAY_FINAL_SHA_HOLD:"+name)
     R11.mkdir(parents=True,exist_ok=False)
@@ -237,12 +342,14 @@ def main():
     stage_exact_owner_webview2_registry_views(
         R11, ROOT / 'coordination/e06/build_onehost_installer.ps1')
     # Preserve the original MainWindow, zero HOME/MENU/WORK modification outside R11.
-    ext=R11/"Integration";ext.mkdir(parents=True,exist_ok=True)
-    (ext/"NativePythonPipe.cs").write_bytes((SRC/"NativePythonPipe.cs").read_bytes())
-    (ext/"OneHostP02WebView2Bridge.cs").write_bytes(
-        (SRC/"OneHostP02WebView2Bridge.cs").read_bytes())
-    stage_path=SRC/"stage_native_p02.py"
-    run=subprocess.run([sys.executable,str(stage_path),str(R11),str(SRC/"MainWindow.NativeP02.cs")],
+    # The older imported GitLab 4-file overlay silently stripped current
+    # A1 signed consent, native STOP epoch, P03 model queue and Browser ACL.
+    # Reuse the exact same 18 Git-blob-pinned sources as the original E06.
+    require(stage_current_owner_components(R11)==18,
+            "T06_CANONICAL_OWNER_SOURCE_STAGE_INCOMPLETE")
+    stage_path=SRC/"coordination/e06/stage_native_p02.py"
+    addon_path=SRC/"coordination/e06/MainWindow.NativeP02.cs"
+    run=subprocess.run([sys.executable,str(stage_path),str(R11),str(addon_path)],
                       capture_output=True,text=True,timeout=60)
     print(run.stdout,flush=True)
     require(run.returncode==0,"MAINWINDOW_ORIGINAL_STAGE_HOLD:"+run.stderr[-900:])
