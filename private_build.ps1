@@ -355,7 +355,7 @@ try {
         }
         # A.1 V3.1 stages into existing OneHost Python, no separate backend.
         $a1Script=Join-Path $root 'coordination/e06/stage_a1_owner.py'
-        $a1OwnerPin='43b898d3aee04dd6244e8d17755d7d37dfc388a0'
+        $a1OwnerPin='86f6e613a66a39f3cc94207fc2992009532efce6'
         if (!(Test-Path -LiteralPath $a1Script -PathType Leaf)) { throw 'A1_ONEHOST_STAGE_SOURCE_MISSING' }
         $a1ActualPin=(& git hash-object -- $a1Script)
         if ($LASTEXITCODE -ne 0 -or ([string]$a1ActualPin).Trim().ToLowerInvariant() -cne $a1OwnerPin) {
@@ -366,10 +366,27 @@ try {
         $a1Stage=($a1StageJson -join "`n") | ConvertFrom-Json
         if ($a1Stage.schema -cne 'NOX-A1-ONEHOST-SOURCE-STAGE-v1' -or
             $a1Stage.source_count -ne 10 -or
-            @($a1Stage.runtime_data_files).Count -ne 10 -or
+            $a1Stage.reused_staged_count -ne 9 -or
+            $a1Stage.newly_staged_count -ne 1 -or
+            @($a1Stage.reused_runtime_paths).Count -ne 9 -or
+            @($a1Stage.runtime_data_files).Count -ne 1 -or
             $a1Stage.native_activation_verified -ne $false -or
             $a1Stage.installed_exe_accepted -ne $false) {
             throw 'A1_ONEHOST_SOURCE_RECEIPT_HOLD'
+        }
+        # Nine exact-pinned A1 sources are already present in original E06.
+        # Require those reused paths in E06 receipt, no duplicate PyInstaller
+        # entries, and let A1 stage append only the remaining provider source.
+        $nativeRuntime = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($entry in @($nativeStage.runtime_data_files)) {
+            if (-not $nativeRuntime.Add([string]$entry.runtime_path)) {
+                throw 'A1_ORIGINAL_NATIVE_RUNTIME_DUPLICATE_HOLD'
+            }
+        }
+        foreach ($reused in @($a1Stage.reused_runtime_paths)) {
+            if (-not $nativeRuntime.Contains([string]$reused)) {
+                throw ('A1_VERIFIED_REUSE_MISSING_FROM_NATIVE_RUNTIME:'+ [string]$reused)
+            }
         }
         $oneHostData = @($nativeStage.runtime_data_files)+@($a1Stage.runtime_data_files)
         $seenRuntime = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -447,7 +464,7 @@ try {
         # an EXE can appear verified while the new A1 code is absent.
         $bundleStage = $nativeStage | ConvertTo-Json -Depth 8 | ConvertFrom-Json
         $bundleStage.runtime_data_files = $oneHostData
-        if (@($bundleStage.runtime_data_files).Count -ne @($nativeStage.runtime_data_files).Count + 10) {
+        if (@($bundleStage.runtime_data_files).Count -ne @($nativeStage.runtime_data_files).Count + 1) {
             throw 'A1_BUNDLED_SOURCE_COVERAGE_HOLD'
         }
         $bundleStage | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $dataReceipt -Encoding UTF8

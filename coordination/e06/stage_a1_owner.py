@@ -59,6 +59,7 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
     if data.get('schema') != 'NOX-A1-ONEHOST-STAGE-LOCK-v1' or set(data.get('sources', {})) != set(REQUIRED):
         raise ValueError('A1_EXACT_TEN_SOURCE_LOCK_REQUIRED')
     staged = []
+    reused = []
     # Validate every source/destination before writing even the first byte.
     for name in REQUIRED:
         expected = data['sources'][name]
@@ -71,12 +72,22 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
         regular_owned(target, source)
         if not src.is_file() or not stat.S_ISREG(src.stat().st_mode):
             raise ValueError('A1_SOURCE_REGULAR_FILE_REQUIRED')
-        if target.exists() or target.is_symlink():
-            raise ValueError('A1_STAGE_DUPLICATE_OWNER_OR_FILE_HOLD')
+        if target.is_symlink():
+            raise ValueError('A1_STAGE_REPARSE_OR_SYMLINK_HOLD')
         payload = src.read_bytes()
         if b'\x00' in payload or len(payload) > 256_000 or git_blob(payload) != expected:
             raise ValueError('A1_EXACT_GIT_SOURCE_SHA_HOLD:' + name)
         compile(payload, str(src), 'exec')
+        # The original E06 source stage may have already installed this exact
+        # Git-locked byte sequence. Verify and reuse it rather than failing or
+        # overwriting the previous native owner.
+        if target.exists():
+            if (not target.is_file() or
+                    not stat.S_ISREG(target.stat().st_mode) or
+                    target.read_bytes() != payload):
+                raise ValueError('A1_STAGE_REUSED_SOURCE_SHA_HOLD:' + name)
+            reused.append(name)
+            continue
         staged.append((target, payload, name))
     created = []
     try:
@@ -99,7 +110,10 @@ def stage(source: Path, *, repo: Path = ROOT, manifest_path: Path = MANIFEST) ->
         raise
     return {
         'schema': 'NOX-A1-ONEHOST-SOURCE-STAGE-v1',
-        'source_count': len(staged),
+        'source_count': len(REQUIRED),
+        'reused_staged_count': len(reused),
+        'newly_staged_count': len(staged),
+        'reused_runtime_paths': ['nox_selfbuilder/' + name for name in reused],
         'runtime_data_files': [
             {'source': _BASE+name, 'runtime_path': 'nox_selfbuilder/'+name,
              'sha256': hashlib.sha256(payload).hexdigest(),
