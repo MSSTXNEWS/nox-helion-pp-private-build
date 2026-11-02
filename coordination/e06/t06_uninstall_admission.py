@@ -8,6 +8,7 @@ This is only SAME-VM component evidence, never independent E07 acceptance.
 from __future__ import annotations
 
 from pathlib import Path
+import stat
 
 
 _UNINSTALL_KEY = (
@@ -15,9 +16,41 @@ _UNINSTALL_KEY = (
 )
 
 
+def _no_reparse_components(path: Path, *, allow_missing: bool) -> bool:
+    """Reject linked/junction path *ancestors*, even with an in-root target.
+
+    Uninstall may remove leaf files/directories, so verification may allow
+    absent components. Existing components remain fail-closed on inaccessible
+    metadata; no parent path is followed through a junction or symlink.
+    """
+    if not isinstance(path, Path):
+        return False
+    for component in (path, *path.parents):
+        try:
+            metadata = component.lstat()
+        except FileNotFoundError:
+            if allow_missing:
+                continue
+            return False
+        except OSError:
+            return False
+        if (stat.S_ISLNK(metadata.st_mode) or
+                getattr(metadata, "st_file_attributes", 0) &
+                getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+            return False
+        try:
+            if getattr(component, "is_junction", lambda: False)():
+                return False
+        except OSError:
+            return False
+    return True
+
+
 def owned_payload_paths(install: Path, inventory: dict) -> tuple[Path, ...]:
     """Snapshot exact original manifest paths BEFORE running Uninstall.exe."""
-    if (not isinstance(install, Path) or not install.is_dir() or
+    if (not isinstance(install, Path) or
+            not _no_reparse_components(install, allow_missing=False) or
+            not install.is_dir() or
             install.is_symlink() or getattr(install, "is_junction", lambda: False)() or
             type(inventory) is not dict or
             inventory.get("schema") != "NOX_P01_PAYLOAD_SHA256_V1" or
@@ -36,7 +69,8 @@ def owned_payload_paths(install: Path, inventory: dict) -> tuple[Path, ...]:
             raise RuntimeError("T06_UNINSTALL_ORIGINAL_INVENTORY_PATH_HOLD")
         path = install.joinpath(*name.split("/"))
         try:
-            if (not path.is_file() or path.is_symlink() or
+            if (not _no_reparse_components(path, allow_missing=False) or
+                    not path.is_file() or path.is_symlink() or
                     getattr(path, "is_junction", lambda: False)() or
                     not path.resolve(strict=True).is_relative_to(root)):
                 raise RuntimeError("T06_UNINSTALL_ORIGINAL_INVENTORY_PATH_HOLD")
@@ -69,11 +103,16 @@ def verify_original_uninstall(install: Path, owned_paths: tuple[Path, ...],
                               registry=None) -> None:
     """Only a complete removal of original owned files and key passes."""
     if (not owned_paths or
-            any(p.exists() or p.is_symlink() for p in owned_paths)):
+            any(not _no_reparse_components(p, allow_missing=True) or
+                p.exists() or p.is_symlink() or
+                getattr(p, "is_junction", lambda: False)()
+                for p in owned_paths)):
         raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS")
     for metadata in ("payload.sha256.json", "nox-p01-owned.txt", "Uninstall.exe"):
         path = install / metadata
-        if path.exists() or path.is_symlink():
+        if (not _no_reparse_components(path, allow_missing=True) or
+                path.exists() or path.is_symlink() or
+                getattr(path, "is_junction", lambda: False)()):
             raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_METADATA_REMAINS")
     if not original_nsis_uninstall_registration_absent(registry):
         raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_REGISTRY_REMAINS")
