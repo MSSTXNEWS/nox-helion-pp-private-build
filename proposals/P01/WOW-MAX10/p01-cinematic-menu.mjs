@@ -38,6 +38,20 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
   const supportsPointer=typeof win.PointerEvent!=='undefined';
   const clean=[];let dead=false,requested=mode;
   const remember=new Map();
+  let before=null;
+  // Mount is a reversible transaction: exception paths also restore ORIGINAL
+  // D02/MENU10 inline media/style and any preexisting status dataset values.
+  const restoreOriginal=()=>{
+    for(const [el,v] of remember){
+      for(const [key,name] of [['x','--nox-r11-px'],['y','--nox-r11-py'],['ix','--nox-r11-index']]){
+        if(v[key])el.style.setProperty(name,v[key]);else el.style.removeProperty(name);
+      }
+    }
+    if(before){
+      if(before.mode===null)delete root.dataset.noxR11CinematicMode;else root.dataset.noxR11CinematicMode=before.mode;
+      if(before.hidden===null)delete root.dataset.noxR11CinematicHidden;else root.dataset.noxR11CinematicHidden=before.hidden;
+    }
+  };
   const attach=(target,type,handler,options)=>{
     target.addEventListener(type,handler,options);
     clean.push(()=>target.removeEventListener(type,handler,options));
@@ -80,7 +94,7 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
       addClass(menuSurface,'nox-r11-cinematic-surface');
       menuSurface.append(scene);
     }
-    const before={mode:Object.hasOwn(root.dataset,'noxR11CinematicMode')?root.dataset.noxR11CinematicMode:null,
+    before={mode:Object.hasOwn(root.dataset,'noxR11CinematicMode')?root.dataset.noxR11CinematicMode:null,
       hidden:Object.hasOwn(root.dataset,'noxR11CinematicHidden')?root.dataset.noxR11CinematicHidden:null};
     const sync=()=>{
       if(dead)return;
@@ -98,13 +112,14 @@ export function mountCanonicalMenuCinematics({root,tiles,worlds,mode='BALANCED',
       destroy(){
         if(dead)return;dead=true;
         for(const f of clean.reverse())try{f()}catch{}
-        for(const [el,v] of remember){for(const [key,name] of [['x','--nox-r11-px'],['y','--nox-r11-py'],['ix','--nox-r11-index']]){
-          if(v[key])el.style.setProperty(name,v[key]);else el.style.removeProperty(name);
-        }}
-        if(before.mode===null)delete root.dataset.noxR11CinematicMode;else root.dataset.noxR11CinematicMode=before.mode;
-        if(before.hidden===null)delete root.dataset.noxR11CinematicHidden;else root.dataset.noxR11CinematicHidden=before.hidden;
+        restoreOriginal();
         scene.remove();mounted.delete(root);
       }
     });
-  }catch(error){for(const f of clean.reverse())try{f()}catch{};scene.remove();throw error;}
+  }catch(error){
+    for(const f of clean.reverse())try{f()}catch{}
+    restoreOriginal();
+    scene.remove();mounted.delete(root);
+    throw error;
+  }
 }
