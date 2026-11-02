@@ -1,41 +1,36 @@
 {
-  "run_id": "NOX-V16-E03-EXPRESS-R01-20261028",
-  "verified_product_percent": null,
+  "schema": "NOX-EXPRESS-FOUR-GATES-STATUS-v1",
+  "as_of": "2026-11-02",
+  "product": "NOX HELION EXPRESS INTEGRATOR Windows x64 EXE loader with embedded Web UI",
+  "executor_policy": "15_GENERALISTS_NO_SINGLE_BOTTLENECK",
+  "source_of_truth": "GitHub PR #162; GitLab Windows builds only on their exact own SHA",
   "gates": [
     {
-      "id": "E03-X01",
-      "name": "Preserve P03 donor files",
-      "status": "SOURCE_STAGED"
+      "id": 1,
+      "name": "SourceLock 729 + real FirstBoot/A1 loader callbacks",
+      "status": "PARTIAL",
+      "evidence": "Original 729 ZIP rechecked; current GitHub tree/real native callback E07 not accepted"
     },
     {
-      "id": "E03-X02",
-      "name": "Full original 729 SHA SourceLock",
-      "status": "CI_PENDING"
+      "id": 2,
+      "name": "WPF Python WebView2 Native IPC",
+      "status": "CANDIDATE_BUILT_ON_OLDER_GITLAB_SHA",
+      "evidence": "17 P02 Windows tests passed on older GitLab pipeline; updated Windows pipeline #3018166442 running, not GitHub PR same SHA"
     },
     {
-      "id": "E03-X03",
-      "name": "Canonical Queue and UI compile",
-      "status": "CI_PENDING"
+      "id": 3,
+      "name": "Windows NSIS Setup.exe",
+      "status": "DIAGNOSTIC_SETUP_ARTIFACT_EXISTS_RELEASE_HOLD",
+      "evidence": "Previous GitLab job 17666690728 uploaded candidate Setup.exe; physical new BuildID pending"
     },
     {
-      "id": "E03-X04",
-      "name": "Licensed model artifact evidence",
-      "status": "REVIEW_REQUIRED"
-    },
-    {
-      "id": "E03-X05",
-      "name": "Real Pull/GGUF install receipt",
-      "status": "NOT_RUN"
-    },
-    {
-      "id": "E03-X06",
-      "name": "One host and NSIS installed runtime",
-      "status": "OWNER6_HOLD"
-    },
-    {
-      "id": "E03-X07",
-      "name": "Independent E07 same SHA",
-      "status": "NOT_RUN"
+      "id": 4,
+      "name": "Installed Windows E07: GUI/IPC/mandatory loader/no-loss/rollback",
+      "status": "NOT_ACCEPTED",
+      "evidence": "Previous installed smoke ended T06_M1_REAL_WINDOWS_GUI_IPC_LIFECYCLE_GATE_HOLD"
     }
-  ]
+  ],
+  "updated_branch_commit_expected": "PR162_HEAD_AT_WRITE",
+  "gitlab_candidate_sha": "a9eded983503bd5707efd8cf757275e80f77e108",
+  "release_accepted": false
 }
