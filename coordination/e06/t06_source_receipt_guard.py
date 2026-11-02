@@ -5,8 +5,10 @@ The original T06 producer, Windows WPF compiler and NSIS builder remain owners.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -33,10 +35,52 @@ def _trusted_regular_path(path: Path) -> bool:
                 for node in nodes))
 
 
+def _same_open_file(path: Path, opened) -> bool:
+    """An already-open file must still be the original trusted path object."""
+    try:
+        current = path.lstat()
+    except OSError:
+        return False
+    return (_trusted_regular_path(path) and
+            stat.S_ISREG(opened.st_mode) and
+            (current.st_dev, current.st_ino, current.st_size,
+             current.st_mtime_ns, current.st_ctime_ns) ==
+            (opened.st_dev, opened.st_ino, opened.st_size,
+             opened.st_mtime_ns, opened.st_ctime_ns))
+
+
+@contextmanager
+def _trusted_binary_reader(path: Path):
+    """Read from one verified descriptor, never re-open an unchecked pathname.
+
+    O_NOFOLLOW closes the leaf swap on POSIX; on Windows the second path and
+    fd identity verification also denies swapped reparse/junction targets.
+    Stable inode/size/timestamps are checked again after the actual read.
+    """
+    if not _trusted_regular_path(path):
+        raise OSError("untrusted path or reparse ancestor")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        stream = os.fdopen(descriptor, "rb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+    with stream:
+        before = os.fstat(stream.fileno())
+        if not _same_open_file(path, before):
+            raise OSError("trusted source was replaced before open")
+        yield stream
+        after = os.fstat(stream.fileno())
+        if (after.st_dev, after.st_ino, after.st_size,
+            after.st_mtime_ns, after.st_ctime_ns) != (
+            before.st_dev, before.st_ino, before.st_size,
+            before.st_mtime_ns, before.st_ctime_ns) or not _same_open_file(path, after):
+            raise OSError("trusted source changed during read")
+
+
 def _receipt(path: Path) -> dict:
     """Bounded exact bytes, no reparse ancestors or duplicate JSON properties."""
-    if not _trusted_regular_path(path) or not 0 < path.stat().st_size <= 131072:
-        raise RuntimeError("T06_SOURCE_RECEIPT_MISSING_OR_UNTRUSTED")
     def reject_duplicate(pairs):
         obj = {}
         for key, value in pairs:
@@ -45,7 +89,16 @@ def _receipt(path: Path) -> dict:
             obj[key] = value
         return obj
     try:
-        result = json.loads(path.read_bytes().decode("utf-8"), object_pairs_hook=reject_duplicate)
+        with _trusted_binary_reader(path) as stream:
+            if not 0 < os.fstat(stream.fileno()).st_size <= 131072:
+                raise OSError("receipt length invalid")
+            raw = stream.read(131073)
+        if not 0 < len(raw) <= 131072:
+            raise OSError("receipt length changed")
+    except OSError as exc:
+        raise RuntimeError("T06_SOURCE_RECEIPT_MISSING_OR_UNTRUSTED") from exc
+    try:
+        result = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate)
     except (ValueError, UnicodeError) as exc:
         raise RuntimeError("T06_SOURCE_RECEIPT_INVALID_JSON") from exc
     if type(result) is not dict:
@@ -83,13 +136,17 @@ def attest_candidate(source_head: str, compile_receipt: Path, candidate_receipt:
     sha = candidate.get("setup_sha256")
     size = candidate.get("setup_bytes")
     if (type(sha) is not str or not _SHA256.fullmatch(sha) or
-            type(size) is not int or size <= 0 or
-            not _trusted_regular_path(setup) or setup.stat().st_size != size):
+            type(size) is not int or size <= 0):
         raise RuntimeError("T06_SOURCE_SETUP_IDENTITY_HOLD")
     digest = hashlib.sha256()
-    with setup.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    if digest.hexdigest() != sha or setup.stat().st_size != size:
+    try:
+        with _trusted_binary_reader(setup) as stream:
+            if os.fstat(stream.fileno()).st_size != size:
+                raise OSError("setup length mismatch")
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise RuntimeError("T06_SOURCE_SETUP_IDENTITY_HOLD") from exc
+    if digest.hexdigest() != sha:
         raise RuntimeError("T06_SOURCE_SETUP_BYTES_SHA_HOLD")
     return sha
