@@ -18,7 +18,24 @@ param(
 )
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
+# Reject a reparse point anywhere in the artifact or receipt ancestry, not
+# only the leaf. A redirected parent can otherwise escape the frozen BuildID.
+function AssertE07NoReparseAncestors([string]$path) {
+ $cursor=[IO.Path]::GetFullPath($path)
+ while ($true) {
+  if (Test-Path -LiteralPath $cursor) {
+   $node=Get-Item -LiteralPath $cursor -Force
+   if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+    throw "E07_REPARSE_ANCESTOR:$cursor"
+   }
+  }
+  $parent=[IO.Path]::GetDirectoryName($cursor)
+  if ([string]::IsNullOrWhiteSpace($parent) -or $parent -ceq $cursor) { break }
+  $cursor=$parent
+ }
+}
 function FileSha([string]$path) {
+ AssertE07NoReparseAncestors $path
  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw "E07_FILE_MISSING:$path" }
  $item=Get-Item -LiteralPath $path -Force
  if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
@@ -171,12 +188,11 @@ $receipt=[ordered]@{
 if (Test-Path -LiteralPath $Output) { throw 'E07_HANDOFF_ALREADY_EXISTS' }
 $parent=Split-Path -Parent $Output
 if ([string]::IsNullOrWhiteSpace($parent)) { throw 'E07_OUTPUT_PARENT_REQUIRED' }
+# Check the complete output ancestry both before and after creating its parent.
+# The no-clobber FileMode.CreateNew below remains the atomic output write.
+AssertE07NoReparseAncestors $Output
 New-Item -ItemType Directory -Path $parent -Force | Out-Null
-foreach ($ancestor in @(Get-Item -LiteralPath $parent) + @(Get-Item -LiteralPath $parent).Parent) {
- if (($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-   throw 'E07_OUTPUT_REPARSE_PARENT'
- }
-}
+AssertE07NoReparseAncestors $Output
 # FileMode.CreateNew makes the no-clobber guarantee atomic across processes.
 # Test-Path above is advisory only; the exclusive create is authoritative.
 function WriteReceiptNoClobber([string]$path, [string]$content) {
