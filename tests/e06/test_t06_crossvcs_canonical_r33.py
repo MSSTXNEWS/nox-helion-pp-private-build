@@ -31,6 +31,23 @@ class CrossVcs(unittest.TestCase):
     def test_wrong_project_denied(self):
         d=self.good();d["CI_PROJECT_PATH"]="other/fork"
         with self.assertRaisesRegex(RuntimeError,"T06_SOURCE_CI_SHA_MISMATCH"):self.probe(d)
+    def test_sha_regex_is_single_anchored_not_escaped_twice(self):
+        # PowerShell uses .NET regex in a *single-quoted* literal. Two
+        # backslashes make the regex match literal backslash+A, rejecting
+        # every otherwise valid Git commit SHA.
+        script=(ROOT/"coordination/e06/t06_fetch_canonical_github.ps1").read_text("utf-8")
+        for field in ("$ExpectedSha", "$env:CI_COMMIT_SHA"):
+            self.assertIn(field+" -cnotmatch '^[0-9a-f]{40}
+        script=(ROOT/"coordination/e06/t06_fetch_canonical_github.ps1").read_text("utf-8")
+        ci=(ROOT/".gitlab-ci.yml").read_text("utf-8")
+        self.assertIn("T06_GITHUB_REF_MOVED_OR_FROZEN_SHA_HOLD",script)
+        self.assertIn("T06_GITHUB_EXACT_TREE_READBACK_HOLD",script)
+        self.assertIn("GIT_CONFIG_VALUE_0",script)
+        self.assertIn("t06_fetch_canonical_github.ps1",ci)
+if __name__=="__main__":unittest.main()
+",script)
+        self.assertNotIn(r"'\\A[0-9a-f]{40}\\z'",script)
+
     def test_fetcher_contract(self):
         script=(ROOT/"coordination/e06/t06_fetch_canonical_github.ps1").read_text("utf-8")
         ci=(ROOT/".gitlab-ci.yml").read_text("utf-8")
