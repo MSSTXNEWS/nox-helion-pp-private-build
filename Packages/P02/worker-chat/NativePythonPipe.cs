@@ -53,9 +53,50 @@ public sealed class NativePythonPipe : IAsyncDisposable
         _reader = Task.Run(ReadPumpAsync);
     }
 
-    public async Task<NativePipeResult> RequestAsync(string route, object payload,
+    // The generic renderer-facing API cannot carry native A1 owner tickets.
+    public Task<NativePipeResult> RequestAsync(string route, object payload,
         TimeSpan? timeout = null, CancellationToken cancel = default,
-        Action<JsonElement>? onEvent = null)
+        Action<JsonElement>? onEvent = null) =>
+        SendAsync(route, payload, timeout, cancel, onEvent, allowNativeA1Ticket: false);
+
+    // Original WPF alone calls this after SID/ACL, trusted origin, user consent
+    // and STOP epoch checks. Python still verifies HMAC, expiry and nonce.
+    public Task<NativePipeResult> RequestWpfApprovedA1Async(
+        string action, object ticket, CancellationToken cancel = default)
+    {
+        if (action is not ("selfbuilder.a1.boot" or "selfbuilder.a1.tick") ||
+            ticket is null)
+            throw new NativePipeHold("A1_NATIVE_OWNER_TICKET_ROUTE_DENIED");
+        return SendAsync("chat.commands", new { action, a1_wpf_ticket = ticket },
+            TimeSpan.FromSeconds(20), cancel, null, allowNativeA1Ticket: true);
+    }
+
+    // The native/Python boundary must not interpret the same field twice.
+    // JsonElement permits duplicate JSON names while Python dict decoding
+    // silently keeps the last value; deny ambiguity before any framed action
+    // is written or any native reply/event is trusted.
+    private static void RequireUnambiguousJson(JsonElement node)
+    {
+        if (node.ValueKind == JsonValueKind.Object)
+        {
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in node.EnumerateObject())
+            {
+                if (!keys.Add(property.Name))
+                    throw new NativePipeHold("NATIVE_JSON_DUPLICATE_FIELD_DENIED");
+                RequireUnambiguousJson(property.Value);
+            }
+        }
+        else if (node.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in node.EnumerateArray())
+                RequireUnambiguousJson(item);
+        }
+    }
+
+    private async Task<NativePipeResult> SendAsync(string route, object payload,
+        TimeSpan? timeout, CancellationToken cancel,
+        Action<JsonElement>? onEvent, bool allowNativeA1Ticket)
     {
         if (Volatile.Read(ref _closed) != 0) throw new NativePipeHold("NATIVE_PIPE_CLOSED");
         if (route is null || !Routes.Contains(route)) throw new NativePipeHold("NATIVE_ROUTE_DENIED");
@@ -68,10 +109,38 @@ public sealed class NativePythonPipe : IAsyncDisposable
         try { data = JsonSerializer.SerializeToElement(payload); }
         catch (Exception e) when (e is JsonException or NotSupportedException) { throw new NativePipeHold("NATIVE_PAYLOAD_INVALID"); }
         if (data.ValueKind != JsonValueKind.Object) throw new NativePipeHold("NATIVE_PAYLOAD_INVALID");
+        RequireUnambiguousJson(data);
         foreach (var prop in data.EnumerateObject())
             if (prop.Name is "tenant" or "principal" or "windows_sid" or "session_id" or "scopes"
                 or "private_approved" or "native_approve" or "nativeConsent" or "admin")
                 throw new NativePipeHold("PAGE_AUTHORITY_CLAIM_DENIED");
+
+        // Owner-only envelope: renderer data cannot smuggle a signed WPF ticket
+        // by calling generic RequestAsync on any native route.
+        if (!allowNativeA1Ticket)
+        {
+            if (data.TryGetProperty("a1_wpf_ticket", out _))
+                throw new NativePipeHold("PAGE_A1_OWNER_TICKET_DENIED");
+        }
+        else
+        {
+            if (route != "chat.commands" ||
+                !data.TryGetProperty("action", out var nativeAction) ||
+                nativeAction.ValueKind != JsonValueKind.String ||
+                nativeAction.GetString() is not ("selfbuilder.a1.boot" or "selfbuilder.a1.tick") ||
+                !data.TryGetProperty("a1_wpf_ticket", out var ticket) ||
+                ticket.ValueKind != JsonValueKind.Object)
+                throw new NativePipeHold("A1_NATIVE_OWNER_TICKET_ENVELOPE_HOLD");
+            var fields = 0;
+            foreach (var property in data.EnumerateObject())
+            {
+                fields++;
+                if (property.Name is not ("action" or "a1_wpf_ticket"))
+                    throw new NativePipeHold("A1_NATIVE_OWNER_TICKET_ENVELOPE_HOLD");
+            }
+            if (fields != 2)
+                throw new NativePipeHold("A1_NATIVE_OWNER_TICKET_ENVELOPE_HOLD");
+        }
 
         bool regular = route is not ("chat.stop" or "training.pause");
         if (regular && Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
@@ -139,6 +208,7 @@ public sealed class NativePythonPipe : IAsyncDisposable
                 await _input.ReadExactlyAsync(reply, _lifetime.Token).ConfigureAwait(false);
                 using var doc = JsonDocument.Parse(reply);
                 var root = doc.RootElement;
+                RequireUnambiguousJson(root);
                 if (root.ValueKind != JsonValueKind.Object ||
                     !root.TryGetProperty("protocol", out var p) || p.GetString() != "NOX-P02-NATIVE-v1" ||
                     !root.TryGetProperty("runId", out var r) || r.GetString() != _runId ||

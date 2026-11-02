@@ -232,7 +232,7 @@ if (-not $gitTool) { throw 'E06_P02_GIT_BLOB_PROVENANCE_REQUIRED' }
 # MainWindow copied to disposable R11; no changes to HOME/MENU/WORK or main.
 $t06Stage=Join-Path $repoRoot 'coordination/e06/stage_native_p02.py'
 $t06Addon=Join-Path $repoRoot 'coordination/e06/MainWindow.NativeP02.cs'
-foreach ($part in @(@{p=$t06Stage;sha='1077733e7abe5fe70f8c80b760e919477fb52351'},@{p=$t06Addon;sha='718a28e8c4e5f7ba47f3c63ddf9a1bf68e986456'})) {
+foreach ($part in @(@{p=$t06Stage;sha='22c94e4b95ca8d0bdf54c78dc8ea82fa474c51a9'},@{p=$t06Addon;sha='8304e4750a12457e0441b702088aad9e18214169'})) {
   Assert-E06PlainPathAncestors -Candidate $part.p -Scope 'T06_NATIVE'
   if (!(Test-Path -LiteralPath $part.p -PathType Leaf) -or
       (& $gitTool.Source hash-object -- $part.p).Trim().ToLowerInvariant() -cne $part.sha) {
@@ -371,7 +371,7 @@ if ($wantsCreative) {
   $microwowFiles=@(
     @{relative='index.html';blob='e44efa7b5e2ffdfda6481c734f92c064fe1f458b'},
     @{relative='ui.css';blob='52757928eab65e474b9f500ab95b49adf3abe340'},
-    @{relative='ui.js';blob='9e6233059bf59532e6c5c91c24462427bd03937b'},
+    @{relative='ui.js';blob='29798bf824ddfc4d18f5c1f2839bcff6568b9937'},
     @{relative='THIRD_PARTY_LICENSES.txt';blob='4661952f5f4c9888c759ec94a3a28a31d26fc81f'},
     @{relative='icons/checkmark.svg';blob='e4ffbdc3d7f4f3e16a7612b7ab6bc145ad8874b6'},
     @{relative='icons/info.svg';blob='bd8e0cf27356e76acc68780ba6fd80cbfffbdf4f'},
@@ -408,7 +408,7 @@ $payload=Join-Path $out 'payload'
 # This is compilable source only: live Python session and UI activation still
 # require native Windows E2E, not a --diagnose receipt.
 $p02StageSources=@(
-  @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='20c64c62c5b2c3f72c73ad106351d3af54cf0bd8'},
+  @{relative='Packages/P02/worker-chat/NativePythonPipe.cs';dest='Integration/NativePythonPipe.cs';blob='e8e4f95106f4d40c29c68d81378c7938e6a7c0f5'},
   @{relative='coordination/e06/OneHostP02WebView2Bridge.cs';dest='Integration/OneHostP02WebView2Bridge.cs';blob='56475efc920f935677e6bab258aa211b1ae7f344'},
   @{relative='Packages/P02/worker-chat/SpaceBrowserBoundary.cs';dest='Integration/SpaceBrowserBoundary.cs';blob='4d70c5de450837d07304d91b4fa4c0e049a2be52'},
   @{relative='coordination/e06/NoXAutostart.cs';dest='Integration/NoXAutostart.cs';blob='f3151521120744e4b3cec2b92566cad78513805e'},

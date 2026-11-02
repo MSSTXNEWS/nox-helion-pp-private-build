@@ -96,8 +96,24 @@ try {
     throw 'ROLLBACK_SAVED_NEW_VERSION_DRIFT'
   }
   $results.rollback='PASS'
+  # M11: removing the ownership marker alone must not pass native uninstall QA.
+  # Snapshot only the existing disposable runner's installed program files;
+  # keep the deliberate __p01_rollback_saved and persistent user data untouched.
+  $uninstallProgramFiles=@(Get-ChildItem -LiteralPath $root -File -Recurse -Force | ForEach-Object { $_.FullName })
+  if ($uninstallProgramFiles.Count -eq 0 -or
+      -not ($uninstallProgramFiles -contains (Join-Path $root 'NOX.P01.Shell.exe'))) {
+    throw 'UNINSTALL_QA_PROGRAM_INVENTORY_MISSING'
+  }
   Exec-Setup (Join-Path $root 'Uninstall.exe') @('/S')
   if(Test-Path -LiteralPath (Join-Path $root 'nox-p01-owned.txt')) {throw 'UNINSTALL_OWNERSHIP_MARKER_REMAINS'}
+  foreach ($programFile in $uninstallProgramFiles) {
+    if (Test-Path -LiteralPath $programFile -PathType Leaf) {
+      throw "UNINSTALL_PROGRAM_FILE_REMAINS:$programFile"
+    }
+  }
+  if (Test-Path -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\NOXHELION.P01') {
+    throw 'UNINSTALL_REGISTRY_ENTRY_REMAINS'
+  }
   $results.uninstall='PASS'
   if((Get-FileHash -LiteralPath $sentinel -Algorithm SHA256).Hash.ToLowerInvariant() -cne $sentinelHash){throw 'USER_DATA_SENTINEL_CHANGED'}
   $results.userDataRetained='PASS'

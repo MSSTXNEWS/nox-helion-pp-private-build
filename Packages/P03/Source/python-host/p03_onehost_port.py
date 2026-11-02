@@ -165,7 +165,11 @@ class P03OneHostPort:
                 or any(not isinstance(t, str) or not TAG.fullmatch(t) for t in tags)
                 or len(tags) != len(set(tags))):
             raise P03PortHold("Installed model evidence invalid")
-        return {"models": [{"tag": t, "installed": True, "digest": None} for t in tags],
+        # /api/tags is an Ollama presence report, NOT a physical SHA-256
+        # verification of the weight bytes or an approved license receipt.
+        # Keep source-visible tags, but never elevate them to INSTALLED proof.
+        return {"models": [{"tag": t, "installed": False,
+                            "ollamaReportedPresent": True, "digest": None} for t in tags],
                 "digestVerified": False, "source": "existing P02 OllamaClient.models"}
 
     def digest(self, session: object, args: dict) -> dict:

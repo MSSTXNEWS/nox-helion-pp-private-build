@@ -72,6 +72,16 @@ def _relative(name: str) -> Path:
     return Path(*posix.parts)
 
 
+def _unambiguous_manifest_object(pairs):
+    """Fail closed on duplicate JSON keys at every depth of the pinned manifest."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise AcquisitionHold("LIBRARY_MANIFEST_DUPLICATE_KEY")
+        result[key] = value
+    return result
+
+
 def audit_library(db_path: str, expected_sha256: str, *, approved_roots,
                   manifest_path: str | None = None, manifest_sha256: str | None = None,
                   assets_root: str | None = None) -> dict:
@@ -122,7 +132,10 @@ def audit_library(db_path: str, expected_sha256: str, *, approved_roots,
         if _digest(manifest) != manifest_sha256:
             raise AcquisitionHold("LIBRARY_MANIFEST_SHA256_MISMATCH")
         try:
-            document = json.loads(manifest.read_text(encoding="utf-8"))
+            document = json.loads(manifest.read_text(encoding="utf-8"),
+                                  object_pairs_hook=_unambiguous_manifest_object)
+        except AcquisitionHold:
+            raise
         except (ValueError, UnicodeError) as exc:
             raise AcquisitionHold("LIBRARY_MANIFEST_JSON_INVALID") from exc
         if not isinstance(document, dict) or document.get("schema") != "NOX-ACQUISITION-FILES-v1":

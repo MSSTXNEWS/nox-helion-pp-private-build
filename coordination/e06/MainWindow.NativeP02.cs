@@ -281,8 +281,7 @@ public partial class MainWindow
                 return new NativePipeResult("",false,null,"A1_WPF_FRESH_CONSENT_REQUIRED");
             try {
                 var ticket=CreateA1PrivateConsentReceipt(a1Name);
-                return await _nativeP02Pipe.RequestAsync("chat.commands",
-                    new {action=a1Name,a1_wpf_ticket=ticket},TimeSpan.FromSeconds(20),cancel);
+                return await _nativeP02Pipe.RequestWpfApprovedA1Async(a1Name,ticket,cancel);
             } catch (OperationCanceledException) { throw; }
               catch { return new NativePipeResult("",false,null,"A1_WPF_OWNER_PROOF_HOLD"); }
         }

@@ -9,10 +9,22 @@ from typing import Mapping
 SHA=re.compile(r"^[a-f0-9]{64}$")
 TAG=re.compile(r"^[a-z0-9][a-z0-9._-]{1,80}:[0-9a-z._-]{1,32}$")
 
+def _unique_catalog_object(pairs):
+    """Reject ambiguous on-disk rights/model fields before owner P03 review."""
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError("CATALOG_DUPLICATE_JSON_KEY")
+        obj[key] = value
+    return obj
+
 def model_candidates(path:Path)->list[dict]:
-    x=json.loads(path.read_text(encoding="utf-8"))
-    if x.get("schema")!="NOX-CODING-LLM-CANDIDATE-REGISTRY-V3":
+    x=json.loads(path.read_text(encoding="utf-8"),
+                 object_pairs_hook=_unique_catalog_object)
+    if not isinstance(x, dict) or x.get("schema")!="NOX-CODING-LLM-CANDIDATE-REGISTRY-V3":
         raise ValueError("CATALOG_SCHEMA_INVALID")
+    if not isinstance(x.get("models"), list):
+        raise ValueError("CATALOG_MODELS_INVALID")
     return x["models"]
 
 def p03_review_handoff(*,catalog_path:Path,tag:str,attestation:Mapping,owner_consent:bool)->dict:

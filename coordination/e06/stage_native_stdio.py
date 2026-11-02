@@ -16,9 +16,18 @@ ADDONS=(
     ('coordination/e06/nox_foundation_readiness.py', 'nox_selfbuilder/foundation_readiness.py', '7d20cb6f750610d2e8122698cdcc190db31ce106'),
     ('contracts/p03_download_candidates.json', 'nox_selfbuilder/p03_download_candidates.json', '17053ed67af3bd74c9f767b9d6cc33d66c3eab73'),
     ('contracts/p04_module_candidates.json', 'nox_selfbuilder/p04_module_candidates.json', '3b034ba129c0ed434fe858ac132b1a15ea222d3b'),
-    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '32ec53a623ee2505ded4296d7df5aa027288ffdc'),
+    ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', '037a2c8a2e769779d657df5ccdccf61d1968a992'),
     ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '0520a74aa62c2390082f6f5e4ae3731e77f92f3d'),
-    ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '0113b3e857f2ba55b74a02fcc3a76a24453b14e0'),
+    ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', 'eac8f3ffd834e4cf8d5e99996d3b7a55a45b70cc'),
+    ('src/nox_selfbuilder/firstboot_coordinator.py', 'nox_selfbuilder/firstboot_coordinator.py', 'aaa2f660fe7345c96137c8a7775f223eada45eb6'),
+    ('src/nox_selfbuilder/acquisition_library.py', 'nox_selfbuilder/acquisition_library.py', 'df8f2c8259efdf3d3fff5a344164bced13144fab'),
+    ('src/nox_selfbuilder/worms.py', 'nox_selfbuilder/worms.py', '28d788ee753665785ec56f81b7b577b2a3ba4d07'),
+    ('src/nox_selfbuilder/worm_autopilot.py', 'nox_selfbuilder/worm_autopilot.py', '7f71acc6836826ed1a04b566486adbd43eba3f95'),
+    ('src/nox_selfbuilder/worm_idea_loop.py', 'nox_selfbuilder/worm_idea_loop.py', '2b1aadd1b8880d38af8b4a3498a090c7e83de08e'),
+    ('src/nox_selfbuilder/a1_initiative_bridge.py', 'nox_selfbuilder/a1_initiative_bridge.py', 'e11b9e2921368f32e76b859f64994312c4ac012d'),
+    ('src/nox_selfbuilder/growth_sandbox.py', 'nox_selfbuilder/growth_sandbox.py', '2c708c2b4aa429e291b045f75d3d4f64521abdae'),
+    ('src/nox_selfbuilder/growth_forge.py', 'nox_selfbuilder/growth_forge.py', 'ffdb0239ae54c4c1ac27d0eaceac5153ff6f8069'),
+    ('src/nox_selfbuilder/a1_official_catalog.py', 'nox_selfbuilder/a1_official_catalog.py', '1833e786023e06ef7a8b8a1abda134224d08601b'),
     ('src/nox_selfbuilder/a1_wpf_owner_proof.py', 'nox_selfbuilder/a1_wpf_owner_proof.py', 'c35b0cac03a7df60133b230f6e0fe406e5f2cf84'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),
@@ -26,7 +35,7 @@ ADDONS=(
     ('Packages/P02/worker-python/p02_chat_bridge.py', 'p02_chat_bridge.py', '0b83e0a391b4cda18b9cb7726607927013c3fa4e'),
     ('Packages/P02/worker-python/p02_onehost.py', 'p02_onehost.py', 'f799e7600e10bc5cd900350527cb40d78ed78bdd'),
     ('proposals/NOX-PACK01-50/native_bridge.py', 'nox_native_bridge.py', 'f26648755a6efa9cbc047ab481af1ba38bb9dc55'),
-    ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', '49eea0726233e23b4671f9b14a4584e9f0d194aa'),
+    ('Packages/P03/Source/python-host/p03_onehost_port.py', 'p03_onehost_port.py', 'd27450a01608641a636ab96ceda500c7874e3e16'),
     ('Packages/P03/Source/python-host/catalog30.discovery.json', 'catalog30.discovery.json', 'dea8fb4bfbea61ce845d3ced17b0ef3596f6ae8a'),
     ('src/nox_selfbuilder/__init__.py', 'nox_selfbuilder/__init__.py', '1d0670e51efab53271385c13c156f2809a25adf1'),
     ('src/nox_selfbuilder/background_forge.py', 'nox_selfbuilder/background_forge.py', '9ee9bf7696cd95f9bae0f5b4410b9012910e7cae'),
@@ -34,9 +43,9 @@ ADDONS=(
     ('src/nox_selfbuilder/complete_builder.py', 'nox_selfbuilder/complete_builder.py', '616aedc351171d3c0365b3c6814d9d22c6cd7227'),
     ('src/nox_selfbuilder/evolution.py', 'nox_selfbuilder/evolution.py', '9c38ca9b1063cda7b0569af7ce622b739213adf4'),
     ('src/nox_selfbuilder/learning.py', 'nox_selfbuilder/learning.py', '3e1cf4f26cfab2505558d67fd5a5bd76ea172e06'),
-    ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', '27abfefec3b7347dab008396524bf94dd8c0e0bd'),
+    ('src/nox_selfbuilder/model_admission.py', 'nox_selfbuilder/model_admission.py', '5622a24e1c135728e126fdf5da091de079aaeb58'),
     ('src/nox_selfbuilder/onehost_builder.py', 'nox_selfbuilder/onehost_builder.py', 'e1d6c26178c900d55789f29429de33f2af46551d'),
-    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', 'fe5a04f330764ff963ae8fdbcfa6d6bd9e2f809d'),
+    ('src/nox_selfbuilder/onehost_queue.py', 'nox_selfbuilder/onehost_queue.py', '2347b79dba7108be3a942975a3c3782f3c99e149'),
     ('src/nox_selfbuilder/onehost_store.py', 'nox_selfbuilder/onehost_store.py', '686911c6102c7ab18a6f07bb2a3b3687fb9c2c45'),
     ('src/nox_selfbuilder/original_store_adapter.py', 'nox_selfbuilder/original_store_adapter.py', '6fcbd9b2f90dc54767728d7ee120ffb7595c019b'),
     ('src/nox_selfbuilder/p02_coder.py', 'nox_selfbuilder/p02_coder.py', '2a9940916424ed851b446f253ed68dab7798e675'),
@@ -101,6 +110,17 @@ def stage(source:Path)->dict:
         "    parser.add_argument('--run-id',type=str)")
     updated=updated.replace(PARSE_ANCHOR,PARSE_ANCHOR+"\n"+STAGED_MODE)
     compile(updated,str(app),"exec")
+    # Fail BEFORE mutating the disposable original if ANY pinned Python donor
+    # has invalid syntax for the actual interpreter used to stage/package it.
+    # Git SHA validates bytes, not Python grammar. Avoid a half-staged loader.
+    for target,data in sources:
+        if target.suffix.lower() == ".py":
+            try:
+                compile(data, str(target), "exec")
+            except (SyntaxError, ValueError) as exc:
+                raise RuntimeError(
+                    "E06_NATIVE_PINNED_PYTHON_SYNTAX_HOLD:" +
+                    str(target.relative_to(source))) from exc
     # All source/addon checks complete before writing any disposable output.
     for target,data in sources:
         target.parent.mkdir(parents=True,exist_ok=True)
@@ -118,6 +138,16 @@ def stage(source:Path)->dict:
                     if dest.endswith((".json", ".zip")) or dest.startswith("Packages/P04/")
                     or dest == "nox_selfbuilder/a1_native_command.py"
                     or dest == "nox_selfbuilder/a1_existing_components.py"
+                    or dest in (
+                                "nox_selfbuilder/firstboot_coordinator.py",
+                                "nox_selfbuilder/acquisition_library.py",
+                                "nox_selfbuilder/worms.py",
+                                "nox_selfbuilder/worm_autopilot.py",
+                                "nox_selfbuilder/worm_idea_loop.py",
+                                "nox_selfbuilder/a1_initiative_bridge.py",
+                                "nox_selfbuilder/growth_sandbox.py",
+                                "nox_selfbuilder/growth_forge.py",
+                                "nox_selfbuilder/a1_official_catalog.py")
                     or dest == "nox_selfbuilder/a1_wpf_owner_proof.py"
                     or dest in ("nox_selfbuilder/activator_worm.py",
                                 "nox_selfbuilder/foundation_readiness.py")],

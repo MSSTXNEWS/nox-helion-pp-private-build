@@ -110,9 +110,15 @@ class NativeWorkQueue:
                 row=self._read(store,scope,tid)
                 if row['state'] not in allowed_states:
                     raise NativeQueueHold('S03_TASK_ALREADY_CLAIMED_OR_TERMINAL')
-                if self.stop_requested() or self.authorize(scope,permission,{'task_id':tid}) is not True:
-                    raise PermissionError('NATIVE_WORK_REVOKED')
-                with store.conn:self._event(store,tid,'CLAIM',{'scope':scope_key(scope),'state':'RUNNING','permission':permission})
+                def require_live_claim_permission():
+                    if (self.stop_requested() or self.stop_epoch()!=epoch or
+                            self.authorize(scope,permission,{'task_id':tid}) is not True):
+                        raise PermissionError('NATIVE_WORK_REVOKED')
+                require_live_claim_permission()
+                with store.conn:
+                    self._event(store,tid,'CLAIM',{'scope':scope_key(scope),'state':'RUNNING','permission':permission})
+                    # STOP/ACL/epoch revocation during SQLite audit must roll back CLAIM.
+                    require_live_claim_permission()
                 return True
             self.actor.call(claim)
             self._active_task=(tuple(scope_key(scope).values()),tid)

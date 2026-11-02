@@ -51,5 +51,172 @@ class A1NativeSource(unittest.TestCase):
         factory_pin = re.findall(r"\('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', '([0-9a-f]{40})'\)", stage)
         self.assertEqual(factory_pin, [blob(ROOT / "src/nox_selfbuilder/a1_existing_components.py")])
 
+
+class A1StopRevokesNativeTicket(unittest.TestCase):
+    """Execute the exact original nested STOP method without another host."""
+
+    def _actual_stop(self, *, failed=False):
+        source = (ROOT / "coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")
+        start = source.index("    def stop(session, args):\n")
+        end = source.index("    for route, method in ((", start)
+        original = source[start:end]
+        program = ("def outer(adapter, stop_hooks, a1_wpf_proof):\n" +
+                   original +
+                   "    def peek():\n        return a1_wpf_proof\n" +
+                   "    return stop, peek\n")
+        namespace = {}
+        exec(compile(program, "<original-nested-STOP>", "exec"), namespace)
+        class Adapter:
+            epoch = 0
+            def stop(self, session, args):
+                self.epoch += 1
+                if failed:
+                    raise RuntimeError("injected STOP error")
+                return {"status": "STOPPED"}
+        adapter = Adapter()
+        hooks = []
+        stop, peek = namespace["outer"](adapter, [lambda: hooks.append("called")], object())
+        return stop, peek, adapter, hooks
+
+    def test_stop_then_reset_never_reuses_old_wpf_ticket(self):
+        stop, peek, adapter, hooks = self._actual_stop()
+        self.assertIsNotNone(peek())
+        self.assertEqual(stop(None, {}), {"status": "STOPPED"})
+        self.assertIsNone(peek())
+        self.assertEqual(adapter.epoch, 1)
+        self.assertEqual(hooks, ["called"])
+        self.assertIsNone(peek())  # Later STOP reset cannot restore ticket.
+
+    def test_stop_failure_still_revokes_owner_proof(self):
+        stop, peek, adapter, hooks = self._actual_stop(failed=True)
+        with self.assertRaisesRegex(RuntimeError, "injected STOP error"):
+            stop(None, {})
+        self.assertIsNone(peek())
+        self.assertEqual(adapter.epoch, 1)
+        self.assertEqual(hooks, [])
+
+
+class A1FirstBootSharedStopClock(unittest.TestCase):
+    """Exercise original A1 assembly: either native STOP witness denies FirstBoot."""
+
+    def test_firstboot_never_ignores_owner_stop_or_epoch_divergence(self):
+        import ast
+        from dataclasses import dataclass, replace
+        from types import SimpleNamespace
+        source = (ROOT / "src/nox_selfbuilder/a1_existing_components.py").read_text("utf-8")
+        function = next(x for x in ast.parse(source).body
+                        if isinstance(x, ast.FunctionDef) and x.name == "build_existing_a1_command")
+
+        @dataclass(frozen=True)
+        class FirstBootPorts:
+            stopped: object
+            stop_epoch: object
+
+        class OwnerPorts:
+            def __init__(self):
+                self.halted = False
+                self.epoch = 0
+                self.firstboot_halted = False
+                self.firstboot_epoch = 0
+                self.stopped = lambda: self.halted
+                self.stop_epoch = lambda: self.epoch
+                self.native_firstboot = FirstBootPorts(
+                    lambda: self.firstboot_halted, lambda: self.firstboot_epoch)
+                self.approved_providers = lambda session: ({}, {})
+                self.authorize = lambda session, action: True
+
+            def verify(self):
+                return True
+
+            def __getattr__(self, key):
+                return lambda *args, **kwargs: None
+
+        namespace = {
+            "ExistingA1OwnerPorts": OwnerPorts, "A1OwnerPortsHold": PermissionError,
+            "replace": replace,
+            "WormSwarm": lambda **kwargs: object(),
+            "WormAutopilot": lambda **kwargs: object(),
+            "NativeIdeaLoop": lambda **kwargs: object(),
+            "A1InitiativeBridge": lambda **kwargs: object(),
+            "FirstBootCoordinator": lambda callbacks: SimpleNamespace(callbacks=callbacks),
+            "A1NativeCommand": lambda **kwargs: SimpleNamespace(_components=kwargs["components"]),
+        }
+        exec(compile(ast.Module(body=[function], type_ignores=[]),
+                     "<original-A1-owner-assembly>", "exec"), namespace)
+        owner = OwnerPorts()
+        command = namespace["build_existing_a1_command"](object(), owner)
+        callbacks = command._components("test-session")["firstboot"].callbacks
+        self.assertIs(callbacks.stopped(), False)
+        self.assertEqual(callbacks.stop_epoch(), 0)
+        owner.halted = True
+        self.assertIs(callbacks.stopped(), True)
+        owner.halted = False
+        owner.firstboot_halted = True
+        self.assertIs(callbacks.stopped(), True)
+        owner.firstboot_halted = False
+        owner.epoch = 1
+        with self.assertRaisesRegex(PermissionError, "A1_NATIVE_FIRSTBOOT_STOP_EPOCH_MISMATCH"):
+            callbacks.stop_epoch()
+        owner.firstboot_epoch = 1
+        self.assertEqual(callbacks.stop_epoch(), 1)
+
+
+class A1BootFailedLeaseRollback(unittest.TestCase):
+    """Runs the ORIGINAL nested Python command with isolated denial callbacks.
+
+    Synthetic callbacks here test rejection only. They do not attest Windows
+    SID, WPF private pipe, native policy, or a working production FirstBoot.
+    """
+    def _command(self, failed):
+        import ast
+        import threading
+        from datetime import datetime, timezone
+        source = (ROOT / "coordination/e06/e06_native_stdio_owner.py").read_text("utf-8")
+        fn = next(n for n in ast.walk(ast.parse(source))
+                  if isinstance(n, ast.FunctionDef) and n.name == "command")
+        leases = {}
+        class Session:
+            chat_id = "isolated-original-chat"
+        class WpfProof:
+            def verify(self, ticket, action):
+                return ticket == "test-only-ticket" and action == "selfbuilder.a1.boot"
+        class NativeCommand:
+            def invoke(self, session, args, *, now):
+                if failed:
+                    raise PermissionError("A1_NATIVE_SIGNED_COMPONENTS_FACTORY_HOLD")
+                return {"schema": "NOX-A-NATIVE-BOOT-v1",
+                        "state": "READY_FOR_EXISTING_IDLE_TICK"}
+        def owner_grant(session, action, args):
+            leases[(session.chat_id, action)] = 7
+        namespace = {
+            "select_scope": lambda s, a: (s, a),
+            "a1_wpf_proof": WpfProof(),
+            "grant": owner_grant,
+            "a1_command": NativeCommand(),
+            "lease_lock": threading.Lock(),
+            "leases": leases,
+            "A1NativeHold": PermissionError,
+            "datetime": datetime,
+            "timezone": timezone,
+        }
+        exec(compile(ast.Module(body=[fn], type_ignores=[]),
+                     "<original-A1-native-command>", "exec"), namespace)
+        return namespace["command"], Session(), leases
+
+    def test_missing_factory_revokes_research_lease(self):
+        command, session, leases = self._command(failed=True)
+        with self.assertRaisesRegex(PermissionError, "A1_NATIVE_SIGNED_COMPONENTS_FACTORY_HOLD"):
+            command(session, {"action": "selfbuilder.a1.boot",
+                              "a1_wpf_ticket": "test-only-ticket"})
+        self.assertNotIn((session.chat_id, "evolution.autonomy.read"), leases)
+
+    def test_successful_one_shot_retains_original_lease(self):
+        command, session, leases = self._command(failed=False)
+        response = command(session, {"action": "selfbuilder.a1.boot",
+                                     "a1_wpf_ticket": "test-only-ticket"})
+        self.assertEqual(response["state"], "READY_FOR_EXISTING_IDLE_TICK")
+        self.assertEqual(leases[(session.chat_id, "evolution.autonomy.read")], 7)
+
+
 if __name__ == "__main__":
     unittest.main()

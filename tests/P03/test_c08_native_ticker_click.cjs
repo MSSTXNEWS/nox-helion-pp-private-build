@@ -90,3 +90,25 @@ test('stale/missing timestamps never advance durable P03 queue; latest native wi
   ordered.post(ordered.jobId,new Date(ordered.clock()-500).toISOString(),'completed');
   assert.equal(ordered.app.state.activeJob.state,'Completed');
 });
+
+test('stale, missing and reordered terminal notices cannot advertise Installed', () => {
+  const present=v=>v.document.getElementById('eventFeed').children[0].children
+    .map(x=>x.textContent).join(' ');
+  for(const atUtc of [new Date(Date.parse('2026-11-01T19:00:00.000Z')).toISOString(),undefined]) {
+    const v=mount();
+    v.app.state.activeJob={jobId:v.jobId,modelId:'llama3',modelTag:'llama3',state:'Queued'};
+    v.app.processMessage({type:'p03.event.v1',event:{jobId:v.jobId,modelTag:'llama3',
+      phase:'completed',status:'Installed',atUtc}});
+    assert.equal(v.app.state.activeJob.state,'Queued','durable queue must remain Queued');
+    assert.doesNotMatch(present(v),/Installed|completed/,'untrusted terminal notice must not claim install');
+    assert.match(present(v),atUtc ? /STALE/ : /UNKNOWN/);
+  }
+  const v=mount();v.app.state.activeJob={jobId:v.jobId,modelId:'llama3',modelTag:'llama3',state:'Queued'};
+  v.post(v.jobId,new Date(v.clock()-1000).toISOString(),'progress');
+  assert.equal(v.app.state.activeJob.state,'Running');
+  v.app.processMessage({type:'p03.event.v1',event:{jobId:v.jobId,modelTag:'llama3',
+    phase:'completed',status:'Installed',atUtc:new Date(v.clock()-2000).toISOString()}});
+  assert.equal(v.app.state.activeJob.state,'Running');
+  assert.doesNotMatch(present(v),/Installed|completed/,'reordered event must not spoof completion in feed');
+  assert.match(present(v),/STALE/);
+});

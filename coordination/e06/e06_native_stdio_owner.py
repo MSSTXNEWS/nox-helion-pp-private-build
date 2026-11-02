@@ -276,6 +276,14 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
                 if a1_wpf_proof is None or a1_wpf_proof.verify(ticket, action) is not True:
                     raise A1NativeHold("A1_WPF_OWNER_PROOF_HOLD")
                 grant(session, "evolution.autonomy.read", {})
+                try:
+                    return a1_command.invoke(session, {"action": action}, now=datetime.now(timezone.utc))
+                except BaseException:
+                    # Failed A1 boot/tick must not retain an autonomous-read lease.
+                    # Do not revoke other actions or unrelated native sessions.
+                    with lease_lock:
+                        leases.pop((session.chat_id, "evolution.autonomy.read"), None)
+                    raise
             return a1_command.invoke(session, {"action": action}, now=datetime.now(timezone.utc))
         if action in ("selfbuilder.background.status",
                       "selfbuilder.background.enable",
@@ -330,7 +338,13 @@ def create_existing_ingress(store, run_id: str, *, client=None, event_sink=None,
     dispatcher.bind("chat.commands", BoundPort(command, lambda: True, evidence, 2))
     stop_hooks = []
     def stop(session, args):
-        result = adapter.stop(session, args)
+        nonlocal a1_wpf_proof
+        try:
+            result = adapter.stop(session, args)
+        finally:
+            # STOP revokes the Python-side acceptance capability, including
+            # failure before the original monotonic STOP epoch can advance.
+            a1_wpf_proof = None
         for hook in stop_hooks:
             hook()
         return result

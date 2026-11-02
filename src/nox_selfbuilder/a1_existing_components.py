@@ -7,7 +7,7 @@ If even one original owner port is unavailable, boot is denied, not simulated.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from .firstboot_coordinator import FirstBootCallbacks, FirstBootCoordinator
@@ -102,7 +102,23 @@ def build_existing_a1_command(builder, ports: ExistingA1OwnerPorts):
             native_s03_recent_lessons=ports.s03_lessons,
             native_verify_lesson=ports.verify_lesson,
             native_s03_append_readback=ports.s03_append_readback)
-        firstboot = FirstBootCoordinator(ports.native_firstboot)
+        # Use BOTH existing owner STOP witnesses. Never let a stale FirstBoot
+        # callback bypass A1 revocation or downgrade stricter native STOP.
+        def owner_stopped():
+            return not (ports.stopped() is False and
+                        ports.native_firstboot.stopped() is False)
+
+        def owner_epoch():
+            epoch = ports.stop_epoch()
+            firstboot_epoch = ports.native_firstboot.stop_epoch()
+            if (type(epoch) is not int or epoch < 0 or
+                    type(firstboot_epoch) is not int or firstboot_epoch != epoch):
+                raise A1OwnerPortsHold('A1_NATIVE_FIRSTBOOT_STOP_EPOCH_MISMATCH')
+            return epoch
+
+        firstboot = FirstBootCoordinator(replace(
+            ports.native_firstboot,
+            stopped=owner_stopped, stop_epoch=owner_epoch))
         if ports.stopped() is not False:
             raise A1OwnerPortsHold('A1_STOP_DURING_NATIVE_COMPONENT_BIND')
         return {'initiative_bridge': bridge, 'firstboot': firstboot}
