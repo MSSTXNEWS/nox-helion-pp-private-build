@@ -10,7 +10,22 @@ DONOR = ROOT / "coordination/e06/build_onehost_installer.ps1"
 spec = importlib.util.spec_from_file_location("t06_compile_owner_webview2_stage", SRC)
 owner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(owner)
-LEGACY = (
+LEGACY_P01_GUARD = r"""# Never stage through a junction in the user-controlled install path or its parents.
+$localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+foreach ($target in @($root, "$root.__p01_stage", "$root.__p01_previous", "$root.__p01_rollback_saved")) {
+  $cursor = [IO.Path]::GetFullPath($target).TrimEnd('\')
+  while ($cursor -and ($cursor -ieq $localRoot -or $cursor.StartsWith($localRoot+'\', [StringComparison]::OrdinalIgnoreCase))) {
+    if (Test-Path -LiteralPath $cursor) {
+      $node = Get-Item -LiteralPath $cursor -Force
+      if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "P01_INSTALL_REPARSE_ANCESTOR:$cursor" }
+    }
+    if ($cursor -ieq $localRoot) { break }
+    $cursor = [IO.Path]::GetDirectoryName($cursor)
+  }
+}
+# Verify the existing installer-owned marker before allowing an update; a filename alone is not proof.
+"""
+LEGACY = LEGACY_P01_GUARD + (
     "# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence.\n"
     "$installed=$false\n"
     "foreach ($registryPath in @('Registry::HKEY_CURRENT_USER\\Software\\Microsoft\\EdgeUpdate\\Clients',"
@@ -42,8 +57,24 @@ class WebView2SameVmStageTests(unittest.TestCase):
                       "P01_WEBVIEW2_RUNTIME_MISSING", "OTHER_ORIGINAL_INSTALLER_POLICY_UNCHANGED"):
             self.assertIn(token, after)
         self.assertEqual(after.count("P01_WEBVIEW2_RUNTIME_MISSING"), 1)
+        # Original installer preflight now has the canonical volume-root guard
+        # in the disposable R11 staged bytes, NOT the retired LOCALAPPDATA cap.
+        self.assertIn("P01_INSTALL_REPARSE_ANCESTOR", after)
+        self.assertIn("while ($cursor)", after)
+        self.assertIn("[IO.Path]::GetDirectoryName($cursor)", after)
+        self.assertNotIn("$localRoot", after)
         with self.assertRaisesRegex(RuntimeError, "ANCHOR_HOLD"):
             owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
+    def test_ownerless_legacy_stub_is_denied_without_mutation(self):
+        # An incomplete WebView2-only fixture can no longer impersonate the
+        # original P01 preflight: volume-root source admission fails closed.
+        unsupported = LEGACY.split("# Official Microsoft WebView2 runtime detection", 1)[1]
+        unsupported = "# Official Microsoft WebView2 runtime detection" + unsupported
+        self.preflight.write_text(unsupported, encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "UNKNOWN_PREIMAGE_HOLD"):
+            owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
+        self.assertEqual(unsupported, self.preflight.read_text("utf-8"))
+
     def test_crlf_and_bom_are_preserved(self):
         self.preflight.write_bytes(b"\xef\xbb\xbf" + LEGACY.replace("\n", "\r\n").encode("utf-8"))
         owner.stage_exact_owner_webview2_registry_views(self.r11, DONOR)
