@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -58,12 +59,47 @@ def read_at(head,path):
     if not safe_path(path):raise ValueError("UNSAFE_OWNER_RECEIPT_PATH")
     return git("show",head+":"+path)
 
+def strict_git_json_at(head, path):
+    """Read bounded source evidence from Git without last-wins JSON authority."""
+    raw = read_at(head, path)
+    if type(raw) is not bytes or not 0 < len(raw) <= 1048576:
+        raise ValueError("OWNER_RECEIPT_JSON_SIZE_HOLD")
+
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("OWNER_RECEIPT_DUPLICATE_JSON_MEMBER")
+            result[key] = value
+        return result
+
+    def reject_nonfinite(value):
+        raise ValueError("OWNER_RECEIPT_NONFINITE_JSON_NUMBER")
+
+    def finite_float(value):
+        parsed = float(value)
+        if not math.isfinite(parsed):
+            raise ValueError("OWNER_RECEIPT_NONFINITE_JSON_NUMBER")
+        return parsed
+
+    try:
+        decoded = json.loads(raw.decode("utf-8", "strict"),
+                             object_pairs_hook=unique_pairs,
+                             parse_constant=reject_nonfinite,
+                             parse_float=finite_float)
+    except (UnicodeError, ValueError, OverflowError, RecursionError) as exc:
+        raise ValueError("OWNER_RECEIPT_INVALID_STRICT_JSON") from exc
+    if type(decoded) is not dict:
+        raise ValueError("OWNER_RECEIPT_NOT_JSON_OBJECT")
+    return decoded
+
+
 def audit(head):
     result={"schema":"NOX_V16_OWNER_RECEIPT_SAME_HEAD_AUDIT_V1",
             "head":head,"owners":{},"host50":{},"native_windows":"NOT_RUN",
             "source_ready":False,"owner_qa_accepted":False}
     for name,path in RECEIPTS.items():
-        data=json.loads(read_at(head,path))
+        data=strict_git_json_at(head,path)
         items=data.get("parts") if name=="P01" else (
             data.get("paths") if name=="P02" else data.get("files"))
         if not isinstance(items,list) or not items:
@@ -96,7 +132,7 @@ def audit(head):
                 "matched":sum(int(x["match"]) for x in checks),
                 "all_match":all(x["match"] for x in checks),
                 "exceptions":[x for x in checks if not x["match"]]}
-    mapping=json.loads(read_at(head,"proposals/NOX-PACK01-50/owner-binding-map.json"))
+    mapping=strict_git_json_at(head,"proposals/NOX-PACK01-50/owner-binding-map.json")
     routes=mapping["routes"]
     result["host50"]={
         "map_blob":blob_at(head,"proposals/NOX-PACK01-50/owner-binding-map.json"),
