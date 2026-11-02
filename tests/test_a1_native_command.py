@@ -89,6 +89,34 @@ class Tests(unittest.TestCase):
         self.b.ready=False;self.boot()
         self.assertEqual(self.go('selfbuilder.a1.status')['state'],'HOLD')
         with self.assertRaisesRegex(A1NativeHold,'BOOT_NOT_READY'):self.go('selfbuilder.a1.tick')
+    def test_status_revoked_after_authorize_stop_and_reset(self):
+        self.boot()
+        def authorize(*args):
+            self.epoch += 1
+            return True
+        self.x._authorize = authorize
+        receipt = self.go('selfbuilder.a1.status')
+        self.assertEqual(receipt['state'], 'HOLD')
+        self.assertFalse(receipt['native_bound'])
+
+    def test_status_revoked_after_authorize_head_switch(self):
+        self.boot()
+        def authorize(*args):
+            self.head = 'b' * 40
+            return True
+        self.x._authorize = authorize
+        receipt = self.go('selfbuilder.a1.status')
+        self.assertEqual(receipt['state'], 'HOLD')
+        self.assertFalse(receipt['native_bound'])
+
+    def test_status_revoked_after_authorize_stop_boolean(self):
+        self.boot()
+        def authorize(*args):
+            self.stopped = True
+            return True
+        self.x._authorize = authorize
+        self.assertEqual(self.go('selfbuilder.a1.status')['state'], 'HOLD')
+
     def test_source_receipts_not_windows_acceptance(self):
         self.boot();self.assertFalse(self.go('selfbuilder.a1.status')['installed_windows_e07'])
 
