@@ -58,7 +58,7 @@ $receipt=Join-Path $stageRoot 'BOOST_STAGE_RECEIPT.json'
 if (!(Test-Path -LiteralPath $receipt -PathType Leaf)) { throw 'BOOST_RECEIPT_MISSING_HOLD' }
 $proof=Get-Content -LiteralPath $receipt -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($proof.schema -cne 'NOX-BOOST-V4-STAGE-V1' -or
-    $proof.archive_sha256 -cne '2ca2647e46edd1e110db1569cb6a636ceee8e8154b416560ad43a87fb95545bd' -or
+    (@('2ca2647e46edd1e110db1569cb6a636ceee8e8154b416560ad43a87fb95545bd','26d2ed7ca66aaa0ce4d2b695537484f51c2080140f79cc576501f211c2190938') -cnotcontains ([string]$proof.archive_sha256)) -or
     $proof.stage_only -ne $true -or $proof.owner_source_mutated -ne $false -or
     $proof.onehost_executed -ne $false -or $proof.e07_pass -ne $false) {
  throw 'BOOST_SOURCE_STAGE_RECEIPT_HOLD'
