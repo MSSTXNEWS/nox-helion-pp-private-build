@@ -90,6 +90,7 @@ const hasEvidence = m => !!(m && m.artifactVerified===true &&
   reviewedDigest(m.manifestSha256) &&
   (numeric(m.requiredVramGiB)>0 || numeric(m.recommendedRamGiB)>0) &&
   m.compatibilityReviewed===true);
+const transferPending = () => state.pending.has('pull') || state.pending.has('importGguf');
 const currentJob = () => state.activeJob && current() &&
   (state.activeJob.modelId===current().id || state.activeJob.modelTag===current().exactTag ||
    state.activeJob.modelTag===current().id) ? state.activeJob : null;
@@ -123,7 +124,7 @@ function renderQuick20(){
  const grid=$('quickInstallGrid');if(!grid)return;grid.replaceChildren();
  for(const id of quick20Ids){
    const m=state.models.find(x=>x.id===id);if(!m)continue;
-   const can=state.hostReady&&state.capabilities?.pull===true&&hasEvidence(m)&&m.id===state.activeId&&$('licenseAck').checked&&!state.pending.has('pull');
+   const can=state.hostReady&&state.capabilities?.pull===true&&hasEvidence(m)&&m.id===state.activeId&&$('licenseAck').checked&&!transferPending();
    const wrapper=el('div','quick-card');
    const meta=el('span','quick-name',m.name);
    const detail=el('small','quick-sub',can?'Готово к запросу в host':'REVIEW_REQUIRED');
@@ -165,8 +166,8 @@ function renderHero(){const m=current(),j=state.activeJob;const verified=hasEvid
   const cap=state.capabilities||{};const queue=state.activeJob;
   const canStop=state.hostReady&&cap.stop===true&&queue&&['Queued','Running'].includes(queue.state);
   const canRetry=state.hostReady&&cap.retry===true&&queue&&['Failed','Cancelled'].includes(queue.state);
-  $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!state.pending.has('pull'));
-  $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&verified&&$('licenseAck').checked&&!state.pending.has('importGguf'));
+  $('pullBtn').disabled=!(state.hostReady&&cap.pull===true&&verified&&$('licenseAck').checked&&!transferPending());
+  $('importBtn').disabled=!(state.hostReady&&cap.importGguf===true&&verified&&$('licenseAck').checked&&!transferPending());
   $('stopBtn').disabled=!(canStop&&!state.pending.has('stop'));
   $('retryBtn').disabled=!(canRetry&&!state.pending.has('retry'));
   $('diagBtn').disabled=!(state.hostReady&&cap.diagnose===true&&!state.pending.has('diagnose'));
@@ -227,6 +228,8 @@ function sendAction(action){const c=state.capabilities||{},isQueue=['stop','retr
  if(action==='stop'&&!['Queued','Running'].includes(job.state))return;
  if(action==='retry'&&!['Failed','Cancelled'].includes(job.state))return;
  if(!['diagnose','pull','importGguf','stop','retry'].includes(action))return;
+ // The original single native queue must never receive concurrent model transfers.
+ if(['pull','importGguf'].includes(action) && transferPending())return;
  if(state.pending.has(action))return;const commandId='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,9);
  const data={type:'p03.command.v1',commandId,action,modelId:targetModel?.id||null,
   licenseAcknowledged:['pull','importGguf'].includes(action)&&$('licenseAck').checked,
