@@ -56,7 +56,32 @@ def _check(node, depth=0):
             raise ValueError("unpaired surrogate")
 
 
+def _deny_reparse_ancestors(path):
+    """Reject symlink/junction ancestry before and after receipt descriptor use.
+
+    A regular leaf can still be reached through a Windows reparse directory.
+    Check the lexical path; realpath() would hide the redirect being inspected.
+    """
+    raw = os.fspath(path)
+    if not isinstance(raw, str):
+        raise ValueError("receipt path type")
+    if ".." in (raw.replace(os.altsep, os.sep) if os.altsep else raw).split(os.sep):
+        raise ValueError("noncanonical receipt path")
+    component = os.path.abspath(raw)
+    while True:
+        info = os.lstat(component)
+        if stat.S_ISLNK(info.st_mode) or (
+            getattr(info, 'st_file_attributes', 0) & 0x400
+        ):
+            raise ValueError("receipt path ancestor reparse")
+        parent = os.path.dirname(component)
+        if parent == component:
+            break
+        component = parent
+
+
 def admit(path):
+    _deny_reparse_ancestors(path)
     metadata = os.lstat(path)
     if not stat.S_ISREG(metadata.st_mode) or (
         getattr(metadata, 'st_file_attributes', 0) & 0x400
@@ -64,7 +89,8 @@ def admit(path):
         raise ValueError("nonregular or reparse receipt")
     if metadata.st_size < 2 or metadata.st_size > MAX_PROOF_BYTES:
         raise ValueError("receipt size")
-    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_BINARY', 0))
+    fd = os.open(path, os.O_RDONLY | getattr(os, 'O_BINARY', 0) |
+                 getattr(os, 'O_NOFOLLOW', 0))
     try:
         current = os.fstat(fd)
         if not stat.S_ISREG(current.st_mode) or (
@@ -75,6 +101,7 @@ def admit(path):
             data = stream.read(MAX_PROOF_BYTES + 1)
     finally:
         os.close(fd)
+    _deny_reparse_ancestors(path)
     if len(data) < 2 or len(data) > MAX_PROOF_BYTES:
         raise ValueError("receipt read size")
     decoded = data.decode('utf-8-sig', errors='strict')
