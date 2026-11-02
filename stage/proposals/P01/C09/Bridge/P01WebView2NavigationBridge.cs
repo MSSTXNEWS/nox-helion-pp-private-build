@@ -122,7 +122,13 @@ internal sealed class P01WebView2NavigationBridge : IDisposable
         _returnToShellPending = true;
         AdvanceDocumentEpoch(newDocument: false);
         try { _webView.Navigate(_trustedVirtualOrigin.AbsoluteUri); return true; }
-        catch (Exception) { return false; } // Do not re-enable IPC on failure.
+        catch (Exception)
+        {
+            // Keep external mode and IPC quarantine; allow a new native retry.
+            // A synchronous Navigate failure has NOT loaded trusted shell bytes.
+            _returnToShellPending = false;
+            return false;
+        }
     }
 
     private static bool IsPublicDnsHost(string? host)
