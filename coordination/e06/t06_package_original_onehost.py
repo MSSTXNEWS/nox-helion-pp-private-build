@@ -46,7 +46,7 @@ def download_artifact(relative,target):
 
 # Exact reviewed P01 32/64-bit WebView2 Evergreen registry-source fix.
 # Stage only into disposable ORIGINAL R11, never into ZIP729 or installed NOX.
-P01_REVIEWED_PREFLIGHT_GIT_BLOB = "62ffd119d5dd4260eb69b9a3cff756f548a78ac1"
+P01_REVIEWED_PREFLIGHT_GIT_BLOB = "e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 # Canonical source pin for the original E06 32/64-bit Evergreen registry here-string.
 WEBVIEW2_E06_REGISTRY_BLOCK_SHA256 = "e9d91ac3ed0bf5437ff38f07d2179a9e7a130835c4d0d1be49fa2c563f0e8bd1"
 P01_WEBVIEW2_START = "# Official Microsoft WebView2 runtime detection uses registry pv, not Edge browser presence."

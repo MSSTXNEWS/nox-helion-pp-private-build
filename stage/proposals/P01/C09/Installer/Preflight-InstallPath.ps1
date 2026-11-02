@@ -10,17 +10,22 @@ foreach ($path in @($root, "$root.__p01_stage", "$root.__p01_previous", "$root._
     if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "P01_INSTALL_REPARSE_POINT:$path" }
   }
 }
-# Never stage through a junction in the user-controlled install path or its parents.
-$localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\')
+# Never stage through a junction in the install path OR an upstream
+# ancestor, including parents above LOCALAPPDATA (same policy as P01
+# Verify-Payload and Remove-InstalledPayload). No new installation rights.
 foreach ($target in @($root, "$root.__p01_stage", "$root.__p01_previous", "$root.__p01_rollback_saved")) {
   $cursor = [IO.Path]::GetFullPath($target).TrimEnd('\')
-  while ($cursor -and ($cursor -ieq $localRoot -or $cursor.StartsWith($localRoot+'\', [StringComparison]::OrdinalIgnoreCase))) {
+  while ($cursor) {
     if (Test-Path -LiteralPath $cursor) {
-      $node = Get-Item -LiteralPath $cursor -Force
-      if (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw "P01_INSTALL_REPARSE_ANCESTOR:$cursor" }
+      $node = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+      if (-not $node.PSIsContainer -or
+          (($node.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw "P01_INSTALL_REPARSE_ANCESTOR:$cursor"
+      }
     }
-    if ($cursor -ieq $localRoot) { break }
-    $cursor = [IO.Path]::GetDirectoryName($cursor)
+    $next = [IO.Path]::GetDirectoryName($cursor)
+    if ([string]::IsNullOrEmpty($next) -or $next -ceq $cursor) { break }
+    $cursor = $next
   }
 }
 # Verify the existing installer-owned marker before allowing an update; a filename alone is not proof.

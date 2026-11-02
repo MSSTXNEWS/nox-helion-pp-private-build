@@ -166,7 +166,7 @@ def bridge_candidate_gate()->dict:
             "T06_WEBVIEW2_ORIGINAL_NSIS_PREFLIGHT_NOT_STAGED")
     staged_text=staged_preflight.read_text("utf-8-sig")
     require(source.get("webview2_p01_source_git_blob")==
-                "62ffd119d5dd4260eb69b9a3cff756f548a78ac1" and
+                "e683e30b4e6fc32c31652061c569d6ce77c2cb2e" and
             re.fullmatch("[0-9a-f]{64}",str(source.get("webview2_p01_preflight_sha256",""))) and
             source["webview2_p01_preflight_sha256"]==sha(staged_preflight) and
             "[Microsoft.Win32.RegistryView]::Registry32" in staged_text and
