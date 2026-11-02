@@ -19,7 +19,7 @@ ADDONS=(
     ('coordination/e06/e06_native_stdio_owner.py', 'helion/e06_native_stdio_owner.py', 'f46893ad141168843d684f471d6ad0f0060da8dc'),
     ('src/nox_selfbuilder/a1_native_command.py', 'nox_selfbuilder/a1_native_command.py', '894ed4b977696a543872c50ce8cf48922b52e1b0'),
     ('src/nox_selfbuilder/a1_existing_components.py', 'nox_selfbuilder/a1_existing_components.py', 'eac8f3ffd834e4cf8d5e99996d3b7a55a45b70cc'),
-    ('src/nox_selfbuilder/firstboot_coordinator.py', 'nox_selfbuilder/firstboot_coordinator.py', '8c3051d9d785e308d52c31b3674c3a06487b4734'),
+    ('src/nox_selfbuilder/firstboot_coordinator.py', 'nox_selfbuilder/firstboot_coordinator.py', '19ab8cd3097617c05e4a6027f4540441c918c77f'),
     ('src/nox_selfbuilder/acquisition_library.py', 'nox_selfbuilder/acquisition_library.py', 'df8f2c8259efdf3d3fff5a344164bced13144fab'),
     ('src/nox_selfbuilder/worms.py', 'nox_selfbuilder/worms.py', '28d788ee753665785ec56f81b7b577b2a3ba4d07'),
     ('src/nox_selfbuilder/worm_autopilot.py', 'nox_selfbuilder/worm_autopilot.py', '7f71acc6836826ed1a04b566486adbd43eba3f95'),
