@@ -62,8 +62,9 @@ def stage(archive: Path, out: Path) -> dict:
                 if root is None:
                     continue
                 relative = PurePosixPath(name[len(root):])
+                limit = 200_000_000 if mappings[root] == "nuget-feed/" else 80_000_000
                 if (not relative.parts or relative.suffix.lower() in LICENSE_FORBIDDEN or
-                        ":" in name or name in seen or entry.file_size > 80_000_000):
+                        ":" in name or name in seen or entry.file_size > limit):
                     raise ValueError("BOOST_CACHE_ENTRY_HOLD")
                 seen.add(name)
                 # ZIP links/special files are not permitted.
