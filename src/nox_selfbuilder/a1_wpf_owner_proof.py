@@ -167,6 +167,14 @@ class A1WpfOwnerProof:
             raise A1OwnerProofHold('A1_WPF_OWNER_RECEIPT_INVALID') from None
         if not hmac.compare_digest(expected, ticket['mac']):
             raise A1OwnerProofHold('A1_WPF_OWNER_MAC_INVALID')
+        # Native STOP may revoke consent while clock/SID/HMAC callbacks run.
+        # This second witness does not replace a native action-boundary check.
+        try:
+            post_epoch = self._stop_epoch()
+        except Exception as exc:
+            raise A1OwnerProofHold('A1_NATIVE_STOP_EPOCH_UNAVAILABLE') from exc
+        if type(post_epoch) is not int or post_epoch != current_epoch:
+            raise A1OwnerProofHold('A1_STOP_EPOCH_REVOKED')
         nonce = ticket['nonce']
         if nonce in self._seen or len(self._seen) >= 8192:
             raise A1OwnerProofHold('A1_WPF_OWNER_NONCE_REPLAY')

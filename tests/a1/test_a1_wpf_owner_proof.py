@@ -63,6 +63,39 @@ class ReceiptTests(unittest.TestCase):
     def test_late_invalid_epoch_callback_denied(self):
         self.v=A1WpfOwnerProof(KEY,RUN,self.path,sid_provider=lambda:SID,clock=lambda:self.t,stop_epoch=lambda:None)
         self.denies(self.ticket())
+    def test_stop_revoked_during_clock_callback_does_not_consume_nonce(self):
+        signed=self.ticket()
+        def revoke_during_validation():
+            self.epoch+=1
+            return self.t
+        self.v._clock=revoke_during_validation
+        with self.assertRaisesRegex(A1OwnerProofHold,'A1_STOP_EPOCH_REVOKED'):
+            self.v.verify(signed,signed['action'])
+        self.assertEqual(self.v._seen,set())
+
+    def test_native_epoch_witness_lost_after_hmac_holds(self):
+        signed=self.ticket()
+        count=[0]
+        def one_shot_epoch():
+            count[0]+=1
+            if count[0]==1:return self.epoch
+            raise OSError('native witness unavailable')
+        self.v._stop_epoch=one_shot_epoch
+        with self.assertRaisesRegex(A1OwnerProofHold,'A1_NATIVE_STOP_EPOCH_UNAVAILABLE'):
+            self.v.verify(signed,signed['action'])
+        self.assertEqual(self.v._seen,set())
+
+    def test_post_signature_epoch_bool_is_not_an_integer(self):
+        signed=self.ticket()
+        count=[0]
+        def invalid_second_epoch():
+            count[0]+=1
+            return 0 if count[0]==1 else False
+        self.v._stop_epoch=invalid_second_epoch
+        with self.assertRaisesRegex(A1OwnerProofHold,'A1_STOP_EPOCH_REVOKED'):
+            self.v.verify(signed,signed['action'])
+        self.assertEqual(self.v._seen,set())
+
     def test_no_page_authority(self):self.denies({**self.ticket(),'nativeConsent':True})
     def test_nongenuine_receipt_action(self):self.denies(self.ticket(action='system.pc_control'),'system.pc_control')
     def test_key_popped_from_child_env(self):
