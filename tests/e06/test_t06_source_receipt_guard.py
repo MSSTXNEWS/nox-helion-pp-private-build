@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 MODULE = Path(__file__).resolve().parents[2] / "coordination/e06/t06_source_receipt_guard.py"
 SPEC = importlib.util.spec_from_file_location("t06_receipt_guard", MODULE)
@@ -114,6 +115,36 @@ class CandidateReceiptTests(unittest.TestCase):
         self.compile.write_bytes(b" " * 131073)
         with self.assertRaisesRegex(RuntimeError, "RECEIPT_MISSING"):
             self.verify()
+
+
+    def _race_leaf_to_symlink_after_lstat(self, target):
+        """Simulate a reparse swap *after* the original leaf lstat returned."""
+        backup = target.with_name(target.name + ".original")
+        original_lstat = Path.lstat
+        switched = [False]
+
+        def swap_on_lstat(path, *args, **kwargs):
+            observed = original_lstat(path, *args, **kwargs)
+            if path == target and not switched[0]:
+                target.rename(backup)
+                try:
+                    target.symlink_to(backup)
+                except (NotImplementedError, OSError):
+                    backup.rename(target)
+                    self.skipTest("symlink creation unavailable")
+                switched[0] = True
+            return observed
+        return swap_on_lstat
+
+    def test_receipt_symlink_swap_between_lstat_and_read_denied(self):
+        with patch.object(Path, "lstat", self._race_leaf_to_symlink_after_lstat(self.compile)):
+            with self.assertRaisesRegex(RuntimeError, "RECEIPT_MISSING_OR_UNTRUSTED"):
+                self.verify()
+
+    def test_setup_symlink_swap_between_lstat_and_hash_denied(self):
+        with patch.object(Path, "lstat", self._race_leaf_to_symlink_after_lstat(self.setup)):
+            with self.assertRaisesRegex(RuntimeError, "SETUP_IDENTITY"):
+                self.verify()
 
 
 if __name__ == "__main__":
