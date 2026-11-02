@@ -40,6 +40,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12.10'
@@ -63,6 +64,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12.10'
@@ -167,6 +169,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12.10'
@@ -197,7 +200,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'NATIVE_BUILD_SOURCE_TREE_UNAVAILABLE' }
           if ($build.schema -cne 'NOX-ONEHOST-PYTHON-BUILD-V1' -or
               $build.release_accepted -isnot [bool] -or $build.bundled_runtime_data_verified -isnot [bool] -or
-              $build.source_commit -cne '${{ github.sha }}' -or $build.source_tree -cne $tree -or
+              $build.source_commit -cne '${{ github.event.pull_request.head.sha || github.sha }}' -or $build.source_tree -cne $tree -or
               $build.release_accepted -ne $false -or $build.bundled_runtime_data_verified -ne $true -or
               @($build.runtime_data_files).Count -lt 1 -or
               [IO.Path]::GetFullPath([string]$build.python_exe) -ine $backend -or
@@ -206,7 +209,7 @@ jobs:
           }
           $nativeProof='work/candidate/NATIVE_ONEHOST_SMOKE.json'
           $smokeArgs=@('coordination/e06/native_onehost_smoke.py','--exe',$backend,
-              '--build-receipt',$buildReceipt,'--source-head','${{ github.sha }}','--output',$nativeProof)
+              '--build-receipt',$buildReceipt,'--source-head','${{ github.event.pull_request.head.sha || github.sha }}','--output',$nativeProof)
           if (-not [string]::IsNullOrWhiteSpace($env:NOX_NATIVE_SMOKE_MODEL)) {
             $smokeArgs+=@('--model',$env:NOX_NATIVE_SMOKE_MODEL)
           }
@@ -319,7 +322,7 @@ jobs:
             OneHostReceipt=(Join-Path $out 'ONEHOST_DIAGNOSTIC_RECEIPT.json')
             SetupExe=(Join-Path $out 'NOX-HELION-V16-DIAGNOSTIC-SETUP.exe')
             PublishedExe=(Join-Path $out 'payload/NOX.P01.Shell.exe')
-            SourceCommitSha='${{ github.sha }}'
+            SourceCommitSha='${{ github.event.pull_request.head.sha || github.sha }}'
             Output=(Join-Path $out 'E07_BUILT_HANDOFF.json')
             Phase='BUILT'
           }

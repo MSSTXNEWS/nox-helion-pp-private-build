@@ -14,6 +14,13 @@ class ExactWindowsRunner(unittest.TestCase):
     def test_diagnostic_linux_gate_not_release_block_for_selfhost(self):
         self.assertIn("if: vars.NOX_WINDOWS_RUNNER != 'self-hosted'",self.yaml)
         self.assertIn("runs-on: ubuntu-24.04",self.yaml)
+    def test_pr_head_used_for_all_three_checkouts_and_windows_receipts(self):
+        # pull_request default checkout/GITHUB_SHA are synthetic merge refs, not PR HEAD.
+        head='${{ github.event.pull_request.head.sha || github.sha }}'
+        self.assertEqual(self.yaml.count('ref: '+head),3)
+        self.assertEqual(self.yaml.count("'"+head+"'"),3)
+        self.assertEqual(self.yaml.count('persist-credentials: false'),3)
+        self.assertNotIn("'${{ github.sha }}'",self.yaml)
     def test_existing_source_and_installer_steps_preserved(self):
         self.assertIn('visual-source-stage:',self.yaml)
         self.assertIn('diagnostic-onehost:',self.yaml)
