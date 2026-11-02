@@ -13,6 +13,9 @@ from ctypes import wintypes
 
 _GW_OWNER = 4
 _WPF_CLASS_PREFIX = "HwndWrapper["
+# A zero-sized WPF helper HWND is not evidence that the real NOX GUI opened.
+_MIN_GUI_CLIENT_WIDTH = 160
+_MIN_GUI_CLIENT_HEIGHT = 100
 
 
 def _same_live_wpf_window(hwnd: int, pid: int, user32: object) -> bool:
@@ -29,8 +32,17 @@ def _same_live_wpf_window(hwnd: int, pid: int, user32: object) -> bool:
         return False
     klass = ctypes.create_unicode_buffer(260)
     length = user32.GetClassNameW(hwnd, klass, len(klass))
-    return (type(length) is int and 0 < length < len(klass) and
-            klass.value.startswith(_WPF_CLASS_PREFIX))
+    if (type(length) is not int or not (0 < length < len(klass)) or
+            not klass.value.startswith(_WPF_CLASS_PREFIX)):
+        return False
+    # IsWindowVisible can still be true for 1x1 HWND helpers/splash windows.
+    # Require a meaningful client area from the SAME HWND (also rechecked
+    # after EnumWindows). This is a source witness, never independent E07.
+    rect = wintypes.RECT()
+    if not user32.GetClientRect(hwnd, ctypes.byref(rect)):
+        return False
+    return (rect.right - rect.left >= _MIN_GUI_CLIENT_WIDTH and
+            rect.bottom - rect.top >= _MIN_GUI_CLIENT_HEIGHT)
 
 
 def _visible_window_for_pid(pid: int, user32: object, callback_type: object) -> int | None:
@@ -74,6 +86,8 @@ def find_visible_wpf_hwnd(pid: int) -> int | None:
         user32.GetWindow.restype = wintypes.HWND
         user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
         user32.GetClassNameW.restype = ctypes.c_int
+        user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+        user32.GetClientRect.restype = wintypes.BOOL
         return _visible_window_for_pid(pid, user32, callback_type)
     except (AttributeError, OSError, TypeError, ValueError):
         return None
