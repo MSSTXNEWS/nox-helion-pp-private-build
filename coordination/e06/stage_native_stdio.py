@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 import sys
+import stat
 
 ROOT=Path(__file__).resolve().parents[2]
 ORIGINAL_APP_SHA256="e43a1d1ef6875b75f4d0da1434464f675a77f3fc592941e2bb7f3410dae7cdae"
@@ -74,6 +75,33 @@ STAGED_MODE="""    if args.native_stdio:
             return serve_existing_store(original_store, args.run_id, args.data_dir)
 """
 
+def refuse_reparse_components(root: Path, target: Path) -> None:
+    """Reject symlink/junction ancestors in the ORIGINAL disposable stage tree.
+
+    A pinned app.py hash is insufficient if helion/ is a reparse point to an
+    external same-byte original. Check source and destination ancestry before
+    every stage operation; native Windows installation still requires E07.
+    """
+    try:
+        parts = target.relative_to(root).parts
+    except ValueError as exc:
+        raise RuntimeError("E06_NATIVE_STAGING_OUTSIDE_ROOT_HOLD") from exc
+    current = root
+    for name in parts:
+        if name in (".", ".."):
+            raise RuntimeError("E06_NATIVE_STAGING_NONCANONICAL_PATH_HOLD")
+        current = current / name
+        try:
+            metadata = current.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISLNK(metadata.st_mode) or
+            bool(getattr(metadata, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))):
+            raise RuntimeError("E06_NATIVE_STAGING_REPARSE_HOLD:" +
+                               str(current.relative_to(root)))
+
+
 def git_blob(raw:bytes)->str:
     return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 
@@ -90,6 +118,7 @@ def pinned_bytes(src:Path, expected:str)->bytes:
 def stage(source:Path)->dict:
     source=source.resolve(strict=True)
     app=source/"helion/app.py"
+    refuse_reparse_components(source,app)
     if not app.is_file() or app.is_symlink():
         raise RuntimeError("E06_ORIGINAL_APP_SOURCE_MISSING")
     original=app.read_bytes()
@@ -102,6 +131,8 @@ def stage(source:Path)->dict:
     for rel,dest,blob in ADDONS:
         src=ROOT/rel
         target=source/dest
+        refuse_reparse_components(ROOT,src)
+        refuse_reparse_components(source,target)
         if target.exists() or target.is_symlink() or not target.resolve(strict=False).is_relative_to(source):
             raise RuntimeError("E06_NATIVE_SOURCE_COLLISION_OR_ESCAPE")
         sources.append((target,pinned_bytes(src,blob)))
@@ -123,9 +154,14 @@ def stage(source:Path)->dict:
                     str(target.relative_to(source))) from exc
     # All source/addon checks complete before writing any disposable output.
     for target,data in sources:
+        refuse_reparse_components(source,target)
         target.parent.mkdir(parents=True,exist_ok=True)
+        refuse_reparse_components(source,target)
         with target.open("xb") as f:f.write(data)
+        refuse_reparse_components(source,target)
+    refuse_reparse_components(source,app)
     app.write_bytes(updated.encode("utf-8"))
+    refuse_reparse_components(source,app)
     if app.read_bytes()!=updated.encode("utf-8"):
         raise RuntimeError("E06_NATIVE_ORIGINAL_APP_READBACK_HOLD")
     return dict(original_app_sha256=ORIGINAL_APP_SHA256,
