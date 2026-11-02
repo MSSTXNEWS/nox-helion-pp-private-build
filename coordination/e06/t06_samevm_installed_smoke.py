@@ -20,6 +20,7 @@ import struct
 import subprocess
 import sys
 import time
+from t06_uninstall_admission import owned_payload_paths, verify_original_uninstall
 
 ROOT=Path(__file__).resolve().parents[2]
 ON_GITHUB=os.environ.get("GITHUB_ACTIONS")=="true"
@@ -751,12 +752,17 @@ def main()->int:
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
                 marker.read_bytes()==signature,
                 "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
+        owned_files=owned_payload_paths(
+            install,strict_receipt(install/"payload.sha256.json",
+                                  "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
         uninstall=install/"Uninstall.exe"
         require(regular(uninstall),"T06_ORIGINAL_UNINSTALLER_MISSING")
         uninstalled=run([str(uninstall),"/S"],220)
         report["installer_lifecycle"]["uninstall"]=uninstalled
-        require(uninstalled["code"]==0 and not wpf.exists() and not backend.exists(),
-                "T06_CONSERVATIVE_UNINSTALL_PROGRAM_FILES_REMAIN")
+        require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
+        verify_original_uninstall(install,owned_files)
+        report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
+        report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
         require(marker.is_file() and marker.read_bytes()==signature,
                 "T06_ORIGINAL_NSIS_UNINSTALL_USER_DATA_LOSS")
         report["phase"]="INSTALLED_GUI_IPC_UPDATE_ROLLBACK_NOLOSS_PASS_NOT_E07"
