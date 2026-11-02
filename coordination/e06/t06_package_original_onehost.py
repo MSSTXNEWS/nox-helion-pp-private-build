@@ -22,12 +22,17 @@ def sha(path):
 def need(ok,msg):
     if not ok:raise RuntimeError(msg)
 def verify_nsis_setup(setup: Path) -> dict:
-    """Reject tiny, redirected or non-PE NSIS output before candidate evidence."""
+    """Reject redirected or stale PE output; hash the SAME admitted file handle."""
     need(setup.is_file() and not setup.is_symlink(),
          "T06_NSIS_SETUP_MISSING_OR_REDIRECTED")
-    size=setup.stat().st_size
-    need(size>=1024*1024,"T06_NSIS_SETUP_TOO_SMALL_OR_TRUNCATED")
+    initial=setup.stat()
+    need(initial.st_size>=1024*1024,"T06_NSIS_SETUP_TOO_SMALL_OR_TRUNCATED")
     with setup.open("rb") as stream:
+        opened=os.fstat(stream.fileno())
+        need((opened.st_dev,opened.st_ino,opened.st_size)==
+             (initial.st_dev,initial.st_ino,initial.st_size),
+             "T06_NSIS_SETUP_REPLACED_BEFORE_OPEN")
+        size=opened.st_size
         dos=stream.read(64)
         need(len(dos)==64 and dos[:2]==b"MZ","T06_NSIS_SETUP_NOT_WINDOWS_PE")
         pe_offset=int.from_bytes(dos[60:64],"little")
@@ -35,7 +40,19 @@ def verify_nsis_setup(setup: Path) -> dict:
              "T06_NSIS_SETUP_PE_OFFSET_INVALID")
         stream.seek(pe_offset)
         need(stream.read(4)==b"PE\x00\x00","T06_NSIS_SETUP_PE_SIGNATURE_INVALID")
-    return {"bytes":size,"sha256":sha(setup)}
+        stream.seek(0)
+        digest=hashlib.sha256()
+        total=0
+        while chunk:=stream.read(1024*1024):
+            digest.update(chunk)
+            total+=len(chunk)
+        after_fd=os.fstat(stream.fileno())
+    final=setup.stat()
+    stable=lambda s:(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+    need(not setup.is_symlink() and total==size and
+         stable(initial)==stable(opened)==stable(after_fd)==stable(final),
+         "T06_NSIS_SETUP_CHANGED_DURING_VERIFY")
+    return {"bytes":total,"sha256":digest.hexdigest()}
 
 def download_artifact(relative,target):
     """Transfer same-job candidate bytes locally, never via GitLab artifact HTTP.
