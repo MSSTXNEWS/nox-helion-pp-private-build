@@ -163,6 +163,60 @@ def download_artifact(relative,target):
     need(sha(origin)==sha(target),"T06_LOCAL_ARTIFACT_COPY_SHA_HOLD")
 
 
+# Exact reviewed original P01 installed-file verifier, not a new backend/installer.
+# Original ZIP729 remains immutable. Only the disposable R11 Installer copy changes.
+P01_INSTALLED_VERIFIER_GIT_BLOB = "2fe86cad7e96eaf1a67354dfce3cf3f96dd33dfa"
+
+def _git_blob(raw):
+    return hashlib.sha1(b"blob "+str(len(raw)).encode("ascii")+b"\0"+raw).hexdigest()
+
+def stage_reviewed_installed_payload_verifier(owner_script, reviewed_script):
+    """Bind the approved C09 verifier to both existing NSIS and installed smoke.
+
+    The verified ZIP may contain an older Verify-Payload without the explicit
+    -AllowInstalledMetadata contract. Never edit that ZIP or a live installation.
+    Reject unknown legacy preimages, changed C09 source, and redirected paths.
+    """
+    for item in (owner_script, *owner_script.parents,
+                 reviewed_script, *reviewed_script.parents):
+        need(not item.is_symlink() and
+             not getattr(item, "is_junction", lambda: False)(),
+             "T06_P01_VERIFY_PATH_REPARSE_HOLD")
+    need(owner_script.is_file() and reviewed_script.is_file() and
+         owner_script.parent.name == "Installer" and
+         512 <= owner_script.stat().st_size <= 262144 and
+         512 <= reviewed_script.stat().st_size <= 262144,
+         "T06_P01_VERIFY_ORIGINAL_OR_REVIEWED_SOURCE_HOLD")
+    original = owner_script.read_bytes()
+    approved_raw = reviewed_script.read_bytes()
+    need(b"\r" not in approved_raw.replace(b"\r\n", b""),
+         "T06_P01_VERIFY_REVIEWED_LINE_ENDINGS_HOLD")
+    canonical = approved_raw.replace(b"\r\n", b"\n")
+    need(_git_blob(canonical) == P01_INSTALLED_VERIFIER_GIT_BLOB,
+         "T06_P01_VERIFY_APPROVED_GIT_BLOB_HOLD")
+    try:
+        old_text = original.decode("utf-8-sig")
+        approved_text = canonical.decode("utf-8-sig")
+    except UnicodeError as exc:
+        raise RuntimeError("T06_P01_VERIFY_ENCODING_HOLD") from exc
+    need(all(mark in old_text for mark in (
+         "P01_PAYLOAD_VERIFY_FAILED", "payload.sha256.json", "SHA256")),
+         "T06_P01_VERIFY_ARCHIVED_SOURCE_UNRECOGNIZED_HOLD")
+    need(all(mark in approved_text for mark in (
+         "[switch]$AllowInstalledMetadata", "Assert-P01UniqueManifestMembers",
+         "P01_PAYLOAD_VERIFY_FAILED", "Get-FileHash", "nox-p01-owned.txt",
+         "Uninstall.exe", "P01_PAYLOAD_SHA256_PASS")),
+         "T06_P01_VERIFY_APPROVED_POLICY_INCOMPLETE_HOLD")
+    changed = original != canonical
+    if changed:
+        owner_script.write_bytes(canonical)
+    need(_git_blob(owner_script.read_bytes()) == P01_INSTALLED_VERIFIER_GIT_BLOB,
+         "T06_P01_VERIFY_STAGED_READBACK_HOLD")
+    return {"reviewed_git_blob": P01_INSTALLED_VERIFIER_GIT_BLOB,
+            "changed_disposable_R11": changed,
+            "installed_metadata_switch_pinned": True,
+            "release_accepted": False}
+
 # Exact reviewed P01 32/64-bit WebView2 Evergreen registry-source fix.
 # Stage only into disposable ORIGINAL R11, never into ZIP729 or installed NOX.
 P01_REVIEWED_PREFLIGHT_GIT_BLOB = "e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
@@ -434,6 +488,14 @@ def build(root,staged):
         Path(__file__).resolve().parents[2]/"stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1")
     print("T06_ORIGINAL_R11_WEBVIEW2_NATIVE_PREFLIGHT_STAGE "+
           json.dumps(webview_proof,sort_keys=True),flush=True)
+    # Both NSIS fresh-stage and installed/rollback checks use this SAME
+    # original C09 source-locked verifier; never modify immutable ZIP729.
+    verifier_proof=stage_reviewed_installed_payload_verifier(
+        installer_dir/"Verify-Payload.ps1",
+        Path(__file__).resolve().parents[2]/
+        "stage/proposals/P01/C09/Installer/Verify-Payload.ps1")
+    print("T06_P01_INSTALLED_VERIFIER_PINNED_SOURCE_ONLY "+
+          json.dumps(verifier_proof,sort_keys=True),flush=True)
     proof=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
         "-ExecutionPolicy","Bypass","-File",
         str(installer_dir/"Verify-Payload.ps1"),"-Root",str(payload),
@@ -472,6 +534,7 @@ def build(root,staged):
          "wpf_source_compilation":"PASS","wpf_installed_interactive_qa":"NOT_RUN",
          "e07":"NOT_ACCEPTED","release_accepted":False,
          "webview2_p01_preflight_sha256":webview_proof["sha256"],
+         "installed_owner_verifier":verifier_proof,
          "webview2_p01_source_git_blob":webview_proof["source_git_blob"],
          "webview2_e06_donor_git_blob":webview_proof.get("e06_donor_git_blob")}
     if megab_attestation is not None:
