@@ -13,8 +13,8 @@ EXPECTED_PART_GIT_BLOBS = (
 )
 EXPECTED_SHA256 = "ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
 BAD = re.compile(r'[<>:"|?*\x00-\x1f]')
-# Win32 also reserves COM¹/²/³ and LPT¹/²/³; fail closed on ZIP device aliases.
-RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$', re.I)
+# Win32 also reserves console streams CONIN$/CONOUT$ and COM¹/²/³, LPT¹/²/³.
+RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|CONIN\$|CONOUT\$|COM[1-9¹²³]|LPT[1-9¹²³])(?:\..*)?$', re.I)
 
 
 def _trusted_part_parent(part: pathlib.Path) -> None:
