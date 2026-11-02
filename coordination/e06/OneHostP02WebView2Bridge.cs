@@ -51,6 +51,10 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
     private int _stopPending;
     private int _disposed;
     private long _streamEpoch;
+    private bool _rendererAwaitingTrustedContent;
+    private bool _rendererReloadInitiated;
+    private bool _browserProcessLost;
+    private int _rendererReloadAttempts;
     private bool _externalMode;
     private bool _nativeReturnPending;
     private string? _externalHost;
@@ -253,13 +257,45 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
             _nativeReturnPending = false;
             _externalHost = null;
         }
+        if (_rendererAwaitingTrustedContent && _rendererReloadInitiated &&
+            !_browserProcessLost && !_externalMode && !_nativeReturnPending &&
+            ExactShellReturn(_web.Source))
+        {
+            _rendererAwaitingTrustedContent = false;
+            _rendererReloadInitiated = false;
+        }
         RevokeDocument();
     }
     private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
-        => RevokeDocument();
+    {
+        RevokeDocument();
+        if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
+        {
+            _browserProcessLost = true;
+            _rendererAwaitingTrustedContent = true;
+            _rendererReloadInitiated = false;
+            return;
+        }
+        if (e.ProcessFailedKind != CoreWebView2ProcessFailedKind.RenderProcessExited)
+            return;
+        _rendererAwaitingTrustedContent = true;
+        _rendererReloadInitiated = false;
+        try
+        {
+            if (Volatile.Read(ref _disposed) != 0 || _lifetime.IsCancellationRequested ||
+                _browserProcessLost || _externalMode || _nativeReturnPending ||
+                !NativeSidMatches() || !ExactShellReturn(_web.Source) ||
+                Interlocked.CompareExchange(ref _rendererReloadAttempts, 1, 0) != 0)
+                return;
+            _rendererReloadInitiated = true;
+            _web.Reload();
+        }
+        catch (Exception) { _rendererReloadInitiated = false; }
+    }
 
     private bool IsCurrent(string source, long epoch) =>
-        Volatile.Read(ref _disposed) == 0 && !_externalMode && !_lifetime.IsCancellationRequested &&
+        Volatile.Read(ref _disposed) == 0 && !_externalMode && !_browserProcessLost &&
+        !_rendererAwaitingTrustedContent && !_lifetime.IsCancellationRequested &&
         Interlocked.Read(ref _epoch) == epoch && ExactShellReturn(source) && ExactShellReturn(_web.Source) &&
         string.Equals(source, _web.Source, StringComparison.Ordinal);
 
@@ -280,8 +316,8 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
 
     private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        if (Volatile.Read(ref _disposed) != 0 || _externalMode ||
-            !ExactShellReturn(e.Source) || !ExactShellReturn(_web.Source))
+        if (Volatile.Read(ref _disposed) != 0 || _externalMode || _browserProcessLost ||
+            _rendererAwaitingTrustedContent || !ExactShellReturn(e.Source) || !ExactShellReturn(_web.Source))
             return;
         var source = e.Source;
         var epoch = Interlocked.Read(ref _epoch);
