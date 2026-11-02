@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -99,10 +100,16 @@ def _receipt(path: Path) -> dict:
         raise RuntimeError("T06_SOURCE_RECEIPT_MISSING_OR_UNTRUSTED") from exc
     def reject_nonfinite(token):
         raise ValueError("non-JSON constant: " + token)
+    def parse_finite_float(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("nonfinite JSON number")
+        return value
     try:
         result = json.loads(raw.decode("utf-8"), object_pairs_hook=reject_duplicate,
+                            parse_float=parse_finite_float,
                             parse_constant=reject_nonfinite)
-    except (ValueError, UnicodeError) as exc:
+    except (ValueError, UnicodeError, OverflowError) as exc:
         raise RuntimeError("T06_SOURCE_RECEIPT_INVALID_JSON") from exc
     if type(result) is not dict:
         raise RuntimeError("T06_SOURCE_RECEIPT_INVALID_OBJECT")
