@@ -146,7 +146,15 @@ class A1NativeCommand:
                     raise A1NativeHold('A1_NATIVE_ALREADY_BOUND_NO_DOUBLE_BOOT')
                 # Bind the actual WPF decision to the SAME authenticated generation.
                 # STOP->RESET or HEAD rotation while its dialog is open revokes consent.
-                consent_epoch, consent_head = self._gate(session, 'evolution.autonomy.read')
+                # Snapshot STOP/source first, but do NOT require the native ACL
+                # consent bit before showing the actual WPF permission dialog.
+                if self._stopped() is not False:
+                    raise A1NativeHold('A1_NATIVE_STOP_OR_UNKNOWN')
+                consent_epoch, consent_head = self._epoch(), self._head()
+                if (type(consent_epoch) is not int or consent_epoch < 0 or
+                        type(consent_head) is not str or
+                        not _HEAD.fullmatch(consent_head)):
+                    raise A1NativeHold('A1_NATIVE_EPOCH_OR_SOURCE_HOLD')
                 if self._consent(session, action) is not True:
                     raise A1NativeHold('A1_FRESH_NATIVE_WPF_CONSENT_REQUIRED')
                 if self._scope(session) != scope:

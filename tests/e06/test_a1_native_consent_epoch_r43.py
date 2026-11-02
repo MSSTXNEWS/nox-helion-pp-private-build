@@ -47,6 +47,16 @@ class NativeConsentEpoch(unittest.TestCase):
         self.assertEqual(self.boot()["state"], "READY_FOR_EXISTING_IDLE_TICK")
         self.assertEqual(self.builder.calls, ["bind", "boot"])
         self.assertEqual(self.factory_calls, 1)
+    def test_wpf_prompt_precedes_acl_confirmation(self):
+        # Some real owners update the ACL consent bit only after dialog YES.
+        approved = {"value": False}
+        self.command._authorize = lambda *a: approved["value"]
+        def approve(*a):
+            approved["value"] = True
+            return True
+        self.consent = approve
+        self.assertEqual(self.boot()["state"], "READY_FOR_EXISTING_IDLE_TICK")
+        self.assertEqual(self.builder.calls, ["bind", "boot"])
     def test_stop_reset_during_consent_never_regrants_old_dialog(self):
         def change(*a):
             self.owner["stopped"] = True
