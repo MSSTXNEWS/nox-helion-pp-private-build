@@ -74,6 +74,28 @@ def canonical_owner_manifest():
         "T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED")
     return tuple(entries)
 
+def _owner_stage_plain_ancestors(path, allow_missing=False):
+    """Deny symlink/junction/reparse ancestors before source or R11 staging.
+
+    A SHA-identical file reached through a redirected ancestor is not proof
+    that the canonical owner path or disposable installer destination is safe.
+    """
+    for node in (path, *path.parents):
+        try:
+            info=node.lstat()
+        except FileNotFoundError:
+            if allow_missing:
+                continue
+            return False
+        except OSError:
+            return False
+        if (stat.S_ISLNK(info.st_mode) or
+                (getattr(info, "st_file_attributes", 0) &
+                 getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)) or
+                getattr(node, "is_junction", lambda: False)()):
+            return False
+    return True
+
 def stage_current_owner_components(r11):
     """Preflight ALL original blobs before adding any file to disposable R11."""
     entries=canonical_owner_manifest()
@@ -90,10 +112,12 @@ def stage_current_owner_components(r11):
                 relative.startswith(("Packages/P02/","Packages/P03/","coordination/e06/")),
                 "T06_CANONICAL_OWNER_STAGE_UNTRUSTED_PATH")
         origin=ROOT.joinpath(*parts.parts)
-        require(origin.is_file() and not origin.is_symlink() and
+        require(origin.is_file() and _owner_stage_plain_ancestors(origin) and
                 origin.resolve(strict=True).is_relative_to(repo),
                 "T06_CANONICAL_OWNER_COMPONENT_MISSING_OR_REDIRECTED:"+relative)
         original=origin.read_bytes()
+        require(_owner_stage_plain_ancestors(origin),
+                "T06_CANONICAL_OWNER_COMPONENT_MISSING_OR_REDIRECTED:"+relative)
         staged=original
         if git_blob(staged)!=pin:
             require(b"\r\n" in original and
@@ -103,15 +127,20 @@ def stage_current_owner_components(r11):
         require(git_blob(staged)==pin,
                 "T06_CANONICAL_OWNER_COMPONENT_SHA_HOLD:"+relative)
         target=r11.joinpath(*output.parts)
+        require(_owner_stage_plain_ancestors(target, allow_missing=True),
+                "T06_CANONICAL_OWNER_STAGE_DESTINATION_REDIRECTED:"+destination)
         require(not target.exists() and not target.is_symlink(),
                 "T06_CANONICAL_OWNER_COMPONENT_STAGE_COLLISION:"+destination)
         verified.append((target,staged,pin))
     # Only now write the reviewed complete P02/P03 source set; zero ZIP changes.
     for target,content,pin in verified:
         target.parent.mkdir(parents=True,exist_ok=True)
+        require(_owner_stage_plain_ancestors(target, allow_missing=True),
+                "T06_CANONICAL_OWNER_STAGE_DESTINATION_REDIRECTED:"+str(target))
         with target.open("xb") as destination:
             destination.write(content)
-        require(git_blob(target.read_bytes())==pin,
+        require(_owner_stage_plain_ancestors(target) and
+                git_blob(target.read_bytes())==pin,
                 "T06_CANONICAL_OWNER_COMPONENT_READBACK_HOLD:"+target.name)
     print("T06_ORIGINAL_E06_CANONICAL_NATIVE_P02_P03_STAGED",
           len(verified),"NO_ZIP_OR_OWNER_CHECKOUT_WRITE",flush=True)
