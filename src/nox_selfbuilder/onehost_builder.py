@@ -19,6 +19,13 @@ from .firstboot_coordinator import FirstBootCoordinator
 
 _HEAD=re.compile(r'^[a-f0-9]{40}(?:[a-f0-9]{24})?$')
 
+def _without_transient_preview(receipt):
+    """Retain durable S03 proof, never the raw source/diff/test preview."""
+    if not isinstance(receipt, dict) or 'preview' not in receipt:
+        return receipt
+    return {key: value for key, value in receipt.items() if key != 'preview'}
+
+
 class ManagedSource:
     def __init__(self,root):self.root=Path(root) if root is not None else None
     def git(self,*args):
@@ -245,7 +252,7 @@ class OneHostSelfBuilder:
         host=_EvolutionHost(self,session,tid,payload)
         def execute():
             result=EvolutionWorker(host,workspace=str(self.workspace)).tick()
-            return {'status':result.status,'task_id':tid,'receipt':result.receipt,'weights_updated':False}
+            return {'status':result.status,'task_id':tid,'receipt':_without_transient_preview(result.receipt),'weights_updated':False}
         ack=self.queue.submit_source(session,tid,execute)
         return {**ack,'ack':True,'run_id':'S03-'+str(tid),'source_head':payload['source_head']}
     def _import_sources(self,session,head):
@@ -311,7 +318,7 @@ class _EvolutionHost:
     def recall(self,*args):return self.service.recall(*args)
     def generate(self,*args):return self.service.coder(*args)
     def record_result(self,tid,status,receipt):
-        return self.service.queue.record(self.session,self.tid,status,{'status':status,'receipt':receipt,'weights_updated':False})
+        return self.service.queue.record(self.session,self.tid,status,{'status':status,'receipt':_without_transient_preview(receipt),'weights_updated':False})
     def finish_task(self,tid,status):
         # Completion is audit-only; original task is never marked OWNER ACCEPTED here.
         return self.service.queue.get(self.session,self.tid).get('state')==status
