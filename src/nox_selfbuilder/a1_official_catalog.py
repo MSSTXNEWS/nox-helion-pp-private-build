@@ -148,9 +148,17 @@ def probe_official_catalog(session, queries, *, source_head, current_head,
             raise WormHold('A1_CATALOG_ORIGINAL_PROVIDER_UNAVAILABLE') from exc
         _checked(native_stop, authorize, session, source_head, current_head,
                  stop_epoch, expected_stop_epoch)
-        out.extend(_parse(registry, name, payload))
+        # A native STOP/epoch/ACL grant can change while metadata is parsed,
+        # after the post-network witness. Never publish stale observations.
+        parsed = _parse(registry, name, payload)
+        _checked(native_stop, authorize, session, source_head, current_head,
+                 stop_epoch, expected_stop_epoch)
+        out.extend(parsed)
         if len(out) > MAX_RESULTS:
             raise WormHold('A1_CATALOG_RESULT_LIMIT')
+    # The last query has no next-iteration guard; check at the return boundary.
+    _checked(native_stop, authorize, session, source_head, current_head,
+             stop_epoch, expected_stop_epoch)
     return {'schema': 'NOX-A1-OFFICIAL-CATALOG-BATCH-v1',
             'source_head': source_head, 'candidates': out,
             'code_executed': False, 'models_installed': False,

@@ -28,7 +28,7 @@ ADDONS=(
     ('src/nox_selfbuilder/a1_initiative_bridge.py', 'nox_selfbuilder/a1_initiative_bridge.py', 'e11b9e2921368f32e76b859f64994312c4ac012d'),
     ('src/nox_selfbuilder/growth_sandbox.py', 'nox_selfbuilder/growth_sandbox.py', '2c708c2b4aa429e291b045f75d3d4f64521abdae'),
     ('src/nox_selfbuilder/growth_forge.py', 'nox_selfbuilder/growth_forge.py', 'ffdb0239ae54c4c1ac27d0eaceac5153ff6f8069'),
-    ('src/nox_selfbuilder/a1_official_catalog.py', 'nox_selfbuilder/a1_official_catalog.py', '1833e786023e06ef7a8b8a1abda134224d08601b'),
+    ('src/nox_selfbuilder/a1_official_catalog.py', 'nox_selfbuilder/a1_official_catalog.py', 'efa4f3c6f44875d90f6c74a914f062fa45d09517'),
     ('src/nox_selfbuilder/a1_wpf_owner_proof.py', 'nox_selfbuilder/a1_wpf_owner_proof.py', 'c35b0cac03a7df60133b230f6e0fe406e5f2cf84'),
     ('Packages/P02/worker-python/p02_native_ingress.py', 'p02_native_ingress.py', '3bb6dd7d507bc0a7c917a25025866321503fa5c6'),
     ('Packages/P02/worker-python/p02_framed_worker.py', 'p02_framed_worker.py', '3045af6e93586e393debae2520ea5c289a3b866d'),
