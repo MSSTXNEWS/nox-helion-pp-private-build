@@ -55,7 +55,10 @@ class A1NativeCommand:
         validate = getattr(session, 'validate', None)
         if not callable(validate):
             raise A1NativeHold('A1_NATIVE_SESSION_REQUIRED')
-        validate()
+        # An owner validator may explicitly reject without raising. None is
+        # the original success convention; False is a native denial, not a grant.
+        if validate() is False:
+            raise A1NativeHold('A1_NATIVE_SESSION_VALIDATION_REJECTED')
         scope = tuple(getattr(session, x, None) for x in
                       ('tenant', 'principal', 'chat_id'))
         if any(type(x) is not str or not 1 <= len(x) <= 128 for x in scope):
@@ -98,21 +101,24 @@ class A1NativeCommand:
 
         if action == 'selfbuilder.a1.status':
             # Status does not invoke code, models, web providers or write to S03.
-            current = self._stopped() is False
-            valid = (current and self._bound and self._owner_scope == scope
-                     and self._epoch() == self._bound_epoch
-                     and self._head() == self._bound_head)
-            if valid:
-                try:
+            # All trusted owner witnesses may be unavailable while STOP, GUI
+            # shutdown or the immutable source HEAD rotates. Status must stay
+            # read-only and fail closed instead of crashing the OneHost caller.
+            try:
+                valid = (self._stopped() is False and self._bound
+                         and self._owner_scope == scope
+                         and self._epoch() == self._bound_epoch
+                         and self._head() == self._bound_head)
+                if valid:
                     # The native callback may revoke STOP/epoch or switch HEAD
                     # while authorizing. A pre-callback snapshot cannot assert
-                    # ACTIVE after such a change (status must remain read-only).
+                    # ACTIVE after such a change.
                     valid = (self._authorize(session, 'evolution.autonomy.read') is True
                              and self._stopped() is False
                              and self._epoch() == self._bound_epoch
                              and self._head() == self._bound_head)
-                except Exception:
-                    valid = False  # Read-only status remains available as HOLD.
+            except Exception:
+                valid = False  # Broken native witness is HOLD, never ACTIVE.
             return {
                 'schema': 'NOX-A1-NATIVE-COMMAND-STATUS-v1',
                 'state': ('ACTIVE_NATIVE_BOOT_RECEIPT' if valid and

@@ -117,6 +117,32 @@ class Tests(unittest.TestCase):
         self.x._authorize = authorize
         self.assertEqual(self.go('selfbuilder.a1.status')['state'], 'HOLD')
 
+    def test_explicit_native_validate_false_is_denied_before_factory(self):
+        class Denied(Session):
+            def validate(self): return False
+        with self.assertRaisesRegex(A1NativeHold, 'A1_NATIVE_SESSION_VALIDATION_REJECTED'):
+            self.go('selfbuilder.a1.boot', Denied())
+        self.assertEqual(self.created, 0)
+        self.assertEqual(self.b.calls, [])
+
+    def test_read_only_status_broken_native_witness_is_hold(self):
+        self.boot()
+        for callback in ('_stopped', '_epoch', '_head'):
+            with self.subTest(callback=callback):
+                original = getattr(self.x, callback)
+                def unavailable():
+                    raise RuntimeError('NATIVE_WITNESS_UNAVAILABLE')
+                setattr(self.x, callback, unavailable)
+                try:
+                    receipt = self.go('selfbuilder.a1.status')
+                    self.assertEqual(receipt['state'], 'HOLD')
+                    self.assertFalse(receipt['native_bound'])
+                    self.assertEqual(receipt['boot_state'], 'NOT_VERIFIED')
+                    self.assertFalse(receipt['installed_windows_e07'])
+                finally:
+                    setattr(self.x, callback, original)
+        self.assertEqual(self.b.calls, ['bind', 'boot'])
+
     def test_source_receipts_not_windows_acceptance(self):
         self.boot();self.assertFalse(self.go('selfbuilder.a1.status')['installed_windows_e07'])
 
