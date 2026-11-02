@@ -44,6 +44,43 @@ def _plain_path(value, *, directory=True):
     return path.resolve(strict=directory)
 
 
+
+def _read_native_config_bytes(root, file):
+    """Read owner-local configuration from one bounded, stable file descriptor.
+
+    This configuration can select paths or jobs but NEVER grant owner capabilities.
+    """
+    _plain_path(str(root))
+    _plain_path(str(file), directory=False)
+    before = file.lstat()
+    if not stat.S_ISREG(before.st_mode) or before.st_size > 65536:
+        raise ValueError("E06_NATIVE_CONFIG_FORMAT_HOLD")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(file, flags)
+    try:
+        opened = os.fstat(fd)
+        identity = lambda s: (s.st_dev, s.st_ino, s.st_size,
+                              s.st_mtime_ns, s.st_ctime_ns)
+        if (not stat.S_ISREG(opened.st_mode) or
+                identity(before) != identity(opened)):
+            raise ValueError("E06_NATIVE_CONFIG_IDENTITY_HOLD")
+        raw = os.read(fd, 65537)
+        after = file.lstat()
+        finished = os.fstat(fd)
+        if (identity(opened) != identity(after) or
+                identity(opened) != identity(finished)):
+            raise ValueError("E06_NATIVE_CONFIG_IDENTITY_HOLD")
+        _plain_path(str(root))
+        _plain_path(str(file), directory=False)
+        if len(raw) > 65536:
+            raise ValueError("E06_NATIVE_CONFIG_FORMAT_HOLD")
+        if len(raw) != opened.st_size:
+            raise ValueError("E06_NATIVE_CONFIG_IDENTITY_HOLD")
+        return raw
+    finally:
+        os.close(fd)
+
+
 def load_native_config(data_dir):
     """Read owner-local configuration. It contains paths/job data, NEVER grants."""
     if data_dir is None:
@@ -53,11 +90,9 @@ def load_native_config(data_dir):
     if not file.exists():
         return {}
     _plain_path(str(file), directory=False)
-    info = file.stat()
-    if not stat.S_ISREG(info.st_mode) or info.st_size > 65536:
-        raise ValueError("E06_NATIVE_CONFIG_FORMAT_HOLD")
+    raw = _read_native_config_bytes(root, file)
     from p02_native_ingress import _reject_duplicate_fields, _reject_nonfinite, _finite_json_number
-    config = json.loads(file.read_text("utf-8"), object_pairs_hook=_reject_duplicate_fields,
+    config = json.loads(raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_fields,
                         parse_constant=_reject_nonfinite, parse_float=_finite_json_number)
     if (type(config) is not dict or config.get("version") != 1 or
             set(config) - {"version", "source_root", "source_paths", "candidate_workspace", "forge_root", "forge_jobs",
