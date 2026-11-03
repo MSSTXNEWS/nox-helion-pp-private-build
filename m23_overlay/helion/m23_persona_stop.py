@@ -7,6 +7,7 @@ and persisted in SQLite. Nothing here is a live model call.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import sqlite3
 import threading
@@ -66,11 +67,18 @@ class PersonaBuckets:
             conn.execute('''CREATE INDEX IF NOT EXISTS idx_persona_bucket
                 ON persona_bucket_turns(persona_id, id)''')
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self):
+        # Close on the way out. sqlite3's own context manager only commits,
+        # and an unclosed handle locks the file on Windows during test cleanup.
         conn = sqlite3.connect(self.path, timeout=5)
-        conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL')
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute('PRAGMA journal_mode=DELETE')
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
 
     def append(self, persona_id: str, role: str, body: str, *,
                generation: int, source: str) -> int:

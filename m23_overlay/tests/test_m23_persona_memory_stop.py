@@ -12,7 +12,7 @@ from helion.personas import PERSONAS
 
 class PersonaIsolationTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         self.path = Path(self.tmp.name) / 'buckets.sqlite3'
         self.p1 = PERSONAS[0].persona_id
@@ -67,7 +67,7 @@ class PersonaIsolationTests(unittest.TestCase):
 
 class StopGuardTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         self.p1 = PERSONAS[0].persona_id
         self.p2 = PERSONAS[1].persona_id
@@ -161,7 +161,7 @@ class HudTests(unittest.TestCase):
             self.root = tk.Tk()
         except tk.TclError:
             self.skipTest('DISPLAY_UNAVAILABLE')
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         self.addCleanup(self.root.destroy)
         self.p1 = PERSONAS[0].persona_id
@@ -228,7 +228,7 @@ class ShellBindingTests(unittest.TestCase):
             self.root = tk.Tk()
         except tk.TclError:
             self.skipTest('DISPLAY_UNAVAILABLE')
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         def _destroy_root():
             try:
