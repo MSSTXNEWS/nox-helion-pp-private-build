@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOX HELION · WOW</title>
+  <style>
+    :root {
+      --obsidian: #04060a;
+      --amber: #ffb86a;
+      --cyan: #5ce1ff;
+      --lava: #ff4d1a;
+      --mode: 1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--obsidian);
+      color: #f4f1ea;
+      font-family: "Segoe UI Variable", system-ui, sans-serif;
+      overflow: hidden;
+    }
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      perspective: 1200px;
+    }
+    /* Debris */
+    .debris {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .debris span {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: rgba(255,180,100,0.4);
+      border-radius: 50%;
+      animation: drift 12s linear infinite;
+    }
+    @keyframes drift {
+      0%   { transform: translateY(100vh) translateX(0); opacity: 0; }
+      10%  { opacity: 0.6; }
+      100% { transform: translateY(-10vh) translateX(40px); opacity: 0; }
+    }
+    /* HOME sun */
+    .home { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transition: opacity 0.6s, transform 0.8s; }
+    .home.hidden { opacity: 0; transform: scale(0.9); pointer-events: none; }
+    .sun {
+      width: 200px; height: 200px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #2a1208 0%, #0a0402 50%, #000 100%);
+      box-shadow: 0 0 40px rgba(255,70,20,0.4), inset 0 0 25px rgba(255,40,0,0.3);
+      animation: breathe 9s ease-in-out infinite;
+      cursor: pointer;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.04); }
+    }
+    /* MENU planet */
+    .menu {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.6s;
+    }
+    .menu.visible { opacity: 1; pointer-events: auto; }
+    .planet {
+      width: 180px; height: 180px; border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 25%, #3a1a08 0%, #1a0a04 40%, #000 100%);
+      box-shadow: 0 0 50px rgba(255,60,10,0.5), inset 0 0 30px rgba(255,40,0,0.4);
+      animation: rotate-slow 40s linear infinite;
+      cursor: pointer;
+    }
+    @keyframes rotate-slow { to { transform: rotate(360deg); } }
+    .asteroid {
+      position: absolute;
+      width: 48px; height: 36px;
+      background: radial-gradient(circle at 30% 30%, #4a2810, #1a0a04);
+      border-radius: 40% 60% 50% 50%;
+      box-shadow: 0 0 12px rgba(255,80,20,0.3);
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+    .asteroid:hover { transform: scale(1.15); }
+    .asteroid::after {
+      content: attr(data-label);
+      position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+      font-size: 0.6rem; color: var(--amber); white-space: nowrap;
+    }
+    /* Personas */
+    .personas {
+      position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 0.6rem;
+    }
+    .persona {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,180,100,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; color: var(--amber);
+      text-align: center; line-height: 1.1;
+    }
+    .persona.hold { opacity: 0.4; }
+    /* Controls */
+    .controls {
+      position: absolute; top: 1rem; right: 1rem;
+      display: flex; gap: 0.4rem; z-index: 10;
+    }
+    .controls button {
+      background: rgba(10,12,18,0.7);
+      border: 1px solid rgba(255,160,80,0.3);
+      color: var(--amber);
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    .controls button.active { border-color: var(--cyan); color: var(--cyan); }
+    /* AI state */
+    .state {
+      position: absolute; top: 1rem; left: 1rem;
+      font-size: 0.75rem; letter-spacing: 0.08em;
+      color: var(--amber);
+    }
+    .thinking .sun { box-shadow: 0 0 70px rgba(255,100,30,0.7), 0 0 30px var(--cyan); }
+    .error .sun { animation: flicker 0.3s infinite; }
+    .stop .sun { box-shadow: none; animation: none; filter: grayscale(0.6); }
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    body.eco .debris { display: none; }
+    body.eco .sun { animation: none; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="debris" id="debris"></div>
+  <div class="state" id="state">IDLE</div>
+  <div class="controls">
+    <button data-mode="max" class="active">MAX</button>
+    <button data-mode="balanced">BALANCED</button>
+    <button data-mode="eco">ECO</button>
+    <button data-state="thinking">Thinking</button>
+    <button data-state="error">Error</button>
+    <button data-state="stop">STOP</button>
+    <button data-state="idle">Idle</button>
+  </div>
+
+  <div class="scene">
+    <div class="home" id="home">
+      <div class="sun" id="sun" title="HELION — клик = MENU"></div>
+    </div>
+    <div class="menu" id="menu">
+      <div class="planet" id="planet" title="MENU — клик = HOME"></div>
+      <div class="asteroid" data-label="РАБОТА" style="top:20%; left:15%;"></div>
+      <div class="asteroid" data-label="ИНТЕЛЛЕКТ" style="top:25%; right:18%;"></div>
+      <div class="asteroid" data-label="ЗНАНИЯ" style="bottom:22%; left:20%;"></div>
+      <div class="asteroid" data-label="ОБУЧЕНИЕ" style="bottom:28%; right:16%;"></div>
+    </div>
+  </div>
+
+  <div class="personas">
+    <div class="persona">KV</div>
+    <div class="persona">AM</div>
+    <div class="persona">LA</div>
+    <div class="persona hold">EV<br>HOLD</div>
+    <div class="persona">CW</div>
+  </div>
+
+  <script>
+    const home = document.getElementById('home');
+    const menu = document.getElementById('menu');
+    const sun = document.getElementById('sun');
+    const planet = document.getElementById('planet');
+    const stateEl = document.getElementById('state');
+    const debris = document.getElementById('debris');
+
+    for (let i = 0; i < 24; i++) {
+      const s = document.createElement('span');
+      s.style.left = Math.random() * 100 + '%';
+      s.style.animationDelay = (Math.random() * 12) + 's';
+      s.style.animationDuration = (8 + Math.random() * 8) + 's';
+      debris.appendChild(s);
+    }
+
+    sun.addEventListener('click', () => {
+      home.classList.add('hidden');
+      menu.classList.add('visible');
+    });
+    planet.addEventListener('click', () => {
+      menu.classList.remove('visible');
+      home.classList.remove('hidden');
+    });
+
+    document.querySelectorAll('[data-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.body.className = btn.dataset.mode;
+        document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('[data-state]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const s = btn.dataset.state;
+        document.body.className = document.body.className.replace(/thinking|error|stop/g, '') + ' ' + s;
+        stateEl.textContent = s.toUpperCase();
+      });
+    });
+  </script>
+</body>
+</html>
