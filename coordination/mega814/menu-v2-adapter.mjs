@@ -70,14 +70,20 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
   }
   const section = catalogue.worlds.find(w => w.id === world.id);
   if (!section) throw new Error('NOX_MENU_V2_WORLD_NOT_FOUND');
-  const details = el('details', undefined, 'mega814-v2-section');
-  details.open = true;
-  details.append(el('summary', `MENU V2 · ${section.items.length} подразделов`));
+
+  // Static in-world screen, not a disclosure/dropdown. The approved asteroid
+  // selects the world; every subsection stays available as a visible button.
+  const details = el('section', undefined, 'mega814-v2-section');
+  details.setAttribute('aria-label', section.title + ' · MENU V2');
+  const heading = el('h3', section.title + ' · ' + section.items.length + ' ПОДРАЗДЕЛОВ',
+    'mega814-v2-section-title');
   const search = el('input', undefined, 'mega814-v2-search');
   search.type = 'search';
   search.placeholder = 'Поиск подраздела';
   search.setAttribute('aria-label', 'Поиск подраздела выбранного мира');
   const list = el('div', undefined, 'mega814-v2-subitems');
+  list.setAttribute('role', 'group');
+  list.setAttribute('aria-label', 'Все подразделы мира ' + section.title);
   const feature = el('section', undefined, 'mega814-v2-feature');
   feature.hidden = true;
   feature.setAttribute('aria-live', 'polite');
@@ -85,24 +91,22 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
   const status = el('p', undefined, 'mega814-v2-feature-status');
   const back = el('button', '← К подразделам', 'mega814-button mega814-v2-back');
   back.type = 'button';
-  // The outer navigation is ALWAYS clickable. Only the inner owner action may
-  // be disabled when the real provider/ACL/route is not ready. No mock ACK.
   const ownerMount = el('div', undefined, 'mega814-v2-owner-action');
+
   function closeFeature() {
     feature.hidden = true;
     list.hidden = false;
     search.hidden = false;
-    back.setAttribute('aria-expanded','false');
+    back.setAttribute('aria-expanded', 'false');
     if (typeof search.focus === 'function') search.focus();
   }
   back.addEventListener('click', closeFeature);
   feature.append(title, status, back, ownerMount);
+
   const rows = [];
   for (const item of section.items) {
     const row = el('div', undefined, 'mega814-v2-subitem');
     const route = item.native_route;
-    // The navigation click never executes the privileged route or asserts a
-    // connected provider. It always opens an in-world detail for this item.
     const button = el('button', item.label, 'mega814-button mega814-v2-navbutton');
     button.type = 'button';
     button.dataset.menuV2Id = item.id;
@@ -111,16 +115,12 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
       title.textContent = item.label;
       ownerMount.replaceChildren();
       if (route) {
-        // Only the ORIGINAL owner callback builds a trusted, ACL-gated action;
-        // a disabled native action must never disable navigation itself.
         try {
           const ownerAction = createOwnerRouteButton(route, item.label);
           if (!ownerAction) throw new Error('NOX_MENU_V2_NATIVE_OWNER_CALLBACK_HOLD');
           ownerMount.append(ownerAction);
           status.textContent = 'Существующий переход · реальная функция и права проверяются отдельно; E07 HOLD.';
         } catch {
-          // Never leak native owner exceptions or turn a failed route into a
-          // dead asteroid: keep the subsection open, with no privileged action.
           ownerMount.replaceChildren();
           status.textContent = 'HOLD · native обработчик недоступен; переход сохранён, действие не выполнено.';
         }
@@ -130,7 +130,7 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
       list.hidden = true;
       search.hidden = true;
       feature.hidden = false;
-      back.setAttribute('aria-expanded','true');
+      back.setAttribute('aria-expanded', 'true');
       if (typeof back.focus === 'function') back.focus();
     });
     row.append(button, el('small', route ?
@@ -139,6 +139,7 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
     list.append(row);
     rows.push({item, row});
   }
+
   search.addEventListener('input', () => {
     const term = String(search.value || '').toLocaleLowerCase();
     for (const {item,row} of rows) {
@@ -157,7 +158,7 @@ export function appendMenuV2(controls, world, catalogue, createOwnerRouteButton)
       if (typeof search.focus === 'function') search.focus();
     }
   });
-  details.append(search, list, feature);
+  details.append(heading, search, list, feature);
   controls.append(details);
   return details;
 }
