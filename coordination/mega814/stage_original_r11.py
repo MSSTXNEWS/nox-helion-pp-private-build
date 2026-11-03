@@ -30,22 +30,31 @@ def approved_source(path,name):
  if len(raw)>1048576 or git_blob_sha(raw)!=OWNER_BLOB_PINS[name]:
   raise RuntimeError("MEGA814_APPROVED_SOURCE_BLOB_HOLD:"+name)
  return raw
-# Compatible with either original R11 or the exact verified Creative + WOW200
-# additive tags; reconstruct the SAME immutable original HTML before admission.
-D02_TAGS = (
- '<script src="creative/entry.js"></script>',
+# Inverse of the EXACT original Creative stage and WOW200 home insertion.
+# Distinct anchored HEAD/BODY blocks reject reordered, duplicated or detached
+# tags; the reconstructed owner HTML must still match original SHA-256.
+APPROVED_HEAD = (
  '<link rel="stylesheet" href="creative/wow200/proposals/NOX-CINEMA-FX/nox-cinema.css">',
  '<link rel="stylesheet" href="creative/wow200/runtime/home-guard.css">',
+ '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-menu-v2.css">',
+ '<link rel="stylesheet" href="creative/wow200/ui/selfbuilder-wow-workbench.css">',
+ '<link rel="stylesheet" href="creative/wow200/ui/nox-r11-wow.css">',
+ '<link rel="stylesheet" href="creative/wow200/proposals/P01/WOW-MAX10/p01-cinematic-menu.css">',
+)
+APPROVED_BODY = (
+ '<script src="creative/entry.js"></script>',
  '<script type="module" src="creative/wow200/runtime/home-scene.mjs"></script>',
+ '<script type="module" src="creative/wow200/ui/onehost-menu-bindings.mjs"></script>',
 )
 def verified_index_mode(raw:bytes,original_sha=INDEX_SHA):
  if sha(raw)==original_sha:return "ORIGINAL_R11"
- try: text=raw.decode("utf-8")
+ try:text=raw.decode("utf-8")
  except UnicodeDecodeError as exc:raise RuntimeError("MEGAB_INDEX_UTF8_HOLD") from exc
- if any(text.count(marker)!=1 for marker in D02_TAGS):
+ approved_head="".join(APPROVED_HEAD)+"</head>"
+ approved_body="".join(APPROVED_BODY)+"</body>"
+ if text.count(approved_head)!=1 or text.count(approved_body)!=1:
   raise RuntimeError("MEGAB_D02_MARKERS_MISSING_DUPLICATED_HOLD")
- clean=text
- for marker in D02_TAGS:clean=clean.replace(marker,"",1)
+ clean=text.replace(approved_head,"</head>",1).replace(approved_body,"</body>",1)
  if sha(clean.encode("utf-8"))!=original_sha:
   raise RuntimeError("MEGAB_ORIGINAL_INDEX_PREIMAGE_SHA_HOLD")
  return "D02_CREATIVE_WOW200_VERIFIED"
