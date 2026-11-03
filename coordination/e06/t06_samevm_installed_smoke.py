@@ -821,6 +821,31 @@ def rollback_slot_layout(install:Path,previous:Path,saved:Path,base:Path)->dict:
                 "T06_ROLLBACK_"+label+"_SLOT_NOT_OWNED")
     return {"previous_consumed":True,"restored_owned":True,"saved_owned":True}
 
+
+def await_original_uninstall(install: Path, owned_files: tuple[Path, ...],
+                             *, timeout_seconds: float = 30.0,
+                             poll_seconds: float = 0.2) -> None:
+    """Allow NSIS /S's deferred child to finish; never accept without full verification.
+
+    The original Uninstall.exe may return after launching its temporary child.
+    Require the *actual* installer-owned metadata to disappear before the
+    unchanged fail-closed manifest/reparse/registry verifier runs. A timeout
+    only produces the original HOLD; it never produces PASS.
+    """
+    require(isinstance(install, Path) and bool(owned_files) and
+            0 < poll_seconds <= 2 and 0 < timeout_seconds <= 60,
+            "T06_NSIS_UNINSTALL_WAIT_BAD_INPUT")
+    deadline = time.monotonic() + timeout_seconds
+    metadata = (install/"payload.sha256.json", install/"nox-p01-owned.txt",
+                install/"Uninstall.exe")
+    while any(p.exists() or p.is_symlink() or
+              getattr(p, "is_junction", lambda: False)() for p in metadata):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(poll_seconds, remaining))
+    verify_original_uninstall(install, owned_files)
+
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
@@ -982,7 +1007,7 @@ def main()->int:
         uninstalled=run([str(uninstall),"/S"],220)
         report["installer_lifecycle"]["uninstall"]=uninstalled
         require(uninstalled["code"]==0,"T06_CONSERVATIVE_UNINSTALL_EXIT_HOLD")
-        verify_original_uninstall(install,owned_files)
+        await_original_uninstall(install,owned_files)
         report["installer_lifecycle"]["uninstall_owned_files_checked"]=len(owned_files)
         report["installer_lifecycle"]["uninstall_registry_views_checked"]=2
         require(marker.is_file() and marker.read_bytes()==signature,
