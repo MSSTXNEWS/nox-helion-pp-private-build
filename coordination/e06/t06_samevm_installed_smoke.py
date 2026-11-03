@@ -791,6 +791,24 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                 except (subprocess.TimeoutExpired,OSError):pass
 
 
+def rollback_slot_layout(install:Path,previous:Path,saved:Path,base:Path)->dict:
+    """Attest original NSIS rollback directory swap, not just exit-0/SHA parity.
+
+    No installed/user data is modified; this is not independent E07.
+    """
+    require(all(plain_parents(p,base) for p in (install,previous,saved)),
+            "T06_ROLLBACK_SLOT_REPARSE_HOLD")
+    require(not previous.exists() and not previous.is_symlink() and
+            not getattr(previous,"is_junction",lambda:False)(),
+            "T06_ROLLBACK_PREVIOUS_SLOT_NOT_CONSUMED")
+    for label,slot in (("RESTORED",install),("SAVED",saved)):
+        require(slot.is_dir() and not slot.is_symlink() and
+                not getattr(slot,"is_junction",lambda:False)() and
+                regular(slot/"nox-p01-owned.txt") and
+                (slot/"nox-p01-owned.txt").read_text("utf-8-sig").strip()=="NOXHELION.P01 V16",
+                "T06_ROLLBACK_"+label+"_SLOT_NOT_OWNED")
+    return {"previous_consumed":True,"restored_owned":True,"saved_owned":True}
+
 def main()->int:
     started=time.monotonic()
     report={"schema":"NOX-T06-INSTALLED-SMOKE-v1","phase":"HOLD",
@@ -912,16 +930,38 @@ def main()->int:
         update=run([str(SETUP),"/S"],250)
         report["installer_lifecycle"]["update"]=update
         backup=Path(str(install)+".__p01_previous")
-        require(update["code"]==0 and backup.is_dir(),
+        require(update["code"]==0 and backup.is_dir() and
+                plain_parents(backup,local_base),
                 "T06_ORIGINAL_NSIS_UPDATE_BACKUP_HOLD")
         require(sha(wpf)==evidence["wpf_sha256"] and
                 marker.read_bytes()==signature,
                 "T06_UPDATE_MUST_PRESERVE_BINARY_AND_DATA")
+        # Verify genuine previous installed program before requesting rollback.
+        backup_check=run(["powershell.exe","-NoProfile","-NonInteractive",
+                          "-ExecutionPolicy","Bypass","-File",str(verify),
+                          "-Root",str(backup),
+                          "-Manifest",str(backup/"payload.sha256.json"),
+                          "-AllowInstalledMetadata"],130)
+        report["installer_lifecycle"]["backup_payload_verify"]=backup_check
+        require(backup_check["code"]==0,"T06_UPDATE_BACKUP_MANIFEST_VERIFY_HOLD")
         rollback=run([str(SETUP),"/S","/ROLLBACK"],250)
         report["installer_lifecycle"]["rollback"]=rollback
         require(rollback["code"]==0 and sha(wpf)==evidence["wpf_sha256"] and
                 marker.read_bytes()==signature,
                 "T06_ORIGINAL_NSIS_ROLLBACK_NOLOSS_HOLD")
+        saved=Path(str(install)+".__p01_rollback_saved")
+        report["installer_lifecycle"]["rollback_slots"]=rollback_slot_layout(
+            install,backup,saved,local_base)
+        # Same-Setup update creates byte-identical versions: require proof
+        # both physical slots were moved and retain verified original payload.
+        for name,slot in (("restored",install),("superseded",saved)):
+            post_check=run(["powershell.exe","-NoProfile","-NonInteractive",
+                            "-ExecutionPolicy","Bypass","-File",str(verify),
+                            "-Root",str(slot),
+                            "-Manifest",str(slot/"payload.sha256.json"),
+                            "-AllowInstalledMetadata"],130)
+            report["installer_lifecycle"]["rollback_payload_"+name]=post_check
+            require(post_check["code"]==0,"T06_ROLLBACK_SLOT_MANIFEST_VERIFY_HOLD:"+name)
         owned_files=owned_payload_paths(
             install,strict_receipt(install/"payload.sha256.json",
                                   "T06_UNINSTALL_INSTALLED_INVENTORY_JSON_HOLD"))
