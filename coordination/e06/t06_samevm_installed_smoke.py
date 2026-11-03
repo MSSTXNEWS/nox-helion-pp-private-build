@@ -655,6 +655,20 @@ def wpf_startup_fatal_seen(seen: dict) -> bool:
     ))
 
 
+WPF_GUI_STABLE_READY_SECONDS = 8.0
+
+
+def wpf_gui_stability_step(first_ready_at: float | None, now: float, *, ready: bool):
+    """An early NAV_OK+IPC+HWND is not stable proof of WebView2 survival."""
+    if (ready is not True or not math.isfinite(now) or
+            (first_ready_at is not None and
+             (not math.isfinite(first_ready_at) or now < first_ready_at))):
+        return None, False
+    if first_ready_at is None:
+        return now, False
+    return first_ready_at, now-first_ready_at>=WPF_GUI_STABLE_READY_SECONDS
+
+
 def live_original_wpf_probe(exe:Path,local:Path)->dict:
     """Attest live WPF GUI/IPC from NEW bytes of the original shell log.
 
@@ -678,6 +692,8 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
     alive_at_proof=False
     hwnd_at_proof=None
     log_replaced=False
+    stable_since=None
+    stable_window_pass=False
     try:
         process=subprocess.Popen([str(exe)],cwd=exe.parent,
             stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
@@ -718,10 +734,11 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                         boundary=window[-4096:]
             if wpf_startup_fatal_seen(seen):
                 break
+            ready_now=False
             if seen["NAV_OK"] and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"]:
-                # Good markers at the start of a large append cannot outweigh
-                # unread INIT_ERROR/NATIVE_HOLD bytes already buffered.
-                # Drain through the observed EOF and recheck log identity.
+                # Drain every newly appended real shell.log line before counting
+                # a live-PID, visible-HWND stability interval. A browser crash
+                # after NAV_OK must never become a false GUI/IPC PASS.
                 latest=log.stat() if log.is_file() else None
                 if (latest is None or identity is None or
                     (latest.st_dev,latest.st_ino)!=identity or
@@ -729,21 +746,26 @@ def live_original_wpf_probe(exe:Path,local:Path)->dict:
                     log_replaced=True
                     break
                 if offset==latest.st_size and process.poll() is None:
-                    # A live PID and log markers do not prove real GUI: require
-                    # a visible, unowned HWND of THIS launched WPF PID.
+                    # Only the ORIGINAL WPF PID and a visible owned HWND count.
                     hwnd_at_proof=find_visible_wpf_hwnd(process.pid)
-                    if hwnd_at_proof is not None:
-                        alive_at_proof=process.poll() is None
-                        if alive_at_proof: break
+                    ready_now=hwnd_at_proof is not None and process.poll() is None
+            stable_since,stable_window_pass=wpf_gui_stability_step(
+                stable_since,time.monotonic(),ready=ready_now)
+            if stable_window_pass:
+                alive_at_proof=process.poll() is None
+                if alive_at_proof:break
             time.sleep(0.7)
-        accepted=(process.pid>0 and alive_at_proof and hwnd_at_proof is not None and
-                  not log_replaced and not wpf_startup_fatal_seen(seen))
+        accepted=(process.pid>0 and alive_at_proof and stable_window_pass and
+                  hwnd_at_proof is not None and not log_replaced and
+                  not wpf_startup_fatal_seen(seen))
         return {"pid_started":process.pid>0,
                 "new_nav_ok":accepted and seen["NAV_OK"],
                 "new_python_ipc_handshake":accepted and seen["P02_ORIGINAL_NATIVE_PIPE_HANDSHAKE_OK"],
                 "init_error":seen["INIT_ERROR"],
                 "native_hold":seen["P02_ORIGINAL_NATIVE_HOLD"],
                 "live_process_at_receipt":alive_at_proof,
+                "stable_ready_window_pass":accepted and stable_window_pass,
+                "stable_ready_window_seconds":WPF_GUI_STABLE_READY_SECONDS,
                 "real_wpf_visible_pid_hwnd":accepted,
                 "real_wpf_hwnd":hex(hwnd_at_proof) if accepted else None,
                 "real_wpf_hwnd_pid":process.pid if accepted else None,
