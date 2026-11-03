@@ -17,5 +17,6 @@ test('incomplete feature dialog owns acceleration; no fake telemetry or direct i
  assert.match(src,/function pending\(/);assert.match(src,/УСКОРИТЬ NOX/);
  assert.match(src,/selfbuilder\.propose/);assert.match(src,/createNativeMenuClient/);
  assert.doesNotMatch(src,/Math\.random|window\.open|fetch\(/);
- assert.match(src,/if\(!host\)/); // placeholder NOT a fake native acknowledgment
+ assert.match(src,/if\(client\)/); // attempt native submission only when host is connected
+ assert.match(src,/else\{/); // otherwise prepare a copyable task, never fake an ACK
 });
