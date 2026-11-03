@@ -60,12 +60,16 @@ def join_and_verify_python():
     buffer.seek(0)
     return buffer
 def join_and_verify_wpf():
-    manifest=json.loads((ROOT/"donors/P01_C07/P01_C07_RECEIPT.json").read_text("utf-8"))
+    reader=_owner_part_reader()
+    manifest_path=ROOT/"donors/P01_C07/P01_C07_RECEIPT.json"
+    with reader(manifest_path) as stream:
+        manifest=json.load(stream)
     combined=io.BytesIO();digest=hashlib.sha256()
     for part in manifest["parts"]:
         f=ROOT/part["path"]
         require(f.is_file() and not f.is_symlink(),"MB1_WPF_PART_MISSING")
-        content=f.read_bytes()
+        with reader(f) as stream:
+            content=stream.read()
         require(len(content)==part["size_bytes"] and
                 git_blob(content)==part["git_blob_sha1"],
                 "MB1_ORIGINAL_P01_PART_SHA_HOLD")
