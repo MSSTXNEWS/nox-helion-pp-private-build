@@ -57,7 +57,7 @@ while (pending.length) {
   }
   const contents = await readFile(source, "utf8");
   inspected.add(name);
-  for (const match of contents.matchAll(/\\b(?:from\\s*|import\\s*)["']([^"']+)["']/g)) {
+  for (const match of contents.matchAll(/\b(?:from\s*|import\s*)["']([^"']+)["']/g)) {
     const dependency = match[1];
     if (!dependency.startsWith("./") && !dependency.startsWith("../")) {
       throw new Error("NOX_NATIVE_NONLOCAL_MODULE_IMPORT_HOLD:" + name);
