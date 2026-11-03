@@ -112,7 +112,7 @@ function replaceSelects(root) {
   if (!documentRef?.defaultView?.Event) throw new Error("NOX_DOCUMENT_EVENT_UNAVAILABLE");
   const EventCtor = documentRef.defaultView.Event;
   for (const select of root.querySelectorAll("select:not([data-nox-select-replaced])")) {
-    const fieldset = root.ownerDocument.createElement("fieldset");
+    const fieldset = documentRef.createElement("fieldset");
     fieldset.className = "nox-choice-group";
     fieldset.setAttribute("aria-label",
       select.labels && select.labels[0] ? select.labels[0].textContent.trim() :
@@ -129,7 +129,7 @@ function replaceSelects(root) {
       }
     };
     for (const option of options) {
-      const button = root.ownerDocument.createElement("button");
+      const button = documentRef.createElement("button");
       button.type = "button";
       button.className = "nox-choice-button";
       button.textContent = option.textContent.trim();
