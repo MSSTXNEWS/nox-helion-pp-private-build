@@ -23,12 +23,16 @@ GOOD = {
 
 
 class DisposableRunnerGate(unittest.TestCase):
-    def check_preinstall(self, env, *, local_bridge=True):
+    def check_preinstall(self, env, *, local_bridge=True, machine="AMD64", pointer_bytes=8):
         """Mock the receipt reader to stop BEFORE any native install step."""
         with tempfile.TemporaryDirectory() as d:
             out = Path(d)
             with (patch.dict(os.environ, env, clear=True),
                   patch.object(SMOKE.sys, "platform", "win32"),
+                  # Clearing the environment also removes Windows architecture
+                  # metadata. The fixture must model the native host explicitly.
+                  patch.object(SMOKE.platform, "machine", return_value=machine),
+                  patch.object(SMOKE.struct, "calcsize", return_value=pointer_bytes),
                   patch.multiple(SMOKE, ON_LOCAL_BRIDGE=local_bridge, ON_GITHUB=False,
                                  OUTPUT=out, NSIS_PROOF=out / "T06_INSTALLED_SMOKE.json"),
                   patch.object(SMOKE, "candidate_gate",
@@ -38,6 +42,12 @@ class DisposableRunnerGate(unittest.TestCase):
 
     def test_exact_existing_gitlab_windows_project_runs_candidate_check(self):
         self.assertTrue(self.check_preinstall(GOOD))
+
+    def test_runner_label_cannot_override_native_architecture(self):
+        for machine in ("", "ARM64", "x86", "unknown"):
+            with self.subTest(machine=machine):
+                self.assertFalse(self.check_preinstall(GOOD, machine=machine))
+        self.assertFalse(self.check_preinstall(GOOD, pointer_bytes=4))
 
     def test_wrong_project_refused_before_candidate(self):
         self.assertFalse(self.check_preinstall({**GOOD, "CI_PROJECT_PATH": "other/project"}))
