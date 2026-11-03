@@ -5,11 +5,12 @@ import re
 import sys
 import unittest
 
-CODE = Path(sys.argv[1]).read_text(encoding='utf-8') if len(sys.argv)>1 else (
-    Path(__file__).resolve().parents[2] / 'coordination/e06/OneHostP02WebView2Bridge.cs'
-).read_text(encoding='utf-8')
-if len(sys.argv)>1:
-    sys.argv[:] = [sys.argv[0]]
+# unittest discovery owns argv; only direct invocation may select a fixture.
+SOURCE = (Path(__file__).resolve().parents[2] /
+          'coordination/e06/OneHostP02WebView2Bridge.cs')
+if __name__ == '__main__' and len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+    SOURCE = Path(sys.argv.pop(1)).resolve()
+CODE = SOURCE.read_text(encoding='utf-8')
 METHOD=CODE.split('private void RevokeDocument()',1)[1].split('private async Task StopRevokedChatAsync()',1)[0]
 class C06CancellationReentrancySource(unittest.TestCase):
     def test_old_lifetime_swapped_before_cancellation(self):
