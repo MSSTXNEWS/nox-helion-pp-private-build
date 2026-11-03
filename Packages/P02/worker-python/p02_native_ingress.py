@@ -219,7 +219,8 @@ class NativeIngress:
                 negative_prefixes = (
                     "HOLD", "ERROR", "BLOCKED", "NOT_READY", "UNAUTHORIZED",
                     "FORBIDDEN", "CONSENT_REQUIRED", "ABORTED", "TIMED_OUT",
-                    "EXPIRED",
+                    "EXPIRED", "CONSENT_REVOKED", "REVOKED",
+                    "STOP_REQUESTED", "STOPPING", "CANCELED", "CANCELLED",
                 )
                 if (("ok" in result and type(ok) is not bool) or
                     ok is False or
