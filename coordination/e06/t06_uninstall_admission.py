@@ -8,7 +8,9 @@ This is only SAME-VM component evidence, never independent E07 acceptance.
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import stat
+import sys
 
 
 _UNINSTALL_KEY = (
@@ -108,12 +110,22 @@ def original_nsis_uninstall_registration_absent(registry=None) -> bool:
 def verify_original_uninstall(install: Path, owned_paths: tuple[Path, ...],
                               registry=None) -> None:
     """Only a complete removal of original owned files and key passes."""
-    if (not owned_paths or
-            any(not _no_reparse_components(p, allow_missing=True) or
-                p.exists() or p.is_symlink() or
-                getattr(p, "is_junction", lambda: False)()
-                for p in owned_paths)):
+    if not owned_paths:
         raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS")
+    for p in owned_paths:
+        if (not _no_reparse_components(p, allow_missing=True) or
+                p.exists() or p.is_symlink() or
+                getattr(p, "is_junction", lambda: False)()):
+            # Emit only one bounded, JSON-escaped manifest-relative name.
+            # Never disclose the CI account path or accept lingering payload.
+            try:
+                relative=p.relative_to(install).as_posix()
+            except (ValueError, TypeError, AttributeError):
+                relative="[OUTSIDE_INSTALL_ROOT]"
+            print("T06_UNINSTALL_FIRST_MANIFEST_RESIDUE " +
+                  json.dumps(relative[:160], ensure_ascii=True),
+                  file=sys.stderr, flush=True)
+            raise RuntimeError("T06_CONSERVATIVE_UNINSTALL_MANIFEST_FILE_REMAINS")
     for metadata in ("payload.sha256.json", "nox-p01-owned.txt", "Uninstall.exe"):
         path = install / metadata
         if (not _no_reparse_components(path, allow_missing=True) or
