@@ -140,5 +140,29 @@ class SourceHeadIdentity(unittest.TestCase):
         self.git("-c", "user.name=NOX Test", "-c", "user.email=nox-test@example.invalid", "commit", "-qm", "second")
         self.assertNotEqual(first, compile_owner.verified_source_head())
 
+class ApprovedRegistryBuildPin(unittest.TestCase):
+    """The shipped original NSIS builder must pin the current reviewed P03 code."""
+    def test_original_installer_registry_pin_matches_approved_git_blob(self):
+        import json
+        import re
+        root = MODULE.parents[2]
+        relative = "Packages/P03/Source/P03.ModelCenter/ModelArtifactReviewRegistry.cs"
+        builder = (root / "coordination/e06/build_onehost_installer.ps1").read_text(encoding="utf-8-sig")
+        expression = (r"@\{relative='" + re.escape(relative) +
+                      r"';dest='Integration/P03/ModelArtifactReviewRegistry.cs';blob='([a-f0-9]{40})'\}")
+        pins = re.findall(expression, builder)
+        self.assertEqual(len(pins), 1, "Original NSIS source stage has no unique P03 registry pin")
+        result = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD:" + relative],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = result.stdout.strip()
+        self.assertRegex(actual, r"^[a-f0-9]{40}$")
+        manifest = json.loads((root / "coordination/express/P03_PINNED_GIT_BLOBS.json").read_text(encoding="utf-8"))
+        reviewed = [entry for entry in manifest["approved_overrides"] if entry.get("path") == relative]
+        self.assertEqual(len(reviewed), 1, "P03 current reviewed source needs one approved override")
+        self.assertEqual(reviewed[0]["post_git_blob_sha1"], actual, "P03 reviewed override is stale")
+        self.assertEqual(pins[0], actual, "Active NSIS OneHost builder would reject reviewed P03 source")
+
+
 if __name__ == "__main__":
     unittest.main()
