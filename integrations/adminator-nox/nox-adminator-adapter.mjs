@@ -1,8 +1,13 @@
 import { createP01RouteDispatcher } from "../../proposals/P01/WOW-MAX10/route-dispatch.mjs";
 
+// Exact action route IDs already admitted by ui/onehost-menu-bindings.mjs.
+// Legacy menu labels (e.g. "model-library") are screen IDs, not native routes.
 export const NOX_NATIVE_ROUTES = Object.freeze([
-  "evolution", "study-queue", "learning-proofs", "weights",
-  "gpu-training", "model-library", "core-status", "commands", "progress"
+  "helion.chat", "chat.history", "chat.stop", "chat.model", "chat.commands",
+  "models.catalog", "models.queue", "models.preflight", "models.pull",
+  "models.cancel", "models.retry", "models.gguf.import", "gpu.preflight",
+  "training.start", "system.autostart", "browser.open", "browser.navidle",
+  "menu.dispatch", "menu.binding"
 ]);
 const routeSet = new Set(NOX_NATIVE_ROUTES);
 const safeNumber = (value) => Number.isFinite(value) && value >= 0 && value <= 100;
