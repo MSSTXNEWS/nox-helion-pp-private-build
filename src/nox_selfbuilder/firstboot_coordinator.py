@@ -320,15 +320,16 @@ class FirstBootCoordinator:
                 break
             if (not isinstance(receipt, Mapping) or receipt.get("ack") is not True or
                     receipt.get("native_durable_queue") is not True or
-                    receipt.get("id") != i or
+                    type(receipt.get("id")) is not int or receipt["id"] != i or
                     receipt.get("sha256") != action["artifact"]["sha256"] or
-                    type(receipt.get("already_queued", False)) is not bool):
+                    "already_queued" not in receipt or
+                    type(receipt["already_queued"]) is not bool):
                 # The native enqueue may already be durable despite a bad ACK.
                 # Stop issuing more actions; next boot must read back the
                 # original per-principal queue before deciding what to resume.
                 denied.append({"id": i, "reason": "NATIVE_QUEUE_ACK_OR_DIGEST_MISMATCH"})
                 break
-            if receipt.get("already_queued", False):
+            if receipt["already_queued"]:
                 already_queued.append(i)
             else:
                 dispatched.append(i)
