@@ -114,3 +114,14 @@ test('pagehide releases local media without claiming native playback',()=>{
   assert.deepEqual(h.revoked,['blob:nox1']);
   assert.equal(h.channel.closed,true);
 });
+
+test('BroadcastChannel cannot remotely start a native mapped project, manual Play remains working',async()=>{
+  const h=harness('?project=demo_1&local_project_media=1');
+  assert.match(h.video.src,/nox-projects\.invalid\/demo_1\/NOX_MOVIE_FINAL\.mp4/);
+  h.channel.onmessage({data:{action:'play'}});
+  assert.equal(h.video.playCount,0,'cross-context message is not a user gesture');
+  assert.match(h.status,/MEDIA_HOLD/);
+  h.items.get('play').onclick();await settle();
+  assert.equal(h.video.playCount,1,'user can still play manually in existing WebView2');
+  assert.equal(h.status,'Воспроизведение');
+});

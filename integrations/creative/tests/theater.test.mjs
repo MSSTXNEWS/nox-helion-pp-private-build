@@ -15,7 +15,7 @@ function harness(query='?project=demo_1') {
       remove(){value.removed=true}, requestFullscreen(){return Promise.resolve()}};
     objects.set(id,value);return value;
   }
-  for(const id of ['video','poster','status','stage','title','space','file','subtitles','play','pause','full','screens'])el(id);
+  for(const id of ['video','poster','status','stage','title','space','file','subtitles','play','pause','back','full','screens'])el(id);
   let next=0;const created=[],revoked=[];
   const events={}; const document={getElementById:id=>objects.get(id),documentElement:{lang:'ru'},
     createElement:()=>({track:{mode:'disabled'},remove(){this.removed=true},addEventListener(name,fn){if(name==='load')fn()}}),
@@ -25,10 +25,16 @@ function harness(query='?project=demo_1') {
     URL:{createObjectURL:obj=>{created.push(obj);return 'blob:media'+(++next)},revokeObjectURL:url=>revoked.push(url)},
     URLSearchParams, Blob, Promise, String, RegExp, Error};
   vm.runInNewContext(source,sandbox,{filename:'theater.js'});
+  // Test fixture: DOM events do not return chooseSubtitle's Promise; drain its queued work.
+  const subtitleChange=objects.get('subtitles').onchange;
+  objects.get('subtitles').onchange=async event=>{
+    subtitleChange(event);
+    await new Promise(resolve=>setImmediate(resolve));
+  };
   return {objects,created,revoked,events,document};
 }
 test('actual HTML and JS share the same control IDs and native projector policy',()=>{
-  for(const id of ['file','subtitles','play','pause','full','screens','status','video','poster','stage','title','space'])
+  for(const id of ['file','subtitles','play','pause','back','full','screens','status','video','poster','stage','title','space'])
     assert.match(html,new RegExp('id="'+id+'"'));
   // WORK/MENU/HOME PNGs are composed screenshots with their own buttons/text.
   // A secondary cinema scene must not paint those interfaces behind live controls.

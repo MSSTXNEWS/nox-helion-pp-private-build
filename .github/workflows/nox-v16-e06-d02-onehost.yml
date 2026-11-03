@@ -8,6 +8,8 @@ on:
         type: string
   pull_request:
     paths:
+      - '.gitattributes'
+      - 'tests/e06/test_checkout_source_bytes.py'
       - 'coordination/e06/build_onehost_installer.ps1'
       - 'src/nox_selfbuilder/acquisition_library.py'
       - 'src/nox_selfbuilder/firstboot_coordinator.py'
@@ -69,7 +71,7 @@ jobs:
           # Real original P01 source tests, not a fake browser/installed E07 receipt.
           node --test proposals/P01/WOW-MAX10/route-dispatch.test.mjs proposals/P01/WOW-MAX10/menu-route-pending.test.mjs
           # Original T06 source/provenance guards: CI source evidence, never E07.
-          for test in test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_a1_native_gate_auth_race.py; do
+          for test in test_checkout_source_bytes.py test_t06_compile_source_head.py test_t06_source_receipt_guard.py test_i2_local_bridge_receipt_gate.py test_t06_gitlab_runner_authorization.py test_t06_e06_workflow_source_gate.py test_a1_native_gate_auth_race.py; do
             python -m unittest discover -s tests/e06 -p "$test" -v
           done
   visual-source-stage:
@@ -139,7 +141,7 @@ jobs:
       - name: Original T06 current HEAD and same-VM receipts (source regressions only)
         shell: pwsh
         run: |
-          foreach ($test in @('test_t06_compile_source_head.py','test_t06_source_receipt_guard.py','test_i2_local_bridge_receipt_gate.py','test_t06_gitlab_runner_authorization.py','test_t06_e06_workflow_source_gate.py','test_a1_native_gate_auth_race.py')) {
+          foreach ($test in @('test_checkout_source_bytes.py','test_t06_compile_source_head.py','test_t06_source_receipt_guard.py','test_i2_local_bridge_receipt_gate.py','test_t06_gitlab_runner_authorization.py','test_t06_e06_workflow_source_gate.py','test_a1_native_gate_auth_race.py')) {
             python -m unittest discover -s tests/e06 -p $test -v
             if ($LASTEXITCODE -ne 0) { throw "E06_T06_SOURCE_RECEIPT_GATE_HOLD:$test" }
           }

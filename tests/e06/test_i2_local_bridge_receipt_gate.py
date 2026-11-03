@@ -3,6 +3,8 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -11,6 +13,11 @@ MODULE=Path(__file__).resolve().parents[2]/"coordination/e06/t06_samevm_installe
 SPEC=importlib.util.spec_from_file_location("t06_smoke_i2",MODULE)
 smoke=importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(smoke)
+ROOT=MODULE.parents[2]
+COMPILER_SPEC=importlib.util.spec_from_file_location(
+    "t06_i2_preflight_owner",MODULE.with_name("t06_compile_original_wpf_p02.py"))
+compiler=importlib.util.module_from_spec(COMPILER_SPEC)
+COMPILER_SPEC.loader.exec_module(compiler)
 ORIGINAL="ff8e2848c7c7ab776b90cbd8ac28e41e3815e96373c3c5f635d7587284629e9a"
 R11="90076eba83a213ba2b410632ced3288d41a6691ab63f81ad0520aa3cbbbfcb52"
 
@@ -21,11 +28,71 @@ def write_json(path,value):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(value),encoding="utf-8")
 
+class UninstallOwnerImport(unittest.TestCase):
+    def test_arbitrary_cwd_uses_both_existing_sibling_functions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory)/"t06_uninstall_admission.py").write_text(
+                "raise AssertionError('SEARCH_PATH_OWNER_EXECUTED')\n",encoding="utf-8")
+            script="""
+import importlib.util
+from pathlib import Path
+import sys
+before=tuple(sys.path)
+source=Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location("arbitrary_smoke_alias",source)
+smoke=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(smoke)
+expected=source.resolve().with_name("t06_uninstall_admission.py")
+for name in ("owned_payload_paths","verify_original_uninstall"):
+    function=getattr(smoke,name)
+    assert function.__name__==name
+    assert Path(function.__code__.co_filename).resolve()==expected
+assert smoke.owned_payload_paths.__globals__ is smoke.verify_original_uninstall.__globals__
+assert tuple(sys.path)==before
+"""
+            result=subprocess.run([sys.executable,"-c",script,str(MODULE)],
+                                  cwd=directory,capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
+    def test_missing_sibling_cannot_use_uninstall_stub_from_search_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);isolated=root/"isolated";isolated.mkdir()
+            source=isolated/MODULE.name;source.write_bytes(MODULE.read_bytes())
+            (root/"t06_uninstall_admission.py").write_text(
+                "def owned_payload_paths(*args): return ()\n"
+                "def verify_original_uninstall(*args): return None\n",encoding="utf-8")
+            script="""
+import importlib.util
+from pathlib import Path
+import sys
+source=Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location("missing_uninstall_owner",source)
+smoke=importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(smoke)
+except FileNotFoundError as error:
+    assert Path(error.filename)==source.with_name("t06_uninstall_admission.py")
+else:
+    raise AssertionError("MISSING_UNINSTALL_OWNER_WAS_ACCEPTED")
+"""
+            result=subprocess.run([sys.executable,"-c",script,str(source)],
+                                  cwd=directory,capture_output=True,text=True,timeout=30)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
 class BridgeReceiptGate(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         root=Path(self.temp.name)
+        # Reuse the real reviewed C09 source and existing stage implementation;
+        # this creates source-test evidence, never an installed Windows receipt.
+        self.build=root/"build"
+        r11=self.build/"R11"
+        self.preflight=r11/"Installer/Preflight-InstallPath.ps1"
+        self.preflight.parent.mkdir(parents=True)
+        self.preflight.write_bytes((ROOT/"stage/proposals/P01/C09/Installer/Preflight-InstallPath.ps1").read_bytes())
+        compiler.stage_exact_owner_webview2_registry_views(
+            r11,ROOT/"coordination/e06/build_onehost_installer.ps1")
         self.payload=root/"payload"
         self.payload.mkdir()
         for name in ["NOX.P01.Shell.exe","Backend/NOX_HELION_PRIVATE_CANDIDATE.exe"]+[
@@ -45,6 +112,8 @@ class BridgeReceiptGate(unittest.TestCase):
         self.original=root/"work/t06-manual-source-inspect/NATIVE_STDIO_SOURCE_SMOKE.json"
         self.source={"schema":"NOX-E06-ONEHOST-CANDIDATE-v1",
             "source_zip_sha256":R11,"release_accepted":False,"e07":"NOT_ACCEPTED",
+            "webview2_p01_source_git_blob":"e683e30b4e6fc32c31652061c569d6ce77c2cb2e",
+            "webview2_p01_preflight_sha256":digest(self.preflight),
             "wpf_source_compilation":"PASS","backend_native_stdio_windows_exe_smoke":"PASS",
             "setup_bytes":self.setup.stat().st_size,"setup_sha256":digest(self.setup),
             "wpf_sha256":digest(self.payload/"NOX.P01.Shell.exe"),
@@ -64,7 +133,7 @@ class BridgeReceiptGate(unittest.TestCase):
             "run_id_matched":True,"request_id_matched":True,
             "native_process_exit_code":0,"release_accepted":False}
         self.configure()
-        self.stack=patch.multiple(smoke,ROOT=root,PAYLOAD=self.payload,
+        self.stack=patch.multiple(smoke,ROOT=root,BUILD=self.build,PAYLOAD=self.payload,
             CANDIDATE=self.receipt,SETUP=self.setup,NATIVE_PROOF=self.native,
             ON_LOCAL_BRIDGE=True)
         self.stack.start()
@@ -80,6 +149,16 @@ class BridgeReceiptGate(unittest.TestCase):
         self.assertEqual(proof["setup_sha256"],digest(self.setup))
         self.assertEqual(proof["manifest_files_checked"],12)
         self.assertNotIn("build_id",proof)
+
+    def test_missing_staged_preflight_rejected(self):
+        self.preflight.unlink()
+        with self.assertRaisesRegex(RuntimeError,"PREFLIGHT_NOT_STAGED"):
+            smoke.candidate_gate()
+
+    def test_changed_staged_preflight_rejected(self):
+        self.preflight.write_bytes(self.preflight.read_bytes()+b"\n# unreviewed change\n")
+        with self.assertRaisesRegex(RuntimeError,"PREFLIGHT_SOURCELOCK_HOLD"):
+            smoke.candidate_gate()
 
     def test_installer_bytes_tamper_rejected(self):
         self.setup.write_bytes(b"MZ changed while candidate claims old SHA")

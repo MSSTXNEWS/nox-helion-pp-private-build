@@ -3,6 +3,7 @@ import importlib.util
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -11,6 +12,59 @@ MODULE = Path(__file__).resolve().parents[2] / "coordination/e06/t06_compile_ori
 SPEC = importlib.util.spec_from_file_location("nox_t06_compile_source_identity", MODULE)
 compile_owner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(compile_owner)
+
+class PayloadVerifierImport(unittest.TestCase):
+    def test_file_import_from_arbitrary_cwd_uses_existing_sibling_owner(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # A same-named module on the search path must never replace the owner.
+            trap = Path(directory) / "t06_package_original_onehost.py"
+            trap.write_text("raise AssertionError('SEARCH_PATH_OWNER_EXECUTED')\n", encoding="utf-8")
+            script = """
+import importlib.util
+from pathlib import Path
+import sys
+before = tuple(sys.path)
+source = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("arbitrary_compiler_alias", source)
+compiler = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(compiler)
+verifier = compiler.stage_reviewed_installed_payload_verifier
+expected = source.resolve().with_name("t06_package_original_onehost.py")
+assert Path(verifier.__code__.co_filename).resolve() == expected
+assert verifier.__name__ == "stage_reviewed_installed_payload_verifier"
+assert tuple(sys.path) == before
+"""
+            result = subprocess.run([sys.executable, "-c", script, str(MODULE)],
+                                    cwd=directory, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_missing_sibling_owner_cannot_fall_back_to_search_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            isolated = root / "isolated"
+            isolated.mkdir()
+            source = isolated / MODULE.name
+            source.write_bytes(MODULE.read_bytes())
+            (root / "t06_package_original_onehost.py").write_text(
+                "def stage_reviewed_installed_payload_verifier(*args): return 'FAKE_PASS'\n",
+                encoding="utf-8")
+            script = """
+import importlib.util
+from pathlib import Path
+import sys
+source = Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("missing_owner_compiler", source)
+compiler = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(compiler)
+except FileNotFoundError as error:
+    assert Path(error.filename) == source.with_name("t06_package_original_onehost.py")
+else:
+    raise AssertionError("MISSING_SIBLING_OWNER_WAS_ACCEPTED")
+"""
+            result = subprocess.run([sys.executable, "-c", script, str(source)],
+                                    cwd=directory, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 class SourceHeadIdentity(unittest.TestCase):
     def setUp(self):
@@ -24,7 +78,10 @@ class SourceHeadIdentity(unittest.TestCase):
         root_patch = patch.object(compile_owner, "ROOT", self.root)
         root_patch.start()
         self.addCleanup(root_patch.stop)
-        env_patch = patch.dict(os.environ, {"CI_COMMIT_SHA": ""})
+        env_patch = patch.dict(os.environ, {key: "" for key in (
+            "CI_COMMIT_SHA", "CI_SERVER_HOST", "CI_PROJECT_PATH",
+            "NOX_T06_AUTHENTICATED_GITHUB_FETCH", "NOX_T06_GITHUB_FROZEN_SHA",
+            "NOX_T06_GITLAB_ORIGIN_SHA", "NOX_T06_GITHUB_FROZEN_REF")})
         env_patch.start()
         self.addCleanup(env_patch.stop)
 
@@ -35,14 +92,33 @@ class SourceHeadIdentity(unittest.TestCase):
         self.assertEqual(compile_owner.verified_source_head(), self.git("rev-parse", "HEAD"))
         self.assertNotEqual(compile_owner.verified_source_head(), "74e03bc99d82467e8b9f48f367b8815fb13a0798")
 
-    def test_ci_head_mismatch_fails_closed(self):
+    def gitlab_witnesses(self):
+        head = self.git("rev-parse", "HEAD")
+        return {
+            "CI_COMMIT_SHA": "b" * 40,
+            "CI_SERVER_HOST": "gitlab.com",
+            "CI_PROJECT_PATH": "s-grouptwet/nox-helion-pp-private-build",
+            "NOX_T06_AUTHENTICATED_GITHUB_FETCH": "PASS",
+            "NOX_T06_GITHUB_FROZEN_SHA": head,
+            "NOX_T06_GITLAB_ORIGIN_SHA": "b" * 40,
+            "NOX_T06_GITHUB_FROZEN_REF": "buildpin/nox-express-20261102-" + head[:12],
+        }
+
+    def test_unverified_ci_head_fails_closed(self):
         with patch.dict(os.environ, {"CI_COMMIT_SHA": "f" * 40}):
-            with self.assertRaisesRegex(RuntimeError, "T06_SOURCE_CI_SHA_MISMATCH"):
+            with self.assertRaisesRegex(RuntimeError, "T06_GITLAB_AUTHENTICATED_FROZEN_SOURCE_REQUIRED"):
                 compile_owner.verified_source_head()
 
-    def test_matching_ci_head_accepted(self):
-        with patch.dict(os.environ, {"CI_COMMIT_SHA": self.git("rev-parse", "HEAD")}):
+    def test_authenticated_frozen_ci_head_accepted(self):
+        with patch.dict(os.environ, self.gitlab_witnesses()):
             self.assertEqual(compile_owner.verified_source_head(), self.git("rev-parse", "HEAD"))
+
+    def test_mismatched_frozen_ci_head_fails_closed(self):
+        witnesses = self.gitlab_witnesses()
+        witnesses["NOX_T06_GITHUB_FROZEN_SHA"] = "f" * 40
+        with patch.dict(os.environ, witnesses):
+            with self.assertRaisesRegex(RuntimeError, "T06_GITLAB_AUTHENTICATED_FROZEN_SOURCE_REQUIRED"):
+                compile_owner.verified_source_head()
 
     def test_missing_git_checkout_fails_closed(self):
         with patch.object(compile_owner, "ROOT", self.root / "missing_checkout"):

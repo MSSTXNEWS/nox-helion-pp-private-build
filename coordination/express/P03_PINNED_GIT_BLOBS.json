@@ -436,6 +436,19 @@
       "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
     },
     {
+      "path": "Packages/P03/Source/P03.ModelCenter/ModelCenterNativeRoutes.cs",
+      "owner": 3,
+      "run_id": "NOX-E03-NATIVE-PIN-RECONCILE-20261103",
+      "pre_git_blob_sha1": "b63d20f9b5a7551d47d48cf96fa56569398602b4",
+      "post_git_blob_sha1": "07b137096122e1df9869d75386bf657d154214a1",
+      "post_bytes": 21228,
+      "source_commit": "d4b46ec3a36ee6da9750a907354660e8349d5108",
+      "prior_hardening_source_commit": "ad926c5933749e5ad2d38f86852419d6e3884b5e",
+      "reconciliation_parent_sha1": "87c1b88bf95672677e21a0d84dc6402040b5eac5",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS"
+    },
+    {
       "path": "Packages/P03/Source/P03.ModelCenter/ModelDownloadQueueStore.cs",
       "owner": 3,
       "run_id": "NOX-E03-PR162-PIN-RECONCILE-20261101",
@@ -486,12 +499,18 @@
     {
       "path": "Packages/P03/Source/python-host/p03_onehost_port.py",
       "owner": 3,
-      "run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "run_id": "NOX-E03-NATIVE-PIN-RECONCILE-20261103",
       "pre_git_blob_sha1": "8b2bf0cb3f691cfede278df29d634f60a508fd69",
-      "post_git_blob_sha1": "f8992171f6d3e39d449fac4c2103d7530f6f79e2",
-      "post_bytes": 21851,
-      "source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
-      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07"
+      "post_git_blob_sha1": "25ec92c638ff572718acd6ef5354411f91384b93",
+      "post_bytes": 23603,
+      "source_commit": "9724715fb8088d8046ed96be062a4f6bc1b457f9",
+      "acceptance": "SOURCE_INTEGRITY_ONLY_NOT_MODEL_RIGHTS_WINDOWS_E07",
+      "reconciliation_parent_sha1": "87c1b88bf95672677e21a0d84dc6402040b5eac5",
+      "prior_approved_run_id": "NOX-P03-BLOCK2-ADDENDUM-20261101",
+      "prior_approved_source_commit": "83b9c444042bfc300cbd447b8367f61d3e3f2846",
+      "prior_approved_post_git_blob_sha1": "f8992171f6d3e39d449fac4c2103d7530f6f79e2",
+      "prior_approved_post_bytes": 21851,
+      "verification": "EXACT_GIT_BLOB_AND_EXISTING_SECURITY_REGRESSIONS_NOT_WINDOWS"
     },
     {
       "path": "Packages/P03/Source/python-host/test_p03_onehost_port.py",

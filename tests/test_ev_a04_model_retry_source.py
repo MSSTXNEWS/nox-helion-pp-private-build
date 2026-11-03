@@ -46,8 +46,11 @@ class ReviewedRetrySourceTest(unittest.TestCase):
         self.assertNotIn('DownloadFile(', self.route)
 
     def test_same_license(self):
-        self.assertIn('prior.LicenseSource', self.guard)
-        self.assertIn('review.LicenseEvidenceUri?.AbsoluteUri', self.guard)
+        self.assertIn('review.LicenseEvidenceUri is not Uri evidence', self.guard)
+        self.assertIn('!evidence.IsAbsoluteUri', self.guard)
+        self.assertIn('evidence.Scheme != Uri.UriSchemeHttps', self.guard)
+        self.assertIn('string.IsNullOrWhiteSpace(prior.LicenseSource)', self.guard)
+        self.assertIn('!string.Equals(prior.LicenseSource, evidence.AbsoluteUri, StringComparison.Ordinal)', self.guard)
 
     def test_ollama_manifest_and_immutable_revision(self):
         self.assertIn('prior.ExpectedOllamaDigest', self.guard)

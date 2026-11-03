@@ -1,2 +1,6 @@
+# SourceLock and approved Git/SHA pins admit the original byte stream.
+# Windows core.autocrlf must not change those bytes at checkout; retain any
+# already committed CRLF exactly, and do not renormalize source or archives.
+* -text
 /PP_MENU_CATALOG_BUNDLE.patch -text
 /PP_FAST_CANDIDATE_MODE.patch -text

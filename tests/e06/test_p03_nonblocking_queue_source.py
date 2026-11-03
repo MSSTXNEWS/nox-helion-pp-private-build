@@ -225,7 +225,15 @@ class P03NativeBackgroundQueueNoLoss(unittest.TestCase):
         self.assertIn("ModelWowBridgeContract.TryParseCommand", owner)
         self.assertIn("NativeP02Acl(sid, route)", owner)
         self.assertIn("Interlocked.Read(ref _nativeDocumentEpoch) != epoch", owner)
-        self.assertIn("await ConfirmP02NativeAsync(route, root, CancellationToken.None)", owner)
+        handler = owner.split("private async void OnP03WebMessageReceived(", 1)[1].split(
+            "private void ShutdownNativeP02()", 1)[0]
+        self.assertIn("var stopGeneration = _nativeModelsStop.Token;", handler)
+        self.assertIn('command.Action == "stop" ? CancellationToken.None : stopGeneration;', handler)
+        self.assertIn("await ConfirmP02NativeAsync(route, root, activeStopToken)", handler)
+        self.assertIn("activeStopToken.IsCancellationRequested", handler)
+        self.assertIn("activeStopToken.ThrowIfCancellationRequested();", handler)
+        self.assertIn('command.Action is not ("stop" or "diagnose"), activeStopToken)', handler)
+        self.assertNotIn("await ConfirmP02NativeAsync(route, root, CancellationToken.None)", handler)
         self.assertIn("ModelWowBridgeContract.SnapshotJson", owner)
         self.assertIn("ModelWowBridgeContract.EventJson(item)", owner)
         self.assertNotIn("new ModelDownloadQueueStore(", owner)

@@ -1,6 +1,18 @@
 """NOX T06 manual one-shot Windows compilation: exact source ONLY, no installed release."""
 import hashlib, io, json, os, pathlib, re, stat, subprocess, sys, zipfile
-from t06_package_original_onehost import stage_reviewed_installed_payload_verifier
+import importlib.util
+
+def _load_reviewed_payload_verifier():
+    """Bind the existing sibling owner for both CLI and file-based imports."""
+    path=pathlib.Path(__file__).resolve().with_name("t06_package_original_onehost.py")
+    spec=importlib.util.spec_from_file_location("nox_t06_packaging_owner",path)
+    if spec is None or spec.loader is None:
+        raise ImportError("T06_PACKAGING_OWNER_IMPORT_HOLD")
+    owner=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(owner)
+    return owner.stage_reviewed_installed_payload_verifier
+
+stage_reviewed_installed_payload_verifier=_load_reviewed_payload_verifier()
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 STAGE=ROOT/"work/t06-wpf-p02-compile"
 R11=STAGE/"R11"

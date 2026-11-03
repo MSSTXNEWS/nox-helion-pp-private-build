@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import platform
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -21,7 +22,18 @@ import struct
 import subprocess
 import sys
 import time
-from t06_uninstall_admission import owned_payload_paths, verify_original_uninstall
+
+def _load_uninstall_owner():
+    """Use the existing adjacent owner independently of cwd or import style."""
+    path=Path(__file__).resolve().with_name("t06_uninstall_admission.py")
+    spec=importlib.util.spec_from_file_location("nox_t06_uninstall_owner",path)
+    if spec is None or spec.loader is None:
+        raise ImportError("T06_UNINSTALL_OWNER_IMPORT_HOLD")
+    owner=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(owner)
+    return owner.owned_payload_paths,owner.verify_original_uninstall
+
+owned_payload_paths,verify_original_uninstall=_load_uninstall_owner()
 
 ROOT=Path(__file__).resolve().parents[2]
 ON_GITHUB=os.environ.get("GITHUB_ACTIONS")=="true"

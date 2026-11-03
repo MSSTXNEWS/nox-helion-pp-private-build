@@ -96,8 +96,8 @@ function backToStudio(){
 }
 function command(data){
  if(!data||typeof data!=='object')return;
- // BroadcastChannel is not a native ACK: it may not auto-play user-picked files.
- if(data.action==='play'){if(videoUrl)note('MEDIA_HOLD: локальный файл запускается вручную');else void play();}
+ // BroadcastChannel has no native user gesture and cannot authorize media playback.
+ if(data.action==='play')note('MEDIA_HOLD: нажмите ▶ в окне кинозала');
  if(data.action==='pause')pause();
  if(data.action==='title')$('title').textContent=String(data.value||'NOX HELION').slice(0,120);
  if(data.action==='space')$('space').textContent=String(data.value||'Кинозал').slice(0,120);
