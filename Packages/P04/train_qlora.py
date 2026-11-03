@@ -611,6 +611,16 @@ def gpu_vram_headroom(exe: str, gpu_uuid: str, profile: str) -> dict[str, int]:
             "gui_reserve_mib": reserve_mib}
 
 
+def require_gpu_snapshot_consistency(inventory_total_mib, live_vram):
+    if (not isinstance(inventory_total_mib, str)
+            or re.fullmatch(r"[0-9]{1,9}", inventory_total_mib) is None
+            or not 1 <= int(inventory_total_mib) <= 1048576
+            or type(live_vram) is not dict
+            or type(live_vram.get("total_mib")) is not int
+            or live_vram["total_mib"] != int(inventory_total_mib)):
+        raise RuntimeError("GPU_TOTAL_MEMORY_SNAPSHOT_DRIFT")
+
+
 class EventWriter:
     """Append-only v3 events with fail-closed run identity and resume sequence."""
 
@@ -877,6 +887,7 @@ def main() -> int:
         if temp >= args.thermal_stop_c:
             raise RuntimeError("GPU_TEMPERATURE_LIMIT_EXCEEDED")
         vram_headroom = gpu_vram_headroom(exe, chosen["uuid"], args.profile)
+        require_gpu_snapshot_consistency(chosen["memory_total_mib"], vram_headroom)
         lock_fd = acquire_gpu_lock(lock_path)
         os.write(lock_fd, (args.run_id + "\n").encode())
         os.fsync(lock_fd)
@@ -1022,6 +1033,7 @@ def main() -> int:
                         return control
                     try:
                         current_vram = gpu_vram_headroom(exe, chosen["uuid"], args.profile)
+                        require_gpu_snapshot_consistency(chosen["memory_total_mib"], current_vram)
                         monitor["vram_free_mib"] = current_vram["free_mib"]
                     except RuntimeError as exc:
                         monitor["resource_reason"] = str(exc)
