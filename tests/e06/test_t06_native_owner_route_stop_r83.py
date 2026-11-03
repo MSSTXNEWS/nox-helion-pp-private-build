@@ -57,7 +57,7 @@ class OriginalNativeOwnerMenuStopR83(unittest.TestCase):
         for filename, sha in ((OWNER, git_blob(OWNER)), (BRIDGE, git_blob(BRIDGE))):
             with self.subTest(path=filename.name):
                 self.assertIn(("sha='" if filename == OWNER else "blob='") + sha + "'", self.builder)
-                self.assertIn('"' + filename.name + '":"' + sha + '"',
+                self.assertIn('"coordination/e06/' + filename.name + '":"' + sha + '"',
                               self.compiler)
         self.assertIn('T06_CANONICAL_OWNER_STAGING_PINS_DIVERGED', self.compiler)
 
