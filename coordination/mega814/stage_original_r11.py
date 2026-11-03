@@ -55,8 +55,13 @@ def verified_index_mode(raw:bytes,original_sha=INDEX_SHA):
  if text.count(approved_head)!=1 or text.count(approved_body)!=1:
   raise RuntimeError("MEGAB_D02_MARKERS_MISSING_DUPLICATED_HOLD")
  clean=text.replace(approved_head,"</head>",1).replace(approved_body,"</body>",1)
- if sha(clean.encode("utf-8"))!=original_sha:
-  raise RuntimeError("MEGAB_ORIGINAL_INDEX_PREIMAGE_SHA_HOLD")
+ # Windows text-mode staging can CRLF-expand the owner R11 LF text.
+ # Admit only a reversible newline normalization matching immutable INDEX_SHA.
+ restored=clean.encode("utf-8")
+ if sha(restored)!=original_sha:
+  if (b"\r\n" not in restored or b"\r" in restored.replace(b"\r\n",b"") or
+      sha(restored.replace(b"\r\n",b"\n"))!=original_sha):
+   raise RuntimeError("MEGAB_ORIGINAL_INDEX_PREIMAGE_SHA_HOLD")
  return "D02_CREATIVE_WOW200_VERIFIED"
 
 def verified_png(path, expected_sha, expected_bytes=None):

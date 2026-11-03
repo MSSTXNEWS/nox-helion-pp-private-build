@@ -55,4 +55,19 @@ class OriginalPreimageAdmission(unittest.TestCase):
   with self.assertRaisesRegex(RuntimeError,"PREIMAGE_SHA_HOLD"):
    stage.verified_index_mode(evil,self.expected)
 
+ def test_windows_lf_original_transcoded_to_crlf_still_recovers_exact_sha(self):
+  # Creative/WOW Python write_text on Windows may expand canonical LF to CRLF.
+  staged=mounted(self.original).replace(b"\n",b"\r\n")
+  self.assertNotEqual(digest(staged),self.expected)
+  self.assertEqual(stage.verified_index_mode(staged,self.expected),"D02_CREATIVE_WOW200_VERIFIED")
+ def test_windows_newline_inverse_does_not_accept_unapproved_markup(self):
+  altered=self.original.replace('id="menu"','id="malicious"')
+  staged=mounted(altered).replace(b"\n",b"\r\n")
+  with self.assertRaisesRegex(RuntimeError,"PREIMAGE_SHA_HOLD"):
+   stage.verified_index_mode(staged,self.expected)
+ def test_windows_newline_inverse_rejects_bare_carriage_return(self):
+  staged=mounted(self.original).replace(b"\n",b"\r\n").replace(b"\r\n",b"\r",1)
+  with self.assertRaisesRegex(RuntimeError,"PREIMAGE_SHA_HOLD"):
+   stage.verified_index_mode(staged,self.expected)
+
 if __name__=="__main__":unittest.main()
