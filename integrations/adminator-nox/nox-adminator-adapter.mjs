@@ -1,4 +1,4 @@
-import { createP01RouteDispatcher } from "../../proposals/P01/WOW-MAX10/route-dispatch.mjs";
+import { createNativeMenuClient } from "../../ui/onehost-menu-bindings.mjs";
 
 // Exact action route IDs already admitted by ui/onehost-menu-bindings.mjs.
 // Legacy menu labels (e.g. "model-library") are screen IDs, not native routes.
@@ -50,8 +50,40 @@ function setState(element, state, reason = "") {
   else delete element.dataset.noxNativeReason;
   if (state !== "confirmed") {
     delete element.dataset.noxNativeAck;
-    delete element.dataset.noxNativeReceipt;
+    delete element.dataset.noxNativeRequestId;
   }
+}
+
+export function classifyNativeResponse(routeId, response) {
+  if (!routeSet.has(routeId) || !response || response.routeId !== routeId) {
+    return Object.freeze({state:"hold",reason:"NATIVE_ROUTE_CORRELATION_FAILED"});
+  }
+  if (response.state === "COMPLETED") {
+    return Object.freeze({state:"confirmed",requestId:
+      typeof response.requestId === "string" ? response.requestId : null});
+  }
+  if (["models.pull","models.retry","models.gguf.import"].includes(routeId) &&
+      ["QUEUED","IN_PROGRESS"].includes(response.state)) {
+    return Object.freeze({state:"queued",requestId:
+      typeof response.requestId === "string" ? response.requestId : null});
+  }
+  if (response.state === "STOP_REQUESTED") {
+    return Object.freeze({state:"stop_requested",requestId:
+      typeof response.requestId === "string" ? response.requestId : null});
+  }
+  return Object.freeze({state:"hold",reason:
+    typeof response.errorCode === "string" ? response.errorCode : "NATIVE_HANDLER_HOLD"});
+}
+
+function readActionPayload(element) {
+  const raw = element.dataset.noxPayload;
+  if (!raw) return {};
+  if (raw.length > 4096) throw new Error("NOX_ACTION_PAYLOAD_TOO_LARGE");
+  const value = JSON.parse(raw);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("NOX_ACTION_PAYLOAD_OBJECT_REQUIRED");
+  }
+  return value;
 }
 
 function flattenNavigation(root) {
@@ -227,15 +259,16 @@ function renderSnapshot(root, snapshot = {}) {
 
 export function mountAdminatorNox({
   root = document,
-  hostPort = globalThis.noxNativePort,
+  nativeClient: suppliedNativeClient = null,
   routeBindings = globalThis.NOX_ADMINATOR_ROUTE_BINDINGS || {}
 } = {}) {
   const doc = root.nodeType === 9 ? root : root.ownerDocument;
   if (!doc || !root.querySelectorAll) throw new TypeError("NOX_ADMINATOR_ROOT_REQUIRED");
   const bindings = validateRouteBindings(routeBindings);
-  const hasHost = !!hostPort && typeof hostPort.isAvailable === "function" &&
-    typeof hostPort.invokeRoute === "function";
-  const dispatcher = hasHost ? createP01RouteDispatcher(hostPort) : null;
+  const view = doc.defaultView;
+  const webview = view && view.chrome && view.chrome.webview;
+  const nativeClient = suppliedNativeClient ||
+    (webview ? createNativeMenuClient({webview,cryptoRef:view.crypto}) : null);
 
   flattenNavigation(root);
   replaceSelects(root);
@@ -251,44 +284,47 @@ export function mountAdminatorNox({
     event.preventDefault();
     if (disposed || element.dataset.noxPending === "true") return;
     const routeId = bindings[element.dataset.noxRoute];
-    if (!routeId || !dispatcher) {
+    if (!routeId || !nativeClient) {
       setState(element, "hold", "NATIVE_HOST_OR_ROUTE_UNAVAILABLE");
       return;
     }
     element.dataset.noxPending = "true";
     setState(element, "pending");
     try {
-      const result = await dispatcher.invoke(routeId);
+      const payload = readActionPayload(element);
+      const response = await nativeClient.request(routeId,payload);
       if (disposed) return;
-      if (result && result.ok === true && result.routeId === routeId &&
-          typeof result.receiptId === "string") {
+      const state = classifyNativeResponse(routeId,response);
+      setState(element,state.state,state.reason || "");
+      if (state.requestId) element.dataset.noxNativeRequestId=state.requestId;
+      if (state.state === "confirmed" || state.state === "queued" ||
+          state.state === "stop_requested") {
         element.dataset.noxNativeAck = "true";
-        element.dataset.noxNativeReceipt = result.receiptId;
-        setState(element, "confirmed");
-      } else {
-        setState(element, "hold", result && result.reason || "ACK_MISSING");
       }
-    } catch {
-      setState(element, "hold", "NATIVE_DISPATCH_FAILED");
+    } catch (error) {
+      if (!disposed) setState(element,"hold",
+        error && typeof error.message === "string" &&
+        /^[A-Z0-9_]{1,80}$/.test(error.message) ? error.message : "NATIVE_DISPATCH_FAILED");
     } finally {
       delete element.dataset.noxPending;
     }
   };
+
   const onTelemetry = (event) => {
-    if (!disposed) renderSnapshot(root, event.detail || {});
+    if (!disposed) renderSnapshot(root,event.detail || {});
   };
-  root.addEventListener("click", onClick, true);
-  if (doc.defaultView) doc.defaultView.addEventListener("nox:telemetry", onTelemetry);
-  renderSnapshot(root, { metrics: {}, series: {}, timestamp: "unavailable" });
+  root.addEventListener("click",onClick,true);
+  if (view) view.addEventListener("nox:telemetry",onTelemetry);
+  renderSnapshot(root,{metrics:{},series:{},timestamp:"unavailable"});
 
   return Object.freeze({
-    renderSnapshot(snapshot) { if (!disposed) renderSnapshot(root, snapshot); },
+    renderSnapshot(snapshot) { if (!disposed) renderSnapshot(root,snapshot); },
     destroy() {
       if (disposed) return;
-      disposed = true;
-      root.removeEventListener("click", onClick, true);
-      if (doc.defaultView) doc.defaultView.removeEventListener("nox:telemetry", onTelemetry);
-      dispatcher?.close();
+      disposed=true;
+      root.removeEventListener("click",onClick,true);
+      if (view) view.removeEventListener("nox:telemetry",onTelemetry);
+      if (nativeClient && nativeClient !== suppliedNativeClient) nativeClient.destroy();
       removeCosmicScene();
     }
   });
