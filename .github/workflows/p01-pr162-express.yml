@@ -49,7 +49,10 @@ jobs:
           node --check integrations/adminator-nox/nox-adminator-adapter.mjs
           node --check integrations/adminator-nox/nox-adminator-entry.mjs
           node --test coordination/mega814/test_menu_v2.mjs
-          node --test integrations/adminator-nox/tests/*.test.mjs
+          cd integrations/adminator-nox
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+          npm run prepare:donor
+          node --test tests/*.test.mjs
       - name: Keep original D02 gravity and WOW unified source regressions
         shell: bash
         run: |
