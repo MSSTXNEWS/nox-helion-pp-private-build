@@ -931,9 +931,9 @@ if ($c11NsiPatched.IndexOf('C11OldPayloadChecked:',[StringComparison]::Ordinal) 
 # in the disposable R11 source; original 729 archive remains immutable.
 $uninstallRegistryBad='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''\"$INSTDIR\Uninstall.exe\"'''
 $uninstallRegistryApproved='  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}" "UninstallString" ''"$INSTDIR\Uninstall.exe"'''
-# R110: one complete original NSIS registry assignment; never substring match.
-# Indent and known quote encodings vary in immutable R11 sources.
-# Admit ONLY four exact preapproved literal values; unknown/multiple HOLD.
+# R113: immutable original R11 7308-byte preimage, line 124 length 129,
+# SHA256 6ab87005e57b21c50252b13173784aafc348aeff3953aef60e1226f6154651d4.
+# Admit ONLY five exact reviewed literal values; unknown/multiple HOLD.
 $uninstallRegistryHold='P01_NSIS_UNINSTALL_REGISTRY_PREIMAGE_HOLD'
 $uninstallRegistryLinePattern='(?m)^[ \t]*WriteRegStr[ \t]+[^\r\n]*"UninstallString"[ \t]+[^\r\n]*'
 $uninstallRegistryMatches=[regex]::Matches($c11NsiPatched,$uninstallRegistryLinePattern)
@@ -948,7 +948,8 @@ $uninstallRegistryAllowed=@(
   $uninstallRegistryBad.TrimStart(),
   $uninstallRegistryApprovedBody,
   ($uninstallRegistryKey + '"\"$INSTDIR\Uninstall.exe\""'),
-  ($uninstallRegistryKey + '"$INSTDIR\Uninstall.exe"')
+  ($uninstallRegistryKey + '"$INSTDIR\Uninstall.exe"'),
+  ($uninstallRegistryKey + [char]39 + '$"$INSTDIR\Uninstall.exe$"' + [char]39)
 )
 if ($uninstallRegistryAllowed -cnotcontains $uninstallRegistryBody) {
   throw $uninstallRegistryHold

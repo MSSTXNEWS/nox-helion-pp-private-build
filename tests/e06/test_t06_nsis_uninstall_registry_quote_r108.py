@@ -1,12 +1,14 @@
 """R108 source-only original NSIS UninstallString quote/guard regression."""
 from pathlib import Path
 import unittest
+import hashlib
 import re
 ROOT = Path(__file__).resolve().parents[2]
 BUILDER = ROOT / "coordination/e06/build_onehost_installer.ps1"
 REVIEWED = ROOT / "stage/proposals/P01/C09/Installer/NOX-HELION-Setup.nsi"
 BAD = "  WriteRegStr HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}\" \"UninstallString\" '\\\"$INSTDIR\\Uninstall.exe\\\"'"
 APPROVED = "  WriteRegStr HKCU \"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_ID}\" \"UninstallString\" '\"$INSTDIR\\Uninstall.exe\"'"
+R11_OBSERVED = APPROVED.split('"UninstallString" ')[0] + '"UninstallString" ' + r"""'$"$INSTDIR\Uninstall.exe$"'"""
 def guarded_stage(sample):
     # Offline mirror of the original PowerShell's bounded exact-line admission.
     candidates = list(re.finditer(r'(?m)^[ \t]*WriteRegStr[ \t]+[^\r\n]*"UninstallString"[ \t]+[^\r\n]*', sample))
@@ -22,6 +24,7 @@ def guarded_stage(sample):
         BAD.lstrip(" \t"), canonical,
         key + '"\\\"$INSTDIR\\Uninstall.exe\\\""',
         key + '"$INSTDIR\\Uninstall.exe"',
+        R11_OBSERVED.lstrip(" \t"),
     )
     if body not in allowed:
         raise ValueError("P01_NSIS_UNINSTALL_REGISTRY_PREIMAGE_HOLD")
@@ -35,6 +38,20 @@ class TestNSISUninstallRegistryQuoteR108(unittest.TestCase):
     def test_malformed_original_is_repaired_without_other_text_loss(self):
         source = "prefix\n" + BAD + "\nsuffix"
         self.assertEqual(guarded_stage(source), "prefix\n" + APPROVED + "\nsuffix")
+    def test_physical_r11_line_124_sha_and_guard(self):
+        # Exact immutable 7308-byte original observed by Windows E06, not C09 donor.
+        self.assertEqual(len(R11_OBSERVED.encode("utf-8")), 129)
+        self.assertEqual(hashlib.sha256(R11_OBSERVED.encode("utf-8")).hexdigest(),
+                         "6ab87005e57b21c50252b13173784aafc348aeff3953aef60e1226f6154651d4")
+        self.assertEqual(guarded_stage("before\r\n" + R11_OBSERVED + "\r\nafter"),
+                         "before\r\n" + APPROVED + "\r\nafter")
+        for unsafe in (R11_OBSERVED + "\n" + R11_OBSERVED,
+                       R11_OBSERVED.replace("HKCU", "HKLM"),
+                       R11_OBSERVED.replace("APP_ID", "OTHER"),
+                       R11_OBSERVED.replace("Uninstall.exe", "powershell.exe")):
+            with self.subTest(unsafe=unsafe[:70]):
+                with self.assertRaises(ValueError):
+                    guarded_stage(unsafe)
     def test_reviewed_original_is_idempotent(self):
         self.assertEqual(guarded_stage(APPROVED), APPROVED)
     def test_unknown_or_multiple_source_lines_are_refused(self):
