@@ -8,13 +8,16 @@ import {
 } from "../nox-adminator-adapter.mjs";
 
 test("only canonical NOX route ids are accepted", () => {
-  assert.deepEqual(validateRouteBindings({ chat: "commands", models: "model-library" }), {
-    chat: "commands",
-    models: "model-library"
+  assert.deepEqual(validateRouteBindings({ chat: "helion.chat", models: "models.catalog" }), {
+    chat: "helion.chat",
+    models: "models.catalog"
   });
   assert.throws(() => validateRouteBindings({ admin: "delete-account" }),
     /NOX_ROUTE_BINDING_NOT_IN_CANONICAL_ALLOWLIST/);
-  assert.equal(NOX_NATIVE_ROUTES.includes("model-library"), true);
+  assert.throws(() => validateRouteBindings({ models: "model-library" }),
+    /NOX_ROUTE_BINDING_NOT_IN_CANONICAL_ALLOWLIST/);
+  assert.equal(NOX_NATIVE_ROUTES.includes("models.catalog"), true);
+  assert.equal(NOX_NATIVE_ROUTES.includes("chat.commands"), true);
 });
 
 test("missing metrics never become fabricated zeroes", () => {
