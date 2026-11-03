@@ -28,7 +28,7 @@ internal sealed class OneHostP02WebView2Bridge : IDisposable
         "models.pull", "models.cancel", "models.retry", "models.digest", "models.gguf.import",
         "models.preflight", "models.licenses", "gpu.preflight", "training.start",
         "training.pause", "training.resume", "training.checkpoints", "training.evaluate",
-        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch"
+        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch", "menu.binding"
     };
     private static readonly HashSet<string> AuthorityFields = new(StringComparer.Ordinal)
     {

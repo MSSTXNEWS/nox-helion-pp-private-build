@@ -25,7 +25,7 @@ public partial class MainWindow
         "chat.rag","chat.voice","chat.stop","calls.history","chat.commands",
         "models.installed","models.digest","gpu.preflight","training.start",
         "training.pause","training.resume","training.checkpoints","training.evaluate",
-        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch"
+        "system.autostart", "browser.open", "browser.navidle", "menu.dispatch", "menu.binding"
     };
     private Process? _nativeP02Process;
     private NativePythonPipe? _nativeP02Pipe;
@@ -168,6 +168,29 @@ public partial class MainWindow
     private async Task<NativePipeResult> DispatchNativeOwnerAsync(string route, JsonElement payload,
         CancellationToken cancel)
     {
+        if (route == "menu.binding") {
+            // B8: native MENU bindings. Buttons, models, SELF-BUILDER/STOP, native ACK.
+            // No second host. Unknown action is HOLD.
+            if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
+                _nativeP02Bridge is not { } bridge || bridge.BrowserExternalActive ||
+                payload.ValueKind != JsonValueKind.Object ||
+                !payload.TryGetProperty("action", out var action) ||
+                action.ValueKind != JsonValueKind.String ||
+                action.GetString() is not string name)
+                return new NativePipeResult("", false, null, "MENU_BINDING_HOLD");
+            var allowed = new HashSet<string>(StringComparer.Ordinal) {
+                "button", "model", "selfbuilder", "stop"
+            };
+            if (!allowed.Contains(name))
+                return new NativePipeResult("", false, null, "MENU_BINDING_DENIED");
+            if (name == "stop") {
+                Interlocked.Increment(ref _a1OwnerStopEpoch);
+                return new NativePipeResult("", true,
+                    JsonSerializer.SerializeToElement(new { status = "MENU_STOP_ACK", action = name }), null);
+            }
+            return new NativePipeResult("", true,
+                JsonSerializer.SerializeToElement(new { status = "MENU_BINDING_ACK", action = name }), null);
+        }
         if (route == "menu.dispatch") {
             // B7: MENU10 route-dispatch. Eight tiles only, native ACL, no D02/HOME change.
             if (cancel.IsCancellationRequested || _nativeP02Core is not { } core ||
