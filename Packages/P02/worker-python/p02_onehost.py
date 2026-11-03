@@ -19,6 +19,9 @@ class OneHostP02(ExistingP02Adapter):
         self._selected = None
         self._selection_lock = threading.RLock()
         self.stop_event = threading.Event()
+        # STOP can arrive during model selection before the provider starts.
+        self._stop_lock = threading.Lock()
+        self._stop_generation = 0
 
     @contextmanager
     def selection_transaction(self):
@@ -84,6 +87,10 @@ class OneHostP02(ExistingP02Adapter):
         return super().history(session, args)
 
     def chat(self, session, args):
+        # Capture the native STOP epoch before any potentially blocking owner
+        # model/scope resolution. Do not reset STOP before validation.
+        with self._stop_lock:
+            chat_stop_generation = self._stop_generation
         session, payload = self._scope(session, args)
         if set(payload) - {'text','model'}:
             raise HostDenied('Unknown chat payload fields')
@@ -96,7 +103,12 @@ class OneHostP02(ExistingP02Adapter):
         if model is None:
             raise HostHold('Select an installed local model before chat')
         payload['model'] = model
-        self.stop_event.clear()
+        with self._stop_lock:
+            # A STOP that overtook this chat during model/scope resolution
+            # must remain sticky, never be cleared by a late chat re-arm.
+            if self._stop_generation != chat_stop_generation:
+                raise ProtocolHold('NATIVE_CHAT_STOP')
+            self.stop_event.clear()
         try:
             with self.store.model_context(model):
                 return super().chat(session, payload)
@@ -110,7 +122,9 @@ class OneHostP02(ExistingP02Adapter):
             raise
 
     def stop(self, session, args):
-        self.stop_event.set()
+        with self._stop_lock:
+            self._stop_generation += 1
+            self.stop_event.set()
         return super().stop(session, args)
 
     def create_coder(self, authorize):
