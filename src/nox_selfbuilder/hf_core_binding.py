@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Callable, Mapping
 
+from .live_ollama_provider import chat, ensure_primary_model
 from .worms import WormHold
 
 # Exact HF facade registry (user-visible cognitive facets).
@@ -50,13 +51,27 @@ TECHNICAL_CORES = frozenset({
 })
 
 
+def _default_provider_callback(*, hf_id: str, core_id: str, session: str) -> dict:
+    """Live inference path. Uses qwen2.5-coder:7b (or best available)."""
+    model = ensure_primary_model()
+    system = (
+        f"Ты ядро {hf_id} ({HF_LABELS[hf_id]}). "
+        f"Технический CoreID: {core_id}. Отвечай коротко и по делу."
+    )
+    return chat(
+        prompt=f"Привет. Подтверди, что ты живое ядро {HF_LABELS[hf_id]}.",
+        model=model,
+        system=system,
+    )
+
+
 def bind_hf_to_live_provider(
     *,
     hf_id: str,
     session: str,
     authorize: Callable,
     native_stop: Callable,
-    provider_callback: Callable,
+    provider_callback: Callable | None = None,
 ) -> dict:
     """Bind one HF facade to the live provider through its technical CoreID.
 
@@ -65,8 +80,12 @@ def bind_hf_to_live_provider(
     """
     if not isinstance(hf_id, str) or hf_id not in HF_FACADES:
         raise WormHold("HF_FACADE_UNKNOWN")
-    if not all(callable(fn) for fn in (authorize, native_stop, provider_callback)):
+    if not all(callable(fn) for fn in (authorize, native_stop)):
         raise WormHold("HF_NATIVE_PORTS_REQUIRED")
+
+    callback = provider_callback or _default_provider_callback
+    if not callable(callback):
+        raise WormHold("HF_PROVIDER_CALLBACK_REQUIRED")
 
     try:
         if native_stop() is not False:
@@ -83,7 +102,7 @@ def bind_hf_to_live_provider(
         raise WormHold("HF_CORE_MAPPING_INVALID")
 
     try:
-        result = provider_callback(hf_id=hf_id, core_id=core, session=session)
+        result = callback(hf_id=hf_id, core_id=core, session=session)
     except Exception as exc:
         raise WormHold("HF_PROVIDER_CALLBACK_FAILED") from exc
 
@@ -97,6 +116,8 @@ def bind_hf_to_live_provider(
         "core_id": core,
         "session": session,
         "provider_result": result,
+        "model": result.get("model"),
+        "status": "LIVE",
         "training_performed": False,
         "weights_updated": False,
     }
