@@ -11,7 +11,7 @@ P01_PREFLIGHT_ANCESTOR_GIT_BLOB="e683e30b4e6fc32c31652061c569d6ce77c2cb2e"
 EXPECTED={
 "coordination/e06/MainWindow.NativeP02.cs":"a4d6d981aca0d53cf6b8c0f2550e46a4313642e8",
 "coordination/e06/OneHostP02WebView2Bridge.cs":"a469c067e2fe01ef657c0bb8c8fa96156cfd05d6",
-"coordination/e06/stage_native_p02.py":"175414f479eaed098cd5b421baf8f3edba926a41",
+"coordination/e06/stage_native_p02.py":"6f9da8cf7a4bdd7bb7aa0ac52fecb99a93afe0dd",
 "Packages/P02/worker-chat/NativePythonPipe.cs":"e8e4f95106f4d40c29c68d81378c7938e6a7c0f5"
 }
 # The existing E06 owner has ONE reviewed list of the 18 additive WPF/P02/

@@ -1,6 +1,6 @@
 """T06: activate existing WPF MainWindow on disposable R11 source, never archive."""
 from pathlib import Path
-import hashlib,sys,re
+import hashlib,sys,re,os,tempfile
 MAIN_SHA="6fc49544f77ec6ce2e7b2e8f3ab86c9a2a64c25d0eb3eb29547c5677851ef210"
 ADDON_SHA="a4d6d981aca0d53cf6b8c0f2550e46a4313642e8"
 def blob(b):
@@ -57,10 +57,33 @@ def run(source,addon,backend_sha256=None):
     rewritten=text.replace("\n","\r\n") if crlf else text
     final=(b"\xef\xbb\xbf" if bom else b"")+rewritten.encode("utf-8")
     # One checked staged copy. Original committed donor bytes remain immutable.
+    # The R11 staging directory is disposable, but never corrupt an original
+    # MainWindow or strand the addon if a write/fsync/commit fails midway.
     output.parent.mkdir(parents=True,exist_ok=True)
-    output.write_bytes(extra);main.write_bytes(final)
-    if blob(output.read_bytes())!=staged_blob:
-        raise ValueError("T06_NATIVE_ADDON_STAGE_READBACK_HOLD")
+    fd,temporary_name=tempfile.mkstemp(prefix=".nox-native-stage-",suffix=".tmp",dir=main.parent)
+    temporary=Path(temporary_name)
+    created_addon=False
+    try:
+        with os.fdopen(fd,"wb") as staged_main:
+            staged_main.write(final)
+            staged_main.flush()
+            os.fsync(staged_main.fileno())
+        if output.exists() or output.is_symlink():
+            raise ValueError("T06_ORIGINAL_MAINWINDOW_COLLISION_OR_MISSING")
+        with output.open("xb") as staged_addon:
+            created_addon=True
+            staged_addon.write(extra)
+            staged_addon.flush()
+            os.fsync(staged_addon.fileno())
+        if blob(output.read_bytes())!=staged_blob:
+            raise ValueError("T06_NATIVE_ADDON_STAGE_READBACK_HOLD")
+        # Publish the fully durable main source in one final atomic operation.
+        os.replace(temporary,main)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        if created_addon:
+            output.unlink(missing_ok=True)
+        raise
     print("T06_SHA_PINNED_ORIGINAL_MAINWINDOW_P02_SOURCE_WIRED")
 if __name__=="__main__":
     if len(sys.argv) not in (3,4):raise SystemExit("USAGE: stage_native_p02.py R11 ADDON [PINNED_NATIVE_EXE_SHA256]")
