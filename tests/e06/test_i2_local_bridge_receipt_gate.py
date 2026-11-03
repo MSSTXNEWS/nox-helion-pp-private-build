@@ -71,7 +71,8 @@ smoke=importlib.util.module_from_spec(spec)
 try:
     spec.loader.exec_module(smoke)
 except FileNotFoundError as error:
-    assert Path(error.filename)==source.with_name("t06_uninstall_admission.py")
+    # Compare canonical paths: Windows TEMP can have an 8.3 alias.
+    assert Path(error.filename).resolve()==source.resolve().with_name("t06_uninstall_admission.py")
 else:
     raise AssertionError("MISSING_UNINSTALL_OWNER_WAS_ACCEPTED")
 """
