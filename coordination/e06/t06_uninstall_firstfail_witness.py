@@ -15,8 +15,37 @@ _R11_REMOVER_BYTES = 4013
 _METADATA = ("payload.sha256.json", "nox-p01-owned.txt", "Uninstall.exe")
 
 
-def _state(path: Path) -> str:
-    """lstat only: never open/follow a symlink or Windows reparse point."""
+def _state(path: Path, *, root: Path | None = None) -> str:
+    """Fail closed on any redirected ancestor before lstat of a child.
+
+    An original manifest child is never probed through a swapped install root,
+    directory symlink or Windows junction. This witness remains read-only.
+    """
+    if root is not None:
+        try:
+            relative = path.relative_to(root)
+        except ValueError:
+            return "REPARSE_HOLD"
+        cursor = root
+        for ancestor in (root, *(root.joinpath(*relative.parts[:index])
+                                 for index in range(1, len(relative.parts)))):
+            try:
+                entry = ancestor.lstat()
+            except FileNotFoundError:
+                return "ABSENT"
+            except OSError:
+                return "UNREADABLE"
+            if (stat.S_ISLNK(entry.st_mode) or
+                    getattr(entry, "st_file_attributes", 0) &
+                    getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)):
+                return "REPARSE_HOLD"
+            try:
+                if getattr(ancestor, "is_junction", lambda: False)():
+                    return "REPARSE_HOLD"
+            except OSError:
+                return "UNREADABLE"
+            if not stat.S_ISDIR(entry.st_mode):
+                return "NOT_REGULAR_HOLD"
     try:
         info = path.lstat()
     except FileNotFoundError:
@@ -56,11 +85,11 @@ def read_only_uninstall_failure_snapshot(
                 any(piece in ("", ".", "..") for piece in relative.split("/")) or
                 "\\" in relative or ":" in relative):
             raise ValueError("T06_WITNESS_UNSAFE_MANIFEST_RELATIVE")
-        state = _state(path)
+        state = _state(path, root=install)
         states[state] += 1
         if state != "ABSENT" and len(residues) < 5:
             residues.append({"manifest_relative": relative[:160], "state": state})
-    metadata = {label: _state(install / label) for label in _METADATA}
+    metadata = {label: _state(install / label, root=install) for label in _METADATA}
     remover_receipt = {"expected_sha256": _R11_REMOVER_SHA256,
                        "expected_bytes": _R11_REMOVER_BYTES,
                        "observed_sha256": None,
